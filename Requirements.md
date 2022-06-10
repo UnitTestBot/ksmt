@@ -20,14 +20,9 @@
 20. Model - on kotlin part in terms of Expression (model completion!)
 21. Generics?
 
-KSMT
-org.ksmt, KAndExpression, KModel, KSolver, KArrayStoreExpression
-org.kosmt, KoAndExpression
-org.kotlinsmt
-org.ksolver
-org.nosmt, NoAndExpression, NoNotExpression
-org.usmt, UExpression, UModel, USolver, UIntExpression
-org.utsmt, 
-org.microsmt
-org.μsmt
-org.megasmt
+### Naming
+- org.ksmt
+- KAndExpression
+- KModel
+- KSolver
+- KArrayStoreExpression
