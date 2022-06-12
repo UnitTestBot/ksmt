@@ -1,6 +1,7 @@
 package org.ksmt.expr
 
 import org.ksmt.decl.*
+import org.ksmt.expr.manager.ExprManager.intern
 
 
 class KAndExpr internal constructor(override val args: List<KExpr<KBoolExpr>>) : KBoolExpr() {
@@ -38,8 +39,8 @@ object KFalse : KBoolExpr() {
     override val args = emptyList<KExpr<*>>()
 }
 
-fun mkAnd(vararg args: KExpr<KBoolExpr>) = KAndExpr(args.toList())
-fun mkOr(vararg args: KExpr<KBoolExpr>) = KOrExpr(args.toList())
-fun mkNot(arg: KExpr<KBoolExpr>) = KNotExpr(arg)
-fun mkBoolConst(decl: KConstDecl<KBoolExpr>) = KBoolConst(decl)
-fun <T : KExpr<T>> mkEq(lhs: KExpr<T>, rhs: KExpr<T>) = KEqExpr(lhs, rhs)
+fun mkAnd(vararg args: KExpr<KBoolExpr>) = KAndExpr(args.toList()).intern()
+fun mkOr(vararg args: KExpr<KBoolExpr>) = KOrExpr(args.toList()).intern()
+fun mkNot(arg: KExpr<KBoolExpr>) = KNotExpr(arg).intern()
+fun mkBoolConst(decl: KConstDecl<KBoolExpr>) = KBoolConst(decl).intern()
+fun <T : KExpr<T>> mkEq(lhs: KExpr<T>, rhs: KExpr<T>) = KEqExpr(lhs, rhs).intern()

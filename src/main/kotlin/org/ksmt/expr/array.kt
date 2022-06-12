@@ -3,6 +3,7 @@ package org.ksmt.expr
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KSelectArrayDecl
 import org.ksmt.decl.KStoreArrayDecl
+import org.ksmt.expr.manager.ExprManager.intern
 import org.ksmt.sort.range
 
 class KArrayStore<Domain : KExpr<Domain>, Range : KExpr<Range>> internal constructor(
@@ -34,13 +35,13 @@ fun <Domain : KExpr<Domain>, Range : KExpr<Range>> mkArrayStore(
     array: KExpr<KArrayExpr<Domain, Range>>,
     index: KExpr<Domain>,
     value: KExpr<Range>
-) = KArrayStore(array, index, value)
+) = KArrayStore(array, index, value).intern()
 
 fun <Domain : KExpr<Domain>, Range : KExpr<Range>> mkArraySelect(
     array: KExpr<KArrayExpr<Domain, Range>>,
     index: KExpr<Domain>
-) = KArraySelect(array, index)
+) = KArraySelect(array, index).intern()
 
 
 fun <Domain : KExpr<Domain>, Range : KExpr<Range>> mkArrayConst(decl: KConstDecl<KArrayExpr<Domain, Range>>) =
-    KArrayConst(decl)
+    KArrayConst(decl).intern()

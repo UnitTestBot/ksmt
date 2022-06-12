@@ -4,6 +4,7 @@ import org.ksmt.decl.KAddArithDecl
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KGeArithDecl
 import org.ksmt.decl.KNumArithDecl
+import org.ksmt.expr.manager.ExprManager.intern
 
 
 class KAddArithExpr internal constructor(override val args: List<KExpr<KArithExpr>>) : KArithExpr() {
@@ -27,11 +28,11 @@ class KArithConst(override val decl: KConstDecl<KArithExpr>) : KArithExpr() {
     override val args = emptyList<KExpr<*>>()
 }
 
-fun mkArithNum(value: Int) = KNumArithExpr(value)
+fun mkArithNum(value: Int) = KNumArithExpr(value).intern()
 
 val Int.expr
     get() = mkArithNum(this)
 
-fun mkArithAdd(vararg args: KExpr<KArithExpr>) = KAddArithExpr(args.toList())
-fun mkArithGe(lhs: KExpr<KArithExpr>, rhs: KExpr<KArithExpr>) = KGeArithExpr(lhs, rhs)
-fun mkArithConst(decl: KConstDecl<KArithExpr>) = KArithConst(decl)
+fun mkArithAdd(vararg args: KExpr<KArithExpr>) = KAddArithExpr(args.toList()).intern()
+fun mkArithGe(lhs: KExpr<KArithExpr>, rhs: KExpr<KArithExpr>) = KGeArithExpr(lhs, rhs).intern()
+fun mkArithConst(decl: KConstDecl<KArithExpr>) = KArithConst(decl).intern()
