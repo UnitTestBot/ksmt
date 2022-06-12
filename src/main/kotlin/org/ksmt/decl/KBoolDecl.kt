@@ -1,8 +1,7 @@
 package org.ksmt.decl
 
-import org.ksmt.expr.KBoolExpr
 import org.ksmt.sort.KBoolSort
 
-abstract class KBoolDecl : KDecl<KBoolExpr>() {
+abstract class KBoolDecl : KDecl<KBoolSort>() {
     override val sort = KBoolSort
 }

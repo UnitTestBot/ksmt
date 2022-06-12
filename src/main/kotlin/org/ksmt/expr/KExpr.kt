@@ -4,8 +4,8 @@ import org.ksmt.decl.KDecl
 import org.ksmt.sort.KSort
 import java.util.*
 
-abstract class KExpr<T : KExpr<T>> {
-    abstract val sort: KSort<T>
+abstract class KExpr<T : KSort<T>> {
+    abstract val sort: T
     abstract val decl: KDecl<T>
     abstract val args: List<KExpr<*>>
 
@@ -23,5 +23,3 @@ abstract class KExpr<T : KExpr<T>> {
     }
 
 }
-
-infix fun <T : KExpr<T>> KExpr<T>.eq(other: KExpr<T>) = mkEq(this, other)

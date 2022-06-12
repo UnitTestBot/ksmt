@@ -1,8 +1,7 @@
 package org.ksmt.decl
 
-object KNumArithDecl : KArithDecl()
+object KArithNumDecl : KArithDecl()
 
-object KAddArithDecl : KArithDecl()
+object KArithAddDecl : KArithDecl()
 
-object KGeArithDecl : KBoolDecl()
-
+object KArithGeDecl : KBoolDecl()

@@ -1,47 +1,48 @@
 package org.ksmt.expr
 
+import org.ksmt.decl.KArraySelectDecl
+import org.ksmt.decl.KArrayStoreDecl
 import org.ksmt.decl.KConstDecl
-import org.ksmt.decl.KSelectArrayDecl
-import org.ksmt.decl.KStoreArrayDecl
 import org.ksmt.expr.manager.ExprManager.intern
-import org.ksmt.sort.range
+import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KSort
 
-class KArrayStore<Domain : KExpr<Domain>, Range : KExpr<Range>> internal constructor(
-    val array: KExpr<KArrayExpr<Domain, Range>>,
-    val index: KExpr<Domain>,
-    val value: KExpr<Range>
-) : KArrayExpr<Domain, Range>() {
+class KArrayStore<D : KSort<D>, R : KSort<R>> internal constructor(
+    val array: KExpr<KArraySort<D, R>>,
+    val index: KExpr<D>,
+    val value: KExpr<R>
+) : KArrayExpr<D, R>() {
     override val sort = array.sort
-    override val decl = KStoreArrayDecl(array.sort)
+    override val decl = KArrayStoreDecl(array.sort)
     override val args = listOf(array, index, value)
 }
 
-class KArraySelect<Domain : KExpr<Domain>, Range : KExpr<Range>> internal constructor(
-    val array: KExpr<KArrayExpr<Domain, Range>>,
-    val index: KExpr<Domain>
-) : KExpr<Range>() {
+class KArraySelect<D : KSort<D>, R : KSort<R>> internal constructor(
+    val array: KExpr<KArraySort<D, R>>,
+    val index: KExpr<D>
+) : KExpr<R>() {
     override val sort = array.sort.range
-    override val decl = KSelectArrayDecl(array.sort.range)
+    override val decl = KArraySelectDecl(array.sort.range)
     override val args = listOf(array, index)
 }
 
-class KArrayConst<Domain : KExpr<Domain>, Range : KExpr<Range>>(override val decl: KConstDecl<KArrayExpr<Domain, Range>>) :
-    KArrayExpr<Domain, Range>() {
+class KArrayConst<D : KSort<D>, R : KSort<R>>(override val decl: KConstDecl<KArraySort<D, R>>) :
+    KArrayExpr<D, R>() {
     override val sort = decl.sort
     override val args = emptyList<KExpr<*>>()
 }
 
-fun <Domain : KExpr<Domain>, Range : KExpr<Range>> mkArrayStore(
-    array: KExpr<KArrayExpr<Domain, Range>>,
-    index: KExpr<Domain>,
-    value: KExpr<Range>
-) = KArrayStore(array, index, value).intern()
+fun <D : KSort<D>, R : KSort<R>> mkArrayStore(array: KExpr<KArraySort<D, R>>, index: KExpr<D>, value: KExpr<R>) =
+    KArrayStore(array, index, value).intern()
 
-fun <Domain : KExpr<Domain>, Range : KExpr<Range>> mkArraySelect(
-    array: KExpr<KArrayExpr<Domain, Range>>,
-    index: KExpr<Domain>
-) = KArraySelect(array, index).intern()
+fun <D : KSort<D>, R : KSort<R>> mkArraySelect(array: KExpr<KArraySort<D, R>>, index: KExpr<D>) =
+    KArraySelect(array, index).intern()
 
-
-fun <Domain : KExpr<Domain>, Range : KExpr<Range>> mkArrayConst(decl: KConstDecl<KArrayExpr<Domain, Range>>) =
+fun <D : KSort<D>, R : KSort<R>> mkArrayConst(decl: KConstDecl<KArraySort<D, R>>) =
     KArrayConst(decl).intern()
+
+fun <D : KSort<D>, R : KSort<R>> KExpr<KArraySort<D, R>>.store(index: KExpr<D>, value: KExpr<R>) =
+    mkArrayStore(this, index, value)
+
+fun <D : KSort<D>, R : KSort<R>> KExpr<KArraySort<D, R>>.select(index: KExpr<D>) =
+    mkArraySelect(this, index)

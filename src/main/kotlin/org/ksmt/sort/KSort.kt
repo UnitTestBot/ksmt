@@ -1,29 +1,26 @@
 package org.ksmt.sort
 
 import org.ksmt.decl.KConstDecl
-import org.ksmt.expr.*
+import org.ksmt.expr.KExpr
+import org.ksmt.expr.mkArithConst
+import org.ksmt.expr.mkArrayConst
+import org.ksmt.expr.mkBoolConst
 
-abstract class KSort<T : KExpr<T>> {
+abstract class KSort<T : KSort<T>> {
     abstract fun mkConst(decl: KConstDecl<T>): KExpr<T>
 }
 
-fun <T : KExpr<T>> KSort<T>.mkConst(name: String) = mkConst(KConstDecl(name, this))
+fun <T : KSort<T>> T.mkConst(name: String) = mkConst(KConstDecl(name, this))
 
 
-object KBoolSort : KSort<KBoolExpr>(){
-    override fun mkConst(decl: KConstDecl<KBoolExpr>): KExpr<KBoolExpr> = mkBoolConst(decl)
+object KBoolSort : KSort<KBoolSort>() {
+    override fun mkConst(decl: KConstDecl<KBoolSort>): KExpr<KBoolSort> = mkBoolConst(decl)
 }
 
-object KArithSort : KSort<KArithExpr>(){
-    override fun mkConst(decl: KConstDecl<KArithExpr>): KExpr<KArithExpr> = mkArithConst(decl)
+object KArithSort : KSort<KArithSort>() {
+    override fun mkConst(decl: KConstDecl<KArithSort>): KExpr<KArithSort> = mkArithConst(decl)
 }
 
-class KArraySort<Domain : KExpr<Domain>, Range : KExpr<Range>>(val domain: KSort<Domain>, val range: KSort<Range>) : KSort<KArrayExpr<Domain, Range>>(){
-    override fun mkConst(decl: KConstDecl<KArrayExpr<Domain, Range>>): KExpr<KArrayExpr<Domain, Range>> = mkArrayConst(decl)
+class KArraySort<D : KSort<D>, R : KSort<R>>(val domain: D, val range: R) : KSort<KArraySort<D, R>>() {
+    override fun mkConst(decl: KConstDecl<KArraySort<D, R>>): KExpr<KArraySort<D, R>> = mkArrayConst(decl)
 }
-
-val <Domain : KExpr<Domain>, Range : KExpr<Range>> KSort<KArrayExpr<Domain, Range>>.range: KSort<Range>
-    get() = (this as KArraySort<Domain, Range>).range
-
-val <Domain : KExpr<Domain>, Range : KExpr<Range>> KSort<KArrayExpr<Domain, Range>>.domain: KSort<Domain>
-    get() = (this as KArraySort<Domain, Range>).domain
