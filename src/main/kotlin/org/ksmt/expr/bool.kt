@@ -18,7 +18,6 @@ class KOrExpr internal constructor(override val args: List<KExpr<KBoolSort>>) : 
     override val decl = KOrDecl
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
         transformer.visit(this)
-        val a = 3
     }
 }
 
@@ -31,7 +30,7 @@ class KBoolConst internal constructor(override val decl: KConstDecl<KBoolSort>) 
     override val args = emptyList<KExpr<*>>()
 }
 
-class KEqExpr<T : KSort<T>> internal constructor(
+class KEqExpr<T : KSort> internal constructor(
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
 ) : KBoolExpr() {
@@ -53,9 +52,9 @@ fun mkAnd(vararg args: KExpr<KBoolSort>) = KAndExpr(args.toList()).intern()
 fun mkOr(vararg args: KExpr<KBoolSort>) = KOrExpr(args.toList()).intern()
 fun mkNot(arg: KExpr<KBoolSort>) = KNotExpr(arg).intern()
 fun mkBoolConst(decl: KConstDecl<KBoolSort>) = KBoolConst(decl).intern()
-fun <T : KSort<T>> mkEq(lhs: KExpr<T>, rhs: KExpr<T>) = KEqExpr(lhs, rhs).intern()
+fun <T : KSort> mkEq(lhs: KExpr<T>, rhs: KExpr<T>) = KEqExpr(lhs, rhs).intern()
 
-infix fun <T : KSort<T>> KExpr<T>.eq(other: KExpr<T>) = mkEq(this, other)
+infix fun <T : KSort> KExpr<T>.eq(other: KExpr<T>) = mkEq(this, other)
 operator fun KExpr<KBoolSort>.not() = mkNot(this)
 infix fun KExpr<KBoolSort>.and(other: KExpr<KBoolSort>) = mkAnd(this, other)
 infix fun KExpr<KBoolSort>.or(other: KExpr<KBoolSort>) = mkOr(this, other)

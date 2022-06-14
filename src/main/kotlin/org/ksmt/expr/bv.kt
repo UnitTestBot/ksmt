@@ -3,16 +3,16 @@ package org.ksmt.expr
 import org.ksmt.sort.KSort
 
 interface KBVSize
-interface KBVSize32: KBVSize
+interface KBVSize32 : KBVSize
 
-class KBVSort<S:KBVSize> : KSort<KBVSort<S>>(){
+class KBVSort<S : KBVSize> : KSort() {
 
 }
 
 
-fun <S: KBVSize> mkBVAdd(lhs: KExpr<KBVSort<S>>, rhs: KExpr<KBVSort<S>>){
+fun <S : KBVSize> mkBVAdd(lhs: KExpr<KBVSort<S>>, rhs: KExpr<KBVSort<S>>) {
     TODO()
 }
 
-fun tets(){
+fun tets() {
 }
