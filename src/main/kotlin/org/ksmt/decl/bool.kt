@@ -1,13 +1,13 @@
 package org.ksmt.decl
 
-object KAndDecl : KBoolDecl()
+object KAndDecl : KBoolDecl("and")
 
-object KOrDecl : KBoolDecl()
+object KOrDecl : KBoolDecl("or")
 
-object KNotDecl : KBoolDecl()
+object KNotDecl : KBoolDecl("not")
 
-object KTrueDecl : KBoolDecl()
+object KTrueDecl : KBoolDecl("true")
 
-object KFalseDecl : KBoolDecl()
+object KFalseDecl : KBoolDecl("false")
 
-object KEqDecl : KBoolDecl()
+object KEqDecl : KBoolDecl("eq")

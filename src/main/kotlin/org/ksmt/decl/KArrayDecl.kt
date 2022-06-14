@@ -4,5 +4,6 @@ import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KSort
 
 abstract class KArrayDecl<D : KSort, R : KSort>(
-    override val sort: KArraySort<D, R>
-) : KDecl<KArraySort<D, R>>()
+    name: String,
+    sort: KArraySort<D, R>,
+) : KDecl<KArraySort<D, R>>(name, sort)

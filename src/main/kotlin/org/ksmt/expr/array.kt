@@ -2,7 +2,6 @@ package org.ksmt.expr
 
 import org.ksmt.decl.KArraySelectDecl
 import org.ksmt.decl.KArrayStoreDecl
-import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.manager.ExprManager.intern
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KSort
@@ -11,25 +10,21 @@ class KArrayStore<D : KSort, R : KSort> internal constructor(
     val array: KExpr<KArraySort<D, R>>,
     val index: KExpr<D>,
     val value: KExpr<R>
-) : KArrayExpr<D, R>() {
+) : KArrayExpr<D, R>(KArrayStoreDecl(array.sort), listOf(array, index, value)) {
     override val sort = array.sort
-    override val decl = KArrayStoreDecl(array.sort)
-    override val args = listOf(array, index, value)
+    override fun accept(transformer: KTransformer): KExpr<KArraySort<D, R>> {
+        TODO("Not yet implemented")
+    }
 }
 
 class KArraySelect<D : KSort, R : KSort> internal constructor(
     val array: KExpr<KArraySort<D, R>>,
     val index: KExpr<D>
-) : KExpr<R>() {
+) : KApp<R, KExpr<*>>(KArraySelectDecl(array.sort.range), listOf(array, index)) {
     override val sort = array.sort.range
-    override val decl = KArraySelectDecl(array.sort.range)
-    override val args = listOf(array, index)
-}
-
-class KArrayConst<D : KSort, R : KSort>(override val decl: KConstDecl<KArraySort<D, R>>) :
-    KArrayExpr<D, R>() {
-    override val sort = decl.sort
-    override val args = emptyList<KExpr<*>>()
+    override fun accept(transformer: KTransformer): KExpr<R> {
+        TODO("Not yet implemented")
+    }
 }
 
 fun <D : KSort, R : KSort> mkArrayStore(array: KExpr<KArraySort<D, R>>, index: KExpr<D>, value: KExpr<R>) =
@@ -37,9 +32,6 @@ fun <D : KSort, R : KSort> mkArrayStore(array: KExpr<KArraySort<D, R>>, index: K
 
 fun <D : KSort, R : KSort> mkArraySelect(array: KExpr<KArraySort<D, R>>, index: KExpr<D>) =
     KArraySelect(array, index).intern()
-
-fun <D : KSort, R : KSort> mkArrayConst(decl: KConstDecl<KArraySort<D, R>>) =
-    KArrayConst(decl).intern()
 
 fun <D : KSort, R : KSort> KExpr<KArraySort<D, R>>.store(index: KExpr<D>, value: KExpr<R>) =
     mkArrayStore(this, index, value)

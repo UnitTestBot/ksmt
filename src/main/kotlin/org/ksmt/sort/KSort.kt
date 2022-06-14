@@ -1,11 +1,7 @@
 package org.ksmt.sort
 
 import org.ksmt.decl.KConstDecl
-import org.ksmt.expr.KExpr
 import org.ksmt.expr.mkApp
-import org.ksmt.expr.mkArithConst
-import org.ksmt.expr.mkArrayConst
-import org.ksmt.expr.mkBoolConst
 
 abstract class KSort
 

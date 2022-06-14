@@ -6,57 +6,55 @@ import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 
 
-class KAndExpr internal constructor(override val args: List<KExpr<KBoolSort>>) : KBoolExpr() {
-    override val decl = KAndDecl
+class KAndExpr internal constructor(args: List<KExpr<KBoolSort>>) : KBoolExpr<KExpr<KBoolSort>>(KAndDecl, args) {
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
-        transformer.visit(this)
-        val a = 3
+        TODO()
     }
 }
 
-class KOrExpr internal constructor(override val args: List<KExpr<KBoolSort>>) : KBoolExpr() {
-    override val decl = KOrDecl
+class KOrExpr internal constructor(args: List<KExpr<KBoolSort>>) : KBoolExpr<KExpr<KBoolSort>>(KOrDecl, args) {
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
-        transformer.visit(this)
+        TODO("Not yet implemented")
     }
+
 }
 
-class KNotExpr internal constructor(val arg: KExpr<KBoolSort>) : KBoolExpr() {
-    override val decl = KNotDecl
-    override val args = listOf(arg)
-}
+class KNotExpr internal constructor(val arg: KExpr<KBoolSort>) : KBoolExpr<KExpr<KBoolSort>>(KNotDecl, listOf(arg)) {
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
+        TODO("Not yet implemented")
+    }
 
-class KBoolConst internal constructor(override val decl: KConstDecl<KBoolSort>) : KBoolExpr() {
-    override val args = emptyList<KExpr<*>>()
 }
 
 class KEqExpr<T : KSort> internal constructor(
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
-) : KBoolExpr() {
-    override val decl = KEqDecl
-    override val args = listOf(lhs, rhs)
+) : KBoolExpr<KExpr<T>>(KEqDecl, listOf(lhs, rhs)) {
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
+        TODO("Not yet implemented")
+    }
 }
 
-object KTrue : KBoolExpr() {
-    override val decl = KTrueDecl
-    override val args = emptyList<KExpr<*>>()
+object KTrue : KBoolExpr<KExpr<*>>(KTrueDecl, emptyList()) {
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
+        TODO("Not yet implemented")
+    }
 }
 
-object KFalse : KBoolExpr() {
-    override val decl = KFalseDecl
-    override val args = emptyList<KExpr<*>>()
+object KFalse : KBoolExpr<KExpr<*>>(KFalseDecl, emptyList()) {
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
+        TODO("Not yet implemented")
+    }
 }
 
 fun mkAnd(vararg args: KExpr<KBoolSort>) = KAndExpr(args.toList()).intern()
 fun mkOr(vararg args: KExpr<KBoolSort>) = KOrExpr(args.toList()).intern()
 fun mkNot(arg: KExpr<KBoolSort>) = KNotExpr(arg).intern()
-fun mkBoolConst(decl: KConstDecl<KBoolSort>) = KBoolConst(decl).intern()
 fun <T : KSort> mkEq(lhs: KExpr<T>, rhs: KExpr<T>) = KEqExpr(lhs, rhs).intern()
 
 infix fun <T : KSort> KExpr<T>.eq(other: KExpr<T>) = mkEq(this, other)
 operator fun KExpr<KBoolSort>.not() = mkNot(this)
 infix fun KExpr<KBoolSort>.and(other: KExpr<KBoolSort>) = mkAnd(this, other)
 infix fun KExpr<KBoolSort>.or(other: KExpr<KBoolSort>) = mkOr(this, other)
-val Boolean.expr: KBoolExpr
+val Boolean.expr
     get() = if (this) KTrue else KFalse
