@@ -1,13 +1,29 @@
 package org.ksmt.decl
 
-object KAndDecl : KBoolDecl("and")
+import org.ksmt.expr.*
+import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KSort
 
-object KOrDecl : KBoolDecl("or")
+object KAndDecl : KFuncDeclChain<KBoolSort, KBoolSort>("and", KBoolSort, KBoolSort) {
+    override fun applyChain(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> = mkAnd(args)
+}
 
-object KNotDecl : KBoolDecl("not")
+object KOrDecl : KFuncDeclChain<KBoolSort, KBoolSort>("or", KBoolSort, KBoolSort) {
+    override fun applyChain(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> = mkOr(args)
+}
 
-object KTrueDecl : KBoolDecl("true")
+object KNotDecl : KFuncDecl1<KBoolSort, KBoolSort>("not", KBoolSort, KBoolSort) {
+    override fun apply(arg: KExpr<KBoolSort>): KExpr<KBoolSort> = mkNot(arg)
+}
 
-object KFalseDecl : KBoolDecl("false")
+class KEqDecl<T : KSort>(argSort: T) : KFuncDecl2<KBoolSort, T, T>("eq", KBoolSort, argSort, argSort) {
+    override fun apply(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> = mkEq(arg0, arg1)
+}
 
-object KEqDecl : KBoolDecl("eq")
+object KTrueDecl : KBuiltinConstDecl<KBoolSort>("true", KBoolSort) {
+    override fun applyBuiltin(): KExpr<KBoolSort> = mkTrue()
+}
+
+object KFalseDecl : KBuiltinConstDecl<KBoolSort>("false", KBoolSort) {
+    override fun applyBuiltin(): KExpr<KBoolSort> = mkFalse()
+}

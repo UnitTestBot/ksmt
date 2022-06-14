@@ -1,5 +1,6 @@
 package org.ksmt.expr
 
+import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.manager.ExprManager.intern
 import org.ksmt.sort.KSort
@@ -22,10 +23,7 @@ abstract class KApp<T : KSort, A : KExpr<*>> internal constructor(
     }
 }
 
-/* todo: fix problem with app duplication.
-*  For example, mkApp(KAndDecl, a, b) and mkAnd(a, b) should return the same object.
-* */
-class KAppImpl<T : KSort> internal constructor(
+class KFunctionApp<T : KSort> internal constructor(
     decl: KDecl<T>, args: List<KExpr<*>>
 ) : KApp<T, KExpr<*>>(decl, args) {
     override fun accept(transformer: KTransformer): KExpr<T> {
@@ -38,5 +36,13 @@ class KAppImpl<T : KSort> internal constructor(
     }
 }
 
+class KConst<T : KSort> internal constructor(decl: KDecl<T>) : KApp<T, KExpr<*>>(decl, emptyList()) {
+    override fun accept(transformer: KTransformer): KExpr<T> {
+        TODO("Not yet implemented")
+    }
+}
 
-fun <T : KSort> mkApp(decl: KDecl<T>, args: List<KExpr<*>>) = KAppImpl(decl, args).intern()
+internal fun <T : KSort> mkFunctionApp(decl: KDecl<T>, args: List<KExpr<*>>) = KFunctionApp(decl, args).intern()
+
+fun <T : KSort> mkApp(decl: KDecl<T>, args: List<KExpr<*>>) = decl.apply(args)
+fun <T : KSort> mkConstApp(decl: KConstDecl<T>) = KConst(decl).intern()

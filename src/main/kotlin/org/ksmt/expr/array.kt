@@ -20,7 +20,7 @@ class KArrayStore<D : KSort, R : KSort> internal constructor(
 class KArraySelect<D : KSort, R : KSort> internal constructor(
     val array: KExpr<KArraySort<D, R>>,
     val index: KExpr<D>
-) : KApp<R, KExpr<*>>(KArraySelectDecl(array.sort.range), listOf(array, index)) {
+) : KApp<R, KExpr<*>>(KArraySelectDecl(array.sort), listOf(array, index)) {
     override val sort = array.sort.range
     override fun accept(transformer: KTransformer): KExpr<R> {
         TODO("Not yet implemented")
