@@ -13,5 +13,13 @@ fun main() {
     val x = KArraySort(KArithSort, KArraySort(KArithSort, KArithSort)).mkConst("e")
     val e1 = (c.select(b) + (c.store(b, b).select(b) + b) eq c.select(b)) and a or !a
     val e2 = x.store(b, c).select(b).select(10.expr) ge 11.expr
+
+
+
     val z = 3
+}
+
+fun anyexpr(expr: KExpr<*>){
+    expr as KExpr<KBoolSort>
+    expr.and(expr)
 }

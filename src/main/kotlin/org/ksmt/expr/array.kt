@@ -41,7 +41,7 @@ fun <D : KSort<D>, R : KSort<R>> mkArraySelect(array: KExpr<KArraySort<D, R>>, i
 fun <D : KSort<D>, R : KSort<R>> mkArrayConst(decl: KConstDecl<KArraySort<D, R>>) =
     KArrayConst(decl).intern()
 
-fun <D : KSort<D>, R : KSort<R>> KExpr<KArraySort<D, R>>.store(index: KExpr<D>, value: KExpr<R>) =
+fun <D : KSort, R : KSort> KExpr<KArraySort<D, R>>.store(index: KExpr<D>, value: KExpr<R>) =
     mkArrayStore(this, index, value)
 
 fun <D : KSort<D>, R : KSort<R>> KExpr<KArraySort<D, R>>.select(index: KExpr<D>) =

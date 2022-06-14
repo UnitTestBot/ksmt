@@ -3,6 +3,7 @@ package org.ksmt.expr
 import org.ksmt.decl.KDecl
 import org.ksmt.sort.KSort
 import java.util.*
+import org.ksmt.expr.manager.ExprManager.intern
 
 abstract class KExpr<T : KSort<T>> {
     abstract val sort: T
@@ -22,4 +23,12 @@ abstract class KExpr<T : KSort<T>> {
         return true
     }
 
+    abstract fun accept(transformer: KTransformer): KExpr<T>
+
 }
+
+class KApp<T : KSort<T>> internal constructor(override val decl: KDecl<T>, override val args: List<KExpr<*>>): KExpr<T>(){
+    override val sort = decl.sort
+}
+
+fun <T: KSort<T>>mkApp(decl: KDecl<T>, args: List<KExpr<*>>) = KApp(decl, args).intern()

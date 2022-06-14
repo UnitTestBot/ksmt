@@ -8,10 +8,18 @@ import org.ksmt.sort.KSort
 
 class KAndExpr internal constructor(override val args: List<KExpr<KBoolSort>>) : KBoolExpr() {
     override val decl = KAndDecl
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
+        transformer.visit(this)
+        val a = 3
+    }
 }
 
 class KOrExpr internal constructor(override val args: List<KExpr<KBoolSort>>) : KBoolExpr() {
     override val decl = KOrDecl
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
+        transformer.visit(this)
+        val a = 3
+    }
 }
 
 class KNotExpr internal constructor(val arg: KExpr<KBoolSort>) : KBoolExpr() {
