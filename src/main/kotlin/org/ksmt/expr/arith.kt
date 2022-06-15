@@ -1,16 +1,19 @@
 package org.ksmt.expr
 
 import org.ksmt.decl.*
+import org.ksmt.expr.manager.ExprManager.intern
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBoolSort
-import org.ksmt.expr.manager.ExprManager.intern
 
 class KAddArithExpr<T : KArithSort<T>> internal constructor(
     args: List<KExpr<T>>
-) : KArithExpr<T, KExpr<T>>(KArithAddDecl(args.first().sort), args) {
+) : KArithExpr<T, KExpr<T>>(args) {
     init {
         require(args.isNotEmpty())
     }
+
+    override val sort by lazy { args.first().sort }
+    override val decl by lazy { KArithAddDecl(sort) }
     override fun accept(transformer: KTransformer): KExpr<T> {
         TODO("Not yet implemented")
     }
@@ -18,10 +21,13 @@ class KAddArithExpr<T : KArithSort<T>> internal constructor(
 
 class KMulArithExpr<T : KArithSort<T>> internal constructor(
     args: List<KExpr<T>>
-) : KArithExpr<T, KExpr<T>>(KArithMulDecl(args.first().sort), args) {
+) : KArithExpr<T, KExpr<T>>(args) {
     init {
         require(args.isNotEmpty())
     }
+
+    override val sort by lazy { args.first().sort }
+    override val decl by lazy { KArithMulDecl(sort) }
     override fun accept(transformer: KTransformer): KExpr<T> {
         TODO("Not yet implemented")
     }
@@ -29,10 +35,13 @@ class KMulArithExpr<T : KArithSort<T>> internal constructor(
 
 class KSubArithExpr<T : KArithSort<T>> internal constructor(
     args: List<KExpr<T>>
-) : KArithExpr<T, KExpr<T>>(KArithSubDecl(args.first().sort), args) {
+) : KArithExpr<T, KExpr<T>>(args) {
     init {
         require(args.isNotEmpty())
     }
+
+    override val sort by lazy { args.first().sort }
+    override val decl by lazy { KArithSubDecl(sort) }
     override fun accept(transformer: KTransformer): KExpr<T> {
         TODO("Not yet implemented")
     }
@@ -40,7 +49,9 @@ class KSubArithExpr<T : KArithSort<T>> internal constructor(
 
 class KUnaryMinusArithExpr<T : KArithSort<T>> internal constructor(
     val arg: KExpr<T>
-) : KArithExpr<T, KExpr<T>>(KArithUnaryMinusDecl(arg.sort), listOf(arg)) {
+) : KArithExpr<T, KExpr<T>>(listOf(arg)) {
+    override val sort by lazy { arg.sort }
+    override val decl by lazy { KArithUnaryMinusDecl(sort) }
     override fun accept(transformer: KTransformer): KExpr<T> {
         TODO("Not yet implemented")
     }
@@ -49,7 +60,9 @@ class KUnaryMinusArithExpr<T : KArithSort<T>> internal constructor(
 class KDivArithExpr<T : KArithSort<T>> internal constructor(
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
-) : KArithExpr<T, KExpr<T>>(KArithDivDecl(lhs.sort), listOf(lhs, rhs)) {
+) : KArithExpr<T, KExpr<T>>(listOf(lhs, rhs)) {
+    override val sort by lazy { lhs.sort }
+    override val decl by lazy { KArithDivDecl(sort) }
     override fun accept(transformer: KTransformer): KExpr<T> {
         TODO("Not yet implemented")
     }
@@ -58,7 +71,9 @@ class KDivArithExpr<T : KArithSort<T>> internal constructor(
 class KPowerArithExpr<T : KArithSort<T>> internal constructor(
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
-) : KArithExpr<T, KExpr<T>>(KArithPowerDecl(lhs.sort), listOf(lhs, rhs)) {
+) : KArithExpr<T, KExpr<T>>(listOf(lhs, rhs)) {
+    override val sort by lazy { lhs.sort }
+    override val decl by lazy { KArithPowerDecl(sort) }
     override fun accept(transformer: KTransformer): KExpr<T> {
         TODO("Not yet implemented")
     }
@@ -67,7 +82,8 @@ class KPowerArithExpr<T : KArithSort<T>> internal constructor(
 class KLtArithExpr<T : KArithSort<T>> internal constructor(
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
-) : KBoolExpr<KExpr<T>>(KArithLtDecl(lhs.sort), listOf(lhs, rhs)) {
+) : KBoolExpr<KExpr<T>>(listOf(lhs, rhs)) {
+    override val decl by lazy { KArithLtDecl(lhs.sort) }
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
         TODO("Not yet implemented")
     }
@@ -76,7 +92,8 @@ class KLtArithExpr<T : KArithSort<T>> internal constructor(
 class KLeArithExpr<T : KArithSort<T>> internal constructor(
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
-) : KBoolExpr<KExpr<T>>(KArithLeDecl(lhs.sort), listOf(lhs, rhs)) {
+) : KBoolExpr<KExpr<T>>(listOf(lhs, rhs)) {
+    override val decl by lazy { KArithLeDecl(lhs.sort) }
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
         TODO("Not yet implemented")
     }
@@ -85,7 +102,8 @@ class KLeArithExpr<T : KArithSort<T>> internal constructor(
 class KGtArithExpr<T : KArithSort<T>> internal constructor(
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
-) : KBoolExpr<KExpr<T>>(KArithGtDecl(lhs.sort), listOf(lhs, rhs)) {
+) : KBoolExpr<KExpr<T>>(listOf(lhs, rhs)) {
+    override val decl by lazy { KArithGtDecl(lhs.sort) }
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
         TODO("Not yet implemented")
     }
@@ -94,7 +112,8 @@ class KGtArithExpr<T : KArithSort<T>> internal constructor(
 class KGeArithExpr<T : KArithSort<T>> internal constructor(
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
-) : KBoolExpr<KExpr<T>>(KArithGeDecl(lhs.sort), listOf(lhs, rhs)) {
+) : KBoolExpr<KExpr<T>>(listOf(lhs, rhs)) {
+    override val decl by lazy { KArithGeDecl(lhs.sort) }
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
         TODO("Not yet implemented")
     }

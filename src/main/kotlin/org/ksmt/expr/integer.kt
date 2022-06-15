@@ -1,15 +1,20 @@
 package org.ksmt.expr
 
-import org.ksmt.decl.*
+import org.ksmt.decl.KIntModDecl
+import org.ksmt.decl.KIntNumDecl
+import org.ksmt.decl.KIntRemDecl
+import org.ksmt.decl.KIntToRealDecl
+import org.ksmt.expr.manager.ExprManager.intern
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
-import org.ksmt.expr.manager.ExprManager.intern
 import java.math.BigInteger
 
 class KModIntExpr internal constructor(
     val lhs: KExpr<KIntSort>,
     val rhs: KExpr<KIntSort>
-) : KArithExpr<KIntSort, KExpr<KIntSort>>(KIntModDecl, listOf(lhs, rhs)) {
+) : KArithExpr<KIntSort, KExpr<KIntSort>>(listOf(lhs, rhs)) {
+    override val sort = KIntSort
+    override val decl = KIntModDecl
     override fun accept(transformer: KTransformer): KExpr<KIntSort> {
         TODO("Not yet implemented")
     }
@@ -18,7 +23,9 @@ class KModIntExpr internal constructor(
 class KRemIntExpr internal constructor(
     val lhs: KExpr<KIntSort>,
     val rhs: KExpr<KIntSort>
-) : KArithExpr<KIntSort, KExpr<KIntSort>>(KIntRemDecl, listOf(lhs, rhs)) {
+) : KArithExpr<KIntSort, KExpr<KIntSort>>(listOf(lhs, rhs)) {
+    override val sort = KIntSort
+    override val decl = KIntRemDecl
     override fun accept(transformer: KTransformer): KExpr<KIntSort> {
         TODO("Not yet implemented")
     }
@@ -26,29 +33,39 @@ class KRemIntExpr internal constructor(
 
 class KToRealIntExpr internal constructor(
     val arg: KExpr<KIntSort>
-) : KArithExpr<KRealSort, KExpr<KIntSort>>(KIntToRealDecl, listOf(arg)) {
+) : KArithExpr<KRealSort, KExpr<KIntSort>>(listOf(arg)) {
+    override val sort = KRealSort
+    override val decl = KIntToRealDecl
     override fun accept(transformer: KTransformer): KExpr<KRealSort> {
         TODO("Not yet implemented")
     }
 }
 
 abstract class KIntNumExpr(
-    private val stringRepresentation: String
-) : KArithExpr<KIntSort, KExpr<*>>(KIntNumDecl(stringRepresentation), emptyList())
+    private val value: Number
+) : KArithExpr<KIntSort, KExpr<*>>(emptyList()) {
+    override val sort = KIntSort
+    override val decl by lazy { KIntNumDecl("$value") }
+    override fun equalTo(other: KExpr<*>): Boolean {
+        if (!super.equalTo(other)) return false
+        other as KIntNumExpr
+        return value == other.value
+    }
+}
 
-class KInt32NumExpr internal constructor(val value: Int) : KIntNumExpr("$value") {
+class KInt32NumExpr internal constructor(val value: Int) : KIntNumExpr(value) {
     override fun accept(transformer: KTransformer): KExpr<KIntSort> {
         TODO("Not yet implemented")
     }
 }
 
-class KInt64NumExpr internal constructor(val value: Long) : KIntNumExpr("$value") {
+class KInt64NumExpr internal constructor(val value: Long) : KIntNumExpr(value) {
     override fun accept(transformer: KTransformer): KExpr<KIntSort> {
         TODO("Not yet implemented")
     }
 }
 
-class KIntBigNumExpr internal constructor(val value: BigInteger) : KIntNumExpr("$value") {
+class KIntBigNumExpr internal constructor(val value: BigInteger) : KIntNumExpr(value) {
     override fun accept(transformer: KTransformer): KExpr<KIntSort> {
         TODO("Not yet implemented")
     }

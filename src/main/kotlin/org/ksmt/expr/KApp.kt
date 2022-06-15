@@ -8,32 +8,44 @@ import java.util.*
 
 
 abstract class KApp<T : KSort, A : KExpr<*>> internal constructor(
-    val decl: KDecl<T>,
     val args: List<A>
 ) : KExpr<T>() {
-    override val sort = decl.sort
-
-    override fun hash(): Int = Objects.hash(javaClass, sort, decl, args)
-
+    abstract val decl: KDecl<T>
+    override fun hash(): Int = Objects.hash(javaClass, args)
     override fun equalTo(other: KExpr<*>): Boolean {
         if (this === other) return true
         if (javaClass != other.javaClass) return false
         other as KApp<*, *>
-        if (decl != other.decl) return false
         if (args != other.args) return false
         return true
     }
 }
 
 class KFunctionApp<T : KSort> internal constructor(
-    decl: KDecl<T>, args: List<KExpr<*>>
-) : KApp<T, KExpr<*>>(decl, args) {
+    override val decl: KDecl<T>, args: List<KExpr<*>>
+) : KApp<T, KExpr<*>>(args) {
+    override val sort: T by lazy { decl.sort }
+
+    override fun equalTo(other: KExpr<*>): Boolean {
+        if (!super.equalTo(other)) return false
+        other as KFunctionApp<*>
+        return decl == other.decl
+    }
+
     override fun accept(transformer: KTransformer): KExpr<T> {
         TODO("Not yet implemented")
     }
 }
 
-class KConst<T : KSort> internal constructor(decl: KDecl<T>) : KApp<T, KExpr<*>>(decl, emptyList()) {
+class KConst<T : KSort> internal constructor(override val decl: KDecl<T>) : KApp<T, KExpr<*>>(emptyList()) {
+    override val sort: T by lazy { decl.sort }
+
+    override fun equalTo(other: KExpr<*>): Boolean {
+        if (!super.equalTo(other)) return false
+        other as KConst<*>
+        return decl == other.decl
+    }
+
     override fun accept(transformer: KTransformer): KExpr<T> {
         TODO("Not yet implemented")
     }

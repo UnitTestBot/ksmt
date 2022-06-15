@@ -1,6 +1,5 @@
 package org.ksmt.expr
 
-import org.ksmt.decl.KDecl
 import org.ksmt.sort.KBVSort
 
 interface KBVSize
@@ -11,10 +10,9 @@ object KBVSize64 : KBVSize
 
 class KBVCustomSize(val sizeBits: UInt) : KBVSize
 
-class BitVecExpr<T : KBVSort<KBVSize>>(
-    decl: KDecl<T>,
+abstract class BitVecExpr<T : KBVSort<KBVSize>>(
     args: List<KExpr<*>>
-) : KApp<T, KExpr<*>>(decl, args) {
+) : KApp<T, KExpr<*>>(args) {
     override fun accept(transformer: KTransformer): KExpr<T> {
         TODO("Not yet implemented")
     }

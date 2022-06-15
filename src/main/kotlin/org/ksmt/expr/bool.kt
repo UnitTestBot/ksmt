@@ -6,20 +6,23 @@ import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 
 
-class KAndExpr internal constructor(args: List<KExpr<KBoolSort>>) : KBoolExpr<KExpr<KBoolSort>>(KAndDecl, args) {
+class KAndExpr internal constructor(args: List<KExpr<KBoolSort>>) : KBoolExpr<KExpr<KBoolSort>>(args) {
+    override val decl = KAndDecl
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
         TODO()
     }
 }
 
-class KOrExpr internal constructor(args: List<KExpr<KBoolSort>>) : KBoolExpr<KExpr<KBoolSort>>(KOrDecl, args) {
+class KOrExpr internal constructor(args: List<KExpr<KBoolSort>>) : KBoolExpr<KExpr<KBoolSort>>(args) {
+    override val decl = KOrDecl
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
         TODO("Not yet implemented")
     }
 
 }
 
-class KNotExpr internal constructor(val arg: KExpr<KBoolSort>) : KBoolExpr<KExpr<KBoolSort>>(KNotDecl, listOf(arg)) {
+class KNotExpr internal constructor(val arg: KExpr<KBoolSort>) : KBoolExpr<KExpr<KBoolSort>>(listOf(arg)) {
+    override val decl = KNotDecl
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
         TODO("Not yet implemented")
     }
@@ -29,19 +32,22 @@ class KNotExpr internal constructor(val arg: KExpr<KBoolSort>) : KBoolExpr<KExpr
 class KEqExpr<T : KSort> internal constructor(
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
-) : KBoolExpr<KExpr<T>>(KEqDecl(lhs.sort), listOf(lhs, rhs)) {
+) : KBoolExpr<KExpr<T>>(listOf(lhs, rhs)) {
+    override val decl by lazy { KEqDecl(lhs.sort) }
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
         TODO("Not yet implemented")
     }
 }
 
-object KTrue : KBoolExpr<KExpr<*>>(KTrueDecl, emptyList()) {
+object KTrue : KBoolExpr<KExpr<*>>(emptyList()) {
+    override val decl = KTrueDecl
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
         TODO("Not yet implemented")
     }
 }
 
-object KFalse : KBoolExpr<KExpr<*>>(KFalseDecl, emptyList()) {
+object KFalse : KBoolExpr<KExpr<*>>(emptyList()) {
+    override val decl = KFalseDecl
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
         TODO("Not yet implemented")
     }
