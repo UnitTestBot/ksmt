@@ -1,42 +1,129 @@
 package org.ksmt.expr
 
-import org.ksmt.decl.KArithAddDecl
-import org.ksmt.decl.KArithGeDecl
-import org.ksmt.decl.KArithNumDecl
-import org.ksmt.expr.manager.ExprManager.intern
+import org.ksmt.decl.*
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBoolSort
+import org.ksmt.expr.manager.ExprManager.intern
 
-
-class KAddArithExpr internal constructor(args: List<KExpr<KArithSort>>) :
-    KArithExpr<KExpr<KArithSort>>(KArithAddDecl, args) {
-    override fun accept(transformer: KTransformer): KExpr<KArithSort> {
-        TODO("Not yet implemented")
+class KAddArithExpr<T : KArithSort<T>> internal constructor(
+    args: List<KExpr<T>>
+) : KArithExpr<T, KExpr<T>>(KArithAddDecl(args.first().sort), args) {
+    init {
+        require(args.isNotEmpty())
     }
-
-}
-
-class KNumArithExpr internal constructor(val value: Int) : KArithExpr<KExpr<*>>(KArithNumDecl(value), emptyList()) {
-    override fun accept(transformer: KTransformer): KExpr<KArithSort> {
+    override fun accept(transformer: KTransformer): KExpr<T> {
         TODO("Not yet implemented")
     }
 }
 
-class KGeArithExpr internal constructor(
-    val lhs: KExpr<KArithSort>,
-    val rhs: KExpr<KArithSort>
-) : KBoolExpr<KExpr<KArithSort>>(KArithGeDecl, listOf(lhs, rhs)) {
+class KMulArithExpr<T : KArithSort<T>> internal constructor(
+    args: List<KExpr<T>>
+) : KArithExpr<T, KExpr<T>>(KArithMulDecl(args.first().sort), args) {
+    init {
+        require(args.isNotEmpty())
+    }
+    override fun accept(transformer: KTransformer): KExpr<T> {
+        TODO("Not yet implemented")
+    }
+}
+
+class KSubArithExpr<T : KArithSort<T>> internal constructor(
+    args: List<KExpr<T>>
+) : KArithExpr<T, KExpr<T>>(KArithSubDecl(args.first().sort), args) {
+    init {
+        require(args.isNotEmpty())
+    }
+    override fun accept(transformer: KTransformer): KExpr<T> {
+        TODO("Not yet implemented")
+    }
+}
+
+class KUnaryMinusArithExpr<T : KArithSort<T>> internal constructor(
+    val arg: KExpr<T>
+) : KArithExpr<T, KExpr<T>>(KArithUnaryMinusDecl(arg.sort), listOf(arg)) {
+    override fun accept(transformer: KTransformer): KExpr<T> {
+        TODO("Not yet implemented")
+    }
+}
+
+class KDivArithExpr<T : KArithSort<T>> internal constructor(
+    val lhs: KExpr<T>,
+    val rhs: KExpr<T>
+) : KArithExpr<T, KExpr<T>>(KArithDivDecl(lhs.sort), listOf(lhs, rhs)) {
+    override fun accept(transformer: KTransformer): KExpr<T> {
+        TODO("Not yet implemented")
+    }
+}
+
+class KPowerArithExpr<T : KArithSort<T>> internal constructor(
+    val lhs: KExpr<T>,
+    val rhs: KExpr<T>
+) : KArithExpr<T, KExpr<T>>(KArithPowerDecl(lhs.sort), listOf(lhs, rhs)) {
+    override fun accept(transformer: KTransformer): KExpr<T> {
+        TODO("Not yet implemented")
+    }
+}
+
+class KLtArithExpr<T : KArithSort<T>> internal constructor(
+    val lhs: KExpr<T>,
+    val rhs: KExpr<T>
+) : KBoolExpr<KExpr<T>>(KArithLtDecl(lhs.sort), listOf(lhs, rhs)) {
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
         TODO("Not yet implemented")
     }
 }
 
-fun mkArithNum(value: Int) = KNumArithExpr(value).intern()
-fun mkArithAdd(vararg args: KExpr<KArithSort>) = KAddArithExpr(args.toList()).intern()
-fun mkArithAdd(args: List<KExpr<KArithSort>>) = KAddArithExpr(args).intern()
-fun mkArithGe(lhs: KExpr<KArithSort>, rhs: KExpr<KArithSort>) = KGeArithExpr(lhs, rhs).intern()
+class KLeArithExpr<T : KArithSort<T>> internal constructor(
+    val lhs: KExpr<T>,
+    val rhs: KExpr<T>
+) : KBoolExpr<KExpr<T>>(KArithLeDecl(lhs.sort), listOf(lhs, rhs)) {
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
+        TODO("Not yet implemented")
+    }
+}
 
-operator fun KExpr<KArithSort>.plus(other: KExpr<KArithSort>) = mkArithAdd(this, other)
-infix fun KExpr<KArithSort>.ge(other: KExpr<KArithSort>) = mkArithGe(this, other)
-val Int.expr: KNumArithExpr
-    get() = mkArithNum(this)
+class KGtArithExpr<T : KArithSort<T>> internal constructor(
+    val lhs: KExpr<T>,
+    val rhs: KExpr<T>
+) : KBoolExpr<KExpr<T>>(KArithGtDecl(lhs.sort), listOf(lhs, rhs)) {
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
+        TODO("Not yet implemented")
+    }
+}
+
+class KGeArithExpr<T : KArithSort<T>> internal constructor(
+    val lhs: KExpr<T>,
+    val rhs: KExpr<T>
+) : KBoolExpr<KExpr<T>>(KArithGeDecl(lhs.sort), listOf(lhs, rhs)) {
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
+        TODO("Not yet implemented")
+    }
+}
+
+fun <T : KArithSort<T>> mkArithAdd(vararg args: KExpr<T>) = KAddArithExpr(args.toList()).intern()
+fun <T : KArithSort<T>> mkArithAdd(args: List<KExpr<T>>) = KAddArithExpr(args).intern()
+fun <T : KArithSort<T>> mkArithMul(vararg args: KExpr<T>) = KMulArithExpr(args.toList()).intern()
+fun <T : KArithSort<T>> mkArithMul(args: List<KExpr<T>>) = KMulArithExpr(args).intern()
+fun <T : KArithSort<T>> mkArithSub(vararg args: KExpr<T>) = KSubArithExpr(args.toList()).intern()
+fun <T : KArithSort<T>> mkArithSub(args: List<KExpr<T>>) = KSubArithExpr(args).intern()
+
+fun <T : KArithSort<T>> mkArithUnaryMinus(arg: KExpr<T>) = KUnaryMinusArithExpr(arg).intern()
+fun <T : KArithSort<T>> mkArithDiv(lhs: KExpr<T>, rhs: KExpr<T>) = KDivArithExpr(lhs, rhs).intern()
+fun <T : KArithSort<T>> mkArithPower(lhs: KExpr<T>, rhs: KExpr<T>) = KPowerArithExpr(lhs, rhs).intern()
+
+fun <T : KArithSort<T>> mkArithLt(lhs: KExpr<T>, rhs: KExpr<T>) = KLtArithExpr(lhs, rhs).intern()
+fun <T : KArithSort<T>> mkArithLe(lhs: KExpr<T>, rhs: KExpr<T>) = KLeArithExpr(lhs, rhs).intern()
+fun <T : KArithSort<T>> mkArithGt(lhs: KExpr<T>, rhs: KExpr<T>) = KGtArithExpr(lhs, rhs).intern()
+fun <T : KArithSort<T>> mkArithGe(lhs: KExpr<T>, rhs: KExpr<T>) = KGeArithExpr(lhs, rhs).intern()
+
+operator fun <T : KArithSort<T>> KExpr<T>.plus(other: KExpr<T>) = mkArithAdd(this, other)
+operator fun <T : KArithSort<T>> KExpr<T>.times(other: KExpr<T>) = mkArithMul(this, other)
+operator fun <T : KArithSort<T>> KExpr<T>.minus(other: KExpr<T>) = mkArithSub(this, other)
+operator fun <T : KArithSort<T>> KExpr<T>.unaryMinus() = mkArithUnaryMinus(this)
+operator fun <T : KArithSort<T>> KExpr<T>.div(other: KExpr<T>) = mkArithDiv(this, other)
+fun <T : KArithSort<T>> KExpr<T>.power(other: KExpr<T>) = mkArithPower(this, other)
+
+infix fun <T : KArithSort<T>> KExpr<T>.lt(other: KExpr<T>) = mkArithLt(this, other)
+infix fun <T : KArithSort<T>> KExpr<T>.le(other: KExpr<T>) = mkArithLe(this, other)
+infix fun <T : KArithSort<T>> KExpr<T>.gt(other: KExpr<T>) = mkArithGt(this, other)
+infix fun <T : KArithSort<T>> KExpr<T>.ge(other: KExpr<T>) = mkArithGe(this, other)
