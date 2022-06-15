@@ -13,10 +13,12 @@ abstract class KApp<T : KSort, A : KExpr<*>> internal constructor(
 ) : KExpr<T>() {
     override val sort = decl.sort
 
-    override fun hash(): Int = Objects.hash(sort, decl, args)
+    override fun hash(): Int = Objects.hash(javaClass, sort, decl, args)
 
     override fun equalTo(other: KExpr<*>): Boolean {
-        if (other !is KApp<*, *>) return false
+        if (this === other) return true
+        if (javaClass != other.javaClass) return false
+        other as KApp<*, *>
         if (decl != other.decl) return false
         if (args != other.args) return false
         return true
@@ -28,11 +30,6 @@ class KFunctionApp<T : KSort> internal constructor(
 ) : KApp<T, KExpr<*>>(decl, args) {
     override fun accept(transformer: KTransformer): KExpr<T> {
         TODO("Not yet implemented")
-    }
-
-    override fun equalTo(other: KExpr<*>): Boolean {
-        if (!super.equalTo(other)) return false
-        return javaClass == other.javaClass
     }
 }
 

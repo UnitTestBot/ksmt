@@ -20,6 +20,6 @@ abstract class KBuiltinConstDecl<T : KSort>(name: String, sort: T) : KConstDecl<
     }
 }
 
-fun <T : KSort> mkConst(name: String, sort: T) = KConstDecl(name, sort)
-fun <T : KSort> T.mkConst(name: String) = mkConst(name, this)
-
+fun <T : KSort> mkConstDecl(name: String, sort: T) = KConstDecl(name, sort)
+fun <T : KSort> T.mkConstDecl(name: String) = mkConstDecl(name, this)
+fun <T : KSort> T.mkConst(name: String) = mkConstDecl(name).apply()

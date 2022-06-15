@@ -1,10 +1,10 @@
 package example
 
+import org.ksmt.decl.mkConst
 import org.ksmt.expr.*
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
-import org.ksmt.sort.mkConst
 
 fun main() {
     val a = KBoolSort.mkConst("a")
