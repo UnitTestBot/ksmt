@@ -20,10 +20,10 @@ class KEqDecl<T : KSort>(argSort: T) : KFuncDecl2<KBoolSort, T, T>("eq", KBoolSo
     override fun apply(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> = mkEq(arg0, arg1)
 }
 
-object KTrueDecl : KBuiltinConstDecl<KBoolSort>("true", KBoolSort) {
-    override fun applyBuiltin(): KExpr<KBoolSort> = mkTrue()
+object KTrueDecl : KConstDecl<KBoolSort>("true", KBoolSort) {
+    override fun apply(args: List<KExpr<*>>): KExpr<KBoolSort> = mkTrue()
 }
 
-object KFalseDecl : KBuiltinConstDecl<KBoolSort>("false", KBoolSort) {
-    override fun applyBuiltin(): KExpr<KBoolSort> = mkFalse()
+object KFalseDecl : KConstDecl<KBoolSort>("false", KBoolSort) {
+    override fun apply(args: List<KExpr<*>>): KExpr<KBoolSort> = mkFalse()
 }

@@ -3,12 +3,22 @@ package org.ksmt.decl
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.mkFunctionApp
 import org.ksmt.sort.KSort
+import java.util.*
 
 open class KFuncDecl<T : KSort>(name: String, sort: T, val argSorts: List<KSort>) : KDecl<T>(name, sort) {
     override fun apply(args: List<KExpr<*>>): KExpr<T> {
         check(args.map { it.sort } == argSorts) { "Arguments sort mismatch" }
         return mkFunctionApp(this, args)
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (!super.equals(other)) return false
+        other as KFuncDecl<*>
+        if (argSorts != other.argSorts) return false
+        return true
+    }
+
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), argSorts)
 }
 
 abstract class KFuncDecl1<T : KSort, A : KSort>(name: String, sort: T, val argSort: A) :
