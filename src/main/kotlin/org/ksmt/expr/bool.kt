@@ -2,6 +2,8 @@ package org.ksmt.expr
 
 import org.ksmt.decl.*
 import org.ksmt.expr.manager.ExprManager.intern
+import org.ksmt.expr.transformer.KBoolTransformer
+import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 
@@ -9,14 +11,20 @@ import org.ksmt.sort.KSort
 class KAndExpr internal constructor(args: List<KExpr<KBoolSort>>) : KBoolExpr<KExpr<KBoolSort>>(args) {
     override val decl = KAndDecl
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
-        TODO()
+        transformer as KBoolTransformer
+        val transformedArgs = args.map { it.accept(transformer) }
+        if (transformedArgs == args) return transformer.transformAnd(this)
+        return transformer.transformAnd(mkAnd(transformedArgs))
     }
 }
 
 class KOrExpr internal constructor(args: List<KExpr<KBoolSort>>) : KBoolExpr<KExpr<KBoolSort>>(args) {
     override val decl = KOrDecl
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
-        TODO("Not yet implemented")
+        transformer as KBoolTransformer
+        val transformedArgs = args.map { it.accept(transformer) }
+        if (transformedArgs == args) return transformer.transformOr(this)
+        return transformer.transformOr(mkOr(transformedArgs))
     }
 
 }

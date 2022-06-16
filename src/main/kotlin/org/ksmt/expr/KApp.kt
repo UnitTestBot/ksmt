@@ -3,6 +3,8 @@ package org.ksmt.expr
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.manager.ExprManager.intern
+import org.ksmt.expr.transformer.KFunctionTransformer
+import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.sort.KSort
 import java.util.*
 
@@ -33,7 +35,10 @@ class KFunctionApp<T : KSort> internal constructor(
     }
 
     override fun accept(transformer: KTransformer): KExpr<T> {
-        TODO("Not yet implemented")
+        transformer as KFunctionTransformer
+        val transformedArgs = args.map { it.accept(transformer) }
+        if (transformedArgs == args) return transformer.transformFunctionApp(this)
+        return transformer.transformFunctionApp(mkFunctionApp(decl, transformedArgs))
     }
 }
 
@@ -47,7 +52,8 @@ class KConst<T : KSort> internal constructor(override val decl: KDecl<T>) : KApp
     }
 
     override fun accept(transformer: KTransformer): KExpr<T> {
-        TODO("Not yet implemented")
+        transformer as KFunctionTransformer
+        return transformer.transformConst(this)
     }
 }
 

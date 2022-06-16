@@ -1,5 +1,6 @@
 package org.ksmt.expr
 
+import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.sort.KBVSort
 
 interface KBVSize

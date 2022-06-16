@@ -3,6 +3,7 @@ package org.ksmt.expr
 import org.ksmt.decl.KArraySelectDecl
 import org.ksmt.decl.KArrayStoreDecl
 import org.ksmt.expr.manager.ExprManager.intern
+import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KSort
 

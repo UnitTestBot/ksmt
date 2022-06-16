@@ -2,6 +2,8 @@ package org.ksmt.expr
 
 import org.ksmt.decl.*
 import org.ksmt.expr.manager.ExprManager.intern
+import org.ksmt.expr.transformer.KArithTransformer
+import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBoolSort
 
@@ -15,7 +17,10 @@ class KAddArithExpr<T : KArithSort<T>> internal constructor(
     override val sort by lazy { args.first().sort }
     override val decl by lazy { KArithAddDecl(sort) }
     override fun accept(transformer: KTransformer): KExpr<T> {
-        TODO("Not yet implemented")
+        transformer as KArithTransformer
+        val transformedArgs = args.map { it.accept(transformer) }
+        if (transformedArgs == args) return transformer.transformArithAdd(this)
+        return transformer.transformArithAdd(mkArithAdd(transformedArgs))
     }
 }
 

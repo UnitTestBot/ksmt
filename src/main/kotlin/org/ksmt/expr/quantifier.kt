@@ -1,8 +1,9 @@
 package org.ksmt.expr
 
 import org.ksmt.decl.KDecl
-import org.ksmt.sort.KBoolSort
 import org.ksmt.expr.manager.ExprManager.intern
+import org.ksmt.expr.transformer.KTransformer
+import org.ksmt.sort.KBoolSort
 
 class KExistentialQuantifier internal constructor(
     body: KExpr<KBoolSort>,
