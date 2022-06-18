@@ -34,12 +34,12 @@ class KFunctionApp<T : KSort> internal constructor(
         return decl == other.decl
     }
 
-    override fun accept(transformer: KTransformer): KExpr<T> {
-        transformer as KFunctionTransformer
-        val transformedArgs = args.map { it.accept(transformer) }
-        if (transformedArgs == args) return transformer.transformFunctionApp(this)
-        return transformer.transformFunctionApp(mkFunctionApp(decl, transformedArgs))
-    }
+    override fun accept(transformer: KTransformer): KExpr<T> =
+        (transformer as KFunctionTransformer).transformFunctionApp(this) {
+            val transformedArgs = args.map { it.accept(transformer) }
+            if (transformedArgs == args) return@transformFunctionApp transformer.transformFunctionApp(this)
+            transformer.transformFunctionApp(mkFunctionApp(decl, transformedArgs))
+        }
 }
 
 class KConst<T : KSort> internal constructor(override val decl: KDecl<T>) : KApp<T, KExpr<*>>(emptyList()) {
@@ -51,10 +51,10 @@ class KConst<T : KSort> internal constructor(override val decl: KDecl<T>) : KApp
         return decl == other.decl
     }
 
-    override fun accept(transformer: KTransformer): KExpr<T> {
-        transformer as KFunctionTransformer
-        return transformer.transformConst(this)
-    }
+    override fun accept(transformer: KTransformer): KExpr<T> =
+        (transformer as KFunctionTransformer).transformConst(this) {
+            transformer.transformConst(this)
+        }
 }
 
 internal fun <T : KSort> mkFunctionApp(decl: KDecl<T>, args: List<KExpr<*>>) = KFunctionApp(decl, args).intern()

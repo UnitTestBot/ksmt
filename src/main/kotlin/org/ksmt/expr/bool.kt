@@ -10,23 +10,22 @@ import org.ksmt.sort.KSort
 
 class KAndExpr internal constructor(args: List<KExpr<KBoolSort>>) : KBoolExpr<KExpr<KBoolSort>>(args) {
     override val decl = KAndDecl
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
-        transformer as KBoolTransformer
-        val transformedArgs = args.map { it.accept(transformer) }
-        if (transformedArgs == args) return transformer.transformAnd(this)
-        return transformer.transformAnd(mkAnd(transformedArgs))
-    }
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> =
+        (transformer as KBoolTransformer).transformAnd(this) {
+            val transformedArgs = args.map { it.accept(transformer) }
+            if (transformedArgs == args) return@transformAnd transformer.transformAnd(this)
+            transformer.transformAnd(mkAnd(transformedArgs))
+        }
 }
 
 class KOrExpr internal constructor(args: List<KExpr<KBoolSort>>) : KBoolExpr<KExpr<KBoolSort>>(args) {
     override val decl = KOrDecl
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
-        transformer as KBoolTransformer
-        val transformedArgs = args.map { it.accept(transformer) }
-        if (transformedArgs == args) return transformer.transformOr(this)
-        return transformer.transformOr(mkOr(transformedArgs))
-    }
-
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> =
+        (transformer as KBoolTransformer).transformOr(this) {
+            val transformedArgs = args.map { it.accept(transformer) }
+            if (transformedArgs == args) return@transformOr transformer.transformOr(this)
+            transformer.transformOr(mkOr(transformedArgs))
+        }
 }
 
 class KNotExpr internal constructor(val arg: KExpr<KBoolSort>) : KBoolExpr<KExpr<KBoolSort>>(listOf(arg)) {

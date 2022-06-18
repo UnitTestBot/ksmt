@@ -16,12 +16,12 @@ class KAddArithExpr<T : KArithSort<T>> internal constructor(
 
     override val sort by lazy { args.first().sort }
     override val decl by lazy { KArithAddDecl(sort) }
-    override fun accept(transformer: KTransformer): KExpr<T> {
-        transformer as KArithTransformer
-        val transformedArgs = args.map { it.accept(transformer) }
-        if (transformedArgs == args) return transformer.transformArithAdd(this)
-        return transformer.transformArithAdd(mkArithAdd(transformedArgs))
-    }
+    override fun accept(transformer: KTransformer): KExpr<T> =
+        (transformer as KArithTransformer).transformArithAdd(this) {
+            val transformedArgs = args.map { it.accept(transformer) }
+            if (transformedArgs == args) return@transformArithAdd transformer.transformArithAdd(this)
+            transformer.transformArithAdd(mkArithAdd(transformedArgs))
+        }
 }
 
 class KMulArithExpr<T : KArithSort<T>> internal constructor(
