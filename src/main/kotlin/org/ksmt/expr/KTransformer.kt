@@ -14,8 +14,8 @@ interface KTransformer {
     fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> = expr
 
     // function transformers
-    fun <T : KSort> transform(expr: KFunctionApp<T>) = transformApp(expr)
-    fun <T : KSort> transform(expr: KConst<T>) = transformApp(expr)
+    fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = transformApp(expr)
+    fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = transform(expr as KFunctionApp<T>)
     fun <T : KSort> transformApp(expr: KApp<T, *>): KExpr<T> {
         val args = expr.args.map { it.accept(this) }
         if (args == expr.args) return transformExpr(expr)

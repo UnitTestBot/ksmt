@@ -21,7 +21,7 @@ abstract class KApp<T : KSort, A : KExpr<*>> internal constructor(
     }
 }
 
-class KFunctionApp<T : KSort> internal constructor(
+open class KFunctionApp<T : KSort> internal constructor(
     override val decl: KDecl<T>, args: List<KExpr<*>>
 ) : KApp<T, KExpr<*>>(args) {
     override val sort: T by lazy { decl.sort }
@@ -35,19 +35,19 @@ class KFunctionApp<T : KSort> internal constructor(
     override fun accept(transformer: KTransformer): KExpr<T> = transformer.transform(this)
 }
 
-class KConst<T : KSort> internal constructor(override val decl: KDecl<T>) : KApp<T, KExpr<*>>(emptyList()) {
-    override val sort: T by lazy { decl.sort }
-
-    override fun equalTo(other: KExpr<*>): Boolean {
-        if (!super.equalTo(other)) return false
-        other as KConst<*>
-        return decl == other.decl
-    }
-
+class KConst<T : KSort> internal constructor(decl: KDecl<T>) : KFunctionApp<T>(decl, emptyList()) {
     override fun accept(transformer: KTransformer): KExpr<T> = transformer.transform(this)
 }
 
-internal fun <T : KSort> mkFunctionApp(decl: KDecl<T>, args: List<KExpr<*>>) = KFunctionApp(decl, args).intern()
+internal fun <T : KSort> mkFunctionApp(decl: KDecl<T>, args: List<KExpr<*>>) = when {
+    args.isEmpty() -> KConst(decl).intern()
+    else -> KFunctionApp(decl, args).intern()
+}
 
+/*
+* For builtin declarations e.g. KAndDecl, mkApp must return the same object as a corresponding builder.
+* For example, mkApp(KAndDecl, a, b) and mkAnd(a, b) must end up with the same KAndExpr object.
+* To achieve such behaviour we override apply for all builtin declarations.
+*/
 fun <T : KSort> mkApp(decl: KDecl<T>, args: List<KExpr<*>>) = decl.apply(args)
 fun <T : KSort> mkConstApp(decl: KConstDecl<T>) = KConst(decl).intern()
