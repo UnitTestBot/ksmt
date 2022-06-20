@@ -10,9 +10,11 @@ class KArrayStoreDecl<D : KSort, R : KSort>(sort: KArraySort<D, R>) :
     KFuncDecl3<KArraySort<D, R>, KArraySort<D, R>, D, R>("store", sort, sort, sort.domain, sort.range) {
     override fun apply(arg0: KExpr<KArraySort<D, R>>, arg1: KExpr<D>, arg2: KExpr<R>): KExpr<KArraySort<D, R>> =
         mkArrayStore(arg0, arg1, arg2)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
 class KArraySelectDecl<D : KSort, R : KSort>(sort: KArraySort<D, R>) :
     KFuncDecl2<R, KArraySort<D, R>, D>("select", sort.range, sort, sort.domain) {
     override fun apply(arg0: KExpr<KArraySort<D, R>>, arg1: KExpr<D>): KExpr<R> = mkArraySelect(arg0, arg1)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }

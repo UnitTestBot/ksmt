@@ -10,6 +10,7 @@ open class KConstDecl<T : KSort>(name: String, sort: T) : KFuncDecl<T>(name, sor
         require(args.isEmpty())
         return mkConstApp(this)
     }
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
 fun <T : KSort> mkConstDecl(name: String, sort: T) = KConstDecl(name, sort)

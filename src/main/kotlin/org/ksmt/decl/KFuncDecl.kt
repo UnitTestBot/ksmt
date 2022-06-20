@@ -10,6 +10,7 @@ open class KFuncDecl<T : KSort>(name: String, sort: T, val argSorts: List<KSort>
         check(args.map { it.sort } == argSorts) { "Arguments sort mismatch" }
         return mkFunctionApp(this, args)
     }
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun equals(other: Any?): Boolean {
         if (!super.equals(other)) return false
