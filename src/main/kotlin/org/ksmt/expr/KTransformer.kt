@@ -1,6 +1,13 @@
 package org.ksmt.expr
 
-import org.ksmt.sort.*
+import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArithSort
+import org.ksmt.sort.KIntSort
+import org.ksmt.sort.KRealSort
+import org.ksmt.sort.KBVSort
+import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KSort
+
 
 interface KTransformer {
     fun transform(expr: KExpr<*>): Any = error("transformer is not implemented for expr $expr")

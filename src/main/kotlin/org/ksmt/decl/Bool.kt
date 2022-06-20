@@ -1,6 +1,12 @@
 package org.ksmt.decl
 
-import org.ksmt.expr.*
+import org.ksmt.expr.KExpr
+import org.ksmt.expr.mkAnd
+import org.ksmt.expr.mkNot
+import org.ksmt.expr.mkOr
+import org.ksmt.expr.mkEq
+import org.ksmt.expr.mkTrue
+import org.ksmt.expr.mkFalse
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 

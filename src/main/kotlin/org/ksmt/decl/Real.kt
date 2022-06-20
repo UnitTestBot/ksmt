@@ -1,7 +1,12 @@
 package org.ksmt.decl
 
-import org.ksmt.expr.*
-import org.ksmt.sort.*
+import org.ksmt.expr.KExpr
+import org.ksmt.expr.mkRealIsInt
+import org.ksmt.expr.mkRealNum
+import org.ksmt.expr.mkRealToInt
+import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KIntSort
+import org.ksmt.sort.KRealSort
 
 object KRealToIntDecl : KFuncDecl1<KIntSort, KRealSort>("realToInt", KIntSort, KRealSort) {
     override fun apply(arg: KExpr<KRealSort>): KExpr<KIntSort> = mkRealToInt(arg)

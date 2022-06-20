@@ -1,6 +1,10 @@
 package org.ksmt.decl
 
-import org.ksmt.expr.*
+import org.ksmt.expr.KExpr
+import org.ksmt.expr.mkIntMod
+import org.ksmt.expr.mkIntRem
+import org.ksmt.expr.mkIntToReal
+import org.ksmt.expr.mkIntNum
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 
