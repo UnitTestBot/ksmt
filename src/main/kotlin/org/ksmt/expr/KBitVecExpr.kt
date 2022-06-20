@@ -13,9 +13,7 @@ class KBVCustomSize(val sizeBits: UInt) : KBVSize
 abstract class BitVecExpr<T : KBVSort<KBVSize>>(
     args: List<KExpr<*>>
 ) : KApp<T, KExpr<*>>(args) {
-    override fun accept(transformer: KTransformer): KExpr<T> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<T> = transformer.transform(this)
 }
 
 fun <S : KBVSize> mkBVAdd(lhs: KExpr<KBVSort<S>>, rhs: KExpr<KBVSort<S>>) {

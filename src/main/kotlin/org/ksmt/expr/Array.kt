@@ -13,9 +13,7 @@ class KArrayStore<D : KSort, R : KSort> internal constructor(
 ) : KArrayExpr<D, R, KExpr<*>>(listOf(array, index, value)) {
     override val sort by lazy { array.sort }
     override val decl by lazy { KArrayStoreDecl(array.sort) }
-    override fun accept(transformer: KTransformer): KExpr<KArraySort<D, R>> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<KArraySort<D, R>> = transformer.transform(this)
 }
 
 class KArraySelect<D : KSort, R : KSort> internal constructor(
@@ -24,9 +22,7 @@ class KArraySelect<D : KSort, R : KSort> internal constructor(
 ) : KApp<R, KExpr<*>>(listOf(array, index)) {
     override val sort by lazy { array.sort.range }
     override val decl by lazy { KArraySelectDecl(array.sort) }
-    override fun accept(transformer: KTransformer): KExpr<R> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<R> = transformer.transform(this)
 }
 
 fun <D : KSort, R : KSort> mkArrayStore(array: KExpr<KArraySort<D, R>>, index: KExpr<D>, value: KExpr<R>) =

@@ -8,25 +8,17 @@ import org.ksmt.sort.KSort
 
 class KAndExpr internal constructor(args: List<KExpr<KBoolSort>>) : KBoolExpr<KExpr<KBoolSort>>(args) {
     override val decl = KAndDecl
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
-        TODO()
-    }
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 class KOrExpr internal constructor(args: List<KExpr<KBoolSort>>) : KBoolExpr<KExpr<KBoolSort>>(args) {
     override val decl = KOrDecl
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
-        TODO("Not yet implemented")
-    }
-
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 class KNotExpr internal constructor(val arg: KExpr<KBoolSort>) : KBoolExpr<KExpr<KBoolSort>>(listOf(arg)) {
     override val decl = KNotDecl
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
-        TODO("Not yet implemented")
-    }
-
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 class KEqExpr<T : KSort> internal constructor(
@@ -34,23 +26,17 @@ class KEqExpr<T : KSort> internal constructor(
     val rhs: KExpr<T>
 ) : KBoolExpr<KExpr<T>>(listOf(lhs, rhs)) {
     override val decl by lazy { KEqDecl(lhs.sort) }
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 object KTrue : KBoolExpr<KExpr<*>>(emptyList()) {
     override val decl = KTrueDecl
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 object KFalse : KBoolExpr<KExpr<*>>(emptyList()) {
     override val decl = KFalseDecl
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 fun mkAnd(vararg args: KExpr<KBoolSort>) = KAndExpr(args.toList()).intern()

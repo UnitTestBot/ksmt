@@ -8,18 +8,14 @@ class KExistentialQuantifier internal constructor(
     body: KExpr<KBoolSort>,
     bounds: List<KDecl<*>>
 ) : KQuantifier(body, bounds) {
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 class KUniversalQuantifier internal constructor(
     body: KExpr<KBoolSort>,
     bounds: List<KDecl<*>>
 ) : KQuantifier(body, bounds) {
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 fun mkExistentialQuantifier(body: KExpr<KBoolSort>, bounds: List<KDecl<*>>) =

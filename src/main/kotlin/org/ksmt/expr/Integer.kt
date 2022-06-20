@@ -15,9 +15,7 @@ class KModIntExpr internal constructor(
 ) : KArithExpr<KIntSort, KExpr<KIntSort>>(listOf(lhs, rhs)) {
     override val sort = KIntSort
     override val decl = KIntModDecl
-    override fun accept(transformer: KTransformer): KExpr<KIntSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<KIntSort> = transformer.transform(this)
 }
 
 class KRemIntExpr internal constructor(
@@ -26,9 +24,7 @@ class KRemIntExpr internal constructor(
 ) : KArithExpr<KIntSort, KExpr<KIntSort>>(listOf(lhs, rhs)) {
     override val sort = KIntSort
     override val decl = KIntRemDecl
-    override fun accept(transformer: KTransformer): KExpr<KIntSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<KIntSort> = transformer.transform(this)
 }
 
 class KToRealIntExpr internal constructor(
@@ -36,9 +32,7 @@ class KToRealIntExpr internal constructor(
 ) : KArithExpr<KRealSort, KExpr<KIntSort>>(listOf(arg)) {
     override val sort = KRealSort
     override val decl = KIntToRealDecl
-    override fun accept(transformer: KTransformer): KExpr<KRealSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<KRealSort> = transformer.transform(this)
 }
 
 abstract class KIntNumExpr(
@@ -54,21 +48,15 @@ abstract class KIntNumExpr(
 }
 
 class KInt32NumExpr internal constructor(val value: Int) : KIntNumExpr(value) {
-    override fun accept(transformer: KTransformer): KExpr<KIntSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<KIntSort> = transformer.transform(this)
 }
 
 class KInt64NumExpr internal constructor(val value: Long) : KIntNumExpr(value) {
-    override fun accept(transformer: KTransformer): KExpr<KIntSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<KIntSort> = transformer.transform(this)
 }
 
 class KIntBigNumExpr internal constructor(val value: BigInteger) : KIntNumExpr(value) {
-    override fun accept(transformer: KTransformer): KExpr<KIntSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<KIntSort> = transformer.transform(this)
 }
 
 fun mkIntMod(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>) = KModIntExpr(lhs, rhs).intern()

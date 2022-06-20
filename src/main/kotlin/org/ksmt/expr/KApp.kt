@@ -32,9 +32,7 @@ class KFunctionApp<T : KSort> internal constructor(
         return decl == other.decl
     }
 
-    override fun accept(transformer: KTransformer): KExpr<T> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<T> = transformer.transform(this)
 }
 
 class KConst<T : KSort> internal constructor(override val decl: KDecl<T>) : KApp<T, KExpr<*>>(emptyList()) {
@@ -46,9 +44,7 @@ class KConst<T : KSort> internal constructor(override val decl: KDecl<T>) : KApp
         return decl == other.decl
     }
 
-    override fun accept(transformer: KTransformer): KExpr<T> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<T> = transformer.transform(this)
 }
 
 internal fun <T : KSort> mkFunctionApp(decl: KDecl<T>, args: List<KExpr<*>>) = KFunctionApp(decl, args).intern()

@@ -13,18 +13,14 @@ class KToIntRealExpr internal constructor(
 ) : KArithExpr<KIntSort, KExpr<KRealSort>>(listOf(arg)) {
     override val sort = KIntSort
     override val decl = KRealToIntDecl
-    override fun accept(transformer: KTransformer): KExpr<KIntSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<KIntSort> = transformer.transform(this)
 }
 
 class KIsIntRealExpr internal constructor(
     val arg: KExpr<KRealSort>
 ) : KBoolExpr<KExpr<KRealSort>>(listOf(arg)) {
     override val decl = KRealIsIntDecl
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 class KRealNumExpr internal constructor(
@@ -33,9 +29,7 @@ class KRealNumExpr internal constructor(
 ) : KArithExpr<KRealSort, KExpr<*>>(emptyList()) {
     override val sort = KRealSort
     override val decl by lazy { KRealNumDecl("$numerator/$denominator") }
-    override fun accept(transformer: KTransformer): KExpr<KRealSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformer): KExpr<KRealSort> = transformer.transform(this)
 }
 
 fun mkRealToInt(arg: KExpr<KRealSort>) = KToIntRealExpr(arg).intern()
