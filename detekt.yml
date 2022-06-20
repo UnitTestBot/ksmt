@@ -145,9 +145,9 @@ complexity:
   TooManyFunctions:
     active: true
     excludes: ['**/test/**', '**/example/**']
-    thresholdInFiles: 11
+    thresholdInFiles: 50
     thresholdInClasses: 11
-    thresholdInInterfaces: 11
+    thresholdInInterfaces: 50
     thresholdInObjects: 11
     thresholdInEnums: 11
     ignoreDeprecated: false
