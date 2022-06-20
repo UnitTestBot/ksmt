@@ -20,20 +20,20 @@ class KAndExpr internal constructor(args: List<KExpr<KBoolSort>>) : KBoolExpr<KE
 
 class KOrExpr internal constructor(args: List<KExpr<KBoolSort>>) : KBoolExpr<KExpr<KBoolSort>>(args) {
     override val decl = KOrDecl
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> =
-        (transformer as KBoolTransformer).transformOr(this) {
-            val transformedArgs = args.map { it.accept(transformer) }
-            if (transformedArgs == args) return@transformOr transformer.transformOr(this)
-            transformer.transformOr(mkOr(transformedArgs))
-        }
+    override fun accept(transformer: KTransformer) =
+        (transformer as KBoolTransformer).transformOrBefore(this)
+    fun transform(transformer: KTransformer): KExpr<KBoolSort> {
+        transformer as KBoolTransformer
+        val transformedArgs = args.map { it.accept(transformer) }
+        if (transformedArgs == args) return transformer.transformOrAfter(this)
+        return transformer.transformOrAfter(mkOr(transformedArgs))
+    }
 }
 
 class KNotExpr internal constructor(val arg: KExpr<KBoolSort>) : KBoolExpr<KExpr<KBoolSort>>(listOf(arg)) {
     override val decl = KNotDecl
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
-        TODO("Not yet implemented")
-    }
-
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> =
+        (transformer as KBoolTransformer).transformNot(this)
 }
 
 class KEqExpr<T : KSort> internal constructor(
