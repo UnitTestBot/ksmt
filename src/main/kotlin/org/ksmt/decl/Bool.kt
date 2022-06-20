@@ -5,6 +5,7 @@ import org.ksmt.expr.mkAnd
 import org.ksmt.expr.mkNot
 import org.ksmt.expr.mkOr
 import org.ksmt.expr.mkEq
+import org.ksmt.expr.mkIte
 import org.ksmt.expr.mkTrue
 import org.ksmt.expr.mkFalse
 import org.ksmt.sort.KBoolSort
@@ -27,6 +28,11 @@ object KNotDecl : KFuncDecl1<KBoolSort, KBoolSort>("not", KBoolSort, KBoolSort) 
 
 class KEqDecl<T : KSort>(argSort: T) : KFuncDecl2<KBoolSort, T, T>("eq", KBoolSort, argSort, argSort) {
     override fun apply(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> = mkEq(arg0, arg1)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
+
+class KIteDecl<T : KSort>(argSort: T) : KFuncDecl3<T, KBoolSort, T, T>("ite", argSort, KBoolSort, argSort, argSort) {
+    override fun apply(arg0: KExpr<KBoolSort>, arg1: KExpr<T>, arg2: KExpr<T>): KExpr<T> = mkIte(arg0, arg1, arg2)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
