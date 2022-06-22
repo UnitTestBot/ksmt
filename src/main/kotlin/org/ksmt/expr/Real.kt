@@ -1,10 +1,6 @@
 package org.ksmt.expr
 
 import org.ksmt.KContext
-import org.ksmt.decl.KRealIsIntDecl
-import org.ksmt.decl.KRealNumDecl
-import org.ksmt.decl.KRealToIntDecl
-import org.ksmt.expr.manager.ExprManager.intern
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
