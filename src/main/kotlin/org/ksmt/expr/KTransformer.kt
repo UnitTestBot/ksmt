@@ -1,5 +1,6 @@
 package org.ksmt.expr
 
+import org.ksmt.KContext
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KIntSort
@@ -10,14 +11,15 @@ import org.ksmt.sort.KSort
 
 
 interface KTransformer {
+    val ctx: KContext
     fun transform(expr: KExpr<*>): Any = error("transformer is not implemented for expr $expr")
     fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> = expr
 
     // function transformers
     fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = transformApp(expr)
     fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = transform(expr as KFunctionApp<T>)
-    fun <T : KSort> transformApp(expr: KApp<T, *>): KExpr<T> {
-        val args = expr.args.map { it.accept(this) }
+    fun <T : KSort> transformApp(expr: KApp<T, *>): KExpr<T> = with(ctx) {
+        val args = expr.args.map { it.accept(this@KTransformer) }
         if (args == expr.args) return transformExpr(expr)
         return transformExpr(mkApp(expr.decl, args))
     }
@@ -65,14 +67,14 @@ interface KTransformer {
     fun transform(expr: KRealNumExpr): KExpr<KRealSort> = transformApp(expr)
 
     // quantifier transformers
-    fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> {
-        val body = expr.body.accept(this)
+    fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> = with(ctx) {
+        val body = expr.body.accept(this@KTransformer)
         if (body == expr.body) return transformExpr(expr)
         return transformExpr(mkExistentialQuantifier(body, expr.bounds))
     }
 
-    fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> {
-        val body = expr.body.accept(this)
+    fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> = with(ctx) {
+        val body = expr.body.accept(this@KTransformer)
         if (body == expr.body) return transformExpr(expr)
         return transformExpr(mkUniversalQuantifier(body, expr.bounds))
     }

@@ -1,29 +1,22 @@
 package org.ksmt.expr
 
-import org.ksmt.decl.KAndDecl
-import org.ksmt.decl.KEqDecl
-import org.ksmt.decl.KNotDecl
-import org.ksmt.decl.KOrDecl
-import org.ksmt.decl.KIteDecl
-import org.ksmt.decl.KTrueDecl
-import org.ksmt.decl.KFalseDecl
-import org.ksmt.expr.manager.ExprManager.intern
+import org.ksmt.KContext
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 
 
 class KAndExpr internal constructor(args: List<KExpr<KBoolSort>>) : KBoolExpr<KExpr<KBoolSort>>(args) {
-    override val decl = KAndDecl
+    override fun KContext.decl() = mkAndDecl()
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 class KOrExpr internal constructor(args: List<KExpr<KBoolSort>>) : KBoolExpr<KExpr<KBoolSort>>(args) {
-    override val decl = KOrDecl
+    override fun KContext.decl() = mkOrDecl()
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 class KNotExpr internal constructor(val arg: KExpr<KBoolSort>) : KBoolExpr<KExpr<KBoolSort>>(listOf(arg)) {
-    override val decl = KNotDecl
+    override fun KContext.decl() = mkNotDecl()
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
@@ -31,7 +24,7 @@ class KEqExpr<T : KSort> internal constructor(
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
 ) : KBoolExpr<KExpr<T>>(listOf(lhs, rhs)) {
-    override val decl by lazy { KEqDecl(lhs.sort) }
+    override fun KContext.decl() = mkEqDecl(lhs.sort)
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
@@ -40,35 +33,17 @@ class KIteExpr<T : KSort> internal constructor(
     val trueBranch: KExpr<T>,
     val falseBranch: KExpr<T>
 ) : KApp<T, KExpr<*>>(listOf(condition, trueBranch, falseBranch)) {
-    override val sort by lazy { trueBranch.sort }
-    override val decl by lazy { KIteDecl(sort) }
+    override fun KContext.sort() = trueBranch.sort
+    override fun KContext.decl() = mkIteDecl(trueBranch.sort)
     override fun accept(transformer: KTransformer): KExpr<T> = transformer.transform(this)
 }
 
 object KTrue : KBoolExpr<KExpr<*>>(emptyList()) {
-    override val decl = KTrueDecl
+    override fun KContext.decl() = mkTrueDecl()
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 object KFalse : KBoolExpr<KExpr<*>>(emptyList()) {
-    override val decl = KFalseDecl
+    override fun KContext.decl() = mkFalseDecl()
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
-
-fun mkAnd(vararg args: KExpr<KBoolSort>) = KAndExpr(args.toList()).intern()
-fun mkAnd(args: List<KExpr<KBoolSort>>) = KAndExpr(args).intern()
-fun mkOr(vararg args: KExpr<KBoolSort>) = KOrExpr(args.toList()).intern()
-fun mkOr(args: List<KExpr<KBoolSort>>) = KOrExpr(args).intern()
-fun mkNot(arg: KExpr<KBoolSort>) = KNotExpr(arg).intern()
-fun mkTrue() = KTrue
-fun mkFalse() = KFalse
-fun <T : KSort> mkEq(lhs: KExpr<T>, rhs: KExpr<T>) = KEqExpr(lhs, rhs).intern()
-fun <T : KSort> mkIte(condition: KExpr<KBoolSort>, trueBranch: KExpr<T>, falseBranch: KExpr<T>) =
-    KIteExpr(condition, trueBranch, falseBranch).intern()
-
-infix fun <T : KSort> KExpr<T>.eq(other: KExpr<T>) = mkEq(this, other)
-operator fun KExpr<KBoolSort>.not() = mkNot(this)
-infix fun KExpr<KBoolSort>.and(other: KExpr<KBoolSort>) = mkAnd(this, other)
-infix fun KExpr<KBoolSort>.or(other: KExpr<KBoolSort>) = mkOr(this, other)
-val Boolean.expr
-    get() = if (this) mkTrue() else mkFalse()

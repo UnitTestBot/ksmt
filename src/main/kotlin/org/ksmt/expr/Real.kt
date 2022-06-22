@@ -1,5 +1,6 @@
 package org.ksmt.expr
 
+import org.ksmt.KContext
 import org.ksmt.decl.KRealIsIntDecl
 import org.ksmt.decl.KRealNumDecl
 import org.ksmt.decl.KRealToIntDecl
@@ -11,15 +12,15 @@ import org.ksmt.sort.KRealSort
 class KToIntRealExpr internal constructor(
     val arg: KExpr<KRealSort>
 ) : KArithExpr<KIntSort, KExpr<KRealSort>>(listOf(arg)) {
-    override val sort = KIntSort
-    override val decl = KRealToIntDecl
+    override fun KContext.sort() = mkIntSort()
+    override fun KContext.decl() = mkRealToIntDecl()
     override fun accept(transformer: KTransformer): KExpr<KIntSort> = transformer.transform(this)
 }
 
 class KIsIntRealExpr internal constructor(
     val arg: KExpr<KRealSort>
 ) : KBoolExpr<KExpr<KRealSort>>(listOf(arg)) {
-    override val decl = KRealIsIntDecl
+    override fun KContext.decl() = mkRealIsIntDecl()
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
@@ -27,27 +28,7 @@ class KRealNumExpr internal constructor(
     val numerator: KIntNumExpr,
     val denominator: KIntNumExpr
 ) : KArithExpr<KRealSort, KExpr<*>>(emptyList()) {
-    override val sort = KRealSort
-    override val decl by lazy { KRealNumDecl("$numerator/$denominator") }
+    override fun KContext.sort() = mkRealSort()
+    override fun KContext.decl() = mkRealNumDecl("$numerator/$denominator")
     override fun accept(transformer: KTransformer): KExpr<KRealSort> = transformer.transform(this)
 }
-
-fun mkRealToInt(arg: KExpr<KRealSort>) = KToIntRealExpr(arg).intern()
-fun mkRealIsInt(arg: KExpr<KRealSort>) = KIsIntRealExpr(arg).intern()
-fun mkRealNum(numerator: KIntNumExpr, denominator: KIntNumExpr) = KRealNumExpr(numerator, denominator).intern()
-fun mkRealNum(numerator: KIntNumExpr) = mkRealNum(numerator, 1.intExpr)
-fun mkRealNum(numerator: Int) = mkRealNum(mkIntNum(numerator))
-fun mkRealNum(numerator: Int, denominator: Int) = mkRealNum(mkIntNum(numerator), mkIntNum(denominator))
-fun mkRealNum(numerator: Long) = mkRealNum(mkIntNum(numerator))
-fun mkRealNum(numerator: Long, denominator: Long) = mkRealNum(mkIntNum(numerator), mkIntNum(denominator))
-fun mkRealNum(value: String): KRealNumExpr {
-    val parts = value.split('/')
-    return when (parts.size) {
-        1 -> mkRealNum(mkIntNum(parts[0]))
-        2 -> mkRealNum(mkIntNum(parts[0]), mkIntNum(parts[1]))
-        else -> error("incorrect real num format")
-    }
-}
-
-fun KExpr<KRealSort>.toIntExpr() = mkRealToInt(this)
-fun KExpr<KRealSort>.isIntExpr() = mkRealIsInt(this)
