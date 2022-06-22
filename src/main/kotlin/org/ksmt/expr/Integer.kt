@@ -36,11 +36,6 @@ abstract class KIntNumExpr(
 ) : KArithExpr<KIntSort, KExpr<*>>(emptyList()) {
     override fun KContext.sort() = mkIntSort()
     override fun KContext.decl() = mkIntNumDecl("$value")
-    override fun equalTo(other: KExpr<*>): Boolean {
-        if (!super.equalTo(other)) return false
-        other as KIntNumExpr
-        return value == other.value
-    }
 }
 
 class KInt32NumExpr internal constructor(val value: Int) : KIntNumExpr(value) {
