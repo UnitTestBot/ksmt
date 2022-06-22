@@ -1,11 +1,11 @@
 package example
 
-import org.ksmt.decl.mkConst
+import org.ksmt.KContext
 import org.ksmt.expr.*
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 
-class ConstCollector : KTransformer {
+class ConstCollector(override val ctx: KContext) : KTransformer {
     val constants = hashSetOf<KConst<*>>()
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> {
         constants += expr
@@ -13,13 +13,13 @@ class ConstCollector : KTransformer {
     }
 }
 
-fun main() {
+fun main() = with(KContext()) {
     val e1 = ((KBoolSort.mkConst("e1") and KBoolSort.mkConst("e2"))
             or (KBoolSort.mkConst("e2") and KBoolSort.mkConst("e1")))
     val e2 = (KBoolSort.mkConst("e1")
             and (KBoolSort.mkConst("e1") and KBoolSort.mkConst("e2"))
             or (KBoolSort.mkConst("e2") and KBoolSort.mkConst("e1")))
     val e = e1 and e2
-    val constants = ConstCollector().apply { e.accept(this) }.constants
+    val constants = ConstCollector(this).apply { e.accept(this) }.constants
     println(constants.size)
 }
