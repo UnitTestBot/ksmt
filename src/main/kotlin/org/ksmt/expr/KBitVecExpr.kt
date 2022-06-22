@@ -11,8 +11,8 @@ object KBVSize64 : KBVSize
 class KBVCustomSize(val sizeBits: UInt) : KBVSize
 
 abstract class BitVecExpr<T : KBVSort<KBVSize>>(
-    args: List<KExpr<*>>
-) : KApp<T, KExpr<*>>(args) {
+    override val args: List<KExpr<*>>
+) : KApp<T, KExpr<*>>() {
     override fun accept(transformer: KTransformer): KExpr<T> = transformer.transform(this)
 }
 

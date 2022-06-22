@@ -8,34 +8,41 @@ import java.math.BigInteger
 class KModIntExpr internal constructor(
     val lhs: KExpr<KIntSort>,
     val rhs: KExpr<KIntSort>
-) : KArithExpr<KIntSort, KExpr<KIntSort>>(listOf(lhs, rhs)) {
+) : KApp<KIntSort, KExpr<KIntSort>>() {
     override fun KContext.sort() = mkIntSort()
     override fun KContext.decl() = mkIntModDecl()
+    override val args: List<KExpr<KIntSort>>
+        get() = listOf(lhs, rhs)
     override fun accept(transformer: KTransformer): KExpr<KIntSort> = transformer.transform(this)
 }
 
 class KRemIntExpr internal constructor(
     val lhs: KExpr<KIntSort>,
     val rhs: KExpr<KIntSort>
-) : KArithExpr<KIntSort, KExpr<KIntSort>>(listOf(lhs, rhs)) {
+) : KApp<KIntSort, KExpr<KIntSort>>() {
     override fun KContext.sort() = mkIntSort()
     override fun KContext.decl() = mkIntRemDecl()
+    override val args: List<KExpr<KIntSort>>
+        get() = listOf(lhs, rhs)
     override fun accept(transformer: KTransformer): KExpr<KIntSort> = transformer.transform(this)
 }
 
 class KToRealIntExpr internal constructor(
     val arg: KExpr<KIntSort>
-) : KArithExpr<KRealSort, KExpr<KIntSort>>(listOf(arg)) {
+) : KApp<KRealSort, KExpr<KIntSort>>() {
     override fun KContext.sort() = mkRealSort()
     override fun KContext.decl() = mkIntToRealDecl()
+    override val args: List<KExpr<KIntSort>>
+        get() = listOf(arg)
     override fun accept(transformer: KTransformer): KExpr<KRealSort> = transformer.transform(this)
 }
 
 abstract class KIntNumExpr(
     private val value: Number
-) : KArithExpr<KIntSort, KExpr<*>>(emptyList()) {
+) : KApp<KIntSort, KExpr<*>>() {
     override fun KContext.sort() = mkIntSort()
     override fun KContext.decl() = mkIntNumDecl("$value")
+    override val args = emptyList<KExpr<*>>()
 }
 
 class KInt32NumExpr internal constructor(val value: Int) : KIntNumExpr(value) {
