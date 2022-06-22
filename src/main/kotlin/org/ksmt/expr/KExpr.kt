@@ -9,6 +9,5 @@ abstract class KExpr<T : KSort> {
     override fun equals(other: Any?): Boolean = this === other
     override fun hashCode(): Int = hash
     abstract fun hash(): Int
-    abstract fun equalTo(other: KExpr<*>): Boolean
     abstract fun accept(transformer: KTransformer): KExpr<T>
 }

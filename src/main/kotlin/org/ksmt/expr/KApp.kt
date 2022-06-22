@@ -11,13 +11,6 @@ abstract class KApp<T : KSort, A : KExpr<*>> internal constructor(
 ) : KExpr<T>() {
     abstract fun KContext.decl(): KDecl<T>
     override fun hash(): Int = Objects.hash(javaClass, args)
-    override fun equalTo(other: KExpr<*>): Boolean {
-        if (this === other) return true
-        if (javaClass != other.javaClass) return false
-        other as KApp<*, *>
-        if (args != other.args) return false
-        return true
-    }
 }
 
 open class KFunctionApp<T : KSort> internal constructor(
@@ -25,11 +18,6 @@ open class KFunctionApp<T : KSort> internal constructor(
 ) : KApp<T, KExpr<*>>(args) {
     override fun KContext.sort(): T = decl.sort
     override fun KContext.decl(): KDecl<T> = decl
-    override fun equalTo(other: KExpr<*>): Boolean {
-        if (!super.equalTo(other)) return false
-        other as KFunctionApp<*>
-        return decl == other.decl
-    }
 
     override fun accept(transformer: KTransformer): KExpr<T> = transformer.transform(this)
 }
