@@ -258,40 +258,41 @@ open class KContext {
     fun <T : KSort> T.mkConstDecl(name: String) = mkConstDecl(name, this)
 
     // bool
-    fun mkFalseDecl(): KDecl<KBoolSort> = KFalseDecl
-    fun mkTrueDecl(): KDecl<KBoolSort> = KTrueDecl
-    fun mkAndDecl(): KDecl<KBoolSort> = KAndDecl
-    fun mkOrDecl(): KDecl<KBoolSort> = KOrDecl
-    fun mkNotDecl(): KDecl<KBoolSort> = KNotDecl
-    fun <T : KSort> mkEqDecl(arg: T): KDecl<KBoolSort> = KEqDecl(arg)
-    fun <T : KSort> mkIteDecl(arg: T): KDecl<T> = KIteDecl(arg)
+    fun mkFalseDecl(): KFalseDecl = KFalseDecl
+    fun mkTrueDecl(): KTrueDecl = KTrueDecl
+    fun mkAndDecl(): KAndDecl = KAndDecl
+    fun mkOrDecl(): KOrDecl = KOrDecl
+    fun mkNotDecl(): KNotDecl = KNotDecl
+    fun <T : KSort> mkEqDecl(arg: T): KEqDecl<T> = KEqDecl(arg)
+    fun <T : KSort> mkIteDecl(arg: T): KIteDecl<T> = KIteDecl(arg)
 
     // array
-    fun <D : KSort, R : KSort> mkArraySelectDecl(array: KArraySort<D, R>): KDecl<R> = KArraySelectDecl(array)
+    fun <D : KSort, R : KSort> mkArraySelectDecl(array: KArraySort<D, R>): KArraySelectDecl<D, R> =
+        KArraySelectDecl(array)
 
-    fun <D : KSort, R : KSort> mkArrayStoreDecl(array: KArraySort<D, R>): KDecl<KArraySort<D, R>> =
+    fun <D : KSort, R : KSort> mkArrayStoreDecl(array: KArraySort<D, R>): KArrayStoreDecl<D, R> =
         KArrayStoreDecl(array)
 
     // arith
-    fun <T : KArithSort<T>> mkArithAddDecl(arg: T) = KArithAddDecl(arg)
-    fun <T : KArithSort<T>> mkArithSubDecl(arg: T) = KArithSubDecl(arg)
-    fun <T : KArithSort<T>> mkArithMulDecl(arg: T) = KArithMulDecl(arg)
-    fun <T : KArithSort<T>> mkArithDivDecl(arg: T) = KArithDivDecl(arg)
-    fun <T : KArithSort<T>> mkArithPowerDecl(arg: T) = KArithPowerDecl(arg)
+    fun <T : KArithSort<T>> mkArithAddDecl(arg: T): KArithAddDecl<T> = KArithAddDecl(arg)
+    fun <T : KArithSort<T>> mkArithSubDecl(arg: T): KArithSubDecl<T> = KArithSubDecl(arg)
+    fun <T : KArithSort<T>> mkArithMulDecl(arg: T): KArithMulDecl<T> = KArithMulDecl(arg)
+    fun <T : KArithSort<T>> mkArithDivDecl(arg: T): KArithDivDecl<T> = KArithDivDecl(arg)
+    fun <T : KArithSort<T>> mkArithPowerDecl(arg: T): KArithPowerDecl<T> = KArithPowerDecl(arg)
     fun <T : KArithSort<T>> mkArithUnaryMinusDecl(arg: T) = KArithUnaryMinusDecl(arg)
-    fun <T : KArithSort<T>> mkArithGeDecl(arg: T) = KArithGeDecl(arg)
-    fun <T : KArithSort<T>> mkArithGtDecl(arg: T) = KArithGtDecl(arg)
-    fun <T : KArithSort<T>> mkArithLeDecl(arg: T) = KArithLeDecl(arg)
-    fun <T : KArithSort<T>> mkArithLtDecl(arg: T) = KArithLtDecl(arg)
+    fun <T : KArithSort<T>> mkArithGeDecl(arg: T): KArithGeDecl<T> = KArithGeDecl(arg)
+    fun <T : KArithSort<T>> mkArithGtDecl(arg: T): KArithGtDecl<T> = KArithGtDecl(arg)
+    fun <T : KArithSort<T>> mkArithLeDecl(arg: T): KArithLeDecl<T> = KArithLeDecl(arg)
+    fun <T : KArithSort<T>> mkArithLtDecl(arg: T): KArithLtDecl<T> = KArithLtDecl(arg)
 
     // int
-    fun mkIntModDecl() = KIntModDecl
-    fun mkIntToRealDecl() = KIntToRealDecl
-    fun mkIntRemDecl() = KIntRemDecl
-    fun mkIntNumDecl(value: String) = KIntNumDecl(value)
+    fun mkIntModDecl(): KIntModDecl = KIntModDecl
+    fun mkIntToRealDecl(): KIntToRealDecl = KIntToRealDecl
+    fun mkIntRemDecl(): KIntRemDecl = KIntRemDecl
+    fun mkIntNumDecl(value: String): KIntNumDecl = KIntNumDecl(value)
 
     // real
-    fun mkRealIsIntDecl() = KRealIsIntDecl
-    fun mkRealToIntDecl() = KRealToIntDecl
-    fun mkRealNumDecl(value: String) = KRealNumDecl(value)
+    fun mkRealIsIntDecl(): KRealIsIntDecl = KRealIsIntDecl
+    fun mkRealToIntDecl(): KRealToIntDecl = KRealToIntDecl
+    fun mkRealNumDecl(value: String): KRealNumDecl = KRealNumDecl(value)
 }
