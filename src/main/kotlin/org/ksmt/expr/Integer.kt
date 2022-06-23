@@ -12,7 +12,7 @@ import java.math.BigInteger
 class KModIntExpr internal constructor(
     val lhs: KExpr<KIntSort>,
     val rhs: KExpr<KIntSort>
-) : KApp<KIntSort, KExpr<KIntSort>>() {
+) : KApp<KIntSort, KExpr<KIntSort>> {
     override fun KContext.sort(): KIntSort = mkIntSort()
     override fun KContext.decl(): KIntModDecl = mkIntModDecl()
     override val args: List<KExpr<KIntSort>>
@@ -23,7 +23,7 @@ class KModIntExpr internal constructor(
 class KRemIntExpr internal constructor(
     val lhs: KExpr<KIntSort>,
     val rhs: KExpr<KIntSort>
-) : KApp<KIntSort, KExpr<KIntSort>>() {
+) : KApp<KIntSort, KExpr<KIntSort>> {
     override fun KContext.sort(): KIntSort = mkIntSort()
     override fun KContext.decl(): KIntRemDecl = mkIntRemDecl()
     override val args: List<KExpr<KIntSort>>
@@ -33,7 +33,7 @@ class KRemIntExpr internal constructor(
 
 class KToRealIntExpr internal constructor(
     val arg: KExpr<KIntSort>
-) : KApp<KRealSort, KExpr<KIntSort>>() {
+) : KApp<KRealSort, KExpr<KIntSort>> {
     override fun KContext.sort(): KRealSort = mkRealSort()
     override fun KContext.decl(): KIntToRealDecl = mkIntToRealDecl()
     override val args: List<KExpr<KIntSort>>
@@ -43,7 +43,7 @@ class KToRealIntExpr internal constructor(
 
 abstract class KIntNumExpr(
     private val value: Number
-) : KApp<KIntSort, KExpr<*>>() {
+) : KApp<KIntSort, KExpr<*>> {
     override fun KContext.sort(): KIntSort = mkIntSort()
     override fun KContext.decl(): KIntNumDecl = mkIntNumDecl("$value")
     override val args = emptyList<KExpr<*>>()

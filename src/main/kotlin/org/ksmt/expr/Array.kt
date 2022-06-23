@@ -9,7 +9,7 @@ class KArrayStore<D : KSort, R : KSort> internal constructor(
     val array: KExpr<KArraySort<D, R>>,
     val index: KExpr<D>,
     val value: KExpr<R>
-) : KApp<KArraySort<D, R>, KExpr<*>>() {
+) : KApp<KArraySort<D, R>, KExpr<*>> {
     override fun KContext.sort(): KArraySort<D, R> = array.sort
     override fun KContext.decl(): KDecl<KArraySort<D, R>> = mkArrayStoreDecl(array.sort)
     override val args: List<KExpr<*>>
@@ -21,7 +21,7 @@ class KArrayStore<D : KSort, R : KSort> internal constructor(
 class KArraySelect<D : KSort, R : KSort> internal constructor(
     val array: KExpr<KArraySort<D, R>>,
     val index: KExpr<D>
-) : KApp<R, KExpr<*>>() {
+) : KApp<R, KExpr<*>> {
     override fun KContext.sort(): R = array.sort.range
     override fun KContext.decl(): KDecl<R> = mkArraySelectDecl(array.sort)
     override val args: List<KExpr<*>>
