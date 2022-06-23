@@ -1,6 +1,7 @@
 package org.ksmt.expr
 
 import org.ksmt.KContext
+import org.ksmt.decl.*
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBoolSort
 
@@ -12,7 +13,7 @@ class KAddArithExpr<T : KArithSort<T>> internal constructor(
     }
 
     override fun KContext.sort(): T = args.first().sort
-    override fun KContext.decl() = mkArithAddDecl(sort)
+    override fun KContext.decl(): KArithAddDecl<T> = mkArithAddDecl(sort)
     override fun accept(transformer: KTransformer): KExpr<T> = transformer.transform(this)
 }
 
@@ -24,7 +25,7 @@ class KMulArithExpr<T : KArithSort<T>> internal constructor(
     }
 
     override fun KContext.sort(): T = args.first().sort
-    override fun KContext.decl() = mkArithMulDecl(sort)
+    override fun KContext.decl(): KArithMulDecl<T> = mkArithMulDecl(sort)
     override fun accept(transformer: KTransformer): KExpr<T> = transformer.transform(this)
 }
 
@@ -36,7 +37,7 @@ class KSubArithExpr<T : KArithSort<T>> internal constructor(
     }
 
     override fun KContext.sort(): T = args.first().sort
-    override fun KContext.decl() = mkArithSubDecl(sort)
+    override fun KContext.decl(): KArithSubDecl<T> = mkArithSubDecl(sort)
     override fun accept(transformer: KTransformer): KExpr<T> = transformer.transform(this)
 }
 
@@ -44,7 +45,7 @@ class KUnaryMinusArithExpr<T : KArithSort<T>> internal constructor(
     val arg: KExpr<T>
 ) : KApp<T, KExpr<T>>() {
     override fun KContext.sort(): T = arg.sort
-    override fun KContext.decl() = mkArithUnaryMinusDecl(sort)
+    override fun KContext.decl(): KArithUnaryMinusDecl<T> = mkArithUnaryMinusDecl(sort)
     override val args: List<KExpr<T>>
         get() = listOf(arg)
 
@@ -56,7 +57,7 @@ class KDivArithExpr<T : KArithSort<T>> internal constructor(
     val rhs: KExpr<T>
 ) : KApp<T, KExpr<T>>() {
     override fun KContext.sort(): T = lhs.sort
-    override fun KContext.decl() = mkArithDivDecl(sort)
+    override fun KContext.decl(): KArithDivDecl<T> = mkArithDivDecl(sort)
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)
 
@@ -68,7 +69,7 @@ class KPowerArithExpr<T : KArithSort<T>> internal constructor(
     val rhs: KExpr<T>
 ) : KApp<T, KExpr<T>>() {
     override fun KContext.sort(): T = lhs.sort
-    override fun KContext.decl() = mkArithPowerDecl(sort)
+    override fun KContext.decl(): KArithPowerDecl<T> = mkArithPowerDecl(sort)
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)
 
@@ -79,8 +80,8 @@ class KLtArithExpr<T : KArithSort<T>> internal constructor(
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
 ) : KApp<KBoolSort, KExpr<T>>() {
-    override fun KContext.sort() = mkBoolSort()
-    override fun KContext.decl() = mkArithLtDecl(lhs.sort)
+    override fun KContext.sort(): KBoolSort = mkBoolSort()
+    override fun KContext.decl(): KArithLtDecl<T> = mkArithLtDecl(lhs.sort)
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)
 
@@ -91,8 +92,8 @@ class KLeArithExpr<T : KArithSort<T>> internal constructor(
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
 ) : KApp<KBoolSort, KExpr<T>>() {
-    override fun KContext.sort() = mkBoolSort()
-    override fun KContext.decl() = mkArithLeDecl(lhs.sort)
+    override fun KContext.sort(): KBoolSort = mkBoolSort()
+    override fun KContext.decl(): KArithLeDecl<T> = mkArithLeDecl(lhs.sort)
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)
 
@@ -103,8 +104,8 @@ class KGtArithExpr<T : KArithSort<T>> internal constructor(
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
 ) : KApp<KBoolSort, KExpr<T>>() {
-    override fun KContext.sort() = mkBoolSort()
-    override fun KContext.decl() = mkArithGtDecl(lhs.sort)
+    override fun KContext.sort(): KBoolSort = mkBoolSort()
+    override fun KContext.decl(): KArithGtDecl<T> = mkArithGtDecl(lhs.sort)
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)
 
@@ -115,8 +116,8 @@ class KGeArithExpr<T : KArithSort<T>> internal constructor(
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
 ) : KApp<KBoolSort, KExpr<T>>() {
-    override fun KContext.sort() = mkBoolSort()
-    override fun KContext.decl() = mkArithGeDecl(lhs.sort)
+    override fun KContext.sort(): KBoolSort = mkBoolSort()
+    override fun KContext.decl(): KArithGeDecl<T> = mkArithGeDecl(lhs.sort)
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)
 
