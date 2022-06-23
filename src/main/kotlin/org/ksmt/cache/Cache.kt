@@ -5,7 +5,7 @@ import java.util.*
 
 class Cache1<T, A0>(val builder: (A0) -> T) {
     private val cache = WeakHashMap<A0, WeakReference<T>>()
-    operator fun invoke(a0: A0): T {
+    fun create(a0: A0): T {
         val currentNode = cache[a0]?.get()
         if (currentNode != null) return currentNode
         val newNode = builder(a0)
@@ -16,7 +16,7 @@ class Cache1<T, A0>(val builder: (A0) -> T) {
 
 class Cache2<T, A0, A1>(val builder: (A0, A1) -> T) {
     private val cache = WeakHashMap<A0, WeakHashMap<A1, WeakReference<T>>>()
-    operator fun invoke(a0: A0, a1: A1): T {
+    fun create(a0: A0, a1: A1): T {
         val node0 = cache.getOrPut(a0) { WeakHashMap() }
         val currentNode = node0[a1]?.get()
         if (currentNode != null) return currentNode
@@ -28,7 +28,7 @@ class Cache2<T, A0, A1>(val builder: (A0, A1) -> T) {
 
 class Cache3<T, A0, A1, A2>(val builder: (A0, A1, A2) -> T) {
     private val cache = WeakHashMap<A0, WeakHashMap<A1, WeakHashMap<A2, WeakReference<T>>>>()
-    operator fun invoke(a0: A0, a1: A1, a2: A2): T {
+    fun create(a0: A0, a1: A1, a2: A2): T {
         val node0 = cache.getOrPut(a0) { WeakHashMap() }
         val node1 = node0.getOrPut(a1) { WeakHashMap() }
         val currentNode = node1[a2]?.get()
@@ -41,7 +41,7 @@ class Cache3<T, A0, A1, A2>(val builder: (A0, A1, A2) -> T) {
 
 class Cache4<T, A0, A1, A2, A3>(val builder: (A0, A1, A2, A3) -> T) {
     private val cache = WeakHashMap<A0, WeakHashMap<A1, WeakHashMap<A2, WeakHashMap<A3, WeakReference<T>>>>>()
-    operator fun invoke(a0: A0, a1: A1, a2: A2, a3: A3): T {
+    fun create(a0: A0, a1: A1, a2: A2, a3: A3): T {
         val node0 = cache.getOrPut(a0) { WeakHashMap() }
         val node1 = node0.getOrPut(a1) { WeakHashMap() }
         val node2 = node1.getOrPut(a2) { WeakHashMap() }
