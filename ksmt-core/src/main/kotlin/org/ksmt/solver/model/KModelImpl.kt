@@ -14,7 +14,7 @@ open class KModelImpl(
         get() = interpretations.keys
 
     override fun <T : KSort> eval(expr: KExpr<T>, complete: Boolean): KExpr<T> =
-        KModelEvaluator(ctx, this, complete).apply(expr)
+        with(KModelEvaluator(ctx, this, complete)) { expr.eval() }
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? =
