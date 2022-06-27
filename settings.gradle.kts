@@ -8,3 +8,4 @@
  */
 
 rootProject.name = "ksmt"
+include("ksmt-core")
