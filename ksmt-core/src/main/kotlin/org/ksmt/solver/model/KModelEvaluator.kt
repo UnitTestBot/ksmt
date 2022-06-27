@@ -28,36 +28,36 @@ open class KModelEvaluator(override val ctx: KContext, val model: KModel, val co
     override fun transform(expr: KAndExpr): KExpr<KBoolSort> = expr.evalApp { args ->
         val filteredArgs = arrayListOf<KExpr<KBoolSort>>()
         for (arg in args) {
-            if (arg == mkTrue()) continue
-            if (arg == mkFalse()) return@evalApp mkFalse()
+            if (arg == trueExpr) continue
+            if (arg == falseExpr) return@evalApp falseExpr
             filteredArgs.add(arg)
         }
-        if (filteredArgs.isEmpty()) return@evalApp mkTrue()
+        if (filteredArgs.isEmpty()) return@evalApp trueExpr
         mkAnd(filteredArgs)
     }
 
     override fun transform(expr: KOrExpr): KExpr<KBoolSort> = expr.evalApp { args ->
         val filteredArgs = arrayListOf<KExpr<KBoolSort>>()
         for (arg in args) {
-            if (arg == mkFalse()) continue
-            if (arg == mkTrue()) return@evalApp mkTrue()
+            if (arg == falseExpr) continue
+            if (arg == trueExpr) return@evalApp trueExpr
             filteredArgs.add(arg)
         }
-        if (filteredArgs.isEmpty()) return@evalApp mkFalse()
+        if (filteredArgs.isEmpty()) return@evalApp falseExpr
         mkOr(filteredArgs)
     }
 
     override fun transform(expr: KNotExpr): KExpr<KBoolSort> = expr.evalApp { args ->
         when (val arg = args[0]) {
-            mkTrue() -> mkFalse()
-            mkFalse() -> mkTrue()
+            trueExpr -> falseExpr
+            falseExpr -> trueExpr
             else -> mkNot(arg)
         }
     }
 
     override fun <T : KSort> transform(expr: KEqExpr<T>): KExpr<KBoolSort> = expr.evalApp { args ->
         val (arg0, arg1) = args
-        if (arg0 == arg1) return@evalApp mkTrue()
+        if (arg0 == arg1) return@evalApp trueExpr
         mkEq(arg0, arg1)
     }
 
@@ -68,8 +68,8 @@ open class KModelEvaluator(override val ctx: KContext, val model: KModel, val co
         arg1 as KExpr<T>
         arg2 as KExpr<T>
         when (arg0) {
-            mkTrue() -> arg1
-            mkFalse() -> arg2
+            trueExpr -> arg1
+            falseExpr -> arg2
             else -> mkIte(arg0, arg1, arg2)
         }
     }
@@ -146,7 +146,7 @@ open class KModelEvaluator(override val ctx: KContext, val model: KModel, val co
     @Suppress("UNCHECKED_CAST")
     open fun <T : KSort> T.sampleValue(): KExpr<T> = with(ctx) {
         accept(object : KSortVisitor<KExpr<T>> {
-            override fun visit(sort: KBoolSort): KExpr<T> = mkTrue() as KExpr<T>
+            override fun visit(sort: KBoolSort): KExpr<T> = trueExpr as KExpr<T>
             override fun visit(sort: KIntSort): KExpr<T> = 0.intExpr as KExpr<T>
             override fun visit(sort: KRealSort): KExpr<T> = mkRealNum(0) as KExpr<T>
             override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): KExpr<T> =

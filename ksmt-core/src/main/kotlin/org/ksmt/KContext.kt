@@ -86,8 +86,15 @@ open class KContext {
     operator fun KExpr<KBoolSort>.not() = mkNot(this)
     infix fun KExpr<KBoolSort>.and(other: KExpr<KBoolSort>) = mkAnd(this, other)
     infix fun KExpr<KBoolSort>.or(other: KExpr<KBoolSort>) = mkOr(this, other)
+
+    val trueExpr: KTrue
+        get() = mkTrue()
+
+    val falseExpr: KFalse
+        get() = mkFalse()
+
     val Boolean.expr
-        get() = if (this) mkTrue() else mkFalse()
+        get() = if (this) trueExpr else falseExpr
 
     // functions
     /*
