@@ -26,6 +26,17 @@ open class KContext {
     val realSortCache = mkCache<KRealSort> { KRealSort(this) }
     fun mkRealSort(): KRealSort = realSortCache.create()
 
+    // utils
+    val boolSort: KBoolSort
+        get() = mkBoolSort()
+
+    val intSort: KIntSort
+        get() = mkIntSort()
+
+    val realSort: KRealSort
+        get() = mkRealSort()
+
+
     /*
     * expressions
     * */
