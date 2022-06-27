@@ -9,3 +9,4 @@
 
 rootProject.name = "ksmt"
 include("ksmt-core")
+include("ksmt-z3")
