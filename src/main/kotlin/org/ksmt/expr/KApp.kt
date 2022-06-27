@@ -8,6 +8,17 @@ import org.ksmt.sort.KSort
 abstract class KApp<T : KSort, A : KExpr<*>> internal constructor(ctx: KContext) : KExpr<T>(ctx) {
     abstract val args: List<A>
     abstract fun decl(): KDecl<T>
+    override fun toString(): String = buildString {
+        append('(')
+        with(ctx) {
+            append(decl.name)
+        }
+        for (arg in args) {
+            append(' ')
+            append("$arg")
+        }
+        append(')')
+    }
 }
 
 open class KFunctionApp<T : KSort> internal constructor(
