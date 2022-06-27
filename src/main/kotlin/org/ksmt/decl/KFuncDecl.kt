@@ -4,7 +4,6 @@ import org.ksmt.KContext
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KSort
-import java.util.*
 
 open class KFuncDecl<T : KSort>(
     ctx: KContext,
@@ -18,15 +17,6 @@ open class KFuncDecl<T : KSort>(
     }
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
-
-    override fun equals(other: Any?): Boolean {
-        if (!super.equals(other)) return false
-        other as KFuncDecl<*>
-        if (argSorts != other.argSorts) return false
-        return true
-    }
-
-    override fun hashCode(): Int = Objects.hash(super.hashCode(), argSorts)
 }
 
 abstract class KFuncDecl1<T : KSort, A : KSort>(
