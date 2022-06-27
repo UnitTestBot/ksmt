@@ -3,6 +3,22 @@ package org.ksmt.cache
 import java.lang.ref.WeakReference
 import java.util.*
 
+class Cache0<T>(val builder: () -> T) {
+    private var value: Any? = UNINITIALIZED
+
+    @Suppress("UNCHECKED_CAST")
+    fun create(): T {
+        if (UNINITIALIZED === value) {
+            value = builder()
+        }
+        return value as T
+    }
+
+    companion object {
+        private val UNINITIALIZED = Any()
+    }
+}
+
 class Cache1<T, A0>(val builder: (A0) -> T) {
     private val cache = WeakHashMap<A0, WeakReference<T>>()
     fun create(a0: A0): T {
@@ -53,7 +69,7 @@ class Cache4<T, A0, A1, A2, A3>(val builder: (A0, A1, A2, A3) -> T) {
     }
 }
 
-
+fun <T> mkCache(builder: () -> T) = Cache0(builder)
 fun <T, A0> mkCache(builder: (A0) -> T) = Cache1(builder)
 fun <T, A0, A1> mkCache(builder: (A0, A1) -> T) = Cache2(builder)
 fun <T, A0, A1, A2> mkCache(builder: (A0, A1, A2) -> T) = Cache3(builder)

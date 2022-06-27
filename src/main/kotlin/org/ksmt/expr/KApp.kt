@@ -5,20 +5,22 @@ import org.ksmt.decl.KDecl
 import org.ksmt.sort.KSort
 
 
-abstract class KApp<T : KSort, A : KExpr<*>> internal constructor() : KExpr<T>() {
+abstract class KApp<T : KSort, A : KExpr<*>> internal constructor(ctx: KContext) : KExpr<T>(ctx) {
     abstract val args: List<A>
-    abstract fun KContext.decl(): KDecl<T>
+    abstract fun decl(): KDecl<T>
 }
 
 open class KFunctionApp<T : KSort> internal constructor(
+    ctx: KContext,
     val decl: KDecl<T>, override val args: List<KExpr<*>>
-) : KApp<T, KExpr<*>>() {
-    override fun KContext.sort(): T = decl.sort
-    override fun KContext.decl(): KDecl<T> = decl
+) : KApp<T, KExpr<*>>(ctx) {
+    override fun sort(): T = decl.sort
+    override fun decl(): KDecl<T> = decl
 
     override fun accept(transformer: KTransformer): KExpr<T> = transformer.transform(this)
 }
 
-class KConst<T : KSort> internal constructor(decl: KDecl<T>) : KFunctionApp<T>(decl, emptyList()) {
+class KConst<T : KSort> internal constructor(ctx: KContext, decl: KDecl<T>) :
+    KFunctionApp<T>(ctx, decl, args = emptyList()) {
     override fun accept(transformer: KTransformer): KExpr<T> = transformer.transform(this)
 }

@@ -6,46 +6,50 @@ import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBoolSort
 
 class KAddArithExpr<T : KArithSort<T>> internal constructor(
+    ctx: KContext,
     override val args: List<KExpr<T>>
-) : KApp<T, KExpr<T>>() {
+) : KApp<T, KExpr<T>>(ctx) {
     init {
         require(args.isNotEmpty())
     }
 
-    override fun KContext.sort(): T = args.first().sort
-    override fun KContext.decl(): KArithAddDecl<T> = mkArithAddDecl(sort)
+    override fun sort(): T = with(ctx) { args.first().sort }
+    override fun decl(): KArithAddDecl<T> = with(ctx) { mkArithAddDecl(sort) }
     override fun accept(transformer: KTransformer): KExpr<T> = transformer.transform(this)
 }
 
 class KMulArithExpr<T : KArithSort<T>> internal constructor(
+    ctx: KContext,
     override val args: List<KExpr<T>>
-) : KApp<T, KExpr<T>>() {
+) : KApp<T, KExpr<T>>(ctx) {
     init {
         require(args.isNotEmpty())
     }
 
-    override fun KContext.sort(): T = args.first().sort
-    override fun KContext.decl(): KArithMulDecl<T> = mkArithMulDecl(sort)
+    override fun sort(): T = with(ctx) { args.first().sort }
+    override fun decl(): KArithMulDecl<T> = with(ctx) { mkArithMulDecl(sort) }
     override fun accept(transformer: KTransformer): KExpr<T> = transformer.transform(this)
 }
 
 class KSubArithExpr<T : KArithSort<T>> internal constructor(
+    ctx: KContext,
     override val args: List<KExpr<T>>
-) : KApp<T, KExpr<T>>() {
+) : KApp<T, KExpr<T>>(ctx) {
     init {
         require(args.isNotEmpty())
     }
 
-    override fun KContext.sort(): T = args.first().sort
-    override fun KContext.decl(): KArithSubDecl<T> = mkArithSubDecl(sort)
+    override fun sort(): T = with(ctx) { args.first().sort }
+    override fun decl(): KArithSubDecl<T> = with(ctx) { mkArithSubDecl(sort) }
     override fun accept(transformer: KTransformer): KExpr<T> = transformer.transform(this)
 }
 
 class KUnaryMinusArithExpr<T : KArithSort<T>> internal constructor(
+    ctx: KContext,
     val arg: KExpr<T>
-) : KApp<T, KExpr<T>>() {
-    override fun KContext.sort(): T = arg.sort
-    override fun KContext.decl(): KArithUnaryMinusDecl<T> = mkArithUnaryMinusDecl(sort)
+) : KApp<T, KExpr<T>>(ctx) {
+    override fun sort(): T = with(ctx) { arg.sort }
+    override fun decl(): KArithUnaryMinusDecl<T> = with(ctx) { mkArithUnaryMinusDecl(sort) }
     override val args: List<KExpr<T>>
         get() = listOf(arg)
 
@@ -53,11 +57,12 @@ class KUnaryMinusArithExpr<T : KArithSort<T>> internal constructor(
 }
 
 class KDivArithExpr<T : KArithSort<T>> internal constructor(
+    ctx: KContext,
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
-) : KApp<T, KExpr<T>>() {
-    override fun KContext.sort(): T = lhs.sort
-    override fun KContext.decl(): KArithDivDecl<T> = mkArithDivDecl(sort)
+) : KApp<T, KExpr<T>>(ctx) {
+    override fun sort(): T = with(ctx) { lhs.sort }
+    override fun decl(): KArithDivDecl<T> = with(ctx) { mkArithDivDecl(sort) }
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)
 
@@ -65,11 +70,12 @@ class KDivArithExpr<T : KArithSort<T>> internal constructor(
 }
 
 class KPowerArithExpr<T : KArithSort<T>> internal constructor(
+    ctx: KContext,
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
-) : KApp<T, KExpr<T>>() {
-    override fun KContext.sort(): T = lhs.sort
-    override fun KContext.decl(): KArithPowerDecl<T> = mkArithPowerDecl(sort)
+) : KApp<T, KExpr<T>>(ctx) {
+    override fun sort(): T = with(ctx) { lhs.sort }
+    override fun decl(): KArithPowerDecl<T> = with(ctx) { mkArithPowerDecl(sort) }
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)
 
@@ -77,11 +83,12 @@ class KPowerArithExpr<T : KArithSort<T>> internal constructor(
 }
 
 class KLtArithExpr<T : KArithSort<T>> internal constructor(
+    ctx: KContext,
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
-) : KApp<KBoolSort, KExpr<T>>() {
-    override fun KContext.sort(): KBoolSort = mkBoolSort()
-    override fun KContext.decl(): KArithLtDecl<T> = mkArithLtDecl(lhs.sort)
+) : KApp<KBoolSort, KExpr<T>>(ctx) {
+    override fun sort(): KBoolSort = ctx.mkBoolSort()
+    override fun decl(): KArithLtDecl<T> = with(ctx) { mkArithLtDecl(lhs.sort) }
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)
 
@@ -89,11 +96,12 @@ class KLtArithExpr<T : KArithSort<T>> internal constructor(
 }
 
 class KLeArithExpr<T : KArithSort<T>> internal constructor(
+    ctx: KContext,
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
-) : KApp<KBoolSort, KExpr<T>>() {
-    override fun KContext.sort(): KBoolSort = mkBoolSort()
-    override fun KContext.decl(): KArithLeDecl<T> = mkArithLeDecl(lhs.sort)
+) : KApp<KBoolSort, KExpr<T>>(ctx) {
+    override fun sort(): KBoolSort = ctx.mkBoolSort()
+    override fun decl(): KArithLeDecl<T> = with(ctx) { mkArithLeDecl(lhs.sort) }
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)
 
@@ -101,11 +109,12 @@ class KLeArithExpr<T : KArithSort<T>> internal constructor(
 }
 
 class KGtArithExpr<T : KArithSort<T>> internal constructor(
+    ctx: KContext,
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
-) : KApp<KBoolSort, KExpr<T>>() {
-    override fun KContext.sort(): KBoolSort = mkBoolSort()
-    override fun KContext.decl(): KArithGtDecl<T> = mkArithGtDecl(lhs.sort)
+) : KApp<KBoolSort, KExpr<T>>(ctx) {
+    override fun sort(): KBoolSort = ctx.mkBoolSort()
+    override fun decl(): KArithGtDecl<T> = with(ctx) { mkArithGtDecl(lhs.sort) }
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)
 
@@ -113,11 +122,12 @@ class KGtArithExpr<T : KArithSort<T>> internal constructor(
 }
 
 class KGeArithExpr<T : KArithSort<T>> internal constructor(
+    ctx: KContext,
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
-) : KApp<KBoolSort, KExpr<T>>() {
-    override fun KContext.sort(): KBoolSort = mkBoolSort()
-    override fun KContext.decl(): KArithGeDecl<T> = mkArithGeDecl(lhs.sort)
+) : KApp<KBoolSort, KExpr<T>>(ctx) {
+    override fun sort(): KBoolSort = ctx.mkBoolSort()
+    override fun decl(): KArithGeDecl<T> = with(ctx) { mkArithGeDecl(lhs.sort) }
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)
 

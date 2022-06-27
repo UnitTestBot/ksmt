@@ -6,38 +6,41 @@ import org.ksmt.expr.KApp
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 
-object KAndDecl : KFuncDeclChain<KBoolSort, KBoolSort>("and", KBoolSort, KBoolSort) {
+class KAndDecl(ctx: KContext) : KFuncDeclChain<KBoolSort, KBoolSort>(ctx, "and", ctx.mkBoolSort(), ctx.mkBoolSort()) {
     override fun KContext.applyChain(args: List<KExpr<KBoolSort>>): KApp<KBoolSort, KExpr<KBoolSort>> = mkAnd(args)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
-object KOrDecl : KFuncDeclChain<KBoolSort, KBoolSort>("or", KBoolSort, KBoolSort) {
+class KOrDecl(ctx: KContext) : KFuncDeclChain<KBoolSort, KBoolSort>(ctx, "or", ctx.mkBoolSort(), ctx.mkBoolSort()) {
     override fun KContext.applyChain(args: List<KExpr<KBoolSort>>): KApp<KBoolSort, KExpr<KBoolSort>> = mkOr(args)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
-object KNotDecl : KFuncDecl1<KBoolSort, KBoolSort>("not", KBoolSort, KBoolSort) {
+class KNotDecl(ctx: KContext) : KFuncDecl1<KBoolSort, KBoolSort>(ctx, "not", ctx.mkBoolSort(), ctx.mkBoolSort()) {
     override fun KContext.apply(arg: KExpr<KBoolSort>): KApp<KBoolSort, KExpr<KBoolSort>> = mkNot(arg)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
-class KEqDecl<T : KSort>(argSort: T) : KFuncDecl2<KBoolSort, T, T>("eq", KBoolSort, argSort, argSort) {
+class KEqDecl<T : KSort>(ctx: KContext, argSort: T) :
+    KFuncDecl2<KBoolSort, T, T>(ctx, "eq", ctx.mkBoolSort(), argSort, argSort) {
     override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<KBoolSort, *> = mkEq(arg0, arg1)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
-class KIteDecl<T : KSort>(argSort: T) : KFuncDecl3<T, KBoolSort, T, T>("ite", argSort, KBoolSort, argSort, argSort) {
+class KIteDecl<T : KSort>(ctx: KContext, argSort: T) :
+    KFuncDecl3<T, KBoolSort, T, T>(ctx, "ite", argSort, ctx.mkBoolSort(), argSort, argSort) {
     override fun KContext.apply(arg0: KExpr<KBoolSort>, arg1: KExpr<T>, arg2: KExpr<T>): KApp<T, *> =
         mkIte(arg0, arg1, arg2)
+
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
-object KTrueDecl : KConstDecl<KBoolSort>("true", KBoolSort) {
+class KTrueDecl(ctx: KContext) : KConstDecl<KBoolSort>(ctx, "true", ctx.mkBoolSort()) {
     override fun KContext.apply(args: List<KExpr<*>>): KApp<KBoolSort, *> = mkTrue()
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
-object KFalseDecl : KConstDecl<KBoolSort>("false", KBoolSort) {
+class KFalseDecl(ctx: KContext) : KConstDecl<KBoolSort>(ctx, "false", ctx.mkBoolSort()) {
     override fun KContext.apply(args: List<KExpr<*>>): KApp<KBoolSort, *> = mkFalse()
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }

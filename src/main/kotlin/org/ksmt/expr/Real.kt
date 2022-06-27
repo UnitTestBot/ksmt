@@ -9,10 +9,11 @@ import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 
 class KToIntRealExpr internal constructor(
+    ctx: KContext,
     val arg: KExpr<KRealSort>
-) : KApp<KIntSort, KExpr<KRealSort>>() {
-    override fun KContext.sort(): KIntSort = mkIntSort()
-    override fun KContext.decl(): KRealToIntDecl = mkRealToIntDecl()
+) : KApp<KIntSort, KExpr<KRealSort>>(ctx) {
+    override fun sort(): KIntSort = ctx.mkIntSort()
+    override fun decl(): KRealToIntDecl = ctx.mkRealToIntDecl()
     override val args: List<KExpr<KRealSort>>
         get() = listOf(arg)
 
@@ -20,10 +21,11 @@ class KToIntRealExpr internal constructor(
 }
 
 class KIsIntRealExpr internal constructor(
+    ctx: KContext,
     val arg: KExpr<KRealSort>
-) : KApp<KBoolSort, KExpr<KRealSort>>() {
-    override fun KContext.sort(): KBoolSort = mkBoolSort()
-    override fun KContext.decl(): KRealIsIntDecl = mkRealIsIntDecl()
+) : KApp<KBoolSort, KExpr<KRealSort>>(ctx) {
+    override fun sort(): KBoolSort = ctx.mkBoolSort()
+    override fun decl(): KRealIsIntDecl = ctx.mkRealIsIntDecl()
     override val args: List<KExpr<KRealSort>>
         get() = listOf(arg)
 
@@ -31,11 +33,12 @@ class KIsIntRealExpr internal constructor(
 }
 
 class KRealNumExpr internal constructor(
+    ctx: KContext,
     val numerator: KIntNumExpr,
     val denominator: KIntNumExpr
-) : KApp<KRealSort, KExpr<*>>() {
-    override fun KContext.sort(): KRealSort = mkRealSort()
-    override fun KContext.decl(): KRealNumDecl = mkRealNumDecl("$numerator/$denominator")
+) : KApp<KRealSort, KExpr<*>>(ctx) {
+    override fun sort(): KRealSort = ctx.mkRealSort()
+    override fun decl(): KRealNumDecl = ctx.mkRealNumDecl("$numerator/$denominator")
     override val args = emptyList<KExpr<*>>()
     override fun accept(transformer: KTransformer): KExpr<KRealSort> = transformer.transform(this)
 }

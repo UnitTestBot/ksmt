@@ -6,12 +6,13 @@ import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KSort
 
 class KArrayStore<D : KSort, R : KSort> internal constructor(
+    ctx: KContext,
     val array: KExpr<KArraySort<D, R>>,
     val index: KExpr<D>,
     val value: KExpr<R>
-) : KApp<KArraySort<D, R>, KExpr<*>>() {
-    override fun KContext.sort(): KArraySort<D, R> = array.sort
-    override fun KContext.decl(): KDecl<KArraySort<D, R>> = mkArrayStoreDecl(array.sort)
+) : KApp<KArraySort<D, R>, KExpr<*>>(ctx) {
+    override fun sort(): KArraySort<D, R> = with(ctx) { array.sort }
+    override fun decl(): KDecl<KArraySort<D, R>> = with(ctx) { mkArrayStoreDecl(array.sort) }
     override val args: List<KExpr<*>>
         get() = listOf(array, index, value)
 
@@ -19,11 +20,12 @@ class KArrayStore<D : KSort, R : KSort> internal constructor(
 }
 
 class KArraySelect<D : KSort, R : KSort> internal constructor(
+    ctx: KContext,
     val array: KExpr<KArraySort<D, R>>,
     val index: KExpr<D>
-) : KApp<R, KExpr<*>>() {
-    override fun KContext.sort(): R = array.sort.range
-    override fun KContext.decl(): KDecl<R> = mkArraySelectDecl(array.sort)
+) : KApp<R, KExpr<*>>(ctx) {
+    override fun sort(): R = with(ctx) { array.sort.range }
+    override fun decl(): KDecl<R> = with(ctx) { mkArraySelectDecl(array.sort) }
     override val args: List<KExpr<*>>
         get() = listOf(array, index)
 
