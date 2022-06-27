@@ -11,7 +11,7 @@ open class KFuncDecl<T : KSort>(
     sort: T,
     val argSorts: List<KSort>
 ) : KDecl<T>(ctx, name, sort) {
-    override fun KContext.apply(args: List<KExpr<*>>): KApp<T, *> {
+    override fun apply(args: List<KExpr<*>>): KApp<T, *> = with(ctx) {
         check(args.map { it.sort } == argSorts) { "Arguments sort mismatch" }
         return mkFunctionApp(this@KFuncDecl, args)
     }
@@ -28,7 +28,7 @@ abstract class KFuncDecl1<T : KSort, A : KSort>(
     abstract fun KContext.apply(arg: KExpr<A>): KApp<T, KExpr<A>>
 
     @Suppress("UNCHECKED_CAST")
-    override fun KContext.apply(args: List<KExpr<*>>): KApp<T, *> {
+    override fun apply(args: List<KExpr<*>>): KApp<T, *> = with(ctx) {
         check(args.size == 1 && args[0].sort == argSort)
         return apply(args[0] as KExpr<A>)
     }
@@ -45,7 +45,7 @@ abstract class KFuncDecl2<T : KSort, A0 : KSort, A1 : KSort>(
     abstract fun KContext.apply(arg0: KExpr<A0>, arg1: KExpr<A1>): KApp<T, *>
 
     @Suppress("UNCHECKED_CAST")
-    override fun KContext.apply(args: List<KExpr<*>>): KApp<T, *> {
+    override fun apply(args: List<KExpr<*>>): KApp<T, *> = with(ctx) {
         check(args.size == 2)
         val (arg0, arg1) = args
         check(arg0.sort == arg0Sort && arg1.sort == arg1Sort)
@@ -64,7 +64,7 @@ abstract class KFuncDecl3<T : KSort, A0 : KSort, A1 : KSort, A2 : KSort>(
     abstract fun KContext.apply(arg0: KExpr<A0>, arg1: KExpr<A1>, arg2: KExpr<A2>): KApp<T, *>
 
     @Suppress("UNCHECKED_CAST")
-    override fun KContext.apply(args: List<KExpr<*>>): KApp<T, *> {
+    override fun apply(args: List<KExpr<*>>): KApp<T, *> = with(ctx) {
         check(args.size == 3)
         val (arg0, arg1, arg2) = args
         check(arg0.sort == arg0Sort && arg1.sort == arg1Sort && arg2.sort == arg2Sort)
@@ -81,7 +81,7 @@ abstract class KFuncDeclChain<T : KSort, A : KSort>(
     abstract fun KContext.applyChain(args: List<KExpr<A>>): KApp<T, KExpr<A>>
 
     @Suppress("UNCHECKED_CAST")
-    override fun KContext.apply(args: List<KExpr<*>>): KApp<T, *> {
+    override fun apply(args: List<KExpr<*>>): KApp<T, *> = with(ctx) {
         check(args.all { it.sort == argSort })
         return applyChain(args as List<KExpr<A>>)
     }
