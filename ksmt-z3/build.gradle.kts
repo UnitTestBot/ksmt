@@ -1,4 +1,5 @@
 import org.gradle.language.jvm.tasks.ProcessResources
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.6.21"
@@ -19,6 +20,10 @@ dependencies {
     z3native("com.microsoft.z3", "z3-native-win64", "4.8.9.1", ext = "zip")
     z3native("com.microsoft.z3", "z3-native-linux64", "4.8.9.1", ext = "zip")
     z3native("com.microsoft.z3", "z3-native-osx", "4.8.9.1", ext = "zip")
+}
+
+tasks.withType<KotlinCompile> {
+    kotlinOptions.allWarningsAsErrors = true
 }
 
 detekt {
