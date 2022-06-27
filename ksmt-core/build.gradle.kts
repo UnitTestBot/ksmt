@@ -19,5 +19,5 @@ dependencies{
 
 detekt {
     buildUponDefaultConfig = true
-    config = files(projectDir.resolve("detekt.yml"))
+    config = files(rootDir.resolve("detekt.yml"))
 }
