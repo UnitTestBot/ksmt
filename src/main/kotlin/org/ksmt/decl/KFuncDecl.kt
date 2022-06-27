@@ -17,6 +17,16 @@ open class KFuncDecl<T : KSort>(
     }
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun toString(): String = buildString {
+        append('(')
+        append(name)
+        append(" (")
+        append(argSorts.joinToString(" "))
+        append(") ")
+        append("$sort")
+        append(" )")
+    }
 }
 
 abstract class KFuncDecl1<T : KSort, A : KSort>(
