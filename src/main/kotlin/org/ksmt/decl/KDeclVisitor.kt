@@ -23,6 +23,7 @@ interface KDeclVisitor<T> {
 
     fun <D : KSort, R : KSort> visit(decl: KArraySelectDecl<D, R>): T = visit(decl as KFuncDecl<R>)
     fun <D : KSort, R : KSort> visit(decl: KArrayStoreDecl<D, R>): T = visit(decl as KFuncDecl<KArraySort<D, R>>)
+    fun <D : KSort, R : KSort> visit(decl: KArrayConstDecl<D, R>): T = visit(decl as KFuncDecl<KArraySort<D, R>>)
 
     fun <S : KArithSort<S>> visit(decl: KArithSubDecl<S>): T = visit(decl as KFuncDecl<S>)
     fun <S : KArithSort<S>> visit(decl: KArithMulDecl<S>): T = visit(decl as KFuncDecl<S>)
