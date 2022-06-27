@@ -1,10 +1,11 @@
 package org.ksmt.expr
 
+import org.ksmt.KAst
 import org.ksmt.KContext
 import org.ksmt.sort.KSort
 
-abstract class KExpr<T : KSort> {
-    abstract fun KContext.sort(): T
+abstract class KExpr<T : KSort>(ctx: KContext): KAst(ctx) {
+    abstract fun sort(): T
     abstract fun accept(transformer: KTransformer): KExpr<T>
 
     //  Contexts guarantee that any two equivalent expressions will be the same kotlin object
