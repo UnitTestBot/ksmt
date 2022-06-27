@@ -348,7 +348,7 @@ open class KContext {
     }
 
     fun <T : KSort> mkFuncDecl(name: String, sort: T, args: List<KSort>): KFuncDecl<T> =
-        funcDeclCache.create(name, sort, args).cast()
+        if (args.isEmpty()) mkConstDecl(name, sort) else funcDeclCache.create(name, sort, args).cast()
 
     val constDeclCache = mkCache { name: String, sort: KSort ->
         ensureContextMatch(sort)
