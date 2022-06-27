@@ -26,6 +26,6 @@ class KIntToRealDecl internal constructor(ctx: KContext) :
 
 class KIntNumDecl internal constructor(ctx: KContext, val value: String) :
     KConstDecl<KIntSort>(ctx, value, ctx.mkIntSort()) {
-    override fun apply(args: List<KExpr<*>>): KApp<KIntSort, *> = mkIntNum(value)
+    override fun apply(args: List<KExpr<*>>): KApp<KIntSort, *> = ctx.mkIntNum(value)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }

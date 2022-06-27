@@ -10,8 +10,8 @@ abstract class KDecl<T : KSort>(
     ctx: KContext,
     val name: String,
     val sort: T
-): KAst(ctx) {
-    abstract fun KContext.apply(args: List<KExpr<*>>): KApp<T, *>
+) : KAst(ctx) {
+    abstract fun apply(args: List<KExpr<*>>): KApp<T, *>
     abstract fun <R> accept(visitor: KDeclVisitor<R>): R
 
     //  Contexts guarantee that any two equivalent declarations will be the same kotlin object

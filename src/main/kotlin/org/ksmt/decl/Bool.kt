@@ -39,11 +39,11 @@ class KIteDecl<T : KSort> internal constructor(ctx: KContext, argSort: T) :
 }
 
 class KTrueDecl internal constructor(ctx: KContext) : KConstDecl<KBoolSort>(ctx, "true", ctx.mkBoolSort()) {
-    override fun apply(args: List<KExpr<*>>): KApp<KBoolSort, *> = mkTrue()
+    override fun apply(args: List<KExpr<*>>): KApp<KBoolSort, *> = ctx.mkTrue()
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
 class KFalseDecl internal constructor(ctx: KContext) : KConstDecl<KBoolSort>(ctx, "false", ctx.mkBoolSort()) {
-    override fun apply(args: List<KExpr<*>>): KApp<KBoolSort, *> = mkFalse()
+    override fun apply(args: List<KExpr<*>>): KApp<KBoolSort, *> = ctx.mkFalse()
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
