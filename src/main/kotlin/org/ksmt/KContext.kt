@@ -6,11 +6,6 @@ import org.ksmt.expr.*
 import org.ksmt.sort.*
 import java.math.BigInteger
 
-@Suppress(
-    "UNCHECKED_CAST",
-    "TYPE_MISMATCH_WARNING",
-    "UPPER_BOUND_VIOLATED_WARNING"
-)
 open class KContext {
     /*
     * sorts
@@ -23,7 +18,7 @@ open class KContext {
     }
 
     fun <D : KSort, R : KSort> mkArraySort(domain: D, range: R): KArraySort<D, R> =
-        arraySortCache.create(domain, range) as KArraySort<D, R>
+        arraySortCache.create(domain, range).cast()
 
     val intSortCache = mkCache<KIntSort> { KIntSort(this) }
     fun mkIntSort(): KIntSort = intSortCache.create()
@@ -66,14 +61,14 @@ open class KContext {
     }
 
     fun <T : KSort> mkEq(lhs: KExpr<T>, rhs: KExpr<T>): KEqExpr<T> =
-        eqCache.create(lhs as KExpr<KSort>, rhs as KExpr<KSort>) as KEqExpr<T>
+        eqCache.create(lhs.cast(), rhs.cast()).cast()
 
     val iteCache = mkContextCheckingCache { c: KExpr<KBoolSort>, t: KExpr<KSort>, f: KExpr<KSort> ->
         KIteExpr(this, c, t, f)
     }
 
     fun <T : KSort> mkIte(condition: KExpr<KBoolSort>, trueBranch: KExpr<T>, falseBranch: KExpr<T>): KIteExpr<T> =
-        iteCache.create(condition, trueBranch as KExpr<KSort>, falseBranch as KExpr<KSort>) as KIteExpr<T>
+        iteCache.create(condition, trueBranch.cast(), falseBranch.cast()).cast()
 
 
     infix fun <T : KSort> KExpr<T>.eq(other: KExpr<T>) = mkEq(this, other)
@@ -98,14 +93,14 @@ open class KContext {
     }
 
     internal fun <T : KSort> mkFunctionApp(decl: KDecl<T>, args: List<KExpr<*>>): KApp<T, *> =
-        if (args.isEmpty()) mkConstApp(decl) else functionAppCache.create(decl, args) as KFunctionApp<T>
+        if (args.isEmpty()) mkConstApp(decl) else functionAppCache.create(decl, args).cast()
 
     val constAppCache = mkCache { decl: KDecl<*> ->
         ensureContextMatch(decl)
         KConst(this, decl)
     }
 
-    fun <T : KSort> mkConstApp(decl: KDecl<T>): KConst<T> = constAppCache.create(decl) as KConst<T>
+    fun <T : KSort> mkConstApp(decl: KDecl<T>): KConst<T> = constAppCache.create(decl).cast()
 
     fun <T : KSort> T.mkConst(name: String) = with(mkConstDecl(name)) { apply() }
 
@@ -117,20 +112,14 @@ open class KContext {
 
     fun <D : KSort, R : KSort> mkArrayStore(
         array: KExpr<KArraySort<D, R>>, index: KExpr<D>, value: KExpr<R>
-    ): KArrayStore<D, R> =
-        arrayStoreCache.create(
-            array as KExpr<KArraySort<KSort, KSort>>,
-            index as KExpr<KSort>,
-            value as KExpr<KSort>
-        ) as KArrayStore<D, R>
-
+    ): KArrayStore<D, R> = arrayStoreCache.create(array.cast(), index.cast(), value.cast()).cast()
 
     val arraySelectCache = mkContextCheckingCache { array: KExpr<KArraySort<KSort, KSort>>, index: KExpr<KSort> ->
         KArraySelect(this, array, index)
     }
 
     fun <D : KSort, R : KSort> mkArraySelect(array: KExpr<KArraySort<D, R>>, index: KExpr<D>): KArraySelect<D, R> =
-        arraySelectCache.create(array as KExpr<KArraySort<KSort, KSort>>, index as KExpr<KSort>) as KArraySelect<D, R>
+        arraySelectCache.create(array.cast(), index.cast()).cast()
 
     fun <D : KSort, R : KSort> KExpr<KArraySort<D, R>>.store(index: KExpr<D>, value: KExpr<R>) =
         mkArrayStore(this, index, value)
@@ -143,21 +132,21 @@ open class KContext {
     }
 
     fun <T : KArithSort<T>> mkArithAdd(args: List<KExpr<T>>): KAddArithExpr<T> =
-        arithAddCache.create(args as List<KExpr<KArithSort<*>>>) as KAddArithExpr<T>
+        arithAddCache.create(args.cast()).cast()
 
     val arithMulCache = mkContextListCheckingCache { args: List<KExpr<KArithSort<*>>> ->
         KMulArithExpr(this, args)
     }
 
     fun <T : KArithSort<T>> mkArithMul(args: List<KExpr<T>>): KMulArithExpr<T> =
-        arithMulCache.create(args as List<KExpr<KArithSort<*>>>) as KMulArithExpr<T>
+        arithMulCache.create(args.cast()).cast()
 
     val arithSubCache = mkContextListCheckingCache { args: List<KExpr<KArithSort<*>>> ->
         KSubArithExpr(this, args)
     }
 
     fun <T : KArithSort<T>> mkArithSub(args: List<KExpr<T>>): KSubArithExpr<T> =
-        arithSubCache.create(args as List<KExpr<KArithSort<*>>>) as KSubArithExpr<T>
+        arithSubCache.create(args.cast()).cast()
 
     fun <T : KArithSort<T>> mkArithAdd(vararg args: KExpr<T>) = mkArithAdd(args.toList())
     fun <T : KArithSort<T>> mkArithMul(vararg args: KExpr<T>) = mkArithMul(args.toList())
@@ -168,49 +157,49 @@ open class KContext {
     }
 
     fun <T : KArithSort<T>> mkArithUnaryMinus(arg: KExpr<T>): KUnaryMinusArithExpr<T> =
-        arithUnaryMinusCache.create(arg as KExpr<KArithSort<*>>) as KUnaryMinusArithExpr<T>
+        arithUnaryMinusCache.create(arg.cast()).cast()
 
     val arithDivCache = mkContextCheckingCache { l: KExpr<KArithSort<*>>, r: KExpr<KArithSort<*>> ->
         KDivArithExpr(this, l, r)
     }
 
     fun <T : KArithSort<T>> mkArithDiv(lhs: KExpr<T>, rhs: KExpr<T>): KDivArithExpr<T> =
-        arithDivCache.create(lhs as KExpr<KArithSort<*>>, rhs as KExpr<KArithSort<*>>) as KDivArithExpr<T>
+        arithDivCache.create(lhs.cast(), rhs.cast()).cast()
 
     val arithPowerCache = mkContextCheckingCache { l: KExpr<KArithSort<*>>, r: KExpr<KArithSort<*>> ->
         KPowerArithExpr(this, l, r)
     }
 
     fun <T : KArithSort<T>> mkArithPower(lhs: KExpr<T>, rhs: KExpr<T>): KPowerArithExpr<T> =
-        arithPowerCache.create(lhs as KExpr<KArithSort<*>>, rhs as KExpr<KArithSort<*>>) as KPowerArithExpr<T>
+        arithPowerCache.create(lhs.cast(), rhs.cast()).cast()
 
     val arithLtCache = mkContextCheckingCache { l: KExpr<KArithSort<*>>, r: KExpr<KArithSort<*>> ->
         KLtArithExpr(this, l, r)
     }
 
     fun <T : KArithSort<T>> mkArithLt(lhs: KExpr<T>, rhs: KExpr<T>): KLtArithExpr<T> =
-        arithLtCache.create(lhs as KExpr<KArithSort<*>>, rhs as KExpr<KArithSort<*>>) as KLtArithExpr<T>
+        arithLtCache.create(lhs.cast(), rhs.cast()).cast()
 
     val arithLeCache = mkContextCheckingCache { l: KExpr<KArithSort<*>>, r: KExpr<KArithSort<*>> ->
         KLeArithExpr(this, l, r)
     }
 
     fun <T : KArithSort<T>> mkArithLe(lhs: KExpr<T>, rhs: KExpr<T>): KLeArithExpr<T> =
-        arithLeCache.create(lhs as KExpr<KArithSort<*>>, rhs as KExpr<KArithSort<*>>) as KLeArithExpr<T>
+        arithLeCache.create(lhs.cast(), rhs.cast()).cast()
 
     val arithGtCache = mkContextCheckingCache { l: KExpr<KArithSort<*>>, r: KExpr<KArithSort<*>> ->
         KGtArithExpr(this, l, r)
     }
 
     fun <T : KArithSort<T>> mkArithGt(lhs: KExpr<T>, rhs: KExpr<T>): KGtArithExpr<T> =
-        arithGtCache.create(lhs as KExpr<KArithSort<*>>, rhs as KExpr<KArithSort<*>>) as KGtArithExpr<T>
+        arithGtCache.create(lhs.cast(), rhs.cast()).cast()
 
     val arithGeCache = mkContextCheckingCache { l: KExpr<KArithSort<*>>, r: KExpr<KArithSort<*>> ->
         KGeArithExpr(this, l, r)
     }
 
     fun <T : KArithSort<T>> mkArithGe(lhs: KExpr<T>, rhs: KExpr<T>): KGeArithExpr<T> =
-        arithGeCache.create(lhs as KExpr<KArithSort<*>>, rhs as KExpr<KArithSort<*>>) as KGeArithExpr<T>
+        arithGeCache.create(lhs.cast(), rhs.cast()).cast()
 
     operator fun <T : KArithSort<T>> KExpr<T>.plus(other: KExpr<T>) = mkArithAdd(this, other)
     operator fun <T : KArithSort<T>> KExpr<T>.times(other: KExpr<T>) = mkArithMul(this, other)
@@ -334,11 +323,11 @@ open class KContext {
     // utils
     val exprSortCache = mkCache { expr: KExpr<*> -> with(expr) { sort() } }
     val <T : KSort> KExpr<T>.sort: T
-        get() = exprSortCache.create(this) as T
+        get() = exprSortCache.create(this).uncheckedCast()
 
     val exprDeclCache = mkCache { expr: KApp<*, *> -> with(expr) { decl() } }
     val <T : KSort> KApp<T, *>.decl: KDecl<T>
-        get() = exprDeclCache.create(this) as KDecl<T>
+        get() = exprDeclCache.create(this).uncheckedCast()
 
     /*
     * declarations
@@ -352,7 +341,7 @@ open class KContext {
     }
 
     fun <T : KSort> mkFuncDecl(name: String, sort: T, args: List<KSort>): KFuncDecl<T> =
-        funcDeclCache.create(name, sort, args) as KFuncDecl<T>
+        funcDeclCache.create(name, sort, args).cast()
 
     val constDeclCache = mkCache { name: String, sort: KSort ->
         ensureContextMatch(sort)
@@ -360,7 +349,7 @@ open class KContext {
     }
 
     fun <T : KSort> mkConstDecl(name: String, sort: T): KConstDecl<T> =
-        constDeclCache.create(name, sort) as KConstDecl<T>
+        constDeclCache.create(name, sort).cast()
 
     fun <T : KSort> T.mkConstDecl(name: String) = mkConstDecl(name, this)
 
@@ -384,13 +373,13 @@ open class KContext {
         KEqDecl(this, arg)
     }
 
-    fun <T : KSort> mkEqDecl(arg: T): KEqDecl<T> = eqDeclCache.create(arg) as KEqDecl<T>
+    fun <T : KSort> mkEqDecl(arg: T): KEqDecl<T> = eqDeclCache.create(arg).cast()
 
     val iteDeclCache = mkContextCheckingCache { arg: KSort ->
         KIteDecl(this, arg)
     }
 
-    fun <T : KSort> mkIteDecl(arg: T): KIteDecl<T> = iteDeclCache.create(arg) as KIteDecl<T>
+    fun <T : KSort> mkIteDecl(arg: T): KIteDecl<T> = iteDeclCache.create(arg).cast()
 
     // array
     val arraySelectDeclCache = mkContextCheckingCache { array: KArraySort<*, *> ->
@@ -398,77 +387,77 @@ open class KContext {
     }
 
     fun <D : KSort, R : KSort> mkArraySelectDecl(array: KArraySort<D, R>): KArraySelectDecl<D, R> =
-        arraySelectDeclCache.create(array) as KArraySelectDecl<D, R>
+        arraySelectDeclCache.create(array).cast()
 
     val arrayStoreDeclCache = mkContextCheckingCache { array: KArraySort<*, *> ->
         KArrayStoreDecl(this, array)
     }
 
     fun <D : KSort, R : KSort> mkArrayStoreDecl(array: KArraySort<D, R>): KArrayStoreDecl<D, R> =
-        arrayStoreDeclCache.create(array) as KArrayStoreDecl<D, R>
+        arrayStoreDeclCache.create(array).cast()
 
     // arith
     val arithAddDeclCache = mkContextCheckingCache { arg: KArithSort<*> ->
-        KArithAddDecl<KArithSort<*>>(this, arg)
+        KArithAddDecl(this, arg)
     }
 
-    fun <T : KArithSort<T>> mkArithAddDecl(arg: T): KArithAddDecl<T> = arithAddDeclCache.create(arg) as KArithAddDecl<T>
+    fun <T : KArithSort<T>> mkArithAddDecl(arg: T): KArithAddDecl<T> = arithAddDeclCache.create(arg).cast()
 
     val arithSubDeclCache = mkContextCheckingCache { arg: KArithSort<*> ->
-        KArithSubDecl<KArithSort<*>>(this, arg)
+        KArithSubDecl(this, arg)
     }
 
-    fun <T : KArithSort<T>> mkArithSubDecl(arg: T): KArithSubDecl<T> = arithSubDeclCache.create(arg) as KArithSubDecl<T>
+    fun <T : KArithSort<T>> mkArithSubDecl(arg: T): KArithSubDecl<T> = arithSubDeclCache.create(arg).cast()
 
     val arithMulDeclCache = mkContextCheckingCache { arg: KArithSort<*> ->
-        KArithMulDecl<KArithSort<*>>(this, arg)
+        KArithMulDecl(this, arg)
     }
 
-    fun <T : KArithSort<T>> mkArithMulDecl(arg: T): KArithMulDecl<T> = arithMulDeclCache.create(arg) as KArithMulDecl<T>
+    fun <T : KArithSort<T>> mkArithMulDecl(arg: T): KArithMulDecl<T> = arithMulDeclCache.create(arg).cast()
 
     val arithDivDeclCache = mkContextCheckingCache { arg: KArithSort<*> ->
-        KArithDivDecl<KArithSort<*>>(this, arg)
+        KArithDivDecl(this, arg)
     }
 
-    fun <T : KArithSort<T>> mkArithDivDecl(arg: T): KArithDivDecl<T> = arithDivDeclCache.create(arg) as KArithDivDecl<T>
+    fun <T : KArithSort<T>> mkArithDivDecl(arg: T): KArithDivDecl<T> = arithDivDeclCache.create(arg).cast()
 
     val arithPowerDeclCache = mkContextCheckingCache { arg: KArithSort<*> ->
-        KArithPowerDecl<KArithSort<*>>(this, arg)
+        KArithPowerDecl(this, arg)
     }
 
     fun <T : KArithSort<T>> mkArithPowerDecl(arg: T): KArithPowerDecl<T> =
-        arithPowerDeclCache.create(arg) as KArithPowerDecl<T>
+        arithPowerDeclCache.create(arg).cast()
 
     val arithUnaryMinusDeclCache = mkContextCheckingCache { arg: KArithSort<*> ->
-        KArithUnaryMinusDecl<KArithSort<*>>(this, arg)
+        KArithUnaryMinusDecl(this, arg)
     }
 
     fun <T : KArithSort<T>> mkArithUnaryMinusDecl(arg: T): KArithUnaryMinusDecl<T> =
-        arithUnaryMinusDeclCache.create(arg) as KArithUnaryMinusDecl<T>
+        arithUnaryMinusDeclCache.create(arg).cast()
 
     val arithGeDeclCache = mkContextCheckingCache { arg: KArithSort<*> ->
-        KArithGeDecl<KArithSort<*>>(this, arg)
+        KArithGeDecl(this, arg)
     }
 
-    fun <T : KArithSort<T>> mkArithGeDecl(arg: T): KArithGeDecl<T> = arithGeDeclCache.create(arg) as KArithGeDecl<T>
+    fun <T : KArithSort<T>> mkArithGeDecl(arg: T): KArithGeDecl<T> = arithGeDeclCache.create(arg).cast()
 
     val arithGtDeclCache = mkContextCheckingCache { arg: KArithSort<*> ->
-        KArithGtDecl<KArithSort<*>>(this, arg)
+        KArithGtDecl(this, arg)
     }
 
-    fun <T : KArithSort<T>> mkArithGtDecl(arg: T): KArithGtDecl<T> = arithGtDeclCache.create(arg) as KArithGtDecl<T>
+    fun <T : KArithSort<T>> mkArithGtDecl(arg: T): KArithGtDecl<T> = arithGtDeclCache.create(arg).cast()
 
     val arithLeDeclCache = mkContextCheckingCache { arg: KArithSort<*> ->
-        KArithLeDecl<KArithSort<*>>(this, arg)
+        KArithLeDecl(this, arg)
     }
 
-    fun <T : KArithSort<T>> mkArithLeDecl(arg: T): KArithLeDecl<T> = arithLeDeclCache.create(arg) as KArithLeDecl<T>
+    fun <T : KArithSort<T>> mkArithLeDecl(arg: T): KArithLeDecl<T> = arithLeDeclCache.create(arg).cast()
 
     val arithLtDeclCache = mkContextCheckingCache { arg: KArithSort<*> ->
-        KArithLtDecl<KArithSort<*>>(this, arg)
+        KArithLtDecl(this, arg)
     }
 
-    fun <T : KArithSort<T>> mkArithLtDecl(arg: T): KArithLtDecl<T> = arithLtDeclCache.create(arg) as KArithLtDecl<T>
+    fun <T : KArithSort<T>> mkArithLtDecl(arg: T): KArithLtDecl<T> = arithLtDeclCache.create(arg).cast()
 
 
     // int
@@ -525,5 +514,10 @@ open class KContext {
             ensureContextMatch(a0, a1, a2)
             builder(a0, a1, a2)
         }
+
+    private inline fun <reified T, reified Base> Base.cast(): T where T : Base = this as T
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <Base, T> Base.uncheckedCast(): T = this as T
 
 }
