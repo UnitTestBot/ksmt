@@ -100,7 +100,9 @@ open class KModelEvaluator(override val ctx: KContext, val model: KModel, val co
                 if (interpretation == null) {
                     return@getOrPut sort.sampleValue()
                 }
-                check(args.size == interpretation.vars.size)
+                check(args.size == interpretation.vars.size) {
+                    "${interpretation.vars.size} arguments expected but ${args.size} provided"
+                }
                 evalFuncInterp(interpretation, args)
             }
         } as KExpr<T>

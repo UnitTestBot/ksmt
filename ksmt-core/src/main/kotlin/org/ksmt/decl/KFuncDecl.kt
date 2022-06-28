@@ -12,7 +12,7 @@ open class KFuncDecl<T : KSort>(
     val argSorts: List<KSort>
 ) : KDecl<T>(ctx, name, sort) {
     override fun apply(args: List<KExpr<*>>): KApp<T, *> = with(ctx) {
-        check(args.map { it.sort } == argSorts) { "Arguments sort mismatch" }
+        checkArgSorts(args)
         return mkFunctionApp(this@KFuncDecl, args)
     }
 
@@ -27,6 +27,16 @@ open class KFuncDecl<T : KSort>(
         append("$sort")
         append(" )")
     }
+
+    fun checkArgSorts(args: List<KExpr<*>>) = with(ctx) {
+        check(args.size == argSorts.size) {
+            "${argSorts.size} arguments expected but ${args.size} provided"
+        }
+        val providedSorts = args.map { it.sort }
+        check(providedSorts == argSorts) {
+            "Arguments sort mismatch. Expected $argSorts but $providedSorts provided"
+        }
+    }
 }
 
 abstract class KFuncDecl1<T : KSort, A : KSort>(
@@ -39,7 +49,7 @@ abstract class KFuncDecl1<T : KSort, A : KSort>(
 
     @Suppress("UNCHECKED_CAST")
     override fun apply(args: List<KExpr<*>>): KApp<T, *> = with(ctx) {
-        check(args.size == 1 && args[0].sort == argSort)
+        checkArgSorts(args)
         return apply(args[0] as KExpr<A>)
     }
 }
@@ -56,9 +66,8 @@ abstract class KFuncDecl2<T : KSort, A0 : KSort, A1 : KSort>(
 
     @Suppress("UNCHECKED_CAST")
     override fun apply(args: List<KExpr<*>>): KApp<T, *> = with(ctx) {
-        check(args.size == 2)
+        checkArgSorts(args)
         val (arg0, arg1) = args
-        check(arg0.sort == arg0Sort && arg1.sort == arg1Sort)
         return apply(arg0 as KExpr<A0>, arg1 as KExpr<A1>)
     }
 }
@@ -75,9 +84,8 @@ abstract class KFuncDecl3<T : KSort, A0 : KSort, A1 : KSort, A2 : KSort>(
 
     @Suppress("UNCHECKED_CAST")
     override fun apply(args: List<KExpr<*>>): KApp<T, *> = with(ctx) {
-        check(args.size == 3)
+        checkArgSorts(args)
         val (arg0, arg1, arg2) = args
-        check(arg0.sort == arg0Sort && arg1.sort == arg1Sort && arg2.sort == arg2Sort)
         return apply(arg0 as KExpr<A0>, arg1 as KExpr<A1>, arg2 as KExpr<A2>)
     }
 }
@@ -92,7 +100,10 @@ abstract class KFuncDeclChain<T : KSort, A : KSort>(
 
     @Suppress("UNCHECKED_CAST")
     override fun apply(args: List<KExpr<*>>): KApp<T, *> = with(ctx) {
-        check(args.all { it.sort == argSort })
+        val providedSorts = args.map { it.sort }
+        check(providedSorts.all { it == argSort }) {
+            "Arguments sort mismatch. Expected arguments of sort $argSort  but $providedSorts provided"
+        }
         return applyChain(args as List<KExpr<A>>)
     }
 }

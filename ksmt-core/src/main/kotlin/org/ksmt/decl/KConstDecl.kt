@@ -8,7 +8,7 @@ import org.ksmt.sort.KSort
 open class KConstDecl<T : KSort>(ctx: KContext, name: String, sort: T) : KFuncDecl<T>(ctx, name, sort, emptyList()) {
     fun apply() = apply(emptyList())
     override fun apply(args: List<KExpr<*>>): KApp<T, *> {
-        require(args.isEmpty())
+        require(args.isEmpty()) { "Constant has no arguments" }
         return ctx.mkConstApp(this@KConstDecl)
     }
 
