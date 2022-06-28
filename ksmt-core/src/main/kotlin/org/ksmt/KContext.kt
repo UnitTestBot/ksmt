@@ -514,6 +514,15 @@ open class KContext {
     val realNumDeclCache = mkCache { value: String -> KRealNumDecl(this, value) }
     fun mkRealNumDecl(value: String): KRealNumDecl = realNumDeclCache.create(value)
 
+    /*
+    * KAst
+    * */
+
+    // toString cache
+    val astStringReprCache = mkCache { ast: KAst -> ast.print() }
+    val KAst.stringRepr: String
+        get() = astStringReprCache.create(this)
+
     // context utils
     fun ensureContextMatch(vararg args: KAst) {
         for (arg in args) {
