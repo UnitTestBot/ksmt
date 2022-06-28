@@ -5,6 +5,8 @@ import org.ksmt.expr.KExpr
 import org.ksmt.expr.KTransformer
 import org.ksmt.sort.KSort
 
+/* Substitute every occurrence of `from` in expression `expr` with `to`.
+* */
 class KExprSubstitutor(override val ctx: KContext) : KTransformer {
     private val substitution = hashMapOf<KExpr<*>, KExpr<*>>()
     fun <T : KSort> substitute(from: KExpr<T>, to: KExpr<T>) {
