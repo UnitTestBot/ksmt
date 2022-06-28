@@ -10,7 +10,7 @@ class KAddArithExpr<T : KArithSort<T>> internal constructor(
     override val args: List<KExpr<T>>
 ) : KApp<T, KExpr<T>>(ctx) {
     init {
-        require(args.isNotEmpty())
+        require(args.isNotEmpty()) { "add requires at least a single argument" }
     }
 
     override fun sort(): T = with(ctx) { args.first().sort }
@@ -23,7 +23,7 @@ class KMulArithExpr<T : KArithSort<T>> internal constructor(
     override val args: List<KExpr<T>>
 ) : KApp<T, KExpr<T>>(ctx) {
     init {
-        require(args.isNotEmpty())
+        require(args.isNotEmpty()) { "mul requires at least a single argument" }
     }
 
     override fun sort(): T = with(ctx) { args.first().sort }
@@ -36,7 +36,7 @@ class KSubArithExpr<T : KArithSort<T>> internal constructor(
     override val args: List<KExpr<T>>
 ) : KApp<T, KExpr<T>>(ctx) {
     init {
-        require(args.isNotEmpty())
+        require(args.isNotEmpty()) { "sub requires at least a single argument" }
     }
 
     override fun sort(): T = with(ctx) { args.first().sort }
