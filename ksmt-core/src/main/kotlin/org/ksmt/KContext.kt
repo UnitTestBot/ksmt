@@ -139,12 +139,11 @@ open class KContext {
     fun <D : KSort, R : KSort> mkArraySelect(array: KExpr<KArraySort<D, R>>, index: KExpr<D>): KArraySelect<D, R> =
         arraySelectCache.create(array.cast(), index.cast()).cast()
 
-    val arrayConstCache = mkCache { array: KArraySort<KSort, KSort>, value: KExpr<KSort> ->
-        ensureContextMatch(array, value)
+    val arrayConstCache = mkContextCheckingCache { array: KArraySort<KSort, KSort>, value: KExpr<KSort> ->
         KArrayConst(this, array, value)
     }
     fun <D : KSort, R : KSort> mkArrayConst(arraySort: KArraySort<D, R>, value: KExpr<R>): KArrayConst<D, R> =
-        arrayConstCache.create(arraySort as KArraySort<KSort, KSort>, value as KExpr<KSort>) as KArrayConst<D, R>
+        arrayConstCache.create(arraySort.cast(), value.cast()).cast()
 
     fun <D : KSort, R : KSort> KExpr<KArraySort<D, R>>.store(index: KExpr<D>, value: KExpr<R>) =
         mkArrayStore(this, index, value)
@@ -421,13 +420,12 @@ open class KContext {
     fun <D : KSort, R : KSort> mkArrayStoreDecl(array: KArraySort<D, R>): KArrayStoreDecl<D, R> =
         arrayStoreDeclCache.create(array).cast()
 
-    val arrayConstDeclCache = mkCache { array: KArraySort<*, *> ->
-        ensureContextMatch(array)
+    val arrayConstDeclCache = mkContextCheckingCache { array: KArraySort<*, *> ->
         KArrayConstDecl(this, array)
     }
 
     fun <D : KSort, R : KSort> mkArrayConstDecl(array: KArraySort<D, R>): KArrayConstDecl<D, R> =
-        arrayConstDeclCache.create(array) as KArrayConstDecl<D, R>
+        arrayConstDeclCache.create(array).cast()
 
     // arith
     val arithAddDeclCache = mkContextCheckingCache { arg: KArithSort<*> ->
