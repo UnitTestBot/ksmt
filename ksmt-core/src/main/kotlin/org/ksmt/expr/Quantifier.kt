@@ -10,6 +10,7 @@ class KExistentialQuantifier internal constructor(
     bounds: List<KDecl<*>>
 ) : KQuantifier(ctx, body, bounds) {
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+    override fun printQuantifierName(): String = "exists"
 }
 
 class KUniversalQuantifier internal constructor(
@@ -18,4 +19,5 @@ class KUniversalQuantifier internal constructor(
     bounds: List<KDecl<*>>
 ) : KQuantifier(ctx, body, bounds) {
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+    override fun printQuantifierName(): String = "forall"
 }

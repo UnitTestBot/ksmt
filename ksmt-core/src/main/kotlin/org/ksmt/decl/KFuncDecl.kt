@@ -18,7 +18,7 @@ open class KFuncDecl<T : KSort>(
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun toString(): String = buildString {
+    override fun print(): String = buildString {
         append('(')
         append(name)
         append(" (")
@@ -97,6 +97,16 @@ abstract class KFuncDeclChain<T : KSort, A : KSort>(
     val argSort: A,
 ) : KFuncDecl<T>(ctx, name, sort, listOf(argSort)) {
     abstract fun KContext.applyChain(args: List<KExpr<A>>): KApp<T, KExpr<A>>
+
+    override fun print(): String = buildString {
+        append('(')
+        append(name)
+        append(" (")
+        append("$argSort *")
+        append(") ")
+        append("$sort")
+        append(" )")
+    }
 
     @Suppress("UNCHECKED_CAST")
     override fun apply(args: List<KExpr<*>>): KApp<T, *> = with(ctx) {
