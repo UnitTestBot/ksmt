@@ -1,6 +1,8 @@
 package org.ksmt.solver.z3
 
 import com.microsoft.z3.ArraySort
+import com.microsoft.z3.BitVecNum
+import com.microsoft.z3.BitVecSort
 import com.microsoft.z3.Expr
 import com.microsoft.z3.FuncDecl
 import com.microsoft.z3.IntNum
@@ -13,6 +15,7 @@ import com.microsoft.z3.intOrNull
 import com.microsoft.z3.longOrNull
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
+import org.ksmt.expr.KBitVecExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KIntNumExpr
 import org.ksmt.expr.KRealNumExpr
@@ -29,7 +32,7 @@ open class KZ3ExprConverter(
         convertExpr(this)
     } as? KExpr<T> ?: error("expr is not properly converted")
 
-    @Suppress("UNCHECKED_CAST", "unused")
+    @Suppress("UNCHECKED_CAST")
     fun <T : KSort> Sort.convert(): T = z3InternCtx.convertSort(this) {
         convertSort(this)
     } as? T ?: error("sort is not properly converted")
@@ -53,7 +56,7 @@ open class KZ3ExprConverter(
             Z3_sort_kind.Z3_ARRAY_SORT -> (sort as ArraySort).let {
                 mkArraySort(convertSort(it.domain), convertSort(it.range))
             }
-            Z3_sort_kind.Z3_BV_SORT -> TODO("bit-vec are not supported yet")
+            Z3_sort_kind.Z3_BV_SORT -> mkBvSort((sort as BitVecSort).size.toUInt())
             Z3_sort_kind.Z3_UNINTERPRETED_SORT,
             Z3_sort_kind.Z3_DATATYPE_SORT,
             Z3_sort_kind.Z3_RELATION_SORT,
@@ -92,8 +95,11 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_UNINTERPRETED -> mkApp(convertDecl(expr.funcDecl), expr.args.map { it.convert<KSort>() })
             Z3_decl_kind.Z3_OP_AND -> mkAnd(expr.args.map { it.convert() })
             Z3_decl_kind.Z3_OP_OR -> mkOr(expr.args.map { it.convert() })
+            Z3_decl_kind.Z3_OP_XOR -> mkXor(expr.args[0].convert(), expr.args[1].convert())
             Z3_decl_kind.Z3_OP_NOT -> mkNot(expr.args[0].convert())
+            Z3_decl_kind.Z3_OP_IMPLIES -> mkImplies(expr.args[0].convert(), expr.args[1].convert())
             Z3_decl_kind.Z3_OP_EQ -> mkEq(expr.args[0].convert(), expr.args[1].convert())
+            Z3_decl_kind.Z3_OP_DISTINCT -> mkDistinct(expr.args.map { it.convert() })
             Z3_decl_kind.Z3_OP_ITE -> mkIte(
                 expr.args[0].convert(),
                 expr.args[1].convert(),
@@ -158,7 +164,7 @@ open class KZ3ExprConverter(
     open fun convertNumeral(expr: Expr): KExpr<*> = when (expr.sort.sortKind) {
         Z3_sort_kind.Z3_INT_SORT -> convertNumeral(expr as IntNum)
         Z3_sort_kind.Z3_REAL_SORT -> convertNumeral(expr as RatNum)
-        Z3_sort_kind.Z3_BV_SORT -> TODO("bit-vec are not supported yet")
+        Z3_sort_kind.Z3_BV_SORT -> convertNumeral(expr as BitVecNum)
         else -> TODO("numerals with ${expr.sort} are not supported")
     }
 
@@ -172,5 +178,10 @@ open class KZ3ExprConverter(
     @Suppress("MemberVisibilityCanBePrivate")
     fun convertNumeral(expr: RatNum): KRealNumExpr = with(ctx) {
         mkRealNum(convertNumeral(expr.numerator), convertNumeral(expr.denominator))
+    }
+
+    @Suppress("MemberVisibilityCanBePrivate")
+    fun convertNumeral(expr: BitVecNum): KBitVecExpr<*> = with(ctx) {
+        mkBV(expr.toBinaryString(), expr.sortSize.toUInt())
     }
 }

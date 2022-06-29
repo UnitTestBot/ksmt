@@ -3,6 +3,7 @@ package org.ksmt.expr
 import org.ksmt.KContext
 import org.ksmt.decl.KArrayConstDecl
 import org.ksmt.decl.KDecl
+import org.ksmt.decl.KFuncDecl
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KSort
 
@@ -42,6 +43,47 @@ class KArrayConst<D : KSort, R : KSort> internal constructor(
     override fun decl(): KArrayConstDecl<D, R> = ctx.mkArrayConstDecl(sort)
     override val args: List<KExpr<R>>
         get() = listOf(value)
+
+    override fun accept(transformer: KTransformer): KExpr<KArraySort<D, R>> = transformer.transform(this)
+}
+
+class KFunctionAsArray<D : KSort, R : KSort> internal constructor(
+    ctx: KContext,
+    val function: KFuncDecl<R>
+) : KExpr<KArraySort<D, R>>(ctx) {
+    val domainSort: D
+
+    init {
+        check(function.argSorts.size == 1) {
+            "Function with single argument required"
+        }
+        @Suppress("UNCHECKED_CAST")
+        domainSort = function.argSorts.single() as D
+    }
+
+    override fun sort(): KArraySort<D, R> = with(ctx) { mkArraySort(domainSort, function.sort) }
+    override fun print(): String = "(asArray ${function.name})"
+    override fun accept(transformer: KTransformer): KExpr<KArraySort<D, R>> = transformer.transform(this)
+}
+
+/** Array lambda binding.
+ *
+ * [Defined as in the Z3 solver](https://microsoft.github.io/z3guide/docs/logic/Lambdas)
+ * */
+class KArrayLambda<D : KSort, R : KSort> internal constructor(
+    ctx: KContext,
+    val indexVarDecl: KDecl<D>,
+    val body: KExpr<R>
+) : KExpr<KArraySort<D, R>>(ctx) {
+    override fun sort(): KArraySort<D, R> = with(ctx) { mkArraySort(indexVarDecl.sort, body.sort) }
+    override fun print(): String = buildString {
+        append("(lambda")
+        append(" (")
+        append("(${indexVarDecl.name} ${indexVarDecl.sort})")
+        append(") ")
+        append("$body")
+        append(")")
+    }
 
     override fun accept(transformer: KTransformer): KExpr<KArraySort<D, R>> = transformer.transform(this)
 }
