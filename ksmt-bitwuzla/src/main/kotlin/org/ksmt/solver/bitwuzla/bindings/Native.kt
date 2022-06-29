@@ -8,7 +8,6 @@ import com.sun.jna.Pointer
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
 import org.ksmt.solver.bitwuzla.*
-import java.io.File
 
 typealias Bitwuzla = Pointer
 typealias BitwuzlaTerm = Pointer
@@ -1342,9 +1341,11 @@ object Native {
      * Original signature : `void bitwuzla_print_model(Bitwuzla*, const char*, FILE*)`<br></br>
      * *native declaration : bitwuzla.h:3272*
      */
-    fun bitwuzla_print_model(bitwuzla: Bitwuzla, format: String, file: File) {
-        throw UnsupportedOperationException("operation is not implemented")
+    fun bitwuzla_print_model(bitwuzla: Bitwuzla, format: String, file: FilePtr) = file.use {
+        bitwuzla_print_model(bitwuzla, format, it.ptr)
     }
+
+    external fun bitwuzla_print_model(bitwuzla: Bitwuzla, format: String, file: Pointer)
 
     /**
      * Print the current input formula.<br></br>
@@ -1359,9 +1360,11 @@ object Native {
      * Original signature : `void bitwuzla_dump_formula(Bitwuzla*, const char*, FILE*)`<br></br>
      * *native declaration : bitwuzla.h:3286*
      */
-    fun bitwuzla_dump_formula(bitwuzla: Bitwuzla, format: String, file: File) {
-        throw UnsupportedOperationException("operation is not implemented")
+    fun bitwuzla_dump_formula(bitwuzla: Bitwuzla, format: String, file: FilePtr) = file.use {
+        bitwuzla_dump_formula(bitwuzla, format, it.ptr)
     }
+
+    external fun bitwuzla_dump_formula(bitwuzla: Bitwuzla, format: String, file: Pointer)
 
     /**
      * Parse input file.<br></br>
@@ -1386,16 +1389,34 @@ object Native {
      * Original signature : `BitwuzlaResult bitwuzla_parse(Bitwuzla*, FILE*, const char*, FILE*, char**, BitwuzlaResult*, bool*)`<br></br>
      * *native declaration : bitwuzla.h:3312*
      */
+    external fun bitwuzla_parse(
+        bitwuzla: Bitwuzla,
+        infile: Pointer,
+        infile_name: String,
+        outfile: Pointer,
+        error_msg: PointerByReference,
+        parsed_status: IntByReference,
+        parsed_smt2: IntByReference
+    ): Int
+
     fun bitwuzla_parse(
         bitwuzla: Bitwuzla,
-        infile: File,
+        infile: FilePtr,
         infile_name: String,
-        outfile: File,
-        error_msg: Array<String>,
-        parsed_status: Array<BitwuzlaResult>,
-        parsed_smt2: BooleanArray
-    ): BitwuzlaResult {
-        throw UnsupportedOperationException("operation is not implemented")
+        outfile: FilePtr
+    ): ParseResult {
+        val errorMsg = PointerByReference()
+        val parsedStatus = IntByReference()
+        val parsedSmt2 = IntByReference()
+        val result = bitwuzla_parse(bitwuzla, infile.ptr, infile_name, outfile.ptr, errorMsg, parsedStatus, parsedSmt2)
+        infile.close()
+        outfile.close()
+        return ParseResult(
+            BitwuzlaResult.fromValue(result),
+            errorMsg.value?.let { if (Pointer.NULL == it) null else it.getString(0) },
+            BitwuzlaResult.fromValue(parsedStatus.value),
+            parsedSmt2.value != 0
+        )
     }
 
     /**
@@ -1421,16 +1442,35 @@ object Native {
      * Original signature : `BitwuzlaResult bitwuzla_parse_format(Bitwuzla*, const char*, FILE*, const char*, FILE*, char**, BitwuzlaResult*)`<br></br>
      * *native declaration : bitwuzla.h:3344*
      */
+    external fun bitwuzla_parse_format(
+        bitwuzla: Bitwuzla,
+        format: String,
+        infile: Pointer,
+        infile_name: String,
+        outfile: Pointer,
+        error_msg: PointerByReference,
+        parsed_status: IntByReference
+    ): Int
+
     fun bitwuzla_parse_format(
         bitwuzla: Bitwuzla,
         format: String,
-        infile: File,
+        infile: FilePtr,
         infile_name: String,
-        outfile: File,
-        error_msg: Array<String>,
-        parsed_status: Array<BitwuzlaResult>
-    ): BitwuzlaResult {
-        throw UnsupportedOperationException("operation is not implemented")
+        outfile: FilePtr
+    ): ParseFormatResult {
+        val errorMsg = PointerByReference()
+        val parsedStatus = IntByReference()
+        val result = bitwuzla_parse_format(
+            bitwuzla, format, infile.ptr, infile_name, outfile.ptr, errorMsg, parsedStatus
+        )
+        infile.close()
+        outfile.close()
+        return ParseFormatResult(
+            BitwuzlaResult.fromValue(result),
+            errorMsg.value?.let { if (Pointer.NULL == it) null else it.getString(0) },
+            BitwuzlaResult.fromValue(parsedStatus.value)
+        )
     }
 
     /**
@@ -1665,9 +1705,11 @@ object Native {
      * Original signature : `void bitwuzla_sort_dump(const BitwuzlaSort*, const char*, FILE*)`<br></br>
      * *native declaration : bitwuzla.h:3559*
      */
-    fun bitwuzla_sort_dump(sort: BitwuzlaSort, format: String, file: File) {
-        throw UnsupportedOperationException("operation is not implemented")
+    fun bitwuzla_sort_dump(sort: BitwuzlaSort, format: String, file: FilePtr) = file.use {
+        bitwuzla_sort_dump(sort, format, it.ptr)
     }
+
+    external fun bitwuzla_sort_dump(sort: BitwuzlaSort, format: String, file: Pointer)
 
     /**
      * Compute the hash value for a term.<br></br>
@@ -2140,9 +2182,11 @@ object Native {
      * Original signature : `void bitwuzla_term_dump(const BitwuzlaTerm*, const char*, FILE*)`<br></br>
      * *native declaration : bitwuzla.h:4025*
      */
-    fun bitwuzla_term_dump(term: BitwuzlaTerm, format: String, file: File) {
-        throw UnsupportedOperationException("operation is not implemented")
+    fun bitwuzla_term_dump(term: BitwuzlaTerm, format: String, file: FilePtr) = file.use {
+        bitwuzla_term_dump(term, format, it.ptr)
     }
+
+    external fun bitwuzla_term_dump(term: BitwuzlaTerm, format: String, file: Pointer)
 
     class FpValue(val sign: String, val exponent: String, val significand: String)
     class ArrayValue(
@@ -2157,6 +2201,19 @@ object Native {
         val arity: Int,
         val args: Array<Array<BitwuzlaTerm>>,
         val values: Array<BitwuzlaTerm>
+    )
+
+    class ParseResult(
+        val result: BitwuzlaResult,
+        val errorMsg: String?,
+        val parsedStatus: BitwuzlaResult,
+        val parsedSmt2: Boolean
+    )
+
+    class ParseFormatResult(
+        val result: BitwuzlaResult,
+        val errorMsg: String?,
+        val parsedStatus: BitwuzlaResult
     )
 
     private fun <T : Pointer> Array<T>.mkPtr(): Pointer {
