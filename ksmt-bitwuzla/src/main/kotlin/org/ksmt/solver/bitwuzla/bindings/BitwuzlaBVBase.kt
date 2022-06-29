@@ -1,4 +1,4 @@
-package org.ksmt.solver.bitwuzla
+package org.ksmt.solver.bitwuzla.bindings
 
 /**
  * The base for strings representing bit-vector values.<br></br>
