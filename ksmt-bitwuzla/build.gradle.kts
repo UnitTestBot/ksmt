@@ -1,4 +1,3 @@
-import org.gradle.language.jvm.tasks.ProcessResources
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -20,9 +19,11 @@ dependencies {
 
     testImplementation(kotlin("test"))
     bitwuzlaNative("bitwuzla", "bitwuzla-native-linux-x86-64", "1.0", ext = "zip")
+    bitwuzlaNative("bitwuzla", "bitwuzla-native-win32-x86-64", "1.0", ext = "zip")
 }
 
-tasks.withType<KotlinCompile> {
+tasks.getByName<KotlinCompile>("compileKotlin") {
+    kotlinOptions.freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
     kotlinOptions.allWarningsAsErrors = true
 }
 

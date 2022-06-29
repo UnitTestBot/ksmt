@@ -11,9 +11,10 @@ interface KModel {
     fun detach(): KModel
 
     data class KFuncInterp<T : KSort>(
+        val sort: T,
         val vars: List<KDecl<*>>,
         val entries: List<KFuncInterpEntry<T>>,
-        val default: KExpr<T>
+        val default: KExpr<T>?
     )
 
     data class KFuncInterpEntry<T : KSort>(

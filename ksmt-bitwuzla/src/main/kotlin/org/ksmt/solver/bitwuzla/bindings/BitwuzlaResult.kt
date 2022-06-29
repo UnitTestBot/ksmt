@@ -1,18 +1,17 @@
-package org.ksmt.solver.bitwuzla
+@file:Suppress("MagicNumber")
+package org.ksmt.solver.bitwuzla.bindings
 
 /**
- * A satisfiability result.<br></br>
- * enum values<br></br>
- * *native declaration : bitwuzla.h:2003*
+ * A satisfiability result.
  */
 enum class BitwuzlaResult(val value: Int) {
-    /** < sat  */
+    /**  sat  */
     BITWUZLA_SAT(10),
 
-    /** < unsat  */
+    /** unsat  */
     BITWUZLA_UNSAT(20),
 
-    /** < unknown  */
+    /** unknown  */
     BITWUZLA_UNKNOWN(0);
 
     companion object {

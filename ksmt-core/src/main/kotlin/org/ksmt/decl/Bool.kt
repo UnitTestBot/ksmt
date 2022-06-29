@@ -24,9 +24,31 @@ class KNotDecl internal constructor(ctx: KContext) :
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
+class KImpliesDecl internal constructor(ctx: KContext) :
+    KFuncDecl2<KBoolSort, KBoolSort, KBoolSort>(ctx, "implies", ctx.mkBoolSort(), ctx.mkBoolSort(), ctx.mkBoolSort()) {
+    override fun KContext.apply(arg0: KExpr<KBoolSort>, arg1: KExpr<KBoolSort>): KApp<KBoolSort, KExpr<KBoolSort>> =
+        mkImplies(arg0, arg1)
+
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
+
+class KXorDecl internal constructor(ctx: KContext) :
+    KFuncDecl2<KBoolSort, KBoolSort, KBoolSort>(ctx, "xor", ctx.mkBoolSort(), ctx.mkBoolSort(), ctx.mkBoolSort()) {
+    override fun KContext.apply(arg0: KExpr<KBoolSort>, arg1: KExpr<KBoolSort>): KApp<KBoolSort, KExpr<KBoolSort>> =
+        mkXor(arg0, arg1)
+
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
+
 class KEqDecl<T : KSort> internal constructor(ctx: KContext, argSort: T) :
     KFuncDecl2<KBoolSort, T, T>(ctx, "eq", ctx.mkBoolSort(), argSort, argSort) {
-    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<KBoolSort, *> = mkEq(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<KBoolSort, KExpr<T>> = mkEq(arg0, arg1)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
+
+class KDistinctDecl<T : KSort> internal constructor(ctx: KContext, argSort: T) :
+    KFuncDeclChain<KBoolSort, T>(ctx, "distinct", ctx.mkBoolSort(), argSort) {
+    override fun KContext.applyChain(args: List<KExpr<T>>): KApp<KBoolSort, KExpr<T>> = mkDistinct(args)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 

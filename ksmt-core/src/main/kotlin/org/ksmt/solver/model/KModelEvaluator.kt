@@ -145,7 +145,9 @@ open class KModelEvaluator(
                     varSubstitution.apply(entry.value)
                 )
             }
-            val default = varSubstitution.apply(interpretation.default)
+            // in case of partial interpretation we can generate any default expr to preserve expression correctness
+            val defaultExpr = interpretation.default ?: interpretation.sort.sampleValue()
+            val default = varSubstitution.apply(defaultExpr)
             return entries.foldRight(default) { entry, acc ->
                 val argBinding = mkAnd(entry.args.zip(args) { ea, a -> mkEq(ea as KExpr<KSort>, a as KExpr<KSort>) })
                 mkIte(argBinding, entry.value, acc)
@@ -158,7 +160,7 @@ open class KModelEvaluator(
             override fun visit(sort: KBoolSort): KExpr<T> = trueExpr as KExpr<T>
             override fun visit(sort: KIntSort): KExpr<T> = 0.intExpr as KExpr<T>
             override fun visit(sort: KRealSort): KExpr<T> = mkRealNum(0) as KExpr<T>
-            override fun <S : KBVSort> visit(sort: S): KExpr<T> = mkBV(0) as KExpr<T>
+            override fun <S : KBVSort> visit(sort: S): KExpr<T> = mkBV("0", sort.sizeBits) as KExpr<T>
             override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): KExpr<T> =
                 mkArrayConst(sort, sort.range.sampleValue()) as KExpr<T>
         })

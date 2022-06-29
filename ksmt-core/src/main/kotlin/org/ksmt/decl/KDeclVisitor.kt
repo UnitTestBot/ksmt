@@ -16,9 +16,12 @@ interface KDeclVisitor<T> {
     fun visit(decl: KAndDecl): T = visit(decl as KFuncDecl<KBoolSort>)
     fun visit(decl: KNotDecl): T = visit(decl as KFuncDecl<KBoolSort>)
     fun visit(decl: KOrDecl): T = visit(decl as KFuncDecl<KBoolSort>)
+    fun visit(decl: KImpliesDecl): T = visit(decl as KFuncDecl<KBoolSort>)
+    fun visit(decl: KXorDecl): T = visit(decl as KFuncDecl<KBoolSort>)
     fun visit(decl: KFalseDecl): T = visit(decl as KConstDecl<KBoolSort>)
     fun visit(decl: KTrueDecl): T = visit(decl as KConstDecl<KBoolSort>)
     fun <S : KSort> visit(decl: KEqDecl<S>): T = visit(decl as KFuncDecl<KBoolSort>)
+    fun <S : KSort> visit(decl: KDistinctDecl<S>): T = visit(decl as KFuncDecl<KBoolSort>)
     fun <S : KSort> visit(decl: KIteDecl<S>): T = visit(decl as KFuncDecl<S>)
 
     fun <D : KSort, R : KSort> visit(decl: KArraySelectDecl<D, R>): T = visit(decl as KFuncDecl<R>)

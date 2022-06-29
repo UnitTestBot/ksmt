@@ -143,16 +143,7 @@ complexity:
     excludeStringsWithLessThan5Characters: true
     ignoreStringsRegex: '$^'
   TooManyFunctions:
-    active: true
-    excludes: ['**/test/**', '**/example/**']
-    thresholdInFiles: 50
-    thresholdInClasses: 11
-    thresholdInInterfaces: 50
-    thresholdInObjects: 11
-    thresholdInEnums: 11
-    ignoreDeprecated: false
-    ignorePrivate: false
-    ignoreOverridden: false
+    active: false
 
 coroutines:
   active: true

@@ -1,6 +1,5 @@
 package org.ksmt.solver.z3
 
-import com.microsoft.z3.Context
 import com.microsoft.z3.FuncDecl
 import com.microsoft.z3.Model
 import org.ksmt.KContext
@@ -15,7 +14,6 @@ open class KZ3Model(
     private val ctx: KContext,
     private val internCtx: KZ3InternalizationContext,
     private val internalizer: KZ3ExprInternalizer,
-    private val z3Ctx: Context,
     private val converter: KZ3ExprConverter
 ) : KModel {
     override val declarations: Set<KDecl<*>> by lazy {
@@ -24,6 +22,8 @@ open class KZ3Model(
         }
     }
 
+    private val interpretations = mutableMapOf<KDecl<*>, KModel.KFuncInterp<*>?>()
+
     override fun <T : KSort> eval(expr: KExpr<T>, complete: Boolean): KExpr<T> {
         ensureContextActive()
         val z3Expr = with(internalizer) { expr.internalize() }
@@ -31,35 +31,37 @@ open class KZ3Model(
         return with(converter) { z3Result.convert() }
     }
 
-    @Suppress("ReturnCount")
-    override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? {
-        ensureContextActive()
-        if (decl !in declarations) return null
-        val z3Decl = with(internalizer) { decl.internalize() }
-        if (z3Decl in model.constDecls) return constInterp(z3Decl)
-        return funcInterp(z3Decl)
-    }
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? =
+        interpretations.getOrPut(decl) {
+            ensureContextActive()
+            if (decl !in declarations) return@getOrPut null
+            val z3Decl = with(internalizer) { decl.internalize() }
+            if (z3Decl in model.constDecls) constInterp<T>(z3Decl) else funcInterp<T>(z3Decl)
+        } as? KModel.KFuncInterp<T>
 
-    @Suppress("MemberVisibilityCanBePrivate")
-    fun <T : KSort> constInterp(decl: FuncDecl): KModel.KFuncInterp<T>? {
+    private fun <T : KSort> constInterp(decl: FuncDecl): KModel.KFuncInterp<T>? {
         val z3Expr = model.getConstInterp(decl) ?: return null
         val expr = with(converter) { z3Expr.convert<T>() }
-        return KModel.KFuncInterp(vars = emptyList(), entries = emptyList(), default = expr)
+        return with(ctx) {
+            KModel.KFuncInterp(sort = expr.sort, vars = emptyList(), entries = emptyList(), default = expr)
+        }
     }
 
-    @Suppress("MemberVisibilityCanBePrivate", "ForbiddenComment")
-    fun <T : KSort> funcInterp(decl: FuncDecl): KModel.KFuncInterp<T>? = with(converter) {
+    private fun <T : KSort> funcInterp(decl: FuncDecl): KModel.KFuncInterp<T>? = with(converter) {
         val z3Interp = model.getFuncInterp(decl) ?: return null
-        // todo: convert z3 vars or generate fresh const by ourself
-        val z3Vars = decl.domain.map { z3Ctx.mkFreshConst("x", it) }.toTypedArray()
-        val vars = z3Vars.map { it.funcDecl.convert<KSort>() }
+        val varSorts = decl.domain.map { it.convert<KSort>() }
+        val vars = varSorts.map { with(ctx) { it.mkFreshConst("x") } }
+        val z3Vars = vars.map { with(internalizer) { it.internalize() } }.toTypedArray()
         val entries = z3Interp.entries.map { entry ->
             val args = entry.args.map { it.substituteVars(z3Vars).convert<KSort>() }
             val value = entry.value.substituteVars(z3Vars).convert<T>()
             KModel.KFuncInterpEntry(args, value)
         }
         val default = z3Interp.getElse().substituteVars(z3Vars).convert<T>()
-        return KModel.KFuncInterp(vars, entries, default)
+        val sort = decl.range.convert<T>()
+        val varDecls = vars.map { with(ctx) { it.decl } }
+        return KModel.KFuncInterp(sort, varDecls, entries, default)
     }
 
     override fun detach(): KModel {

@@ -16,6 +16,7 @@ import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAddArithExpr
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KArrayConst
+import org.ksmt.expr.KArrayLambda
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KBitVec16Expr
@@ -26,6 +27,7 @@ import org.ksmt.expr.KBitVecCustomExpr
 import org.ksmt.expr.KBitVecExpr
 import org.ksmt.expr.KBitVecNumberExpr
 import org.ksmt.expr.KConst
+import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KDivArithExpr
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExistentialQuantifier
@@ -34,6 +36,7 @@ import org.ksmt.expr.KFalse
 import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KGeArithExpr
 import org.ksmt.expr.KGtArithExpr
+import org.ksmt.expr.KImpliesExpr
 import org.ksmt.expr.KInt32NumExpr
 import org.ksmt.expr.KInt64NumExpr
 import org.ksmt.expr.KIntBigNumExpr
@@ -55,6 +58,7 @@ import org.ksmt.expr.KTransformer
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
+import org.ksmt.expr.KXorExpr
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBVSort
 import org.ksmt.sort.KSort
@@ -101,6 +105,14 @@ open class KZ3ExprInternalizer(
         z3Ctx.mkNot(arg.internalize() as BoolExpr)
     }
 
+    override fun transform(expr: KImpliesExpr) = expr.internalizeExpr {
+        z3Ctx.mkImplies(p.internalize() as BoolExpr, q.internalize() as BoolExpr)
+    }
+
+    override fun transform(expr: KXorExpr) = expr.internalizeExpr {
+        z3Ctx.mkXor(a.internalize() as BoolExpr, b.internalize() as BoolExpr)
+    }
+
     override fun transform(expr: KTrue) = expr.internalizeExpr {
         z3Ctx.mkTrue()
     }
@@ -111,6 +123,10 @@ open class KZ3ExprInternalizer(
 
     override fun <T : KSort> transform(expr: KEqExpr<T>) = expr.internalizeExpr {
         z3Ctx.mkEq(lhs.internalize(), rhs.internalize())
+    }
+
+    override fun <T : KSort> transform(expr: KDistinctExpr<T>) = expr.internalizeExpr {
+        z3Ctx.mkDistinct(*args.map { it.internalize() }.toTypedArray())
     }
 
     override fun <T : KSort> transform(expr: KIteExpr<T>) = expr.internalizeExpr {
@@ -143,6 +159,11 @@ open class KZ3ExprInternalizer(
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>) = expr.internalizeExpr {
         z3Ctx.mkConstArray(expr.sort.internalize(), expr.value.internalize())
+    }
+
+    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) = expr.internalizeExpr {
+        val internalizedIndex = indexVarDecl.internalize()
+        z3Ctx.mkLambda(arrayOf(internalizedIndex.range), arrayOf(internalizedIndex.name), body.internalize())
     }
 
     override fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>) = expr.internalizeExpr {

@@ -25,7 +25,9 @@ class KRealSort internal constructor(ctx: KContext) : KArithSort<KRealSort>(ctx)
     override fun print(): String = "Real"
 }
 
-class KArraySort<D : KSort, R : KSort> internal constructor(ctx: KContext, val domain: D, val range: R) : KSort(ctx) {
+class KArraySort<out D : KSort, out R : KSort> internal constructor(
+    ctx: KContext, val domain: D, val range: R
+) : KSort(ctx) {
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
     override fun print(): String = "(Array $domain $range)"
 }
@@ -34,6 +36,12 @@ abstract class KBVSort(ctx: KContext) : KSort(ctx) {
     abstract val sizeBits: UInt
 
     override fun print(): String = "BitVec $sizeBits"
+}
+
+class KBV1Sort internal constructor(ctx: KContext) : KBVSort(ctx) {
+    override val sizeBits: UInt = 1u
+
+    override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
 }
 
 class KBV8Sort internal constructor(ctx: KContext) : KBVSort(ctx) {

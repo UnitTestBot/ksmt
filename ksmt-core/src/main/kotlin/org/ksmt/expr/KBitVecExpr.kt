@@ -3,6 +3,7 @@ package org.ksmt.expr
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.sort.KBV16Sort
+import org.ksmt.sort.KBV1Sort
 import org.ksmt.sort.KBV32Sort
 import org.ksmt.sort.KBV64Sort
 import org.ksmt.sort.KBV8Sort
@@ -12,6 +13,14 @@ abstract class KBitVecExpr<T : KBVSort>(
     ctx: KContext
 ) : KApp<T, KExpr<*>>(ctx) {
     override val args: List<KExpr<*>> = emptyList()
+}
+
+class KBitVec1Expr internal constructor(ctx: KContext, val value: Boolean) : KBitVecExpr<KBV1Sort>(ctx) {
+    override fun accept(transformer: KTransformer): KExpr<KBV1Sort> = transformer.transform(this)
+
+    override fun decl(): KDecl<KBV1Sort> = ctx.mkBvDecl(value)
+
+    override fun sort(): KBV1Sort = ctx.mkBv1Sort()
 }
 
 abstract class KBitVecNumberExpr<T : KBVSort, N : Number>(

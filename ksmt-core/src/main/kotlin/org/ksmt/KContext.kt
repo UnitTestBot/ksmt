@@ -1,7 +1,6 @@
 package org.ksmt
 
 import org.ksmt.cache.mkCache
-import java.math.BigInteger
 import org.ksmt.decl.KAndDecl
 import org.ksmt.decl.KArithAddDecl
 import org.ksmt.decl.KArithDivDecl
@@ -17,15 +16,18 @@ import org.ksmt.decl.KArrayConstDecl
 import org.ksmt.decl.KArraySelectDecl
 import org.ksmt.decl.KArrayStoreDecl
 import org.ksmt.decl.KBitVec16ExprDecl
+import org.ksmt.decl.KBitVec1ExprDecl
 import org.ksmt.decl.KBitVec32ExprDecl
 import org.ksmt.decl.KBitVec64ExprDecl
 import org.ksmt.decl.KBitVec8ExprDecl
 import org.ksmt.decl.KBitVecCustomSizeExprDecl
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
+import org.ksmt.decl.KDistinctDecl
 import org.ksmt.decl.KEqDecl
 import org.ksmt.decl.KFalseDecl
 import org.ksmt.decl.KFuncDecl
+import org.ksmt.decl.KImpliesDecl
 import org.ksmt.decl.KIntModDecl
 import org.ksmt.decl.KIntNumDecl
 import org.ksmt.decl.KIntRemDecl
@@ -37,27 +39,33 @@ import org.ksmt.decl.KRealIsIntDecl
 import org.ksmt.decl.KRealNumDecl
 import org.ksmt.decl.KRealToIntDecl
 import org.ksmt.decl.KTrueDecl
+import org.ksmt.decl.KXorDecl
 import org.ksmt.expr.KAddArithExpr
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KArrayConst
+import org.ksmt.expr.KArrayLambda
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KBitVec16Expr
+import org.ksmt.expr.KBitVec1Expr
 import org.ksmt.expr.KBitVec32Expr
 import org.ksmt.expr.KBitVec64Expr
 import org.ksmt.expr.KBitVec8Expr
 import org.ksmt.expr.KBitVecCustomExpr
 import org.ksmt.expr.KBitVecExpr
 import org.ksmt.expr.KConst
+import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KDivArithExpr
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFalse
 import org.ksmt.expr.KFunctionApp
+import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KGeArithExpr
 import org.ksmt.expr.KGtArithExpr
+import org.ksmt.expr.KImpliesExpr
 import org.ksmt.expr.KInt32NumExpr
 import org.ksmt.expr.KInt64NumExpr
 import org.ksmt.expr.KIntBigNumExpr
@@ -79,9 +87,11 @@ import org.ksmt.expr.KToRealIntExpr
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
+import org.ksmt.expr.KXorExpr
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBV16Sort
+import org.ksmt.sort.KBV1Sort
 import org.ksmt.sort.KBV32Sort
 import org.ksmt.sort.KBV64Sort
 import org.ksmt.sort.KBV8Sort
@@ -91,6 +101,8 @@ import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import java.math.BigInteger
+import kotlin.reflect.KProperty
 
 @Suppress("TooManyFunctions", "unused")
 open class KContext {
@@ -113,6 +125,7 @@ open class KContext {
     // bit-vec
     private val bvSortCache = mkCache { sizeBits: UInt ->
         when (sizeBits.toInt()) {
+            1 -> KBV1Sort(this)
             Byte.SIZE_BITS -> KBV8Sort(this)
             Short.SIZE_BITS -> KBV16Sort(this)
             Int.SIZE_BITS -> KBV32Sort(this)
@@ -122,6 +135,7 @@ open class KContext {
     }
 
     fun mkBvSort(sizeBits: UInt): KBVSort = bvSortCache.create(sizeBits)
+    fun mkBv1Sort(): KBV1Sort = mkBvSort(1u).cast()
     fun mkBv8Sort(): KBV8Sort = mkBvSort(Byte.SIZE_BITS.toUInt()).cast()
     fun mkBv16Sort(): KBV16Sort = mkBvSort(Short.SIZE_BITS.toUInt()).cast()
     fun mkBv32Sort(): KBV32Sort = mkBvSort(Int.SIZE_BITS.toUInt()).cast()
@@ -140,6 +154,8 @@ open class KContext {
     val realSort: KRealSort
         get() = mkRealSort()
 
+    val bv1Sort: KBV1Sort
+        get() = mkBv1Sort()
 
     /*
     * expressions
@@ -167,6 +183,18 @@ open class KContext {
 
     fun mkNot(arg: KExpr<KBoolSort>): KNotExpr = notCache.create(arg)
 
+    private val impliesCache = mkContextCheckingCache { p: KExpr<KBoolSort>, q: KExpr<KBoolSort> ->
+        KImpliesExpr(this, p, q)
+    }
+
+    fun mkImplies(p: KExpr<KBoolSort>, q: KExpr<KBoolSort>): KImpliesExpr = impliesCache.create(p, q)
+
+    private val xorCache = mkContextCheckingCache { a: KExpr<KBoolSort>, b: KExpr<KBoolSort> ->
+        KXorExpr(this, a, b)
+    }
+
+    fun mkXor(a: KExpr<KBoolSort>, b: KExpr<KBoolSort>): KXorExpr = xorCache.create(a, b)
+
     private val trueCache = mkCache<KTrue> { KTrue(this) }
     fun mkTrue() = trueCache.create()
 
@@ -178,6 +206,12 @@ open class KContext {
     }
 
     fun <T : KSort> mkEq(lhs: KExpr<T>, rhs: KExpr<T>): KEqExpr<T> = eqCache.create(lhs.cast(), rhs.cast()).cast()
+
+    private val distinctCache = mkContextListCheckingCache { args: List<KExpr<KSort>> ->
+        KDistinctExpr(this, args)
+    }
+
+    fun <T : KSort> mkDistinct(args: List<KExpr<T>>): KDistinctExpr<T> = distinctCache.create(args.cast()).cast()
 
     private val iteCache = mkContextCheckingCache { c: KExpr<KBoolSort>, t: KExpr<KSort>, f: KExpr<KSort> ->
         KIteExpr(this, c, t, f)
@@ -191,6 +225,8 @@ open class KContext {
     operator fun KExpr<KBoolSort>.not() = mkNot(this)
     infix fun KExpr<KBoolSort>.and(other: KExpr<KBoolSort>) = mkAnd(this, other)
     infix fun KExpr<KBoolSort>.or(other: KExpr<KBoolSort>) = mkOr(this, other)
+    infix fun KExpr<KBoolSort>.xor(other: KExpr<KBoolSort>) = mkXor(this, other)
+    infix fun KExpr<KBoolSort>.implies(other: KExpr<KBoolSort>) = mkImplies(this, other)
 
     val trueExpr: KTrue
         get() = mkTrue()
@@ -225,7 +261,12 @@ open class KContext {
 
     fun <T : KSort> mkConstApp(decl: KDecl<T>): KConst<T> = constAppCache.create(decl).cast()
 
-    fun <T : KSort> T.mkConst(name: String) = with(mkConstDecl(name)) { apply() }
+    fun <T : KSort> T.mkConst(name: String): KApp<T, *> = with(mkConstDecl(name)) { apply() }
+
+    fun <T : KSort> T.mkFreshConst(name: String): KApp<T, *> = with(mkFreshConstDecl(name)) { apply() }
+
+    inline operator fun <reified T : KSort> T.getValue(thisRef: Any?, property: KProperty<*>): KApp<T, *> =
+        mkConst(property.name)
 
     // array
     private val arrayStoreCache =
@@ -251,6 +292,20 @@ open class KContext {
 
     fun <D : KSort, R : KSort> mkArrayConst(arraySort: KArraySort<D, R>, value: KExpr<R>): KArrayConst<D, R> =
         arrayConstCache.create(arraySort.cast(), value.cast()).cast()
+
+    private val functionAsArrayCache = mkContextCheckingCache { function: KFuncDecl<KSort> ->
+        KFunctionAsArray<KSort, KSort>(this, function)
+    }
+
+    fun <D : KSort, R : KSort> mkFunctionAsArray(function: KFuncDecl<R>): KFunctionAsArray<D, R> =
+        functionAsArrayCache.create(function.cast()).cast()
+
+    private val arrayLambdaCache = mkContextCheckingCache { indexVar: KDecl<*>, body: KExpr<*> ->
+        KArrayLambda(this, indexVar, body)
+    }
+
+    fun <D : KSort, R : KSort> mkArrayLambda(indexVar: KDecl<D>, body: KExpr<R>): KArrayLambda<D, R> =
+        arrayLambdaCache.create(indexVar, body).cast()
 
     fun <D : KSort, R : KSort> KExpr<KArraySort<D, R>>.store(index: KExpr<D>, value: KExpr<R>) =
         mkArrayStore(this, index, value)
@@ -436,17 +491,20 @@ open class KContext {
     fun KExpr<KRealSort>.isIntExpr() = mkRealIsInt(this)
 
     // bitvectors
+    private val bv1Cache = mkCache { value: Boolean -> KBitVec1Expr(this, value) }
     private val bv8Cache = mkCache { value: Byte -> KBitVec8Expr(this, value) }
     private val bv16Cache = mkCache { value: Short -> KBitVec16Expr(this, value) }
     private val bv32Cache = mkCache { value: Int -> KBitVec32Expr(this, value) }
     private val bv64Cache = mkCache { value: Long -> KBitVec64Expr(this, value) }
     private val bvCache = mkCache { value: String, sizeBits: UInt -> KBitVecCustomExpr(this, value, sizeBits) }
 
+    fun mkBV(value: Boolean): KBitVec1Expr = bv1Cache.create(value)
     fun mkBV(value: Byte): KBitVec8Expr = bv8Cache.create(value)
     fun mkBV(value: Short): KBitVec16Expr = bv16Cache.create(value)
     fun mkBV(value: Int): KBitVec32Expr = bv32Cache.create(value)
     fun mkBV(value: Long): KBitVec64Expr = bv64Cache.create(value)
     fun mkBV(value: String, sizeBits: UInt): KBitVecExpr<KBVSort> = when (sizeBits.toInt()) {
+        1 -> mkBV(value.toInt(radix = 2) != 0).cast()
         Byte.SIZE_BITS -> mkBV(value.toByte(radix = 2)).cast()
         Short.SIZE_BITS -> mkBV(value.toShort(radix = 2)).cast()
         Int.SIZE_BITS -> mkBV(value.toInt(radix = 2)).cast()
@@ -507,6 +565,25 @@ open class KContext {
     @Suppress("MemberVisibilityCanBePrivate")
     fun <T : KSort> T.mkConstDecl(name: String) = mkConstDecl(name, this)
 
+    /* Since any two KFuncDecl are only equivalent if they are the same kotlin object,
+     * we can guarantee that the returned KFuncDecl is not equal to any other declaration.
+    */
+    private var freshConstIdx = 0
+    fun <T : KSort> mkFreshFuncDecl(name: String, sort: T, args: List<KSort>): KFuncDecl<T> {
+        if (args.isEmpty()) return mkFreshConstDecl(name, sort)
+        ensureContextMatch(sort)
+        ensureContextMatch(args)
+        return KFuncDecl(this, "$name!fresh!${freshConstIdx++}", sort, args)
+    }
+
+    fun <T : KSort> mkFreshConstDecl(name: String, sort: T): KConstDecl<T> {
+        ensureContextMatch(sort)
+        return KConstDecl(this, "$name!fresh!${freshConstIdx++}", sort)
+    }
+
+    @Suppress("MemberVisibilityCanBePrivate")
+    fun <T : KSort> T.mkFreshConstDecl(name: String) = mkFreshConstDecl(name, this)
+
     // bool
     private val falseDeclCache = mkCache<KFalseDecl> { KFalseDecl(this) }
     fun mkFalseDecl(): KFalseDecl = falseDeclCache.create()
@@ -523,11 +600,23 @@ open class KContext {
     private val notDeclCache = mkCache<KNotDecl> { KNotDecl(this) }
     fun mkNotDecl(): KNotDecl = notDeclCache.create()
 
+    private val impliesDeclCache = mkCache<KImpliesDecl> { KImpliesDecl(this) }
+    fun mkImpliesDecl(): KImpliesDecl = impliesDeclCache.create()
+
+    private val xorDeclCache = mkCache<KXorDecl> { KXorDecl(this) }
+    fun mkXorDecl(): KXorDecl = xorDeclCache.create()
+
     private val eqDeclCache = mkContextCheckingCache { arg: KSort ->
         KEqDecl(this, arg)
     }
 
     fun <T : KSort> mkEqDecl(arg: T): KEqDecl<T> = eqDeclCache.create(arg).cast()
+
+    private val distinctDeclCache = mkContextCheckingCache { arg: KSort ->
+        KDistinctDecl(this, arg)
+    }
+
+    fun <T : KSort> mkDistinctDecl(arg: T): KDistinctDecl<T> = distinctDeclCache.create(arg).cast()
 
     private val iteDeclCache = mkContextCheckingCache { arg: KSort ->
         KIteDecl(this, arg)
@@ -643,6 +732,7 @@ open class KContext {
     private val realNumDeclCache = mkCache { value: String -> KRealNumDecl(this, value) }
     fun mkRealNumDecl(value: String): KRealNumDecl = realNumDeclCache.create(value)
 
+    private val bv1DeclCache = mkCache { value: Boolean -> KBitVec1ExprDecl(this, value) }
     private val bv8DeclCache = mkCache { value: Byte -> KBitVec8ExprDecl(this, value) }
     private val bv16DeclCache = mkCache { value: Short -> KBitVec16ExprDecl(this, value) }
     private val bv32DeclCache = mkCache { value: Int -> KBitVec32ExprDecl(this, value) }
@@ -651,12 +741,14 @@ open class KContext {
         KBitVecCustomSizeExprDecl(this, value, sizeBits)
     }
 
+    fun mkBvDecl(value: Boolean): KDecl<KBV1Sort> = bv1DeclCache.create(value)
     fun mkBvDecl(value: Byte): KDecl<KBV8Sort> = bv8DeclCache.create(value)
     fun mkBvDecl(value: Short): KDecl<KBV16Sort> = bv16DeclCache.create(value)
     fun mkBvDecl(value: Int): KDecl<KBV32Sort> = bv32DeclCache.create(value)
     fun mkBvDecl(value: Long): KDecl<KBV64Sort> = bv64DeclCache.create(value)
 
     fun mkBvDecl(value: String, sizeBits: UInt): KDecl<KBVSort> = when (sizeBits.toInt()) {
+        1 -> mkBvDecl(value.toInt(radix = 2) != 0).cast()
         Byte.SIZE_BITS -> mkBvDecl(value.toByte(radix = 2)).cast()
         Short.SIZE_BITS -> mkBvDecl(value.toShort(radix = 2)).cast()
         Int.SIZE_BITS -> mkBvDecl(value.toInt(radix = 2)).cast()

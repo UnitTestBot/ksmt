@@ -4,6 +4,7 @@ import org.ksmt.KContext
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBV16Sort
+import org.ksmt.sort.KBV1Sort
 import org.ksmt.sort.KBV32Sort
 import org.ksmt.sort.KBV64Sort
 import org.ksmt.sort.KBV8Sort
@@ -32,13 +33,17 @@ interface KTransformer {
     fun transform(expr: KAndExpr): KExpr<KBoolSort> = transformApp(expr)
     fun transform(expr: KOrExpr): KExpr<KBoolSort> = transformApp(expr)
     fun transform(expr: KNotExpr): KExpr<KBoolSort> = transformApp(expr)
+    fun transform(expr: KImpliesExpr): KExpr<KBoolSort> = transformApp(expr)
+    fun transform(expr: KXorExpr): KExpr<KBoolSort> = transformApp(expr)
     fun transform(expr: KTrue): KExpr<KBoolSort> = transformApp(expr)
     fun transform(expr: KFalse): KExpr<KBoolSort> = transformApp(expr)
     fun <T : KSort> transform(expr: KEqExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    fun <T : KSort> transform(expr: KDistinctExpr<T>): KExpr<KBoolSort> = transformApp(expr)
     fun <T : KSort> transform(expr: KIteExpr<T>): KExpr<T> = transformApp(expr)
 
     // bit-vec transformers
     fun <T : KBVSort> transformBitVecExpr(expr: KBitVecExpr<T>): KExpr<T> = transformApp(expr)
+    fun transform(expr: KBitVec1Expr): KExpr<KBV1Sort> = transformBitVecExpr(expr)
     fun transform(expr: KBitVec8Expr): KExpr<KBV8Sort> = transformBitVecExpr(expr)
     fun transform(expr: KBitVec16Expr): KExpr<KBV16Sort> = transformBitVecExpr(expr)
     fun transform(expr: KBitVec32Expr): KExpr<KBV32Sort> = transformBitVecExpr(expr)
@@ -49,6 +54,12 @@ interface KTransformer {
     fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> = transformApp(expr)
     fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> = transformApp(expr)
     fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>): KExpr<KArraySort<D, R>> = transformApp(expr)
+    fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> = transformExpr(expr)
+    fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> = with(ctx) {
+        val body = expr.body.accept(this@KTransformer)
+        if (body == expr.body) return transformExpr(expr)
+        return transformExpr(mkArrayLambda(expr.indexVarDecl, body))
+    }
 
     // arith transformers
     fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>): KExpr<T> = transformApp(expr)
