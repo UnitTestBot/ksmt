@@ -1,4 +1,4 @@
-package org.ksmt.solver.bitwuzla
+package org.ksmt.solver.bitwuzla.bindings
 
 /**
  * The term kind.<br></br>

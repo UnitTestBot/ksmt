@@ -1,6 +1,6 @@
 @file:Suppress("FunctionName", "unused", "UNUSED_PARAMETER")
 
-package org.ksmt.solver.bitwuzla
+package org.ksmt.solver.bitwuzla.bindings
 
 import com.sun.jna.Memory
 import com.sun.jna.Native
@@ -14,7 +14,7 @@ typealias Bitwuzla = Pointer
 typealias BitwuzlaTerm = Pointer
 typealias BitwuzlaSort = Pointer
 
-object BitwuzlaNative {
+object Native {
     init {
         Native.register("bitwuzla")
     }

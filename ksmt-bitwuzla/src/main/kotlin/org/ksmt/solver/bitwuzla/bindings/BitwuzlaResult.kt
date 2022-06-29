@@ -1,4 +1,4 @@
-package org.ksmt.solver.bitwuzla
+package org.ksmt.solver.bitwuzla.bindings
 
 /**
  * A satisfiability result.<br></br>
