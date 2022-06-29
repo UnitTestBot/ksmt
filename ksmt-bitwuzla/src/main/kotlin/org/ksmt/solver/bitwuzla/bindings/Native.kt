@@ -1065,8 +1065,7 @@ object Native {
     fun bitwuzla_get_unsat_assumptions(bitwuzla: Bitwuzla): Array<BitwuzlaTerm> {
         val size = IntByReference()
         val resultPtr = bitwuzla_get_unsat_assumptions(bitwuzla, size)
-        val result = resultPtr.getPointerArray(0, size.value)
-        return result as Array<BitwuzlaTerm>
+        return resultPtr.load(size.value)
     }
 
     external fun bitwuzla_get_unsat_assumptions(bitwuzla: Bitwuzla, size: IntByReference): Pointer
@@ -1090,8 +1089,7 @@ object Native {
     fun bitwuzla_get_unsat_core(bitwuzla: Bitwuzla): Array<BitwuzlaTerm> {
         val size = IntByReference()
         val resultPtr = bitwuzla_get_unsat_core(bitwuzla, size)
-        val result = resultPtr.getPointerArray(0, size.value)
-        return result as Array<BitwuzlaTerm>
+        return resultPtr.load(size.value)
     }
 
     external fun bitwuzla_get_unsat_core(bitwuzla: Bitwuzla, size: IntByReference): Pointer
@@ -1261,9 +1259,9 @@ object Native {
         val sz = size.value
         return ArrayValue(
             sz,
-            indices.pointer.getPointerArray(0, sz) as Array<BitwuzlaTerm>,
-            values.pointer.getPointerArray(0, sz) as Array<BitwuzlaTerm>,
-            defaultValue.value as BitwuzlaTerm
+            indices.value.load(sz),
+            values.value.load(sz),
+            defaultValue.value
         )
     }
 
@@ -1316,9 +1314,9 @@ object Native {
         bitwuzla_get_fun_value(bitwuzla, term, argsPtr, arityPtr, valuesPtr, sizePtr)
         val size = sizePtr.value
         val arity = arityPtr.value
-        val argsPtrList = argsPtr.value.getPointerArray(0, size)
-        val args = Array(size) { argsPtrList[it].getPointerArray(0, arity) as Array<BitwuzlaTerm> }
-        return FunValue(size, arity, args, valuesPtr.value.getPointerArray(0, size) as Array<BitwuzlaTerm>)
+        val argsPtrList = argsPtr.value.load(size)
+        val args = Array(size) { argsPtrList[it].load(arity) }
+        return FunValue(size, arity, args, valuesPtr.value.load(size))
     }
 
     external fun bitwuzla_get_fun_value(
@@ -1495,7 +1493,7 @@ object Native {
     ) {
         val termsPtr = terms.mkPtr()
         bitwuzla_substitute_terms(bitwuzla, terms.size, termsPtr, map_keys.size, map_keys.mkPtr(), map_values.mkPtr())
-        val result = termsPtr.getPointerArray(0, terms.size)
+        val result = termsPtr.load(terms.size)
         for (i in terms.indices) {
             terms[i] = result[i]
         }
@@ -1574,7 +1572,7 @@ object Native {
     fun bitwuzla_sort_fun_get_domain_sorts(sort: BitwuzlaSort): Array<BitwuzlaSort> {
         val size = IntByReference()
         val result = bitwuzla_sort_fun_get_domain_sorts(sort, size)
-        return result.getPointerArray(0, size.value) as Array<BitwuzlaSort>
+        return result.load(size.value)
     }
 
     external fun bitwuzla_sort_fun_get_domain_sorts(sort: BitwuzlaSort, size: IntByReference): Pointer
@@ -1706,7 +1704,7 @@ object Native {
     fun bitwuzla_term_get_children(term: BitwuzlaTerm): Array<BitwuzlaTerm> {
         val size = IntByReference()
         val result = bitwuzla_term_get_children(term, size)
-        return result.getPointerArray(0, size.value) as Array<BitwuzlaTerm>
+        return result.load(size.value)
     }
 
     external fun bitwuzla_term_get_children(term: BitwuzlaTerm, size: IntByReference): Pointer
@@ -1724,6 +1722,7 @@ object Native {
     fun bitwuzla_term_get_indices(term: BitwuzlaTerm): IntArray {
         val size = IntByReference()
         val result = bitwuzla_term_get_indices(term, size)
+        if (Pointer.NULL == result) return intArrayOf()
         return result.getIntArray(0, size.value)
     }
 
@@ -1791,7 +1790,7 @@ object Native {
     fun bitwuzla_term_fun_get_domain_sorts(term: BitwuzlaTerm): Array<BitwuzlaSort> {
         val size = IntByReference()
         val result = bitwuzla_term_fun_get_domain_sorts(term, size)
-        return result.getPointerArray(0, size.value) as Array<BitwuzlaSort>
+        return result.load(size.value)
     }
 
     external fun bitwuzla_term_fun_get_domain_sorts(term: BitwuzlaTerm, size: IntByReference): Pointer
@@ -1854,7 +1853,7 @@ object Native {
      * Original signature : `char* bitwuzla_term_get_symbol(const BitwuzlaTerm*)`<br></br>
      * *native declaration : bitwuzla.h:3742*
      */
-    external fun bitwuzla_term_get_symbol(term: BitwuzlaTerm): String
+    external fun bitwuzla_term_get_symbol(term: BitwuzlaTerm): String?
 
     /**
      * Set the symbol of a term.<br></br>
@@ -2150,7 +2149,7 @@ object Native {
         val size: Int,
         val indices: Array<BitwuzlaTerm>,
         val values: Array<BitwuzlaTerm>,
-        val defaultValue: BitwuzlaTerm
+        val defaultValue: BitwuzlaTerm?
     )
 
     class FunValue(
@@ -2166,6 +2165,11 @@ object Native {
             memory.setPointer(Native.POINTER_SIZE.toLong() * i, this[i])
         }
         return memory
+    }
+
+    private fun Pointer.load(size: Int): Array<Pointer> {
+        if (Pointer.NULL == this) return emptyArray()
+        return getPointerArray(0, size)
     }
 
 }
