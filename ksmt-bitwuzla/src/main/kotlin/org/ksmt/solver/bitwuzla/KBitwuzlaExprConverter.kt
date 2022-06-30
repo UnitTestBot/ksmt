@@ -1,6 +1,7 @@
 package org.ksmt.solver.bitwuzla
 
 import org.ksmt.KContext
+import org.ksmt.expr.KApp
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
@@ -13,11 +14,21 @@ open class KBitwuzlaExprConverter(
     val ctx: KContext,
     val bitwuzlaCtx: KBitwuzlaContext
 ) {
+    /*
+    * Create KSmt expression from Bitwuzla term
+    * todo: booleans in bitwuzla are represented as BV1
+    *  convert all bv1 -> bool?
+    *  keep bv1 as bv?
+    *  more complex rules?
+    * */
     @Suppress("UNCHECKED_CAST")
     fun <T : KSort> BitwuzlaTerm.convert(): KExpr<T> = bitwuzlaCtx.convertExpr(this) {
         convertExprHelper(this)
     } as? KExpr<T> ?: error("expr is not properly converted")
 
+    /*
+    * Create KSmt expression from Bitwuzla sort
+    * */
     @Suppress("UNCHECKED_CAST")
     fun <T : KSort> BitwuzlaSort.convertSort(): T = bitwuzlaCtx.convertSort(this) {
         convertSortHelper(this)
@@ -60,8 +71,10 @@ open class KBitwuzlaExprConverter(
                 val children = Native.bitwuzla_term_get_children(expr)
                 check(children.isNotEmpty()) { "Apply has no function term" }
                 val function = children[0]
-                val args = children.drop(1)
-                TODO()
+                check(Native.bitwuzla_term_is_fun(function)) { "function term expected" }
+                val decl = (function.convert<KSort>() as KApp<*, *>).decl()
+                val args = children.drop(1).map { it.convert<KSort>() }
+                decl.apply(args)
             }
             BitwuzlaKind.BITWUZLA_KIND_VAL -> when {
                 Native.bitwuzla_mk_true(bitwuzlaCtx.bitwuzla) == expr -> trueExpr
@@ -85,14 +98,25 @@ open class KBitwuzlaExprConverter(
             // array
             BitwuzlaKind.BITWUZLA_KIND_CONST_ARRAY -> {
                 val children = Native.bitwuzla_term_get_children(expr)
-
-                TODO()
+                check(children.size == 1) { "incorrect const array arguments" }
+                val value = children[0].convert<KSort>()
+                val sort = Native.bitwuzla_term_get_sort(expr).convertSort<KArraySort<KSort, KSort>>()
+                mkArrayConst(sort, value)
             }
-            BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT -> TODO()
+            BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT -> {
+                val children = Native.bitwuzla_term_get_children(expr)
+                check(children.size == 2) { "incorrect array select arguments" }
+                val array = children[0].convert<KArraySort<KSort, KSort>>()
+                val index = children[1].convert<KSort>()
+                array.select(index)
+            }
             BitwuzlaKind.BITWUZLA_KIND_ARRAY_STORE -> {
-                val children = Native.bitwuzla_term_get_children(expr).map { it.convert<KSort>() }
+                val children = Native.bitwuzla_term_get_children(expr)
                 check(children.size == 3) { "incorrect array store arguments" }
-                mkArrayStore(children[0] as KExpr<KArraySort<KSort, KSort>>, children[1], children[2])
+                val array = children[0].convert<KArraySort<KSort, KSort>>()
+                val index = children[1].convert<KSort>()
+                val value = children[2].convert<KSort>()
+                array.store(index, value)
             }
 
             // quantifiers

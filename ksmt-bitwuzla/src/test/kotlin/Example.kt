@@ -15,16 +15,6 @@ class Example {
         val e = mkArraySort(boolSort, boolSort).mkConst("e")
         val solver = KBitwuzlaSolver(this)
         solver.assert(a)
-//        solver.assert(
-//            mkUniversalQuantifier(
-//                !(c eq falseExpr and !(c eq a)) or b.apply(listOf(c)), listOf(c.decl)
-//            )
-//        )
-//        solver.assert(
-//            mkUniversalQuantifier(
-//                !(c eq trueExpr) or !b.apply(listOf(c)), listOf(c.decl)
-//            )
-//        )
         solver.assert(e.select(a) eq trueExpr)
         val status = solver.check()
         assertEquals(status, KSolverStatus.SAT)
@@ -33,7 +23,6 @@ class Example {
         val cValue = model.eval(c)
         val eValue = model.eval(e)
         assertEquals(aValue, trueExpr)
-        assertEquals(cValue, c)
         assertTrue(eValue.sort is KArraySort<*, *>)
         val bInterp = model.interpretation(b)
         assertNotNull(bInterp)
