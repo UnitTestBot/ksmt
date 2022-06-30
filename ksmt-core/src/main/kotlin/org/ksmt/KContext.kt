@@ -23,6 +23,23 @@ open class KContext {
     val intSortCache = mkCache<KIntSort> { KIntSort(this) }
     fun mkIntSort(): KIntSort = intSortCache.create()
 
+    // bit-vec
+    private val bvSortCache = mkCache { sizeBits: UInt ->
+        when (sizeBits.toInt()) {
+            Byte.SIZE_BITS -> KBV8Sort(this)
+            Short.SIZE_BITS -> KBV16Sort(this)
+            Int.SIZE_BITS -> KBV32Sort(this)
+            Long.SIZE_BITS -> KBV64Sort(this)
+            else -> KBVCustomSizeSort(this, sizeBits)
+        }
+    }
+
+    fun mkBvSort(sizeBits: UInt): KBVSort = bvSortCache.create(sizeBits)
+    fun mkBv8Sort(): KBV8Sort = mkBvSort(Byte.SIZE_BITS.toUInt()).cast()
+    fun mkBv16Sort(): KBV16Sort = mkBvSort(Short.SIZE_BITS.toUInt()).cast()
+    fun mkBv32Sort(): KBV32Sort = mkBvSort(Int.SIZE_BITS.toUInt()).cast()
+    fun mkBv64Sort(): KBV64Sort = mkBvSort(Long.SIZE_BITS.toUInt()).cast()
+
     val realSortCache = mkCache<KRealSort> { KRealSort(this) }
     fun mkRealSort(): KRealSort = realSortCache.create()
 
@@ -142,6 +159,7 @@ open class KContext {
     val arrayConstCache = mkContextCheckingCache { array: KArraySort<KSort, KSort>, value: KExpr<KSort> ->
         KArrayConst(this, array, value)
     }
+
     fun <D : KSort, R : KSort> mkArrayConst(arraySort: KArraySort<D, R>, value: KExpr<R>): KArrayConst<D, R> =
         arrayConstCache.create(arraySort.cast(), value.cast()).cast()
 
@@ -324,6 +342,27 @@ open class KContext {
 
     fun KExpr<KRealSort>.toIntExpr() = mkRealToInt(this)
     fun KExpr<KRealSort>.isIntExpr() = mkRealIsInt(this)
+
+    // bitvectors
+    private val bv8Cache = mkCache { value: Byte -> KBitVec8Expr(this, value) }
+    private val bv16Cache = mkCache { value: Short -> KBitVec16Expr(this, value) }
+    private val bv32Cache = mkCache { value: Int -> KBitVec32Expr(this, value) }
+    private val bv64Cache = mkCache { value: Long -> KBitVec64Expr(this, value) }
+    private val bvCache =
+        mkCache { value: String, sizeBits: UInt -> KBitVecCustomExpr(this, value, sizeBits) }
+
+    fun mkBV(value: Byte): KBitVec8Expr = bv8Cache.create(value)
+    fun mkBV(value: Short): KBitVec16Expr = bv16Cache.create(value)
+    fun mkBV(value: Int): KBitVec32Expr = bv32Cache.create(value)
+    fun mkBV(value: Long): KBitVec64Expr = bv64Cache.create(value)
+    fun mkBV(value: String, sizeBits: UInt): KBitVecExpr<KBVSort> =
+        when (sizeBits.toInt()) {
+            Byte.SIZE_BITS -> mkBV(value.toByte(radix = 2)).cast()
+            Short.SIZE_BITS -> mkBV(value.toShort(radix = 2)).cast()
+            Int.SIZE_BITS -> mkBV(value.toInt(radix = 2)).cast()
+            Long.SIZE_BITS -> mkBV(value.toLong(radix = 2)).cast()
+            else -> bvCache.create(value, sizeBits)
+        }
 
     // quantifiers
     val existentialQuantifierCache = mkCache { body: KExpr<KBoolSort>, bounds: List<KDecl<*>> ->
@@ -514,6 +553,27 @@ open class KContext {
     val realNumDeclCache = mkCache { value: String -> KRealNumDecl(this, value) }
     fun mkRealNumDecl(value: String): KRealNumDecl = realNumDeclCache.create(value)
 
+    private val bv8DeclCache = mkCache { value: Byte -> KBitVec8ExprDecl(this, value) }
+    private val bv16DeclCache = mkCache { value: Short -> KBitVec16ExprDecl(this, value) }
+    private val bv32DeclCache = mkCache { value: Int -> KBitVec32ExprDecl(this, value) }
+    private val bv64DeclCache = mkCache { value: Long -> KBitVec64ExprDecl(this, value) }
+    private val bvCustomSizeDeclCache = mkCache { value: String, sizeBits: UInt ->
+        KBitVecCustomSizeExprDecl(this, value, sizeBits)
+    }
+
+    fun mkBvDecl(value: Byte): KDecl<KBV8Sort> = bv8DeclCache.create(value)
+    fun mkBvDecl(value: Short): KDecl<KBV16Sort> = bv16DeclCache.create(value)
+    fun mkBvDecl(value: Int): KDecl<KBV32Sort> = bv32DeclCache.create(value)
+    fun mkBvDecl(value: Long): KDecl<KBV64Sort> = bv64DeclCache.create(value)
+
+    fun mkBvDecl(value: String, sizeBits: UInt): KDecl<KBVSort> =
+        when (sizeBits.toInt()) {
+            Byte.SIZE_BITS -> mkBvDecl(value.toByte(radix = 2)).cast()
+            Short.SIZE_BITS -> mkBvDecl(value.toShort(radix = 2)).cast()
+            Int.SIZE_BITS -> mkBvDecl(value.toInt(radix = 2)).cast()
+            Long.SIZE_BITS -> mkBvDecl(value.toLong(radix = 2)).cast()
+            else -> bvCustomSizeDeclCache.create(value, sizeBits).cast()
+        }
     /*
     * KAst
     * */
@@ -559,5 +619,8 @@ open class KContext {
 
     @Suppress("UNCHECKED_CAST")
     private fun <Base, T> Base.uncheckedCast(): T = this as T
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <Base, T> Base.uncheckedCastOrNull(): T? = this as? T
 
 }
