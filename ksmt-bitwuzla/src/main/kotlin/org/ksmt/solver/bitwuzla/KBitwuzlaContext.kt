@@ -54,8 +54,8 @@ open class KBitwuzlaContext : AutoCloseable {
     val rootConstantScope: RootConstantScope = RootConstantScope()
     var currentConstantScope: ConstantScope = rootConstantScope
 
-    fun declaredConstants(): Set<BitwuzlaTerm> = rootConstantScope.constants.toSet()
-    fun mkConstant(name: String, sort: BitwuzlaSort): BitwuzlaTerm = currentConstantScope.mkConstant(name, sort)
+    fun declaredConstants(): Set<KDecl<*>> = rootConstantScope.constants.toSet()
+    fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = currentConstantScope.mkConstant(decl, sort)
 
     inline fun <reified T> withConstantScope(body: NestedConstantScope.() -> T): T {
         val oldScope = currentConstantScope
@@ -107,28 +107,28 @@ open class KBitwuzlaContext : AutoCloseable {
     }
 
     sealed interface ConstantScope {
-        fun mkConstant(name: String, sort: BitwuzlaSort): BitwuzlaTerm
+        fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm
     }
 
     inner class RootConstantScope : ConstantScope {
-        val constants = hashSetOf<BitwuzlaTerm>()
-        private val constantCache = mkCache { name: String, sort: BitwuzlaSort ->
-            Native.bitwuzla_mk_const(bitwuzla, sort, name).also {
-                constants += it
+        val constants = hashSetOf<KDecl<*>>()
+        private val constantCache = mkCache { decl: KDecl<*>, sort: BitwuzlaSort ->
+            Native.bitwuzla_mk_const(bitwuzla, sort, decl.name).also {
+                constants += decl
             }
         }
 
-        override fun mkConstant(name: String, sort: BitwuzlaSort): BitwuzlaTerm = constantCache.create(name, sort)
+        override fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = constantCache.create(decl, sort)
     }
 
     inner class NestedConstantScope(val parent: ConstantScope) : ConstantScope {
-        private val constants = hashMapOf<Pair<String, BitwuzlaSort>, BitwuzlaTerm>()
-        fun mkFreshConstant(name: String, sort: BitwuzlaSort): BitwuzlaTerm = constants.getOrPut(name to sort) {
-            Native.bitwuzla_mk_const(bitwuzla, sort, name)
+        private val constants = hashMapOf<Pair<KDecl<*>, BitwuzlaSort>, BitwuzlaTerm>()
+        fun mkFreshConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = constants.getOrPut(decl to sort) {
+            Native.bitwuzla_mk_const(bitwuzla, sort, decl.name)
         }
 
-        override fun mkConstant(name: String, sort: BitwuzlaSort): BitwuzlaTerm =
-            constants[name to sort] ?: parent.mkConstant(name, sort)
+        override fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm =
+            constants[decl to sort] ?: parent.mkConstant(decl, sort)
     }
 
 }
