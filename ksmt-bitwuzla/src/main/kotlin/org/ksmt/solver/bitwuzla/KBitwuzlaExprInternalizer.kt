@@ -33,7 +33,7 @@ open class KBitwuzlaExprInternalizer(
 
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = expr.internalizeExpr {
-        val const = bitwuzlaCtx.mkConstant(decl.name, decl.bitwuzlaSort())
+        val const = bitwuzlaCtx.mkConstant(decl, decl.bitwuzlaSort())
         val args = args.map { it.internalize() }
         val termArgs = (listOf(const) + args).toTypedArray()
         Native.bitwuzla_mk_term(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, termArgs)
@@ -41,7 +41,7 @@ open class KBitwuzlaExprInternalizer(
 
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = expr.internalizeExpr {
         with(ctx) {
-            bitwuzlaCtx.mkConstant(decl.name, sort.internalize())
+            bitwuzlaCtx.mkConstant(decl, sort.internalize())
         }
     }
 
@@ -145,7 +145,7 @@ open class KBitwuzlaExprInternalizer(
         internalizeExpr {
             bitwuzlaCtx.withConstantScope {
                 val internalizedBounds = bounds.map {
-                    mkFreshConstant(it.name, it.sort.internalize())
+                    mkFreshConstant(it, it.sort.internalize())
                 }
                 val boundVars = bounds.map { bitwuzlaCtx.mkFreshVar(it.sort.internalize()) }
                 val body = body.internalize()

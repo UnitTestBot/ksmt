@@ -16,11 +16,8 @@ open class KBitwuzlaModel(
     val internalizer: KBitwuzlaExprInternalizer,
     val converter: KBitwuzlaExprConverter
 ) : KModel {
-    override val declarations: Set<KDecl<*>> by lazy {
-        bitwuzlaCtx.declaredConstants().map {
-            with(converter) { it.convert<KSort>() as KApp<*, *> }
-        }.mapTo(mutableSetOf()) { with(ctx) { it.decl } }
-    }
+    override val declarations: Set<KDecl<*>>
+        get() = bitwuzlaCtx.declaredConstants()
 
     val interpretations: MutableMap<KDecl<*>, KModel.KFuncInterp<*>> = hashMapOf()
 
@@ -36,7 +33,7 @@ open class KBitwuzlaModel(
         with(ctx) {
             bitwuzlaCtx.ensureActive()
             val term = with(internalizer) {
-                bitwuzlaCtx.mkConstant(decl.name, decl.bitwuzlaSort())
+                bitwuzlaCtx.mkConstant(decl, decl.bitwuzlaSort())
             }
             when {
                 Native.bitwuzla_term_is_array(term) -> with(converter) {
