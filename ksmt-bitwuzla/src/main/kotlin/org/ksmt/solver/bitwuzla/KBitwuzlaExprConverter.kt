@@ -1,7 +1,6 @@
 package org.ksmt.solver.bitwuzla
 
 import org.ksmt.KContext
-import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
@@ -46,7 +45,7 @@ open class KBitwuzlaExprConverter(
         when (val kind = Native.bitwuzla_term_get_kind_helper(expr)) {
             // constants, functions, values
             BitwuzlaKind.BITWUZLA_KIND_CONST -> {
-                val name = Native.bitwuzla_term_get_symbol(expr) ?: error("constant has no symbol")
+                val name = Native.bitwuzla_term_get_symbol(expr) ?: generateBitwuzlaSymbol(expr)
                 val sort = Native.bitwuzla_term_get_sort(expr)
                 val decl = if (Native.bitwuzla_sort_is_fun(sort) && !Native.bitwuzla_sort_is_array(sort)) {
                     val domain = Native.bitwuzla_sort_fun_get_domain_sorts(sort).map { it.convertSort<KSort>() }
@@ -189,5 +188,13 @@ open class KBitwuzlaExprConverter(
             BitwuzlaKind.BITWUZLA_KIND_DISTINCT,
             BitwuzlaKind.BITWUZLA_KIND_LAMBDA -> TODO("unsupported kind $kind")
         }
+    }
+
+    private fun generateBitwuzlaSymbol(expr: BitwuzlaTerm): String {
+        /* generate symbol in the same way as in bitwuzla model printer
+        * https://github.com/bitwuzla/bitwuzla/blob/main/src/bzlaprintmodel.c#L263
+        * */
+        val id = Native.bitwuzla_term_hash(expr)
+        return "uf$id"
     }
 }
