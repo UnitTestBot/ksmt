@@ -2224,8 +2224,8 @@ object Native {
         return memory
     }
 
-    private fun Pointer.load(size: Int): Array<Pointer> {
-        if (Pointer.NULL == this) return emptyArray()
+    private fun Pointer?.load(size: Int): Array<Pointer> {
+        if (this == null || Pointer.NULL == this || size == 0) return emptyArray()
         return getPointerArray(0, size)
     }
 

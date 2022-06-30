@@ -7,26 +7,36 @@ import com.sun.jna.Pointer
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 
-object FileUtils {
+object FilePtrUtils {
     fun openRead(path: Path): FilePtr = FilePtr(lib.fopen(path.absolutePathString(), "r"))
     fun openWrite(path: Path): FilePtr = FilePtr(lib.fopen(path.absolutePathString(), "w+"))
-    fun close(ptr: Pointer) = lib.fclose(ptr)
+    fun stdout(): FilePtr = stdout
+    fun flush(ptr: FilePtr) = lib.fflush(ptr.ptr)
+    fun close(ptr: FilePtr) = lib.fclose(ptr.ptr)
 
-    interface CLib : Library {
+
+    private interface CLib : Library {
         fun fopen(path: String, mode: String): Pointer
         fun fdopen(fd: Int, mode: String): Pointer
         fun fclose(ptr: Pointer)
+        fun fflush(ptr: Pointer): Int
     }
 
     private val lib: CLib by lazy {
         Native.load(if (Platform.isWindows()) "msvcrt" else "c", CLib::class.java)
     }
 
+    private val stdout: FilePtr by lazy {
+        FilePtr(lib.fdopen(1, "w"), closable = false)
+    }
+
 }
 
-class FilePtr(val ptr: Pointer) : AutoCloseable {
+class FilePtr internal constructor(val ptr: Pointer, private val closable: Boolean = true) : AutoCloseable {
     override fun close() {
-        FileUtils.close(ptr)
+        FilePtrUtils.flush(this)
+        if (closable) {
+            FilePtrUtils.close(this)
+        }
     }
 }
-
