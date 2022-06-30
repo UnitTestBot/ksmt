@@ -33,7 +33,7 @@ open class KBitwuzlaExprInternalizer(
 
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = expr.internalizeExpr {
-        val const = bitwuzlaCtx.mkConstant(expr.decl.name, expr.decl.bitwuzlaSort())
+        val const = bitwuzlaCtx.mkConstant(decl.name, decl.bitwuzlaSort())
         val args = args.map { it.internalize() }
         val termArgs = (listOf(const) + args).toTypedArray()
         Native.bitwuzla_mk_term(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, termArgs)
@@ -41,7 +41,7 @@ open class KBitwuzlaExprInternalizer(
 
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = expr.internalizeExpr {
         with(ctx) {
-            bitwuzlaCtx.mkConstant(expr.decl.name, expr.sort.internalize())
+            bitwuzlaCtx.mkConstant(decl.name, sort.internalize())
         }
     }
 
@@ -143,13 +143,13 @@ open class KBitwuzlaExprInternalizer(
 
     inline fun <T : KQuantifier> T.internalizeQuantifier(crossinline internalizer: T.(Array<BitwuzlaTerm>) -> BitwuzlaTerm) =
         internalizeExpr {
-            with(ctx) {
-                val body = body.internalize()
-                if (bounds.isEmpty()) return@internalizeExpr body
+            bitwuzlaCtx.withConstantScope {
                 val internalizedBounds = bounds.map {
-                    Native.bitwuzla_mk_const(bitwuzlaCtx.bitwuzla, it.sort.internalize(), it.name)
+                    mkFreshConstant(it.name, it.sort.internalize())
                 }
                 val boundVars = bounds.map { bitwuzlaCtx.mkFreshVar(it.sort.internalize()) }
+                val body = body.internalize()
+                if (bounds.isEmpty()) return@internalizeExpr body
                 val bodyWithVars = Native.bitwuzla_substitute_term(
                     bitwuzlaCtx.bitwuzla,
                     body,
@@ -195,6 +195,7 @@ open class KBitwuzlaExprInternalizer(
         override fun <S : KSort> visit(decl: KFuncDecl<S>): BitwuzlaSort = bitwuzlaCtx.internalizeDeclSort(decl) {
             val domain = decl.argSorts.map { it.accept(sortInternalizer) }.toTypedArray()
             val range = decl.sort.accept(sortInternalizer)
+            if (domain.isEmpty()) return@internalizeDeclSort range
             Native.bitwuzla_mk_fun_sort(bitwuzlaCtx.bitwuzla, domain.size, domain, range)
         }
     }
