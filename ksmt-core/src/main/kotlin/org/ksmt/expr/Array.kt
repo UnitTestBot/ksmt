@@ -42,5 +42,6 @@ class KArrayConst<D : KSort, R : KSort> internal constructor(
     override fun decl(): KArrayConstDecl<D, R> = ctx.mkArrayConstDecl(sort)
     override val args: List<KExpr<R>>
         get() = listOf(value)
+
     override fun accept(transformer: KTransformer): KExpr<KArraySort<D, R>> = transformer.transform(this)
 }

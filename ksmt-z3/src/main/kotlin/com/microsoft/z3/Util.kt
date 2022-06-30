@@ -12,6 +12,7 @@ fun IntNum.longOrNull(): Long? {
     return result.value
 }
 
+@Suppress("LongParameterList")
 fun Context.mkExistsQuantifier(
     boundConstants: Array<Expr>,
     body: Expr,
@@ -22,6 +23,7 @@ fun Context.mkExistsQuantifier(
     skolemId: Symbol?
 ): Quantifier = mkExists(boundConstants, body, weight, patterns, noPatterns, quantifierId, skolemId)
 
+@Suppress("LongParameterList")
 fun Context.mkForallQuantifier(
     boundConstants: Array<Expr>,
     body: Expr,

@@ -3,13 +3,13 @@ package org.ksmt.solver.z3
 import com.microsoft.z3.Expr
 import com.microsoft.z3.FuncDecl
 import com.microsoft.z3.Sort
+import java.lang.ref.WeakReference
+import java.util.WeakHashMap
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KSort
-import java.lang.ref.WeakReference
-import java.util.*
-import kotlin.collections.Map
 
+@Suppress("TooManyFunctions")
 class KZ3InternalizationContext : AutoCloseable {
     private var closed = false
     private val expressions = WeakHashMap<KExpr<*>, Expr>()

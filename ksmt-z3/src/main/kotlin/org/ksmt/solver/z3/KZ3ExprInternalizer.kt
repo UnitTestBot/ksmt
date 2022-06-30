@@ -1,24 +1,76 @@
 package org.ksmt.solver.z3
 
-import com.microsoft.z3.*
+import com.microsoft.z3.ArithExpr
+import com.microsoft.z3.ArrayExpr
+import com.microsoft.z3.BoolExpr
+import com.microsoft.z3.Context
+import com.microsoft.z3.Expr
+import com.microsoft.z3.FuncDecl
+import com.microsoft.z3.IntExpr
+import com.microsoft.z3.RealExpr
+import com.microsoft.z3.Sort
+import com.microsoft.z3.mkExistsQuantifier
+import com.microsoft.z3.mkForallQuantifier
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
-import org.ksmt.expr.*
-import org.ksmt.expr.BitVecExpr
+import org.ksmt.expr.KAddArithExpr
+import org.ksmt.expr.KAndExpr
+import org.ksmt.expr.KArrayConst
+import org.ksmt.expr.KArraySelect
+import org.ksmt.expr.KArrayStore
+import org.ksmt.expr.KBitVec16Expr
+import org.ksmt.expr.KBitVec32Expr
+import org.ksmt.expr.KBitVec64Expr
+import org.ksmt.expr.KBitVec8Expr
+import org.ksmt.expr.KBitVecCustomExpr
+import org.ksmt.expr.KBitVecExpr
+import org.ksmt.expr.KBitVecNumberExpr
+import org.ksmt.expr.KConst
+import org.ksmt.expr.KDivArithExpr
+import org.ksmt.expr.KEqExpr
+import org.ksmt.expr.KExistentialQuantifier
+import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFalse
+import org.ksmt.expr.KFunctionApp
+import org.ksmt.expr.KGeArithExpr
+import org.ksmt.expr.KGtArithExpr
+import org.ksmt.expr.KInt32NumExpr
+import org.ksmt.expr.KInt64NumExpr
+import org.ksmt.expr.KIntBigNumExpr
+import org.ksmt.expr.KIsIntRealExpr
+import org.ksmt.expr.KIteExpr
+import org.ksmt.expr.KLeArithExpr
+import org.ksmt.expr.KLtArithExpr
+import org.ksmt.expr.KModIntExpr
+import org.ksmt.expr.KMulArithExpr
+import org.ksmt.expr.KNotExpr
+import org.ksmt.expr.KOrExpr
+import org.ksmt.expr.KPowerArithExpr
+import org.ksmt.expr.KRealNumExpr
+import org.ksmt.expr.KRemIntExpr
+import org.ksmt.expr.KSubArithExpr
+import org.ksmt.expr.KToIntRealExpr
+import org.ksmt.expr.KToRealIntExpr
+import org.ksmt.expr.KTransformer
+import org.ksmt.expr.KTrue
+import org.ksmt.expr.KUnaryMinusArithExpr
+import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBVSort
 import org.ksmt.sort.KSort
 
+@Suppress("TooManyFunctions", "SpreadOperator")
 open class KZ3ExprInternalizer(
     override val ctx: KContext,
-    val z3Ctx: Context,
+    private val z3Ctx: Context,
     val z3InternCtx: KZ3InternalizationContext,
-    val sortInternalizer: KZ3SortInternalizer,
-    val declInternalizer: KZ3DeclInternalizer
+    private val sortInternalizer: KZ3SortInternalizer,
+    private val declInternalizer: KZ3DeclInternalizer
 ) : KTransformer {
 
     fun <T : KDecl<*>> T.internalize(): FuncDecl = accept(declInternalizer)
 
+    @Suppress("MemberVisibilityCanBePrivate")
     fun <T : KSort> T.internalize(): Sort = accept(sortInternalizer)
 
     fun <T : KSort> KExpr<T>.internalize(): Expr {
@@ -69,8 +121,16 @@ open class KZ3ExprInternalizer(
         )
     }
 
-    override fun <T : KBVSort<KBVSize>> transform(expr: BitVecExpr<T>) = expr.internalizeExpr {
-        TODO("BV is not supported yet")
+    override fun <T : KBVSort> transformBitVecExpr(expr: KBitVecExpr<T>): KExpr<T> = expr.internalizeExpr {
+        val sizeBits = expr.sort().sizeBits.toInt()
+        when (expr) {
+            is KBitVec8Expr, is KBitVec16Expr, is KBitVec32Expr -> {
+                z3Ctx.mkBV((expr as KBitVecNumberExpr<*, *>).numberValue.toInt(), sizeBits)
+            }
+            is KBitVec64Expr -> z3Ctx.mkBV(expr.numberValue, sizeBits)
+            is KBitVecCustomExpr -> z3Ctx.mkBV(expr.value, sizeBits)
+            else -> error("Unknown bv expression class ${expr::class} in transformation method: ${expr.print()}")
+        }
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) = expr.internalizeExpr {
@@ -190,6 +250,7 @@ open class KZ3ExprInternalizer(
         )
     }
 
+    @Suppress("MemberVisibilityCanBePrivate")
     inline fun <T : KExpr<*>> T.internalizeExpr(crossinline internalizer: T.() -> Expr): T {
         z3InternCtx.internalizeExpr(this) {
             internalizer()
