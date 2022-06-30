@@ -10,7 +10,6 @@ import kotlin.io.path.absolutePathString
 object FileUtils {
     fun openRead(path: Path): FilePtr = FilePtr(lib.fopen(path.absolutePathString(), "r"))
     fun openWrite(path: Path): FilePtr = FilePtr(lib.fopen(path.absolutePathString(), "w+"))
-    fun stdout(): FilePtr = FilePtr(lib.fdopen(1, "w"))
     fun close(ptr: Pointer) = lib.fclose(ptr)
 
     interface CLib : Library {
