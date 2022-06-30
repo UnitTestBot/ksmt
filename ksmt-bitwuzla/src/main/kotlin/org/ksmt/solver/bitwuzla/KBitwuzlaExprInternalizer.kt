@@ -18,13 +18,24 @@ open class KBitwuzlaExprInternalizer(
     open val sortInternalizer: SortInternalizer by lazy { SortInternalizer(bitwuzlaCtx) }
     open val declSortInternalizer: DeclSortInternalizer by lazy { DeclSortInternalizer(bitwuzlaCtx, sortInternalizer) }
 
+    /*
+    * Create Bitwuzla term from KSmt expression
+    * */
     fun <T : KSort> KExpr<T>.internalize(): BitwuzlaTerm {
         bitwuzlaCtx.ensureActive()
         accept(this@KBitwuzlaExprInternalizer)
         return bitwuzlaCtx[this] ?: error("expression is not properly internalized")
     }
 
+    /*
+    * Create Bitwuzla sort from KSmt sort
+    * */
     fun <T : KSort> T.internalize(): BitwuzlaSort = accept(sortInternalizer)
+
+    /*
+    * Create Bitwuzla function sort for KSmt declaration.
+    * If declaration is a constant then nonfunction sort is returned
+    * */
     fun <T : KSort> KDecl<T>.bitwuzlaSort(): BitwuzlaSort = accept(declSortInternalizer)
 
 
