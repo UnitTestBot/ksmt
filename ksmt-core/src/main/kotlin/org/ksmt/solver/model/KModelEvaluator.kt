@@ -1,20 +1,39 @@
 package org.ksmt.solver.model
 
 import org.ksmt.KContext
-import org.ksmt.expr.*
+import org.ksmt.expr.KConst
+import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFunctionApp
+import org.ksmt.expr.KTransformer
 import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.solver.KModel
-import org.ksmt.sort.KSortVisitor
+import org.ksmt.expr.KAndExpr
+import org.ksmt.expr.KApp
+import org.ksmt.expr.KBitVecExpr
+import org.ksmt.expr.KEqExpr
+import org.ksmt.expr.KFalse
+import org.ksmt.expr.KIntNumExpr
+import org.ksmt.expr.KIteExpr
+import org.ksmt.expr.KNotExpr
+import org.ksmt.expr.KOrExpr
+import org.ksmt.expr.KRealNumExpr
+import org.ksmt.expr.KTrue
+import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBVSort
+import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
-import org.ksmt.sort.KBVSort
-import org.ksmt.sort.KArraySort
-import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KSortVisitor
 
-open class KModelEvaluator(override val ctx: KContext, val model: KModel, val complete: Boolean) : KTransformer {
+@Suppress("TooManyFunctions")
+open class KModelEvaluator(
+    override val ctx: KContext,
+    private val model: KModel,
+    private val complete: Boolean
+) : KTransformer {
     val evaluatedExpressions: MutableMap<KExpr<*>, KExpr<*>> = hashMapOf()
-    val evaluatedFunctions: MutableMap<KExpr<*>, KExpr<*>> = hashMapOf()
+    private val evaluatedFunctions: MutableMap<KExpr<*>, KExpr<*>> = hashMapOf()
 
     fun <T : KSort> KExpr<T>.eval(): KExpr<T> = accept(this@KModelEvaluator)
 
@@ -74,6 +93,9 @@ open class KModelEvaluator(override val ctx: KContext, val model: KModel, val co
     }
 
     override fun transformIntNum(expr: KIntNumExpr): KExpr<KIntSort> = expr.evalExpr { expr }
+
+    override fun <T : KBVSort> transformBitVecExpr(expr: KBitVecExpr<T>): KExpr<T> = expr.evalExpr { expr }
+
     override fun transform(expr: KRealNumExpr): KExpr<KRealSort> = expr.evalExpr { expr }
     override fun transform(expr: KTrue): KExpr<KBoolSort> = expr.evalExpr { expr }
     override fun transform(expr: KFalse): KExpr<KBoolSort> = expr.evalExpr { expr }
@@ -85,6 +107,7 @@ open class KModelEvaluator(override val ctx: KContext, val model: KModel, val co
             ctx.eval()
         } as KExpr<T>
 
+    @Suppress("MemberVisibilityCanBePrivate")
     fun <T : KSort, A : KExpr<*>> KApp<T, A>.evalFunction(): KExpr<T> = evalExpr {
         evalFunction(args.map { it.eval() })
     }
@@ -135,12 +158,9 @@ open class KModelEvaluator(override val ctx: KContext, val model: KModel, val co
             override fun visit(sort: KBoolSort): KExpr<T> = trueExpr as KExpr<T>
             override fun visit(sort: KIntSort): KExpr<T> = 0.intExpr as KExpr<T>
             override fun visit(sort: KRealSort): KExpr<T> = mkRealNum(0) as KExpr<T>
+            override fun <S : KBVSort> visit(sort: S): KExpr<T> = mkBV(0) as KExpr<T>
             override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): KExpr<T> =
                 mkArrayConst(sort, sort.range.sampleValue()) as KExpr<T>
-
-            override fun <S : KBVSize> visit(sort: KBVSort<S>): KExpr<T> {
-                TODO("Not yet implemented")
-            }
         })
     }
 }

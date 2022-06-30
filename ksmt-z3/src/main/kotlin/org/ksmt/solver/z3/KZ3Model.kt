@@ -11,12 +11,12 @@ import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KSort
 
 open class KZ3Model(
-    val model: Model,
-    val ctx: KContext,
-    val internCtx: KZ3InternalizationContext,
-    val internalizer: KZ3ExprInternalizer,
-    val z3Ctx: Context,
-    val converter: KZ3ExprConverter
+    private val model: Model,
+    private val ctx: KContext,
+    private val internCtx: KZ3InternalizationContext,
+    private val internalizer: KZ3ExprInternalizer,
+    private val z3Ctx: Context,
+    private val converter: KZ3ExprConverter
 ) : KModel {
     override val declarations: Set<KDecl<*>> by lazy {
         with(converter) {
@@ -31,6 +31,7 @@ open class KZ3Model(
         return with(converter) { z3Result.convert() }
     }
 
+    @Suppress("ReturnCount")
     override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? {
         ensureContextActive()
         if (decl !in declarations) return null
@@ -39,12 +40,14 @@ open class KZ3Model(
         return funcInterp(z3Decl)
     }
 
+    @Suppress("MemberVisibilityCanBePrivate")
     fun <T : KSort> constInterp(decl: FuncDecl): KModel.KFuncInterp<T>? {
         val z3Expr = model.getConstInterp(decl) ?: return null
         val expr = with(converter) { z3Expr.convert<T>() }
         return KModel.KFuncInterp(vars = emptyList(), entries = emptyList(), default = expr)
     }
 
+    @Suppress("MemberVisibilityCanBePrivate", "ForbiddenComment")
     fun <T : KSort> funcInterp(decl: FuncDecl): KModel.KFuncInterp<T>? = with(converter) {
         val z3Interp = model.getFuncInterp(decl) ?: return null
         // todo: convert z3 vars or generate fresh const by ourself
@@ -66,5 +69,5 @@ open class KZ3Model(
         return KModelImpl(ctx, interpretations)
     }
 
-    fun ensureContextActive() = check(internCtx.isActive) { "Context already closed" }
+    private fun ensureContextActive() = check(internCtx.isActive) { "Context already closed" }
 }

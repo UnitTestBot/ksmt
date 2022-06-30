@@ -1,10 +1,15 @@
 package org.ksmt.expr
 
 import org.ksmt.KContext
-import org.ksmt.decl.*
+import org.ksmt.decl.KAndDecl
+import org.ksmt.decl.KEqDecl
+import org.ksmt.decl.KFalseDecl
+import org.ksmt.decl.KIteDecl
+import org.ksmt.decl.KNotDecl
+import org.ksmt.decl.KOrDecl
+import org.ksmt.decl.KTrueDecl
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
-
 
 class KAndExpr internal constructor(
     ctx: KContext,
