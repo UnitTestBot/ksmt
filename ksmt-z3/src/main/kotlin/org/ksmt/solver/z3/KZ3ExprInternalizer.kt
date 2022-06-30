@@ -4,7 +4,7 @@ import com.microsoft.z3.*
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.*
-import org.ksmt.expr.BitVecExpr
+import org.ksmt.expr.KBitVecExpr
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBVSort
 import org.ksmt.sort.KSort
@@ -69,8 +69,16 @@ open class KZ3ExprInternalizer(
         )
     }
 
-    override fun <T : KBVSort<KBVSize>> transform(expr: BitVecExpr<T>) = expr.internalizeExpr {
-        TODO("BV is not supported yet")
+    override fun <T : KBVSort> transformBitVecExpr(expr: KBitVecExpr<T>): KExpr<T> = expr.internalizeExpr {
+        val sizeBits = expr.sort().sizeBits.toInt()
+        when (expr) {
+            is KBitVec8Expr, is KBitVec16Expr, is KBitVec32Expr -> {
+                z3Ctx.mkBV((expr as KBitVecNumberExpr<*, *>).numberValue.toInt(), sizeBits)
+            }
+            is KBitVec64Expr -> z3Ctx.mkBV(expr.numberValue, sizeBits)
+            is KBitVecCustomExpr -> z3Ctx.mkBV(expr.value, sizeBits)
+            else -> error("Unknown bv expression class ${expr::class} in transformation method: ${expr.print()}")
+        }
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) = expr.internalizeExpr {

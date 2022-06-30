@@ -74,6 +74,9 @@ open class KModelEvaluator(override val ctx: KContext, val model: KModel, val co
     }
 
     override fun transformIntNum(expr: KIntNumExpr): KExpr<KIntSort> = expr.evalExpr { expr }
+
+    override fun <T : KBVSort> transformBitVecExpr(expr: KBitVecExpr<T>): KExpr<T> = expr.evalExpr { expr }
+
     override fun transform(expr: KRealNumExpr): KExpr<KRealSort> = expr.evalExpr { expr }
     override fun transform(expr: KTrue): KExpr<KBoolSort> = expr.evalExpr { expr }
     override fun transform(expr: KFalse): KExpr<KBoolSort> = expr.evalExpr { expr }
@@ -135,12 +138,9 @@ open class KModelEvaluator(override val ctx: KContext, val model: KModel, val co
             override fun visit(sort: KBoolSort): KExpr<T> = trueExpr as KExpr<T>
             override fun visit(sort: KIntSort): KExpr<T> = 0.intExpr as KExpr<T>
             override fun visit(sort: KRealSort): KExpr<T> = mkRealNum(0) as KExpr<T>
+            override fun <S : KBVSort> visit(sort: S): KExpr<T> = mkBV(0) as KExpr<T>
             override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): KExpr<T> =
                 mkArrayConst(sort, sort.range.sampleValue()) as KExpr<T>
-
-            override fun <S : KBVSize> visit(sort: KBVSort<S>): KExpr<T> {
-                TODO("Not yet implemented")
-            }
         })
     }
 }
