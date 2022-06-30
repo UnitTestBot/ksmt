@@ -27,7 +27,7 @@ open class KBitwuzlaExprConverter(
     } as? KExpr<T> ?: error("expr is not properly converted")
 
     /*
-    * Create KSmt expression from Bitwuzla sort
+    * Create KSmt sort from Bitwuzla sort
     * */
     @Suppress("UNCHECKED_CAST")
     fun <T : KSort> BitwuzlaSort.convertSort(): T = bitwuzlaCtx.convertSort(this) {
