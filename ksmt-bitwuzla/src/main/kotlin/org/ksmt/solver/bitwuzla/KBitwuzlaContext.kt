@@ -1,5 +1,6 @@
 package org.ksmt.solver.bitwuzla
 
+import org.ksmt.cache.mkCache
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaResult
@@ -35,7 +36,6 @@ open class KBitwuzlaContext : AutoCloseable {
             internalizer(decl)
         }
 
-
     fun convertExpr(expr: BitwuzlaTerm, converter: (BitwuzlaTerm) -> KExpr<*>): KExpr<*> =
         convert(expressions, bitwuzlaExpressions, expr, converter)
 
@@ -45,13 +45,20 @@ open class KBitwuzlaContext : AutoCloseable {
     private var freshVarNumber = 0
     fun mkFreshVar(sort: BitwuzlaSort) = Native.bitwuzla_mk_var(bitwuzla, sort, "${freshVarNumber++}")
 
-    private val constants = hashSetOf<BitwuzlaTerm>()
-    fun mkConstant(name: String, sort: BitwuzlaSort): BitwuzlaTerm =
-        Native.bitwuzla_mk_const(bitwuzla, sort, name).also {
-            constants += it
-        }
+    val rootConstantScope: RootConstantScope = RootConstantScope()
+    var currentConstantScope: ConstantScope = rootConstantScope
 
-    fun allConstants(): Set<BitwuzlaTerm> = constants.toSet()
+    fun declaredConstants(): Set<BitwuzlaTerm> = rootConstantScope.constants.toSet()
+    fun mkConstant(name: String, sort: BitwuzlaSort): BitwuzlaTerm = currentConstantScope.mkConstant(name, sort)
+
+    inline fun <reified T> withConstantScope(body: NestedConstantScope.() -> T): T {
+        val oldScope = currentConstantScope
+        val newScope = NestedConstantScope(currentConstantScope)
+        currentConstantScope = newScope
+        val result = newScope.body()
+        currentConstantScope = oldScope
+        return result
+    }
 
     fun assert(term: BitwuzlaTerm) {
         ensureActive()
@@ -98,6 +105,31 @@ open class KBitwuzlaContext : AutoCloseable {
         cache.getOrPut(converted) { key }
         reverseCache[key] = WeakReference(converted)
         return converted
+    }
+
+    sealed interface ConstantScope {
+        fun mkConstant(name: String, sort: BitwuzlaSort): BitwuzlaTerm
+    }
+
+    inner class RootConstantScope : ConstantScope {
+        val constants = hashSetOf<BitwuzlaTerm>()
+        private val constantCache = mkCache { name: String, sort: BitwuzlaSort ->
+            Native.bitwuzla_mk_const(bitwuzla, sort, name).also {
+                constants += it
+            }
+        }
+
+        override fun mkConstant(name: String, sort: BitwuzlaSort): BitwuzlaTerm = constantCache.create(name, sort)
+    }
+
+    inner class NestedConstantScope(val parent: ConstantScope) : ConstantScope {
+        private val constants = hashMapOf<Pair<String, BitwuzlaSort>, BitwuzlaTerm>()
+        fun mkFreshConstant(name: String, sort: BitwuzlaSort): BitwuzlaTerm = constants.getOrPut(name to sort) {
+            Native.bitwuzla_mk_const(bitwuzla, sort, name)
+        }
+
+        override fun mkConstant(name: String, sort: BitwuzlaSort): BitwuzlaTerm =
+            constants[name to sort] ?: parent.mkConstant(name, sort)
     }
 
 }
