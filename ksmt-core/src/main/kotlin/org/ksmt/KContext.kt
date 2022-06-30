@@ -254,6 +254,13 @@ open class KContext {
     fun <D : KSort, R : KSort> mkArrayConst(arraySort: KArraySort<D, R>, value: KExpr<R>): KArrayConst<D, R> =
         arrayConstCache.create(arraySort.cast(), value.cast()).cast()
 
+    val functionAsArrayCache = mkContextCheckingCache { function: KFuncDecl<KSort> ->
+        KFunctionAsArray<KSort, KSort>(this, function)
+    }
+
+    fun <D : KSort, R : KSort> mkFunctionAsArray(function: KFuncDecl<R>): KFunctionAsArray<D, R> =
+        functionAsArrayCache.create(function.cast()).cast()
+
     fun <D : KSort, R : KSort> KExpr<KArraySort<D, R>>.store(index: KExpr<D>, value: KExpr<R>) =
         mkArrayStore(this, index, value)
 

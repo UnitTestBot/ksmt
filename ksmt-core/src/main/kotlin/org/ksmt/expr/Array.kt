@@ -3,6 +3,7 @@ package org.ksmt.expr
 import org.ksmt.KContext
 import org.ksmt.decl.KArrayConstDecl
 import org.ksmt.decl.KDecl
+import org.ksmt.decl.KFuncDecl
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KSort
 
@@ -43,5 +44,24 @@ class KArrayConst<D : KSort, R : KSort> internal constructor(
     override val args: List<KExpr<R>>
         get() = listOf(value)
 
+    override fun accept(transformer: KTransformer): KExpr<KArraySort<D, R>> = transformer.transform(this)
+}
+
+class KFunctionAsArray<D : KSort, R : KSort> internal constructor(
+    ctx: KContext,
+    val function: KFuncDecl<R>
+) : KExpr<KArraySort<D, R>>(ctx) {
+    val domainSort: D
+
+    init {
+        check(function.argSorts.size == 1) {
+            "Function with single argument required"
+        }
+        @Suppress("UNCHECKED_CAST")
+        domainSort = function.argSorts.single() as D
+    }
+
+    override fun sort(): KArraySort<D, R> = with(ctx) { mkArraySort(domainSort, function.sort) }
+    override fun print(): String = "(asArray ${function.name})"
     override fun accept(transformer: KTransformer): KExpr<KArraySort<D, R>> = transformer.transform(this)
 }
