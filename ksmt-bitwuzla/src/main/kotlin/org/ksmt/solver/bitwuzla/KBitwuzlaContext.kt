@@ -16,8 +16,8 @@ open class KBitwuzlaContext : AutoCloseable {
 
     val bitwuzla = Native.bitwuzla_new()
 
-    private val expressions = WeakHashMap<KExpr<*>, BitwuzlaTerm>()
-    private val bitwuzlaExpressions = WeakHashMap<BitwuzlaTerm, WeakReference<KExpr<*>>>()
+    val expressions = WeakHashMap<KExpr<*>, BitwuzlaTerm>()
+    val bitwuzlaExpressions = WeakHashMap<BitwuzlaTerm, WeakReference<KExpr<*>>>()
     private val sorts = WeakHashMap<KSort, BitwuzlaSort>()
     private val bitwuzlaSorts = WeakHashMap<BitwuzlaSort, WeakReference<KSort>>()
     private val declSorts = WeakHashMap<KDecl<*>, BitwuzlaSort>()
@@ -26,10 +26,16 @@ open class KBitwuzlaContext : AutoCloseable {
     operator fun get(sort: KSort): BitwuzlaSort? = sorts[sort]
 
     fun internalizeExpr(expr: KExpr<*>, internalizer: (KExpr<*>) -> BitwuzlaTerm): BitwuzlaTerm =
-        internalize(expressions, bitwuzlaExpressions, expr, internalizer)
+        expressions.getOrPut(expr) {
+            internalizer(expr) // don't reverse cache bitwuzla terms since it may be rewrited
+        }
 
     fun internalizeSort(sort: KSort, internalizer: (KSort) -> BitwuzlaSort): BitwuzlaSort =
-        internalize(sorts, bitwuzlaSorts, sort, internalizer)
+        sorts.getOrPut(sort) {
+            internalizer(sort).also {
+                bitwuzlaSorts[it] = WeakReference(sort)
+            }
+        }
 
     fun internalizeDeclSort(decl: KDecl<*>, internalizer: (KDecl<*>) -> BitwuzlaSort): BitwuzlaSort =
         declSorts.getOrPut(decl) {
@@ -73,22 +79,15 @@ open class KBitwuzlaContext : AutoCloseable {
     override fun close() {
         closed = true
         sorts.clear()
-//        decls.clear()
+        bitwuzlaSorts.clear()
         expressions.clear()
+        bitwuzlaExpressions.clear()
+        declSorts.clear()
         Native.bitwuzla_delete(bitwuzla)
     }
 
     fun ensureActive() {
         check(!closed) { "context already closed" }
-    }
-
-    private inline fun <K, V> internalize(
-        cache: MutableMap<K, V>,
-        reverseCache: MutableMap<V, WeakReference<K>>,
-        key: K,
-        internalizer: (K) -> V
-    ): V = cache.getOrPut(key) {
-        internalizer(key).also { reverseCache[it] = WeakReference(key) }
     }
 
     private inline fun <K, V> convert(
