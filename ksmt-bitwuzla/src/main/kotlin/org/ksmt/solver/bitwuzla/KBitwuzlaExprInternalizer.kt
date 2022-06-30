@@ -176,7 +176,7 @@ open class KBitwuzlaExprInternalizer(
         override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): BitwuzlaSort =
             bitwuzlaCtx.internalizeSort(sort) {
                 val domain = sort.domain.accept(this@SortInternalizer)
-                val range = sort.domain.accept(this@SortInternalizer)
+                val range = sort.range.accept(this@SortInternalizer)
                 Native.bitwuzla_mk_array_sort(bitwuzlaCtx.bitwuzla, domain, range)
             }
 
