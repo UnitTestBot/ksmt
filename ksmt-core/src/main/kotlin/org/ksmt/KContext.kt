@@ -227,6 +227,8 @@ open class KContext {
 
     fun <T : KSort> T.mkConst(name: String) = with(mkConstDecl(name)) { apply() }
 
+    fun <T : KSort> T.mkFreshConst(name: String) = with(mkFreshConstDecl(name)) { apply() }
+
     // array
     private val arrayStoreCache =
         mkContextCheckingCache { a: KExpr<KArraySort<KSort, KSort>>, i: KExpr<KSort>, v: KExpr<KSort> ->
@@ -506,6 +508,24 @@ open class KContext {
 
     @Suppress("MemberVisibilityCanBePrivate")
     fun <T : KSort> T.mkConstDecl(name: String) = mkConstDecl(name, this)
+
+    /* Since any two KFuncDecl are only equivalent if they are the same kotlin object,
+     * we can guarantee that the returned KFuncDecl is not equal to any other declaration.
+    */
+    private var freshConstIdx = 0
+    fun <T : KSort> mkFreshFuncDecl(name: String, sort: T, args: List<KSort>): KFuncDecl<T> {
+        if (args.isEmpty()) return mkFreshConstDecl(name, sort)
+        ensureContextMatch(sort)
+        ensureContextMatch(args)
+        return KFuncDecl(this, "$name!fresh!${freshConstIdx++}", sort, args)
+    }
+
+    fun <T : KSort> mkFreshConstDecl(name: String, sort: T): KConstDecl<T> {
+        ensureContextMatch(sort)
+        return KConstDecl(this, "$name!fresh!${freshConstIdx++}", sort)
+    }
+
+    fun <T : KSort> T.mkFreshConstDecl(name: String) = mkFreshConstDecl(name, this)
 
     // bool
     private val falseDeclCache = mkCache<KFalseDecl> { KFalseDecl(this) }
