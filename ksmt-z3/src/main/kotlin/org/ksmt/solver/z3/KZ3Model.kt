@@ -44,7 +44,9 @@ open class KZ3Model(
     fun <T : KSort> constInterp(decl: FuncDecl): KModel.KFuncInterp<T>? {
         val z3Expr = model.getConstInterp(decl) ?: return null
         val expr = with(converter) { z3Expr.convert<T>() }
-        return KModel.KFuncInterp(vars = emptyList(), entries = emptyList(), default = expr)
+        return with(ctx) {
+            KModel.KFuncInterp(sort = expr.sort, vars = emptyList(), entries = emptyList(), default = expr)
+        }
     }
 
     @Suppress("MemberVisibilityCanBePrivate", "ForbiddenComment")
@@ -59,7 +61,8 @@ open class KZ3Model(
             KModel.KFuncInterpEntry(args, value)
         }
         val default = z3Interp.getElse().substituteVars(z3Vars).convert<T>()
-        return KModel.KFuncInterp(vars, entries, default)
+        val sort = decl.range.convert<T>()
+        return KModel.KFuncInterp(sort, vars, entries, default)
     }
 
     override fun detach(): KModel {

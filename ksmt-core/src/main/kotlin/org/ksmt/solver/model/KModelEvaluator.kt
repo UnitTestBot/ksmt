@@ -145,7 +145,9 @@ open class KModelEvaluator(
                     varSubstitution.apply(entry.value)
                 )
             }
-            val default = varSubstitution.apply(interpretation.default)
+            // in case of partial interpretation we can generate any default expr to preserve expression correctness
+            val defaultExpr = interpretation.default ?: interpretation.sort.sampleValue()
+            val default = varSubstitution.apply(defaultExpr)
             return entries.foldRight(default) { entry, acc ->
                 val argBinding = mkAnd(entry.args.zip(args) { ea, a -> mkEq(ea as KExpr<KSort>, a as KExpr<KSort>) })
                 mkIte(argBinding, entry.value, acc)
