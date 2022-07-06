@@ -12,7 +12,7 @@ import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.sort.KBoolSort
 
-open class KZ3Solver(val ctx: KContext) : KSolver {
+open class KZ3Solver(private val ctx: KContext) : KSolver {
     private val z3Ctx = Context()
     private val solver = z3Ctx.mkSolver()
     private val z3InternCtx = KZ3InternalizationContext()

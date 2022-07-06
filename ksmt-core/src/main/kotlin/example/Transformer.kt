@@ -1,7 +1,9 @@
 package example
 
 import org.ksmt.KContext
-import org.ksmt.expr.*
+import org.ksmt.expr.KConst
+import org.ksmt.expr.KExpr
+import org.ksmt.expr.KTransformer
 import org.ksmt.sort.KSort
 
 class ConstCollector(override val ctx: KContext) : KTransformer {

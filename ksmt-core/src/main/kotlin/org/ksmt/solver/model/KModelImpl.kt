@@ -8,7 +8,7 @@ import org.ksmt.sort.KSort
 
 open class KModelImpl(
     val ctx: KContext,
-    val interpretations: Map<KDecl<*>, KModel.KFuncInterp<*>>
+    private val interpretations: Map<KDecl<*>, KModel.KFuncInterp<*>>
 ) : KModel {
     override val declarations: Set<KDecl<*>>
         get() = interpretations.keys

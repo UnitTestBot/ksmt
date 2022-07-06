@@ -1,25 +1,35 @@
 package org.ksmt.solver.z3
 
-import com.microsoft.z3.*
+import com.microsoft.z3.ArraySort
+import com.microsoft.z3.Expr
+import com.microsoft.z3.FuncDecl
+import com.microsoft.z3.IntNum
+import com.microsoft.z3.RatNum
+import com.microsoft.z3.Sort
 import com.microsoft.z3.enumerations.Z3_ast_kind
 import com.microsoft.z3.enumerations.Z3_decl_kind
 import com.microsoft.z3.enumerations.Z3_sort_kind
+import com.microsoft.z3.intOrNull
+import com.microsoft.z3.longOrNull
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
-import org.ksmt.expr.*
-import org.ksmt.sort.*
-import java.util.*
+import org.ksmt.expr.KExpr
+import org.ksmt.expr.KIntNumExpr
+import org.ksmt.expr.KRealNumExpr
+import org.ksmt.sort.KArithSort
+import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KSort
 
 open class KZ3ExprConverter(
-    val ctx: KContext,
-    val z3InternCtx: KZ3InternalizationContext
+    private val ctx: KContext,
+    private val z3InternCtx: KZ3InternalizationContext
 ) {
     @Suppress("UNCHECKED_CAST")
     fun <T : KSort> Expr.convert(): KExpr<T> = z3InternCtx.convertExpr(this) {
         convertExpr(this)
     } as? KExpr<T> ?: error("expr is not properly converted")
 
-    @Suppress("UNCHECKED_CAST")
+    @Suppress("UNCHECKED_CAST", "unused")
     fun <T : KSort> Sort.convert(): T = z3InternCtx.convertSort(this) {
         convertSort(this)
     } as? T ?: error("sort is not properly converted")
@@ -72,6 +82,8 @@ open class KZ3ExprConverter(
         "RemoveExplicitTypeArguments",
         "USELESS_CAST",
         "UPPER_BOUND_VIOLATED_WARNING",
+        "LongMethod",
+        "ComplexMethod"
     )
     open fun convertApp(expr: Expr): KExpr<*> = with(ctx) {
         when (expr.funcDecl.declKind) {
@@ -150,12 +162,14 @@ open class KZ3ExprConverter(
         else -> TODO("numerals with ${expr.sort} are not supported")
     }
 
+    @Suppress("MemberVisibilityCanBePrivate")
     fun convertNumeral(expr: IntNum): KIntNumExpr = with(ctx) {
         expr.intOrNull()?.let { mkIntNum(it) }
             ?: expr.longOrNull()?.let { mkIntNum(it) }
             ?: mkIntNum(expr.bigInteger)
     }
 
+    @Suppress("MemberVisibilityCanBePrivate")
     fun convertNumeral(expr: RatNum): KRealNumExpr = with(ctx) {
         mkRealNum(convertNumeral(expr.numerator), convertNumeral(expr.denominator))
     }
