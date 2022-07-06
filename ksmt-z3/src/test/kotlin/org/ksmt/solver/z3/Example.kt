@@ -1,9 +1,13 @@
 package org.ksmt.solver.z3
 
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+import org.junit.jupiter.api.Test
 import org.ksmt.KContext
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.sort.KArraySort
-import kotlin.test.*
 
 class Example {
 

@@ -1,14 +1,49 @@
 package org.ksmt.solver.z3
 
-import com.microsoft.z3.*
-import org.ksmt.decl.*
+import com.microsoft.z3.ArithExpr
+import com.microsoft.z3.ArrayExpr
+import com.microsoft.z3.Context
+import com.microsoft.z3.Expr
+import com.microsoft.z3.FuncDecl
+import com.microsoft.z3.IntExpr
+import com.microsoft.z3.RealExpr
+import org.ksmt.decl.KAndDecl
+import org.ksmt.decl.KArithAddDecl
+import org.ksmt.decl.KArithDivDecl
+import org.ksmt.decl.KArithGeDecl
+import org.ksmt.decl.KArithGtDecl
+import org.ksmt.decl.KArithLeDecl
+import org.ksmt.decl.KArithLtDecl
+import org.ksmt.decl.KArithMulDecl
+import org.ksmt.decl.KArithPowerDecl
+import org.ksmt.decl.KArithSubDecl
+import org.ksmt.decl.KArithUnaryMinusDecl
+import org.ksmt.decl.KArraySelectDecl
+import org.ksmt.decl.KArrayStoreDecl
+import org.ksmt.decl.KConstDecl
+import org.ksmt.decl.KDeclVisitor
+import org.ksmt.decl.KEqDecl
+import org.ksmt.decl.KFalseDecl
+import org.ksmt.decl.KFuncDecl
+import org.ksmt.decl.KIntModDecl
+import org.ksmt.decl.KIntNumDecl
+import org.ksmt.decl.KIntRemDecl
+import org.ksmt.decl.KIntToRealDecl
+import org.ksmt.decl.KIteDecl
+import org.ksmt.decl.KNotDecl
+import org.ksmt.decl.KOrDecl
+import org.ksmt.decl.KRealIsIntDecl
+import org.ksmt.decl.KRealNumDecl
+import org.ksmt.decl.KRealToIntDecl
+import org.ksmt.decl.KTrueDecl
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KSort
 
+@Suppress("TooManyFunctions")
 open class KZ3DeclInternalizer(
-    val z3Ctx: Context,
-    val z3InternCtx: KZ3InternalizationContext,
-    val sortInternalizer: KZ3SortInternalizer
+    private val z3Ctx: Context,
+    private val z3InternCtx: KZ3InternalizationContext,
+    private val sortInternalizer: KZ3SortInternalizer
 ) : KDeclVisitor<FuncDecl> {
     override fun <S : KSort> visit(decl: KFuncDecl<S>): FuncDecl = z3InternCtx.internalizeDecl(decl) {
         val argSorts = decl.argSorts.map { it.accept(sortInternalizer) }.toTypedArray()
@@ -19,7 +54,8 @@ open class KZ3DeclInternalizer(
         z3Ctx.mkConstDecl(decl.name, decl.sort.accept(sortInternalizer))
     }
 
-    /* fixme: there is no way in Z3 api to create FuncDecl for builtin functions.
+    @Suppress("ForbiddenComment")
+    /* TODO: there is no way in Z3 api to create FuncDecl for builtin functions.
      *  To overcome this we create a sample expression.
      */
     override fun visit(decl: KAndDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
@@ -131,6 +167,5 @@ open class KZ3DeclInternalizer(
         z3Ctx.mkReal(decl.value).funcDecl
     }
 
-    fun KSort.sample() = z3Ctx.mkConst("e", accept(sortInternalizer))
-
+    private fun KSort.sample(): Expr = z3Ctx.mkConst("e", accept(sortInternalizer))
 }

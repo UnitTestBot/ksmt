@@ -1,7 +1,16 @@
 package org.ksmt.expr
 
 import org.ksmt.KContext
-import org.ksmt.decl.*
+import org.ksmt.decl.KArithAddDecl
+import org.ksmt.decl.KArithDivDecl
+import org.ksmt.decl.KArithGeDecl
+import org.ksmt.decl.KArithGtDecl
+import org.ksmt.decl.KArithLeDecl
+import org.ksmt.decl.KArithLtDecl
+import org.ksmt.decl.KArithMulDecl
+import org.ksmt.decl.KArithPowerDecl
+import org.ksmt.decl.KArithSubDecl
+import org.ksmt.decl.KArithUnaryMinusDecl
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBoolSort
 

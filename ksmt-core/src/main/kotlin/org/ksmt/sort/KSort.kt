@@ -12,6 +12,7 @@ class KBoolSort internal constructor(ctx: KContext) : KSort(ctx) {
     override fun print(): String = "Bool"
 }
 
+@Suppress("UnnecessaryAbstractClass")
 abstract class KArithSort<out T : KArithSort<T>>(ctx: KContext) : KSort(ctx)
 
 class KIntSort internal constructor(ctx: KContext) : KArithSort<KIntSort>(ctx) {

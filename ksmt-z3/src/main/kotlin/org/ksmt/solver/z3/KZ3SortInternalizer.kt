@@ -12,8 +12,8 @@ import org.ksmt.sort.KSort
 
 
 open class KZ3SortInternalizer(
-    val z3Ctx: Context,
-    val z3InternCtx: KZ3InternalizationContext
+    private val z3Ctx: Context,
+    private val z3InternCtx: KZ3InternalizationContext
 ) : KSortVisitor<Sort> {
     override fun visit(sort: KBoolSort): Sort = z3InternCtx.internalizeSort(sort) {
         z3Ctx.boolSort
@@ -36,5 +36,6 @@ open class KZ3SortInternalizer(
         z3Ctx.mkBitVecSort(sort.sizeBits.toInt())
     }
 
+    @Suppress("MemberVisibilityCanBePrivate")
     fun <T : KSort> T.internalizeZ3Sort() = accept(this@KZ3SortInternalizer)
 }

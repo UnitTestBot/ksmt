@@ -4,7 +4,6 @@ import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.sort.KSort
 
-
 abstract class KApp<T : KSort, A : KExpr<*>> internal constructor(ctx: KContext) : KExpr<T>(ctx) {
     abstract val args: List<A>
     abstract fun decl(): KDecl<T>

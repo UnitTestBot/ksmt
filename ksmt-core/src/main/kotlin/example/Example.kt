@@ -4,6 +4,7 @@ import org.ksmt.KContext
 import org.ksmt.expr.KBitVec8Expr
 import org.ksmt.sort.KBV16Sort
 
+@Suppress("UNUSED_VARIABLE")
 fun main() = with(KContext()) {
     val a = boolSort.mkConst("a")
     val b = intSort.mkConst("b")
