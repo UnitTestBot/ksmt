@@ -36,31 +36,31 @@ open class KBitwuzlaExprConverter(
 
     open fun convertSortHelper(sort: BitwuzlaSort): KSort = with(ctx) {
         when {
-            Native.bitwuzla_sort_is_equal(sort, Native.bitwuzla_mk_bool_sort(bitwuzlaCtx.bitwuzla)) -> {
+            Native.bitwuzlaSortIsEqual(sort, Native.bitwuzlaMkBoolSort(bitwuzlaCtx.bitwuzla)) -> {
                 boolSort
             }
-            Native.bitwuzla_sort_is_array(sort) -> {
-                val domain = Native.bitwuzla_sort_array_get_index(sort).convertSort<KSort>()
-                val range = Native.bitwuzla_sort_array_get_element(sort).convertSort<KSort>()
+            Native.bitwuzlaSortIsArray(sort) -> {
+                val domain = Native.bitwuzlaSortArrayGetIndex(sort).convertSort<KSort>()
+                val range = Native.bitwuzlaSortArrayGetElement(sort).convertSort<KSort>()
                 mkArraySort(domain, range)
             }
-            Native.bitwuzla_sort_is_fun(sort) -> {
+            Native.bitwuzlaSortIsFun(sort) -> {
                 error("fun sorts are not allowed for conversion")
             }
-            Native.bitwuzla_sort_is_bv(sort) -> TODO("BV are not supported yet")
+            Native.bitwuzlaSortIsBv(sort) -> TODO("BV are not supported yet")
             else -> TODO("sort is not supported")
         }
     }
 
     open fun convertExprHelper(expr: BitwuzlaTerm): KExpr<*> = with(ctx) {
-        when (val kind = Native.bitwuzla_term_get_kind_helper(expr)) {
+        when (val kind = Native.bitwuzlaTermGetKind(expr)) {
             // constants, functions, values
             BitwuzlaKind.BITWUZLA_KIND_CONST -> {
-                val name = Native.bitwuzla_term_get_symbol(expr) ?: generateBitwuzlaSymbol(expr)
-                val sort = Native.bitwuzla_term_get_sort(expr)
-                val decl = if (Native.bitwuzla_sort_is_fun(sort) && !Native.bitwuzla_sort_is_array(sort)) {
-                    val domain = Native.bitwuzla_sort_fun_get_domain_sorts(sort).map { it.convertSort<KSort>() }
-                    val range = Native.bitwuzla_sort_fun_get_codomain(sort).convertSort<KSort>()
+                val name = Native.bitwuzlaTermGetSymbol(expr) ?: generateBitwuzlaSymbol(expr)
+                val sort = Native.bitwuzlaTermGetSort(expr)
+                val decl = if (Native.bitwuzlaSortIsFun(sort) && !Native.bitwuzlaSortIsArray(sort)) {
+                    val domain = Native.bitwuzlaSortFunGetDomainSorts(sort).map { it.convertSort<KSort>() }
+                    val range = Native.bitwuzlaSortFunGetCodomain(sort).convertSort<KSort>()
                     mkFuncDecl(name, range, domain)
                 } else {
                     mkConstDecl(name, sort.convertSort())
@@ -68,23 +68,23 @@ open class KBitwuzlaExprConverter(
                 mkConstApp(decl)
             }
             BitwuzlaKind.BITWUZLA_KIND_APPLY -> {
-                val children = Native.bitwuzla_term_get_children(expr)
+                val children = Native.bitwuzlaTermGetChildren(expr)
                 check(children.isNotEmpty()) { "Apply has no function term" }
                 val function = children[0]
-                check(Native.bitwuzla_term_is_fun(function)) { "function term expected" }
+                check(Native.bitwuzlaTermIsFun(function)) { "function term expected" }
                 val decl = (function.convert<KSort>() as KApp<*, *>).decl()
                 val args = children.drop(1).map { it.convert<KSort>() }
                 decl.apply(args)
             }
             BitwuzlaKind.BITWUZLA_KIND_VAL -> when {
-                Native.bitwuzla_mk_true(bitwuzlaCtx.bitwuzla) == expr -> trueExpr
-                Native.bitwuzla_mk_false(bitwuzlaCtx.bitwuzla) == expr -> falseExpr
-                Native.bitwuzla_term_is_bv(expr) -> {
-                    val size = Native.bitwuzla_term_bv_get_size(expr)
-                    val value = Native.bitwuzla_get_bv_value(bitwuzlaCtx.bitwuzla, expr)
+                Native.bitwuzlaMkTrue(bitwuzlaCtx.bitwuzla) == expr -> trueExpr
+                Native.bitwuzlaMkFalse(bitwuzlaCtx.bitwuzla) == expr -> falseExpr
+                Native.bitwuzlaTermIsBv(expr) -> {
+                    val size = Native.bitwuzlaTermBvGetSize(expr)
+                    val value = Native.bitwuzlaGetBvValue(bitwuzlaCtx.bitwuzla, expr)
                     mkBV(value, size.toUInt())
                 }
-                Native.bitwuzla_term_is_fp(expr) -> TODO("FP are not supported yet")
+                Native.bitwuzlaTermIsFp(expr) -> TODO("FP are not supported yet")
                 else -> TODO("unsupported value")
             }
             BitwuzlaKind.BITWUZLA_KIND_VAR -> TODO("var conversion is not implemented")
@@ -101,21 +101,21 @@ open class KBitwuzlaExprConverter(
 
             // array
             BitwuzlaKind.BITWUZLA_KIND_CONST_ARRAY -> {
-                val children = Native.bitwuzla_term_get_children(expr)
+                val children = Native.bitwuzlaTermGetChildren(expr)
                 check(children.size == 1) { "incorrect const array arguments" }
                 val value = children[0].convert<KSort>()
-                val sort = Native.bitwuzla_term_get_sort(expr).convertSort<KArraySort<KSort, KSort>>()
+                val sort = Native.bitwuzlaTermGetSort(expr).convertSort<KArraySort<KSort, KSort>>()
                 mkArrayConst(sort, value)
             }
             BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT -> {
-                val children = Native.bitwuzla_term_get_children(expr)
+                val children = Native.bitwuzlaTermGetChildren(expr)
                 check(children.size == 2) { "incorrect array select arguments" }
                 val array = children[0].convert<KArraySort<KSort, KSort>>()
                 val index = children[1].convert<KSort>()
                 array.select(index)
             }
             BitwuzlaKind.BITWUZLA_KIND_ARRAY_STORE -> {
-                val children = Native.bitwuzla_term_get_children(expr)
+                val children = Native.bitwuzlaTermGetChildren(expr)
                 check(children.size == 3) { "incorrect array store arguments" }
                 val array = children[0].convert<KArraySort<KSort, KSort>>()
                 val index = children[1].convert<KSort>()
@@ -222,7 +222,7 @@ open class KBitwuzlaExprConverter(
         /* generate symbol in the same way as in bitwuzla model printer
         * https://github.com/bitwuzla/bitwuzla/blob/main/src/bzlaprintmodel.c#L263
         * */
-        val id = Native.bitwuzla_term_hash(expr)
+        val id = Native.bitwuzlaTermHash(expr)
         return "uf$id"
     }
 }

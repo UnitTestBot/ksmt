@@ -5,12 +5,8 @@ import org.ksmt.decl.KDecl
 import org.ksmt.decl.KDeclVisitor
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.*
+import org.ksmt.solver.bitwuzla.bindings.*
 import org.ksmt.sort.*
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBVBase
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
-import org.ksmt.solver.bitwuzla.bindings.Native
 
 open class KBitwuzlaExprInternalizer(
     override val ctx: KContext,
@@ -48,7 +44,7 @@ open class KBitwuzlaExprInternalizer(
         val const = bitwuzlaCtx.mkConstant(decl, decl.bitwuzlaSort())
         val args = args.map { it.internalize() }
         val termArgs = (listOf(const) + args).toTypedArray()
-        Native.bitwuzla_mk_term(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, termArgs)
+        Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, termArgs)
     }
 
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = expr.internalizeExpr {
@@ -61,7 +57,7 @@ open class KBitwuzlaExprInternalizer(
         when (args.size) {
             0 -> ctx.trueExpr.internalize()
             1 -> args[0].internalize()
-            else -> Native.bitwuzla_mk_term(
+            else -> Native.bitwuzlaMkTerm(
                 bitwuzlaCtx.bitwuzla,
                 BitwuzlaKind.BITWUZLA_KIND_AND,
                 args.map { it.internalize() }.toTypedArray()
@@ -73,7 +69,7 @@ open class KBitwuzlaExprInternalizer(
         when (args.size) {
             0 -> ctx.falseExpr.internalize()
             1 -> args[0].internalize()
-            else -> Native.bitwuzla_mk_term(
+            else -> Native.bitwuzlaMkTerm(
                 bitwuzlaCtx.bitwuzla,
                 BitwuzlaKind.BITWUZLA_KIND_OR,
                 args.map { it.internalize() }.toTypedArray()
@@ -82,19 +78,19 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun transform(expr: KNotExpr): KExpr<KBoolSort> = expr.internalizeExpr {
-        Native.bitwuzla_mk_term1(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_NOT, arg.internalize())
+        Native.bitwuzlaMkTerm1(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_NOT, arg.internalize())
     }
 
     override fun transform(expr: KTrue): KExpr<KBoolSort> = expr.internalizeExpr {
-        Native.bitwuzla_mk_true(bitwuzlaCtx.bitwuzla)
+        Native.bitwuzlaMkTrue(bitwuzlaCtx.bitwuzla)
     }
 
     override fun transform(expr: KFalse): KExpr<KBoolSort> = expr.internalizeExpr {
-        Native.bitwuzla_mk_false(bitwuzlaCtx.bitwuzla)
+        Native.bitwuzlaMkFalse(bitwuzlaCtx.bitwuzla)
     }
 
     override fun <T : KSort> transform(expr: KEqExpr<T>): KExpr<KBoolSort> = expr.internalizeExpr {
-        Native.bitwuzla_mk_term2(
+        Native.bitwuzlaMkTerm2(
             bitwuzlaCtx.bitwuzla,
             BitwuzlaKind.BITWUZLA_KIND_EQUAL,
             lhs.internalize(),
@@ -103,7 +99,7 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun <T : KSort> transform(expr: KIteExpr<T>): KExpr<T> = expr.internalizeExpr {
-        Native.bitwuzla_mk_term3(
+        Native.bitwuzlaMkTerm3(
             bitwuzlaCtx.bitwuzla,
             BitwuzlaKind.BITWUZLA_KIND_ITE,
             condition.internalize(),
@@ -119,7 +115,7 @@ open class KBitwuzlaExprInternalizer(
 
     fun <T : KBitVecNumberExpr<S, *>, S : KBVSort> transformBvNumber(expr: T): T = expr.internalizeExpr {
         with(ctx) {
-            Native.bitwuzla_mk_bv_value_uint64(
+            Native.bitwuzlaMkBvValueUint64(
                 bitwuzlaCtx.bitwuzla,
                 sort.internalize(),
                 numberValue.toLong()
@@ -129,7 +125,7 @@ open class KBitwuzlaExprInternalizer(
 
     override fun transform(expr: KBitVecCustomExpr): KExpr<KBVSort> = expr.internalizeExpr {
         with(ctx) {
-            Native.bitwuzla_mk_bv_value(
+            Native.bitwuzlaMkBvValue(
                 bitwuzlaCtx.bitwuzla,
                 sort.internalize(),
                 value,
@@ -140,7 +136,7 @@ open class KBitwuzlaExprInternalizer(
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> =
         expr.internalizeExpr {
-            Native.bitwuzla_mk_term3(
+            Native.bitwuzlaMkTerm3(
                 bitwuzlaCtx.bitwuzla,
                 BitwuzlaKind.BITWUZLA_KIND_ARRAY_STORE,
                 array.internalize(),
@@ -150,7 +146,7 @@ open class KBitwuzlaExprInternalizer(
         }
 
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> = expr.internalizeExpr {
-        Native.bitwuzla_mk_term2(
+        Native.bitwuzlaMkTerm2(
             bitwuzlaCtx.bitwuzla,
             BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT,
             array.internalize(),
@@ -160,7 +156,7 @@ open class KBitwuzlaExprInternalizer(
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>): KExpr<KArraySort<D, R>> =
         expr.internalizeExpr {
-            Native.bitwuzla_mk_const_array(
+            Native.bitwuzlaMkConstArray(
                 bitwuzlaCtx.bitwuzla,
                 sort.internalize(),
                 value.internalize()
@@ -168,11 +164,11 @@ open class KBitwuzlaExprInternalizer(
         }
 
     override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> = expr.internalizeQuantifier { args ->
-        Native.bitwuzla_mk_term(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EXISTS, args)
+        Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EXISTS, args)
     }
 
     override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> = expr.internalizeQuantifier { args ->
-        Native.bitwuzla_mk_term(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FORALL, args)
+        Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FORALL, args)
     }
 
     inline fun <T : KQuantifier> T.internalizeQuantifier(crossinline internalizer: T.(Array<BitwuzlaTerm>) -> BitwuzlaTerm) =
@@ -184,7 +180,7 @@ open class KBitwuzlaExprInternalizer(
                 val boundVars = bounds.map { bitwuzlaCtx.mkFreshVar(it.sort.internalize()) }
                 val body = body.internalize()
                 if (bounds.isEmpty()) return@internalizeExpr body
-                val bodyWithVars = Native.bitwuzla_substitute_term(
+                val bodyWithVars = Native.bitwuzlaSubstituteTerm(
                     bitwuzlaCtx.bitwuzla,
                     body,
                     internalizedBounds.toTypedArray(),
@@ -204,19 +200,19 @@ open class KBitwuzlaExprInternalizer(
 
     open class SortInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KSortVisitor<BitwuzlaSort> {
         override fun visit(sort: KBoolSort): BitwuzlaSort = bitwuzlaCtx.internalizeSort(sort) {
-            Native.bitwuzla_mk_bool_sort(bitwuzlaCtx.bitwuzla)
+            Native.bitwuzlaMkBoolSort(bitwuzlaCtx.bitwuzla)
         }
 
         override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): BitwuzlaSort =
             bitwuzlaCtx.internalizeSort(sort) {
                 val domain = sort.domain.accept(this@SortInternalizer)
                 val range = sort.range.accept(this@SortInternalizer)
-                Native.bitwuzla_mk_array_sort(bitwuzlaCtx.bitwuzla, domain, range)
+                Native.bitwuzlaMkArraySort(bitwuzlaCtx.bitwuzla, domain, range)
             }
 
         override fun <S : KBVSort> visit(sort: S): BitwuzlaSort =
             bitwuzlaCtx.internalizeSort(sort) {
-                Native.bitwuzla_mk_bv_sort(bitwuzlaCtx.bitwuzla, sort.sizeBits.toInt())
+                Native.bitwuzlaMkBvSort(bitwuzlaCtx.bitwuzla, sort.sizeBits.toInt())
             }
 
         override fun visit(sort: KIntSort): BitwuzlaSort = error("Unsupported sort $sort")
@@ -231,7 +227,7 @@ open class KBitwuzlaExprInternalizer(
             val domain = decl.argSorts.map { it.accept(sortInternalizer) }.toTypedArray()
             val range = decl.sort.accept(sortInternalizer)
             if (domain.isEmpty()) return@internalizeDeclSort range
-            Native.bitwuzla_mk_fun_sort(bitwuzlaCtx.bitwuzla, domain.size, domain, range)
+            Native.bitwuzlaMkFunSort(bitwuzlaCtx.bitwuzla, domain.size, domain, range)
         }
     }
 }

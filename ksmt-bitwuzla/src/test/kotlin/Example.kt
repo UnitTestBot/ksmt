@@ -29,7 +29,7 @@ class Example {
         solver.assert(eConst eq mkArrayConst(mkArraySort(boolSort, boolSort), trueExpr))
         val status = solver.check()
         assertEquals(status, KSolverStatus.SAT)
-        Native.bitwuzla_print_model(solver.bitwuzlaCtx.bitwuzla, "smt2", FilePtrUtils.stdout())
+        Native.bitwuzlaPrintModel(solver.bitwuzlaCtx.bitwuzla, "smt2", FilePtrUtils.stdout())
         val model = solver.model()
         val aValue = model.eval(a)
         val cValue = model.eval(c)

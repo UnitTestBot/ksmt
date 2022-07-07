@@ -21,7 +21,7 @@ open class KBitwuzlaSolver(val ctx: KContext) : KSolver {
     private var lastCheckStatus = KSolverStatus.UNKNOWN
 
     init {
-        Native.bitwuzla_set_option(bitwuzlaCtx.bitwuzla, BitwuzlaOption.BITWUZLA_OPT_PRODUCE_MODELS, 1)
+        Native.bitwuzlaSetOption(bitwuzlaCtx.bitwuzla, BitwuzlaOption.BITWUZLA_OPT_PRODUCE_MODELS, 1)
     }
 
     override fun assert(expr: KExpr<KBoolSort>) {
