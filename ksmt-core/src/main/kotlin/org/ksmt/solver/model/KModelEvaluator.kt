@@ -9,7 +9,7 @@ import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.solver.KModel
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KApp
-import org.ksmt.expr.KBitVecExpr
+import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KFalse
 import org.ksmt.expr.KIntNumExpr
@@ -19,7 +19,7 @@ import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KRealNumExpr
 import org.ksmt.expr.KTrue
 import org.ksmt.sort.KArraySort
-import org.ksmt.sort.KBVSort
+import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
@@ -94,7 +94,7 @@ open class KModelEvaluator(
 
     override fun transformIntNum(expr: KIntNumExpr): KExpr<KIntSort> = expr.evalExpr { expr }
 
-    override fun <T : KBVSort> transformBitVecExpr(expr: KBitVecExpr<T>): KExpr<T> = expr.evalExpr { expr }
+    override fun <T : KBvSort> transformBitVecValue(expr: KBitVecValue<T>): KExpr<T> = expr.evalExpr { expr }
 
     override fun transform(expr: KRealNumExpr): KExpr<KRealSort> = expr.evalExpr { expr }
     override fun transform(expr: KTrue): KExpr<KBoolSort> = expr.evalExpr { expr }
@@ -160,7 +160,7 @@ open class KModelEvaluator(
             override fun visit(sort: KBoolSort): KExpr<T> = trueExpr as KExpr<T>
             override fun visit(sort: KIntSort): KExpr<T> = 0.intExpr as KExpr<T>
             override fun visit(sort: KRealSort): KExpr<T> = mkRealNum(0) as KExpr<T>
-            override fun <S : KBVSort> visit(sort: S): KExpr<T> = mkBV("0", sort.sizeBits) as KExpr<T>
+            override fun <S : KBvSort> visit(sort: S): KExpr<T> = mkBv("0", sort.sizeBits) as KExpr<T>
             override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): KExpr<T> =
                 mkArrayConst(sort, sort.range.sampleValue()) as KExpr<T>
         })

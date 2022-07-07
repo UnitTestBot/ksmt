@@ -5,7 +5,7 @@ import com.microsoft.z3.Sort
 import org.ksmt.sort.KSortVisitor
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
-import org.ksmt.sort.KBVSort
+import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
@@ -32,7 +32,7 @@ open class KZ3SortInternalizer(
             z3Ctx.mkArraySort(sort.domain.internalizeZ3Sort(), sort.range.internalizeZ3Sort())
         }
 
-    override fun <T : KBVSort> visit(sort: T): Sort = z3InternCtx.internalizeSort(sort) {
+    override fun <T : KBvSort> visit(sort: T): Sort = z3InternCtx.internalizeSort(sort) {
         z3Ctx.mkBitVecSort(sort.sizeBits.toInt())
     }
 
