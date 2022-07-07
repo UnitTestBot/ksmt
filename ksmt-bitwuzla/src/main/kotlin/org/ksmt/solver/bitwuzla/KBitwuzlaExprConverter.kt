@@ -79,7 +79,11 @@ open class KBitwuzlaExprConverter(
             BitwuzlaKind.BITWUZLA_KIND_VAL -> when {
                 Native.bitwuzla_mk_true(bitwuzlaCtx.bitwuzla) == expr -> trueExpr
                 Native.bitwuzla_mk_false(bitwuzlaCtx.bitwuzla) == expr -> falseExpr
-                Native.bitwuzla_term_is_bv(expr) -> TODO("BV are not supported yet")
+                Native.bitwuzla_term_is_bv(expr) -> {
+                    val size = Native.bitwuzla_term_bv_get_size(expr)
+                    val value = Native.bitwuzla_get_bv_value(bitwuzlaCtx.bitwuzla, expr)
+                    mkBV(value, size.toUInt())
+                }
                 Native.bitwuzla_term_is_fp(expr) -> TODO("FP are not supported yet")
                 else -> TODO("unsupported value")
             }
