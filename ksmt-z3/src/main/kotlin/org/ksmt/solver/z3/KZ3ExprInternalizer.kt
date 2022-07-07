@@ -19,13 +19,13 @@ import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
-import org.ksmt.expr.KBitVec16Expr
-import org.ksmt.expr.KBitVec32Expr
-import org.ksmt.expr.KBitVec64Expr
-import org.ksmt.expr.KBitVec8Expr
-import org.ksmt.expr.KBitVecCustomExpr
-import org.ksmt.expr.KBitVecExpr
-import org.ksmt.expr.KBitVecNumberExpr
+import org.ksmt.expr.KBitVec16Value
+import org.ksmt.expr.KBitVec32Value
+import org.ksmt.expr.KBitVec64Value
+import org.ksmt.expr.KBitVec8Value
+import org.ksmt.expr.KBitVecCustomValue
+import org.ksmt.expr.KBitVecValue
+import org.ksmt.expr.KBitVecNumberValue
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KDivArithExpr
@@ -60,7 +60,7 @@ import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.sort.KArithSort
-import org.ksmt.sort.KBVSort
+import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KSort
 
 @Suppress("TooManyFunctions", "SpreadOperator")
@@ -137,14 +137,14 @@ open class KZ3ExprInternalizer(
         )
     }
 
-    override fun <T : KBVSort> transformBitVecExpr(expr: KBitVecExpr<T>): KExpr<T> = expr.internalizeExpr {
+    override fun <T : KBvSort> transformBitVecValue(expr: KBitVecValue<T>): KExpr<T> = expr.internalizeExpr {
         val sizeBits = expr.sort().sizeBits.toInt()
         when (expr) {
-            is KBitVec8Expr, is KBitVec16Expr, is KBitVec32Expr -> {
-                z3Ctx.mkBV((expr as KBitVecNumberExpr<*, *>).numberValue.toInt(), sizeBits)
+            is KBitVec8Value, is KBitVec16Value, is KBitVec32Value -> {
+                z3Ctx.mkBV((expr as KBitVecNumberValue<*, *>).numberValue.toInt(), sizeBits)
             }
-            is KBitVec64Expr -> z3Ctx.mkBV(expr.numberValue, sizeBits)
-            is KBitVecCustomExpr -> z3Ctx.mkBV(expr.value, sizeBits)
+            is KBitVec64Value -> z3Ctx.mkBV(expr.numberValue, sizeBits)
+            is KBitVecCustomValue -> z3Ctx.mkBV(expr.value, sizeBits)
             else -> error("Unknown bv expression class ${expr::class} in transformation method: ${expr.print()}")
         }
     }

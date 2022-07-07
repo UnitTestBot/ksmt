@@ -32,7 +32,7 @@ class KArraySort<out D : KSort, out R : KSort> internal constructor(
     override fun print(): String = "(Array $domain $range)"
 }
 
-abstract class KBVSort(ctx: KContext) : KSort(ctx) {
+abstract class KBvSort(ctx: KContext) : KSort(ctx) {
     abstract val sizeBits: UInt
 
     override fun print(): String = "BitVec $sizeBits"
@@ -44,30 +44,30 @@ class KBV1Sort internal constructor(ctx: KContext) : KBVSort(ctx) {
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
 }
 
-class KBV8Sort internal constructor(ctx: KContext) : KBVSort(ctx) {
+class KBv8Sort internal constructor(ctx: KContext) : KBvSort(ctx) {
     override val sizeBits: UInt = Byte.SIZE_BITS.toUInt()
 
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
 }
 
-class KBV16Sort internal constructor(ctx: KContext) : KBVSort(ctx) {
+class KBv16Sort internal constructor(ctx: KContext) : KBvSort(ctx) {
     override val sizeBits: UInt = Short.SIZE_BITS.toUInt()
 
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
 }
 
-class KBV32Sort internal constructor(ctx: KContext) : KBVSort(ctx) {
+class KBv32Sort internal constructor(ctx: KContext) : KBvSort(ctx) {
     override val sizeBits: UInt = Int.SIZE_BITS.toUInt()
 
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
 }
 
-class KBV64Sort internal constructor(ctx: KContext) : KBVSort(ctx) {
+class KBv64Sort internal constructor(ctx: KContext) : KBvSort(ctx) {
     override val sizeBits: UInt = Long.SIZE_BITS.toUInt()
 
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
 }
 
-class KBVCustomSizeSort internal constructor(ctx: KContext, override val sizeBits: UInt) : KBVSort(ctx) {
+class KBvCustomSizeSort internal constructor(ctx: KContext, override val sizeBits: UInt) : KBvSort(ctx) {
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
 }

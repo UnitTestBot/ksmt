@@ -33,7 +33,7 @@ class Example {
         solver.assert(e.select(3.intExpr) ge 0.intExpr)
 
         val bvVariable = mkBv32Sort().mkConst("A")
-        val bvValue = mkBV(256)
+        val bvValue = mkBv(256)
         solver.assert(mkEq(bvValue, bvVariable))
 
         val status = solver.check()
