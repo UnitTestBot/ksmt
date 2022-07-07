@@ -43,6 +43,7 @@ import org.ksmt.expr.KApp
 import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
+import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KBitVec16Expr
 import org.ksmt.expr.KBitVec32Expr
 import org.ksmt.expr.KBitVec64Expr
@@ -254,7 +255,7 @@ open class KContext {
     fun <D : KSort, R : KSort> mkArrayConst(arraySort: KArraySort<D, R>, value: KExpr<R>): KArrayConst<D, R> =
         arrayConstCache.create(arraySort.cast(), value.cast()).cast()
 
-    val functionAsArrayCache = mkContextCheckingCache { function: KFuncDecl<KSort> ->
+    private val functionAsArrayCache = mkContextCheckingCache { function: KFuncDecl<KSort> ->
         KFunctionAsArray<KSort, KSort>(this, function)
     }
 
@@ -532,6 +533,7 @@ open class KContext {
         return KConstDecl(this, "$name!fresh!${freshConstIdx++}", sort)
     }
 
+    @Suppress("MemberVisibilityCanBePrivate")
     fun <T : KSort> T.mkFreshConstDecl(name: String) = mkFreshConstDecl(name, this)
 
     // bool
