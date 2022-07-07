@@ -2,7 +2,6 @@ package org.ksmt.solver.bitwuzla
 
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
-import org.ksmt.expr.KApp
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.bitwuzla.bindings.Native
@@ -24,7 +23,7 @@ open class KBitwuzlaModel(
     override fun <T : KSort> eval(expr: KExpr<T>, complete: Boolean): KExpr<T> {
         bitwuzlaCtx.ensureActive()
         val term = with(internalizer) { expr.internalize() }
-        val value = Native.bitwuzla_get_value(bitwuzlaCtx.bitwuzla, term)
+        val value = Native.bitwuzlaGetValue(bitwuzlaCtx.bitwuzla, term)
         return with(converter) { value.convert() }
     }
 
@@ -36,10 +35,10 @@ open class KBitwuzlaModel(
                 bitwuzlaCtx.mkConstant(decl, decl.bitwuzlaSort())
             }
             when {
-                Native.bitwuzla_term_is_array(term) -> with(converter) {
+                Native.bitwuzlaTermIsArray(term) -> with(converter) {
                     val sort = decl.sort as KArraySort<*, *>
                     val entries = mutableListOf<KModel.KFuncInterpEntry<KSort>>()
-                    val interp = Native.bitwuzla_get_array_value(bitwuzlaCtx.bitwuzla, term)
+                    val interp = Native.bitwuzlaGetArrayValue(bitwuzlaCtx.bitwuzla, term)
                     for (i in 0 until interp.size) {
                         val index = interp.indices[i].convert<KSort>()
                         val value = interp.values[i].convert<KSort>()
@@ -61,9 +60,9 @@ open class KBitwuzlaModel(
                         default = mkFunctionAsArray<KSort, KSort>(arrayInterpDecl) as KExpr<T>
                     )
                 }
-                Native.bitwuzla_term_is_fun(term) -> with(converter) {
+                Native.bitwuzlaTermIsFun(term) -> with(converter) {
                     val entries = mutableListOf<KModel.KFuncInterpEntry<T>>()
-                    val interp = Native.bitwuzla_get_fun_value(bitwuzlaCtx.bitwuzla, term)
+                    val interp = Native.bitwuzlaGetFunValue(bitwuzlaCtx.bitwuzla, term)
                     for (i in 0 until interp.size) {
                         val args = interp.args[i].map { it.convert<KSort>() }
                         val value = interp.values[i].convert<T>()
@@ -77,7 +76,7 @@ open class KBitwuzlaModel(
                     )
                 }
                 else -> {
-                    val value = Native.bitwuzla_get_value(bitwuzlaCtx.bitwuzla, term)
+                    val value = Native.bitwuzlaGetValue(bitwuzlaCtx.bitwuzla, term)
                     val convertedValue = with(converter) { value.convert<T>() }
                     KModel.KFuncInterp(
                         sort = decl.sort,

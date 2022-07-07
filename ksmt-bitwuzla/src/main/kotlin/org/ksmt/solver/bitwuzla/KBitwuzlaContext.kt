@@ -14,7 +14,7 @@ import java.util.*
 open class KBitwuzlaContext : AutoCloseable {
     private var closed = false
 
-    val bitwuzla = Native.bitwuzla_new()
+    val bitwuzla = Native.bitwuzlaNew()
 
     val expressions = WeakHashMap<KExpr<*>, BitwuzlaTerm>()
     val bitwuzlaExpressions = WeakHashMap<BitwuzlaTerm, WeakReference<KExpr<*>>>()
@@ -49,7 +49,7 @@ open class KBitwuzlaContext : AutoCloseable {
         convert(sorts, bitwuzlaSorts, sort, converter)
 
     private var freshVarNumber = 0
-    fun mkFreshVar(sort: BitwuzlaSort) = Native.bitwuzla_mk_var(bitwuzla, sort, "${freshVarNumber++}")
+    fun mkFreshVar(sort: BitwuzlaSort) = Native.bitwuzlaMkVar(bitwuzla, sort, "${freshVarNumber++}")
 
     val rootConstantScope: RootConstantScope = RootConstantScope()
     var currentConstantScope: ConstantScope = rootConstantScope
@@ -68,12 +68,12 @@ open class KBitwuzlaContext : AutoCloseable {
 
     fun assert(term: BitwuzlaTerm) {
         ensureActive()
-        Native.bitwuzla_assert(bitwuzla, term)
+        Native.bitwuzlaAssert(bitwuzla, term)
     }
 
     fun check(): BitwuzlaResult {
         ensureActive()
-        return Native.bitwuzla_check_sat_helper(bitwuzla)
+        return Native.bitwuzlaCheckSat(bitwuzla)
     }
 
     override fun close() {
@@ -83,7 +83,7 @@ open class KBitwuzlaContext : AutoCloseable {
         expressions.clear()
         bitwuzlaExpressions.clear()
         declSorts.clear()
-        Native.bitwuzla_delete(bitwuzla)
+        Native.bitwuzlaDelete(bitwuzla)
     }
 
     fun ensureActive() {
@@ -113,7 +113,7 @@ open class KBitwuzlaContext : AutoCloseable {
     inner class RootConstantScope : ConstantScope {
         val constants = hashSetOf<KDecl<*>>()
         private val constantCache = mkCache { decl: KDecl<*>, sort: BitwuzlaSort ->
-            Native.bitwuzla_mk_const(bitwuzla, sort, decl.name).also {
+            Native.bitwuzlaMkConst(bitwuzla, sort, decl.name).also {
                 constants += decl
             }
         }
@@ -124,7 +124,7 @@ open class KBitwuzlaContext : AutoCloseable {
     inner class NestedConstantScope(val parent: ConstantScope) : ConstantScope {
         private val constants = hashMapOf<Pair<KDecl<*>, BitwuzlaSort>, BitwuzlaTerm>()
         fun mkFreshConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = constants.getOrPut(decl to sort) {
-            Native.bitwuzla_mk_const(bitwuzla, sort, decl.name)
+            Native.bitwuzlaMkConst(bitwuzla, sort, decl.name)
         }
 
         override fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm =
