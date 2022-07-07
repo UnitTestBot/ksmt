@@ -1,18 +1,16 @@
 package org.ksmt.solver.bitwuzla.bindings
 
 /**
- * The base for strings representing bit-vector values.<br></br>
- * enum values<br></br>
- * *native declaration : bitwuzla.h:26*
+ * The base for strings representing bit-vector values.
  */
 enum class BitwuzlaBVBase(val value: Int) {
-    /** < binary  */
+    /** binary  */
     BITWUZLA_BV_BASE_BIN(0),
 
-    /** < decimal  */
+    /** decimal  */
     BITWUZLA_BV_BASE_DEC(1),
 
-    /** < hexadecimal  */
+    /** hexadecimal  */
     BITWUZLA_BV_BASE_HEX(2);
 
     companion object {
