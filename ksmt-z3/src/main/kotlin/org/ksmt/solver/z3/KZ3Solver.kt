@@ -11,6 +11,7 @@ import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.sort.KBoolSort
+import org.ksmt.utils.NativeLibraryLoader
 
 open class KZ3Solver(private val ctx: KContext) : KSolver {
     private val z3Ctx = Context()
@@ -82,5 +83,18 @@ open class KZ3Solver(private val ctx: KContext) : KSolver {
     override fun close() {
         z3InternCtx.close()
         z3Ctx.close()
+    }
+
+    companion object {
+        init {
+            System.setProperty("z3.skipLibraryLoad", "true")
+            NativeLibraryLoader.load { os ->
+                when (os) {
+                    NativeLibraryLoader.OS.LINUX -> listOf("libz3", "libz3java")
+                    NativeLibraryLoader.OS.MACOS -> listOf("libz3", "libz3java")
+                    NativeLibraryLoader.OS.WINDOWS -> listOf("vcruntime140", "vcruntime140_1", "libz3", "libz3java")
+                }
+            }
+        }
     }
 }
