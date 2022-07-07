@@ -7,6 +7,7 @@ import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.*
 import org.ksmt.sort.*
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBVBase
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
@@ -111,8 +112,30 @@ open class KBitwuzlaExprInternalizer(
         )
     }
 
-    override fun <T : KBVSort<KBVSize>> transform(expr: BitVecExpr<T>): KExpr<T> = expr.internalizeExpr {
-        TODO("BV is not supported yet")
+    override fun transform(expr: KBitVec8Expr): KExpr<KBV8Sort> = transformBvNumber(expr)
+    override fun transform(expr: KBitVec16Expr): KExpr<KBV16Sort> = transformBvNumber(expr)
+    override fun transform(expr: KBitVec32Expr): KExpr<KBV32Sort> = transformBvNumber(expr)
+    override fun transform(expr: KBitVec64Expr): KExpr<KBV64Sort> = transformBvNumber(expr)
+
+    fun <T : KBitVecNumberExpr<S, *>, S : KBVSort> transformBvNumber(expr: T): T = expr.internalizeExpr {
+        with(ctx) {
+            Native.bitwuzla_mk_bv_value_uint64(
+                bitwuzlaCtx.bitwuzla,
+                sort.internalize(),
+                numberValue.toLong()
+            )
+        }
+    }
+
+    override fun transform(expr: KBitVecCustomExpr): KExpr<KBVSort> = expr.internalizeExpr {
+        with(ctx) {
+            Native.bitwuzla_mk_bv_value(
+                bitwuzlaCtx.bitwuzla,
+                sort.internalize(),
+                value,
+                BitwuzlaBVBase.BITWUZLA_BV_BASE_BIN
+            )
+        }
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> =
@@ -191,9 +214,10 @@ open class KBitwuzlaExprInternalizer(
                 Native.bitwuzla_mk_array_sort(bitwuzlaCtx.bitwuzla, domain, range)
             }
 
-        override fun <S : KBVSize> visit(sort: KBVSort<S>): BitwuzlaSort {
-            TODO("BV is not supported yet")
-        }
+        override fun <S : KBVSort> visit(sort: S): BitwuzlaSort =
+            bitwuzlaCtx.internalizeSort(sort) {
+                Native.bitwuzla_mk_bv_sort(bitwuzlaCtx.bitwuzla, sort.sizeBits.toInt())
+            }
 
         override fun visit(sort: KIntSort): BitwuzlaSort = error("Unsupported sort $sort")
         override fun visit(sort: KRealSort): BitwuzlaSort = error("Unsupported sort $sort")
