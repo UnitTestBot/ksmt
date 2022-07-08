@@ -31,12 +31,21 @@ class Example {
             )
         )
         solver.assert(e.select(3.intExpr) ge 0.intExpr)
+
+        val bvVariable = mkBv32Sort().mkConst("A")
+        val bvValue = mkBV(256)
+        solver.assert(mkEq(bvValue, bvVariable))
+
         val status = solver.check()
         assertEquals(status, KSolverStatus.SAT)
+
         val model = solver.model()
         val aValue = model.eval(a)
         val cValue = model.eval(c)
         val eValue = model.eval(e)
+        val bv = model.eval(bvVariable)
+
+        assertEquals(bv, bvValue)
         assertEquals(aValue, trueExpr)
         assertEquals(cValue, c)
         assertTrue(eValue.sort is KArraySort<*, *>)
