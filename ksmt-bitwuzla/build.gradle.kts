@@ -20,6 +20,7 @@ dependencies {
 
     testImplementation(kotlin("test"))
     bitwuzlaNative("bitwuzla", "bitwuzla-native-linux-x86-64", "1.0", ext = "zip")
+    bitwuzlaNative("bitwuzla", "bitwuzla-native-win32-x86-64", "1.0", ext = "zip")
 }
 
 tasks.withType<KotlinCompile> {
