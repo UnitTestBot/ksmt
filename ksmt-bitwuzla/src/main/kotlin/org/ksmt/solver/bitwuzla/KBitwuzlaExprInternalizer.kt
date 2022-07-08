@@ -71,7 +71,10 @@ open class KBitwuzlaExprInternalizer(
     * */
     fun <T : KSort> KDecl<T>.bitwuzlaSort(): BitwuzlaSort = accept(declSortInternalizer)
 
-
+    /**
+     * [KBitwuzlaExprInternalizer] overrides transform for all supported Bitwuzla expressions.
+     * Therefore, if basic expr transform is invoked expression is unsupported.
+     * */
     override fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> =
         error("Unsupported expr $expr")
 
@@ -118,11 +121,11 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun transform(expr: KTrue): KExpr<KBoolSort> = expr.internalizeExpr {
-        Native.bitwuzlaMkTrue(bitwuzlaCtx.bitwuzla)
+        bitwuzlaCtx.trueTerm
     }
 
     override fun transform(expr: KFalse): KExpr<KBoolSort> = expr.internalizeExpr {
-        Native.bitwuzlaMkFalse(bitwuzlaCtx.bitwuzla)
+        bitwuzlaCtx.falseTerm
     }
 
     override fun <T : KSort> transform(expr: KEqExpr<T>): KExpr<KBoolSort> = expr.internalizeExpr {
@@ -234,7 +237,7 @@ open class KBitwuzlaExprInternalizer(
         return this
     }
 
-    open class SortInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KSortVisitor<BitwuzlaSort> {
+    open class SortInternalizer(private val bitwuzlaCtx: KBitwuzlaContext) : KSortVisitor<BitwuzlaSort> {
         override fun visit(sort: KBoolSort): BitwuzlaSort = bitwuzlaCtx.internalizeSort(sort) {
             Native.bitwuzlaMkBoolSort(bitwuzlaCtx.bitwuzla)
         }
@@ -251,13 +254,16 @@ open class KBitwuzlaExprInternalizer(
                 Native.bitwuzlaMkBvSort(bitwuzlaCtx.bitwuzla, sort.sizeBits.toInt())
             }
 
+        /**
+         * Bitwuzla doesn't support integers and reals.
+         * */
         override fun visit(sort: KIntSort): BitwuzlaSort = error("Unsupported sort $sort")
         override fun visit(sort: KRealSort): BitwuzlaSort = error("Unsupported sort $sort")
     }
 
     open class DeclSortInternalizer(
-        val bitwuzlaCtx: KBitwuzlaContext,
-        val sortInternalizer: SortInternalizer
+        private val bitwuzlaCtx: KBitwuzlaContext,
+        private val sortInternalizer: SortInternalizer
     ) : KDeclVisitor<BitwuzlaSort> {
         override fun <S : KSort> visit(decl: KFuncDecl<S>): BitwuzlaSort = bitwuzlaCtx.internalizeDeclSort(decl) {
             val domain = decl.argSorts.map { it.accept(sortInternalizer) }.toTypedArray()

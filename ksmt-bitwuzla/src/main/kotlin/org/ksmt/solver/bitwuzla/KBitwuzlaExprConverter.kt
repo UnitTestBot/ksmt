@@ -11,7 +11,7 @@ import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KSort
 
 open class KBitwuzlaExprConverter(
-    val ctx: KContext,
+    private val ctx: KContext,
     val bitwuzlaCtx: KBitwuzlaContext
 ) {
     /*
@@ -24,7 +24,7 @@ open class KBitwuzlaExprConverter(
     @Suppress("UNCHECKED_CAST")
     fun <T : KSort> BitwuzlaTerm.convert(): KExpr<T> = bitwuzlaCtx.convertExpr(this) {
         convertExprHelper(this)
-    } as? KExpr<T> ?: error("expr is not properly converted")
+    } as? KExpr<T> ?: error("expr is not properly converted: ${Native.bitwuzlaTermGetKind(this)}")
 
     /*
     * Create KSmt sort from Bitwuzla sort
@@ -77,8 +77,8 @@ open class KBitwuzlaExprConverter(
                 decl.apply(args)
             }
             BitwuzlaKind.BITWUZLA_KIND_VAL -> when {
-                Native.bitwuzlaMkTrue(bitwuzlaCtx.bitwuzla) == expr -> trueExpr
-                Native.bitwuzlaMkFalse(bitwuzlaCtx.bitwuzla) == expr -> falseExpr
+                bitwuzlaCtx.trueTerm == expr -> trueExpr
+                bitwuzlaCtx.falseTerm == expr -> falseExpr
                 Native.bitwuzlaTermIsBv(expr) -> {
                     val size = Native.bitwuzlaTermBvGetSize(expr)
                     val value = Native.bitwuzlaGetBvValue(bitwuzlaCtx.bitwuzla, expr)

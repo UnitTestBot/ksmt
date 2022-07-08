@@ -16,8 +16,11 @@ open class KBitwuzlaContext : AutoCloseable {
 
     val bitwuzla = Native.bitwuzlaNew()
 
-    val expressions = WeakHashMap<KExpr<*>, BitwuzlaTerm>()
-    val bitwuzlaExpressions = WeakHashMap<BitwuzlaTerm, WeakReference<KExpr<*>>>()
+    val trueTerm: BitwuzlaTerm by lazy { Native.bitwuzlaMkTrue(bitwuzla) }
+    val falseTerm: BitwuzlaTerm by lazy { Native.bitwuzlaMkFalse(bitwuzla) }
+
+    private val expressions = WeakHashMap<KExpr<*>, BitwuzlaTerm>()
+    private val bitwuzlaExpressions = WeakHashMap<BitwuzlaTerm, WeakReference<KExpr<*>>>()
     private val sorts = WeakHashMap<KSort, BitwuzlaSort>()
     private val bitwuzlaSorts = WeakHashMap<BitwuzlaSort, WeakReference<KSort>>()
     private val declSorts = WeakHashMap<KDecl<*>, BitwuzlaSort>()
@@ -51,7 +54,7 @@ open class KBitwuzlaContext : AutoCloseable {
     private var freshVarNumber = 0
     fun mkFreshVar(sort: BitwuzlaSort) = Native.bitwuzlaMkVar(bitwuzla, sort, "${freshVarNumber++}")
 
-    val rootConstantScope: RootConstantScope = RootConstantScope()
+    private val rootConstantScope: RootConstantScope = RootConstantScope()
     var currentConstantScope: ConstantScope = rootConstantScope
 
     fun declaredConstants(): Set<KDecl<*>> = rootConstantScope.constants.toSet()
@@ -108,7 +111,7 @@ open class KBitwuzlaContext : AutoCloseable {
         if (current != null) return current
 
         val converted = converter(key)
-        cache.getOrPut(converted) { key }
+        cache.putIfAbsent(converted, key)
         reverseCache[key] = WeakReference(converted)
         return converted
     }

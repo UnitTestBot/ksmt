@@ -10,7 +10,7 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaResult
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KBoolSort
 
-open class KBitwuzlaSolver(val ctx: KContext) : KSolver {
+open class KBitwuzlaSolver(private val ctx: KContext) : KSolver {
     open val bitwuzlaCtx = KBitwuzlaContext()
     open val exprInternalizer: KBitwuzlaExprInternalizer by lazy {
         KBitwuzlaExprInternalizer(ctx, bitwuzlaCtx)
