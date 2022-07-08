@@ -9,7 +9,7 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KSort
 import java.lang.ref.WeakReference
-import java.util.*
+import java.util.WeakHashMap
 
 open class KBitwuzlaContext : AutoCloseable {
     private var closed = false
