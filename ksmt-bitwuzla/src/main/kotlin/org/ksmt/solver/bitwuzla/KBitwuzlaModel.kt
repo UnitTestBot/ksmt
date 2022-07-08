@@ -10,15 +10,15 @@ import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KSort
 
 open class KBitwuzlaModel(
-    val ctx: KContext,
-    val bitwuzlaCtx: KBitwuzlaContext,
-    val internalizer: KBitwuzlaExprInternalizer,
-    val converter: KBitwuzlaExprConverter
+    private val ctx: KContext,
+    private val bitwuzlaCtx: KBitwuzlaContext,
+    private val internalizer: KBitwuzlaExprInternalizer,
+    private val converter: KBitwuzlaExprConverter
 ) : KModel {
     override val declarations: Set<KDecl<*>>
         get() = bitwuzlaCtx.declaredConstants()
 
-    val interpretations: MutableMap<KDecl<*>, KModel.KFuncInterp<*>> = hashMapOf()
+    private val interpretations: MutableMap<KDecl<*>, KModel.KFuncInterp<*>> = hashMapOf()
 
     override fun <T : KSort> eval(expr: KExpr<T>, complete: Boolean): KExpr<T> {
         bitwuzlaCtx.ensureActive()
