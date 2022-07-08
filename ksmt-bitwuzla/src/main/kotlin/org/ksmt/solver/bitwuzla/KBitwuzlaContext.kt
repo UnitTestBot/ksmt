@@ -57,6 +57,13 @@ open class KBitwuzlaContext : AutoCloseable {
     fun declaredConstants(): Set<KDecl<*>> = rootConstantScope.constants.toSet()
     fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = currentConstantScope.mkConstant(decl, sort)
 
+    /** Constant scope for quantifiers.
+     *
+     * Quantifier bound variables may clash with constants from outer scope and
+     * therefore shadowing is required.
+     *
+     * @see NestedConstantScope
+     * */
     inline fun <reified T> withConstantScope(body: NestedConstantScope.() -> T): T {
         val oldScope = currentConstantScope
         val newScope = NestedConstantScope(currentConstantScope)
@@ -121,6 +128,11 @@ open class KBitwuzlaContext : AutoCloseable {
         override fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = constantCache.create(decl, sort)
     }
 
+    /** Constant shadowing.
+     *
+     * If constant declaration from outer scope clashes with registered fresh declaration
+     * fresh constant is returned instead of constant from outer scope.
+     * */
     inner class NestedConstantScope(val parent: ConstantScope) : ConstantScope {
         private val constants = hashMapOf<Pair<KDecl<*>, BitwuzlaSort>, BitwuzlaTerm>()
         fun mkFreshConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = constants.getOrPut(decl to sort) {
