@@ -22,8 +22,26 @@ object FilePtrUtils {
         fun fflush(ptr: Pointer): Int
     }
 
+    private interface MSVCRT : Library {
+        fun fopen(path: String, mode: String): Pointer
+        fun _fdopen(fd: Int, mode: String): Pointer
+        fun fclose(ptr: Pointer)
+        fun fflush(ptr: Pointer): Int
+    }
+
+    private class MSVCRTAdapter(private val msvcrt: MSVCRT) : CLib {
+        override fun fopen(path: String, mode: String): Pointer = msvcrt.fopen(path, mode)
+        override fun fdopen(fd: Int, mode: String): Pointer = msvcrt._fdopen(fd, mode)
+        override fun fclose(ptr: Pointer) = msvcrt.fclose(ptr)
+        override fun fflush(ptr: Pointer): Int = msvcrt.fflush(ptr)
+    }
+
     private val lib: CLib by lazy {
-        Native.load(if (Platform.isWindows()) "msvcrt" else "c", CLib::class.java)
+        if (Platform.isWindows()) {
+            MSVCRTAdapter(Native.load("msvcrt", MSVCRT::class.java))
+        } else {
+            Native.load("c", CLib::class.java)
+        }
     }
 
     private val stdout: FilePtr by lazy {
