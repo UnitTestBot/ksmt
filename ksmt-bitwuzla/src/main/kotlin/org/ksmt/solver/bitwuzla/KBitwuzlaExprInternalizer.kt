@@ -239,7 +239,7 @@ open class KBitwuzlaExprInternalizer(
 
     open class SortInternalizer(private val bitwuzlaCtx: KBitwuzlaContext) : KSortVisitor<BitwuzlaSort> {
         override fun visit(sort: KBoolSort): BitwuzlaSort = bitwuzlaCtx.internalizeSort(sort) {
-            Native.bitwuzlaMkBoolSort(bitwuzlaCtx.bitwuzla)
+            bitwuzlaCtx.boolSort
         }
 
         override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): BitwuzlaSort =
