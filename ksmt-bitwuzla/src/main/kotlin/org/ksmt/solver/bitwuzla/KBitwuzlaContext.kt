@@ -18,6 +18,7 @@ open class KBitwuzlaContext : AutoCloseable {
 
     val trueTerm: BitwuzlaTerm by lazy { Native.bitwuzlaMkTrue(bitwuzla) }
     val falseTerm: BitwuzlaTerm by lazy { Native.bitwuzlaMkFalse(bitwuzla) }
+    val boolSort: BitwuzlaSort by lazy { Native.bitwuzlaMkBoolSort(bitwuzla) }
 
     private val expressions = WeakHashMap<KExpr<*>, BitwuzlaTerm>()
     private val bitwuzlaExpressions = WeakHashMap<BitwuzlaTerm, WeakReference<KExpr<*>>>()

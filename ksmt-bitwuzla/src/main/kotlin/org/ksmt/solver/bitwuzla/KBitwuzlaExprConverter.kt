@@ -36,7 +36,7 @@ open class KBitwuzlaExprConverter(
 
     open fun convertSortHelper(sort: BitwuzlaSort): KSort = with(ctx) {
         when {
-            Native.bitwuzlaSortIsEqual(sort, Native.bitwuzlaMkBoolSort(bitwuzlaCtx.bitwuzla)) -> {
+            Native.bitwuzlaSortIsEqual(sort, bitwuzlaCtx.boolSort) -> {
                 boolSort
             }
             Native.bitwuzlaSortIsArray(sort) -> {
@@ -47,7 +47,10 @@ open class KBitwuzlaExprConverter(
             Native.bitwuzlaSortIsFun(sort) -> {
                 error("fun sorts are not allowed for conversion")
             }
-            Native.bitwuzlaSortIsBv(sort) -> TODO("BV are not supported yet")
+            Native.bitwuzlaSortIsBv(sort) -> {
+                val size = Native.bitwuzlaSortBvGetSize(sort)
+                mkBvSort(size.toUInt())
+            }
             else -> TODO("sort is not supported")
         }
     }
