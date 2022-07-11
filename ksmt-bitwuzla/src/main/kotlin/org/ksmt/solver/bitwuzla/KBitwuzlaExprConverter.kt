@@ -73,6 +73,7 @@ open class KBitwuzlaExprConverter(
         }
     }
 
+    @Suppress("MagicNumber", "LongMethod", "ComplexMethod")
     open fun convertExprHelper(expr: BitwuzlaTerm): KExpr<*> = with(ctx) {
         when (val kind = Native.bitwuzlaTermGetKind(expr)) {
             // constants, functions, values
@@ -264,6 +265,7 @@ open class KBitwuzlaExprConverter(
         }
     }
 
+    @Suppress("LongMethod")
     open fun convertBoolExpr(expr: BitwuzlaTerm, kind: BitwuzlaKind): KExpr<*> = when (kind) {
         BitwuzlaKind.BITWUZLA_KIND_BV_AND, BitwuzlaKind.BITWUZLA_KIND_AND -> with(ctx) {
             val args = Native.bitwuzlaTermGetChildren(expr).map { it.convert<KBoolSort>() }
