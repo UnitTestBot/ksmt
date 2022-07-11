@@ -1,3 +1,4 @@
+@file:Suppress("MagicNumber")
 package org.ksmt.solver.bitwuzla.bindings
 
 /**

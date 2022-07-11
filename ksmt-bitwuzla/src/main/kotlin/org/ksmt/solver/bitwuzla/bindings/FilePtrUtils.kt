@@ -22,6 +22,7 @@ object FilePtrUtils {
         fun fflush(ptr: Pointer): Int
     }
 
+    @Suppress("FunctionName")
     private interface MSVCRT : Library {
         fun fopen(path: String, mode: String): Pointer
         fun _fdopen(fd: Int, mode: String): Pointer

@@ -234,18 +234,19 @@ open class KBitwuzlaExprInternalizer(
         Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FORALL, args)
     }
 
-    inline fun <T : KQuantifier> T.internalizeQuantifier(crossinline internalizer: T.(Array<BitwuzlaTerm>) -> BitwuzlaTerm) =
-        internalizeExpr {
-            bitwuzlaCtx.withConstantScope {
-                val boundVars = bounds.map {
-                    mkVar(it, it.sort.internalize())
-                }
-                val body = body.internalize()
-                if (bounds.isEmpty()) return@internalizeExpr body
-                val args = (boundVars + body).toTypedArray()
-                internalizer(args)
+    inline fun <T : KQuantifier> T.internalizeQuantifier(
+        crossinline internalizer: T.(Array<BitwuzlaTerm>) -> BitwuzlaTerm
+    ) = internalizeExpr {
+        bitwuzlaCtx.withConstantScope {
+            val boundVars = bounds.map {
+                mkVar(it, it.sort.internalize())
             }
+            val body = body.internalize()
+            if (bounds.isEmpty()) return@internalizeExpr body
+            val args = (boundVars + body).toTypedArray()
+            internalizer(args)
         }
+    }
 
     inline fun <T : KExpr<*>> T.internalizeExpr(crossinline internalizer: T.() -> BitwuzlaTerm): T {
         bitwuzlaCtx.internalizeExpr(this) {

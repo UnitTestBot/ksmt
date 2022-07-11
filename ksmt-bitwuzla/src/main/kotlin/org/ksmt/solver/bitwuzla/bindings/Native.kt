@@ -1,4 +1,11 @@
-@file:Suppress("FunctionName", "unused", "UNUSED_PARAMETER")
+@file:Suppress(
+    "FunctionName",
+    "FunctionParameterNaming",
+    "LongParameterList",
+    "LargeClass",
+    "unused",
+    "UNUSED_PARAMETER"
+)
 
 package org.ksmt.solver.bitwuzla.bindings
 
@@ -1656,8 +1663,9 @@ object Native {
      * error occurred, else `null`.
      * @param parsedStatus Output parameter, stores the status of the input in case
      * of SMT-LIB v2 input, if given.
-     * @param result [BitwuzlaResult.BITWUZLA_SAT] if the input formula was simplified to true, [BitwuzlaResult.BITWUZLA_UNSAT]
-     * if it was simplified to false, and [BitwuzlaResult.BITWUZLA_UNKNOWN] otherwise.
+     * @param result [BitwuzlaResult.BITWUZLA_SAT] if the input formula was simplified to true,
+     * [BitwuzlaResult.BITWUZLA_UNSAT] if it was simplified to false,
+     * and [BitwuzlaResult.BITWUZLA_UNKNOWN] otherwise.
      */
     class ParseFormatResult(
         val result: BitwuzlaResult,
