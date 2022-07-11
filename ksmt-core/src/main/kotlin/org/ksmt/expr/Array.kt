@@ -65,3 +65,25 @@ class KFunctionAsArray<D : KSort, R : KSort> internal constructor(
     override fun print(): String = "(asArray ${function.name})"
     override fun accept(transformer: KTransformer): KExpr<KArraySort<D, R>> = transformer.transform(this)
 }
+
+/** Array lambda binding.
+ *
+ * [Defined as in the Z3 solver](https://microsoft.github.io/z3guide/docs/logic/Lambdas)
+ * */
+class KArrayLambda<D : KSort, R : KSort> internal constructor(
+    ctx: KContext,
+    val indexVarDecl: KDecl<D>,
+    val body: KExpr<R>
+) : KExpr<KArraySort<D, R>>(ctx) {
+    override fun sort(): KArraySort<D, R> = with(ctx) { mkArraySort(indexVarDecl.sort, body.sort) }
+    override fun print(): String = buildString {
+        append("(lambda")
+        append(" (")
+        append("(${indexVarDecl.name} ${indexVarDecl.sort})")
+        append(") ")
+        append("$body")
+        append(")")
+    }
+
+    override fun accept(transformer: KTransformer): KExpr<KArraySort<D, R>> = transformer.transform(this)
+}

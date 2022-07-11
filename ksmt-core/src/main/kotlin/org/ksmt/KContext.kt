@@ -41,6 +41,7 @@ import org.ksmt.expr.KAddArithExpr
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KArrayConst
+import org.ksmt.expr.KArrayLambda
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KFunctionAsArray
@@ -265,6 +266,13 @@ open class KContext {
 
     fun <D : KSort, R : KSort> mkFunctionAsArray(function: KFuncDecl<R>): KFunctionAsArray<D, R> =
         functionAsArrayCache.create(function.cast()).cast()
+
+    private val arrayLambdaCache = mkContextCheckingCache { indexVar: KDecl<*>, body: KExpr<*> ->
+        KArrayLambda(this, indexVar, body)
+    }
+
+    fun <D : KSort, R : KSort> mkArrayLambda(indexVar: KDecl<D>, body: KExpr<R>): KArrayLambda<D, R> =
+        arrayLambdaCache.create(indexVar, body).cast()
 
     fun <D : KSort, R : KSort> KExpr<KArraySort<D, R>>.store(index: KExpr<D>, value: KExpr<R>) =
         mkArrayStore(this, index, value)

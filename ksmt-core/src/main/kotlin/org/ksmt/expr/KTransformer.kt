@@ -50,6 +50,11 @@ interface KTransformer {
     fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> = transformApp(expr)
     fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>): KExpr<KArraySort<D, R>> = transformApp(expr)
     fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> = transformExpr(expr)
+    fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> = with(ctx) {
+        val body = expr.body.accept(this@KTransformer)
+        if (body == expr.body) return transformExpr(expr)
+        return transformExpr(mkArrayLambda(expr.indexVarDecl, body))
+    }
 
     // arith transformers
     fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>): KExpr<T> = transformApp(expr)
