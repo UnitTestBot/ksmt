@@ -25,13 +25,14 @@ open class KBitwuzlaContext : AutoCloseable {
     private val sorts = WeakHashMap<KSort, BitwuzlaSort>()
     private val bitwuzlaSorts = WeakHashMap<BitwuzlaSort, WeakReference<KSort>>()
     private val declSorts = WeakHashMap<KDecl<*>, BitwuzlaSort>()
+    private val bitwuzlaConstants = HashMap<BitwuzlaTerm, KDecl<*>>()
 
     operator fun get(expr: KExpr<*>): BitwuzlaTerm? = expressions[expr]
     operator fun get(sort: KSort): BitwuzlaSort? = sorts[sort]
 
     fun internalizeExpr(expr: KExpr<*>, internalizer: (KExpr<*>) -> BitwuzlaTerm): BitwuzlaTerm =
         expressions.getOrPut(expr) {
-            internalizer(expr) // don't reverse cache bitwuzla terms since it may be rewrited
+            internalizer(expr) // don't reverse cache bitwuzla term since it may be rewrited
         }
 
     fun internalizeSort(sort: KSort, internalizer: (KSort) -> BitwuzlaSort): BitwuzlaSort =
@@ -52,25 +53,26 @@ open class KBitwuzlaContext : AutoCloseable {
     fun convertSort(sort: BitwuzlaSort, converter: (BitwuzlaSort) -> KSort): KSort =
         convert(sorts, bitwuzlaSorts, sort, converter)
 
-    private var freshVarNumber = 0
-    fun mkFreshVar(sort: BitwuzlaSort) = Native.bitwuzlaMkVar(bitwuzla, sort, "${freshVarNumber++}")
+    // constant is known only if it was previously internalized
+    fun convertConstantIfKnown(term: BitwuzlaTerm): KDecl<*>? = bitwuzlaConstants[term]
 
-    private val rootConstantScope: RootConstantScope = RootConstantScope()
-    var currentConstantScope: ConstantScope = rootConstantScope
+    private val normalConstantScope: NormalConstantScope = NormalConstantScope()
+    var currentConstantScope: ConstantScope = normalConstantScope
 
-    fun declaredConstants(): Set<KDecl<*>> = rootConstantScope.constants.toSet()
+    fun declaredConstants(): Set<KDecl<*>> = normalConstantScope.constants.toSet()
     fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = currentConstantScope.mkConstant(decl, sort)
 
     /** Constant scope for quantifiers.
      *
-     * Quantifier bound variables may clash with constants from outer scope and
-     * therefore shadowing is required.
+     * Quantifier bound variables:
+     * 1. may clash with constants from outer scope
+     * 2. must be replaced with vars in quantifier body
      *
-     * @see NestedConstantScope
+     * @see QuantifiedConstantScope
      * */
-    inline fun <reified T> withConstantScope(body: NestedConstantScope.() -> T): T {
+    inline fun <reified T> withConstantScope(body: QuantifiedConstantScope.() -> T): T {
         val oldScope = currentConstantScope
-        val newScope = NestedConstantScope(currentConstantScope)
+        val newScope = QuantifiedConstantScope(currentConstantScope)
         currentConstantScope = newScope
         val result = newScope.body()
         currentConstantScope = oldScope
@@ -94,6 +96,7 @@ open class KBitwuzlaContext : AutoCloseable {
         expressions.clear()
         bitwuzlaExpressions.clear()
         declSorts.clear()
+        bitwuzlaConstants.clear()
         Native.bitwuzlaDelete(bitwuzla)
     }
 
@@ -121,26 +124,33 @@ open class KBitwuzlaContext : AutoCloseable {
         fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm
     }
 
-    inner class RootConstantScope : ConstantScope {
+
+    /** Produce normal constants for KSmt declarations.
+     *
+     *  Guarantee that if two declarations are equal
+     *  then same Bitwuzla native pointer is returned.
+     * */
+    inner class NormalConstantScope : ConstantScope {
         val constants = hashSetOf<KDecl<*>>()
         private val constantCache = mkCache { decl: KDecl<*>, sort: BitwuzlaSort ->
             Native.bitwuzlaMkConst(bitwuzla, sort, decl.name).also {
                 constants += decl
+                bitwuzlaConstants[it] = decl
             }
         }
 
         override fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = constantCache.create(decl, sort)
     }
 
-    /** Constant shadowing.
+    /** Constant quantification.
      *
-     * If constant declaration from outer scope clashes with registered fresh declaration
-     * fresh constant is returned instead of constant from outer scope.
+     * If constant declaration registered as quantified variable,
+     * then the corresponding var is returned instead of constant.
      * */
-    inner class NestedConstantScope(val parent: ConstantScope) : ConstantScope {
+    inner class QuantifiedConstantScope(private val parent: ConstantScope) : ConstantScope {
         private val constants = hashMapOf<Pair<KDecl<*>, BitwuzlaSort>, BitwuzlaTerm>()
-        fun mkFreshConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = constants.getOrPut(decl to sort) {
-            Native.bitwuzlaMkConst(bitwuzla, sort, decl.name)
+        fun mkVar(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = constants.getOrPut(decl to sort) {
+            Native.bitwuzlaMkVar(bitwuzla, sort, decl.name)
         }
 
         override fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm =

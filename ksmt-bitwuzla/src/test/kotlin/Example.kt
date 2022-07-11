@@ -1,10 +1,12 @@
 import org.ksmt.KContext
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
-import org.ksmt.solver.bitwuzla.bindings.FilePtrUtils
-import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KArraySort
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class Example {
 
@@ -29,7 +31,6 @@ class Example {
         solver.assert(eConst eq mkArrayConst(mkArraySort(boolSort, boolSort), trueExpr))
         val status = solver.check()
         assertEquals(status, KSolverStatus.SAT)
-        Native.bitwuzlaPrintModel(solver.bitwuzlaCtx.bitwuzla, "smt2", FilePtrUtils.stdout())
         val model = solver.model()
         val aValue = model.eval(a)
         val cValue = model.eval(c)

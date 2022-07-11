@@ -4,44 +4,45 @@ import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KDeclVisitor
 import org.ksmt.decl.KFuncDecl
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBVBase
-import org.ksmt.solver.bitwuzla.bindings.Native
-import org.ksmt.expr.KTransformer
-import org.ksmt.expr.KExpr
-import org.ksmt.expr.KFunctionApp
-import org.ksmt.expr.KConst
 import org.ksmt.expr.KAndExpr
-import org.ksmt.expr.KOrExpr
-import org.ksmt.expr.KNotExpr
-import org.ksmt.expr.KTrue
-import org.ksmt.expr.KFalse
-import org.ksmt.expr.KEqExpr
-import org.ksmt.expr.KIteExpr
+import org.ksmt.expr.KArrayConst
+import org.ksmt.expr.KArrayLambda
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
-import org.ksmt.expr.KArrayConst
-import org.ksmt.expr.KBitVec8Expr
 import org.ksmt.expr.KBitVec16Expr
 import org.ksmt.expr.KBitVec32Expr
 import org.ksmt.expr.KBitVec64Expr
+import org.ksmt.expr.KBitVec8Expr
 import org.ksmt.expr.KBitVecCustomExpr
 import org.ksmt.expr.KBitVecNumberExpr
-import org.ksmt.expr.KQuantifier
+import org.ksmt.expr.KConst
+import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExistentialQuantifier
+import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFalse
+import org.ksmt.expr.KFunctionApp
+import org.ksmt.expr.KIteExpr
+import org.ksmt.expr.KNotExpr
+import org.ksmt.expr.KOrExpr
+import org.ksmt.expr.KQuantifier
+import org.ksmt.expr.KTransformer
+import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUniversalQuantifier
-import org.ksmt.sort.KSort
-import org.ksmt.sort.KBVSort
-import org.ksmt.sort.KBV8Sort
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBVBase
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
+import org.ksmt.solver.bitwuzla.bindings.Native
+import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBV16Sort
 import org.ksmt.sort.KBV32Sort
 import org.ksmt.sort.KBV64Sort
+import org.ksmt.sort.KBV8Sort
+import org.ksmt.sort.KBVSort
 import org.ksmt.sort.KBoolSort
-import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
+import org.ksmt.sort.KSort
 import org.ksmt.sort.KSortVisitor
 
 open class KBitwuzlaExprInternalizer(
@@ -49,7 +50,9 @@ open class KBitwuzlaExprInternalizer(
     val bitwuzlaCtx: KBitwuzlaContext
 ) : KTransformer {
     open val sortInternalizer: SortInternalizer by lazy { SortInternalizer(bitwuzlaCtx) }
-    open val declSortInternalizer: DeclSortInternalizer by lazy { DeclSortInternalizer(bitwuzlaCtx, sortInternalizer) }
+    open val functionSortInternalizer: FunctionSortInternalizer by lazy {
+        FunctionSortInternalizer(bitwuzlaCtx, sortInternalizer)
+    }
 
     /*
     * Create Bitwuzla term from KSmt expression
@@ -69,7 +72,7 @@ open class KBitwuzlaExprInternalizer(
     * Create Bitwuzla function sort for KSmt declaration.
     * If declaration is a constant then nonfunction sort is returned
     * */
-    fun <T : KSort> KDecl<T>.bitwuzlaSort(): BitwuzlaSort = accept(declSortInternalizer)
+    fun <T : KSort> KDecl<T>.bitwuzlaFunctionSort(): BitwuzlaSort = accept(functionSortInternalizer)
 
     /**
      * [KBitwuzlaExprInternalizer] overrides transform for all supported Bitwuzla expressions.
@@ -80,7 +83,7 @@ open class KBitwuzlaExprInternalizer(
 
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = expr.internalizeExpr {
-        val const = bitwuzlaCtx.mkConstant(decl, decl.bitwuzlaSort())
+        val const = bitwuzlaCtx.mkConstant(decl, decl.bitwuzlaFunctionSort())
         val args = args.map { it.internalize() }
         val termArgs = (listOf(const) + args).toTypedArray()
         Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, termArgs)
@@ -202,6 +205,27 @@ open class KBitwuzlaExprInternalizer(
             )
         }
 
+    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> =
+        expr.internalizeExpr {
+            bitwuzlaCtx.withConstantScope {
+                val indexVar = mkVar(indexVarDecl, indexVarDecl.sort.internalize())
+                val body = body.internalize()
+                val bodyKind = Native.bitwuzlaTermGetKind(body)
+                if (bodyKind == BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT) {
+                    val selectArgs = Native.bitwuzlaTermGetChildren(body)
+                    if (selectArgs[1] == indexVar) {
+                        /** Recognize and support special case of lambda expressions
+                         * which can be produced by [KBitwuzlaExprConverter].
+                         *
+                         * (lambda (i) (select array i)) -> array
+                         */
+                        return@internalizeExpr selectArgs[0]
+                    }
+                }
+                error("array lambda expressions are not supported in Bitwuzla")
+            }
+        }
+
     override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> = expr.internalizeQuantifier { args ->
         Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EXISTS, args)
     }
@@ -213,19 +237,12 @@ open class KBitwuzlaExprInternalizer(
     inline fun <T : KQuantifier> T.internalizeQuantifier(crossinline internalizer: T.(Array<BitwuzlaTerm>) -> BitwuzlaTerm) =
         internalizeExpr {
             bitwuzlaCtx.withConstantScope {
-                val internalizedBounds = bounds.map {
-                    mkFreshConstant(it, it.sort.internalize())
+                val boundVars = bounds.map {
+                    mkVar(it, it.sort.internalize())
                 }
-                val boundVars = bounds.map { bitwuzlaCtx.mkFreshVar(it.sort.internalize()) }
                 val body = body.internalize()
                 if (bounds.isEmpty()) return@internalizeExpr body
-                val bodyWithVars = Native.bitwuzlaSubstituteTerm(
-                    bitwuzlaCtx.bitwuzla,
-                    body,
-                    internalizedBounds.toTypedArray(),
-                    boundVars.toTypedArray()
-                )
-                val args = (boundVars + bodyWithVars).toTypedArray()
+                val args = (boundVars + body).toTypedArray()
                 internalizer(args)
             }
         }
@@ -244,6 +261,9 @@ open class KBitwuzlaExprInternalizer(
 
         override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): BitwuzlaSort =
             bitwuzlaCtx.internalizeSort(sort) {
+                check(sort.range !is KArraySort<*, *> && sort.domain !is KArraySort<*, *>) {
+                    "Bitwuzla doesn't support nested arrays"
+                }
                 val domain = sort.domain.accept(this@SortInternalizer)
                 val range = sort.range.accept(this@SortInternalizer)
                 Native.bitwuzlaMkArraySort(bitwuzlaCtx.bitwuzla, domain, range)
@@ -261,11 +281,17 @@ open class KBitwuzlaExprInternalizer(
         override fun visit(sort: KRealSort): BitwuzlaSort = error("Unsupported sort $sort")
     }
 
-    open class DeclSortInternalizer(
+    open class FunctionSortInternalizer(
         private val bitwuzlaCtx: KBitwuzlaContext,
         private val sortInternalizer: SortInternalizer
     ) : KDeclVisitor<BitwuzlaSort> {
         override fun <S : KSort> visit(decl: KFuncDecl<S>): BitwuzlaSort = bitwuzlaCtx.internalizeDeclSort(decl) {
+            check(decl.argSorts.all { it !is KArraySort<*, *> }) {
+                "Bitwuzla doesn't support functions with arrays in domain"
+            }
+            check(decl.argSorts.isEmpty() || decl.sort !is KArraySort<*, *>) {
+                "Bitwuzla doesn't support functions with arrays in range"
+            }
             val domain = decl.argSorts.map { it.accept(sortInternalizer) }.toTypedArray()
             val range = decl.sort.accept(sortInternalizer)
             if (domain.isEmpty()) return@internalizeDeclSort range
