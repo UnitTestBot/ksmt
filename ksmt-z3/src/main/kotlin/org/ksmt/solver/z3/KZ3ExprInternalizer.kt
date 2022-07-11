@@ -16,6 +16,7 @@ import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAddArithExpr
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KArrayConst
+import org.ksmt.expr.KArrayLambda
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KBitVec16Expr
@@ -143,6 +144,11 @@ open class KZ3ExprInternalizer(
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>) = expr.internalizeExpr {
         z3Ctx.mkConstArray(expr.sort.internalize(), expr.value.internalize())
+    }
+
+    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) = expr.internalizeExpr {
+        val internalizedIndex = indexVarDecl.internalize()
+        z3Ctx.mkLambda(arrayOf(internalizedIndex.range), arrayOf(internalizedIndex.name), body.internalize())
     }
 
     override fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>) = expr.internalizeExpr {
