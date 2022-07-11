@@ -92,6 +92,7 @@ import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import kotlin.reflect.KProperty
 
 @Suppress("TooManyFunctions", "unused")
 open class KContext {
@@ -229,6 +230,9 @@ open class KContext {
     fun <T : KSort> T.mkConst(name: String) = with(mkConstDecl(name)) { apply() }
 
     fun <T : KSort> T.mkFreshConst(name: String) = with(mkFreshConstDecl(name)) { apply() }
+
+    inline operator fun <reified T : KSort> T.getValue(thisRef: Any?, property: KProperty<*>): KExpr<T> =
+        mkConst(property.name)
 
     // array
     private val arrayStoreCache =
