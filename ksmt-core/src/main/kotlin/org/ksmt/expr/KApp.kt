@@ -8,6 +8,10 @@ abstract class KApp<T : KSort, A : KExpr<*>> internal constructor(ctx: KContext)
     abstract val args: List<A>
     abstract fun decl(): KDecl<T>
     override fun print(): String = buildString {
+        if (args.isEmpty()) {
+            with(ctx) { append(decl.name) }
+            return@buildString
+        }
         append('(')
         with(ctx) {
             append(decl.name)
