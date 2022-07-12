@@ -584,17 +584,21 @@ open class KBitwuzlaExprConverter(
                     check(expr.toDomainSort == boolSort || expr.toDomainSort == bv1Sort) {
                         "unexpected cast from ${fromSort.domain} to ${expr.toDomainSort}"
                     }
+
                     val falseValue = expr.arg.select(fromSort.domain.falseValue())
                         .convertToExpectedIfNeeded(expr.toRangeSort)
                     val trueValue = expr.arg.select(fromSort.domain.trueValue())
                         .convertToExpectedIfNeeded(expr.toRangeSort)
+
                     val resultArraySort = mkArraySort(expr.toDomainSort, expr.toRangeSort)
+
                     mkArrayConst(resultArraySort, falseValue).store(expr.toDomainSort.trueValue(), trueValue)
                 }
                 else -> {
                     check(fromSort.domain == expr.toDomainSort) {
                         "unexpected cast from ${fromSort.domain} to ${expr.toDomainSort}"
                     }
+
                     val index = expr.toDomainSort.mkFreshConst("index")
                     val bodyExpr = expr.arg.select(index as KExpr<FromDomain>)
                     val body: KExpr<ToRange> = when (expr.toRangeSort) {
@@ -602,6 +606,7 @@ open class KBitwuzlaExprConverter(
                         boolSort -> bodyExpr.ensureBoolExpr() as KExpr<ToRange>
                         else -> error("unexpected domain: ${expr.toRangeSort}")
                     }
+
                     mkArrayLambda(index.decl, body)
                 }
             }.accept(this@AdapterTermRewriter)
