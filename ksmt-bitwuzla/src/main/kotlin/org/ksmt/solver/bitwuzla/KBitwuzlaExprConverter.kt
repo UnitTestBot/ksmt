@@ -10,7 +10,7 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KArraySort
-import org.ksmt.sort.KBVSort
+import org.ksmt.sort.KBV1Sort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 
@@ -400,9 +400,6 @@ open class KBitwuzlaExprConverter(
         return "uf$id"
     }
 
-    private val bv1Sort by lazy { ctx.mkBvSort(1u) }
-
-
     /** Bitwuzla does not distinguish between Bool and (BitVec 1).
      *
      *  By default, we convert all Bitwuzla (BitVec 1) terms as Bool expressions, but:
@@ -421,11 +418,11 @@ open class KBitwuzlaExprConverter(
      * */
     @Suppress("UNCHECKED_CAST")
     private fun KExpr<*>.convertToBoolIfNeeded(): KExpr<*> = when (with(ctx) { sort }) {
-        bv1Sort -> ensureBoolExpr()
+        ctx.bv1Sort -> ensureBoolExpr()
         is KArraySort<*, *> -> (this as KExpr<KArraySort<*, *>>)
             .ensureArrayExprSortMatch(
-                domainExpected = { if (it == bv1Sort) ctx.boolSort else it },
-                rangeExpected = { if (it == bv1Sort) ctx.boolSort else it }
+                domainExpected = { if (it == ctx.bv1Sort) ctx.boolSort else it },
+                rangeExpected = { if (it == ctx.bv1Sort) ctx.boolSort else it }
             )
         else -> this
     }
@@ -441,7 +438,7 @@ open class KBitwuzlaExprConverter(
      * */
     @Suppress("UNCHECKED_CAST")
     private fun <T : KSort> KExpr<*>.convertToExpectedIfNeeded(expected: T): KExpr<T> = when (expected) {
-        bv1Sort -> ensureBv1Expr() as KExpr<T>
+        ctx.bv1Sort -> ensureBv1Expr() as KExpr<T>
         ctx.boolSort -> ensureBoolExpr() as KExpr<T>
         is KArraySort<*, *> -> {
             (this as? KExpr<KArraySort<*, *>> ?: error("array expected. actual is $this"))
@@ -485,7 +482,7 @@ open class KBitwuzlaExprConverter(
         when {
             sort == boolSort -> this@ensureBoolExpr as KExpr<KBoolSort>
             this@ensureBoolExpr is BoolToBv1AdapterExpr -> arg
-            else -> Bv1ToBoolAdapterExpr(this@ensureBoolExpr as KExpr<KBVSort>)
+            else -> Bv1ToBoolAdapterExpr(this@ensureBoolExpr as KExpr<KBV1Sort>)
         }
     }
 
@@ -493,23 +490,23 @@ open class KBitwuzlaExprConverter(
      * Convert expression from Bool to (BitVec 1).
      * */
     @Suppress("UNCHECKED_CAST")
-    private fun KExpr<*>.ensureBv1Expr(): KExpr<KBVSort> = with(ctx) {
+    private fun KExpr<*>.ensureBv1Expr(): KExpr<KBV1Sort> = with(ctx) {
         when {
-            sort == bv1Sort -> this@ensureBv1Expr as KExpr<KBVSort>
+            sort == bv1Sort -> this@ensureBv1Expr as KExpr<KBV1Sort>
             this@ensureBv1Expr is Bv1ToBoolAdapterExpr -> arg
             else -> BoolToBv1AdapterExpr(this@ensureBv1Expr as KExpr<KBoolSort>)
         }
     }
 
-    private inner class BoolToBv1AdapterExpr(val arg: KExpr<KBoolSort>) : KExpr<KBVSort>(ctx) {
-        override fun sort(): KBVSort = bv1Sort
+    private inner class BoolToBv1AdapterExpr(val arg: KExpr<KBoolSort>) : KExpr<KBV1Sort>(ctx) {
+        override fun sort(): KBV1Sort = ctx.bv1Sort
         override fun print(): String = "(toBV1 $arg)"
 
-        override fun accept(transformer: KTransformer): KExpr<KBVSort> =
+        override fun accept(transformer: KTransformer): KExpr<KBV1Sort> =
             (transformer as AdapterTermRewriter).transform(this)
     }
 
-    private inner class Bv1ToBoolAdapterExpr(val arg: KExpr<KBVSort>) : KExpr<KBoolSort>(ctx) {
+    private inner class Bv1ToBoolAdapterExpr(val arg: KExpr<KBV1Sort>) : KExpr<KBoolSort>(ctx) {
         override fun sort(): KBoolSort = ctx.boolSort
         override fun print(): String = "(toBool $arg)"
 
@@ -536,7 +533,7 @@ open class KBitwuzlaExprConverter(
          * x: Bool
          * (toBv x) -> (ite x #b1 #b0)
          * */
-        fun transform(expr: BoolToBv1AdapterExpr): KExpr<KBVSort> = with(ctx) {
+        fun transform(expr: BoolToBv1AdapterExpr): KExpr<KBV1Sort> = with(ctx) {
             val arg = expr.arg.accept(this@AdapterTermRewriter)
             return mkIte(arg, bv1Sort.trueValue(), bv1Sort.falseValue())
         }
@@ -612,16 +609,19 @@ open class KBitwuzlaExprConverter(
             }.accept(this@AdapterTermRewriter)
         }
 
+        private val bv1One: KExpr<KBV1Sort> by lazy { ctx.mkBV(true) }
+        private val bv1Zero: KExpr<KBV1Sort> by lazy { ctx.mkBV(false) }
+
         @Suppress("UNCHECKED_CAST")
         private fun <T : KSort> T.trueValue(): KExpr<T> = when (this) {
-            is KBVSort -> ctx.mkBV("1", 1u) as KExpr<T>
+            is KBV1Sort -> bv1One as KExpr<T>
             is KBoolSort -> ctx.trueExpr as KExpr<T>
             else -> error("unexpected sort: $this")
         }
 
         @Suppress("UNCHECKED_CAST")
         private fun <T : KSort> T.falseValue(): KExpr<T> = when (this) {
-            is KBVSort -> ctx.mkBV("0", 1u) as KExpr<T>
+            is KBV1Sort -> bv1Zero as KExpr<T>
             is KBoolSort -> ctx.falseExpr as KExpr<T>
             else -> error("unexpected sort: $this")
         }
