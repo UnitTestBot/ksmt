@@ -29,7 +29,7 @@ open class KZ3ExprConverter(
         convertExpr(this)
     } as? KExpr<T> ?: error("expr is not properly converted")
 
-    @Suppress("UNCHECKED_CAST", "unused")
+    @Suppress("UNCHECKED_CAST")
     fun <T : KSort> Sort.convert(): T = z3InternCtx.convertSort(this) {
         convertSort(this)
     } as? T ?: error("sort is not properly converted")

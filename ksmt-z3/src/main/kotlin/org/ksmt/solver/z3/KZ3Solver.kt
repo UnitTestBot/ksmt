@@ -80,12 +80,12 @@ open class KZ3Solver(private val ctx: KContext) : KSolver {
 
     override fun assertAndTrack(expr: KExpr<KBoolSort>): KExpr<KBoolSort> = z3Try {
         val z3Expr = with(exprInternalizer) { expr.internalize() } as BoolExpr
+        val trackVar = with(ctx) { boolSort.mkFreshConst("track") }
+        val z3TrackVar = with(exprInternalizer) { trackVar.internalize() } as BoolExpr
 
-        @Suppress("ForbiddenComment") // todo: use our fresh const when available
-        val trackVar = z3Ctx.mkFreshConst("track", z3Ctx.boolSort) as BoolExpr
+        solver.assertAndTrack(z3Expr, z3TrackVar)
 
-        solver.assertAndTrack(z3Expr, trackVar)
-        with(exprConverter) { trackVar.convert() }
+        trackVar
     }
 
     override fun check(timeout: Duration): KSolverStatus = z3Try {
@@ -106,7 +106,7 @@ open class KZ3Solver(private val ctx: KContext) : KSolver {
     override fun model(): KModel = z3Try {
         require(lastCheckStatus == KSolverStatus.SAT) { "Model are only available after SAT checks" }
         val model = solver.model
-        KZ3Model(model, ctx, z3InternCtx, exprInternalizer, z3Ctx, exprConverter)
+        KZ3Model(model, ctx, z3InternCtx, exprInternalizer, exprConverter)
     }
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = z3Try {
