@@ -34,19 +34,7 @@ open class KBitwuzlaModel(
 
             if (!complete) return convertedExpr
 
-            val evaluatedExpr = expr
-            convertedExpr.accept(object : KTransformer {
-                override val ctx: KContext = this@KBitwuzlaModel.ctx
-                override fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> {
-                    if (expr == evaluatedExpr) return with(valueSampler) { expr.sort.sampleValue() }
-                    return super.transformExpr(expr)
-                }
-
-                override fun <T : KSort> transformApp(expr: KApp<T, *>): KExpr<T> {
-                    if (expr.decl in incompleteDecls) return with(valueSampler) { expr.sort.sampleValue() }
-                    return super.transformApp(expr)
-                }
-            })
+            convertedExpr.accept(ModelCompleter(expr, incompleteDecls))
         }
     }
 
@@ -130,5 +118,23 @@ open class KBitwuzlaModel(
     private val valueSampler: KModelEvaluator by lazy {
         val modelStub = KModelImpl(ctx, interpretations = emptyMap())
         KModelEvaluator(ctx, modelStub, true)
+    }
+
+    /** Generate concrete values instead of unknown constants.
+     * */
+    inner class ModelCompleter(
+        private val evaluatedExpr: KExpr<*>,
+        private val incompleteDecls: Set<KDecl<*>>
+    ) : KTransformer {
+        override val ctx: KContext = this@KBitwuzlaModel.ctx
+        override fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> = with(ctx) {
+            if (expr == evaluatedExpr) return with(valueSampler) { expr.sort.sampleValue() }
+            return super.transformExpr(expr)
+        }
+
+        override fun <T : KSort> transformApp(expr: KApp<T, *>): KExpr<T> = with(ctx) {
+            if (expr.decl in incompleteDecls) return with(valueSampler) { expr.sort.sampleValue() }
+            return super.transformApp(expr)
+        }
     }
 }

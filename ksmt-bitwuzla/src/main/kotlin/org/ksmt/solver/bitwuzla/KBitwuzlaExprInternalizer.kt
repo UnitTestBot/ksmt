@@ -10,6 +10,7 @@ import org.ksmt.expr.KArrayLambda
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KBitVec16Expr
+import org.ksmt.expr.KBitVec1Expr
 import org.ksmt.expr.KBitVec32Expr
 import org.ksmt.expr.KBitVec64Expr
 import org.ksmt.expr.KBitVec8Expr
@@ -35,6 +36,7 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBV16Sort
+import org.ksmt.sort.KBV1Sort
 import org.ksmt.sort.KBV32Sort
 import org.ksmt.sort.KBV64Sort
 import org.ksmt.sort.KBV8Sort
@@ -97,7 +99,7 @@ open class KBitwuzlaExprInternalizer(
 
     override fun transform(expr: KAndExpr): KExpr<KBoolSort> = expr.internalizeExpr {
         when (args.size) {
-            0 -> ctx.trueExpr.internalize()
+            0 -> bitwuzlaCtx.trueTerm
             1 -> args[0].internalize()
             else -> Native.bitwuzlaMkTerm(
                 bitwuzlaCtx.bitwuzla,
@@ -109,7 +111,7 @@ open class KBitwuzlaExprInternalizer(
 
     override fun transform(expr: KOrExpr): KExpr<KBoolSort> = expr.internalizeExpr {
         when (args.size) {
-            0 -> ctx.falseExpr.internalize()
+            0 -> bitwuzlaCtx.falseTerm
             1 -> args[0].internalize()
             else -> Native.bitwuzlaMkTerm(
                 bitwuzlaCtx.bitwuzla,
@@ -148,6 +150,10 @@ open class KBitwuzlaExprInternalizer(
             trueBranch.internalize(),
             falseBranch.internalize()
         )
+    }
+
+    override fun transform(expr: KBitVec1Expr): KExpr<KBV1Sort> = expr.internalizeExpr {
+        if (expr.value) bitwuzlaCtx.trueTerm else bitwuzlaCtx.falseTerm
     }
 
     override fun transform(expr: KBitVec8Expr): KExpr<KBV8Sort> = transformBvNumber(expr)
@@ -272,7 +278,12 @@ open class KBitwuzlaExprInternalizer(
 
         override fun <S : KBVSort> visit(sort: S): BitwuzlaSort =
             bitwuzlaCtx.internalizeSort(sort) {
-                Native.bitwuzlaMkBvSort(bitwuzlaCtx.bitwuzla, sort.sizeBits.toInt())
+                val size = sort.sizeBits.toInt()
+                if (size == 1) {
+                    bitwuzlaCtx.boolSort
+                } else {
+                    Native.bitwuzlaMkBvSort(bitwuzlaCtx.bitwuzla, sort.sizeBits.toInt())
+                }
             }
 
         /**
