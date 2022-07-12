@@ -4,6 +4,7 @@ import org.ksmt.KContext
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBV16Sort
+import org.ksmt.sort.KBV1Sort
 import org.ksmt.sort.KBV32Sort
 import org.ksmt.sort.KBV64Sort
 import org.ksmt.sort.KBV8Sort
@@ -39,6 +40,7 @@ interface KTransformer {
 
     // bit-vec transformers
     fun <T : KBVSort> transformBitVecExpr(expr: KBitVecExpr<T>): KExpr<T> = transformApp(expr)
+    fun transform(expr: KBitVec1Expr): KExpr<KBV1Sort> = transformBitVecExpr(expr)
     fun transform(expr: KBitVec8Expr): KExpr<KBV8Sort> = transformBitVecExpr(expr)
     fun transform(expr: KBitVec16Expr): KExpr<KBV16Sort> = transformBitVecExpr(expr)
     fun transform(expr: KBitVec32Expr): KExpr<KBV32Sort> = transformBitVecExpr(expr)

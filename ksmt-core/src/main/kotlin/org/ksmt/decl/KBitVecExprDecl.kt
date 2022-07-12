@@ -4,6 +4,7 @@ import org.ksmt.KContext
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KBV16Sort
+import org.ksmt.sort.KBV1Sort
 import org.ksmt.sort.KBV32Sort
 import org.ksmt.sort.KBV64Sort
 import org.ksmt.sort.KBV8Sort
@@ -13,6 +14,13 @@ abstract class KBitVecExprDecl<T : KBVSort> internal constructor(ctx: KContext, 
     KConstDecl<T>(ctx, "#b$value", sort) {
 
     internal constructor(ctx: KContext, value: Number, sort: T) : this(ctx, value.toBinary(), sort)
+}
+
+class KBitVec1ExprDecl internal constructor(ctx: KContext, private val boolValue: Boolean) :
+    KBitVecExprDecl<KBV1Sort>(ctx, if (boolValue) "1" else "0", ctx.mkBv1Sort()) {
+    override fun apply(args: List<KExpr<*>>): KApp<KBV1Sort, *> = ctx.mkBV(boolValue)
+
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
 class KBitVec8ExprDecl internal constructor(ctx: KContext, private val byteValue: Byte) :

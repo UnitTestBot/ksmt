@@ -38,6 +38,12 @@ abstract class KBVSort(ctx: KContext) : KSort(ctx) {
     override fun print(): String = "BitVec $sizeBits"
 }
 
+class KBV1Sort internal constructor(ctx: KContext) : KBVSort(ctx) {
+    override val sizeBits: UInt = 1u
+
+    override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
+}
+
 class KBV8Sort internal constructor(ctx: KContext) : KBVSort(ctx) {
     override val sizeBits: UInt = Byte.SIZE_BITS.toUInt()
 
