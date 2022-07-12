@@ -9,6 +9,7 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaOption
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaResult
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KBoolSort
+import kotlin.time.Duration
 
 open class KBitwuzlaSolver(private val ctx: KContext) : KSolver {
     open val bitwuzlaCtx = KBitwuzlaContext()
@@ -29,7 +30,19 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver {
         bitwuzlaCtx.assert(term)
     }
 
-    override fun check(): KSolverStatus {
+    override fun assertAndTrack(expr: KExpr<KBoolSort>): KExpr<KBoolSort> {
+        TODO("Not yet implemented")
+    }
+
+    override fun push() {
+        TODO("Not yet implemented")
+    }
+
+    override fun pop(n: UInt) {
+        TODO("Not yet implemented")
+    }
+
+    override fun check(timeout: Duration): KSolverStatus {
         val status = bitwuzlaCtx.check()
         return when (status) {
             BitwuzlaResult.BITWUZLA_SAT -> KSolverStatus.SAT
@@ -38,9 +51,21 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver {
         }.also { lastCheckStatus = it }
     }
 
+    override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus {
+        TODO("Not yet implemented")
+    }
+
     override fun model(): KModel {
         require(lastCheckStatus == KSolverStatus.SAT) { "Model are only available after SAT checks" }
         return KBitwuzlaModel(ctx, bitwuzlaCtx, exprInternalizer, exprConverter)
+    }
+
+    override fun unsatCore(): List<KExpr<KBoolSort>> {
+        TODO("Not yet implemented")
+    }
+
+    override fun reasonOfUnknown(): String {
+        TODO("Not yet implemented")
     }
 
     override fun close() {
