@@ -13,16 +13,22 @@ import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.sort.KBoolSort
 import org.ksmt.utils.NativeLibraryLoader
+import java.lang.ref.PhantomReference
+import java.lang.ref.ReferenceQueue
+import java.util.IdentityHashMap
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 
-@Suppress("TooManyFunctions")
 open class KZ3Solver(private val ctx: KContext) : KSolver {
     private val z3Ctx = Context()
     private val solver = z3Ctx.mkSolver()
     private val z3InternCtx = KZ3InternalizationContext()
     private var lastCheckStatus = KSolverStatus.UNKNOWN
     private var currentScope: UInt = 0u
+
+    @Suppress("LeakingThis")
+    private val contextCleanupActionHandler = registerContextForCleanup(this, z3Ctx)
+
     private val sortInternalizer by lazy {
         createSortInternalizer(z3InternCtx, z3Ctx)
     }
@@ -121,6 +127,7 @@ open class KZ3Solver(private val ctx: KContext) : KSolver {
     }
 
     override fun close() {
+        unregisterContextCleanup(contextCleanupActionHandler)
         z3InternCtx.close()
         z3Ctx.close()
     }
@@ -159,6 +166,31 @@ open class KZ3Solver(private val ctx: KContext) : KSolver {
                     NativeLibraryLoader.OS.MACOS -> listOf("libz3", "libz3java")
                     NativeLibraryLoader.OS.WINDOWS -> listOf("vcruntime140", "vcruntime140_1", "libz3", "libz3java")
                 }
+            }
+        }
+
+        private val cleanupHandlers = ReferenceQueue<KZ3Solver>()
+        private val contextForCleanup = IdentityHashMap<PhantomReference<KZ3Solver>, Context>()
+
+        /** Ensure Z3 native context is closed and all native memory is released.
+         * */
+        private fun registerContextForCleanup(solver: KZ3Solver, context: Context): PhantomReference<KZ3Solver> {
+            cleanupStaleContexts()
+            val cleanupHandler = PhantomReference(solver, cleanupHandlers)
+            contextForCleanup[cleanupHandler] = context
+            return cleanupHandler
+        }
+
+        private fun unregisterContextCleanup(handler: PhantomReference<KZ3Solver>) {
+            contextForCleanup.remove(handler)
+            handler.clear()
+            cleanupStaleContexts()
+        }
+
+        private fun cleanupStaleContexts() {
+            while (true) {
+                val handler = cleanupHandlers.poll() ?: break
+                contextForCleanup.remove(handler)?.close()
             }
         }
     }
