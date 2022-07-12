@@ -22,7 +22,7 @@ dependencies {
     z3native("com.microsoft.z3", "z3-native-osx", "4.8.9.1", ext = "zip")
 }
 
-tasks.withType<KotlinCompile> {
+tasks.getByName<KotlinCompile>("compileKotlin") {
     kotlinOptions.allWarningsAsErrors = true
 }
 
