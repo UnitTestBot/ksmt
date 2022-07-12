@@ -1,6 +1,5 @@
 @file:Suppress(
     "FunctionName",
-    "FunctionParameterNaming",
     "LongParameterList",
     "LargeClass",
     "unused",
@@ -341,7 +340,7 @@ object Native {
     fun bitwuzlaMkFpSort(bitwuzla: Bitwuzla, expSize: Int, sigSize: Int): BitwuzlaSort =
         bitwuzla_mk_fp_sort(bitwuzla, expSize, sigSize)
 
-    private external fun bitwuzla_mk_fp_sort(bitwuzla: Bitwuzla, exp_size: Int, sig_size: Int): BitwuzlaSort
+    private external fun bitwuzla_mk_fp_sort(bitwuzla: Bitwuzla, expSize: Int, sigSize: Int): BitwuzlaSort
 
 
     /**
@@ -668,9 +667,9 @@ object Native {
 
     private external fun bitwuzla_mk_fp_value(
         bitwuzla: Bitwuzla,
-        bv_sign: BitwuzlaTerm,
-        bv_exponent: BitwuzlaTerm,
-        bv_significand: BitwuzlaTerm
+        bvSign: BitwuzlaTerm,
+        bvExponent: BitwuzlaTerm,
+        bvSignificand: BitwuzlaTerm
     ): BitwuzlaTerm
 
 
@@ -1425,7 +1424,7 @@ object Native {
         indices: PointerByReference,
         values: PointerByReference,
         size: IntByReference,
-        default_value: PointerByReference
+        defaultValue: PointerByReference
     )
 
     /**
@@ -1552,7 +1551,7 @@ object Native {
      *
      * @param bitwuzla The Bitwuzla instance.
      * @param infile The input file.
-     * @param infile_name The name of the input file.
+     * @param infileName The name of the input file.
      * @param outfile The output file.
      *
      * @return [ParseResult]
@@ -1562,13 +1561,13 @@ object Native {
     fun bitwuzlaParse(
         bitwuzla: Bitwuzla,
         infile: FilePtr,
-        infile_name: String,
+        infileName: String,
         outfile: FilePtr
     ): ParseResult {
         val errorMsg = PointerByReference()
         val parsedStatus = IntByReference()
         val parsedSmt2 = IntByReference()
-        val result = bitwuzla_parse(bitwuzla, infile.ptr, infile_name, outfile.ptr, errorMsg, parsedStatus, parsedSmt2)
+        val result = bitwuzla_parse(bitwuzla, infile.ptr, infileName, outfile.ptr, errorMsg, parsedStatus, parsedSmt2)
         infile.close()
         outfile.close()
         return ParseResult(
@@ -1582,11 +1581,11 @@ object Native {
     private external fun bitwuzla_parse(
         bitwuzla: Bitwuzla,
         infile: Pointer,
-        infile_name: String,
+        infileName: String,
         outfile: Pointer,
-        error_msg: PointerByReference,
-        parsed_status: IntByReference,
-        parsed_smt2: IntByReference
+        errorMsg: PointerByReference,
+        parsedStatus: IntByReference,
+        parsedSmt2: IntByReference
     ): Int
 
     /**
@@ -1651,10 +1650,10 @@ object Native {
         bitwuzla: Bitwuzla,
         format: String,
         infile: Pointer,
-        infile_name: String,
+        infileName: String,
         outfile: Pointer,
-        error_msg: PointerByReference,
-        parsed_status: IntByReference
+        errorMsg: PointerByReference,
+        parsedStatus: IntByReference
     ): Int
 
 
@@ -1693,9 +1692,9 @@ object Native {
     private external fun bitwuzla_substitute_term(
         bitwuzla: Bitwuzla,
         term: BitwuzlaTerm,
-        map_size: Int,
-        map_keys: Pointer,
-        map_values: Pointer
+        mapSize: Int,
+        mapKeys: Pointer,
+        mapValues: Pointer
     ): BitwuzlaTerm
 
 
@@ -1728,11 +1727,11 @@ object Native {
 
     private external fun bitwuzla_substitute_terms(
         bitwuzla: Bitwuzla,
-        terms_size: Int,
+        termsSize: Int,
         terms: Pointer,
-        map_size: Int,
-        map_keys: Pointer,
-        map_values: Pointer
+        mapSize: Int,
+        mapKeys: Pointer,
+        mapValues: Pointer
     )
 
     /**
