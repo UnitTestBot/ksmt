@@ -235,11 +235,11 @@ open class KContext {
 
     fun <T : KSort> mkConstApp(decl: KDecl<T>): KConst<T> = constAppCache.create(decl).cast()
 
-    fun <T : KSort> T.mkConst(name: String) = with(mkConstDecl(name)) { apply() }
+    fun <T : KSort> T.mkConst(name: String): KApp<T, *> = with(mkConstDecl(name)) { apply() }
 
-    fun <T : KSort> T.mkFreshConst(name: String) = with(mkFreshConstDecl(name)) { apply() }
+    fun <T : KSort> T.mkFreshConst(name: String): KApp<T, *> = with(mkFreshConstDecl(name)) { apply() }
 
-    inline operator fun <reified T : KSort> T.getValue(thisRef: Any?, property: KProperty<*>): KExpr<T> =
+    inline operator fun <reified T : KSort> T.getValue(thisRef: Any?, property: KProperty<*>): KApp<T, *> =
         mkConst(property.name)
 
     // array
