@@ -8,6 +8,7 @@
 
 package org.ksmt.solver.bitwuzla.bindings
 
+import com.sun.jna.Callback
 import com.sun.jna.Memory
 import com.sun.jna.Native
 import com.sun.jna.Pointer
@@ -19,8 +20,17 @@ typealias BitwuzlaTerm = Pointer
 typealias BitwuzlaSort = Pointer
 
 object Native {
+
+    private var error: String? = null
+    private val defaultAbortHandler = object : BitwuzlaAbortCallback {
+        override fun abort(msg: String) {
+            error = msg
+        }
+    }
+
     init {
         Native.register("bitwuzla")
+        bitwuzlaSetAbortCallback(defaultAbortHandler)
     }
 
     /**
@@ -33,7 +43,7 @@ object Native {
      * @see bitwuzla_delete
      */
     fun bitwuzlaNew(): Bitwuzla =
-        bitwuzla_new()
+        bitwuzla_new().checkError()
 
     private external fun bitwuzla_new(): Bitwuzla
 
@@ -48,7 +58,7 @@ object Native {
      * @see bitwuzla_new
      */
     fun bitwuzlaDelete(bitwuzla: Bitwuzla) =
-        bitwuzla_delete(bitwuzla)
+        bitwuzla_delete(bitwuzla).checkError()
 
     private external fun bitwuzla_delete(bitwuzla: Bitwuzla)
 
@@ -67,7 +77,7 @@ object Native {
      * @see bitwuzla_new
      */
     fun bitwuzlaReset(bitwuzla: Bitwuzla) =
-        bitwuzla_reset(bitwuzla)
+        bitwuzla_reset(bitwuzla).checkError()
 
     private external fun bitwuzla_reset(bitwuzla: Bitwuzla)
 
@@ -78,7 +88,7 @@ object Native {
      * @param bitwuzla The Bitwuzla instance.
      */
     fun bitwuzlaCopyright(bitwuzla: Bitwuzla): String =
-        bitwuzla_copyright(bitwuzla)
+        bitwuzla_copyright(bitwuzla).checkError()
 
     private external fun bitwuzla_copyright(bitwuzla: Bitwuzla): String
 
@@ -89,7 +99,7 @@ object Native {
      * @param bitwuzla The Bitwuzla instance.
      */
     fun bitwuzlaVersion(bitwuzla: Bitwuzla): String =
-        bitwuzla_version(bitwuzla)
+        bitwuzla_version(bitwuzla).checkError()
 
     private external fun bitwuzla_version(bitwuzla: Bitwuzla): String
 
@@ -100,7 +110,7 @@ object Native {
      * @param bitwuzla The Bitwuzla instance.
      */
     fun bitwuzlaGitId(bitwuzla: Bitwuzla): String =
-        bitwuzla_git_id(bitwuzla)
+        bitwuzla_git_id(bitwuzla).checkError()
 
     private external fun bitwuzla_git_id(bitwuzla: Bitwuzla): String
 
@@ -117,7 +127,7 @@ object Native {
      * @see bitwuzlaGetTerminationCallbackState
      */
     fun bitwuzlaTerminate(bitwuzla: Bitwuzla): Boolean =
-        bitwuzla_terminate(bitwuzla)
+        bitwuzla_terminate(bitwuzla).checkError()
 
     private external fun bitwuzla_terminate(bitwuzla: Bitwuzla): Boolean
 
@@ -168,13 +178,21 @@ object Native {
      * as a global variable). It you use threading, make sure to set the
      * abort callback prior to creating threads.
      *
-     * @param `fun` The callback function, the argument `msg` explains the reason
+     * @param function The callback function, the argument `msg` explains the reason
      * for the abort.
      */
-    fun bitwuzlaSetAbortCallback(function: Pointer) {
-        throw UnsupportedOperationException("callbacks are not supported")
-    }
+    fun bitwuzlaSetAbortCallback(function: BitwuzlaAbortCallback): Unit =
+        bitwuzla_set_abort_callback(function).checkError()
 
+    private external fun bitwuzla_set_abort_callback(callback: BitwuzlaAbortCallback)
+
+    interface BitwuzlaAbortCallback : Callback {
+
+        /** Abort callback function.
+         * @param msg explains the reason for the abort.
+         */
+        fun abort(msg: String)
+    }
 
     /**
      * Set option.
@@ -186,7 +204,7 @@ object Native {
      * @see BitwuzlaOption
      */
     fun bitwuzlaSetOption(bitwuzla: Bitwuzla, option: BitwuzlaOption, value: Int) {
-        bitwuzla_set_option(bitwuzla, option.value, value)
+        bitwuzla_set_option(bitwuzla, option.value, value).checkError()
     }
 
     private external fun bitwuzla_set_option(bitwuzla: Bitwuzla, option: Int, value: Int)
@@ -202,7 +220,7 @@ object Native {
      * @see BitwuzlaOption
      */
     fun bitwuzlaSetOptionStr(bitwuzla: Bitwuzla, option: BitwuzlaOption, value: String) {
-        bitwuzla_set_option_str(bitwuzla, option.value, value)
+        bitwuzla_set_option_str(bitwuzla, option.value, value).checkError()
     }
 
     private external fun bitwuzla_set_option_str(bitwuzla: Bitwuzla, option: Int, value: String)
@@ -219,7 +237,7 @@ object Native {
      * @see BitwuzlaOption
      */
     fun bitwuzlaGetOption(bitwuzla: Bitwuzla, option: BitwuzlaOption): Int =
-        bitwuzla_get_option(bitwuzla, option.value)
+        bitwuzla_get_option(bitwuzla, option.value).checkError()
 
     private external fun bitwuzla_get_option(bitwuzla: Bitwuzla, option: Int): Int
 
@@ -237,7 +255,7 @@ object Native {
      * @see bitwuzla_set_option_str
      */
     fun bitwuzlaGetOptionStr(bitwuzla: Bitwuzla, option: BitwuzlaOption): String =
-        bitwuzla_get_option_str(bitwuzla, option.value)
+        bitwuzla_get_option_str(bitwuzla, option.value).checkError()
 
     private external fun bitwuzla_get_option_str(bitwuzla: Bitwuzla, option: Int): String
 
@@ -278,7 +296,7 @@ object Native {
         bitwuzla: Bitwuzla,
         index: BitwuzlaSort,
         element: BitwuzlaSort
-    ): BitwuzlaSort = bitwuzla_mk_array_sort(bitwuzla, index, element)
+    ): BitwuzlaSort = bitwuzla_mk_array_sort(bitwuzla, index, element).checkError()
 
     private external fun bitwuzla_mk_array_sort(
         bitwuzla: Bitwuzla,
@@ -297,7 +315,7 @@ object Native {
      * @return A Boolean sort.
      */
     fun bitwuzlaMkBoolSort(bitwuzla: Bitwuzla): BitwuzlaSort =
-        bitwuzla_mk_bool_sort(bitwuzla)
+        bitwuzla_mk_bool_sort(bitwuzla).checkError()
 
     private external fun bitwuzla_mk_bool_sort(bitwuzla: Bitwuzla): BitwuzlaSort
 
@@ -316,7 +334,7 @@ object Native {
      * @see bitwuzla_term_bv_get_size
      */
     fun bitwuzlaMkBvSort(bitwuzla: Bitwuzla, size: Int): BitwuzlaSort =
-        bitwuzla_mk_bv_sort(bitwuzla, size)
+        bitwuzla_mk_bv_sort(bitwuzla, size).checkError()
 
     private external fun bitwuzla_mk_bv_sort(bitwuzla: Bitwuzla, size: Int): BitwuzlaSort
 
@@ -338,7 +356,7 @@ object Native {
      * @see bitwuzla_term_fp_get_sig_size
      */
     fun bitwuzlaMkFpSort(bitwuzla: Bitwuzla, expSize: Int, sigSize: Int): BitwuzlaSort =
-        bitwuzla_mk_fp_sort(bitwuzla, expSize, sigSize)
+        bitwuzla_mk_fp_sort(bitwuzla, expSize, sigSize).checkError()
 
     private external fun bitwuzla_mk_fp_sort(bitwuzla: Bitwuzla, expSize: Int, sigSize: Int): BitwuzlaSort
 
@@ -368,7 +386,7 @@ object Native {
         arity: Int,
         domain: Array<BitwuzlaSort>,
         codomain: BitwuzlaSort
-    ): BitwuzlaSort = bitwuzla_mk_fun_sort(bitwuzla, arity, domain.mkPtr(), codomain)
+    ): BitwuzlaSort = bitwuzla_mk_fun_sort(bitwuzla, arity, domain.mkPtr(), codomain).checkError()
 
     private external fun bitwuzla_mk_fun_sort(
         bitwuzla: Bitwuzla,
@@ -388,7 +406,7 @@ object Native {
      * @see bitwuzla_term_is_rm
      */
     fun bitwuzlaMkRmSort(bitwuzla: Bitwuzla): BitwuzlaSort =
-        bitwuzla_mk_rm_sort(bitwuzla)
+        bitwuzla_mk_rm_sort(bitwuzla).checkError()
 
     private external fun bitwuzla_mk_rm_sort(bitwuzla: Bitwuzla): BitwuzlaSort
 
@@ -403,7 +421,7 @@ object Native {
      * @return A term representing the bit-vector value 1 of size 1.
      */
     fun bitwuzlaMkTrue(bitwuzla: Bitwuzla): BitwuzlaTerm =
-        bitwuzla_mk_true(bitwuzla)
+        bitwuzla_mk_true(bitwuzla).checkError()
 
     private external fun bitwuzla_mk_true(bitwuzla: Bitwuzla): BitwuzlaTerm
 
@@ -418,7 +436,7 @@ object Native {
      * @return A term representing the bit-vector value 0 of size 1.
      */
     fun bitwuzlaMkFalse(bitwuzla: Bitwuzla): BitwuzlaTerm =
-        bitwuzla_mk_false(bitwuzla)
+        bitwuzla_mk_false(bitwuzla).checkError()
 
     private external fun bitwuzla_mk_false(bitwuzla: Bitwuzla): BitwuzlaTerm
 
@@ -434,7 +452,7 @@ object Native {
      * @see bitwuzla_mk_bv_sort
      */
     fun bitwuzlaMkBvZero(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm =
-        bitwuzla_mk_bv_zero(bitwuzla, sort)
+        bitwuzla_mk_bv_zero(bitwuzla, sort).checkError()
 
     private external fun bitwuzla_mk_bv_zero(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
@@ -450,7 +468,7 @@ object Native {
      * @see bitwuzla_mk_bv_sort
      */
     fun bitwuzlaMkBvOne(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm =
-        bitwuzla_mk_bv_one(bitwuzla, sort)
+        bitwuzla_mk_bv_one(bitwuzla, sort).checkError()
 
     private external fun bitwuzla_mk_bv_one(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
@@ -467,7 +485,7 @@ object Native {
      * @see bitwuzla_mk_bv_sort
      */
     fun bitwuzlaMkBvOnes(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm =
-        bitwuzla_mk_bv_ones(bitwuzla, sort)
+        bitwuzla_mk_bv_ones(bitwuzla, sort).checkError()
 
     private external fun bitwuzla_mk_bv_ones(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
@@ -484,7 +502,7 @@ object Native {
      * @see bitwuzla_mk_bv_sort
      */
     fun bitwuzlaMkBvMinSigned(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm =
-        bitwuzla_mk_bv_min_signed(bitwuzla, sort)
+        bitwuzla_mk_bv_min_signed(bitwuzla, sort).checkError()
 
     private external fun bitwuzla_mk_bv_min_signed(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
@@ -501,7 +519,7 @@ object Native {
      * @see bitwuzla_mk_bv_sort
      */
     fun bitwuzlaMkBvMaxSigned(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm =
-        bitwuzla_mk_bv_max_signed(bitwuzla, sort)
+        bitwuzla_mk_bv_max_signed(bitwuzla, sort).checkError()
 
     private external fun bitwuzla_mk_bv_max_signed(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
@@ -518,7 +536,7 @@ object Native {
      * @see bitwuzla_mk_fp_sort
      */
     fun bitwuzlaMkFpPosZero(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm =
-        bitwuzla_mk_fp_pos_zero(bitwuzla, sort)
+        bitwuzla_mk_fp_pos_zero(bitwuzla, sort).checkError()
 
     private external fun bitwuzla_mk_fp_pos_zero(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
@@ -535,7 +553,7 @@ object Native {
      * @see bitwuzla_mk_fp_sort
      */
     fun bitwuzlaMkFpNegZero(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm =
-        bitwuzla_mk_fp_neg_zero(bitwuzla, sort)
+        bitwuzla_mk_fp_neg_zero(bitwuzla, sort).checkError()
 
     private external fun bitwuzla_mk_fp_neg_zero(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
@@ -552,7 +570,7 @@ object Native {
      * @see bitwuzla_mk_fp_sort
      */
     fun bitwuzlaMkFpPosInf(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm =
-        bitwuzla_mk_fp_pos_inf(bitwuzla, sort)
+        bitwuzla_mk_fp_pos_inf(bitwuzla, sort).checkError()
 
     private external fun bitwuzla_mk_fp_pos_inf(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
@@ -569,7 +587,7 @@ object Native {
      * @see bitwuzla_mk_fp_sort
      */
     fun bitwuzlaMkFpNegInf(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm =
-        bitwuzla_mk_fp_neg_inf(bitwuzla, sort)
+        bitwuzla_mk_fp_neg_inf(bitwuzla, sort).checkError()
 
     private external fun bitwuzla_mk_fp_neg_inf(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
@@ -586,7 +604,7 @@ object Native {
      * @see bitwuzla_mk_fp_sort
      */
     fun bitwuzlaMkFpNan(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm =
-        bitwuzla_mk_fp_nan(bitwuzla, sort)
+        bitwuzla_mk_fp_nan(bitwuzla, sort).checkError()
 
     private external fun bitwuzla_mk_fp_nan(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
@@ -614,7 +632,7 @@ object Native {
         sort: BitwuzlaSort,
         value: String,
         base: BitwuzlaBVBase
-    ): BitwuzlaTerm = bitwuzla_mk_bv_value(bitwuzla, sort, value, base.value)
+    ): BitwuzlaTerm = bitwuzla_mk_bv_value(bitwuzla, sort, value, base.value).checkError()
 
     private external fun bitwuzla_mk_bv_value(
         bitwuzla: Bitwuzla,
@@ -640,7 +658,7 @@ object Native {
      * @see bitwuzla_mk_bv_sort
      */
     fun bitwuzlaMkBvValueUint64(bitwuzla: Bitwuzla, sort: BitwuzlaSort, value: Long): BitwuzlaTerm =
-        bitwuzla_mk_bv_value_uint64(bitwuzla, sort, value)
+        bitwuzla_mk_bv_value_uint64(bitwuzla, sort, value).checkError()
 
     private external fun bitwuzla_mk_bv_value_uint64(bitwuzla: Bitwuzla, sort: BitwuzlaSort, value: Long): BitwuzlaTerm
 
@@ -663,7 +681,7 @@ object Native {
         bvSign: BitwuzlaTerm,
         bvExponent: BitwuzlaTerm,
         bvSignificand: BitwuzlaTerm
-    ): BitwuzlaTerm = bitwuzla_mk_fp_value(bitwuzla, bvSign, bvExponent, bvSignificand)
+    ): BitwuzlaTerm = bitwuzla_mk_fp_value(bitwuzla, bvSign, bvExponent, bvSignificand).checkError()
 
     private external fun bitwuzla_mk_fp_value(
         bitwuzla: Bitwuzla,
@@ -692,7 +710,7 @@ object Native {
         sort: BitwuzlaSort,
         rm: BitwuzlaTerm,
         real: String
-    ): BitwuzlaTerm = bitwuzla_mk_fp_value_from_real(bitwuzla, sort, rm, real)
+    ): BitwuzlaTerm = bitwuzla_mk_fp_value_from_real(bitwuzla, sort, rm, real).checkError()
 
     private external fun bitwuzla_mk_fp_value_from_real(
         bitwuzla: Bitwuzla,
@@ -724,7 +742,7 @@ object Native {
         rm: BitwuzlaTerm,
         num: String,
         den: String
-    ): BitwuzlaTerm = bitwuzla_mk_fp_value_from_rational(bitwuzla, sort, rm, num, den)
+    ): BitwuzlaTerm = bitwuzla_mk_fp_value_from_rational(bitwuzla, sort, rm, num, den).checkError()
 
     private external fun bitwuzla_mk_fp_value_from_rational(
         bitwuzla: Bitwuzla,
@@ -747,7 +765,7 @@ object Native {
      * @see BitwuzlaRoundingMode
      */
     fun bitwuzlaMkRmValue(bitwuzla: Bitwuzla, rm: BitwuzlaRoundingMode): BitwuzlaTerm =
-        bitwuzla_mk_rm_value(bitwuzla, rm.value)
+        bitwuzla_mk_rm_value(bitwuzla, rm.value).checkError()
 
     private external fun bitwuzla_mk_rm_value(bitwuzla: Bitwuzla, rm: Int): BitwuzlaTerm
 
@@ -764,7 +782,7 @@ object Native {
      * @see  BitwuzlaKind
      */
     fun bitwuzlaMkTerm1(bitwuzla: Bitwuzla, kind: BitwuzlaKind, arg: BitwuzlaTerm): BitwuzlaTerm =
-        bitwuzla_mk_term1(bitwuzla, kind.value, arg)
+        bitwuzla_mk_term1(bitwuzla, kind.value, arg).checkError()
 
     private external fun bitwuzla_mk_term1(bitwuzla: Bitwuzla, kind: Int, arg: BitwuzlaTerm): BitwuzlaTerm
 
@@ -786,7 +804,7 @@ object Native {
         kind: BitwuzlaKind,
         arg0: BitwuzlaTerm,
         arg1: BitwuzlaTerm
-    ): BitwuzlaTerm = bitwuzla_mk_term2(bitwuzla, kind.value, arg0, arg1)
+    ): BitwuzlaTerm = bitwuzla_mk_term2(bitwuzla, kind.value, arg0, arg1).checkError()
 
     private external fun bitwuzla_mk_term2(
         bitwuzla: Bitwuzla,
@@ -815,7 +833,7 @@ object Native {
         arg0: BitwuzlaTerm,
         arg1: BitwuzlaTerm,
         arg2: BitwuzlaTerm
-    ): BitwuzlaTerm = bitwuzla_mk_term3(bitwuzla, kind.value, arg0, arg1, arg2)
+    ): BitwuzlaTerm = bitwuzla_mk_term3(bitwuzla, kind.value, arg0, arg1, arg2).checkError()
 
     private external fun bitwuzla_mk_term3(
         bitwuzla: Bitwuzla,
@@ -838,7 +856,7 @@ object Native {
      * @see  BitwuzlaKind
      */
     fun bitwuzlaMkTerm(bitwuzla: Bitwuzla, kind: BitwuzlaKind, args: Array<BitwuzlaTerm>): BitwuzlaTerm =
-        bitwuzla_mk_term(bitwuzla, kind.value, args.size, args.mkPtr())
+        bitwuzla_mk_term(bitwuzla, kind.value, args.size, args.mkPtr()).checkError()
 
     private external fun bitwuzla_mk_term(bitwuzla: Bitwuzla, kind: Int, argc: Int, args: Pointer): BitwuzlaTerm
 
@@ -859,7 +877,7 @@ object Native {
         kind: BitwuzlaKind,
         arg: BitwuzlaTerm,
         idx: Int
-    ): BitwuzlaTerm = bitwuzla_mk_term1_indexed1(bitwuzla, kind.value, arg, idx)
+    ): BitwuzlaTerm = bitwuzla_mk_term1_indexed1(bitwuzla, kind.value, arg, idx).checkError()
 
     private external fun bitwuzla_mk_term1_indexed1(
         bitwuzla: Bitwuzla,
@@ -887,7 +905,7 @@ object Native {
         arg: BitwuzlaTerm,
         idx0: Int,
         idx1: Int
-    ): BitwuzlaTerm = bitwuzla_mk_term1_indexed2(bitwuzla, kind.value, arg, idx0, idx1)
+    ): BitwuzlaTerm = bitwuzla_mk_term1_indexed2(bitwuzla, kind.value, arg, idx0, idx1).checkError()
 
     private external fun bitwuzla_mk_term1_indexed2(
         bitwuzla: Bitwuzla,
@@ -917,7 +935,7 @@ object Native {
         arg0: BitwuzlaTerm,
         arg1: BitwuzlaTerm,
         idx: Int
-    ): BitwuzlaTerm = bitwuzla_mk_term2_indexed1(bitwuzla, kind.value, arg0, arg1, idx)
+    ): BitwuzlaTerm = bitwuzla_mk_term2_indexed1(bitwuzla, kind.value, arg0, arg1, idx).checkError()
 
     private external fun bitwuzla_mk_term2_indexed1(
         bitwuzla: Bitwuzla,
@@ -949,7 +967,7 @@ object Native {
         arg1: BitwuzlaTerm,
         idx0: Int,
         idx1: Int
-    ): BitwuzlaTerm = bitwuzla_mk_term2_indexed2(bitwuzla, kind.value, arg0, arg1, idx0, idx1)
+    ): BitwuzlaTerm = bitwuzla_mk_term2_indexed2(bitwuzla, kind.value, arg0, arg1, idx0, idx1).checkError()
 
     private external fun bitwuzla_mk_term2_indexed2(
         bitwuzla: Bitwuzla,
@@ -980,6 +998,7 @@ object Native {
         args: Array<BitwuzlaTerm>,
         idxs: IntArray
     ): BitwuzlaTerm = bitwuzla_mk_term_indexed(bitwuzla, kind.value, args.size, args.mkPtr(), idxs.size, idxs)
+        .checkError()
 
     private external fun bitwuzla_mk_term_indexed(
         bitwuzla: Bitwuzla,
@@ -1008,7 +1027,7 @@ object Native {
      * @see bitwuzla_mk_rm_sort
      */
     fun bitwuzlaMkConst(bitwuzla: Bitwuzla, sort: BitwuzlaSort, symbol: String): BitwuzlaTerm =
-        bitwuzla_mk_const(bitwuzla, sort, symbol)
+        bitwuzla_mk_const(bitwuzla, sort, symbol).checkError()
 
     private external fun bitwuzla_mk_const(bitwuzla: Bitwuzla, sort: BitwuzlaSort, symbol: String): BitwuzlaTerm
 
@@ -1027,7 +1046,7 @@ object Native {
      * @see bitwuzla_mk_array_sort
      */
     fun bitwuzlaMkConstArray(bitwuzla: Bitwuzla, sort: BitwuzlaSort, value: BitwuzlaTerm): BitwuzlaTerm =
-        bitwuzla_mk_const_array(bitwuzla, sort, value)
+        bitwuzla_mk_const_array(bitwuzla, sort, value).checkError()
 
     private external fun bitwuzla_mk_const_array(
         bitwuzla: Bitwuzla,
@@ -1054,7 +1073,7 @@ object Native {
      * @see bitwuzla_mk_rm_sort
      */
     fun bitwuzlaMkVar(bitwuzla: Bitwuzla, sort: BitwuzlaSort, symbol: String): BitwuzlaTerm =
-        bitwuzla_mk_var(bitwuzla, sort, symbol)
+        bitwuzla_mk_var(bitwuzla, sort, symbol).checkError()
 
     private external fun bitwuzla_mk_var(bitwuzla: Bitwuzla, sort: BitwuzlaSort, symbol: String): BitwuzlaTerm
 
@@ -1077,7 +1096,7 @@ object Native {
      * @see BitwuzlaOption.BITWUZLA_OPT_INCREMENTAL
      */
     fun bitwuzlaPush(bitwuzla: Bitwuzla, nlevels: Int) =
-        bitwuzla_push(bitwuzla, nlevels)
+        bitwuzla_push(bitwuzla, nlevels).checkError()
 
     private external fun bitwuzla_push(bitwuzla: Bitwuzla, nlevels: Int)
 
@@ -1100,7 +1119,7 @@ object Native {
      * @see BitwuzlaOption.BITWUZLA_OPT_INCREMENTAL
      */
     fun bitwuzlaPop(bitwuzla: Bitwuzla, nlevels: Int) =
-        bitwuzla_pop(bitwuzla, nlevels)
+        bitwuzla_pop(bitwuzla, nlevels).checkError()
 
     private external fun bitwuzla_pop(bitwuzla: Bitwuzla, nlevels: Int)
 
@@ -1112,7 +1131,7 @@ object Native {
      * @param term The formula to assert.
      */
     fun bitwuzlaAssert(bitwuzla: Bitwuzla, term: BitwuzlaTerm) =
-        bitwuzla_assert(bitwuzla, term)
+        bitwuzla_assert(bitwuzla, term).checkError()
 
     private external fun bitwuzla_assert(bitwuzla: Bitwuzla, term: BitwuzlaTerm)
 
@@ -1136,7 +1155,7 @@ object Native {
      * @see BitwuzlaOption.BITWUZLA_OPT_INCREMENTAL
      */
     fun bitwuzlaAssume(bitwuzla: Bitwuzla, term: BitwuzlaTerm) =
-        bitwuzla_assume(bitwuzla, term)
+        bitwuzla_assume(bitwuzla, term).checkError()
 
     private external fun bitwuzla_assume(bitwuzla: Bitwuzla, term: BitwuzlaTerm)
 
@@ -1165,7 +1184,7 @@ object Native {
      * @see BitwuzlaOption.BITWUZLA_OPT_INCREMENTAL
      */
     fun bitwuzlaIsUnsatAssumption(bitwuzla: Bitwuzla, term: BitwuzlaTerm): Boolean =
-        bitwuzla_is_unsat_assumption(bitwuzla, term)
+        bitwuzla_is_unsat_assumption(bitwuzla, term).checkError()
 
     private external fun bitwuzla_is_unsat_assumption(bitwuzla: Bitwuzla, term: BitwuzlaTerm): Boolean
 
@@ -1194,7 +1213,7 @@ object Native {
      */
     fun bitwuzlaGetUnsatAssumptions(bitwuzla: Bitwuzla): Array<BitwuzlaTerm> {
         val size = IntByReference()
-        val resultPtr = bitwuzla_get_unsat_assumptions(bitwuzla, size)
+        val resultPtr = bitwuzla_get_unsat_assumptions(bitwuzla, size).checkError()
         return resultPtr.load(size.value)
     }
 
@@ -1219,7 +1238,7 @@ object Native {
      */
     fun bitwuzlaGetUnsatCore(bitwuzla: Bitwuzla): Array<BitwuzlaTerm> {
         val size = IntByReference()
-        val resultPtr = bitwuzla_get_unsat_core(bitwuzla, size)
+        val resultPtr = bitwuzla_get_unsat_core(bitwuzla, size).checkError()
         return resultPtr.load(size.value)
     }
 
@@ -1234,7 +1253,7 @@ object Native {
      * @see bitwuzla_assume
      */
     fun bitwuzlaFixateAssumptions(bitwuzla: Bitwuzla) =
-        bitwuzla_fixate_assumptions(bitwuzla)
+        bitwuzla_fixate_assumptions(bitwuzla).checkError()
 
     private external fun bitwuzla_fixate_assumptions(bitwuzla: Bitwuzla)
 
@@ -1247,7 +1266,7 @@ object Native {
      * @see bitwuzla_assume
      */
     fun bitwuzlaResetAssumptions(bitwuzla: Bitwuzla) =
-        bitwuzla_reset_assumptions(bitwuzla)
+        bitwuzla_reset_assumptions(bitwuzla).checkError()
 
     private external fun bitwuzla_reset_assumptions(bitwuzla: Bitwuzla)
 
@@ -1267,7 +1286,7 @@ object Native {
      * @see BitwuzlaResult
      */
     fun bitwuzlaSimplify(bitwuzla: Bitwuzla): BitwuzlaResult =
-        BitwuzlaResult.fromValue(bitwuzla_simplify(bitwuzla))
+        BitwuzlaResult.fromValue(bitwuzla_simplify(bitwuzla).checkError())
 
     private external fun bitwuzla_simplify(bitwuzla: Bitwuzla): Int
 
@@ -1298,7 +1317,7 @@ object Native {
      * @see BitwuzlaResult
      */
     fun bitwuzlaCheckSat(bitwuzla: Bitwuzla): BitwuzlaResult =
-        BitwuzlaResult.fromValue(bitwuzla_check_sat(bitwuzla))
+        BitwuzlaResult.fromValue(bitwuzla_check_sat(bitwuzla).checkError())
 
     private external fun bitwuzla_check_sat(bitwuzla: Bitwuzla): Int
 
@@ -1317,7 +1336,7 @@ object Native {
      * @see bitwuzla_check_sat
      */
     fun bitwuzlaGetValue(bitwuzla: Bitwuzla, term: BitwuzlaTerm): BitwuzlaTerm =
-        bitwuzla_get_value(bitwuzla, term)
+        bitwuzla_get_value(bitwuzla, term).checkError()
 
     private external fun bitwuzla_get_value(bitwuzla: Bitwuzla, term: BitwuzlaTerm): BitwuzlaTerm
 
@@ -1333,7 +1352,7 @@ object Native {
      * Return value is valid until next `bitwuzla_get_bv_value` call.
      */
     fun bitwuzlaGetBvValue(bitwuzla: Bitwuzla, term: BitwuzlaTerm): String =
-        bitwuzla_get_bv_value(bitwuzla, term)
+        bitwuzla_get_bv_value(bitwuzla, term).checkError()
 
     private external fun bitwuzla_get_bv_value(bitwuzla: Bitwuzla, term: BitwuzlaTerm): String
 
@@ -1352,6 +1371,7 @@ object Native {
         val exponentPtr = PointerByReference()
         val significandPtr = PointerByReference()
         bitwuzla_get_fp_value(bitwuzla, term, signPtr, exponentPtr, significandPtr)
+        checkError()
         return FpValue(
             signPtr.value.getString(0),
             exponentPtr.value.getString(0),
@@ -1386,7 +1406,7 @@ object Native {
      * @return String representation of rounding mode (RNA, RNE, RTN, RTP, RTZ).
      */
     fun bitwuzlaGetRmValue(bitwuzla: Bitwuzla, term: BitwuzlaTerm): String =
-        bitwuzla_get_rm_value(bitwuzla, term)
+        bitwuzla_get_rm_value(bitwuzla, term).checkError()
 
     private external fun bitwuzla_get_rm_value(bitwuzla: Bitwuzla, term: BitwuzlaTerm): String
 
@@ -1409,6 +1429,7 @@ object Native {
         val values = PointerByReference()
         val defaultValue = PointerByReference()
         bitwuzla_get_array_value(bitwuzla, term, indices, values, size, defaultValue)
+        checkError()
         val sz = size.value
         return ArrayValue(
             sz,
@@ -1460,6 +1481,7 @@ object Native {
         val argsPtr = PointerByReference()
         val valuesPtr = PointerByReference()
         bitwuzla_get_fun_value(bitwuzla, term, argsPtr, arityPtr, valuesPtr, sizePtr)
+        checkError()
         val size = sizePtr.value
         val arity = arityPtr.value
         val argsPtrList = argsPtr.value.load(size)
@@ -1568,6 +1590,7 @@ object Native {
         val parsedStatus = IntByReference()
         val parsedSmt2 = IntByReference()
         val result = bitwuzla_parse(bitwuzla, infile.ptr, infileName, outfile.ptr, errorMsg, parsedStatus, parsedSmt2)
+        checkError()
         infile.close()
         outfile.close()
         return ParseResult(
@@ -1636,7 +1659,7 @@ object Native {
         val parsedStatus = IntByReference()
         val result = bitwuzla_parse_format(
             bitwuzla, format, infile.ptr, infileName, outfile.ptr, errorMsg, parsedStatus
-        )
+        ).checkError()
         infile.close()
         outfile.close()
         return ParseFormatResult(
@@ -1688,6 +1711,7 @@ object Native {
         mapKeys: Array<BitwuzlaTerm>,
         mapValues: Array<BitwuzlaTerm>
     ): BitwuzlaTerm = bitwuzla_substitute_term(bitwuzla, term, mapKeys.size, mapKeys.mkPtr(), mapValues.mkPtr())
+        .checkError()
 
     private external fun bitwuzla_substitute_term(
         bitwuzla: Bitwuzla,
@@ -1719,6 +1743,7 @@ object Native {
     ) {
         val termsPtr = terms.mkPtr()
         bitwuzla_substitute_terms(bitwuzla, terms.size, termsPtr, mapKeys.size, mapKeys.mkPtr(), mapValues.mkPtr())
+        checkError()
         val result = termsPtr.load(terms.size)
         for (i in terms.indices) {
             terms[i] = result[i]
@@ -1742,7 +1767,7 @@ object Native {
      * @return The hash value of the sort.
      */
     fun bitwuzlaSortHash(sort: BitwuzlaSort): Long =
-        bitwuzla_sort_hash(sort)
+        bitwuzla_sort_hash(sort).checkError()
 
     private external fun bitwuzla_sort_hash(sort: BitwuzlaSort): Long
 
@@ -1757,7 +1782,7 @@ object Native {
      * @return The size of the bit-vector sort.
      */
     fun bitwuzlaSortBvGetSize(sort: BitwuzlaSort): Int =
-        bitwuzla_sort_bv_get_size(sort)
+        bitwuzla_sort_bv_get_size(sort).checkError()
 
     private external fun bitwuzla_sort_bv_get_size(sort: BitwuzlaSort): Int
 
@@ -1772,7 +1797,7 @@ object Native {
      * @return The exponent size of the floating-point sort.
      */
     fun bitwuzlaSortFpGetExpSize(sort: BitwuzlaSort): Int =
-        bitwuzla_sort_fp_get_exp_size(sort)
+        bitwuzla_sort_fp_get_exp_size(sort).checkError()
 
     private external fun bitwuzla_sort_fp_get_exp_size(sort: BitwuzlaSort): Int
 
@@ -1787,7 +1812,7 @@ object Native {
      * @return The significand size of the floating-point sort.
      */
     fun bitwuzlaSortFpGetSigSize(sort: BitwuzlaSort): Int =
-        bitwuzla_sort_fp_get_sig_size(sort)
+        bitwuzla_sort_fp_get_sig_size(sort).checkError()
 
     private external fun bitwuzla_sort_fp_get_sig_size(sort: BitwuzlaSort): Int
 
@@ -1802,7 +1827,7 @@ object Native {
      * @return The index sort of the array sort.
      */
     fun bitwuzlaSortArrayGetIndex(sort: BitwuzlaSort): BitwuzlaSort =
-        bitwuzla_sort_array_get_index(sort)
+        bitwuzla_sort_array_get_index(sort).checkError()
 
     private external fun bitwuzla_sort_array_get_index(sort: BitwuzlaSort): BitwuzlaSort
 
@@ -1817,7 +1842,7 @@ object Native {
      * @return The element sort of the array sort.
      */
     fun bitwuzlaSortArrayGetElement(sort: BitwuzlaSort): BitwuzlaSort =
-        bitwuzla_sort_array_get_element(sort)
+        bitwuzla_sort_array_get_element(sort).checkError()
 
     private external fun bitwuzla_sort_array_get_element(sort: BitwuzlaSort): BitwuzlaSort
 
@@ -1834,7 +1859,7 @@ object Native {
      */
     fun bitwuzlaSortFunGetDomainSorts(sort: BitwuzlaSort): Array<BitwuzlaSort> {
         val size = IntByReference()
-        val result = bitwuzla_sort_fun_get_domain_sorts(sort, size)
+        val result = bitwuzla_sort_fun_get_domain_sorts(sort, size).checkError()
         return result.load(size.value)
     }
 
@@ -1851,7 +1876,7 @@ object Native {
      * @return The codomain sort of the function sort.
      */
     fun bitwuzlaSortFunGetCodomain(sort: BitwuzlaSort): BitwuzlaSort =
-        bitwuzla_sort_fun_get_codomain(sort)
+        bitwuzla_sort_fun_get_codomain(sort).checkError()
 
     private external fun bitwuzla_sort_fun_get_codomain(sort: BitwuzlaSort): BitwuzlaSort
 
@@ -1864,7 +1889,7 @@ object Native {
      * @return The number of arguments of the function sort.
      */
     fun bitwuzlaSortFunGetArity(sort: BitwuzlaSort): Int =
-        bitwuzla_sort_fun_get_arity(sort)
+        bitwuzla_sort_fun_get_arity(sort).checkError()
 
     private external fun bitwuzla_sort_fun_get_arity(sort: BitwuzlaSort): Int
 
@@ -1878,7 +1903,7 @@ object Native {
      * @return True if the given sorts are equal.
      */
     fun bitwuzlaSortIsEqual(sort0: BitwuzlaSort, sort1: BitwuzlaSort): Boolean =
-        bitwuzla_sort_is_equal(sort0, sort1)
+        bitwuzla_sort_is_equal(sort0, sort1).checkError()
 
     private external fun bitwuzla_sort_is_equal(sort0: BitwuzlaSort, sort1: BitwuzlaSort): Boolean
 
@@ -1891,7 +1916,7 @@ object Native {
      * @return True if `sort` is an array sort.
      */
     fun bitwuzlaSortIsArray(sort: BitwuzlaSort): Boolean =
-        bitwuzla_sort_is_array(sort)
+        bitwuzla_sort_is_array(sort).checkError()
 
     private external fun bitwuzla_sort_is_array(sort: BitwuzlaSort): Boolean
 
@@ -1904,7 +1929,7 @@ object Native {
      * @return True if `sort` is a bit-vector sort.
      */
     fun bitwuzlaSortIsBv(sort: BitwuzlaSort): Boolean =
-        bitwuzla_sort_is_bv(sort)
+        bitwuzla_sort_is_bv(sort).checkError()
 
     private external fun bitwuzla_sort_is_bv(sort: BitwuzlaSort): Boolean
 
@@ -1917,7 +1942,7 @@ object Native {
      * @return True if `sort` is a floating-point sort.
      */
     fun bitwuzlaSortIsFp(sort: BitwuzlaSort): Boolean =
-        bitwuzla_sort_is_fp(sort)
+        bitwuzla_sort_is_fp(sort).checkError()
 
     private external fun bitwuzla_sort_is_fp(sort: BitwuzlaSort): Boolean
 
@@ -1930,7 +1955,7 @@ object Native {
      * @return True if `sort` is a function sort.
      */
     fun bitwuzlaSortIsFun(sort: BitwuzlaSort): Boolean =
-        bitwuzla_sort_is_fun(sort)
+        bitwuzla_sort_is_fun(sort).checkError()
 
     private external fun bitwuzla_sort_is_fun(sort: BitwuzlaSort): Boolean
 
@@ -1943,7 +1968,7 @@ object Native {
      * @return True if `sort` is a Roundingmode sort.
      */
     fun bitwuzlaSortIsRm(sort: BitwuzlaSort): Boolean =
-        bitwuzla_sort_is_rm(sort)
+        bitwuzla_sort_is_rm(sort).checkError()
 
     private external fun bitwuzla_sort_is_rm(sort: BitwuzlaSort): Boolean
 
@@ -1960,7 +1985,7 @@ object Native {
      * @param file The file to print the term to.
      */
     fun bitwuzlaSortDump(sort: BitwuzlaSort, format: String, file: FilePtr) = file.use {
-        bitwuzla_sort_dump(sort, format, it.ptr)
+        bitwuzla_sort_dump(sort, format, it.ptr).checkError()
     }
 
     private external fun bitwuzla_sort_dump(sort: BitwuzlaSort, format: String, file: Pointer)
@@ -1973,7 +1998,7 @@ object Native {
      * @return The hash value of the term.
      */
     fun bitwuzlaTermHash(term: BitwuzlaTerm): Long =
-        bitwuzla_term_hash(term)
+        bitwuzla_term_hash(term).checkError()
 
     private external fun bitwuzla_term_hash(term: BitwuzlaTerm): Long
 
@@ -1988,7 +2013,7 @@ object Native {
      * @see BitwuzlaKind
      */
     fun bitwuzlaTermGetKind(term: BitwuzlaTerm): BitwuzlaKind =
-        BitwuzlaKind.fromValue(bitwuzla_term_get_kind(term))
+        BitwuzlaKind.fromValue(bitwuzla_term_get_kind(term).checkError())
 
     private external fun bitwuzla_term_get_kind(term: BitwuzlaTerm): Int
 
@@ -2004,7 +2029,7 @@ object Native {
      */
     fun bitwuzlaTermGetChildren(term: BitwuzlaTerm): Array<BitwuzlaTerm> {
         val size = IntByReference()
-        val result = bitwuzla_term_get_children(term, size)
+        val result = bitwuzla_term_get_children(term, size).checkError()
         return result.load(size.value)
     }
 
@@ -2022,7 +2047,7 @@ object Native {
      */
     fun bitwuzlaTermGetIndices(term: BitwuzlaTerm): IntArray {
         val size = IntByReference()
-        val result = bitwuzla_term_get_indices(term, size)
+        val result = bitwuzla_term_get_indices(term, size).checkError()
         if (Pointer.NULL == result) return intArrayOf()
         return result.getIntArray(0, size.value)
     }
@@ -2038,7 +2063,7 @@ object Native {
      * @return True if `term` is an indexed term.
      */
     fun bitwuzlaTermIsIndexed(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_indexed(term)
+        bitwuzla_term_is_indexed(term).checkError()
 
     private external fun bitwuzla_term_is_indexed(term: BitwuzlaTerm): Boolean
 
@@ -2051,7 +2076,7 @@ object Native {
      * @return The associated Bitwuzla instance.
      */
     fun bitwuzlaTermGetBitwuzla(term: BitwuzlaTerm): Bitwuzla =
-        bitwuzla_term_get_bitwuzla(term)
+        bitwuzla_term_get_bitwuzla(term).checkError()
 
     private external fun bitwuzla_term_get_bitwuzla(term: BitwuzlaTerm): Bitwuzla
 
@@ -2064,7 +2089,7 @@ object Native {
      * @return The sort of the term.
      */
     fun bitwuzlaTermGetSort(term: BitwuzlaTerm): BitwuzlaSort =
-        bitwuzla_term_get_sort(term)
+        bitwuzla_term_get_sort(term).checkError()
 
     private external fun bitwuzla_term_get_sort(term: BitwuzlaTerm): BitwuzlaSort
 
@@ -2079,7 +2104,7 @@ object Native {
      * @return The index sort of the array term.
      */
     fun bitwuzlaTermArrayGetIndexSort(term: BitwuzlaTerm): BitwuzlaSort =
-        bitwuzla_term_array_get_index_sort(term)
+        bitwuzla_term_array_get_index_sort(term).checkError()
 
     private external fun bitwuzla_term_array_get_index_sort(term: BitwuzlaTerm): BitwuzlaSort
 
@@ -2094,7 +2119,7 @@ object Native {
      * @return The element sort of the array term.
      */
     fun bitwuzlaTermArrayGetElementSort(term: BitwuzlaTerm): BitwuzlaSort =
-        bitwuzla_term_array_get_element_sort(term)
+        bitwuzla_term_array_get_element_sort(term).checkError()
 
     private external fun bitwuzla_term_array_get_element_sort(term: BitwuzlaTerm): BitwuzlaSort
 
@@ -2112,7 +2137,7 @@ object Native {
      */
     fun bitwuzlaTermFunGetDomainSorts(term: BitwuzlaTerm): Array<BitwuzlaSort> {
         val size = IntByReference()
-        val result = bitwuzla_term_fun_get_domain_sorts(term, size)
+        val result = bitwuzla_term_fun_get_domain_sorts(term, size).checkError()
         return result.load(size.value)
     }
 
@@ -2130,7 +2155,7 @@ object Native {
      * @return The codomain sort of the function term.
      */
     fun bitwuzlaTermFunGetCodomainSort(term: BitwuzlaTerm): BitwuzlaSort =
-        bitwuzla_term_fun_get_codomain_sort(term)
+        bitwuzla_term_fun_get_codomain_sort(term).checkError()
 
     private external fun bitwuzla_term_fun_get_codomain_sort(term: BitwuzlaTerm): BitwuzlaSort
 
@@ -2145,7 +2170,7 @@ object Native {
      * @return The bit-width of the bit-vector term.
      */
     fun bitwuzlaTermBvGetSize(term: BitwuzlaTerm): Int =
-        bitwuzla_term_bv_get_size(term)
+        bitwuzla_term_bv_get_size(term).checkError()
 
     private external fun bitwuzla_term_bv_get_size(term: BitwuzlaTerm): Int
 
@@ -2160,7 +2185,7 @@ object Native {
      * @return The bit-width of the exponent of the floating-point term.
      */
     fun bitwuzlaTermFpGetExpSize(term: BitwuzlaTerm): Int =
-        bitwuzla_term_fp_get_exp_size(term)
+        bitwuzla_term_fp_get_exp_size(term).checkError()
 
     private external fun bitwuzla_term_fp_get_exp_size(term: BitwuzlaTerm): Int
 
@@ -2175,7 +2200,7 @@ object Native {
      * @return The bit-width of the significand of the floating-point term.
      */
     fun bitwuzlaTermFpGetSigSize(term: BitwuzlaTerm): Int =
-        bitwuzla_term_fp_get_sig_size(term)
+        bitwuzla_term_fp_get_sig_size(term).checkError()
 
     private external fun bitwuzla_term_fp_get_sig_size(term: BitwuzlaTerm): Int
 
@@ -2190,7 +2215,7 @@ object Native {
      * @return The arity of the function term.
      */
     fun bitwuzlaTermFunGetArity(term: BitwuzlaTerm): Int =
-        bitwuzla_term_fun_get_arity(term)
+        bitwuzla_term_fun_get_arity(term).checkError()
 
     private external fun bitwuzla_term_fun_get_arity(term: BitwuzlaTerm): Int
 
@@ -2203,7 +2228,7 @@ object Native {
      * @return The symbol of `term`. `null` if no symbol is defined.
      */
     fun bitwuzlaTermGetSymbol(term: BitwuzlaTerm): String? =
-        bitwuzla_term_get_symbol(term)
+        bitwuzla_term_get_symbol(term).checkError()
 
     private external fun bitwuzla_term_get_symbol(term: BitwuzlaTerm): String?
 
@@ -2215,7 +2240,7 @@ object Native {
      * @param symbol The symbol.
      */
     fun bitwuzlaTermSetSymbol(term: BitwuzlaTerm, symbol: String) =
-        bitwuzla_term_set_symbol(term, symbol)
+        bitwuzla_term_set_symbol(term, symbol).checkError()
 
     private external fun bitwuzla_term_set_symbol(term: BitwuzlaTerm, symbol: String)
 
@@ -2229,7 +2254,7 @@ object Native {
      * @return True if the sorts of `term0` and `term1` are equal.
      */
     fun bitwuzlaTermIsEqualSort(term0: BitwuzlaTerm, term1: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_equal_sort(term0, term1)
+        bitwuzla_term_is_equal_sort(term0, term1).checkError()
 
     private external fun bitwuzla_term_is_equal_sort(term0: BitwuzlaTerm, term1: BitwuzlaTerm): Boolean
 
@@ -2242,7 +2267,7 @@ object Native {
      * @return True if `term` is an array term.
      */
     fun bitwuzlaTermIsArray(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_array(term)
+        bitwuzla_term_is_array(term).checkError()
 
     private external fun bitwuzla_term_is_array(term: BitwuzlaTerm): Boolean
 
@@ -2255,7 +2280,7 @@ object Native {
      * @return True if `term` is a constant.
      */
     fun bitwuzlaTermIsConst(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_const(term)
+        bitwuzla_term_is_const(term).checkError()
 
     private external fun bitwuzla_term_is_const(term: BitwuzlaTerm): Boolean
 
@@ -2268,7 +2293,7 @@ object Native {
      * @return True if `term` is a function.
      */
     fun bitwuzlaTermIsFun(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_fun(term)
+        bitwuzla_term_is_fun(term).checkError()
 
     private external fun bitwuzla_term_is_fun(term: BitwuzlaTerm): Boolean
 
@@ -2281,7 +2306,7 @@ object Native {
      * @return True if `term` is a variable.
      */
     fun bitwuzlaTermIsVar(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_var(term)
+        bitwuzla_term_is_var(term).checkError()
 
     private external fun bitwuzla_term_is_var(term: BitwuzlaTerm): Boolean
 
@@ -2294,7 +2319,7 @@ object Native {
      * @return True if `term` is a variable and bound.
      */
     fun bitwuzlaTermIsBoundVar(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_bound_var(term)
+        bitwuzla_term_is_bound_var(term).checkError()
 
     private external fun bitwuzla_term_is_bound_var(term: BitwuzlaTerm): Boolean
 
@@ -2307,7 +2332,7 @@ object Native {
      * @return True if `term` is a value.
      */
     fun bitwuzlaTermIsValue(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_value(term)
+        bitwuzla_term_is_value(term).checkError()
 
     private external fun bitwuzla_term_is_value(term: BitwuzlaTerm): Boolean
 
@@ -2320,7 +2345,7 @@ object Native {
      * @return True if `term` is a bit-vector value.
      */
     fun bitwuzlaTermIsBvValue(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_bv_value(term)
+        bitwuzla_term_is_bv_value(term).checkError()
 
     private external fun bitwuzla_term_is_bv_value(term: BitwuzlaTerm): Boolean
 
@@ -2333,7 +2358,7 @@ object Native {
      * @return True if `term` is a floating-point value.
      */
     fun bitwuzlaTermIsFpValue(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_fp_value(term)
+        bitwuzla_term_is_fp_value(term).checkError()
 
     private external fun bitwuzla_term_is_fp_value(term: BitwuzlaTerm): Boolean
 
@@ -2346,7 +2371,7 @@ object Native {
      * @return True if `term` is a rounding mode value.
      */
     fun bitwuzlaTermIsRmValue(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_rm_value(term)
+        bitwuzla_term_is_rm_value(term).checkError()
 
     private external fun bitwuzla_term_is_rm_value(term: BitwuzlaTerm): Boolean
 
@@ -2359,7 +2384,7 @@ object Native {
      * @return True if `term` is a bit-vector term.
      */
     fun bitwuzlaTermIsBv(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_bv(term)
+        bitwuzla_term_is_bv(term).checkError()
 
     private external fun bitwuzla_term_is_bv(term: BitwuzlaTerm): Boolean
 
@@ -2372,7 +2397,7 @@ object Native {
      * @return True if `term` is a floating-point term.
      */
     fun bitwuzlaTermIsFp(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_fp(term)
+        bitwuzla_term_is_fp(term).checkError()
 
     private external fun bitwuzla_term_is_fp(term: BitwuzlaTerm): Boolean
 
@@ -2385,7 +2410,7 @@ object Native {
      * @return True if `term` is a rounding mode term.
      */
     fun bitwuzlaTermIsRm(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_rm(term)
+        bitwuzla_term_is_rm(term).checkError()
 
     private external fun bitwuzla_term_is_rm(term: BitwuzlaTerm): Boolean
 
@@ -2398,7 +2423,7 @@ object Native {
      * @return True if `term` is a bit-vector zero value.
      */
     fun bitwuzlaTermIsBvValueZero(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_bv_value_zero(term)
+        bitwuzla_term_is_bv_value_zero(term).checkError()
 
     private external fun bitwuzla_term_is_bv_value_zero(term: BitwuzlaTerm): Boolean
 
@@ -2411,7 +2436,7 @@ object Native {
      * @return True if `term` is a bit-vector one value.
      */
     fun bitwuzlaTermIsBvValueOne(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_bv_value_one(term)
+        bitwuzla_term_is_bv_value_one(term).checkError()
 
     private external fun bitwuzla_term_is_bv_value_one(term: BitwuzlaTerm): Boolean
 
@@ -2424,7 +2449,7 @@ object Native {
      * @return True if `term` is a bit-vector value with all bits set to one.
      */
     fun bitwuzlaTermIsBvValueOnes(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_bv_value_ones(term)
+        bitwuzla_term_is_bv_value_ones(term).checkError()
 
     private external fun bitwuzla_term_is_bv_value_ones(term: BitwuzlaTerm): Boolean
 
@@ -2438,7 +2463,7 @@ object Native {
      * set to 1 and all other bits set to 0.
      */
     fun bitwuzlaTermIsBvValueMinSigned(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_bv_value_min_signed(term)
+        bitwuzla_term_is_bv_value_min_signed(term).checkError()
 
     private external fun bitwuzla_term_is_bv_value_min_signed(term: BitwuzlaTerm): Boolean
 
@@ -2452,7 +2477,7 @@ object Native {
      * set to 0 and all other bits set to 1.
      */
     fun bitwuzlaTermIsBvValueMaxSigned(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_bv_value_max_signed(term)
+        bitwuzla_term_is_bv_value_max_signed(term).checkError()
 
     private external fun bitwuzla_term_is_bv_value_max_signed(term: BitwuzlaTerm): Boolean
 
@@ -2465,7 +2490,7 @@ object Native {
      * @return True if `term` is a floating-point +zero value.
      */
     fun bitwuzlaTermIsFpValuePosZero(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_fp_value_pos_zero(term)
+        bitwuzla_term_is_fp_value_pos_zero(term).checkError()
 
     private external fun bitwuzla_term_is_fp_value_pos_zero(term: BitwuzlaTerm): Boolean
 
@@ -2478,7 +2503,7 @@ object Native {
      * @return True if `term` is a floating-point value negative zero.
      */
     fun bitwuzlaTermIsFpValueNegZero(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_fp_value_neg_zero(term)
+        bitwuzla_term_is_fp_value_neg_zero(term).checkError()
 
     private external fun bitwuzla_term_is_fp_value_neg_zero(term: BitwuzlaTerm): Boolean
 
@@ -2491,7 +2516,7 @@ object Native {
      * @return True if `term` is a floating-point +oo value.
      */
     fun bitwuzlaTermIsFpValuePosInf(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_fp_value_pos_inf(term)
+        bitwuzla_term_is_fp_value_pos_inf(term).checkError()
 
     private external fun bitwuzla_term_is_fp_value_pos_inf(term: BitwuzlaTerm): Boolean
 
@@ -2504,7 +2529,7 @@ object Native {
      * @return True if `term` is a floating-point -oo value.
      */
     fun bitwuzlaTermIsFpValueNegInf(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_fp_value_neg_inf(term)
+        bitwuzla_term_is_fp_value_neg_inf(term).checkError()
 
     private external fun bitwuzla_term_is_fp_value_neg_inf(term: BitwuzlaTerm): Boolean
 
@@ -2517,7 +2542,7 @@ object Native {
      * @return True if `term` is a floating-point NaN value.
      */
     fun bitwuzlaTermIsFpValueNan(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_fp_value_nan(term)
+        bitwuzla_term_is_fp_value_nan(term).checkError()
 
     private external fun bitwuzla_term_is_fp_value_nan(term: BitwuzlaTerm): Boolean
 
@@ -2530,7 +2555,7 @@ object Native {
      * @return True if `term` is a roundindg mode RNA value.
      */
     fun bitwuzlaTermIsRmValueRna(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_rm_value_rna(term)
+        bitwuzla_term_is_rm_value_rna(term).checkError()
 
     private external fun bitwuzla_term_is_rm_value_rna(term: BitwuzlaTerm): Boolean
 
@@ -2543,7 +2568,7 @@ object Native {
      * @return True if `term` is a rounding mode RNE value.
      */
     fun bitwuzlaTermIsRmValueRne(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_rm_value_rne(term)
+        bitwuzla_term_is_rm_value_rne(term).checkError()
 
     private external fun bitwuzla_term_is_rm_value_rne(term: BitwuzlaTerm): Boolean
 
@@ -2556,7 +2581,7 @@ object Native {
      * @return True if `term` is a rounding mode RTN value.
      */
     fun bitwuzlaTermIsRmValueRtn(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_rm_value_rtn(term)
+        bitwuzla_term_is_rm_value_rtn(term).checkError()
 
     private external fun bitwuzla_term_is_rm_value_rtn(term: BitwuzlaTerm): Boolean
 
@@ -2569,7 +2594,7 @@ object Native {
      * @return True if `term` is a rounding mode RTP value.
      */
     fun bitwuzlaTermIsRmValueRtp(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_rm_value_rtp(term)
+        bitwuzla_term_is_rm_value_rtp(term).checkError()
 
     private external fun bitwuzla_term_is_rm_value_rtp(term: BitwuzlaTerm): Boolean
 
@@ -2582,7 +2607,7 @@ object Native {
      * @return True if `term` is a rounding mode RTZ value.
      */
     fun bitwuzlaTermIsRmValueRtz(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_rm_value_rtz(term)
+        bitwuzla_term_is_rm_value_rtz(term).checkError()
 
     private external fun bitwuzla_term_is_rm_value_rtz(term: BitwuzlaTerm): Boolean
 
@@ -2595,7 +2620,7 @@ object Native {
      * @return True if `term` is a constant array.
      */
     fun bitwuzlaTermIsConstArray(term: BitwuzlaTerm): Boolean =
-        bitwuzla_term_is_const_array(term)
+        bitwuzla_term_is_const_array(term).checkError()
 
     private external fun bitwuzla_term_is_const_array(term: BitwuzlaTerm): Boolean
 
@@ -2609,7 +2634,7 @@ object Native {
      * @param file The file to print the term to.
      */
     fun bitwuzlaTermDump(term: BitwuzlaTerm, format: String, file: FilePtr) = file.use {
-        bitwuzla_term_dump(term, format, it.ptr)
+        bitwuzla_term_dump(term, format, it.ptr).checkError()
     }
 
     private external fun bitwuzla_term_dump(term: BitwuzlaTerm, format: String, file: Pointer)
@@ -2621,7 +2646,7 @@ object Native {
      * @return A string representation of the given term kind.
      */
     fun bitwuzlaKindToString(kind: BitwuzlaKind): String =
-        bitwuzla_kind_to_string(kind.value)
+        bitwuzla_kind_to_string(kind.value).checkError()
 
     private external fun bitwuzla_kind_to_string(kind: Int): String
 
@@ -2632,7 +2657,7 @@ object Native {
      * @return A string representation of the given result.
      */
     fun bitwuzlaResultToString(result: BitwuzlaResult): String =
-        bitwuzla_result_to_string(result.value)
+        bitwuzla_result_to_string(result.value).checkError()
 
     private external fun bitwuzla_result_to_string(result: Int): String
 
@@ -2643,7 +2668,7 @@ object Native {
      * @return A string representation of the rounding mode.
      */
     fun bitwuzlaRmToString(rm: BitwuzlaRoundingMode): String =
-        bitwuzla_rm_to_string(rm.value)
+        bitwuzla_rm_to_string(rm.value).checkError()
 
     private external fun bitwuzla_rm_to_string(rm: Int): String
 
@@ -2659,6 +2684,17 @@ object Native {
     private fun Pointer?.load(size: Int): Array<Pointer> {
         if (this == null || Pointer.NULL == this || size == 0) return emptyArray()
         return getPointerArray(0, size)
+    }
+
+    class BitwuzlaException(message: String) : Exception(message)
+
+    private fun <T> T.checkError(): T {
+        val pendingError = error
+        if (pendingError != null) {
+            error = null
+            throw BitwuzlaException(pendingError)
+        }
+        return this
     }
 
 }
