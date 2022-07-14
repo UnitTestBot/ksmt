@@ -23,6 +23,7 @@ dependencies {
 }
 
 tasks.getByName<KotlinCompile>("compileKotlin") {
+    kotlinOptions.freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
     kotlinOptions.allWarningsAsErrors = true
 }
 

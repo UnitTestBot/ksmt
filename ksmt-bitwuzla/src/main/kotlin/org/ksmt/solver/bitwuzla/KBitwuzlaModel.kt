@@ -25,38 +25,42 @@ open class KBitwuzlaModel(
 
     private val interpretations: MutableMap<KDecl<*>, KModel.KFuncInterp<*>> = hashMapOf()
 
-    override fun <T : KSort> eval(expr: KExpr<T>, complete: Boolean): KExpr<T> = with(ctx) {
-        bitwuzlaCtx.ensureActive()
-        val term = with(internalizer) { expr.internalize() }
-        val value = Native.bitwuzlaGetValue(bitwuzlaCtx.bitwuzla, term)
-        with(converter) {
-            val convertedExpr = value.convertExpr(expr.sort)
+    override fun <T : KSort> eval(expr: KExpr<T>, complete: Boolean): KExpr<T> = bitwuzlaCtx.bitwuzlaTry {
+        with(ctx) {
+            bitwuzlaCtx.ensureActive()
+            val term = with(internalizer) { expr.internalize() }
+            val value = Native.bitwuzlaGetValue(bitwuzlaCtx.bitwuzla, term)
+            with(converter) {
+                val convertedExpr = value.convertExpr(expr.sort)
 
-            if (!complete) return convertedExpr
+                if (!complete) return convertedExpr
 
-            convertedExpr.accept(ModelCompleter(expr, incompleteDecls))
+                convertedExpr.accept(ModelCompleter(expr, incompleteDecls))
+            }
         }
     }
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T> = interpretations.getOrPut(decl) {
-        with(ctx) {
-            bitwuzlaCtx.ensureActive()
-            val term = with(internalizer) {
-                bitwuzlaCtx.mkConstant(decl, decl.bitwuzlaFunctionSort())
-            }
-            when {
-                Native.bitwuzlaTermIsArray(term) -> arrayInterpretation(decl, term)
-                Native.bitwuzlaTermIsFun(term) -> functionInterpretation(decl, term)
-                else -> {
-                    val value = Native.bitwuzlaGetValue(bitwuzlaCtx.bitwuzla, term)
-                    val convertedValue = with(converter) { value.convertExpr(decl.sort) }
-                    KModel.KFuncInterp(
-                        sort = decl.sort,
-                        vars = emptyList(),
-                        entries = emptyList(),
-                        default = convertedValue
-                    )
+        bitwuzlaCtx.bitwuzlaTry {
+            with(ctx) {
+                bitwuzlaCtx.ensureActive()
+                val term = with(internalizer) {
+                    bitwuzlaCtx.mkConstant(decl, decl.bitwuzlaFunctionSort())
+                }
+                when {
+                    Native.bitwuzlaTermIsArray(term) -> arrayInterpretation(decl, term)
+                    Native.bitwuzlaTermIsFun(term) -> functionInterpretation(decl, term)
+                    else -> {
+                        val value = Native.bitwuzlaGetValue(bitwuzlaCtx.bitwuzla, term)
+                        val convertedValue = with(converter) { value.convertExpr(decl.sort) }
+                        KModel.KFuncInterp(
+                            sort = decl.sort,
+                            vars = emptyList(),
+                            entries = emptyList(),
+                            default = convertedValue
+                        )
+                    }
                 }
             }
         }
