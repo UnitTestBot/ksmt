@@ -1,15 +1,20 @@
 package org.ksmt.solver.bitwuzla
 
+import com.sun.jna.Pointer
 import org.ksmt.cache.mkCache
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaResult
+import org.ksmt.solver.KSolverException
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KSort
 import java.lang.ref.WeakReference
 import java.util.WeakHashMap
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 open class KBitwuzlaContext : AutoCloseable {
     private var closed = false
@@ -79,14 +84,28 @@ open class KBitwuzlaContext : AutoCloseable {
         return result
     }
 
-    fun assert(term: BitwuzlaTerm) {
-        ensureActive()
-        Native.bitwuzlaAssert(bitwuzla, term)
+    @OptIn(ExperimentalTime::class)
+    fun <T> withTimeout(timeout: Duration, body: () -> T): T {
+        if (timeout == Duration.INFINITE) {
+            Native.bitwuzlaResetTerminationCallback(bitwuzla)
+            return body()
+        }
+        val currentTime = TimeSource.Monotonic.markNow()
+        val finishTime = currentTime + timeout
+        val timeoutTerminator = BitwuzlaTimeout(finishTime)
+        try {
+            Native.bitwuzlaSetTerminationCallback(bitwuzla, timeoutTerminator, null)
+            return body()
+        } finally {
+            Native.bitwuzlaResetTerminationCallback(bitwuzla)
+        }
     }
 
-    fun check(): BitwuzlaResult {
+    inline fun <reified T> bitwuzlaTry(body: () -> T): T = try {
         ensureActive()
-        return Native.bitwuzlaCheckSat(bitwuzla)
+        body()
+    } catch (ex: Native.BitwuzlaException) {
+        throw KSolverException(ex)
     }
 
     override fun close() {
@@ -155,6 +174,11 @@ open class KBitwuzlaContext : AutoCloseable {
 
         override fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm =
             constants[decl to sort] ?: parent.mkConstant(decl, sort)
+    }
+
+    @OptIn(ExperimentalTime::class)
+    class BitwuzlaTimeout(private val finishTime: TimeMark) : Native.BitwuzlaTerminationCallback {
+        override fun terminate(state: Pointer?): Int = if (finishTime.hasNotPassedNow()) 0 else 1
     }
 
 }
