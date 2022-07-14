@@ -146,10 +146,32 @@ object Native {
      * @see bitwuzla_terminate
      * @see bitwuzlaGetTerminationCallbackState
      */
-    fun bitwuzlaSetTerminationCallback(bitwuzla: Bitwuzla, function: Pointer, state: Pointer) {
-        throw UnsupportedOperationException("callbacks are not supported")
-    }
+    fun bitwuzlaSetTerminationCallback(bitwuzla: Bitwuzla, function: BitwuzlaTerminationCallback?, state: Pointer?) =
+        bitwuzla_set_termination_callback(bitwuzla, function, state).checkError()
 
+    /**
+     * Reset a termination callback function.
+     * @param bitwuzla The Bitwuzla instance.
+     * @see bitwuzlaSetTerminationCallback
+     */
+    fun bitwuzlaResetTerminationCallback(bitwuzla: Bitwuzla) =
+        bitwuzla_set_termination_callback(bitwuzla, null, null).checkError()
+
+    private external fun bitwuzla_set_termination_callback(
+        bitwuzla: Bitwuzla,
+        function: BitwuzlaTerminationCallback?,
+        state: Pointer?
+    )
+
+    interface BitwuzlaTerminationCallback : Callback {
+
+        /** The callback function, returns a value != 0 if `bitwuzla` has
+         * been terminated.
+         * @param state The argument to the callback function.
+         * @see bitwuzlaGetTerminationCallbackState
+         */
+        fun terminate(state: Pointer?): Int
+    }
 
     /**
      * Get the state of the termination callback function.
@@ -165,9 +187,10 @@ object Native {
      * @see bitwuzla_terminate
      * @see bitwuzlaSetTerminationCallback
      */
-    fun bitwuzlaGetTerminationCallbackState(bitwuzla: Bitwuzla): Pointer {
-        throw UnsupportedOperationException("callbacks are not supported")
-    }
+    fun bitwuzlaGetTerminationCallbackState(bitwuzla: Bitwuzla): Pointer? =
+        bitwuzla_get_termination_callback_state(bitwuzla)
+
+    private external fun bitwuzla_get_termination_callback_state(bitwuzla: Bitwuzla): Pointer?
 
 
     /**
