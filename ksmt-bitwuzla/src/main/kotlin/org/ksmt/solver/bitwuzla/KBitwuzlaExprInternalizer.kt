@@ -10,7 +10,7 @@ import org.ksmt.expr.KArrayLambda
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KBitVec16Expr
-import org.ksmt.expr.KBitVec1Expr
+import org.ksmt.expr.KBitVec1Value
 import org.ksmt.expr.KBitVec32Expr
 import org.ksmt.expr.KBitVec64Expr
 import org.ksmt.expr.KBitVec8Expr
@@ -38,12 +38,12 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KArraySort
-import org.ksmt.sort.KBV16Sort
-import org.ksmt.sort.KBV1Sort
-import org.ksmt.sort.KBV32Sort
-import org.ksmt.sort.KBV64Sort
-import org.ksmt.sort.KBV8Sort
-import org.ksmt.sort.KBVSort
+import org.ksmt.sort.KBv16Sort
+import org.ksmt.sort.KBv1Sort
+import org.ksmt.sort.KBv32Sort
+import org.ksmt.sort.KBv64Sort
+import org.ksmt.sort.KBv8Sort
+import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
@@ -181,16 +181,16 @@ open class KBitwuzlaExprInternalizer(
         )
     }
 
-    override fun transform(expr: KBitVec1Expr): KExpr<KBV1Sort> = expr.internalizeExpr {
+    override fun transform(expr: KBitVec1Value): KExpr<KBv1Sort> = expr.internalizeExpr {
         if (expr.value) bitwuzlaCtx.trueTerm else bitwuzlaCtx.falseTerm
     }
 
-    override fun transform(expr: KBitVec8Expr): KExpr<KBV8Sort> = transformBvNumber(expr)
-    override fun transform(expr: KBitVec16Expr): KExpr<KBV16Sort> = transformBvNumber(expr)
-    override fun transform(expr: KBitVec32Expr): KExpr<KBV32Sort> = transformBvNumber(expr)
-    override fun transform(expr: KBitVec64Expr): KExpr<KBV64Sort> = transformBvNumber(expr)
+    override fun transform(expr: KBitVec8Expr): KExpr<KBv8Sort> = transformBvNumber(expr)
+    override fun transform(expr: KBitVec16Expr): KExpr<KBv16Sort> = transformBvNumber(expr)
+    override fun transform(expr: KBitVec32Expr): KExpr<KBv32Sort> = transformBvNumber(expr)
+    override fun transform(expr: KBitVec64Expr): KExpr<KBv64Sort> = transformBvNumber(expr)
 
-    fun <T : KBitVecNumberExpr<S, *>, S : KBVSort> transformBvNumber(expr: T): T = expr.internalizeExpr {
+    fun <T : KBitVecNumberExpr<S, *>, S : KBvSort> transformBvNumber(expr: T): T = expr.internalizeExpr {
         with(ctx) {
             Native.bitwuzlaMkBvValueUint64(
                 bitwuzlaCtx.bitwuzla,
@@ -200,7 +200,7 @@ open class KBitwuzlaExprInternalizer(
         }
     }
 
-    override fun transform(expr: KBitVecCustomExpr): KExpr<KBVSort> = expr.internalizeExpr {
+    override fun transform(expr: KBitVecCustomExpr): KExpr<KBvSort> = expr.internalizeExpr {
         with(ctx) {
             Native.bitwuzlaMkBvValue(
                 bitwuzlaCtx.bitwuzla,
@@ -305,7 +305,7 @@ open class KBitwuzlaExprInternalizer(
                 Native.bitwuzlaMkArraySort(bitwuzlaCtx.bitwuzla, domain, range)
             }
 
-        override fun <S : KBVSort> visit(sort: S): BitwuzlaSort =
+        override fun <S : KBvSort> visit(sort: S): BitwuzlaSort =
             bitwuzlaCtx.internalizeSort(sort) {
                 val size = sort.sizeBits.toInt()
                 if (size == 1) {

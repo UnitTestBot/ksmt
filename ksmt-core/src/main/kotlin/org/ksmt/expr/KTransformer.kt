@@ -4,7 +4,7 @@ import org.ksmt.KContext
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBv16Sort
-import org.ksmt.sort.KBV1Sort
+import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBv32Sort
 import org.ksmt.sort.KBv64Sort
 import org.ksmt.sort.KBv8Sort
@@ -43,7 +43,7 @@ interface KTransformer {
 
     // bit-vec transformers
     fun <T : KBvSort> transformBitVecValue(expr: KBitVecValue<T>): KExpr<T> = transformApp(expr)
-    fun transform(expr: KBitVec1Expr): KExpr<KBV1Sort> = transformBitVecExpr(expr)
+    fun transform(expr: KBitVec1Value): KExpr<KBv1Sort> = transformBitVecValue(expr)
     fun transform(expr: KBitVec8Value): KExpr<KBv8Sort> = transformBitVecValue(expr)
     fun transform(expr: KBitVec16Value): KExpr<KBv16Sort> = transformBitVecValue(expr)
     fun transform(expr: KBitVec32Value): KExpr<KBv32Sort> = transformBitVecValue(expr)
@@ -52,39 +52,39 @@ interface KTransformer {
 
     // bit-vec expresssions transformers
     fun transform(expr: KBvNotExpr): KExpr<KBvSort> = transformApp(expr)
-    fun transform(expr: KBvRedAndExpr): KExpr<KBvSort> = transformApp(expr)
-    fun transform(expr: KBvRedOrExpr): KExpr<KBvSort> = transformApp(expr)
+    fun transform(expr: KBvReductionAndExpr): KExpr<KBvSort> = transformApp(expr)
+    fun transform(expr: KBvReductionOrExpr): KExpr<KBvSort> = transformApp(expr)
     fun transform(expr: KBvAndExpr): KExpr<KBvSort> = transformApp(expr)
     fun transform(expr: KBvOrExpr): KExpr<KBvSort> = transformApp(expr)
     fun transform(expr: KBvXorExpr): KExpr<KBvSort> = transformApp(expr)
     fun transform(expr: KBvNAndExpr): KExpr<KBvSort> = transformApp(expr)
     fun transform(expr: KBvNorExpr): KExpr<KBvSort> = transformApp(expr)
     fun transform(expr: KBvXNorExpr): KExpr<KBvSort> = transformApp(expr)
-    fun transform(expr: KBvNegExpr): KExpr<KBvSort> = transformApp(expr)
+    fun transform(expr: KBvNegationExpr): KExpr<KBvSort> = transformApp(expr)
     fun transform(expr: KBvAddExpr): KExpr<KBvSort> = transformApp(expr)
     fun transform(expr: KBvSubExpr): KExpr<KBvSort> = transformApp(expr)
     fun transform(expr: KBvMulExpr): KExpr<KBvSort> = transformApp(expr)
-    fun transform(expr: KBvUDivExpr): KExpr<KBvSort> = transformApp(expr)
-    fun transform(expr: KBvSDivExpr): KExpr<KBvSort> = transformApp(expr)
-    fun transform(expr: KBvURemExpr): KExpr<KBvSort> = transformApp(expr)
-    fun transform(expr: KBvSRemExpr): KExpr<KBvSort> = transformApp(expr)
-    fun transform(expr: KBvSModExpr): KExpr<KBvSort> = transformApp(expr)
-    fun transform(expr: KBvULTExpr): KExpr<KBoolSort> = transformApp(expr)
-    fun transform(expr: KBvSLTExpr): KExpr<KBoolSort> = transformApp(expr)
-    fun transform(expr: KBvULEExpr): KExpr<KBoolSort> = transformApp(expr)
-    fun transform(expr: KBvSLEExpr): KExpr<KBoolSort> = transformApp(expr)
-    fun transform(expr: KBvUGEExpr): KExpr<KBoolSort> = transformApp(expr)
-    fun transform(expr: KBvSGEExpr): KExpr<KBoolSort> = transformApp(expr)
-    fun transform(expr: KBvUGTExpr): KExpr<KBoolSort> = transformApp(expr)
-    fun transform(expr: KBvSGTExpr): KExpr<KBoolSort> = transformApp(expr)
+    fun transform(expr: KBvUnsignedDivExpr): KExpr<KBvSort> = transformApp(expr)
+    fun transform(expr: KBvSignedDivExpr): KExpr<KBvSort> = transformApp(expr)
+    fun transform(expr: KBvUnsignedRemExpr): KExpr<KBvSort> = transformApp(expr)
+    fun transform(expr: KBvSignedRemExpr): KExpr<KBvSort> = transformApp(expr)
+    fun transform(expr: KBvSignedModExpr): KExpr<KBvSort> = transformApp(expr)
+    fun transform(expr: KBvUnsignedLessExpr): KExpr<KBoolSort> = transformApp(expr)
+    fun transform(expr: KBvSignedLessExpr): KExpr<KBoolSort> = transformApp(expr)
+    fun transform(expr: KBvUnsignedLessOrEqualExpr): KExpr<KBoolSort> = transformApp(expr)
+    fun transform(expr: KBvSignedLessOrEqualExpr): KExpr<KBoolSort> = transformApp(expr)
+    fun transform(expr: KBvUnsignedGreaterOrEqualExpr): KExpr<KBoolSort> = transformApp(expr)
+    fun transform(expr: KBvSignedGreaterOrEqualExpr): KExpr<KBoolSort> = transformApp(expr)
+    fun transform(expr: KBvUnsignedGreaterExpr): KExpr<KBoolSort> = transformApp(expr)
+    fun transform(expr: KBvSignedGreaterExpr): KExpr<KBoolSort> = transformApp(expr)
     fun transform(expr: KConcatExpr): KExpr<KBvSort> = transformApp(expr)
     fun transform(expr: KExtractExpr): KExpr<KBvSort> = transformApp(expr)
-    fun transform(expr: KSignExtExpr): KExpr<KBvSort> = transformApp(expr)
-    fun transform(expr: KZeroExtExpr): KExpr<KBvSort> = transformApp(expr)
+    fun transform(expr: KSignExtensionExpr): KExpr<KBvSort> = transformApp(expr)
+    fun transform(expr: KZeroExtensionExpr): KExpr<KBvSort> = transformApp(expr)
     fun transform(expr: KRepeatExpr): KExpr<KBvSort> = transformApp(expr)
-    fun transform(expr: KBvSHLExpr): KExpr<KBvSort> = transformApp(expr)
-    fun transform(expr: KBvLSHRExpr): KExpr<KBvSort> = transformApp(expr)
-    fun transform(expr: KBvASHRExpr): KExpr<KBvSort> = transformApp(expr)
+    fun transform(expr: KBvShiftLeftExpr): KExpr<KBvSort> = transformApp(expr)
+    fun transform(expr: KBvLogicalShiftRightExpr): KExpr<KBvSort> = transformApp(expr)
+    fun transform(expr: KBvArithShiftRightExpr): KExpr<KBvSort> = transformApp(expr)
     fun transform(expr: KBvRotateLeftExpr): KExpr<KBvSort> = transformApp(expr)
     fun transform(expr: KBvRotateRightExpr): KExpr<KBvSort> = transformApp(expr)
     fun transform(expr: KBv2IntExpr): KExpr<KIntSort> = transformApp(expr)

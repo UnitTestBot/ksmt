@@ -127,19 +127,19 @@ class SolverTest {
 
         var array = arrayBase
         for (i in 0..1024) {
-            val v = mkBV((i xor 1024).toByte())
-            array = array.store(mkBV(4198400 + i), v)
+            val v = mkBv((i xor 1024).toByte())
+            array = array.store(mkBv(4198400 + i), v)
         }
 
         var xoredX = with(solver.exprInternalizer) { x.internalize() }
         for (i in 0..3000) {
-            val selectedValue = array.select(mkBV(4198500 + i))
+            val selectedValue = array.select(mkBv(4198500 + i))
             val selectedValueTerm = with(solver.exprInternalizer) { selectedValue.internalize() }
             xoredX = Native.bitwuzlaMkTerm2(
                 solver.bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_XOR, xoredX, selectedValueTerm
             )
         }
-        val someRandomValue = with(solver.exprInternalizer) { mkBV(42.toByte()).internalize() }
+        val someRandomValue = with(solver.exprInternalizer) { mkBv(42.toByte()).internalize() }
         val assertion = Native.bitwuzlaMkTerm2(
             solver.bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, xoredX, someRandomValue
         )
