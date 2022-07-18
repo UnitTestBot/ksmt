@@ -10,7 +10,6 @@ open class KFuncDecl<T : KSort>(
     name: String,
     sort: T,
     val argSorts: List<KSort>,
-    val parameters: List<Any> = emptyList()
 ) : KDecl<T>(ctx, name, sort) {
     override fun apply(args: List<KExpr<*>>): KApp<T, *> = with(ctx) {
         checkArgSorts(args)
@@ -45,8 +44,7 @@ abstract class KFuncDecl1<T : KSort, A : KSort>(
     name: String,
     sort: T,
     val argSort: A,
-    parameters: List<Any> = emptyList()
-) : KFuncDecl<T>(ctx, name, sort, listOf(argSort), parameters) {
+) : KFuncDecl<T>(ctx, name, sort, listOf(argSort)) {
     abstract fun KContext.apply(arg: KExpr<A>): KApp<T, KExpr<A>>
 
     @Suppress("UNCHECKED_CAST")
@@ -63,8 +61,7 @@ abstract class KFuncDecl2<T : KSort, A0 : KSort, A1 : KSort>(
     sort: T,
     val arg0Sort: A0,
     val arg1Sort: A1,
-    parameters: List<Any> = emptyList()
-) : KFuncDecl<T>(ctx, name, sort, listOf(arg0Sort, arg1Sort), parameters) {
+) : KFuncDecl<T>(ctx, name, sort, listOf(arg0Sort, arg1Sort)) {
     abstract fun KContext.apply(arg0: KExpr<A0>, arg1: KExpr<A1>): KApp<T, *>
 
     @Suppress("UNCHECKED_CAST")
@@ -82,8 +79,7 @@ abstract class KFuncDecl3<T : KSort, A0 : KSort, A1 : KSort, A2 : KSort>(
     val arg0Sort: A0,
     val arg1Sort: A1,
     val arg2Sort: A2,
-    parameters: List<Any> = emptyList()
-) : KFuncDecl<T>(ctx, name, sort, listOf(arg0Sort, arg1Sort, arg2Sort), parameters) {
+) : KFuncDecl<T>(ctx, name, sort, listOf(arg0Sort, arg1Sort, arg2Sort)) {
     abstract fun KContext.apply(arg0: KExpr<A0>, arg1: KExpr<A1>, arg2: KExpr<A2>): KApp<T, *>
 
     @Suppress("UNCHECKED_CAST")
@@ -94,13 +90,16 @@ abstract class KFuncDecl3<T : KSort, A0 : KSort, A1 : KSort, A2 : KSort>(
     }
 }
 
+interface KParameterizedFuncDecl {
+    val parameters: List<Any>
+}
+
 abstract class KFuncDeclChain<T : KSort, A : KSort>(
     ctx: KContext,
     name: String,
     sort: T,
     val argSort: A,
-    parameters: List<Any> = emptyList()
-) : KFuncDecl<T>(ctx, name, sort, listOf(argSort), parameters) {
+) : KFuncDecl<T>(ctx, name, sort, listOf(argSort)) {
     abstract fun KContext.applyChain(args: List<KExpr<A>>): KApp<T, KExpr<A>>
 
     override fun print(): String = buildString {

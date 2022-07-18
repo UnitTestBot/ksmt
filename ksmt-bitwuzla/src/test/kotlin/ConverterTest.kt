@@ -11,9 +11,7 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaResult
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.FilePtrUtils
 import org.ksmt.solver.bitwuzla.bindings.Native
-import org.ksmt.sort.KBV1Sort
-import org.ksmt.sort.KBVSort
-import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KSort
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -103,7 +101,7 @@ class ConverterTest {
     @Test
     fun testArrayToBVExpr(): Unit = with(ctx) {
         val a by mkArraySort(bv1Sort, bv1Sort)
-        val term = with(internalizer) { a.store(mkBV(true), mkBV(true)).internalize() }
+        val term = with(internalizer) { a.store(mkBv(true), mkBv(true)).internalize() }
         val converted = with(converter) { term.convertExpr(a.sort) }
         converted.accept(sortChecker)
         val convertedTerm = with(internalizer) { converted.internalize() }
@@ -142,8 +140,8 @@ class ConverterTest {
         assertTrue(checkEquivalent(eqTerm, convertedTerm))
     }
 
-    private fun KExpr<KBV1Sort>.toBool() = with(ctx) {
-        mkIte(this@toBool eq mkBV(true), trueExpr, falseExpr)
+    private fun KExpr<KBv1Sort>.toBool() = with(ctx) {
+        mkIte(this@toBool eq mkBv(true), trueExpr, falseExpr)
     }
 
     private class SortChecker(override val ctx: KContext) : KTransformer {
