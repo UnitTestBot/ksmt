@@ -2,6 +2,7 @@ package org.ksmt.solver.z3
 
 import com.microsoft.z3.ArithExpr
 import com.microsoft.z3.ArrayExpr
+import com.microsoft.z3.BitVecExpr
 import com.microsoft.z3.Context
 import com.microsoft.z3.Expr
 import com.microsoft.z3.FuncDecl
@@ -20,9 +21,58 @@ import org.ksmt.decl.KArithSubDecl
 import org.ksmt.decl.KArithUnaryMinusDecl
 import org.ksmt.decl.KArraySelectDecl
 import org.ksmt.decl.KArrayStoreDecl
+import org.ksmt.decl.KBitVec16ValueDecl
+import org.ksmt.decl.KBitVec1ValueDecl
+import org.ksmt.decl.KBitVec32ValueDecl
+import org.ksmt.decl.KBitVec64ValueDecl
+import org.ksmt.decl.KBitVec8ValueDecl
+import org.ksmt.decl.KBitVecCustomSizeValueDecl
+import org.ksmt.decl.KBitVecValueDecl
+import org.ksmt.decl.KBv2IntDecl
+import org.ksmt.decl.KBvAddDecl
+import org.ksmt.decl.KBvAddNoOverflowDecl
+import org.ksmt.decl.KBvAddNoUnderflowDecl
+import org.ksmt.decl.KBvAndDecl
+import org.ksmt.decl.KBvArithShiftRightDecl
+import org.ksmt.decl.KBvDivNoOverflowDecl
+import org.ksmt.decl.KBvLogicalShiftRightDecl
+import org.ksmt.decl.KBvMulDecl
+import org.ksmt.decl.KBvMulNoOverflowDecl
+import org.ksmt.decl.KBvMulNoUnderflowDecl
+import org.ksmt.decl.KBvNAndDecl
+import org.ksmt.decl.KBvNegNoOverflowDecl
+import org.ksmt.decl.KBvNegationDecl
+import org.ksmt.decl.KBvNorDecl
+import org.ksmt.decl.KBvNotDecl
+import org.ksmt.decl.KBvOrDecl
+import org.ksmt.decl.KBvReductionAndDecl
+import org.ksmt.decl.KBvReductionOrDecl
+import org.ksmt.decl.KBvRotateLeftDecl
+import org.ksmt.decl.KBvRotateRightDecl
+import org.ksmt.decl.KBvShiftLeftDecl
+import org.ksmt.decl.KBvSignedDivDecl
+import org.ksmt.decl.KBvSignedGreaterDecl
+import org.ksmt.decl.KBvSignedGreaterOrEqualDecl
+import org.ksmt.decl.KBvSignedLessDecl
+import org.ksmt.decl.KBvSignedLessOrEqualDecl
+import org.ksmt.decl.KBvSignedModDecl
+import org.ksmt.decl.KBvSignedRemDecl
+import org.ksmt.decl.KBvSubDecl
+import org.ksmt.decl.KBvSubNoOverflowDecl
+import org.ksmt.decl.KBvSubNoUnderflowDecl
+import org.ksmt.decl.KBvUnsignedDivDecl
+import org.ksmt.decl.KBvUnsignedGreaterDecl
+import org.ksmt.decl.KBvUnsignedGreaterOrEqualDecl
+import org.ksmt.decl.KBvUnsignedLessDecl
+import org.ksmt.decl.KBvUnsignedLessOrEqualDecl
+import org.ksmt.decl.KBvUnsignedRemDecl
+import org.ksmt.decl.KBvXNorDecl
+import org.ksmt.decl.KBvXorDecl
+import org.ksmt.decl.KConcatDecl
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDeclVisitor
 import org.ksmt.decl.KEqDecl
+import org.ksmt.decl.KExtractDecl
 import org.ksmt.decl.KFalseDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.decl.KIntModDecl
@@ -35,7 +85,10 @@ import org.ksmt.decl.KOrDecl
 import org.ksmt.decl.KRealIsIntDecl
 import org.ksmt.decl.KRealNumDecl
 import org.ksmt.decl.KRealToIntDecl
+import org.ksmt.decl.KRepeatDecl
+import org.ksmt.decl.KSignExtDecl
 import org.ksmt.decl.KTrueDecl
+import org.ksmt.decl.KZeroExtDecl
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KSort
 
@@ -167,5 +220,226 @@ open class KZ3DeclInternalizer(
         z3Ctx.mkReal(decl.value).funcDecl
     }
 
+    override fun visit(decl: KBitVec1ValueDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBV(decl.value, decl.sort.sizeBits.toInt()).funcDecl
+    }
+
+    override fun visit(decl: KBitVec8ValueDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBV(decl.byteValue.toInt(), decl.sort.sizeBits.toInt()).funcDecl
+    }
+
+    override fun visit(decl: KBitVec16ValueDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBV(decl.shortValue.toInt(), decl.sort.sizeBits.toInt()).funcDecl
+    }
+
+    override fun visit(decl: KBitVec32ValueDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBV(decl.intValue, decl.sort.sizeBits.toInt()).funcDecl
+    }
+
+    override fun visit(decl: KBitVec64ValueDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBV(decl.longValue, decl.sort.sizeBits.toInt()).funcDecl
+    }
+
+    override fun visit(decl: KBitVecCustomSizeValueDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBV(decl.value, decl.sort.sizeBits.toInt()).funcDecl
+    }
+
+    override fun visit(decl: KBvNotDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVNot(decl.argSort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvReductionAndDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVRedAND(decl.argSort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvReductionOrDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVRedOR(decl.argSort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvAndDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVAND(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvOrDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVOR(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvXorDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVXOR(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvNAndDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVNAND(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvNorDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVNOR(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvXNorDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVXNOR(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvNegationDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVNeg(decl.argSort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvAddDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVAdd(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvSubDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVSub(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvMulDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVMul(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvUnsignedDivDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVUDiv(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvSignedDivDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVSDiv(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvUnsignedRemDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVURem(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvSignedRemDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVSRem(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvSignedModDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVSMod(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvUnsignedLessDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVULT(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvSignedLessDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVSLT(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvSignedLessOrEqualDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVSLE(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvUnsignedLessOrEqualDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVULE(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvUnsignedGreaterOrEqualDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVUGE(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvSignedGreaterOrEqualDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVSGE(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvUnsignedGreaterDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVUGT(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+
+    }
+
+    override fun visit(decl: KBvSignedGreaterDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVSGT(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KConcatDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkConcat(decl.arg0Sort.sample() as BitVecExpr, decl.arg1Sort.sample() as BitVecExpr).funcDecl
+    }
+
+    override fun visit(decl: KExtractDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkExtract(decl.parameters[0] as Int, decl.parameters[1] as Int, decl.argSort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KSignExtDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkSignExt(decl.parameters[0] as Int, decl.argSort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KZeroExtDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkZeroExt(decl.parameters[0] as Int, decl.argSort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KRepeatDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkRepeat(decl.parameters[0] as Int, decl.argSort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvShiftLeftDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVSHL(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvLogicalShiftRightDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVLSHR(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvArithShiftRightDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVASHR(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvRotateLeftDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVRotateLeft(decl.arg0Sort.sample() as BitVecExpr, decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvRotateRightDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVRotateRight(decl.arg0Sort.sample() as BitVecExpr, decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBv2IntDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBV2Int(decl.argSort.sample().cast(), decl.parameters.single() as Boolean).funcDecl
+    }
+
+    override fun visit(decl: KBvAddNoOverflowDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVAddNoOverflow(
+            decl.arg0Sort.sample().cast(),
+            decl.arg1Sort.sample().cast(),
+            decl.parameters.single() as Boolean
+        ).funcDecl
+    }
+
+    override fun visit(decl: KBvAddNoUnderflowDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVAddNoUnderflow(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvSubNoOverflowDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVSubNoOverflow(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvSubNoUnderflowDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVSubNoUnderflow(
+            decl.arg0Sort.sample().cast(),
+            decl.arg1Sort.sample().cast(),
+            decl.parameters.single() as Boolean
+        ).funcDecl
+    }
+
+    override fun visit(decl: KBvDivNoOverflowDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVSDivNoOverflow(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvNegNoOverflowDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVNegNoOverflow(decl.argSort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvMulNoOverflowDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVMulNoOverflow(
+            decl.arg0Sort.sample().cast(),
+            decl.arg1Sort.sample().cast(),
+            decl.parameters.single() as Boolean
+        ).funcDecl
+    }
+
+    override fun visit(decl: KBvMulNoUnderflowDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVMulNoUnderflow(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    // TODO move it somewhere and merge with the same function from the other modules
+    private inline fun <reified T, reified Base> Base.cast(): T where T : Base = this as T
+
+    // collect this consts
     private fun KSort.sample(): Expr = z3Ctx.mkConst("e", accept(sortInternalizer))
 }

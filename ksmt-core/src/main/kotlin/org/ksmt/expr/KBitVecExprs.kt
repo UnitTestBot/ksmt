@@ -843,80 +843,115 @@ class KBv2IntExpr internal constructor(
 // (=> (and (bvslt #b00 #b10) (bvslt #b00 #b10)) (bvslt #b00 (bvadd #b10 #b10)))
 class KBvAddNoOverflowExpr internal constructor(
     ctx: KContext,
-    left: KExpr<KBvSort>,
-    right: KExpr<KBvSort>,
-    isSigned: Boolean
-) : KFunctionApp<KBoolSort>(
-    ctx,
-    ctx.mkBvAddNoOverflowDecl(left.sort(), right.sort(), isSigned),
-    listOf(left, right, if (isSigned) ctx.trueExpr else ctx.falseExpr)
-)
+    val left: KExpr<KBvSort>,
+    val right: KExpr<KBvSort>,
+    val isSigned: Boolean
+) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
+    override val args: List<KExpr<KBvSort>> by lazy {
+        listOf(left, right)
+    }
+
+    override fun decl(): KDecl<KBoolSort> = ctx.mkBvAddNoOverflowDecl(left.sort(), right.sort(), isSigned)
+    override fun sort(): KBoolSort = ctx.mkBoolSort()
+
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+}
 
 class KBvAddNoUnderflowExpr internal constructor(
     ctx: KContext,
-    left: KExpr<KBvSort>,
-    right: KExpr<KBvSort>,
-    isSigned: Boolean
-) : KFunctionApp<KBoolSort>(
-    ctx,
-    ctx.mkBvAddNoUnderflowDecl(left.sort(), right.sort(), isSigned),
-    listOf(left, right, if (isSigned) ctx.trueExpr else ctx.falseExpr)
-)
+    val left: KExpr<KBvSort>,
+    val right: KExpr<KBvSort>,
+) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
+    override val args: List<KExpr<KBvSort>> by lazy {
+        listOf(left, right)
+    }
+
+    override fun decl(): KDecl<KBoolSort> = ctx.mkBvAddNoUnderflowDecl(left.sort(), right.sort())
+    override fun sort(): KBoolSort = ctx.mkBoolSort()
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+}
 
 class KBvSubNoOverflowExpr internal constructor(
     ctx: KContext,
-    left: KExpr<KBvSort>,
-    right: KExpr<KBvSort>,
-    isSigned: Boolean
-) : KFunctionApp<KBoolSort>(
-    ctx,
-    ctx.mkBvSubNoOverflowDecl(left.sort(), right.sort(), isSigned),
-    listOf(left, right, if (isSigned) ctx.trueExpr else ctx.falseExpr)
-)
+    val left: KExpr<KBvSort>,
+    val right: KExpr<KBvSort>,
+) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
+    override val args: List<KExpr<KBvSort>> by lazy {
+        listOf(left, right)
+    }
+
+    override fun decl(): KDecl<KBoolSort> = ctx.mkBvSubNoOverflowDecl(left.sort(), right.sort())
+    override fun sort(): KBoolSort = ctx.mkBoolSort()
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+}
+
+class KBvSubNoUnderflowExpr internal constructor(
+    ctx: KContext,
+    val left: KExpr<KBvSort>,
+    val right: KExpr<KBvSort>,
+    val isSigned: Boolean
+) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
+    override val args: List<KExpr<KBvSort>> by lazy {
+        listOf(left, right)
+    }
+
+    override fun decl(): KDecl<KBoolSort> = ctx.mkBvSubNoUnderflowDecl(left.sort(), right.sort(), isSigned)
+    override fun sort(): KBoolSort = ctx.mkBoolSort()
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+}
 
 class KBvDivNoOverflowExpr internal constructor(
     ctx: KContext,
-    left: KExpr<KBvSort>,
-    right: KExpr<KBvSort>,
-    isSigned: Boolean
-) : KFunctionApp<KBoolSort>(
-    ctx,
-    ctx.mkBvDivNoOverflowDecl(left.sort(), right.sort(), isSigned),
-    listOf(left, right, if (isSigned) ctx.trueExpr else ctx.falseExpr)
-)
+    val left: KExpr<KBvSort>,
+    val right: KExpr<KBvSort>,
+) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
+    override val args: List<KExpr<KBvSort>> by lazy {
+        listOf(left, right)
+    }
+
+    override fun decl(): KDecl<KBoolSort> = ctx.mkBvDivNoOverflowDecl(left.sort(), right.sort())
+    override fun sort(): KBoolSort = ctx.mkBoolSort()
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+}
 
 class KBvNegNoOverflowExpr internal constructor(
     ctx: KContext,
-    left: KExpr<KBvSort>,
-    right: KExpr<KBvSort>,
-    isSigned: Boolean
-) : KFunctionApp<KBoolSort>(
-    ctx,
-    ctx.mkBvNegNoOverflowDecl(left.sort(), right.sort(), isSigned),
-    listOf(left, right, if (isSigned) ctx.trueExpr else ctx.falseExpr)
-)
+    val value: KExpr<KBvSort>,
+) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
+    override val args: List<KExpr<KBvSort>> by lazy {
+        listOf(value)
+    }
+
+    override fun decl(): KDecl<KBoolSort> = ctx.mkBvNegNoOverflowDecl(value.sort())
+    override fun sort(): KBoolSort = ctx.mkBoolSort()
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+}
 
 class KBvMulNoOverflowExpr internal constructor(
     ctx: KContext,
-    left: KExpr<KBvSort>,
-    right: KExpr<KBvSort>,
-    isSigned: Boolean
-) : KFunctionApp<KBoolSort>(
-    ctx,
-    ctx.mkBvMulNoOverflowDecl(left.sort(), right.sort(), isSigned),
-    listOf(left, right, if (isSigned) ctx.trueExpr else ctx.falseExpr)
-)
+    val left: KExpr<KBvSort>,
+    val right: KExpr<KBvSort>,
+    val isSigned: Boolean
+) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
+    override val args: List<KExpr<KBvSort>> by lazy {
+        listOf(left, right)
+    }
+
+    override fun decl(): KDecl<KBoolSort> = ctx.mkBvMulNoOverflowDecl(left.sort(), right.sort(), isSigned)
+    override fun sort(): KBoolSort = ctx.mkBoolSort()
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+}
 
 class KBvMulNoUnderflowExpr internal constructor(
     ctx: KContext,
-    left: KExpr<KBvSort>,
-    right: KExpr<KBvSort>,
-    isSigned: Boolean
-) : KFunctionApp<KBoolSort>(
-    ctx,
-    ctx.mkBvMulNoUnderflowDecl(left.sort(), right.sort(), isSigned),
-    listOf(left, right, if (isSigned) ctx.trueExpr else ctx.falseExpr)
-)
+    val left: KExpr<KBvSort>,
+    val right: KExpr<KBvSort>,
+) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
+    override val args: List<KExpr<KBvSort>> by lazy {
+        listOf(left, right)
+    }
 
-
-
+    override fun decl(): KDecl<KBoolSort> = ctx.mkBvMulNoUnderflowDecl(left.sort(), right.sort())
+    override fun sort(): KBoolSort = ctx.mkBoolSort()
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+}
