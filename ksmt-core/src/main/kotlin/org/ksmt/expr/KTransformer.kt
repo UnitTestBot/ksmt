@@ -33,6 +33,7 @@ interface KTransformer {
     fun transform(expr: KAndExpr): KExpr<KBoolSort> = transformApp(expr)
     fun transform(expr: KOrExpr): KExpr<KBoolSort> = transformApp(expr)
     fun transform(expr: KNotExpr): KExpr<KBoolSort> = transformApp(expr)
+    fun transform(expr: KImpliesExpr): KExpr<KBoolSort> = transformApp(expr)
     fun transform(expr: KTrue): KExpr<KBoolSort> = transformApp(expr)
     fun transform(expr: KFalse): KExpr<KBoolSort> = transformApp(expr)
     fun <T : KSort> transform(expr: KEqExpr<T>): KExpr<KBoolSort> = transformApp(expr)

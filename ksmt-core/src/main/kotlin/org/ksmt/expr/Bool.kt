@@ -4,6 +4,7 @@ import org.ksmt.KContext
 import org.ksmt.decl.KAndDecl
 import org.ksmt.decl.KEqDecl
 import org.ksmt.decl.KFalseDecl
+import org.ksmt.decl.KImpliesDecl
 import org.ksmt.decl.KIteDecl
 import org.ksmt.decl.KNotDecl
 import org.ksmt.decl.KOrDecl
@@ -37,6 +38,19 @@ class KNotExpr internal constructor(
     override fun decl(): KNotDecl = ctx.mkNotDecl()
     override val args: List<KExpr<KBoolSort>>
         get() = listOf(arg)
+
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+}
+
+class KImpliesExpr internal constructor(
+    ctx: KContext,
+    val p: KExpr<KBoolSort>,
+    val q: KExpr<KBoolSort>
+) : KApp<KBoolSort, KExpr<KBoolSort>>(ctx) {
+    override fun sort(): KBoolSort = ctx.mkBoolSort()
+    override fun decl(): KImpliesDecl = ctx.mkImpliesDecl()
+    override val args: List<KExpr<KBoolSort>>
+        get() = listOf(p, q)
 
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }

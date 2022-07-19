@@ -133,8 +133,12 @@ open class KBitwuzlaExprConverter(
                 check(children.size == 3) { "unexpected number of ITE arguments: ${children.size}" }
                 mkIte(children[0].convert(), children[1].convert(), children[2].convert())
             }
+            BitwuzlaKind.BITWUZLA_KIND_IMPLIES -> {
+                val args = Native.bitwuzlaTermGetChildren(expr)
+                check(args.size == 2) { "unexpected number of Implies arguments: ${args.size}" }
+                mkImplies(args[0].convert(), args[1].convert())
+            }
             BitwuzlaKind.BITWUZLA_KIND_IFF -> TODO()
-            BitwuzlaKind.BITWUZLA_KIND_IMPLIES -> TODO()
             BitwuzlaKind.BITWUZLA_KIND_AND,
             BitwuzlaKind.BITWUZLA_KIND_OR,
             BitwuzlaKind.BITWUZLA_KIND_NOT,
