@@ -22,6 +22,7 @@ import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFalse
 import org.ksmt.expr.KFunctionApp
+import org.ksmt.expr.KImpliesExpr
 import org.ksmt.expr.KIteExpr
 import org.ksmt.expr.KNotExpr
 import org.ksmt.expr.KOrExpr
@@ -123,6 +124,15 @@ open class KBitwuzlaExprInternalizer(
 
     override fun transform(expr: KNotExpr): KExpr<KBoolSort> = expr.internalizeExpr {
         Native.bitwuzlaMkTerm1(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_NOT, arg.internalize())
+    }
+
+    override fun transform(expr: KImpliesExpr): KExpr<KBoolSort> = expr.internalizeExpr {
+        Native.bitwuzlaMkTerm2(
+            bitwuzlaCtx.bitwuzla,
+            BitwuzlaKind.BITWUZLA_KIND_IMPLIES,
+            p.internalize(),
+            q.internalize()
+        )
     }
 
     override fun transform(expr: KTrue): KExpr<KBoolSort> = expr.internalizeExpr {

@@ -35,6 +35,7 @@ import org.ksmt.expr.KFalse
 import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KGeArithExpr
 import org.ksmt.expr.KGtArithExpr
+import org.ksmt.expr.KImpliesExpr
 import org.ksmt.expr.KInt32NumExpr
 import org.ksmt.expr.KInt64NumExpr
 import org.ksmt.expr.KIntBigNumExpr
@@ -100,6 +101,10 @@ open class KZ3ExprInternalizer(
 
     override fun transform(expr: KNotExpr) = expr.internalizeExpr {
         z3Ctx.mkNot(arg.internalize() as BoolExpr)
+    }
+
+    override fun transform(expr: KImpliesExpr) = expr.internalizeExpr {
+        z3Ctx.mkImplies(p.internalize() as BoolExpr, q.internalize() as BoolExpr)
     }
 
     override fun transform(expr: KTrue) = expr.internalizeExpr {

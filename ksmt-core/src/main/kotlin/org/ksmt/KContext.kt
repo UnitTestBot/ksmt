@@ -27,6 +27,7 @@ import org.ksmt.decl.KDecl
 import org.ksmt.decl.KEqDecl
 import org.ksmt.decl.KFalseDecl
 import org.ksmt.decl.KFuncDecl
+import org.ksmt.decl.KImpliesDecl
 import org.ksmt.decl.KIntModDecl
 import org.ksmt.decl.KIntNumDecl
 import org.ksmt.decl.KIntRemDecl
@@ -62,6 +63,7 @@ import org.ksmt.expr.KFalse
 import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KGeArithExpr
 import org.ksmt.expr.KGtArithExpr
+import org.ksmt.expr.KImpliesExpr
 import org.ksmt.expr.KInt32NumExpr
 import org.ksmt.expr.KInt64NumExpr
 import org.ksmt.expr.KIntBigNumExpr
@@ -176,6 +178,12 @@ open class KContext {
     }
 
     fun mkNot(arg: KExpr<KBoolSort>): KNotExpr = notCache.create(arg)
+
+    private val impliesCache = mkContextCheckingCache { p: KExpr<KBoolSort>, q: KExpr<KBoolSort> ->
+        KImpliesExpr(this, p, q)
+    }
+
+    fun mkImplies(p: KExpr<KBoolSort>, q: KExpr<KBoolSort>): KImpliesExpr = impliesCache.create(p, q)
 
     private val trueCache = mkCache<KTrue> { KTrue(this) }
     fun mkTrue() = trueCache.create()
@@ -573,6 +581,9 @@ open class KContext {
 
     private val notDeclCache = mkCache<KNotDecl> { KNotDecl(this) }
     fun mkNotDecl(): KNotDecl = notDeclCache.create()
+
+    private val impliesDeclCache = mkCache<KImpliesDecl> { KImpliesDecl(this) }
+    fun mkImpliesDecl(): KImpliesDecl = impliesDeclCache.create()
 
     private val eqDeclCache = mkContextCheckingCache { arg: KSort ->
         KEqDecl(this, arg)
