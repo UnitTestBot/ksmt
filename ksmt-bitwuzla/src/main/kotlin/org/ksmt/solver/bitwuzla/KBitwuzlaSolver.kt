@@ -49,7 +49,7 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver {
     }
 
     override fun push(): Unit = bitwuzlaCtx.bitwuzlaTry {
-        Native.bitwuzlaPush(bitwuzlaCtx.bitwuzla, 1)
+        Native.bitwuzlaPush(bitwuzlaCtx.bitwuzla, nlevels = 1)
 
         currentLevelTrackedAssertions = mutableSetOf()
         trackedAssertions.add(currentLevelTrackedAssertions)
@@ -105,6 +105,7 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver {
 
     override fun reasonOfUnknown(): String = bitwuzlaCtx.bitwuzlaTry {
         require(lastCheckStatus == KSolverStatus.UNKNOWN) { "Unknown reason is only available after UNKNOWN checks" }
+        // There is no way to retrieve reason of unknown from Bitwuzla in general case.
         return "unknown"
     }
 

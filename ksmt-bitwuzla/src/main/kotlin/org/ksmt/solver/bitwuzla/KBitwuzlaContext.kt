@@ -94,7 +94,7 @@ open class KBitwuzlaContext : AutoCloseable {
         val finishTime = currentTime + timeout
         val timeoutTerminator = BitwuzlaTimeout(finishTime)
         try {
-            Native.bitwuzlaSetTerminationCallback(bitwuzla, timeoutTerminator, null)
+            Native.bitwuzlaSetTerminationCallback(bitwuzla, timeoutTerminator, state = null)
             return body()
         } finally {
             Native.bitwuzlaResetTerminationCallback(bitwuzla)
