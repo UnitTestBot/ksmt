@@ -50,7 +50,7 @@ interface KTransformer {
     fun transform(expr: KBitVec64Value): KExpr<KBv64Sort> = transformBitVecValue(expr)
     fun transform(expr: KBitVecCustomValue): KExpr<KBvSort> = transformBitVecValue(expr)
 
-    // bit-vec expresssions transformers
+    // bit-vec expressions transformers
     fun transform(expr: KBvNotExpr): KExpr<KBvSort> = transformApp(expr)
     fun transform(expr: KBvReductionAndExpr): KExpr<KBvSort> = transformApp(expr)
     fun transform(expr: KBvReductionOrExpr): KExpr<KBvSort> = transformApp(expr)
@@ -91,6 +91,7 @@ interface KTransformer {
     fun transform(expr: KBvAddNoOverflowExpr): KExpr<KBoolSort> = transformApp(expr)
     fun transform(expr: KBvAddNoUnderflowExpr): KExpr<KBoolSort> = transformApp(expr)
     fun transform(expr: KBvSubNoOverflowExpr): KExpr<KBoolSort> = transformApp(expr)
+    fun transform(expr: KBvSubNoUnderflowExpr): KExpr<KBoolSort> = transformApp(expr)
     fun transform(expr: KBvDivNoOverflowExpr): KExpr<KBoolSort> = transformApp(expr)
     fun transform(expr: KBvNegNoOverflowExpr): KExpr<KBoolSort> = transformApp(expr)
     fun transform(expr: KBvMulNoOverflowExpr): KExpr<KBoolSort> = transformApp(expr)

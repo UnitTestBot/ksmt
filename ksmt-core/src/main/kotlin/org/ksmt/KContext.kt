@@ -35,29 +35,29 @@ import org.ksmt.decl.KBitVec64ValueDecl
 import org.ksmt.decl.KBitVec8ValueDecl
 import org.ksmt.decl.KBitVecCustomSizeValueDecl
 import org.ksmt.decl.KBv2IntDecl
-import org.ksmt.decl.KBvASHRDecl
+import org.ksmt.decl.KBvArithShiftRightDecl
 import org.ksmt.decl.KBvAddNoOverflowDecl
 import org.ksmt.decl.KBvAddNoUnderflowDecl
 import org.ksmt.decl.KBvDivNoOverflowDecl
-import org.ksmt.decl.KBvLSHRDecl
+import org.ksmt.decl.KBvLogicalShiftRightDecl
 import org.ksmt.decl.KBvMulNoOverflowDecl
 import org.ksmt.decl.KBvMulNoUnderflowDecl
 import org.ksmt.decl.KBvNegationDecl
 import org.ksmt.decl.KBvNegNoOverflowDecl
 import org.ksmt.decl.KBvRotateLeftDecl
 import org.ksmt.decl.KBvRotateRightDecl
-import org.ksmt.decl.KBvSGEDecl
-import org.ksmt.decl.KBvSGTDecl
-import org.ksmt.decl.KBvSHLDecl
+import org.ksmt.decl.KBvSignedGreaterOrEqualDecl
+import org.ksmt.decl.KBvSignedGreaterDecl
+import org.ksmt.decl.KBvShiftLeftDecl
 import org.ksmt.decl.KBvSignedLessOrEqualDecl
 import org.ksmt.decl.KBvSignedLessDecl
 import org.ksmt.decl.KBitVec1ValueDecl
 import org.ksmt.decl.KBvSignedModDecl
 import org.ksmt.decl.KBvSignedRemDecl
 import org.ksmt.decl.KBvSubNoOverflowDecl
-import org.ksmt.decl.KBvUGEDecl
-import org.ksmt.decl.KBvUGTDecl
-import org.ksmt.decl.KBvULEDecl
+import org.ksmt.decl.KBvUnsignedGreaterOrEqualDecl
+import org.ksmt.decl.KBvUnsignedGreaterDecl
+import org.ksmt.decl.KBvUnsignedLessOrEqualDecl
 import org.ksmt.decl.KBvUnsignedLessDecl
 import org.ksmt.decl.KBvUnsignedRemDecl
 import org.ksmt.decl.KConcatDecl
@@ -199,12 +199,15 @@ import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import java.math.BigInteger
 import kotlin.reflect.KProperty
+import org.ksmt.decl.KBvSubNoUnderflowDecl
+import org.ksmt.decl.toBinary
 import org.ksmt.expr.KBitVec16Value
 import org.ksmt.expr.KBitVec1Value
 import org.ksmt.expr.KBitVec32Value
 import org.ksmt.expr.KBitVec64Value
 import org.ksmt.expr.KBitVec8Value
 import org.ksmt.expr.KBitVecCustomValue
+import org.ksmt.expr.KBvSubNoUnderflowExpr
 
 @Suppress("TooManyFunctions", "unused")
 open class KContext {
@@ -609,6 +612,7 @@ open class KContext {
     fun mkBv(value: Short): KBitVec16Value = bv16Cache.create(value)
     fun mkBv(value: Int): KBitVec32Value = bv32Cache.create(value)
     fun mkBv(value: Long): KBitVec64Value = bv64Cache.create(value)
+    fun mkBv(value: Number, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value.toBinary(), sizeBits)
     fun mkBv(value: String, sizeBits: UInt): KBitVecValue<KBvSort> = when (sizeBits.toInt()) {
         1 -> mkBv(value.toInt(radix = 2) != 0).cast()
         Byte.SIZE_BITS -> mkBv(value.toByte(radix = 2)).cast()
@@ -795,11 +799,17 @@ open class KContext {
     fun mkBvRotateLeftExpr(left: KExpr<KBvSort>, right: KExpr<KBvSort>): KBvRotateLeftExpr =
         bvRotateLeftExprCache.create(left, right)
 
+    fun mkBvRotateLeftExpr(left: Int, right: KExpr<KBvSort>): KBvRotateLeftExpr =
+        mkBvRotateLeftExpr(mkBv(left, right.sort().sizeBits), right)
+
     private val bvRotateRightExprCache =
         mkCache { left: KExpr<KBvSort>, right: KExpr<KBvSort> -> KBvRotateRightExpr(this, left, right) }
 
     fun mkBvRotateRightExpr(left: KExpr<KBvSort>, right: KExpr<KBvSort>): KBvRotateRightExpr =
         bvRotateRightExprCache.create(left, right)
+
+    fun mkBvRotateRightExpr(left: Int, right: KExpr<KBvSort>): KBvRotateRightExpr =
+        mkBvRotateRightExpr(mkBv(left, right.sort().sizeBits), right)
 
     private val bv2IntExprCache =
         mkCache { value: KExpr<KBvSort>, isSigned: Boolean -> KBv2IntExpr(this, value, isSigned) }
@@ -820,60 +830,58 @@ open class KContext {
         bvAddNoOverflowExprCache.create(left, right, isSigned)
 
     private val bvAddNoUnderflowExprCache =
-        mkCache { left: KExpr<KBvSort>, right: KExpr<KBvSort>, isSigned: Boolean ->
+        mkCache { left: KExpr<KBvSort>, right: KExpr<KBvSort> ->
             KBvAddNoUnderflowExpr(
                 this,
                 left,
                 right,
-                isSigned
             )
         }
 
-    fun mkBvAddNoUnderflowExpr(left: KExpr<KBvSort>, right: KExpr<KBvSort>, isSigned: Boolean): KBvAddNoUnderflowExpr =
-        bvAddNoUnderflowExprCache.create(left, right, isSigned)
+    fun mkBvAddNoUnderflowExpr(left: KExpr<KBvSort>, right: KExpr<KBvSort>): KBvAddNoUnderflowExpr =
+        bvAddNoUnderflowExprCache.create(left, right)
 
     private val bvSubNoOverflowExprCache =
-        mkCache { left: KExpr<KBvSort>, right: KExpr<KBvSort>, isSigned: Boolean ->
+        mkCache { left: KExpr<KBvSort>, right: KExpr<KBvSort> ->
             KBvSubNoOverflowExpr(
                 this,
                 left,
                 right,
+            )
+        }
+
+    fun mkBvSubNoOverflowExpr(left: KExpr<KBvSort>, right: KExpr<KBvSort>): KBvSubNoOverflowExpr =
+        bvSubNoOverflowExprCache.create(left, right)
+
+    private val bvSubNoUnderflowExprCache =
+        mkCache { left: KExpr<KBvSort>, right: KExpr<KBvSort>, isSigned: Boolean ->
+            KBvSubNoUnderflowExpr(
+                this,
+                left,
+                right,
                 isSigned
             )
         }
 
-    fun mkBvSubNoOverflowExpr(left: KExpr<KBvSort>, right: KExpr<KBvSort>, isSigned: Boolean): KBvSubNoOverflowExpr =
-        bvSubNoOverflowExprCache.create(left, right, isSigned)
+    fun mkBvSubNoUnderflowExpr(left: KExpr<KBvSort>, right: KExpr<KBvSort>, isSigned: Boolean): KBvSubNoUnderflowExpr =
+        bvSubNoUnderflowExprCache.create(left, right, isSigned)
+
 
     private val bvDivNoOverflowExprCache =
-        mkCache { left: KExpr<KBvSort>, right: KExpr<KBvSort>, isSigned: Boolean ->
+        mkCache { left: KExpr<KBvSort>, right: KExpr<KBvSort> ->
             KBvDivNoOverflowExpr(
                 this,
                 left,
                 right,
-                isSigned
             )
         }
 
-    fun mkBvDivNoOverflowExpr(left: KExpr<KBvSort>, right: KExpr<KBvSort>, isSigned: Boolean): KBvDivNoOverflowExpr =
-        bvDivNoOverflowExprCache.create(left, right, isSigned)
+    fun mkBvDivNoOverflowExpr(left: KExpr<KBvSort>, right: KExpr<KBvSort>): KBvDivNoOverflowExpr =
+        bvDivNoOverflowExprCache.create(left, right)
 
-    private val bvNegNoOverflowExprCache =
-        mkCache { left: KExpr<KBvSort>, right: KExpr<KBvSort>, isSigned: Boolean ->
-            KBvNegNoOverflowExpr(
-                this,
-                left,
-                right,
-                isSigned
-            )
-        }
-
-    fun mkBvNegationNoOverflowExpr(
-        left: KExpr<KBvSort>,
-        right: KExpr<KBvSort>,
-        isSigned: Boolean
-    ): KBvNegNoOverflowExpr =
-        bvNegNoOverflowExprCache.create(left, right, isSigned)
+    private val bvNegNoOverflowExprCache = mkCache { value: KExpr<KBvSort> -> KBvNegNoOverflowExpr(this, value) }
+    fun mkBvNegationNoOverflowExpr(value: KExpr<KBvSort>): KBvNegNoOverflowExpr =
+        bvNegNoOverflowExprCache.create(value)
 
     private val bvMulNoOverflowExprCache =
         mkCache { left: KExpr<KBvSort>, right: KExpr<KBvSort>, isSigned: Boolean ->
@@ -889,17 +897,16 @@ open class KContext {
         bvMulNoOverflowExprCache.create(left, right, isSigned)
 
     private val bvMulNoUnderflowExprCache =
-        mkCache { left: KExpr<KBvSort>, right: KExpr<KBvSort>, isSigned: Boolean ->
+        mkCache { left: KExpr<KBvSort>, right: KExpr<KBvSort> ->
             KBvMulNoUnderflowExpr(
                 this,
                 left,
                 right,
-                isSigned
             )
         }
 
-    fun mkBvMulNoUnderflowExpr(left: KExpr<KBvSort>, right: KExpr<KBvSort>, isSigned: Boolean): KBvMulNoUnderflowExpr =
-        bvMulNoUnderflowExprCache.create(left, right, isSigned)
+    fun mkBvMulNoUnderflowExpr(left: KExpr<KBvSort>, right: KExpr<KBvSort>): KBvMulNoUnderflowExpr =
+        bvMulNoUnderflowExprCache.create(left, right)
 
     // quantifiers
     private val existentialQuantifierCache = mkCache { body: KExpr<KBoolSort>, bounds: List<KDecl<*>> ->
@@ -1211,20 +1218,20 @@ open class KContext {
     fun mkBvSignedLessOrEqualDecl(left: KBvSort, right: KBvSort): KBvSignedLessOrEqualDecl =
         bvSLEDeclCache.create(left, right)
 
-    private val bvULEDeclCache = mkCache { left: KBvSort, right: KBvSort -> KBvULEDecl(this, left, right) }
-    fun mkBvUnsignedLessOrEqualDecl(left: KBvSort, right: KBvSort): KBvULEDecl = bvULEDeclCache.create(left, right)
+    private val bvULEDeclCache = mkCache { left: KBvSort, right: KBvSort -> KBvUnsignedLessOrEqualDecl(this, left, right) }
+    fun mkBvUnsignedLessOrEqualDecl(left: KBvSort, right: KBvSort): KBvUnsignedLessOrEqualDecl = bvULEDeclCache.create(left, right)
 
-    private val bvUGEDeclCache = mkCache { left: KBvSort, right: KBvSort -> KBvUGEDecl(this, left, right) }
-    fun mkBvUnsignedGreaterOrEqualDecl(left: KBvSort, right: KBvSort): KBvUGEDecl = bvUGEDeclCache.create(left, right)
+    private val bvUGEDeclCache = mkCache { left: KBvSort, right: KBvSort -> KBvUnsignedGreaterOrEqualDecl(this, left, right) }
+    fun mkBvUnsignedGreaterOrEqualDecl(left: KBvSort, right: KBvSort): KBvUnsignedGreaterOrEqualDecl = bvUGEDeclCache.create(left, right)
 
-    private val bvSGEDeclCache = mkCache { left: KBvSort, right: KBvSort -> KBvSGEDecl(this, left, right) }
-    fun mkBvSignedGreaterOrEqualDecl(left: KBvSort, right: KBvSort): KBvSGEDecl = bvSGEDeclCache.create(left, right)
+    private val bvSGEDeclCache = mkCache { left: KBvSort, right: KBvSort -> KBvSignedGreaterOrEqualDecl(this, left, right) }
+    fun mkBvSignedGreaterOrEqualDecl(left: KBvSort, right: KBvSort): KBvSignedGreaterOrEqualDecl = bvSGEDeclCache.create(left, right)
 
-    private val bvUGTDeclCache = mkCache { left: KBvSort, right: KBvSort -> KBvUGTDecl(this, left, right) }
-    fun mkBvUnsignedGreaterDecl(left: KBvSort, right: KBvSort): KBvUGTDecl = bvUGTDeclCache.create(left, right)
+    private val bvUGTDeclCache = mkCache { left: KBvSort, right: KBvSort -> KBvUnsignedGreaterDecl(this, left, right) }
+    fun mkBvUnsignedGreaterDecl(left: KBvSort, right: KBvSort): KBvUnsignedGreaterDecl = bvUGTDeclCache.create(left, right)
 
-    private val bvSGTDeclCache = mkCache { left: KBvSort, right: KBvSort -> KBvSGTDecl(this, left, right) }
-    fun mkBvSignedGreaterDecl(left: KBvSort, right: KBvSort): KBvSGTDecl = bvSGTDeclCache.create(left, right)
+    private val bvSGTDeclCache = mkCache { left: KBvSort, right: KBvSort -> KBvSignedGreaterDecl(this, left, right) }
+    fun mkBvSignedGreaterDecl(left: KBvSort, right: KBvSort): KBvSignedGreaterDecl = bvSGTDeclCache.create(left, right)
 
     private val concatDeclCache = mkCache { left: KBvSort, right: KBvSort -> KConcatDecl(this, left, right) }
     fun mkConcatDecl(left: KBvSort, right: KBvSort): KConcatDecl = concatDeclCache.create(left, right)
@@ -1244,14 +1251,14 @@ open class KContext {
     private val repeatDeclCache = mkCache { i: Int, value: KBvSort -> KRepeatDecl(this, i, value) }
     fun mkRepeatDecl(i: Int, value: KBvSort) = repeatDeclCache.create(i, value)
 
-    private val bvSHLDeclCache = mkCache { left: KBvSort, right: KBvSort -> KBvSHLDecl(this, left, right) }
-    fun mkBvShiftLeftDecl(left: KBvSort, right: KBvSort): KBvSHLDecl = bvSHLDeclCache.create(left, right)
+    private val bvSHLDeclCache = mkCache { left: KBvSort, right: KBvSort -> KBvShiftLeftDecl(this, left, right) }
+    fun mkBvShiftLeftDecl(left: KBvSort, right: KBvSort): KBvShiftLeftDecl = bvSHLDeclCache.create(left, right)
 
-    private val bvLSHRDeclCache = mkCache { left: KBvSort, right: KBvSort -> KBvLSHRDecl(this, left, right) }
-    fun mkBvLogicalShiftRightDecl(left: KBvSort, right: KBvSort): KBvLSHRDecl = bvLSHRDeclCache.create(left, right)
+    private val bvLSHRDeclCache = mkCache { left: KBvSort, right: KBvSort -> KBvLogicalShiftRightDecl(this, left, right) }
+    fun mkBvLogicalShiftRightDecl(left: KBvSort, right: KBvSort): KBvLogicalShiftRightDecl = bvLSHRDeclCache.create(left, right)
 
-    private val bvASHRDeclCache = mkCache { left: KBvSort, right: KBvSort -> KBvASHRDecl(this, left, right) }
-    fun mkBvArithShiftRightDecl(left: KBvSort, right: KBvSort): KBvASHRDecl = bvASHRDeclCache.create(left, right)
+    private val bvASHRDeclCache = mkCache { left: KBvSort, right: KBvSort -> KBvArithShiftRightDecl(this, left, right) }
+    fun mkBvArithShiftRightDecl(left: KBvSort, right: KBvSort): KBvArithShiftRightDecl = bvASHRDeclCache.create(left, right)
 
     private val bvRotateLeftDeclCache =
         mkCache { left: KBvSort, right: KBvSort -> KBvRotateLeftDecl(this, left, right) }
@@ -1282,56 +1289,59 @@ open class KContext {
         bvAddNoOverflowDeclCache.create(left, right, isSigned)
 
     private val bvAddNoUnderflowDeclCache =
-        mkCache { left: KBvSort, right: KBvSort, isSigned: Boolean ->
+        mkCache { left: KBvSort, right: KBvSort ->
             KBvAddNoUnderflowDecl(
                 this,
                 left,
                 right,
-                isSigned
             )
         }
 
-    fun mkBvAddNoUnderflowDecl(left: KBvSort, right: KBvSort, isSigned: Boolean): KBvAddNoUnderflowDecl =
-        bvAddNoUnderflowDeclCache.create(left, right, isSigned)
+    fun mkBvAddNoUnderflowDecl(left: KBvSort, right: KBvSort): KBvAddNoUnderflowDecl =
+        bvAddNoUnderflowDeclCache.create(left, right)
 
     private val bvSubNoOverflowDeclCache =
-        mkCache { left: KBvSort, right: KBvSort, isSigned: Boolean ->
+        mkCache { left: KBvSort, right: KBvSort ->
             KBvSubNoOverflowDecl(
                 this,
                 left,
                 right,
+            )
+        }
+
+    fun mkBvSubNoOverflowDecl(left: KBvSort, right: KBvSort): KBvSubNoOverflowDecl =
+        bvSubNoOverflowDeclCache.create(left, right)
+
+
+    private val bvSubUnderflowDeclCache =
+        mkCache { left: KBvSort, right: KBvSort, isSigned: Boolean ->
+            KBvSubNoUnderflowDecl(
+                this,
+                left,
+                right,
                 isSigned
             )
         }
 
-    fun mkBvSubNoOverflowDecl(left: KBvSort, right: KBvSort, isSigned: Boolean): KBvSubNoOverflowDecl =
-        bvSubNoOverflowDeclCache.create(left, right, isSigned)
+    fun mkBvSubNoUnderflowDecl(left: KBvSort, right: KBvSort, isSigned: Boolean): KBvSubNoUnderflowDecl =
+        bvSubUnderflowDeclCache.create(left, right, isSigned)
 
     private val bvDivNoOverflowDeclCache =
-        mkCache { left: KBvSort, right: KBvSort, isSigned: Boolean ->
+        mkCache { left: KBvSort, right: KBvSort ->
             KBvDivNoOverflowDecl(
                 this,
                 left,
-                right,
-                isSigned
+                right
             )
         }
 
-    fun mkBvDivNoOverflowDecl(left: KBvSort, right: KBvSort, isSigned: Boolean): KBvDivNoOverflowDecl =
-        bvDivNoOverflowDeclCache.create(left, right, isSigned)
+    fun mkBvDivNoOverflowDecl(left: KBvSort, right: KBvSort): KBvDivNoOverflowDecl =
+        bvDivNoOverflowDeclCache.create(left, right)
 
-    private val bvNegNoOverflowDeclCache =
-        mkCache { left: KBvSort, right: KBvSort, isSigned: Boolean ->
-            KBvNegNoOverflowDecl(
-                this,
-                left,
-                right,
-                isSigned
-            )
-        }
+    private val bvNegNoOverflowDeclCache = mkCache { value: KBvSort -> KBvNegNoOverflowDecl(this, value) }
 
-    fun mkBvNegNoOverflowDecl(left: KBvSort, right: KBvSort, isSigned: Boolean): KBvNegNoOverflowDecl =
-        bvNegNoOverflowDeclCache.create(left, right, isSigned)
+    fun mkBvNegNoOverflowDecl(value: KBvSort): KBvNegNoOverflowDecl =
+        bvNegNoOverflowDeclCache.create(value)
 
     private val bvMulNoOverflowDeclCache =
         mkCache { left: KBvSort, right: KBvSort, isSigned: Boolean ->
@@ -1347,17 +1357,16 @@ open class KContext {
         bvMulNoOverflowDeclCache.create(left, right, isSigned)
 
     private val bvMulNoUnderflowDeclCache =
-        mkCache { left: KBvSort, right: KBvSort, isSigned: Boolean ->
+        mkCache { left: KBvSort, right: KBvSort ->
             KBvMulNoUnderflowDecl(
                 this,
                 left,
                 right,
-                isSigned
             )
         }
 
-    fun mkBvMulNoUnderflowDecl(left: KBvSort, right: KBvSort, isSigned: Boolean): KBvMulNoUnderflowDecl =
-        bvMulNoUnderflowDeclCache.create(left, right, isSigned)
+    fun mkBvMulNoUnderflowDecl(left: KBvSort, right: KBvSort): KBvMulNoUnderflowDecl =
+        bvMulNoUnderflowDeclCache.create(left, right)
 
     /*
     * KAst

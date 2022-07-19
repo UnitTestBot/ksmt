@@ -3,6 +3,12 @@ package org.ksmt.decl
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KBv16Sort
+import org.ksmt.sort.KBv1Sort
+import org.ksmt.sort.KBv32Sort
+import org.ksmt.sort.KBv64Sort
+import org.ksmt.sort.KBv8Sort
+import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
@@ -47,4 +53,57 @@ interface KDeclVisitor<T> {
     fun visit(decl: KRealIsIntDecl): T = visit(decl as KFuncDecl<KBoolSort>)
     fun visit(decl: KRealToIntDecl): T = visit(decl as KFuncDecl<KIntSort>)
     fun visit(decl: KRealNumDecl): T = visit(decl as KConstDecl<KRealSort>)
+
+    fun visit(decl: KBitVec1ValueDecl): T
+    fun visit(decl: KBitVec8ValueDecl): T
+    fun visit(decl: KBitVec16ValueDecl): T
+    fun visit(decl: KBitVec32ValueDecl): T
+    fun visit(decl: KBitVec64ValueDecl): T
+    fun visit(decl: KBitVecCustomSizeValueDecl): T
+
+    fun visit(decl: KBvNotDecl): T
+    fun visit(decl: KBvReductionAndDecl): T
+    fun visit(decl: KBvReductionOrDecl): T
+    fun visit(decl: KBvAndDecl): T
+    fun visit(decl: KBvOrDecl): T
+    fun visit(decl: KBvXorDecl): T
+    fun visit(decl: KBvNAndDecl): T
+    fun visit(decl: KBvNorDecl): T
+    fun visit(decl: KBvXNorDecl): T
+    fun visit(decl: KBvNegationDecl): T
+    fun visit(decl: KBvAddDecl): T
+    fun visit(decl: KBvSubDecl): T
+    fun visit(decl: KBvMulDecl): T
+    fun visit(decl: KBvUnsignedDivDecl): T
+    fun visit(decl: KBvSignedDivDecl): T
+    fun visit(decl: KBvUnsignedRemDecl): T
+    fun visit(decl: KBvSignedRemDecl): T
+    fun visit(decl: KBvSignedModDecl): T
+    fun visit(decl: KBvUnsignedLessDecl): T
+    fun visit(decl: KBvSignedLessDecl): T
+    fun visit(decl: KBvSignedLessOrEqualDecl): T
+    fun visit(decl: KBvUnsignedLessOrEqualDecl): T
+    fun visit(decl: KBvUnsignedGreaterOrEqualDecl): T
+    fun visit(decl: KBvSignedGreaterOrEqualDecl): T
+    fun visit(decl: KBvUnsignedGreaterDecl): T
+    fun visit(decl: KBvSignedGreaterDecl): T
+    fun visit(decl: KConcatDecl): T
+    fun visit(decl: KExtractDecl): T
+    fun visit(decl: KSignExtDecl): T
+    fun visit(decl: KZeroExtDecl): T
+    fun visit(decl: KRepeatDecl): T
+    fun visit(decl: KBvShiftLeftDecl): T
+    fun visit(decl: KBvLogicalShiftRightDecl): T
+    fun visit(decl: KBvArithShiftRightDecl): T
+    fun visit(decl: KBvRotateLeftDecl): T
+    fun visit(decl: KBvRotateRightDecl): T
+    fun visit(decl: KBv2IntDecl): T
+    fun visit(decl: KBvAddNoOverflowDecl): T
+    fun visit(decl: KBvAddNoUnderflowDecl): T
+    fun visit(decl: KBvSubNoOverflowDecl): T
+    fun visit(decl: KBvSubNoUnderflowDecl): T
+    fun visit(decl: KBvDivNoOverflowDecl): T
+    fun visit(decl: KBvNegNoOverflowDecl): T
+    fun visit(decl: KBvMulNoOverflowDecl): T
+    fun visit(decl: KBvMulNoUnderflowDecl): T
 }
