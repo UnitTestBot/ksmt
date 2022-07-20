@@ -504,12 +504,22 @@ open class KContext {
     fun mkBV(value: Int): KBitVec32Expr = bv32Cache.create(value)
     fun mkBV(value: Long): KBitVec64Expr = bv64Cache.create(value)
     fun mkBV(value: String, sizeBits: UInt): KBitVecExpr<KBVSort> = when (sizeBits.toInt()) {
-        1 -> mkBV(value.toInt(radix = 2) != 0).cast()
-        Byte.SIZE_BITS -> mkBV(value.toByte(radix = 2)).cast()
-        Short.SIZE_BITS -> mkBV(value.toShort(radix = 2)).cast()
-        Int.SIZE_BITS -> mkBV(value.toInt(radix = 2)).cast()
-        Long.SIZE_BITS -> mkBV(value.toLong(radix = 2)).cast()
+        1 -> mkBV(value.parseBvNumber(sizeBits) != 0L).cast()
+        Byte.SIZE_BITS -> mkBV(value.parseBvNumber(sizeBits).toByte()).cast()
+        Short.SIZE_BITS -> mkBV(value.parseBvNumber(sizeBits).toShort()).cast()
+        Int.SIZE_BITS -> mkBV(value.parseBvNumber(sizeBits).toInt()).cast()
+        Long.SIZE_BITS -> mkBV(value.parseBvNumber(sizeBits)).cast()
         else -> bvCache.create(value, sizeBits)
+    }
+
+    /** In Kotlin "1".repeat(64).toLong(radix = 2) is [NumberFormatException], but we expect it to be -1.
+     * To overcome this problem, we use [java.lang.Long.parseUnsignedLong]
+     * */
+    private fun String.parseBvNumber(sizeBits: UInt): Long {
+        require(length.toUInt() <= sizeBits) {
+            "Provided string $this consist of $length symbols, which is greater than $sizeBits"
+        }
+        return java.lang.Long.parseUnsignedLong(this, 2)
     }
 
     // quantifiers

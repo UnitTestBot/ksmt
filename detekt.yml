@@ -132,6 +132,7 @@ complexity:
     ignoreArgumentsMatchingNames: false
   NestedBlockDepth:
     active: true
+    excludes: [ '**/test/**', '**/example/**' ]
     threshold: 4
   ReplaceSafeCallChainWithRun:
     active: false
