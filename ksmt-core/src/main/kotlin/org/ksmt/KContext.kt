@@ -39,6 +39,7 @@ import org.ksmt.decl.KRealIsIntDecl
 import org.ksmt.decl.KRealNumDecl
 import org.ksmt.decl.KRealToIntDecl
 import org.ksmt.decl.KTrueDecl
+import org.ksmt.decl.KXorDecl
 import org.ksmt.expr.KAddArithExpr
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KApp
@@ -85,6 +86,7 @@ import org.ksmt.expr.KToRealIntExpr
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
+import org.ksmt.expr.KXorExpr
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBV16Sort
@@ -185,6 +187,12 @@ open class KContext {
 
     fun mkImplies(p: KExpr<KBoolSort>, q: KExpr<KBoolSort>): KImpliesExpr = impliesCache.create(p, q)
 
+    private val xorCache = mkContextCheckingCache { a: KExpr<KBoolSort>, b: KExpr<KBoolSort> ->
+        KXorExpr(this, a, b)
+    }
+
+    fun mkXor(a: KExpr<KBoolSort>, b: KExpr<KBoolSort>): KXorExpr = xorCache.create(a, b)
+
     private val trueCache = mkCache<KTrue> { KTrue(this) }
     fun mkTrue() = trueCache.create()
 
@@ -209,6 +217,8 @@ open class KContext {
     operator fun KExpr<KBoolSort>.not() = mkNot(this)
     infix fun KExpr<KBoolSort>.and(other: KExpr<KBoolSort>) = mkAnd(this, other)
     infix fun KExpr<KBoolSort>.or(other: KExpr<KBoolSort>) = mkOr(this, other)
+    infix fun KExpr<KBoolSort>.xor(other: KExpr<KBoolSort>) = mkXor(this, other)
+    infix fun KExpr<KBoolSort>.implies(other: KExpr<KBoolSort>) = mkImplies(this, other)
 
     val trueExpr: KTrue
         get() = mkTrue()
@@ -584,6 +594,9 @@ open class KContext {
 
     private val impliesDeclCache = mkCache<KImpliesDecl> { KImpliesDecl(this) }
     fun mkImpliesDecl(): KImpliesDecl = impliesDeclCache.create()
+
+    private val xorDeclCache = mkCache<KXorDecl> { KXorDecl(this) }
+    fun mkXorDecl(): KXorDecl = xorDeclCache.create()
 
     private val eqDeclCache = mkContextCheckingCache { arg: KSort ->
         KEqDecl(this, arg)

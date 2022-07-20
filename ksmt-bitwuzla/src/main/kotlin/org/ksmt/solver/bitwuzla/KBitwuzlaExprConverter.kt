@@ -123,6 +123,7 @@ open class KBitwuzlaExprConverter(
             BitwuzlaKind.BITWUZLA_KIND_VAR -> TODO("var conversion is not implemented")
 
             // bool
+            BitwuzlaKind.BITWUZLA_KIND_IFF,
             BitwuzlaKind.BITWUZLA_KIND_EQUAL -> {
                 val args = Native.bitwuzlaTermGetChildren(expr).map { it.convert<KSort>() }
                 check(args.size == 2) { "unexpected number of EQ arguments: ${args.size}" }
@@ -138,7 +139,6 @@ open class KBitwuzlaExprConverter(
                 check(args.size == 2) { "unexpected number of Implies arguments: ${args.size}" }
                 mkImplies(args[0].convert(), args[1].convert())
             }
-            BitwuzlaKind.BITWUZLA_KIND_IFF -> TODO()
             BitwuzlaKind.BITWUZLA_KIND_AND,
             BitwuzlaKind.BITWUZLA_KIND_OR,
             BitwuzlaKind.BITWUZLA_KIND_NOT,
@@ -286,7 +286,10 @@ open class KBitwuzlaExprConverter(
                 ?: error("single argument expected for not operation")
             mkNot(arg)
         }
-        BitwuzlaKind.BITWUZLA_KIND_BV_XOR, BitwuzlaKind.BITWUZLA_KIND_XOR -> TODO("xor is not implemented")
+        BitwuzlaKind.BITWUZLA_KIND_BV_XOR, BitwuzlaKind.BITWUZLA_KIND_XOR -> with(ctx) {
+            val args = Native.bitwuzlaTermGetChildren(expr)
+            mkXor(args[0].convert(), args[1].convert())
+        }
         BitwuzlaKind.BITWUZLA_KIND_BV_NAND,
         BitwuzlaKind.BITWUZLA_KIND_BV_NOR,
         BitwuzlaKind.BITWUZLA_KIND_BV_XNOR,

@@ -57,6 +57,7 @@ import org.ksmt.expr.KTransformer
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
+import org.ksmt.expr.KXorExpr
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBVSort
 import org.ksmt.sort.KSort
@@ -105,6 +106,10 @@ open class KZ3ExprInternalizer(
 
     override fun transform(expr: KImpliesExpr) = expr.internalizeExpr {
         z3Ctx.mkImplies(p.internalize() as BoolExpr, q.internalize() as BoolExpr)
+    }
+
+    override fun transform(expr: KXorExpr) = expr.internalizeExpr {
+        z3Ctx.mkXor(a.internalize() as BoolExpr, b.internalize() as BoolExpr)
     }
 
     override fun transform(expr: KTrue) = expr.internalizeExpr {
