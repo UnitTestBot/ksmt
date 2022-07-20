@@ -2,9 +2,59 @@ package org.ksmt.solver.bitwuzla
 
 import org.ksmt.KContext
 import org.ksmt.decl.KBitVec16ValueDecl
+import org.ksmt.decl.KBitVec1ValueDecl
+import org.ksmt.decl.KBitVec32ValueDecl
+import org.ksmt.decl.KBitVec64ValueDecl
+import org.ksmt.decl.KBitVec8ValueDecl
+import org.ksmt.decl.KBitVecCustomSizeValueDecl
+import org.ksmt.decl.KBv2IntDecl
+import org.ksmt.decl.KBvAddDecl
+import org.ksmt.decl.KBvAddNoOverflowDecl
+import org.ksmt.decl.KBvAddNoUnderflowDecl
+import org.ksmt.decl.KBvAndDecl
+import org.ksmt.decl.KBvArithShiftRightDecl
+import org.ksmt.decl.KBvDivNoOverflowDecl
+import org.ksmt.decl.KBvLogicalShiftRightDecl
+import org.ksmt.decl.KBvMulDecl
+import org.ksmt.decl.KBvMulNoOverflowDecl
+import org.ksmt.decl.KBvMulNoUnderflowDecl
+import org.ksmt.decl.KBvNAndDecl
+import org.ksmt.decl.KBvNegNoOverflowDecl
+import org.ksmt.decl.KBvNegationDecl
+import org.ksmt.decl.KBvNorDecl
+import org.ksmt.decl.KBvNotDecl
+import org.ksmt.decl.KBvOrDecl
+import org.ksmt.decl.KBvReductionAndDecl
+import org.ksmt.decl.KBvReductionOrDecl
+import org.ksmt.decl.KBvRotateLeftDecl
+import org.ksmt.decl.KBvRotateRightDecl
+import org.ksmt.decl.KBvShiftLeftDecl
+import org.ksmt.decl.KBvSignedDivDecl
+import org.ksmt.decl.KBvSignedGreaterDecl
+import org.ksmt.decl.KBvSignedGreaterOrEqualDecl
+import org.ksmt.decl.KBvSignedLessDecl
+import org.ksmt.decl.KBvSignedLessOrEqualDecl
+import org.ksmt.decl.KBvSignedModDecl
+import org.ksmt.decl.KBvSignedRemDecl
+import org.ksmt.decl.KBvSubDecl
+import org.ksmt.decl.KBvSubNoOverflowDecl
+import org.ksmt.decl.KBvSubNoUnderflowDecl
+import org.ksmt.decl.KBvUnsignedDivDecl
+import org.ksmt.decl.KBvUnsignedGreaterDecl
+import org.ksmt.decl.KBvUnsignedGreaterOrEqualDecl
+import org.ksmt.decl.KBvUnsignedLessDecl
+import org.ksmt.decl.KBvUnsignedLessOrEqualDecl
+import org.ksmt.decl.KBvUnsignedRemDecl
+import org.ksmt.decl.KBvXNorDecl
+import org.ksmt.decl.KBvXorDecl
+import org.ksmt.decl.KConcatDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KDeclVisitor
+import org.ksmt.decl.KExtractDecl
 import org.ksmt.decl.KFuncDecl
+import org.ksmt.decl.KRepeatDecl
+import org.ksmt.decl.KSignExtDecl
+import org.ksmt.decl.KZeroExtDecl
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
@@ -473,6 +523,210 @@ open class KBitwuzlaExprInternalizer(
             val range = decl.sort.accept(sortInternalizer)
             if (domain.isEmpty()) return@internalizeDeclSort range
             Native.bitwuzlaMkFunSort(bitwuzlaCtx.bitwuzla, domain.size, domain, range)
+        }
+
+        override fun visit(decl: KBitVec1ValueDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBitVec8ValueDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBitVec16ValueDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBitVec32ValueDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBitVec64ValueDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBitVecCustomSizeValueDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvNotDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvReductionAndDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvReductionOrDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvAndDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvOrDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvXorDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvNAndDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvNorDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvXNorDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvNegationDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvAddDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvSubDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvMulDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvUnsignedDivDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvSignedDivDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvUnsignedRemDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvSignedRemDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvSignedModDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvUnsignedLessDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvSignedLessDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvSignedLessOrEqualDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvUnsignedLessOrEqualDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvUnsignedGreaterOrEqualDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvSignedGreaterOrEqualDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvUnsignedGreaterDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvSignedGreaterDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KConcatDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KExtractDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KSignExtDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KZeroExtDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KRepeatDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvShiftLeftDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvLogicalShiftRightDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvArithShiftRightDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvRotateLeftDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvRotateRightDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBv2IntDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvAddNoOverflowDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvAddNoUnderflowDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvSubNoOverflowDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvSubNoUnderflowDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvDivNoOverflowDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvNegNoOverflowDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvMulNoOverflowDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvMulNoUnderflowDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
         }
     }
 }
