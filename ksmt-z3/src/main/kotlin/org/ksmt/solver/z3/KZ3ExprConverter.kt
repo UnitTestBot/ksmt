@@ -99,6 +99,7 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_NOT -> mkNot(expr.args[0].convert())
             Z3_decl_kind.Z3_OP_IMPLIES -> mkImplies(expr.args[0].convert(), expr.args[1].convert())
             Z3_decl_kind.Z3_OP_EQ -> mkEq(expr.args[0].convert(), expr.args[1].convert())
+            Z3_decl_kind.Z3_OP_DISTINCT -> mkDistinct(expr.args.map { it.convert() })
             Z3_decl_kind.Z3_OP_ITE -> mkIte(
                 expr.args[0].convert(),
                 expr.args[1].convert(),

@@ -17,6 +17,7 @@ import org.ksmt.expr.KBitVec8Expr
 import org.ksmt.expr.KBitVecCustomExpr
 import org.ksmt.expr.KBitVecNumberExpr
 import org.ksmt.expr.KConst
+import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
@@ -159,6 +160,14 @@ open class KBitwuzlaExprInternalizer(
             BitwuzlaKind.BITWUZLA_KIND_EQUAL,
             lhs.internalize(),
             rhs.internalize()
+        )
+    }
+
+    override fun <T : KSort> transform(expr: KDistinctExpr<T>): KExpr<KBoolSort> = expr.internalizeExpr {
+        Native.bitwuzlaMkTerm(
+            bitwuzlaCtx.bitwuzla,
+            BitwuzlaKind.BITWUZLA_KIND_DISTINCT,
+            args.map { it.internalize() }.toTypedArray()
         )
     }
 

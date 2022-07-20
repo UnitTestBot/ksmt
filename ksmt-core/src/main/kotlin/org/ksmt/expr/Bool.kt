@@ -2,6 +2,7 @@ package org.ksmt.expr
 
 import org.ksmt.KContext
 import org.ksmt.decl.KAndDecl
+import org.ksmt.decl.KDistinctDecl
 import org.ksmt.decl.KEqDecl
 import org.ksmt.decl.KFalseDecl
 import org.ksmt.decl.KImpliesDecl
@@ -78,6 +79,19 @@ class KEqExpr<T : KSort> internal constructor(
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)
 
+    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+}
+
+class KDistinctExpr<T : KSort> internal constructor(
+    ctx: KContext,
+    override val args: List<KExpr<T>>
+) : KApp<KBoolSort, KExpr<T>>(ctx) {
+    init {
+        require(args.isNotEmpty()) { "distinct requires at least a single argument" }
+    }
+
+    override fun sort(): KBoolSort = ctx.mkBoolSort()
+    override fun decl(): KDistinctDecl<T> = with(ctx) { mkDistinctDecl(args.first().sort) }
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 

@@ -27,6 +27,7 @@ import org.ksmt.expr.KBitVecCustomExpr
 import org.ksmt.expr.KBitVecExpr
 import org.ksmt.expr.KBitVecNumberExpr
 import org.ksmt.expr.KConst
+import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KDivArithExpr
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExistentialQuantifier
@@ -122,6 +123,10 @@ open class KZ3ExprInternalizer(
 
     override fun <T : KSort> transform(expr: KEqExpr<T>) = expr.internalizeExpr {
         z3Ctx.mkEq(lhs.internalize(), rhs.internalize())
+    }
+
+    override fun <T : KSort> transform(expr: KDistinctExpr<T>) = expr.internalizeExpr {
+        z3Ctx.mkDistinct(*args.map { it.internalize() }.toTypedArray())
     }
 
     override fun <T : KSort> transform(expr: KIteExpr<T>) = expr.internalizeExpr {

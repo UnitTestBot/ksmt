@@ -38,6 +38,7 @@ interface KTransformer {
     fun transform(expr: KTrue): KExpr<KBoolSort> = transformApp(expr)
     fun transform(expr: KFalse): KExpr<KBoolSort> = transformApp(expr)
     fun <T : KSort> transform(expr: KEqExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    fun <T : KSort> transform(expr: KDistinctExpr<T>): KExpr<KBoolSort> = transformApp(expr)
     fun <T : KSort> transform(expr: KIteExpr<T>): KExpr<T> = transformApp(expr)
 
     // bit-vec transformers

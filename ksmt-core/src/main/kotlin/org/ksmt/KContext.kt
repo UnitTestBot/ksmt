@@ -1,7 +1,6 @@
 package org.ksmt
 
 import org.ksmt.cache.mkCache
-import java.math.BigInteger
 import org.ksmt.decl.KAndDecl
 import org.ksmt.decl.KArithAddDecl
 import org.ksmt.decl.KArithDivDecl
@@ -24,6 +23,7 @@ import org.ksmt.decl.KBitVec8ExprDecl
 import org.ksmt.decl.KBitVecCustomSizeExprDecl
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
+import org.ksmt.decl.KDistinctDecl
 import org.ksmt.decl.KEqDecl
 import org.ksmt.decl.KFalseDecl
 import org.ksmt.decl.KFuncDecl
@@ -47,7 +47,6 @@ import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
-import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KBitVec16Expr
 import org.ksmt.expr.KBitVec1Expr
 import org.ksmt.expr.KBitVec32Expr
@@ -56,12 +55,14 @@ import org.ksmt.expr.KBitVec8Expr
 import org.ksmt.expr.KBitVecCustomExpr
 import org.ksmt.expr.KBitVecExpr
 import org.ksmt.expr.KConst
+import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KDivArithExpr
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFalse
 import org.ksmt.expr.KFunctionApp
+import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KGeArithExpr
 import org.ksmt.expr.KGtArithExpr
 import org.ksmt.expr.KImpliesExpr
@@ -100,6 +101,7 @@ import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import java.math.BigInteger
 import kotlin.reflect.KProperty
 
 @Suppress("TooManyFunctions", "unused")
@@ -204,6 +206,12 @@ open class KContext {
     }
 
     fun <T : KSort> mkEq(lhs: KExpr<T>, rhs: KExpr<T>): KEqExpr<T> = eqCache.create(lhs.cast(), rhs.cast()).cast()
+
+    private val distinctCache = mkContextListCheckingCache { args: List<KExpr<KSort>> ->
+        KDistinctExpr(this, args)
+    }
+
+    fun <T : KSort> mkDistinct(args: List<KExpr<T>>): KDistinctExpr<T> = distinctCache.create(args.cast()).cast()
 
     private val iteCache = mkContextCheckingCache { c: KExpr<KBoolSort>, t: KExpr<KSort>, f: KExpr<KSort> ->
         KIteExpr(this, c, t, f)
@@ -603,6 +611,12 @@ open class KContext {
     }
 
     fun <T : KSort> mkEqDecl(arg: T): KEqDecl<T> = eqDeclCache.create(arg).cast()
+
+    private val distinctDeclCache = mkContextCheckingCache { arg: KSort ->
+        KDistinctDecl(this, arg)
+    }
+
+    fun <T : KSort> mkDistinctDecl(arg: T): KDistinctDecl<T> = distinctDeclCache.create(arg).cast()
 
     private val iteDeclCache = mkContextCheckingCache { arg: KSort ->
         KIteDecl(this, arg)
