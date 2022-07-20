@@ -129,6 +129,10 @@ open class KBitwuzlaExprConverter(
                 check(args.size == 2) { "unexpected number of EQ arguments: ${args.size}" }
                 mkEq(args[0], args[1])
             }
+            BitwuzlaKind.BITWUZLA_KIND_DISTINCT -> {
+                val args = Native.bitwuzlaTermGetChildren(expr).map { it.convert<KSort>() }
+                mkDistinct(args)
+            }
             BitwuzlaKind.BITWUZLA_KIND_ITE -> {
                 val children = Native.bitwuzlaTermGetChildren(expr)
                 check(children.size == 3) { "unexpected number of ITE arguments: ${children.size}" }
@@ -264,7 +268,6 @@ open class KBitwuzlaExprConverter(
 
             // unsupported
             BitwuzlaKind.BITWUZLA_NUM_KINDS,
-            BitwuzlaKind.BITWUZLA_KIND_DISTINCT,
             BitwuzlaKind.BITWUZLA_KIND_LAMBDA -> TODO("unsupported kind $kind")
         }
     }
