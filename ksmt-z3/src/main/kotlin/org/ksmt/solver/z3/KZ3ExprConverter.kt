@@ -92,6 +92,7 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_UNINTERPRETED -> mkApp(convertDecl(expr.funcDecl), expr.args.map { it.convert<KSort>() })
             Z3_decl_kind.Z3_OP_AND -> mkAnd(expr.args.map { it.convert() })
             Z3_decl_kind.Z3_OP_OR -> mkOr(expr.args.map { it.convert() })
+            Z3_decl_kind.Z3_OP_XOR -> mkXor(expr.args[0].convert(), expr.args[1].convert())
             Z3_decl_kind.Z3_OP_NOT -> mkNot(expr.args[0].convert())
             Z3_decl_kind.Z3_OP_IMPLIES -> mkImplies(expr.args[0].convert(), expr.args[1].convert())
             Z3_decl_kind.Z3_OP_EQ -> mkEq(expr.args[0].convert(), expr.args[1].convert())

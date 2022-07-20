@@ -30,6 +30,7 @@ import org.ksmt.expr.KQuantifier
 import org.ksmt.expr.KTransformer
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUniversalQuantifier
+import org.ksmt.expr.KXorExpr
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBVBase
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
@@ -132,6 +133,15 @@ open class KBitwuzlaExprInternalizer(
             BitwuzlaKind.BITWUZLA_KIND_IMPLIES,
             p.internalize(),
             q.internalize()
+        )
+    }
+
+    override fun transform(expr: KXorExpr): KExpr<KBoolSort> = expr.internalizeExpr {
+        Native.bitwuzlaMkTerm2(
+            bitwuzlaCtx.bitwuzla,
+            BitwuzlaKind.BITWUZLA_KIND_XOR,
+            a.internalize(),
+            b.internalize()
         )
     }
 
