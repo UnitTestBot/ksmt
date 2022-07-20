@@ -622,8 +622,8 @@ class KConcatExpr internal constructor(
  */
 class KExtractExpr internal constructor(
     ctx: KContext,
-    private val high: Int,
-    private val low: Int,
+    val high: Int,
+    val low: Int,
     val value: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
     override val args: List<KExpr<KBvSort>> by lazy {
