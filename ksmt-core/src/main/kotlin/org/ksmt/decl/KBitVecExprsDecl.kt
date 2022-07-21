@@ -470,7 +470,7 @@ class KBvArithShiftRightDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort
 }
 
 class KBvRotateLeftDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "rotate_left", arg0Sort, arg0Sort, arg1Sort) {
+    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "ext_rotate_left", arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
@@ -493,7 +493,7 @@ class KBvRotateLeftIndexedDecl(ctx: KContext, i: Int, valueSort: KBvSort) :
 }
 
 class KBvRotateRightDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "rotate_right", arg0Sort, arg0Sort, arg1Sort) {
+    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "ext_rotate_right", arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
