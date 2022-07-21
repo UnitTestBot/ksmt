@@ -12,6 +12,7 @@ import com.microsoft.z3.RealExpr
 import com.microsoft.z3.Sort
 import com.microsoft.z3.mkExistsQuantifier
 import com.microsoft.z3.mkForallQuantifier
+import kotlin.math.exp
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAddArithExpr
@@ -48,7 +49,9 @@ import org.ksmt.expr.KBvOrExpr
 import org.ksmt.expr.KBvReductionAndExpr
 import org.ksmt.expr.KBvReductionOrExpr
 import org.ksmt.expr.KBvRotateLeftExpr
+import org.ksmt.expr.KBvRotateLeftIndexedExpr
 import org.ksmt.expr.KBvRotateRightExpr
+import org.ksmt.expr.KBvRotateRightIndexedExpr
 import org.ksmt.expr.KBvShiftLeftExpr
 import org.ksmt.expr.KBvSignedDivExpr
 import org.ksmt.expr.KBvSignedGreaterExpr
@@ -316,7 +319,19 @@ open class KZ3ExprInternalizer(
 
     override fun transform(expr: KBvRotateLeftExpr): KExpr<KBvSort> = with(expr) { transform(expr.arg0, expr.arg1, z3Ctx::mkBVRotateLeft) }
 
+    override fun transform(expr: KBvRotateLeftIndexedExpr): KExpr<KBvSort> = with(expr) {
+        internalizeExpr {
+            z3Ctx.mkBVRotateLeft(i, value.internalize() as BitVecExpr)
+        }
+    }
+
     override fun transform(expr: KBvRotateRightExpr): KExpr<KBvSort> = with(expr) { transform(expr.arg0, expr.arg1, z3Ctx::mkBVRotateRight) }
+
+    override fun transform(expr: KBvRotateRightIndexedExpr): KExpr<KBvSort> = with(expr) {
+        internalizeExpr {
+            z3Ctx.mkBVRotateRight(i, value.internalize() as BitVecExpr)
+        }
+    }
 
     override fun transform(expr: KBv2IntExpr): KExpr<KIntSort> = with(expr) {
         internalizeExpr {

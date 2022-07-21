@@ -48,7 +48,9 @@ import org.ksmt.decl.KBvOrDecl
 import org.ksmt.decl.KBvReductionAndDecl
 import org.ksmt.decl.KBvReductionOrDecl
 import org.ksmt.decl.KBvRotateLeftDecl
+import org.ksmt.decl.KBvRotateLeftIndexedDecl
 import org.ksmt.decl.KBvRotateRightDecl
+import org.ksmt.decl.KBvRotateRightIndexedDecl
 import org.ksmt.decl.KBvShiftLeftDecl
 import org.ksmt.decl.KBvSignedDivDecl
 import org.ksmt.decl.KBvSignedGreaterDecl
@@ -385,8 +387,16 @@ open class KZ3DeclInternalizer(
         z3Ctx.mkBVRotateLeft(decl.arg0Sort.sample() as BitVecExpr, decl.arg1Sort.sample().cast()).funcDecl
     }
 
+    override fun visit(decl: KBvRotateLeftIndexedDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVRotateLeft(decl.parameters.single() as Int, decl.argSort.sample().cast()).funcDecl
+    }
+
     override fun visit(decl: KBvRotateRightDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
         z3Ctx.mkBVRotateRight(decl.arg0Sort.sample() as BitVecExpr, decl.arg1Sort.sample().cast()).funcDecl
+    }
+
+    override fun visit(decl: KBvRotateRightIndexedDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+        z3Ctx.mkBVRotateRight(decl.parameters.single() as Int, decl.argSort.sample().cast()).funcDecl
     }
 
     override fun visit(decl: KBv2IntDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
