@@ -62,6 +62,7 @@ class KBitVec64Value internal constructor(ctx: KContext, longValue: Long) :
     override fun accept(transformer: KTransformer): KExpr<KBv64Sort> = transformer.transform(this)
 
     override fun decl(): KDecl<KBv64Sort> = ctx.mkBvDecl(numberValue)
+
     override fun sort(): KBv64Sort = ctx.mkBv64Sort()
 }
 
@@ -70,7 +71,6 @@ class KBitVecCustomValue internal constructor(
     val value: String,
     private val sizeBits: UInt
 ) : KBitVecValue<KBvSort>(ctx) {
-
     init {
         require(value.length.toUInt() == sizeBits) {
             "Provided string $value consist of ${value.length} symbols, but $sizeBits were expected"
@@ -92,16 +92,14 @@ class KBvNotExpr internal constructor(
     ctx: KContext,
     val value: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(value)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(value)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvNotDecl(value.sort())
 
     override fun sort(): KBvSort = value.sort()
 
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
-
 }
 
 /**
@@ -111,9 +109,9 @@ class KBvReductionAndExpr internal constructor(
     ctx: KContext,
     val value: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(value)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(value)
+
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvReductionAndDecl(value.sort())
 
@@ -129,9 +127,8 @@ class KBvReductionOrExpr internal constructor(
     ctx: KContext,
     val value: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(value)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(value)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvReductionOrDecl(value.sort())
 
@@ -148,9 +145,8 @@ class KBvAndExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvAndDecl(arg0.sort(), arg1.sort())
 
@@ -167,13 +163,13 @@ class KBvOrExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvOrDecl(arg0.sort(), arg1.sort())
 
     override fun sort(): KBvSort = arg0.sort()
+
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
 }
 
@@ -185,11 +181,11 @@ class KBvXorExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvXorDecl(arg0.sort(), arg1.sort())
+
     override fun sort(): KBvSort = arg0.sort()
 
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
@@ -203,14 +199,12 @@ class KBvNAndExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvNAndDecl(arg0.sort(), arg1.sort())
 
     override fun sort(): KBvSort = arg0.sort()
-
 
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
 }
@@ -223,14 +217,12 @@ class KBvNorExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvNorDecl(arg0.sort(), arg1.sort())
 
     override fun sort(): KBvSort = arg0.sort()
-
 
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
 }
@@ -243,14 +235,13 @@ class KBvXNorExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
+
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvXNorDecl(arg0.sort(), arg1.sort())
 
     override fun sort(): KBvSort = arg0.sort()
-
 
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
 }
@@ -262,9 +253,8 @@ class KBvNegationExpr internal constructor(
     ctx: KContext,
     val value: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(value)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(value)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvNegationDecl(value.sort())
     override fun sort(): KBvSort = value.sort()
@@ -280,9 +270,8 @@ class KBvAddExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvAddDecl(arg0.sort(), arg1.sort())
 
@@ -300,9 +289,8 @@ class KBvSubExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvSubDecl(arg0.sort(), arg1.sort())
 
@@ -320,9 +308,8 @@ class KBvMulExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvMulDecl(arg0.sort(), arg1.sort())
 
@@ -343,9 +330,8 @@ class KBvUnsignedDivExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvUnsignedDivDecl(arg0.sort(), arg1.sort())
 
@@ -368,9 +354,8 @@ class KBvSignedDivExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvSignedDivDecl(arg0.sort(), arg1.sort())
 
@@ -391,9 +376,8 @@ class KBvUnsignedRemExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvUnsignedRemDecl(arg0.sort(), arg1.sort())
 
@@ -415,9 +399,8 @@ class KBvSignedRemExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvSignedRemDecl(arg0.sort(), arg1.sort())
 
@@ -436,9 +419,8 @@ class KBvSignedModExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvSignedModDecl(arg0.sort(), arg1.sort())
     override fun sort(): KBvSort = arg0.sort()
@@ -455,9 +437,8 @@ class KBvUnsignedLessExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvUnsignedLessDecl(arg0.sort(), arg1.sort())
 
@@ -474,9 +455,8 @@ class KBvSignedLessExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvSignedLessDecl(arg0.sort(), arg1.sort())
     override fun sort(): KBoolSort = ctx.mkBoolSort()
@@ -492,9 +472,8 @@ class KBvUnsignedLessOrEqualExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvUnsignedLessOrEqualDecl(arg0.sort(), arg1.sort())
     override fun sort(): KBoolSort = ctx.mkBoolSort()
@@ -511,9 +490,8 @@ class KBvSignedLessOrEqualExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvSignedLessOrEqualDecl(arg0.sort(), arg1.sort())
     override fun sort(): KBoolSort = ctx.mkBoolSort()
@@ -530,9 +508,8 @@ class KBvUnsignedGreaterOrEqualExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvUnsignedGreaterOrEqualDecl(arg0.sort(), arg1.sort())
     override fun sort(): KBoolSort = ctx.mkBoolSort()
@@ -548,9 +525,8 @@ class KBvSignedGreaterOrEqualExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvSignedGreaterOrEqualDecl(arg0.sort(), arg1.sort())
     override fun sort(): KBoolSort = ctx.mkBoolSort()
@@ -566,9 +542,8 @@ class KBvUnsignedGreaterExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvUnsignedGreaterDecl(arg0.sort(), arg1.sort())
 
@@ -584,9 +559,8 @@ class KBvSignedGreaterExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvSignedGreaterDecl(arg0.sort(), arg1.sort())
     override fun sort(): KBoolSort = ctx.mkBoolSort()
@@ -604,9 +578,8 @@ class KConcatExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkConcatDecl(arg0.sort(), arg1.sort())
 
@@ -626,9 +599,8 @@ class KExtractExpr internal constructor(
     val low: Int,
     val value: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(value)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(value)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkExtractDecl(high, low, value)
 
@@ -648,9 +620,8 @@ class KSignExtensionExpr internal constructor(
     val i: Int,
     val value: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(value)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(value)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkSignExtensionDecl(i, value.sort())
 
@@ -671,9 +642,8 @@ class KZeroExtensionExpr internal constructor(
     val i: Int,
     val value: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(value)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(value)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkZeroExtensionDecl(i, value.sort())
 
@@ -691,9 +661,8 @@ class KRepeatExpr internal constructor(
     val i: Int,
     val value: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(value)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(value)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkRepeatDecl(i, value.sort())
 
@@ -713,9 +682,8 @@ class KBvShiftLeftExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvShiftLeftDecl(arg0.sort(), arg1.sort())
 
@@ -735,9 +703,8 @@ class KBvLogicalShiftRightExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvLogicalShiftRightDecl(arg0.sort(), arg1.sort())
 
@@ -758,9 +725,8 @@ class KBvArithShiftRightExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvArithShiftRightDecl(arg0.sort(), arg1.sort())
 
@@ -780,9 +746,8 @@ class KBvRotateLeftExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvRotateLeftDecl(arg0.sort(), arg1.sort())
 
@@ -801,9 +766,8 @@ class KBvRotateLeftIndexedExpr internal constructor(
     val i: Int,
     val value: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(value)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(value)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvRotateLeftIndexedDecl(i, value.sort())
 
@@ -822,9 +786,8 @@ class KBvRotateRightExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvRotateRightDecl(arg0.sort(), arg1.sort())
 
@@ -843,9 +806,8 @@ class KBvRotateRightIndexedExpr internal constructor(
     val i: Int,
     val value: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(value)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(value)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvRotateRightIndexedDecl(i, value.sort())
 
@@ -868,9 +830,8 @@ class KBv2IntExpr internal constructor(
     val value: KExpr<KBvSort>,
     val isSigned: Boolean
 ) : KApp<KIntSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(value)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(value)
 
     override fun decl(): KDecl<KIntSort> = ctx.mkBv2IntDecl(value.sort(), isSigned)
 
@@ -879,20 +840,17 @@ class KBv2IntExpr internal constructor(
     override fun accept(transformer: KTransformer): KExpr<KIntSort> = transformer.transform(this)
 }
 
-// TODO think about their declarations -- in z3 they have decl: declare-fun => (Bool Bool) Bool
-// toString for `mkBvAddNoOverflow(mkBv(2, 2), mkBv(2, 2), true)`
-// (=> (and (bvslt #b00 #b10) (bvslt #b00 #b10)) (bvslt #b00 (bvadd #b10 #b10)))
 class KBvAddNoOverflowExpr internal constructor(
     ctx: KContext,
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>,
     val isSigned: Boolean
 ) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvAddNoOverflowDecl(arg0.sort(), arg1.sort(), isSigned)
+
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
@@ -903,12 +861,13 @@ class KBvAddNoUnderflowExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>,
 ) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvAddNoUnderflowDecl(arg0.sort(), arg1.sort())
+
     override fun sort(): KBoolSort = ctx.mkBoolSort()
+
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
@@ -917,12 +876,13 @@ class KBvSubNoOverflowExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>,
 ) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvSubNoOverflowDecl(arg0.sort(), arg1.sort())
+
     override fun sort(): KBoolSort = ctx.mkBoolSort()
+
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
@@ -932,12 +892,13 @@ class KBvSubNoUnderflowExpr internal constructor(
     val arg1: KExpr<KBvSort>,
     val isSigned: Boolean
 ) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvSubNoUnderflowDecl(arg0.sort(), arg1.sort(), isSigned)
+
     override fun sort(): KBoolSort = ctx.mkBoolSort()
+
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
@@ -946,12 +907,13 @@ class KBvDivNoOverflowExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>,
 ) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvDivNoOverflowDecl(arg0.sort(), arg1.sort())
+
     override fun sort(): KBoolSort = ctx.mkBoolSort()
+
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
@@ -959,12 +921,13 @@ class KBvNegNoOverflowExpr internal constructor(
     ctx: KContext,
     val value: KExpr<KBvSort>,
 ) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(value)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(value)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvNegNoOverflowDecl(value.sort())
+
     override fun sort(): KBoolSort = ctx.mkBoolSort()
+
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
@@ -974,12 +937,13 @@ class KBvMulNoOverflowExpr internal constructor(
     val arg1: KExpr<KBvSort>,
     val isSigned: Boolean
 ) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvMulNoOverflowDecl(arg0.sort(), arg1.sort(), isSigned)
+
     override fun sort(): KBoolSort = ctx.mkBoolSort()
+
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
@@ -988,11 +952,12 @@ class KBvMulNoUnderflowExpr internal constructor(
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>,
 ) : KApp<KBoolSort, KExpr<KBvSort>>(ctx) {
-    override val args: List<KExpr<KBvSort>> by lazy {
-        listOf(arg0, arg1)
-    }
+    override val args: List<KExpr<KBvSort>>
+        get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvMulNoUnderflowDecl(arg0.sort(), arg1.sort())
+
     override fun sort(): KBoolSort = ctx.mkBoolSort()
+
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
