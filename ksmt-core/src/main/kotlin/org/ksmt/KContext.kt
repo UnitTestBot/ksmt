@@ -618,11 +618,11 @@ open class KContext {
     fun mkBv(value: Long): KBitVec64Value = bv64Cache.create(value)
     fun mkBv(value: Number, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value.toBinary(), sizeBits)
     fun mkBv(value: String, sizeBits: UInt): KBitVecValue<KBvSort> = when (sizeBits.toInt()) {
-        1 -> mkBv(value.toInt(radix = 2) != 0).cast()
-        Byte.SIZE_BITS -> mkBv(value.toByte(radix = 2)).cast()
-        Short.SIZE_BITS -> mkBv(value.toShort(radix = 2)).cast()
-        Int.SIZE_BITS -> mkBv(value.toInt(radix = 2)).cast()
-        Long.SIZE_BITS -> mkBv(value.toLong(radix = 2)).cast()
+        1 -> mkBv(value.toUInt(radix = 2).toInt() != 0).cast()
+        Byte.SIZE_BITS -> mkBv(value.toUByte(radix = 2).toByte()).cast()
+        Short.SIZE_BITS -> mkBv(value.toUShort(radix = 2).toShort()).cast()
+        Int.SIZE_BITS -> mkBv(value.toUInt(radix = 2).toInt()).cast()
+        Long.SIZE_BITS -> mkBv(value.toULong(radix = 2).toLong()).cast()
         else -> bvCache.create(value, sizeBits)
     }
 
@@ -1157,11 +1157,11 @@ open class KContext {
     fun mkBvDecl(value: Long): KDecl<KBv64Sort> = bv64DeclCache.create(value)
 
     fun mkBvDecl(value: String, sizeBits: UInt): KDecl<KBvSort> = when (sizeBits.toInt()) {
-        1 -> mkBvDecl(value.toInt(radix = 2) != 0).cast()
-        Byte.SIZE_BITS -> mkBvDecl(value.toByte(radix = 2)).cast()
-        Short.SIZE_BITS -> mkBvDecl(value.toShort(radix = 2)).cast()
-        Int.SIZE_BITS -> mkBvDecl(value.toInt(radix = 2)).cast()
-        Long.SIZE_BITS -> mkBvDecl(value.toLong(radix = 2)).cast()
+        1 -> mkBvDecl(value.toUInt(radix = 2).toInt() != 0).cast()
+        Byte.SIZE_BITS -> mkBvDecl(value.toUByte(radix = 2).toByte()).cast()
+        Short.SIZE_BITS -> mkBvDecl(value.toUShort(radix = 2).toShort()).cast()
+        Int.SIZE_BITS -> mkBvDecl(value.toUInt(radix = 2).toInt()).cast()
+        Long.SIZE_BITS -> mkBvDecl(value.toULong(radix = 2).toLong()).cast()
         else -> bvCustomSizeDeclCache.create(value, sizeBits).cast()
     }
 
