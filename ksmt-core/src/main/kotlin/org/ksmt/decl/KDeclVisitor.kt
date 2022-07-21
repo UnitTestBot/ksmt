@@ -96,7 +96,9 @@ interface KDeclVisitor<T> {
     fun visit(decl: KBvLogicalShiftRightDecl): T
     fun visit(decl: KBvArithShiftRightDecl): T
     fun visit(decl: KBvRotateLeftDecl): T
+    fun visit(decl: KBvRotateLeftIndexedDecl): T
     fun visit(decl: KBvRotateRightDecl): T
+    fun visit(decl: KBvRotateRightIndexedDecl): T
     fun visit(decl: KBv2IntDecl): T
     fun visit(decl: KBvAddNoOverflowDecl): T
     fun visit(decl: KBvAddNoUnderflowDecl): T

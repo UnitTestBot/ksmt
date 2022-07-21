@@ -199,6 +199,8 @@ import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import java.math.BigInteger
 import kotlin.reflect.KProperty
+import org.ksmt.decl.KBvRotateLeftIndexedDecl
+import org.ksmt.decl.KBvRotateRightIndexedDecl
 import org.ksmt.decl.KBvSubNoUnderflowDecl
 import org.ksmt.decl.toBinary
 import org.ksmt.expr.KBitVec16Value
@@ -207,6 +209,8 @@ import org.ksmt.expr.KBitVec32Value
 import org.ksmt.expr.KBitVec64Value
 import org.ksmt.expr.KBitVec8Value
 import org.ksmt.expr.KBitVecCustomValue
+import org.ksmt.expr.KBvRotateLeftIndexedExpr
+import org.ksmt.expr.KBvRotateRightIndexedExpr
 import org.ksmt.expr.KBvSubNoUnderflowExpr
 
 @Suppress("TooManyFunctions", "unused")
@@ -799,8 +803,17 @@ open class KContext {
     fun mkBvRotateLeftExpr(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KBvRotateLeftExpr =
         bvRotateLeftExprCache.create(arg0, arg1)
 
+    private val bvRotateLeftIndexedExprCache =
+        mkCache { i: Int, value: KExpr<KBvSort> -> KBvRotateLeftIndexedExpr(this, i, value) }
+    fun mkBvRotateLeftIndexedExpr(i: Int, value: KExpr<KBvSort>) = bvRotateLeftIndexedExprCache.create(i, value)
+
     fun mkBvRotateLeftExpr(arg0: Int, arg1: KExpr<KBvSort>): KBvRotateLeftExpr =
         mkBvRotateLeftExpr(mkBv(arg0, arg1.sort().sizeBits), arg1)
+
+    private val bvRotateRightIndexedExprCache =
+        mkCache { i: Int, value: KExpr<KBvSort> -> KBvRotateRightIndexedExpr(this, i, value) }
+    fun mkBvRotateRightIndexedExpr(i: Int, value: KExpr<KBvSort>) = bvRotateRightIndexedExprCache.create(i, value)
+
 
     private val bvRotateRightExprCache =
         mkCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvRotateRightExpr(this, arg0, arg1) }
@@ -1278,11 +1291,25 @@ open class KContext {
     fun mkBvRotateLeftDecl(arg0: KBvSort, arg1: KBvSort): KBvRotateLeftDecl =
         bvRotateLeftDeclCache.create(arg0, arg1)
 
+    private val bvRotateLeftIndexedDeclCache =
+        mkCache { i: Int, valueSort: KBvSort -> KBvRotateLeftIndexedDecl(this, i, valueSort) }
+
+    fun mkBvRotateLeftIndexedDecl(i: Int, valueSort: KBvSort): KBvRotateLeftIndexedDecl =
+        bvRotateLeftIndexedDeclCache.create(i, valueSort)
+
+
     private val bvRotateRightDeclCache =
         mkCache { arg0: KBvSort, arg1: KBvSort -> KBvRotateRightDecl(this, arg0, arg1) }
 
     fun mkBvRotateRightDecl(arg0: KBvSort, arg1: KBvSort): KBvRotateRightDecl =
         bvRotateRightDeclCache.create(arg0, arg1)
+
+    private val bvRotateRightIndexedDeclCache =
+        mkCache { i: Int, valueSort: KBvSort -> KBvRotateRightIndexedDecl(this, i, valueSort) }
+
+    fun mkBvRotateRightIndexedDecl(i: Int, valueSort: KBvSort): KBvRotateRightIndexedDecl =
+        bvRotateRightIndexedDeclCache.create(i, valueSort)
+
 
     private val bv2IntDeclCache = mkCache { value: KBvSort, isSigned: Boolean -> KBv2IntDecl(this, value, isSigned) }
     fun mkBv2IntDecl(value: KBvSort, isSigned: Boolean) = bv2IntDeclCache.create(value, isSigned)

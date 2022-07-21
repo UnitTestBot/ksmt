@@ -441,7 +441,8 @@ class KBvShiftLeftDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KApp<KBvSort, *> = mkBvShiftLeftExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KApp<KBvSort, *> =
+        mkBvShiftLeftExpr(arg0, arg1)
 }
 
 class KBvLogicalShiftRightDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
@@ -452,7 +453,8 @@ class KBvLogicalShiftRightDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSo
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KApp<KBvSort, *> = mkBvLogicalShiftRightExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KApp<KBvSort, *> =
+        mkBvLogicalShiftRightExpr(arg0, arg1)
 }
 
 class KBvArithShiftRightDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
@@ -463,7 +465,8 @@ class KBvArithShiftRightDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KApp<KBvSort, *> = mkBvArithShiftRightExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KApp<KBvSort, *> =
+        mkBvArithShiftRightExpr(arg0, arg1)
 }
 
 class KBvRotateLeftDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
@@ -478,6 +481,17 @@ class KBvRotateLeftDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
         mkBvRotateLeftExpr(arg0, arg1)
 }
 
+class KBvRotateLeftIndexedDecl(ctx: KContext, i: Int, valueSort: KBvSort) :
+    KFuncDecl1<KBvSort, KBvSort>(ctx, "rotate_left", valueSort, valueSort), KParameterizedFuncDecl {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(arg: KExpr<KBvSort>): KApp<KBvSort, KExpr<KBvSort>> = mkBvRotateLeftIndexedExpr(parameters.single() as Int, arg)
+
+    override val parameters: List<Any> by lazy {
+        listOf(i)
+    }
+}
+
 class KBvRotateRightDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
     KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "rotate_right", arg0Sort, arg0Sort, arg1Sort) {
     init {
@@ -489,6 +503,18 @@ class KBvRotateRightDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
     override fun KContext.apply(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KApp<KBvSort, KExpr<KBvSort>> =
         mkBvRotateRightExpr(arg0, arg1)
 }
+
+class KBvRotateRightIndexedDecl(ctx: KContext, i: Int, valueSort: KBvSort) :
+    KFuncDecl1<KBvSort, KBvSort>(ctx, "rotate_right", valueSort, valueSort), KParameterizedFuncDecl {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(arg: KExpr<KBvSort>): KApp<KBvSort, KExpr<KBvSort>> = mkBvRotateRightIndexedExpr(parameters.single() as Int, arg)
+
+    override val parameters: List<Any> by lazy {
+        listOf(i)
+    }
+}
+
 
 // name??? looks like bv2int if it unsigned and false otherwise
 class KBv2IntDecl(ctx: KContext, value: KBvSort, isSigned: Boolean) :

@@ -27,7 +27,9 @@ import org.ksmt.decl.KBvOrDecl
 import org.ksmt.decl.KBvReductionAndDecl
 import org.ksmt.decl.KBvReductionOrDecl
 import org.ksmt.decl.KBvRotateLeftDecl
+import org.ksmt.decl.KBvRotateLeftIndexedDecl
 import org.ksmt.decl.KBvRotateRightDecl
+import org.ksmt.decl.KBvRotateRightIndexedDecl
 import org.ksmt.decl.KBvShiftLeftDecl
 import org.ksmt.decl.KBvSignedDivDecl
 import org.ksmt.decl.KBvSignedGreaterDecl
@@ -689,7 +691,15 @@ open class KBitwuzlaExprInternalizer(
             TODO("Not yet implemented")
         }
 
+        override fun visit(decl: KBvRotateLeftIndexedDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
         override fun visit(decl: KBvRotateRightDecl): BitwuzlaSort {
+            TODO("Not yet implemented")
+        }
+
+        override fun visit(decl: KBvRotateRightIndexedDecl): BitwuzlaSort {
             TODO("Not yet implemented")
         }
 

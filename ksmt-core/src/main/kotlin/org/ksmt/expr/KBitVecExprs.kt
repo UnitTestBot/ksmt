@@ -105,7 +105,7 @@ class KBvNotExpr internal constructor(
 }
 
 /**
- * Takes conjunction of bits in a vector, return vector of length 1.
+ * Takes conjunction of bits in the [value], return a vector of length 1.
  */
 class KBvReductionAndExpr internal constructor(
     ctx: KContext,
@@ -123,7 +123,7 @@ class KBvReductionAndExpr internal constructor(
 }
 
 /**
- * Take disjunction of bits in a vector, return vector of length 1.
+ * Take disjunction of bits in [value], return a vector of length 1.
  */
 class KBvReductionOrExpr internal constructor(
     ctx: KContext,
@@ -335,7 +335,7 @@ class KBvMulExpr internal constructor(
 /**
  * Unsigned division.
  *
- * It is defined as the floor of `t1 / t2` if `t2` is different from zero.
+ * It is defined as the floor of `arg0 / arg1` if `arg1` is different from zero.
  * Otherwise, the result is undefined.
  */
 class KBvUnsignedDivExpr internal constructor(
@@ -359,9 +359,9 @@ class KBvUnsignedDivExpr internal constructor(
  * Signed division.
  *
  * It is defined as:
- * * the floor of the `t1 / t2` if `t2` is different from zero and `t1 * t2 >= 0`
- * * the ceiling of `t1 / t2` if `t2` if different from zero and `t1 * t2 < 0`
- * * if `t2` is zero, then the result is undefined.
+ * * the floor of the `arg0 / arg1` if `arg1` is different from zero and `arg0 * arg1 >= 0`
+ * * the ceiling of `arg0 / arg1` if `arg1` if different from zero and `arg0 * arg1 < 0`
+ * * if `arg1` is zero, then the result is undefined.
  */
 class KBvSignedDivExpr internal constructor(
     ctx: KContext,
@@ -383,8 +383,8 @@ class KBvSignedDivExpr internal constructor(
 /**
  * Unsigned remainder.
  *
- * It is defined as `t1 - (t1 /u t2) * t2`, where `\u` represents unsigned division.
- * If `t2` is zero, then the result is undefined.
+ * It is defined as `arg0 - (arg0 /u arg1) * arg1`, where `\u` represents unsigned division.
+ * If `arg1` is zero, then the result is undefined.
  */
 class KBvUnsignedRemExpr internal constructor(
     ctx: KContext,
@@ -406,9 +406,9 @@ class KBvUnsignedRemExpr internal constructor(
 /**
  * Signed remainder.
  *
- * It is defined as `t1 - (t1 /s t2) * t2`, where `\s` represents signed division.
- * The most significant bit (sign) of the result is equal to the most significant bit of `t1`.
- * If `t2` is zero, then the result is undefined.
+ * It is defined as `arg0 - (arg0 /s arg1) * arg1`, where `\s` represents signed division.
+ * The most significant bit (sign) of the result is equal to the most significant bit of `arg0`.
+ * If `arg1` is zero, then the result is undefined.
  */
 class KBvSignedRemExpr internal constructor(
     ctx: KContext,
@@ -429,7 +429,7 @@ class KBvSignedRemExpr internal constructor(
 
 /**
  * Two's complement signed remainder (sign follows divisor).
- * If `t2` is zero, then the result is undefined.
+ * If `arg1` is zero, then the result is undefined.
  */
 class KBvSignedModExpr internal constructor(
     ctx: KContext,
@@ -597,7 +597,7 @@ class KBvSignedGreaterExpr internal constructor(
 /**
  * Bit-vector concatenation.
  *
- * @return a bit-vector of size `n1 + n2`, where `n1` and `n2` are the sizes of [left] and [right] correspondingly.
+ * @return a bit-vector of size `n1 + n2`, where `n1` and `n2` are the sizes of [arg0] and [arg1] correspondingly.
  */
 class KConcatExpr internal constructor(
     ctx: KContext,
@@ -704,9 +704,9 @@ class KRepeatExpr internal constructor(
 }
 
 /**
- * Shift arg0.
+ * Shift left.
  *
- * It is equivalent to multiplication by `2^x`, where `x` is the value of [right].
+ * It is equivalent to multiplication by `2^x`, where `x` is the value of [arg1].
  */
 class KBvShiftLeftExpr internal constructor(
     ctx: KContext,
@@ -726,9 +726,9 @@ class KBvShiftLeftExpr internal constructor(
 }
 
 /**
- * Logical shift arg1.
+ * Logical shift right.
  *
- * It is equivalent to unsigned division by `2^x`, where `x` is the value of [right].
+ * It is equivalent to unsigned division by `2^x`, where `x` is the value of [arg1].
  */
 class KBvLogicalShiftRightExpr internal constructor(
     ctx: KContext,
@@ -748,7 +748,7 @@ class KBvLogicalShiftRightExpr internal constructor(
 }
 
 /**
- * Arithmetic shift arg1.
+ * Arithmetic shift right.
  *
  * It is like logical shift right except that the most significant bits
  * of the result always copy the most significant bit of the second argument.
@@ -771,9 +771,9 @@ class KBvArithShiftRightExpr internal constructor(
 }
 
 /**
- * Rotate arg0.
+ * Rotate left.
  *
- * Rotates bits of the [left] to the left [right] times.
+ * Rotates bits of the [arg0] to the left [arg1] times.
  */
 class KBvRotateLeftExpr internal constructor(
     ctx: KContext,
@@ -792,9 +792,30 @@ class KBvRotateLeftExpr internal constructor(
 }
 
 /**
- * Rotate arg0.
+ * Rotate left.
  *
- * Rotates bits of the [left] to the right [right] times.
+ * Rotates bits of the [value] to the left [i] times.
+ */
+class KBvRotateLeftIndexedExpr internal constructor(
+    ctx: KContext,
+    val i: Int,
+    val value: KExpr<KBvSort>
+) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
+    override val args: List<KExpr<KBvSort>> by lazy {
+        listOf(value)
+    }
+
+    override fun decl(): KDecl<KBvSort> = ctx.mkBvRotateLeftIndexedDecl(i, value.sort())
+
+    override fun sort(): KBvSort = value.sort()
+
+    override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
+}
+
+/**
+ * Rotate right.
+ *
+ * Rotates bits of the [arg0] to the right [arg1] times.
  */
 class KBvRotateRightExpr internal constructor(
     ctx: KContext,
@@ -810,7 +831,27 @@ class KBvRotateRightExpr internal constructor(
     override fun sort(): KBvSort = arg0.sort()
 
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
+}
 
+/**
+ * Rotate right.
+ *
+ * Rotates bits of the [value] to the right [i] times.
+ */
+class KBvRotateRightIndexedExpr internal constructor(
+    ctx: KContext,
+    val i: Int,
+    val value: KExpr<KBvSort>
+) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
+    override val args: List<KExpr<KBvSort>> by lazy {
+        listOf(value)
+    }
+
+    override fun decl(): KDecl<KBvSort> = ctx.mkBvRotateRightIndexedDecl(i, value.sort())
+
+    override fun sort(): KBvSort = value.sort()
+
+    override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
 }
 
 /**
