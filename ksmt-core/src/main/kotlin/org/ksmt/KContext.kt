@@ -638,9 +638,11 @@ open class KContext {
     private val bvRedAndExprCache = mkCache { value: KExpr<KBvSort> -> KBvReductionAndExpr(this, value) }
 
     fun mkBvReductionAndExpr(value: KExpr<KBvSort>): KBvReductionAndExpr = bvRedAndExprCache.create(value)
+    fun KExpr<KBvSort>.reductionAnd(): KBvReductionAndExpr = mkBvReductionAndExpr(this)
 
     private val bvRedOrExprCache = mkCache { value: KExpr<KBvSort> -> KBvReductionOrExpr(this, value) }
     fun mkBvReductionOrExpr(value: KExpr<KBvSort>): KBvReductionOrExpr = bvRedOrExprCache.create(value)
+    fun KExpr<KBvSort>.reductionOr(): KBvReductionOrExpr = mkBvReductionOrExpr(this)
 
     private val bvAndExprCache =
         mkCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvAndExpr(this, arg0, arg1) }

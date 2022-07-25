@@ -115,6 +115,7 @@ open class KZ3Solver(private val ctx: KContext) : KSolver {
         KZ3Model(model, ctx, z3InternCtx, exprInternalizer, exprConverter)
     }
 
+    // TODO add mapping back from tracked variable into initial value
     override fun unsatCore(): List<KExpr<KBoolSort>> = z3Try {
         require(lastCheckStatus == KSolverStatus.UNSAT) { "Unsat cores are only available after UNSAT checks" }
         val z3Core = solver.unsatCore
