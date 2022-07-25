@@ -318,15 +318,21 @@ class BitVecTest {
         val negativeBv = negativeValue.toBv()
         val positiveBv = positiveValue.toBv()
 
-        val result = mkBv64Sort().mkConst("symbolicVariable")
+        val firstResult = mkBv64Sort().mkConst("symbolicVariable")
+        val secondResult = mkBv64Sort().mkConst("anotherSymbolicVariable")
 
-        solver.assert(operation(negativeBv, positiveBv) eq result)
+        solver.assert(operation(negativeBv, positiveBv) eq firstResult)
+        solver.assert(operation(positiveBv, negativeBv) eq secondResult)
         solver.check()
 
-        val actualValue = (solver.model().eval(result) as KBitVec64Value).numberValue
-        val expectedValue = transformation(negativeValue, positiveValue)
+        val firstActualValue = (solver.model().eval(firstResult) as KBitVec64Value).numberValue
+        val secondActualValue = (solver.model().eval(secondResult) as KBitVec64Value).numberValue
 
-        assertEquals(expectedValue, actualValue)
+        val firstExpectedValue = transformation(negativeValue, positiveValue)
+        val secondExpectedValue = transformation(positiveValue, negativeValue)
+
+        assertEquals(firstExpectedValue, firstActualValue)
+        assertEquals(secondExpectedValue, secondActualValue)
     }
 
     @Test
@@ -383,6 +389,20 @@ class BitVecTest {
 
     @Test
     fun testMulExpr(): Unit = testBinaryOperation(context::mkBvMulExpr, Long::times)
+
+    @Test
+    fun testUnsignedDivExpr(): Unit = testBinaryOperation(context::mkBvUnsignedDivExpr) { arg0: Long, arg1: Long ->
+        (arg0.toULong() / arg1.toULong()).toLong()
+    }
+
+    @Test
+    fun testSignedDivExpr(): Unit = testBinaryOperation(context::mkBvSignedDivExpr, Long::div)
+
+    @Test
+    @Disabled("Doesn't work yet")
+    fun testUnsignedRemExpr(): Unit = testBinaryOperation(context::mkBvUnsignedRemExpr) { arg0: Long, arg1: Long ->
+        arg0 - (arg0.toULong() / arg1.toULong()).toLong() * arg1
+    }
 
     private fun createTwoRandomLongValues(): Pair<NegativeLong, PositiveLong> {
         val negativeValue = Random.nextLong(from = Int.MIN_VALUE.toLong(), until = 0L)
