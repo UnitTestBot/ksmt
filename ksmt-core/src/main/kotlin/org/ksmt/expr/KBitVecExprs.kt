@@ -68,18 +68,16 @@ class KBitVec64Value internal constructor(ctx: KContext, longValue: Long) :
 
 class KBitVecCustomValue internal constructor(
     ctx: KContext,
-    val value: String,
+    val decimalStringValue: String,
     private val sizeBits: UInt
 ) : KBitVecValue<KBvSort>(ctx) {
     init {
-        require(value.length.toUInt() == sizeBits) {
-            "Provided string $value consist of ${value.length} symbols, but $sizeBits were expected"
-        }
+        // TODO do we need to check size of bits? It takes some time and I'm not sure we really need it
     }
 
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
 
-    override fun decl(): KDecl<KBvSort> = ctx.mkBvDecl(value, sizeBits)
+    override fun decl(): KDecl<KBvSort> = ctx.mkBvDecl(decimalStringValue, sizeBits)
 
     override fun sort(): KBvSort = ctx.mkBvSort(sizeBits)
 }

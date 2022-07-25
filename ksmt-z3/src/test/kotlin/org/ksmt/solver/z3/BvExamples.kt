@@ -9,6 +9,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.ksmt.KContext
+import org.ksmt.expr.KBitVec32Value
 import org.ksmt.expr.KBitVecCustomValue
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.sort.KBv16Sort
@@ -152,8 +153,8 @@ class BvExamples {
         val positiveBvFromString = mkBv(positiveValue, sizeBits) as KBitVecCustomValue
         val negativeBvFromString = mkBv(negativeValue, sizeBits) as KBitVecCustomValue
 
-        assertEquals(positiveBvFromString.value, positiveValue)
-        assertEquals(negativeBvFromString.value, negativeValue)
+        assertEquals(positiveBvFromString.decimalStringValue, positiveValue)
+        assertEquals(negativeBvFromString.decimalStringValue, negativeValue)
 
         assertEquals(positiveBvFromString.sort.sizeBits, sizeBits)
         assertEquals(negativeBvFromString.sort.sizeBits, sizeBits)
@@ -171,6 +172,56 @@ class BvExamples {
 
         assertFailsWith(IllegalArgumentException::class) { mkBv(stringValue, sizeBits) }
     }
+
+    @Test
+    fun testNotExpr(): Unit = with(context) {
+        val stringValue = generateBinaryString(Random.nextInt(from = 65, until = 100))
+        val sizeBits = stringValue.length.toUInt()
+
+        val bv = mkBv(stringValue, sizeBits)
+        val symbolicBv = mkBvSort(sizeBits).mkConst("symbolic_variable")
+
+        solver.assert(mkEq(mkBvNotExpr(mkBvNotExpr(bv)), bv))
+        solver.assert(mkEq(mkBvNotExpr(bv), symbolicBv))
+        solver.check()
+
+        val actualValue = (solver.model().eval(symbolicBv) as KBitVecCustomValue).decimalStringValue
+        val expectedValue = stringValue.map { if (it == '1') '0' else '1' }.joinToString("")
+
+        assertEquals(expectedValue, actualValue)
+    }
+
+    @Test
+    fun testNegationExpr(): Unit = with(context) {
+        val negativeValue = Random.nextInt(from = Int.MIN_VALUE, until = 0)
+        val positiveValue = Random.nextInt(from = 1, until = Int.MAX_VALUE)
+
+        val negativeBv = negativeValue.toBv()
+        val positiveBv = positiveValue.toBv()
+        val zero = 0.toBv()
+
+        val negNegativeValue = mkBv32Sort().mkConst("neg_negative_value")
+        val negPositiveValue = mkBv32Sort().mkConst("neg_positive_value")
+        val zeroValue = mkBv32Sort().mkConst("zero_value")
+
+        solver.assert(mkEq(mkBvNegationExpr(negativeBv), negNegativeValue))
+        solver.assert(mkEq(mkBvNegationExpr(positiveBv), negPositiveValue))
+        solver.assert(mkEq(mkBvNegationExpr(zero), zeroValue))
+
+        solver.check()
+        val model = solver.model()
+
+        val evaluatedNegNegativeBv = model.eval(negNegativeValue) as KBitVec32Value
+        val evaluatedNegPositiveBv = model.eval(negPositiveValue) as KBitVec32Value
+        val evaluatedZeroValue = model.eval(zeroValue) as KBitVec32Value
+
+        assertEquals(-negativeValue, evaluatedNegNegativeBv.numberValue)
+        assertEquals(-positiveValue, evaluatedNegPositiveBv.numberValue)
+        assertEquals(expected = 0, evaluatedZeroValue.numberValue)
+    }
+
+    private fun generateBinaryString(length: Int): String =
+        CharArray(length) { if (Random.nextInt() % 2 == 0) '1' else '0' }.joinToString("")
 
     // TODO extract into a common module
     private fun Number.toBinary(): String = when (this) {

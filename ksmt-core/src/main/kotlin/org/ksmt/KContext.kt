@@ -612,11 +612,17 @@ open class KContext {
     private val bvCache = mkCache { value: String, sizeBits: UInt -> KBitVecCustomValue(this, value, sizeBits) }
 
     fun mkBv(value: Boolean): KBitVec1Value = bv1Cache.create(value)
+    fun Boolean.toBv(): KBitVec1Value = mkBv(this)
     fun mkBv(value: Byte): KBitVec8Value = bv8Cache.create(value)
+    fun Byte.toBv(): KBitVec8Value = mkBv(this)
     fun mkBv(value: Short): KBitVec16Value = bv16Cache.create(value)
+    fun Short.toBv(): KBitVec16Value = mkBv(this)
     fun mkBv(value: Int): KBitVec32Value = bv32Cache.create(value)
+    fun Int.toBv(): KBitVec32Value = mkBv(this)
     fun mkBv(value: Long): KBitVec64Value = bv64Cache.create(value)
+    fun Long.toBv(): KBitVec64Value = mkBv(this)
     fun mkBv(value: Number, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value.toBinary(), sizeBits)
+    fun Number.toBv(sizeBits: UInt) = mkBv(this, sizeBits)
     fun mkBv(value: String, sizeBits: UInt): KBitVecValue<KBvSort> = when (sizeBits.toInt()) {
         1 -> mkBv(value.toUInt(radix = 2).toInt() != 0).cast()
         Byte.SIZE_BITS -> mkBv(value.toUByte(radix = 2).toByte()).cast()
