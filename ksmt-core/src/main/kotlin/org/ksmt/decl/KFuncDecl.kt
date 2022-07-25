@@ -8,9 +8,9 @@ import org.ksmt.sort.KSort
 open class KFuncDecl<T : KSort>(
     ctx: KContext,
     name: String,
-    sort: T,
-    val argSorts: List<KSort>
-) : KDecl<T>(ctx, name, sort) {
+    resultSort: T,
+    val argSorts: List<KSort>,
+) : KDecl<T>(ctx, name, resultSort) {
     override fun apply(args: List<KExpr<*>>): KApp<T, *> = with(ctx) {
         checkArgSorts(args)
         return mkFunctionApp(this@KFuncDecl, args)
@@ -42,9 +42,9 @@ open class KFuncDecl<T : KSort>(
 abstract class KFuncDecl1<T : KSort, A : KSort>(
     ctx: KContext,
     name: String,
-    sort: T,
-    val argSort: A
-) : KFuncDecl<T>(ctx, name, sort, listOf(argSort)) {
+    resultSort: T,
+    val argSort: A,
+) : KFuncDecl<T>(ctx, name, resultSort, listOf(argSort)) {
     abstract fun KContext.apply(arg: KExpr<A>): KApp<T, KExpr<A>>
 
     @Suppress("UNCHECKED_CAST")
@@ -58,10 +58,10 @@ abstract class KFuncDecl1<T : KSort, A : KSort>(
 abstract class KFuncDecl2<T : KSort, A0 : KSort, A1 : KSort>(
     ctx: KContext,
     name: String,
-    sort: T,
+    resultSort: T,
     val arg0Sort: A0,
-    val arg1Sort: A1
-) : KFuncDecl<T>(ctx, name, sort, listOf(arg0Sort, arg1Sort)) {
+    val arg1Sort: A1,
+) : KFuncDecl<T>(ctx, name, resultSort, listOf(arg0Sort, arg1Sort)) {
     abstract fun KContext.apply(arg0: KExpr<A0>, arg1: KExpr<A1>): KApp<T, *>
 
     @Suppress("UNCHECKED_CAST")
@@ -75,11 +75,11 @@ abstract class KFuncDecl2<T : KSort, A0 : KSort, A1 : KSort>(
 abstract class KFuncDecl3<T : KSort, A0 : KSort, A1 : KSort, A2 : KSort>(
     ctx: KContext,
     name: String,
-    sort: T,
+    resultSort: T,
     val arg0Sort: A0,
     val arg1Sort: A1,
     val arg2Sort: A2,
-) : KFuncDecl<T>(ctx, name, sort, listOf(arg0Sort, arg1Sort, arg2Sort)) {
+) : KFuncDecl<T>(ctx, name, resultSort, listOf(arg0Sort, arg1Sort, arg2Sort)) {
     abstract fun KContext.apply(arg0: KExpr<A0>, arg1: KExpr<A1>, arg2: KExpr<A2>): KApp<T, *>
 
     @Suppress("UNCHECKED_CAST")
@@ -90,12 +90,16 @@ abstract class KFuncDecl3<T : KSort, A0 : KSort, A1 : KSort, A2 : KSort>(
     }
 }
 
+interface KParameterizedFuncDecl {
+    val parameters: List<Any>
+}
+
 abstract class KFuncDeclChain<T : KSort, A : KSort>(
     ctx: KContext,
     name: String,
-    sort: T,
+    resultSort: T,
     val argSort: A,
-) : KFuncDecl<T>(ctx, name, sort, listOf(argSort)) {
+) : KFuncDecl<T>(ctx, name, resultSort, listOf(argSort)) {
     abstract fun KContext.applyChain(args: List<KExpr<A>>): KApp<T, KExpr<A>>
 
     override fun print(): String = buildString {

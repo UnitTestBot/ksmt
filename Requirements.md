@@ -10,7 +10,7 @@
 10. Benchmark solver request
 11. Don't use Z3Java API
 12. Bitwoozla as second priority solver
-13. BV, Arrays, Ints, FP, Q-
+13. Bv, Arrays, Ints, FP, Q-
 14. Recommendation - switch to other solver (if fails)
 15. Easy deployment via JitPack
 16. Incremental via lemma. Drop? Assumption incrementality (check-sat with params)

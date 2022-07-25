@@ -1,6 +1,7 @@
 package org.ksmt.solver.z3
 
 import com.microsoft.z3.ArraySort
+import com.microsoft.z3.BitVecExpr
 import com.microsoft.z3.BitVecNum
 import com.microsoft.z3.BitVecSort
 import com.microsoft.z3.Expr
@@ -15,12 +16,13 @@ import com.microsoft.z3.intOrNull
 import com.microsoft.z3.longOrNull
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
-import org.ksmt.expr.KBitVecExpr
+import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KIntNumExpr
 import org.ksmt.expr.KRealNumExpr
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KSort
 
 open class KZ3ExprConverter(
@@ -181,7 +183,8 @@ open class KZ3ExprConverter(
     }
 
     @Suppress("MemberVisibilityCanBePrivate")
-    fun convertNumeral(expr: BitVecNum): KBitVecExpr<*> = with(ctx) {
-        mkBV(expr.toBinaryString(), expr.sortSize.toUInt())
+    fun convertNumeral(expr: BitVecNum): KBitVecValue<*> = with(ctx) {
+        val sizeBits = expr.sortSize.toUInt()
+        mkBv(value = expr.toBinaryString().padStart(sizeBits.toInt(), '0'), sizeBits)
     }
 }
