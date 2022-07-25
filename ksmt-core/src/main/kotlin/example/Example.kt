@@ -1,8 +1,8 @@
 package example
 
 import org.ksmt.KContext
-import org.ksmt.expr.KBitVec8Expr
-import org.ksmt.sort.KBV16Sort
+import org.ksmt.expr.KBitVec8Value
+import org.ksmt.sort.KBv16Sort
 
 @Suppress("UNUSED_VARIABLE")
 fun main() = with(KContext()) {
@@ -14,14 +14,14 @@ fun main() = with(KContext()) {
     val e2 = x.store(b, c).select(b).select(10.intExpr) ge 11.intExpr
     val z = 3
 
-    val bv8 = mkBV(0.toByte())
+    val bv8 = mkBv(0.toByte())
     val byteBits = Byte.SIZE_BITS
     // how to restrict such casts to avoid misscast? For example, you can write `as KBitVec16Expr` as well
-    val sameBv8 = mkBV("0".repeat(byteBits), byteBits.toUInt()) as KBitVec8Expr
+    val sameBv8 = mkBv("0".repeat(byteBits), byteBits.toUInt()) as KBitVec8Value
     check(bv8 === sameBv8)
 
     val bv16Sort = mkBv16Sort()
-    val sameBv16Sort = mkBvSort(16.toUInt()) as KBV16Sort
+    val sameBv16Sort = mkBvSort(16.toUInt()) as KBv16Sort
     check(bv16Sort === sameBv16Sort)
 
     val bv32Decl = mkBvDecl(0)

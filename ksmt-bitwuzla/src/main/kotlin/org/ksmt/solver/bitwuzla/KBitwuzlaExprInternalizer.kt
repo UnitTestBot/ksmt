@@ -9,13 +9,58 @@ import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
-import org.ksmt.expr.KBitVec16Expr
-import org.ksmt.expr.KBitVec1Expr
-import org.ksmt.expr.KBitVec32Expr
-import org.ksmt.expr.KBitVec64Expr
-import org.ksmt.expr.KBitVec8Expr
-import org.ksmt.expr.KBitVecCustomExpr
-import org.ksmt.expr.KBitVecNumberExpr
+import org.ksmt.expr.KBitVec16Value
+import org.ksmt.expr.KBitVec1Value
+import org.ksmt.expr.KBitVec32Value
+import org.ksmt.expr.KBitVec64Value
+import org.ksmt.expr.KBitVec8Value
+import org.ksmt.expr.KBitVecCustomValue
+import org.ksmt.expr.KBitVecNumberValue
+import org.ksmt.expr.KBv2IntExpr
+import org.ksmt.expr.KBvAddExpr
+import org.ksmt.expr.KBvAddNoOverflowExpr
+import org.ksmt.expr.KBvAddNoUnderflowExpr
+import org.ksmt.expr.KBvAndExpr
+import org.ksmt.expr.KBvArithShiftRightExpr
+import org.ksmt.expr.KBvConcatExpr
+import org.ksmt.expr.KBvDivNoOverflowExpr
+import org.ksmt.expr.KBvExtractExpr
+import org.ksmt.expr.KBvLogicalShiftRightExpr
+import org.ksmt.expr.KBvMulExpr
+import org.ksmt.expr.KBvMulNoOverflowExpr
+import org.ksmt.expr.KBvMulNoUnderflowExpr
+import org.ksmt.expr.KBvNAndExpr
+import org.ksmt.expr.KBvNegNoOverflowExpr
+import org.ksmt.expr.KBvNegationExpr
+import org.ksmt.expr.KBvNorExpr
+import org.ksmt.expr.KBvNotExpr
+import org.ksmt.expr.KBvOrExpr
+import org.ksmt.expr.KBvReductionAndExpr
+import org.ksmt.expr.KBvReductionOrExpr
+import org.ksmt.expr.KBvRepeatExpr
+import org.ksmt.expr.KBvRotateLeftExpr
+import org.ksmt.expr.KBvRotateRightExpr
+import org.ksmt.expr.KBvShiftLeftExpr
+import org.ksmt.expr.KBvSignExtensionExpr
+import org.ksmt.expr.KBvSignedDivExpr
+import org.ksmt.expr.KBvSignedGreaterExpr
+import org.ksmt.expr.KBvSignedGreaterOrEqualExpr
+import org.ksmt.expr.KBvSignedLessExpr
+import org.ksmt.expr.KBvSignedLessOrEqualExpr
+import org.ksmt.expr.KBvSignedModExpr
+import org.ksmt.expr.KBvSignedRemExpr
+import org.ksmt.expr.KBvSubExpr
+import org.ksmt.expr.KBvSubNoOverflowExpr
+import org.ksmt.expr.KBvSubNoUnderflowExpr
+import org.ksmt.expr.KBvUnsignedDivExpr
+import org.ksmt.expr.KBvUnsignedGreaterExpr
+import org.ksmt.expr.KBvUnsignedGreaterOrEqualExpr
+import org.ksmt.expr.KBvUnsignedLessExpr
+import org.ksmt.expr.KBvUnsignedLessOrEqualExpr
+import org.ksmt.expr.KBvUnsignedRemExpr
+import org.ksmt.expr.KBvXNorExpr
+import org.ksmt.expr.KBvXorExpr
+import org.ksmt.expr.KBvZeroExtensionExpr
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KEqExpr
@@ -38,13 +83,13 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KArraySort
-import org.ksmt.sort.KBV16Sort
-import org.ksmt.sort.KBV1Sort
-import org.ksmt.sort.KBV32Sort
-import org.ksmt.sort.KBV64Sort
-import org.ksmt.sort.KBV8Sort
-import org.ksmt.sort.KBVSort
 import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KBv16Sort
+import org.ksmt.sort.KBv1Sort
+import org.ksmt.sort.KBv32Sort
+import org.ksmt.sort.KBv64Sort
+import org.ksmt.sort.KBv8Sort
+import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
@@ -181,16 +226,16 @@ open class KBitwuzlaExprInternalizer(
         )
     }
 
-    override fun transform(expr: KBitVec1Expr): KExpr<KBV1Sort> = expr.internalizeExpr {
+    override fun transform(expr: KBitVec1Value): KExpr<KBv1Sort> = expr.internalizeExpr {
         if (expr.value) bitwuzlaCtx.trueTerm else bitwuzlaCtx.falseTerm
     }
 
-    override fun transform(expr: KBitVec8Expr): KExpr<KBV8Sort> = transformBvNumber(expr)
-    override fun transform(expr: KBitVec16Expr): KExpr<KBV16Sort> = transformBvNumber(expr)
-    override fun transform(expr: KBitVec32Expr): KExpr<KBV32Sort> = transformBvNumber(expr)
-    override fun transform(expr: KBitVec64Expr): KExpr<KBV64Sort> = transformBvNumber(expr)
+    override fun transform(expr: KBitVec8Value): KExpr<KBv8Sort> = transformBvNumber(expr)
+    override fun transform(expr: KBitVec16Value): KExpr<KBv16Sort> = transformBvNumber(expr)
+    override fun transform(expr: KBitVec32Value): KExpr<KBv32Sort> = transformBvNumber(expr)
+    override fun transform(expr: KBitVec64Value): KExpr<KBv64Sort> = transformBvNumber(expr)
 
-    fun <T : KBitVecNumberExpr<S, *>, S : KBVSort> transformBvNumber(expr: T): T = expr.internalizeExpr {
+    fun <T : KBitVecNumberValue<S, *>, S : KBvSort> transformBvNumber(expr: T): T = expr.internalizeExpr {
         with(ctx) {
             Native.bitwuzlaMkBvValueUint64(
                 bitwuzlaCtx.bitwuzla,
@@ -200,16 +245,106 @@ open class KBitwuzlaExprInternalizer(
         }
     }
 
-    override fun transform(expr: KBitVecCustomExpr): KExpr<KBVSort> = expr.internalizeExpr {
+    override fun transform(expr: KBitVecCustomValue): KExpr<KBvSort> = expr.internalizeExpr {
         with(ctx) {
             Native.bitwuzlaMkBvValue(
                 bitwuzlaCtx.bitwuzla,
                 sort.internalize(),
-                value,
+                binaryStringValue,
                 BitwuzlaBVBase.BITWUZLA_BV_BASE_BIN
             )
         }
     }
+
+    override fun <T : KBvSort> transform(expr: KBvNotExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvReductionAndExpr<T>): KExpr<KBv1Sort> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvReductionOrExpr<T>): KExpr<KBv1Sort> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvAndExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvOrExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvXorExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvNAndExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvNorExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvXNorExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvNegationExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvAddExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvSubExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvMulExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvUnsignedDivExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvSignedDivExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvUnsignedRemExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvSignedRemExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvSignedModExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvUnsignedLessExpr<T>): KExpr<KBoolSort> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvSignedLessExpr<T>): KExpr<KBoolSort> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvUnsignedLessOrEqualExpr<T>): KExpr<KBoolSort> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvSignedLessOrEqualExpr<T>): KExpr<KBoolSort> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterOrEqualExpr<T>): KExpr<KBoolSort> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvSignedGreaterOrEqualExpr<T>): KExpr<KBoolSort> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterExpr<T>): KExpr<KBoolSort> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvSignedGreaterExpr<T>): KExpr<KBoolSort> = TODO()
+
+    override fun transform(expr: KBvConcatExpr): KExpr<KBvSort> = TODO()
+
+    override fun transform(expr: KBvExtractExpr): KExpr<KBvSort> = TODO()
+
+    override fun transform(expr: KBvSignExtensionExpr): KExpr<KBvSort> = TODO()
+
+    override fun transform(expr: KBvZeroExtensionExpr): KExpr<KBvSort> = TODO()
+
+    override fun transform(expr: KBvRepeatExpr): KExpr<KBvSort> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvShiftLeftExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvLogicalShiftRightExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvArithShiftRightExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>): KExpr<T> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>): KExpr<T> = TODO()
+
+    override fun transform(expr: KBv2IntExpr): KExpr<KIntSort> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvAddNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>): KExpr<KBoolSort> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>): KExpr<KBoolSort> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
+
+    override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>): KExpr<KBoolSort> = TODO()
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> =
         expr.internalizeExpr {
@@ -305,7 +440,7 @@ open class KBitwuzlaExprInternalizer(
                 Native.bitwuzlaMkArraySort(bitwuzlaCtx.bitwuzla, domain, range)
             }
 
-        override fun <S : KBVSort> visit(sort: S): BitwuzlaSort =
+        override fun <S : KBvSort> visit(sort: S): BitwuzlaSort =
             bitwuzlaCtx.internalizeSort(sort) {
                 val size = sort.sizeBits.toInt()
                 if (size == 1) {
