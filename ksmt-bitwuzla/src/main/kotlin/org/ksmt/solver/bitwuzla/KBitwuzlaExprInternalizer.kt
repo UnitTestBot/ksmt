@@ -303,7 +303,7 @@ open class KBitwuzlaExprInternalizer(
             Native.bitwuzlaMkBvValue(
                 bitwuzlaCtx.bitwuzla,
                 sort.internalize(),
-                value,
+                decimalStringValue,
                 BitwuzlaBVBase.BITWUZLA_BV_BASE_BIN
             )
         }
