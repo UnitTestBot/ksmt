@@ -711,6 +711,8 @@ class KBvMulNoUnderflowDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort)
     ): KApp<KBoolSort, *> = mkBvMulNoUnderflowExpr(arg0, arg1)
 }
 
+// We can have here `0` as a pad symbol since `toString` can return a string
+// containing fewer symbols than `sizeBits` only for non-negative numbers
 internal fun Number.toBinary(): String = when (this) {
     is Byte -> toUByte().toString(radix = 2).padStart(Byte.SIZE_BITS, '0')
     is Short -> toUShort().toString(radix = 2).padStart(Short.SIZE_BITS, '0')
