@@ -16,6 +16,7 @@ import org.ksmt.solver.KSolverStatus
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import java.nio.file.Path
+import java.nio.file.Paths
 import kotlin.io.path.Path
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.relativeTo
@@ -176,7 +177,7 @@ class BenchmarksBasedTest {
         fun testData(): List<Arguments> {
             val testData = this::class.java.classLoader
                 .getResource("testData")?.toURI()
-                ?.let { Path(it.path) }
+                ?.let { Paths.get(it) }
                 ?: error("No test data")
             val testDataFiles = testData.listDirectoryEntries("*.smt2").sorted()
             return testDataFiles.map { Arguments.of(it.relativeTo(testData).toString(), it) }
