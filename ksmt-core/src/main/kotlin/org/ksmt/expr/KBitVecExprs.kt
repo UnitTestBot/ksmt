@@ -110,7 +110,6 @@ class KBvReductionAndExpr internal constructor(
     override val args: List<KExpr<KBvSort>>
         get() = listOf(value)
 
-
     override fun decl(): KDecl<KBvSort> = ctx.mkBvReductionAndDecl(value.sort())
 
     override fun sort(): KBvSort = ctx.mkBv1Sort()
@@ -255,6 +254,7 @@ class KBvNegationExpr internal constructor(
         get() = listOf(value)
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvNegationDecl(value.sort())
+
     override fun sort(): KBvSort = value.sort()
 
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
@@ -275,7 +275,6 @@ class KBvAddExpr internal constructor(
 
     override fun sort(): KBvSort = arg0.sort()
 
-
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
 }
 
@@ -294,7 +293,6 @@ class KBvSubExpr internal constructor(
 
     override fun sort(): KBvSort = arg0.sort()
 
-
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
 }
 
@@ -312,7 +310,6 @@ class KBvMulExpr internal constructor(
     override fun decl(): KDecl<KBvSort> = ctx.mkBvMulDecl(arg0.sort(), arg1.sort())
 
     override fun sort(): KBvSort = arg0.sort()
-
 
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
 }
@@ -334,7 +331,6 @@ class KBvUnsignedDivExpr internal constructor(
     override fun decl(): KDecl<KBvSort> = ctx.mkBvUnsignedDivDecl(arg0.sort(), arg1.sort())
 
     override fun sort(): KBvSort = arg0.sort()
-
 
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
 }
@@ -359,7 +355,6 @@ class KBvSignedDivExpr internal constructor(
 
     override fun sort(): KBvSort = arg0.sort()
 
-
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
 }
 
@@ -380,7 +375,6 @@ class KBvUnsignedRemExpr internal constructor(
     override fun decl(): KDecl<KBvSort> = ctx.mkBvUnsignedRemDecl(arg0.sort(), arg1.sort())
 
     override fun sort(): KBvSort = arg0.sort()
-
 
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
 }
@@ -404,7 +398,6 @@ class KBvSignedRemExpr internal constructor(
 
     override fun sort(): KBvSort = arg0.sort()
 
-
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
 }
 
@@ -422,7 +415,6 @@ class KBvSignedModExpr internal constructor(
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvSignedModDecl(arg0.sort(), arg1.sort())
     override fun sort(): KBvSort = arg0.sort()
-
 
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
 }
@@ -457,6 +449,7 @@ class KBvSignedLessExpr internal constructor(
         get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvSignedLessDecl(arg0.sort(), arg1.sort())
+
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
@@ -474,6 +467,7 @@ class KBvUnsignedLessOrEqualExpr internal constructor(
         get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvUnsignedLessOrEqualDecl(arg0.sort(), arg1.sort())
+
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
 
@@ -492,6 +486,7 @@ class KBvSignedLessOrEqualExpr internal constructor(
         get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvSignedLessOrEqualDecl(arg0.sort(), arg1.sort())
+
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
 
@@ -510,6 +505,7 @@ class KBvUnsignedGreaterOrEqualExpr internal constructor(
         get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvUnsignedGreaterOrEqualDecl(arg0.sort(), arg1.sort())
+
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
@@ -527,6 +523,7 @@ class KBvSignedGreaterOrEqualExpr internal constructor(
         get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvSignedGreaterOrEqualDecl(arg0.sort(), arg1.sort())
+
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
@@ -546,6 +543,7 @@ class KBvUnsignedGreaterExpr internal constructor(
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvUnsignedGreaterDecl(arg0.sort(), arg1.sort())
 
     override fun sort(): KBoolSort = ctx.mkBoolSort()
+
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
@@ -561,6 +559,7 @@ class KBvSignedGreaterExpr internal constructor(
         get() = listOf(arg0, arg1)
 
     override fun decl(): KDecl<KBoolSort> = ctx.mkBvSignedGreaterDecl(arg0.sort(), arg1.sort())
+
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
@@ -582,6 +581,7 @@ class KConcatExpr internal constructor(
     override fun decl(): KDecl<KBvSort> = ctx.mkConcatDecl(arg0.sort(), arg1.sort())
 
     override fun sort(): KBvSort = decl().sort
+
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
 }
 
