@@ -1,10 +1,10 @@
 package org.ksmt.solver.z3
 
-import kotlin.math.exp
 import kotlin.random.Random
 import kotlin.random.nextUInt
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -17,6 +17,8 @@ import org.ksmt.expr.KBitVec64Value
 import org.ksmt.expr.KBitVecCustomValue
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KTrue
+import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv16Sort
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBv32Sort
@@ -310,8 +312,8 @@ class BitVecTest {
     }
 
     private fun testBinaryOperation(
-        operation: (KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBvSort>,
-        transformation: (Long, Long) -> Long
+        symbolicOperation: (KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBvSort>,
+        concreteOperation: (Long, Long) -> Long
     ): Unit = with(context) {
         val (negativeValue, positiveValue) = createTwoRandomLongValues()
 
@@ -321,18 +323,57 @@ class BitVecTest {
         val firstResult = mkBv64Sort().mkConst("symbolicVariable")
         val secondResult = mkBv64Sort().mkConst("anotherSymbolicVariable")
 
-        solver.assert(operation(negativeBv, positiveBv) eq firstResult)
-        solver.assert(operation(positiveBv, negativeBv) eq secondResult)
+        solver.assert(symbolicOperation(negativeBv, positiveBv) eq firstResult)
+        solver.assert(symbolicOperation(positiveBv, negativeBv) eq secondResult)
         solver.check()
 
         val firstActualValue = (solver.model().eval(firstResult) as KBitVec64Value).numberValue
         val secondActualValue = (solver.model().eval(secondResult) as KBitVec64Value).numberValue
 
-        val firstExpectedValue = transformation(negativeValue, positiveValue)
-        val secondExpectedValue = transformation(positiveValue, negativeValue)
+        val firstExpectedValue = concreteOperation(negativeValue, positiveValue)
+        val secondExpectedValue = concreteOperation(positiveValue, negativeValue)
 
         assertEquals(firstExpectedValue, firstActualValue)
         assertEquals(secondExpectedValue, secondActualValue)
+    }
+
+    private fun testLogicalOperation(
+        symbolicOperation: (KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBoolSort>,
+        concreteOperation: (Long, Long) -> Boolean
+    ): Unit = with(context) {
+        val values = (0 until 2).map { Random.nextLong() }.sorted()
+        val bvValues = values.map { it.toBv() }
+
+        val withItselfConst = mkBoolSort().mkConst("withItself")
+        val firstWithSecondConst = mkBoolSort().mkConst("firstWithSecond")
+        val secondWithFirstConst = mkBoolSort().mkConst("secondWithFirst")
+
+        val withItself = symbolicOperation(bvValues[0], bvValues[0]) eq withItselfConst
+        val firstWithSecond = symbolicOperation(bvValues[0], bvValues[1]) eq firstWithSecondConst
+        val secondWithFirst = symbolicOperation(bvValues[1], bvValues[0]) eq secondWithFirstConst
+
+        solver.assert(withItself)
+        solver.assert(firstWithSecond)
+        solver.assert(secondWithFirst)
+
+        solver.check()
+        val model = solver.model()
+
+        val expectedValues = listOf(
+            concreteOperation(values[0], values[0]),
+            concreteOperation(values[0], values[1]),
+            concreteOperation(values[1], values[0])
+        )
+
+        val actualValues = listOf(
+            model.eval(withItself),
+            model.eval(firstWithSecond),
+            model.eval(secondWithFirst)
+        )
+
+        assertFalse { expectedValues[0] xor (actualValues[0] is KTrue) }
+        assertFalse { expectedValues[1] xor (actualValues[1] is KTrue) }
+        assertFalse { expectedValues[2] xor (actualValues[2] is KTrue) }
     }
 
     @Test
@@ -399,9 +440,24 @@ class BitVecTest {
     fun testSignedDivExpr(): Unit = testBinaryOperation(context::mkBvSignedDivExpr, Long::div)
 
     @Test
-    @Disabled("Doesn't work yet")
+//    @Disabled("Doesn't work yet")
     fun testUnsignedRemExpr(): Unit = testBinaryOperation(context::mkBvUnsignedRemExpr) { arg0: Long, arg1: Long ->
         arg0 - (arg0.toULong() / arg1.toULong()).toLong() * arg1
+    }
+
+    @Test
+    fun testSignedReminderExpr(): Unit = testBinaryOperation(context:: mkBvSignedRemExpr) { arg0: Long, arg1: Long ->
+        arg0 - (arg0 / arg1) * arg1
+    }
+
+    @Test
+    fun testSignedModExpr(): Unit = testBinaryOperation(context::mkBvSignedModExpr) { arg0: Long, arg1: Long ->
+        TODO()
+    }
+
+    @Test
+    fun testUnsignedLessExpr(): Unit = testLogicalOperation(context::mkBvUnsignedLessExpr) { arg0: Long, arg1: Long ->
+        arg0.toULong() < arg1.toULong()
     }
 
     private fun createTwoRandomLongValues(): Pair<NegativeLong, PositiveLong> {

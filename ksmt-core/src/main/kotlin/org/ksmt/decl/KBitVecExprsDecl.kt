@@ -65,149 +65,135 @@ class KBitVecCustomSizeValueDecl internal constructor(
 
 
 // Expressions with bit-vectors
-class KBvNotDecl(ctx: KContext, valueSort: KBvSort) :
-    KFuncDecl1<KBvSort, KBvSort>(ctx, "bvnot", resultSort = valueSort, valueSort) {
+class KBvNotDecl<T : KBvSort> internal constructor(ctx: KContext, valueSort: T) :
+    KFuncDecl1<T, T>(ctx, "bvnot", resultSort = valueSort, valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<KBvSort>): KApp<KBvSort, KExpr<KBvSort>> = mkBvNotExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<T, KExpr<T>> = mkBvNotExpr(arg)
 }
 
-class KBvReductionAndDecl(ctx: KContext, valueSort: KBvSort) :
-    KFuncDecl1<KBvSort, KBvSort>(ctx, "bvredand", resultSort = ctx.mkBv1Sort(), valueSort) {
+class KBvReductionAndDecl<T : KBvSort> internal constructor(ctx: KContext, valueSort: T) :
+    KFuncDecl1<KBv1Sort, T>(ctx, "bvredand", resultSort = ctx.mkBv1Sort(), valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<KBvSort>): KApp<KBvSort, KExpr<KBvSort>> = mkBvReductionAndExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<KBv1Sort, KExpr<T>> = mkBvReductionAndExpr(arg)
 }
 
-class KBvReductionOrDecl(ctx: KContext, valueSort: KBvSort) :
-    KFuncDecl1<KBvSort, KBvSort>(ctx, "bvredor", resultSort = ctx.mkBv1Sort(), valueSort) {
+class KBvReductionOrDecl<T : KBvSort> internal constructor(ctx: KContext, valueSort: T) :
+    KFuncDecl1<KBv1Sort, T>(ctx, "bvredor", resultSort = ctx.mkBv1Sort(), valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<KBvSort>): KApp<KBvSort, KExpr<KBvSort>> = mkBvReductionOrExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<KBv1Sort, KExpr<T>> = mkBvReductionOrExpr(arg)
 }
 
-class KBvAndDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "bvand", resultSort = arg0Sort, arg0Sort, arg1Sort) {
+class KBvAndDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "bvand", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KApp<KBvSort, *> = mkBvAndExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvAndExpr(arg0, arg1)
 }
 
-class KBvOrDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "bvor", resultSort = arg0Sort, arg0Sort, arg1Sort) {
+class KBvOrDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "bvor", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KApp<KBvSort, *> = mkBvOrExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvOrExpr(arg0, arg1)
 }
 
-class KBvXorDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "bvxor", resultSort = arg0Sort, arg0Sort, arg1Sort) {
+class KBvXorDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "bvxor", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KApp<KBvSort, *> = mkBvXorExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvXorExpr(arg0, arg1)
 }
 
-class KBvNAndDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "bvnand", resultSort = arg0Sort, arg0Sort, arg1Sort) {
+class KBvNAndDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "bvnand", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KApp<KBvSort, *> = mkBvNAndExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvNAndExpr(arg0, arg1)
 }
 
-class KBvNorDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "bvnor", resultSort = arg0Sort, arg0Sort, arg1Sort) {
+class KBvNorDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "bvnor", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KApp<KBvSort, *> = mkBvNorExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvNorExpr(arg0, arg1)
 }
 
-class KBvXNorDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "bvxnor", resultSort = arg0Sort, arg0Sort, arg1Sort) {
+class KBvXNorDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "bvxnor", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KApp<KBvSort, *> = mkBvXNorExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvXNorExpr(arg0, arg1)
 }
 
-class KBvNegationDecl(ctx: KContext, valueSort: KBvSort) :
-    KFuncDecl1<KBvSort, KBvSort>(ctx, "bvneg", resultSort = valueSort, valueSort) {
+class KBvNegationDecl<T : KBvSort> internal constructor(ctx: KContext, valueSort: T) :
+    KFuncDecl1<T, T>(ctx, "bvneg", resultSort = valueSort, valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<KBvSort>): KApp<KBvSort, KExpr<KBvSort>> = mkBvNegationExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<T, KExpr<T>> = mkBvNegationExpr(arg)
 }
 
-class KBvAddDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "bvadd", resultSort = arg0Sort, arg0Sort, arg1Sort) {
+class KBvAddDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "bvadd", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KApp<KBvSort, *> = mkBvAddExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvAddExpr(arg0, arg1)
 }
 
-class KBvSubDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "bvsub", resultSort = arg0Sort, arg0Sort, arg1Sort) {
+class KBvSubDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "bvsub", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KApp<KBvSort, *> = mkBvSubExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvSubExpr(arg0, arg1)
 }
 
-class KBvMulDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "bvmul", resultSort = arg0Sort, arg0Sort, arg1Sort) {
+class KBvMulDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "bvmul", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KApp<KBvSort, *> = mkBvMulExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvMulExpr(arg0, arg1)
 }
 
-class KBvUnsignedDivDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "bvudiv", resultSort = arg0Sort, arg0Sort, arg1Sort) {
-    init {
-        checkSortsAreTheSame(arg0Sort, arg1Sort)
-    }
-
-    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
-
-    override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>
-    ): KApp<KBvSort, *> = mkBvUnsignedDivExpr(arg0, arg1)
-}
-
-class KBvSignedDivDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "bvsdiv", resultSort = arg0Sort, arg0Sort, arg1Sort) {
+class KBvUnsignedDivDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "bvudiv", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
@@ -215,13 +201,13 @@ class KBvSignedDivDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>
-    ): KApp<KBvSort, *> = mkBvSignedDivExpr(arg0, arg1)
+        arg0: KExpr<T>,
+        arg1: KExpr<T>
+    ): KApp<T, *> = mkBvUnsignedDivExpr(arg0, arg1)
 }
 
-class KBvUnsignedRemDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "bvurem", resultSort = arg0Sort, arg0Sort, arg1Sort) {
+class KBvSignedDivDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "bvsdiv", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
@@ -229,13 +215,13 @@ class KBvUnsignedRemDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>
-    ): KApp<KBvSort, *> = mkBvUnsignedRemExpr(arg0, arg1)
+        arg0: KExpr<T>,
+        arg1: KExpr<T>
+    ): KApp<T, *> = mkBvSignedDivExpr(arg0, arg1)
 }
 
-class KBvSignedRemDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "bvsrem", resultSort = arg0Sort, arg0Sort, arg1Sort) {
+class KBvUnsignedRemDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "bvurem", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
@@ -243,13 +229,13 @@ class KBvSignedRemDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>
-    ): KApp<KBvSort, *> = mkBvSignedRemExpr(arg0, arg1)
+        arg0: KExpr<T>,
+        arg1: KExpr<T>
+    ): KApp<T, *> = mkBvUnsignedRemExpr(arg0, arg1)
 }
 
-class KBvSignedModDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "bvsmod", resultSort = arg0Sort, arg0Sort, arg1Sort) {
+class KBvSignedRemDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "bvsrem", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
@@ -257,13 +243,13 @@ class KBvSignedModDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>
-    ): KApp<KBvSort, *> = mkBvSignedModExpr(arg0, arg1)
+        arg0: KExpr<T>,
+        arg1: KExpr<T>
+    ): KApp<T, *> = mkBvSignedRemExpr(arg0, arg1)
 }
 
-class KBvUnsignedLessDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBoolSort, KBvSort, KBvSort>(ctx, "bvult", resultSort = ctx.mkBoolSort(), arg0Sort, arg1Sort) {
+class KBvSignedModDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "bvsmod", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
@@ -271,13 +257,27 @@ class KBvUnsignedLessDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>
+        arg0: KExpr<T>,
+        arg1: KExpr<T>
+    ): KApp<T, *> = mkBvSignedModExpr(arg0, arg1)
+}
+
+class KBvUnsignedLessDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<KBoolSort, T, T>(ctx, "bvult", resultSort = ctx.mkBoolSort(), arg0Sort, arg1Sort) {
+    init {
+        checkSortsAreTheSame(arg0Sort, arg1Sort)
+    }
+
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<T>,
+        arg1: KExpr<T>
     ): KApp<KBoolSort, *> = mkBvUnsignedLessExpr(arg0, arg1)
 }
 
-class KBvSignedLessDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBoolSort, KBvSort, KBvSort>(ctx, "bvslt", resultSort = ctx.mkBoolSort(), arg0Sort, arg1Sort) {
+class KBvSignedLessDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<KBoolSort, T, T>(ctx, "bvslt", resultSort = ctx.mkBoolSort(), arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
@@ -285,13 +285,13 @@ class KBvSignedLessDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>
+        arg0: KExpr<T>,
+        arg1: KExpr<T>
     ): KApp<KBoolSort, *> = mkBvSignedLessExpr(arg0, arg1)
 }
 
-class KBvSignedLessOrEqualDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBoolSort, KBvSort, KBvSort>(ctx, "bvsle", resultSort = ctx.mkBoolSort(), arg0Sort, arg1Sort) {
+class KBvSignedLessOrEqualDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<KBoolSort, T, T>(ctx, "bvsle", resultSort = ctx.mkBoolSort(), arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
@@ -299,14 +299,14 @@ class KBvSignedLessOrEqualDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSo
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>
+        arg0: KExpr<T>,
+        arg1: KExpr<T>
     ): KApp<KBoolSort, *> = mkBvSignedLessOrEqualExpr(arg0, arg1)
 }
 
 
-class KBvUnsignedLessOrEqualDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBoolSort, KBvSort, KBvSort>(ctx, "bvule", resultSort = ctx.mkBoolSort(), arg0Sort, arg1Sort) {
+class KBvUnsignedLessOrEqualDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<KBoolSort, T, T>(ctx, "bvule", resultSort = ctx.mkBoolSort(), arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
@@ -314,13 +314,13 @@ class KBvUnsignedLessOrEqualDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBv
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>
+        arg0: KExpr<T>,
+        arg1: KExpr<T>
     ): KApp<KBoolSort, *> = mkBvUnsignedLessOrEqualExpr(arg0, arg1)
 }
 
-class KBvUnsignedGreaterOrEqualDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBoolSort, KBvSort, KBvSort>(ctx, "bvuge", resultSort = ctx.mkBoolSort(), arg0Sort, arg1Sort) {
+class KBvUnsignedGreaterOrEqualDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<KBoolSort, T, T>(ctx, "bvuge", resultSort = ctx.mkBoolSort(), arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
@@ -328,13 +328,13 @@ class KBvUnsignedGreaterOrEqualDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>
+        arg0: KExpr<T>,
+        arg1: KExpr<T>
     ): KApp<KBoolSort, *> = mkBvUnsignedGreaterOrEqualExpr(arg0, arg1)
 }
 
-class KBvSignedGreaterOrEqualDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBoolSort, KBvSort, KBvSort>(ctx, "bvsge", resultSort = ctx.mkBoolSort(), arg0Sort, arg1Sort) {
+class KBvSignedGreaterOrEqualDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<KBoolSort, T, T>(ctx, "bvsge", resultSort = ctx.mkBoolSort(), arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
@@ -342,13 +342,13 @@ class KBvSignedGreaterOrEqualDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KB
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>
+        arg0: KExpr<T>,
+        arg1: KExpr<T>
     ): KApp<KBoolSort, *> = mkBvSignedGreaterOrEqualExpr(arg0, arg1)
 }
 
-class KBvUnsignedGreaterDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBoolSort, KBvSort, KBvSort>(ctx, "bvugt", resultSort = ctx.mkBoolSort(), arg0Sort, arg1Sort) {
+class KBvUnsignedGreaterDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<KBoolSort, T, T>(ctx, "bvugt", resultSort = ctx.mkBoolSort(), arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
@@ -356,13 +356,13 @@ class KBvUnsignedGreaterDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>
+        arg0: KExpr<T>,
+        arg1: KExpr<T>
     ): KApp<KBoolSort, *> = mkBvUnsignedGreaterExpr(arg0, arg1)
 }
 
-class KBvSignedGreaterDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBoolSort, KBvSort, KBvSort>(ctx, "bvsgt", resultSort = ctx.mkBoolSort(), arg0Sort, arg1Sort) {
+class KBvSignedGreaterDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<KBoolSort, T, T>(ctx, "bvsgt", resultSort = ctx.mkBoolSort(), arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
@@ -370,12 +370,12 @@ class KBvSignedGreaterDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>
+        arg0: KExpr<T>,
+        arg1: KExpr<T>
     ): KApp<KBoolSort, *> = mkBvSignedGreaterExpr(arg0, arg1)
 }
 
-class KConcatDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
+class KConcatDecl internal constructor(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
     KFuncDecl2<KBvSort, KBvSort, KBvSort>(
         ctx,
         "concat",
@@ -395,7 +395,7 @@ class KConcatDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
     ): KApp<KBvSort, *> = mkConcatExpr(arg0, arg1)
 }
 
-class KExtractDecl(ctx: KContext, high: Int, low: Int, value: KExpr<KBvSort>) :
+class KExtractDecl internal constructor(ctx: KContext, high: Int, low: Int, value: KExpr<KBvSort>) :
     KFuncDecl1<KBvSort, KBvSort>(
         ctx,
         "extract",
@@ -410,7 +410,7 @@ class KExtractDecl(ctx: KContext, high: Int, low: Int, value: KExpr<KBvSort>) :
     override val parameters: List<Any> = listOf(high, low)
 }
 
-class KSignExtDecl(ctx: KContext, i: Int, value: KBvSort) :
+class KSignExtDecl internal constructor(ctx: KContext, i: Int, value: KBvSort) :
     KFuncDecl1<KBvSort, KBvSort>(
         ctx,
         "sign_extend",
@@ -425,7 +425,7 @@ class KSignExtDecl(ctx: KContext, i: Int, value: KBvSort) :
     override val parameters: List<Any> = listOf(i)
 }
 
-class KZeroExtDecl(ctx: KContext, i: Int, value: KBvSort) :
+class KZeroExtDecl internal constructor(ctx: KContext, i: Int, value: KBvSort) :
     KFuncDecl1<KBvSort, KBvSort>(
         ctx,
         "zero_extend",
@@ -440,7 +440,7 @@ class KZeroExtDecl(ctx: KContext, i: Int, value: KBvSort) :
     override val parameters: List<Any> = listOf(i)
 }
 
-class KRepeatDecl(ctx: KContext, i: Int, value: KBvSort) :
+class KRepeatDecl internal constructor(ctx: KContext, i: Int, value: KBvSort) :
     KFuncDecl1<KBvSort, KBvSort>(
         ctx,
         "repeat",
@@ -455,8 +455,8 @@ class KRepeatDecl(ctx: KContext, i: Int, value: KBvSort) :
     override val parameters: List<Any> = listOf(i)
 }
 
-class KBvShiftLeftDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "bvshl", resultSort = arg0Sort, arg0Sort, arg1Sort) {
+class KBvShiftLeftDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "bvshl", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
@@ -464,13 +464,13 @@ class KBvShiftLeftDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>
-    ): KApp<KBvSort, *> = mkBvShiftLeftExpr(arg0, arg1)
+        arg0: KExpr<T>,
+        arg1: KExpr<T>
+    ): KApp<T, *> = mkBvShiftLeftExpr(arg0, arg1)
 }
 
-class KBvLogicalShiftRightDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "bvlshr", resultSort = arg0Sort, arg0Sort, arg1Sort) {
+class KBvLogicalShiftRightDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "bvlshr", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
@@ -478,13 +478,13 @@ class KBvLogicalShiftRightDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSo
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>
-    ): KApp<KBvSort, *> = mkBvLogicalShiftRightExpr(arg0, arg1)
+        arg0: KExpr<T>,
+        arg1: KExpr<T>
+    ): KApp<T, *> = mkBvLogicalShiftRightExpr(arg0, arg1)
 }
 
-class KBvArithShiftRightDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "bvashr", resultSort = arg0Sort, arg0Sort, arg1Sort) {
+class KBvArithShiftRightDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "bvashr", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
@@ -492,13 +492,13 @@ class KBvArithShiftRightDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>
-    ): KApp<KBvSort, *> = mkBvArithShiftRightExpr(arg0, arg1)
+        arg0: KExpr<T>,
+        arg1: KExpr<T>
+    ): KApp<T, *> = mkBvArithShiftRightExpr(arg0, arg1)
 }
 
-class KBvRotateLeftDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "ext_rotate_left", resultSort = arg0Sort, arg0Sort, arg1Sort) {
+class KBvRotateLeftDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "ext_rotate_left", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
@@ -506,23 +506,23 @@ class KBvRotateLeftDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>
-    ): KApp<KBvSort, KExpr<KBvSort>> = mkBvRotateLeftExpr(arg0, arg1)
+        arg0: KExpr<T>,
+        arg1: KExpr<T>
+    ): KApp<T, KExpr<T>> = mkBvRotateLeftExpr(arg0, arg1)
 }
 
-class KBvRotateLeftIndexedDecl(ctx: KContext, i: Int, valueSort: KBvSort) :
-    KFuncDecl1<KBvSort, KBvSort>(ctx, "rotate_left", resultSort = valueSort, valueSort), KParameterizedFuncDecl {
+class KBvRotateLeftIndexedDecl<T : KBvSort> internal constructor(ctx: KContext, i: Int, valueSort: T) :
+    KFuncDecl1<T, T>(ctx, "rotate_left", resultSort = valueSort, valueSort), KParameterizedFuncDecl {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<KBvSort>): KApp<KBvSort, KExpr<KBvSort>> =
+    override fun KContext.apply(arg: KExpr<T>): KApp<T, KExpr<T>> =
         mkBvRotateLeftIndexedExpr(parameters.single() as Int, arg)
 
     override val parameters: List<Any> = listOf(i)
 }
 
-class KBvRotateRightDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBvSort, KBvSort, KBvSort>(ctx, "ext_rotate_right", resultSort = arg0Sort, arg0Sort, arg1Sort) {
+class KBvRotateRightDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<T, T, T>(ctx, "ext_rotate_right", resultSort = arg0Sort, arg0Sort, arg1Sort) {
     init {
         checkSortsAreTheSame(arg0Sort, arg1Sort)
     }
@@ -530,22 +530,22 @@ class KBvRotateRightDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>
-    ): KApp<KBvSort, KExpr<KBvSort>> = mkBvRotateRightExpr(arg0, arg1)
+        arg0: KExpr<T>,
+        arg1: KExpr<T>
+    ): KApp<T, KExpr<T>> = mkBvRotateRightExpr(arg0, arg1)
 }
 
-class KBvRotateRightIndexedDecl(ctx: KContext, i: Int, valueSort: KBvSort) :
-    KFuncDecl1<KBvSort, KBvSort>(ctx, "rotate_right", resultSort = valueSort, valueSort), KParameterizedFuncDecl {
+class KBvRotateRightIndexedDecl<T : KBvSort> internal constructor(ctx: KContext, i: Int, valueSort: T) :
+    KFuncDecl1<T, T>(ctx, "rotate_right", resultSort = valueSort, valueSort), KParameterizedFuncDecl {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<KBvSort>): KApp<KBvSort, KExpr<KBvSort>> =
+    override fun KContext.apply(arg: KExpr<T>): KApp<T, KExpr<T>> =
         mkBvRotateRightIndexedExpr(parameters.single() as Int, arg)
 
     override val parameters: List<Any> = listOf(i)
 }
 
-class KBv2IntDecl(ctx: KContext, value: KBvSort, isSigned: Boolean) :
+class KBv2IntDecl internal constructor(ctx: KContext, value: KBvSort, isSigned: Boolean) :
     KFuncDecl1<KIntSort, KBvSort>(ctx, "bv2int", resultSort = ctx.mkIntSort(), value), KParameterizedFuncDecl {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
@@ -555,8 +555,13 @@ class KBv2IntDecl(ctx: KContext, value: KBvSort, isSigned: Boolean) :
     override val parameters: List<Any> = listOf(isSigned)
 }
 
-class KBvAddNoOverflowDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort, isSigned: Boolean) :
-    KFuncDecl2<KBoolSort, KBvSort, KBvSort>(
+class KBvAddNoOverflowDecl<T : KBvSort> internal constructor(
+    ctx: KContext,
+    arg0Sort: T,
+    arg1Sort: T,
+    isSigned: Boolean
+) :
+    KFuncDecl2<KBoolSort, T, T>(
         ctx,
         "bv_add_no_overflow",
         resultSort = ctx.mkBoolSort(),
@@ -571,15 +576,15 @@ class KBvAddNoOverflowDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort, 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>,
+        arg0: KExpr<T>,
+        arg1: KExpr<T>,
     ): KApp<KBoolSort, *> = mkBvAddNoOverflowExpr(arg0, arg1, parameters.single() as Boolean)
 
     override val parameters: List<Any> = listOf(isSigned)
 }
 
-class KBvAddNoUnderflowDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBoolSort, KBvSort, KBvSort>(
+class KBvAddNoUnderflowDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<KBoolSort, T, T>(
         ctx,
         "bv_add_no_underflow",
         resultSort = ctx.mkBoolSort(),
@@ -593,13 +598,13 @@ class KBvAddNoUnderflowDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>,
+        arg0: KExpr<T>,
+        arg1: KExpr<T>,
     ): KApp<KBoolSort, *> = mkBvAddNoUnderflowExpr(arg0, arg1)
 }
 
-class KBvSubNoOverflowDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBoolSort, KBvSort, KBvSort>(
+class KBvSubNoOverflowDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<KBoolSort, T, T>(
         ctx,
         "bv_sub_no_overflow",
         resultSort = ctx.mkBoolSort(),
@@ -613,13 +618,18 @@ class KBvSubNoOverflowDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>,
+        arg0: KExpr<T>,
+        arg1: KExpr<T>,
     ): KApp<KBoolSort, *> = mkBvSubNoOverflowExpr(arg0, arg1)
 }
 
-class KBvSubNoUnderflowDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort, isSigned: Boolean) :
-    KFuncDecl2<KBoolSort, KBvSort, KBvSort>(
+class KBvSubNoUnderflowDecl<T : KBvSort> internal constructor(
+    ctx: KContext,
+    arg0Sort: T,
+    arg1Sort: T,
+    isSigned: Boolean
+) :
+    KFuncDecl2<KBoolSort, T, T>(
         ctx,
         "bv_sub_no_underflow",
         resultSort = ctx.mkBoolSort(),
@@ -634,15 +644,15 @@ class KBvSubNoUnderflowDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort,
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>,
+        arg0: KExpr<T>,
+        arg1: KExpr<T>,
     ): KApp<KBoolSort, *> = mkBvSubNoUnderflowExpr(arg0, arg1, parameters.single() as Boolean)
 
     override val parameters: List<Any> = listOf(isSigned)
 }
 
-class KBvDivNoOverflowDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBoolSort, KBvSort, KBvSort>(
+class KBvDivNoOverflowDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<KBoolSort, T, T>(
         ctx,
         "bv_div_no_overflow",
         resultSort = ctx.mkBoolSort(),
@@ -656,20 +666,25 @@ class KBvDivNoOverflowDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>,
+        arg0: KExpr<T>,
+        arg1: KExpr<T>,
     ): KApp<KBoolSort, *> = mkBvDivNoOverflowExpr(arg0, arg1)
 }
 
-class KBvNegNoOverflowDecl(ctx: KContext, value: KBvSort) :
-    KFuncDecl1<KBoolSort, KBvSort>(ctx, "bv_neg_no_overflow", resultSort = ctx.mkBoolSort(), value) {
+class KBvNegNoOverflowDecl<T : KBvSort> internal constructor(ctx: KContext, value: T) :
+    KFuncDecl1<KBoolSort, T>(ctx, "bv_neg_no_overflow", resultSort = ctx.mkBoolSort(), value) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
-    override fun KContext.apply(arg: KExpr<KBvSort>): KApp<KBoolSort, KExpr<KBvSort>> =
+    override fun KContext.apply(arg: KExpr<T>): KApp<KBoolSort, KExpr<T>> =
         mkBvNegationNoOverflowExpr(arg)
 }
 
-class KBvMulNoOverflowDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort, isSigned: Boolean) :
-    KFuncDecl2<KBoolSort, KBvSort, KBvSort>(
+class KBvMulNoOverflowDecl<T : KBvSort> internal constructor(
+    ctx: KContext,
+    arg0Sort: T,
+    arg1Sort: T,
+    isSigned: Boolean
+) :
+    KFuncDecl2<KBoolSort, T, T>(
         ctx,
         "bv_mul_no_overflow",
         resultSort = ctx.mkBoolSort(),
@@ -684,15 +699,15 @@ class KBvMulNoOverflowDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort, 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>,
+        arg0: KExpr<T>,
+        arg1: KExpr<T>,
     ): KApp<KBoolSort, *> = mkBvMulNoOverflowExpr(arg0, arg1, parameters.single() as Boolean)
 
     override val parameters: List<Any> = listOf(isSigned)
 }
 
-class KBvMulNoUnderflowDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort) :
-    KFuncDecl2<KBoolSort, KBvSort, KBvSort>(
+class KBvMulNoUnderflowDecl<T : KBvSort> internal constructor(ctx: KContext, arg0Sort: T, arg1Sort: T) :
+    KFuncDecl2<KBoolSort, T, T>(
         ctx,
         "bv_mul_no_underflow",
         resultSort = ctx.mkBoolSort(),
@@ -706,8 +721,8 @@ class KBvMulNoUnderflowDecl(ctx: KContext, arg0Sort: KBvSort, arg1Sort: KBvSort)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>,
+        arg0: KExpr<T>,
+        arg1: KExpr<T>,
     ): KApp<KBoolSort, *> = mkBvMulNoUnderflowExpr(arg0, arg1)
 }
 

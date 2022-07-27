@@ -61,51 +61,51 @@ interface KDeclVisitor<T> {
     fun visit(decl: KBitVec64ValueDecl): T
     fun visit(decl: KBitVecCustomSizeValueDecl): T
 
-    fun visit(decl: KBvNotDecl): T
-    fun visit(decl: KBvReductionAndDecl): T
-    fun visit(decl: KBvReductionOrDecl): T
-    fun visit(decl: KBvAndDecl): T
-    fun visit(decl: KBvOrDecl): T
-    fun visit(decl: KBvXorDecl): T
-    fun visit(decl: KBvNAndDecl): T
-    fun visit(decl: KBvNorDecl): T
-    fun visit(decl: KBvXNorDecl): T
-    fun visit(decl: KBvNegationDecl): T
-    fun visit(decl: KBvAddDecl): T
-    fun visit(decl: KBvSubDecl): T
-    fun visit(decl: KBvMulDecl): T
-    fun visit(decl: KBvUnsignedDivDecl): T
-    fun visit(decl: KBvSignedDivDecl): T
-    fun visit(decl: KBvUnsignedRemDecl): T
-    fun visit(decl: KBvSignedRemDecl): T
-    fun visit(decl: KBvSignedModDecl): T
-    fun visit(decl: KBvUnsignedLessDecl): T
-    fun visit(decl: KBvSignedLessDecl): T
-    fun visit(decl: KBvSignedLessOrEqualDecl): T
-    fun visit(decl: KBvUnsignedLessOrEqualDecl): T
-    fun visit(decl: KBvUnsignedGreaterOrEqualDecl): T
-    fun visit(decl: KBvSignedGreaterOrEqualDecl): T
-    fun visit(decl: KBvUnsignedGreaterDecl): T
-    fun visit(decl: KBvSignedGreaterDecl): T
+    fun <S: KBvSort> visit(decl: KBvNotDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvReductionAndDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvReductionOrDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvAndDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvOrDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvXorDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvNAndDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvNorDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvXNorDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvNegationDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvAddDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvSubDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvMulDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvUnsignedDivDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvSignedDivDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvUnsignedRemDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvSignedRemDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvSignedModDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvUnsignedLessDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvSignedLessDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvSignedLessOrEqualDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvUnsignedLessOrEqualDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvUnsignedGreaterOrEqualDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvSignedGreaterOrEqualDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvUnsignedGreaterDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvSignedGreaterDecl<S>): T
     fun visit(decl: KConcatDecl): T
     fun visit(decl: KExtractDecl): T
     fun visit(decl: KSignExtDecl): T
     fun visit(decl: KZeroExtDecl): T
     fun visit(decl: KRepeatDecl): T
-    fun visit(decl: KBvShiftLeftDecl): T
-    fun visit(decl: KBvLogicalShiftRightDecl): T
-    fun visit(decl: KBvArithShiftRightDecl): T
-    fun visit(decl: KBvRotateLeftDecl): T
-    fun visit(decl: KBvRotateLeftIndexedDecl): T
-    fun visit(decl: KBvRotateRightDecl): T
-    fun visit(decl: KBvRotateRightIndexedDecl): T
+    fun <S : KBvSort> visit(decl: KBvShiftLeftDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvLogicalShiftRightDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvArithShiftRightDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvRotateLeftDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvRotateLeftIndexedDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvRotateRightDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvRotateRightIndexedDecl<S>): T
     fun visit(decl: KBv2IntDecl): T
-    fun visit(decl: KBvAddNoOverflowDecl): T
-    fun visit(decl: KBvAddNoUnderflowDecl): T
-    fun visit(decl: KBvSubNoOverflowDecl): T
-    fun visit(decl: KBvSubNoUnderflowDecl): T
-    fun visit(decl: KBvDivNoOverflowDecl): T
-    fun visit(decl: KBvNegNoOverflowDecl): T
-    fun visit(decl: KBvMulNoOverflowDecl): T
-    fun visit(decl: KBvMulNoUnderflowDecl): T
+    fun <S : KBvSort> visit(decl: KBvAddNoOverflowDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvAddNoUnderflowDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvSubNoOverflowDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvSubNoUnderflowDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvDivNoOverflowDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvNegNoOverflowDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvMulNoOverflowDecl<S>): T
+    fun <S : KBvSort> visit(decl: KBvMulNoUnderflowDecl<S>): T
 }
