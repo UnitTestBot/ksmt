@@ -383,10 +383,6 @@ class KConcatDecl internal constructor(ctx: KContext, arg0Sort: KBvSort, arg1Sor
         arg0Sort,
         arg1Sort
     ) {
-    init {
-        checkSortsAreTheSame(arg0Sort, arg1Sort)
-    }
-
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(
@@ -395,7 +391,7 @@ class KConcatDecl internal constructor(ctx: KContext, arg0Sort: KBvSort, arg1Sor
     ): KApp<KBvSort, *> = mkConcatExpr(arg0, arg1)
 }
 
-class KExtractDecl internal constructor(ctx: KContext, high: Int, low: Int, value: KExpr<KBvSort>) :
+class KExtractDecl internal constructor(ctx: KContext, val high: Int, val low: Int, value: KExpr<KBvSort>) :
     KFuncDecl1<KBvSort, KBvSort>(
         ctx,
         "extract",
@@ -407,7 +403,8 @@ class KExtractDecl internal constructor(ctx: KContext, high: Int, low: Int, valu
     override fun KContext.apply(arg: KExpr<KBvSort>): KApp<KBvSort, KExpr<KBvSort>> =
         mkExtractExpr(parameters[0] as Int, parameters[1] as Int, arg)
 
-    override val parameters: List<Any> = listOf(high, low)
+    override val parameters: List<Any>
+        get() = listOf(high, low)
 }
 
 class KSignExtDecl internal constructor(ctx: KContext, i: Int, value: KBvSort) :
