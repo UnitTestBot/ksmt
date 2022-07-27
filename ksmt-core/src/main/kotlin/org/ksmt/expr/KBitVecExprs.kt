@@ -605,7 +605,7 @@ class KExtractExpr internal constructor(
 
     override fun sort(): KBvSort = ctx.mkBvSort((high - low + 1).toUInt())
 
-    override fun accept(transformer: KTransformer): KExpr<KBvSort> = TODO()
+    override fun accept(transformer: KTransformer): KExpr<KBvSort> = ctx.mkExtractExpr(high, low, value)
 }
 
 /**
