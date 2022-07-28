@@ -87,11 +87,11 @@ interface KDeclVisitor<T> {
     fun <S : KBvSort> visit(decl: KBvSignedGreaterOrEqualDecl<S>): T
     fun <S : KBvSort> visit(decl: KBvUnsignedGreaterDecl<S>): T
     fun <S : KBvSort> visit(decl: KBvSignedGreaterDecl<S>): T
-    fun visit(decl: KConcatDecl): T
-    fun visit(decl: KExtractDecl): T
+    fun visit(decl: KBvConcatDecl): T
+    fun visit(decl: KBvExtractDecl): T
     fun visit(decl: KSignExtDecl): T
     fun visit(decl: KZeroExtDecl): T
-    fun visit(decl: KRepeatDecl): T
+    fun visit(decl: KBvRepeatDecl): T
     fun <S : KBvSort> visit(decl: KBvShiftLeftDecl<S>): T
     fun <S : KBvSort> visit(decl: KBvLogicalShiftRightDecl<S>): T
     fun <S : KBvSort> visit(decl: KBvArithShiftRightDecl<S>): T

@@ -60,12 +60,12 @@ import org.ksmt.decl.KBvUnsignedGreaterDecl
 import org.ksmt.decl.KBvUnsignedLessOrEqualDecl
 import org.ksmt.decl.KBvUnsignedLessDecl
 import org.ksmt.decl.KBvUnsignedRemDecl
-import org.ksmt.decl.KConcatDecl
+import org.ksmt.decl.KBvConcatDecl
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KDistinctDecl
 import org.ksmt.decl.KEqDecl
-import org.ksmt.decl.KExtractDecl
+import org.ksmt.decl.KBvExtractDecl
 import org.ksmt.decl.KFalseDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.decl.KImpliesDecl
@@ -79,7 +79,7 @@ import org.ksmt.decl.KOrDecl
 import org.ksmt.decl.KRealIsIntDecl
 import org.ksmt.decl.KRealNumDecl
 import org.ksmt.decl.KRealToIntDecl
-import org.ksmt.decl.KRepeatDecl
+import org.ksmt.decl.KBvRepeatDecl
 import org.ksmt.decl.KSignExtDecl
 import org.ksmt.decl.KTrueDecl
 import org.ksmt.decl.KZeroExtDecl
@@ -144,14 +144,14 @@ import org.ksmt.expr.KBvUnsignedLessExpr
 import org.ksmt.expr.KBvUnsignedRemExpr
 import org.ksmt.expr.KBvXNorExpr
 import org.ksmt.expr.KBvXorExpr
-import org.ksmt.expr.KConcatExpr
+import org.ksmt.expr.KBvConcatExpr
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KDivArithExpr
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.KExtractExpr
+import org.ksmt.expr.KBvExtractExpr
 import org.ksmt.expr.KFalse
 import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KFunctionAsArray
@@ -173,8 +173,8 @@ import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KPowerArithExpr
 import org.ksmt.expr.KRealNumExpr
 import org.ksmt.expr.KRemIntExpr
-import org.ksmt.expr.KRepeatExpr
-import org.ksmt.expr.KSignExtensionExpr
+import org.ksmt.expr.KBvRepeatExpr
+import org.ksmt.expr.KBvSignExtensionExpr
 import org.ksmt.expr.KSubArithExpr
 import org.ksmt.expr.KToIntRealExpr
 import org.ksmt.expr.KToRealIntExpr
@@ -183,7 +183,7 @@ import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KZeroExtExpr
 import org.ksmt.expr.KXorExpr
-import org.ksmt.expr.KZeroExtensionExpr
+import org.ksmt.expr.KBvZeroExtensionExpr
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBv16Sort
@@ -789,23 +789,23 @@ open class KContext {
         bvSignedGreaterExprCache.create(arg0, arg1).cast()
 
     private val concatExprCache =
-        mkCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KConcatExpr(this, arg0, arg1) }
+        mkCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvConcatExpr(this, arg0, arg1) }
 
-    fun mkConcatExpr(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KConcatExpr = concatExprCache.create(arg0, arg1)
+    fun mkConcatExpr(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KBvConcatExpr = concatExprCache.create(arg0, arg1)
 
     private val extractExprCache = mkCache { high: Int, low: Int, value: KExpr<KBvSort> ->
-        KExtractExpr(this, high, low, value)
+        KBvExtractExpr(this, high, low, value)
     }
 
     fun mkExtractExpr(high: Int, low: Int, value: KExpr<KBvSort>) = extractExprCache.create(high, low, value)
 
-    private val signExtExprCache = mkCache { i: Int, value: KExpr<KBvSort> -> KSignExtensionExpr(this, i, value) }
+    private val signExtExprCache = mkCache { i: Int, value: KExpr<KBvSort> -> KBvSignExtensionExpr(this, i, value) }
     fun mkSignExtExpr(i: Int, value: KExpr<KBvSort>) = signExtExprCache.create(i, value)
 
-    private val zeroExtExprCache = mkCache { i: Int, value: KExpr<KBvSort> -> KZeroExtensionExpr(this, i, value) }
+    private val zeroExtExprCache = mkCache { i: Int, value: KExpr<KBvSort> -> KBvZeroExtensionExpr(this, i, value) }
     fun mkZeroExtExpr(i: Int, value: KExpr<KBvSort>) = zeroExtExprCache.create(i, value)
 
-    private val repeatExprCache = mkCache { i: Int, value: KExpr<KBvSort> -> KRepeatExpr(this, i, value) }
+    private val repeatExprCache = mkCache { i: Int, value: KExpr<KBvSort> -> KBvRepeatExpr(this, i, value) }
     fun mkRepeatExpr(i: Int, value: KExpr<KBvSort>) = repeatExprCache.create(i, value)
 
     private val bvShiftLeftExprCache =
@@ -1320,11 +1320,11 @@ open class KContext {
     fun <T : KBvSort> mkBvSignedGreaterDecl(arg0: T, arg1: T): KBvSignedGreaterDecl<T> =
         bvSignedGreaterDeclCache.create(arg0, arg1).cast()
 
-    private val concatDeclCache = mkCache { arg0: KBvSort, arg1: KBvSort -> KConcatDecl(this, arg0, arg1) }
-    fun mkConcatDecl(arg0: KBvSort, arg1: KBvSort): KConcatDecl = concatDeclCache.create(arg0, arg1)
+    private val concatDeclCache = mkCache { arg0: KBvSort, arg1: KBvSort -> KBvConcatDecl(this, arg0, arg1) }
+    fun mkConcatDecl(arg0: KBvSort, arg1: KBvSort): KBvConcatDecl = concatDeclCache.create(arg0, arg1)
 
     private val extractDeclCache = mkCache { high: Int, low: Int, value: KExpr<KBvSort> ->
-        KExtractDecl(this, high, low, value)
+        KBvExtractDecl(this, high, low, value)
     }
 
     fun mkExtractDecl(high: Int, low: Int, value: KExpr<KBvSort>) = extractDeclCache.create(high, low, value)
@@ -1335,7 +1335,7 @@ open class KContext {
     private val zeroExtDeclCache = mkCache { i: Int, value: KBvSort -> KZeroExtDecl(this, i, value) }
     fun mkZeroExtensionDecl(i: Int, value: KBvSort) = zeroExtDeclCache.create(i, value)
 
-    private val repeatDeclCache = mkCache { i: Int, value: KBvSort -> KRepeatDecl(this, i, value) }
+    private val repeatDeclCache = mkCache { i: Int, value: KBvSort -> KBvRepeatDecl(this, i, value) }
     fun mkRepeatDecl(i: Int, value: KBvSort) = repeatDeclCache.create(i, value)
 
     private val bvShiftLeftDeclCache = mkCache { arg0: KBvSort, arg1: KBvSort -> KBvShiftLeftDecl(this, arg0, arg1) }

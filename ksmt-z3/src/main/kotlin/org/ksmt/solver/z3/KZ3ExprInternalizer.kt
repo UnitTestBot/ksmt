@@ -70,14 +70,14 @@ import org.ksmt.expr.KBvUnsignedLessOrEqualExpr
 import org.ksmt.expr.KBvUnsignedRemExpr
 import org.ksmt.expr.KBvXNorExpr
 import org.ksmt.expr.KBvXorExpr
-import org.ksmt.expr.KConcatExpr
+import org.ksmt.expr.KBvConcatExpr
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KDivArithExpr
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.KExtractExpr
+import org.ksmt.expr.KBvExtractExpr
 import org.ksmt.expr.KFalse
 import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KGeArithExpr
@@ -97,8 +97,8 @@ import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KPowerArithExpr
 import org.ksmt.expr.KRealNumExpr
 import org.ksmt.expr.KRemIntExpr
-import org.ksmt.expr.KRepeatExpr
-import org.ksmt.expr.KSignExtensionExpr
+import org.ksmt.expr.KBvRepeatExpr
+import org.ksmt.expr.KBvSignExtensionExpr
 import org.ksmt.expr.KSubArithExpr
 import org.ksmt.expr.KToIntRealExpr
 import org.ksmt.expr.KToRealIntExpr
@@ -106,6 +106,7 @@ import org.ksmt.expr.KTransformer
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
+import org.ksmt.expr.KBvZeroExtensionExpr
 import org.ksmt.expr.KZeroExtensionExpr
 import org.ksmt.expr.KXorExpr
 import org.ksmt.sort.KArithSort
@@ -310,27 +311,27 @@ open class KZ3ExprInternalizer(
     override fun <T : KBvSort> transform(expr: KBvSignedGreaterExpr<T>): KExpr<KBoolSort> =
         with(expr) { transform(arg0, arg1, z3Ctx::mkBVSGT) }
 
-    override fun transform(expr: KConcatExpr): KExpr<KBvSort> = with(expr) { transform(arg0, arg1, z3Ctx::mkConcat) }
+    override fun transform(expr: KBvConcatExpr): KExpr<KBvSort> = with(expr) { transform(arg0, arg1, z3Ctx::mkConcat) }
 
-    override fun transform(expr: KExtractExpr): KExpr<KBvSort> = with(expr) {
+    override fun transform(expr: KBvExtractExpr): KExpr<KBvSort> = with(expr) {
         internalizeExpr {
             z3Ctx.mkExtract(high, low, value.internalize() as BitVecExpr)
         }
     }
 
-    override fun transform(expr: KSignExtensionExpr): KExpr<KBvSort> = with(expr) {
+    override fun transform(expr: KBvSignExtensionExpr): KExpr<KBvSort> = with(expr) {
         internalizeExpr {
             z3Ctx.mkSignExt(i, value.internalize() as BitVecExpr)
         }
     }
 
-    override fun transform(expr: KZeroExtensionExpr): KExpr<KBvSort> = with(expr) {
+    override fun transform(expr: KBvZeroExtensionExpr): KExpr<KBvSort> = with(expr) {
         internalizeExpr {
             z3Ctx.mkZeroExt(i, value.internalize() as BitVecExpr)
         }
     }
 
-    override fun transform(expr: KRepeatExpr): KExpr<KBvSort> = with(expr) {
+    override fun transform(expr: KBvRepeatExpr): KExpr<KBvSort> = with(expr) {
         internalizeExpr {
             z3Ctx.mkRepeat(expr.i, value.internalize() as BitVecExpr)
         }

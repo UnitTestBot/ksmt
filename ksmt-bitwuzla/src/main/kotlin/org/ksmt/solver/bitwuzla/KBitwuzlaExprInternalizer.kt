@@ -49,12 +49,12 @@ import org.ksmt.decl.KBvUnsignedLessOrEqualDecl
 import org.ksmt.decl.KBvUnsignedRemDecl
 import org.ksmt.decl.KBvXNorDecl
 import org.ksmt.decl.KBvXorDecl
-import org.ksmt.decl.KConcatDecl
+import org.ksmt.decl.KBvConcatDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KDeclVisitor
-import org.ksmt.decl.KExtractDecl
+import org.ksmt.decl.KBvExtractDecl
 import org.ksmt.decl.KFuncDecl
-import org.ksmt.decl.KRepeatDecl
+import org.ksmt.decl.KBvRepeatDecl
 import org.ksmt.decl.KSignExtDecl
 import org.ksmt.decl.KZeroExtDecl
 import org.ksmt.expr.KAndExpr
@@ -109,13 +109,13 @@ import org.ksmt.expr.KBvUnsignedLessOrEqualExpr
 import org.ksmt.expr.KBvUnsignedRemExpr
 import org.ksmt.expr.KBvXNorExpr
 import org.ksmt.expr.KBvXorExpr
-import org.ksmt.expr.KConcatExpr
+import org.ksmt.expr.KBvConcatExpr
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.KExtractExpr
+import org.ksmt.expr.KBvExtractExpr
 import org.ksmt.expr.KFalse
 import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KImpliesExpr
@@ -123,11 +123,12 @@ import org.ksmt.expr.KIteExpr
 import org.ksmt.expr.KNotExpr
 import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KQuantifier
-import org.ksmt.expr.KRepeatExpr
-import org.ksmt.expr.KSignExtensionExpr
+import org.ksmt.expr.KBvRepeatExpr
+import org.ksmt.expr.KBvSignExtensionExpr
 import org.ksmt.expr.KTransformer
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUniversalQuantifier
+import org.ksmt.expr.KBvZeroExtensionExpr
 import org.ksmt.expr.KZeroExtensionExpr
 import org.ksmt.expr.KXorExpr
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBVBase
@@ -361,15 +362,15 @@ open class KBitwuzlaExprInternalizer(
 
     override fun transform(expr: KBvSignedGreaterExpr): KExpr<KBoolSort> = TODO()
 
-    override fun transform(expr: KConcatExpr): KExpr<KBvSort> = TODO()
+    override fun transform(expr: KBvConcatExpr): KExpr<KBvSort> = TODO()
 
-    override fun transform(expr: KExtractExpr): KExpr<KBvSort> = TODO()
+    override fun transform(expr: KBvExtractExpr): KExpr<KBvSort> = TODO()
 
-    override fun transform(expr: KSignExtensionExpr): KExpr<KBvSort> = TODO()
+    override fun transform(expr: KBvSignExtensionExpr): KExpr<KBvSort> = TODO()
 
-    override fun transform(expr: KZeroExtensionExpr): KExpr<KBvSort> = TODO()
+    override fun transform(expr: KBvZeroExtensionExpr): KExpr<KBvSort> = TODO()
 
-    override fun transform(expr: KRepeatExpr): KExpr<KBvSort> = TODO()
+    override fun transform(expr: KBvRepeatExpr): KExpr<KBvSort> = TODO()
 
     override fun transform(expr: KBvShiftLeftExpr): KExpr<KBvSort> = TODO()
 
@@ -655,11 +656,11 @@ open class KBitwuzlaExprInternalizer(
             TODO("Not yet implemented")
         }
 
-        override fun visit(decl: KConcatDecl): BitwuzlaSort {
+        override fun visit(decl: KBvConcatDecl): BitwuzlaSort {
             TODO("Not yet implemented")
         }
 
-        override fun visit(decl: KExtractDecl): BitwuzlaSort {
+        override fun visit(decl: KBvExtractDecl): BitwuzlaSort {
             TODO("Not yet implemented")
         }
 
@@ -671,7 +672,7 @@ open class KBitwuzlaExprInternalizer(
             TODO("Not yet implemented")
         }
 
-        override fun visit(decl: KRepeatDecl): BitwuzlaSort {
+        override fun visit(decl: KBvRepeatDecl): BitwuzlaSort {
             TODO("Not yet implemented")
         }
 
