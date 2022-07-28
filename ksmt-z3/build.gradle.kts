@@ -1,5 +1,6 @@
 plugins {
     id("org.ksmt.ksmt-base")
+    `java-test-fixtures`
 }
 
 repositories {
@@ -12,7 +13,12 @@ val z3native by configurations.creating
 dependencies {
     implementation(project(":ksmt-core"))
     implementation("org.sosy-lab", "javasmt-solver-z3", "4.8.9-sosy1")
+
     testImplementation("org.junit.jupiter", "junit-jupiter-params", "5.8.2")
+    testImplementation(testFixtures(project(":ksmt-core")))
+    testFixturesImplementation(testFixtures(project(":ksmt-core")))
+    testFixturesImplementation("org.sosy-lab", "javasmt-solver-z3", "4.8.9-sosy1")
+
     z3native("com.microsoft.z3", "z3-native-win64", "4.8.9.1", ext = "zip")
     z3native("com.microsoft.z3", "z3-native-linux64", "4.8.9.1", ext = "zip")
     z3native("com.microsoft.z3", "z3-native-osx", "4.8.9.1", ext = "zip")
