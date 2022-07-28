@@ -109,17 +109,7 @@ open class KBitwuzlaExprConverter(
                 }
                 return funcDecl.apply(args).convertToBoolIfNeeded()
             }
-            BitwuzlaKind.BITWUZLA_KIND_VAL -> when {
-                bitwuzlaCtx.trueTerm == expr -> trueExpr
-                bitwuzlaCtx.falseTerm == expr -> falseExpr
-                Native.bitwuzlaTermIsBv(expr) -> {
-                    val size = Native.bitwuzlaTermBvGetSize(expr)
-                    val value = Native.bitwuzlaGetBvValue(bitwuzlaCtx.bitwuzla, expr)
-                    mkBv(value, size.toUInt())
-                }
-                Native.bitwuzlaTermIsFp(expr) -> TODO("FP are not supported yet")
-                else -> TODO("unsupported value")
-            }
+            BitwuzlaKind.BITWUZLA_KIND_VAL -> convertValue(expr)
             BitwuzlaKind.BITWUZLA_KIND_VAR -> TODO("var conversion is not implemented")
 
             // bool
@@ -270,6 +260,22 @@ open class KBitwuzlaExprConverter(
             BitwuzlaKind.BITWUZLA_NUM_KINDS,
             BitwuzlaKind.BITWUZLA_KIND_LAMBDA -> TODO("unsupported kind $kind")
         }
+    }
+
+    private fun KContext.convertValue(expr: BitwuzlaTerm) = when {
+        bitwuzlaCtx.trueTerm == expr -> trueExpr
+        bitwuzlaCtx.falseTerm == expr -> falseExpr
+        /**
+         * Search for cached value first because [Native.bitwuzlaGetBvValue]
+         * is only available after check-sat call
+         * */
+        Native.bitwuzlaTermIsBv(expr) -> bitwuzlaCtx.convertBvValue(expr) ?: run {
+            val size = Native.bitwuzlaTermBvGetSize(expr)
+            val value = Native.bitwuzlaGetBvValue(bitwuzlaCtx.bitwuzla, expr)
+            mkBv(value, size.toUInt())
+        }
+        Native.bitwuzlaTermIsFp(expr) -> TODO("FP are not supported yet")
+        else -> TODO("unsupported value")
     }
 
     @Suppress("LongMethod")
