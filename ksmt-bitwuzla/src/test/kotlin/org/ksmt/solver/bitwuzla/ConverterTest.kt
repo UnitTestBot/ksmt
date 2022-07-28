@@ -1,10 +1,9 @@
+package org.ksmt.solver.bitwuzla
+
 import org.ksmt.KContext
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KTransformer
-import org.ksmt.solver.bitwuzla.KBitwuzlaContext
-import org.ksmt.solver.bitwuzla.KBitwuzlaExprConverter
-import org.ksmt.solver.bitwuzla.KBitwuzlaExprInternalizer
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaOption
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaResult
