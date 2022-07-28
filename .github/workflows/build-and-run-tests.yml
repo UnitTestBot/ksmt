@@ -1,0 +1,49 @@
+name: Build and run simple ksmt tests
+
+on:
+  push:
+    branches:
+      - main
+      - design-draft
+
+  pull_request:
+    types: [ opened, edited ]
+    branches:
+      - main
+      - design-draft
+
+jobs:
+  run_tests:
+    name: Run tests
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK 1.8
+        uses: actions/setup-java@v3
+        with:
+          java-version: 8
+          distribution: 'zulu'
+          cache: gradle
+
+      - name: Build and run simple tests
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: |
+            build
+            --no-daemon
+            --continue
+            -Pz3.runBenchmarksBasedTests=false
+            -Pbitwuzla.runBenchmarksBasedTests=false
+
+# todo: test report uploading is temporarily disabled (https://github.com/UnitTestBot/ksmt/pull/18)
+#      - name: Upload ksmt test reports
+#        uses: actions/upload-artifact@v3
+#        if: always()
+#        with:
+#          name: ksmt_tests_report
+#          path: ./**/build/reports/tests/test/

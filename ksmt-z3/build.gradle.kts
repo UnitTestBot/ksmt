@@ -1,47 +1,56 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
-    kotlin("jvm") version "1.6.21"
-    id("io.gitlab.arturbosch.detekt") version "1.20.0"
-    id("de.undercouch.download") version "5.1.0"
+    id("org.ksmt.ksmt-base")
+    `java-test-fixtures`
+    id("com.github.johnrengelman.shadow") version "7.1.2"
 }
 
 repositories {
     mavenCentral()
-    flatDir { dirs("dist") }
 }
 
 val z3native by configurations.creating
 
+val z3Version = "4.10.2"
+
+val z3JavaJar by lazy { z3Release("x64-win", "*.jar") }
+
 dependencies {
     implementation(project(":ksmt-core"))
-    implementation("org.sosy-lab", "javasmt-solver-z3", "4.8.9-sosy1")
-    testImplementation(kotlin("test"))
-    testImplementation("org.junit.jupiter", "junit-jupiter-params", "5.8.2")
-    z3native("com.microsoft.z3", "z3-native-win64", "4.8.9.1", ext = "zip")
-    z3native("com.microsoft.z3", "z3-native-linux64", "4.8.9.1", ext = "zip")
-    z3native("com.microsoft.z3", "z3-native-osx", "4.8.9.1", ext = "zip")
-}
+    implementation(z3JavaJar)
 
-tasks.getByName<KotlinCompile>("compileKotlin") {
-    kotlinOptions.allWarningsAsErrors = true
-}
+    testImplementation(testFixtures(project(":ksmt-core")))
+    testFixturesApi(testFixtures(project(":ksmt-core")))
+    testFixturesImplementation(z3Release("x64-win", "*.jar"))
 
-detekt {
-    buildUponDefaultConfig = true
-    config = files(rootDir.resolve("detekt.yml"))
+    z3native(z3Release("x64-win", "*.dll"))
+    z3native(z3Release("x64-glibc-2.31", "*.so"))
+    z3native(z3Release("x64-osx-10.16", "*.dylib"))
 }
 
 tasks.withType<ProcessResources> {
-    z3native.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
-        from(zipTree(artifact.file)) {
-            into("lib/x64")
-        }
+    from(z3native.resolvedConfiguration.files) {
+        into("lib/x64")
     }
 }
 
+fun z3Release(arch: String, artifactPattern: String): FileTree {
+    val z3ReleaseBaseUrl = "https://github.com/Z3Prover/z3/releases/download"
+    val releaseName = "z3-${z3Version}"
+    val packageName = "z3-${z3Version}-${arch}.zip"
+    val packageDownloadTarget = buildDir.resolve("dist").resolve(releaseName).resolve(packageName)
+    download(listOf(z3ReleaseBaseUrl, releaseName, packageName).joinToString("/"), packageDownloadTarget)
+    return zipTree(packageDownloadTarget).matching { include("**/$artifactPattern") }
+}
+
+val runBenchmarksBasedTests = project.booleanProperty("z3.runBenchmarksBasedTests") ?: true
+
 // skip big benchmarks to achieve faster tests build and run time
-val skipBigBenchmarks = true
+val skipBigBenchmarks = project.booleanProperty("z3.skipBigBenchmarks") ?: true
+
+// skip to achieve faster tests run time
+val skipZ3SolverTest = project.booleanProperty("z3.skipSolverTest") ?: true
 
 val smtLibBenchmarks = listOfNotNull(
     "QF_ALIA", // 12M
@@ -62,7 +71,7 @@ val smtLibBenchmarks = listOfNotNull(
     "ABV", // 400K
     if (!skipBigBenchmarks) "AUFBV" else null, // 1.2G
     if (!skipBigBenchmarks) "BV" else null, // 847M
-    if (!skipBigBenchmarks) "QF_ABV" else null, // 253M
+    "QF_ABV", // 253M
     if (!skipBigBenchmarks) "QF_BV" else null// 12.3G
 )
 
@@ -73,33 +82,31 @@ val prepareTestData by tasks.registering {
 }
 
 tasks.withType<Test> {
-    useJUnitPlatform()
-    dependsOn.add(prepareTestData)
+    if (runBenchmarksBasedTests) {
+        environment("z3.benchmarksBasedTests", "enabled")
+        dependsOn.add(prepareTestData)
+        if (!skipZ3SolverTest) {
+            environment("z3.testSolver", "enabled")
+        }
+    }
 }
 
-fun mkSmtLibBenchmarkTestData(name: String) = tasks.register("smtLibBenchmark-$name") {
-    doLast {
-        val path = buildDir.resolve("smtLibBenchmark/$name")
-        val downloadTarget = path.resolve("$name.zip")
-        val repoUrl = "https://clc-gitlab.cs.uiowa.edu:2443"
-        val url = "$repoUrl/api/v4/projects/SMT-LIB-benchmarks%2F$name/repository/archive.zip"
-        download.run {
-            src(url)
-            dest(downloadTarget)
-            overwrite(false)
-        }
-        copy {
-            from(zipTree(downloadTarget))
-            into(path)
-        }
-        val smtFiles = path.walkTopDown().filter { it.extension == "smt2" }.toList()
-        val testResources = sourceSets.test.get().output.resourcesDir!!
-        val testData = testResources.resolve("testData")
-        copy {
-            from(smtFiles.toTypedArray())
-            into(testData)
-            rename { "${name}_$it" }
-            duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+tasks.withType<ShadowJar> {
+    archiveClassifier.set("")
+    dependencies {
+        include(dependency(z3JavaJar))
+    }
+    val implementation = project.configurations["implementation"].dependencies.toSet()
+    val runtimeOnly = project.configurations["runtimeOnly"].dependencies.toSet()
+    val dependencies =  (implementation + runtimeOnly)
+    project.configurations.shadow.get().dependencies.addAll(dependencies)
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            project.shadow.component(this)
+            artifact(tasks["kotlinSourcesJar"])
         }
     }
 }

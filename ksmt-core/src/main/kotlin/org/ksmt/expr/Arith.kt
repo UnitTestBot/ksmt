@@ -11,6 +11,7 @@ import org.ksmt.decl.KArithMulDecl
 import org.ksmt.decl.KArithPowerDecl
 import org.ksmt.decl.KArithSubDecl
 import org.ksmt.decl.KArithUnaryMinusDecl
+import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBoolSort
 

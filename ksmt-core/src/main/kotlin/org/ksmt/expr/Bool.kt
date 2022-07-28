@@ -11,6 +11,7 @@ import org.ksmt.decl.KNotDecl
 import org.ksmt.decl.KOrDecl
 import org.ksmt.decl.KTrueDecl
 import org.ksmt.decl.KXorDecl
+import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 

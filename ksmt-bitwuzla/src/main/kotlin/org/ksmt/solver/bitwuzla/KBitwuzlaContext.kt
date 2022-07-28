@@ -9,8 +9,6 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KSort
-import java.lang.ref.WeakReference
-import java.util.WeakHashMap
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.time.TimeMark
@@ -25,16 +23,24 @@ open class KBitwuzlaContext : AutoCloseable {
     val falseTerm: BitwuzlaTerm by lazy { Native.bitwuzlaMkFalse(bitwuzla) }
     val boolSort: BitwuzlaSort by lazy { Native.bitwuzlaMkBoolSort(bitwuzla) }
 
-    private val expressions = WeakHashMap<KExpr<*>, BitwuzlaTerm>()
-    private val bitwuzlaExpressions = WeakHashMap<BitwuzlaTerm, WeakReference<KExpr<*>>>()
-    private val sorts = WeakHashMap<KSort, BitwuzlaSort>()
-    private val bitwuzlaSorts = WeakHashMap<BitwuzlaSort, WeakReference<KSort>>()
-    private val declSorts = WeakHashMap<KDecl<*>, BitwuzlaSort>()
-    private val bitwuzlaConstants = HashMap<BitwuzlaTerm, KDecl<*>>()
+    private val expressions = hashMapOf<KExpr<*>, BitwuzlaTerm>()
+    private val bitwuzlaExpressions = hashMapOf<BitwuzlaTerm, KExpr<*>>()
+    private val sorts = hashMapOf<KSort, BitwuzlaSort>()
+    private val bitwuzlaSorts = hashMapOf<BitwuzlaSort, KSort>()
+    private val declSorts = hashMapOf<KDecl<*>, BitwuzlaSort>()
+    private val bitwuzlaConstants = hashMapOf<BitwuzlaTerm, KDecl<*>>()
+    private val bvValues = hashMapOf<BitwuzlaTerm, KExpr<*>>()
 
     operator fun get(expr: KExpr<*>): BitwuzlaTerm? = expressions[expr]
     operator fun get(sort: KSort): BitwuzlaSort? = sorts[sort]
 
+    /**
+     * Internalize ksmt expr into [BitwuzlaTerm] and cache internalization result to avoid
+     * internalization of already internalized expressions.
+     *
+     * [internalizer] must use special functions to internalize BitVec values ([internalizeBvValue])
+     * and constants ([mkConstant])
+     * */
     fun internalizeExpr(expr: KExpr<*>, internalizer: (KExpr<*>) -> BitwuzlaTerm): BitwuzlaTerm =
         expressions.getOrPut(expr) {
             internalizer(expr) // don't reverse cache bitwuzla term since it may be rewrited
@@ -43,7 +49,7 @@ open class KBitwuzlaContext : AutoCloseable {
     fun internalizeSort(sort: KSort, internalizer: (KSort) -> BitwuzlaSort): BitwuzlaSort =
         sorts.getOrPut(sort) {
             internalizer(sort).also {
-                bitwuzlaSorts[it] = WeakReference(sort)
+                bitwuzlaSorts[it] = sort
             }
         }
 
@@ -52,11 +58,25 @@ open class KBitwuzlaContext : AutoCloseable {
             internalizer(decl)
         }
 
+    /** Internalize and reverse cache Bv value to support Bv values conversion.
+     *
+     * Since [Native.bitwuzlaGetBvValue] is only available after check-sat call
+     * we must reverse cache Bv values to be able to convert all previously internalized
+     * expressions.
+     * */
+    fun saveInternalizedValue(expr: KExpr<*>, term: BitwuzlaTerm) {
+        bvValues[term] = expr
+    }
+
+    fun findConvertedExpr(expr: BitwuzlaTerm): KExpr<*>? = bitwuzlaExpressions[expr]
+
     fun convertExpr(expr: BitwuzlaTerm, converter: (BitwuzlaTerm) -> KExpr<*>): KExpr<*> =
         convert(expressions, bitwuzlaExpressions, expr, converter)
 
     fun convertSort(sort: BitwuzlaSort, converter: (BitwuzlaSort) -> KSort): KSort =
         convert(sorts, bitwuzlaSorts, sort, converter)
+
+    fun convertValue(value: BitwuzlaTerm): KExpr<*>? = bvValues[value]
 
     // constant is known only if it was previously internalized
     fun convertConstantIfKnown(term: BitwuzlaTerm): KDecl<*>? = bitwuzlaConstants[term]
@@ -65,6 +85,12 @@ open class KBitwuzlaContext : AutoCloseable {
     var currentConstantScope: ConstantScope = normalConstantScope
 
     fun declaredConstants(): Set<KDecl<*>> = normalConstantScope.constants.toSet()
+
+    /** Internalize constant.
+     *  1. Since [Native.bitwuzlaMkConst] creates fresh constant on each invocation caches are used
+     *   to guarantee that if two constants are equal in ksmt they are also equal in Bitwuzla
+     *  2. Scoping is used to support quantifier bound variables (see [withConstantScope])
+     * */
     fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = currentConstantScope.mkConstant(decl, sort)
 
     /** Constant scope for quantifiers.
@@ -125,17 +151,17 @@ open class KBitwuzlaContext : AutoCloseable {
 
     private inline fun <K, V> convert(
         cache: MutableMap<K, V>,
-        reverseCache: MutableMap<V, WeakReference<K>>,
+        reverseCache: MutableMap<V, K>,
         key: V,
         converter: (V) -> K
     ): K {
-        val current = reverseCache[key]?.get()
+        val current = reverseCache[key]
 
         if (current != null) return current
 
         val converted = converter(key)
         cache.putIfAbsent(converted, key)
-        reverseCache[key] = WeakReference(converted)
+        reverseCache[key] = converted
         return converted
     }
 
