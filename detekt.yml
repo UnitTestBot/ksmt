@@ -93,6 +93,7 @@ complexity:
     includePrivateDeclarations: false
   ComplexMethod:
     active: true
+    excludes: [ '**/test/**', '**/example/**' ]
     threshold: 15
     ignoreSingleWhenExpression: false
     ignoreSimpleWhenEntries: false

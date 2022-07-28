@@ -1,8 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.6.21"
-    id("io.gitlab.arturbosch.detekt") version "1.20.0"
+    id("org.ksmt.ksmt-base")
 }
 
 repositories {
@@ -17,23 +16,12 @@ dependencies {
     implementation("net.java.dev.jna:jna:5.12.0")
     implementation("net.java.dev.jna:jna-platform:5.12.0")
 
-    testImplementation(kotlin("test"))
     bitwuzlaNative("bitwuzla", "bitwuzla-native-linux-x86-64", "1.0", ext = "zip")
     bitwuzlaNative("bitwuzla", "bitwuzla-native-win32-x86-64", "1.0", ext = "zip")
 }
 
-tasks.getByName<KotlinCompile>("compileKotlin") {
+tasks.withType<KotlinCompile> {
     kotlinOptions.freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
-    kotlinOptions.allWarningsAsErrors = true
-}
-
-detekt {
-    buildUponDefaultConfig = true
-    config = files(rootDir.resolve("detekt.yml"))
-}
-
-tasks.withType<Test> {
-    useJUnitPlatform()
 }
 
 tasks.withType<ProcessResources> {
