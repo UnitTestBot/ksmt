@@ -571,7 +571,7 @@ class KBvSignedGreaterExpr<S: KBvSort> internal constructor(
  *
  * @return a bit-vector of size `n1 + n2`, where `n1` and `n2` are the sizes of [arg0] and [arg1] correspondingly.
  */
-class KConcatExpr internal constructor(
+class KBvConcatExpr internal constructor(
     ctx: KContext,
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
@@ -592,7 +592,7 @@ class KConcatExpr internal constructor(
  * Extracts the bits [high] down to [low] from the bitvector [value] of size `m`
  * to yield a new bitvector of size `n`, where `n = [high] - [low] + 1`.
  */
-class KExtractExpr internal constructor(
+class KBvExtractExpr internal constructor(
     ctx: KContext,
     val high: Int,
     val low: Int,
@@ -614,7 +614,7 @@ class KExtractExpr internal constructor(
  * Sign-extends the [value] to the (signed) equivalent bitvector of size `m + [i]`,
  * where `m` is the size of the [value].
  */
-class KSignExtensionExpr internal constructor(
+class KBvSignExtensionExpr internal constructor(
     ctx: KContext,
     val i: Int,
     val value: KExpr<KBvSort>
@@ -636,7 +636,7 @@ class KSignExtensionExpr internal constructor(
  * Extend the [value] with zeros to the (unsigned) equivalent bitvector
  * of size `m + [i]`, where `m` is the size of the [value].
  */
-class KZeroExtensionExpr internal constructor(
+class KBvZeroExtensionExpr internal constructor(
     ctx: KContext,
     val i: Int,
     val value: KExpr<KBvSort>
@@ -655,7 +655,7 @@ class KZeroExtensionExpr internal constructor(
 /**
  * Bit-vector repetition.
  */
-class KRepeatExpr internal constructor(
+class KBvRepeatExpr internal constructor(
     ctx: KContext,
     val i: Int,
     val value: KExpr<KBvSort>

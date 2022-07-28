@@ -70,11 +70,11 @@ import org.ksmt.decl.KBvUnsignedLessOrEqualDecl
 import org.ksmt.decl.KBvUnsignedRemDecl
 import org.ksmt.decl.KBvXNorDecl
 import org.ksmt.decl.KBvXorDecl
-import org.ksmt.decl.KConcatDecl
+import org.ksmt.decl.KBvConcatDecl
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDeclVisitor
 import org.ksmt.decl.KEqDecl
-import org.ksmt.decl.KExtractDecl
+import org.ksmt.decl.KBvExtractDecl
 import org.ksmt.decl.KFalseDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.decl.KIntModDecl
@@ -87,7 +87,7 @@ import org.ksmt.decl.KOrDecl
 import org.ksmt.decl.KRealIsIntDecl
 import org.ksmt.decl.KRealNumDecl
 import org.ksmt.decl.KRealToIntDecl
-import org.ksmt.decl.KRepeatDecl
+import org.ksmt.decl.KBvRepeatDecl
 import org.ksmt.decl.KSignExtDecl
 import org.ksmt.decl.KTrueDecl
 import org.ksmt.decl.KZeroExtDecl
@@ -352,11 +352,11 @@ open class KZ3DeclInternalizer(
         z3Ctx.mkBVSGT(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
     }
 
-    override fun visit(decl: KConcatDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+    override fun visit(decl: KBvConcatDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
         z3Ctx.mkConcat(decl.arg0Sort.sample() as BitVecExpr, decl.arg1Sort.sample() as BitVecExpr).funcDecl
     }
 
-    override fun visit(decl: KExtractDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+    override fun visit(decl: KBvExtractDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
         z3Ctx.mkExtract(decl.parameters[0] as Int, decl.parameters[1] as Int, decl.argSort.sample().cast()).funcDecl
     }
 
@@ -368,7 +368,7 @@ open class KZ3DeclInternalizer(
         z3Ctx.mkZeroExt(decl.parameters[0] as Int, decl.argSort.sample().cast()).funcDecl
     }
 
-    override fun visit(decl: KRepeatDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
+    override fun visit(decl: KBvRepeatDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
         z3Ctx.mkRepeat(decl.parameters[0] as Int, decl.argSort.sample().cast()).funcDecl
     }
 
