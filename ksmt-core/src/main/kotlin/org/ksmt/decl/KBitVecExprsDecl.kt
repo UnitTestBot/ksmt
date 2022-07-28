@@ -388,7 +388,7 @@ class KBvConcatDecl internal constructor(ctx: KContext, arg0Sort: KBvSort, arg1S
     override fun KContext.apply(
         arg0: KExpr<KBvSort>,
         arg1: KExpr<KBvSort>
-    ): KApp<KBvSort, *> = mkConcatExpr(arg0, arg1)
+    ): KApp<KBvSort, *> = mkBvConcatExpr(arg0, arg1)
 }
 
 class KBvExtractDecl internal constructor(
@@ -405,7 +405,7 @@ class KBvExtractDecl internal constructor(
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(arg: KExpr<KBvSort>): KApp<KBvSort, KExpr<KBvSort>> =
-        mkExtractExpr(parameters[0] as Int, parameters[1] as Int, arg)
+        mkBvExtractExpr(parameters[0] as Int, parameters[1] as Int, arg)
 
     override val parameters: List<Any>
         get() = listOf(high, low)
@@ -421,7 +421,7 @@ class KSignExtDecl internal constructor(ctx: KContext, private val i: Int, value
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(arg: KExpr<KBvSort>): KApp<KBvSort, KExpr<KBvSort>> =
-        mkSignExtExpr(parameters.single() as Int, arg)
+        mkBvSignExtensionExpr(parameters.single() as Int, arg)
 
     override val parameters: List<Any>
         get() = listOf(i)
@@ -437,7 +437,7 @@ class KZeroExtDecl internal constructor(ctx: KContext, private val i: Int, value
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(arg: KExpr<KBvSort>): KApp<KBvSort, KExpr<KBvSort>> =
-        mkZeroExtExpr(parameters.single() as Int, arg)
+        mkBvZeroExtensionExpr(parameters.single() as Int, arg)
 
     override val parameters: List<Any>
         get() = listOf(i)
@@ -453,7 +453,7 @@ class KBvRepeatDecl internal constructor(ctx: KContext, private val i: Int, valu
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
     override fun KContext.apply(arg: KExpr<KBvSort>): KApp<KBvSort, KExpr<KBvSort>> =
-        mkRepeatExpr(parameters.single() as Int, arg)
+        mkBvRepeatExpr(parameters.single() as Int, arg)
 
     override val parameters: List<Any>
         get() = listOf(i)

@@ -11,12 +11,16 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.ksmt.KContext
+import org.ksmt.decl.KBitVecValueDecl
 import org.ksmt.expr.KBitVec1Value
 import org.ksmt.expr.KBitVec32Value
 import org.ksmt.expr.KBitVec64Value
 import org.ksmt.expr.KBitVecCustomValue
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KInt64NumExpr
+import org.ksmt.expr.KIntBigNumExpr
+import org.ksmt.expr.KIntNumExpr
 import org.ksmt.expr.KTrue
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv16Sort
@@ -366,9 +370,9 @@ class BitVecTest {
         )
 
         val actualValues = listOf(
-            model.eval(withItself),
-            model.eval(firstWithSecond),
-            model.eval(secondWithFirst)
+            model.eval(withItselfConst),
+            model.eval(firstWithSecondConst),
+            model.eval(secondWithFirstConst)
         )
 
         assertFalse { expectedValues[0] xor (actualValues[0] is KTrue) }
@@ -446,7 +450,7 @@ class BitVecTest {
     }
 
     @Test
-    fun testSignedReminderExpr(): Unit = testBinaryOperation(context:: mkBvSignedRemExpr) { arg0: Long, arg1: Long ->
+    fun testSignedReminderExpr(): Unit = testBinaryOperation(context::mkBvSignedRemExpr) { arg0: Long, arg1: Long ->
         arg0 - (arg0 / arg1) * arg1
     }
 
@@ -459,6 +463,270 @@ class BitVecTest {
     fun testUnsignedLessExpr(): Unit = testLogicalOperation(context::mkBvUnsignedLessExpr) { arg0: Long, arg1: Long ->
         arg0.toULong() < arg1.toULong()
     }
+
+    @Test
+    fun testSignedLessExpr(): Unit = testLogicalOperation(context::mkBvSignedLessExpr) { arg0: Long, arg1: Long ->
+        arg0 < arg1
+    }
+
+    @Test
+    fun testUnsignedLessOrEqualExpr(): Unit =
+        testLogicalOperation(context::mkBvUnsignedLessOrEqualExpr) { arg0: Long, arg1: Long ->
+            arg0.toULong() <= arg1.toULong()
+        }
+
+    @Test
+    fun testSignedLessOrEqualExpr(): Unit =
+        testLogicalOperation(context::mkBvSignedLessOrEqualExpr) { arg0: Long, arg1: Long ->
+            arg0 <= arg1
+        }
+
+    @Test
+    fun testUnsignedGreaterOrEqualExpr(): Unit =
+        testLogicalOperation(context::mkBvUnsignedGreaterOrEqualExpr) { arg0: Long, arg1: Long ->
+            arg0 >= arg1
+        }
+
+    @Test
+    fun testSignedGreaterOrEqualExpr(): Unit =
+        testLogicalOperation(context::mkBvSignedGreaterOrEqualExpr) { arg0: Long, arg1: Long ->
+            arg0 >= arg1
+        }
+
+    @Test
+    fun testUnsignedGreaterExpr(): Unit =
+        testLogicalOperation(context::mkBvUnsignedGreaterExpr) { arg0: Long, arg1: Long ->
+            arg0.toULong() >= arg1.toULong()
+        }
+
+    @Test
+    fun testSignedGreaterExpr(): Unit = testLogicalOperation(context::mkBvSignedGreaterExpr) { arg0: Long, arg1: Long ->
+        arg0 > arg1
+    }
+
+    @Test
+    fun testConcatExpr(): Unit = with(context) {
+        val firstBv = Random.nextLong().toBv()
+        val secondBv = Random.nextInt().toBv()
+
+        val sizeBits = firstBv.sort.sizeBits + secondBv.sort.sizeBits
+        val symbolicConst = mkBvSort(sizeBits).mkConst("symbolicConst")
+
+        solver.assert(symbolicConst eq mkBvConcatExpr(firstBv, secondBv))
+        solver.check()
+
+        val resultValue = solver.model().eval(symbolicConst) as KBitVecCustomValue
+        val expectedResult = firstBv.numberValue.toBinary() + secondBv.numberValue.toBinary()
+
+        // TODO a bug with decimalStringValue and binary representation, run a debug to understand what I mean
+        assertEquals(expectedResult, resultValue.decimalStringValue)
+    }
+
+    @Test
+    fun testBvExtractExpr() : Unit = with(context) {
+        val value = Random.nextLong().toBv()
+        val high = Random.nextInt(from = 32, until = 64)
+        val low = Random.nextInt(from = 5, until = 32)
+
+        val symbolicValue = mkBvSort(high.toUInt() - low.toUInt() + 1u).mkConst("symbolicVariable")
+
+        solver.assert(symbolicValue eq mkBvExtractExpr(high, low, value))
+        solver.check()
+
+        val result = solver.model().eval(symbolicValue) as KBitVecValue<*>
+        val sizeBits = value.sort.sizeBits.toInt()
+        val expectedResult = value.numberValue.toBinary().substring(sizeBits - high - 1, sizeBits - low)
+
+        assertEquals(expectedResult, (result.decl as KBitVecValueDecl).value)
+    }
+
+    @Test
+    fun testBvSignExtensionExpr(): Unit = with(context) {
+        val negativeBv = Random.nextInt(from = Int.MIN_VALUE, until = 0).toBv()
+        val positiveBv = Random.nextInt(from = 1, until = Int.MAX_VALUE).toBv()
+
+        val positiveSymbolicVariable = mkBvSort(Long.SIZE_BITS.toUInt()).mkConst("positiveSymbolicVariable")
+        val negativeSymbolicVariable = mkBvSort(Long.SIZE_BITS.toUInt()).mkConst("negativeSymbolicVariable")
+
+        solver.assert(positiveSymbolicVariable eq mkBvSignExtensionExpr(Int.SIZE_BITS, positiveBv))
+        solver.assert(negativeSymbolicVariable eq mkBvSignExtensionExpr(Int.SIZE_BITS, negativeBv))
+        solver.check()
+
+        val positiveResult = (solver.model().eval(positiveSymbolicVariable) as KBitVec64Value).numberValue.toBinary()
+        val negativeResult = (solver.model().eval(negativeSymbolicVariable) as KBitVec64Value).numberValue.toBinary()
+
+        val expectedPositiveResult = positiveBv.numberValue.toBinary().padStart(Long.SIZE_BITS, '0')
+        val expectedNegativeResult = negativeBv.numberValue.toBinary().padStart(Long.SIZE_BITS, '1')
+
+        assertEquals(expectedPositiveResult, positiveResult)
+        assertEquals(expectedNegativeResult, negativeResult)
+    }
+
+    @Test
+    fun testBvZeroExtensionExpr(): Unit = with(context) {
+        val negativeBv = Random.nextInt(from = Int.MIN_VALUE, until = 0).toBv()
+        val positiveBv = Random.nextInt(from = 1, until = Int.MAX_VALUE).toBv()
+
+        val positiveSymbolicVariable = mkBvSort(Long.SIZE_BITS.toUInt()).mkConst("positiveSymbolicVariable")
+        val negativeSymbolicVariable = mkBvSort(Long.SIZE_BITS.toUInt()).mkConst("negativeSymbolicVariable")
+
+        solver.assert(positiveSymbolicVariable eq mkBvZeroExtensionExpr(Int.SIZE_BITS, positiveBv))
+        solver.assert(negativeSymbolicVariable eq mkBvZeroExtensionExpr(Int.SIZE_BITS, negativeBv))
+        solver.check()
+
+        val positiveResult = (solver.model().eval(positiveSymbolicVariable) as KBitVec64Value).numberValue.toBinary()
+        val negativeResult = (solver.model().eval(negativeSymbolicVariable) as KBitVec64Value).numberValue.toBinary()
+
+        val expectedPositiveResult = positiveBv.numberValue.toBinary().padStart(Long.SIZE_BITS, '0')
+        val expectedNegativeResult = negativeBv.numberValue.toBinary().padStart(Long.SIZE_BITS, '0')
+
+        assertEquals(expectedPositiveResult, positiveResult)
+        assertEquals(expectedNegativeResult, negativeResult)
+    }
+
+    @Test
+    fun testBvRepeatExpr(): Unit = with(context) {
+        val bv = Random.nextInt().toShort().toBv()
+        val numberOfRepetitions = 4u
+
+        val symbolicVariable = mkBvSort(bv.sort.sizeBits * numberOfRepetitions).mkConst("symbolicVariable")
+
+        solver.assert(symbolicVariable eq mkBvRepeatExpr(numberOfRepetitions.toInt(), bv))
+        solver.check()
+
+        val result = (solver.model().eval(symbolicVariable) as KBitVec64Value).numberValue.toBinary()
+        val expectedValue = bv.numberValue.toBinary().repeat(numberOfRepetitions.toInt())
+
+        assertEquals(expectedValue, result)
+    }
+
+    private fun testShift(
+        symbolicOperation: (KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBvSort>,
+        concreteOperation: (Long, Int) -> Long
+    ) = with(context) {
+        val value = Random.nextLong().toBv()
+        // TODO add restriction for positive shiftSize or check that it is not required
+        val shiftSize = Random.nextInt(from = 1, until = 50).toLong().toBv()
+
+        val symbolicVariable = value.sort().mkConst("symbolicVariable")
+
+        solver.assert(symbolicVariable eq symbolicOperation(value, shiftSize))
+        solver.check()
+
+        val expectedResult = concreteOperation(value.numberValue, shiftSize.numberValue.toInt())
+        val result = (solver.model().eval(symbolicVariable) as KBitVec64Value).numberValue
+
+        assertEquals(expectedResult, result)
+    }
+
+    // получается не строгая типизация, на самом деле. можно передать вот в таком виде функцию, а внутри testShift
+    // вызвать от двух разных векторов, и тогда всё умрёт в рантайме
+    @Test
+    fun testBvShiftLeftExpr(): Unit = testShift(context::mkBvShiftLeftExpr, Long::shl)
+
+    @Test
+    fun testBvLogicalShiftRightExpr(): Unit = testShift(context::mkBvLogicalShiftRightExpr, Long::ushr)
+
+    @Test
+    fun testBvArithShiftRightExpr(): Unit = testShift(context::mkBvArithShiftRightExpr, Long::shr)
+
+    @Test
+    fun testRotateLeft(): Unit = with(context) {
+        val bv = Random.nextLong().toBv()
+        val rotateSize = Random.nextLong(from = 1, until = 4).toBv()
+
+        val symbolicVariable = bv.sort().mkConst("symbolicVariable")
+
+        solver.assert(symbolicVariable eq mkBvRotateLeftExpr(bv, rotateSize))
+        solver.check()
+
+        val expectedResult = bv.numberValue.toBinary().let {
+            it.substring(rotateSize.numberValue.toInt(), it.length) + it.substring(0, rotateSize.numberValue.toInt())
+        }
+        val actualResult = (solver.model().eval(symbolicVariable) as KBitVec64Value).numberValue.toBinary()
+
+        assertEquals(expectedResult, actualResult)
+    }
+
+    @Test
+    fun testIndexedRotateLeft(): Unit = with(context) {
+        val bv = Random.nextLong().toBv()
+        val rotateSize = Random.nextInt(from = 1, until = 4)
+
+        val symbolicVariable = bv.sort().mkConst("symbolicVariable")
+
+        solver.assert(symbolicVariable eq mkBvRotateLeftIndexedExpr(rotateSize, bv))
+        solver.check()
+
+        val expectedResult = bv.numberValue.toBinary().let {
+            it.substring(rotateSize, it.length) + it.substring(0, rotateSize)
+        }
+        val actualResult = (solver.model().eval(symbolicVariable) as KBitVec64Value).numberValue.toBinary()
+
+        assertEquals(expectedResult, actualResult)
+    }
+
+    @Test
+    fun testRotateRight(): Unit = with(context) {
+        val bv = Random.nextLong().toBv()
+        val rotateSize = Random.nextLong(from = 1, until = 4).toBv()
+
+        val symbolicVariable = bv.sort().mkConst("symbolicVariable")
+
+        solver.assert(symbolicVariable eq mkBvRotateRightExpr(bv, rotateSize))
+        solver.check()
+
+        val expectedResult = bv.numberValue.toBinary().let {
+            val firstPart = it.substring(it.length - rotateSize.numberValue.toInt(), it.length)
+            val secondPart = it.substring(0, it.length - rotateSize.numberValue.toInt())
+            firstPart + secondPart
+        }
+        val actualResult = (solver.model().eval(symbolicVariable) as KBitVec64Value).numberValue.toBinary()
+
+        assertEquals(expectedResult, actualResult)
+    }
+
+    @Test
+    fun testIndexedRotateRight(): Unit = with(context) {
+        val bv = Random.nextLong().toBv()
+        val rotateSize = Random.nextInt(from = 1, until = 4)
+
+        val symbolicVariable = bv.sort().mkConst("symbolicVariable")
+
+        solver.assert(symbolicVariable eq mkBvRotateRightIndexedExpr(rotateSize, bv))
+        solver.check()
+
+        val expectedResult = bv.numberValue.toBinary().let {
+            val firstPart = it.substring(it.length - rotateSize, it.length)
+            val secondPart = it.substring(0, it.length - rotateSize)
+            firstPart + secondPart
+        }
+        val actualResult = (solver.model().eval(symbolicVariable) as KBitVec64Value).numberValue.toBinary()
+
+        assertEquals(expectedResult, actualResult)
+    }
+
+    @Test
+    fun testKBv2Int(): Unit = with(context) {
+        val value = Random.nextLong(from = Long.MIN_VALUE, until = 0).toBv()
+        val signedSymbolicValue = mkIntSort().mkConst("signedSymbolicValue")
+        val unsignedSymbolicValue = mkIntSort().mkConst("unsignedSymbolicValue")
+
+        solver.assert(signedSymbolicValue eq mkBv2IntExpr(value, isSigned = true))
+        solver.assert(unsignedSymbolicValue eq mkBv2IntExpr(value, isSigned = false))
+        solver.check()
+
+        val expectedSignedResult = value.numberValue
+        val expectedUnsignedResult = value.numberValue.toULong()
+
+        val actualSignedResult = (solver.model().eval(signedSymbolicValue) as KIntNumExpr)
+        val actualUnsignedResult = (solver.model().eval(unsignedSymbolicValue) as KIntNumExpr)
+
+        assertEquals(expectedSignedResult, (actualSignedResult as KInt64NumExpr).value)
+        assertEquals(expectedUnsignedResult.toString(), (actualUnsignedResult as KIntBigNumExpr).value.toString())
+    }
+
+    // TODO add tests for tests with overloads
 
     private fun createTwoRandomLongValues(): Pair<NegativeLong, PositiveLong> {
         val negativeValue = Random.nextLong(from = Int.MIN_VALUE.toLong(), until = 0L)

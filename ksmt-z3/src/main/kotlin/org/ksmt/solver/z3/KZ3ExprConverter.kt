@@ -183,6 +183,7 @@ open class KZ3ExprConverter(
     @Suppress("MemberVisibilityCanBePrivate")
     fun convertNumeral(expr: BitVecNum): KBitVecValue<*> = with(ctx) {
         val sizeBits = expr.sortSize.toUInt()
+        // TODO there is a bug here. We create KBitVecCustomValue with binary representation set in the decimalStringValue field
         mkBv(value = expr.toBinaryString().padStart(sizeBits.toInt(), '0'), sizeBits)
     }
 }

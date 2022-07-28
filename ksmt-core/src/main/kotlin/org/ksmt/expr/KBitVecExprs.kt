@@ -579,7 +579,7 @@ class KBvConcatExpr internal constructor(
     override val args: List<KExpr<KBvSort>>
         get() = listOf(arg0, arg1)
 
-    override fun decl(): KDecl<KBvSort> = ctx.mkConcatDecl(arg0.sort(), arg1.sort())
+    override fun decl(): KDecl<KBvSort> = ctx.mkBvConcatDecl(arg0.sort(), arg1.sort())
 
     override fun sort(): KBvSort = decl().sort
 
@@ -601,11 +601,11 @@ class KBvExtractExpr internal constructor(
     override val args: List<KExpr<KBvSort>>
         get() = listOf(value)
 
-    override fun decl(): KDecl<KBvSort> = ctx.mkExtractDecl(high, low, value)
+    override fun decl(): KDecl<KBvSort> = ctx.mkBvExtractDecl(high, low, value)
 
     override fun sort(): KBvSort = ctx.mkBvSort((high - low + 1).toUInt())
 
-    override fun accept(transformer: KTransformer): KExpr<KBvSort> = ctx.mkExtractExpr(high, low, value)
+    override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
 }
 
 /**
@@ -622,7 +622,7 @@ class KBvSignExtensionExpr internal constructor(
     override val args: List<KExpr<KBvSort>>
         get() = listOf(value)
 
-    override fun decl(): KDecl<KBvSort> = ctx.mkSignExtensionDecl(i, value.sort())
+    override fun decl(): KDecl<KBvSort> = ctx.mkBvSignExtensionDecl(i, value.sort())
 
     override fun sort(): KBvSort = ctx.mkBvSort(value.sort().sizeBits + i.toUInt())
 
@@ -644,7 +644,7 @@ class KBvZeroExtensionExpr internal constructor(
     override val args: List<KExpr<KBvSort>>
         get() = listOf(value)
 
-    override fun decl(): KDecl<KBvSort> = ctx.mkZeroExtensionDecl(i, value.sort())
+    override fun decl(): KDecl<KBvSort> = ctx.mkBvZeroExtensionDecl(i, value.sort())
 
     override fun sort(): KBvSort = ctx.mkBvSort(value.sort().sizeBits + i.toUInt())
 
@@ -663,7 +663,7 @@ class KBvRepeatExpr internal constructor(
     override val args: List<KExpr<KBvSort>>
         get() = listOf(value)
 
-    override fun decl(): KDecl<KBvSort> = ctx.mkRepeatDecl(i, value.sort())
+    override fun decl(): KDecl<KBvSort> = ctx.mkBvRepeatDecl(i, value.sort())
 
     override fun sort(): KBvSort = ctx.mkBvSort(value.sort().sizeBits * i.toUInt())
 
