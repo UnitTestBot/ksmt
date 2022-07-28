@@ -1,9 +1,5 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
-    kotlin("jvm") version "1.6.21"
-    id("io.gitlab.arturbosch.detekt") version "1.20.0"
-    id("de.undercouch.download") version "5.1.0"
+    id("org.ksmt.ksmt-base")
 }
 
 repositories {
@@ -16,20 +12,10 @@ val z3native by configurations.creating
 dependencies {
     implementation(project(":ksmt-core"))
     implementation("org.sosy-lab", "javasmt-solver-z3", "4.8.9-sosy1")
-    testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter", "junit-jupiter-params", "5.8.2")
     z3native("com.microsoft.z3", "z3-native-win64", "4.8.9.1", ext = "zip")
     z3native("com.microsoft.z3", "z3-native-linux64", "4.8.9.1", ext = "zip")
     z3native("com.microsoft.z3", "z3-native-osx", "4.8.9.1", ext = "zip")
-}
-
-tasks.getByName<KotlinCompile>("compileKotlin") {
-    kotlinOptions.allWarningsAsErrors = true
-}
-
-detekt {
-    buildUponDefaultConfig = true
-    config = files(rootDir.resolve("detekt.yml"))
 }
 
 tasks.withType<ProcessResources> {
@@ -73,33 +59,5 @@ val prepareTestData by tasks.registering {
 }
 
 tasks.withType<Test> {
-    useJUnitPlatform()
     dependsOn.add(prepareTestData)
-}
-
-fun mkSmtLibBenchmarkTestData(name: String) = tasks.register("smtLibBenchmark-$name") {
-    doLast {
-        val path = buildDir.resolve("smtLibBenchmark/$name")
-        val downloadTarget = path.resolve("$name.zip")
-        val repoUrl = "https://clc-gitlab.cs.uiowa.edu:2443"
-        val url = "$repoUrl/api/v4/projects/SMT-LIB-benchmarks%2F$name/repository/archive.zip"
-        download.run {
-            src(url)
-            dest(downloadTarget)
-            overwrite(false)
-        }
-        copy {
-            from(zipTree(downloadTarget))
-            into(path)
-        }
-        val smtFiles = path.walkTopDown().filter { it.extension == "smt2" }.toList()
-        val testResources = sourceSets.test.get().output.resourcesDir!!
-        val testData = testResources.resolve("testData")
-        copy {
-            from(smtFiles.toTypedArray())
-            into(testData)
-            rename { "${name}_$it" }
-            duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-        }
-    }
 }
