@@ -1,3 +1,5 @@
+package org.ksmt.solver.bitwuzla
+
 import org.ksmt.KContext
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
