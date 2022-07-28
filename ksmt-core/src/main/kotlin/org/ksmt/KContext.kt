@@ -791,22 +791,22 @@ open class KContext {
     private val concatExprCache =
         mkCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvConcatExpr(this, arg0, arg1) }
 
-    fun mkConcatExpr(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KBvConcatExpr = concatExprCache.create(arg0, arg1)
+    fun mkBvConcatExpr(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KBvConcatExpr = concatExprCache.create(arg0, arg1)
 
     private val extractExprCache = mkCache { high: Int, low: Int, value: KExpr<KBvSort> ->
         KBvExtractExpr(this, high, low, value)
     }
 
-    fun mkExtractExpr(high: Int, low: Int, value: KExpr<KBvSort>) = extractExprCache.create(high, low, value)
+    fun mkBvExtractExpr(high: Int, low: Int, value: KExpr<KBvSort>) = extractExprCache.create(high, low, value)
 
-    private val signExtExprCache = mkCache { i: Int, value: KExpr<KBvSort> -> KBvSignExtensionExpr(this, i, value) }
-    fun mkSignExtExpr(i: Int, value: KExpr<KBvSort>) = signExtExprCache.create(i, value)
+    private val signExtensionExprCache = mkCache { i: Int, value: KExpr<KBvSort> -> KBvSignExtensionExpr(this, i, value) }
+    fun mkBvSignExtensionExpr(i: Int, value: KExpr<KBvSort>) = signExtensionExprCache.create(i, value)
 
-    private val zeroExtExprCache = mkCache { i: Int, value: KExpr<KBvSort> -> KBvZeroExtensionExpr(this, i, value) }
-    fun mkZeroExtExpr(i: Int, value: KExpr<KBvSort>) = zeroExtExprCache.create(i, value)
+    private val zeroExtensionExprCache = mkCache { i: Int, value: KExpr<KBvSort> -> KBvZeroExtensionExpr(this, i, value) }
+    fun mkBvZeroExtensionExpr(i: Int, value: KExpr<KBvSort>) = zeroExtensionExprCache.create(i, value)
 
     private val repeatExprCache = mkCache { i: Int, value: KExpr<KBvSort> -> KBvRepeatExpr(this, i, value) }
-    fun mkRepeatExpr(i: Int, value: KExpr<KBvSort>) = repeatExprCache.create(i, value)
+    fun mkBvRepeatExpr(i: Int, value: KExpr<KBvSort>) = repeatExprCache.create(i, value)
 
     private val bvShiftLeftExprCache =
         mkCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvShiftLeftExpr(this, arg0, arg1) }
@@ -1321,22 +1321,22 @@ open class KContext {
         bvSignedGreaterDeclCache.create(arg0, arg1).cast()
 
     private val concatDeclCache = mkCache { arg0: KBvSort, arg1: KBvSort -> KBvConcatDecl(this, arg0, arg1) }
-    fun mkConcatDecl(arg0: KBvSort, arg1: KBvSort): KBvConcatDecl = concatDeclCache.create(arg0, arg1)
+    fun mkBvConcatDecl(arg0: KBvSort, arg1: KBvSort): KBvConcatDecl = concatDeclCache.create(arg0, arg1)
 
     private val extractDeclCache = mkCache { high: Int, low: Int, value: KExpr<KBvSort> ->
         KBvExtractDecl(this, high, low, value)
     }
 
-    fun mkExtractDecl(high: Int, low: Int, value: KExpr<KBvSort>) = extractDeclCache.create(high, low, value)
+    fun mkBvExtractDecl(high: Int, low: Int, value: KExpr<KBvSort>) = extractDeclCache.create(high, low, value)
 
     private val signExtDeclCache = mkCache { i: Int, value: KBvSort -> KSignExtDecl(this, i, value) }
-    fun mkSignExtensionDecl(i: Int, value: KBvSort) = signExtDeclCache.create(i, value)
+    fun mkBvSignExtensionDecl(i: Int, value: KBvSort) = signExtDeclCache.create(i, value)
 
     private val zeroExtDeclCache = mkCache { i: Int, value: KBvSort -> KZeroExtDecl(this, i, value) }
-    fun mkZeroExtensionDecl(i: Int, value: KBvSort) = zeroExtDeclCache.create(i, value)
+    fun mkBvZeroExtensionDecl(i: Int, value: KBvSort) = zeroExtDeclCache.create(i, value)
 
     private val repeatDeclCache = mkCache { i: Int, value: KBvSort -> KBvRepeatDecl(this, i, value) }
-    fun mkRepeatDecl(i: Int, value: KBvSort) = repeatDeclCache.create(i, value)
+    fun mkBvRepeatDecl(i: Int, value: KBvSort) = repeatDeclCache.create(i, value)
 
     private val bvShiftLeftDeclCache = mkCache { arg0: KBvSort, arg1: KBvSort -> KBvShiftLeftDecl(this, arg0, arg1) }
     fun <T : KBvSort> mkBvShiftLeftDecl(arg0: T, arg1: T): KBvShiftLeftDecl<T> =
