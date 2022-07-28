@@ -31,6 +31,7 @@ open class KBitwuzlaContext : AutoCloseable {
     private val bitwuzlaSorts = WeakHashMap<BitwuzlaSort, WeakReference<KSort>>()
     private val declSorts = WeakHashMap<KDecl<*>, BitwuzlaSort>()
     private val bitwuzlaConstants = HashMap<BitwuzlaTerm, KDecl<*>>()
+    private val bvValues = HashMap<BitwuzlaTerm, KExpr<*>>()
 
     operator fun get(expr: KExpr<*>): BitwuzlaTerm? = expressions[expr]
     operator fun get(sort: KSort): BitwuzlaSort? = sorts[sort]
@@ -52,11 +53,21 @@ open class KBitwuzlaContext : AutoCloseable {
             internalizer(decl)
         }
 
+    fun internalizeBvValue(expr: KExpr<*>, internalizer: () -> BitwuzlaTerm): BitwuzlaTerm =
+        internalizer().also {
+            // reverse cache bitwuzla term for bv value since it may not be rewrited
+            val current = bvValues[it]
+            check(current == null) { "Same bv value for $expr and $current" }
+            bvValues[it] = expr
+        }
+
     fun convertExpr(expr: BitwuzlaTerm, converter: (BitwuzlaTerm) -> KExpr<*>): KExpr<*> =
         convert(expressions, bitwuzlaExpressions, expr, converter)
 
     fun convertSort(sort: BitwuzlaSort, converter: (BitwuzlaSort) -> KSort): KSort =
         convert(sorts, bitwuzlaSorts, sort, converter)
+
+    fun convertBvValue(value: BitwuzlaTerm): KExpr<*>? = bvValues[value]
 
     // constant is known only if it was previously internalized
     fun convertConstantIfKnown(term: BitwuzlaTerm): KDecl<*>? = bitwuzlaConstants[term]

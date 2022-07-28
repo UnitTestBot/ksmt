@@ -236,23 +236,27 @@ open class KBitwuzlaExprInternalizer(
     override fun transform(expr: KBitVec64Value): KExpr<KBv64Sort> = transformBvNumber(expr)
 
     fun <T : KBitVecNumberValue<S, *>, S : KBvSort> transformBvNumber(expr: T): T = expr.internalizeExpr {
-        with(ctx) {
-            Native.bitwuzlaMkBvValueUint64(
-                bitwuzlaCtx.bitwuzla,
-                sort.internalize(),
-                numberValue.toLong()
-            )
+        bitwuzlaCtx.internalizeBvValue(expr) {
+            with(ctx) {
+                Native.bitwuzlaMkBvValueUint64(
+                    bitwuzlaCtx.bitwuzla,
+                    sort.internalize(),
+                    numberValue.toLong()
+                )
+            }
         }
     }
 
     override fun transform(expr: KBitVecCustomValue): KExpr<KBvSort> = expr.internalizeExpr {
-        with(ctx) {
-            Native.bitwuzlaMkBvValue(
-                bitwuzlaCtx.bitwuzla,
-                sort.internalize(),
-                binaryStringValue,
-                BitwuzlaBVBase.BITWUZLA_BV_BASE_BIN
-            )
+        bitwuzlaCtx.internalizeBvValue(expr) {
+            with(ctx) {
+                Native.bitwuzlaMkBvValue(
+                    bitwuzlaCtx.bitwuzla,
+                    sort.internalize(),
+                    binaryStringValue,
+                    BitwuzlaBVBase.BITWUZLA_BV_BASE_BIN
+                )
+            }
         }
     }
 
