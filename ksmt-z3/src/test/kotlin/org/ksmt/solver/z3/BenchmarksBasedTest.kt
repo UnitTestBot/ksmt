@@ -1,6 +1,5 @@
 package org.ksmt.solver.z3
 
-import com.microsoft.z3.BoolExpr
 import com.microsoft.z3.Context
 import com.microsoft.z3.Expr
 import com.microsoft.z3.Solver
@@ -13,12 +12,10 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KSolverStatus
-import org.ksmt.sort.KBoolSort
+import org.ksmt.solver.fixtures.TestDataProvider
+import org.ksmt.solver.fixtures.z3.Z3SmtLibParser
 import org.ksmt.sort.KSort
 import java.nio.file.Path
-import java.nio.file.Paths
-import kotlin.io.path.Path
-import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.relativeTo
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -32,12 +29,8 @@ class BenchmarksBasedTest {
     fun testConverter(name: String, samplePath: Path) = skipNotImplementedFeatures {
         val ctx = KContext()
         Context().use { parseCtx ->
-            val assertions = parseCtx.parseFile(samplePath)
-            val ksmtAssertions = run {
-                val internCtx = KZ3InternalizationContext()
-                val converter = KZ3ExprConverter(ctx, internCtx)
-                with(converter) { assertions.map { it.convert<KBoolSort>() } }
-            }
+            val assertions = parser.parseFile(parseCtx, samplePath)
+            val ksmtAssertions = parser.convert(ctx, assertions)
 
             Context().use { checkCtx ->
                 checkCtx.performEqualityChecks(ctx) {
@@ -59,7 +52,7 @@ class BenchmarksBasedTest {
     fun testSolver(name: String, samplePath: Path) = skipNotImplementedFeatures {
         val ctx = KContext()
         Context().use { parseCtx ->
-            val assertions = parseCtx.parseFile(samplePath)
+            val assertions = parser.parseFile(parseCtx, samplePath)
             val (expectedStatus, expectedModel) = with(parseCtx) {
                 val solver = mkSolver().apply {
                     val params = mkParams().apply {
@@ -67,7 +60,7 @@ class BenchmarksBasedTest {
                     }
                     setParameters(params)
                 }
-                solver.add(*assertions)
+                solver.add(*assertions.toTypedArray())
                 val status = solver.check()
                 when (status) {
                     Status.SATISFIABLE -> KSolverStatus.SAT to solver.model
@@ -75,11 +68,8 @@ class BenchmarksBasedTest {
                     Status.UNKNOWN, null -> return
                 }
             }
-            val ksmtAssertions = run {
-                val internCtx = KZ3InternalizationContext()
-                val converter = KZ3ExprConverter(ctx, internCtx)
-                with(converter) { assertions.map { it.convert<KBoolSort>() } }
-            }
+
+            val ksmtAssertions = parser.convert(ctx, assertions)
 
             KZ3Solver(ctx).use { solver ->
                 ksmtAssertions.forEach { solver.assert(it) }
@@ -158,29 +148,15 @@ class BenchmarksBasedTest {
         }
     }
 
-    private fun Context.parseFile(path: Path): Array<BoolExpr> = parseSMTLIB2File(
-        path.toAbsolutePath().toString(),
-        emptyArray(),
-        emptyArray(),
-        emptyArray(),
-        emptyArray()
-    )
-
     companion object {
-
-        init {
-            // ensure loading of native library provided by ksmt
-            KZ3Solver(KContext()).close()
-        }
+        val parser = Z3SmtLibParser()
 
         @JvmStatic
         fun testData(): List<Arguments> {
-            val testData = this::class.java.classLoader
-                .getResource("testData")?.toURI()
-                ?.let { Paths.get(it) }
-                ?: error("No test data")
-            val testDataFiles = testData.listDirectoryEntries("*.smt2").sorted()
-            return testDataFiles.map { Arguments.of(it.relativeTo(testData).toString(), it) }
+            val testDataLocation = TestDataProvider.testDataLocation()
+            return TestDataProvider.testData().map {
+                Arguments.of(it.relativeTo(testDataLocation).toString(), it)
+            }
         }
     }
 }
