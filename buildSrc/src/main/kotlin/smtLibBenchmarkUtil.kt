@@ -19,20 +19,30 @@ fun Project.mkSmtLibBenchmarkTestData(name: String) = tasks.register("smtLibBenc
                 overwrite(false)
             }
         }
-        if (!path.exists()) {
+
+        val unpackCompleteMarker = path.resolve("unpack-complete")
+        if (!unpackCompleteMarker.exists()) {
             copy {
                 from(zipTree(downloadTarget))
                 into(path)
+                duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             }
+            unpackCompleteMarker.createNewFile()
         }
-        val smtFiles = path.walkTopDown().filter { it.extension == "smt2" }.toList()
+
         val testResources = testResourceDir()!!
         val testData = testResources.resolve("testData")
-        copy {
-            from(smtFiles.toTypedArray())
-            into(testData)
-            rename { "${name}_$it" }
-            duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+        val testDataCopyCompleteMarker = testData.resolve("$name-copy-complete")
+        if (!testDataCopyCompleteMarker.exists()) {
+            val smtFiles = path.walkTopDown().filter { it.extension == "smt2" }.toList()
+            copy {
+                from(smtFiles.toTypedArray())
+                into(testData)
+                rename { "${name}_$it" }
+                duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+            }
+            testDataCopyCompleteMarker.createNewFile()
         }
     }
 }
