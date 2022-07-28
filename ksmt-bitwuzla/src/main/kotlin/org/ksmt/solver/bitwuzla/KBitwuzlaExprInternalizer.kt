@@ -16,7 +16,6 @@ import org.ksmt.expr.KBitVec64Value
 import org.ksmt.expr.KBitVec8Value
 import org.ksmt.expr.KBitVecCustomValue
 import org.ksmt.expr.KBitVecNumberValue
-import org.ksmt.expr.KBv2IntExpr
 import org.ksmt.expr.KBvAddExpr
 import org.ksmt.expr.KBvAddNoOverflowExpr
 import org.ksmt.expr.KBvAddNoUnderflowExpr
@@ -39,7 +38,9 @@ import org.ksmt.expr.KBvReductionAndExpr
 import org.ksmt.expr.KBvReductionOrExpr
 import org.ksmt.expr.KBvRepeatExpr
 import org.ksmt.expr.KBvRotateLeftExpr
+import org.ksmt.expr.KBvRotateLeftIndexedExpr
 import org.ksmt.expr.KBvRotateRightExpr
+import org.ksmt.expr.KBvRotateRightIndexedExpr
 import org.ksmt.expr.KBvShiftLeftExpr
 import org.ksmt.expr.KBvSignExtensionExpr
 import org.ksmt.expr.KBvSignedDivExpr
@@ -73,10 +74,13 @@ import org.ksmt.expr.KIteExpr
 import org.ksmt.expr.KNotExpr
 import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KQuantifier
-import org.ksmt.expr.KTransformer
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
+import org.ksmt.expr.transformer.KTransformer
+import org.ksmt.solver.KSolverUnsupportedFeatureException
+import org.ksmt.solver.bitwuzla.KBitwuzlaExprInternalizer.ExprInternalizationResult.Companion.argumentsInternalizationRequired
+import org.ksmt.solver.bitwuzla.KBitwuzlaExprInternalizer.ExprInternalizationResult.Companion.notInitializedInternalizationResult
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBVBase
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
@@ -85,7 +89,6 @@ import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv16Sort
-import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBv32Sort
 import org.ksmt.sort.KBv64Sort
 import org.ksmt.sort.KBv8Sort
@@ -94,6 +97,7 @@ import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KSortVisitor
+import org.ksmt.sort.KUninterpretedSort
 
 open class KBitwuzlaExprInternalizer(
     override val ctx: KContext,
@@ -104,25 +108,72 @@ open class KBitwuzlaExprInternalizer(
         FunctionSortInternalizer(bitwuzlaCtx, sortInternalizer)
     }
 
+    val exprStack = arrayListOf<KExpr<*>>()
+
+    /**
+     * Keeps result of last [KTransformer.transform] invocation.
+     * */
+    var lastExprInternalizationResult: ExprInternalizationResult = notInitializedInternalizationResult
+
     /*
     * Create Bitwuzla term from KSmt expression
     * */
     fun <T : KSort> KExpr<T>.internalize(): BitwuzlaTerm {
         bitwuzlaCtx.ensureActive()
-        accept(this@KBitwuzlaExprInternalizer)
+        exprStack.add(this)
+        while (exprStack.isNotEmpty()) {
+            lastExprInternalizationResult = notInitializedInternalizationResult
+            val expr = exprStack.removeLast()
+
+            val internalized = bitwuzlaCtx[expr]
+            if (internalized != null) continue
+
+            /**
+             * Internalize expression non-recursively.
+             * 1. Ensure all expression arguments are internalized and available in [bitwuzlaCtx].
+             * If not so, [lastExprInternalizationResult] is set to [argumentsInternalizationRequired]
+             * 2. Internalize expression if all arguments are available and
+             * set [lastExprInternalizationResult] to internalization result.
+             * */
+            expr.accept(this@KBitwuzlaExprInternalizer)
+
+            check(!lastExprInternalizationResult.notInitialized) {
+                "Internalization result wasn't initialized during expr internalization"
+            }
+
+            if (!lastExprInternalizationResult.argumentsInternalizationRequired) {
+                saveExprInternalizationResult(expr, lastExprInternalizationResult.internalizedExpr)
+            }
+        }
         return bitwuzlaCtx[this] ?: error("expression is not properly internalized")
     }
 
     /*
     * Create Bitwuzla sort from KSmt sort
     * */
-    fun <T : KSort> T.internalize(): BitwuzlaSort = accept(sortInternalizer)
+    fun <T : KSort> T.internalizeSort(): BitwuzlaSort = accept(sortInternalizer)
 
     /*
     * Create Bitwuzla function sort for KSmt declaration.
     * If declaration is a constant then nonfunction sort is returned
     * */
     fun <T : KSort> KDecl<T>.bitwuzlaFunctionSort(): BitwuzlaSort = accept(functionSortInternalizer)
+
+    fun saveExprInternalizationResult(expr: KExpr<*>, term: BitwuzlaTerm) {
+        bitwuzlaCtx.internalizeExpr(expr) { term }
+        val kind = Native.bitwuzlaTermGetKind(term)
+
+        /**
+         * Save internalized values for [KBitwuzlaExprConverter] needs
+         * @see [KBitwuzlaContext.saveInternalizedValue]
+         * */
+        if (kind != BitwuzlaKind.BITWUZLA_KIND_VAL) return
+
+        if (bitwuzlaCtx.convertValue(term) != null) return
+        if (term == bitwuzlaCtx.trueTerm || term == bitwuzlaCtx.falseTerm) return
+
+        bitwuzlaCtx.saveInternalizedValue(expr, term)
+    }
 
     /**
      * [KBitwuzlaExprInternalizer] overrides transform for all supported Bitwuzla expressions.
@@ -131,103 +182,78 @@ open class KBitwuzlaExprInternalizer(
     override fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> =
         error("Unsupported expr $expr")
 
-
-    override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = expr.internalizeExpr {
-        val const = bitwuzlaCtx.mkConstant(decl, decl.bitwuzlaFunctionSort())
-        val args = args.map { it.internalize() }
-        val termArgs = (listOf(const) + args).toTypedArray()
-        Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, termArgs)
+    override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = with(expr) {
+        transformList(args) { args ->
+            val const = bitwuzlaCtx.mkConstant(decl, decl.bitwuzlaFunctionSort())
+            val termArgs = (listOf(const) + args).toTypedArray()
+            Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, termArgs)
+        }
     }
 
-    override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = expr.internalizeExpr {
+    override fun <T : KSort> transform(expr: KConst<T>) = expr.transform {
         with(ctx) {
-            bitwuzlaCtx.mkConstant(decl, sort.internalize())
+            bitwuzlaCtx.mkConstant(expr.decl, expr.sort.internalizeSort())
         }
     }
 
-    override fun transform(expr: KAndExpr): KExpr<KBoolSort> = expr.internalizeExpr {
-        when (args.size) {
-            0 -> bitwuzlaCtx.trueTerm
-            1 -> args[0].internalize()
-            else -> Native.bitwuzlaMkTerm(
-                bitwuzlaCtx.bitwuzla,
-                BitwuzlaKind.BITWUZLA_KIND_AND,
-                args.map { it.internalize() }.toTypedArray()
+    override fun transform(expr: KAndExpr) = with(expr) {
+        transformList(args) { args ->
+            when (args.size) {
+                0 -> bitwuzlaCtx.trueTerm
+                1 -> args[0]
+                else -> Native.bitwuzlaMkTerm(
+                    bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_AND, args.toTypedArray()
+                )
+            }
+        }
+    }
+
+    override fun transform(expr: KOrExpr) = with(expr) {
+        transformList(args) { args ->
+            when (args.size) {
+                0 -> bitwuzlaCtx.falseTerm
+                1 -> args[0]
+                else -> Native.bitwuzlaMkTerm(
+                    bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_OR, args.toTypedArray()
+                )
+            }
+        }
+    }
+
+    override fun transform(expr: KNotExpr) = with(expr) {
+        transform(arg, BitwuzlaKind.BITWUZLA_KIND_NOT)
+    }
+
+    override fun transform(expr: KImpliesExpr) = with(expr) {
+        transform(p, q, BitwuzlaKind.BITWUZLA_KIND_IMPLIES)
+    }
+
+    override fun transform(expr: KXorExpr) = with(expr) {
+        transform(a, b, BitwuzlaKind.BITWUZLA_KIND_XOR)
+    }
+
+    override fun transform(expr: KTrue) = expr.transform { bitwuzlaCtx.trueTerm }
+
+    override fun transform(expr: KFalse) = expr.transform { bitwuzlaCtx.falseTerm }
+
+    override fun <T : KSort> transform(expr: KEqExpr<T>) = with(expr) {
+        transform(lhs, rhs, BitwuzlaKind.BITWUZLA_KIND_EQUAL)
+    }
+
+    override fun <T : KSort> transform(expr: KDistinctExpr<T>) = with(expr) {
+        transformList(args) { args ->
+            Native.bitwuzlaMkTerm(
+                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, args.toTypedArray()
             )
         }
     }
 
-    override fun transform(expr: KOrExpr): KExpr<KBoolSort> = expr.internalizeExpr {
-        when (args.size) {
-            0 -> bitwuzlaCtx.falseTerm
-            1 -> args[0].internalize()
-            else -> Native.bitwuzlaMkTerm(
-                bitwuzlaCtx.bitwuzla,
-                BitwuzlaKind.BITWUZLA_KIND_OR,
-                args.map { it.internalize() }.toTypedArray()
-            )
-        }
+    override fun <T : KSort> transform(expr: KIteExpr<T>) = with(expr) {
+        transform(condition, trueBranch, falseBranch, BitwuzlaKind.BITWUZLA_KIND_ITE)
     }
 
-    override fun transform(expr: KNotExpr): KExpr<KBoolSort> = expr.internalizeExpr {
-        Native.bitwuzlaMkTerm1(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_NOT, arg.internalize())
-    }
-
-    override fun transform(expr: KImpliesExpr): KExpr<KBoolSort> = expr.internalizeExpr {
-        Native.bitwuzlaMkTerm2(
-            bitwuzlaCtx.bitwuzla,
-            BitwuzlaKind.BITWUZLA_KIND_IMPLIES,
-            p.internalize(),
-            q.internalize()
-        )
-    }
-
-    override fun transform(expr: KXorExpr): KExpr<KBoolSort> = expr.internalizeExpr {
-        Native.bitwuzlaMkTerm2(
-            bitwuzlaCtx.bitwuzla,
-            BitwuzlaKind.BITWUZLA_KIND_XOR,
-            a.internalize(),
-            b.internalize()
-        )
-    }
-
-    override fun transform(expr: KTrue): KExpr<KBoolSort> = expr.internalizeExpr {
-        bitwuzlaCtx.trueTerm
-    }
-
-    override fun transform(expr: KFalse): KExpr<KBoolSort> = expr.internalizeExpr {
-        bitwuzlaCtx.falseTerm
-    }
-
-    override fun <T : KSort> transform(expr: KEqExpr<T>): KExpr<KBoolSort> = expr.internalizeExpr {
-        Native.bitwuzlaMkTerm2(
-            bitwuzlaCtx.bitwuzla,
-            BitwuzlaKind.BITWUZLA_KIND_EQUAL,
-            lhs.internalize(),
-            rhs.internalize()
-        )
-    }
-
-    override fun <T : KSort> transform(expr: KDistinctExpr<T>): KExpr<KBoolSort> = expr.internalizeExpr {
-        Native.bitwuzlaMkTerm(
-            bitwuzlaCtx.bitwuzla,
-            BitwuzlaKind.BITWUZLA_KIND_DISTINCT,
-            args.map { it.internalize() }.toTypedArray()
-        )
-    }
-
-    override fun <T : KSort> transform(expr: KIteExpr<T>): KExpr<T> = expr.internalizeExpr {
-        Native.bitwuzlaMkTerm3(
-            bitwuzlaCtx.bitwuzla,
-            BitwuzlaKind.BITWUZLA_KIND_ITE,
-            condition.internalize(),
-            trueBranch.internalize(),
-            falseBranch.internalize()
-        )
-    }
-
-    override fun transform(expr: KBitVec1Value): KExpr<KBv1Sort> = expr.internalizeExpr {
-        if (expr.value) bitwuzlaCtx.trueTerm else bitwuzlaCtx.falseTerm
+    override fun transform(expr: KBitVec1Value) = with(expr) {
+        transform { if (value) bitwuzlaCtx.trueTerm else bitwuzlaCtx.falseTerm }
     }
 
     override fun transform(expr: KBitVec8Value): KExpr<KBv8Sort> = transformBvNumber(expr)
@@ -235,151 +261,278 @@ open class KBitwuzlaExprInternalizer(
     override fun transform(expr: KBitVec32Value): KExpr<KBv32Sort> = transformBvNumber(expr)
     override fun transform(expr: KBitVec64Value): KExpr<KBv64Sort> = transformBvNumber(expr)
 
-    fun <T : KBitVecNumberValue<S, *>, S : KBvSort> transformBvNumber(expr: T): T = expr.internalizeExpr {
-        with(ctx) {
-            Native.bitwuzlaMkBvValueUint64(
-                bitwuzlaCtx.bitwuzla,
-                sort.internalize(),
-                numberValue.toLong()
+    fun <T : KBitVecNumberValue<S, *>, S : KBvSort> transformBvNumber(expr: T): T = with(expr) {
+        transform {
+            with(ctx) {
+                Native.bitwuzlaMkBvValueUint64(
+                    bitwuzlaCtx.bitwuzla,
+                    sort.internalizeSort(),
+                    numberValue.toLong()
+                ).also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
+            }
+        }
+    }
+
+    override fun transform(expr: KBitVecCustomValue) = with(expr) {
+        transform {
+            with(ctx) {
+                Native.bitwuzlaMkBvValue(
+                    bitwuzlaCtx.bitwuzla,
+                    sort.internalizeSort(),
+                    binaryStringValue,
+                    BitwuzlaBVBase.BITWUZLA_BV_BASE_BIN
+                ).also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
+            }
+        }
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvNotExpr<T>) = with(expr) {
+        transform(value, BitwuzlaKind.BITWUZLA_KIND_BV_NOT)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvReductionAndExpr<T>) = with(expr) {
+        transform(value, BitwuzlaKind.BITWUZLA_KIND_BV_REDAND)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvReductionOrExpr<T>) = with(expr) {
+        transform(value, BitwuzlaKind.BITWUZLA_KIND_BV_REDOR)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvAndExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_AND)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvOrExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_OR)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvXorExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_XOR)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvNAndExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_NAND)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvNorExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_NOR)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvXNorExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_XNOR)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvNegationExpr<T>) = with(expr) {
+        transform(value, BitwuzlaKind.BITWUZLA_KIND_BV_NEG)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvAddExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_ADD)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvSubExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SUB)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvMulExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_MUL)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvUnsignedDivExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_UDIV)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvSignedDivExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SDIV)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvUnsignedRemExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_UREM)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvSignedRemExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SREM)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvSignedModExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SMOD)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvUnsignedLessExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_ULT)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvSignedLessExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SLT)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvUnsignedLessOrEqualExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_ULE)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvSignedLessOrEqualExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SLE)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterOrEqualExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_UGE)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvSignedGreaterOrEqualExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SGT)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_UGE)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvSignedGreaterExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SGE)
+    }
+
+    override fun transform(expr: KBvConcatExpr) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_CONCAT)
+    }
+
+    override fun transform(expr: KBvExtractExpr) = with(expr) {
+        transform(value) { arg ->
+            Native.bitwuzlaMkTerm1Indexed2(
+                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_EXTRACT,
+                arg, expr.high, expr.low
             )
         }
     }
 
-    override fun transform(expr: KBitVecCustomValue): KExpr<KBvSort> = expr.internalizeExpr {
-        with(ctx) {
-            Native.bitwuzlaMkBvValue(
-                bitwuzlaCtx.bitwuzla,
-                sort.internalize(),
-                binaryStringValue,
-                BitwuzlaBVBase.BITWUZLA_BV_BASE_BIN
+    override fun transform(expr: KBvSignExtensionExpr) = with(expr) {
+        transform(value) { arg ->
+            Native.bitwuzlaMkTerm1Indexed1(
+                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_SIGN_EXTEND,
+                arg, expr.i
             )
         }
     }
 
-    override fun <T : KBvSort> transform(expr: KBvNotExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvReductionAndExpr<T>): KExpr<KBv1Sort> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvReductionOrExpr<T>): KExpr<KBv1Sort> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvAndExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvOrExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvXorExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvNAndExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvNorExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvXNorExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvNegationExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvAddExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvSubExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvMulExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvUnsignedDivExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvSignedDivExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvUnsignedRemExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvSignedRemExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvSignedModExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvUnsignedLessExpr<T>): KExpr<KBoolSort> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvSignedLessExpr<T>): KExpr<KBoolSort> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvUnsignedLessOrEqualExpr<T>): KExpr<KBoolSort> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvSignedLessOrEqualExpr<T>): KExpr<KBoolSort> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterOrEqualExpr<T>): KExpr<KBoolSort> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvSignedGreaterOrEqualExpr<T>): KExpr<KBoolSort> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterExpr<T>): KExpr<KBoolSort> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvSignedGreaterExpr<T>): KExpr<KBoolSort> = TODO()
-
-    override fun transform(expr: KBvConcatExpr): KExpr<KBvSort> = TODO()
-
-    override fun transform(expr: KBvExtractExpr): KExpr<KBvSort> = TODO()
-
-    override fun transform(expr: KBvSignExtensionExpr): KExpr<KBvSort> = TODO()
-
-    override fun transform(expr: KBvZeroExtensionExpr): KExpr<KBvSort> = TODO()
-
-    override fun transform(expr: KBvRepeatExpr): KExpr<KBvSort> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvShiftLeftExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvLogicalShiftRightExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvArithShiftRightExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>): KExpr<T> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>): KExpr<T> = TODO()
-
-    override fun transform(expr: KBv2IntExpr): KExpr<KIntSort> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvAddNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>): KExpr<KBoolSort> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>): KExpr<KBoolSort> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
-
-    override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>): KExpr<KBoolSort> = TODO()
-
-    override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> =
-        expr.internalizeExpr {
-            Native.bitwuzlaMkTerm3(
-                bitwuzlaCtx.bitwuzla,
-                BitwuzlaKind.BITWUZLA_KIND_ARRAY_STORE,
-                array.internalize(),
-                index.internalize(),
-                value.internalize()
+    override fun transform(expr: KBvZeroExtensionExpr) = with(expr) {
+        transform(value) { arg ->
+            Native.bitwuzlaMkTerm1Indexed1(
+                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_ZERO_EXTEND,
+                arg, expr.i
             )
         }
-
-    override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> = expr.internalizeExpr {
-        Native.bitwuzlaMkTerm2(
-            bitwuzlaCtx.bitwuzla,
-            BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT,
-            array.internalize(),
-            index.internalize()
-        )
     }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>): KExpr<KArraySort<D, R>> =
-        expr.internalizeExpr {
-            Native.bitwuzlaMkConstArray(
-                bitwuzlaCtx.bitwuzla,
-                sort.internalize(),
-                value.internalize()
+    override fun transform(expr: KBvRepeatExpr) = with(expr) {
+        transform(value) { arg ->
+            Native.bitwuzlaMkTerm1Indexed1(
+                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_REPEAT,
+                arg, expr.i
             )
         }
+    }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> =
-        expr.internalizeExpr {
+    override fun <T : KBvSort> transform(expr: KBvShiftLeftExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SHL)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvLogicalShiftRightExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SHR)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvArithShiftRightExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_ASHR)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_ROL)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_ROR)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvRotateLeftIndexedExpr<T>) = with(expr) {
+        transform(value) { arg ->
+            Native.bitwuzlaMkTerm1Indexed1(
+                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_ROLI,
+                arg, expr.i
+            )
+        }
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvRotateRightIndexedExpr<T>) = with(expr) {
+        transform(value) { arg ->
+            Native.bitwuzlaMkTerm1Indexed1(
+                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_RORI,
+                arg, expr.i
+            )
+        }
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvAddNoOverflowExpr<T>) = with(expr) {
+        val kind = if (isSigned) {
+            BitwuzlaKind.BITWUZLA_KIND_BV_SADD_OVERFLOW
+        } else {
+            BitwuzlaKind.BITWUZLA_KIND_BV_UADD_OVERFLOW
+        }
+        transform(arg0, arg1, kind)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>) = with(expr) {
+        TODO("no direct support for $expr")
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SSUB_OVERFLOW)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>) = with(expr) {
+        TODO("no direct support for $expr")
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>) = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SDIV_OVERFLOW)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>) = with(expr) {
+        TODO("no direct support for $expr")
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>) = with(expr) {
+        val kind = if (isSigned) {
+            BitwuzlaKind.BITWUZLA_KIND_BV_SMUL_OVERFLOW
+        } else {
+            BitwuzlaKind.BITWUZLA_KIND_BV_UMUL_OVERFLOW
+        }
+        transform(arg0, arg1, kind)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) = with(expr) {
+        TODO("no direct support for $expr")
+    }
+
+    override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) = with(expr) {
+        transform(array, index, value, BitwuzlaKind.BITWUZLA_KIND_ARRAY_STORE)
+    }
+
+    override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>) = with(expr) {
+        transform(array, index, BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT)
+    }
+
+    override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>) = with(expr) {
+        transform(value) { value ->
+            Native.bitwuzlaMkConstArray(bitwuzlaCtx.bitwuzla, sort.internalizeSort(), value)
+        }
+    }
+
+    @Suppress("LABEL_NAME_CLASH")
+    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) = with(expr) {
+        transform {
             bitwuzlaCtx.withConstantScope {
-                val indexVar = mkVar(indexVarDecl, indexVarDecl.sort.internalize())
-                val body = body.internalize()
+                val indexVar = mkVar(indexVarDecl, indexVarDecl.sort.internalizeSort())
+                val bodyInternalizer = KBitwuzlaExprInternalizer(ctx, bitwuzlaCtx)
+                val body = with(bodyInternalizer) {
+                    body.internalize()
+                }
                 val bodyKind = Native.bitwuzlaTermGetKind(body)
                 if (bodyKind == BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT) {
                     val selectArgs = Native.bitwuzlaTermGetChildren(body)
@@ -389,12 +542,13 @@ open class KBitwuzlaExprInternalizer(
                          *
                          * (lambda (i) (select array i)) -> array
                          */
-                        return@internalizeExpr selectArgs[0]
+                        return@transform selectArgs[0]
                     }
                 }
-                error("array lambda expressions are not supported in Bitwuzla")
+                throw KSolverUnsupportedFeatureException("array lambda expressions are not supported in Bitwuzla")
             }
         }
+    }
 
     override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> = expr.internalizeQuantifier { args ->
         Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EXISTS, args)
@@ -406,23 +560,19 @@ open class KBitwuzlaExprInternalizer(
 
     inline fun <T : KQuantifier> T.internalizeQuantifier(
         crossinline internalizer: T.(Array<BitwuzlaTerm>) -> BitwuzlaTerm
-    ) = internalizeExpr {
+    ) = transform {
         bitwuzlaCtx.withConstantScope {
             val boundVars = bounds.map {
-                mkVar(it, it.sort.internalize())
+                mkVar(it, it.sort.internalizeSort())
             }
-            val body = body.internalize()
-            if (bounds.isEmpty()) return@internalizeExpr body
+            val bodyInternalizer = KBitwuzlaExprInternalizer(ctx, bitwuzlaCtx)
+            val body = with(bodyInternalizer) {
+                body.internalize()
+            }
+            if (bounds.isEmpty()) return@transform body
             val args = (boundVars + body).toTypedArray()
             internalizer(args)
         }
-    }
-
-    inline fun <T : KExpr<*>> T.internalizeExpr(crossinline internalizer: T.() -> BitwuzlaTerm): T {
-        bitwuzlaCtx.internalizeExpr(this) {
-            internalizer()
-        }
-        return this
     }
 
     open class SortInternalizer(private val bitwuzlaCtx: KBitwuzlaContext) : KSortVisitor<BitwuzlaSort> {
@@ -432,8 +582,8 @@ open class KBitwuzlaExprInternalizer(
 
         override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): BitwuzlaSort =
             bitwuzlaCtx.internalizeSort(sort) {
-                check(sort.range !is KArraySort<*, *> && sort.domain !is KArraySort<*, *>) {
-                    "Bitwuzla doesn't support nested arrays"
+                if (sort.range is KArraySort<*, *> || sort.domain is KArraySort<*, *>) {
+                    throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support nested arrays")
                 }
                 val domain = sort.domain.accept(this@SortInternalizer)
                 val range = sort.range.accept(this@SortInternalizer)
@@ -453,8 +603,14 @@ open class KBitwuzlaExprInternalizer(
         /**
          * Bitwuzla doesn't support integers and reals.
          * */
-        override fun visit(sort: KIntSort): BitwuzlaSort = error("Unsupported sort $sort")
-        override fun visit(sort: KRealSort): BitwuzlaSort = error("Unsupported sort $sort")
+        override fun visit(sort: KIntSort): BitwuzlaSort =
+            throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
+
+        override fun visit(sort: KRealSort): BitwuzlaSort =
+            throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
+
+        override fun visit(sort: KUninterpretedSort): BitwuzlaSort =
+            throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
     }
 
     open class FunctionSortInternalizer(
@@ -462,16 +618,147 @@ open class KBitwuzlaExprInternalizer(
         private val sortInternalizer: SortInternalizer
     ) : KDeclVisitor<BitwuzlaSort> {
         override fun <S : KSort> visit(decl: KFuncDecl<S>): BitwuzlaSort = bitwuzlaCtx.internalizeDeclSort(decl) {
-            check(decl.argSorts.all { it !is KArraySort<*, *> }) {
-                "Bitwuzla doesn't support functions with arrays in domain"
+            if (decl.argSorts.any { it is KArraySort<*, *> }) {
+                throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support functions with arrays in domain")
             }
-            check(decl.argSorts.isEmpty() || decl.sort !is KArraySort<*, *>) {
-                "Bitwuzla doesn't support functions with arrays in range"
+            if (decl.argSorts.isNotEmpty() && decl.sort is KArraySort<*, *>) {
+                throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support functions with arrays in range")
             }
             val domain = decl.argSorts.map { it.accept(sortInternalizer) }.toTypedArray()
             val range = decl.sort.accept(sortInternalizer)
             if (domain.isEmpty()) return@internalizeDeclSort range
             Native.bitwuzlaMkFunSort(bitwuzlaCtx.bitwuzla, domain.size, domain, range)
+        }
+    }
+
+    fun internalizedExpr(expr: KExpr<*>): BitwuzlaTerm? = bitwuzlaCtx[expr]
+
+    inline fun <S : KExpr<*>> S.transform(operation: () -> BitwuzlaTerm): S = also {
+        lastExprInternalizationResult = ExprInternalizationResult(operation())
+    }
+
+    fun <S : KExpr<*>> S.transform(
+        arg: KExpr<*>,
+        kind: BitwuzlaKind
+    ): S = transform(arg) { a0 -> Native.bitwuzlaMkTerm1(bitwuzlaCtx.bitwuzla, kind, a0) }
+
+    inline fun <S : KExpr<*>> S.transform(
+        arg: KExpr<*>,
+        operation: (BitwuzlaTerm) -> BitwuzlaTerm
+    ): S = also {
+        val internalizedArg = internalizedExpr(arg)
+        if (internalizedArg == null) {
+            exprStack.add(this)
+            exprStack.add(arg)
+            lastExprInternalizationResult = argumentsInternalizationRequired
+        } else {
+            lastExprInternalizationResult = ExprInternalizationResult(operation(internalizedArg))
+        }
+    }
+
+    fun <S : KExpr<*>> S.transform(
+        arg0: KExpr<*>,
+        arg1: KExpr<*>,
+        kind: BitwuzlaKind
+    ): S = transform(arg0, arg1) { a0, a1 ->
+        Native.bitwuzlaMkTerm2(bitwuzlaCtx.bitwuzla, kind, a0, a1)
+    }
+
+    inline fun <S : KExpr<*>> S.transform(
+        arg0: KExpr<*>,
+        arg1: KExpr<*>,
+        operation: (BitwuzlaTerm, BitwuzlaTerm) -> BitwuzlaTerm
+    ): S = also {
+        val internalizedArg0 = internalizedExpr(arg0)
+        val internalizedArg1 = internalizedExpr(arg1)
+        if (internalizedArg0 == null || internalizedArg1 == null) {
+            exprStack.add(this)
+            internalizedArg0 ?: exprStack.add(arg0)
+            internalizedArg1 ?: exprStack.add(arg1)
+            lastExprInternalizationResult = argumentsInternalizationRequired
+        } else {
+            lastExprInternalizationResult = ExprInternalizationResult(
+                operation(internalizedArg0, internalizedArg1)
+            )
+        }
+    }
+
+    fun <S : KExpr<*>> S.transform(
+        arg0: KExpr<*>,
+        arg1: KExpr<*>,
+        arg2: KExpr<*>,
+        kind: BitwuzlaKind
+    ): S = transform(arg0, arg1, arg2) { a0, a1, a2 ->
+        Native.bitwuzlaMkTerm3(bitwuzlaCtx.bitwuzla, kind, a0, a1, a2)
+    }
+
+    inline fun <S : KExpr<*>> S.transform(
+        arg0: KExpr<*>,
+        arg1: KExpr<*>,
+        arg2: KExpr<*>,
+        operation: (BitwuzlaTerm, BitwuzlaTerm, BitwuzlaTerm) -> BitwuzlaTerm
+    ): S = also {
+        val internalizedArg0 = internalizedExpr(arg0)
+        val internalizedArg1 = internalizedExpr(arg1)
+        val internalizedArg2 = internalizedExpr(arg2)
+        if (internalizedArg0 == null || internalizedArg1 == null || internalizedArg2 == null) {
+            exprStack.add(this)
+            internalizedArg0 ?: exprStack.add(arg0)
+            internalizedArg1 ?: exprStack.add(arg1)
+            internalizedArg2 ?: exprStack.add(arg2)
+            lastExprInternalizationResult = argumentsInternalizationRequired
+        } else {
+            lastExprInternalizationResult = ExprInternalizationResult(
+                operation(internalizedArg0, internalizedArg1, internalizedArg2)
+            )
+        }
+    }
+
+    inline fun <S : KExpr<*>> S.transformList(
+        args: List<KExpr<*>>,
+        operation: (List<BitwuzlaTerm>) -> BitwuzlaTerm
+    ): S = also {
+        val internalizedArgs = mutableListOf<BitwuzlaTerm>()
+        var exprAdded = false
+        var argsReady = true
+        for (arg in args) {
+            val internalized = internalizedExpr(arg)
+            if (internalized != null) {
+                internalizedArgs.add(internalized)
+                continue
+            }
+            argsReady = false
+            if (!exprAdded) {
+                exprStack.add(this)
+                exprAdded = true
+            }
+            exprStack.add(arg)
+        }
+        lastExprInternalizationResult = if (argsReady) {
+            ExprInternalizationResult(operation(internalizedArgs))
+        } else {
+            argumentsInternalizationRequired
+        }
+    }
+
+    @JvmInline
+    value class ExprInternalizationResult(private val value: Any) {
+        val argumentsInternalizationRequired: Boolean
+            get() = value === argumentsInternalizationRequiredMarker
+
+        val notInitialized: Boolean
+            get() = value === notInitializedInternalizationResultMarker
+
+        val internalizedExpr: BitwuzlaTerm
+            get() = value as? BitwuzlaTerm ?: error("expr is not internalized")
+
+        companion object {
+            private val argumentsInternalizationRequiredMarker = Any()
+            private val notInitializedInternalizationResultMarker = Any()
+            val argumentsInternalizationRequired =
+                ExprInternalizationResult(argumentsInternalizationRequiredMarker)
+            val notInitializedInternalizationResult =
+                ExprInternalizationResult(notInitializedInternalizationResultMarker)
         }
     }
 }

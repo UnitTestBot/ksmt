@@ -9,6 +9,7 @@ import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 
 
 open class KZ3SortInternalizer(
@@ -34,6 +35,10 @@ open class KZ3SortInternalizer(
 
     override fun <T : KBvSort> visit(sort: T): Sort = z3InternCtx.internalizeSort(sort) {
         z3Ctx.mkBitVecSort(sort.sizeBits.toInt())
+    }
+
+    override fun visit(sort: KUninterpretedSort): Sort = z3InternCtx.internalizeSort(sort) {
+        z3Ctx.mkUninterpretedSort(sort.name)
     }
 
     @Suppress("MemberVisibilityCanBePrivate")

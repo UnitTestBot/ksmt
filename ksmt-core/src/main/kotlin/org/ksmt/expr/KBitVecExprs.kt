@@ -2,6 +2,7 @@ package org.ksmt.expr
 
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
+import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv16Sort
@@ -73,7 +74,8 @@ class KBitVecCustomValue internal constructor(
 ) : KBitVecValue<KBvSort>(ctx) {
     init {
         require(binaryStringValue.length.toUInt() == sizeBits) {
-            "Provided string $binaryStringValue consist of ${binaryStringValue.length} symbols, but $sizeBits were expected"
+            "Provided string $binaryStringValue consist of ${binaryStringValue.length} " +
+                    "symbols, but $sizeBits were expected"
         }
     }
 

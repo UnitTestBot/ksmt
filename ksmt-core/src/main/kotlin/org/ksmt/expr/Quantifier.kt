@@ -2,6 +2,7 @@ package org.ksmt.expr
 
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
+import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.sort.KBoolSort
 
 class KExistentialQuantifier internal constructor(

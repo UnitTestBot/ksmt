@@ -12,14 +12,21 @@ abstract class KQuantifier(
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
     abstract fun printQuantifierName(): String
-    override fun print(): String = buildString {
-        append("(${printQuantifierName()}")
+    override fun print(builder: StringBuilder): Unit = with(builder) {
         append('(')
+        append(printQuantifierName())
+        append('(')
+
         bounds.forEach { bound ->
-            append("(${bound.name} ${bound.sort})")
+            append('(')
+            append(bound.name)
+            append(' ')
+            bound.sort.print(this)
+            append(')')
         }
+
         append(')')
-        append("$body")
+        body.print(this)
         append(')')
     }
 }
