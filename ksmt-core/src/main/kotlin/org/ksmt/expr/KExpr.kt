@@ -4,7 +4,7 @@ import org.ksmt.KAst
 import org.ksmt.KContext
 import org.ksmt.sort.KSort
 
-abstract class KExpr<out T : KSort>(ctx: KContext): KAst(ctx) {
+abstract class KExpr<T : KSort>(ctx: KContext): KAst(ctx) {
     abstract fun sort(): T
     abstract fun accept(transformer: KTransformer): KExpr<T>
 
