@@ -230,9 +230,9 @@ open class KZ3ExprInternalizer(
         operation(arg.internalize() as BitVecExpr)
     }
 
-    private fun <R : Expr, S : KSort> KExpr<S>.transform(
-        arg0: KExpr<KBvSort>,
-        arg1: KExpr<KBvSort>,
+    private fun <R : Expr, S : KSort, T1 : KBvSort, T2 : KBvSort> KExpr<S>.transform(
+        arg0: KExpr<T1>,
+        arg1: KExpr<T2>,
         operation: (BitVecExpr, BitVecExpr) -> R
     ): KExpr<S> = internalizeExpr {
         operation(arg0.internalize() as BitVecExpr, arg1.internalize() as BitVecExpr)

@@ -315,7 +315,7 @@ class BitVecTest {
     }
 
     private fun testBinaryOperation(
-        symbolicOperation: (KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBvSort>,
+        symbolicOperation: (KExpr<KBv64Sort>, KExpr<KBv64Sort>) -> KExpr<KBv64Sort>,
         concreteOperation: (Long, Long) -> Long
     ): Unit = with(context) {
         val (negativeValue, positiveValue) = createTwoRandomLongValues()
@@ -341,7 +341,7 @@ class BitVecTest {
     }
 
     private fun testLogicalOperation(
-        symbolicOperation: (KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBoolSort>,
+        symbolicOperation: (KExpr<KBv64Sort>, KExpr<KBv64Sort>) -> KExpr<KBoolSort>,
         concreteOperation: (Long, Long) -> Boolean
     ): Unit = with(context) {
         val values = (0 until 2).map { Random.nextLong() }.sorted()
@@ -596,7 +596,7 @@ class BitVecTest {
     }
 
     private fun testShift(
-        symbolicOperation: (KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBvSort>,
+        symbolicOperation: (KExpr<KBv64Sort>, KExpr<KBv64Sort>) -> KExpr<KBv64Sort>,
         concreteOperation: (Long, Int) -> Long
     ) = with(context) {
         val value = Random.nextLong().toBv()
