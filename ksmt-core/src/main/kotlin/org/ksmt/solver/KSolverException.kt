@@ -1,7 +1,7 @@
 package org.ksmt.solver
 
 @Suppress("unused")
-class KSolverException : Exception {
+open class KSolverException : Exception {
     constructor() : super()
     constructor(cause: Throwable) : super(cause)
     constructor(message: String) : super(message)

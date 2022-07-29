@@ -35,6 +35,9 @@ tasks.withType<ProcessResources> {
 // skip big benchmarks to achieve faster tests build and run time
 val skipBigBenchmarks = true
 
+// skip to achieve faster tests run time
+val skipZ3SolverTest = true
+
 val smtLibBenchmarks = listOfNotNull(
     "QF_ALIA", // 12M
     "QF_AUFLIA", // 1.5M
@@ -66,4 +69,7 @@ val prepareTestData by tasks.registering {
 
 tasks.withType<Test> {
     dependsOn.add(prepareTestData)
+    if (!skipZ3SolverTest) {
+        environment("z3.testSolver", "enabled")
+    }
 }
