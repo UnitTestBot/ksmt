@@ -3,6 +3,7 @@ package org.ksmt.solver.z3
 import com.microsoft.z3.ArraySort
 import com.microsoft.z3.BitVecExpr
 import com.microsoft.z3.BitVecNum
+import com.microsoft.z3.BitVecSort
 import com.microsoft.z3.Expr
 import com.microsoft.z3.FuncDecl
 import com.microsoft.z3.IntNum
@@ -21,6 +22,7 @@ import org.ksmt.expr.KIntNumExpr
 import org.ksmt.expr.KRealNumExpr
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KSort
 
 open class KZ3ExprConverter(

@@ -1,62 +1,9 @@
 package org.ksmt.solver.bitwuzla
 
 import org.ksmt.KContext
-import org.ksmt.decl.KBitVec16ValueDecl
-import org.ksmt.decl.KBitVec1ValueDecl
-import org.ksmt.decl.KBitVec32ValueDecl
-import org.ksmt.decl.KBitVec64ValueDecl
-import org.ksmt.decl.KBitVec8ValueDecl
-import org.ksmt.decl.KBitVecCustomSizeValueDecl
-import org.ksmt.decl.KBv2IntDecl
-import org.ksmt.decl.KBvAddDecl
-import org.ksmt.decl.KBvAddNoOverflowDecl
-import org.ksmt.decl.KBvAddNoUnderflowDecl
-import org.ksmt.decl.KBvAndDecl
-import org.ksmt.decl.KBvArithShiftRightDecl
-import org.ksmt.decl.KBvDivNoOverflowDecl
-import org.ksmt.decl.KBvLogicalShiftRightDecl
-import org.ksmt.decl.KBvMulDecl
-import org.ksmt.decl.KBvMulNoOverflowDecl
-import org.ksmt.decl.KBvMulNoUnderflowDecl
-import org.ksmt.decl.KBvNAndDecl
-import org.ksmt.decl.KBvNegNoOverflowDecl
-import org.ksmt.decl.KBvNegationDecl
-import org.ksmt.decl.KBvNorDecl
-import org.ksmt.decl.KBvNotDecl
-import org.ksmt.decl.KBvOrDecl
-import org.ksmt.decl.KBvReductionAndDecl
-import org.ksmt.decl.KBvReductionOrDecl
-import org.ksmt.decl.KBvRotateLeftDecl
-import org.ksmt.decl.KBvRotateLeftIndexedDecl
-import org.ksmt.decl.KBvRotateRightDecl
-import org.ksmt.decl.KBvRotateRightIndexedDecl
-import org.ksmt.decl.KBvShiftLeftDecl
-import org.ksmt.decl.KBvSignedDivDecl
-import org.ksmt.decl.KBvSignedGreaterDecl
-import org.ksmt.decl.KBvSignedGreaterOrEqualDecl
-import org.ksmt.decl.KBvSignedLessDecl
-import org.ksmt.decl.KBvSignedLessOrEqualDecl
-import org.ksmt.decl.KBvSignedModDecl
-import org.ksmt.decl.KBvSignedRemDecl
-import org.ksmt.decl.KBvSubDecl
-import org.ksmt.decl.KBvSubNoOverflowDecl
-import org.ksmt.decl.KBvSubNoUnderflowDecl
-import org.ksmt.decl.KBvUnsignedDivDecl
-import org.ksmt.decl.KBvUnsignedGreaterDecl
-import org.ksmt.decl.KBvUnsignedGreaterOrEqualDecl
-import org.ksmt.decl.KBvUnsignedLessDecl
-import org.ksmt.decl.KBvUnsignedLessOrEqualDecl
-import org.ksmt.decl.KBvUnsignedRemDecl
-import org.ksmt.decl.KBvXNorDecl
-import org.ksmt.decl.KBvXorDecl
-import org.ksmt.decl.KBvConcatDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KDeclVisitor
-import org.ksmt.decl.KBvExtractDecl
 import org.ksmt.decl.KFuncDecl
-import org.ksmt.decl.KBvRepeatDecl
-import org.ksmt.decl.KSignExtDecl
-import org.ksmt.decl.KZeroExtDecl
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
@@ -75,7 +22,9 @@ import org.ksmt.expr.KBvAddNoOverflowExpr
 import org.ksmt.expr.KBvAddNoUnderflowExpr
 import org.ksmt.expr.KBvAndExpr
 import org.ksmt.expr.KBvArithShiftRightExpr
+import org.ksmt.expr.KBvConcatExpr
 import org.ksmt.expr.KBvDivNoOverflowExpr
+import org.ksmt.expr.KBvExtractExpr
 import org.ksmt.expr.KBvLogicalShiftRightExpr
 import org.ksmt.expr.KBvMulExpr
 import org.ksmt.expr.KBvMulNoOverflowExpr
@@ -88,9 +37,11 @@ import org.ksmt.expr.KBvNotExpr
 import org.ksmt.expr.KBvOrExpr
 import org.ksmt.expr.KBvReductionAndExpr
 import org.ksmt.expr.KBvReductionOrExpr
+import org.ksmt.expr.KBvRepeatExpr
 import org.ksmt.expr.KBvRotateLeftExpr
 import org.ksmt.expr.KBvRotateRightExpr
 import org.ksmt.expr.KBvShiftLeftExpr
+import org.ksmt.expr.KBvSignExtensionExpr
 import org.ksmt.expr.KBvSignedDivExpr
 import org.ksmt.expr.KBvSignedGreaterExpr
 import org.ksmt.expr.KBvSignedGreaterOrEqualExpr
@@ -109,13 +60,12 @@ import org.ksmt.expr.KBvUnsignedLessOrEqualExpr
 import org.ksmt.expr.KBvUnsignedRemExpr
 import org.ksmt.expr.KBvXNorExpr
 import org.ksmt.expr.KBvXorExpr
-import org.ksmt.expr.KBvConcatExpr
+import org.ksmt.expr.KBvZeroExtensionExpr
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.KBvExtractExpr
 import org.ksmt.expr.KFalse
 import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KImpliesExpr
@@ -123,13 +73,9 @@ import org.ksmt.expr.KIteExpr
 import org.ksmt.expr.KNotExpr
 import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KQuantifier
-import org.ksmt.expr.KBvRepeatExpr
-import org.ksmt.expr.KBvSignExtensionExpr
 import org.ksmt.expr.KTransformer
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUniversalQuantifier
-import org.ksmt.expr.KBvZeroExtensionExpr
-import org.ksmt.expr.KZeroExtensionExpr
 import org.ksmt.expr.KXorExpr
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBVBase
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
@@ -137,13 +83,13 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv16Sort
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBv32Sort
 import org.ksmt.sort.KBv64Sort
 import org.ksmt.sort.KBv8Sort
 import org.ksmt.sort.KBvSort
-import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
@@ -310,57 +256,57 @@ open class KBitwuzlaExprInternalizer(
         }
     }
 
-    override fun <T: KBvSort> transform(expr: KBvNotExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvNotExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvReductionAndExpr<T>): KExpr<KBv1Sort> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvReductionAndExpr<T>): KExpr<KBv1Sort> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvReductionOrExpr<T>): KExpr<KBv1Sort> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvReductionOrExpr<T>): KExpr<KBv1Sort> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvAndExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvAndExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvOrExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvOrExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvXorExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvXorExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvNAndExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvNAndExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvNorExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvNorExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvXNorExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvXNorExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvNegationExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvNegationExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvAddExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvAddExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvSubExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvSubExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvMulExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvMulExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvUnsignedDivExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvUnsignedDivExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvSignedDivExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvSignedDivExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvUnsignedRemExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvUnsignedRemExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvSignedRemExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvSignedRemExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvSignedModExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvSignedModExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvUnsignedLessExpr<T>): KExpr<KBoolSort> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvUnsignedLessExpr<T>): KExpr<KBoolSort> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvSignedLessExpr<T>): KExpr<KBoolSort> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvSignedLessExpr<T>): KExpr<KBoolSort> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvUnsignedLessOrEqualExpr<T>): KExpr<KBoolSort> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvUnsignedLessOrEqualExpr<T>): KExpr<KBoolSort> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvSignedLessOrEqualExpr<T>): KExpr<KBoolSort> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvSignedLessOrEqualExpr<T>): KExpr<KBoolSort> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvUnsignedGreaterOrEqualExpr<T>): KExpr<KBoolSort> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterOrEqualExpr<T>): KExpr<KBoolSort> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvSignedGreaterOrEqualExpr<T>): KExpr<KBoolSort> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvSignedGreaterOrEqualExpr<T>): KExpr<KBoolSort> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvUnsignedGreaterExpr<T>): KExpr<KBoolSort> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterExpr<T>): KExpr<KBoolSort> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvSignedGreaterExpr<T>): KExpr<KBoolSort> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvSignedGreaterExpr<T>): KExpr<KBoolSort> = TODO()
 
     override fun transform(expr: KBvConcatExpr): KExpr<KBvSort> = TODO()
 
@@ -372,33 +318,33 @@ open class KBitwuzlaExprInternalizer(
 
     override fun transform(expr: KBvRepeatExpr): KExpr<KBvSort> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvShiftLeftExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvShiftLeftExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvLogicalShiftRightExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvLogicalShiftRightExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvArithShiftRightExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvArithShiftRightExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvRotateLeftExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>): KExpr<T> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvRotateRightExpr<T>): KExpr<T> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>): KExpr<T> = TODO()
 
     override fun transform(expr: KBv2IntExpr): KExpr<KIntSort> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvAddNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvAddNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>): KExpr<KBoolSort> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>): KExpr<KBoolSort> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvSubNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>): KExpr<KBoolSort> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>): KExpr<KBoolSort> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvDivNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvNegNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvMulNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>): KExpr<KBoolSort> = TODO()
 
-    override fun <T: KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>): KExpr<KBoolSort> = TODO()
+    override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>): KExpr<KBoolSort> = TODO()
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> =
         expr.internalizeExpr {
