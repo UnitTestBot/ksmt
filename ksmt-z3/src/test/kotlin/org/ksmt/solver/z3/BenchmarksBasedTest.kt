@@ -4,8 +4,7 @@ import com.microsoft.z3.Context
 import com.microsoft.z3.Expr
 import com.microsoft.z3.Solver
 import com.microsoft.z3.Status
-import org.junit.jupiter.api.Assumptions
-import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -13,6 +12,7 @@ import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.fixtures.TestDataProvider
+import org.ksmt.solver.fixtures.skipUnsupportedSolverFeatures
 import org.ksmt.solver.fixtures.z3.Z3SmtLibParser
 import org.ksmt.sort.KSort
 import java.nio.file.Path
@@ -26,7 +26,7 @@ class BenchmarksBasedTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
-    fun testConverter(name: String, samplePath: Path) = skipNotImplementedFeatures {
+    fun testConverter(name: String, samplePath: Path) = skipUnsupportedSolverFeatures {
         val ctx = KContext()
         Context().use { parseCtx ->
             val assertions = parser.parseFile(parseCtx, samplePath)
@@ -46,10 +46,14 @@ class BenchmarksBasedTest {
         }
     }
 
-    @Disabled // disabled due to a very long runtime
+    @EnabledIfEnvironmentVariable(
+        named = "z3.testSolver",
+        matches = "enabled",
+        disabledReason = "z3 solver test"
+    )
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
-    fun testSolver(name: String, samplePath: Path) = skipNotImplementedFeatures {
+    fun testSolver(name: String, samplePath: Path) = skipUnsupportedSolverFeatures {
         val ctx = KContext()
         Context().use { parseCtx ->
             val assertions = parser.parseFile(parseCtx, samplePath)
@@ -105,16 +109,6 @@ class BenchmarksBasedTest {
                 }
             }
         }
-    }
-
-    private inline fun skipNotImplementedFeatures(body: () -> Unit) = try {
-        body()
-    } catch (ex: NotImplementedError) {
-        val reducedStackTrace = ex.stackTrace.take(5).joinToString("\n") { it.toString() }
-        val report = "${ex.message}\n$reducedStackTrace"
-        System.err.println(report)
-        // skip test with not implemented feature
-        Assumptions.assumeTrue(false, ex.message)
     }
 
     private fun Context.performEqualityChecks(ctx: KContext, checks: EqualityChecker.() -> Unit) {

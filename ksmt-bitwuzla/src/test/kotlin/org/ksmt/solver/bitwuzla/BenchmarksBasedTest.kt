@@ -1,6 +1,5 @@
 package org.ksmt.solver.bitwuzla
 
-import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -8,6 +7,7 @@ import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.fixtures.TestDataProvider
+import org.ksmt.solver.fixtures.skipUnsupportedSolverFeatures
 import org.ksmt.solver.fixtures.z3.Z3SmtLibParser
 import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.sort.KSort
@@ -24,7 +24,7 @@ class BenchmarksBasedTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
-    fun testConverter(name: String, samplePath: Path) = skipNotImplementedFeatures {
+    fun testConverter(name: String, samplePath: Path) = skipUnsupportedSolverFeatures {
         println(name)
         val ctx = KContext()
         val ksmtAssertions = parser.parse(ctx, samplePath)
@@ -59,7 +59,7 @@ class BenchmarksBasedTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
-    fun testSolver(name: String, samplePath: Path) = skipNotImplementedFeatures {
+    fun testSolver(name: String, samplePath: Path) = skipUnsupportedSolverFeatures {
         val ctx = KContext()
         val ksmtAssertions = parser.parse(ctx, samplePath)
         KBitwuzlaSolver(ctx).use { bitwuzla ->
@@ -94,16 +94,6 @@ class BenchmarksBasedTest {
                 assertEquals(KSolverStatus.SAT, modelCheckStatus, "invalid model")
             }
         }
-    }
-
-    private inline fun skipNotImplementedFeatures(body: () -> Unit) = try {
-        body()
-    } catch (ex: NotImplementedError) {
-        val reducedStackTrace = ex.stackTrace.take(5).joinToString("\n") { it.toString() }
-        val report = "${ex.message}\n$reducedStackTrace"
-        System.err.println(report)
-        // skip test with not implemented feature
-        Assumptions.assumeTrue(false, ex.message)
     }
 
     @OptIn(ExperimentalTime::class)
