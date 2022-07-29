@@ -108,7 +108,6 @@ import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KBvZeroExtensionExpr
-import org.ksmt.expr.KZeroExtensionExpr
 import org.ksmt.expr.KXorExpr
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBoolSort

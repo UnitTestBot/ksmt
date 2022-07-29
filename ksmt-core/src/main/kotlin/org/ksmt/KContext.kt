@@ -91,19 +91,6 @@ import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
-import org.ksmt.expr.KFunctionAsArray
-import org.ksmt.expr.KBitVec16Expr
-import org.ksmt.expr.KBitVec1Expr
-import org.ksmt.expr.KBitVec32Expr
-import org.ksmt.expr.KBitVec64Expr
-import org.ksmt.expr.KBitVec8Expr
-import org.ksmt.expr.KBitVecCustomExpr
-import org.ksmt.expr.KBitVecExpr
-import org.ksmt.expr.KBitVec16Value
-import org.ksmt.expr.KBitVec32Value
-import org.ksmt.expr.KBitVec64Value
-import org.ksmt.expr.KBitVec8Value
-import org.ksmt.expr.KBitVecCustomValue
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KBv2IntExpr
 import org.ksmt.expr.KBvArithShiftRightExpr
@@ -154,7 +141,6 @@ import org.ksmt.expr.KExpr
 import org.ksmt.expr.KBvExtractExpr
 import org.ksmt.expr.KFalse
 import org.ksmt.expr.KFunctionApp
-import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KGeArithExpr
 import org.ksmt.expr.KGtArithExpr
 import org.ksmt.expr.KImpliesExpr
@@ -181,7 +167,6 @@ import org.ksmt.expr.KToRealIntExpr
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
-import org.ksmt.expr.KZeroExtExpr
 import org.ksmt.expr.KXorExpr
 import org.ksmt.expr.KBvZeroExtensionExpr
 import org.ksmt.sort.KArithSort
@@ -212,6 +197,7 @@ import org.ksmt.expr.KBitVecCustomValue
 import org.ksmt.expr.KBvRotateLeftIndexedExpr
 import org.ksmt.expr.KBvRotateRightIndexedExpr
 import org.ksmt.expr.KBvSubNoUnderflowExpr
+import org.ksmt.expr.KFunctionAsArray
 
 @Suppress("TooManyFunctions", "unused")
 open class KContext {
