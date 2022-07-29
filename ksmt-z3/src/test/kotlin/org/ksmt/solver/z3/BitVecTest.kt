@@ -164,8 +164,8 @@ class BitVecTest {
         val positiveBvFromString = mkBv(positiveValue, sizeBits) as KBitVecCustomValue
         val negativeBvFromString = mkBv(negativeValue, sizeBits) as KBitVecCustomValue
 
-        assertEquals(positiveBvFromString.decimalStringValue, positiveValue)
-        assertEquals(negativeBvFromString.decimalStringValue, negativeValue)
+        assertEquals(positiveBvFromString.binaryStringValue, positiveValue)
+        assertEquals(negativeBvFromString.binaryStringValue, negativeValue)
 
         assertEquals(positiveBvFromString.sort.sizeBits, sizeBits)
         assertEquals(negativeBvFromString.sort.sizeBits, sizeBits)
@@ -177,7 +177,6 @@ class BitVecTest {
     }
 
     @Test
-    @Disabled("TODO add check for the size")
     fun testCreateIllegalBv(): Unit = with(context) {
         val sizeBits = 42u
         val stringValue = "0".repeat(sizeBits.toInt() - 1)
@@ -187,14 +186,15 @@ class BitVecTest {
 
     @Test
     fun testNotExpr(): Unit = with(context) {
-        val sizeBits = Random.nextInt(from = 65, until = 100).toUInt()
-        val (negativeValue, positiveValue) = createTwoRandomLongValues().let { it.first.toString() to it.second.toString() }
+        val (negativeValue, positiveValue) = createTwoRandomLongValues().let { it.first.toBinary() to it.second.toBinary() }
+        val negativeSizeBits = negativeValue.length.toUInt()
+        val positiveSizeBits = positiveValue.length.toUInt()
 
-        val negativeBv = mkBv(negativeValue, sizeBits)
-        val positiveBv = mkBv(positiveValue, sizeBits)
+        val negativeBv = mkBv(negativeValue, negativeSizeBits)
+        val positiveBv = mkBv(positiveValue, positiveSizeBits)
 
-        val negativeSymbolicValue = mkBvSort(sizeBits).mkConst("negative_symbolic_variable")
-        val positiveSymbolicValue = mkBvSort(sizeBits).mkConst("positive_symbolic_variable")
+        val negativeSymbolicValue = negativeBv.sort().mkConst("negative_symbolic_variable")
+        val positiveSymbolicValue = positiveBv.sort().mkConst("positive_symbolic_variable")
 
         solver.assert(mkBvNotExpr(mkBvNotExpr(negativeBv)) eq negativeBv)
         solver.assert(mkBvNotExpr(negativeBv) eq negativeSymbolicValue)
@@ -204,14 +204,13 @@ class BitVecTest {
 
         solver.check()
 
-        val actualNegativeValue = (solver.model().eval(negativeSymbolicValue) as KBitVecCustomValue).decimalStringValue
-        val actualPositiveValue = (solver.model().eval(positiveSymbolicValue) as KBitVecCustomValue).decimalStringValue
+        val actualNegativeValue = (solver.model().eval(negativeSymbolicValue) as KBitVec64Value).numberValue.toBinary()
+        val actualPositiveValue = (solver.model().eval(positiveSymbolicValue) as KBitVec64Value).numberValue.toBinary()
+        val sizeBits = negativeBv.sort().sizeBits
 
         val expectedValueTransformation = { stringValue: String ->
             stringValue
-                .toLong()
-                .toBinary()
-                .padStart(sizeBits.toInt(), if (stringValue.toLong() < 0) '1' else '0')
+                .padStart(sizeBits.toInt(), if (stringValue[0] == '1') '1' else '0')
                 .map { if (it == '1') '0' else '1' }
                 .joinToString("")
         }
@@ -234,7 +233,7 @@ class BitVecTest {
     @Test
     fun testBvReductionAndExpr(): Unit = with(context) {
         val longValue = Random.nextLong()
-        val value = longValue.toBv(sizeBits = Random.nextUInt(from = 0u, until = 1000u))
+        val value = longValue.toBv(sizeBits = Random.nextUInt(from = 64u, until = 1000u))
         val symbolicResult = mkBv1Sort().mkConst("symbolicValue")
 
         solver.assert(symbolicResult eq value.reductionAnd())
@@ -375,9 +374,9 @@ class BitVecTest {
             model.eval(secondWithFirstConst)
         )
 
-        assertFalse { expectedValues[0] xor (actualValues[0] is KTrue) }
-        assertFalse { expectedValues[1] xor (actualValues[1] is KTrue) }
-        assertFalse { expectedValues[2] xor (actualValues[2] is KTrue) }
+        assertFalse("Values: $values") { expectedValues[0] xor (actualValues[0] is KTrue) }
+        assertFalse("Values: $values") { expectedValues[1] xor (actualValues[1] is KTrue) }
+        assertFalse("Values: $values") { expectedValues[2] xor (actualValues[2] is KTrue) }
     }
 
     @Test
@@ -421,9 +420,11 @@ class BitVecTest {
         val evaluatedNegPositiveBv = model.eval(negPositiveValue) as KBitVec64Value
         val evaluatedZeroValue = model.eval(zeroValue) as KBitVec32Value
 
-        assertEquals(-negativeValue, evaluatedNegNegativeBv.numberValue)
-        assertEquals(-positiveValue, evaluatedNegPositiveBv.numberValue)
-        assertEquals(expected = 0, evaluatedZeroValue.numberValue)
+        val message = "NegativeValue: $negativeValue, positiveValue: $positiveValue"
+
+        assertEquals(-negativeValue, evaluatedNegNegativeBv.numberValue, message)
+        assertEquals(-positiveValue, evaluatedNegPositiveBv.numberValue, message)
+        assertEquals(expected = 0, evaluatedZeroValue.numberValue, message)
     }
 
     @Test
@@ -444,20 +445,15 @@ class BitVecTest {
     fun testSignedDivExpr(): Unit = testBinaryOperation(context::mkBvSignedDivExpr, Long::div)
 
     @Test
-//    @Disabled("Doesn't work yet")
     fun testUnsignedRemExpr(): Unit = testBinaryOperation(context::mkBvUnsignedRemExpr) { arg0: Long, arg1: Long ->
-        arg0 - (arg0.toULong() / arg1.toULong()).toLong() * arg1
+        arg0.toULong().rem(arg1.toULong()).toLong()
     }
 
     @Test
-    fun testSignedReminderExpr(): Unit = testBinaryOperation(context::mkBvSignedRemExpr) { arg0: Long, arg1: Long ->
-        arg0 - (arg0 / arg1) * arg1
-    }
+    fun testSignedReminderExpr(): Unit = testBinaryOperation(context::mkBvSignedRemExpr, Long::rem)
 
     @Test
-    fun testSignedModExpr(): Unit = testBinaryOperation(context::mkBvSignedModExpr) { arg0: Long, arg1: Long ->
-        TODO()
-    }
+    fun testSignedModExpr(): Unit = testBinaryOperation(context::mkBvSignedModExpr, Long::mod)
 
     @Test
     fun testUnsignedLessExpr(): Unit = testLogicalOperation(context::mkBvUnsignedLessExpr) { arg0: Long, arg1: Long ->
@@ -484,7 +480,7 @@ class BitVecTest {
     @Test
     fun testUnsignedGreaterOrEqualExpr(): Unit =
         testLogicalOperation(context::mkBvUnsignedGreaterOrEqualExpr) { arg0: Long, arg1: Long ->
-            arg0 >= arg1
+            arg0.toULong() >= arg1.toULong()
         }
 
     @Test
@@ -496,7 +492,7 @@ class BitVecTest {
     @Test
     fun testUnsignedGreaterExpr(): Unit =
         testLogicalOperation(context::mkBvUnsignedGreaterExpr) { arg0: Long, arg1: Long ->
-            arg0.toULong() >= arg1.toULong()
+            arg0.toULong() > arg1.toULong()
         }
 
     @Test
@@ -518,12 +514,11 @@ class BitVecTest {
         val resultValue = solver.model().eval(symbolicConst) as KBitVecCustomValue
         val expectedResult = firstBv.numberValue.toBinary() + secondBv.numberValue.toBinary()
 
-        // TODO a bug with decimalStringValue and binary representation, run a debug to understand what I mean
-        assertEquals(expectedResult, resultValue.decimalStringValue)
+        assertEquals(expectedResult, resultValue.binaryStringValue)
     }
 
     @Test
-    fun testBvExtractExpr() : Unit = with(context) {
+    fun testBvExtractExpr(): Unit = with(context) {
         val value = Random.nextLong().toBv()
         val high = Random.nextInt(from = 32, until = 64)
         val low = Random.nextInt(from = 5, until = 32)

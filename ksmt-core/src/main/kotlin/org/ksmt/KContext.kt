@@ -621,7 +621,11 @@ open class KContext {
     fun Int.toBv(): KBitVec32Value = mkBv(this)
     fun mkBv(value: Long): KBitVec64Value = bv64Cache.create(value)
     fun Long.toBv(): KBitVec64Value = mkBv(this)
-    fun mkBv(value: Number, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value.toBinary(), sizeBits)
+    fun mkBv(value: Number, sizeBits: UInt): KBitVecValue<KBvSort> {
+        val string = value.toBinary().let { it.padStart(sizeBits.toInt(), it.first()) }
+        return mkBv(string, sizeBits)
+    }
+    // TODO size bits should not be less than size bits for the number
     fun Number.toBv(sizeBits: UInt) = mkBv(this, sizeBits)
     fun mkBv(value: String, sizeBits: UInt): KBitVecValue<KBvSort> = when (sizeBits.toInt()) {
         1 -> mkBv(value.toUInt(radix = 2).toInt() != 0).cast()
@@ -791,7 +795,7 @@ open class KContext {
     private val concatExprCache =
         mkCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvConcatExpr(this, arg0, arg1) }
 
-    fun mkBvConcatExpr(arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>): KBvConcatExpr = concatExprCache.create(arg0, arg1)
+    fun <T: KBvSort, S: KBvSort> mkBvConcatExpr(arg0: KExpr<T>, arg1: KExpr<S>): KBvConcatExpr = concatExprCache.create(arg0, arg1)
 
     private val extractExprCache = mkCache { high: Int, low: Int, value: KExpr<KBvSort> ->
         KBvExtractExpr(this, high, low, value)

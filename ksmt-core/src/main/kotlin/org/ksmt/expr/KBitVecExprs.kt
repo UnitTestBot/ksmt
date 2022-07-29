@@ -68,16 +68,18 @@ class KBitVec64Value internal constructor(ctx: KContext, longValue: Long) :
 
 class KBitVecCustomValue internal constructor(
     ctx: KContext,
-    val decimalStringValue: String,
+    val binaryStringValue: String,
     private val sizeBits: UInt
 ) : KBitVecValue<KBvSort>(ctx) {
     init {
-        // TODO do we need to check size of bits? It takes some time and I'm not sure we really need it
+        require(binaryStringValue.length.toUInt() == sizeBits) {
+            "Provided string $binaryStringValue consist of ${binaryStringValue.length} symbols, but $sizeBits were expected"
+        }
     }
 
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
 
-    override fun decl(): KDecl<KBvSort> = ctx.mkBvDecl(decimalStringValue, sizeBits)
+    override fun decl(): KDecl<KBvSort> = ctx.mkBvDecl(binaryStringValue, sizeBits)
 
     override fun sort(): KBvSort = ctx.mkBvSort(sizeBits)
 }
@@ -344,7 +346,7 @@ class KBvUnsignedDivExpr<S : KBvSort> internal constructor(
  * * the ceiling of `arg0 / arg1` if `arg1` if different from zero and `arg0 * arg1 < 0`
  * * if `arg1` is zero, then the result is undefined.
  */
-class KBvSignedDivExpr<S: KBvSort> internal constructor(
+class KBvSignedDivExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
@@ -365,7 +367,7 @@ class KBvSignedDivExpr<S: KBvSort> internal constructor(
  * It is defined as `arg0 - (arg0 /u arg1) * arg1`, where `\u` represents unsigned division.
  * If `arg1` is zero, then the result is undefined.
  */
-class KBvUnsignedRemExpr<S: KBvSort> internal constructor(
+class KBvUnsignedRemExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
@@ -387,7 +389,7 @@ class KBvUnsignedRemExpr<S: KBvSort> internal constructor(
  * The most significant bit (sign) of the result is equal to the most significant bit of `arg0`.
  * If `arg1` is zero, then the result is undefined.
  */
-class KBvSignedRemExpr<S: KBvSort> internal constructor(
+class KBvSignedRemExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
@@ -406,7 +408,7 @@ class KBvSignedRemExpr<S: KBvSort> internal constructor(
  * Two's complement signed remainder (sign follows divisor).
  * If `arg1` is zero, then the result is undefined.
  */
-class KBvSignedModExpr<S: KBvSort> internal constructor(
+class KBvSignedModExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
@@ -423,7 +425,7 @@ class KBvSignedModExpr<S: KBvSort> internal constructor(
 /**
  * Unsigned less-than.
  */
-class KBvUnsignedLessExpr<S: KBvSort> internal constructor(
+class KBvUnsignedLessExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
@@ -441,7 +443,7 @@ class KBvUnsignedLessExpr<S: KBvSort> internal constructor(
 /**
  * Two's complement signed less-than.
  */
-class KBvSignedLessExpr<S: KBvSort> internal constructor(
+class KBvSignedLessExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
@@ -459,7 +461,7 @@ class KBvSignedLessExpr<S: KBvSort> internal constructor(
 /**
  * Unsigned less-than or equal to.
  */
-class KBvUnsignedLessOrEqualExpr<S: KBvSort> internal constructor(
+class KBvUnsignedLessOrEqualExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
@@ -478,7 +480,7 @@ class KBvUnsignedLessOrEqualExpr<S: KBvSort> internal constructor(
 /**
  * Two's complement signed less-than or equal to.
  */
-class KBvSignedLessOrEqualExpr<S: KBvSort> internal constructor(
+class KBvSignedLessOrEqualExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
@@ -497,7 +499,7 @@ class KBvSignedLessOrEqualExpr<S: KBvSort> internal constructor(
 /**
  * Unsigned greater than or equal to.
  */
-class KBvUnsignedGreaterOrEqualExpr<S: KBvSort> internal constructor(
+class KBvUnsignedGreaterOrEqualExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
@@ -515,7 +517,7 @@ class KBvUnsignedGreaterOrEqualExpr<S: KBvSort> internal constructor(
 /**
  * Two's complement signed greater than or equal to.
  */
-class KBvSignedGreaterOrEqualExpr<S: KBvSort> internal constructor(
+class KBvSignedGreaterOrEqualExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
@@ -533,7 +535,7 @@ class KBvSignedGreaterOrEqualExpr<S: KBvSort> internal constructor(
 /**
  * Unsigned greater-than.
  */
-class KBvUnsignedGreaterExpr<S: KBvSort> internal constructor(
+class KBvUnsignedGreaterExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
@@ -551,7 +553,7 @@ class KBvUnsignedGreaterExpr<S: KBvSort> internal constructor(
 /**
  * Two's complement signed greater-than.
  */
-class KBvSignedGreaterExpr<S: KBvSort> internal constructor(
+class KBvSignedGreaterExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
@@ -676,7 +678,7 @@ class KBvRepeatExpr internal constructor(
  *
  * It is equivalent to multiplication by `2^x`, where `x` is the value of [arg1].
  */
-class KBvShiftLeftExpr<S: KBvSort> internal constructor(
+class KBvShiftLeftExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
@@ -697,7 +699,7 @@ class KBvShiftLeftExpr<S: KBvSort> internal constructor(
  *
  * It is equivalent to unsigned division by `2^x`, where `x` is the value of [arg1].
  */
-class KBvLogicalShiftRightExpr<S: KBvSort> internal constructor(
+class KBvLogicalShiftRightExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
@@ -719,7 +721,7 @@ class KBvLogicalShiftRightExpr<S: KBvSort> internal constructor(
  * It is like logical shift right except that the most significant bits
  * of the result always copy the most significant bit of the second argument.
  */
-class KBvArithShiftRightExpr<S: KBvSort> internal constructor(
+class KBvArithShiftRightExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
@@ -740,7 +742,7 @@ class KBvArithShiftRightExpr<S: KBvSort> internal constructor(
  *
  * Rotates bits of the [arg0] to the left [arg1] times.
  */
-class KBvRotateLeftExpr<S: KBvSort> internal constructor(
+class KBvRotateLeftExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
@@ -760,7 +762,7 @@ class KBvRotateLeftExpr<S: KBvSort> internal constructor(
  *
  * Rotates bits of the [value] to the left [i] times.
  */
-class KBvRotateLeftIndexedExpr<S: KBvSort> internal constructor(
+class KBvRotateLeftIndexedExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val i: Int,
     val value: KExpr<S>
@@ -780,7 +782,7 @@ class KBvRotateLeftIndexedExpr<S: KBvSort> internal constructor(
  *
  * Rotates bits of the [arg0] to the right [arg1] times.
  */
-class KBvRotateRightExpr<S: KBvSort> internal constructor(
+class KBvRotateRightExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
@@ -800,7 +802,7 @@ class KBvRotateRightExpr<S: KBvSort> internal constructor(
  *
  * Rotates bits of the [value] to the right [i] times.
  */
-class KBvRotateRightIndexedExpr<S: KBvSort> internal constructor(
+class KBvRotateRightIndexedExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val i: Int,
     val value: KExpr<S>
@@ -839,7 +841,7 @@ class KBv2IntExpr internal constructor(
     override fun accept(transformer: KTransformer): KExpr<KIntSort> = transformer.transform(this)
 }
 
-class KBvAddNoOverflowExpr<S: KBvSort> internal constructor(
+class KBvAddNoOverflowExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>,
@@ -855,7 +857,7 @@ class KBvAddNoOverflowExpr<S: KBvSort> internal constructor(
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
-class KBvAddNoUnderflowExpr<S: KBvSort> internal constructor(
+class KBvAddNoUnderflowExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>,
@@ -870,7 +872,7 @@ class KBvAddNoUnderflowExpr<S: KBvSort> internal constructor(
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
-class KBvSubNoOverflowExpr<S: KBvSort> internal constructor(
+class KBvSubNoOverflowExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>,
@@ -885,7 +887,7 @@ class KBvSubNoOverflowExpr<S: KBvSort> internal constructor(
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
-class KBvSubNoUnderflowExpr<S: KBvSort> internal constructor(
+class KBvSubNoUnderflowExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>,
@@ -901,7 +903,7 @@ class KBvSubNoUnderflowExpr<S: KBvSort> internal constructor(
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
-class KBvDivNoOverflowExpr<S: KBvSort> internal constructor(
+class KBvDivNoOverflowExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>,
@@ -916,7 +918,7 @@ class KBvDivNoOverflowExpr<S: KBvSort> internal constructor(
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
-class KBvNegNoOverflowExpr<S: KBvSort> internal constructor(
+class KBvNegNoOverflowExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val value: KExpr<S>,
 ) : KApp<KBoolSort, KExpr<S>>(ctx) {
@@ -930,7 +932,7 @@ class KBvNegNoOverflowExpr<S: KBvSort> internal constructor(
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
-class KBvMulNoOverflowExpr<S: KBvSort> internal constructor(
+class KBvMulNoOverflowExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>,
@@ -946,7 +948,7 @@ class KBvMulNoOverflowExpr<S: KBvSort> internal constructor(
     override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
 }
 
-class KBvMulNoUnderflowExpr<S: KBvSort> internal constructor(
+class KBvMulNoUnderflowExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>,

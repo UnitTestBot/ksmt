@@ -12,6 +12,7 @@ import com.microsoft.z3.RealExpr
 import com.microsoft.z3.Sort
 import com.microsoft.z3.mkExistsQuantifier
 import com.microsoft.z3.mkForallQuantifier
+import java.math.BigInteger
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAddArithExpr
@@ -201,7 +202,11 @@ open class KZ3ExprInternalizer(
                 z3Ctx.mkBV((expr as KBitVecNumberValue<*, *>).numberValue.toInt(), sizeBits)
             }
             is KBitVec64Value -> z3Ctx.mkBV(expr.numberValue, sizeBits)
-            is KBitVecCustomValue -> z3Ctx.mkBV(expr.decimalStringValue, sizeBits)
+            is KBitVecCustomValue -> {
+//              // TODO a problem with negative numbers. Here BigInteger treat `-15` as big positive number
+                val decimalString = BigInteger(expr.binaryStringValue, 2).toString(10)
+                z3Ctx.mkBV(decimalString, sizeBits)
+            }
             else -> error("Unknown bv expression class ${expr::class} in transformation method: ${expr.print()}")
         }
     }
@@ -279,7 +284,7 @@ open class KZ3ExprInternalizer(
     { transform(arg0, arg1, z3Ctx::mkBVSDiv) }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedRemExpr<T>): KExpr<T> = with(expr)
-    { transform(arg0, arg1, z3Ctx::mkBVUDiv) }
+    { transform(arg0, arg1, z3Ctx::mkBVURem) }
 
     override fun <T : KBvSort> transform(expr: KBvSignedRemExpr<T>): KExpr<T> = with(expr)
     { transform(arg0, arg1, z3Ctx::mkBVSRem) }
