@@ -167,7 +167,7 @@ enum class BitwuzlaKind(val value: Int) {
     BITWUZLA_KIND_BV_ROL(24),
 
     /**
-     * Bit-vector rotate arg1.
+     * Bit-vector rotate right.
      *
      * This is a non-indexed variant of SMT-LIB \c rotate_right.
      */
