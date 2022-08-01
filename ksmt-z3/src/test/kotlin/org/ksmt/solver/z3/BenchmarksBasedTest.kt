@@ -1,9 +1,11 @@
 package org.ksmt.solver.z3
 
+import com.microsoft.z3.BoolExpr
 import com.microsoft.z3.Context
 import com.microsoft.z3.Expr
 import com.microsoft.z3.Solver
 import com.microsoft.z3.Status
+import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -37,10 +39,9 @@ class BenchmarksBasedTest {
                     for ((originalZ3Expr, ksmtExpr) in assertions.zip(ksmtAssertions)) {
                         val internalizedExpr = internalize(ksmtExpr)
                         val z3Expr = originalZ3Expr.translate(checkCtx)
-                        assertTrue("expressions are not equal") {
-                            areEqual(internalizedExpr, z3Expr)
-                        }
+                        areEqual(internalizedExpr, z3Expr)
                     }
+                    check { "expressions are not equal" }
                 }
             }
         }
@@ -98,23 +99,26 @@ class BenchmarksBasedTest {
 
                 Context().use { checkCtx ->
                     checkCtx.performEqualityChecks(ctx) {
-                        for ((const, expectedValue, actualValue) in assignmentsToCheck) {
+                        for ((_, expectedValue, actualValue) in assignmentsToCheck) {
                             val internalizedExpr = internalize(actualValue)
                             val z3Expr = expectedValue.translate(checkCtx)
-                            assertTrue("model assignments for $const are not equal") {
-                                areEqual(internalizedExpr, z3Expr)
-                            }
+                            areEqual(internalizedExpr, z3Expr)
                         }
+                        check { "model assignments are not equal" }
                     }
                 }
             }
         }
     }
 
-    private fun Context.performEqualityChecks(ctx: KContext, checks: EqualityChecker.() -> Unit) {
+    private fun Context.performEqualityChecks(
+        ctx: KContext,
+        checks: EqualityChecker.() -> Unit
+    ) {
         val solver = mkSolver()
         val params = mkParams().apply {
             add("timeout", 1.seconds.toInt(DurationUnit.MILLISECONDS))
+            add("model", false)
         }
         solver.setParameters(params)
         val checker = EqualityChecker(this, solver, ctx)
@@ -133,12 +137,23 @@ class BenchmarksBasedTest {
 
         fun internalize(expr: KExpr<*>): Expr = with(internalizer) { expr.internalize() }
 
-        fun areEqual(left: Expr, right: Expr): Boolean {
-            solver.push()
-            solver.add(ctx.mkNot(ctx.mkEq(left, right)))
+        private val equalityChecks = mutableListOf<BoolExpr>()
+
+        fun areEqual(left: Expr, right: Expr) {
+            equalityChecks.add(ctx.mkNot(ctx.mkEq(left, right)))
+        }
+
+        fun check(message: () -> String) {
+            solver.add(ctx.mkOr(*equalityChecks.toTypedArray()))
             val status = solver.check()
-            solver.pop()
-            return status == Status.UNSATISFIABLE
+            when (status) {
+                Status.UNSATISFIABLE -> return
+                Status.SATISFIABLE -> assertTrue(false, message())
+                null, Status.UNKNOWN -> {
+                    System.err.println("equality check: unknown")
+                    Assumptions.assumeTrue(false, "equality check: unknown")
+                }
+            }
         }
     }
 
