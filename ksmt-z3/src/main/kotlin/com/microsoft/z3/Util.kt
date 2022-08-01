@@ -33,3 +33,6 @@ fun Context.mkForallQuantifier(
     quantifierId: Symbol?,
     skolemId: Symbol?
 ): Quantifier = mkForall(boundConstants, body, weight, patterns, noPatterns, quantifierId, skolemId)
+
+val Expr.ctx: Context
+    get() = context
