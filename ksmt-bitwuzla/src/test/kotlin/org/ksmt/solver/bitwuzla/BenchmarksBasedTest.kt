@@ -1,5 +1,7 @@
 package org.ksmt.solver.bitwuzla
 
+import org.junit.jupiter.api.parallel.Execution
+import org.junit.jupiter.api.parallel.ExecutionMode
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -22,10 +24,10 @@ import kotlin.time.TimeSource
 
 class BenchmarksBasedTest {
 
+    @Execution(ExecutionMode.CONCURRENT)
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
     fun testConverter(name: String, samplePath: Path) = skipUnsupportedSolverFeatures {
-        println(name)
         val ctx = KContext()
         val ksmtAssertions = parser.parse(ctx, samplePath)
 

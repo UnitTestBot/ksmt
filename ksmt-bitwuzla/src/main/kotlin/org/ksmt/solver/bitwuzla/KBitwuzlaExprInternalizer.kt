@@ -77,6 +77,7 @@ import org.ksmt.expr.KTransformer
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
+import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBVBase
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
@@ -396,7 +397,7 @@ open class KBitwuzlaExprInternalizer(
                         return@internalizeExpr selectArgs[0]
                     }
                 }
-                error("array lambda expressions are not supported in Bitwuzla")
+                throw KSolverUnsupportedFeatureException("array lambda expressions are not supported in Bitwuzla")
             }
         }
 
@@ -436,8 +437,8 @@ open class KBitwuzlaExprInternalizer(
 
         override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): BitwuzlaSort =
             bitwuzlaCtx.internalizeSort(sort) {
-                check(sort.range !is KArraySort<*, *> && sort.domain !is KArraySort<*, *>) {
-                    "Bitwuzla doesn't support nested arrays"
+                if (sort.range is KArraySort<*, *> || sort.domain is KArraySort<*, *>) {
+                    throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support nested arrays")
                 }
                 val domain = sort.domain.accept(this@SortInternalizer)
                 val range = sort.range.accept(this@SortInternalizer)
@@ -457,8 +458,11 @@ open class KBitwuzlaExprInternalizer(
         /**
          * Bitwuzla doesn't support integers and reals.
          * */
-        override fun visit(sort: KIntSort): BitwuzlaSort = error("Unsupported sort $sort")
-        override fun visit(sort: KRealSort): BitwuzlaSort = error("Unsupported sort $sort")
+        override fun visit(sort: KIntSort): BitwuzlaSort =
+            throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
+
+        override fun visit(sort: KRealSort): BitwuzlaSort =
+            throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
     }
 
     open class FunctionSortInternalizer(
@@ -466,11 +470,11 @@ open class KBitwuzlaExprInternalizer(
         private val sortInternalizer: SortInternalizer
     ) : KDeclVisitor<BitwuzlaSort> {
         override fun <S : KSort> visit(decl: KFuncDecl<S>): BitwuzlaSort = bitwuzlaCtx.internalizeDeclSort(decl) {
-            check(decl.argSorts.all { it !is KArraySort<*, *> }) {
-                "Bitwuzla doesn't support functions with arrays in domain"
+            if (decl.argSorts.any { it is KArraySort<*, *> }) {
+                throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support functions with arrays in domain")
             }
-            check(decl.argSorts.isEmpty() || decl.sort !is KArraySort<*, *>) {
-                "Bitwuzla doesn't support functions with arrays in range"
+            if (decl.argSorts.isNotEmpty() && decl.sort is KArraySort<*, *>) {
+                throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support functions with arrays in range")
             }
             val domain = decl.argSorts.map { it.accept(sortInternalizer) }.toTypedArray()
             val range = decl.sort.accept(sortInternalizer)
