@@ -95,7 +95,9 @@ open class KZ3ExprConverter(
         when (expr.funcDecl.declKind) {
             Z3_decl_kind.Z3_OP_TRUE -> trueExpr
             Z3_decl_kind.Z3_OP_FALSE -> falseExpr
-            Z3_decl_kind.Z3_OP_UNINTERPRETED -> mkApp(convertDecl(expr.funcDecl), expr.args.map { it.convert<KSort>() })
+            Z3_decl_kind.Z3_OP_UNINTERPRETED -> convertList(expr.args) { args: List<KExpr<KSort>> ->
+                mkApp(convertDecl(expr.funcDecl), args)
+            }
             Z3_decl_kind.Z3_OP_AND -> convertList(expr.args, ::mkAnd)
             Z3_decl_kind.Z3_OP_OR -> convertList(expr.args, ::mkOr)
             Z3_decl_kind.Z3_OP_XOR -> convert(expr.args, ::mkXor)
@@ -104,40 +106,16 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_EQ -> convert(expr.args, ::mkEq)
             Z3_decl_kind.Z3_OP_DISTINCT -> convertList(expr.args, ::mkDistinct)
             Z3_decl_kind.Z3_OP_ITE -> convert(expr.args, ::mkIte)
-            Z3_decl_kind.Z3_OP_LE -> mkArithLe<KArithSort<*>>(
-                expr.args[0].convert<KArithSort<*>>(),
-                expr.args[1].convert<KArithSort<*>>()
-            )
-            Z3_decl_kind.Z3_OP_GE -> mkArithGe<KArithSort<*>>(
-                expr.args[0].convert<KArithSort<*>>(),
-                expr.args[1].convert<KArithSort<*>>()
-            )
-            Z3_decl_kind.Z3_OP_LT -> mkArithLt<KArithSort<*>>(
-                expr.args[0].convert<KArithSort<*>>(),
-                expr.args[1].convert<KArithSort<*>>()
-            )
-            Z3_decl_kind.Z3_OP_GT -> mkArithGt<KArithSort<*>>(
-                expr.args[0].convert<KArithSort<*>>(),
-                expr.args[1].convert<KArithSort<*>>()
-            )
-            Z3_decl_kind.Z3_OP_ADD -> mkArithAdd<KArithSort<*>>(
-                expr.args.map { it.convert<KArithSort<*>>() } as List<KExpr<KArithSort<*>>>
-            )
-            Z3_decl_kind.Z3_OP_SUB -> mkArithSub<KArithSort<*>>(
-                expr.args.map { it.convert<KArithSort<*>>() } as List<KExpr<KArithSort<*>>>
-            )
-            Z3_decl_kind.Z3_OP_MUL -> mkArithMul<KArithSort<*>>(
-                expr.args.map { it.convert<KArithSort<*>>() } as List<KExpr<KArithSort<*>>>
-            )
-            Z3_decl_kind.Z3_OP_UMINUS -> mkArithUnaryMinus<KArithSort<*>>(expr.args[0].convert<KArithSort<*>>())
-            Z3_decl_kind.Z3_OP_DIV -> mkArithDiv<KArithSort<*>>(
-                expr.args[0].convert<KArithSort<*>>(),
-                expr.args[1].convert<KArithSort<*>>()
-            )
-            Z3_decl_kind.Z3_OP_POWER -> mkArithPower<KArithSort<*>>(
-                expr.args[0].convert<KArithSort<*>>(),
-                expr.args[1].convert<KArithSort<*>>()
-            )
+            Z3_decl_kind.Z3_OP_LE -> convert<KBoolSort, KArithSort<*>, KArithSort<*>>(expr.args, ::mkArithLe)
+            Z3_decl_kind.Z3_OP_GE -> convert<KBoolSort, KArithSort<*>, KArithSort<*>>(expr.args, ::mkArithGe)
+            Z3_decl_kind.Z3_OP_LT -> convert<KBoolSort, KArithSort<*>, KArithSort<*>>(expr.args, ::mkArithLt)
+            Z3_decl_kind.Z3_OP_GT -> convert<KBoolSort, KArithSort<*>, KArithSort<*>>(expr.args, ::mkArithGt)
+            Z3_decl_kind.Z3_OP_ADD -> convertList<KArithSort<*>, KArithSort<*>>(expr.args, ::mkArithAdd)
+            Z3_decl_kind.Z3_OP_SUB -> convertList<KArithSort<*>, KArithSort<*>>(expr.args, ::mkArithSub)
+            Z3_decl_kind.Z3_OP_MUL -> convertList<KArithSort<*>, KArithSort<*>>(expr.args, ::mkArithMul)
+            Z3_decl_kind.Z3_OP_UMINUS -> convert<KArithSort<*>, KArithSort<*>>(expr.args, ::mkArithUnaryMinus)
+            Z3_decl_kind.Z3_OP_DIV -> convert<KArithSort<*>, KArithSort<*>, KArithSort<*>>(expr.args, ::mkArithDiv)
+            Z3_decl_kind.Z3_OP_POWER -> convert<KArithSort<*>, KArithSort<*>, KArithSort<*>>(expr.args, ::mkArithPower)
             Z3_decl_kind.Z3_OP_REM -> convert(expr.args, ::mkIntRem)
             Z3_decl_kind.Z3_OP_MOD -> convert(expr.args, ::mkIntMod)
             Z3_decl_kind.Z3_OP_TO_REAL -> convert(expr.args, ::mkIntToReal)
@@ -145,10 +123,9 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_IS_INT -> convert(expr.args, ::mkRealIsInt)
             Z3_decl_kind.Z3_OP_STORE -> convert(expr.args, ::mkArrayStore)
             Z3_decl_kind.Z3_OP_SELECT -> convert(expr.args, ::mkArraySelect)
-            Z3_decl_kind.Z3_OP_CONST_ARRAY -> mkArrayConst(
-                convertSort(expr.funcDecl.range) as KArraySort<*, *>,
-                expr.args[0].convert()
-            )
+            Z3_decl_kind.Z3_OP_CONST_ARRAY -> convert(expr.args) { arg: KExpr<KSort> ->
+                mkArrayConst(convertSort(expr.funcDecl.range) as KArraySort<*, *>, arg)
+            }
             Z3_decl_kind.Z3_OP_BNUM,
             Z3_decl_kind.Z3_OP_BIT1,
             Z3_decl_kind.Z3_OP_BIT0 -> error("unexpected Bv numeral in app converter: $expr")
@@ -182,22 +159,22 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_BNOR -> convert(expr.args, ::mkBvNorExpr)
             Z3_decl_kind.Z3_OP_BXNOR -> convert(expr.args, ::mkBvXNorExpr)
             Z3_decl_kind.Z3_OP_CONCAT -> convertReduced(expr.args, ::mkBvConcatExpr)
-            Z3_decl_kind.Z3_OP_SIGN_EXT -> {
+            Z3_decl_kind.Z3_OP_SIGN_EXT -> convert(expr.args) { arg: KExpr<KBvSort> ->
                 val size = expr.funcDecl.parameters[0].int
-                mkBvSignExtensionExpr(size, expr.args[0].convert())
+                mkBvSignExtensionExpr(size, arg)
             }
-            Z3_decl_kind.Z3_OP_ZERO_EXT -> {
+            Z3_decl_kind.Z3_OP_ZERO_EXT -> convert(expr.args) { arg: KExpr<KBvSort> ->
                 val size = expr.funcDecl.parameters[0].int
-                mkBvZeroExtensionExpr(size, expr.args[0].convert())
+                mkBvZeroExtensionExpr(size, arg)
             }
-            Z3_decl_kind.Z3_OP_EXTRACT -> {
+            Z3_decl_kind.Z3_OP_EXTRACT -> convert(expr.args) { arg: KExpr<KBvSort> ->
                 val high = expr.funcDecl.parameters[0].int
                 val low = expr.funcDecl.parameters[1].int
-                mkBvExtractExpr(high, low, expr.args[0].convert())
+                mkBvExtractExpr(high, low, arg)
             }
-            Z3_decl_kind.Z3_OP_REPEAT -> {
+            Z3_decl_kind.Z3_OP_REPEAT -> convert(expr.args) { arg: KExpr<KBvSort> ->
                 val repeatCount = expr.funcDecl.parameters[0].int
-                mkBvRepeatExpr(repeatCount, expr.args[0].convert())
+                mkBvRepeatExpr(repeatCount, arg)
             }
             Z3_decl_kind.Z3_OP_BREDOR -> convert(expr.args, ::mkBvReductionOrExpr)
             Z3_decl_kind.Z3_OP_BREDAND -> convert(expr.args, ::mkBvReductionAndExpr)
@@ -205,39 +182,32 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_BSHL -> convert(expr.args, ::mkBvShiftLeftExpr)
             Z3_decl_kind.Z3_OP_BLSHR -> convert(expr.args, ::mkBvLogicalShiftRightExpr)
             Z3_decl_kind.Z3_OP_BASHR -> convert(expr.args, ::mkBvArithShiftRightExpr)
-            Z3_decl_kind.Z3_OP_ROTATE_LEFT -> {
+            Z3_decl_kind.Z3_OP_ROTATE_LEFT -> convert(expr.args) { arg: KExpr<KBvSort> ->
                 val rotation = expr.funcDecl.parameters[0].int
-                mkBvRotateLeftExpr(rotation, expr.args[0].convert())
+                mkBvRotateLeftExpr(rotation, arg)
             }
-            Z3_decl_kind.Z3_OP_ROTATE_RIGHT -> {
+            Z3_decl_kind.Z3_OP_ROTATE_RIGHT -> convert(expr.args) { arg: KExpr<KBvSort> ->
                 val rotation = expr.funcDecl.parameters[0].int
-                mkBvRotateRightExpr(rotation, expr.args[0].convert())
+                mkBvRotateRightExpr(rotation, arg)
             }
             Z3_decl_kind.Z3_OP_EXT_ROTATE_LEFT -> convert(expr.args, ::mkBvRotateLeftExpr)
             Z3_decl_kind.Z3_OP_EXT_ROTATE_RIGHT -> convert(expr.args, ::mkBvRotateRightExpr)
             Z3_decl_kind.Z3_OP_BIT2BOOL -> TODO("bit2bool conversion is not supported")
             Z3_decl_kind.Z3_OP_INT2BV -> TODO("int2bv conversion is not supported")
             Z3_decl_kind.Z3_OP_BV2INT -> TODO("bv2int conversion is not supported")
-            Z3_decl_kind.Z3_OP_CARRY -> {
+            Z3_decl_kind.Z3_OP_CARRY -> convert(expr.args) { a0: KExpr<KBvSort>, a1: KExpr<KBvSort>, a2: KExpr<KBvSort> ->
                 mkBvOrExpr(
-                    mkBvAndExpr(expr.args[0].convert(), expr.args[1].convert()),
-                    mkBvOrExpr(
-                        mkBvAndExpr(expr.args[0].convert(), expr.args[2].convert()),
-                        mkBvAndExpr(expr.args[1].convert(), expr.args[2].convert())
-                    )
+                    mkBvAndExpr(a0, a1),
+                    mkBvOrExpr(mkBvAndExpr(a0, a2), mkBvAndExpr(a1, a2))
                 )
             }
             Z3_decl_kind.Z3_OP_XOR3 -> convertReduced(expr.args, ::mkBvXorExpr)
-            Z3_decl_kind.Z3_OP_BSMUL_NO_OVFL -> mkBvMulNoOverflowExpr(
-                expr.args[0].convert(),
-                expr.args[1].convert(),
-                isSigned = true
-            )
-            Z3_decl_kind.Z3_OP_BUMUL_NO_OVFL -> mkBvMulNoOverflowExpr(
-                expr.args[0].convert(),
-                expr.args[1].convert(),
-                isSigned = false
-            )
+            Z3_decl_kind.Z3_OP_BSMUL_NO_OVFL -> convert(expr.args) { a0: KExpr<KBvSort>, a1: KExpr<KBvSort> ->
+                mkBvMulNoOverflowExpr(a0, a1, isSigned = true)
+            }
+            Z3_decl_kind.Z3_OP_BUMUL_NO_OVFL -> convert(expr.args) { a0: KExpr<KBvSort>, a1: KExpr<KBvSort> ->
+                mkBvMulNoOverflowExpr(a0, a1, isSigned = false)
+            }
             Z3_decl_kind.Z3_OP_BSMUL_NO_UDFL -> convert(expr.args, ::mkBvMulNoUnderflowExpr)
             else -> TODO("${expr.funcDecl} is not supported")
         }
