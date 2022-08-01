@@ -10,9 +10,9 @@ import com.microsoft.z3.FuncDecl
 import com.microsoft.z3.IntExpr
 import com.microsoft.z3.RealExpr
 import com.microsoft.z3.Sort
+import com.microsoft.z3.mkBvNumeral
 import com.microsoft.z3.mkExistsQuantifier
 import com.microsoft.z3.mkForallQuantifier
-import java.math.BigInteger
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAddArithExpr
@@ -197,11 +197,16 @@ open class KZ3ExprInternalizer(
     override fun <T : KBvSort> transformBitVecValue(expr: KBitVecValue<T>): KExpr<T> = expr.internalizeExpr {
         val sizeBits = expr.sort().sizeBits.toInt()
         when (expr) {
+            is KBitVec1Value -> z3Ctx.mkBvNumeral(booleanArrayOf(expr.value))
             is KBitVec8Value, is KBitVec16Value, is KBitVec32Value -> {
                 z3Ctx.mkBV((expr as KBitVecNumberValue<*, *>).numberValue.toInt(), sizeBits)
             }
             is KBitVec64Value -> z3Ctx.mkBV(expr.numberValue, sizeBits)
-            is KBitVecCustomValue -> z3Ctx.mkBV(expr.binaryStringValue, sizeBits)
+            is KBitVecCustomValue -> {
+                val bits = expr.binaryStringValue.reversed().let { value -> BooleanArray(value.length) { value[it] == '1' } }
+                check(bits.size == sizeBits) { "bv bits size mismatch" }
+                z3Ctx.mkBvNumeral(bits)
+            }
             else -> error("Unknown bv expression class ${expr::class} in transformation method: ${expr.print()}")
         }
     }

@@ -36,3 +36,6 @@ fun Context.mkForallQuantifier(
 
 val Expr.ctx: Context
     get() = context
+
+fun Context.mkBvNumeral(bits: BooleanArray): Expr =
+    Expr.create(this, Native.mkBvNumeral(nCtx(), bits.size, bits))
