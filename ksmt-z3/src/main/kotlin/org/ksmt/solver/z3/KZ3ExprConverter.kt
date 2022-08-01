@@ -1,14 +1,15 @@
 package org.ksmt.solver.z3
 
 import com.microsoft.z3.ArraySort
-import com.microsoft.z3.BitVecExpr
 import com.microsoft.z3.BitVecNum
 import com.microsoft.z3.BitVecSort
 import com.microsoft.z3.Expr
 import com.microsoft.z3.FuncDecl
 import com.microsoft.z3.IntNum
+import com.microsoft.z3.Quantifier
 import com.microsoft.z3.RatNum
 import com.microsoft.z3.Sort
+import com.microsoft.z3.ctx
 import com.microsoft.z3.enumerations.Z3_ast_kind
 import com.microsoft.z3.enumerations.Z3_decl_kind
 import com.microsoft.z3.enumerations.Z3_sort_kind
@@ -22,7 +23,7 @@ import org.ksmt.expr.KIntNumExpr
 import org.ksmt.expr.KRealNumExpr
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
-import org.ksmt.sort.KBvSort
+import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 
 open class KZ3ExprConverter(
@@ -75,8 +76,8 @@ open class KZ3ExprConverter(
     open fun convertExpr(expr: Expr): KExpr<*> = when (expr.astKind) {
         Z3_ast_kind.Z3_NUMERAL_AST -> convertNumeral(expr)
         Z3_ast_kind.Z3_APP_AST -> convertApp(expr)
-        Z3_ast_kind.Z3_QUANTIFIER_AST -> TODO("quantifier conversion is not implemented")
-        Z3_ast_kind.Z3_VAR_AST -> TODO("var conversion is not implemented")
+        Z3_ast_kind.Z3_QUANTIFIER_AST -> convertQuantifier(expr)
+        Z3_ast_kind.Z3_VAR_AST -> error("var conversion is not supported")
         Z3_ast_kind.Z3_SORT_AST,
         Z3_ast_kind.Z3_FUNC_DECL_AST,
         Z3_ast_kind.Z3_UNKNOWN_AST -> error("impossible ast kind for expressions")
@@ -186,5 +187,23 @@ open class KZ3ExprConverter(
     fun convertNumeral(expr: BitVecNum): KBitVecValue<*> = with(ctx) {
         val sizeBits = expr.sortSize.toUInt()
         mkBv(value = expr.toBinaryString().padStart(sizeBits.toInt(), '0'), sizeBits)
+    }
+
+    open fun convertQuantifier(expr: Expr): KExpr<KBoolSort> = with(ctx) {
+        expr as Quantifier
+
+        val z3Bounds = expr.boundVariableSorts.zip(expr.boundVariableNames).map { (sort, name) ->
+            expr.ctx.mkConst(name, sort)
+        }.reversed()
+
+        val body = expr.body.substituteVars(z3Bounds.toTypedArray()).convert<KBoolSort>()
+
+        val bounds = z3Bounds.map { it.funcDecl.convert<KSort>() }
+
+        if (expr.isUniversal) {
+            mkUniversalQuantifier(body, bounds)
+        } else {
+            mkExistentialQuantifier(body, bounds)
+        }
     }
 }
