@@ -1,12 +1,14 @@
 package org.ksmt.solver.z3
 
-import com.microsoft.z3.BoolExpr
 import com.microsoft.z3.Context
 import com.microsoft.z3.Expr
+import com.microsoft.z3.Native
 import com.microsoft.z3.Solver
 import com.microsoft.z3.Status
 import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
+import org.junit.jupiter.api.parallel.Execution
+import org.junit.jupiter.api.parallel.ExecutionMode
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -26,6 +28,7 @@ import kotlin.time.DurationUnit
 
 class BenchmarksBasedTest {
 
+    @Execution(ExecutionMode.CONCURRENT)
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
     fun testConverter(name: String, samplePath: Path) = skipUnsupportedSolverFeatures {
@@ -39,7 +42,7 @@ class BenchmarksBasedTest {
                     for ((originalZ3Expr, ksmtExpr) in assertions.zip(ksmtAssertions)) {
                         val internalizedExpr = internalize(ksmtExpr)
                         val z3Expr = originalZ3Expr.translate(checkCtx)
-                        areEqual(internalizedExpr, z3Expr)
+                        areEqual(actual = internalizedExpr, expected = z3Expr)
                     }
                     check { "expressions are not equal" }
                 }
@@ -102,7 +105,7 @@ class BenchmarksBasedTest {
                         for ((_, expectedValue, actualValue) in assignmentsToCheck) {
                             val internalizedExpr = internalize(actualValue)
                             val z3Expr = expectedValue.translate(checkCtx)
-                            areEqual(internalizedExpr, z3Expr)
+                            areEqual(actual = internalizedExpr, expected = z3Expr)
                         }
                         check { "model assignments are not equal" }
                     }
@@ -137,28 +140,52 @@ class BenchmarksBasedTest {
 
         fun internalize(expr: KExpr<*>): Expr = with(internalizer) { expr.internalize() }
 
-        private val equalityChecks = mutableListOf<BoolExpr>()
+        private val equalityChecks = mutableListOf<Pair<Expr, Expr>>()
 
-        fun areEqual(left: Expr, right: Expr) {
-            equalityChecks.add(ctx.mkNot(ctx.mkEq(left, right)))
+        fun areEqual(actual: Expr, expected: Expr) {
+            equalityChecks.add(actual to expected)
         }
 
         fun check(message: () -> String) {
-            solver.add(ctx.mkOr(*equalityChecks.toTypedArray()))
+            val equalityBindings = equalityChecks.map { ctx.mkNot(ctx.mkEq(it.first, it.second)) }
+            solver.add(ctx.mkOr(*equalityBindings.toTypedArray()))
             val status = solver.check()
             when (status) {
                 Status.UNSATISFIABLE -> return
-                Status.SATISFIABLE -> assertTrue(false, message())
+                Status.SATISFIABLE -> {
+                    val (expected, actual) = findFirstFailedEquality()
+                    if (expected != null && actual != null) {
+                        assertEquals(expected, actual, message())
+                    }
+                    assertTrue(false, message())
+                }
                 null, Status.UNKNOWN -> {
                     System.err.println("equality check: unknown")
                     Assumptions.assumeTrue(false, "equality check: unknown")
                 }
             }
         }
+
+        private fun findFirstFailedEquality(): Pair<Expr?, Expr?> {
+            for ((lhs, rhs) in equalityChecks) {
+                solver.push()
+                val binding = ctx.mkNot(ctx.mkEq(lhs, rhs))
+                solver.add(binding)
+                val status = solver.check()
+                solver.pop()
+                if (status == Status.SATISFIABLE) return lhs to rhs
+            }
+            return null to null
+        }
     }
 
     companion object {
         val parser = Z3SmtLibParser()
+
+        init {
+            // Limit z3 native memory usage to avoid OOM
+            Native.globalParamSet("memory_max_size", "2048") // 2048 megabytes
+        }
 
         @JvmStatic
         fun testData(): List<Arguments> {
