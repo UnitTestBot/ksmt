@@ -3,11 +3,11 @@ package org.ksmt.solver.z3
 import com.microsoft.z3.Expr
 import com.microsoft.z3.FuncDecl
 import com.microsoft.z3.Sort
-import java.lang.ref.WeakReference
-import java.util.WeakHashMap
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KSort
+import java.lang.ref.WeakReference
+import java.util.WeakHashMap
 
 @Suppress("TooManyFunctions")
 class KZ3InternalizationContext : AutoCloseable {
@@ -34,6 +34,8 @@ class KZ3InternalizationContext : AutoCloseable {
 
     fun internalizeDecl(decl: KDecl<*>, internalizer: (KDecl<*>) -> FuncDecl): FuncDecl =
         internalize(decls, z3Decls, decl, internalizer)
+
+    fun findConvertedExpr(expr: Expr): KExpr<*>? = z3Expressions[expr]?.get()
 
     fun convertExpr(expr: Expr, converter: (Expr) -> KExpr<*>): KExpr<*> =
         convert(expressions, z3Expressions, expr, converter)
