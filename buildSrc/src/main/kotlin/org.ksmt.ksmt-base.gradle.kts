@@ -25,4 +25,5 @@ tasks.getByName<KotlinCompile>("compileKotlin") {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    systemProperty("junit.jupiter.execution.parallel.enabled", true)
 }

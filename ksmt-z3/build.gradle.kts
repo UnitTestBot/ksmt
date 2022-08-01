@@ -57,7 +57,7 @@ val smtLibBenchmarks = listOfNotNull(
     "ABV", // 400K
     if (!skipBigBenchmarks) "AUFBV" else null, // 1.2G
     if (!skipBigBenchmarks) "BV" else null, // 847M
-    if (!skipBigBenchmarks) "QF_ABV" else null, // 253M
+    "QF_ABV", // 253M
     if (!skipBigBenchmarks) "QF_BV" else null// 12.3G
 )
 
