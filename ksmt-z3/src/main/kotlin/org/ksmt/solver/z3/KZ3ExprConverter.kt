@@ -78,7 +78,7 @@ open class KZ3ExprConverter(
                 mkArraySort(convertSort(it.domain), convertSort(it.range))
             }
             Z3_sort_kind.Z3_BV_SORT -> mkBvSort((sort as BitVecSort).size.toUInt())
-            Z3_sort_kind.Z3_UNINTERPRETED_SORT,
+            Z3_sort_kind.Z3_UNINTERPRETED_SORT -> mkUninterpretedSort(sort.name.toString())
             Z3_sort_kind.Z3_DATATYPE_SORT,
             Z3_sort_kind.Z3_RELATION_SORT,
             Z3_sort_kind.Z3_FINITE_DOMAIN_SORT,

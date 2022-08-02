@@ -25,6 +25,7 @@ import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KSortVisitor
+import org.ksmt.sort.KUninterpretedSort
 
 @Suppress("TooManyFunctions")
 open class KModelEvaluator(
@@ -163,6 +164,8 @@ open class KModelEvaluator(
             override fun <S : KBvSort> visit(sort: S): KExpr<T> = mkBv("0", sort.sizeBits) as KExpr<T>
             override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): KExpr<T> =
                 mkArrayConst(sort, sort.range.sampleValue()) as KExpr<T>
+            override fun visit(sort: KUninterpretedSort): KExpr<T> =
+                error("Uninterpreted sort has no values")
         })
     }
 }

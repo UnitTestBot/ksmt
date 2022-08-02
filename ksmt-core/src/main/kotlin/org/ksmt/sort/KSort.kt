@@ -71,3 +71,9 @@ class KBv64Sort internal constructor(ctx: KContext) : KBvSort(ctx) {
 class KBvCustomSizeSort internal constructor(ctx: KContext, override val sizeBits: UInt) : KBvSort(ctx) {
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
 }
+
+class KUninterpretedSort internal constructor(val name: String, ctx: KContext) : KSort(ctx) {
+    override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
+
+    override fun print(): String = name
+}
