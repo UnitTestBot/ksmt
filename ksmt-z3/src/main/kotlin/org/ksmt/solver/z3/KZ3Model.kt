@@ -36,7 +36,7 @@ open class KZ3Model(
         interpretations.getOrPut(decl) {
             ensureContextActive()
             if (decl !in declarations) return@getOrPut null
-            val z3Decl = with(internalizer) { decl.internalize() }
+            val z3Decl = with(internalizer) { decl.internalizeDecl() }
             if (z3Decl in model.constDecls) constInterp<T>(z3Decl) else funcInterp<T>(z3Decl)
         } as? KModel.KFuncInterp<T>
 

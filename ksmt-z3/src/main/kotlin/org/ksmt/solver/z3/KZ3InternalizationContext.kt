@@ -22,9 +22,9 @@ class KZ3InternalizationContext : AutoCloseable {
     val isActive: Boolean
         get() = !closed
 
-    operator fun get(expr: KExpr<*>): Internalized<Expr> = expressions.getInternalized(expr)
-    operator fun get(sort: KSort): Internalized<Sort> = sorts.getInternalized(sort)
-    operator fun get(decl: KDecl<*>): Internalized<FuncDecl> = decls.getInternalized(decl)
+    fun findInternalizedExpr(expr: KExpr<*>): Expr? = expressions[expr]
+
+    fun findConvertedExpr(expr: Expr): KExpr<*>? = z3Expressions[expr]?.get()
 
     fun internalizeExpr(expr: KExpr<*>, internalizer: (KExpr<*>) -> Expr): Expr =
         internalize(expressions, z3Expressions, expr, internalizer)
@@ -34,8 +34,6 @@ class KZ3InternalizationContext : AutoCloseable {
 
     fun internalizeDecl(decl: KDecl<*>, internalizer: (KDecl<*>) -> FuncDecl): FuncDecl =
         internalize(decls, z3Decls, decl, internalizer)
-
-    fun findConvertedExpr(expr: Expr): KExpr<*>? = z3Expressions[expr]?.get()
 
     fun convertExpr(expr: Expr, converter: (Expr) -> KExpr<*>): KExpr<*> =
         convert(expressions, z3Expressions, expr, converter)
@@ -77,20 +75,4 @@ class KZ3InternalizationContext : AutoCloseable {
         decls.clear()
         expressions.clear()
     }
-
-    sealed interface Internalized<out T> {
-        val isInternalized: Boolean
-            get() = this is Value
-
-        fun getOrError(): T = when (this) {
-            is Value -> value
-            NotInternalized -> error("not internalized")
-        }
-
-        class Value<T>(val value: T) : Internalized<T>
-        object NotInternalized : Internalized<Nothing>
-    }
-
-    private fun <K, V> Map<K, V>.getInternalized(key: K): Internalized<V> =
-        this[key]?.let { Internalized.Value(it) } ?: Internalized.NotInternalized
 }
