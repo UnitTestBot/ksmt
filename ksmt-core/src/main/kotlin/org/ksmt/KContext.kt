@@ -182,6 +182,7 @@ import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 import java.math.BigInteger
 import kotlin.reflect.KProperty
 import org.ksmt.decl.KBvRotateLeftIndexedDecl
@@ -240,6 +241,9 @@ open class KContext {
 
     private val realSortCache = mkCache<KRealSort> { KRealSort(this) }
     fun mkRealSort(): KRealSort = realSortCache.create()
+
+    private val uninterpretedSortCache = mkCache { name: String -> KUninterpretedSort(name, this) }
+    fun mkUninterpretedSort(name: String): KUninterpretedSort = uninterpretedSortCache.create(name)
 
     // utils
     val boolSort: KBoolSort

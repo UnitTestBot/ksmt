@@ -95,6 +95,7 @@ import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KSortVisitor
+import org.ksmt.sort.KUninterpretedSort
 
 open class KBitwuzlaExprInternalizer(
     override val ctx: KContext,
@@ -462,6 +463,9 @@ open class KBitwuzlaExprInternalizer(
             throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
 
         override fun visit(sort: KRealSort): BitwuzlaSort =
+            throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
+
+        override fun visit(sort: KUninterpretedSort): BitwuzlaSort =
             throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
     }
 

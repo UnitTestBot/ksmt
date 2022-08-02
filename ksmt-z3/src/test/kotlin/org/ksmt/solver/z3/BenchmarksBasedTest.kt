@@ -37,15 +37,12 @@ class BenchmarksBasedTest {
             val assertions = parser.parseFile(parseCtx, samplePath)
             val ksmtAssertions = parser.convert(ctx, assertions)
 
-            Context().use { checkCtx ->
-                checkCtx.performEqualityChecks(ctx) {
-                    for ((originalZ3Expr, ksmtExpr) in assertions.zip(ksmtAssertions)) {
-                        val internalizedExpr = internalize(ksmtExpr)
-                        val z3Expr = originalZ3Expr.translate(checkCtx)
-                        areEqual(actual = internalizedExpr, expected = z3Expr)
-                    }
-                    check { "expressions are not equal" }
+            parseCtx.performEqualityChecks(ctx) {
+                for ((originalZ3Expr, ksmtExpr) in assertions.zip(ksmtAssertions)) {
+                    val internalizedExpr = internalize(ksmtExpr)
+                    areEqual(actual = internalizedExpr, expected = originalZ3Expr)
                 }
+                check { "expressions are not equal" }
             }
         }
     }
@@ -167,8 +164,9 @@ class BenchmarksBasedTest {
                     assertTrue(false, message())
                 }
                 null, Status.UNKNOWN -> {
-                    System.err.println("equality check: unknown")
-                    Assumptions.assumeTrue(false, "equality check: unknown")
+                    val testIgnoreReason = "equality check: unknown -- ${solver.reasonUnknown}"
+                    System.err.println(testIgnoreReason)
+                    Assumptions.assumeTrue(false, testIgnoreReason)
                 }
             }
         }
