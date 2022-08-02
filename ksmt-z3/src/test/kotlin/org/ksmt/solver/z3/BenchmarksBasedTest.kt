@@ -55,6 +55,7 @@ class BenchmarksBasedTest {
         matches = "enabled",
         disabledReason = "z3 solver test"
     )
+    @Execution(ExecutionMode.CONCURRENT)
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
     fun testSolver(name: String, samplePath: Path) = skipUnsupportedSolverFeatures {
@@ -65,6 +66,7 @@ class BenchmarksBasedTest {
                 val solver = mkSolver().apply {
                     val params = mkParams().apply {
                         add("timeout", 1.seconds.toInt(DurationUnit.MILLISECONDS))
+                        add("random_seed", RANDOM_SEED)
                     }
                     setParameters(params)
                 }
@@ -79,7 +81,7 @@ class BenchmarksBasedTest {
 
             val ksmtAssertions = parser.convert(ctx, assertions)
 
-            KZ3Solver(ctx).use { solver ->
+            SeededZ3Solver(ctx).use { solver ->
                 ksmtAssertions.forEach { solver.assert(it) }
                 // use greater timeout to avoid false-positive unknowns
                 val status = solver.check(timeout = 2.seconds)
@@ -91,8 +93,13 @@ class BenchmarksBasedTest {
                 val expectedModelAssignments = run {
                     val internCtx = KZ3InternalizationContext()
                     val converter = KZ3ExprConverter(ctx, internCtx)
-                    val z3Constants = expectedModel.decls.map { parseCtx.mkConst(it) }
-                    val assignments = z3Constants.associateWith { expectedModel.eval(it, false) }
+                    val z3Constants = expectedModel.constDecls.map { parseCtx.mkConst(it) }
+                    val z3Functions = expectedModel.funcDecls.map { decl ->
+                        val args = decl.domain.map { parseCtx.mkFreshConst("x", it) }
+                        decl.apply(*args.toTypedArray())
+                    }
+                    val z3ModelKeys = z3Constants + z3Functions
+                    val assignments = z3ModelKeys.associateWith { expectedModel.eval(it, false) }
                     with(converter) { assignments.map { (const, value) -> const.convert<KSort>() to value } }
                 }
                 val assignmentsToCheck = expectedModelAssignments.map { (const, expectedValue) ->
@@ -180,6 +187,7 @@ class BenchmarksBasedTest {
     }
 
     companion object {
+        const val RANDOM_SEED = 12345
         val parser = Z3SmtLibParser()
 
         init {
@@ -195,4 +203,6 @@ class BenchmarksBasedTest {
             }
         }
     }
+
+    private class SeededZ3Solver(ctx: KContext, override val randomSeed: Int = RANDOM_SEED) : KZ3Solver(ctx)
 }

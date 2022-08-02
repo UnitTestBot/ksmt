@@ -379,7 +379,7 @@ open class KZ3ExprInternalizer(
         expr.transform<ArrayExpr, Expr, KArraySelect<D, R>>(expr.array, expr.index, z3Ctx::mkSelect)
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>) = expr.transform(expr.value) { value: Expr ->
-        z3Ctx.mkConstArray(expr.sort.internalizeSort(), value)
+        z3Ctx.mkConstArray(expr.sort.domain.internalizeSort(), value)
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) = expr.transform(expr.body) { body: Expr ->

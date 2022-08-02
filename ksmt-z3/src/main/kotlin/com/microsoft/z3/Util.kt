@@ -39,3 +39,6 @@ val Expr.ctx: Context
 
 fun Context.mkBvNumeral(bits: BooleanArray): Expr =
     Expr.create(this, Native.mkBvNumeral(nCtx(), bits.size, bits))
+
+val Quantifier.isLambda: Boolean
+    get() = Native.isLambda(context.nCtx(), nativeObject)

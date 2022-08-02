@@ -21,8 +21,8 @@ import kotlin.time.DurationUnit
 
 open class KZ3Solver(private val ctx: KContext) : KSolver {
     private val z3Ctx = Context()
-    private val solver = z3Ctx.mkSolver()
     private val z3InternCtx = KZ3InternalizationContext()
+    private val solver = createSolver()
     private var lastCheckStatus = KSolverStatus.UNKNOWN
     private var currentScope: UInt = 0u
 
@@ -41,6 +41,8 @@ open class KZ3Solver(private val ctx: KContext) : KSolver {
     private val exprConverter by lazy {
         createExprConverter(z3InternCtx, z3Ctx)
     }
+
+    open val randomSeed: Int = 0
 
     open fun createSortInternalizer(
         internCtx: KZ3InternalizationContext,
@@ -64,6 +66,15 @@ open class KZ3Solver(private val ctx: KContext) : KSolver {
         internCtx: KZ3InternalizationContext,
         z3Ctx: Context
     ) = KZ3ExprConverter(ctx, internCtx)
+
+    private fun createSolver(): Solver = z3Ctx.mkSolver().apply {
+        if (randomSeed != 0) {
+            val params = z3Ctx.mkParams().apply {
+                add("random_seed", randomSeed)
+            }
+            setParameters(params)
+        }
+    }
 
     override fun push() {
         solver.push()

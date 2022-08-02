@@ -14,6 +14,7 @@ import com.microsoft.z3.enumerations.Z3_ast_kind
 import com.microsoft.z3.enumerations.Z3_decl_kind
 import com.microsoft.z3.enumerations.Z3_sort_kind
 import com.microsoft.z3.intOrNull
+import com.microsoft.z3.isLambda
 import com.microsoft.z3.longOrNull
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
@@ -334,10 +335,11 @@ open class KZ3ExprConverter(
 
         val bounds = z3Bounds.map { it.funcDecl.convert<KSort>() }
 
-        if (expr.isUniversal) {
-            mkUniversalQuantifier(body, bounds)
-        } else {
-            mkExistentialQuantifier(body, bounds)
+        when {
+            expr.isUniversal -> mkUniversalQuantifier(body, bounds)
+            expr.isExistential -> mkExistentialQuantifier(body, bounds)
+            expr.isLambda -> TODO("array lambda converter")
+            else -> TODO("unexpected quantifier: $expr")
         }
     }
 }
