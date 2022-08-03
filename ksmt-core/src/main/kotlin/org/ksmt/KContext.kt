@@ -202,7 +202,7 @@ import org.ksmt.utils.cast
 import org.ksmt.utils.toBinary
 import org.ksmt.utils.uncheckedCast
 
-@Suppress("TooManyFunctions", "unused")
+@Suppress("TooManyFunctions", "LargeClass", "unused")
 open class KContext {
     /*
     * sorts

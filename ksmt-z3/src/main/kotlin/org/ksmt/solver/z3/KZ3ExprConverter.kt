@@ -273,7 +273,7 @@ open class KZ3ExprConverter(
         op: (KExpr<A0>, KExpr<A1>) -> KExpr<T>
     ) = ensureArgsAndConvert(this, args, 2) { args -> op(args[0] as KExpr<A0>, args[1] as KExpr<A1>) }
 
-    @Suppress("UNCHECKED_CAST")
+    @Suppress("UNCHECKED_CAST", "MagicNumber")
     inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> Expr<*>.convert(
         op: (KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<T>
     ) = ensureArgsAndConvert(this, args, 3) { args ->

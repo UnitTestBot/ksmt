@@ -20,6 +20,7 @@ import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.fixtures.TestDataProvider
 import org.ksmt.solver.fixtures.skipUnsupportedSolverFeatures
 import org.ksmt.solver.fixtures.z3.Z3SmtLibParser
+import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import java.nio.file.Path
 import kotlin.io.path.relativeTo
@@ -82,46 +83,62 @@ class BenchmarksBasedTest {
             }
 
             val ksmtAssertions = parser.convert(ctx, assertions)
+            runKsmtZ3Solver(ctx, ksmtAssertions, expectedStatus, expectedModel, parseCtx)
+        }
+    }
 
-            TestZ3Solver(ctx).use { solver ->
-                ksmtAssertions.forEach { solver.assert(it) }
-                // use greater timeout to avoid false-positive unknowns
-                val status = solver.check(timeout = 2.seconds)
-                val message by lazy {
-                    val failInfo = if (status == KSolverStatus.UNKNOWN) " -- ${solver.reasonOfUnknown()}" else ""
-                    "solver check-sat mismatch$failInfo"
+    private fun runKsmtZ3Solver(
+        ctx: KContext,
+        ksmtAssertions: List<KExpr<KBoolSort>>,
+        expectedStatus: KSolverStatus,
+        expectedModel: Model?,
+        parseCtx: Context
+    ) = TestZ3Solver(ctx).use { solver ->
+        ksmtAssertions.forEach { solver.assert(it) }
+        // use greater timeout to avoid false-positive unknowns
+        val status = solver.check(timeout = 2.seconds)
+        val message by lazy {
+            val failInfo = if (status == KSolverStatus.UNKNOWN) " -- ${solver.reasonOfUnknown()}" else ""
+            "solver check-sat mismatch$failInfo"
+        }
+        assertEquals(expectedStatus, status, message)
+
+        if (status != KSolverStatus.SAT || expectedModel == null) return
+
+        val model = solver.wrapModel(expectedModel)
+
+        checkModelAssignments(ctx, expectedModel, parseCtx, model)
+    }
+
+    private fun checkModelAssignments(
+        ctx: KContext,
+        expectedModel: Model,
+        parseCtx: Context,
+        actualModel: KZ3Model
+    ) {
+        val expectedModelAssignments = run {
+            val internCtx = KZ3InternalizationContext()
+            val converter = KZ3ExprConverter(ctx, internCtx)
+            val z3Constants = expectedModel.constDecls.map { parseCtx.mkConst(it) }
+            val z3Functions = expectedModel.funcDecls.map { decl ->
+                val args = decl.domain.map { parseCtx.mkFreshConst("x", it) }
+                decl.apply(*args.toTypedArray())
+            }
+            val z3ModelKeys = z3Constants + z3Functions
+            val assignments = z3ModelKeys.associateWith { expectedModel.eval(it, false) }
+            with(converter) { assignments.map { (const, value) -> const.convert<KSort>() to value } }
+        }
+        val assignmentsToCheck = expectedModelAssignments.map { (const, expectedValue) ->
+            val actualValue = actualModel.eval(const, complete = false)
+            Triple(const, expectedValue, actualValue)
+        }
+
+        Context().use { checkCtx ->
+            checkCtx.performEqualityChecks(ctx) {
+                for ((_, expectedValue, actualValue) in assignmentsToCheck) {
+                    areEqual(actual = internalize(actualValue), expected = expectedValue.translate(checkCtx))
                 }
-                assertEquals(expectedStatus, status, message)
-
-                if (status != KSolverStatus.SAT || expectedModel == null) return
-
-                val model = solver.wrapModel(expectedModel)
-
-                val expectedModelAssignments = run {
-                    val internCtx = KZ3InternalizationContext()
-                    val converter = KZ3ExprConverter(ctx, internCtx)
-                    val z3Constants = expectedModel.constDecls.map { parseCtx.mkConst(it) }
-                    val z3Functions = expectedModel.funcDecls.map { decl ->
-                        val args = decl.domain.map { parseCtx.mkFreshConst("x", it) }
-                        decl.apply(*args.toTypedArray())
-                    }
-                    val z3ModelKeys = z3Constants + z3Functions
-                    val assignments = z3ModelKeys.associateWith { expectedModel.eval(it, false) }
-                    with(converter) { assignments.map { (const, value) -> const.convert<KSort>() to value } }
-                }
-                val assignmentsToCheck = expectedModelAssignments.map { (const, expectedValue) ->
-                    val actualValue = model.eval(const, complete = false)
-                    Triple(const, expectedValue, actualValue)
-                }
-
-                Context().use { checkCtx ->
-                    checkCtx.performEqualityChecks(ctx) {
-                        for ((_, expectedValue, actualValue) in assignmentsToCheck) {
-                            areEqual(actual = internalize(actualValue), expected = expectedValue.translate(checkCtx))
-                        }
-                        check { "model assignments are not equal" }
-                    }
-                }
+                check { "model assignments are not equal" }
             }
         }
     }
