@@ -142,11 +142,11 @@ class BenchmarksBasedTest {
         private val declInternalizer = KZ3DeclInternalizer(ctx, internCtx, sortInternalizer)
         private val internalizer = KZ3ExprInternalizer(ksmtCtx, ctx, internCtx, sortInternalizer, declInternalizer)
 
-        fun internalize(expr: KExpr<*>): Expr = with(internalizer) { expr.internalize() }
+        fun internalize(expr: KExpr<*>): Expr<*> = with(internalizer) { expr.internalize() }
 
-        private val equalityChecks = mutableListOf<Pair<Expr, Expr>>()
+        private val equalityChecks = mutableListOf<Pair<Expr<*>, Expr<*>>>()
 
-        fun areEqual(actual: Expr, expected: Expr) {
+        fun areEqual(actual: Expr<*>, expected: Expr<*>) {
             equalityChecks.add(actual to expected)
         }
 
@@ -171,7 +171,7 @@ class BenchmarksBasedTest {
             }
         }
 
-        private fun findFirstFailedEquality(): Pair<Expr?, Expr?> {
+        private fun findFirstFailedEquality(): Pair<Expr<*>?, Expr<*>?> {
             for ((lhs, rhs) in equalityChecks) {
                 solver.push()
                 val binding = ctx.mkNot(ctx.mkEq(lhs, rhs))

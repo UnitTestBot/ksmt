@@ -1,9 +1,11 @@
 package org.ksmt.solver.z3
 
 import com.microsoft.z3.ArithExpr
+import com.microsoft.z3.ArithSort
 import com.microsoft.z3.ArrayExpr
 import com.microsoft.z3.BitVecExpr
 import com.microsoft.z3.BoolExpr
+import com.microsoft.z3.BoolSort
 import com.microsoft.z3.Context
 import com.microsoft.z3.Expr
 import com.microsoft.z3.FuncDecl
@@ -122,9 +124,9 @@ open class KZ3ExprInternalizer(
 ) : KTransformer {
 
     val exprStack = arrayListOf<KExpr<*>>()
-    var internalizedExpr: Expr? = null
+    var internalizedExpr: Expr<*>? = null
 
-    fun <T : KSort> KExpr<T>.internalize(): Expr {
+    fun <T : KSort> KExpr<T>.internalize(): Expr<*> {
         exprStack.add(this)
         while (exprStack.isNotEmpty()) {
             internalizedExpr = null
@@ -143,14 +145,14 @@ open class KZ3ExprInternalizer(
             ?: error("expr is not properly internalized: $this")
     }
 
-    fun <T : KDecl<*>> T.internalizeDecl(): FuncDecl = accept(declInternalizer)
+    fun <T : KDecl<*>> T.internalizeDecl(): FuncDecl<*> = accept(declInternalizer)
 
     fun <T : KSort> T.internalizeSort(): Sort = accept(sortInternalizer)
 
     override fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> =
         error("Unexpected expr $expr")
 
-    override fun <T : KSort> transform(expr: KFunctionApp<T>) = expr.transformList(expr.args) { args: Array<Expr> ->
+    override fun <T : KSort> transform(expr: KFunctionApp<T>) = expr.transformList(expr.args) { args: Array<Expr<*>> ->
         z3Ctx.mkApp(expr.decl.internalizeDecl(), *args)
     }
 
@@ -178,12 +180,17 @@ open class KZ3ExprInternalizer(
 
     override fun <T : KSort> transform(expr: KEqExpr<T>) = expr.transform(expr.lhs, expr.rhs, z3Ctx::mkEq)
 
-    override fun <T : KSort> transform(expr: KDistinctExpr<T>) = expr.transformList(expr.args) { args: Array<Expr> ->
+    override fun <T : KSort> transform(expr: KDistinctExpr<T>) = expr.transformList(expr.args) { args: Array<Expr<*>> ->
         z3Ctx.mkDistinct(*args)
     }
 
     override fun <T : KSort> transform(expr: KIteExpr<T>) =
-        expr.transform(expr.condition, expr.trueBranch, expr.falseBranch, z3Ctx::mkITE)
+        expr.transform<Expr<BoolSort>, Expr<Sort>, Expr<Sort>, KIteExpr<T>>(
+            expr.condition,
+            expr.trueBranch,
+            expr.falseBranch,
+            z3Ctx::mkITE
+        )
 
     override fun <T : KBvSort> transformBitVecValue(expr: KBitVecValue<T>) = expr.transform {
         val sizeBits = expr.sort().sizeBits.toInt()
@@ -373,37 +380,46 @@ open class KZ3ExprInternalizer(
         expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVMulNoUnderflow)
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) =
-        expr.transform<ArrayExpr, Expr, Expr, KArrayStore<D, R>>(expr.array, expr.index, expr.value, z3Ctx::mkStore)
+        expr.transform<ArrayExpr<Sort, Sort>, Expr<Sort>, Expr<Sort>, KArrayStore<D, R>>(
+            expr.array,
+            expr.index,
+            expr.value,
+            z3Ctx::mkStore
+        )
 
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>) =
-        expr.transform<ArrayExpr, Expr, KArraySelect<D, R>>(expr.array, expr.index, z3Ctx::mkSelect)
+        expr.transform<ArrayExpr<Sort, Sort>, Expr<Sort>, KArraySelect<D, R>>(expr.array, expr.index, z3Ctx::mkSelect)
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>) = expr.transform(expr.value) { value: Expr ->
-        z3Ctx.mkConstArray(expr.sort.domain.internalizeSort(), value)
-    }
+    override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>) =
+        expr.transform(expr.value) { value: Expr<*> ->
+            z3Ctx.mkConstArray(expr.sort.domain.internalizeSort(), value)
+        }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) = expr.transform(expr.body) { body: Expr ->
-        val internalizedIndex = expr.indexVarDecl.internalizeDecl()
-        z3Ctx.mkLambda(arrayOf(internalizedIndex.range), arrayOf(internalizedIndex.name), body)
-    }
+    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) =
+        expr.transform(expr.body) { body: Expr<*> ->
+            val internalizedIndex = expr.indexVarDecl.internalizeDecl()
+            z3Ctx.mkLambda(arrayOf(internalizedIndex.range), arrayOf(internalizedIndex.name), body)
+        }
 
     override fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>) =
-        expr.transformList(expr.args) { args: Array<ArithExpr> -> z3Ctx.mkAdd(*args) }
+        expr.transformList(expr.args) { args: Array<ArithExpr<*>> -> z3Ctx.mkAdd(*args) }
 
     override fun <T : KArithSort<T>> transform(expr: KSubArithExpr<T>) =
-        expr.transformList(expr.args) { args: Array<ArithExpr> -> z3Ctx.mkSub(*args) }
+        expr.transformList(expr.args) { args: Array<ArithExpr<*>> -> z3Ctx.mkSub(*args) }
 
     override fun <T : KArithSort<T>> transform(expr: KMulArithExpr<T>) =
-        expr.transformList(expr.args) { args: Array<ArithExpr> -> z3Ctx.mkMul(*args) }
+        expr.transformList(expr.args) { args: Array<ArithExpr<*>> -> z3Ctx.mkMul(*args) }
 
     override fun <T : KArithSort<T>> transform(expr: KUnaryMinusArithExpr<T>) =
-        expr.transform(expr.arg, z3Ctx::mkUnaryMinus)
+        expr.transform<ArithExpr<ArithSort>, KUnaryMinusArithExpr<T>>(expr.arg, z3Ctx::mkUnaryMinus)
 
     override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>) =
-        expr.transform(expr.lhs, expr.rhs, z3Ctx::mkDiv)
+        expr.transform<ArithExpr<ArithSort>, ArithExpr<ArithSort>, KDivArithExpr<T>>(expr.lhs, expr.rhs, z3Ctx::mkDiv)
 
     override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>) =
-        expr.transform(expr.lhs, expr.rhs, z3Ctx::mkPower)
+        expr.transform<ArithExpr<ArithSort>, ArithExpr<ArithSort>, KPowerArithExpr<T>>(
+            expr.lhs, expr.rhs, z3Ctx::mkPower
+        )
 
     override fun <T : KArithSort<T>> transform(expr: KLtArithExpr<T>) = expr.transform(expr.lhs, expr.rhs, z3Ctx::mkLt)
 
@@ -458,15 +474,15 @@ open class KZ3ExprInternalizer(
         )
     }
 
-    fun internalizedExpr(expr: KExpr<*>): Expr? = z3InternCtx.findInternalizedExpr(expr)
+    fun internalizedExpr(expr: KExpr<*>): Expr<*>? = z3InternCtx.findInternalizedExpr(expr)
 
-    inline fun <S : KExpr<*>> S.transform(operation: () -> Expr): S = also {
+    inline fun <S : KExpr<*>> S.transform(operation: () -> Expr<*>): S = also {
         internalizedExpr = operation()
     }
 
-    inline fun <reified A0 : Expr, S : KExpr<*>> S.transform(
+    inline fun <reified A0 : Expr<*>, S : KExpr<*>> S.transform(
         arg: KExpr<*>,
-        operation: (A0) -> Expr
+        operation: (A0) -> Expr<*>
     ): S = also {
         val internalizedArg = internalizedExpr(arg)
         if (internalizedArg == null) {
@@ -477,10 +493,10 @@ open class KZ3ExprInternalizer(
         }
     }
 
-    inline fun <reified A0 : Expr, reified A1 : Expr, S : KExpr<*>> S.transform(
+    inline fun <reified A0 : Expr<*>, reified A1 : Expr<*>, S : KExpr<*>> S.transform(
         arg0: KExpr<*>,
         arg1: KExpr<*>,
-        operation: (A0, A1) -> Expr
+        operation: (A0, A1) -> Expr<*>
     ): S = also {
         val internalizedArg0 = internalizedExpr(arg0)
         val internalizedArg1 = internalizedExpr(arg1)
@@ -493,11 +509,11 @@ open class KZ3ExprInternalizer(
         }
     }
 
-    inline fun <reified A0 : Expr, reified A1 : Expr, reified A2 : Expr, S : KExpr<*>> S.transform(
+    inline fun <reified A0 : Expr<*>, reified A1 : Expr<*>, reified A2 : Expr<*>, S : KExpr<*>> S.transform(
         arg0: KExpr<*>,
         arg1: KExpr<*>,
         arg2: KExpr<*>,
-        operation: (A0, A1, A2) -> Expr
+        operation: (A0, A1, A2) -> Expr<*>
     ): S = also {
         val internalizedArg0 = internalizedExpr(arg0)
         val internalizedArg1 = internalizedExpr(arg1)
@@ -512,9 +528,9 @@ open class KZ3ExprInternalizer(
         }
     }
 
-    inline fun <reified A : Expr, S : KExpr<*>> S.transformList(
+    inline fun <reified A : Expr<*>, S : KExpr<*>> S.transformList(
         args: List<KExpr<*>>,
-        operation: (Array<A>) -> Expr
+        operation: (Array<A>) -> Expr<*>
     ): S = also {
         val internalizedArgs = mutableListOf<A>()
         var exprAdded = false

@@ -40,7 +40,7 @@ open class KZ3Model(
             if (z3Decl in model.constDecls) constInterp<T>(z3Decl) else funcInterp<T>(z3Decl)
         } as? KModel.KFuncInterp<T>
 
-    private fun <T : KSort> constInterp(decl: FuncDecl): KModel.KFuncInterp<T>? {
+    private fun <T : KSort> constInterp(decl: FuncDecl<*>): KModel.KFuncInterp<T>? {
         val z3Expr = model.getConstInterp(decl) ?: return null
         val expr = with(converter) { z3Expr.convert<T>() }
         return with(ctx) {
@@ -48,7 +48,7 @@ open class KZ3Model(
         }
     }
 
-    private fun <T : KSort> funcInterp(decl: FuncDecl): KModel.KFuncInterp<T>? = with(converter) {
+    private fun <T : KSort> funcInterp(decl: FuncDecl<*>): KModel.KFuncInterp<T>? = with(converter) {
         val z3Interp = model.getFuncInterp(decl) ?: return null
         val varSorts = decl.domain.map { it.convert<KSort>() }
         val vars = varSorts.map { with(ctx) { it.mkFreshConst("x") } }
