@@ -115,6 +115,7 @@ import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KSort
 
+@Suppress("SpreadOperator")
 open class KZ3ExprInternalizer(
     override val ctx: KContext,
     private val z3Ctx: Context,
