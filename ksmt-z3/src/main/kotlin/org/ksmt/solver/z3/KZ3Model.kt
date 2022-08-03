@@ -37,7 +37,11 @@ open class KZ3Model(
             ensureContextActive()
             if (decl !in declarations) return@getOrPut null
             val z3Decl = with(internalizer) { decl.internalizeDecl() }
-            if (z3Decl in model.constDecls) constInterp<T>(z3Decl) else funcInterp<T>(z3Decl)
+            when (z3Decl) {
+                in model.constDecls -> constInterp<T>(z3Decl)
+                in model.funcDecls -> funcInterp<T>(z3Decl)
+                else -> error("decl $decl is in model declarations but not present in model")
+            }
         } as? KModel.KFuncInterp<T>
 
     private fun <T : KSort> constInterp(decl: FuncDecl<*>): KModel.KFuncInterp<T>? {
