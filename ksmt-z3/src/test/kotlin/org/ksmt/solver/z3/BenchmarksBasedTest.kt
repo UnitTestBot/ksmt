@@ -52,7 +52,7 @@ class BenchmarksBasedTest {
         matches = "enabled",
         disabledReason = "z3 solver test"
     )
-    @Execution(ExecutionMode.CONCURRENT)
+//    @Execution(ExecutionMode.CONCURRENT)
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
     fun testSolver(name: String, samplePath: Path) = skipUnsupportedSolverFeatures {
@@ -82,7 +82,11 @@ class BenchmarksBasedTest {
                 ksmtAssertions.forEach { solver.assert(it) }
                 // use greater timeout to avoid false-positive unknowns
                 val status = solver.check(timeout = 2.seconds)
-                assertEquals(expectedStatus, status, "solver check-sat mismatch")
+                val message by lazy {
+                    val failInfo = if (status == KSolverStatus.UNKNOWN) " -- ${solver.reasonOfUnknown()}" else ""
+                    "solver check-sat mismatch$failInfo"
+                }
+                assertEquals(expectedStatus, status, message)
 
                 if (status != KSolverStatus.SAT || expectedModel == null) return
 
