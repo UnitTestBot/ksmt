@@ -116,6 +116,9 @@ class BenchmarksBasedTest {
         parseCtx: Context,
         actualModel: KZ3Model
     ) {
+        // check no exceptions during model detach
+        actualModel.detach()
+
         val expectedModelAssignments = run {
             val internCtx = KZ3InternalizationContext()
             val converter = KZ3ExprConverter(ctx, internCtx)
