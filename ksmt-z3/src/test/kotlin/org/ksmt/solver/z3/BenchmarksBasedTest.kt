@@ -2,9 +2,11 @@ package org.ksmt.solver.z3
 
 import com.microsoft.z3.Context
 import com.microsoft.z3.Expr
+import com.microsoft.z3.Model
 import com.microsoft.z3.Native
 import com.microsoft.z3.Solver
 import com.microsoft.z3.Status
+import com.microsoft.z3.translate
 import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.junit.jupiter.api.parallel.Execution
@@ -52,7 +54,7 @@ class BenchmarksBasedTest {
         matches = "enabled",
         disabledReason = "z3 solver test"
     )
-//    @Execution(ExecutionMode.CONCURRENT)
+    @Execution(ExecutionMode.CONCURRENT)
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
     fun testSolver(name: String, samplePath: Path) = skipUnsupportedSolverFeatures {
@@ -72,13 +74,16 @@ class BenchmarksBasedTest {
                 when (status) {
                     Status.SATISFIABLE -> KSolverStatus.SAT to solver.model
                     Status.UNSATISFIABLE -> KSolverStatus.UNSAT to null
-                    Status.UNKNOWN, null -> return
+                    Status.UNKNOWN, null -> {
+                        Assumptions.assumeTrue(false, "expected status: unknown")
+                        return
+                    }
                 }
             }
 
             val ksmtAssertions = parser.convert(ctx, assertions)
 
-            SeededZ3Solver(ctx).use { solver ->
+            TestZ3Solver(ctx).use { solver ->
                 ksmtAssertions.forEach { solver.assert(it) }
                 // use greater timeout to avoid false-positive unknowns
                 val status = solver.check(timeout = 2.seconds)
@@ -90,7 +95,8 @@ class BenchmarksBasedTest {
 
                 if (status != KSolverStatus.SAT || expectedModel == null) return
 
-                val model = solver.model()
+                val model = solver.wrapModel(expectedModel)
+
                 val expectedModelAssignments = run {
                     val internCtx = KZ3InternalizationContext()
                     val converter = KZ3ExprConverter(ctx, internCtx)
@@ -111,9 +117,7 @@ class BenchmarksBasedTest {
                 Context().use { checkCtx ->
                     checkCtx.performEqualityChecks(ctx) {
                         for ((_, expectedValue, actualValue) in assignmentsToCheck) {
-                            val internalizedExpr = internalize(actualValue)
-                            val z3Expr = expectedValue.translate(checkCtx)
-                            areEqual(actual = internalizedExpr, expected = z3Expr)
+                            areEqual(actual = internalize(actualValue), expected = expectedValue.translate(checkCtx))
                         }
                         check { "model assignments are not equal" }
                     }
@@ -161,8 +165,8 @@ class BenchmarksBasedTest {
             when (status) {
                 Status.UNSATISFIABLE -> return
                 Status.SATISFIABLE -> {
-                    val (expected, actual) = findFirstFailedEquality()
-                    if (expected != null && actual != null) {
+                    val (actual, expected) = findFirstFailedEquality()
+                    if (actual != null && expected != null) {
                         assertEquals(expected, actual, message())
                     }
                     assertTrue(false, message())
@@ -176,13 +180,13 @@ class BenchmarksBasedTest {
         }
 
         private fun findFirstFailedEquality(): Pair<Expr<*>?, Expr<*>?> {
-            for ((lhs, rhs) in equalityChecks) {
+            for ((actual, expected) in equalityChecks) {
                 solver.push()
-                val binding = ctx.mkNot(ctx.mkEq(lhs, rhs))
+                val binding = ctx.mkNot(ctx.mkEq(actual, expected))
                 solver.add(binding)
                 val status = solver.check()
                 solver.pop()
-                if (status == Status.SATISFIABLE) return lhs to rhs
+                if (status == Status.SATISFIABLE) return actual to expected
             }
             return null to null
         }
@@ -194,7 +198,8 @@ class BenchmarksBasedTest {
 
         init {
             // Limit z3 native memory usage to avoid OOM
-            Native.globalParamSet("memory_max_size", "2048") // 2048 megabytes
+            Native.globalParamSet("memory_max_size", "8192") // 8192 megabytes (hard limit)
+            Native.globalParamSet("memory_high_watermark", "${2047 * 1024 * 1024}") // 2047 megabytes
         }
 
         @JvmStatic
@@ -206,5 +211,8 @@ class BenchmarksBasedTest {
         }
     }
 
-    private class SeededZ3Solver(ctx: KContext, override val randomSeed: Int = RANDOM_SEED) : KZ3Solver(ctx)
+    private class TestZ3Solver(val ctx: KContext, override val randomSeed: Int = RANDOM_SEED) : KZ3Solver(ctx) {
+        fun wrapModel(model: Model): KZ3Model =
+            KZ3Model(model.translate(z3Ctx), ctx, z3InternCtx, exprInternalizer, exprConverter)
+    }
 }
