@@ -33,10 +33,10 @@ open class KZ3ExprConverter(
     private val z3InternCtx: KZ3InternalizationContext
 ) {
 
-    val exprStack = arrayListOf<Expr>()
+    val exprStack = arrayListOf<Expr<*>>()
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : KSort> Expr.convert(): KExpr<T> {
+    fun <T : KSort> Expr<*>.convert(): KExpr<T> {
         exprStack.add(this)
         while (exprStack.isNotEmpty()) {
             val expr = exprStack.removeLast()
@@ -59,11 +59,11 @@ open class KZ3ExprConverter(
     } as? T ?: error("sort is not properly converted")
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : KSort> FuncDecl.convert(): KDecl<T> = z3InternCtx.convertDecl(this) {
+    fun <T : KSort> FuncDecl<*>.convert(): KDecl<T> = z3InternCtx.convertDecl(this) {
         convertDecl(this)
     } as? KDecl<T> ?: error("decl is not properly converted")
 
-    open fun convertDecl(decl: FuncDecl): KDecl<*> = with(ctx) {
+    open fun convertDecl(decl: FuncDecl<*>): KDecl<*> = with(ctx) {
         val sort = convertSort(decl.range)
         val args = decl.domain.map { convertSort(it) }
         return mkFuncDecl("${decl.name}", sort, args)
@@ -74,7 +74,7 @@ open class KZ3ExprConverter(
             Z3_sort_kind.Z3_BOOL_SORT -> boolSort
             Z3_sort_kind.Z3_INT_SORT -> intSort
             Z3_sort_kind.Z3_REAL_SORT -> realSort
-            Z3_sort_kind.Z3_ARRAY_SORT -> (sort as ArraySort).let {
+            Z3_sort_kind.Z3_ARRAY_SORT -> (sort as ArraySort<*, *>).let {
                 mkArraySort(convertSort(it.domain), convertSort(it.range))
             }
             Z3_sort_kind.Z3_BV_SORT -> mkBvSort((sort as BitVecSort).size.toUInt())
@@ -86,12 +86,13 @@ open class KZ3ExprConverter(
             Z3_sort_kind.Z3_ROUNDING_MODE_SORT,
             Z3_sort_kind.Z3_SEQ_SORT,
             Z3_sort_kind.Z3_RE_SORT,
+            Z3_sort_kind.Z3_CHAR_SORT,
             Z3_sort_kind.Z3_UNKNOWN_SORT -> TODO("$sort is not supported yet")
             null -> error("z3 sort kind cannot be null")
         }
     }
 
-    open fun convertExpr(expr: Expr): KExpr<*>? = when (expr.astKind) {
+    open fun convertExpr(expr: Expr<*>): KExpr<*>? = when (expr.astKind) {
         Z3_ast_kind.Z3_NUMERAL_AST -> convertNumeral(expr)
         Z3_ast_kind.Z3_APP_AST -> convertApp(expr)
         Z3_ast_kind.Z3_QUANTIFIER_AST -> convertQuantifier(expr)
@@ -109,7 +110,7 @@ open class KZ3ExprConverter(
         "LongMethod",
         "ComplexMethod"
     )
-    open fun convertApp(expr: Expr): KExpr<*>? = with(ctx) {
+    open fun convertApp(expr: Expr<*>): KExpr<*>? = with(ctx) {
         when (expr.funcDecl.declKind) {
             Z3_decl_kind.Z3_OP_TRUE -> trueExpr
             Z3_decl_kind.Z3_OP_FALSE -> falseExpr
@@ -231,11 +232,11 @@ open class KZ3ExprConverter(
         }
     }
 
-    fun Expr.findConvertedExpr(): KExpr<*>? = z3InternCtx.findConvertedExpr(this)
+    fun Expr<*>.findConvertedExpr(): KExpr<*>? = z3InternCtx.findConvertedExpr(this)
 
     inline fun ensureArgsAndConvert(
-        expr: Expr,
-        args: Array<out Expr>,
+        expr: Expr<*>,
+        args: Array<out Expr<*>>,
         expectedSize: Int,
         converter: (List<KExpr<*>>) -> KExpr<*>
     ): KExpr<*>? {
@@ -263,33 +264,33 @@ open class KZ3ExprConverter(
     }
 
     @Suppress("UNCHECKED_CAST")
-    inline fun <T : KSort, A0 : KSort> Expr.convert(
+    inline fun <T : KSort, A0 : KSort> Expr<*>.convert(
         op: (KExpr<A0>) -> KExpr<T>
     ) = ensureArgsAndConvert(this, args, 1) { args -> op(args[0] as KExpr<A0>) }
 
     @Suppress("UNCHECKED_CAST")
-    inline fun <T : KSort, A0 : KSort, A1 : KSort> Expr.convert(
+    inline fun <T : KSort, A0 : KSort, A1 : KSort> Expr<*>.convert(
         op: (KExpr<A0>, KExpr<A1>) -> KExpr<T>
     ) = ensureArgsAndConvert(this, args, 2) { args -> op(args[0] as KExpr<A0>, args[1] as KExpr<A1>) }
 
     @Suppress("UNCHECKED_CAST")
-    inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> Expr.convert(
+    inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> Expr<*>.convert(
         op: (KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<T>
     ) = ensureArgsAndConvert(this, args, 3) { args ->
         op(args[0] as KExpr<A0>, args[1] as KExpr<A1>, args[2] as KExpr<A2>)
     }
 
     @Suppress("UNCHECKED_CAST")
-    inline fun <T : KSort, A : KSort> Expr.convertList(
+    inline fun <T : KSort, A : KSort> Expr<*>.convertList(
         op: (List<KExpr<A>>) -> KExpr<T>
     ) = ensureArgsAndConvert(this, args, numArgs) { args -> op(args as List<KExpr<A>>) }
 
     @Suppress("UNCHECKED_CAST")
-    inline fun <T : KSort> Expr.convertReduced(
+    inline fun <T : KSort> Expr<*>.convertReduced(
         op: (KExpr<T>, KExpr<T>) -> KExpr<T>
     ) = ensureArgsAndConvert(this, args, numArgs) { args -> (args as List<KExpr<T>>).reduce(op) }
 
-    open fun convertNumeral(expr: Expr): KExpr<*> = when (expr.sort.sortKind) {
+    open fun convertNumeral(expr: Expr<*>): KExpr<*> = when (expr.sort.sortKind) {
         Z3_sort_kind.Z3_INT_SORT -> convertNumeral(expr as IntNum)
         Z3_sort_kind.Z3_REAL_SORT -> convertNumeral(expr as RatNum)
         Z3_sort_kind.Z3_BV_SORT -> convertNumeral(expr as BitVecNum)
@@ -314,7 +315,7 @@ open class KZ3ExprConverter(
         mkBv(value = expr.toBinaryString().padStart(sizeBits.toInt(), '0'), sizeBits)
     }
 
-    open fun convertQuantifier(expr: Expr): KExpr<KBoolSort>? = with(ctx) {
+    open fun convertQuantifier(expr: Expr<*>): KExpr<KBoolSort>? = with(ctx) {
         expr as Quantifier
 
         val z3Bounds = expr.boundVariableSorts.zip(expr.boundVariableNames).map { (sort, name) ->

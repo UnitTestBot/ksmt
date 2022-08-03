@@ -14,30 +14,30 @@ fun IntNum.longOrNull(): Long? {
 
 @Suppress("LongParameterList")
 fun Context.mkExistsQuantifier(
-    boundConstants: Array<Expr>,
-    body: Expr,
+    boundConstants: Array<Expr<*>>,
+    body: Expr<BoolSort>,
     weight: Int,
     patterns: Array<Pattern>,
-    noPatterns: Array<Expr>,
+    noPatterns: Array<Expr<*>>,
     quantifierId: Symbol?,
     skolemId: Symbol?
 ): Quantifier = mkExists(boundConstants, body, weight, patterns, noPatterns, quantifierId, skolemId)
 
 @Suppress("LongParameterList")
 fun Context.mkForallQuantifier(
-    boundConstants: Array<Expr>,
-    body: Expr,
+    boundConstants: Array<Expr<*>>,
+    body: Expr<BoolSort>,
     weight: Int,
     patterns: Array<Pattern>,
-    noPatterns: Array<Expr>,
+    noPatterns: Array<Expr<*>>,
     quantifierId: Symbol?,
     skolemId: Symbol?
 ): Quantifier = mkForall(boundConstants, body, weight, patterns, noPatterns, quantifierId, skolemId)
 
-val Expr.ctx: Context
+val Expr<*>.ctx: Context
     get() = context
 
-fun Context.mkBvNumeral(bits: BooleanArray): Expr =
+fun Context.mkBvNumeral(bits: BooleanArray): Expr<*> =
     Expr.create(this, Native.mkBvNumeral(nCtx(), bits.size, bits))
 
 val Quantifier.isLambda: Boolean

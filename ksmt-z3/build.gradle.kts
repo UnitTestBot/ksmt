@@ -5,31 +5,39 @@ plugins {
 
 repositories {
     mavenCentral()
-    flatDir { dirs("dist") }
 }
 
 val z3native by configurations.creating
 
+val z3Version = "4.10.2"
+
 dependencies {
     implementation(project(":ksmt-core"))
-    implementation("org.sosy-lab", "javasmt-solver-z3", "4.8.9-sosy1")
+    implementation(z3Release("x64-win", "*.jar"))
 
     testImplementation("org.junit.jupiter", "junit-jupiter-params", "5.8.2")
     testImplementation(testFixtures(project(":ksmt-core")))
     testFixturesImplementation(testFixtures(project(":ksmt-core")))
-    testFixturesImplementation("org.sosy-lab", "javasmt-solver-z3", "4.8.9-sosy1")
+    testFixturesImplementation(z3Release("x64-win", "*.jar"))
 
-    z3native("com.microsoft.z3", "z3-native-win64", "4.8.9.1", ext = "zip")
-    z3native("com.microsoft.z3", "z3-native-linux64", "4.8.9.1", ext = "zip")
-    z3native("com.microsoft.z3", "z3-native-osx", "4.8.9.1", ext = "zip")
+    z3native(z3Release("x64-win", "*.dll"))
+    z3native(z3Release("x64-glibc-2.31", "*.so"))
+    z3native(z3Release("x64-osx-10.16", "*.dylib"))
 }
 
 tasks.withType<ProcessResources> {
-    z3native.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
-        from(zipTree(artifact.file)) {
-            into("lib/x64")
-        }
+    from(z3native.resolvedConfiguration.files) {
+        into("lib/x64")
     }
+}
+
+fun z3Release(arch: String, artifactPattern: String): FileTree {
+    val z3ReleaseBaseUrl = "https://github.com/Z3Prover/z3/releases/download"
+    val releaseName = "z3-${z3Version}"
+    val packageName = "z3-${z3Version}-${arch}.zip"
+    val packageDownloadTarget = buildDir.resolve("dist").resolve(releaseName).resolve(packageName)
+    download(listOf(z3ReleaseBaseUrl, releaseName, packageName).joinToString("/"), packageDownloadTarget)
+    return zipTree(packageDownloadTarget).matching { include("**/$artifactPattern") }
 }
 
 // skip big benchmarks to achieve faster tests build and run time

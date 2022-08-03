@@ -12,13 +12,7 @@ fun Project.mkSmtLibBenchmarkTestData(name: String) = tasks.register("smtLibBenc
         val downloadTarget = path.resolve("$name.zip")
         val repoUrl = "https://clc-gitlab.cs.uiowa.edu:2443"
         val url = "$repoUrl/api/v4/projects/SMT-LIB-benchmarks%2F$name/repository/archive.zip"
-        if (!downloadTarget.exists()) {
-            download().run {
-                src(url)
-                dest(downloadTarget)
-                overwrite(false)
-            }
-        }
+        download(url, downloadTarget)
 
         val unpackCompleteMarker = path.resolve("unpack-complete")
         if (!unpackCompleteMarker.exists()) {
@@ -51,6 +45,3 @@ private fun Project.testResourceDir(): File? {
     val sourceSets = (this as ExtensionAware).extensions.getByName("sourceSets") as SourceSetContainer
     return sourceSets["test"].output.resourcesDir
 }
-
-private fun Project.download(): DownloadExtension =
-    (this as ExtensionAware).extensions.getByName("download") as DownloadExtension
