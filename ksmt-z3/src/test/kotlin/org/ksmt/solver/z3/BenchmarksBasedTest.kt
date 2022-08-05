@@ -15,15 +15,20 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFunctionAsArray
+import org.ksmt.expr.KTransformer
+import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.fixtures.TestDataProvider
 import org.ksmt.solver.fixtures.skipUnsupportedSolverFeatures
 import org.ksmt.solver.fixtures.z3.Z3SmtLibParser
+import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import java.nio.file.Path
 import kotlin.io.path.relativeTo
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
@@ -116,7 +121,8 @@ class BenchmarksBasedTest {
         actualModel: KZ3Model
     ) {
         // check no exceptions during model detach
-        actualModel.detach()
+        val detachedModel = actualModel.detach()
+        checkAsArrayDeclsPresentInModel(ctx, detachedModel)
 
         val expectedModelAssignments = run {
             val internCtx = KZ3InternalizationContext()
@@ -237,5 +243,22 @@ class BenchmarksBasedTest {
         val internalizer = KZ3ExprInternalizer(ctx, this, internCtx, sortInternalizer, declInternalizer)
         val converter = KZ3ExprConverter(ctx, internCtx)
         return KZ3Model(model, ctx, internCtx, internalizer, converter)
+    }
+
+    private fun checkAsArrayDeclsPresentInModel(ctx: KContext, model: KModel) {
+        val checker = AsArrayDeclChecker(ctx, model)
+        model.declarations.forEach { decl ->
+            model.interpretation(decl)?.let { interpretation ->
+                interpretation.entries.forEach { it.value.accept(checker) }
+                interpretation.default?.accept(checker)
+            }
+        }
+    }
+
+    private class AsArrayDeclChecker(override val ctx: KContext, val model: KModel) : KTransformer {
+        override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
+            assertNotNull(model.interpretation(expr.function), "no interpretation for as-array: $expr")
+            return expr
+        }
     }
 }
