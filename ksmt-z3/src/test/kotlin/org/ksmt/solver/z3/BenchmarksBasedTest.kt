@@ -6,7 +6,6 @@ import com.microsoft.z3.Model
 import com.microsoft.z3.Native
 import com.microsoft.z3.Solver
 import com.microsoft.z3.Status
-import com.microsoft.z3.translate
 import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.junit.jupiter.api.parallel.Execution
@@ -83,16 +82,15 @@ class BenchmarksBasedTest {
             }
 
             val ksmtAssertions = parser.convert(ctx, assertions)
-            runKsmtZ3Solver(ctx, ksmtAssertions, expectedStatus, expectedModel, parseCtx)
+            parseCtx.runKsmtZ3Solver(ctx, ksmtAssertions, expectedStatus, expectedModel)
         }
     }
 
-    private fun runKsmtZ3Solver(
+    private fun Context.runKsmtZ3Solver(
         ctx: KContext,
         ksmtAssertions: List<KExpr<KBoolSort>>,
         expectedStatus: KSolverStatus,
-        expectedModel: Model?,
-        parseCtx: Context
+        expectedModel: Model?
     ) = TestZ3Solver(ctx).use { solver ->
         ksmtAssertions.forEach { solver.assert(it) }
         // use greater timeout to avoid false-positive unknowns
@@ -105,15 +103,16 @@ class BenchmarksBasedTest {
 
         if (status != KSolverStatus.SAT || expectedModel == null) return
 
-        val model = solver.wrapModel(expectedModel)
-
-        checkModelAssignments(ctx, expectedModel, parseCtx, model)
+        checkModelAssignments(
+            ctx = ctx,
+            expectedModel = expectedModel,
+            actualModel = wrapModel(ctx, expectedModel)
+        )
     }
 
-    private fun checkModelAssignments(
+    private fun Context.checkModelAssignments(
         ctx: KContext,
         expectedModel: Model,
-        parseCtx: Context,
         actualModel: KZ3Model
     ) {
         // check no exceptions during model detach
@@ -122,9 +121,9 @@ class BenchmarksBasedTest {
         val expectedModelAssignments = run {
             val internCtx = KZ3InternalizationContext()
             val converter = KZ3ExprConverter(ctx, internCtx)
-            val z3Constants = expectedModel.constDecls.map { parseCtx.mkConst(it) }
+            val z3Constants = expectedModel.constDecls.map { mkConst(it) }
             val z3Functions = expectedModel.funcDecls.map { decl ->
-                val args = decl.domain.map { parseCtx.mkFreshConst("x", it) }
+                val args = decl.domain.map { mkFreshConst("x", it) }
                 decl.apply(*args.toTypedArray())
             }
             val z3ModelKeys = z3Constants + z3Functions
@@ -136,13 +135,11 @@ class BenchmarksBasedTest {
             Triple(const, expectedValue, actualValue)
         }
 
-        Context().use { checkCtx ->
-            checkCtx.performEqualityChecks(ctx) {
-                for ((_, expectedValue, actualValue) in assignmentsToCheck) {
-                    areEqual(actual = internalize(actualValue), expected = expectedValue.translate(checkCtx))
-                }
-                check { "model assignments are not equal" }
+        performEqualityChecks(ctx) {
+            for ((_, expectedValue, actualValue) in assignmentsToCheck) {
+                areEqual(actual = internalize(actualValue), expected = expectedValue)
             }
+            check { "model assignments are not equal" }
         }
     }
 
@@ -231,8 +228,14 @@ class BenchmarksBasedTest {
         }
     }
 
-    private class TestZ3Solver(val ctx: KContext, override val randomSeed: Int = RANDOM_SEED) : KZ3Solver(ctx) {
-        fun wrapModel(model: Model): KZ3Model =
-            KZ3Model(model.translate(z3Ctx), ctx, z3InternCtx, exprInternalizer, exprConverter)
+    private class TestZ3Solver(ctx: KContext, override val randomSeed: Int = RANDOM_SEED) : KZ3Solver(ctx)
+
+    private fun Context.wrapModel(ctx: KContext, model: Model): KZ3Model {
+        val internCtx = KZ3InternalizationContext()
+        val sortInternalizer = KZ3SortInternalizer(this, internCtx)
+        val declInternalizer = KZ3DeclInternalizer(this, internCtx, sortInternalizer)
+        val internalizer = KZ3ExprInternalizer(ctx, this, internCtx, sortInternalizer, declInternalizer)
+        val converter = KZ3ExprConverter(ctx, internCtx)
+        return KZ3Model(model, ctx, internCtx, internalizer, converter)
     }
 }

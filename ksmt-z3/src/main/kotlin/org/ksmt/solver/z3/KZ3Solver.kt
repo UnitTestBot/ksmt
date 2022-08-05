@@ -20,8 +20,8 @@ import kotlin.time.Duration
 import kotlin.time.DurationUnit
 
 open class KZ3Solver(private val ctx: KContext) : KSolver {
-    internal val z3Ctx = Context()
-    internal val z3InternCtx = KZ3InternalizationContext()
+    private val z3Ctx = Context()
+    private val z3InternCtx = KZ3InternalizationContext()
     private val solver = createSolver()
     private var lastCheckStatus = KSolverStatus.UNKNOWN
     private var currentScope: UInt = 0u
@@ -29,16 +29,16 @@ open class KZ3Solver(private val ctx: KContext) : KSolver {
     @Suppress("LeakingThis")
     private val contextCleanupActionHandler = registerContextForCleanup(this, z3Ctx)
 
-    internal val sortInternalizer by lazy {
+    private val sortInternalizer by lazy {
         createSortInternalizer(z3InternCtx, z3Ctx)
     }
-    internal val declInternalizer by lazy {
+    private val declInternalizer by lazy {
         createDeclInternalizer(z3InternCtx, z3Ctx, sortInternalizer)
     }
-    internal val exprInternalizer by lazy {
+    private val exprInternalizer by lazy {
         createExprInternalizer(z3InternCtx, z3Ctx, sortInternalizer, declInternalizer)
     }
-    internal val exprConverter by lazy {
+    private val exprConverter by lazy {
         createExprConverter(z3InternCtx, z3Ctx)
     }
 
