@@ -18,6 +18,7 @@ import com.microsoft.z3.isLambda
 import com.microsoft.z3.longOrNull
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
+import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KIntNumExpr
@@ -228,7 +229,14 @@ open class KZ3ExprConverter(
                 mkBvMulNoOverflowExpr(a0, a1, isSigned = false)
             }
             Z3_decl_kind.Z3_OP_BSMUL_NO_UDFL -> expr.convert(::mkBvMulNoUnderflowExpr)
-            else -> TODO("${expr.funcDecl} is not supported")
+            Z3_decl_kind.Z3_OP_AS_ARRAY ->  {
+                val z3Decl = expr.funcDecl.parameters[0].funcDecl
+                @Suppress("UNCHECKED_CAST")
+                val decl = convertDecl(z3Decl) as? KFuncDecl<KSort>
+                    ?: error("unexpected as-array decl $z3Decl")
+                mkFunctionAsArray<KSort, KSort>(decl)
+            }
+            else -> TODO("${expr.funcDecl} (${expr.funcDecl.declKind}) is not supported")
         }
     }
 
