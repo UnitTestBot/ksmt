@@ -357,19 +357,19 @@ open class KZ3DeclInternalizer(
     }
 
     override fun visit(decl: KBvExtractDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
-        z3Ctx.mkExtract(decl.parameters[0] as Int, decl.parameters[1] as Int, decl.argSort.sample().cast()).funcDecl
+        z3Ctx.mkExtract(decl.high, decl.low, decl.argSort.sample().cast()).funcDecl
     }
 
     override fun visit(decl: KSignExtDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
-        z3Ctx.mkSignExt(decl.parameters[0] as Int, decl.argSort.sample().cast()).funcDecl
+        z3Ctx.mkSignExt(decl.i, decl.argSort.sample().cast()).funcDecl
     }
 
     override fun visit(decl: KZeroExtDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
-        z3Ctx.mkZeroExt(decl.parameters[0] as Int, decl.argSort.sample().cast()).funcDecl
+        z3Ctx.mkZeroExt(decl.i, decl.argSort.sample().cast()).funcDecl
     }
 
     override fun visit(decl: KBvRepeatDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
-        z3Ctx.mkRepeat(decl.parameters[0] as Int, decl.argSort.sample().cast()).funcDecl
+        z3Ctx.mkRepeat(decl.i, decl.argSort.sample().cast()).funcDecl
     }
 
     override fun <T: KBvSort> visit(decl: KBvShiftLeftDecl<T>): FuncDecl = z3InternCtx.internalizeDecl(decl) {
@@ -389,7 +389,7 @@ open class KZ3DeclInternalizer(
     }
 
     override fun <T: KBvSort> visit(decl: KBvRotateLeftIndexedDecl<T>): FuncDecl = z3InternCtx.internalizeDecl(decl) {
-        z3Ctx.mkBVRotateLeft(decl.parameters.single() as Int, decl.argSort.sample().cast()).funcDecl
+        z3Ctx.mkBVRotateLeft(decl.i, decl.argSort.sample().cast()).funcDecl
     }
 
     override fun <T: KBvSort> visit(decl: KBvRotateRightDecl<T>): FuncDecl = z3InternCtx.internalizeDecl(decl) {
@@ -397,18 +397,18 @@ open class KZ3DeclInternalizer(
     }
 
     override fun <T: KBvSort> visit(decl: KBvRotateRightIndexedDecl<T>): FuncDecl = z3InternCtx.internalizeDecl(decl) {
-        z3Ctx.mkBVRotateRight(decl.parameters.single() as Int, decl.argSort.sample().cast()).funcDecl
+        z3Ctx.mkBVRotateRight(decl.i, decl.argSort.sample().cast()).funcDecl
     }
 
     override fun visit(decl: KBv2IntDecl): FuncDecl = z3InternCtx.internalizeDecl(decl) {
-        z3Ctx.mkBV2Int(decl.argSort.sample().cast(), decl.parameters.single() as Boolean).funcDecl
+        z3Ctx.mkBV2Int(decl.argSort.sample().cast(), decl.isSigned).funcDecl
     }
 
     override fun <T: KBvSort> visit(decl: KBvAddNoOverflowDecl<T>): FuncDecl = z3InternCtx.internalizeDecl(decl) {
         z3Ctx.mkBVAddNoOverflow(
             decl.arg0Sort.sample().cast(),
             decl.arg1Sort.sample().cast(),
-            decl.parameters.single() as Boolean
+            decl.isSigned
         ).funcDecl
     }
 
@@ -424,7 +424,7 @@ open class KZ3DeclInternalizer(
         z3Ctx.mkBVSubNoUnderflow(
             decl.arg0Sort.sample().cast(),
             decl.arg1Sort.sample().cast(),
-            decl.parameters.single() as Boolean
+            decl.isSigned
         ).funcDecl
     }
 
@@ -440,7 +440,7 @@ open class KZ3DeclInternalizer(
         z3Ctx.mkBVMulNoOverflow(
             decl.arg0Sort.sample().cast(),
             decl.arg1Sort.sample().cast(),
-            decl.parameters.single() as Boolean
+            decl.isSigned
         ).funcDecl
     }
 
