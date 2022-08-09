@@ -925,7 +925,7 @@ class KBvNegNoOverflowExpr<S : KBvSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
-    override fun decl(): KDecl<KBoolSort> = ctx.mkBvNegNoOverflowDecl(value.sort())
+    override fun decl(): KDecl<KBoolSort> = ctx.mkBvNegationNoOverflowDecl(value.sort())
 
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
