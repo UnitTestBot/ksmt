@@ -187,7 +187,6 @@ import kotlin.reflect.KProperty
 import org.ksmt.decl.KBvRotateLeftIndexedDecl
 import org.ksmt.decl.KBvRotateRightIndexedDecl
 import org.ksmt.decl.KBvSubNoUnderflowDecl
-import org.ksmt.decl.toBinary
 import org.ksmt.expr.KBitVec16Value
 import org.ksmt.expr.KBitVec1Value
 import org.ksmt.expr.KBitVec32Value
@@ -198,6 +197,7 @@ import org.ksmt.expr.KBvRotateLeftIndexedExpr
 import org.ksmt.expr.KBvRotateRightIndexedExpr
 import org.ksmt.expr.KBvSubNoUnderflowExpr
 import org.ksmt.expr.KFunctionAsArray
+import org.ksmt.utils.toBinary
 
 @Suppress("TooManyFunctions", "unused")
 open class KContext {
@@ -612,11 +612,18 @@ open class KContext {
     fun Long.toBv(): KBitVec64Value = mkBv(this)
     fun ULong.toBv(): KBitVec64Value = mkBv(toLong())
     fun mkBv(value: Number, sizeBits: UInt): KBitVecValue<KBvSort> {
-        val string = value.toBinary().let { it.padStart(sizeBits.toInt(), it.first()) }
-        return mkBv(string, sizeBits)
+        val binaryString = value.toBinary()
+
+        require(binaryString.length <= sizeBits.toInt()) {
+            "Cannot create a bitvector of size $sizeBits from the given number $value" +
+                    " since its binary representation requires at least ${binaryString.length} bits"
+        }
+
+        val paddedString = binaryString.padStart(sizeBits.toInt(), binaryString.first())
+
+        return mkBv(paddedString, sizeBits)
     }
 
-    // TODO size bits should not be less than size bits for the number
     fun Number.toBv(sizeBits: UInt) = mkBv(this, sizeBits)
     fun mkBv(value: String, sizeBits: UInt): KBitVecValue<KBvSort> = when (sizeBits.toInt()) {
         1 -> mkBv(value.toUInt(radix = 2).toInt() != 0).cast()
@@ -1520,9 +1527,4 @@ open class KContext {
             ensureContextMatch(a0, a1, a2)
             builder(a0, a1, a2)
         }
-
-    private inline fun <reified T, reified Base> Base.cast(): T where T : Base = this as T
-
-    @Suppress("UNCHECKED_CAST")
-    private fun <Base, T> Base.uncheckedCast(): T = this as T
 }

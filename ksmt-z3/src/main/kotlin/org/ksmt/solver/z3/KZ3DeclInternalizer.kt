@@ -448,9 +448,6 @@ open class KZ3DeclInternalizer(
         z3Ctx.mkBVMulNoUnderflow(decl.arg0Sort.sample().cast(), decl.arg1Sort.sample().cast()).funcDecl
     }
 
-    // TODO move it somewhere and merge with the same function from the other modules
-    private inline fun <reified T, reified Base> Base.cast(): T where T : Base = this as T
-
     // collect this consts
     private fun KSort.sample(): Expr = z3Ctx.mkConst("e", accept(sortInternalizer))
 }

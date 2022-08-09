@@ -11,6 +11,7 @@ import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KIntSort
+import org.ksmt.utils.toBinary
 
 abstract class KBitVecValueDecl<T : KBvSort> internal constructor(
     ctx: KContext,
@@ -695,17 +696,6 @@ class KBvMulNoUnderflowDecl<T : KBvSort> internal constructor(ctx: KContext, arg
         arg0: KExpr<T>,
         arg1: KExpr<T>,
     ): KApp<KBoolSort, *> = mkBvMulNoUnderflowExpr(arg0, arg1)
-}
-
-// We can have here `0` as a pad symbol since `toString` can return a string
-// containing fewer symbols than `sizeBits` only for non-negative numbers
-// TODO move into util methods
-fun Number.toBinary(): String = when (this) {
-    is Byte -> toUByte().toString(radix = 2).padStart(Byte.SIZE_BITS, '0')
-    is Short -> toUShort().toString(radix = 2).padStart(Short.SIZE_BITS, '0')
-    is Int -> toUInt().toString(radix = 2).padStart(Int.SIZE_BITS, '0')
-    is Long -> toULong().toString(radix = 2).padStart(Long.SIZE_BITS, '0')
-    else -> error("Unsupported type for transformation into a binary string: ${this::class.simpleName}")
 }
 
 private fun checkSortsAreTheSame(vararg sorts: KBvSort) {

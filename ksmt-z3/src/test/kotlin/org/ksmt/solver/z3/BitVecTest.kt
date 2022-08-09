@@ -29,6 +29,7 @@ import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBv32Sort
 import org.ksmt.sort.KBv64Sort
 import org.ksmt.sort.KBv8Sort
+import org.ksmt.utils.toBinary
 
 class BitVecTest {
     private var context = KContext()
@@ -182,11 +183,14 @@ class BitVecTest {
         val stringValue = "0".repeat(sizeBits.toInt() - 1)
 
         assertFailsWith(IllegalArgumentException::class) { mkBv(stringValue, sizeBits) }
+        assertFailsWith(IllegalArgumentException::class) { mkBv(Long.MAX_VALUE, sizeBits) }
     }
 
     @Test
     fun testNotExpr(): Unit = with(context) {
-        val (negativeValue, positiveValue) = createTwoRandomLongValues().let { it.first.toBinary() to it.second.toBinary() }
+        val (negativeValue, positiveValue) = createTwoRandomLongValues().let {
+            it.first.toBinary() to it.second.toBinary()
+        }
         val negativeSizeBits = negativeValue.length.toUInt()
         val positiveSizeBits = positiveValue.length.toUInt()
 
@@ -600,7 +604,6 @@ class BitVecTest {
         concreteOperation: (Long, Int) -> Long
     ) = with(context) {
         val value = Random.nextLong().toBv()
-        // TODO add restriction for positive shiftSize or check that it is not required
         val shiftSize = Random.nextInt(from = 1, until = 50).toLong().toBv()
 
         val symbolicVariable = value.sort().mkConst("symbolicVariable")
@@ -870,16 +873,6 @@ class BitVecTest {
 
         return negativeValue to positiveValue
     }
-
-    // TODO extract into a common module
-    private fun Number.toBinary(): String = when (this) {
-        is Byte -> toUByte().toString(radix = 2).padStart(Byte.SIZE_BITS, '0')
-        is Short -> toUShort().toString(radix = 2).padStart(Short.SIZE_BITS, '0')
-        is Int -> toUInt().toString(radix = 2).padStart(Int.SIZE_BITS, '0')
-        is Long -> toULong().toString(radix = 2).padStart(Long.SIZE_BITS, '0')
-        else -> error("Unsupported type for transformation into a binary string: ${this::class.simpleName}")
-    }
-
 }
 
 typealias PositiveLong = Long
