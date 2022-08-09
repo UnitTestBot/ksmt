@@ -28,15 +28,17 @@ import org.ksmt.expr.KBitVec32Value
 import org.ksmt.expr.KBitVec64Value
 import org.ksmt.expr.KBitVec8Value
 import org.ksmt.expr.KBitVecCustomValue
-import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KBitVecNumberValue
+import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KBv2IntExpr
 import org.ksmt.expr.KBvAddExpr
 import org.ksmt.expr.KBvAddNoOverflowExpr
 import org.ksmt.expr.KBvAddNoUnderflowExpr
 import org.ksmt.expr.KBvAndExpr
 import org.ksmt.expr.KBvArithShiftRightExpr
+import org.ksmt.expr.KBvConcatExpr
 import org.ksmt.expr.KBvDivNoOverflowExpr
+import org.ksmt.expr.KBvExtractExpr
 import org.ksmt.expr.KBvLogicalShiftRightExpr
 import org.ksmt.expr.KBvMulExpr
 import org.ksmt.expr.KBvMulNoOverflowExpr
@@ -49,11 +51,13 @@ import org.ksmt.expr.KBvNotExpr
 import org.ksmt.expr.KBvOrExpr
 import org.ksmt.expr.KBvReductionAndExpr
 import org.ksmt.expr.KBvReductionOrExpr
+import org.ksmt.expr.KBvRepeatExpr
 import org.ksmt.expr.KBvRotateLeftExpr
 import org.ksmt.expr.KBvRotateLeftIndexedExpr
 import org.ksmt.expr.KBvRotateRightExpr
 import org.ksmt.expr.KBvRotateRightIndexedExpr
 import org.ksmt.expr.KBvShiftLeftExpr
+import org.ksmt.expr.KBvSignExtensionExpr
 import org.ksmt.expr.KBvSignedDivExpr
 import org.ksmt.expr.KBvSignedGreaterExpr
 import org.ksmt.expr.KBvSignedGreaterOrEqualExpr
@@ -72,14 +76,13 @@ import org.ksmt.expr.KBvUnsignedLessOrEqualExpr
 import org.ksmt.expr.KBvUnsignedRemExpr
 import org.ksmt.expr.KBvXNorExpr
 import org.ksmt.expr.KBvXorExpr
-import org.ksmt.expr.KBvConcatExpr
+import org.ksmt.expr.KBvZeroExtensionExpr
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KDivArithExpr
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.KBvExtractExpr
 import org.ksmt.expr.KFalse
 import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KGeArithExpr
@@ -99,8 +102,6 @@ import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KPowerArithExpr
 import org.ksmt.expr.KRealNumExpr
 import org.ksmt.expr.KRemIntExpr
-import org.ksmt.expr.KBvRepeatExpr
-import org.ksmt.expr.KBvSignExtensionExpr
 import org.ksmt.expr.KSubArithExpr
 import org.ksmt.expr.KToIntRealExpr
 import org.ksmt.expr.KToRealIntExpr
@@ -108,8 +109,9 @@ import org.ksmt.expr.KTransformer
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
-import org.ksmt.expr.KBvZeroExtensionExpr
 import org.ksmt.expr.KXorExpr
+import org.ksmt.solver.z3.KZ3ExprInternalizer.ExprInternalizationResult.Companion.argumentsInternalizationRequired
+import org.ksmt.solver.z3.KZ3ExprInternalizer.ExprInternalizationResult.Companion.notInitializedInternalizationResult
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
@@ -125,21 +127,36 @@ open class KZ3ExprInternalizer(
 ) : KTransformer {
 
     val exprStack = arrayListOf<KExpr<*>>()
-    var internalizedExpr: Expr<*>? = null
+
+    /**
+     * Keeps result of last [KTransformer.transform] invocation.
+     * */
+    var lastExprInternalizationResult: ExprInternalizationResult = notInitializedInternalizationResult
 
     fun <T : KSort> KExpr<T>.internalize(): Expr<*> {
         exprStack.add(this)
         while (exprStack.isNotEmpty()) {
-            internalizedExpr = null
+            lastExprInternalizationResult = notInitializedInternalizationResult
             val expr = exprStack.removeLast()
 
             val internalized = z3InternCtx.findInternalizedExpr(expr)
             if (internalized != null) continue
 
+            /**
+             * Internalize expression non-recursively.
+             * 1. Ensure all expression arguments are internalized and available in [z3InternCtx].
+             * If not so, [lastExprInternalizationResult] is set to [argumentsInternalizationRequired]
+             * 2. Internalize expression if all arguments are available and
+             * set [lastExprInternalizationResult] to internalization result.
+             * */
             expr.accept(this@KZ3ExprInternalizer)
 
-            if (internalizedExpr != null) {
-                z3InternCtx.internalizeExpr(expr) { internalizedExpr!! }
+            check(!lastExprInternalizationResult.notInitialized) {
+                "Internalization result wasn't initialized during expr internalization"
+            }
+
+            if (!lastExprInternalizationResult.argumentsInternalizationRequired) {
+                z3InternCtx.internalizeExpr(expr) { lastExprInternalizationResult.internalizedExpr }
             }
         }
         return z3InternCtx.findInternalizedExpr(this)
@@ -153,45 +170,45 @@ open class KZ3ExprInternalizer(
     override fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> =
         error("Unexpected expr $expr")
 
-    override fun <T : KSort> transform(expr: KFunctionApp<T>) = expr.transformList(expr.args) { args: Array<Expr<*>> ->
-        z3Ctx.mkApp(expr.decl.internalizeDecl(), *args)
+    override fun <T : KSort> transform(expr: KFunctionApp<T>) = with(expr) {
+        transformList(args) { args: Array<Expr<*>> ->
+            z3Ctx.mkApp(decl.internalizeDecl(), *args)
+        }
     }
 
-    override fun <T : KSort> transform(expr: KConst<T>) = expr.transform {
-        z3Ctx.mkConst(expr.decl.internalizeDecl())
+    override fun <T : KSort> transform(expr: KConst<T>) = with(expr) {
+        transform { z3Ctx.mkConst(decl.internalizeDecl()) }
     }
 
-    override fun transform(expr: KAndExpr) = expr.transformList(expr.args) { args: Array<BoolExpr> ->
-        z3Ctx.mkAnd(*args)
+    override fun transform(expr: KAndExpr) = with(expr) {
+        transformList(args) { args: Array<BoolExpr> -> z3Ctx.mkAnd(*args) }
     }
 
-    override fun transform(expr: KOrExpr) = expr.transformList(expr.args) { args: Array<BoolExpr> ->
-        z3Ctx.mkOr(*args)
+    override fun transform(expr: KOrExpr) = with(expr) {
+        transformList(args) { args: Array<BoolExpr> -> z3Ctx.mkOr(*args) }
     }
 
-    override fun transform(expr: KNotExpr) = expr.transform(expr.arg, z3Ctx::mkNot)
+    override fun transform(expr: KNotExpr) = with(expr) { transform(arg, z3Ctx::mkNot) }
 
-    override fun transform(expr: KImpliesExpr) = expr.transform(expr.p, expr.q, z3Ctx::mkImplies)
+    override fun transform(expr: KImpliesExpr) = with(expr) { transform(p, q, z3Ctx::mkImplies) }
 
-    override fun transform(expr: KXorExpr) = expr.transform(expr.a, expr.b, z3Ctx::mkXor)
+    override fun transform(expr: KXorExpr) = with(expr) { transform(a, b, z3Ctx::mkXor) }
 
     override fun transform(expr: KTrue) = expr.transform { z3Ctx.mkTrue() }
 
     override fun transform(expr: KFalse) = expr.transform { z3Ctx.mkFalse() }
 
-    override fun <T : KSort> transform(expr: KEqExpr<T>) = expr.transform(expr.lhs, expr.rhs, z3Ctx::mkEq)
+    override fun <T : KSort> transform(expr: KEqExpr<T>) = with(expr) { transform(lhs, rhs, z3Ctx::mkEq) }
 
-    override fun <T : KSort> transform(expr: KDistinctExpr<T>) = expr.transformList(expr.args) { args: Array<Expr<*>> ->
-        z3Ctx.mkDistinct(*args)
+    override fun <T : KSort> transform(expr: KDistinctExpr<T>) = with(expr) {
+        transformList(args) { args: Array<Expr<*>> -> z3Ctx.mkDistinct(*args) }
     }
 
-    override fun <T : KSort> transform(expr: KIteExpr<T>) =
-        expr.transform<Expr<BoolSort>, Expr<Sort>, Expr<Sort>, KIteExpr<T>>(
-            expr.condition,
-            expr.trueBranch,
-            expr.falseBranch,
-            z3Ctx::mkITE
+    override fun <T : KSort> transform(expr: KIteExpr<T>) = with(expr) {
+        transform<Expr<BoolSort>, Expr<Sort>, Expr<Sort>, KIteExpr<T>>(
+            condition, trueBranch, falseBranch, z3Ctx::mkITE
         )
+    }
 
     override fun <T : KBvSort> transformBitVecValue(expr: KBitVecValue<T>) = expr.transform {
         val sizeBits = expr.sort().sizeBits.toInt()
@@ -225,260 +242,269 @@ open class KZ3ExprInternalizer(
     override fun transform(expr: KBitVecCustomValue) = transformBitVecValue(expr)
 
     override fun <T : KBvSort> transform(expr: KBvNotExpr<T>) =
-        expr.transform(expr.value, z3Ctx::mkBVNot)
+        with(expr) { transform(value, z3Ctx::mkBVNot) }
 
     override fun <T : KBvSort> transform(expr: KBvReductionAndExpr<T>) =
-        expr.transform(expr.value, z3Ctx::mkBVRedAND)
+        with(expr) { transform(value, z3Ctx::mkBVRedAND) }
 
     override fun <T : KBvSort> transform(expr: KBvReductionOrExpr<T>) =
-        expr.transform(expr.value, z3Ctx::mkBVRedOR)
+        with(expr) { transform(value, z3Ctx::mkBVRedOR) }
 
     override fun <T : KBvSort> transform(expr: KBvAndExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVAND)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVAND) }
 
     override fun <T : KBvSort> transform(expr: KBvOrExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVOR)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVOR) }
 
     override fun <T : KBvSort> transform(expr: KBvXorExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVXOR)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVXOR) }
 
     override fun <T : KBvSort> transform(expr: KBvNAndExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVNAND)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVNAND) }
 
     override fun <T : KBvSort> transform(expr: KBvNorExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVNOR)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVNOR) }
 
     override fun <T : KBvSort> transform(expr: KBvXNorExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVXNOR)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVXNOR) }
 
     override fun <T : KBvSort> transform(expr: KBvNegationExpr<T>) =
-        expr.transform(expr.value, z3Ctx::mkBVNeg)
+        with(expr) { transform(value, z3Ctx::mkBVNeg) }
 
     override fun <T : KBvSort> transform(expr: KBvAddExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVAdd)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVAdd) }
 
     override fun <T : KBvSort> transform(expr: KBvSubExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVSub)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVSub) }
 
     override fun <T : KBvSort> transform(expr: KBvMulExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVMul)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVMul) }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedDivExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVUDiv)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVUDiv) }
 
     override fun <T : KBvSort> transform(expr: KBvSignedDivExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVSDiv)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVSDiv) }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedRemExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVURem)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVURem) }
 
     override fun <T : KBvSort> transform(expr: KBvSignedRemExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVSRem)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVSRem) }
 
     override fun <T : KBvSort> transform(expr: KBvSignedModExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVSMod)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVSMod) }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedLessExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVULT)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVULT) }
 
     override fun <T : KBvSort> transform(expr: KBvSignedLessExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVSLT)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVSLT) }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedLessOrEqualExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVULE)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVULE) }
 
     override fun <T : KBvSort> transform(expr: KBvSignedLessOrEqualExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVSLE)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVSLE) }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterOrEqualExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVUGE)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVUGE) }
 
     override fun <T : KBvSort> transform(expr: KBvSignedGreaterOrEqualExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVSGE)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVSGE) }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVUGT)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVUGT) }
 
     override fun <T : KBvSort> transform(expr: KBvSignedGreaterExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVSGT)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVSGT) }
 
     override fun transform(expr: KBvConcatExpr): KExpr<KBvSort> =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkConcat)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkConcat) }
 
-    override fun transform(expr: KBvExtractExpr) = expr.transform(expr.value) { value: BitVecExpr ->
-        z3Ctx.mkExtract(expr.high, expr.low, value)
+    override fun transform(expr: KBvExtractExpr) = with(expr) {
+        transform(value) { value: BitVecExpr -> z3Ctx.mkExtract(high, low, value) }
     }
 
-    override fun transform(expr: KBvSignExtensionExpr) = expr.transform(expr.value) { value: BitVecExpr ->
-        z3Ctx.mkSignExt(expr.i, value)
+    override fun transform(expr: KBvSignExtensionExpr) = with(expr) {
+        transform(value) { value: BitVecExpr -> z3Ctx.mkSignExt(i, value) }
     }
 
-    override fun transform(expr: KBvZeroExtensionExpr) = expr.transform(expr.value) { value: BitVecExpr ->
-        z3Ctx.mkZeroExt(expr.i, value)
+    override fun transform(expr: KBvZeroExtensionExpr) = with(expr) {
+        transform(value) { value: BitVecExpr -> z3Ctx.mkZeroExt(i, value) }
     }
 
-    override fun transform(expr: KBvRepeatExpr) = expr.transform(expr.value) { value: BitVecExpr ->
-        z3Ctx.mkRepeat(expr.i, value)
+    override fun transform(expr: KBvRepeatExpr) = with(expr) {
+        transform(value) { value: BitVecExpr -> z3Ctx.mkRepeat(i, value) }
     }
 
     override fun <T : KBvSort> transform(expr: KBvShiftLeftExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVSHL)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVSHL) }
 
     override fun <T : KBvSort> transform(expr: KBvLogicalShiftRightExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVLSHR)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVLSHR) }
 
     override fun <T : KBvSort> transform(expr: KBvArithShiftRightExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVASHR)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVASHR) }
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVRotateLeft)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVRotateLeft) }
 
-    override fun <T : KBvSort> transform(expr: KBvRotateLeftIndexedExpr<T>) =
-        expr.transform(expr.value) { value: BitVecExpr ->
-            z3Ctx.mkBVRotateLeft(expr.i, value)
-        }
+    override fun <T : KBvSort> transform(expr: KBvRotateLeftIndexedExpr<T>) = with(expr) {
+        transform(value) { value: BitVecExpr -> z3Ctx.mkBVRotateLeft(i, value) }
+    }
 
     override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVRotateRight)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVRotateRight) }
 
-    override fun <T : KBvSort> transform(expr: KBvRotateRightIndexedExpr<T>) =
-        expr.transform(expr.value) { value: BitVecExpr ->
-            z3Ctx.mkBVRotateRight(expr.i, value)
-        }
-
-    override fun transform(expr: KBv2IntExpr) = expr.transform(expr.value) { value: BitVecExpr ->
-        z3Ctx.mkBV2Int(value, expr.isSigned)
+    override fun <T : KBvSort> transform(expr: KBvRotateRightIndexedExpr<T>) = with(expr) {
+        transform(value) { value: BitVecExpr -> z3Ctx.mkBVRotateRight(i, value) }
     }
 
-    override fun <T : KBvSort> transform(expr: KBvAddNoOverflowExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1) { a0: BitVecExpr, a1: BitVecExpr ->
-            z3Ctx.mkBVAddNoOverflow(a0, a1, expr.isSigned)
+    override fun transform(expr: KBv2IntExpr) = with(expr) {
+        transform(value) { value: BitVecExpr -> z3Ctx.mkBV2Int(value, isSigned) }
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvAddNoOverflowExpr<T>) = with(expr) {
+        transform(arg0, arg1) { a0: BitVecExpr, a1: BitVecExpr ->
+            z3Ctx.mkBVAddNoOverflow(a0, a1, isSigned)
         }
+    }
 
     override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVAddNoUnderflow)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVAddNoUnderflow) }
 
     override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVSubNoOverflow)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVSubNoOverflow) }
 
-    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>): KExpr<KBoolSort> =
-        expr.transform(expr.arg0, expr.arg1) { a0: BitVecExpr, a1: BitVecExpr ->
-            z3Ctx.mkBVSubNoUnderflow(a0, a1, expr.isSigned)
+    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(arg0, arg1) { a0: BitVecExpr, a1: BitVecExpr ->
+            z3Ctx.mkBVSubNoUnderflow(a0, a1, isSigned)
         }
+    }
 
     override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVSDivNoOverflow)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVSDivNoOverflow) }
 
     override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>) =
-        expr.transform(expr.value, z3Ctx::mkBVNegNoOverflow)
+        with(expr) { transform(value, z3Ctx::mkBVNegNoOverflow) }
 
-    override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1) { a0: BitVecExpr, a1: BitVecExpr ->
-            z3Ctx.mkBVMulNoOverflow(a0, a1, expr.isSigned)
+    override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>) = with(expr) {
+        transform(arg0, arg1) { a0: BitVecExpr, a1: BitVecExpr ->
+            z3Ctx.mkBVMulNoOverflow(a0, a1, isSigned)
         }
+    }
 
     override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) =
-        expr.transform(expr.arg0, expr.arg1, z3Ctx::mkBVMulNoUnderflow)
+        with(expr) { transform(arg0, arg1, z3Ctx::mkBVMulNoUnderflow) }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) =
-        expr.transform<ArrayExpr<Sort, Sort>, Expr<Sort>, Expr<Sort>, KArrayStore<D, R>>(
-            expr.array,
-            expr.index,
-            expr.value,
-            z3Ctx::mkStore
-        )
-
-    override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>) =
-        expr.transform<ArrayExpr<Sort, Sort>, Expr<Sort>, KArraySelect<D, R>>(expr.array, expr.index, z3Ctx::mkSelect)
-
-    override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>) =
-        expr.transform(expr.value) { value: Expr<*> ->
-            z3Ctx.mkConstArray(expr.sort.domain.internalizeSort(), value)
-        }
-
-    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) =
-        expr.transform(expr.body) { body: Expr<*> ->
-            val internalizedIndex = expr.indexVarDecl.internalizeDecl()
-            z3Ctx.mkLambda(arrayOf(internalizedIndex.range), arrayOf(internalizedIndex.name), body)
-        }
-
-    override fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>) =
-        expr.transformList(expr.args) { args: Array<ArithExpr<*>> -> z3Ctx.mkAdd(*args) }
-
-    override fun <T : KArithSort<T>> transform(expr: KSubArithExpr<T>) =
-        expr.transformList(expr.args) { args: Array<ArithExpr<*>> -> z3Ctx.mkSub(*args) }
-
-    override fun <T : KArithSort<T>> transform(expr: KMulArithExpr<T>) =
-        expr.transformList(expr.args) { args: Array<ArithExpr<*>> -> z3Ctx.mkMul(*args) }
-
-    override fun <T : KArithSort<T>> transform(expr: KUnaryMinusArithExpr<T>) =
-        expr.transform<ArithExpr<ArithSort>, KUnaryMinusArithExpr<T>>(expr.arg, z3Ctx::mkUnaryMinus)
-
-    override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>) =
-        expr.transform<ArithExpr<ArithSort>, ArithExpr<ArithSort>, KDivArithExpr<T>>(expr.lhs, expr.rhs, z3Ctx::mkDiv)
-
-    override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>) =
-        expr.transform<ArithExpr<ArithSort>, ArithExpr<ArithSort>, KPowerArithExpr<T>>(
-            expr.lhs, expr.rhs, z3Ctx::mkPower
-        )
-
-    override fun <T : KArithSort<T>> transform(expr: KLtArithExpr<T>) = expr.transform(expr.lhs, expr.rhs, z3Ctx::mkLt)
-
-    override fun <T : KArithSort<T>> transform(expr: KLeArithExpr<T>) = expr.transform(expr.lhs, expr.rhs, z3Ctx::mkLe)
-
-    override fun <T : KArithSort<T>> transform(expr: KGtArithExpr<T>) = expr.transform(expr.lhs, expr.rhs, z3Ctx::mkGt)
-
-    override fun <T : KArithSort<T>> transform(expr: KGeArithExpr<T>) = expr.transform(expr.lhs, expr.rhs, z3Ctx::mkGe)
-
-    override fun transform(expr: KModIntExpr) = expr.transform(expr.lhs, expr.rhs, z3Ctx::mkMod)
-
-    override fun transform(expr: KRemIntExpr) = expr.transform(expr.lhs, expr.rhs, z3Ctx::mkRem)
-
-    override fun transform(expr: KToRealIntExpr) = expr.transform(expr.arg, z3Ctx::mkInt2Real)
-
-    override fun transform(expr: KInt32NumExpr) = expr.transform { z3Ctx.mkInt(expr.value) }
-
-    override fun transform(expr: KInt64NumExpr) = expr.transform { z3Ctx.mkInt(expr.value) }
-
-    override fun transform(expr: KIntBigNumExpr) = expr.transform { z3Ctx.mkInt(expr.value.toString()) }
-
-    override fun transform(expr: KToIntRealExpr) = expr.transform(expr.arg, z3Ctx::mkReal2Int)
-
-    override fun transform(expr: KIsIntRealExpr) = expr.transform(expr.arg, z3Ctx::mkIsInteger)
-
-    override fun transform(expr: KRealNumExpr) =
-        expr.transform(expr.numerator, expr.denominator) { numerator: IntExpr, denominator: IntExpr ->
-            z3Ctx.mkDiv(z3Ctx.mkInt2Real(numerator), z3Ctx.mkInt2Real(denominator))
-        }
-
-    override fun transform(expr: KExistentialQuantifier) = expr.transform(expr.body) { body: BoolExpr ->
-        z3Ctx.mkExistsQuantifier(
-            boundConstants = expr.bounds.map { z3Ctx.mkConst(it.internalizeDecl()) }.toTypedArray(),
-            body = body,
-            weight = 0,
-            patterns = arrayOf(),
-            noPatterns = arrayOf(),
-            quantifierId = null,
-            skolemId = null
+    override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) = with(expr) {
+        transform<ArrayExpr<Sort, Sort>, Expr<Sort>, Expr<Sort>, KArrayStore<D, R>>(
+            array, index, value, z3Ctx::mkStore
         )
     }
 
-    override fun transform(expr: KUniversalQuantifier) = expr.transform(expr.body) { body: BoolExpr ->
-        z3Ctx.mkForallQuantifier(
-            boundConstants = expr.bounds.map { z3Ctx.mkConst(it.internalizeDecl()) }.toTypedArray(),
-            body = body,
-            weight = 0,
-            patterns = arrayOf(),
-            noPatterns = arrayOf(),
-            quantifierId = null,
-            skolemId = null
-        )
+    override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>) = with(expr) {
+        transform<ArrayExpr<Sort, Sort>, Expr<Sort>, KArraySelect<D, R>>(array, index, z3Ctx::mkSelect)
+    }
+
+    override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>) = with(expr) {
+        transform(value) { value: Expr<*> -> z3Ctx.mkConstArray(sort.domain.internalizeSort(), value) }
+    }
+
+    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) = with(expr) {
+        transform(body) { body: Expr<*> ->
+            val internalizedIndex = indexVarDecl.internalizeDecl()
+            z3Ctx.mkLambda(arrayOf(internalizedIndex.range), arrayOf(internalizedIndex.name), body)
+        }
+    }
+
+    override fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>) = with(expr) {
+        transformList(args) { args: Array<ArithExpr<*>> -> z3Ctx.mkAdd(*args) }
+    }
+
+    override fun <T : KArithSort<T>> transform(expr: KSubArithExpr<T>) = with(expr) {
+        transformList(args) { args: Array<ArithExpr<*>> -> z3Ctx.mkSub(*args) }
+    }
+
+    override fun <T : KArithSort<T>> transform(expr: KMulArithExpr<T>) = with(expr) {
+        transformList(args) { args: Array<ArithExpr<*>> -> z3Ctx.mkMul(*args) }
+    }
+
+    override fun <T : KArithSort<T>> transform(expr: KUnaryMinusArithExpr<T>) = with(expr) {
+        transform<ArithExpr<ArithSort>, KUnaryMinusArithExpr<T>>(arg, z3Ctx::mkUnaryMinus)
+    }
+
+    override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>) = with(expr) {
+        transform<ArithExpr<ArithSort>, ArithExpr<ArithSort>, KDivArithExpr<T>>(lhs, rhs, z3Ctx::mkDiv)
+    }
+
+    override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>) = with(expr) {
+        transform<ArithExpr<ArithSort>, ArithExpr<ArithSort>, KPowerArithExpr<T>>(lhs, rhs, z3Ctx::mkPower)
+    }
+
+    override fun <T : KArithSort<T>> transform(expr: KLtArithExpr<T>) = with(expr) { transform(lhs, rhs, z3Ctx::mkLt) }
+
+    override fun <T : KArithSort<T>> transform(expr: KLeArithExpr<T>) = with(expr) { transform(lhs, rhs, z3Ctx::mkLe) }
+
+    override fun <T : KArithSort<T>> transform(expr: KGtArithExpr<T>) = with(expr) { transform(lhs, rhs, z3Ctx::mkGt) }
+
+    override fun <T : KArithSort<T>> transform(expr: KGeArithExpr<T>) = with(expr) { transform(lhs, rhs, z3Ctx::mkGe) }
+
+    override fun transform(expr: KModIntExpr) = with(expr) { transform(lhs, rhs, z3Ctx::mkMod) }
+
+    override fun transform(expr: KRemIntExpr) = with(expr) { transform(lhs, rhs, z3Ctx::mkRem) }
+
+    override fun transform(expr: KToRealIntExpr) = with(expr) { transform(arg, z3Ctx::mkInt2Real) }
+
+    override fun transform(expr: KInt32NumExpr) = with(expr) { transform { z3Ctx.mkInt(value) } }
+
+    override fun transform(expr: KInt64NumExpr) = with(expr) { transform { z3Ctx.mkInt(value) } }
+
+    override fun transform(expr: KIntBigNumExpr) = with(expr) { transform { z3Ctx.mkInt(value.toString()) } }
+
+    override fun transform(expr: KToIntRealExpr) = with(expr) { transform(arg, z3Ctx::mkReal2Int) }
+
+    override fun transform(expr: KIsIntRealExpr) = with(expr) { transform(arg, z3Ctx::mkIsInteger) }
+
+    override fun transform(expr: KRealNumExpr) = with(expr) {
+        transform(numerator, denominator) { numerator: IntExpr, denominator: IntExpr ->
+            z3Ctx.mkDiv(z3Ctx.mkInt2Real(numerator), z3Ctx.mkInt2Real(denominator))
+        }
+    }
+
+    override fun transform(expr: KExistentialQuantifier) = with(expr) {
+        transform(body) { body: BoolExpr ->
+            z3Ctx.mkExistsQuantifier(
+                boundConstants = bounds.map { z3Ctx.mkConst(it.internalizeDecl()) }.toTypedArray(),
+                body = body,
+                weight = 0,
+                patterns = arrayOf(),
+                noPatterns = arrayOf(),
+                quantifierId = null,
+                skolemId = null
+            )
+        }
+    }
+
+    override fun transform(expr: KUniversalQuantifier) = with(expr) {
+        transform(body) { body: BoolExpr ->
+            z3Ctx.mkForallQuantifier(
+                boundConstants = bounds.map { z3Ctx.mkConst(it.internalizeDecl()) }.toTypedArray(),
+                body = body,
+                weight = 0,
+                patterns = arrayOf(),
+                noPatterns = arrayOf(),
+                quantifierId = null,
+                skolemId = null
+            )
+        }
     }
 
     fun internalizedExpr(expr: KExpr<*>): Expr<*>? = z3InternCtx.findInternalizedExpr(expr)
 
     inline fun <S : KExpr<*>> S.transform(operation: () -> Expr<*>): S = also {
-        internalizedExpr = operation()
+        lastExprInternalizationResult = ExprInternalizationResult(operation())
     }
 
     inline fun <reified A0 : Expr<*>, S : KExpr<*>> S.transform(
@@ -489,8 +515,9 @@ open class KZ3ExprInternalizer(
         if (internalizedArg == null) {
             exprStack.add(this)
             exprStack.add(arg)
+            lastExprInternalizationResult = argumentsInternalizationRequired
         } else {
-            internalizedExpr = operation(internalizedArg as A0)
+            lastExprInternalizationResult = ExprInternalizationResult(operation(internalizedArg as A0))
         }
     }
 
@@ -505,8 +532,11 @@ open class KZ3ExprInternalizer(
             exprStack.add(this)
             internalizedArg0 ?: exprStack.add(arg0)
             internalizedArg1 ?: exprStack.add(arg1)
+            lastExprInternalizationResult = argumentsInternalizationRequired
         } else {
-            internalizedExpr = operation(internalizedArg0 as A0, internalizedArg1 as A1)
+            lastExprInternalizationResult = ExprInternalizationResult(
+                operation(internalizedArg0 as A0, internalizedArg1 as A1)
+            )
         }
     }
 
@@ -524,8 +554,11 @@ open class KZ3ExprInternalizer(
             internalizedArg0 ?: exprStack.add(arg0)
             internalizedArg1 ?: exprStack.add(arg1)
             internalizedArg2 ?: exprStack.add(arg2)
+            lastExprInternalizationResult = argumentsInternalizationRequired
         } else {
-            internalizedExpr = operation(internalizedArg0 as A0, internalizedArg1 as A1, internalizedArg2 as A2)
+            lastExprInternalizationResult = ExprInternalizationResult(
+                operation(internalizedArg0 as A0, internalizedArg1 as A1, internalizedArg2 as A2)
+            )
         }
     }
 
@@ -549,8 +582,31 @@ open class KZ3ExprInternalizer(
             }
             exprStack.add(arg)
         }
-        if (argsReady) {
-            internalizedExpr = operation(internalizedArgs.toTypedArray())
+        lastExprInternalizationResult = if (argsReady) {
+            ExprInternalizationResult(operation(internalizedArgs.toTypedArray()))
+        } else {
+            argumentsInternalizationRequired
+        }
+    }
+
+
+    @JvmInline
+    value class ExprInternalizationResult(private val value: Any) {
+        val argumentsInternalizationRequired: Boolean
+            get() = value === argumentsInternalizationRequiredMarker
+
+        val notInitialized: Boolean
+            get() = value === notInitializedInternalizationResultMarker
+
+        val internalizedExpr: Expr<*>
+            get() = value as? Expr<*> ?: error("expr is not internalized")
+
+        companion object {
+            private val argumentsInternalizationRequiredMarker = Any()
+            private val notInitializedInternalizationResultMarker = Any()
+            val argumentsInternalizationRequired = ExprInternalizationResult(argumentsInternalizationRequiredMarker)
+            val notInitializedInternalizationResult =
+                ExprInternalizationResult(notInitializedInternalizationResultMarker)
         }
     }
 }

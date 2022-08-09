@@ -163,6 +163,8 @@ class BenchmarksBasedTest {
         checker.checks()
     }
 
+    private data class EqualityCheck(val actual: Expr<*>, val expected: Expr<*>)
+
     private class EqualityChecker(
         private val ctx: Context,
         private val solver: Solver,
@@ -175,22 +177,22 @@ class BenchmarksBasedTest {
 
         fun internalize(expr: KExpr<*>): Expr<*> = with(internalizer) { expr.internalize() }
 
-        private val equalityChecks = mutableListOf<Pair<Expr<*>, Expr<*>>>()
+        private val equalityChecks = mutableListOf<EqualityCheck>()
 
         fun areEqual(actual: Expr<*>, expected: Expr<*>) {
-            equalityChecks.add(actual to expected)
+            equalityChecks.add(EqualityCheck(actual = actual, expected = expected))
         }
 
         fun check(message: () -> String) {
-            val equalityBindings = equalityChecks.map { ctx.mkNot(ctx.mkEq(it.first, it.second)) }
+            val equalityBindings = equalityChecks.map { ctx.mkNot(ctx.mkEq(it.actual, it.expected)) }
             solver.add(ctx.mkOr(*equalityBindings.toTypedArray()))
             val status = solver.check()
             when (status) {
                 Status.UNSATISFIABLE -> return
                 Status.SATISFIABLE -> {
-                    val (actual, expected) = findFirstFailedEquality()
-                    if (actual != null && expected != null) {
-                        assertEquals(expected, actual, message())
+                    val failedEqualityCheck = findFirstFailedEquality()
+                    if (failedEqualityCheck != null) {
+                        assertEquals(failedEqualityCheck.expected, failedEqualityCheck.actual, message())
                     }
                     assertTrue(false, message())
                 }
@@ -202,16 +204,16 @@ class BenchmarksBasedTest {
             }
         }
 
-        private fun findFirstFailedEquality(): Pair<Expr<*>?, Expr<*>?> {
-            for ((actual, expected) in equalityChecks) {
+        private fun findFirstFailedEquality(): EqualityCheck? {
+            for (check in equalityChecks) {
                 solver.push()
-                val binding = ctx.mkNot(ctx.mkEq(actual, expected))
+                val binding = ctx.mkNot(ctx.mkEq(check.actual, check.expected))
                 solver.add(binding)
                 val status = solver.check()
                 solver.pop()
-                if (status == Status.SATISFIABLE) return actual to expected
+                if (status == Status.SATISFIABLE) return check
             }
-            return null to null
+            return null
         }
     }
 
@@ -221,8 +223,19 @@ class BenchmarksBasedTest {
 
         init {
             // Limit z3 native memory usage to avoid OOM
-            Native.globalParamSet("memory_max_size", "8192") // 8192 megabytes (hard limit)
+            // fixme: use `memory_high_watermark_mb` when available and set it to 2048 (2GB)
             Native.globalParamSet("memory_high_watermark", "${2047 * 1024 * 1024}") // 2047 megabytes
+
+            /**
+             *  Memory usage hard limit.
+             *
+             *  Normally z3 will throw an exception when used
+             *  memory amount is slightly above `memory_high_watermark`.
+             *  But `memory_high_watermark` check may be missed somewhere in Z3 and
+             *  memory usage will become a way higher than limit.
+             *  Therefore, we use hard limit to avoid OOM
+             */
+            Native.globalParamSet("memory_max_size", "8192") // 8192 megabytes
         }
 
         @JvmStatic
