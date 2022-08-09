@@ -601,12 +601,16 @@ open class KContext {
     fun Boolean.toBv(): KBitVec1Value = mkBv(this)
     fun mkBv(value: Byte): KBitVec8Value = bv8Cache.create(value)
     fun Byte.toBv(): KBitVec8Value = mkBv(this)
+    fun UByte.toBv(): KBitVec8Value = mkBv(toByte())
     fun mkBv(value: Short): KBitVec16Value = bv16Cache.create(value)
     fun Short.toBv(): KBitVec16Value = mkBv(this)
+    fun UShort.toBv(): KBitVec16Value = mkBv(toShort())
     fun mkBv(value: Int): KBitVec32Value = bv32Cache.create(value)
     fun Int.toBv(): KBitVec32Value = mkBv(this)
+    fun UInt.toBv(): KBitVec32Value = mkBv(toInt())
     fun mkBv(value: Long): KBitVec64Value = bv64Cache.create(value)
     fun Long.toBv(): KBitVec64Value = mkBv(this)
+    fun ULong.toBv(): KBitVec64Value = mkBv(toLong())
     fun mkBv(value: Number, sizeBits: UInt): KBitVecValue<KBvSort> {
         val string = value.toBinary().let { it.padStart(sizeBits.toInt(), it.first()) }
         return mkBv(string, sizeBits)
@@ -1445,10 +1449,10 @@ open class KContext {
     fun <T : KBvSort> mkBvDivNoOverflowDecl(arg0: T, arg1: T): KBvDivNoOverflowDecl<T> =
         bvDivNoOverflowDeclCache.create(arg0, arg1).cast()
 
-    private val bvNegNoOverflowDeclCache = mkCache { value: KBvSort -> KBvNegNoOverflowDecl(this, value) }
+    private val bvNegationNoOverflowDeclCache = mkCache { value: KBvSort -> KBvNegNoOverflowDecl(this, value) }
 
-    fun <T : KBvSort> mkBvNegNoOverflowDecl(value: T): KBvNegNoOverflowDecl<T> =
-        bvNegNoOverflowDeclCache.create(value).cast()
+    fun <T : KBvSort> mkBvNegationNoOverflowDecl(value: T): KBvNegNoOverflowDecl<T> =
+        bvNegationNoOverflowDeclCache.create(value).cast()
 
     private val bvMulNoOverflowDeclCache =
         mkCache { arg0: KBvSort, arg1: KBvSort, isSigned: Boolean ->
