@@ -252,7 +252,7 @@ class BitVecTest {
     @Test
     fun testBvReductionOrExpr(): Unit = with(context) {
         val longValue = Random.nextLong()
-        val value = longValue.toBv(sizeBits = Random.nextUInt(from = 0u, until = 1000u))
+        val value = longValue.toBv(sizeBits = Random.nextUInt(from = 64u, until = 1000u))
         val symbolicResult = mkBv1Sort().mkConst("symbolicValue")
 
         solver.assert(symbolicResult eq value.reductionOr())
