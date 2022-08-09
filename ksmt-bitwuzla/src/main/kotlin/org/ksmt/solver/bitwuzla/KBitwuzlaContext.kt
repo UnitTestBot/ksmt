@@ -36,6 +36,13 @@ open class KBitwuzlaContext : AutoCloseable {
     operator fun get(expr: KExpr<*>): BitwuzlaTerm? = expressions[expr]
     operator fun get(sort: KSort): BitwuzlaSort? = sorts[sort]
 
+    /**
+     * Internalize ksmt expr into [BitwuzlaTerm] and cache internalization result to avoid
+     * internalization of already internalized expressions.
+     *
+     * [internalizer] must use special functions to internalize BitVec values ([internalizeBvValue])
+     * and constants ([mkConstant])
+     * */
     fun internalizeExpr(expr: KExpr<*>, internalizer: (KExpr<*>) -> BitwuzlaTerm): BitwuzlaTerm =
         expressions.getOrPut(expr) {
             internalizer(expr) // don't reverse cache bitwuzla term since it may be rewrited
@@ -53,9 +60,22 @@ open class KBitwuzlaContext : AutoCloseable {
             internalizer(decl)
         }
 
+    /** Internalize and reverse cache Bv value to support Bv values conversion.
+     *
+     * Since [Native.bitwuzlaGetBvValue] is only available after check-sat call
+     * we must reverse cache Bv values to be able to convert all previously internalized
+     * expressions.
+     * */
     fun internalizeBvValue(expr: KExpr<*>, internalizer: () -> BitwuzlaTerm): BitwuzlaTerm =
         internalizer().also {
-            // reverse cache bitwuzla term for bv value since it may not be rewrited
+            /**
+             * Reverse cache bitwuzla term for bv value since it may not be rewrited.
+             *
+             * Since [internalizeExpr] guarantee that same expressions are never
+             * internalized twice then if we have something in reverse cache for term
+             * it is only possible if our assumption about `may not be rewrited` is wrong.
+             * Use runtime check to detekt possible bug.
+             * */
             val current = bvValues[it]
             check(current == null) { "Same bv value for $expr and $current" }
             bvValues[it] = expr
@@ -76,6 +96,12 @@ open class KBitwuzlaContext : AutoCloseable {
     var currentConstantScope: ConstantScope = normalConstantScope
 
     fun declaredConstants(): Set<KDecl<*>> = normalConstantScope.constants.toSet()
+
+    /** Internalize constant.
+     *  1. Since [Native.bitwuzlaMkConst] creates fresh constant on each invocation caches are used
+     *   to guarantee that if two constants are equal in ksmt they are also equal in Bitwuzla
+     *  2. Scoping is used to support quantifier bound variables (see [withConstantScope])
+     * */
     fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = currentConstantScope.mkConstant(decl, sort)
 
     /** Constant scope for quantifiers.

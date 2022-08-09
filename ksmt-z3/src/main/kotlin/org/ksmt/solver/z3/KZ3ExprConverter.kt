@@ -46,8 +46,8 @@ open class KZ3ExprConverter(
 
             val converted = convertExpr(expr)
 
-            if (converted != null) {
-                z3InternCtx.convertExpr(expr) { converted }
+            if (!converted.argumentsConversionRequired) {
+                z3InternCtx.convertExpr(expr) { converted.convertedExpr }
             }
         }
         return z3InternCtx.findConvertedExpr(this) as? KExpr<T>
@@ -93,11 +93,24 @@ open class KZ3ExprConverter(
         }
     }
 
-    open fun convertExpr(expr: Expr<*>): KExpr<*>? = when (expr.astKind) {
+    /**
+     * Convert expression non-recursively.
+     * 1. Ensure all expression arguments are already converted and available in [z3InternCtx].
+     * If any argument is not converted [argumentsConversionRequired] is returned.
+     * 2. If all arguments are available converted expression is returned.
+     * */
+    open fun convertExpr(expr: Expr<*>): ExprConversionResult = when (expr.astKind) {
         Z3_ast_kind.Z3_NUMERAL_AST -> convertNumeral(expr)
         Z3_ast_kind.Z3_APP_AST -> convertApp(expr)
-        Z3_ast_kind.Z3_QUANTIFIER_AST -> convertQuantifier(expr)
-        Z3_ast_kind.Z3_VAR_AST -> error("var conversion is not supported")
+        Z3_ast_kind.Z3_QUANTIFIER_AST -> convertQuantifier(expr as Quantifier)
+
+        /**
+         * Vars are only possible in Quantifier bodies and function interpretations.
+         * Currently we remove vars in all of these cases and therefore
+         * if a var occurs then we are missing something
+         * */
+        Z3_ast_kind.Z3_VAR_AST -> error("unexpected var")
+
         Z3_ast_kind.Z3_SORT_AST,
         Z3_ast_kind.Z3_FUNC_DECL_AST,
         Z3_ast_kind.Z3_UNKNOWN_AST -> error("impossible ast kind for expressions")
@@ -111,10 +124,10 @@ open class KZ3ExprConverter(
         "LongMethod",
         "ComplexMethod"
     )
-    open fun convertApp(expr: Expr<*>): KExpr<*>? = with(ctx) {
+    open fun convertApp(expr: Expr<*>): ExprConversionResult = with(ctx) {
         when (expr.funcDecl.declKind) {
-            Z3_decl_kind.Z3_OP_TRUE -> trueExpr
-            Z3_decl_kind.Z3_OP_FALSE -> falseExpr
+            Z3_decl_kind.Z3_OP_TRUE -> convert { trueExpr }
+            Z3_decl_kind.Z3_OP_FALSE -> convert { falseExpr }
             Z3_decl_kind.Z3_OP_UNINTERPRETED -> expr.convertList { args: List<KExpr<KSort>> ->
                 mkApp(convertDecl(expr.funcDecl), args)
             }
@@ -229,8 +242,9 @@ open class KZ3ExprConverter(
                 mkBvMulNoOverflowExpr(a0, a1, isSigned = false)
             }
             Z3_decl_kind.Z3_OP_BSMUL_NO_UDFL -> expr.convert(::mkBvMulNoUnderflowExpr)
-            Z3_decl_kind.Z3_OP_AS_ARRAY ->  {
+            Z3_decl_kind.Z3_OP_AS_ARRAY -> convert {
                 val z3Decl = expr.funcDecl.parameters[0].funcDecl
+
                 @Suppress("UNCHECKED_CAST")
                 val decl = convertDecl(z3Decl) as? KFuncDecl<KSort>
                     ?: error("unexpected as-array decl $z3Decl")
@@ -242,12 +256,16 @@ open class KZ3ExprConverter(
 
     fun Expr<*>.findConvertedExpr(): KExpr<*>? = z3InternCtx.findConvertedExpr(this)
 
+    /**
+     * Ensure all expression arguments are already converted and available in [z3InternCtx].
+     * If not so, [argumentsConversionRequired] is returned.
+     * */
     inline fun ensureArgsAndConvert(
         expr: Expr<*>,
         args: Array<out Expr<*>>,
         expectedSize: Int,
         converter: (List<KExpr<*>>) -> KExpr<*>
-    ): KExpr<*>? {
+    ): ExprConversionResult {
         check(args.size == expectedSize) { "arguments size mismatch: expected $expectedSize, actual ${args.size}" }
         val convertedArgs = mutableListOf<KExpr<*>>()
         var exprAdded = false
@@ -266,44 +284,47 @@ open class KZ3ExprConverter(
             exprStack.add(arg)
         }
 
-        if (!argsReady) return null
+        if (!argsReady) return argumentsConversionRequired
 
-        return converter(convertedArgs)
+        val convertedExpr = converter(convertedArgs)
+        return ExprConversionResult(convertedExpr)
     }
+
+    inline fun <T : KSort> convert(op: () -> KExpr<T>) = ExprConversionResult(op())
 
     @Suppress("UNCHECKED_CAST")
     inline fun <T : KSort, A0 : KSort> Expr<*>.convert(
         op: (KExpr<A0>) -> KExpr<T>
-    ) = ensureArgsAndConvert(this, args, 1) { args -> op(args[0] as KExpr<A0>) }
+    ) = ensureArgsAndConvert(this, args, expectedSize = 1) { args -> op(args[0] as KExpr<A0>) }
 
     @Suppress("UNCHECKED_CAST")
     inline fun <T : KSort, A0 : KSort, A1 : KSort> Expr<*>.convert(
         op: (KExpr<A0>, KExpr<A1>) -> KExpr<T>
-    ) = ensureArgsAndConvert(this, args, 2) { args -> op(args[0] as KExpr<A0>, args[1] as KExpr<A1>) }
+    ) = ensureArgsAndConvert(this, args, expectedSize = 2) { args -> op(args[0] as KExpr<A0>, args[1] as KExpr<A1>) }
 
     @Suppress("UNCHECKED_CAST", "MagicNumber")
     inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> Expr<*>.convert(
         op: (KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<T>
-    ) = ensureArgsAndConvert(this, args, 3) { args ->
+    ) = ensureArgsAndConvert(this, args, expectedSize = 3) { args ->
         op(args[0] as KExpr<A0>, args[1] as KExpr<A1>, args[2] as KExpr<A2>)
     }
 
     @Suppress("UNCHECKED_CAST")
     inline fun <T : KSort, A : KSort> Expr<*>.convertList(
         op: (List<KExpr<A>>) -> KExpr<T>
-    ) = ensureArgsAndConvert(this, args, numArgs) { args -> op(args as List<KExpr<A>>) }
+    ) = ensureArgsAndConvert(this, args, expectedSize = numArgs) { args -> op(args as List<KExpr<A>>) }
 
     @Suppress("UNCHECKED_CAST")
     inline fun <T : KSort> Expr<*>.convertReduced(
         op: (KExpr<T>, KExpr<T>) -> KExpr<T>
-    ) = ensureArgsAndConvert(this, args, numArgs) { args -> (args as List<KExpr<T>>).reduce(op) }
+    ) = ensureArgsAndConvert(this, args, expectedSize = numArgs) { args -> (args as List<KExpr<T>>).reduce(op) }
 
-    open fun convertNumeral(expr: Expr<*>): KExpr<*> = when (expr.sort.sortKind) {
+    open fun convertNumeral(expr: Expr<*>): ExprConversionResult = when (expr.sort.sortKind) {
         Z3_sort_kind.Z3_INT_SORT -> convertNumeral(expr as IntNum)
         Z3_sort_kind.Z3_REAL_SORT -> convertNumeral(expr as RatNum)
         Z3_sort_kind.Z3_BV_SORT -> convertNumeral(expr as BitVecNum)
         else -> TODO("numerals with ${expr.sort} are not supported")
-    }
+    }.let { ExprConversionResult(it) }
 
     @Suppress("MemberVisibilityCanBePrivate")
     fun convertNumeral(expr: IntNum): KIntNumExpr = with(ctx) {
@@ -323,12 +344,11 @@ open class KZ3ExprConverter(
         mkBv(value = expr.toBinaryString().padStart(sizeBits.toInt(), '0'), sizeBits)
     }
 
-    open fun convertQuantifier(expr: Expr<*>): KExpr<KBoolSort>? = with(ctx) {
-        expr as Quantifier
-
-        val z3Bounds = expr.boundVariableSorts.zip(expr.boundVariableNames).map { (sort, name) ->
-            expr.ctx.mkConst(name, sort)
-        }.reversed()
+    open fun convertQuantifier(expr: Quantifier): ExprConversionResult = with(ctx) {
+        val z3Bounds = expr.boundVariableSorts
+            .zip(expr.boundVariableNames)
+            .map { (sort, name) -> expr.ctx.mkConst(name, sort) }
+            .asReversed()
 
         val preparedBody = expr.body.substituteVars(z3Bounds.toTypedArray())
 
@@ -336,7 +356,7 @@ open class KZ3ExprConverter(
         if (body == null) {
             exprStack.add(expr)
             exprStack.add(preparedBody)
-            return null
+            return argumentsConversionRequired
         }
 
         @Suppress("UNCHECKED_CAST")
@@ -344,11 +364,24 @@ open class KZ3ExprConverter(
 
         val bounds = z3Bounds.map { it.funcDecl.convert<KSort>() }
 
-        when {
+        val convertedExpr = when {
             expr.isUniversal -> mkUniversalQuantifier(body, bounds)
             expr.isExistential -> mkExistentialQuantifier(body, bounds)
             expr.isLambda -> TODO("array lambda converter")
             else -> TODO("unexpected quantifier: $expr")
         }
+        ExprConversionResult(convertedExpr)
     }
+
+    @JvmInline
+    value class ExprConversionResult(private val expr: KExpr<*>?) {
+        val argumentsConversionRequired: Boolean
+            get() = expr == null
+
+        val convertedExpr: KExpr<*>
+            get() = expr ?: error("expr is not converted")
+    }
+
+    val argumentsConversionRequired = ExprConversionResult(null)
+
 }

@@ -114,6 +114,7 @@ complexity:
   LargeClass:
     active: true
     threshold: 600
+    excludes: ['**/test/**', '**/example/**']
   LongMethod:
     active: true
     threshold: 60
@@ -124,6 +125,7 @@ complexity:
     ignoreDefaultParameters: false
     ignoreDataClasses: true
     ignoreAnnotatedParameter: []
+    excludes: ['**/test/**', '**/example/**']
   MethodOverloading:
     active: false
     threshold: 6
@@ -493,6 +495,7 @@ style:
     includeLineWrapping: false
   ForbiddenComment:
     active: true
+    excludes: ['**/test/**', '**/example/**']
     values:
       - 'FIXME:'
       - 'STOPSHIP:'
