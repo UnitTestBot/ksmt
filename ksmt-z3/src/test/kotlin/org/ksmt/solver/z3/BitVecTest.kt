@@ -617,8 +617,6 @@ class BitVecTest {
         assertEquals(expectedResult, result)
     }
 
-    // получается не строгая типизация, на самом деле. можно передать вот в таком виде функцию, а внутри testShift
-    // вызвать от двух разных векторов, и тогда всё умрёт в рантайме
     @Test
     fun testBvShiftLeftExpr(): Unit = testShift(context::mkBvShiftLeftExpr, Long::shl)
 
