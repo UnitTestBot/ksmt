@@ -94,6 +94,7 @@ import org.ksmt.decl.KZeroExtDecl
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.cast
 
 @Suppress("TooManyFunctions")
 open class KZ3DeclInternalizer(

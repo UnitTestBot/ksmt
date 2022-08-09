@@ -201,11 +201,7 @@ open class KZ3ExprInternalizer(
                 z3Ctx.mkBV((expr as KBitVecNumberValue<*, *>).numberValue.toInt(), sizeBits)
             }
             is KBitVec64Value -> z3Ctx.mkBV(expr.numberValue, sizeBits)
-            is KBitVecCustomValue -> {
-//              // TODO a problem with negative numbers. Here BigInteger treat `-15` as big positive number
-                val decimalString = BigInteger(expr.binaryStringValue, 2).toString(10)
-                z3Ctx.mkBV(decimalString, sizeBits)
-            }
+            is KBitVecCustomValue -> z3Ctx.mkBV(expr.binaryStringValue, sizeBits)
             else -> error("Unknown bv expression class ${expr::class} in transformation method: ${expr.print()}")
         }
     }
