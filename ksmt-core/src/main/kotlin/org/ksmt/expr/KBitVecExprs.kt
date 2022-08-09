@@ -172,7 +172,6 @@ class KBvOrExpr<S : KBvSort> internal constructor(
     override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
 }
 
-// TODO replace all S: KBvSort with S: KBvSort
 /**
  * Bitwise XOR.
  */
