@@ -42,7 +42,7 @@ open class KZ3Solver(private val ctx: KContext) : KSolver {
         createExprConverter(z3InternCtx, z3Ctx)
     }
 
-    open val randomSeed: Int = 0
+    open val seedForRandom: Int = 0
 
     open fun createSortInternalizer(
         internCtx: KZ3InternalizationContext,
@@ -68,9 +68,9 @@ open class KZ3Solver(private val ctx: KContext) : KSolver {
     ) = KZ3ExprConverter(ctx, internCtx)
 
     private fun createSolver(): Solver = z3Ctx.mkSolver().apply {
-        if (randomSeed != 0) {
+        if (seedForRandom != 0) {
             val params = z3Ctx.mkParams().apply {
-                add("random_seed", randomSeed)
+                add("random_seed", seedForRandom)
             }
             setParameters(params)
         }

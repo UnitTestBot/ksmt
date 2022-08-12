@@ -70,7 +70,7 @@ class BenchmarksBasedTest {
                 val solver = mkSolver().apply {
                     val params = mkParams().apply {
                         add("timeout", 1.seconds.toInt(DurationUnit.MILLISECONDS))
-                        add("random_seed", RANDOM_SEED)
+                        add("random_seed", SEED_FOR_RANDOM)
                     }
                     setParameters(params)
                 }
@@ -218,7 +218,7 @@ class BenchmarksBasedTest {
     }
 
     companion object {
-        const val RANDOM_SEED = 12345
+        const val SEED_FOR_RANDOM = 12345
         val parser = Z3SmtLibParser()
 
         init {
@@ -247,7 +247,7 @@ class BenchmarksBasedTest {
         }
     }
 
-    private class TestZ3Solver(ctx: KContext, override val randomSeed: Int = RANDOM_SEED) : KZ3Solver(ctx)
+    private class TestZ3Solver(ctx: KContext, override val seedForRandom: Int = SEED_FOR_RANDOM) : KZ3Solver(ctx)
 
     private fun Context.wrapModel(ctx: KContext, model: Model): KZ3Model {
         val internCtx = KZ3InternalizationContext()
