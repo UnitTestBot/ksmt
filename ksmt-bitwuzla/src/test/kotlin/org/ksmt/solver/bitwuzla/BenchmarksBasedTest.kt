@@ -9,6 +9,7 @@ import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.fixtures.TestDataProvider
+import org.ksmt.solver.fixtures.parseAndSkipTestIfError
 import org.ksmt.solver.fixtures.skipUnsupportedSolverFeatures
 import org.ksmt.solver.fixtures.z3.Z3SmtLibParser
 import org.ksmt.solver.z3.KZ3Solver
@@ -29,7 +30,10 @@ class BenchmarksBasedTest {
     @MethodSource("testData")
     fun testConverter(name: String, samplePath: Path) = skipUnsupportedSolverFeatures {
         val ctx = KContext()
-        val ksmtAssertions = parser.parse(ctx, samplePath)
+
+        val ksmtAssertions = parseAndSkipTestIfError {
+            parser.parse(ctx, samplePath)
+        }
 
         KBitwuzlaContext().use { bitwuzlaCtx ->
             val internalizer = KBitwuzlaExprInternalizer(ctx, bitwuzlaCtx)
@@ -63,7 +67,11 @@ class BenchmarksBasedTest {
     @MethodSource("testData")
     fun testSolver(name: String, samplePath: Path) = skipUnsupportedSolverFeatures {
         val ctx = KContext()
-        val ksmtAssertions = parser.parse(ctx, samplePath)
+
+        val ksmtAssertions = parseAndSkipTestIfError {
+            parser.parse(ctx, samplePath)
+        }
+
         KBitwuzlaSolver(ctx).use { bitwuzla ->
             ksmtAssertions.forEach { bitwuzla.assert(it) }
             val status = bitwuzla.check(timeout = 1.seconds)

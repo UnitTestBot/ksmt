@@ -14,3 +14,16 @@ inline fun skipUnsupportedSolverFeatures(body: () -> Unit) = try {
 } catch (ex: KSolverUnsupportedFeatureException) {
     Assumptions.assumeTrue(false, ex.message)
 }
+
+inline fun <reified T> parseAndSkipTestIfError(parse: () -> T) = try {
+    parse()
+} catch (ex: SmtLibParser.ParseError) {
+    val testIgnoreReason = "parse failed -- ${ex.message}"
+    System.err.println(testIgnoreReason)
+    Assumptions.assumeTrue(false, testIgnoreReason)
+    /**
+     * assumeTrue throws an exception,
+     * but we need something with [Nothing] return type
+     * */
+    error("ignored")
+}

@@ -20,6 +20,7 @@ import org.ksmt.expr.KTransformer
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.fixtures.TestDataProvider
+import org.ksmt.solver.fixtures.parseAndSkipTestIfError
 import org.ksmt.solver.fixtures.skipUnsupportedSolverFeatures
 import org.ksmt.solver.fixtures.z3.Z3SmtLibParser
 import org.ksmt.sort.KArraySort
@@ -41,7 +42,9 @@ class BenchmarksBasedTest {
     fun testConverter(name: String, samplePath: Path) = skipUnsupportedSolverFeatures {
         val ctx = KContext()
         Context().use { parseCtx ->
-            val assertions = parser.parseFile(parseCtx, samplePath)
+            val assertions = parseAndSkipTestIfError {
+                parser.parseFile(parseCtx, samplePath)
+            }
             val ksmtAssertions = parser.convert(ctx, assertions)
 
             parseCtx.performEqualityChecks(ctx) {
@@ -65,7 +68,9 @@ class BenchmarksBasedTest {
     fun testSolver(name: String, samplePath: Path) = skipUnsupportedSolverFeatures {
         val ctx = KContext()
         Context().use { parseCtx ->
-            val assertions = parser.parseFile(parseCtx, samplePath)
+            val assertions = parseAndSkipTestIfError {
+                parser.parseFile(parseCtx, samplePath)
+            }
             val (expectedStatus, expectedModel) = with(parseCtx) {
                 val solver = mkSolver().apply {
                     val params = mkParams().apply {
