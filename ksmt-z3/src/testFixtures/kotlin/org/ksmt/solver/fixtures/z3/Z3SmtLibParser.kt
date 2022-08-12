@@ -18,13 +18,17 @@ class Z3SmtLibParser : SmtLibParser {
             convert(ctx, assertions)
         }
 
-    fun parseFile(ctx: Context, path: Path): List<BoolExpr> = ctx.parseSMTLIB2File(
-        path.toAbsolutePath().toString(),
-        emptyArray(),
-        emptyArray(),
-        emptyArray(),
-        emptyArray()
-    ).toList()
+    fun parseFile(ctx: Context, path: Path): List<BoolExpr> = try {
+        ctx.parseSMTLIB2File(
+            path.toAbsolutePath().toString(),
+            emptyArray(),
+            emptyArray(),
+            emptyArray(),
+            emptyArray()
+        ).toList()
+    } catch (ex: Exception) {
+        throw SmtLibParser.ParseError(ex)
+    }
 
     fun convert(ctx: KContext, assertions: List<BoolExpr>): List<KExpr<KBoolSort>> {
         val internCtx = KZ3InternalizationContext()
