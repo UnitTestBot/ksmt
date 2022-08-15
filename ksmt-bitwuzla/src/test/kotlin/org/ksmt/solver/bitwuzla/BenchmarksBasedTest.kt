@@ -1,5 +1,6 @@
 package org.ksmt.solver.bitwuzla
 
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import org.junit.jupiter.params.ParameterizedTest
@@ -23,6 +24,11 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
+@EnabledIfEnvironmentVariable(
+    named = "bitwuzla.benchmarksBasedTests",
+    matches = "enabled",
+    disabledReason = "bitwuzla benchmarks based test"
+)
 class BenchmarksBasedTest {
 
     @Execution(ExecutionMode.CONCURRENT)

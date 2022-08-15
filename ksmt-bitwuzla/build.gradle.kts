@@ -17,8 +17,6 @@ dependencies {
     implementation("net.java.dev.jna:jna-platform:5.12.0")
 
     testImplementation(project(":ksmt-z3"))
-    testImplementation("org.junit.jupiter", "junit-jupiter-params", "5.8.2")
-    testImplementation(testFixtures(project(":ksmt-core")))
     testImplementation(testFixtures(project(":ksmt-z3")))
 
     bitwuzlaNative("bitwuzla", "bitwuzla-native-linux-x86-64", "1.0", ext = "zip")
@@ -40,8 +38,11 @@ tasks.withType<ProcessResources> {
     }
 }
 
+val runBenchmarksBasedTests = project.booleanProperty("bitwuzla.runBenchmarksBasedTests") ?: true
+
 // skip big benchmarks to achieve faster tests build and run time
-val skipBigBenchmarks = true
+val skipBigBenchmarks = project.booleanProperty("bitwuzla.skipBigBenchmarks") ?: true
+
 val smtLibBenchmarks = listOfNotNull(
     "QF_UF", // 100M
     "ABV", // 400K
@@ -57,5 +58,17 @@ val prepareTestData by tasks.registering {
 }
 
 tasks.withType<Test> {
-    dependsOn.add(prepareTestData)
+    if (runBenchmarksBasedTests) {
+        environment("bitwuzla.benchmarksBasedTests", "enabled")
+        dependsOn.add(prepareTestData)
+    }
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["java"])
+            artifact(tasks["kotlinSourcesJar"])
+        }
+    }
 }
