@@ -34,6 +34,11 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
 
+@EnabledIfEnvironmentVariable(
+    named = "z3.benchmarksBasedTests",
+    matches = "enabled",
+    disabledReason = "z3 benchmarks based test"
+)
 class BenchmarksBasedTest {
 
     @Execution(ExecutionMode.CONCURRENT)

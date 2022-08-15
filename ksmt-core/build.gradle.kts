@@ -4,5 +4,14 @@ plugins {
 }
 
 dependencies {
-    testFixturesImplementation("org.junit.jupiter", "junit-jupiter-params", "5.8.2")
+    testFixturesApi("org.junit.jupiter", "junit-jupiter-params", "5.8.2")
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["java"].also { removeTestFixtures(it) })
+            artifact(tasks["kotlinSourcesJar"])
+        }
+    }
 }
