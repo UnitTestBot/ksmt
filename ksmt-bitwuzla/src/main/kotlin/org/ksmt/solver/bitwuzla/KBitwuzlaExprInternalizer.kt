@@ -145,9 +145,10 @@ open class KBitwuzlaExprInternalizer(
         if (kind != BitwuzlaKind.BITWUZLA_KIND_VAL) return
 
         if (bitwuzlaCtx.convertValue(term) != null) return
-        if (term == bitwuzlaCtx.trueTerm || term == bitwuzlaCtx.falseTerm) return
 
-        bitwuzlaCtx.saveInternalizedValue(expr, term)
+        if (term != bitwuzlaCtx.trueTerm && term != bitwuzlaCtx.falseTerm) {
+            bitwuzlaCtx.saveInternalizedValue(expr, term)
+        }
     }
 
     /**
