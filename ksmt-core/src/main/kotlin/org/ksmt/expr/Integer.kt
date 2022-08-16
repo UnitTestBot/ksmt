@@ -5,6 +5,7 @@ import org.ksmt.decl.KIntModDecl
 import org.ksmt.decl.KIntNumDecl
 import org.ksmt.decl.KIntRemDecl
 import org.ksmt.decl.KIntToRealDecl
+import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import java.math.BigInteger
