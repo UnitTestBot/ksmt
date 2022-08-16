@@ -9,8 +9,6 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KSort
-import java.lang.ref.WeakReference
-import java.util.WeakHashMap
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.time.TimeMark
@@ -25,13 +23,13 @@ open class KBitwuzlaContext : AutoCloseable {
     val falseTerm: BitwuzlaTerm by lazy { Native.bitwuzlaMkFalse(bitwuzla) }
     val boolSort: BitwuzlaSort by lazy { Native.bitwuzlaMkBoolSort(bitwuzla) }
 
-    private val expressions = WeakHashMap<KExpr<*>, BitwuzlaTerm>()
-    private val bitwuzlaExpressions = WeakHashMap<BitwuzlaTerm, WeakReference<KExpr<*>>>()
-    private val sorts = WeakHashMap<KSort, BitwuzlaSort>()
-    private val bitwuzlaSorts = WeakHashMap<BitwuzlaSort, WeakReference<KSort>>()
-    private val declSorts = WeakHashMap<KDecl<*>, BitwuzlaSort>()
-    private val bitwuzlaConstants = HashMap<BitwuzlaTerm, KDecl<*>>()
-    private val bvValues = HashMap<BitwuzlaTerm, KExpr<*>>()
+    private val expressions = hashMapOf<KExpr<*>, BitwuzlaTerm>()
+    private val bitwuzlaExpressions = hashMapOf<BitwuzlaTerm, KExpr<*>>()
+    private val sorts = hashMapOf<KSort, BitwuzlaSort>()
+    private val bitwuzlaSorts = hashMapOf<BitwuzlaSort, KSort>()
+    private val declSorts = hashMapOf<KDecl<*>, BitwuzlaSort>()
+    private val bitwuzlaConstants = hashMapOf<BitwuzlaTerm, KDecl<*>>()
+    private val bvValues = hashMapOf<BitwuzlaTerm, KExpr<*>>()
 
     operator fun get(expr: KExpr<*>): BitwuzlaTerm? = expressions[expr]
     operator fun get(sort: KSort): BitwuzlaSort? = sorts[sort]
@@ -51,7 +49,7 @@ open class KBitwuzlaContext : AutoCloseable {
     fun internalizeSort(sort: KSort, internalizer: (KSort) -> BitwuzlaSort): BitwuzlaSort =
         sorts.getOrPut(sort) {
             internalizer(sort).also {
-                bitwuzlaSorts[it] = WeakReference(sort)
+                bitwuzlaSorts[it] = sort
             }
         }
 
@@ -66,20 +64,11 @@ open class KBitwuzlaContext : AutoCloseable {
      * we must reverse cache Bv values to be able to convert all previously internalized
      * expressions.
      * */
-    fun internalizeBvValue(expr: KExpr<*>, internalizer: () -> BitwuzlaTerm): BitwuzlaTerm =
-        internalizer().also {
-            /**
-             * Reverse cache bitwuzla term for bv value since it may not be rewrited.
-             *
-             * Since [internalizeExpr] guarantee that same expressions are never
-             * internalized twice then if we have something in reverse cache for term
-             * it is only possible if our assumption about `may not be rewrited` is wrong.
-             * Use runtime check to detekt possible bug.
-             * */
-            val current = bvValues[it]
-            check(current == null) { "Same bv value for $expr and $current" }
-            bvValues[it] = expr
-        }
+    fun saveInternalizedValue(expr: KExpr<*>, term: BitwuzlaTerm) {
+        bvValues[term] = expr
+    }
+
+    fun findConvertedExpr(expr: BitwuzlaTerm): KExpr<*>? = bitwuzlaExpressions[expr]
 
     fun convertExpr(expr: BitwuzlaTerm, converter: (BitwuzlaTerm) -> KExpr<*>): KExpr<*> =
         convert(expressions, bitwuzlaExpressions, expr, converter)
@@ -87,7 +76,7 @@ open class KBitwuzlaContext : AutoCloseable {
     fun convertSort(sort: BitwuzlaSort, converter: (BitwuzlaSort) -> KSort): KSort =
         convert(sorts, bitwuzlaSorts, sort, converter)
 
-    fun convertBvValue(value: BitwuzlaTerm): KExpr<*>? = bvValues[value]
+    fun convertValue(value: BitwuzlaTerm): KExpr<*>? = bvValues[value]
 
     // constant is known only if it was previously internalized
     fun convertConstantIfKnown(term: BitwuzlaTerm): KDecl<*>? = bitwuzlaConstants[term]
@@ -162,17 +151,17 @@ open class KBitwuzlaContext : AutoCloseable {
 
     private inline fun <K, V> convert(
         cache: MutableMap<K, V>,
-        reverseCache: MutableMap<V, WeakReference<K>>,
+        reverseCache: MutableMap<V, K>,
         key: V,
         converter: (V) -> K
     ): K {
-        val current = reverseCache[key]?.get()
+        val current = reverseCache[key]
 
         if (current != null) return current
 
         val converted = converter(key)
         cache.putIfAbsent(converted, key)
-        reverseCache[key] = WeakReference(converted)
+        reverseCache[key] = converted
         return converted
     }
 
