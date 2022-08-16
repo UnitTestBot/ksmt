@@ -105,7 +105,7 @@ import org.ksmt.expr.KRemIntExpr
 import org.ksmt.expr.KSubArithExpr
 import org.ksmt.expr.KToIntRealExpr
 import org.ksmt.expr.KToRealIntExpr
-import org.ksmt.expr.KTransformer
+import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier

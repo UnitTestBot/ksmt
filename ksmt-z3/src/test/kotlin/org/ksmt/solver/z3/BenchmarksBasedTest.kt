@@ -16,7 +16,7 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFunctionAsArray
-import org.ksmt.expr.KTransformer
+import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.fixtures.TestDataProvider

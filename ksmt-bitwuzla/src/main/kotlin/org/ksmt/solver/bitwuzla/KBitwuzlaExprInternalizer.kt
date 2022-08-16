@@ -73,7 +73,7 @@ import org.ksmt.expr.KIteExpr
 import org.ksmt.expr.KNotExpr
 import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KQuantifier
-import org.ksmt.expr.KTransformer
+import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr

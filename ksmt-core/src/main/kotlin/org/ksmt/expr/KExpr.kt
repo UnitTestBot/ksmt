@@ -2,6 +2,7 @@ package org.ksmt.expr
 
 import org.ksmt.KAst
 import org.ksmt.KContext
+import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.sort.KSort
 
 abstract class KExpr<T : KSort>(ctx: KContext): KAst(ctx) {

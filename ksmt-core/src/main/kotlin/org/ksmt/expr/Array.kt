@@ -4,6 +4,7 @@ import org.ksmt.KContext
 import org.ksmt.decl.KArrayConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
+import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KSort
 

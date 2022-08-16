@@ -4,7 +4,7 @@ import org.ksmt.KContext
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFunctionApp
-import org.ksmt.expr.KTransformer
+import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.solver.KModel
 import org.ksmt.expr.KAndExpr
