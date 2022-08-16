@@ -2,10 +2,15 @@ package org.ksmt.expr.transformer
 
 import org.ksmt.KContext
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KUniversalQuantifier
+import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 
-abstract class KNonRecursiveAppTransformer(override val ctx: KContext) : KTransformer {
+abstract class KNonRecursiveTransformer(override val ctx: KContext) : KTransformer {
     private val transformed = hashMapOf<KExpr<*>, KExpr<*>>()
     private val exprStack = arrayListOf<KExpr<*>>()
     private var exprWasTransformed = false
@@ -45,6 +50,33 @@ abstract class KNonRecursiveAppTransformer(override val ctx: KContext) : KTransf
                 mkApp(expr.decl, transformedArgs)
             }
             return transformExpr(transformedApp)
+        }
+
+    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> =
+        transformExprAfterTransformed(expr, listOf(expr.body)) { transformedBody ->
+            with(ctx) {
+                val body = transformedBody.single()
+                if (body == expr.body) return transformExpr(expr)
+                return transformExpr(mkArrayLambda(expr.indexVarDecl, body))
+            }
+        }
+
+    override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> =
+        transformExprAfterTransformed(expr, listOf(expr.body)) { transformedBody ->
+            with(ctx) {
+                val body = transformedBody.single()
+                if (body == expr.body) return transformExpr(expr)
+                return transformExpr(mkExistentialQuantifier(body, expr.bounds))
+            }
+        }
+
+    override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> =
+        transformExprAfterTransformed(expr, listOf(expr.body)) { transformedBody ->
+            with(ctx) {
+                val body = transformedBody.single()
+                if (body == expr.body) return transformExpr(expr)
+                return transformExpr(mkUniversalQuantifier(body, expr.bounds))
+            }
         }
 
     inline fun <T : KSort, A : KSort> transformAppAfterArgsTransformed(
