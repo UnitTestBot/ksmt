@@ -10,6 +10,7 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
+import org.ksmt.solver.util.KExprConverterBase
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
@@ -19,7 +20,8 @@ import org.ksmt.sort.KSort
 open class KBitwuzlaExprConverter(
     private val ctx: KContext,
     val bitwuzlaCtx: KBitwuzlaContext
-) {
+) : KExprConverterBase<BitwuzlaTerm>() {
+
     private val adapterTermRewriter = AdapterTermRewriter(ctx)
     private val incompleteDeclarations = mutableSetOf<KDecl<*>>()
 
@@ -41,26 +43,17 @@ open class KBitwuzlaExprConverter(
      * @see convertToBoolIfNeeded
      * */
     fun <T : KSort> BitwuzlaTerm.convertExpr(expectedSort: T): KExpr<T> =
-        convert<KSort>()
+        convertFromNative<KSort>()
             .convertToExpectedIfNeeded(expectedSort)
             .let { adapterTermRewriter.apply(it) }
 
-    val exprStack = arrayListOf<BitwuzlaTerm>()
-    private fun <T : KSort> BitwuzlaTerm.convert(): KExpr<T> {
-        exprStack.add(this)
-        while (exprStack.isNotEmpty()) {
-            val expr = exprStack.removeLast()
 
-            if (bitwuzlaCtx.findConvertedExpr(expr) != null) continue
+    override fun findConvertedNative(expr: BitwuzlaTerm): KExpr<*>? {
+        return bitwuzlaCtx.findConvertedExpr(expr)
+    }
 
-            val converted = convertExprHelper(expr)
-
-            if (!converted.argumentsConversionRequired) {
-                bitwuzlaCtx.convertExpr(expr) { converted.convertedExpr }
-            }
-        }
-        return bitwuzlaCtx.findConvertedExpr(this) as? KExpr<T>
-            ?: error("expr is not properly converted")
+    override fun saveConvertedNative(native: BitwuzlaTerm, converted: KExpr<*>) {
+        bitwuzlaCtx.convertExpr(native) { converted }
     }
 
     private fun BitwuzlaSort.convertSort(): KSort = bitwuzlaCtx.convertSort(this) {
@@ -88,7 +81,7 @@ open class KBitwuzlaExprConverter(
         }
     }
 
-    open fun convertExprHelper(expr: BitwuzlaTerm): ExprConversionResult = with(ctx) {
+    override fun convertNativeExpr(expr: BitwuzlaTerm): ExprConversionResult = with(ctx) {
         when (val kind = Native.bitwuzlaTermGetKind(expr)) {
             // constants, functions, values
             BitwuzlaKind.BITWUZLA_KIND_CONST -> convertConst(expr)
@@ -675,55 +668,6 @@ open class KBitwuzlaExprConverter(
         }
     }
 
-
-    @JvmInline
-    value class ExprConversionResult(private val expr: KExpr<*>?) {
-        val argumentsConversionRequired: Boolean
-            get() = expr == null
-
-        val convertedExpr: KExpr<*>
-            get() = expr ?: error("expr is not converted")
-    }
-
-    val argumentsConversionRequired = ExprConversionResult(null)
-
-
-    fun BitwuzlaTerm.findConvertedExpr(): KExpr<*>? = bitwuzlaCtx.findConvertedExpr(this)
-
-    /**
-     * Ensure all expression arguments are already converted and available in [bitwuzlaCtx].
-     * If not so, [argumentsConversionRequired] is returned.
-     * */
-    inline fun ensureArgsAndConvert(
-        expr: BitwuzlaTerm,
-        args: Array<BitwuzlaTerm>,
-        expectedSize: Int,
-        converter: (List<KExpr<*>>) -> KExpr<*>
-    ): ExprConversionResult {
-        check(args.size == expectedSize) { "arguments size mismatch: expected $expectedSize, actual ${args.size}" }
-        val convertedArgs = mutableListOf<KExpr<*>>()
-        var exprAdded = false
-        var argsReady = true
-        for (arg in args) {
-            val converted = arg.findConvertedExpr()
-            if (converted != null) {
-                convertedArgs.add(converted)
-                continue
-            }
-            argsReady = false
-            if (!exprAdded) {
-                exprStack.add(expr)
-                exprAdded = true
-            }
-            exprStack.add(arg)
-        }
-
-        if (!argsReady) return argumentsConversionRequired
-
-        val convertedExpr = converter(convertedArgs)
-        return ExprConversionResult(convertedExpr)
-    }
-
     inline fun <T : KSort> BitwuzlaTerm.convertBv(
         op: (KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<T>
     ) = convert { a0: KExpr<KSort>, a1: KExpr<KSort> ->
@@ -736,31 +680,25 @@ open class KBitwuzlaExprConverter(
         op(arg.ensureBvExpr()).convertToBoolIfNeeded()
     }
 
-    inline fun <T : KSort> convert(op: () -> KExpr<T>) = ExprConversionResult(op())
-
     inline fun <T : KSort, A0 : KSort> BitwuzlaTerm.convert(
         op: (KExpr<A0>) -> KExpr<T>
     ): ExprConversionResult {
         val args = Native.bitwuzlaTermGetChildren(this)
-        return ensureArgsAndConvert(this, args, expectedSize = 1) { args -> op(args[0] as KExpr<A0>) }
+        return convert(args, op)
     }
 
     inline fun <T : KSort, A0 : KSort, A1 : KSort> BitwuzlaTerm.convert(
         op: (KExpr<A0>, KExpr<A1>) -> KExpr<T>
     ): ExprConversionResult {
         val args = Native.bitwuzlaTermGetChildren(this)
-        return ensureArgsAndConvert(this, args, expectedSize = 2) { args ->
-            op(args[0] as KExpr<A0>, args[1] as KExpr<A1>)
-        }
+        return convert(args, op)
     }
 
     inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> BitwuzlaTerm.convert(
         op: (KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<T>
     ): ExprConversionResult {
         val args = Native.bitwuzlaTermGetChildren(this)
-        return ensureArgsAndConvert(this, args, expectedSize = 3) { args ->
-            op(args[0] as KExpr<A0>, args[1] as KExpr<A1>, args[2] as KExpr<A2>)
-        }
+        return convert(args, op)
     }
 
     inline fun <T : KSort, A : KSort> BitwuzlaTerm.convertList(
@@ -769,9 +707,4 @@ open class KBitwuzlaExprConverter(
         val args = Native.bitwuzlaTermGetChildren(this)
         return convertList(args, op)
     }
-
-    inline fun <T : KSort, A : KSort> BitwuzlaTerm.convertList(
-        args: Array<BitwuzlaTerm>,
-        op: (List<KExpr<A>>) -> KExpr<T>
-    ) = ensureArgsAndConvert(this, args, expectedSize = args.size) { args -> op(args as List<KExpr<A>>) }
 }
