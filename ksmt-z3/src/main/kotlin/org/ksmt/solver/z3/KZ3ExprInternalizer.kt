@@ -105,13 +105,11 @@ import org.ksmt.expr.KRemIntExpr
 import org.ksmt.expr.KSubArithExpr
 import org.ksmt.expr.KToIntRealExpr
 import org.ksmt.expr.KToRealIntExpr
-import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
-import org.ksmt.solver.z3.KZ3ExprInternalizer.ExprInternalizationResult.Companion.argumentsInternalizationRequired
-import org.ksmt.solver.z3.KZ3ExprInternalizer.ExprInternalizationResult.Companion.notInitializedInternalizationResult
+import org.ksmt.solver.util.KExprInternalizerBase
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
@@ -124,44 +122,14 @@ open class KZ3ExprInternalizer(
     private val z3InternCtx: KZ3InternalizationContext,
     private val sortInternalizer: KZ3SortInternalizer,
     private val declInternalizer: KZ3DeclInternalizer
-) : KTransformer {
+) : KExprInternalizerBase<Expr<*>>() {
 
-    val exprStack = arrayListOf<KExpr<*>>()
-
-    /**
-     * Keeps result of last [KTransformer.transform] invocation.
-     * */
-    var lastExprInternalizationResult: ExprInternalizationResult = notInitializedInternalizationResult
-
-    fun <T : KSort> KExpr<T>.internalize(): Expr<*> {
-        exprStack.add(this)
-        while (exprStack.isNotEmpty()) {
-            lastExprInternalizationResult = notInitializedInternalizationResult
-            val expr = exprStack.removeLast()
-
-            val internalized = z3InternCtx.findInternalizedExpr(expr)
-            if (internalized != null) continue
-
-            /**
-             * Internalize expression non-recursively.
-             * 1. Ensure all expression arguments are internalized and available in [z3InternCtx].
-             * If not so, [lastExprInternalizationResult] is set to [argumentsInternalizationRequired]
-             * 2. Internalize expression if all arguments are available and
-             * set [lastExprInternalizationResult] to internalization result.
-             * */
-            expr.accept(this@KZ3ExprInternalizer)
-
-            check(!lastExprInternalizationResult.notInitialized) {
-                "Internalization result wasn't initialized during expr internalization"
-            }
-
-            if (!lastExprInternalizationResult.argumentsInternalizationRequired) {
-                z3InternCtx.internalizeExpr(expr) { lastExprInternalizationResult.internalizedExpr }
-            }
-        }
-        return z3InternCtx.findInternalizedExpr(this)
-            ?: error("expr is not properly internalized: $this")
+    override fun findInternalizedExpr(expr: KExpr<*>): Expr<*>? = z3InternCtx.findInternalizedExpr(expr)
+    override fun saveInternalizedExpr(expr: KExpr<*>, internalized: Expr<*>) {
+        z3InternCtx.internalizeExpr(expr) { internalized }
     }
+
+    fun <T : KSort> KExpr<T>.internalize(): Expr<*> = internalizeExpr()
 
     fun <T : KDecl<*>> T.internalizeDecl(): FuncDecl<*> = accept(declInternalizer)
 
@@ -498,115 +466,6 @@ open class KZ3ExprInternalizer(
                 quantifierId = null,
                 skolemId = null
             )
-        }
-    }
-
-    fun internalizedExpr(expr: KExpr<*>): Expr<*>? = z3InternCtx.findInternalizedExpr(expr)
-
-    inline fun <S : KExpr<*>> S.transform(operation: () -> Expr<*>): S = also {
-        lastExprInternalizationResult = ExprInternalizationResult(operation())
-    }
-
-    inline fun <reified A0 : Expr<*>, S : KExpr<*>> S.transform(
-        arg: KExpr<*>,
-        operation: (A0) -> Expr<*>
-    ): S = also {
-        val internalizedArg = internalizedExpr(arg)
-        if (internalizedArg == null) {
-            exprStack.add(this)
-            exprStack.add(arg)
-            lastExprInternalizationResult = argumentsInternalizationRequired
-        } else {
-            lastExprInternalizationResult = ExprInternalizationResult(operation(internalizedArg as A0))
-        }
-    }
-
-    inline fun <reified A0 : Expr<*>, reified A1 : Expr<*>, S : KExpr<*>> S.transform(
-        arg0: KExpr<*>,
-        arg1: KExpr<*>,
-        operation: (A0, A1) -> Expr<*>
-    ): S = also {
-        val internalizedArg0 = internalizedExpr(arg0)
-        val internalizedArg1 = internalizedExpr(arg1)
-        if (internalizedArg0 == null || internalizedArg1 == null) {
-            exprStack.add(this)
-            internalizedArg0 ?: exprStack.add(arg0)
-            internalizedArg1 ?: exprStack.add(arg1)
-            lastExprInternalizationResult = argumentsInternalizationRequired
-        } else {
-            lastExprInternalizationResult = ExprInternalizationResult(
-                operation(internalizedArg0 as A0, internalizedArg1 as A1)
-            )
-        }
-    }
-
-    inline fun <reified A0 : Expr<*>, reified A1 : Expr<*>, reified A2 : Expr<*>, S : KExpr<*>> S.transform(
-        arg0: KExpr<*>,
-        arg1: KExpr<*>,
-        arg2: KExpr<*>,
-        operation: (A0, A1, A2) -> Expr<*>
-    ): S = also {
-        val internalizedArg0 = internalizedExpr(arg0)
-        val internalizedArg1 = internalizedExpr(arg1)
-        val internalizedArg2 = internalizedExpr(arg2)
-        if (internalizedArg0 == null || internalizedArg1 == null || internalizedArg2 == null) {
-            exprStack.add(this)
-            internalizedArg0 ?: exprStack.add(arg0)
-            internalizedArg1 ?: exprStack.add(arg1)
-            internalizedArg2 ?: exprStack.add(arg2)
-            lastExprInternalizationResult = argumentsInternalizationRequired
-        } else {
-            lastExprInternalizationResult = ExprInternalizationResult(
-                operation(internalizedArg0 as A0, internalizedArg1 as A1, internalizedArg2 as A2)
-            )
-        }
-    }
-
-    inline fun <reified A : Expr<*>, S : KExpr<*>> S.transformList(
-        args: List<KExpr<*>>,
-        operation: (Array<A>) -> Expr<*>
-    ): S = also {
-        val internalizedArgs = mutableListOf<A>()
-        var exprAdded = false
-        var argsReady = true
-        for (arg in args) {
-            val internalized = internalizedExpr(arg)
-            if (internalized != null) {
-                internalizedArgs.add(internalized as A)
-                continue
-            }
-            argsReady = false
-            if (!exprAdded) {
-                exprStack.add(this)
-                exprAdded = true
-            }
-            exprStack.add(arg)
-        }
-        lastExprInternalizationResult = if (argsReady) {
-            ExprInternalizationResult(operation(internalizedArgs.toTypedArray()))
-        } else {
-            argumentsInternalizationRequired
-        }
-    }
-
-
-    @JvmInline
-    value class ExprInternalizationResult(private val value: Any) {
-        val argumentsInternalizationRequired: Boolean
-            get() = value === argumentsInternalizationRequiredMarker
-
-        val notInitialized: Boolean
-            get() = value === notInitializedInternalizationResultMarker
-
-        val internalizedExpr: Expr<*>
-            get() = value as? Expr<*> ?: error("expr is not internalized")
-
-        companion object {
-            private val argumentsInternalizationRequiredMarker = Any()
-            private val notInitializedInternalizationResultMarker = Any()
-            val argumentsInternalizationRequired = ExprInternalizationResult(argumentsInternalizationRequiredMarker)
-            val notInitializedInternalizationResult =
-                ExprInternalizationResult(notInitializedInternalizationResultMarker)
         }
     }
 }

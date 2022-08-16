@@ -23,6 +23,7 @@ import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KIntNumExpr
 import org.ksmt.expr.KRealNumExpr
+import org.ksmt.solver.util.KExprConverterBase
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
@@ -32,27 +33,17 @@ import org.ksmt.sort.KSort
 open class KZ3ExprConverter(
     private val ctx: KContext,
     private val z3InternCtx: KZ3InternalizationContext
-) {
+) : KExprConverterBase<Expr<*>>() {
 
-    val exprStack = arrayListOf<Expr<*>>()
-
-    @Suppress("UNCHECKED_CAST")
-    fun <T : KSort> Expr<*>.convert(): KExpr<T> {
-        exprStack.add(this)
-        while (exprStack.isNotEmpty()) {
-            val expr = exprStack.removeLast()
-
-            if (z3InternCtx.findConvertedExpr(expr) != null) continue
-
-            val converted = convertExpr(expr)
-
-            if (!converted.argumentsConversionRequired) {
-                z3InternCtx.convertExpr(expr) { converted.convertedExpr }
-            }
-        }
-        return z3InternCtx.findConvertedExpr(this) as? KExpr<T>
-            ?: error("expr is not properly converted")
+    override fun findConvertedNative(expr: Expr<*>): KExpr<*>? {
+        return z3InternCtx.findConvertedExpr(expr)
     }
+
+    override fun saveConvertedNative(native: Expr<*>, converted: KExpr<*>) {
+        z3InternCtx.convertExpr(native) { converted }
+    }
+
+    fun <T : KSort> Expr<*>.convert(): KExpr<T> = convertFromNative()
 
     @Suppress("UNCHECKED_CAST")
     fun <T : KSort> Sort.convert(): T = z3InternCtx.convertSort(this) {
@@ -99,7 +90,7 @@ open class KZ3ExprConverter(
      * If any argument is not converted [argumentsConversionRequired] is returned.
      * 2. If all arguments are available converted expression is returned.
      * */
-    open fun convertExpr(expr: Expr<*>): ExprConversionResult = when (expr.astKind) {
+    override fun convertNativeExpr(expr: Expr<*>): ExprConversionResult = when (expr.astKind) {
         Z3_ast_kind.Z3_NUMERAL_AST -> convertNumeral(expr)
         Z3_ast_kind.Z3_APP_AST -> convertApp(expr)
         Z3_ast_kind.Z3_QUANTIFIER_AST -> convertQuantifier(expr as Quantifier)
@@ -293,35 +284,6 @@ open class KZ3ExprConverter(
         return ExprConversionResult(convertedExpr)
     }
 
-    inline fun <T : KSort> convert(op: () -> KExpr<T>) = ExprConversionResult(op())
-
-    @Suppress("UNCHECKED_CAST")
-    inline fun <T : KSort, A0 : KSort> Expr<*>.convert(
-        op: (KExpr<A0>) -> KExpr<T>
-    ) = ensureArgsAndConvert(this, args, expectedSize = 1) { args -> op(args[0] as KExpr<A0>) }
-
-    @Suppress("UNCHECKED_CAST")
-    inline fun <T : KSort, A0 : KSort, A1 : KSort> Expr<*>.convert(
-        op: (KExpr<A0>, KExpr<A1>) -> KExpr<T>
-    ) = ensureArgsAndConvert(this, args, expectedSize = 2) { args -> op(args[0] as KExpr<A0>, args[1] as KExpr<A1>) }
-
-    @Suppress("UNCHECKED_CAST", "MagicNumber")
-    inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> Expr<*>.convert(
-        op: (KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<T>
-    ) = ensureArgsAndConvert(this, args, expectedSize = 3) { args ->
-        op(args[0] as KExpr<A0>, args[1] as KExpr<A1>, args[2] as KExpr<A2>)
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    inline fun <T : KSort, A : KSort> Expr<*>.convertList(
-        op: (List<KExpr<A>>) -> KExpr<T>
-    ) = ensureArgsAndConvert(this, args, expectedSize = numArgs) { args -> op(args as List<KExpr<A>>) }
-
-    @Suppress("UNCHECKED_CAST")
-    inline fun <T : KSort> Expr<*>.convertReduced(
-        op: (KExpr<T>, KExpr<T>) -> KExpr<T>
-    ) = ensureArgsAndConvert(this, args, expectedSize = numArgs) { args -> (args as List<KExpr<T>>).reduce(op) }
-
     open fun convertNumeral(expr: Expr<*>): ExprConversionResult = when (expr.sort.sortKind) {
         Z3_sort_kind.Z3_INT_SORT -> convertNumeral(expr as IntNum)
         Z3_sort_kind.Z3_REAL_SORT -> convertNumeral(expr as RatNum)
@@ -376,15 +338,17 @@ open class KZ3ExprConverter(
         ExprConversionResult(convertedExpr)
     }
 
-    @JvmInline
-    value class ExprConversionResult(private val expr: KExpr<*>?) {
-        val argumentsConversionRequired: Boolean
-            get() = expr == null
+    inline fun <T : KSort, A0 : KSort> Expr<*>.convert(op: (KExpr<A0>) -> KExpr<T>) = convert(args, op)
 
-        val convertedExpr: KExpr<*>
-            get() = expr ?: error("expr is not converted")
-    }
+    inline fun <T : KSort, A0 : KSort, A1 : KSort> Expr<*>.convert(op: (KExpr<A0>, KExpr<A1>) -> KExpr<T>) =
+        convert(args, op)
 
-    val argumentsConversionRequired = ExprConversionResult(null)
+    inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> Expr<*>.convert(
+        op: (KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<T>
+    ) = convert(args, op)
+
+    inline fun <T : KSort, A : KSort> Expr<*>.convertList(op: (List<KExpr<A>>) -> KExpr<T>) = convertList(args, op)
+
+    inline fun <T : KSort> Expr<*>.convertReduced(op: (KExpr<T>, KExpr<T>) -> KExpr<T>) = convertReduced(args, op)
 
 }
