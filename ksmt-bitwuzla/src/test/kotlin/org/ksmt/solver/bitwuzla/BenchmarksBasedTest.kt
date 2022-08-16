@@ -7,7 +7,9 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.ksmt.KContext
+import org.ksmt.expr.KApp
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.fixtures.TestDataProvider
 import org.ksmt.solver.fixtures.parseAndSkipTestIfError
@@ -50,6 +52,10 @@ class BenchmarksBasedTest {
             val converter = KBitwuzlaExprConverter(ctx, bitwuzlaCtx)
             val recoveredKsmtAssertions = with(converter) {
                 bitwuzlaAssertions.map { it.convertExpr(ctx.boolSort) }
+            }
+
+            recoveredKsmtAssertions.forEach {
+                ExpressionValidator(ctx).apply(it)
             }
 
             withTimeoutChecks(10.seconds) {
@@ -130,6 +136,14 @@ class BenchmarksBasedTest {
             return TestDataProvider.testData().map {
                 Arguments.of(it.relativeTo(testDataLocation).toString(), it)
             }
+        }
+    }
+
+    private class ExpressionValidator(ctx: KContext) : KNonRecursiveTransformer(ctx) {
+        override fun <T : KSort> transformApp(expr: KApp<T, *>): KExpr<T> = with(ctx) {
+            // apply internally check arguments sorts
+            expr.decl.apply(expr.args)
+            return super.transformApp(expr)
         }
     }
 }

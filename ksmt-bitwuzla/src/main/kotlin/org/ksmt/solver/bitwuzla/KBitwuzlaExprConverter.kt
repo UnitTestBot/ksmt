@@ -4,7 +4,7 @@ import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.transformer.KNonRecursiveAppTransformer
+import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
@@ -43,7 +43,7 @@ open class KBitwuzlaExprConverter(
     fun <T : KSort> BitwuzlaTerm.convertExpr(expectedSort: T): KExpr<T> =
         convert<KSort>()
             .convertToExpectedIfNeeded(expectedSort)
-            .accept(adapterTermRewriter)
+            .let { adapterTermRewriter.apply(it) }
 
     val exprStack = arrayListOf<BitwuzlaTerm>()
     private fun <T : KSort> BitwuzlaTerm.convert(): KExpr<T> {
@@ -307,91 +307,91 @@ open class KBitwuzlaExprConverter(
     }
 
     open fun KContext.convertBVExpr(expr: BitwuzlaTerm, kind: BitwuzlaKind): ExprConversionResult = when (kind) {
-        BitwuzlaKind.BITWUZLA_KIND_BV_AND -> expr.convert(::mkBvAndExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_NAND -> expr.convert(::mkBvNAndExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_NEG -> expr.convert(::mkBvNegationExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_NOR -> expr.convert(::mkBvNorExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_NOT -> expr.convert(::mkBvNotExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_OR -> expr.convert(::mkBvOrExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_XNOR -> expr.convert(::mkBvXNorExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_XOR -> expr.convert(::mkBvXorExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_REDAND -> expr.convert(::mkBvReductionAndExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_REDOR -> expr.convert(::mkBvReductionOrExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_AND -> expr.convertBv(::mkBvAndExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_NAND -> expr.convertBv(::mkBvNAndExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_NEG -> expr.convertBv(::mkBvNegationExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_NOR -> expr.convertBv(::mkBvNorExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_NOT -> expr.convertBv(::mkBvNotExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_OR -> expr.convertBv(::mkBvOrExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_XNOR -> expr.convertBv(::mkBvXNorExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_XOR -> expr.convertBv(::mkBvXorExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_REDAND -> expr.convertBv(::mkBvReductionAndExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_REDOR -> expr.convertBv(::mkBvReductionOrExpr)
         BitwuzlaKind.BITWUZLA_KIND_BV_REDXOR -> TODO("$kind")
-        BitwuzlaKind.BITWUZLA_KIND_BV_SGE -> expr.convert(::mkBvSignedGreaterOrEqualExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_SGT -> expr.convert(::mkBvSignedGreaterExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_SLE -> expr.convert(::mkBvSignedLessOrEqualExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_SLT -> expr.convert(::mkBvSignedLessExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_UGE -> expr.convert(::mkBvUnsignedGreaterOrEqualExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_UGT -> expr.convert(::mkBvUnsignedGreaterExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_ULE -> expr.convert(::mkBvUnsignedLessOrEqualExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_ULT -> expr.convert(::mkBvUnsignedLessExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_ADD -> expr.convert(::mkBvAddExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_SUB -> expr.convert(::mkBvSubExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_SGE -> expr.convertBv(::mkBvSignedGreaterOrEqualExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_SGT -> expr.convertBv(::mkBvSignedGreaterExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_SLE -> expr.convertBv(::mkBvSignedLessOrEqualExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_SLT -> expr.convertBv(::mkBvSignedLessExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_UGE -> expr.convertBv(::mkBvUnsignedGreaterOrEqualExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_UGT -> expr.convertBv(::mkBvUnsignedGreaterExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_ULE -> expr.convertBv(::mkBvUnsignedLessOrEqualExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_ULT -> expr.convertBv(::mkBvUnsignedLessExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_ADD -> expr.convertBv(::mkBvAddExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_SUB -> expr.convertBv(::mkBvSubExpr)
         BitwuzlaKind.BITWUZLA_KIND_BV_DEC,
         BitwuzlaKind.BITWUZLA_KIND_BV_INC -> TODO("$kind")
-        BitwuzlaKind.BITWUZLA_KIND_BV_MUL -> expr.convert(::mkBvMulExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_SDIV -> expr.convert(::mkBvSignedDivExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_SMOD -> expr.convert(::mkBvSignedModExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_SREM -> expr.convert(::mkBvSignedRemExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_UDIV -> expr.convert(::mkBvUnsignedDivExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_UREM -> expr.convert(::mkBvUnsignedRemExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_SADD_OVERFLOW -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+        BitwuzlaKind.BITWUZLA_KIND_BV_MUL -> expr.convertBv(::mkBvMulExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_SDIV -> expr.convertBv(::mkBvSignedDivExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_SMOD -> expr.convertBv(::mkBvSignedModExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_SREM -> expr.convertBv(::mkBvSignedRemExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_UDIV -> expr.convertBv(::mkBvUnsignedDivExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_UREM -> expr.convertBv(::mkBvUnsignedRemExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_SADD_OVERFLOW -> expr.convertBv { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
             mkBvAddNoOverflowExpr(arg0, arg1, isSigned = true)
         }
-        BitwuzlaKind.BITWUZLA_KIND_BV_UADD_OVERFLOW -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+        BitwuzlaKind.BITWUZLA_KIND_BV_UADD_OVERFLOW -> expr.convertBv { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
             mkBvAddNoOverflowExpr(arg0, arg1, isSigned = false)
         }
-        BitwuzlaKind.BITWUZLA_KIND_BV_SSUB_OVERFLOW -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+        BitwuzlaKind.BITWUZLA_KIND_BV_SSUB_OVERFLOW -> expr.convertBv { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
             mkBvSubNoOverflowExpr(arg0, arg1)
         }
         BitwuzlaKind.BITWUZLA_KIND_BV_USUB_OVERFLOW -> TODO("$kind")
-        BitwuzlaKind.BITWUZLA_KIND_BV_SMUL_OVERFLOW -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+        BitwuzlaKind.BITWUZLA_KIND_BV_SMUL_OVERFLOW -> expr.convertBv { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
             mkBvMulNoOverflowExpr(arg0, arg1, isSigned = true)
         }
-        BitwuzlaKind.BITWUZLA_KIND_BV_UMUL_OVERFLOW -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+        BitwuzlaKind.BITWUZLA_KIND_BV_UMUL_OVERFLOW -> expr.convertBv { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
             mkBvMulNoOverflowExpr(arg0, arg1, isSigned = false)
         }
-        BitwuzlaKind.BITWUZLA_KIND_BV_SDIV_OVERFLOW -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+        BitwuzlaKind.BITWUZLA_KIND_BV_SDIV_OVERFLOW -> expr.convertBv { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
             mkBvDivNoOverflowExpr(arg0, arg1)
         }
-        BitwuzlaKind.BITWUZLA_KIND_BV_ROL -> expr.convert(::mkBvRotateLeftExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_ROR -> expr.convert(::mkBvRotateRightExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_ASHR -> expr.convert(::mkBvArithShiftRightExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_SHR -> expr.convert(::mkBvLogicalShiftRightExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_SHL -> expr.convert(::mkBvShiftLeftExpr)
-        BitwuzlaKind.BITWUZLA_KIND_BV_ROLI -> expr.convert { value: KExpr<KBvSort> ->
+        BitwuzlaKind.BITWUZLA_KIND_BV_ROL -> expr.convertBv(::mkBvRotateLeftExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_ROR -> expr.convertBv(::mkBvRotateRightExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_ASHR -> expr.convertBv(::mkBvArithShiftRightExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_SHR -> expr.convertBv(::mkBvLogicalShiftRightExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_SHL -> expr.convertBv(::mkBvShiftLeftExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_ROLI -> expr.convertBv { value: KExpr<KBvSort> ->
             val indices = Native.bitwuzlaTermGetIndices(expr)
             val i = indices.single()
             mkBvRotateLeftIndexedExpr(i, value)
         }
-        BitwuzlaKind.BITWUZLA_KIND_BV_RORI -> expr.convert { value: KExpr<KBvSort> ->
+        BitwuzlaKind.BITWUZLA_KIND_BV_RORI -> expr.convertBv { value: KExpr<KBvSort> ->
             val indices = Native.bitwuzlaTermGetIndices(expr)
             val i = indices.single()
             mkBvRotateRightIndexedExpr(i, value)
         }
-        BitwuzlaKind.BITWUZLA_KIND_BV_SIGN_EXTEND -> expr.convert { value: KExpr<KBvSort> ->
+        BitwuzlaKind.BITWUZLA_KIND_BV_SIGN_EXTEND -> expr.convertBv { value: KExpr<KBvSort> ->
             val indices = Native.bitwuzlaTermGetIndices(expr)
             val i = indices.single()
             mkBvSignExtensionExpr(i, value)
         }
-        BitwuzlaKind.BITWUZLA_KIND_BV_ZERO_EXTEND -> expr.convert { value: KExpr<KBvSort> ->
+        BitwuzlaKind.BITWUZLA_KIND_BV_ZERO_EXTEND -> expr.convertBv { value: KExpr<KBvSort> ->
             val indices = Native.bitwuzlaTermGetIndices(expr)
             val i = indices.single()
             mkBvZeroExtensionExpr(i, value)
         }
-        BitwuzlaKind.BITWUZLA_KIND_BV_REPEAT -> expr.convert { value: KExpr<KBvSort> ->
+        BitwuzlaKind.BITWUZLA_KIND_BV_REPEAT -> expr.convertBv { value: KExpr<KBvSort> ->
             val indices = Native.bitwuzlaTermGetIndices(expr)
             val i = indices.single()
             mkBvRepeatExpr(i, value)
         }
-        BitwuzlaKind.BITWUZLA_KIND_BV_EXTRACT -> expr.convert { value: KExpr<KBvSort> ->
+        BitwuzlaKind.BITWUZLA_KIND_BV_EXTRACT -> expr.convertBv { value: KExpr<KBvSort> ->
             val indices = Native.bitwuzlaTermGetIndices(expr)
             check(indices.size == 2) { "unexpected extract indices: $indices" }
             val (high, low) = indices
             mkBvExtractExpr(high, low, value)
         }
-        BitwuzlaKind.BITWUZLA_KIND_BV_CONCAT -> expr.convert(::mkBvConcatExpr)
+        BitwuzlaKind.BITWUZLA_KIND_BV_CONCAT -> expr.convertBv(::mkBvConcatExpr)
         BitwuzlaKind.BITWUZLA_KIND_BV_COMP -> TODO("$kind")
         else -> error("unexpected BV kind $kind")
     }
@@ -429,7 +429,7 @@ open class KBitwuzlaExprConverter(
      *  @see ensureArrayExprSortMatch
      * */
     @Suppress("UNCHECKED_CAST")
-    private fun KExpr<*>.convertToBoolIfNeeded(): KExpr<*> = when (with(ctx) { sort }) {
+    fun KExpr<*>.convertToBoolIfNeeded(): KExpr<*> = when (with(ctx) { sort }) {
         ctx.bv1Sort -> ensureBoolExpr()
         is KArraySort<*, *> -> (this as KExpr<KArraySort<*, *>>)
             .ensureArrayExprSortMatch(
@@ -449,7 +449,7 @@ open class KBitwuzlaExprConverter(
      *  @see convertToBoolIfNeeded
      * */
     @Suppress("UNCHECKED_CAST")
-    private fun <T : KSort> KExpr<*>.convertToExpectedIfNeeded(expected: T): KExpr<T> = when (expected) {
+    fun <T : KSort> KExpr<*>.convertToExpectedIfNeeded(expected: T): KExpr<T> = when (expected) {
         ctx.bv1Sort -> ensureBv1Expr() as KExpr<T>
         ctx.boolSort -> ensureBoolExpr() as KExpr<T>
         is KArraySort<*, *> -> {
@@ -510,6 +510,15 @@ open class KBitwuzlaExprConverter(
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
+    fun KExpr<*>.ensureBvExpr(): KExpr<KBvSort> = with(ctx) {
+        if (sort == boolSort) ensureBv1Expr() as KExpr<KBvSort>
+        else {
+            check(sort is KBvSort) { "Bv sort expected but $sort occurred" }
+            this@ensureBvExpr as KExpr<KBvSort>
+        }
+    }
+
     private inner class BoolToBv1AdapterExpr(val arg: KExpr<KBoolSort>) : KExpr<KBv1Sort>(ctx) {
         override fun sort(): KBv1Sort = ctx.bv1Sort
 
@@ -519,8 +528,10 @@ open class KBitwuzlaExprConverter(
             builder.append(')')
         }
 
-        override fun accept(transformer: KTransformer): KExpr<KBv1Sort> =
-            (transformer as AdapterTermRewriter).transform(this)
+        override fun accept(transformer: KTransformer): KExpr<KBv1Sort> {
+            check(transformer is AdapterTermRewriter) { "leaked adapter term" }
+            return transformer.transform(this)
+        }
     }
 
     private inner class Bv1ToBoolAdapterExpr(val arg: KExpr<KBv1Sort>) : KExpr<KBoolSort>(ctx) {
@@ -532,8 +543,10 @@ open class KBitwuzlaExprConverter(
             builder.append(')')
         }
 
-        override fun accept(transformer: KTransformer): KExpr<KBoolSort> =
-            (transformer as AdapterTermRewriter).transform(this)
+        override fun accept(transformer: KTransformer): KExpr<KBoolSort> {
+            check(transformer is AdapterTermRewriter) { "leaked adapter term" }
+            return transformer.transform(this)
+        }
     }
 
     private inner class ArrayAdapterExpr<FromDomain : KSort, FromRange : KSort, ToDomain : KSort, ToRange : KSort>(
@@ -551,14 +564,16 @@ open class KBitwuzlaExprConverter(
             builder.append(')')
         }
 
-        override fun accept(transformer: KTransformer): KExpr<KArraySort<ToDomain, ToRange>> =
-            (transformer as AdapterTermRewriter).transform(this)
+        override fun accept(transformer: KTransformer): KExpr<KArraySort<ToDomain, ToRange>> {
+            check(transformer is AdapterTermRewriter) { "leaked adapter term" }
+            return transformer.transform(this)
+        }
     }
 
     /**
      * Remove auxiliary terms introduced by [convertToBoolIfNeeded] and [convertToExpectedIfNeeded].
      * */
-    private inner class AdapterTermRewriter(ctx: KContext) : KNonRecursiveAppTransformer(ctx) {
+    private inner class AdapterTermRewriter(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         /**
          * x: Bool
          * (toBv x) -> (ite x #b1 #b0)
@@ -639,7 +654,7 @@ open class KBitwuzlaExprConverter(
                     mkArrayLambda(index.decl, body)
                 }
             }
-            apply(replacement)
+            AdapterTermRewriter(ctx).apply(replacement)
         }
 
         private val bv1One: KExpr<KBv1Sort> by lazy { ctx.mkBv(true) }
@@ -709,6 +724,18 @@ open class KBitwuzlaExprConverter(
         return ExprConversionResult(convertedExpr)
     }
 
+    inline fun <T : KSort> BitwuzlaTerm.convertBv(
+        op: (KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<T>
+    ) = convert { a0: KExpr<KSort>, a1: KExpr<KSort> ->
+        op(a0.ensureBvExpr(), a1.ensureBvExpr()).convertToBoolIfNeeded()
+    }
+
+    inline fun <T : KSort> BitwuzlaTerm.convertBv(
+        op: (KExpr<KBvSort>) -> KExpr<T>
+    ) = convert { arg: KExpr<KSort> ->
+        op(arg.ensureBvExpr()).convertToBoolIfNeeded()
+    }
+
     inline fun <T : KSort> convert(op: () -> KExpr<T>) = ExprConversionResult(op())
 
     inline fun <T : KSort, A0 : KSort> BitwuzlaTerm.convert(
@@ -723,10 +750,7 @@ open class KBitwuzlaExprConverter(
     ): ExprConversionResult {
         val args = Native.bitwuzlaTermGetChildren(this)
         return ensureArgsAndConvert(this, args, expectedSize = 2) { args ->
-            op(
-                args[0] as KExpr<A0>,
-                args[1] as KExpr<A1>
-            )
+            op(args[0] as KExpr<A0>, args[1] as KExpr<A1>)
         }
     }
 
