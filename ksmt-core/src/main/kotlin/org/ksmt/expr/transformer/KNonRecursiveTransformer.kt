@@ -15,6 +15,9 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KTransform
     private val exprStack = arrayListOf<KExpr<*>>()
     private var exprWasTransformed = false
 
+    /**
+     * Transform [rootExpr] and all it sub-expressions non-recursively.
+     * */
     fun <T : KSort> apply(rootExpr: KExpr<T>): KExpr<T> {
         exprStack.add(rootExpr)
         while (exprStack.isNotEmpty()) {
@@ -28,16 +31,26 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KTransform
         return transformedExpr(rootExpr) ?: error("expr was not properly transformed: $rootExpr")
     }
 
+    /**
+     *  Get [expr] transformation result or
+     *  null if expression was not transformed yet
+     * */
     fun <T : KSort> transformedExpr(expr: KExpr<T>): KExpr<T>? {
         @Suppress("UNCHECKED_CAST")
         return transformed[expr] as? KExpr<T>
     }
 
+    /**
+     * Transform [this] expression after [dependencies] expressions
+     * */
     fun KExpr<*>.transformAfter(dependencies: List<KExpr<*>>) {
         exprStack += this
         exprStack += dependencies
     }
 
+    /**
+     *  Inform [KNonRecursiveTransformer] that transformation was not applied to expression
+     * */
     fun markExpressionAsNotTransformed() {
         exprWasTransformed = false
     }
@@ -79,11 +92,22 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KTransform
             }
         }
 
+    /**
+     * [KApp] non-recursive transformation helper.
+     * @see [transformExprAfterTransformed]
+     * */
     inline fun <T : KSort, A : KSort> transformAppAfterArgsTransformed(
         expr: KApp<T, KExpr<A>>,
         transformer: (List<KExpr<A>>) -> KExpr<T>
     ): KExpr<T> = transformExprAfterTransformed(expr, expr.args, transformer)
 
+
+    /**
+     * Transform [expr] only if all it sub-expressions
+     * [dependencies] were already transformed.
+     * Otherwise, register [expr] for transformation after [dependencies]
+     * and keep [expr] unchanged.
+     * */
     inline fun <T : KSort, A : KSort> transformExprAfterTransformed(
         expr: KExpr<T>,
         dependencies: List<KExpr<A>>,

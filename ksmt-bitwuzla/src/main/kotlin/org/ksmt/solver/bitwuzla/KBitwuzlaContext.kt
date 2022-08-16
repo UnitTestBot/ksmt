@@ -110,6 +110,12 @@ open class KBitwuzlaContext : AutoCloseable {
         return result
     }
 
+
+    /**
+     * keep strong reference to bitwuzla timeout callback to avoid sigsegv
+     * */
+    private var timeoutTerminator: BitwuzlaTimeout? = null
+
     @OptIn(ExperimentalTime::class)
     fun <T> withTimeout(timeout: Duration, body: () -> T): T {
         if (timeout == Duration.INFINITE) {
@@ -118,11 +124,12 @@ open class KBitwuzlaContext : AutoCloseable {
         }
         val currentTime = TimeSource.Monotonic.markNow()
         val finishTime = currentTime + timeout
-        val timeoutTerminator = BitwuzlaTimeout(finishTime)
+        timeoutTerminator = BitwuzlaTimeout(finishTime)
         try {
             Native.bitwuzlaSetTerminationCallback(bitwuzla, timeoutTerminator, state = null)
             return body()
         } finally {
+            timeoutTerminator = null
             Native.bitwuzlaResetTerminationCallback(bitwuzla)
         }
     }
