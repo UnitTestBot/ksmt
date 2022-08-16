@@ -81,6 +81,7 @@ open class KBitwuzlaExprConverter(
         }
     }
 
+    @Suppress("LongMethod", "ComplexMethod")
     override fun convertNativeExpr(expr: BitwuzlaTerm): ExprConversionResult = with(ctx) {
         when (val kind = Native.bitwuzlaTermGetKind(expr)) {
             // constants, functions, values
@@ -234,6 +235,7 @@ open class KBitwuzlaExprConverter(
     private fun KContext.convertConst(expr: BitwuzlaTerm): ExprConversionResult = convert<KSort> {
         val knownConstDecl = bitwuzlaCtx.convertConstantIfKnown(expr)
         if (knownConstDecl != null) {
+            @Suppress("UNCHECKED_CAST")
             return@convert mkConstApp(knownConstDecl).convertToBoolIfNeeded() as KExpr<KSort>
         }
 
@@ -241,6 +243,7 @@ open class KBitwuzlaExprConverter(
         val sort = Native.bitwuzlaTermGetSort(expr)
         if (!Native.bitwuzlaSortIsFun(sort) || Native.bitwuzlaSortIsArray(sort)) {
             val decl = generateDecl(expr) { mkConstDecl(it, sort.convertSort()) }
+            @Suppress("UNCHECKED_CAST")
             return@convert decl.apply().convertToBoolIfNeeded() as KExpr<KSort>
         }
 
@@ -299,6 +302,7 @@ open class KBitwuzlaExprConverter(
         else -> error("unexpected bool kind $kind")
     }
 
+    @Suppress("LongMethod", "ComplexMethod")
     open fun KContext.convertBVExpr(expr: BitwuzlaTerm, kind: BitwuzlaKind): ExprConversionResult = when (kind) {
         BitwuzlaKind.BITWUZLA_KIND_BV_AND -> expr.convertBv(::mkBvAndExpr)
         BitwuzlaKind.BITWUZLA_KIND_BV_NAND -> expr.convertBv(::mkBvNAndExpr)
