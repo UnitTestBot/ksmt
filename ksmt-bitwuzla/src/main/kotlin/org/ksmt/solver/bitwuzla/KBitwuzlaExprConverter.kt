@@ -4,6 +4,7 @@ import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.transformer.KNonRecursiveAppTransformer
 import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
@@ -559,16 +560,18 @@ open class KBitwuzlaExprConverter(
             (transformer as AdapterTermRewriter).transform(this)
     }
 
-    /** Remove auxiliary terms introduced by [convertToBoolIfNeeded] and [convertToExpectedIfNeeded].
+    /**
+     * Remove auxiliary terms introduced by [convertToBoolIfNeeded] and [convertToExpectedIfNeeded].
      * */
-    private inner class AdapterTermRewriter(override val ctx: KContext) : KTransformer {
+    private inner class AdapterTermRewriter(ctx: KContext) : KNonRecursiveAppTransformer(ctx) {
         /**
          * x: Bool
          * (toBv x) -> (ite x #b1 #b0)
          * */
         fun transform(expr: BoolToBv1AdapterExpr): KExpr<KBv1Sort> = with(ctx) {
-            val arg = expr.arg.accept(this@AdapterTermRewriter)
-            return mkIte(arg, bv1Sort.trueValue(), bv1Sort.falseValue())
+            transformExprAfterTransformed(expr, listOf(expr.arg)) { transformedArg ->
+                mkIte(transformedArg.single(), bv1Sort.trueValue(), bv1Sort.falseValue())
+            }
         }
 
         /**
@@ -576,8 +579,9 @@ open class KBitwuzlaExprConverter(
          * (toBool x) -> (ite (x == #b1) true false)
          * */
         fun transform(expr: Bv1ToBoolAdapterExpr): KExpr<KBoolSort> = with(ctx) {
-            val arg = expr.arg.accept(this@AdapterTermRewriter)
-            return mkIte(arg eq bv1Sort.trueValue(), trueExpr, falseExpr)
+            transformExprAfterTransformed(expr, listOf(expr.arg)) { transformedArg ->
+                mkIte(transformedArg.single() eq bv1Sort.trueValue(), trueExpr, falseExpr)
+            }
         }
 
         /**
@@ -608,7 +612,7 @@ open class KBitwuzlaExprConverter(
             if (fromSort.domain == expr.toDomainSort && fromSort.range == expr.toRangeSort) {
                 return@with expr.arg as KExpr<KArraySort<ToDomain, ToRange>>
             }
-            when (fromSort.domain) {
+            val replacement = when (fromSort.domain) {
                 bv1Sort, boolSort -> {
                     // avoid lambda expression when possible
                     check(expr.toDomainSort == boolSort || expr.toDomainSort == bv1Sort) {
@@ -639,7 +643,8 @@ open class KBitwuzlaExprConverter(
 
                     mkArrayLambda(index.decl, body)
                 }
-            }.accept(this@AdapterTermRewriter)
+            }
+            apply(replacement)
         }
 
         private val bv1One: KExpr<KBv1Sort> by lazy { ctx.mkBv(true) }
