@@ -2695,6 +2695,19 @@ object Native {
 
     private external fun bitwuzla_rm_to_string(rm: Int): String
 
+    /**
+     * Retrieve string representation of const node.
+     * Only safe if [bitwuzlaTermIsBvValue] is true.
+     * */
+    fun bitwuzlaBvConstNodeToString(term: BitwuzlaTerm): String = bzla_util_node2string(term)
+
+    /**
+     * Retrieve string representation of const node.
+     * Only safe if [bitwuzlaTermIsFpValue] is true.
+     * */
+    fun bitwuzlaFpConstNodeToString(term: BitwuzlaTerm): String = bzla_util_node2string(term)
+
+    private external fun bzla_util_node2string(term: BitwuzlaTerm): String
 
     private fun <T : Pointer> Array<T>.mkPtr(): Pointer {
         val memory = Memory(Native.POINTER_SIZE.toLong() * size)
