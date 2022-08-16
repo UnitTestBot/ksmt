@@ -77,15 +77,13 @@ import org.ksmt.expr.KQuantifier
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
-import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.solver.KSolverUnsupportedFeatureException
-import org.ksmt.solver.bitwuzla.KBitwuzlaExprInternalizer.ExprInternalizationResult.Companion.argumentsInternalizationRequired
-import org.ksmt.solver.bitwuzla.KBitwuzlaExprInternalizer.ExprInternalizationResult.Companion.notInitializedInternalizationResult
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBVBase
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
+import org.ksmt.solver.util.KExprInternalizerBase
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv16Sort
@@ -102,50 +100,27 @@ import org.ksmt.sort.KUninterpretedSort
 open class KBitwuzlaExprInternalizer(
     override val ctx: KContext,
     val bitwuzlaCtx: KBitwuzlaContext
-) : KTransformer {
+) : KExprInternalizerBase<BitwuzlaTerm>() {
+
     open val sortInternalizer: SortInternalizer by lazy { SortInternalizer(bitwuzlaCtx) }
     open val functionSortInternalizer: FunctionSortInternalizer by lazy {
         FunctionSortInternalizer(bitwuzlaCtx, sortInternalizer)
     }
 
-    val exprStack = arrayListOf<KExpr<*>>()
+    override fun findInternalizedExpr(expr: KExpr<*>): BitwuzlaTerm? {
+        return bitwuzlaCtx[expr]
+    }
 
-    /**
-     * Keeps result of last [KTransformer.transform] invocation.
-     * */
-    var lastExprInternalizationResult: ExprInternalizationResult = notInitializedInternalizationResult
+    override fun saveInternalizedExpr(expr: KExpr<*>, internalized: BitwuzlaTerm) {
+        saveExprInternalizationResult(expr, internalized)
+    }
 
     /*
     * Create Bitwuzla term from KSmt expression
     * */
     fun <T : KSort> KExpr<T>.internalize(): BitwuzlaTerm {
         bitwuzlaCtx.ensureActive()
-        exprStack.add(this)
-        while (exprStack.isNotEmpty()) {
-            lastExprInternalizationResult = notInitializedInternalizationResult
-            val expr = exprStack.removeLast()
-
-            val internalized = bitwuzlaCtx[expr]
-            if (internalized != null) continue
-
-            /**
-             * Internalize expression non-recursively.
-             * 1. Ensure all expression arguments are internalized and available in [bitwuzlaCtx].
-             * If not so, [lastExprInternalizationResult] is set to [argumentsInternalizationRequired]
-             * 2. Internalize expression if all arguments are available and
-             * set [lastExprInternalizationResult] to internalization result.
-             * */
-            expr.accept(this@KBitwuzlaExprInternalizer)
-
-            check(!lastExprInternalizationResult.notInitialized) {
-                "Internalization result wasn't initialized during expr internalization"
-            }
-
-            if (!lastExprInternalizationResult.argumentsInternalizationRequired) {
-                saveExprInternalizationResult(expr, lastExprInternalizationResult.internalizedExpr)
-            }
-        }
-        return bitwuzlaCtx[this] ?: error("expression is not properly internalized")
+        return internalizeExpr()
     }
 
     /*
@@ -183,7 +158,7 @@ open class KBitwuzlaExprInternalizer(
         error("Unsupported expr $expr")
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = with(expr) {
-        transformList(args) { args ->
+        transformList(args) { args: Array<BitwuzlaTerm> ->
             val const = bitwuzlaCtx.mkConstant(decl, decl.bitwuzlaFunctionSort())
             val termArgs = (listOf(const) + args).toTypedArray()
             Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, termArgs)
@@ -197,24 +172,24 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun transform(expr: KAndExpr) = with(expr) {
-        transformList(args) { args ->
+        transformList(args) { args: Array<BitwuzlaTerm> ->
             when (args.size) {
                 0 -> bitwuzlaCtx.trueTerm
                 1 -> args[0]
                 else -> Native.bitwuzlaMkTerm(
-                    bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_AND, args.toTypedArray()
+                    bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_AND, args
                 )
             }
         }
     }
 
     override fun transform(expr: KOrExpr) = with(expr) {
-        transformList(args) { args ->
+        transformList(args) { args: Array<BitwuzlaTerm> ->
             when (args.size) {
                 0 -> bitwuzlaCtx.falseTerm
                 1 -> args[0]
                 else -> Native.bitwuzlaMkTerm(
-                    bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_OR, args.toTypedArray()
+                    bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_OR, args
                 )
             }
         }
@@ -241,9 +216,9 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun <T : KSort> transform(expr: KDistinctExpr<T>) = with(expr) {
-        transformList(args) { args ->
+        transformList(args) { args: Array<BitwuzlaTerm> ->
             Native.bitwuzlaMkTerm(
-                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, args.toTypedArray()
+                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, args
             )
         }
     }
@@ -395,7 +370,7 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun transform(expr: KBvExtractExpr) = with(expr) {
-        transform(value) { arg ->
+        transform(value) { arg: BitwuzlaTerm ->
             Native.bitwuzlaMkTerm1Indexed2(
                 bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_EXTRACT,
                 arg, expr.high, expr.low
@@ -404,7 +379,7 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun transform(expr: KBvSignExtensionExpr) = with(expr) {
-        transform(value) { arg ->
+        transform(value) { arg: BitwuzlaTerm ->
             Native.bitwuzlaMkTerm1Indexed1(
                 bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_SIGN_EXTEND,
                 arg, expr.i
@@ -413,7 +388,7 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun transform(expr: KBvZeroExtensionExpr) = with(expr) {
-        transform(value) { arg ->
+        transform(value) { arg: BitwuzlaTerm ->
             Native.bitwuzlaMkTerm1Indexed1(
                 bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_ZERO_EXTEND,
                 arg, expr.i
@@ -422,7 +397,7 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun transform(expr: KBvRepeatExpr) = with(expr) {
-        transform(value) { arg ->
+        transform(value) { arg: BitwuzlaTerm ->
             Native.bitwuzlaMkTerm1Indexed1(
                 bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_REPEAT,
                 arg, expr.i
@@ -451,7 +426,7 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftIndexedExpr<T>) = with(expr) {
-        transform(value) { arg ->
+        transform(value) { arg: BitwuzlaTerm ->
             Native.bitwuzlaMkTerm1Indexed1(
                 bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_ROLI,
                 arg, expr.i
@@ -460,7 +435,7 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun <T : KBvSort> transform(expr: KBvRotateRightIndexedExpr<T>) = with(expr) {
-        transform(value) { arg ->
+        transform(value) { arg: BitwuzlaTerm ->
             Native.bitwuzlaMkTerm1Indexed1(
                 bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_RORI,
                 arg, expr.i
@@ -519,7 +494,7 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>) = with(expr) {
-        transform(value) { value ->
+        transform(value) { value: BitwuzlaTerm ->
             Native.bitwuzlaMkConstArray(bitwuzlaCtx.bitwuzla, sort.internalizeSort(), value)
         }
     }
@@ -631,134 +606,26 @@ open class KBitwuzlaExprInternalizer(
         }
     }
 
-    fun internalizedExpr(expr: KExpr<*>): BitwuzlaTerm? = bitwuzlaCtx[expr]
-
-    inline fun <S : KExpr<*>> S.transform(operation: () -> BitwuzlaTerm): S = also {
-        lastExprInternalizationResult = ExprInternalizationResult(operation())
-    }
-
     fun <S : KExpr<*>> S.transform(
         arg: KExpr<*>,
         kind: BitwuzlaKind
-    ): S = transform(arg) { a0 -> Native.bitwuzlaMkTerm1(bitwuzlaCtx.bitwuzla, kind, a0) }
+    ): S = transform(arg) { a0: BitwuzlaTerm -> Native.bitwuzlaMkTerm1(bitwuzlaCtx.bitwuzla, kind, a0) }
 
-    inline fun <S : KExpr<*>> S.transform(
-        arg: KExpr<*>,
-        operation: (BitwuzlaTerm) -> BitwuzlaTerm
-    ): S = also {
-        val internalizedArg = internalizedExpr(arg)
-        if (internalizedArg == null) {
-            exprStack.add(this)
-            exprStack.add(arg)
-            lastExprInternalizationResult = argumentsInternalizationRequired
-        } else {
-            lastExprInternalizationResult = ExprInternalizationResult(operation(internalizedArg))
-        }
-    }
 
     fun <S : KExpr<*>> S.transform(
         arg0: KExpr<*>,
         arg1: KExpr<*>,
         kind: BitwuzlaKind
-    ): S = transform(arg0, arg1) { a0, a1 ->
+    ): S = transform(arg0, arg1) { a0: BitwuzlaTerm, a1: BitwuzlaTerm ->
         Native.bitwuzlaMkTerm2(bitwuzlaCtx.bitwuzla, kind, a0, a1)
     }
 
-    inline fun <S : KExpr<*>> S.transform(
-        arg0: KExpr<*>,
-        arg1: KExpr<*>,
-        operation: (BitwuzlaTerm, BitwuzlaTerm) -> BitwuzlaTerm
-    ): S = also {
-        val internalizedArg0 = internalizedExpr(arg0)
-        val internalizedArg1 = internalizedExpr(arg1)
-        if (internalizedArg0 == null || internalizedArg1 == null) {
-            exprStack.add(this)
-            internalizedArg0 ?: exprStack.add(arg0)
-            internalizedArg1 ?: exprStack.add(arg1)
-            lastExprInternalizationResult = argumentsInternalizationRequired
-        } else {
-            lastExprInternalizationResult = ExprInternalizationResult(
-                operation(internalizedArg0, internalizedArg1)
-            )
-        }
-    }
-
     fun <S : KExpr<*>> S.transform(
         arg0: KExpr<*>,
         arg1: KExpr<*>,
         arg2: KExpr<*>,
         kind: BitwuzlaKind
-    ): S = transform(arg0, arg1, arg2) { a0, a1, a2 ->
+    ): S = transform(arg0, arg1, arg2) { a0: BitwuzlaTerm, a1: BitwuzlaTerm, a2: BitwuzlaTerm ->
         Native.bitwuzlaMkTerm3(bitwuzlaCtx.bitwuzla, kind, a0, a1, a2)
-    }
-
-    inline fun <S : KExpr<*>> S.transform(
-        arg0: KExpr<*>,
-        arg1: KExpr<*>,
-        arg2: KExpr<*>,
-        operation: (BitwuzlaTerm, BitwuzlaTerm, BitwuzlaTerm) -> BitwuzlaTerm
-    ): S = also {
-        val internalizedArg0 = internalizedExpr(arg0)
-        val internalizedArg1 = internalizedExpr(arg1)
-        val internalizedArg2 = internalizedExpr(arg2)
-        if (internalizedArg0 == null || internalizedArg1 == null || internalizedArg2 == null) {
-            exprStack.add(this)
-            internalizedArg0 ?: exprStack.add(arg0)
-            internalizedArg1 ?: exprStack.add(arg1)
-            internalizedArg2 ?: exprStack.add(arg2)
-            lastExprInternalizationResult = argumentsInternalizationRequired
-        } else {
-            lastExprInternalizationResult = ExprInternalizationResult(
-                operation(internalizedArg0, internalizedArg1, internalizedArg2)
-            )
-        }
-    }
-
-    inline fun <S : KExpr<*>> S.transformList(
-        args: List<KExpr<*>>,
-        operation: (List<BitwuzlaTerm>) -> BitwuzlaTerm
-    ): S = also {
-        val internalizedArgs = mutableListOf<BitwuzlaTerm>()
-        var exprAdded = false
-        var argsReady = true
-        for (arg in args) {
-            val internalized = internalizedExpr(arg)
-            if (internalized != null) {
-                internalizedArgs.add(internalized)
-                continue
-            }
-            argsReady = false
-            if (!exprAdded) {
-                exprStack.add(this)
-                exprAdded = true
-            }
-            exprStack.add(arg)
-        }
-        lastExprInternalizationResult = if (argsReady) {
-            ExprInternalizationResult(operation(internalizedArgs))
-        } else {
-            argumentsInternalizationRequired
-        }
-    }
-
-    @JvmInline
-    value class ExprInternalizationResult(private val value: Any) {
-        val argumentsInternalizationRequired: Boolean
-            get() = value === argumentsInternalizationRequiredMarker
-
-        val notInitialized: Boolean
-            get() = value === notInitializedInternalizationResultMarker
-
-        val internalizedExpr: BitwuzlaTerm
-            get() = value as? BitwuzlaTerm ?: error("expr is not internalized")
-
-        companion object {
-            private val argumentsInternalizationRequiredMarker = Any()
-            private val notInitializedInternalizationResultMarker = Any()
-            val argumentsInternalizationRequired =
-                ExprInternalizationResult(argumentsInternalizationRequiredMarker)
-            val notInitializedInternalizationResult =
-                ExprInternalizationResult(notInitializedInternalizationResultMarker)
-        }
     }
 }
