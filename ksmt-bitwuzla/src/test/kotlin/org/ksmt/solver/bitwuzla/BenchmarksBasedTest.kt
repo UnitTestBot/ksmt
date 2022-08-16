@@ -1,5 +1,6 @@
 package org.ksmt.solver.bitwuzla
 
+import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
@@ -20,11 +21,9 @@ import org.ksmt.sort.KSort
 import java.nio.file.Path
 import kotlin.io.path.relativeTo
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.ExperimentalTime
-import kotlin.time.TimeMark
-import kotlin.time.TimeSource
 
 @EnabledIfEnvironmentVariable(
     named = "bitwuzla.benchmarksBasedTests",
@@ -58,23 +57,16 @@ class BenchmarksBasedTest {
                 ExpressionValidator(ctx).apply(it)
             }
 
-            withTimeoutChecks(10.seconds) {
-                for ((original, converted) in ksmtAssertions.zip(recoveredKsmtAssertions)) {
-
-                    // avoid too big test samples
-                    if (timeLimitReached()) return
-
-                    KZ3Solver(ctx).use {
-                        val checkExpr = with(ctx) { !(original eq converted) }
-                        it.assert(checkExpr)
-                        val checkResult = it.check(timeout = 1.seconds)
-                        assertEquals(KSolverStatus.UNSAT, checkResult, "converter failed: $original -> $converted")
-                    }
+            with(EqualityChecker(ctx)) {
+                ksmtAssertions.zip(recoveredKsmtAssertions).forEach { (original, converted) ->
+                    areEqual(actual = converted, expected = original)
                 }
+                check(timeout = 1.seconds) { "converter failed" }
             }
         }
     }
 
+    @Execution(ExecutionMode.CONCURRENT)
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
     fun testSolver(name: String, samplePath: Path) = skipUnsupportedSolverFeatures {
@@ -88,14 +80,24 @@ class BenchmarksBasedTest {
             ksmtAssertions.forEach { bitwuzla.assert(it) }
             val status = bitwuzla.check(timeout = 1.seconds)
 
-            if (status == KSolverStatus.UNKNOWN) return
+            if (status == KSolverStatus.UNKNOWN) {
+                Assumptions.assumeTrue(false, "bitwuzla solver unknown -- nothing to test")
+            }
+
+            if (status == KSolverStatus.SAT) {
+                val model = bitwuzla.model()
+                // check no exceptions during model detach
+                model.detach()
+            }
 
             val expectedStatus = KZ3Solver(ctx).use { z3Solver ->
                 ksmtAssertions.forEach { z3Solver.assert(it) }
                 z3Solver.check(timeout = 1.seconds)
             }
 
-            if (expectedStatus == KSolverStatus.UNKNOWN) return
+            if (expectedStatus == KSolverStatus.UNKNOWN) {
+                Assumptions.assumeTrue(false, "expected status unknown -- nothing to test")
+            }
 
             assertEquals(expectedStatus, status, "bitwuzla check-sat result differ from z3")
 
@@ -118,15 +120,6 @@ class BenchmarksBasedTest {
         }
     }
 
-    @OptIn(ExperimentalTime::class)
-    private inline fun <reified T> withTimeoutChecks(timeout: Duration, block: TimeoutCheck.() -> T): T =
-        TimeoutCheck(TimeSource.Monotonic.markNow(), timeout).block()
-
-    @OptIn(ExperimentalTime::class)
-    private class TimeoutCheck(private val begin: TimeMark, private val limit: Duration) {
-        fun timeLimitReached(): Boolean = begin.elapsedNow() > limit
-    }
-
     companion object {
         val parser = Z3SmtLibParser()
 
@@ -144,6 +137,45 @@ class BenchmarksBasedTest {
             // apply internally check arguments sorts
             expr.decl.apply(expr.args)
             return super.transformApp(expr)
+        }
+    }
+
+    private data class EqualityCheck(val actual: KExpr<KSort>, val expected: KExpr<KSort>)
+
+    private class EqualityChecker(val ctx: KContext) {
+        private val equalityChecks = mutableListOf<EqualityCheck>()
+
+        @Suppress("UNCHECKED_CAST")
+        fun <T : KSort> areEqual(actual: KExpr<T>, expected: KExpr<T>) {
+            equalityChecks.add(EqualityCheck(actual = actual as KExpr<KSort>, expected = expected as KExpr<KSort>))
+        }
+
+        fun check(timeout: Duration, message: () -> String) = with(ctx) {
+            KZ3Solver(ctx).use { solver ->
+                val bulkCheck = mkOr(equalityChecks.map { !(it.actual eq it.expected) })
+                solver.assert(bulkCheck)
+                when (solver.check(timeout)) {
+                    KSolverStatus.UNSAT -> return
+                    KSolverStatus.SAT -> assertTrue(false, message())
+                    KSolverStatus.UNKNOWN -> {
+                        val testIgnoreReason = "equality check: unknown -- ${solver.reasonOfUnknown()}"
+                        System.err.println(testIgnoreReason)
+                        Assumptions.assumeTrue(false, testIgnoreReason)
+                    }
+                }
+            }
+        }
+
+        private fun findFirstFailedEquality(solver: KZ3Solver): EqualityCheck? = with(ctx) {
+            for (check in equalityChecks) {
+                solver.push()
+                val binding = !(check.actual eq check.expected)
+                solver.assert(binding)
+                val status = solver.check()
+                solver.pop()
+                if (status == KSolverStatus.SAT) return check
+            }
+            return null
         }
     }
 }
