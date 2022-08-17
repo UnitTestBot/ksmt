@@ -18,6 +18,7 @@ import com.sun.jna.ptr.PointerByReference
 typealias Bitwuzla = Pointer
 typealias BitwuzlaTerm = Pointer
 typealias BitwuzlaSort = Pointer
+typealias BitwuzlaBitVector = Pointer
 
 object Native {
 
@@ -2696,18 +2697,35 @@ object Native {
     private external fun bitwuzla_rm_to_string(rm: Int): String
 
     /**
-     * Retrieve string representation of const node.
-     * Only safe if [bitwuzlaTermIsBvValue] is true.
+     * Get bv const bits. Only safe if [bitwuzlaTermIsBvValue] is true for [term]
      * */
-    fun bitwuzlaBvConstNodeToString(term: BitwuzlaTerm): String = bzla_util_node2string(term)
+    fun bitwuzlaBvConstNodeGetBits(term: BitwuzlaTerm): BitwuzlaBitVector =
+        bzla_node_bv_const_get_bits(term).checkError()
 
     /**
-     * Retrieve string representation of const node.
-     * Only safe if [bitwuzlaTermIsFpValue] is true.
+     * Get width (bv size) of bv const bits.
      * */
-    fun bitwuzlaFpConstNodeToString(term: BitwuzlaTerm): String = bzla_util_node2string(term)
+    fun bitwuzlaBvBitsGetWidth(bv: BitwuzlaBitVector): Int =
+        bzla_bv_get_width(bv).checkError()
 
-    private external fun bzla_util_node2string(term: BitwuzlaTerm): String
+    /**
+     * Convert bv const bits to uint64.
+     * Only safe if [bitwuzlaBvBitsGetWidth] <= 64.
+     * */
+    fun bitwuzlaBvBitsToUInt64(bv: BitwuzlaBitVector): Long =
+        bzla_bv_to_uint64(bv).checkError()
+
+    /**
+     * Get a single bit (0 or 1) from bv const bits.
+     * Only safe if 0 <= [pos] < [bitwuzlaBvBitsGetWidth].
+     * */
+    fun bitwuzlaBvBitsGetBit(bv: BitwuzlaBitVector, pos: Int): Int =
+        bzla_bv_get_bit(bv, pos).checkError()
+
+    private external fun bzla_node_bv_const_get_bits(term: BitwuzlaTerm): BitwuzlaBitVector
+    private external fun bzla_bv_get_width(bv: BitwuzlaBitVector): Int
+    private external fun bzla_bv_to_uint64(bv: BitwuzlaBitVector): Long
+    private external fun bzla_bv_get_bit(bv: BitwuzlaBitVector, pos: Int): Int
 
     private fun <T : Pointer> Array<T>.mkPtr(): Pointer {
         val memory = Memory(Native.POINTER_SIZE.toLong() * size)
