@@ -149,13 +149,7 @@ class BenchmarksBasedTest {
                 solver.assert(bulkCheck)
                 when (solver.check(timeout)) {
                     KSolverStatus.UNSAT -> return
-                    KSolverStatus.SAT -> {
-                        val failedEqualityCheck = findFirstFailedEquality(solver)
-                        if (failedEqualityCheck != null) {
-                            assertEquals(failedEqualityCheck.expected, failedEqualityCheck.actual, message())
-                        }
-                        assertTrue(false, message())
-                    }
+                    KSolverStatus.SAT -> assertTrue(false, message())
                     KSolverStatus.UNKNOWN -> {
                         val testIgnoreReason = "equality check: unknown -- ${solver.reasonOfUnknown()}"
                         System.err.println(testIgnoreReason)

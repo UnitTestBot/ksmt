@@ -251,13 +251,6 @@ open class KBitwuzlaExprConverter(
         error("Constants with functional type are not supported")
     }
 
-    /**
-     * Internal bv const node representation format
-     * normal node: <node_id> bvconst <bits>
-     * inverted node: -<node_id> bvconst <bits>
-     * */
-    private val bitwuzlaBvConstInternalRepresentationPattern = Regex("""(-?)\d+\sbvconst\s(\d+)""")
-
     private fun KContext.convertValue(expr: BitwuzlaTerm): ExprConversionResult = convert {
         when {
             bitwuzlaCtx.trueTerm == expr -> trueExpr
@@ -269,17 +262,21 @@ open class KBitwuzlaExprConverter(
             Native.bitwuzlaTermIsBv(expr) -> bitwuzlaCtx.convertValue(expr) ?: run {
                 val size = Native.bitwuzlaTermBvGetSize(expr)
                 if (Native.bitwuzlaTermIsBvValue(expr)) {
-                    /**
-                     * Unsafe: retrieve internal node string representation
-                     * */
-                    val internalStr = Native.bitwuzlaBvConstNodeToString(expr)
-                    val parsed = bitwuzlaBvConstInternalRepresentationPattern.matchEntire(internalStr)
-                    check(parsed != null) { "Unexpected internal node representation: $internalStr" }
-                    val isInverted = "-" == parsed.groupValues[1]
-                    val bits = parsed.groupValues[2]
-                    val value = mkBv(bits, size.toUInt())
-                    val normalizedValue = if (isInverted) mkBvNotExpr(value) else value
-                    normalizedValue.also {
+                    val nativeBits = Native.bitwuzlaBvConstNodeGetBits(expr)
+                    val nativeBitsSize = Native.bitwuzlaBvBitsGetWidth(nativeBits)
+                    check(size == nativeBitsSize) { "bv size mismatch" }
+                    val bits = if (size <= Long.SIZE_BITS) {
+                        val numericValue = Native.bitwuzlaBvBitsToUInt64(nativeBits).toULong()
+                        numericValue.toString(radix = 2).padStart(size, '0')
+                    } else {
+                        val bitChars = CharArray(size) { charIdx ->
+                            val bitIdx = size - 1 - charIdx
+                            val bit = Native.bitwuzlaBvBitsGetBit(nativeBits, bitIdx) != 0
+                            if (bit) '1' else '0'
+                        }
+                        String(bitChars)
+                    }
+                    mkBv(bits, size.toUInt()).also {
                         bitwuzlaCtx.saveInternalizedValue(it, expr)
                     }
                 } else {
