@@ -102,6 +102,10 @@ class BenchmarksBasedTest {
             if (status == KSolverStatus.UNSAT) return
 
             val model = bitwuzla.model()
+
+            // check no exceptions during model detach
+            model.detach()
+
             val modelAssignments = with(ctx) {
                 val vars = model.declarations.map { mkConstApp(it) }
                 vars.map {
