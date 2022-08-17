@@ -251,7 +251,12 @@ open class KBitwuzlaExprConverter(
         error("Constants with functional type are not supported")
     }
 
-    private val bitwuzlaBvConstInternalRepresentationPattern = Regex("""-?\d+\sbvconst\s(\d+)""")
+    /**
+     * Internal bv const node representation format
+     * normal node: <node_id> bvconst <bits>
+     * inverted node: -<node_id> bvconst <bits>
+     * */
+    private val bitwuzlaBvConstInternalRepresentationPattern = Regex("""(-?)\d+\sbvconst\s(\d+)""")
 
     private fun KContext.convertValue(expr: BitwuzlaTerm): ExprConversionResult = convert {
         when {
@@ -266,13 +271,15 @@ open class KBitwuzlaExprConverter(
                 if (Native.bitwuzlaTermIsBvValue(expr)) {
                     /**
                      * Unsafe: retrieve internal node string representation
-                     * <node_id> bvconst <bits>
                      * */
                     val internalStr = Native.bitwuzlaBvConstNodeToString(expr)
                     val parsed = bitwuzlaBvConstInternalRepresentationPattern.matchEntire(internalStr)
                     check(parsed != null) { "Unexpected internal node representation: $internalStr" }
-                    val bits = parsed.groupValues[1]
-                    mkBv(bits, size.toUInt()).also {
+                    val isInverted = "-" == parsed.groupValues[1]
+                    val bits = parsed.groupValues[2]
+                    val value = mkBv(bits, size.toUInt())
+                    val normalizedValue = if (isInverted) mkBvNotExpr(value) else value
+                    normalizedValue.also {
                         bitwuzlaCtx.saveInternalizedValue(it, expr)
                     }
                 } else {
