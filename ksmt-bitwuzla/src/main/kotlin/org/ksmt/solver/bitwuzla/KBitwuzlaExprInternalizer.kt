@@ -355,15 +355,15 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun <T : KBvSort> transform(expr: KBvSignedGreaterOrEqualExpr<T>) = with(expr) {
-        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SGT)
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SGE)
     }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterExpr<T>) = with(expr) {
-        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_UGE)
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_UGT)
     }
 
     override fun <T : KBvSort> transform(expr: KBvSignedGreaterExpr<T>) = with(expr) {
-        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SGE)
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SGT)
     }
 
     override fun transform(expr: KBvConcatExpr) = with(expr) {
