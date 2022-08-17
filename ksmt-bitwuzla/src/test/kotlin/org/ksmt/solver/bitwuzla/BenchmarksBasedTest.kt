@@ -66,6 +66,7 @@ class BenchmarksBasedTest {
         }
     }
 
+    @Execution(ExecutionMode.CONCURRENT)
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
     fun testSolver(name: String, samplePath: Path) = skipUnsupportedSolverFeatures {
@@ -79,24 +80,30 @@ class BenchmarksBasedTest {
             ksmtAssertions.forEach { bitwuzla.assert(it) }
             val status = bitwuzla.check(timeout = 1.seconds)
 
-            if (status == KSolverStatus.UNKNOWN) return
+            if (status == KSolverStatus.UNKNOWN) {
+                Assumptions.assumeTrue(false, "bitwuzla solver unknown -- nothing to test")
+            }
+
+            if (status == KSolverStatus.SAT) {
+                val model = bitwuzla.model()
+                // check no exceptions during model detach
+                model.detach()
+            }
 
             val expectedStatus = KZ3Solver(ctx).use { z3Solver ->
                 ksmtAssertions.forEach { z3Solver.assert(it) }
                 z3Solver.check(timeout = 1.seconds)
             }
 
-            if (expectedStatus == KSolverStatus.UNKNOWN) return
+            if (expectedStatus == KSolverStatus.UNKNOWN) {
+                Assumptions.assumeTrue(false, "expected status unknown -- nothing to test")
+            }
 
             assertEquals(expectedStatus, status, "bitwuzla check-sat result differ from z3")
 
             if (status == KSolverStatus.UNSAT) return
 
             val model = bitwuzla.model()
-
-            // check no exceptions during model detach
-            model.detach()
-
             val modelAssignments = with(ctx) {
                 val vars = model.declarations.map { mkConstApp(it) }
                 vars.map {
