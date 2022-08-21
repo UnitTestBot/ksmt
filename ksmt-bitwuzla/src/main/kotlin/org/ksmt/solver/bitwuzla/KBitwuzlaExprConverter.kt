@@ -3,6 +3,7 @@ package org.ksmt.solver.bitwuzla
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
+import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.expr.transformer.KTransformer
@@ -48,9 +49,8 @@ open class KBitwuzlaExprConverter(
             .let { adapterTermRewriter.apply(it) }
 
 
-    override fun findConvertedNative(expr: BitwuzlaTerm): KExpr<*>? {
-        return bitwuzlaCtx.findConvertedExpr(expr)
-    }
+    override fun findConvertedNative(expr: BitwuzlaTerm): KExpr<*>? =
+        bitwuzlaCtx.findConvertedExpr(expr)
 
     override fun saveConvertedNative(native: BitwuzlaTerm, converted: KExpr<*>) {
         bitwuzlaCtx.convertExpr(native) { converted }
@@ -217,19 +217,26 @@ open class KBitwuzlaExprConverter(
         val appArgs = children.drop(1).toTypedArray()
         return expr.convertList(appArgs) { convertedArgs: List<KExpr<KSort>> ->
             check(Native.bitwuzlaTermIsFun(function)) { "function term expected" }
-            val funcDecl = bitwuzlaCtx.convertConstantIfKnown(function)
-                ?.let { it as? KFuncDecl<*> ?: error("function expected. actual: $it") }
-                ?: run {
-                    // new function
-                    val domain = Native.bitwuzlaTermFunGetDomainSorts(function).map { it.convertSort() }
-                    val range = Native.bitwuzlaTermFunGetCodomainSort(function).convertSort()
-                    generateDecl(function) { mkFuncDecl(it, range, domain) }
-                }
+            val funcDecl = convertFuncDecl(function)
             val args = convertedArgs.zip(funcDecl.argSorts) { arg, expectedSort ->
                 arg.convertToExpectedIfNeeded(expectedSort)
             }
             funcDecl.apply(args).convertToBoolIfNeeded()
         }
+    }
+
+    private fun KContext.convertFuncDecl(function: BitwuzlaTerm): KFuncDecl<*> {
+        val knownFuncDecl = bitwuzlaCtx.convertConstantIfKnown(function)
+
+        if (knownFuncDecl != null) {
+            return knownFuncDecl as? KFuncDecl<*>
+                ?: error("function expected. actual: $knownFuncDecl")
+        }
+
+        // new function
+        val domain = Native.bitwuzlaTermFunGetDomainSorts(function).map { it.convertSort() }
+        val range = Native.bitwuzlaTermFunGetCodomainSort(function).convertSort()
+        return generateDecl(function) { mkFuncDecl(it, range, domain) }
     }
 
     private fun KContext.convertConst(expr: BitwuzlaTerm): ExprConversionResult = convert<KSort> {
@@ -260,33 +267,43 @@ open class KBitwuzlaExprConverter(
              * is only available after check-sat call
              * */
             Native.bitwuzlaTermIsBv(expr) -> bitwuzlaCtx.convertValue(expr) ?: run {
-                val size = Native.bitwuzlaTermBvGetSize(expr)
-                if (Native.bitwuzlaTermIsBvValue(expr)) {
-                    val nativeBits = Native.bitwuzlaBvConstNodeGetBits(expr)
-                    val nativeBitsSize = Native.bitwuzlaBvBitsGetWidth(nativeBits)
-                    check(size == nativeBitsSize) { "bv size mismatch" }
-                    val bits = if (size <= Long.SIZE_BITS) {
-                        val numericValue = Native.bitwuzlaBvBitsToUInt64(nativeBits).toULong()
-                        numericValue.toString(radix = 2).padStart(size, '0')
-                    } else {
-                        val bitChars = CharArray(size) { charIdx ->
-                            val bitIdx = size - 1 - charIdx
-                            val bit = Native.bitwuzlaBvBitsGetBit(nativeBits, bitIdx) != 0
-                            if (bit) '1' else '0'
-                        }
-                        String(bitChars)
-                    }
-                    mkBv(bits, size.toUInt()).also {
-                        bitwuzlaCtx.saveInternalizedValue(it, expr)
-                    }
-                } else {
-                    val value = Native.bitwuzlaGetBvValue(bitwuzlaCtx.bitwuzla, expr)
-                    mkBv(value, size.toUInt())
-                }
+                convertBvValue(expr)
             }
             Native.bitwuzlaTermIsFp(expr) -> TODO("FP are not supported yet")
             else -> TODO("unsupported value")
         }
+    }
+
+    private fun KContext.convertBvValue(expr: BitwuzlaTerm): KBitVecValue<KBvSort> {
+        val size = Native.bitwuzlaTermBvGetSize(expr)
+        val convertedValue = if (Native.bitwuzlaTermIsBvValue(expr)) {
+            // convert Bv value from native representation
+            val nativeBits = Native.bitwuzlaBvConstNodeGetBits(expr)
+            val nativeBitsSize = Native.bitwuzlaBvBitsGetWidth(nativeBits)
+
+            check(size == nativeBitsSize) { "bv size mismatch" }
+
+            val bits = if (size <= Long.SIZE_BITS) {
+                val numericValue = Native.bitwuzlaBvBitsToUInt64(nativeBits).toULong()
+                numericValue.toString(radix = 2).padStart(size, '0')
+            } else {
+                val bitChars = CharArray(size) { charIdx ->
+                    val bitIdx = size - 1 - charIdx
+                    val bit = Native.bitwuzlaBvBitsGetBit(nativeBits, bitIdx) != 0
+                    if (bit) '1' else '0'
+                }
+                String(bitChars)
+            }
+
+            mkBv(bits, size.toUInt())
+        } else {
+            val value = Native.bitwuzlaGetBvValue(bitwuzlaCtx.bitwuzla, expr)
+            mkBv(value, size.toUInt())
+        }
+
+        bitwuzlaCtx.saveInternalizedValue(convertedValue, expr)
+
+        return convertedValue
     }
 
     open fun KContext.convertBoolExpr(expr: BitwuzlaTerm, kind: BitwuzlaKind): ExprConversionResult = when (kind) {
@@ -511,13 +528,15 @@ open class KBitwuzlaExprConverter(
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
     fun KExpr<*>.ensureBvExpr(): KExpr<KBvSort> = with(ctx) {
-        if (sort == boolSort) ensureBv1Expr() as KExpr<KBvSort>
-        else {
+        val expr = if (sort == boolSort) {
+            ensureBv1Expr()
+        } else {
             check(sort is KBvSort) { "Bv sort expected but $sort occurred" }
-            this@ensureBvExpr as KExpr<KBvSort>
+            this@ensureBvExpr
         }
+        @Suppress("UNCHECKED_CAST")
+        expr as KExpr<KBvSort>
     }
 
     private inner class BoolToBv1AdapterExpr(val arg: KExpr<KBoolSort>) : KExpr<KBv1Sort>(ctx) {
