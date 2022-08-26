@@ -227,7 +227,10 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_EXT_ROTATE_RIGHT -> expr.convert(::mkBvRotateRightExpr)
             Z3_decl_kind.Z3_OP_BIT2BOOL -> TODO("bit2bool conversion is not supported")
             Z3_decl_kind.Z3_OP_INT2BV -> TODO("int2bv conversion is not supported")
-            Z3_decl_kind.Z3_OP_BV2INT -> TODO("bv2int conversion is not supported")
+            Z3_decl_kind.Z3_OP_BV2INT -> expr.convert { arg: KExpr<KBvSort> ->
+                // bv2int is always unsigned in Z3
+                ctx.mkBv2IntExpr(arg, isSigned = false)
+            }
             Z3_decl_kind.Z3_OP_CARRY -> expr.convert { a0: KExpr<KBvSort>, a1: KExpr<KBvSort>, a2: KExpr<KBvSort> ->
                 mkBvOrExpr(
                     mkBvAndExpr(a0, a1),
