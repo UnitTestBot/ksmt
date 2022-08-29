@@ -225,7 +225,7 @@ open class KZ3ExprInternalizer(
                 check(bits.size == sizeBits) { "bv bits size mismatch" }
                 z3Ctx.mkBvNumeral(bits)
             }
-            else -> error("Unknown bv expression class ${expr::class} in transformation method: ${expr.print()}")
+            else -> error("Unknown bv expression class ${expr::class} in transformation method: $expr")
         }
     }
 

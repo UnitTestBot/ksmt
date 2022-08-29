@@ -1496,10 +1496,14 @@ open class KContext {
     * KAst
     * */
 
-    // toString cache
-    private val astStringReprCache = mkCache { ast: KAst -> ast.print() }
+    /**
+     * String representations are not cached since
+     * it requires a lot of memory.
+     * For example, (and a b) will store a full copy
+     * of a and b string representations
+     * */
     val KAst.stringRepr: String
-        get() = astStringReprCache.create(this)
+        get() = buildString { print(this) }
 
     // context utils
     private fun ensureContextMatch(vararg args: KAst) {

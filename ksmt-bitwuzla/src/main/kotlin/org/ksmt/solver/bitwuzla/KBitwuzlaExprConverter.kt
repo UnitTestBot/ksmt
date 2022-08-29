@@ -516,7 +516,12 @@ open class KBitwuzlaExprConverter(
 
     private inner class BoolToBv1AdapterExpr(val arg: KExpr<KBoolSort>) : KExpr<KBv1Sort>(ctx) {
         override fun sort(): KBv1Sort = ctx.bv1Sort
-        override fun print(): String = "(toBV1 $arg)"
+
+        override fun print(builder: StringBuilder) {
+            builder.append("(toBV1 ")
+            arg.print(builder)
+            builder.append(')')
+        }
 
         override fun accept(transformer: KTransformer): KExpr<KBv1Sort> =
             (transformer as AdapterTermRewriter).transform(this)
@@ -524,7 +529,12 @@ open class KBitwuzlaExprConverter(
 
     private inner class Bv1ToBoolAdapterExpr(val arg: KExpr<KBv1Sort>) : KExpr<KBoolSort>(ctx) {
         override fun sort(): KBoolSort = ctx.boolSort
-        override fun print(): String = "(toBool $arg)"
+
+        override fun print(builder: StringBuilder) {
+            builder.append("(toBool ")
+            arg.print(builder)
+            builder.append(')')
+        }
 
         override fun accept(transformer: KTransformer): KExpr<KBoolSort> =
             (transformer as AdapterTermRewriter).transform(this)
@@ -536,7 +546,14 @@ open class KBitwuzlaExprConverter(
         val toRangeSort: ToRange
     ) : KExpr<KArraySort<ToDomain, ToRange>>(ctx) {
         override fun sort(): KArraySort<ToDomain, ToRange> = ctx.mkArraySort(toDomainSort, toRangeSort)
-        override fun print(): String = "(toArray ${sort()} $arg)"
+
+        override fun print(builder: StringBuilder) {
+            builder.append("(toArray ")
+            sort().print(builder)
+            builder.append(' ')
+            arg.print(builder)
+            builder.append(')')
+        }
 
         override fun accept(transformer: KTransformer): KExpr<KArraySort<ToDomain, ToRange>> =
             (transformer as AdapterTermRewriter).transform(this)
