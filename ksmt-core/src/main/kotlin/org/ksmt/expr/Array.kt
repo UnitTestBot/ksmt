@@ -62,7 +62,11 @@ class KFunctionAsArray<D : KSort, R : KSort> internal constructor(
     }
 
     override fun sort(): KArraySort<D, R> = with(ctx) { mkArraySort(domainSort, function.sort) }
-    override fun print(): String = "(asArray ${function.name})"
+    override fun print(builder: StringBuilder): Unit = with(builder) {
+        append("(asArray ")
+        append(function.name)
+        append(')')
+    }
     override fun accept(transformer: KTransformer): KExpr<KArraySort<D, R>> = transformer.transform(this)
 }
 
@@ -76,13 +80,14 @@ class KArrayLambda<D : KSort, R : KSort> internal constructor(
     val body: KExpr<R>
 ) : KExpr<KArraySort<D, R>>(ctx) {
     override fun sort(): KArraySort<D, R> = with(ctx) { mkArraySort(indexVarDecl.sort, body.sort) }
-    override fun print(): String = buildString {
-        append("(lambda")
-        append(" (")
-        append("(${indexVarDecl.name} ${indexVarDecl.sort})")
-        append(") ")
-        append("$body")
-        append(")")
+    override fun print(builder: StringBuilder): Unit = with(builder) {
+        append("(lambda ((")
+        append(indexVarDecl.name)
+        append(' ')
+        indexVarDecl.sort.print(this)
+        append(")) ")
+        body.print(this)
+        append(')')
     }
 
     override fun accept(transformer: KTransformer): KExpr<KArraySort<D, R>> = transformer.transform(this)

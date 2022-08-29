@@ -7,20 +7,20 @@ import org.ksmt.sort.KSort
 abstract class KApp<T : KSort, A : KExpr<*>> internal constructor(ctx: KContext) : KExpr<T>(ctx) {
     abstract val args: List<A>
     abstract fun decl(): KDecl<T>
-    override fun print(): String = buildString {
-        if (args.isEmpty()) {
-            with(ctx) { append(decl.name) }
-            return@buildString
-        }
-        append('(')
-        with(ctx) {
+    override fun print(builder: StringBuilder): Unit = with(ctx) {
+        with(builder) {
+            if (args.isEmpty()) {
+                append(decl.name)
+                return
+            }
+            append('(')
             append(decl.name)
+            for (arg in args) {
+                append(' ')
+                arg.print(this)
+            }
+            append(')')
         }
-        for (arg in args) {
-            append(' ')
-            append("$arg")
-        }
-        append(')')
     }
 }
 

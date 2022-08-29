@@ -18,14 +18,19 @@ open class KFuncDecl<T : KSort>(
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun print(): String = buildString {
+    override fun print(builder: StringBuilder): Unit = with(builder) {
         append('(')
         append(name)
         append(" (")
-        append(argSorts.joinToString(" "))
+
+        for ((i, sort) in argSorts.withIndex()) {
+            if (i > 0) append(" ")
+            sort.print(this)
+        }
+
         append(") ")
-        append("$sort")
-        append(" )")
+        sort.print(this)
+        append(')')
     }
 
     fun checkArgSorts(args: List<KExpr<*>>) = with(ctx) {
@@ -102,14 +107,14 @@ abstract class KFuncDeclChain<T : KSort, A : KSort>(
 ) : KFuncDecl<T>(ctx, name, resultSort, listOf(argSort)) {
     abstract fun KContext.applyChain(args: List<KExpr<A>>): KApp<T, KExpr<A>>
 
-    override fun print(): String = buildString {
-        append('(')
-        append(name)
-        append(" (")
-        append("$argSort *")
-        append(") ")
-        append("$sort")
-        append(" )")
+    override fun print(builder: StringBuilder) {
+        builder.append('(')
+        builder.append(name)
+        builder.append(" (")
+        argSort.print(builder)
+        builder.append(" *) ")
+        sort.print(builder)
+        builder.append(" )")
     }
 
     @Suppress("UNCHECKED_CAST")
