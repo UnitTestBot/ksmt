@@ -8,6 +8,7 @@ import com.microsoft.z3.BoolExpr
 import com.microsoft.z3.BoolSort
 import com.microsoft.z3.Context
 import com.microsoft.z3.Expr
+import com.microsoft.z3.FPSort
 import com.microsoft.z3.FuncDecl
 import com.microsoft.z3.IntExpr
 import com.microsoft.z3.Sort
@@ -76,7 +77,6 @@ import org.ksmt.expr.KBvUnsignedLessOrEqualExpr
 import org.ksmt.expr.KBvUnsignedRemExpr
 import org.ksmt.expr.KBvXNorExpr
 import org.ksmt.expr.KBvXorExpr
-import org.ksmt.expr.KBvZeroExtensionExpr
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KDivArithExpr
@@ -108,11 +108,24 @@ import org.ksmt.expr.KToRealIntExpr
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
+import org.ksmt.expr.KBvZeroExtensionExpr
+import org.ksmt.expr.KFp128Value
+import org.ksmt.expr.KFp16Value
+import org.ksmt.expr.KFp32Value
+import org.ksmt.expr.KFp64Value
+import org.ksmt.expr.KFpCustomSizeValue
+import org.ksmt.expr.KFpValue
 import org.ksmt.expr.KXorExpr
 import org.ksmt.solver.util.KExprInternalizerBase
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
+import org.ksmt.sort.KFp128Sort
+import org.ksmt.sort.KFp16Sort
+import org.ksmt.sort.KFp32Sort
+import org.ksmt.sort.KFp64Sort
+import org.ksmt.sort.KFpSort
+import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KSort
 
 @Suppress("SpreadOperator")
@@ -365,6 +378,34 @@ open class KZ3ExprInternalizer(
 
     override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) =
         with(expr) { transform(arg0, arg1, z3Ctx::mkBVMulNoUnderflow) }
+
+    override fun <T : KFpSort> transformFpValue(expr: KFpValue<T>): KExpr<T> = expr.transform {
+        with(expr) {
+            when (this) {
+                is KFp16Value -> z3Ctx.mkFP(value, z3Ctx.mkFPSort16())
+                is KFp32Value -> z3Ctx.mkFP(value, z3Ctx.mkFPSort32())
+                is KFp64Value -> z3Ctx.mkFP(value, z3Ctx.mkFPSort64())
+                is KFp128Value -> z3Ctx.mkFP(signBit, exponentValue, significandValue, z3Ctx.mkFPSort128())
+                is KFpCustomSizeValue -> z3Ctx.mkFP(
+                    signBit,
+                    exponentValue,
+                    significandValue,
+                    z3Ctx.mkFPSort(sort().exponentBits.toInt(), sort().significandBits.toInt())
+                )
+                else -> error("Unexpected KFpValue type: ${this::class.qualifiedName}")
+            }
+        }
+    }
+
+    override fun transform(expr: KFp16Value): KExpr<KFp16Sort> = transformFpValue(expr)
+
+    override fun transform(expr: KFp32Value): KExpr<KFp32Sort> = transformFpValue(expr)
+
+    override fun transform(expr: KFp64Value): KExpr<KFp64Sort> = transformFpValue(expr)
+
+    override fun transform(expr: KFp128Value): KExpr<KFp128Sort> = transformFpValue(expr)
+
+    override fun transform(expr: KFpCustomSizeValue): KExpr<KFpSort> = transformFpValue(expr)
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) = with(expr) {
         transform<ArrayExpr<Sort, Sort>, Expr<Sort>, Expr<Sort>, KArrayStore<D, R>>(
