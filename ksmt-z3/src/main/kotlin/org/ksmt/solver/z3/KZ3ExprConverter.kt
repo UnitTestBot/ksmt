@@ -4,6 +4,8 @@ import com.microsoft.z3.ArraySort
 import com.microsoft.z3.BitVecNum
 import com.microsoft.z3.BitVecSort
 import com.microsoft.z3.Expr
+import com.microsoft.z3.FPNum
+import com.microsoft.z3.FPSort
 import com.microsoft.z3.FuncDecl
 import com.microsoft.z3.IntNum
 import com.microsoft.z3.Quantifier
@@ -28,6 +30,8 @@ import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
+import org.ksmt.sort.KFp64Sort
+import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
 
 open class KZ3ExprConverter(
@@ -70,11 +74,14 @@ open class KZ3ExprConverter(
                 mkArraySort(convertSort(it.domain), convertSort(it.range))
             }
             Z3_sort_kind.Z3_BV_SORT -> mkBvSort((sort as BitVecSort).size.toUInt())
+            Z3_sort_kind.Z3_FLOATING_POINT_SORT -> {
+                val fpSort = sort as FPSort
+                mkFpSort(fpSort.eBits.toUInt(), fpSort.sBits.toUInt())
+            }
             Z3_sort_kind.Z3_UNINTERPRETED_SORT -> mkUninterpretedSort(sort.name.toString())
             Z3_sort_kind.Z3_DATATYPE_SORT,
             Z3_sort_kind.Z3_RELATION_SORT,
             Z3_sort_kind.Z3_FINITE_DOMAIN_SORT,
-            Z3_sort_kind.Z3_FLOATING_POINT_SORT,
             Z3_sort_kind.Z3_ROUNDING_MODE_SORT,
             Z3_sort_kind.Z3_SEQ_SORT,
             Z3_sort_kind.Z3_RE_SORT,
@@ -243,6 +250,23 @@ open class KZ3ExprConverter(
                 val decl = convertDecl(z3Decl) as? KFuncDecl<KSort>
                     ?: error("unexpected as-array decl $z3Decl")
                 mkFunctionAsArray<KSort, KSort>(decl)
+            }
+            Z3_decl_kind.Z3_OP_FPA_NUM -> convert {
+                with(expr as FPNum) {
+                    val sort = convertSort(sort) as KFpSort
+                    val sBits = sort.significandBits.toInt()
+                    val fp64SizeBits = KFp64Sort.exponentBits.toInt() + KFp64Sort.significandBits.toInt()
+
+                    // if we have sBits greater than long size bits, take it all, otherwise take last (sBits - 1) bits
+                    val significandMask = if (sBits < fp64SizeBits) (1L shl (sBits - 1)) - 1 else -1
+                    // TODO it is not right if we have significand with number of bits greater than 64
+                    val significand = significandUInt64 and significandMask
+
+                    val exponentMask = (1L shl sort.exponentBits.toInt()) - 1
+                    val exponent = getExponentInt64(false) and exponentMask
+
+                    mkFp(significand, exponent, sign, sort)
+                }
             }
             else -> TODO("${expr.funcDecl} (${expr.funcDecl.declKind}) is not supported")
         }

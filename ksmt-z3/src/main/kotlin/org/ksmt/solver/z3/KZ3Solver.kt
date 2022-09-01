@@ -121,7 +121,9 @@ open class KZ3Solver(private val ctx: KContext) : KSolver {
     }
 
     override fun model(): KModel = z3Try {
-        require(lastCheckStatus == KSolverStatus.SAT) { "Model are only available after SAT checks" }
+        require(lastCheckStatus == KSolverStatus.SAT) {
+            "Model are only available after SAT checks, current solver status: $lastCheckStatus"
+        }
         val model = solver.model
         KZ3Model(model, ctx, z3InternCtx, exprInternalizer, exprConverter)
     }
