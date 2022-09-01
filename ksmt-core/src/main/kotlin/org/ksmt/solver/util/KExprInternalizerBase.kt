@@ -1,6 +1,7 @@
 package org.ksmt.solver.util
 
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.solver.util.KExprInternalizerBase.ExprInternalizationResult.Companion.argumentsInternalizationRequired
 import org.ksmt.solver.util.KExprInternalizerBase.ExprInternalizationResult.Companion.notInitializedInternalizationResult
@@ -105,6 +106,42 @@ abstract class KExprInternalizerBase<T : Any> : KTransformer {
         } else {
             lastExprInternalizationResult = ExprInternalizationResult(
                 operation(internalizedArg0 as A0, internalizedArg1 as A1, internalizedArg2 as A2)
+            )
+        }
+    }
+
+    inline fun <reified A0 : T, reified A1 : T, reified A2 : T, reified A3 : T, S : KExpr<*>> S.transform(
+        arg0: KExpr<*>,
+        arg1: KExpr<*>,
+        arg2: KExpr<*>,
+        arg3: KExpr<*>,
+        operation: (A0, A1, A2, A3) -> T
+    ): S = also {
+        val internalizedArg0 = findInternalizedExpr(arg0)
+        val internalizedArg1 = findInternalizedExpr(arg1)
+        val internalizedArg2 = findInternalizedExpr(arg2)
+        val internalizedArg3 = findInternalizedExpr(arg3)
+
+        val args = listOf(internalizedArg0, internalizedArg1, internalizedArg2, internalizedArg3)
+        val someArgumentIsNull = args.any { it == null }
+
+        if (someArgumentIsNull) {
+            exprStack.add(this)
+
+            internalizedArg0 ?: exprStack.add(arg0)
+            internalizedArg1 ?: exprStack.add(arg1)
+            internalizedArg2 ?: exprStack.add(arg2)
+            internalizedArg3 ?: exprStack.add(arg3)
+
+            lastExprInternalizationResult = argumentsInternalizationRequired
+        } else {
+            lastExprInternalizationResult = ExprInternalizationResult(
+                operation(
+                    internalizedArg0 as A0,
+                    internalizedArg1 as A1,
+                    internalizedArg2 as A2,
+                    internalizedArg3 as A3
+                )
             )
         }
     }

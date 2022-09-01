@@ -12,19 +12,19 @@ import java.util.WeakHashMap
 @Suppress("TooManyFunctions")
 class KZ3InternalizationContext : AutoCloseable {
     private var closed = false
-    private val expressions = WeakHashMap<KExpr<*>, Expr<*>>()
-    private val z3Expressions = WeakHashMap<Expr<*>, WeakReference<KExpr<*>>>()
-    private val sorts = WeakHashMap<KSort, Sort>()
-    private val z3Sorts = WeakHashMap<Sort, WeakReference<KSort>>()
-    private val decls = WeakHashMap<KDecl<*>, FuncDecl<*>>()
-    private val z3Decls = WeakHashMap<FuncDecl<*>, WeakReference<KDecl<*>>>()
+    private val expressions = HashMap<KExpr<*>, Expr<*>>()
+    private val z3Expressions = HashMap<Expr<*>, KExpr<*>>()
+    private val sorts = HashMap<KSort, Sort>()
+    private val z3Sorts = HashMap<Sort, KSort>()
+    private val decls = HashMap<KDecl<*>, FuncDecl<*>>()
+    private val z3Decls = HashMap<FuncDecl<*>, KDecl<*>>()
 
     val isActive: Boolean
         get() = !closed
 
     fun findInternalizedExpr(expr: KExpr<*>): Expr<*>? = expressions[expr]
 
-    fun findConvertedExpr(expr: Expr<*>): KExpr<*>? = z3Expressions[expr]?.get()
+    fun findConvertedExpr(expr: Expr<*>): KExpr<*>? = z3Expressions[expr]
 
     fun internalizeExpr(expr: KExpr<*>, internalizer: (KExpr<*>) -> Expr<*>): Expr<*> =
         internalize(expressions, z3Expressions, expr, internalizer)
@@ -46,26 +46,26 @@ class KZ3InternalizationContext : AutoCloseable {
 
     private inline fun <K, V> internalize(
         cache: MutableMap<K, V>,
-        reverseCache: MutableMap<V, WeakReference<K>>,
+        reverseCache: MutableMap<V, K>,
         key: K,
         internalizer: (K) -> V
     ): V = cache.getOrPut(key) {
-        internalizer(key).also { reverseCache[it] = WeakReference(key) }
+        internalizer(key).also { reverseCache[it] = key }
     }
 
     private inline fun <K, V> convert(
         cache: MutableMap<K, V>,
-        reverseCache: MutableMap<V, WeakReference<K>>,
+        reverseCache: MutableMap<V, K>,
         key: V,
         converter: (V) -> K
     ): K {
-        val current = reverseCache[key]?.get()
+        val current = reverseCache[key]
 
         if (current != null) return current
 
         val converted = converter(key)
         cache.getOrPut(converted) { key }
-        reverseCache[key] = WeakReference(converted)
+        reverseCache[key] = converted
         return converted
     }
 

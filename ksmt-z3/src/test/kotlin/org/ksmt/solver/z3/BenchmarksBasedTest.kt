@@ -14,8 +14,10 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.ksmt.KContext
+import org.ksmt.expr.KApp
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFunctionAsArray
+import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolverStatus
@@ -51,6 +53,8 @@ class BenchmarksBasedTest {
                 parser.parseFile(parseCtx, samplePath)
             }
             val ksmtAssertions = parser.convert(ctx, assertions)
+
+            ksmtAssertions.forEach { SortChecker(ctx).apply(it) }
 
             parseCtx.performEqualityChecks(ctx) {
                 for ((originalZ3Expr, ksmtExpr) in assertions.zip(ksmtAssertions)) {
@@ -282,6 +286,16 @@ class BenchmarksBasedTest {
         override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
             assertNotNull(model.interpretation(expr.function), "no interpretation for as-array: $expr")
             return expr
+        }
+    }
+
+    private class SortChecker(ctx: KContext) : KNonRecursiveTransformer(ctx) {
+        override fun <T : KSort> transformApp(expr: KApp<T, *>): KExpr<T> = with(ctx) {
+            // apply internally check arguments sorts
+            expr.decl.apply(expr.args)
+            return super.transformApp(expr).also {
+                check(it.sort == expr.sort) { "sort mismatch" }
+            }
         }
     }
 }

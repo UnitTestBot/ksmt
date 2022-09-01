@@ -3,7 +3,6 @@ package org.ksmt.solver.z3
 import kotlin.random.Random
 import kotlin.random.nextUInt
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.AfterEach
@@ -178,12 +177,26 @@ class BitVecTest {
     }
 
     @Test
-    fun testCreateIllegalBv(): Unit = with(context) {
+    fun testCreateBvNarrowingTransformation(): Unit = with(context) {
         val sizeBits = 42u
-        val stringValue = "0".repeat(sizeBits.toInt() - 1)
+        val bitvector = mkBv(Long.MAX_VALUE, sizeBits) as KBitVecCustomValue
 
-        assertFailsWith(IllegalArgumentException::class) { mkBv(stringValue, sizeBits) }
-        assertFailsWith(IllegalArgumentException::class) { mkBv(Long.MAX_VALUE, sizeBits) }
+        assertEquals(bitvector.binaryStringValue, Long.MAX_VALUE.toBinary().takeLast(sizeBits.toInt()))
+    }
+
+    @Test
+    fun testCreateBvWithGreaterSize(): Unit = with(context) {
+        val sizeBits = 100u
+        val positiveBv = mkBv(Long.MAX_VALUE, sizeBits) as KBitVecCustomValue
+        val negativeBv = mkBv(Long.MIN_VALUE, sizeBits) as KBitVecCustomValue
+
+        val sizeDifference = sizeBits.toInt() - Long.SIZE_BITS
+
+        assertEquals(positiveBv.binaryStringValue.take(sizeDifference), "0".repeat(sizeDifference))
+        assertEquals(negativeBv.binaryStringValue.take(sizeDifference), "1".repeat(sizeDifference))
+
+        assertEquals(positiveBv.binaryStringValue.takeLast(Long.SIZE_BITS), Long.MAX_VALUE.toBinary())
+        assertEquals(negativeBv.binaryStringValue.takeLast(Long.SIZE_BITS), Long.MIN_VALUE.toBinary())
     }
 
     @Test
