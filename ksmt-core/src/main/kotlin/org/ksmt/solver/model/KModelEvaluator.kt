@@ -12,6 +12,7 @@ import org.ksmt.expr.KApp
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KFalse
+import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.KIntNumExpr
 import org.ksmt.expr.KIteExpr
 import org.ksmt.expr.KNotExpr
@@ -21,6 +22,8 @@ import org.ksmt.expr.KTrue
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KFpRoundingModeSort
+import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
@@ -162,8 +165,13 @@ open class KModelEvaluator(
             override fun visit(sort: KIntSort): KExpr<T> = 0.intExpr as KExpr<T>
             override fun visit(sort: KRealSort): KExpr<T> = mkRealNum(0) as KExpr<T>
             override fun <S : KBvSort> visit(sort: S): KExpr<T> = mkBv("0", sort.sizeBits) as KExpr<T>
+            override fun <S : KFpSort> visit(sort: S): KExpr<T> = mkFp(0f, sort) as KExpr<T>
+            override fun visit(sort: KFpRoundingModeSort): KExpr<T> =
+                mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardZero) as KExpr<T>
+
             override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): KExpr<T> =
                 mkArrayConst(sort, sort.range.sampleValue()) as KExpr<T>
+
             override fun visit(sort: KUninterpretedSort): KExpr<T> =
                 error("Uninterpreted sort has no values")
         })

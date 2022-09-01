@@ -55,6 +55,18 @@ class Cache4<T, A0, A1, A2, A3>(val builder: (A0, A1, A2, A3) -> T) : AutoClosea
     }
 }
 
+class Cache5<T, A0, A1, A2, A3, A4>(val builder: (A0, A1, A2, A3, A4) -> T) : AutoCloseable {
+    private val cache = HashMap<List<*>, T>()
+
+    @Suppress("unused")
+    fun create(a0: A0, a1: A1, a2: A2, a3: A3, a4: A4): T =
+        cache.getOrPut(listOf(a0, a1, a2, a3, a4)) { builder(a0, a1, a2, a3, a4) }
+
+    override fun close() {
+        cache.clear()
+    }
+}
+
 fun <T> mkCache(builder: () -> T) = Cache0(builder)
 fun <T, A0> mkCache(builder: (A0) -> T) = Cache1(builder)
 fun <T, A0, A1> mkCache(builder: (A0, A1) -> T) = Cache2(builder)
@@ -62,3 +74,4 @@ fun <T, A0, A1, A2> mkCache(builder: (A0, A1, A2) -> T) = Cache3(builder)
 
 @Suppress("unused")
 fun <T, A0, A1, A2, A3> mkCache(builder: (A0, A1, A2, A3) -> T) = Cache4(builder)
+fun <T, A0, A1, A2, A3, A4> mkCache(builder: (A0, A1, A2, A3, A4) -> T) = Cache5(builder)

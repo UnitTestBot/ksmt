@@ -88,6 +88,19 @@ abstract class KExprConverterBase<T : Any> {
         op(convertedArgs[0] as KExpr<A0>, convertedArgs[1] as KExpr<A1>, convertedArgs[2] as KExpr<A2>)
     }
 
+    @Suppress("UNCHECKED_CAST", "MagicNumber")
+    inline fun <S : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort> T.convert(
+        args: Array<T>,
+        op: (KExpr<A0>, KExpr<A1>, KExpr<A2>, KExpr<A3>) -> KExpr<S>
+    ) = ensureArgsConvertedAndConvert(this, args, expectedSize = 4) { convertedArgs ->
+        op(
+            convertedArgs[0] as KExpr<A0>,
+            convertedArgs[1] as KExpr<A1>,
+            convertedArgs[2] as KExpr<A2>,
+            convertedArgs[3] as KExpr<A3>
+        )
+    }
+
     @Suppress("UNCHECKED_CAST")
     inline fun <S : KSort, A : KSort> T.convertList(
         args: Array<T>,

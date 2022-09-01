@@ -11,15 +11,20 @@ import org.ksmt.sort.KBv64Sort
 import org.ksmt.sort.KBv8Sort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KIntSort
+import org.ksmt.utils.toBinary
 
 abstract class KBitVecValue<S : KBvSort>(
     ctx: KContext
 ) : KApp<S, KExpr<*>>(ctx) {
     override val args: List<KExpr<*>> = emptyList()
+
+    abstract val stringValue: String
 }
 
 class KBitVec1Value internal constructor(ctx: KContext, val value: Boolean) : KBitVecValue<KBv1Sort>(ctx) {
     override fun accept(transformer: KTransformer): KExpr<KBv1Sort> = transformer.transform(this)
+
+    override val stringValue: String = if (value) "1" else "0"
 
     override fun decl(): KDecl<KBv1Sort> = ctx.mkBvDecl(value)
 
@@ -29,7 +34,9 @@ class KBitVec1Value internal constructor(ctx: KContext, val value: Boolean) : KB
 abstract class KBitVecNumberValue<S : KBvSort, N : Number>(
     ctx: KContext,
     val numberValue: N
-) : KBitVecValue<S>(ctx)
+) : KBitVecValue<S>(ctx) {
+    override val stringValue: String = numberValue.toBinary()
+}
 
 class KBitVec8Value internal constructor(ctx: KContext, byteValue: Byte) :
     KBitVecNumberValue<KBv8Sort, Byte>(ctx, byteValue) {
@@ -80,6 +87,8 @@ class KBitVecCustomValue internal constructor(
     }
 
     override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
+
+    override val stringValue: String = binaryStringValue
 
     override fun decl(): KDecl<KBvSort> = ctx.mkBvDecl(binaryStringValue, sizeBits)
 

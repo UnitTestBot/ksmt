@@ -4,12 +4,19 @@ import com.microsoft.z3.ArithExpr
 import com.microsoft.z3.ArithSort
 import com.microsoft.z3.ArrayExpr
 import com.microsoft.z3.BitVecExpr
+import com.microsoft.z3.BitVecSort
 import com.microsoft.z3.BoolExpr
 import com.microsoft.z3.BoolSort
 import com.microsoft.z3.Context
 import com.microsoft.z3.Expr
+import com.microsoft.z3.FPExpr
+import com.microsoft.z3.FPRMExpr
+import com.microsoft.z3.FPRMSort
+import com.microsoft.z3.FPSort
 import com.microsoft.z3.FuncDecl
 import com.microsoft.z3.IntExpr
+import com.microsoft.z3.RealExpr
+import com.microsoft.z3.RealSort
 import com.microsoft.z3.Sort
 import com.microsoft.z3.mkBvNumeral
 import com.microsoft.z3.mkExistsQuantifier
@@ -68,6 +75,7 @@ import org.ksmt.expr.KBvSignedRemExpr
 import org.ksmt.expr.KBvSubExpr
 import org.ksmt.expr.KBvSubNoOverflowExpr
 import org.ksmt.expr.KBvSubNoUnderflowExpr
+import org.ksmt.expr.KBvToFpExpr
 import org.ksmt.expr.KBvUnsignedDivExpr
 import org.ksmt.expr.KBvUnsignedGreaterExpr
 import org.ksmt.expr.KBvUnsignedGreaterOrEqualExpr
@@ -76,7 +84,6 @@ import org.ksmt.expr.KBvUnsignedLessOrEqualExpr
 import org.ksmt.expr.KBvUnsignedRemExpr
 import org.ksmt.expr.KBvXNorExpr
 import org.ksmt.expr.KBvXorExpr
-import org.ksmt.expr.KBvZeroExtensionExpr
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KDivArithExpr
@@ -108,11 +115,57 @@ import org.ksmt.expr.KToRealIntExpr
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
+import org.ksmt.expr.KBvZeroExtensionExpr
+import org.ksmt.expr.KFp128Value
+import org.ksmt.expr.KFp16Value
+import org.ksmt.expr.KFp32Value
+import org.ksmt.expr.KFp64Value
+import org.ksmt.expr.KFpAbsExpr
+import org.ksmt.expr.KFpAddExpr
+import org.ksmt.expr.KFpCustomSizeValue
+import org.ksmt.expr.KFpDivExpr
+import org.ksmt.expr.KFpEqualExpr
+import org.ksmt.expr.KFpFromBvExpr
+import org.ksmt.expr.KFpFusedMulAddExpr
+import org.ksmt.expr.KFpGreaterExpr
+import org.ksmt.expr.KFpGreaterOrEqualExpr
+import org.ksmt.expr.KFpIsInfiniteExpr
+import org.ksmt.expr.KFpIsNaNExpr
+import org.ksmt.expr.KFpIsNegativeExpr
+import org.ksmt.expr.KFpIsNormalExpr
+import org.ksmt.expr.KFpIsPositiveExpr
+import org.ksmt.expr.KFpIsSubnormalExpr
+import org.ksmt.expr.KFpIsZeroExpr
+import org.ksmt.expr.KFpLessExpr
+import org.ksmt.expr.KFpLessOrEqualExpr
+import org.ksmt.expr.KFpMaxExpr
+import org.ksmt.expr.KFpMinExpr
+import org.ksmt.expr.KFpMulExpr
+import org.ksmt.expr.KFpNegationExpr
+import org.ksmt.expr.KFpRemExpr
+import org.ksmt.expr.KFpRoundToIntegralExpr
+import org.ksmt.expr.KFpRoundingMode
+import org.ksmt.expr.KFpRoundingModeExpr
+import org.ksmt.expr.KFpSqrtExpr
+import org.ksmt.expr.KFpSubExpr
+import org.ksmt.expr.KFpToBvExpr
+import org.ksmt.expr.KFpToFpExpr
+import org.ksmt.expr.KFpToIEEEBvExpr
+import org.ksmt.expr.KFpToRealExpr
+import org.ksmt.expr.KFpValue
+import org.ksmt.expr.KRealToFpExpr
 import org.ksmt.expr.KXorExpr
 import org.ksmt.solver.util.KExprInternalizerBase
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
+import org.ksmt.sort.KFp128Sort
+import org.ksmt.sort.KFp16Sort
+import org.ksmt.sort.KFp32Sort
+import org.ksmt.sort.KFp64Sort
+import org.ksmt.sort.KFpRoundingModeSort
+import org.ksmt.sort.KFpSort
+import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 
 @Suppress("SpreadOperator")
@@ -365,6 +418,184 @@ open class KZ3ExprInternalizer(
 
     override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) =
         with(expr) { transform(arg0, arg1, z3Ctx::mkBVMulNoUnderflow) }
+
+    override fun <T : KFpSort> transformFpValue(expr: KFpValue<T>): KExpr<T> = expr.transform {
+        val sort = with(ctx) { expr.sort.internalizeSort() } as FPSort
+        with(expr) {
+            when (this) {
+                is KFp16Value -> z3Ctx.mkFP(value, sort)
+                is KFp32Value -> z3Ctx.mkFP(value, sort)
+                is KFp64Value -> z3Ctx.mkFP(value, sort)
+                is KFp128Value -> z3Ctx.mkFP(signBit, exponentValue, significandValue, sort)
+                is KFpCustomSizeValue -> z3Ctx.mkFP(signBit, exponentValue, significandValue, sort)
+                else -> error("Unexpected KFpValue type: ${this::class.qualifiedName}")
+            }
+        }
+    }
+
+    override fun transform(expr: KFp16Value): KExpr<KFp16Sort> = transformFpValue(expr)
+
+    override fun transform(expr: KFp32Value): KExpr<KFp32Sort> = transformFpValue(expr)
+
+    override fun transform(expr: KFp64Value): KExpr<KFp64Sort> = transformFpValue(expr)
+
+    override fun transform(expr: KFp128Value): KExpr<KFp128Sort> = transformFpValue(expr)
+
+    override fun transform(expr: KFpCustomSizeValue): KExpr<KFpSort> = transformFpValue(expr)
+
+    override fun transform(expr: KFpRoundingModeExpr): KExpr<KFpRoundingModeSort> = with(expr) {
+        transform { transformRoundingModeNumeral(value) }
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpAbsExpr<T>): KExpr<T> = with(expr) {
+        transform(value, z3Ctx::mkFPAbs)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpNegationExpr<T>): KExpr<T> = with(expr) {
+        transform(value, z3Ctx::mkFPNeg)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpAddExpr<T>): KExpr<T> = with(expr) {
+        transform(roundingMode, arg0, arg1, z3Ctx::mkFPAdd)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpSubExpr<T>): KExpr<T> = with(expr) {
+        transform(roundingMode, arg0, arg1, z3Ctx::mkFPSub)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpMulExpr<T>): KExpr<T> = with(expr) {
+        transform(roundingMode, arg0, arg1, z3Ctx::mkFPMul)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpDivExpr<T>): KExpr<T> = with(expr) {
+        transform(roundingMode, arg0, arg1, z3Ctx::mkFPDiv)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpFusedMulAddExpr<T>): KExpr<T> =
+        with(expr) {
+            transform(roundingMode, arg0, arg1, arg2, z3Ctx::mkFPFMA)
+        }
+
+    override fun <T : KFpSort> transform(expr: KFpSqrtExpr<T>): KExpr<T> =
+        with(expr) {
+            transform(roundingMode, value, z3Ctx::mkFPSqrt)
+        }
+
+    override fun <T : KFpSort> transform(expr: KFpRemExpr<T>): KExpr<T> = with(expr) {
+        transform(arg0, arg1, z3Ctx::mkFPRem)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpRoundToIntegralExpr<T>): KExpr<T> =
+        with(expr) {
+            transform(roundingMode, value, z3Ctx::mkFPRoundToIntegral)
+        }
+
+    override fun <T : KFpSort> transform(expr: KFpMinExpr<T>): KExpr<T> = with(expr) {
+        transform(arg0, arg1, z3Ctx::mkFPMin)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpMaxExpr<T>): KExpr<T> = with(expr) {
+        transform(arg0, arg1, z3Ctx::mkFPMax)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpLessOrEqualExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(arg0, arg1, z3Ctx::mkFPLEq)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpLessExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(arg0, arg1, z3Ctx::mkFPLt)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpGreaterOrEqualExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(arg0, arg1, z3Ctx::mkFPGEq)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpGreaterExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(arg0, arg1, z3Ctx::mkFPGt)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpEqualExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(arg0, arg1, z3Ctx::mkFPEq)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpIsNormalExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(value, z3Ctx::mkFPIsNormal)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpIsSubnormalExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(value, z3Ctx::mkFPIsSubnormal)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpIsZeroExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(value, z3Ctx::mkFPIsZero)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpIsInfiniteExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(value, z3Ctx::mkFPIsInfinite)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpIsNaNExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(value, z3Ctx::mkFPIsNaN)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpIsNegativeExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(value, z3Ctx::mkFPIsNegative)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpIsPositiveExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(value, z3Ctx::mkFPIsPositive)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>): KExpr<KBvSort> =
+        with(expr) {
+            transform(roundingMode, value) { rm: Expr<FPRMSort>, value: Expr<FPSort> ->
+                z3Ctx.mkFPToBV(rm, value, bvSize, isSigned)
+            }
+        }
+
+    private fun transformRoundingModeNumeral(roundingMode: KFpRoundingMode): FPRMExpr =
+        with(z3Ctx) {
+            when (roundingMode) {
+                KFpRoundingMode.RoundNearestTiesToEven -> mkFPRoundNearestTiesToEven()
+                KFpRoundingMode.RoundNearestTiesToAway -> mkFPRoundNearestTiesToAway()
+                KFpRoundingMode.RoundTowardNegative -> mkFPRoundTowardNegative()
+                KFpRoundingMode.RoundTowardPositive -> mkFPRoundTowardPositive()
+                KFpRoundingMode.RoundTowardZero -> mkFPRoundTowardZero()
+            }
+        }
+
+    override fun <T : KFpSort> transform(expr: KFpToRealExpr<T>): KExpr<KRealSort> = with(expr) {
+        transform(value, z3Ctx::mkFPToReal)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> = with(expr) {
+        transform(value, z3Ctx::mkFPToIEEEBV)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> = with(expr) {
+        transform(sign, exponent, significand, z3Ctx::mkFP)
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> = with(expr) {
+        transform(roundingMode, value) { rm: Expr<FPRMSort>, value: Expr<FPSort> ->
+            val fpSort = sort.internalizeSort() as FPSort
+            z3Ctx.mkFPToFP(rm, value as FPExpr, fpSort)
+        }
+    }
+
+    override fun <T : KFpSort> transform(expr: KRealToFpExpr<T>): KExpr<T> = with(expr) {
+        transform(roundingMode, value) { rm: Expr<FPRMSort>, value: Expr<RealSort> ->
+            val fpSort = sort.internalizeSort() as FPSort
+            z3Ctx.mkFPToFP(rm, value as RealExpr, fpSort)
+        }
+    }
+
+    override fun <T : KFpSort> transform(expr: KBvToFpExpr<T>): KExpr<T> = with(expr) {
+        transform(roundingMode, value) { rm: Expr<FPRMSort>, value: Expr<BitVecSort> ->
+            val fpSort = sort.internalizeSort() as FPSort
+            z3Ctx.mkFPToFP(rm, value as BitVecExpr, fpSort, signed)
+        }
+    }
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) = with(expr) {
         transform<ArrayExpr<Sort, Sort>, Expr<Sort>, Expr<Sort>, KArrayStore<D, R>>(
