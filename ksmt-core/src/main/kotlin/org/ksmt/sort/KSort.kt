@@ -148,3 +148,37 @@ class KFpCustomSizeSort(ctx: KContext, exponentBits: UInt, significandBits: UInt
     KFpSort(ctx, exponentBits, significandBits) {
     override fun exponentShiftSize(): Int = (1 shl (exponentBits.toInt() - 1)) - 1
 }
+
+sealed class KFpRoundingModeSort(ctx: KContext): KSort(ctx) {
+    override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
+}
+
+class KFpRoundNearestTiesToEvenSort(ctx: KContext) : KFpRoundingModeSort(ctx) {
+    override fun print(builder: StringBuilder) {
+        builder.append("RoundNearestTiesToEvenSort")
+    }
+}
+
+class KFpRoundNearestTiesToAwaySort(ctx: KContext) : KFpRoundingModeSort(ctx) {
+    override fun print(builder: StringBuilder) {
+        builder.append("RoundNearestTiesToAwaySort")
+    }
+}
+
+class KFpRoundTowardPositiveSort(ctx: KContext) : KFpRoundingModeSort(ctx) {
+    override fun print(builder: StringBuilder) {
+        builder.append("RoundTowardPositiveSort")
+    }
+}
+
+class KFpRoundTowardNegativeSort(ctx: KContext) : KFpRoundingModeSort(ctx) {
+    override fun print(builder: StringBuilder) {
+        builder.append("RoundTowardNegativeSort")
+    }
+}
+
+class KFpRoundTowardZeroSort(ctx: KContext) : KFpRoundingModeSort(ctx) {
+    override fun print(builder: StringBuilder) {
+        builder.append("RoundTowardZeroSort")
+    }
+}

@@ -251,7 +251,9 @@ open class KZ3ExprConverter(
                     ?: error("unexpected as-array decl $z3Decl")
                 mkFunctionAsArray<KSort, KSort>(decl)
             }
-            Z3_decl_kind.Z3_OP_FPA_NUM -> convert {
+            Z3_decl_kind.Z3_OP_FPA_NUM,
+            Z3_decl_kind.Z3_OP_FPA_MINUS_ZERO,
+            Z3_decl_kind.Z3_OP_FPA_PLUS_ZERO -> convert {
                 with(expr as FPNum) {
                     val sort = convertSort(sort) as KFpSort
                     val sBits = sort.significandBits.toInt()

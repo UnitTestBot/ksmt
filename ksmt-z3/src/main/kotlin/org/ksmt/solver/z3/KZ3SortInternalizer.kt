@@ -13,6 +13,7 @@ import org.ksmt.sort.KFp16Sort
 import org.ksmt.sort.KFp32Sort
 import org.ksmt.sort.KFp64Sort
 import org.ksmt.sort.KFpCustomSizeSort
+import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
@@ -42,7 +43,8 @@ open class KZ3SortInternalizer(
     override fun <T : KBvSort> visit(sort: T): Sort = z3InternCtx.internalizeSort(sort) {
         z3Ctx.mkBitVecSort(sort.sizeBits.toInt())
     }
-    override fun <S: KFpSort> visit(sort: S): Sort = z3InternCtx.internalizeSort(sort) {
+
+    override fun <S : KFpSort> visit(sort: S): Sort = z3InternCtx.internalizeSort(sort) {
         when (sort) {
             is KFp16Sort -> z3Ctx.mkFPSort16()
             is KFp32Sort -> z3Ctx.mkFPSort32()
@@ -51,6 +53,10 @@ open class KZ3SortInternalizer(
             is KFpCustomSizeSort -> z3Ctx.mkFPSort(sort.exponentBits.toInt(), sort.significandBits.toInt())
             else -> error("Unsupported sort: $sort")
         }
+    }
+
+    override fun <S : KFpRoundingModeSort> visit(sort: S): Sort = z3InternCtx.internalizeSort(sort) {
+        z3Ctx.mkFPRoundingModeSort()
     }
 
     override fun visit(sort: KUninterpretedSort): Sort = z3InternCtx.internalizeSort(sort) {

@@ -69,6 +69,44 @@ import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFalse
+import org.ksmt.expr.KFp128Value
+import org.ksmt.expr.KFp16Value
+import org.ksmt.expr.KFp32Value
+import org.ksmt.expr.KFp64Value
+import org.ksmt.expr.KFpAbsExpr
+import org.ksmt.expr.KFpAddExpr
+import org.ksmt.expr.KFpCustomSizeValue
+import org.ksmt.expr.KFpDivExpr
+import org.ksmt.expr.KFpEqualExpr
+import org.ksmt.expr.KFpFusedMulAddExpr
+import org.ksmt.expr.KFpGreaterExpr
+import org.ksmt.expr.KFpGreaterOrEqualExpr
+import org.ksmt.expr.KFpIsInfiniteExpr
+import org.ksmt.expr.KFpIsNaNExpr
+import org.ksmt.expr.KFpIsNegativeExpr
+import org.ksmt.expr.KFpIsNormalExpr
+import org.ksmt.expr.KFpIsPositiveExpr
+import org.ksmt.expr.KFpIsSubnormalExpr
+import org.ksmt.expr.KFpIsZeroExpr
+import org.ksmt.expr.KFpLessExpr
+import org.ksmt.expr.KFpLessOrEqualExpr
+import org.ksmt.expr.KFpMaxExpr
+import org.ksmt.expr.KFpMinExpr
+import org.ksmt.expr.KFpMulExpr
+import org.ksmt.expr.KFpNegationExpr
+import org.ksmt.expr.KFpRemExpr
+import org.ksmt.expr.KFpRoundNearestTiesToAwayExpr
+import org.ksmt.expr.KFpRoundNearestTiesToEvenExpr
+import org.ksmt.expr.KFpRoundToIntegralExpr
+import org.ksmt.expr.KFpRoundTowardNegativeExpr
+import org.ksmt.expr.KFpRoundTowardPositiveExpr
+import org.ksmt.expr.KFpRoundTowardZeroExpr
+import org.ksmt.expr.KFpSqrtExpr
+import org.ksmt.expr.KFpSubExpr
+import org.ksmt.expr.KFpToBvExpr
+import org.ksmt.expr.KFpToIEEEBvExpr
+import org.ksmt.expr.KFpToRealExpr
+import org.ksmt.expr.KFpValue
 import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KGeArithExpr
@@ -109,6 +147,12 @@ import org.ksmt.sort.KFp128Sort
 import org.ksmt.sort.KFp16Sort
 import org.ksmt.sort.KFp32Sort
 import org.ksmt.sort.KFp64Sort
+import org.ksmt.sort.KFpRoundNearestTiesToAwaySort
+import org.ksmt.sort.KFpRoundNearestTiesToEvenSort
+import org.ksmt.sort.KFpRoundTowardNegativeSort
+import org.ksmt.sort.KFpRoundTowardPositiveSort
+import org.ksmt.sort.KFpRoundTowardZeroSort
+import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
@@ -206,6 +250,42 @@ interface KTransformer {
     fun transform(expr: KFp64Value): KExpr<KFp64Sort> = transformFpValue(expr)
     fun transform(expr: KFp128Value): KExpr<KFp128Sort> = transformFpValue(expr)
     fun transform(expr: KFpCustomSizeValue): KExpr<KFpSort> = transformFpValue(expr)
+
+    // fp operations tranformation
+    fun <T : KFpSort> transform(expr: KFpAbsExpr<T>): KExpr<T> = transformApp(expr)
+    fun <T : KFpSort> transform(expr: KFpNegationExpr<T>): KExpr<T> = transformApp(expr)
+    fun <R: KFpRoundingModeSort, T : KFpSort> transform(expr: KFpAddExpr<R, T>): KExpr<T> = transformApp(expr)
+    fun <R: KFpRoundingModeSort, T : KFpSort> transform(expr: KFpSubExpr<R, T>): KExpr<T> = transformApp(expr)
+    fun <R: KFpRoundingModeSort, T : KFpSort> transform(expr: KFpMulExpr<R, T>): KExpr<T> = transformApp(expr)
+    fun <R: KFpRoundingModeSort, T : KFpSort> transform(expr: KFpDivExpr<R, T>): KExpr<T> = transformApp(expr)
+    fun <R: KFpRoundingModeSort, T : KFpSort> transform(expr: KFpFusedMulAddExpr<R, T>): KExpr<T> = transformApp(expr)
+    fun <R: KFpRoundingModeSort, T : KFpSort> transform(expr: KFpSqrtExpr<R, T>): KExpr<T> = transformApp(expr)
+    fun <T : KFpSort> transform(expr: KFpRemExpr<T>): KExpr<T> = transformApp(expr)
+    fun <R: KFpRoundingModeSort, T : KFpSort> transform(expr: KFpRoundToIntegralExpr<R, T>): KExpr<T> = transformApp(expr)
+    fun <T : KFpSort> transform(expr: KFpMinExpr<T>): KExpr<T> = transformApp(expr)
+    fun <T : KFpSort> transform(expr: KFpMaxExpr<T>): KExpr<T> = transformApp(expr)
+    fun <T : KFpSort> transform(expr: KFpLessOrEqualExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    fun <T : KFpSort> transform(expr: KFpLessExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    fun <T : KFpSort> transform(expr: KFpGreaterOrEqualExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    fun <T : KFpSort> transform(expr: KFpGreaterExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    fun <T : KFpSort> transform(expr: KFpEqualExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    fun <T : KFpSort> transform(expr: KFpIsNormalExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    fun <T : KFpSort> transform(expr: KFpIsSubnormalExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    fun <T : KFpSort> transform(expr: KFpIsZeroExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    fun <T : KFpSort> transform(expr: KFpIsInfiniteExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    fun <T : KFpSort> transform(expr: KFpIsNaNExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    fun <T : KFpSort> transform(expr: KFpIsNegativeExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    fun <T : KFpSort> transform(expr: KFpIsPositiveExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    fun <R: KFpRoundingModeSort, T : KFpSort> transform(expr: KFpToBvExpr<R, T>): KExpr<KBvSort> = transformApp(expr)
+    fun <T : KFpSort> transform(expr: KFpToRealExpr<T>): KExpr<KRealSort> = transformApp(expr)
+    fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> = transformApp(expr)
+
+    // fp rounding mode numerals
+    fun transform(expr: KFpRoundNearestTiesToEvenExpr): KExpr<KFpRoundNearestTiesToEvenSort> = transformApp(expr)
+    fun transform(expr: KFpRoundNearestTiesToAwayExpr): KExpr<KFpRoundNearestTiesToAwaySort> = transformApp(expr)
+    fun transform(expr: KFpRoundTowardPositiveExpr): KExpr<KFpRoundTowardPositiveSort> = transformApp(expr)
+    fun transform(expr: KFpRoundTowardNegativeExpr): KExpr<KFpRoundTowardNegativeSort> = transformApp(expr)
+    fun transform(expr: KFpRoundTowardZeroExpr): KExpr<KFpRoundTowardZeroSort> = transformApp(expr)
 
     // array transformers
     fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> = transformApp(expr)

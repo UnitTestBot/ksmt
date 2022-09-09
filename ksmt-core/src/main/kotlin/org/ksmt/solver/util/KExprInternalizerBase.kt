@@ -109,6 +109,39 @@ abstract class KExprInternalizerBase<T : Any> : KTransformer {
         }
     }
 
+    inline fun <reified A0 : T, reified A1 : T, reified A2 : T, reified A3 : T, S : KExpr<*>> S.transform(
+        arg0: KExpr<*>,
+        arg1: KExpr<*>,
+        arg2: KExpr<*>,
+        arg3: KExpr<*>,
+        operation: (A0, A1, A2, A3) -> T
+    ): S = also {
+        val internalizedArg0 = findInternalizedExpr(arg0)
+        val internalizedArg1 = findInternalizedExpr(arg1)
+        val internalizedArg2 = findInternalizedExpr(arg2)
+        val internalizedArg3 = findInternalizedExpr(arg3)
+
+        if (internalizedArg0 == null || internalizedArg1 == null || internalizedArg2 == null || internalizedArg3 == null) {
+            exprStack.add(this)
+
+            internalizedArg0 ?: exprStack.add(arg0)
+            internalizedArg1 ?: exprStack.add(arg1)
+            internalizedArg2 ?: exprStack.add(arg2)
+            internalizedArg3 ?: exprStack.add(arg3)
+
+            lastExprInternalizationResult = argumentsInternalizationRequired
+        } else {
+            lastExprInternalizationResult = ExprInternalizationResult(
+                operation(
+                    internalizedArg0 as A0,
+                    internalizedArg1 as A1,
+                    internalizedArg2 as A2,
+                    internalizedArg3 as A3
+                )
+            )
+        }
+    }
+
     inline fun <reified A : T, S : KExpr<*>> S.transformList(
         args: List<KExpr<*>>,
         operation: (Array<A>) -> T

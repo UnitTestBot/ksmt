@@ -1,9 +1,15 @@
 package org.ksmt.solver.z3
 
 import java.lang.Float.intBitsToFloat
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.sign
+import kotlin.math.sqrt
 import kotlin.random.Random
 import kotlin.random.nextUInt
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -11,6 +17,11 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFp64Value
+import org.ksmt.expr.KTrue
+import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KFp64Sort
+import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.utils.booleanSignBit
 import org.ksmt.utils.extractExponent
@@ -199,8 +210,8 @@ class FloatingPointTest {
                 // val values = listOf((-8634236606667726792L to 33L))
 
                 // TODO here we should apply masks to avoid exponents that are not in [min..max] range
-                 val randomDoubles = (0..1000).map { Random.nextDouble() }
-                 val randomFloats = (0..1000).map { Random.nextFloat() }
+                val randomDoubles = (0..1000).map { Random.nextDouble() }
+                val randomFloats = (0..1000).map { Random.nextFloat() }
 
                 val signBit = Random.nextBoolean()
 
@@ -208,10 +219,249 @@ class FloatingPointTest {
                 val symbolicValues = values.mapTo(mutableListOf()) { (significand, exponent) ->
                     mkFp(significand, exponent, signBit, sort)
                 }
-                 symbolicValues += randomDoubles.mapTo(mutableListOf()) { value -> mkFp(value, sort) }
-                 symbolicValues += randomFloats.map { value -> mkFp(value, sort) }
+                symbolicValues += randomDoubles.mapTo(mutableListOf()) { value -> mkFp(value, sort) }
+                symbolicValues += randomFloats.map { value -> mkFp(value, sort) }
 
                 symbolicValuesCheck(symbolicValues, sort)
             }
         }
+
+    @Test
+    fun testFpAbsExpr(): Unit = with(context) {
+        val negativeNumber = Random.nextDouble(from = Long.MIN_VALUE.toDouble(), until = 0.0)
+        val positiveNumber = Random.nextDouble(from = 0.0, Long.MAX_VALUE.toDouble())
+
+        val negativeFp = negativeNumber.toFp() as KFp64Value
+        val positiveFp = positiveNumber.toFp() as KFp64Value
+
+        val negativeVariable = mkFp64Sort().mkConst("negativeValue")
+        val positiveVariable = mkFp64Sort().mkConst("positiveValue")
+
+        solver.assert(mkFpAbsExpr(negativeFp) eq negativeVariable)
+        solver.assert(mkFpAbsExpr(positiveFp) eq positiveVariable)
+
+        solver.check()
+        with(solver.model()) {
+            assertEquals(abs(negativeNumber), (eval(negativeVariable) as KFp64Value).value, DELTA)
+            assertEquals(positiveNumber, (eval(positiveVariable) as KFp64Value).value, DELTA)
+        }
+    }
+
+    @Test
+    fun testFpNegation(): Unit = with(context) {
+        val number = Random.nextDouble()
+        val numberFp = number.toFp() as KFp64Value
+
+        val variable = mkFp64Sort().mkConst("variable")
+
+        solver.assert(mkFpNegationExpr(numberFp) eq variable)
+
+        solver.check()
+        with(solver.model()) {
+            assertEquals(-1 * number, (eval(variable) as KFp64Value).value, DELTA)
+        }
+    }
+
+    private fun testBinaryArithOperation(
+        symbolicOperation: (KExpr<out KFpRoundingModeSort>, KFp64Value, KFp64Value) -> KExpr<KFp64Sort>,
+        concreteOperation: (Double, Double) -> Double
+    ): Unit = with(context) {
+        val fst = Random.nextDouble()
+        val snd = Random.nextDouble()
+
+        val fstFp = fst.toFp() as KFp64Value
+        val sndFp = snd.toFp() as KFp64Value
+
+        val fstVariable = mkFp64Sort().mkConst("fstVariable")
+        val sndVariable = mkFp64Sort().mkConst("sndVariable")
+
+        val roundingMode = mkFpRoundNearestTiesToEvenExpr()
+
+        solver.assert(symbolicOperation(roundingMode, fstFp, sndFp) eq fstVariable)
+        solver.assert(symbolicOperation(roundingMode, sndFp, fstFp) eq sndVariable)
+
+        solver.check()
+        with(solver.model()) {
+            assertEquals(concreteOperation(fst, snd), (eval(fstVariable) as KFp64Value).value, DELTA)
+            assertEquals(concreteOperation(snd, fst), (eval(sndVariable) as KFp64Value).value, DELTA)
+        }
+    }
+
+    @Test
+    fun testFpAddExpr() = testBinaryArithOperation(context::mkFpAddExpr) { a, b -> a + b }
+
+    @Test
+    fun testFpSubExpr() = testBinaryArithOperation(context::mkFpSubExpr) { a, b -> a - b }
+
+    @Test
+    fun testFpMulExpr() = testBinaryArithOperation(context::mkFpMulExpr) { a, b -> a * b }
+
+    @Test
+    fun testFpDivExpr() = testBinaryArithOperation(context::mkFpDivExpr) { a, b -> a / b }
+
+    @Test
+    fun testFpFusedMulAddExpr(): Unit = with(context) {
+        val fst = Random.nextDouble()
+        val snd = Random.nextDouble()
+        val third = Random.nextDouble()
+
+        val fstFp = fst.toFp() as KFp64Value
+        val sndFp = snd.toFp() as KFp64Value
+        val thirdFp = third.toFp() as KFp64Value
+
+        val fstVariable = mkFp64Sort().mkConst("fstVariable")
+        val sndVariable = mkFp64Sort().mkConst("sndVariable")
+        val thirdVariable = mkFp64Sort().mkConst("thirdVariable")
+
+        val roundingMode = mkFpRoundNearestTiesToEvenExpr()
+
+        solver.assert(mkFpFusedMulAddExpr(roundingMode, fstFp, sndFp, thirdFp) eq fstVariable)
+        solver.assert(mkFpFusedMulAddExpr(roundingMode, sndFp, thirdFp, fstFp) eq sndVariable)
+        solver.assert(mkFpFusedMulAddExpr(roundingMode, thirdFp, fstFp, sndFp) eq thirdVariable)
+
+        solver.check()
+        with(solver.model()) {
+            assertEquals((fst * snd) + third, (eval(fstVariable) as KFp64Value).value, DELTA)
+            assertEquals((snd * third) + fst, (eval(sndVariable) as KFp64Value).value, DELTA)
+            assertEquals((third * fst) + snd, (eval(thirdVariable) as KFp64Value).value, DELTA)
+        }
+    }
+
+    @Test
+    fun testFpSqrtExpr(): Unit = with(context) {
+        val value = Random.nextDouble()
+        val valueFp = value.toFp() as KFp64Value
+        val valueVariable = mkFp64Sort().mkConst("fstVariable")
+
+        val roundingMode = mkFpRoundNearestTiesToEvenExpr()
+
+        solver.assert(mkFpSqrtExpr(roundingMode, valueFp) eq valueVariable)
+
+        solver.check()
+        with(solver.model()) {
+            assertEquals(sqrt(value), (eval(valueVariable) as KFp64Value).value, DELTA)
+        }
+    }
+
+    @Test
+    fun testFpRoundToIntegral(): Unit = with(context) {
+        val value = Random.nextDouble()
+
+        val roundingModes = listOf(
+            mkFpRoundNearestTiesToEvenExpr(),
+            mkFpRoundNearestTiesToAwayExpr(),
+            mkFpRoundTowardPositiveExpr(),
+            mkFpRoundTowardNegativeExpr(),
+            mkFpRoundTowardZeroExpr()
+        )
+
+        val variables = roundingModes.indices.map { mkFp64Sort().mkConst("variable$it") }
+
+        variables.forEachIndexed { index, it ->
+            solver.assert(mkFpRoundToIntegralExpr(roundingModes[index], value.toFp() as KFp64Value) eq it)
+        }
+
+        solver.check()
+        with(solver.model()) {
+            variables.map { (eval(it) as KFp64Value).value }
+        }
+    }
+
+    private fun testMinMax(
+        symbolicOperation: (KFp64Value, KFp64Value) -> KExpr<KFp64Sort>,
+        concreteOperation: (Double, Double) -> Double
+    ): Unit = with(context) {
+        val fst = Random.nextDouble()
+        val snd = Random.nextDouble()
+
+        val fstFp = fst.toFp() as KFp64Value
+        val sndFp = snd.toFp() as KFp64Value
+
+        val fstVariable = mkFp64Sort().mkConst("fstVariable")
+        val sndVariable = mkFp64Sort().mkConst("sndVariable")
+
+        solver.assert(symbolicOperation(fstFp, sndFp) eq fstVariable)
+        solver.assert(symbolicOperation(sndFp, fstFp) eq sndVariable)
+
+        solver.check()
+        with(solver.model()) {
+            assertEquals(concreteOperation(fst, snd), (eval(fstVariable) as KFp64Value).value, DELTA)
+            assertEquals(concreteOperation(snd, fst), (eval(sndVariable) as KFp64Value).value, DELTA)
+        }
+    }
+
+    @Test
+    fun testMinValue(): Unit = testMinMax(context::mkFpMinExpr) { a: Double, b: Double -> min(a, b) }
+
+    @Test
+    fun testMaxValue(): Unit = testMinMax(context::mkFpMaxExpr) { a: Double, b: Double -> max(a, b) }
+
+    private fun testCompare(
+        symbolicOperation: (KExpr<KFp64Sort>, KExpr<KFp64Sort>) -> KExpr<KBoolSort>,
+        concreteOperation: (Double, Double) -> Boolean
+    ): Unit = with(context) {
+        val fst = Random.nextDouble()
+        val snd = Random.nextDouble()
+
+        val fstFp = fst.toFp() as KFp64Value
+        val sndFp = snd.toFp() as KFp64Value
+
+        val fstVariable = mkBoolSort().mkConst("fstVariable")
+        val sndVariable = mkBoolSort().mkConst("sndVariable")
+
+        solver.assert(symbolicOperation(fstFp, sndFp) eq fstVariable)
+        solver.assert(symbolicOperation(sndFp, fstFp) eq sndVariable)
+
+        solver.check()
+        with(solver.model()) {
+            assertEquals(concreteOperation(fst, snd), eval(fstVariable) is KTrue)
+            assertEquals(concreteOperation(snd, fst), eval(sndVariable) is KTrue)
+        }
+    }
+
+    private fun testPredicate(
+        symbolicPredicate: (KExpr<KFp64Sort>) -> KExpr<KBoolSort>,
+        concreteOperation: (Double) -> Boolean
+    ): Unit = with(context) {
+        val values = listOf(Double.NaN, +0.0, -0.0, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, 1.0.pow(-126))
+        val fpValues = values.map { it.toFp() as KFp64Value }
+        val variables = values.indices.map { mkBoolSort().mkConst("variable$it") }
+
+        val valuesWithVariables = fpValues.zip(variables)
+        valuesWithVariables.forEach { (value, variable) ->
+            solver.assert(symbolicPredicate(value) eq variable)
+        }
+
+        solver.check()
+        with(solver.model()) {
+            valuesWithVariables.forEach { (fp, variable) ->
+                assertEquals(concreteOperation(fp.value), eval(variable) is KTrue)
+            }
+        }
+    }
+
+    @Test
+    fun testLessOrEqualExpr() = testCompare(context::mkFpLessOrEqualExpr) { a: Double, b: Double -> a <= b }
+
+    @Test
+    fun testLessExpr() = testCompare(context::mkFpLessExpr) { a: Double, b: Double -> a < b }
+
+    @Test
+    fun testGreaterExpr() = testCompare(context::mkFpGreaterExpr) { a: Double, b: Double -> a > b }
+
+    @Test
+    fun testGreaterOrEqualExpr() = testCompare(context::mkFpGreaterOrEqualExpr) { a: Double, b: Double -> a >= b }
+
+    @Test
+    fun testEqualExpr() = testCompare(context::mkFpEqualExpr) { a: Double, b: Double -> abs(a - b) <= DELTA }
+
+    @Test
+    fun testIsZero() = testPredicate(context::mkFpIsZeroExpr) { value: Double -> value == +0.0 || value == -0.0 }
+
+    @Test
+    fun testIsInfinite() = testPredicate(context::mkFpIsInfiniteExpr) { value: Double -> value.isInfinite() }
+
+    companion object {
+        const val DELTA = 1e-15
+    }
 }
