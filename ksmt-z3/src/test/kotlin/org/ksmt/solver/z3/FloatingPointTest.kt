@@ -18,10 +18,10 @@ import org.junit.jupiter.api.Test
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFp64Value
+import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.KTrue
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KFp64Sort
-import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.utils.booleanSignBit
 import org.ksmt.utils.extractExponent
@@ -263,7 +263,7 @@ class FloatingPointTest {
     }
 
     private fun testBinaryArithOperation(
-        symbolicOperation: (KExpr<out KFpRoundingModeSort>, KFp64Value, KFp64Value) -> KExpr<KFp64Sort>,
+        symbolicOperation: (KFpRoundingMode, KFp64Value, KFp64Value) -> KExpr<KFp64Sort>,
         concreteOperation: (Double, Double) -> Double
     ): Unit = with(context) {
         val fst = Random.nextDouble()
@@ -275,7 +275,7 @@ class FloatingPointTest {
         val fstVariable = mkFp64Sort().mkConst("fstVariable")
         val sndVariable = mkFp64Sort().mkConst("sndVariable")
 
-        val roundingMode = mkFpRoundNearestTiesToEvenExpr()
+        val roundingMode = KFpRoundingMode.RoundNearestTiesToEven
 
         solver.assert(symbolicOperation(roundingMode, fstFp, sndFp) eq fstVariable)
         solver.assert(symbolicOperation(roundingMode, sndFp, fstFp) eq sndVariable)
@@ -313,7 +313,7 @@ class FloatingPointTest {
         val sndVariable = mkFp64Sort().mkConst("sndVariable")
         val thirdVariable = mkFp64Sort().mkConst("thirdVariable")
 
-        val roundingMode = mkFpRoundNearestTiesToEvenExpr()
+        val roundingMode = KFpRoundingMode.RoundNearestTiesToEven
 
         solver.assert(mkFpFusedMulAddExpr(roundingMode, fstFp, sndFp, thirdFp) eq fstVariable)
         solver.assert(mkFpFusedMulAddExpr(roundingMode, sndFp, thirdFp, fstFp) eq sndVariable)
@@ -333,7 +333,7 @@ class FloatingPointTest {
         val valueFp = value.toFp() as KFp64Value
         val valueVariable = mkFp64Sort().mkConst("fstVariable")
 
-        val roundingMode = mkFpRoundNearestTiesToEvenExpr()
+        val roundingMode = KFpRoundingMode.RoundNearestTiesToEven
 
         solver.assert(mkFpSqrtExpr(roundingMode, valueFp) eq valueVariable)
 
@@ -347,13 +347,7 @@ class FloatingPointTest {
     fun testFpRoundToIntegral(): Unit = with(context) {
         val value = Random.nextDouble()
 
-        val roundingModes = listOf(
-            mkFpRoundNearestTiesToEvenExpr(),
-            mkFpRoundNearestTiesToAwayExpr(),
-            mkFpRoundTowardPositiveExpr(),
-            mkFpRoundTowardNegativeExpr(),
-            mkFpRoundTowardZeroExpr()
-        )
+        val roundingModes = KFpRoundingMode.values()
 
         val variables = roundingModes.indices.map { mkFp64Sort().mkConst("variable$it") }
 

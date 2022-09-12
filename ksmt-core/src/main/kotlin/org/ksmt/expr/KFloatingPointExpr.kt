@@ -9,7 +9,6 @@ import org.ksmt.sort.KFp128Sort
 import org.ksmt.sort.KFp16Sort
 import org.ksmt.sort.KFp32Sort
 import org.ksmt.sort.KFp64Sort
-import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.utils.booleanSignBit
@@ -177,82 +176,82 @@ class KFpNegationExpr<S : KFpSort> internal constructor(
 }
 
 // TODO Can they have different sorts?
-class KFpAddExpr<out R: KFpRoundingModeSort, S : KFpSort> internal constructor(
+class KFpAddExpr<S : KFpSort> internal constructor(
     ctx: KContext,
-    val roundingMode: KExpr<out R>,
+    val roundingMode: KFpRoundingMode,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
 ) : KApp<S, KExpr<*>>(ctx) {
     override val args: List<KExpr<*>>
-        get() = listOf(roundingMode, arg0, arg1)
+        get() = listOf(arg0, arg1)
 
-    override fun decl(): KDecl<S> = ctx.mkFpAddDecl(roundingMode.sort(), arg0.sort(), arg1.sort())
+    override fun decl(): KDecl<S> = ctx.mkFpAddDecl(roundingMode, arg0.sort(), arg1.sort())
 
     override fun sort(): S = arg0.sort()
 
     override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
 }
 
-class KFpSubExpr<out R: KFpRoundingModeSort, S : KFpSort> internal constructor(
+class KFpSubExpr<S : KFpSort> internal constructor(
     ctx: KContext,
-    val roundingMode: KExpr<out R>,
+    val roundingMode: KFpRoundingMode,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
 ) : KApp<S, KExpr<*>>(ctx) {
     override val args: List<KExpr<*>>
-        get() = listOf(roundingMode, arg0, arg1)
+        get() = listOf(arg0, arg1)
 
-    override fun decl(): KDecl<S> = ctx.mkFpSubDecl(roundingMode.sort(), arg0.sort(), arg1.sort())
+    override fun decl(): KDecl<S> = ctx.mkFpSubDecl(roundingMode, arg0.sort(), arg1.sort())
 
     override fun sort(): S = arg0.sort()
 
     override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
 }
 
-class KFpMulExpr<out R: KFpRoundingModeSort, S : KFpSort> internal constructor(
+class KFpMulExpr<S : KFpSort> internal constructor(
     ctx: KContext,
-    val roundingMode: KExpr<out R>,
+    val roundingMode: KFpRoundingMode,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
 ) : KApp<S, KExpr<*>>(ctx) {
     override val args: List<KExpr<*>>
-        get() = listOf(roundingMode, arg0, arg1)
+        get() = listOf(arg0, arg1)
 
-    override fun decl(): KDecl<S> = ctx.mkFpMulDecl(roundingMode.sort(), arg0.sort(), arg1.sort())
+    override fun decl(): KDecl<S> = ctx.mkFpMulDecl(roundingMode, arg0.sort(), arg1.sort())
 
     override fun sort(): S = arg0.sort()
 
     override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
 }
 
-class KFpDivExpr<out R: KFpRoundingModeSort, S : KFpSort> internal constructor(
+class KFpDivExpr<S : KFpSort> internal constructor(
     ctx: KContext,
-    val roundingMode: KExpr<out R>,
+    val roundingMode: KFpRoundingMode,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
 ) : KApp<S, KExpr<*>>(ctx) {
     override val args: List<KExpr<*>>
-        get() = listOf(roundingMode, arg0, arg1)
+        get() = listOf(arg0, arg1)
 
-    override fun decl(): KDecl<S> = ctx.mkFpDivDecl(roundingMode.sort(), arg0.sort(), arg1.sort())
+    override fun decl(): KDecl<S> = ctx.mkFpDivDecl(roundingMode, arg0.sort(), arg1.sort())
 
     override fun sort(): S = arg0.sort()
 
     override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
 }
 
-class KFpFusedMulAddExpr<R : KFpRoundingModeSort, S : KFpSort> internal constructor(
+class KFpFusedMulAddExpr<S : KFpSort> internal constructor(
     ctx: KContext,
-    val roundingMode: KExpr<out R>,
+    val roundingMode: KFpRoundingMode,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>,
     val arg2: KExpr<S>
 ) : KApp<S, KExpr<*>>(ctx) {
     override val args: List<KExpr<*>>
-        get() = listOf(roundingMode, arg0, arg1, arg2)
+        get() = listOf(arg0, arg1, arg2)
 
     override fun decl(): KDecl<S> = ctx.mkFpFusedMulAddDecl(
-        roundingMode.sort(),
+        roundingMode,
         arg0.sort(),
         arg1.sort(),
         arg2.sort()
@@ -264,15 +263,15 @@ class KFpFusedMulAddExpr<R : KFpRoundingModeSort, S : KFpSort> internal construc
 
 }
 
-class KFpSqrtExpr<R : KFpRoundingModeSort, S : KFpSort> internal constructor(
+class KFpSqrtExpr<S : KFpSort> internal constructor(
     ctx: KContext,
-    val roundingMode: KExpr<out R>,
+    val roundingMode: KFpRoundingMode,
     val value: KExpr<S>
-) : KApp<S, KExpr<*>>(ctx) {
-    override val args: List<KExpr<*>>
-        get() = listOf(roundingMode, value)
+) : KApp<S, KExpr<S>>(ctx) {
+    override val args: List<KExpr<S>>
+        get() = listOf(value)
 
-    override fun decl(): KDecl<S> = ctx.mkFpSqrtDecl(roundingMode.sort(), value.sort())
+    override fun decl(): KDecl<S> = ctx.mkFpSqrtDecl(roundingMode, value.sort())
 
     override fun sort(): S = value.sort()
 
@@ -295,15 +294,15 @@ class KFpRemExpr<S : KFpSort> internal constructor(
     override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
 }
 
-class KFpRoundToIntegralExpr<R : KFpRoundingModeSort, S : KFpSort> internal constructor(
+class KFpRoundToIntegralExpr<S : KFpSort> internal constructor(
     ctx: KContext,
-    val roundingMode: KExpr<out R>,
+    val roundingMode: KFpRoundingMode,
     val value: KExpr<S>
-) : KApp<S, KExpr<*>>(ctx) {
-    override val args: List<KExpr<*>>
-        get() = listOf(roundingMode, value)
+) : KApp<S, KExpr<S>>(ctx) {
+    override val args: List<KExpr<S>>
+        get() = listOf(value)
 
-    override fun decl(): KDecl<S> = ctx.mkFpRoundToIntegralDecl(roundingMode.sort(), value.sort())
+    override fun decl(): KDecl<S> = ctx.mkFpRoundToIntegralDecl(roundingMode, value.sort())
 
     override fun sort(): S = value.sort()
 
@@ -516,17 +515,17 @@ class KFpIsPositiveExpr<S : KFpSort> internal constructor(
 
 // TODO mkFpToFp ???
 
-class KFpToBvExpr<R : KFpRoundingModeSort, S : KFpSort> internal constructor(
+class KFpToBvExpr<S : KFpSort> internal constructor(
     ctx: KContext,
-    val roundingMode: KExpr<out R>,
+    val roundingMode: KFpRoundingMode,
     val value: KExpr<S>,
     val bvSize: Int,
     val isSigned: Boolean
-) : KApp<KBvSort, KExpr<*>>(ctx) {
-    override val args: List<KExpr<*>>
-        get() = listOf(roundingMode, value)
+) : KApp<KBvSort, KExpr<S>>(ctx) {
+    override val args: List<KExpr<S>>
+        get() = listOf(value)
 
-    override fun decl(): KDecl<KBvSort> = ctx.mkFpToBvDecl(roundingMode.sort(), value.sort(), bvSize, isSigned)
+    override fun decl(): KDecl<KBvSort> = ctx.mkFpToBvDecl(roundingMode, value.sort(), bvSize, isSigned)
 
     override fun sort(): KBvSort = decl().sort
 

@@ -1,6 +1,7 @@
 package org.ksmt.solver.util
 
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.solver.util.KExprInternalizerBase.ExprInternalizationResult.Companion.argumentsInternalizationRequired
 import org.ksmt.solver.util.KExprInternalizerBase.ExprInternalizationResult.Companion.notInitializedInternalizationResult

@@ -8,7 +8,7 @@ import com.microsoft.z3.BoolExpr
 import com.microsoft.z3.BoolSort
 import com.microsoft.z3.Context
 import com.microsoft.z3.Expr
-import com.microsoft.z3.FPRMSort
+import com.microsoft.z3.FPRMExpr
 import com.microsoft.z3.FPSort
 import com.microsoft.z3.FuncDecl
 import com.microsoft.z3.IntExpr
@@ -136,12 +136,8 @@ import org.ksmt.expr.KFpMinExpr
 import org.ksmt.expr.KFpMulExpr
 import org.ksmt.expr.KFpNegationExpr
 import org.ksmt.expr.KFpRemExpr
-import org.ksmt.expr.KFpRoundNearestTiesToAwayExpr
-import org.ksmt.expr.KFpRoundNearestTiesToEvenExpr
 import org.ksmt.expr.KFpRoundToIntegralExpr
-import org.ksmt.expr.KFpRoundTowardNegativeExpr
-import org.ksmt.expr.KFpRoundTowardPositiveExpr
-import org.ksmt.expr.KFpRoundTowardZeroExpr
+import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.KFpSqrtExpr
 import org.ksmt.expr.KFpSubExpr
 import org.ksmt.expr.KFpToBvExpr
@@ -157,14 +153,7 @@ import org.ksmt.sort.KFp128Sort
 import org.ksmt.sort.KFp16Sort
 import org.ksmt.sort.KFp32Sort
 import org.ksmt.sort.KFp64Sort
-import org.ksmt.sort.KFpRoundNearestTiesToAwaySort
-import org.ksmt.sort.KFpRoundNearestTiesToEvenSort
-import org.ksmt.sort.KFpRoundTowardNegativeSort
-import org.ksmt.sort.KFpRoundTowardPositiveSort
-import org.ksmt.sort.KFpRoundTowardZeroSort
-import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
-import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 
@@ -455,38 +444,53 @@ open class KZ3ExprInternalizer(
         transform(value, z3Ctx::mkFPNeg)
     }
 
-    override fun <R : KFpRoundingModeSort, T : KFpSort> transform(expr: KFpAddExpr<R, T>): KExpr<T> = with(expr) {
-        transform(roundingMode, arg0, arg1, z3Ctx::mkFPAdd)
+    override fun <T : KFpSort> transform(expr: KFpAddExpr<T>): KExpr<T> = with(expr) {
+        transform(arg0, arg1) { left: Expr<FPSort>, right: Expr<FPSort> ->
+            z3Ctx.mkFPAdd(transformRoundingModeNumeral(roundingMode), left, right)
+        }
     }
 
-    override fun <R : KFpRoundingModeSort, T : KFpSort> transform(expr: KFpSubExpr<R, T>): KExpr<T> = with(expr) {
-        transform(roundingMode, arg0, arg1, z3Ctx::mkFPSub)
+    override fun <T : KFpSort> transform(expr: KFpSubExpr<T>): KExpr<T> = with(expr) {
+        transform(arg0, arg1) { left: Expr<FPSort>, right: Expr<FPSort> ->
+            z3Ctx.mkFPSub(transformRoundingModeNumeral(roundingMode), left, right)
+        }
     }
 
-    override fun <R : KFpRoundingModeSort, T : KFpSort> transform(expr: KFpMulExpr<R, T>): KExpr<T> = with(expr) {
-        transform(roundingMode, arg0, arg1, z3Ctx::mkFPMul)
+    override fun <T : KFpSort> transform(expr: KFpMulExpr<T>): KExpr<T> = with(expr) {
+        transform(arg0, arg1) { left: Expr<FPSort>, right: Expr<FPSort> ->
+            z3Ctx.mkFPMul(transformRoundingModeNumeral(roundingMode), left, right)
+        }
     }
 
-    override fun <R : KFpRoundingModeSort, T : KFpSort> transform(expr: KFpDivExpr<R, T>): KExpr<T> = with(expr) {
-        transform(roundingMode, arg0, arg1, z3Ctx::mkFPDiv)
+    override fun <T : KFpSort> transform(expr: KFpDivExpr<T>): KExpr<T> = with(expr) {
+        transform(arg0, arg1) { left: Expr<FPSort>, right: Expr<FPSort> ->
+            z3Ctx.mkFPDiv(transformRoundingModeNumeral(roundingMode), left, right)
+        }
     }
 
-    override fun <R : KFpRoundingModeSort, T : KFpSort> transform(expr: KFpFusedMulAddExpr<R, T>): KExpr<T> =
+    override fun <T : KFpSort> transform(expr: KFpFusedMulAddExpr<T>): KExpr<T> =
         with(expr) {
-            transform(roundingMode, arg0, arg1, arg2, z3Ctx::mkFPFMA)
+            transform(arg0, arg1, arg2) { first: Expr<FPSort>, second: Expr<FPSort>, third: Expr<FPSort> ->
+                z3Ctx.mkFPFMA(transformRoundingModeNumeral(roundingMode), first, second, third)
+            }
         }
 
-    override fun <R : KFpRoundingModeSort, T : KFpSort> transform(expr: KFpSqrtExpr<R, T>): KExpr<T> = with(expr) {
-        transform(roundingMode, value, z3Ctx::mkFPSqrt)
-    }
+    override fun <T : KFpSort> transform(expr: KFpSqrtExpr<T>): KExpr<T> =
+        with(expr) {
+            transform(value) { z3Value: Expr<FPSort> ->
+                z3Ctx.mkFPSqrt(transformRoundingModeNumeral(roundingMode), z3Value)
+            }
+        }
 
     override fun <T : KFpSort> transform(expr: KFpRemExpr<T>): KExpr<T> = with(expr) {
         transform(arg0, arg1, z3Ctx::mkFPRem)
     }
 
-    override fun <R : KFpRoundingModeSort, T : KFpSort> transform(expr: KFpRoundToIntegralExpr<R, T>): KExpr<T> =
+    override fun <T : KFpSort> transform(expr: KFpRoundToIntegralExpr<T>): KExpr<T> =
         with(expr) {
-            transform(roundingMode, value, z3Ctx::mkFPRoundToIntegral)
+            transform(value) { z3Value: Expr<FPSort> ->
+                z3Ctx.mkFPRoundToIntegral(transformRoundingModeNumeral(roundingMode), z3Value)
+            }
         }
 
     override fun <T : KFpSort> transform(expr: KFpMinExpr<T>): KExpr<T> = with(expr) {
@@ -545,10 +549,21 @@ open class KZ3ExprInternalizer(
         transform(value, z3Ctx::mkFPIsPositive)
     }
 
-    override fun <R : KFpRoundingModeSort, T : KFpSort> transform(expr: KFpToBvExpr<R, T>): KExpr<KBvSort> =
+    override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>): KExpr<KBvSort> =
         with(expr) {
-            transform(roundingMode, value) { roundingMode: Expr<FPRMSort>, value: Expr<FPSort> ->
-                z3Ctx.mkFPToBV(roundingMode, value, bvSize, isSigned)
+            transform(value) { value: Expr<FPSort> ->
+                z3Ctx.mkFPToBV(transformRoundingModeNumeral(expr.roundingMode), value, bvSize, isSigned)
+            }
+        }
+
+    private fun transformRoundingModeNumeral(roundingMode: KFpRoundingMode): FPRMExpr =
+        with(z3Ctx) {
+            when (roundingMode) {
+                KFpRoundingMode.RoundNearestTiesToEven -> mkFPRoundNearestTiesToEven()
+                KFpRoundingMode.RoundNearestTiesToAway -> mkFPRoundNearestTiesToAway()
+                KFpRoundingMode.RoundTowardNegative -> mkFPRoundTowardNegative()
+                KFpRoundingMode.RoundTowardPositive -> mkFPRoundTowardPositive()
+                KFpRoundingMode.RoundTowardZero -> mkFPRoundTowardZero()
             }
         }
 
@@ -558,26 +573,6 @@ open class KZ3ExprInternalizer(
 
     override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> = with(expr) {
         transform(value, z3Ctx::mkFPToIEEEBV)
-    }
-
-    override fun transform(expr: KFpRoundNearestTiesToEvenExpr): KExpr<KFpRoundNearestTiesToEvenSort> = with(expr) {
-        transform(z3Ctx::mkFPRoundNearestTiesToEven)
-    }
-
-    override fun transform(expr: KFpRoundNearestTiesToAwayExpr): KExpr<KFpRoundNearestTiesToAwaySort> = with(expr) {
-        transform(z3Ctx::mkFPRoundNearestTiesToAway)
-    }
-
-    override fun transform(expr: KFpRoundTowardPositiveExpr): KExpr<KFpRoundTowardPositiveSort> = with(expr) {
-        transform(z3Ctx::mkFPRoundTowardPositive)
-    }
-
-    override fun transform(expr: KFpRoundTowardNegativeExpr): KExpr<KFpRoundTowardNegativeSort> = with(expr) {
-        transform(z3Ctx::mkFPRoundTowardNegative)
-    }
-
-    override fun transform(expr: KFpRoundTowardZeroExpr): KExpr<KFpRoundTowardZeroSort> = with(expr) {
-        transform(z3Ctx::mkFPRoundTowardZero)
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) = with(expr) {

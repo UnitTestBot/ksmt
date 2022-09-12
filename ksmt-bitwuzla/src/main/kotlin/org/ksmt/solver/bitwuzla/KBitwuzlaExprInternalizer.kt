@@ -91,7 +91,6 @@ import org.ksmt.sort.KBv32Sort
 import org.ksmt.sort.KBv64Sort
 import org.ksmt.sort.KBv8Sort
 import org.ksmt.sort.KBvSort
-import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
@@ -592,10 +591,6 @@ open class KBitwuzlaExprInternalizer(
 
         override fun <S : KFpSort> visit(sort: S): BitwuzlaSort =
             TODO("We do not support KFP sort yet")
-
-        override fun <S : KFpRoundingModeSort> visit(sort: S): BitwuzlaSort {
-            TODO("We do not support KFPRoundingMode sort yet")
-        }
     }
 
     open class FunctionSortInternalizer(

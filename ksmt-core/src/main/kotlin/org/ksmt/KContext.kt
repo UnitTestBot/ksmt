@@ -227,12 +227,7 @@ import org.ksmt.decl.KFpMinDecl
 import org.ksmt.decl.KFpMulDecl
 import org.ksmt.decl.KFpNegationDecl
 import org.ksmt.decl.KFpRemDecl
-import org.ksmt.decl.KFpRoundNearestTiesToAwayDecl
-import org.ksmt.decl.KFpRoundNearestTiesToEvenDecl
 import org.ksmt.decl.KFpRoundToIntegralDecl
-import org.ksmt.decl.KFpRoundTowardNegativeDecl
-import org.ksmt.decl.KFpRoundTowardPositiveDecl
-import org.ksmt.decl.KFpRoundTowardZeroDecl
 import org.ksmt.decl.KFpSqrtDecl
 import org.ksmt.decl.KFpSubDecl
 import org.ksmt.decl.KFpToBvDecl
@@ -273,12 +268,8 @@ import org.ksmt.expr.KFpMinExpr
 import org.ksmt.expr.KFpMulExpr
 import org.ksmt.expr.KFpNegationExpr
 import org.ksmt.expr.KFpRemExpr
-import org.ksmt.expr.KFpRoundNearestTiesToAwayExpr
-import org.ksmt.expr.KFpRoundNearestTiesToEvenExpr
 import org.ksmt.expr.KFpRoundToIntegralExpr
-import org.ksmt.expr.KFpRoundTowardNegativeExpr
-import org.ksmt.expr.KFpRoundTowardPositiveExpr
-import org.ksmt.expr.KFpRoundTowardZeroExpr
+import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.KFpSqrtExpr
 import org.ksmt.expr.KFpSubExpr
 import org.ksmt.expr.KFpToBvExpr
@@ -286,12 +277,6 @@ import org.ksmt.expr.KFpToIEEEBvExpr
 import org.ksmt.expr.KFpToRealExpr
 import org.ksmt.expr.KFpValue
 import org.ksmt.expr.KFunctionAsArray
-import org.ksmt.sort.KFpRoundNearestTiesToAwaySort
-import org.ksmt.sort.KFpRoundNearestTiesToEvenSort
-import org.ksmt.sort.KFpRoundTowardNegativeSort
-import org.ksmt.sort.KFpRoundTowardPositiveSort
-import org.ksmt.sort.KFpRoundTowardZeroSort
-import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.utils.booleanSignBit
 import org.ksmt.utils.cast
 import org.ksmt.utils.extendWithLeadingZeros
@@ -377,37 +362,6 @@ open class KContext : AutoCloseable {
     fun mkFp128Sort(): KFp128Sort = fpSortCache.create(KFp128Sort.exponentBits, KFp128Sort.significandBits).cast()
     fun mkFpSort(exponentBits: UInt, significandBits: UInt): KFpSort =
         fpSortCache.create(exponentBits, significandBits)
-
-    // fp rounding mode numerals sorts
-    private val fpRoundNearestTiesToEvenSortCache = mkClosableCache<KFpRoundNearestTiesToEvenSort> {
-        KFpRoundNearestTiesToEvenSort(this)
-    }
-
-    fun mkFpRoundNearestTiesToEvenSort(): KFpRoundNearestTiesToEvenSort = fpRoundNearestTiesToEvenSortCache.create()
-
-    private val fpRoundNearestTiesToAwaySortCache = mkClosableCache<KFpRoundNearestTiesToAwaySort> {
-        KFpRoundNearestTiesToAwaySort(this)
-    }
-
-    fun mkFpRoundNearestTiesToAwaySort(): KFpRoundNearestTiesToAwaySort = fpRoundNearestTiesToAwaySortCache.create()
-
-    private val fpRoundTowardPositiveSortCache = mkClosableCache<KFpRoundTowardPositiveSort> {
-        KFpRoundTowardPositiveSort(this)
-    }
-
-    fun mkFpRoundTowardPositiveSort(): KFpRoundTowardPositiveSort = fpRoundTowardPositiveSortCache.create()
-
-    private val fpRoundTowardNegativeSortCache = mkClosableCache<KFpRoundTowardNegativeSort> {
-        KFpRoundTowardNegativeSort(this)
-    }
-
-    fun mkFpRoundTowardNegativeSort(): KFpRoundTowardNegativeSort = fpRoundTowardNegativeSortCache.create()
-
-    private val fpRoundTowardZeroSortCache = mkClosableCache<KFpRoundTowardZeroSort> {
-        KFpRoundTowardZeroSort(this)
-    }
-
-    fun mkFpRoundTowardZeroSort(): KFpRoundTowardZeroSort = fpRoundTowardZeroSortCache.create()
 
 
     // utils
@@ -1345,76 +1299,76 @@ open class KContext : AutoCloseable {
     fun <T : KFpSort> mkFpNegationExpr(value: KExpr<T>): KFpNegationExpr<T> =
         fpNegationExprCache.create(value.cast()).cast()
 
-    private val fpAddExprCache = mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>,
+    private val fpAddExprCache = mkClosableCache { roundingMode: KFpRoundingMode,
                                                    arg0: KExpr<KFpSort>,
                                                    arg1: KExpr<KFpSort> ->
         KFpAddExpr(this, roundingMode, arg0, arg1)
     }
 
-    fun <R : KFpRoundingModeSort, T : KFpSort> mkFpAddExpr(
-        roundingMode: KExpr<out R>,
+    fun <T : KFpSort> mkFpAddExpr(
+        roundingMode: KFpRoundingMode,
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KFpAddExpr<R, T> = fpAddExprCache.create(roundingMode.cast(), arg0.cast(), arg1.cast()).cast()
+    ): KFpAddExpr<T> = fpAddExprCache.create(roundingMode.cast(), arg0.cast(), arg1.cast()).cast()
 
 
-    private val fpSubExprCache = mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>,
+    private val fpSubExprCache = mkClosableCache { roundingMode: KFpRoundingMode,
                                                    arg0: KExpr<KFpSort>,
                                                    arg1: KExpr<KFpSort> ->
         KFpSubExpr(this, roundingMode, arg0, arg1)
     }
 
-    fun <R : KFpRoundingModeSort, T : KFpSort> mkFpSubExpr(
-        roundingMode: KExpr<out R>,
+    fun <T : KFpSort> mkFpSubExpr(
+        roundingMode: KFpRoundingMode,
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KFpSubExpr<R, T> = fpSubExprCache.create(roundingMode.cast(), arg0.cast(), arg1.cast()).cast()
+    ): KFpSubExpr<T> = fpSubExprCache.create(roundingMode.cast(), arg0.cast(), arg1.cast()).cast()
 
     private val fpMulExprCache =
-        mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<KFpSort>, arg1: KExpr<KFpSort> ->
+        mkClosableCache { roundingMode: KFpRoundingMode, arg0: KExpr<KFpSort>, arg1: KExpr<KFpSort> ->
             KFpMulExpr(this, roundingMode, arg0, arg1)
         }
 
-    fun <R : KFpRoundingModeSort, T : KFpSort> mkFpMulExpr(
-        roundingMode: KExpr<out R>,
+    fun <T : KFpSort> mkFpMulExpr(
+        roundingMode: KFpRoundingMode,
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KFpMulExpr<R, T> = fpMulExprCache.create(roundingMode.cast(), arg0.cast(), arg1.cast()).cast()
+    ): KFpMulExpr<T> = fpMulExprCache.create(roundingMode.cast(), arg0.cast(), arg1.cast()).cast()
 
     private val fpDivExprCache =
-        mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<KFpSort>, arg1: KExpr<KFpSort> ->
+        mkClosableCache { roundingMode: KFpRoundingMode, arg0: KExpr<KFpSort>, arg1: KExpr<KFpSort> ->
             KFpDivExpr(this, roundingMode, arg0, arg1)
         }
 
-    fun <R : KFpRoundingModeSort, T : KFpSort> mkFpDivExpr(
-        roundingMode: KExpr<out R>,
+    fun <T : KFpSort> mkFpDivExpr(
+        roundingMode: KFpRoundingMode,
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KFpDivExpr<R, T> = fpDivExprCache.create(roundingMode.cast(), arg0.cast(), arg1.cast()).cast()
+    ): KFpDivExpr<T> = fpDivExprCache.create(roundingMode.cast(), arg0.cast(), arg1.cast()).cast()
 
-    private val fpFusedMulAddExprCache = mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>,
+    private val fpFusedMulAddExprCache = mkClosableCache { roundingMode: KFpRoundingMode,
                                                            arg0: KExpr<KFpSort>,
                                                            arg1: KExpr<KFpSort>,
                                                            arg2: KExpr<KFpSort> ->
         KFpFusedMulAddExpr(this, roundingMode, arg0, arg1, arg2)
     }
 
-    fun <R : KFpRoundingModeSort, T : KFpSort> mkFpFusedMulAddExpr(
-        roundingMode: KExpr<out R>,
+    fun <T : KFpSort> mkFpFusedMulAddExpr(
+        roundingMode: KFpRoundingMode,
         arg0: KExpr<T>,
         arg1: KExpr<T>,
         arg2: KExpr<T>
-    ): KFpFusedMulAddExpr<R, T> =
+    ): KFpFusedMulAddExpr<T> =
         fpFusedMulAddExprCache.create(roundingMode.cast(), arg0.cast(), arg1.cast(), arg2.cast()).cast()
 
-    private val fpSqrtExprCache = mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>, value: KExpr<KFpSort> ->
+    private val fpSqrtExprCache = mkClosableCache { roundingMode: KFpRoundingMode, value: KExpr<KFpSort> ->
         KFpSqrtExpr(this, roundingMode, value)
     }
 
-    fun <R : KFpRoundingModeSort, T : KFpSort> mkFpSqrtExpr(
-        roundingMode: KExpr<out R>,
+    fun <T : KFpSort> mkFpSqrtExpr(
+        roundingMode: KFpRoundingMode,
         value: KExpr<T>
-    ): KFpSqrtExpr<R, T> =
+    ): KFpSqrtExpr<T> =
         fpSqrtExprCache.create(roundingMode.cast(), value.cast()).cast()
 
     private val fpRemExprCache = mkClosableCache { arg0: KExpr<KFpSort>, arg1: KExpr<KFpSort> ->
@@ -1425,14 +1379,14 @@ open class KContext : AutoCloseable {
         fpRemExprCache.create(arg0.cast(), arg1.cast()).cast()
 
     private val fpRoundToIntegralExprCache =
-        mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>, value: KExpr<KFpSort> ->
+        mkClosableCache { roundingMode: KFpRoundingMode, value: KExpr<KFpSort> ->
             KFpRoundToIntegralExpr(this, roundingMode, value)
         }
 
-    fun <R : KFpRoundingModeSort, T : KFpSort> mkFpRoundToIntegralExpr(
-        roundingMode: KExpr<out R>,
+    fun <T : KFpSort> mkFpRoundToIntegralExpr(
+        roundingMode: KFpRoundingMode,
         value: KExpr<T>
-    ): KFpRoundToIntegralExpr<R, T> = fpRoundToIntegralExprCache.create(roundingMode.cast(), value.cast()).cast()
+    ): KFpRoundToIntegralExpr<T> = fpRoundToIntegralExprCache.create(roundingMode.cast(), value.cast()).cast()
 
     private val fpMinExprCache = mkClosableCache { arg0: KExpr<KFpSort>, arg1: KExpr<KFpSort> ->
         KFpMinExpr(this, arg0, arg1)
@@ -1518,19 +1472,19 @@ open class KContext : AutoCloseable {
     fun <T : KFpSort> mkFpIsPositiveExpr(value: KExpr<T>): KFpIsPositiveExpr<T> =
         fpIsPositiveExprCache.create(value.cast()).cast()
 
-    private val fpToBvExprCache = mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>,
+    private val fpToBvExprCache = mkClosableCache { roundingMode: KFpRoundingMode,
                                                     value: KExpr<KFpSort>,
                                                     bvSize: Int,
                                                     isSigned: Boolean ->
         KFpToBvExpr(this, roundingMode, value, bvSize, isSigned)
     }
 
-    fun <R : KFpRoundingModeSort, T : KFpSort> mkFpToBvExpr(
-        roundingMode: KExpr<out R>,
+    fun <T : KFpSort> mkFpToBvExpr(
+        roundingMode: KFpRoundingMode,
         value: KExpr<T>,
         bvSize: Int,
         isSigned: Boolean
-    ): KFpToBvExpr<R, T> = fpToBvExprCache.create(roundingMode.cast(), value.cast(), bvSize, isSigned).cast()
+    ): KFpToBvExpr<T> = fpToBvExprCache.create(roundingMode.cast(), value.cast(), bvSize, isSigned).cast()
 
     private val fpToRealExprCache = mkClosableCache { value: KExpr<KFpSort> -> KFpToRealExpr(this, value) }
 
@@ -1540,37 +1494,6 @@ open class KContext : AutoCloseable {
 
     fun <T : KFpSort> mkFpToIEEEBvExpr(value: KExpr<T>): KFpToIEEEBvExpr<T> =
         fpToIEEEBvExprCache.create(value.cast()).cast()
-
-    // fp rounding mode numerals
-    private val fpRoundNearestTiesToEvenExprCache = mkClosableCache<KFpRoundNearestTiesToEvenExpr> {
-        KFpRoundNearestTiesToEvenExpr(this)
-    }
-
-    fun mkFpRoundNearestTiesToEvenExpr(): KFpRoundNearestTiesToEvenExpr = fpRoundNearestTiesToEvenExprCache.create()
-
-    private val fpRoundNearestTiesToAwayExprCache = mkClosableCache<KFpRoundNearestTiesToAwayExpr> {
-        KFpRoundNearestTiesToAwayExpr(this)
-    }
-
-    fun mkFpRoundNearestTiesToAwayExpr(): KFpRoundNearestTiesToAwayExpr = fpRoundNearestTiesToAwayExprCache.create()
-
-    private val fpRoundTowardPositiveExprCache = mkClosableCache<KFpRoundTowardPositiveExpr> {
-        KFpRoundTowardPositiveExpr(this)
-    }
-
-    fun mkFpRoundTowardPositiveExpr(): KFpRoundTowardPositiveExpr = fpRoundTowardPositiveExprCache.create()
-
-    private val fpRoundTowardNegativeExprCache = mkClosableCache<KFpRoundTowardNegativeExpr> {
-        KFpRoundTowardNegativeExpr(this)
-    }
-
-    fun mkFpRoundTowardNegativeExpr(): KFpRoundTowardNegativeExpr = fpRoundTowardNegativeExprCache.create()
-
-    private val fpRoundTowardZeroExprCache = mkClosableCache<KFpRoundTowardZeroExpr> {
-        KFpRoundTowardZeroExpr(this)
-    }
-
-    fun mkFpRoundTowardZeroExpr(): KFpRoundTowardZeroExpr = fpRoundTowardZeroExprCache.create()
 
 
     // quantifiers
@@ -2184,67 +2107,67 @@ open class KContext : AutoCloseable {
     fun <T : KFpSort> mkFpNegationDecl(valueSort: T): KFpNegationDecl<T> = fpNegationDeclCache.create(valueSort).cast()
 
     private val fpAddDeclCache =
-        mkClosableCache { roundingModeSort: KFpRoundingModeSort, arg0Sort: KFpSort, arg1Sort: KFpSort ->
-            KFpAddDecl(this, roundingModeSort, arg0Sort, arg1Sort)
+        mkClosableCache { roundingMode: KFpRoundingMode, arg0Sort: KFpSort, arg1Sort: KFpSort ->
+            KFpAddDecl(this, roundingMode, arg0Sort, arg1Sort)
         }
 
-    fun <R : KFpRoundingModeSort, T : KFpSort> mkFpAddDecl(
-        roundingModeSort: R,
+    fun <T : KFpSort> mkFpAddDecl(
+        roundingMode: KFpRoundingMode,
         arg0Sort: T,
         arg1Sort: T
-    ): KFpAddDecl<R, T> = fpAddDeclCache.create(roundingModeSort, arg0Sort, arg1Sort).cast()
+    ): KFpAddDecl<T> = fpAddDeclCache.create(roundingMode, arg0Sort, arg1Sort).cast()
 
     private val fpSubDeclCache =
-        mkClosableCache { roundingModeSort: KFpRoundingModeSort, arg0Sort: KFpSort, arg1Sort: KFpSort ->
-            KFpSubDecl(this, roundingModeSort, arg0Sort, arg1Sort)
+        mkClosableCache { roundingMode: KFpRoundingMode, arg0Sort: KFpSort, arg1Sort: KFpSort ->
+            KFpSubDecl(this, roundingMode, arg0Sort, arg1Sort)
         }
 
-    fun <R : KFpRoundingModeSort, T : KFpSort> mkFpSubDecl(
-        roundingModeSort: R,
+    fun <T : KFpSort> mkFpSubDecl(
+        roundingMode: KFpRoundingMode,
         arg0Sort: T,
         arg1Sort: T
-    ): KFpSubDecl<R, T> = fpSubDeclCache.create(roundingModeSort, arg0Sort, arg1Sort).cast()
+    ): KFpSubDecl<T> = fpSubDeclCache.create(roundingMode, arg0Sort, arg1Sort).cast()
 
     private val fpMulDeclCache =
-        mkClosableCache { roundingModeSort: KFpRoundingModeSort, arg0Sort: KFpSort, arg1Sort: KFpSort ->
-            KFpMulDecl(this, roundingModeSort, arg0Sort, arg1Sort)
+        mkClosableCache { roundingMode: KFpRoundingMode, arg0Sort: KFpSort, arg1Sort: KFpSort ->
+            KFpMulDecl(this, roundingMode, arg0Sort, arg1Sort)
         }
 
-    fun <R : KFpRoundingModeSort, T : KFpSort> mkFpMulDecl(
-        roundingModeSort: R,
+    fun <T : KFpSort> mkFpMulDecl(
+        roundingMode: KFpRoundingMode,
         arg0Sort: T,
         arg1Sort: T
-    ): KFpMulDecl<R, T> = fpMulDeclCache.create(roundingModeSort, arg0Sort, arg1Sort).cast()
+    ): KFpMulDecl<T> = fpMulDeclCache.create(roundingMode, arg0Sort, arg1Sort).cast()
 
     private val fpDivDeclCache =
-        mkClosableCache { roundingModeSort: KFpRoundingModeSort, arg0Sort: KFpSort, arg1Sort: KFpSort ->
-            KFpDivDecl(this, roundingModeSort, arg0Sort, arg1Sort)
+        mkClosableCache { roundingMode: KFpRoundingMode, arg0Sort: KFpSort, arg1Sort: KFpSort ->
+            KFpDivDecl(this, roundingMode, arg0Sort, arg1Sort)
         }
 
-    fun <R : KFpRoundingModeSort, T : KFpSort> mkFpDivDecl(
-        roundingModeSort: R,
+    fun <T : KFpSort> mkFpDivDecl(
+        roundingMode: KFpRoundingMode,
         arg0Sort: T,
         arg1Sort: T
-    ): KFpDivDecl<R, T> = fpDivDeclCache.create(roundingModeSort, arg0Sort, arg1Sort).cast()
+    ): KFpDivDecl<T> = fpDivDeclCache.create(roundingMode, arg0Sort, arg1Sort).cast()
 
     private val fpFusedMulAddDeclCache =
-        mkClosableCache { roundingMode: KFpRoundingModeSort, arg0sort: KFpSort, arg1Sort: KFpSort, arg2Sort: KFpSort ->
+        mkClosableCache { roundingMode: KFpRoundingMode, arg0sort: KFpSort, arg1Sort: KFpSort, arg2Sort: KFpSort ->
             KFpFusedMulAddDecl(this, roundingMode, arg0sort, arg1Sort, arg2Sort)
         }
 
-    fun <R : KFpRoundingModeSort, T : KFpSort> mkFpFusedMulAddDecl(
-        roundingModeSort: R,
+    fun <T : KFpSort> mkFpFusedMulAddDecl(
+        roundingMode: KFpRoundingMode,
         arg0Sort: T,
         arg1Sort: T,
         arg2Sort: T
-    ): KFpFusedMulAddDecl<R, T> = fpFusedMulAddDeclCache.create(roundingModeSort, arg0Sort, arg1Sort, arg2Sort).cast()
+    ): KFpFusedMulAddDecl<T> = fpFusedMulAddDeclCache.create(roundingMode, arg0Sort, arg1Sort, arg2Sort).cast()
 
-    private val fpSqrtDeclCache = mkClosableCache { roundingModeSort: KFpRoundingModeSort, valueSort: KFpSort ->
-        KFpSqrtDecl(this, roundingModeSort, valueSort)
+    private val fpSqrtDeclCache = mkClosableCache { roundingMode: KFpRoundingMode, valueSort: KFpSort ->
+        KFpSqrtDecl(this, roundingMode, valueSort)
     }
 
-    fun <R : KFpRoundingModeSort, T : KFpSort> mkFpSqrtDecl(roundingModeSort: R, valueSort: T): KFpSqrtDecl<R, T> =
-        fpSqrtDeclCache.create(roundingModeSort, valueSort).cast()
+    fun <T : KFpSort> mkFpSqrtDecl(roundingMode: KFpRoundingMode, valueSort: T): KFpSqrtDecl<T> =
+        fpSqrtDeclCache.create(roundingMode, valueSort).cast()
 
     private val fpRemDeclCache = mkClosableCache { arg0Sort: KFpSort, arg1Sort: KFpSort ->
         KFpRemDecl(this, arg0Sort, arg1Sort)
@@ -2254,14 +2177,14 @@ open class KContext : AutoCloseable {
         fpRemDeclCache.create(arg0Sort, arg1Sort).cast()
 
     private val roundToIntegralDeclCache =
-        mkClosableCache { roundingModeSort: KFpRoundingModeSort, valueSort: KFpSort ->
-            KFpRoundToIntegralDecl(this, roundingModeSort, valueSort)
+        mkClosableCache { roundingMode: KFpRoundingMode, valueSort: KFpSort ->
+            KFpRoundToIntegralDecl(this, roundingMode, valueSort)
         }
 
-    fun <R : KFpRoundingModeSort, T : KFpSort> mkFpRoundToIntegralDecl(
-        roundingModeSort: R,
+    fun <T : KFpSort> mkFpRoundToIntegralDecl(
+        roundingMode: KFpRoundingMode,
         valueSort: T
-    ): KFpRoundToIntegralDecl<R, T> = roundToIntegralDeclCache.create(roundingModeSort, valueSort).cast()
+    ): KFpRoundToIntegralDecl<T> = roundToIntegralDeclCache.create(roundingMode, valueSort).cast()
 
     private val fpMinDeclCache = mkClosableCache { arg0Sort: KFpSort, arg1Sort: KFpSort ->
         KFpMinDecl(this, arg0Sort, arg1Sort)
@@ -2361,53 +2284,22 @@ open class KContext : AutoCloseable {
         fpIsPositiveDecl.create(valueSort).cast()
 
     private val fpToBvDeclCache =
-        mkClosableCache { roundingMode: KFpRoundingModeSort, valueSort: KFpSort, bvSize: Int, isSigned: Boolean ->
+        mkClosableCache { roundingMode: KFpRoundingMode, valueSort: KFpSort, bvSize: Int, isSigned: Boolean ->
             KFpToBvDecl(this, roundingMode, valueSort, bvSize, isSigned)
         }
 
-    fun <R : KFpRoundingModeSort, T : KFpSort> mkFpToBvDecl(
-        roundingModeSort: R,
+    fun <T : KFpSort> mkFpToBvDecl(
+        roundingMode: KFpRoundingMode,
         valueSort: T,
         bvSize: Int,
         isSigned: Boolean
-    ): KFpToBvDecl<R, T> = fpToBvDeclCache.create(roundingModeSort, valueSort, bvSize, isSigned).cast()
+    ): KFpToBvDecl<T> = fpToBvDeclCache.create(roundingMode, valueSort, bvSize, isSigned).cast()
 
     private val fpToRealDeclCache = mkClosableCache { valueSort: KFpSort -> KFpToRealDecl(this, valueSort) }
     fun <T : KFpSort> mkFpToRealDecl(valueSort: T): KFpToRealDecl<T> = fpToRealDeclCache.create(valueSort).cast()
 
     private val fpToIEEEBvDeclCache = mkClosableCache { valueSort: KFpSort -> KFpToIEEEBvDecl(this, valueSort) }
     fun <T : KFpSort> mkFpToIEEEBvDecl(valueSort: T): KFpToIEEEBvDecl<T> = fpToIEEEBvDeclCache.create(valueSort).cast()
-
-    // fp rounding mode numerals decls
-    private val fpRoundNearestTiesToEvenDeclCache = mkClosableCache<KFpRoundNearestTiesToEvenDecl> {
-        KFpRoundNearestTiesToEvenDecl(this)
-    }
-
-    fun mkFpRoundNearestTiesToEvenDecl(): KFpRoundNearestTiesToEvenDecl = fpRoundNearestTiesToEvenDeclCache.create()
-
-    private val fpRoundNearestTiesToAwayDeclCache = mkClosableCache<KFpRoundNearestTiesToAwayDecl> {
-        KFpRoundNearestTiesToAwayDecl(this)
-    }
-
-    fun mkFpRoundNearestTiesToAwayDecl(): KFpRoundNearestTiesToAwayDecl = fpRoundNearestTiesToAwayDeclCache.create()
-
-    private val fpRoundTowardPositiveDeclCache = mkClosableCache<KFpRoundTowardPositiveDecl> {
-        KFpRoundTowardPositiveDecl(this)
-    }
-
-    fun mkFpRoundTowardPositiveDecl(): KFpRoundTowardPositiveDecl = fpRoundTowardPositiveDeclCache.create()
-
-    private val fpRoundTowardNegativeDeclCache = mkClosableCache<KFpRoundTowardNegativeDecl> {
-        KFpRoundTowardNegativeDecl(this)
-    }
-
-    fun mkFpRoundTowardNegativeDecl(): KFpRoundTowardNegativeDecl = fpRoundTowardNegativeDeclCache.create()
-
-    private val fpRoundTowardZeroDeclCache = mkClosableCache<KFpRoundTowardZeroDecl> {
-        KFpRoundTowardZeroDecl(this)
-    }
-
-    fun mkFpRoundTowardZeroDecl(): KFpRoundTowardZeroDecl = fpRoundTowardZeroDeclCache.create()
 
 
     /*

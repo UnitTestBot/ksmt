@@ -21,7 +21,6 @@ import org.ksmt.expr.KTrue
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KBoolSort
-import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
@@ -165,8 +164,6 @@ open class KModelEvaluator(
             override fun visit(sort: KRealSort): KExpr<T> = mkRealNum(0) as KExpr<T>
             override fun <S : KBvSort> visit(sort: S): KExpr<T> = mkBv("0", sort.sizeBits) as KExpr<T>
             override fun <S: KFpSort> visit(sort: S): KExpr<T> = mkFp(0f, sort) as KExpr<T>
-            override fun <S : KFpRoundingModeSort> visit(sort: S): KExpr<T> =
-                mkFpRoundNearestTiesToEvenExpr() as KExpr<T>
             override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): KExpr<T> =
                 mkArrayConst(sort, sort.range.sampleValue()) as KExpr<T>
             override fun visit(sort: KUninterpretedSort): KExpr<T> =
