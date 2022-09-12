@@ -20,6 +20,7 @@ fun Number.toBinary(): String = when (this) {
 /**
  * Significand for Fp16 takes 10 bits from the float value: from 14 to 23 bits
  */
+@Suppress("MagicNumber")
 val Float.halfPrecisionSignificand: Int
     get() = (toRawBits() and 0b0000_0000_0111_1111_1110_0000_0000_0000) shr 13
 
@@ -27,6 +28,7 @@ val Float.halfPrecisionSignificand: Int
  * Take an exponent from the float value. Depending on the [isBiased] is can be either shifted by
  * [KFp16Sort.exponentShiftSize] or not.
  */
+@Suppress("MagicNumber")
 fun Float.getHalfPrecisionExponent(isBiased: Boolean): Int {
     // take an unbiased exponent from the given value
     val unbiasedFloatExponent = getExponent(isBiased = false)
@@ -45,6 +47,7 @@ fun Float.getHalfPrecisionExponent(isBiased: Boolean): Int {
  *
  * @see [Float.toRawBits]
  */
+@Suppress("MagicNumber")
 val Float.significand: Int get() = toRawBits() and 0x7fffff
 
 /**
@@ -53,6 +56,7 @@ val Float.significand: Int get() = toRawBits() and 0x7fffff
  *
  * @see [Float.toRawBits]
  */
+@Suppress("MagicNumber")
 fun Float.getExponent(isBiased: Boolean): Int {
     // extract exponent using the mask and move it to the right without saving the sign
     val exponent = (toRawBits() and 0x7f80_0000) ushr 23
@@ -60,6 +64,7 @@ fun Float.getExponent(isBiased: Boolean): Int {
     return if (isBiased) exponent else exponent - KFp32Sort.exponentShiftSize
 }
 
+@Suppress("MagicNumber")
 val Float.signBit: Int get() = (toRawBits() shr 31) and 1
 val Float.booleanSignBit: Boolean get() = signBit == 1
 
@@ -68,6 +73,7 @@ val Float.booleanSignBit: Boolean get() = signBit == 1
  *
  * @see [Double.toRawBits]
  */
+@Suppress("MagicNumber")
 val Double.significand: Long get() = toRawBits() and 0x000f_ffff_ffff_ffff
 
 /**
@@ -76,6 +82,7 @@ val Double.significand: Long get() = toRawBits() and 0x000f_ffff_ffff_ffff
  *
  * @see [Double.toRawBits]
  */
+@Suppress("MagicNumber")
 fun Double.getExponent(isBiased: Boolean): Long {
     // extract exponent using the mask and move it to the right without saving the sign
     val exponent = (toRawBits() and 0x7ff0_0000_0000_0000) ushr 52
@@ -83,6 +90,7 @@ fun Double.getExponent(isBiased: Boolean): Long {
     return if (isBiased) exponent else exponent - KFp64Sort.exponentShiftSize
 }
 
+@Suppress("MagicNumber")
 val Double.signBit: Int get() = (toRawBits() shr 63).toInt() and 1
 val Double.booleanSignBit: Boolean get() = signBit == 1
 
@@ -113,6 +121,7 @@ fun Float.extractSignificand(sort: KFpSort): Int {
  * therefore we will have not a value of 32 zeros following by 32 ones, but 100...0011..11, that will change
  * the value of the bitvector we wanted to construct.
  */
+@Suppress("MagicNumber")
 fun Int.extendWithLeadingZeros(): Long = toLong().let {
     ((((it shr 63) and 1) shl 31) or it) and 0xffff_ffff
 }
@@ -120,6 +129,7 @@ fun Int.extendWithLeadingZeros(): Long = toLong().let {
 /**
  * Extracts an exponent of the specific [sort] from the fp32 value.
  */
+@Suppress("MagicNumber")
 fun Float.extractExponent(sort: KFpSort, isBiased: Boolean): Int {
     // extract an exponent from the value in fp32 format
     val exponent = getExponent(isBiased = false)
@@ -140,6 +150,7 @@ fun Float.extractExponent(sort: KFpSort, isBiased: Boolean): Int {
 /**
  * Extracts a significand of the specific [sort] from a double value.
  */
+@Suppress("MagicNumber")
 fun Double.extractSignificand(sort: KFpSort): Long {
     val significandBits = sort.significandBits.toInt()
     val fp64Bits = KFp64Sort.significandBits.toInt()
@@ -157,6 +168,7 @@ fun Double.extractSignificand(sort: KFpSort): Long {
 /**
  * Extracts an exponent of the specific [sort] from the fp64 value.
  */
+@Suppress("MagicNumber")
 fun Double.extractExponent(sort: KFpSort, isBiased: Boolean): Long {
     val exponent = getExponent(isBiased = false)
     val sign = (exponent shr 10) and 1

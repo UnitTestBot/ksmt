@@ -261,6 +261,7 @@ interface KTransformer {
     fun <R: KFpRoundingModeSort, T : KFpSort> transform(expr: KFpFusedMulAddExpr<R, T>): KExpr<T> = transformApp(expr)
     fun <R: KFpRoundingModeSort, T : KFpSort> transform(expr: KFpSqrtExpr<R, T>): KExpr<T> = transformApp(expr)
     fun <T : KFpSort> transform(expr: KFpRemExpr<T>): KExpr<T> = transformApp(expr)
+    @Suppress("MaxLineLength")
     fun <R: KFpRoundingModeSort, T : KFpSort> transform(expr: KFpRoundToIntegralExpr<R, T>): KExpr<T> = transformApp(expr)
     fun <T : KFpSort> transform(expr: KFpMinExpr<T>): KExpr<T> = transformApp(expr)
     fun <T : KFpSort> transform(expr: KFpMaxExpr<T>): KExpr<T> = transformApp(expr)

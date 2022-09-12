@@ -1188,7 +1188,11 @@ open class KContext : AutoCloseable {
         KFp128Value(this, significand, exponent, signBit)
     }
     private val fpCustomSizeCache =
-        mkClosableCache { significandSize: UInt, exponentSize: UInt, significand: Long, exponent: Long, signBit: Boolean ->
+        mkClosableCache { significandSize: UInt,
+                          exponentSize: UInt,
+                          significand: Long,
+                          exponent: Long,
+                          signBit: Boolean ->
             KFpCustomSizeValue(this, significandSize, exponentSize, significand, exponent, signBit)
         }
 
@@ -1258,6 +1262,7 @@ open class KContext : AutoCloseable {
         )
     }
 
+    @Suppress("MagicNumber")
     private fun constructFp16Number(exponent: Long, significand: Long, intSignBit: Int): Float {
         // get sign and `body` of the unbiased exponent
         val exponentSign = (exponent.toInt() shr 4) and 1
@@ -1275,6 +1280,7 @@ open class KContext : AutoCloseable {
         return intBitsToFloat(bits)
     }
 
+    @Suppress("MagicNumber")
     private fun constructFp32Number(exponent: Long, significand: Long, intSignBit: Int): Float {
         // `and 0xff` here is to avoid overloading when we have a number greater than 255,
         // and the result of the addition will affect the sign bit
@@ -1284,6 +1290,7 @@ open class KContext : AutoCloseable {
         return intBitsToFloat(intValue)
     }
 
+    @Suppress("MagicNumber")
     private fun constructFp64Number(exponent: Long, significand: Long, intSignBit: Int): Double {
         // `and 0b111_1111_1111` here is to avoid overloading when we have a number greater than 255,
         // and the result of the addition will affect the sign bit
@@ -2123,7 +2130,11 @@ open class KContext : AutoCloseable {
         fp128DeclCache.create(significandBits, exponent, signBit)
 
     private val fpCustomSizeDeclCache =
-        mkClosableCache { significandSize: UInt, exponentSize: UInt, significand: Long, exponent: Long, signBit: Boolean ->
+        mkClosableCache { significandSize: UInt,
+                          exponentSize: UInt,
+                          significand: Long,
+                          exponent: Long,
+                          signBit: Boolean ->
             KFpCustomSizeDecl(this, significandSize, exponentSize, significand, exponent, signBit)
         }
 

@@ -121,7 +121,10 @@ abstract class KExprInternalizerBase<T : Any> : KTransformer {
         val internalizedArg2 = findInternalizedExpr(arg2)
         val internalizedArg3 = findInternalizedExpr(arg3)
 
-        if (internalizedArg0 == null || internalizedArg1 == null || internalizedArg2 == null || internalizedArg3 == null) {
+        val args = listOf(internalizedArg0, internalizedArg1, internalizedArg2, internalizedArg3)
+        val someArgumentIsNull = args.any { it == null }
+
+        if (someArgumentIsNull) {
             exprStack.add(this)
 
             internalizedArg0 ?: exprStack.add(arg0)

@@ -25,6 +25,10 @@ abstract class KFpValue<T : KFpSort>(
     val signBit: Boolean
 ) : KApp<T, KExpr<*>>(ctx) {
     override val args: List<KExpr<*>> = emptyList()
+
+    companion object {
+        const val MAX_EXPONENT_SIZE = 63
+    }
 }
 
 /**
@@ -128,7 +132,9 @@ class KFpCustomSizeValue internal constructor(
     signBit
 ) {
     init {
-        require(exponentSize.toInt() <= 63) { "Maximum number of exponent bits is 63" }
+        require(exponentSize.toInt() <= MAX_EXPONENT_SIZE) {
+            "Maximum number of exponent bits is $MAX_EXPONENT_SIZE"
+        }
     }
 
     override fun decl(): KDecl<KFpSort> =

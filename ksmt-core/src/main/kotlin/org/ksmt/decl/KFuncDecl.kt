@@ -95,6 +95,7 @@ abstract class KFuncDecl3<T : KSort, A0 : KSort, A1 : KSort, A2 : KSort>(
     }
 }
 
+@Suppress("LongParameterList")
 abstract class KFuncDecl4<T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3: KSort>(
     ctx: KContext,
     name: String,
