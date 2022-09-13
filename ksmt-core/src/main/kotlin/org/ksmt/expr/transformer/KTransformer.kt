@@ -96,6 +96,7 @@ import org.ksmt.expr.KFpMulExpr
 import org.ksmt.expr.KFpNegationExpr
 import org.ksmt.expr.KFpRemExpr
 import org.ksmt.expr.KFpRoundToIntegralExpr
+import org.ksmt.expr.KFpRoundingModeExpr
 import org.ksmt.expr.KFpSqrtExpr
 import org.ksmt.expr.KFpSubExpr
 import org.ksmt.expr.KFpToBvExpr
@@ -142,6 +143,7 @@ import org.ksmt.sort.KFp128Sort
 import org.ksmt.sort.KFp16Sort
 import org.ksmt.sort.KFp32Sort
 import org.ksmt.sort.KFp64Sort
+import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
@@ -239,6 +241,9 @@ interface KTransformer {
     fun transform(expr: KFp64Value): KExpr<KFp64Sort> = transformFpValue(expr)
     fun transform(expr: KFp128Value): KExpr<KFp128Sort> = transformFpValue(expr)
     fun transform(expr: KFpCustomSizeValue): KExpr<KFpSort> = transformFpValue(expr)
+
+    // fp rounding mode
+    fun transform(expr: KFpRoundingModeExpr): KExpr<KFpRoundingModeSort> = transformApp(expr)
 
     // fp operations tranformation
     fun <T : KFpSort> transform(expr: KFpAbsExpr<T>): KExpr<T> = transformApp(expr)

@@ -8,5 +8,6 @@ interface KSortVisitor<T> {
     fun <S : KBvSort> visit(sort: S): T
     fun <S : KFpSort> visit(sort: S): T
     fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): T
+    fun visit(sort: KFpRoundingModeSort): T
     fun visit(sort: KUninterpretedSort): T
 }

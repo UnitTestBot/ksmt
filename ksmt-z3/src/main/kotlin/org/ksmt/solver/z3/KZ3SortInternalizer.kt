@@ -13,6 +13,7 @@ import org.ksmt.sort.KFp16Sort
 import org.ksmt.sort.KFp32Sort
 import org.ksmt.sort.KFp64Sort
 import org.ksmt.sort.KFpCustomSizeSort
+import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
@@ -38,6 +39,10 @@ open class KZ3SortInternalizer(
         z3InternCtx.internalizeSort(sort) {
             z3Ctx.mkArraySort(sort.domain.internalizeZ3Sort(), sort.range.internalizeZ3Sort())
         }
+
+    override fun visit(sort: KFpRoundingModeSort): Sort = z3InternCtx.internalizeSort(sort) {
+        z3Ctx.mkFPRoundingModeSort()
+    }
 
     override fun <T : KBvSort> visit(sort: T): Sort = z3InternCtx.internalizeSort(sort) {
         z3Ctx.mkBitVecSort(sort.sizeBits.toInt())

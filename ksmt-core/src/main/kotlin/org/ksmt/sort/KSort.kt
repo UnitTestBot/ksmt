@@ -148,3 +148,11 @@ class KFpCustomSizeSort(ctx: KContext, exponentBits: UInt, significandBits: UInt
     KFpSort(ctx, exponentBits, significandBits) {
     override fun exponentShiftSize(): Int = (1 shl (exponentBits.toInt() - 1)) - 1
 }
+
+class KFpRoundingModeSort(ctx: KContext) : KSort(ctx) {
+    override fun print(builder: StringBuilder) {
+        builder.append("RoundingModeSort")
+    }
+
+    override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
+}

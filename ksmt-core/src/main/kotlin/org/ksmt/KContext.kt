@@ -228,6 +228,7 @@ import org.ksmt.decl.KFpMulDecl
 import org.ksmt.decl.KFpNegationDecl
 import org.ksmt.decl.KFpRemDecl
 import org.ksmt.decl.KFpRoundToIntegralDecl
+import org.ksmt.decl.KFpRoundingModeDecl
 import org.ksmt.decl.KFpSqrtDecl
 import org.ksmt.decl.KFpSubDecl
 import org.ksmt.decl.KFpToBvDecl
@@ -270,6 +271,7 @@ import org.ksmt.expr.KFpNegationExpr
 import org.ksmt.expr.KFpRemExpr
 import org.ksmt.expr.KFpRoundToIntegralExpr
 import org.ksmt.expr.KFpRoundingMode
+import org.ksmt.expr.KFpRoundingModeExpr
 import org.ksmt.expr.KFpSqrtExpr
 import org.ksmt.expr.KFpSubExpr
 import org.ksmt.expr.KFpToBvExpr
@@ -277,6 +279,7 @@ import org.ksmt.expr.KFpToIEEEBvExpr
 import org.ksmt.expr.KFpToRealExpr
 import org.ksmt.expr.KFpValue
 import org.ksmt.expr.KFunctionAsArray
+import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.utils.booleanSignBit
 import org.ksmt.utils.cast
 import org.ksmt.utils.extendWithLeadingZeros
@@ -363,6 +366,8 @@ open class KContext : AutoCloseable {
     fun mkFpSort(exponentBits: UInt, significandBits: UInt): KFpSort =
         fpSortCache.create(exponentBits, significandBits)
 
+    private val roundingModeSortCache = mkClosableCache<KFpRoundingModeSort> { KFpRoundingModeSort(this) }
+    fun mkFpRoundingSortCache(): KFpRoundingModeSort = roundingModeSortCache.create()
 
     // utils
     val boolSort: KBoolSort
@@ -1292,6 +1297,9 @@ open class KContext : AutoCloseable {
     fun <T : KFpSort> mkFp(significand: Long, exponent: Long, signBit: Boolean, sort: T): KExpr<T> =
         mkFpCustomSize(sort.exponentBits, sort.significandBits, exponent, significand, signBit)
 
+    private val roundingModeCache = mkClosableCache { value: KFpRoundingMode -> KFpRoundingModeExpr(this, value) }
+    fun mkFpRoundingModeExpr(value: KFpRoundingMode): KFpRoundingModeExpr = roundingModeCache.create(value)
+
     private val fpAbsExprCache = mkClosableCache { value: KExpr<KFpSort> -> KFpAbsExpr(this, value) }
     fun <T : KFpSort> mkFpAbsExpr(value: KExpr<T>): KFpAbsExpr<T> = fpAbsExprCache.create(value.cast()).cast()
 
@@ -2099,6 +2107,9 @@ open class KContext : AutoCloseable {
             else -> error("Sort declaration for an unknown $sort")
         }
     }
+
+    private val roundingModeDeclCache = mkClosableCache { value: KFpRoundingMode -> KFpRoundingModeDecl(this, value) }
+    fun mkFpRoundingModeDecl(value: KFpRoundingMode) = roundingModeDeclCache.create(value)
 
     private val fpAbsDeclCache = mkClosableCache { valueSort: KFpSort -> KFpAbsDecl(this, valueSort) }
     fun <T : KFpSort> mkFpAbsDecl(valueSort: T): KFpAbsDecl<T> = fpAbsDeclCache.create(valueSort).cast()
