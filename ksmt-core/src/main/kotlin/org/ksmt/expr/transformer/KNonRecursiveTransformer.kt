@@ -20,14 +20,17 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KTransform
      * */
     fun <T : KSort> apply(rootExpr: KExpr<T>): KExpr<T> {
         exprStack.add(rootExpr)
+
         while (exprStack.isNotEmpty()) {
             val expr = exprStack.removeLast()
             exprWasTransformed = true
             val transformedExpr = expr.accept(this)
+
             if (exprWasTransformed) {
                 transformed[expr] = transformedExpr
             }
         }
+
         return transformedExpr(rootExpr) ?: error("expr was not properly transformed: $rootExpr")
     }
 
@@ -59,27 +62,38 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KTransform
     override fun <T : KSort> transformApp(expr: KApp<T, *>): KExpr<T> =
         transformAppAfterArgsTransformed(expr as KApp<T, KExpr<KSort>>) { transformedArgs ->
             if (transformedArgs == expr.args) return transformExpr(expr)
+
             val transformedApp = with(ctx) {
                 mkApp(expr.decl, transformedArgs)
             }
+
             return transformExpr(transformedApp)
         }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> =
-        transformExprAfterTransformed(expr, listOf(expr.body)) { transformedBody ->
-            with(ctx) {
-                val body = transformedBody.single()
-                if (body == expr.body) return transformExpr(expr)
-                return transformExpr(mkArrayLambda(expr.indexVarDecl, body))
+    override fun <D : KSort, R : KSort> transform(
+        expr: KArrayLambda<D, R>
+    ): KExpr<KArraySort<D, R>> = transformExprAfterTransformed(expr, listOf(expr.body)) { transformedBody ->
+        with(ctx) {
+            val body = transformedBody.single()
+
+            return if (body == expr.body) {
+                transformExpr(expr)
+            } else {
+                transformExpr(mkArrayLambda(expr.indexVarDecl, body))
             }
         }
+    }
 
     override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> =
         transformExprAfterTransformed(expr, listOf(expr.body)) { transformedBody ->
             with(ctx) {
                 val body = transformedBody.single()
-                if (body == expr.body) return transformExpr(expr)
-                return transformExpr(mkExistentialQuantifier(body, expr.bounds))
+
+                return if (body == expr.body) {
+                    transformExpr(expr)
+                } else {
+                    transformExpr(mkExistentialQuantifier(body, expr.bounds))
+                }
             }
         }
 
@@ -87,8 +101,12 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KTransform
         transformExprAfterTransformed(expr, listOf(expr.body)) { transformedBody ->
             with(ctx) {
                 val body = transformedBody.single()
-                if (body == expr.body) return transformExpr(expr)
-                return transformExpr(mkUniversalQuantifier(body, expr.bounds))
+
+                return if (body == expr.body) {
+                    transformExpr(expr)
+                } else {
+                    transformExpr(mkUniversalQuantifier(body, expr.bounds))
+                }
             }
         }
 
@@ -115,8 +133,10 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KTransform
     ): KExpr<T> {
         val transformedDependencies = mutableListOf<KExpr<A>>()
         val notTransformedDependencies = mutableListOf<KExpr<A>>()
+
         for (dependency in dependencies) {
             val transformedDependency = transformedExpr(dependency)
+
             if (transformedDependency != null) {
                 transformedDependencies += transformedDependency
                 continue
@@ -124,11 +144,14 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KTransform
                 notTransformedDependencies += dependency
             }
         }
+
         if (notTransformedDependencies.isNotEmpty()) {
             expr.transformAfter(notTransformedDependencies)
             markExpressionAsNotTransformed()
+
             return expr
         }
+
         return transformer(transformedDependencies)
     }
 }

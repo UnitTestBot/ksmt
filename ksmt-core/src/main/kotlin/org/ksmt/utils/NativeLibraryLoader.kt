@@ -12,6 +12,7 @@ object NativeLibraryLoader {
 
     fun load(libraries: (OS) -> List<String>) {
         val arch = System.getProperty("os.arch")
+
         require(arch in supportedArchs) { "Not supported arch: $arch" }
 
         val osName = System.getProperty("os.name").lowercase()
@@ -23,11 +24,13 @@ object NativeLibraryLoader {
         }
 
         val librariesToLoad = libraries(os)
+
         for (libName in librariesToLoad) {
             val osLibName = libName + libraryExt
             val resourceName = "lib/x64/$osLibName"
             val libUri = NativeLibraryLoader::class.java.classLoader
-                .getResource(resourceName)?.toURI()
+                .getResource(resourceName)
+                ?.toURI()
                 ?: error("Can't find native library $osLibName")
 
             if (libUri.scheme == "file") {
@@ -36,10 +39,13 @@ object NativeLibraryLoader {
             }
 
             val libFile = Files.createTempFile(libName, libraryExt)
+
             NativeLibraryLoader::class.java.classLoader
-                .getResourceAsStream(resourceName)?.use { libResourceStream ->
+                .getResourceAsStream(resourceName)
+                ?.use { libResourceStream ->
                     libFile.outputStream().use { libResourceStream.copyTo(it) }
                 }
+
             System.load(libFile.toAbsolutePath().toString())
         }
     }

@@ -102,12 +102,17 @@ open class KZ3DeclInternalizer(
     private val z3InternCtx: KZ3InternalizationContext,
     private val sortInternalizer: KZ3SortInternalizer
 ) : KDeclVisitor<FuncDecl<*>> {
-    override fun <S : KSort> visit(decl: KFuncDecl<S>): FuncDecl<*> = z3InternCtx.internalizeDecl(decl) {
+    override fun <S : KSort> visit(
+        decl: KFuncDecl<S>
+    ): FuncDecl<*> = z3InternCtx.internalizeDecl(decl) {
         val argSorts = decl.argSorts.map { it.accept(sortInternalizer) }.toTypedArray()
+
         z3Ctx.mkFuncDecl(decl.name, argSorts, decl.sort.accept(sortInternalizer))
     }
 
-    override fun <S : KSort> visit(decl: KConstDecl<S>): FuncDecl<*> = z3InternCtx.internalizeDecl(decl) {
+    override fun <S : KSort> visit(
+        decl: KConstDecl<S>
+    ): FuncDecl<*> = z3InternCtx.internalizeDecl(decl) {
         z3Ctx.mkConstDecl(decl.name, decl.sort.accept(sortInternalizer))
     }
 
@@ -142,7 +147,7 @@ open class KZ3DeclInternalizer(
 
     override fun <S : KSort> visit(decl: KIteDecl<S>): FuncDecl<*> = z3InternCtx.internalizeDecl(decl) {
         val expr = decl.arg0Sort.sample()
-        z3Ctx.mkITE<Sort>(z3Ctx.mkTrue(), expr, expr).funcDecl
+        z3Ctx.mkITE(z3Ctx.mkTrue(), expr, expr).funcDecl
     }
 
     @Suppress("UNCHECKED_CAST")

@@ -111,6 +111,7 @@ class BenchmarksBasedTest {
                     it as KExpr<KSort> eq model.eval(it)
                 }
             }
+
             KZ3Solver(ctx).use { z3Solver ->
                 ksmtAssertions.forEach { z3Solver.assert(it) }
                 modelAssignments.forEach { z3Solver.assert(it) }
@@ -175,6 +176,7 @@ class BenchmarksBasedTest {
                 solver.pop()
                 if (status == KSolverStatus.SAT) return check
             }
+
             return null
         }
     }

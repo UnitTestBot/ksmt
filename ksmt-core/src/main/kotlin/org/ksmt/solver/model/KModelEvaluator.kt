@@ -34,9 +34,10 @@ import org.ksmt.sort.KUninterpretedSort
 open class KModelEvaluator(
     override val ctx: KContext,
     private val model: KModel,
-    private val complete: Boolean
+    private val isComplete: Boolean
 ) : KTransformer {
     val evaluatedExpressions: MutableMap<KExpr<*>, KExpr<*>> = hashMapOf()
+
     private val evaluatedFunctions: MutableMap<KExpr<*>, KExpr<*>> = hashMapOf()
 
     fun <T : KSort> KExpr<T>.eval(): KExpr<T> = accept(this@KModelEvaluator)
@@ -49,27 +50,35 @@ open class KModelEvaluator(
         mkApp(expr.decl, expr.args.map { it.eval() })
     }
 
+    @Suppress("DuplicatedCode")
     override fun transform(expr: KAndExpr): KExpr<KBoolSort> = expr.evalExpr {
         val evaluatedArgs = mutableListOf<KExpr<KBoolSort>>()
+
         for (arg in expr.args) {
             val evaluated = arg.eval()
             if (evaluated == trueExpr) continue
             if (evaluated == falseExpr) return@evalExpr falseExpr
             evaluatedArgs.add(evaluated)
         }
+
         if (evaluatedArgs.isEmpty()) return@evalExpr trueExpr
+
         mkAnd(evaluatedArgs)
     }
 
+    @Suppress("DuplicatedCode")
     override fun transform(expr: KOrExpr): KExpr<KBoolSort> = expr.evalExpr {
         val evaluatedArgs = mutableListOf<KExpr<KBoolSort>>()
+
         for (arg in expr.args) {
             val evaluated = arg.eval()
             if (evaluated == falseExpr) continue
             if (evaluated == trueExpr) return@evalExpr trueExpr
             evaluatedArgs.add(evaluated)
         }
+
         if (evaluatedArgs.isEmpty()) return@evalExpr falseExpr
+
         mkOr(evaluatedArgs)
     }
 
@@ -84,7 +93,9 @@ open class KModelEvaluator(
     override fun <T : KSort> transform(expr: KEqExpr<T>): KExpr<KBoolSort> = expr.evalExpr {
         val lhs = expr.lhs.eval()
         val rhs = expr.rhs.eval()
+
         if (lhs == rhs) return@evalExpr trueExpr
+
         mkEq(lhs, rhs)
     }
 
@@ -106,10 +117,9 @@ open class KModelEvaluator(
 
 
     @Suppress("UNCHECKED_CAST")
-    inline fun <T : KSort, E : KExpr<T>> E.evalExpr(crossinline eval: KContext.() -> KExpr<T>): KExpr<T> =
-        evaluatedExpressions.getOrPut(this) {
-            ctx.eval()
-        } as KExpr<T>
+    inline fun <T : KSort, E : KExpr<T>> E.evalExpr(
+        crossinline eval: KContext.() -> KExpr<T>
+    ): KExpr<T> = evaluatedExpressions.getOrPut(this) { ctx.eval() } as KExpr<T>
 
     @Suppress("MemberVisibilityCanBePrivate")
     fun <T : KSort, A : KExpr<*>> KApp<T, A>.evalFunction(): KExpr<T> = evalExpr {
@@ -117,46 +127,57 @@ open class KModelEvaluator(
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : KSort, A : KExpr<*>> KApp<T, A>.evalFunction(args: List<KExpr<*>>): KExpr<T> =
-        evaluatedFunctions.getOrPut(this) {
-            with(ctx) {
-                val interpretation = model.interpretation(decl)
-                if (interpretation == null && !complete) {
-                    return@getOrPut mkApp(decl, args)
-                }
-                if (interpretation == null) {
-                    return@getOrPut sort.sampleValue()
-                }
-                check(args.size == interpretation.vars.size) {
-                    "${interpretation.vars.size} arguments expected but ${args.size} provided"
-                }
-                evalFuncInterp(interpretation, args)
+    fun <T : KSort, A : KExpr<*>> KApp<T, A>.evalFunction(
+        args: List<KExpr<*>>
+    ): KExpr<T> = evaluatedFunctions.getOrPut(this) {
+        with(ctx) {
+            val interpretation = model.interpretation(decl)
+
+            if (interpretation == null && !isComplete) {
+                return@getOrPut mkApp(decl, args)
             }
-        } as KExpr<T>
+
+            if (interpretation == null) {
+                return@getOrPut sort.sampleValue()
+            }
+
+            check(args.size == interpretation.vars.size) {
+                "${interpretation.vars.size} arguments expected but ${args.size} provided"
+            }
+
+            evalFuncInterp(interpretation, args)
+        }
+    } as KExpr<T>
 
 
     @Suppress("UNCHECKED_CAST")
-    open fun <T : KSort> evalFuncInterp(interpretation: KModel.KFuncInterp<T>, args: List<KExpr<*>>): KExpr<T> =
-        with(ctx) {
-            val varSubstitution = KExprSubstitutor(ctx).apply {
-                interpretation.vars.zip(args).forEach { (v, a) ->
-                    substitute(mkApp(v, emptyList()) as KExpr<KSort>, a as KExpr<KSort>)
-                }
-            }
-            val entries = interpretation.entries.map { entry ->
-                KModel.KFuncInterpEntry(
-                    entry.args.map { varSubstitution.apply(it) },
-                    varSubstitution.apply(entry.value)
-                )
-            }
-            // in case of partial interpretation we can generate any default expr to preserve expression correctness
-            val defaultExpr = interpretation.default ?: interpretation.sort.sampleValue()
-            val default = varSubstitution.apply(defaultExpr)
-            return entries.foldRight(default) { entry, acc ->
-                val argBinding = mkAnd(entry.args.zip(args) { ea, a -> mkEq(ea as KExpr<KSort>, a as KExpr<KSort>) })
-                mkIte(argBinding, entry.value, acc)
+    open fun <T : KSort> evalFuncInterp(
+        interpretation: KModel.KFuncInterp<T>,
+        args: List<KExpr<*>>
+    ): KExpr<T> = with(ctx) {
+        val varSubstitution = KExprSubstitutor(ctx).apply {
+            interpretation.vars.zip(args).forEach { (v, a) ->
+                val app = mkApp(v, emptyList())
+                substitute(app as KExpr<KSort>, a as KExpr<KSort>)
             }
         }
+
+        val entries = interpretation.entries.map { entry ->
+            KModel.KFuncInterpEntry(
+                entry.args.map { varSubstitution.apply(it) },
+                varSubstitution.apply(entry.value)
+            )
+        }
+
+        // in case of partial interpretation we can generate any default expr to preserve expression correctness
+        val defaultExpr = interpretation.default ?: interpretation.sort.sampleValue()
+        val default = varSubstitution.apply(defaultExpr)
+
+        return entries.foldRight(default) { entry, acc ->
+            val argBinding = mkAnd(entry.args.zip(args) { ea, a -> mkEq(ea as KExpr<KSort>, a as KExpr<KSort>) })
+            mkIte(argBinding, entry.value, acc)
+        }
+    }
 
     @Suppress("UNCHECKED_CAST")
     open fun <T : KSort> T.sampleValue(): KExpr<T> = with(ctx) {

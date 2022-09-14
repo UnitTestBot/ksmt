@@ -46,15 +46,15 @@ object FilePtrUtils {
     }
 
     private val stdout: FilePtr by lazy {
-        FilePtr(lib.fdopen(1, "w"), closable = false)
+        FilePtr(lib.fdopen(1, "w"), isClosable = false)
     }
 
 }
 
-class FilePtr internal constructor(val ptr: Pointer, private val closable: Boolean = true) : AutoCloseable {
+class FilePtr internal constructor(val ptr: Pointer, private val isClosable: Boolean = true) : AutoCloseable {
     override fun close() {
         FilePtrUtils.flush(this)
-        if (closable) {
+        if (isClosable) {
             FilePtrUtils.close(this)
         }
     }

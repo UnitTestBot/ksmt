@@ -9,11 +9,12 @@ fun Project.mkSmtLibBenchmarkTestData(name: String) = tasks.register("smtLibBenc
     doLast {
         val path = buildDir.resolve("smtLibBenchmark/$name")
         val downloadTarget = path.resolve("$name.zip")
-        val repoUrl = "https://clc-gitlab.cs.uiowa.edu:2443"
-        val url = "$repoUrl/api/v4/projects/SMT-LIB-benchmarks%2F$name/repository/archive.zip"
+        val url = "$BENCHMARK_REPO_URL/api/v4/projects/SMT-LIB-benchmarks%2F$name/repository/archive.zip"
+
         download(url, downloadTarget)
 
         val unpackCompleteMarker = path.resolve("unpack-complete")
+
         if (!unpackCompleteMarker.exists()) {
             copy {
                 from(zipTree(downloadTarget))
@@ -23,10 +24,10 @@ fun Project.mkSmtLibBenchmarkTestData(name: String) = tasks.register("smtLibBenc
             unpackCompleteMarker.createNewFile()
         }
 
-        val testResources = testResourceDir()!!
+        val testResources = testResourceDir() ?: error("No resource directory found for $name benchmark")
         val testData = testResources.resolve("testData")
-
         val testDataCopyCompleteMarker = testData.resolve("$name-copy-complete")
+
         if (!testDataCopyCompleteMarker.exists()) {
             val smtFiles = path.walkTopDown().filter { it.extension == "smt2" }.toList()
             copy {
@@ -42,5 +43,7 @@ fun Project.mkSmtLibBenchmarkTestData(name: String) = tasks.register("smtLibBenc
 
 private fun Project.testResourceDir(): File? {
     val sourceSets = (this as ExtensionAware).extensions.getByName("sourceSets") as SourceSetContainer
-    return sourceSets["test"].output.resourcesDir
+    return sourceSets["test"]?.output?.resourcesDir
 }
+
+private const val BENCHMARK_REPO_URL = "https://clc-gitlab.cs.uiowa.edu:2443"

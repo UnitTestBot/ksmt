@@ -33,6 +33,7 @@ class Z3SmtLibParser : SmtLibParser {
     fun convert(ctx: KContext, assertions: List<BoolExpr>): List<KExpr<KBoolSort>> {
         val internCtx = KZ3InternalizationContext()
         val converter = KZ3ExprConverter(ctx, internCtx)
+
         return with(converter) { assertions.map { it.convert() } }
     }
 

@@ -9,6 +9,7 @@ abstract class KSort(ctx: KContext) : KAst(ctx) {
 
 class KBoolSort internal constructor(ctx: KContext) : KSort(ctx) {
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
+
     override fun print(builder: StringBuilder) {
         builder.append("Bool")
     }
@@ -19,6 +20,7 @@ abstract class KArithSort<out T : KArithSort<T>>(ctx: KContext) : KSort(ctx)
 
 class KIntSort internal constructor(ctx: KContext) : KArithSort<KIntSort>(ctx) {
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
+
     override fun print(builder: StringBuilder) {
         builder.append("Int")
     }
@@ -26,6 +28,7 @@ class KIntSort internal constructor(ctx: KContext) : KArithSort<KIntSort>(ctx) {
 
 class KRealSort internal constructor(ctx: KContext) : KArithSort<KRealSort>(ctx) {
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
+
     override fun print(builder: StringBuilder) {
         builder.append("Real")
     }
@@ -35,6 +38,7 @@ class KArraySort<out D : KSort, out R : KSort> internal constructor(
     ctx: KContext, val domain: D, val range: R
 ) : KSort(ctx) {
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
+
     override fun print(builder: StringBuilder): Unit = with(builder) {
         append("(Array ")
         domain.print(this)
@@ -100,7 +104,9 @@ sealed class KFpSort(ctx: KContext, val exponentBits: UInt, val significandBits:
     override fun print(builder: StringBuilder) {
         builder.append("FP (eBits: $exponentBits) (sBits: $significandBits)")
     }
+
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
+
     abstract fun exponentShiftSize(): Int
 }
 
@@ -144,8 +150,11 @@ class KFp128Sort(ctx: KContext) : KFpSort(ctx, exponentBits, significandBits) {
     }
 }
 
-class KFpCustomSizeSort(ctx: KContext, exponentBits: UInt, significandBits: UInt) :
-    KFpSort(ctx, exponentBits, significandBits) {
+class KFpCustomSizeSort(
+    ctx: KContext,
+    exponentBits: UInt,
+    significandBits: UInt
+) : KFpSort(ctx, exponentBits, significandBits) {
     override fun exponentShiftSize(): Int = (1 shl (exponentBits.toInt() - 1)) - 1
 }
 

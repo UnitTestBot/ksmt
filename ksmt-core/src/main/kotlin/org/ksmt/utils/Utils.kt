@@ -44,6 +44,7 @@ fun Float.getHalfPrecisionExponent(isBiased: Boolean): Int {
             (signBit shl 4) or otherBits
         }
     }
+
     return if (isBiased) unbiasedFp16Exponent + KFp16Sort.exponentShiftSize else unbiasedFp16Exponent
 }
 

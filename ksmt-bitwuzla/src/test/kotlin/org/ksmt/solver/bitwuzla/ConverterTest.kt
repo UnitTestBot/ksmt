@@ -3,7 +3,7 @@ package org.ksmt.solver.bitwuzla
 import org.ksmt.KContext
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.transformer.KTransformer
+import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaOption
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaResult
@@ -143,7 +143,7 @@ class ConverterTest {
         mkIte(this@toBool eq mkBv(true), trueExpr, falseExpr)
     }
 
-    private class SortChecker(override val ctx: KContext) : KTransformer {
+    private class SortChecker(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         override fun <T : KSort> transformApp(expr: KApp<T, *>): KExpr<T> = with(ctx) {
             // apply internally check arguments sorts
             expr.decl.apply(expr.args)

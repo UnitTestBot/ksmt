@@ -2,7 +2,7 @@ package org.ksmt.expr
 
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
-import org.ksmt.expr.transformer.KTransformer
+import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBvSort
@@ -41,14 +41,15 @@ abstract class KFpValue<T : KFpSort>(
  * 0      00000000   00000000000000000000000    (1 8 23)
  * x      x___xxxx   xxxxxxxxxx_____________    (1 5 10)
  */
-class KFp16Value internal constructor(ctx: KContext, val value: Float) :
-    KFpValue<KFp16Sort>(
-        ctx,
-        significand = with(ctx) { value.halfPrecisionSignificand.toBv(KFp16Sort.significandBits - 1u) },
-        exponent = with(ctx) { value.getHalfPrecisionExponent(isBiased = false).toBv(KFp16Sort.exponentBits) },
-        signBit = value.booleanSignBit
-    ) {
-
+class KFp16Value internal constructor(
+    ctx: KContext,
+    val value: Float
+) : KFpValue<KFp16Sort>(
+    ctx,
+    significand = with(ctx) { value.halfPrecisionSignificand.toBv(KFp16Sort.significandBits - 1u) },
+    exponent = with(ctx) { value.getHalfPrecisionExponent(isBiased = false).toBv(KFp16Sort.exponentBits) },
+    signBit = value.booleanSignBit
+) {
     init {
         // TODO add checks for the bounds
     }
@@ -57,35 +58,39 @@ class KFp16Value internal constructor(ctx: KContext, val value: Float) :
 
     override fun sort(): KFp16Sort = ctx.mkFp16Sort()
 
-    override fun accept(transformer: KTransformer): KExpr<KFp16Sort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KFp16Sort> = transformer.transform(this)
 }
 
-class KFp32Value internal constructor(ctx: KContext, val value: Float) :
-    KFpValue<KFp32Sort>(
-        ctx,
-        significand = with(ctx) { value.significand.toBv(KFp32Sort.significandBits - 1u) },
-        exponent = with(ctx) { value.getExponent(isBiased = false).toBv(KFp32Sort.exponentBits) },
-        signBit = value.booleanSignBit
-    ) {
+class KFp32Value internal constructor(
+    ctx: KContext,
+    val value: Float
+) : KFpValue<KFp32Sort>(
+    ctx,
+    significand = with(ctx) { value.significand.toBv(KFp32Sort.significandBits - 1u) },
+    exponent = with(ctx) { value.getExponent(isBiased = false).toBv(KFp32Sort.exponentBits) },
+    signBit = value.booleanSignBit
+) {
     override fun decl(): KDecl<KFp32Sort> = ctx.mkFp32Decl(value)
 
     override fun sort(): KFp32Sort = ctx.mkFp32Sort()
 
-    override fun accept(transformer: KTransformer): KExpr<KFp32Sort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KFp32Sort> = transformer.transform(this)
 }
 
-class KFp64Value internal constructor(ctx: KContext, val value: Double) :
-    KFpValue<KFp64Sort>(
-        ctx,
-        significand = with(ctx) { value.significand.toBv(KFp64Sort.significandBits - 1u) },
-        exponent = with(ctx) { value.getExponent(isBiased = false).toBv(KFp64Sort.exponentBits) },
-        signBit = value.booleanSignBit
-    ) {
+class KFp64Value internal constructor(
+    ctx: KContext,
+    val value: Double
+) : KFpValue<KFp64Sort>(
+    ctx,
+    significand = with(ctx) { value.significand.toBv(KFp64Sort.significandBits - 1u) },
+    exponent = with(ctx) { value.getExponent(isBiased = false).toBv(KFp64Sort.exponentBits) },
+    signBit = value.booleanSignBit
+) {
     override fun decl(): KDecl<KFp64Sort> = ctx.mkFp64Decl(value)
 
     override fun sort(): KFp64Sort = ctx.mkFp64Sort()
 
-    override fun accept(transformer: KTransformer): KExpr<KFp64Sort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KFp64Sort> = transformer.transform(this)
 }
 
 /**
@@ -109,7 +114,7 @@ class KFp128Value internal constructor(
 
     override fun sort(): KFp128Sort = ctx.mkFp128Sort()
 
-    override fun accept(transformer: KTransformer): KExpr<KFp128Sort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KFp128Sort> = transformer.transform(this)
 }
 
 /**
@@ -138,12 +143,17 @@ class KFpCustomSizeValue internal constructor(
         }
     }
 
-    override fun decl(): KDecl<KFpSort> =
-        ctx.mkFpCustomSizeDecl(significandSize, exponentSize, significandValue, exponentValue, signBit)
+    override fun decl(): KDecl<KFpSort> = ctx.mkFpCustomSizeDecl(
+        significandSize,
+        exponentSize,
+        significandValue,
+        exponentValue,
+        signBit
+    )
 
     override fun sort(): KFpSort = ctx.mkFpSort(exponentSize, significandSize)
 
-    override fun accept(transformer: KTransformer): KExpr<KFpSort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KFpSort> = transformer.transform(this)
 }
 
 class KFpAbsExpr<S : KFpSort> internal constructor(
@@ -157,7 +167,7 @@ class KFpAbsExpr<S : KFpSort> internal constructor(
 
     override fun sort(): S = value.sort()
 
-    override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 }
 
 /**
@@ -174,7 +184,7 @@ class KFpNegationExpr<S : KFpSort> internal constructor(
 
     override fun sort(): S = value.sort()
 
-    override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 }
 
 // TODO Can they have different sorts?
@@ -191,7 +201,7 @@ class KFpAddExpr<S : KFpSort> internal constructor(
 
     override fun sort(): S = arg0.sort()
 
-    override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 }
 
 class KFpSubExpr<S : KFpSort> internal constructor(
@@ -207,7 +217,7 @@ class KFpSubExpr<S : KFpSort> internal constructor(
 
     override fun sort(): S = arg0.sort()
 
-    override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 }
 
 class KFpMulExpr<S : KFpSort> internal constructor(
@@ -219,11 +229,11 @@ class KFpMulExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<*>>
         get() = listOf(roundingMode, arg0, arg1)
 
-    override fun decl(): KDecl<S> = with(ctx) { mkFpMulDecl(roundingMode.sort, arg0.sort, arg1.sort)  }
+    override fun decl(): KDecl<S> = with(ctx) { mkFpMulDecl(roundingMode.sort, arg0.sort, arg1.sort) }
 
     override fun sort(): S = arg0.sort()
 
-    override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 }
 
 class KFpDivExpr<S : KFpSort> internal constructor(
@@ -239,7 +249,7 @@ class KFpDivExpr<S : KFpSort> internal constructor(
 
     override fun sort(): S = arg0.sort()
 
-    override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 }
 
 class KFpFusedMulAddExpr<S : KFpSort> internal constructor(
@@ -263,7 +273,7 @@ class KFpFusedMulAddExpr<S : KFpSort> internal constructor(
 
     override fun sort(): S = arg0.sort()
 
-    override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 
 }
 
@@ -279,7 +289,7 @@ class KFpSqrtExpr<S : KFpSort> internal constructor(
 
     override fun sort(): S = value.sort()
 
-    override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 
 }
 
@@ -295,7 +305,7 @@ class KFpRemExpr<S : KFpSort> internal constructor(
 
     override fun sort(): S = arg0.sort()
 
-    override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 }
 
 class KFpRoundToIntegralExpr<S : KFpSort> internal constructor(
@@ -310,7 +320,7 @@ class KFpRoundToIntegralExpr<S : KFpSort> internal constructor(
 
     override fun sort(): S = value.sort()
 
-    override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 
 }
 
@@ -326,7 +336,7 @@ class KFpMinExpr<S : KFpSort> internal constructor(
 
     override fun sort(): S = arg0.sort()
 
-    override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 }
 
 class KFpMaxExpr<S : KFpSort> internal constructor(
@@ -341,7 +351,7 @@ class KFpMaxExpr<S : KFpSort> internal constructor(
 
     override fun sort(): S = arg0.sort()
 
-    override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 }
 
 class KFpLessOrEqualExpr<S : KFpSort> internal constructor(
@@ -356,7 +366,7 @@ class KFpLessOrEqualExpr<S : KFpSort> internal constructor(
 
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 class KFpLessExpr<S : KFpSort> internal constructor(
@@ -371,7 +381,7 @@ class KFpLessExpr<S : KFpSort> internal constructor(
 
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 class KFpGreaterOrEqualExpr<S : KFpSort> internal constructor(
@@ -386,7 +396,7 @@ class KFpGreaterOrEqualExpr<S : KFpSort> internal constructor(
 
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 class KFpGreaterExpr<S : KFpSort> internal constructor(
@@ -401,7 +411,7 @@ class KFpGreaterExpr<S : KFpSort> internal constructor(
 
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 class KFpEqualExpr<S : KFpSort> internal constructor(
@@ -416,7 +426,7 @@ class KFpEqualExpr<S : KFpSort> internal constructor(
 
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 class KFpIsNormalExpr<S : KFpSort> internal constructor(
@@ -430,7 +440,7 @@ class KFpIsNormalExpr<S : KFpSort> internal constructor(
 
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 class KFpIsSubnormalExpr<S : KFpSort> internal constructor(
@@ -444,7 +454,7 @@ class KFpIsSubnormalExpr<S : KFpSort> internal constructor(
 
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 class KFpIsZeroExpr<S : KFpSort> internal constructor(
@@ -458,7 +468,7 @@ class KFpIsZeroExpr<S : KFpSort> internal constructor(
 
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 class KFpIsInfiniteExpr<S : KFpSort> internal constructor(
@@ -472,7 +482,7 @@ class KFpIsInfiniteExpr<S : KFpSort> internal constructor(
 
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 class KFpIsNaNExpr<S : KFpSort> internal constructor(
@@ -486,7 +496,7 @@ class KFpIsNaNExpr<S : KFpSort> internal constructor(
 
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 class KFpIsNegativeExpr<S : KFpSort> internal constructor(
@@ -500,7 +510,7 @@ class KFpIsNegativeExpr<S : KFpSort> internal constructor(
 
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 class KFpIsPositiveExpr<S : KFpSort> internal constructor(
@@ -514,7 +524,7 @@ class KFpIsPositiveExpr<S : KFpSort> internal constructor(
 
     override fun sort(): KBoolSort = ctx.mkBoolSort()
 
-    override fun accept(transformer: KTransformer): KExpr<KBoolSort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 }
 
 // TODO mkFpToFp ???
@@ -529,11 +539,13 @@ class KFpToBvExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<*>>
         get() = listOf(roundingMode, value)
 
-    override fun decl(): KDecl<KBvSort> = with(ctx) { mkFpToBvDecl(roundingMode.sort, value.sort, bvSize, isSigned) }
+    override fun decl(): KDecl<KBvSort> = with(ctx) {
+        mkFpToBvDecl(roundingMode.sort, value.sort, bvSize, isSigned)
+    }
 
     override fun sort(): KBvSort = decl().sort
 
-    override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KBvSort> = transformer.transform(this)
 
 }
 
@@ -548,7 +560,7 @@ class KFpToRealExpr<S : KFpSort> internal constructor(
 
     override fun sort(): KRealSort = ctx.mkRealSort()
 
-    override fun accept(transformer: KTransformer): KExpr<KRealSort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KRealSort> = transformer.transform(this)
 }
 
 class KFpToIEEEBvExpr<S : KFpSort> internal constructor(
@@ -562,7 +574,7 @@ class KFpToIEEEBvExpr<S : KFpSort> internal constructor(
 
     override fun sort(): KBvSort = decl().sort
 
-    override fun accept(transformer: KTransformer): KExpr<KBvSort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KBvSort> = transformer.transform(this)
 }
 
 class KFpFromBvExpr<S : KFpSort> internal constructor(
@@ -581,7 +593,7 @@ class KFpFromBvExpr<S : KFpSort> internal constructor(
 
     override fun sort(): S = sort
 
-    override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 }
 
 class KFpToFpExpr<S : KFpSort> internal constructor(
@@ -599,7 +611,7 @@ class KFpToFpExpr<S : KFpSort> internal constructor(
 
     override fun sort(): S = sort
 
-    override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 }
 
 class KRealToFpExpr<S : KFpSort> internal constructor(
@@ -617,7 +629,7 @@ class KRealToFpExpr<S : KFpSort> internal constructor(
 
     override fun sort(): S = sort
 
-    override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 }
 
 class KBvToFpExpr<S : KFpSort> internal constructor(
@@ -636,5 +648,5 @@ class KBvToFpExpr<S : KFpSort> internal constructor(
 
     override fun sort(): S = sort
 
-    override fun accept(transformer: KTransformer): KExpr<S> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 }

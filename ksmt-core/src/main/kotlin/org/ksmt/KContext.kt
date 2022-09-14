@@ -438,7 +438,10 @@ open class KContext : AutoCloseable {
         KImpliesExpr(this, p, q)
     }
 
-    fun mkImplies(p: KExpr<KBoolSort>, q: KExpr<KBoolSort>): KImpliesExpr = impliesCache.createIfContextActive(p, q)
+    fun mkImplies(
+        p: KExpr<KBoolSort>,
+        q: KExpr<KBoolSort>
+    ): KImpliesExpr = impliesCache.createIfContextActive(p, q)
 
     private val xorCache = mkContextCheckingCache { a: KExpr<KBoolSort>, b: KExpr<KBoolSort> ->
         KXorExpr(this, a, b)
@@ -470,9 +473,16 @@ open class KContext : AutoCloseable {
         KIteExpr(this, c, t, f)
     }
 
-    fun <T : KSort> mkIte(condition: KExpr<KBoolSort>, trueBranch: KExpr<T>, falseBranch: KExpr<T>): KIteExpr<T> =
-        iteCache.createIfContextActive(condition, trueBranch.cast(), falseBranch.cast()).cast()
+    fun <T : KSort> mkIte(
+        condition: KExpr<KBoolSort>,
+        trueBranch: KExpr<T>,
+        falseBranch: KExpr<T>
+    ): KIteExpr<T> {
+        val trueArg: KExpr<KSort> = trueBranch.cast()
+        val falseArg: KExpr<KSort> = falseBranch.cast()
 
+        return iteCache.createIfContextActive(condition, trueArg, falseArg).cast()
+    }
 
     infix fun <T : KSort> KExpr<T>.eq(other: KExpr<T>) = mkEq(this, other)
     operator fun KExpr<KBoolSort>.not() = mkNot(this)
@@ -518,33 +528,49 @@ open class KContext : AutoCloseable {
 
     fun <T : KSort> T.mkFreshConst(name: String): KApp<T, *> = with(mkFreshConstDecl(name)) { apply() }
 
-    inline operator fun <reified T : KSort> T.getValue(thisRef: Any?, property: KProperty<*>): KApp<T, *> =
-        mkConst(property.name)
+    inline operator fun <reified T : KSort> T.getValue(
+        thisRef: Any?,
+        property: KProperty<*>
+    ): KApp<T, *> = mkConst(property.name)
 
     // array
-    private val arrayStoreCache =
-        mkContextCheckingCache { a: KExpr<KArraySort<KSort, KSort>>, i: KExpr<KSort>, v: KExpr<KSort> ->
-            KArrayStore(this, a, i, v)
-        }
+    private val arrayStoreCache = mkContextCheckingCache { a: KExpr<KArraySort<KSort, KSort>>,
+                                                           i: KExpr<KSort>,
+                                                           v: KExpr<KSort> ->
+        KArrayStore(this, a, i, v)
+    }
 
     fun <D : KSort, R : KSort> mkArrayStore(
-        array: KExpr<KArraySort<D, R>>, index: KExpr<D>, value: KExpr<R>
-    ): KArrayStore<D, R> = arrayStoreCache.createIfContextActive(array.cast(), index.cast(), value.cast()).cast()
+        array: KExpr<KArraySort<D, R>>,
+        index: KExpr<D>,
+        value: KExpr<R>
+    ): KArrayStore<D, R> {
+        val arrayArg: KExpr<KArraySort<KSort, KSort>> = array.cast()
+        val indexArg: KExpr<KSort> = index.cast()
+        val valueArg: KExpr<KSort> = value.cast()
 
-    private val arraySelectCache =
-        mkContextCheckingCache { array: KExpr<KArraySort<KSort, KSort>>, index: KExpr<KSort> ->
-            KArraySelect(this, array, index)
-        }
+        return arrayStoreCache.createIfContextActive(arrayArg, indexArg, valueArg).cast()
+    }
 
-    fun <D : KSort, R : KSort> mkArraySelect(array: KExpr<KArraySort<D, R>>, index: KExpr<D>): KArraySelect<D, R> =
-        arraySelectCache.createIfContextActive(array.cast(), index.cast()).cast()
+    private val arraySelectCache = mkContextCheckingCache { array: KExpr<KArraySort<KSort, KSort>>,
+                                                            index: KExpr<KSort> ->
+        KArraySelect(this, array, index)
+    }
 
-    private val arrayConstCache = mkContextCheckingCache { array: KArraySort<KSort, KSort>, value: KExpr<KSort> ->
+    fun <D : KSort, R : KSort> mkArraySelect(
+        array: KExpr<KArraySort<D, R>>,
+        index: KExpr<D>
+    ): KArraySelect<D, R> = arraySelectCache.createIfContextActive(array.cast(), index.cast()).cast()
+
+    private val arrayConstCache = mkContextCheckingCache { array: KArraySort<KSort, KSort>,
+                                                           value: KExpr<KSort> ->
         KArrayConst(this, array, value)
     }
 
-    fun <D : KSort, R : KSort> mkArrayConst(arraySort: KArraySort<D, R>, value: KExpr<R>): KArrayConst<D, R> =
-        arrayConstCache.createIfContextActive(arraySort.cast(), value.cast()).cast()
+    fun <D : KSort, R : KSort> mkArrayConst(
+        arraySort: KArraySort<D, R>,
+        value: KExpr<R>
+    ): KArrayConst<D, R> = arrayConstCache.createIfContextActive(arraySort.cast(), value.cast()).cast()
 
     private val functionAsArrayCache = mkContextCheckingCache { function: KFuncDecl<KSort> ->
         KFunctionAsArray<KSort, KSort>(this, function)
@@ -603,42 +629,48 @@ open class KContext : AutoCloseable {
     fun <T : KArithSort<T>> mkArithUnaryMinus(arg: KExpr<T>): KUnaryMinusArithExpr<T> =
         arithUnaryMinusCache.createIfContextActive(arg.cast()).cast()
 
-    private val arithDivCache = mkContextCheckingCache { l: KExpr<KArithSort<*>>, r: KExpr<KArithSort<*>> ->
+    private val arithDivCache = mkContextCheckingCache { l: KExpr<KArithSort<*>>,
+                                                         r: KExpr<KArithSort<*>> ->
         KDivArithExpr(this, l, r)
     }
 
     fun <T : KArithSort<T>> mkArithDiv(lhs: KExpr<T>, rhs: KExpr<T>): KDivArithExpr<T> =
         arithDivCache.createIfContextActive(lhs.cast(), rhs.cast()).cast()
 
-    private val arithPowerCache = mkContextCheckingCache { l: KExpr<KArithSort<*>>, r: KExpr<KArithSort<*>> ->
+    private val arithPowerCache = mkContextCheckingCache { l: KExpr<KArithSort<*>>,
+                                                           r: KExpr<KArithSort<*>> ->
         KPowerArithExpr(this, l, r)
     }
 
     fun <T : KArithSort<T>> mkArithPower(lhs: KExpr<T>, rhs: KExpr<T>): KPowerArithExpr<T> =
         arithPowerCache.createIfContextActive(lhs.cast(), rhs.cast()).cast()
 
-    private val arithLtCache = mkContextCheckingCache { l: KExpr<KArithSort<*>>, r: KExpr<KArithSort<*>> ->
+    private val arithLtCache = mkContextCheckingCache { l: KExpr<KArithSort<*>>,
+                                                        r: KExpr<KArithSort<*>> ->
         KLtArithExpr(this, l, r)
     }
 
     fun <T : KArithSort<T>> mkArithLt(lhs: KExpr<T>, rhs: KExpr<T>): KLtArithExpr<T> =
         arithLtCache.createIfContextActive(lhs.cast(), rhs.cast()).cast()
 
-    private val arithLeCache = mkContextCheckingCache { l: KExpr<KArithSort<*>>, r: KExpr<KArithSort<*>> ->
+    private val arithLeCache = mkContextCheckingCache { l: KExpr<KArithSort<*>>,
+                                                        r: KExpr<KArithSort<*>> ->
         KLeArithExpr(this, l, r)
     }
 
     fun <T : KArithSort<T>> mkArithLe(lhs: KExpr<T>, rhs: KExpr<T>): KLeArithExpr<T> =
         arithLeCache.createIfContextActive(lhs.cast(), rhs.cast()).cast()
 
-    private val arithGtCache = mkContextCheckingCache { l: KExpr<KArithSort<*>>, r: KExpr<KArithSort<*>> ->
+    private val arithGtCache = mkContextCheckingCache { l: KExpr<KArithSort<*>>,
+                                                        r: KExpr<KArithSort<*>> ->
         KGtArithExpr(this, l, r)
     }
 
     fun <T : KArithSort<T>> mkArithGt(lhs: KExpr<T>, rhs: KExpr<T>): KGtArithExpr<T> =
         arithGtCache.createIfContextActive(lhs.cast(), rhs.cast()).cast()
 
-    private val arithGeCache = mkContextCheckingCache { l: KExpr<KArithSort<*>>, r: KExpr<KArithSort<*>> ->
+    private val arithGeCache = mkContextCheckingCache { l: KExpr<KArithSort<*>>,
+                                                        r: KExpr<KArithSort<*>> ->
         KGeArithExpr(this, l, r)
     }
 
@@ -658,17 +690,25 @@ open class KContext : AutoCloseable {
     infix fun <T : KArithSort<T>> KExpr<T>.ge(other: KExpr<T>) = mkArithGe(this, other)
 
     // integer
-    private val intModCache = mkContextCheckingCache { l: KExpr<KIntSort>, r: KExpr<KIntSort> ->
+    private val intModCache = mkContextCheckingCache { l: KExpr<KIntSort>,
+                                                       r: KExpr<KIntSort> ->
         KModIntExpr(this, l, r)
     }
 
-    fun mkIntMod(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): KModIntExpr = intModCache.createIfContextActive(lhs, rhs)
+    fun mkIntMod(
+        lhs: KExpr<KIntSort>,
+        rhs: KExpr<KIntSort>
+    ): KModIntExpr = intModCache.createIfContextActive(lhs, rhs)
 
-    private val intRemCache = mkContextCheckingCache { l: KExpr<KIntSort>, r: KExpr<KIntSort> ->
+    private val intRemCache = mkContextCheckingCache { l: KExpr<KIntSort>,
+                                                       r: KExpr<KIntSort> ->
         KRemIntExpr(this, l, r)
     }
 
-    fun mkIntRem(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): KRemIntExpr = intRemCache.createIfContextActive(lhs, rhs)
+    fun mkIntRem(
+        lhs: KExpr<KIntSort>,
+        rhs: KExpr<KIntSort>
+    ): KRemIntExpr = intRemCache.createIfContextActive(lhs, rhs)
 
     private val intToRealCache = mkContextCheckingCache { arg: KExpr<KIntSort> ->
         KToRealIntExpr(this, arg)
@@ -694,12 +734,15 @@ open class KContext : AutoCloseable {
 
     fun mkIntNum(value: BigInteger): KIntBigNumExpr = intBigNumCache.createIfContextActive(value)
     fun mkIntNum(value: String) =
-        value.toIntOrNull()?.let { mkIntNum(it) } ?: value.toLongOrNull()?.let { mkIntNum(it) }
-        ?: mkIntNum(value.toBigInteger())
+        value.toIntOrNull()
+            ?.let { mkIntNum(it) }
+            ?: value.toLongOrNull()?.let { mkIntNum(it) }
+            ?: mkIntNum(value.toBigInteger())
 
     infix fun KExpr<KIntSort>.mod(rhs: KExpr<KIntSort>) = mkIntMod(this, rhs)
     infix fun KExpr<KIntSort>.rem(rhs: KExpr<KIntSort>) = mkIntRem(this, rhs)
     fun KExpr<KIntSort>.toRealExpr() = mkIntToReal(this)
+
     val Int.intExpr
         get() = mkIntNum(this)
     val Long.intExpr
@@ -720,7 +763,8 @@ open class KContext : AutoCloseable {
 
     fun mkRealIsInt(arg: KExpr<KRealSort>): KIsIntRealExpr = realIsIntCache.createIfContextActive(arg)
 
-    private val realNumCache = mkContextCheckingCache { numerator: KIntNumExpr, denominator: KIntNumExpr ->
+    private val realNumCache = mkContextCheckingCache { numerator: KIntNumExpr,
+                                                        denominator: KIntNumExpr ->
         KRealNumExpr(this, numerator, denominator)
     }
 
@@ -735,6 +779,7 @@ open class KContext : AutoCloseable {
     fun mkRealNum(numerator: Long, denominator: Long) = mkRealNum(mkIntNum(numerator), mkIntNum(denominator))
     fun mkRealNum(value: String): KRealNumExpr {
         val parts = value.split('/')
+
         return when (parts.size) {
             1 -> mkRealNum(mkIntNum(parts[0]))
             2 -> mkRealNum(mkIntNum(parts[0]), mkIntNum(parts[1]))
@@ -751,10 +796,16 @@ open class KContext : AutoCloseable {
     private val bv16Cache = mkClosableCache { value: Short -> KBitVec16Value(this, value) }
     private val bv32Cache = mkClosableCache { value: Int -> KBitVec32Value(this, value) }
     private val bv64Cache = mkClosableCache { value: Long -> KBitVec64Value(this, value) }
-    private val bvCache = mkClosableCache { value: String, sizeBits: UInt -> KBitVecCustomValue(this, value, sizeBits) }
+    private val bvCache = mkClosableCache { value: String, sizeBits: UInt ->
+        KBitVecCustomValue(this, value, sizeBits)
+    }
 
     fun mkBv(value: Boolean): KBitVec1Value = bv1Cache.createIfContextActive(value)
-    fun mkBv(value: Boolean, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv((if (value) 1 else 0) as Number, sizeBits)
+    fun mkBv(value: Boolean, sizeBits: UInt): KBitVecValue<KBvSort> {
+        val intValue = (if (value) 1 else 0) as Number
+        return mkBv(intValue, sizeBits)
+    }
+
     fun Boolean.toBv(): KBitVec1Value = mkBv(this)
     fun Boolean.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
 
@@ -814,220 +865,311 @@ open class KContext : AutoCloseable {
     fun <T : KBvSort> mkBvNotExpr(value: KExpr<T>): KBvNotExpr<T> =
         bvNotExprCache.createIfContextActive(value.cast()).cast()
 
-    private val bvRedAndExprCache = mkClosableCache { value: KExpr<KBvSort> -> KBvReductionAndExpr(this, value) }
+    private val bvRedAndExprCache = mkClosableCache { value: KExpr<KBvSort> ->
+        KBvReductionAndExpr(this, value)
+    }
 
     fun <T : KBvSort> mkBvReductionAndExpr(value: KExpr<T>): KBvReductionAndExpr<T> =
         bvRedAndExprCache.createIfContextActive(value.cast()).cast()
 
     fun <T : KBvSort> KExpr<T>.reductionAnd(): KBvReductionAndExpr<T> = mkBvReductionAndExpr(this)
 
-    private val bvRedOrExprCache = mkClosableCache { value: KExpr<KBvSort> -> KBvReductionOrExpr(this, value) }
+    private val bvRedOrExprCache = mkClosableCache { value: KExpr<KBvSort> ->
+        KBvReductionOrExpr(this, value)
+    }
+
     fun <T : KBvSort> mkBvReductionOrExpr(value: KExpr<T>): KBvReductionOrExpr<T> =
         bvRedOrExprCache.createIfContextActive(value.cast()).cast()
 
     fun <T : KBvSort> KExpr<T>.reductionOr(): KBvReductionOrExpr<T> = mkBvReductionOrExpr(this)
 
-    private val bvAndExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvAndExpr(this, arg0, arg1) }
+    private val bvAndExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                   arg1: KExpr<KBvSort> ->
+        KBvAndExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvAndExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvAndExpr<T> =
         bvAndExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvOrExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvOrExpr(this, arg0, arg1) }
+    private val bvOrExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                  arg1: KExpr<KBvSort> ->
+        KBvOrExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvOrExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvOrExpr<T> =
         bvOrExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvXorExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvXorExpr(this, arg0, arg1) }
+    private val bvXorExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                   arg1: KExpr<KBvSort> ->
+        KBvXorExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvXorExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvXorExpr<T> =
         bvXorExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvNAndExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvNAndExpr(this, arg0, arg1) }
+    private val bvNAndExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                    arg1: KExpr<KBvSort> ->
+        KBvNAndExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvNAndExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvNAndExpr<T> =
         bvNAndExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvNorExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvNorExpr(this, arg0, arg1) }
+    private val bvNorExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                   arg1: KExpr<KBvSort> ->
+        KBvNorExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvNorExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvNorExpr<T> =
         bvNorExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvXNorExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvXNorExpr(this, arg0, arg1) }
+    private val bvXNorExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                    arg1: KExpr<KBvSort> ->
+        KBvXNorExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvXNorExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvXNorExpr<T> =
         bvXNorExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvNegationExprCache = mkClosableCache { value: KExpr<KBvSort> -> KBvNegationExpr(this, value) }
+    private val bvNegationExprCache = mkClosableCache { value: KExpr<KBvSort> ->
+        KBvNegationExpr(this, value)
+    }
+
     fun <T : KBvSort> mkBvNegationExpr(value: KExpr<T>): KBvNegationExpr<T> =
         bvNegationExprCache.createIfContextActive(value.cast()).cast()
 
-    private val bvAddExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvAddExpr(this, arg0, arg1) }
+    private val bvAddExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                   arg1: KExpr<KBvSort> ->
+        KBvAddExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvAddExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvAddExpr<T> =
         bvAddExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvSubExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvSubExpr(this, arg0, arg1) }
+    private val bvSubExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                   arg1: KExpr<KBvSort> ->
+        KBvSubExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvSubExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvSubExpr<T> =
         bvSubExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvMulExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvMulExpr(this, arg0, arg1) }
+    private val bvMulExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                   arg1: KExpr<KBvSort> ->
+        KBvMulExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvMulExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvMulExpr<T> =
         bvMulExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvUnsignedDivExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvUnsignedDivExpr(this, arg0, arg1) }
+    private val bvUnsignedDivExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                           arg1: KExpr<KBvSort> ->
+        KBvUnsignedDivExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvUnsignedDivExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvUnsignedDivExpr<T> =
         bvUnsignedDivExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvSignedDivExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvSignedDivExpr(this, arg0, arg1) }
+    private val bvSignedDivExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                         arg1: KExpr<KBvSort> ->
+        KBvSignedDivExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvSignedDivExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedDivExpr<T> =
         bvSignedDivExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvUnsignedRemExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvUnsignedRemExpr(this, arg0, arg1) }
+    private val bvUnsignedRemExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                           arg1: KExpr<KBvSort> ->
+        KBvUnsignedRemExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvUnsignedRemExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvUnsignedRemExpr<T> =
         bvUnsignedRemExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvSignedRemExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvSignedRemExpr(this, arg0, arg1) }
+    private val bvSignedRemExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                         arg1: KExpr<KBvSort> ->
+        KBvSignedRemExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvSignedRemExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedRemExpr<T> =
         bvSignedRemExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvSignedModExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvSignedModExpr(this, arg0, arg1) }
+    private val bvSignedModExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                         arg1: KExpr<KBvSort> ->
+        KBvSignedModExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvSignedModExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedModExpr<T> =
         bvSignedModExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvUnsignedLessExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvUnsignedLessExpr(this, arg0, arg1) }
+    private val bvUnsignedLessExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                            arg1: KExpr<KBvSort> ->
+        KBvUnsignedLessExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvUnsignedLessExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvUnsignedLessExpr<T> =
         bvUnsignedLessExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvSignedLessExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvSignedLessExpr(this, arg0, arg1) }
+    private val bvSignedLessExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                          arg1: KExpr<KBvSort> ->
+        KBvSignedLessExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvSignedLessExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedLessExpr<T> =
         bvSignedLessExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvSignedLessOrEqualExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvSignedLessOrEqualExpr(this, arg0, arg1) }
+    private val bvSignedLessOrEqualExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                                 arg1: KExpr<KBvSort> ->
+        KBvSignedLessOrEqualExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvSignedLessOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedLessOrEqualExpr<T> =
         bvSignedLessOrEqualExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvUnsignedLessOrEqualExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvUnsignedLessOrEqualExpr(this, arg0, arg1) }
+    private val bvUnsignedLessOrEqualExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                                   arg1: KExpr<KBvSort> ->
+        KBvUnsignedLessOrEqualExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvUnsignedLessOrEqualExpr(
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KBvUnsignedLessOrEqualExpr<T> =
-        bvUnsignedLessOrEqualExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
+    ): KBvUnsignedLessOrEqualExpr<T> {
+        val a0: KExpr<KBvSort> = arg0.cast()
+        val a1: KExpr<KBvSort> = arg1.cast()
 
-    private val bvUnsignedGreaterOrEqualExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
-            KBvUnsignedGreaterOrEqualExpr(this, arg0, arg1)
-        }
+        return bvUnsignedLessOrEqualExprCache.createIfContextActive(a0, a1).cast()
+    }
+
+    private val bvUnsignedGreaterOrEqualExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                                      arg1: KExpr<KBvSort> ->
+        KBvUnsignedGreaterOrEqualExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvUnsignedGreaterOrEqualExpr(
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KBvUnsignedGreaterOrEqualExpr<T> =
-        bvUnsignedGreaterOrEqualExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
+    ): KBvUnsignedGreaterOrEqualExpr<T> {
+        val a0: KExpr<KBvSort> = arg0.cast()
+        val a1: KExpr<KBvSort> = arg1.cast()
 
-    private val bvSignedGreaterOrEqualExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvSignedGreaterOrEqualExpr(this, arg0, arg1) }
+        return bvUnsignedGreaterOrEqualExprCache.createIfContextActive(a0, a1).cast()
+    }
+
+    private val bvSignedGreaterOrEqualExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                                    arg1: KExpr<KBvSort> ->
+        KBvSignedGreaterOrEqualExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvSignedGreaterOrEqualExpr(
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KBvSignedGreaterOrEqualExpr<T> =
-        bvSignedGreaterOrEqualExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
+    ): KBvSignedGreaterOrEqualExpr<T> {
+        val a0: KExpr<KBvSort> = arg0.cast()
+        val a1: KExpr<KBvSort> = arg1.cast()
 
-    private val bvUnsignedGreaterExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvUnsignedGreaterExpr(this, arg0, arg1) }
+        return bvSignedGreaterOrEqualExprCache.createIfContextActive(a0, a1).cast()
+    }
+
+    private val bvUnsignedGreaterExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                               arg1: KExpr<KBvSort> ->
+        KBvUnsignedGreaterExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvUnsignedGreaterExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvUnsignedGreaterExpr<T> =
         bvUnsignedGreaterExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvSignedGreaterExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvSignedGreaterExpr(this, arg0, arg1) }
+    private val bvSignedGreaterExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                             arg1: KExpr<KBvSort> ->
+        KBvSignedGreaterExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvSignedGreaterExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedGreaterExpr<T> =
         bvSignedGreaterExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val concatExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvConcatExpr(this, arg0, arg1) }
+    private val concatExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                    arg1: KExpr<KBvSort> ->
+        KBvConcatExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort, S : KBvSort> mkBvConcatExpr(arg0: KExpr<T>, arg1: KExpr<S>): KBvConcatExpr =
         concatExprCache.createIfContextActive(arg0.cast(), arg1.cast())
 
-    private val extractExprCache = mkClosableCache { high: Int, low: Int, value: KExpr<KBvSort> ->
+    private val extractExprCache = mkClosableCache { high: Int,
+                                                     low: Int,
+                                                     value: KExpr<KBvSort> ->
         KBvExtractExpr(this, high, low, value)
     }
 
     fun <T : KBvSort> mkBvExtractExpr(high: Int, low: Int, value: KExpr<T>) =
         extractExprCache.createIfContextActive(high, low, value.cast())
 
-    private val signExtensionExprCache =
-        mkClosableCache { i: Int, value: KExpr<KBvSort> -> KBvSignExtensionExpr(this, i, value) }
+    private val signExtensionExprCache = mkClosableCache { i: Int,
+                                                           value: KExpr<KBvSort> ->
+        KBvSignExtensionExpr(this, i, value)
+    }
 
-    fun <T : KBvSort> mkBvSignExtensionExpr(i: Int, value: KExpr<T>) =
-        signExtensionExprCache.createIfContextActive(i, value.cast())
+    fun <T : KBvSort> mkBvSignExtensionExpr(
+        i: Int,
+        value: KExpr<T>
+    ) = signExtensionExprCache.createIfContextActive(i, value.cast())
 
-    private val zeroExtensionExprCache =
-        mkClosableCache { i: Int, value: KExpr<KBvSort> -> KBvZeroExtensionExpr(this, i, value) }
+    private val zeroExtensionExprCache = mkClosableCache { i: Int,
+                                                           value: KExpr<KBvSort> ->
+        KBvZeroExtensionExpr(this, i, value)
+    }
 
-    fun <T : KBvSort> mkBvZeroExtensionExpr(i: Int, value: KExpr<T>) =
-        zeroExtensionExprCache.createIfContextActive(i, value.cast())
+    fun <T : KBvSort> mkBvZeroExtensionExpr(
+        i: Int,
+        value: KExpr<T>
+    ) = zeroExtensionExprCache.createIfContextActive(i, value.cast())
 
-    private val repeatExprCache = mkClosableCache { i: Int, value: KExpr<KBvSort> -> KBvRepeatExpr(this, i, value) }
-    fun <T : KBvSort> mkBvRepeatExpr(i: Int, value: KExpr<T>) = repeatExprCache.createIfContextActive(i, value.cast())
+    private val repeatExprCache = mkClosableCache { i: Int,
+                                                    value: KExpr<KBvSort> ->
+        KBvRepeatExpr(this, i, value)
+    }
 
-    private val bvShiftLeftExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvShiftLeftExpr(this, arg0, arg1) }
+    fun <T : KBvSort> mkBvRepeatExpr(
+        i: Int,
+        value: KExpr<T>
+    ) = repeatExprCache.createIfContextActive(i, value.cast())
+
+    private val bvShiftLeftExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                         arg1: KExpr<KBvSort> ->
+        KBvShiftLeftExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvShiftLeftExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvShiftLeftExpr<T> =
         bvShiftLeftExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvLogicalShiftRightExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvLogicalShiftRightExpr(this, arg0, arg1) }
+    private val bvLogicalShiftRightExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                                 arg1: KExpr<KBvSort> ->
+        KBvLogicalShiftRightExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvLogicalShiftRightExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvLogicalShiftRightExpr<T> =
         bvLogicalShiftRightExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvArithShiftRightExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvArithShiftRightExpr(this, arg0, arg1) }
+    private val bvArithShiftRightExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                               arg1: KExpr<KBvSort> ->
+        KBvArithShiftRightExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvArithShiftRightExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvArithShiftRightExpr<T> =
         bvArithShiftRightExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvRotateLeftExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvRotateLeftExpr(this, arg0, arg1) }
+    private val bvRotateLeftExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                          arg1: KExpr<KBvSort> ->
+        KBvRotateLeftExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvRotateLeftExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvRotateLeftExpr<T> =
         bvRotateLeftExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvRotateLeftIndexedExprCache =
-        mkClosableCache { i: Int, value: KExpr<KBvSort> -> KBvRotateLeftIndexedExpr(this, i, value) }
+    private val bvRotateLeftIndexedExprCache = mkClosableCache { i: Int,
+                                                                 value: KExpr<KBvSort> ->
+        KBvRotateLeftIndexedExpr(this, i, value)
+    }
 
     fun <T : KBvSort> mkBvRotateLeftIndexedExpr(i: Int, value: KExpr<T>): KBvRotateLeftIndexedExpr<T> =
         bvRotateLeftIndexedExprCache.createIfContextActive(i, value.cast()).cast()
@@ -1035,15 +1177,19 @@ open class KContext : AutoCloseable {
     fun <T : KBvSort> mkBvRotateLeftExpr(arg0: Int, arg1: KExpr<T>): KBvRotateLeftExpr<T> =
         mkBvRotateLeftExpr(mkBv(arg0, arg1.sort().sizeBits), arg1.cast()).cast()
 
-    private val bvRotateRightIndexedExprCache =
-        mkClosableCache { i: Int, value: KExpr<KBvSort> -> KBvRotateRightIndexedExpr(this, i, value) }
+    private val bvRotateRightIndexedExprCache = mkClosableCache { i: Int,
+                                                                  value: KExpr<KBvSort> ->
+        KBvRotateRightIndexedExpr(this, i, value)
+    }
 
     fun <T : KBvSort> mkBvRotateRightIndexedExpr(i: Int, value: KExpr<T>): KBvRotateRightIndexedExpr<T> =
         bvRotateRightIndexedExprCache.createIfContextActive(i, value.cast()).cast()
 
 
-    private val bvRotateRightExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> -> KBvRotateRightExpr(this, arg0, arg1) }
+    private val bvRotateRightExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                           arg1: KExpr<KBvSort> ->
+        KBvRotateRightExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvRotateRightExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvRotateRightExpr<T> =
         bvRotateRightExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
@@ -1051,79 +1197,69 @@ open class KContext : AutoCloseable {
     fun <T : KBvSort> mkBvRotateRightExpr(arg0: Int, arg1: KExpr<T>): KBvRotateRightExpr<T> =
         mkBvRotateRightExpr(mkBv(arg0, arg1.sort().sizeBits), arg1.cast()).cast()
 
-    private val bv2IntExprCache =
-        mkClosableCache { value: KExpr<KBvSort>, isSigned: Boolean -> KBv2IntExpr(this, value, isSigned) }
+    private val bv2IntExprCache = mkClosableCache { value: KExpr<KBvSort>,
+                                                    isSigned: Boolean ->
+        KBv2IntExpr(this, value, isSigned)
+    }
 
     fun <T : KBvSort> mkBv2IntExpr(value: KExpr<T>, isSigned: Boolean): KBv2IntExpr =
         bv2IntExprCache.createIfContextActive(value.cast(), isSigned)
 
-    private val bvAddNoOverflowExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>, isSigned: Boolean ->
-            KBvAddNoOverflowExpr(
-                this,
-                arg0,
-                arg1,
-                isSigned
-            )
-        }
+    private val bvAddNoOverflowExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                             arg1: KExpr<KBvSort>,
+                                                             isSigned: Boolean ->
+        KBvAddNoOverflowExpr(this, arg0, arg1, isSigned)
+    }
 
     fun <T : KBvSort> mkBvAddNoOverflowExpr(
         arg0: KExpr<T>,
         arg1: KExpr<T>,
         isSigned: Boolean
-    ): KBvAddNoOverflowExpr<T> =
-        bvAddNoOverflowExprCache.createIfContextActive(arg0.cast(), arg1.cast(), isSigned).cast()
+    ): KBvAddNoOverflowExpr<T> {
+        val a0: KExpr<KBvSort> = arg0.cast()
+        val a1: KExpr<KBvSort> = arg1.cast()
 
-    private val bvAddNoUnderflowExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
-            KBvAddNoUnderflowExpr(
-                this,
-                arg0,
-                arg1,
-            )
-        }
+        return bvAddNoOverflowExprCache.createIfContextActive(a0, a1, isSigned).cast()
+    }
+
+    private val bvAddNoUnderflowExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                              arg1: KExpr<KBvSort> ->
+        KBvAddNoUnderflowExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvAddNoUnderflowExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvAddNoUnderflowExpr<T> =
         bvAddNoUnderflowExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvSubNoOverflowExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
-            KBvSubNoOverflowExpr(
-                this,
-                arg0,
-                arg1,
-            )
-        }
+    private val bvSubNoOverflowExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                             arg1: KExpr<KBvSort> ->
+        KBvSubNoOverflowExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvSubNoOverflowExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvSubNoOverflowExpr<T> =
         bvSubNoOverflowExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val bvSubNoUnderflowExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>, isSigned: Boolean ->
-            KBvSubNoUnderflowExpr(
-                this,
-                arg0,
-                arg1,
-                isSigned
-            )
-        }
+    private val bvSubNoUnderflowExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                              arg1: KExpr<KBvSort>,
+                                                              isSigned: Boolean ->
+        KBvSubNoUnderflowExpr(this, arg0, arg1, isSigned)
+    }
 
     fun <T : KBvSort> mkBvSubNoUnderflowExpr(
         arg0: KExpr<T>,
         arg1: KExpr<T>,
         isSigned: Boolean
-    ): KBvSubNoUnderflowExpr<T> =
-        bvSubNoUnderflowExprCache.createIfContextActive(arg0.cast(), arg1.cast(), isSigned).cast()
+    ): KBvSubNoUnderflowExpr<T> {
+        val a0: KExpr<KBvSort> = arg0.cast()
+        val a1: KExpr<KBvSort> = arg1.cast()
+
+        return bvSubNoUnderflowExprCache.createIfContextActive(a0, a1, isSigned).cast()
+    }
 
 
-    private val bvDivNoOverflowExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
-            KBvDivNoOverflowExpr(
-                this,
-                arg0,
-                arg1,
-            )
-        }
+    private val bvDivNoOverflowExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                             arg1: KExpr<KBvSort> ->
+        KBvDivNoOverflowExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvDivNoOverflowExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvDivNoOverflowExpr<T> =
         bvDivNoOverflowExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
@@ -1134,31 +1270,27 @@ open class KContext : AutoCloseable {
     fun <T : KBvSort> mkBvNegationNoOverflowExpr(value: KExpr<T>): KBvNegNoOverflowExpr<T> =
         bvNegNoOverflowExprCache.createIfContextActive(value.cast()).cast()
 
-    private val bvMulNoOverflowExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort>, isSigned: Boolean ->
-            KBvMulNoOverflowExpr(
-                this,
-                arg0,
-                arg1,
-                isSigned
-            )
-        }
+    private val bvMulNoOverflowExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                             arg1: KExpr<KBvSort>,
+                                                             isSigned: Boolean ->
+        KBvMulNoOverflowExpr(this, arg0, arg1, isSigned)
+    }
 
     fun <T : KBvSort> mkBvMulNoOverflowExpr(
         arg0: KExpr<T>,
         arg1: KExpr<T>,
         isSigned: Boolean
-    ): KBvMulNoOverflowExpr<T> =
-        bvMulNoOverflowExprCache.createIfContextActive(arg0.cast(), arg1.cast(), isSigned).cast()
+    ): KBvMulNoOverflowExpr<T> {
+        val a0: KExpr<KBvSort> = arg0.cast()
+        val a1: KExpr<KBvSort> = arg1.cast()
 
-    private val bvMulNoUnderflowExprCache =
-        mkClosableCache { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
-            KBvMulNoUnderflowExpr(
-                this,
-                arg0,
-                arg1,
-            )
-        }
+        return bvMulNoOverflowExprCache.createIfContextActive(a0, a1, isSigned).cast()
+    }
+
+    private val bvMulNoUnderflowExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
+                                                              arg1: KExpr<KBvSort> ->
+        KBvMulNoUnderflowExpr(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvMulNoUnderflowExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvMulNoUnderflowExpr<T> =
         bvMulNoUnderflowExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
@@ -1167,17 +1299,18 @@ open class KContext : AutoCloseable {
     private val fp16Cache = mkClosableCache { value: Float -> KFp16Value(this, value) }
     private val fp32Cache = mkClosableCache { value: Float -> KFp32Value(this, value) }
     private val fp64Cache = mkClosableCache { value: Double -> KFp64Value(this, value) }
-    private val fp128Cache = mkClosableCache { significand: Long, exponent: Long, signBit: Boolean ->
+    private val fp128Cache = mkClosableCache { significand: Long,
+                                               exponent: Long,
+                                               signBit: Boolean ->
         KFp128Value(this, significand, exponent, signBit)
     }
-    private val fpCustomSizeCache =
-        mkClosableCache { significandSize: UInt,
-                          exponentSize: UInt,
-                          significand: Long,
-                          exponent: Long,
-                          signBit: Boolean ->
-            KFpCustomSizeValue(this, significandSize, exponentSize, significand, exponent, signBit)
-        }
+    private val fpCustomSizeCache = mkClosableCache { significandSize: UInt,
+                                                      exponentSize: UInt,
+                                                      significand: Long,
+                                                      exponent: Long,
+                                                      signBit: Boolean ->
+        KFpCustomSizeValue(this, significandSize, exponentSize, significand, exponent, signBit)
+    }
 
     /**
      * Creates FP16 from the [value].
@@ -1223,9 +1356,13 @@ open class KContext : AutoCloseable {
                 mkFp64(number).cast()
             }
             is KFp128Sort -> mkFp128(significand, exponent, signBit).cast()
-            else -> fpCustomSizeCache.createIfContextActive(
-                significandSize, exponentSize, significand, exponent, signBit
-            ).cast()
+            else -> {
+                val fpValue = fpCustomSizeCache.createIfContextActive(
+                    significandSize, exponentSize, significand, exponent, signBit
+                )
+
+                fpValue.cast()
+            }
         }
     }
 
@@ -1369,17 +1506,29 @@ open class KContext : AutoCloseable {
         is KFpCustomSizeSort -> TODO("custom fp zero exponent")
     }
 
-    private val roundingModeCache = mkClosableCache { value: KFpRoundingMode -> KFpRoundingModeExpr(this, value) }
-    fun mkFpRoundingModeExpr(value: KFpRoundingMode): KFpRoundingModeExpr =
-        roundingModeCache.createIfContextActive(value)
+    private val roundingModeCache = mkClosableCache { value: KFpRoundingMode ->
+        KFpRoundingModeExpr(this, value)
+    }
 
-    private val fpAbsExprCache = mkClosableCache { value: KExpr<KFpSort> -> KFpAbsExpr(this, value) }
-    fun <T : KFpSort> mkFpAbsExpr(value: KExpr<T>): KFpAbsExpr<T> =
-        fpAbsExprCache.createIfContextActive(value.cast()).cast()
+    fun mkFpRoundingModeExpr(
+        value: KFpRoundingMode
+    ): KFpRoundingModeExpr = roundingModeCache.createIfContextActive(value)
 
-    private val fpNegationExprCache = mkClosableCache { value: KExpr<KFpSort> -> KFpNegationExpr(this, value) }
-    fun <T : KFpSort> mkFpNegationExpr(value: KExpr<T>): KFpNegationExpr<T> =
-        fpNegationExprCache.createIfContextActive(value.cast()).cast()
+    private val fpAbsExprCache = mkClosableCache { value: KExpr<KFpSort> ->
+        KFpAbsExpr(this, value)
+    }
+
+    fun <T : KFpSort> mkFpAbsExpr(
+        value: KExpr<T>
+    ): KFpAbsExpr<T> = fpAbsExprCache.createIfContextActive(value.cast()).cast()
+
+    private val fpNegationExprCache = mkClosableCache { value: KExpr<KFpSort> ->
+        KFpNegationExpr(this, value)
+    }
+
+    fun <T : KFpSort> mkFpNegationExpr(
+        value: KExpr<T>
+    ): KFpNegationExpr<T> = fpNegationExprCache.createIfContextActive(value.cast()).cast()
 
     private val fpAddExprCache = mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>,
                                                    arg0: KExpr<KFpSort>,
@@ -1391,7 +1540,13 @@ open class KContext : AutoCloseable {
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KFpAddExpr<T> = fpAddExprCache.createIfContextActive(roundingMode.cast(), arg0.cast(), arg1.cast()).cast()
+    ): KFpAddExpr<T> {
+        val rm = roundingMode.cast()
+        val a0: KExpr<KFpSort> = arg0.cast()
+        val a1: KExpr<KFpSort> = arg1.cast()
+
+        return fpAddExprCache.createIfContextActive(rm, a0, a1).cast()
+    }
 
 
     private val fpSubExprCache = mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>,
@@ -1404,29 +1559,49 @@ open class KContext : AutoCloseable {
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KFpSubExpr<T> = fpSubExprCache.createIfContextActive(roundingMode.cast(), arg0.cast(), arg1.cast()).cast()
+    ): KFpSubExpr<T> {
+        val rm = roundingMode.cast()
+        val a0: KExpr<KFpSort> = arg0.cast()
+        val a1: KExpr<KFpSort> = arg1.cast()
 
-    private val fpMulExprCache =
-        mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<KFpSort>, arg1: KExpr<KFpSort> ->
-            KFpMulExpr(this, roundingMode, arg0, arg1)
-        }
+        return fpSubExprCache.createIfContextActive(rm, a0, a1).cast()
+    }
+
+    private val fpMulExprCache = mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>,
+                                                   arg0: KExpr<KFpSort>,
+                                                   arg1: KExpr<KFpSort> ->
+        KFpMulExpr(this, roundingMode, arg0, arg1)
+    }
 
     fun <T : KFpSort> mkFpMulExpr(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KFpMulExpr<T> = fpMulExprCache.createIfContextActive(roundingMode.cast(), arg0.cast(), arg1.cast()).cast()
+    ): KFpMulExpr<T> {
+        val rm = roundingMode.cast()
+        val a0: KExpr<KFpSort> = arg0.cast()
+        val a1: KExpr<KFpSort> = arg1.cast()
 
-    private val fpDivExprCache =
-        mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<KFpSort>, arg1: KExpr<KFpSort> ->
-            KFpDivExpr(this, roundingMode, arg0, arg1)
-        }
+        return fpMulExprCache.createIfContextActive(rm, a0, a1).cast()
+    }
+
+    private val fpDivExprCache = mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>,
+                                                   arg0: KExpr<KFpSort>,
+                                                   arg1: KExpr<KFpSort> ->
+        KFpDivExpr(this, roundingMode, arg0, arg1)
+    }
 
     fun <T : KFpSort> mkFpDivExpr(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KFpDivExpr<T> = fpDivExprCache.createIfContextActive(roundingMode.cast(), arg0.cast(), arg1.cast()).cast()
+    ): KFpDivExpr<T> {
+        val rm = roundingMode.cast()
+        val a0: KExpr<KFpSort> = arg0.cast()
+        val a1: KExpr<KFpSort> = arg1.cast()
+
+        return fpDivExprCache.createIfContextActive(rm, a0, a1).cast()
+    }
 
     private val fpFusedMulAddExprCache = mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>,
                                                            arg0: KExpr<KFpSort>,
@@ -1440,117 +1615,154 @@ open class KContext : AutoCloseable {
         arg0: KExpr<T>,
         arg1: KExpr<T>,
         arg2: KExpr<T>
-    ): KFpFusedMulAddExpr<T> =
-        fpFusedMulAddExprCache.createIfContextActive(roundingMode.cast(), arg0.cast(), arg1.cast(), arg2.cast()).cast()
+    ): KFpFusedMulAddExpr<T> {
+        val rm = roundingMode.cast()
+        val a0: KExpr<KFpSort> = arg0.cast()
+        val a1: KExpr<KFpSort> = arg1.cast()
+        val a2: KExpr<KFpSort> = arg2.cast()
 
-    private val fpSqrtExprCache = mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>, value: KExpr<KFpSort> ->
+        return fpFusedMulAddExprCache.createIfContextActive(rm, a0, a1, a2).cast()
+    }
+
+    private val fpSqrtExprCache = mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>,
+                                                    value: KExpr<KFpSort> ->
         KFpSqrtExpr(this, roundingMode, value)
     }
 
     fun <T : KFpSort> mkFpSqrtExpr(
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<T>
-    ): KFpSqrtExpr<T> =
-        fpSqrtExprCache.createIfContextActive(roundingMode.cast(), value.cast()).cast()
+    ): KFpSqrtExpr<T> {
+        val rm = roundingMode.cast()
+        val arg: KExpr<KFpSort> = value.cast()
 
-    private val fpRemExprCache = mkClosableCache { arg0: KExpr<KFpSort>, arg1: KExpr<KFpSort> ->
+        return fpSqrtExprCache.createIfContextActive(rm, arg).cast()
+    }
+
+    private val fpRemExprCache = mkClosableCache { arg0: KExpr<KFpSort>,
+                                                   arg1: KExpr<KFpSort> ->
         KFpRemExpr(this, arg0, arg1)
     }
 
     fun <T : KFpSort> mkFpRemExpr(arg0: KExpr<T>, arg1: KExpr<T>): KFpRemExpr<T> =
         fpRemExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val fpRoundToIntegralExprCache =
-        mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>, value: KExpr<KFpSort> ->
-            KFpRoundToIntegralExpr(this, roundingMode, value)
-        }
+    private val fpRoundToIntegralExprCache = mkClosableCache { roundingMode: KExpr<KFpRoundingModeSort>,
+                                                               value: KExpr<KFpSort> ->
+        KFpRoundToIntegralExpr(this, roundingMode, value)
+    }
 
     fun <T : KFpSort> mkFpRoundToIntegralExpr(
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<T>
-    ): KFpRoundToIntegralExpr<T> =
-        fpRoundToIntegralExprCache.createIfContextActive(roundingMode.cast(), value.cast()).cast()
+    ): KFpRoundToIntegralExpr<T> {
+        val rm = roundingMode.cast()
+        val arg: KExpr<KFpSort> = value.cast()
 
-    private val fpMinExprCache = mkClosableCache { arg0: KExpr<KFpSort>, arg1: KExpr<KFpSort> ->
+        return fpRoundToIntegralExprCache.createIfContextActive(rm, arg).cast()
+    }
+
+    private val fpMinExprCache = mkClosableCache { arg0: KExpr<KFpSort>,
+                                                   arg1: KExpr<KFpSort> ->
         KFpMinExpr(this, arg0, arg1)
     }
 
     fun <T : KFpSort> mkFpMinExpr(arg0: KExpr<T>, arg1: KExpr<T>): KFpMinExpr<T> =
         fpMinExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val fpMaxExprCache = mkClosableCache { arg0: KExpr<KFpSort>, arg1: KExpr<KFpSort> ->
+    private val fpMaxExprCache = mkClosableCache { arg0: KExpr<KFpSort>,
+                                                   arg1: KExpr<KFpSort> ->
         KFpMaxExpr(this, arg0, arg1)
     }
 
     fun <T : KFpSort> mkFpMaxExpr(arg0: KExpr<T>, arg1: KExpr<T>): KFpMaxExpr<T> =
         fpMaxExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val fpLessOrEqualExprCache = mkClosableCache { arg0: KExpr<KFpSort>, arg1: KExpr<KFpSort> ->
+    private val fpLessOrEqualExprCache = mkClosableCache { arg0: KExpr<KFpSort>,
+                                                           arg1: KExpr<KFpSort> ->
         KFpLessOrEqualExpr(this, arg0, arg1)
     }
 
     fun <T : KFpSort> mkFpLessOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KFpLessOrEqualExpr<T> =
         fpLessOrEqualExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val fpLessExprCache = mkClosableCache { arg0: KExpr<KFpSort>, arg1: KExpr<KFpSort> ->
+    private val fpLessExprCache = mkClosableCache { arg0: KExpr<KFpSort>,
+                                                    arg1: KExpr<KFpSort> ->
         KFpLessExpr(this, arg0, arg1)
     }
 
     fun <T : KFpSort> mkFpLessExpr(arg0: KExpr<T>, arg1: KExpr<T>): KFpLessExpr<T> =
         fpLessExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val fpGreaterOrEqualExprCache = mkClosableCache { arg0: KExpr<KFpSort>, arg1: KExpr<KFpSort> ->
+    private val fpGreaterOrEqualExprCache = mkClosableCache { arg0: KExpr<KFpSort>,
+                                                              arg1: KExpr<KFpSort> ->
         KFpGreaterOrEqualExpr(this, arg0, arg1)
     }
 
     fun <T : KFpSort> mkFpGreaterOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KFpGreaterOrEqualExpr<T> =
         fpGreaterOrEqualExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val fpGreaterExprCache = mkClosableCache { arg0: KExpr<KFpSort>, arg1: KExpr<KFpSort> ->
+    private val fpGreaterExprCache = mkClosableCache { arg0: KExpr<KFpSort>,
+                                                       arg1: KExpr<KFpSort> ->
         KFpGreaterExpr(this, arg0, arg1)
     }
 
     fun <T : KFpSort> mkFpGreaterExpr(arg0: KExpr<T>, arg1: KExpr<T>): KFpGreaterExpr<T> =
         fpGreaterExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val fpEqualExprCache = mkClosableCache { arg0: KExpr<KFpSort>, arg1: KExpr<KFpSort> ->
+    private val fpEqualExprCache = mkClosableCache { arg0: KExpr<KFpSort>,
+                                                     arg1: KExpr<KFpSort> ->
         KFpEqualExpr(this, arg0, arg1)
     }
 
     fun <T : KFpSort> mkFpEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KFpEqualExpr<T> =
         fpEqualExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
-    private val fpIsNormalExprCache = mkClosableCache { value: KExpr<KFpSort> -> KFpIsNormalExpr(this, value) }
+    private val fpIsNormalExprCache = mkClosableCache { value: KExpr<KFpSort> ->
+        KFpIsNormalExpr(this, value)
+    }
 
     fun <T : KFpSort> mkFpIsNormalExpr(value: KExpr<T>): KFpIsNormalExpr<T> =
         fpIsNormalExprCache.createIfContextActive(value.cast()).cast()
 
-    private val fpIsSubnormalExprCache = mkClosableCache { value: KExpr<KFpSort> -> KFpIsSubnormalExpr(this, value) }
+    private val fpIsSubnormalExprCache = mkClosableCache { value: KExpr<KFpSort> ->
+        KFpIsSubnormalExpr(this, value)
+    }
 
     fun <T : KFpSort> mkFpIsSubnormalExpr(value: KExpr<T>): KFpIsSubnormalExpr<T> =
         fpIsSubnormalExprCache.createIfContextActive(value.cast()).cast()
 
-    private val fpIsZeroExprCache = mkClosableCache { value: KExpr<KFpSort> -> KFpIsZeroExpr(this, value) }
+    private val fpIsZeroExprCache = mkClosableCache { value: KExpr<KFpSort> ->
+        KFpIsZeroExpr(this, value)
+    }
 
     fun <T : KFpSort> mkFpIsZeroExpr(value: KExpr<T>): KFpIsZeroExpr<T> =
         fpIsZeroExprCache.createIfContextActive(value.cast()).cast()
 
-    private val fpIsInfiniteExprCache = mkClosableCache { value: KExpr<KFpSort> -> KFpIsInfiniteExpr(this, value) }
+    private val fpIsInfiniteExprCache = mkClosableCache { value: KExpr<KFpSort> ->
+        KFpIsInfiniteExpr(this, value)
+    }
 
     fun <T : KFpSort> mkFpIsInfiniteExpr(value: KExpr<T>): KFpIsInfiniteExpr<T> =
         fpIsInfiniteExprCache.createIfContextActive(value.cast()).cast()
 
-    private val fpIsNaNExprCache = mkClosableCache { value: KExpr<KFpSort> -> KFpIsNaNExpr(this, value) }
+    private val fpIsNaNExprCache = mkClosableCache { value: KExpr<KFpSort> ->
+        KFpIsNaNExpr(this, value)
+    }
 
     fun <T : KFpSort> mkFpIsNaNExpr(value: KExpr<T>): KFpIsNaNExpr<T> =
         fpIsNaNExprCache.createIfContextActive(value.cast()).cast()
 
-    private val fpIsNegativeExprCache = mkClosableCache { value: KExpr<KFpSort> -> KFpIsNegativeExpr(this, value) }
+    private val fpIsNegativeExprCache = mkClosableCache { value: KExpr<KFpSort> ->
+        KFpIsNegativeExpr(this, value)
+    }
 
     fun <T : KFpSort> mkFpIsNegativeExpr(value: KExpr<T>): KFpIsNegativeExpr<T> =
         fpIsNegativeExprCache.createIfContextActive(value.cast()).cast()
 
-    private val fpIsPositiveExprCache = mkClosableCache { value: KExpr<KFpSort> -> KFpIsPositiveExpr(this, value) }
+    private val fpIsPositiveExprCache = mkClosableCache { value: KExpr<KFpSort> ->
+        KFpIsPositiveExpr(this, value)
+    }
 
     fun <T : KFpSort> mkFpIsPositiveExpr(value: KExpr<T>): KFpIsPositiveExpr<T> =
         fpIsPositiveExprCache.createIfContextActive(value.cast()).cast()
@@ -1567,15 +1779,23 @@ open class KContext : AutoCloseable {
         value: KExpr<T>,
         bvSize: Int,
         isSigned: Boolean
-    ): KFpToBvExpr<T> =
-        fpToBvExprCache.createIfContextActive(roundingMode.cast(), value.cast(), bvSize, isSigned).cast()
+    ): KFpToBvExpr<T> {
+        val rm = roundingMode.cast()
+        val arg: KExpr<KFpSort> = value.cast()
 
-    private val fpToRealExprCache = mkClosableCache { value: KExpr<KFpSort> -> KFpToRealExpr(this, value) }
+        return fpToBvExprCache.createIfContextActive(rm, arg, bvSize, isSigned).cast()
+    }
+
+    private val fpToRealExprCache = mkClosableCache { value: KExpr<KFpSort> ->
+        KFpToRealExpr(this, value)
+    }
 
     fun <T : KFpSort> mkFpToRealExpr(value: KExpr<T>): KFpToRealExpr<T> =
         fpToRealExprCache.createIfContextActive(value.cast()).cast()
 
-    private val fpToIEEEBvExprCache = mkClosableCache { value: KExpr<KFpSort> -> KFpToIEEEBvExpr(this, value) }
+    private val fpToIEEEBvExprCache = mkClosableCache { value: KExpr<KFpSort> ->
+        KFpToIEEEBvExpr(this, value)
+    }
 
     fun <T : KFpSort> mkFpToIEEEBvExpr(value: KExpr<T>): KFpToIEEEBvExpr<T> =
         fpToIEEEBvExprCache.createIfContextActive(value.cast()).cast()
@@ -1583,9 +1803,14 @@ open class KContext : AutoCloseable {
     private val fpFromBvExprCache = mkClosableCache { sign: KExpr<KBv1Sort>,
                                                       exponent: KExpr<out KBvSort>,
                                                       significand: KExpr<out KBvSort> ->
-        val sort = mkFpSort(exponent.sort.sizeBits, significand.sort.sizeBits + 1u)
+        val exponentBits = exponent.sort.sizeBits
+        // +1 it required since bv doesn't contain `hidden bit`
+        val significandBits = significand.sort.sizeBits + 1u
+        val sort = mkFpSort(exponentBits, significandBits)
+
         KFpFromBvExpr(this, sort, sign, exponent, significand)
     }
+
     fun <T : KFpSort> mkFpFromBvExpr(
         sign: KExpr<KBv1Sort>,
         exponent: KExpr<out KBvSort>,
@@ -1638,7 +1863,8 @@ open class KContext : AutoCloseable {
     fun mkExistentialQuantifier(body: KExpr<KBoolSort>, bounds: List<KDecl<*>>) =
         existentialQuantifierCache.createIfContextActive(body, bounds)
 
-    private val universalQuantifierCache = mkClosableCache { body: KExpr<KBoolSort>, bounds: List<KDecl<*>> ->
+    private val universalQuantifierCache = mkClosableCache { body: KExpr<KBoolSort>,
+                                                             bounds: List<KDecl<*>> ->
         ensureContextMatch(body)
         ensureContextMatch(bounds)
         KUniversalQuantifier(this, body, bounds)
@@ -1667,8 +1893,15 @@ open class KContext : AutoCloseable {
         KFuncDecl(this, name, sort, args)
     }
 
-    fun <T : KSort> mkFuncDecl(name: String, sort: T, args: List<KSort>): KFuncDecl<T> =
-        if (args.isEmpty()) mkConstDecl(name, sort) else funcDeclCache.createIfContextActive(name, sort, args).cast()
+    fun <T : KSort> mkFuncDecl(
+        name: String,
+        sort: T,
+        args: List<KSort>
+    ): KFuncDecl<T> = if (args.isEmpty()) {
+        mkConstDecl(name, sort)
+    } else {
+        funcDeclCache.createIfContextActive(name, sort, args).cast()
+    }
 
     private val constDeclCache = mkClosableCache { name: String, sort: KSort ->
         ensureContextMatch(sort)
@@ -1688,8 +1921,10 @@ open class KContext : AutoCloseable {
     private var freshConstIdx = 0
     fun <T : KSort> mkFreshFuncDecl(name: String, sort: T, args: List<KSort>): KFuncDecl<T> {
         if (args.isEmpty()) return mkFreshConstDecl(name, sort)
+
         ensureContextMatch(sort)
         ensureContextMatch(args)
+
         return KFuncDecl(this, "$name!fresh!${freshConstIdx++}", sort, args)
     }
 
@@ -1810,26 +2045,33 @@ open class KContext : AutoCloseable {
         KArithGeDecl(this, arg)
     }
 
-    fun <T : KArithSort<T>> mkArithGeDecl(arg: T): KArithGeDecl<T> = arithGeDeclCache.createIfContextActive(arg).cast()
+    fun <T : KArithSort<T>> mkArithGeDecl(
+        arg: T
+    ): KArithGeDecl<T> = arithGeDeclCache.createIfContextActive(arg).cast()
 
     private val arithGtDeclCache = mkContextCheckingCache { arg: KArithSort<*> ->
         KArithGtDecl(this, arg)
     }
 
-    fun <T : KArithSort<T>> mkArithGtDecl(arg: T): KArithGtDecl<T> = arithGtDeclCache.createIfContextActive(arg).cast()
+    fun <T : KArithSort<T>> mkArithGtDecl(
+        arg: T
+    ): KArithGtDecl<T> = arithGtDeclCache.createIfContextActive(arg).cast()
 
     private val arithLeDeclCache = mkContextCheckingCache { arg: KArithSort<*> ->
         KArithLeDecl(this, arg)
     }
 
-    fun <T : KArithSort<T>> mkArithLeDecl(arg: T): KArithLeDecl<T> = arithLeDeclCache.createIfContextActive(arg).cast()
+    fun <T : KArithSort<T>> mkArithLeDecl(
+        arg: T
+    ): KArithLeDecl<T> = arithLeDeclCache.createIfContextActive(arg).cast()
 
     private val arithLtDeclCache = mkContextCheckingCache { arg: KArithSort<*> ->
         KArithLtDecl(this, arg)
     }
 
-    fun <T : KArithSort<T>> mkArithLtDecl(arg: T): KArithLtDecl<T> = arithLtDeclCache.createIfContextActive(arg).cast()
-
+    fun <T : KArithSort<T>> mkArithLtDecl(
+        arg: T
+    ): KArithLtDecl<T> = arithLtDeclCache.createIfContextActive(arg).cast()
 
     // int
     private val intModDeclCache = mkClosableCache<KIntModDecl> { KIntModDecl(this) }
@@ -2006,10 +2248,15 @@ open class KContext : AutoCloseable {
     fun <T : KBvSort> mkBvSignedGreaterDecl(arg0: T, arg1: T): KBvSignedGreaterDecl<T> =
         bvSignedGreaterDeclCache.createIfContextActive(arg0, arg1).cast()
 
-    private val concatDeclCache =
-        mkClosableCache { arg0: KBvSort, arg1: KBvSort -> KBvConcatDecl(this, arg0, arg1) }
+    private val concatDeclCache = mkClosableCache { arg0: KBvSort,
+                                                    arg1: KBvSort ->
+        KBvConcatDecl(this, arg0, arg1)
+    }
 
-    fun mkBvConcatDecl(arg0: KBvSort, arg1: KBvSort): KBvConcatDecl = concatDeclCache.createIfContextActive(arg0, arg1)
+    fun mkBvConcatDecl(
+        arg0: KBvSort,
+        arg1: KBvSort
+    ): KBvConcatDecl = concatDeclCache.createIfContextActive(arg0, arg1)
 
     private val extractDeclCache = mkClosableCache { high: Int, low: Int, value: KExpr<KBvSort> ->
         KBvExtractDecl(this, high, low, value)
@@ -2027,145 +2274,134 @@ open class KContext : AutoCloseable {
     private val repeatDeclCache = mkClosableCache { i: Int, value: KBvSort -> KBvRepeatDecl(this, i, value) }
     fun mkBvRepeatDecl(i: Int, value: KBvSort) = repeatDeclCache.createIfContextActive(i, value)
 
-    private val bvShiftLeftDeclCache =
-        mkClosableCache { arg0: KBvSort, arg1: KBvSort -> KBvShiftLeftDecl(this, arg0, arg1) }
+    private val bvShiftLeftDeclCache = mkClosableCache { arg0: KBvSort,
+                                                         arg1: KBvSort ->
+        KBvShiftLeftDecl(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvShiftLeftDecl(arg0: T, arg1: T): KBvShiftLeftDecl<T> =
         bvShiftLeftDeclCache.createIfContextActive(arg0, arg1).cast()
 
-    private val bvLogicalShiftRightDeclCache =
-        mkClosableCache { arg0: KBvSort, arg1: KBvSort -> KBvLogicalShiftRightDecl(this, arg0, arg1) }
+    private val bvLogicalShiftRightDeclCache = mkClosableCache { arg0: KBvSort,
+                                                                 arg1: KBvSort ->
+        KBvLogicalShiftRightDecl(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvLogicalShiftRightDecl(arg0: T, arg1: T): KBvLogicalShiftRightDecl<T> =
         bvLogicalShiftRightDeclCache.createIfContextActive(arg0, arg1).cast()
 
-    private val bvArithShiftRightDeclCache =
-        mkClosableCache { arg0: KBvSort, arg1: KBvSort -> KBvArithShiftRightDecl(this, arg0, arg1) }
+    private val bvArithShiftRightDeclCache = mkClosableCache { arg0: KBvSort,
+                                                               arg1: KBvSort ->
+        KBvArithShiftRightDecl(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvArithShiftRightDecl(arg0: T, arg1: T): KBvArithShiftRightDecl<T> =
         bvArithShiftRightDeclCache.createIfContextActive(arg0, arg1).cast()
 
-    private val bvRotateLeftDeclCache =
-        mkClosableCache { arg0: KBvSort, arg1: KBvSort -> KBvRotateLeftDecl(this, arg0, arg1) }
+    private val bvRotateLeftDeclCache = mkClosableCache { arg0: KBvSort,
+                                                          arg1: KBvSort ->
+        KBvRotateLeftDecl(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvRotateLeftDecl(arg0: T, arg1: T): KBvRotateLeftDecl<T> =
         bvRotateLeftDeclCache.createIfContextActive(arg0, arg1).cast()
 
-    private val bvRotateLeftIndexedDeclCache =
-        mkClosableCache { i: Int, valueSort: KBvSort -> KBvRotateLeftIndexedDecl(this, i, valueSort) }
+    private val bvRotateLeftIndexedDeclCache = mkClosableCache { i: Int,
+                                                                 valueSort: KBvSort ->
+        KBvRotateLeftIndexedDecl(this, i, valueSort)
+    }
 
     fun <T : KBvSort> mkBvRotateLeftIndexedDecl(i: Int, valueSort: T): KBvRotateLeftIndexedDecl<T> =
         bvRotateLeftIndexedDeclCache.createIfContextActive(i, valueSort).cast()
 
 
-    private val bvRotateRightDeclCache =
-        mkClosableCache { arg0: KBvSort, arg1: KBvSort -> KBvRotateRightDecl(this, arg0, arg1) }
+    private val bvRotateRightDeclCache = mkClosableCache { arg0: KBvSort,
+                                                           arg1: KBvSort ->
+        KBvRotateRightDecl(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvRotateRightDecl(arg0: T, arg1: T): KBvRotateRightDecl<T> =
         bvRotateRightDeclCache.createIfContextActive(arg0, arg1).cast()
 
-    private val bvRotateRightIndexedDeclCache =
-        mkClosableCache { i: Int, valueSort: KBvSort -> KBvRotateRightIndexedDecl(this, i, valueSort) }
+    private val bvRotateRightIndexedDeclCache = mkClosableCache { i: Int,
+                                                                  valueSort: KBvSort ->
+        KBvRotateRightIndexedDecl(this, i, valueSort)
+    }
 
     fun <T : KBvSort> mkBvRotateRightIndexedDecl(i: Int, valueSort: T): KBvRotateRightIndexedDecl<T> =
         bvRotateRightIndexedDeclCache.createIfContextActive(i, valueSort).cast()
 
 
-    private val bv2IntDeclCache =
-        mkClosableCache { value: KBvSort, isSigned: Boolean -> KBv2IntDecl(this, value, isSigned) }
+    private val bv2IntDeclCache = mkClosableCache { value: KBvSort,
+                                                    isSigned: Boolean ->
+        KBv2IntDecl(this, value, isSigned)
+    }
 
     fun mkBv2IntDecl(value: KBvSort, isSigned: Boolean) = bv2IntDeclCache.createIfContextActive(value, isSigned)
 
-    private val bvAddNoOverflowDeclCache =
-        mkClosableCache { arg0: KBvSort, arg1: KBvSort, isSigned: Boolean ->
-            KBvAddNoOverflowDecl(
-                this,
-                arg0,
-                arg1,
-                isSigned
-            )
-        }
+    private val bvAddNoOverflowDeclCache = mkClosableCache { arg0: KBvSort,
+                                                             arg1: KBvSort,
+                                                             isSigned: Boolean ->
+        KBvAddNoOverflowDecl(this, arg0, arg1, isSigned)
+    }
 
     fun <T : KBvSort> mkBvAddNoOverflowDecl(arg0: T, arg1: T, isSigned: Boolean): KBvAddNoOverflowDecl<T> =
         bvAddNoOverflowDeclCache.createIfContextActive(arg0, arg1, isSigned).cast()
 
-    private val bvAddNoUnderflowDeclCache =
-        mkClosableCache { arg0: KBvSort, arg1: KBvSort ->
-            KBvAddNoUnderflowDecl(
-                this,
-                arg0,
-                arg1,
-            )
-        }
+    private val bvAddNoUnderflowDeclCache = mkClosableCache { arg0: KBvSort,
+                                                              arg1: KBvSort ->
+        KBvAddNoUnderflowDecl(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvAddNoUnderflowDecl(arg0: T, arg1: T): KBvAddNoUnderflowDecl<T> =
         bvAddNoUnderflowDeclCache.createIfContextActive(arg0, arg1).cast()
 
-    private val bvSubNoOverflowDeclCache =
-        mkClosableCache { arg0: KBvSort, arg1: KBvSort ->
-            KBvSubNoOverflowDecl(
-                this,
-                arg0,
-                arg1,
-            )
-        }
+    private val bvSubNoOverflowDeclCache = mkClosableCache { arg0: KBvSort,
+                                                             arg1: KBvSort ->
+        KBvSubNoOverflowDecl(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvSubNoOverflowDecl(arg0: T, arg1: T): KBvSubNoOverflowDecl<T> =
         bvSubNoOverflowDeclCache.createIfContextActive(arg0, arg1).cast()
 
 
-    private val bvSubUnderflowDeclCache =
-        mkClosableCache { arg0: KBvSort, arg1: KBvSort, isSigned: Boolean ->
-            KBvSubNoUnderflowDecl(
-                this,
-                arg0,
-                arg1,
-                isSigned
-            )
-        }
+    private val bvSubUnderflowDeclCache = mkClosableCache { arg0: KBvSort,
+                                                            arg1: KBvSort,
+                                                            isSigned: Boolean ->
+        KBvSubNoUnderflowDecl(this, arg0, arg1, isSigned)
+    }
 
     fun <T : KBvSort> mkBvSubNoUnderflowDecl(arg0: T, arg1: T, isSigned: Boolean): KBvSubNoUnderflowDecl<T> =
         bvSubUnderflowDeclCache.createIfContextActive(arg0, arg1, isSigned).cast()
 
-    private val bvDivNoOverflowDeclCache =
-        mkClosableCache { arg0: KBvSort, arg1: KBvSort ->
-            KBvDivNoOverflowDecl(
-                this,
-                arg0,
-                arg1
-            )
-        }
+    private val bvDivNoOverflowDeclCache = mkClosableCache { arg0: KBvSort,
+                                                             arg1: KBvSort ->
+        KBvDivNoOverflowDecl(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvDivNoOverflowDecl(arg0: T, arg1: T): KBvDivNoOverflowDecl<T> =
         bvDivNoOverflowDeclCache.createIfContextActive(arg0, arg1).cast()
 
-    private val bvNegationNoOverflowDeclCache =
-        mkClosableCache { value: KBvSort -> KBvNegNoOverflowDecl(this, value) }
+    private val bvNegationNoOverflowDeclCache = mkClosableCache { value: KBvSort ->
+        KBvNegNoOverflowDecl(this, value)
+    }
 
     fun <T : KBvSort> mkBvNegationNoOverflowDecl(value: T): KBvNegNoOverflowDecl<T> =
         bvNegationNoOverflowDeclCache.createIfContextActive(value).cast()
 
-    private val bvMulNoOverflowDeclCache =
-        mkClosableCache { arg0: KBvSort, arg1: KBvSort, isSigned: Boolean ->
-            KBvMulNoOverflowDecl(
-                this,
-                arg0,
-                arg1,
-                isSigned
-            )
-        }
+    private val bvMulNoOverflowDeclCache = mkClosableCache { arg0: KBvSort,
+                                                             arg1: KBvSort,
+                                                             isSigned: Boolean ->
+        KBvMulNoOverflowDecl(this, arg0, arg1, isSigned)
+    }
 
     fun <T : KBvSort> mkBvMulNoOverflowDecl(arg0: T, arg1: T, isSigned: Boolean): KBvMulNoOverflowDecl<T> =
         bvMulNoOverflowDeclCache.createIfContextActive(arg0, arg1, isSigned).cast()
 
-    private val bvMulNoUnderflowDeclCache =
-        mkClosableCache { arg0: KBvSort, arg1: KBvSort ->
-            KBvMulNoUnderflowDecl(
-                this,
-                arg0,
-                arg1,
-            )
-        }
+    private val bvMulNoUnderflowDeclCache = mkClosableCache { arg0: KBvSort,
+                                                              arg1: KBvSort ->
+        KBvMulNoUnderflowDecl(this, arg0, arg1)
+    }
 
     fun <T : KBvSort> mkBvMulNoUnderflowDecl(arg0: T, arg1: T): KBvMulNoUnderflowDecl<T> =
         bvMulNoUnderflowDeclCache.createIfContextActive(arg0, arg1).cast()
@@ -2180,21 +2416,22 @@ open class KContext : AutoCloseable {
     private val fp64DeclCache = mkClosableCache { value: Double -> KFp64Decl(this, value) }
     fun mkFp64Decl(value: Double): KFp64Decl = fp64DeclCache.createIfContextActive(value)
 
-    private val fp128DeclCache = mkClosableCache { significand: Long, exponent: Long, signBit: Boolean ->
+    private val fp128DeclCache = mkClosableCache { significand: Long,
+                                                   exponent: Long,
+                                                   signBit: Boolean ->
         KFp128Decl(this, significand, exponent, signBit)
     }
 
     fun mkFp128Decl(significandBits: Long, exponent: Long, signBit: Boolean): KFp128Decl =
         fp128DeclCache.createIfContextActive(significandBits, exponent, signBit)
 
-    private val fpCustomSizeDeclCache =
-        mkClosableCache { significandSize: UInt,
-                          exponentSize: UInt,
-                          significand: Long,
-                          exponent: Long,
-                          signBit: Boolean ->
-            KFpCustomSizeDecl(this, significandSize, exponentSize, significand, exponent, signBit)
-        }
+    private val fpCustomSizeDeclCache = mkClosableCache { significandSize: UInt,
+                                                          exponentSize: UInt,
+                                                          significand: Long,
+                                                          exponent: Long,
+                                                          signBit: Boolean ->
+        KFpCustomSizeDecl(this, significandSize, exponentSize, significand, exponent, signBit)
+    }
 
     fun <T : KFpSort> mkFpCustomSizeDecl(
         significandSize: UInt,
@@ -2206,9 +2443,11 @@ open class KContext : AutoCloseable {
         val sort = mkFpSort(exponentSize, significandSize)
 
         if (sort is KFpCustomSizeSort) {
-            return fpCustomSizeDeclCache.createIfContextActive(
+            val fpDecl = fpCustomSizeDeclCache.createIfContextActive(
                 significandSize, exponentSize, significand, exponent, signBit
-            ).cast()
+            )
+
+            return fpDecl.cast()
         }
 
         if (sort is KFp128Sort) {
@@ -2237,25 +2476,32 @@ open class KContext : AutoCloseable {
         }
     }
 
-    private val roundingModeDeclCache =
-        mkClosableCache { value: KFpRoundingMode -> KFpRoundingModeDecl(this, value) }
+    private val roundingModeDeclCache = mkClosableCache { value: KFpRoundingMode ->
+        KFpRoundingModeDecl(this, value)
+    }
 
     fun mkFpRoundingModeDecl(value: KFpRoundingMode) = roundingModeDeclCache.createIfContextActive(value)
 
-    private val fpAbsDeclCache = mkClosableCache { valueSort: KFpSort -> KFpAbsDecl(this, valueSort) }
+    private val fpAbsDeclCache = mkClosableCache { valueSort: KFpSort ->
+        KFpAbsDecl(this, valueSort)
+    }
 
-    fun <T : KFpSort> mkFpAbsDecl(valueSort: T): KFpAbsDecl<T> =
-        fpAbsDeclCache.createIfContextActive(valueSort).cast()
+    fun <T : KFpSort> mkFpAbsDecl(
+        valueSort: T
+    ): KFpAbsDecl<T> = fpAbsDeclCache.createIfContextActive(valueSort).cast()
 
-    private val fpNegationDeclCache = mkClosableCache { valueSort: KFpSort -> KFpNegationDecl(this, valueSort) }
+    private val fpNegationDeclCache = mkClosableCache { valueSort: KFpSort ->
+        KFpNegationDecl(this, valueSort)
+    }
 
     fun <T : KFpSort> mkFpNegationDecl(valueSort: T): KFpNegationDecl<T> =
         fpNegationDeclCache.createIfContextActive(valueSort).cast()
 
-    private val fpAddDeclCache =
-        mkClosableCache { roundingMode: KFpRoundingModeSort, arg0Sort: KFpSort, arg1Sort: KFpSort ->
-            KFpAddDecl(this, roundingMode, arg0Sort, arg1Sort)
-        }
+    private val fpAddDeclCache = mkClosableCache { roundingMode: KFpRoundingModeSort,
+                                                   arg0Sort: KFpSort,
+                                                   arg1Sort: KFpSort ->
+        KFpAddDecl(this, roundingMode, arg0Sort, arg1Sort)
+    }
 
     fun <T : KFpSort> mkFpAddDecl(
         roundingMode: KFpRoundingModeSort,
@@ -2263,10 +2509,11 @@ open class KContext : AutoCloseable {
         arg1Sort: T
     ): KFpAddDecl<T> = fpAddDeclCache.createIfContextActive(roundingMode, arg0Sort, arg1Sort).cast()
 
-    private val fpSubDeclCache =
-        mkClosableCache { roundingMode: KFpRoundingModeSort, arg0Sort: KFpSort, arg1Sort: KFpSort ->
-            KFpSubDecl(this, roundingMode, arg0Sort, arg1Sort)
-        }
+    private val fpSubDeclCache = mkClosableCache { roundingMode: KFpRoundingModeSort,
+                                                   arg0Sort: KFpSort,
+                                                   arg1Sort: KFpSort ->
+        KFpSubDecl(this, roundingMode, arg0Sort, arg1Sort)
+    }
 
     fun <T : KFpSort> mkFpSubDecl(
         roundingMode: KFpRoundingModeSort,
@@ -2274,10 +2521,11 @@ open class KContext : AutoCloseable {
         arg1Sort: T
     ): KFpSubDecl<T> = fpSubDeclCache.createIfContextActive(roundingMode, arg0Sort, arg1Sort).cast()
 
-    private val fpMulDeclCache =
-        mkClosableCache { roundingMode: KFpRoundingModeSort, arg0Sort: KFpSort, arg1Sort: KFpSort ->
-            KFpMulDecl(this, roundingMode, arg0Sort, arg1Sort)
-        }
+    private val fpMulDeclCache = mkClosableCache { roundingMode: KFpRoundingModeSort,
+                                                   arg0Sort: KFpSort,
+                                                   arg1Sort: KFpSort ->
+        KFpMulDecl(this, roundingMode, arg0Sort, arg1Sort)
+    }
 
     fun <T : KFpSort> mkFpMulDecl(
         roundingMode: KFpRoundingModeSort,
@@ -2285,10 +2533,11 @@ open class KContext : AutoCloseable {
         arg1Sort: T
     ): KFpMulDecl<T> = fpMulDeclCache.createIfContextActive(roundingMode, arg0Sort, arg1Sort).cast()
 
-    private val fpDivDeclCache =
-        mkClosableCache { roundingMode: KFpRoundingModeSort, arg0Sort: KFpSort, arg1Sort: KFpSort ->
-            KFpDivDecl(this, roundingMode, arg0Sort, arg1Sort)
-        }
+    private val fpDivDeclCache = mkClosableCache { roundingMode: KFpRoundingModeSort,
+                                                   arg0Sort: KFpSort,
+                                                   arg1Sort: KFpSort ->
+        KFpDivDecl(this, roundingMode, arg0Sort, arg1Sort)
+    }
 
     fun <T : KFpSort> mkFpDivDecl(
         roundingMode: KFpRoundingModeSort,
@@ -2296,37 +2545,48 @@ open class KContext : AutoCloseable {
         arg1Sort: T
     ): KFpDivDecl<T> = fpDivDeclCache.createIfContextActive(roundingMode, arg0Sort, arg1Sort).cast()
 
-    private val fpFusedMulAddDeclCache =
-        mkClosableCache { roundingMode: KFpRoundingModeSort, arg0sort: KFpSort, arg1Sort: KFpSort, arg2Sort: KFpSort ->
-            KFpFusedMulAddDecl(this, roundingMode, arg0sort, arg1Sort, arg2Sort)
-        }
+    private val fpFusedMulAddDeclCache = mkClosableCache { roundingMode: KFpRoundingModeSort,
+                                                           arg0sort: KFpSort,
+                                                           arg1Sort: KFpSort,
+                                                           arg2Sort: KFpSort ->
+        KFpFusedMulAddDecl(this, roundingMode, arg0sort, arg1Sort, arg2Sort)
+    }
 
     fun <T : KFpSort> mkFpFusedMulAddDecl(
         roundingMode: KFpRoundingModeSort,
         arg0Sort: T,
         arg1Sort: T,
         arg2Sort: T
-    ): KFpFusedMulAddDecl<T> =
-        fpFusedMulAddDeclCache.createIfContextActive(roundingMode, arg0Sort, arg1Sort, arg2Sort).cast()
+    ): KFpFusedMulAddDecl<T> {
+        val fpDecl = fpFusedMulAddDeclCache.createIfContextActive(
+            roundingMode,
+            arg0Sort,
+            arg1Sort,
+            arg2Sort
+        )
+        return fpDecl.cast()
+    }
 
-    private val fpSqrtDeclCache = mkClosableCache { roundingMode: KFpRoundingModeSort, valueSort: KFpSort ->
+    private val fpSqrtDeclCache = mkClosableCache { roundingMode: KFpRoundingModeSort,
+                                                    valueSort: KFpSort ->
         KFpSqrtDecl(this, roundingMode, valueSort)
     }
 
     fun <T : KFpSort> mkFpSqrtDecl(roundingMode: KFpRoundingModeSort, valueSort: T): KFpSqrtDecl<T> =
         fpSqrtDeclCache.createIfContextActive(roundingMode, valueSort).cast()
 
-    private val fpRemDeclCache = mkClosableCache { arg0Sort: KFpSort, arg1Sort: KFpSort ->
+    private val fpRemDeclCache = mkClosableCache { arg0Sort: KFpSort,
+                                                   arg1Sort: KFpSort ->
         KFpRemDecl(this, arg0Sort, arg1Sort)
     }
 
     fun <T : KFpSort> mkFpRemDecl(arg0Sort: T, arg1Sort: T): KFpRemDecl<T> =
         fpRemDeclCache.createIfContextActive(arg0Sort, arg1Sort).cast()
 
-    private val roundToIntegralDeclCache =
-        mkClosableCache { roundingMode: KFpRoundingModeSort, valueSort: KFpSort ->
-            KFpRoundToIntegralDecl(this, roundingMode, valueSort)
-        }
+    private val roundToIntegralDeclCache = mkClosableCache { roundingMode: KFpRoundingModeSort,
+                                                             valueSort: KFpSort ->
+        KFpRoundToIntegralDecl(this, roundingMode, valueSort)
+    }
 
     fun <T : KFpSort> mkFpRoundToIntegralDecl(
         roundingMode: KFpRoundingModeSort,
@@ -2431,10 +2691,12 @@ open class KContext : AutoCloseable {
     fun <T : KFpSort> mkFpIsPositiveDecl(valueSort: T): KFpIsPositiveDecl<T> =
         fpIsPositiveDecl.createIfContextActive(valueSort).cast()
 
-    private val fpToBvDeclCache =
-        mkClosableCache { roundingMode: KFpRoundingModeSort, valueSort: KFpSort, bvSize: Int, isSigned: Boolean ->
-            KFpToBvDecl(this, roundingMode, valueSort, bvSize, isSigned)
-        }
+    private val fpToBvDeclCache = mkClosableCache { roundingMode: KFpRoundingModeSort,
+                                                    valueSort: KFpSort,
+                                                    bvSize: Int,
+                                                    isSigned: Boolean ->
+        KFpToBvDecl(this, roundingMode, valueSort, bvSize, isSigned)
+    }
 
     fun <T : KFpSort> mkFpToBvDecl(
         roundingMode: KFpRoundingModeSort,
@@ -2453,26 +2715,43 @@ open class KContext : AutoCloseable {
     fun <T : KFpSort> mkFpToIEEEBvDecl(valueSort: T): KFpToIEEEBvDecl<T> =
         fpToIEEEBvDeclCache.createIfContextActive(valueSort).cast()
 
-    private val fpFromBvDeclCache = mkClosableCache { signSort: KBv1Sort, expSort: KBvSort, significandSort: KBvSort ->
-        val sort = mkFpSort(expSort.sizeBits, significandSort.sizeBits + 1u)
+    private val fpFromBvDeclCache = mkClosableCache { signSort: KBv1Sort,
+                                                      expSort: KBvSort,
+                                                      significandSort: KBvSort ->
+        val exponentBits = expSort.sizeBits
+        val significandBits = significandSort.sizeBits + 1u
+        val sort = mkFpSort(exponentBits, significandBits)
+
         KFpFromBvDecl(this, sort, signSort, expSort, significandSort)
     }
 
-    fun <T : KFpSort> mkFpFromBvDecl(signSort: KBv1Sort, expSort: KBvSort, significandSort: KBvSort): KFpFromBvDecl<T> =
-        fpFromBvDeclCache.createIfContextActive(signSort, expSort, significandSort).cast()
+    fun <T : KFpSort> mkFpFromBvDecl(
+        signSort: KBv1Sort,
+        expSort: KBvSort,
+        significandSort: KBvSort
+    ): KFpFromBvDecl<T> {
+        val fpDecl = fpFromBvDeclCache.createIfContextActive(signSort, expSort, significandSort)
+        return fpDecl.cast()
+    }
 
-    private val fpToFpDeclCache = mkClosableCache { sort: KFpSort, rm: KFpRoundingModeSort, value: KFpSort ->
+    private val fpToFpDeclCache = mkClosableCache { sort: KFpSort,
+                                                    rm: KFpRoundingModeSort,
+                                                    value: KFpSort ->
         KFpToFpDecl(this, sort, rm, value)
     }
 
-    private val realToFpDeclCache = mkClosableCache { sort: KFpSort, rm: KFpRoundingModeSort, value: KRealSort ->
+    private val realToFpDeclCache = mkClosableCache { sort: KFpSort,
+                                                      rm: KFpRoundingModeSort,
+                                                      value: KRealSort ->
         KRealToFpDecl(this, sort, rm, value)
     }
 
-    private val bvToFpDeclCache =
-        mkClosableCache { sort: KFpSort, rm: KFpRoundingModeSort, value: KBvSort, signed: Boolean ->
-            KBvToFpDecl(this, sort, rm, value, signed)
-        }
+    private val bvToFpDeclCache = mkClosableCache { sort: KFpSort,
+                                                    rm: KFpRoundingModeSort,
+                                                    value: KBvSort,
+                                                    signed: Boolean ->
+        KBvToFpDecl(this, sort, rm, value, signed)
+    }
 
     fun <T : KFpSort> mkFpToFpDecl(sort: T, rm: KFpRoundingModeSort, value: KFpSort): KFpToFpDecl<T> =
         fpToFpDeclCache.createIfContextActive(sort, rm, value).cast()
@@ -2542,24 +2821,29 @@ open class KContext : AutoCloseable {
     private fun <T, A0> mkClosableCache(builder: (A0) -> T) = ensureClosed { mkCache(builder) }
     private fun <T, A0, A1> mkClosableCache(builder: (A0, A1) -> T) = ensureClosed { mkCache(builder) }
     private fun <T, A0, A1, A2> mkClosableCache(builder: (A0, A1, A2) -> T) = ensureClosed { mkCache(builder) }
-    private fun <T, A0, A1, A2, A3> mkClosableCache(builder: (A0, A1, A2, A3) -> T) = ensureClosed { mkCache(builder) }
-    private fun <T, A0, A1, A2, A3, A4> mkClosableCache(builder: (A0, A1, A2, A3, A4) -> T) =
-        ensureClosed { mkCache(builder) }
+    private fun <T, A0, A1, A2, A3> mkClosableCache(
+        builder: (A0, A1, A2, A3) -> T
+    ) = ensureClosed { mkCache(builder) }
 
-    private fun <T> Cache0<T>.createIfContextActive(): T =
-        ensureContextActive { create() }
+    private fun <T, A0, A1, A2, A3, A4> mkClosableCache(
+        builder: (A0, A1, A2, A3, A4) -> T
+    ) = ensureClosed { mkCache(builder) }
 
-    private fun <T, A> Cache1<T, A>.createIfContextActive(arg: A): T =
-        ensureContextActive { create(arg) }
+    private fun <T> Cache0<T>.createIfContextActive(): T = ensureContextActive { create() }
 
-    private fun <T, A0, A1> Cache2<T, A0, A1>.createIfContextActive(a0: A0, a1: A1): T =
-        ensureContextActive { create(a0, a1) }
+    private fun <T, A> Cache1<T, A>.createIfContextActive(arg: A): T = ensureContextActive { create(arg) }
 
-    private fun <T, A0, A1, A2> Cache3<T, A0, A1, A2>.createIfContextActive(a0: A0, a1: A1, a2: A2): T =
-        ensureContextActive { create(a0, a1, a2) }
+    private fun <T, A0, A1> Cache2<T, A0, A1>.createIfContextActive(
+        a0: A0, a1: A1
+    ): T = ensureContextActive { create(a0, a1) }
 
-    private fun <T, A0, A1, A2, A3> Cache4<T, A0, A1, A2, A3>.createIfContextActive(a0: A0, a1: A1, a2: A2, a3: A3): T =
-        ensureContextActive { create(a0, a1, a2, a3) }
+    private fun <T, A0, A1, A2> Cache3<T, A0, A1, A2>.createIfContextActive(
+        a0: A0, a1: A1, a2: A2
+    ): T = ensureContextActive { create(a0, a1, a2) }
+
+    private fun <T, A0, A1, A2, A3> Cache4<T, A0, A1, A2, A3>.createIfContextActive(
+        a0: A0, a1: A1, a2: A2, a3: A3
+    ): T = ensureContextActive { create(a0, a1, a2, a3) }
 
     private fun <T, A0, A1, A2, A3, A4> Cache5<T, A0, A1, A2, A3, A4>.createIfContextActive(
         a0: A0, a1: A1, a2: A2, a3: A3, a4: A4

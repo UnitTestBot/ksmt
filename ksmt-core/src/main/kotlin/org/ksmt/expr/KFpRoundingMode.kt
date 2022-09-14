@@ -2,7 +2,7 @@ package org.ksmt.expr
 
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
-import org.ksmt.expr.transformer.KTransformer
+import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KFpRoundingModeSort
 
 enum class KFpRoundingMode(val modeName: String) {
@@ -13,7 +13,10 @@ enum class KFpRoundingMode(val modeName: String) {
     RoundTowardZero("RoundTowardZero")
 }
 
-class KFpRoundingModeExpr(ctx: KContext, val value: KFpRoundingMode): KApp<KFpRoundingModeSort, KExpr<*>>(ctx) {
+class KFpRoundingModeExpr(
+    ctx: KContext,
+    val value: KFpRoundingMode
+) : KApp<KFpRoundingModeSort, KExpr<*>>(ctx) {
     override val args: List<KExpr<*>>
         get() = emptyList()
 
@@ -21,5 +24,5 @@ class KFpRoundingModeExpr(ctx: KContext, val value: KFpRoundingMode): KApp<KFpRo
 
     override fun sort(): KFpRoundingModeSort = ctx.mkFpRoundingModeSort()
 
-    override fun accept(transformer: KTransformer): KExpr<KFpRoundingModeSort> = transformer.transform(this)
+    override fun accept(transformer: KTransformerBase): KExpr<KFpRoundingModeSort> = transformer.transform(this)
 }
