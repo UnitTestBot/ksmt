@@ -1,4 +1,5 @@
 @file:Suppress("MagicNumber")
+
 package org.ksmt.solver.bitwuzla.bindings
 
 /**
@@ -20,7 +21,8 @@ enum class BitwuzlaOption(val value: Int) {
 
     /* --------------------------- General Options --------------------------- */
 
-    /** **Configure the solver engine.**
+    /** 
+     * **Configure the solver engine.**
      *
      * Values:
      *  * **aigprop**:
@@ -39,7 +41,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_ENGINE(0),
 
-    /** **Use non-zero exit codes for sat and unsat results.**
+    /** 
+     * **Use non-zero exit codes for sat and unsat results.**
      *
      * When enabled, use Bitwuzla exit codes:
      * * [BitwuzlaResult.BITWUZLA_SAT]
@@ -55,7 +58,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_EXIT_CODES(1),
 
-    /** **Configure input file format.**
+    /** 
+     * **Configure input file format.**
      *
      * If unspecified, Bitwuzla will autodetect the input file format.
      *
@@ -67,7 +71,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_INPUT_FORMAT(2),
 
-    /** **Incremental solving.**
+    /** 
+     * **Incremental solving.**
      *
      * Values:
      *  * **1**: enable
@@ -81,26 +86,29 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_INCREMENTAL(3),
 
-    /** **Log level.**
+    /** 
+     * **Log level.**
      *
      * Values:
      *  * An unsigned integer value (**default**: 0).
      */
     BITWUZLA_OPT_LOGLEVEL(4),
 
-    /** **Configure output number format for bit-vector values.**
+    /** 
+     * **Configure output number format for bit-vector values.**
      *
      * If unspecified, Bitwuzla will use BTOR format.
      *
      * Values:
-     *  * **aiger**: AIGER ascii format 
-     *  * **aigerbin**: AIGER binary format 
-     *  * **btor** **(default)**: BTOR format 
-     *  * **smt2**: SMT-LIB v2 format 
+     *  * **aiger**: AIGER ascii format
+     *  * **aigerbin**: AIGER binary format
+     *  * **btor** **(default)**: BTOR format
+     *  * **smt2**: SMT-LIB v2 format
      */
     BITWUZLA_OPT_OUTPUT_FORMAT(5),
 
-    /** **Configure output number format for bit-vector values.**
+    /** 
+     * **Configure output number format for bit-vector values.**
      *
      * If unspecified, Bitwuzla will use binary representation.
      *
@@ -114,7 +122,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_OUTPUT_NUMBER_FORMAT(6),
 
-    /** **Pretty printing.**
+    /** 
+     * **Pretty printing.**
      *
      * Values:
      *  * **1**: enable **(default)**
@@ -122,7 +131,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PRETTY_PRINT(7),
 
-    /** **Print DIMACS.**
+    /** 
+     * **Print DIMACS.**
      *
      * Print the CNF sent to the SAT solver in DIMACS format to stdout.
      *
@@ -132,7 +142,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PRINT_DIMACS(8),
 
-    /** **Model generation.**
+    /** 
+     * **Model generation.**
      *
      * Values:
      *  * **1**: enable, generate model for assertions only
@@ -143,7 +154,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PRODUCE_MODELS(9),
 
-    /** **Unsat core generation.**
+    /** 
+     * **Unsat core generation.**
      *
      * Values:
      *  * **1**: enable
@@ -151,7 +163,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PRODUCE_UNSAT_CORES(10),
 
-    /** **Configure the SAT solver engine.**
+    /** 
+     * **Configure the SAT solver engine.**
      *
      * Values:
      *  * **cadical** **(default)**:
@@ -171,14 +184,16 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SAT_ENGINE(11),
 
-    /** **Seed for random number generator.**
+    /** 
+     * **Seed for random number generator.**
      *
      * Values:
      *  * An unsigned integer value (**default**: 0).
      */
     BITWUZLA_OPT_SEED(12),
 
-    /** **Verbosity level.**
+    /** 
+     * **Verbosity level.**
      *
      * Values:
      *  * An unsigned integer value <= 4 (**default**: 0).
@@ -187,7 +202,8 @@ enum class BitwuzlaOption(val value: Int) {
 
     /* -------------- Rewriting/Preprocessing Options (Expert) --------------- */
 
-    /** **Ackermannization preprocessing.**
+    /** 
+     * **Ackermannization preprocessing.**
      *
      * Eager addition of Ackermann constraints for function applications.
      *
@@ -199,7 +215,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PP_ACKERMANN(14),
 
-    /** **Beta reduction preprocessing.**
+    /** 
+     * **Beta reduction preprocessing.**
      *
      * Eager elimination of lambda terms via beta reduction.
      *
@@ -215,7 +232,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PP_BETA_REDUCE(15),
 
-    /** **Eliminate bit-vector extracts (preprocessing).**
+    /** 
+     * **Eliminate bit-vector extracts (preprocessing).**
      *
      * Values:
      *  * **1**: enable **(default)**
@@ -225,7 +243,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PP_ELIMINATE_EXTRACTS(16),
 
-    /** **Eliminate ITEs (preprocessing).**
+    /** 
+     * **Eliminate ITEs (preprocessing).**
      *
      * Values:
      *  * **1**: enable
@@ -235,7 +254,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PP_ELIMINATE_ITES(17),
 
-    /** **Extract lambdas (preprocessing).**
+    /** 
+     * **Extract lambdas (preprocessing).**
      *
      * Extraction of common array patterns as lambda terms.
      *
@@ -247,7 +267,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PP_EXTRACT_LAMBDAS(18),
 
-    /** **Merge lambda terms (preprocessing).**
+    /** 
+     * **Merge lambda terms (preprocessing).**
      *
      * Values:
      *  * **1**: enable **(default)**
@@ -257,7 +278,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PP_MERGE_LAMBDAS(19),
 
-    /** **Non-destructive term substitutions.**
+    /** 
+     * **Non-destructive term substitutions.**
      *
      * Values:
      *  * **1**: enable
@@ -267,7 +289,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PP_NONDESTR_SUBST(20),
 
-    /** **Normalize bit-vector addition (global).**
+    /** 
+     * **Normalize bit-vector addition (global).**
      *
      * Values:
      *  * **1**: enable **(default)**
@@ -277,7 +300,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PP_NORMALIZE_ADD(21),
 
-    /** **Boolean skeleton preprocessing.**
+    /** 
+     * **Boolean skeleton preprocessing.**
      *
      * Values:
      *  * **1**: enable **(default)**
@@ -287,7 +311,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PP_SKELETON_PREPROC(22),
 
-    /** **Unconstrained optimization (preprocessing).**
+    /** 
+     * **Unconstrained optimization (preprocessing).**
      *
      * Values:
      *  * **1**: enable
@@ -297,7 +322,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PP_UNCONSTRAINED_OPTIMIZATION(23),
 
-    /** **Variable substitution preprocessing.**
+    /** 
+     * **Variable substitution preprocessing.**
      *
      * Values:
      *  * **1**: enable **(default)**
@@ -307,7 +333,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PP_VAR_SUBST(24),
 
-    /** **Propagate bit-vector extracts over arithmetic bit-vector operators.**
+    /** 
+     * **Propagate bit-vector extracts over arithmetic bit-vector operators.**
      *
      * Values:
      *  * **1**: enable
@@ -317,7 +344,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_RW_EXTRACT_ARITH(25),
 
-    /** **Rewrite level.**
+    /** 
+     * **Rewrite level.**
      *
      * Values:
      * * **0**: no rewriting
@@ -332,7 +360,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_RW_LEVEL(26),
 
-    /** **Normalize bit-vector operations.**
+    /** 
+     * **Normalize bit-vector operations.**
      *
      * Normalize bit-vector addition, multiplication and bit-wise and.
      *
@@ -344,7 +373,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_RW_NORMALIZE(27),
 
-    /** **Normalize bit-vector addition (local).**
+    /** 
+     * **Normalize bit-vector addition (local).**
      *
      * Values:
      *  * **1**: enable **(default)**
@@ -354,7 +384,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_RW_NORMALIZE_ADD(28),
 
-    /** **Simplify constraints on construction.**
+    /** 
+     * **Simplify constraints on construction.**
      *
      * Values:
      *  * **1**: enable **(default)**
@@ -364,7 +395,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_RW_SIMPLIFY_CONSTRAINTS(29),
 
-    /** **Eliminate bit-vector SLT nodes.**
+    /** 
+     * **Eliminate bit-vector SLT nodes.**
      *
      * Values:
      *  * **1**: enable
@@ -374,7 +406,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_RW_SLT(30),
 
-    /** **Sort the children of AIG nodes by id.**
+    /** 
+     * **Sort the children of AIG nodes by id.**
      *
      * Values:
      *  * **1**: enable **(default)**
@@ -384,7 +417,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_RW_SORT_AIG(31),
 
-    /** **Sort the children of adder and multiplier circuits by id.**
+    /** 
+     * **Sort the children of adder and multiplier circuits by id.**
      *
      * Values:
      *  * **1**: enable **(default)**
@@ -394,7 +428,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_RW_SORT_AIGVEC(32),
 
-    /** **Sort the children of commutative operations by id.**
+    /** 
+     * **Sort the children of commutative operations by id.**
      *
      * Values:
      *  * **1**: enable **(default)**
@@ -406,13 +441,8 @@ enum class BitwuzlaOption(val value: Int) {
 
 /* --------------------- Fun Engine Options (Expert) --------------------- */
 
-
-
-
-
-
-
-    /** **Function solver engine:
+    /** 
+     * **Function solver engine:
      *    Dual propagation optimization.**
      *
      * Values:
@@ -423,7 +453,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_FUN_DUAL_PROP(34),
 
-    /** **Function solver engine:
+    /** 
+     * **Function solver engine:
      *    Assumption order for dual propagation optimization.**
      *
      * Set order in which inputs are assumed in the dual propagation clone.
@@ -440,7 +471,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_FUN_DUAL_PROP_QSORT(35),
 
-    /** **Function solver engine:
+    /** 
+     * **Function solver engine:
      *    Eager lemmas.**
      *
      * Configure mode for eager lemma generation.
@@ -459,7 +491,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_FUN_EAGER_LEMMAS(36),
 
-    /** **Function solver engine:
+    /** 
+     * **Function solver engine:
      *    Lazy synthesis.**
      *
      * Configure lazy synthesis (to bit-level) of bit-vector expressions.
@@ -472,7 +505,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_FUN_LAZY_SYNTHESIZE(37),
 
-    /** **Function solver engine:
+    /** 
+     * **Function solver engine:
      *    Justification optimization.**
      *
      * Values:
@@ -483,7 +517,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_FUN_JUST(38),
 
-    /** **Function solver engine:
+    /** 
+     * **Function solver engine:
      *    Justification optimization heuristic.**
      *
      * Configure heuristic to determine path selection for justification
@@ -501,7 +536,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_FUN_JUST_HEURISTIC(39),
 
-    /** **Function solver engine:
+    /** 
+     * **Function solver engine:
      *    Propagation-based local search sequential portfolio.**
      *
      * When function solver engine is enabled, configure propagation-based local
@@ -516,7 +552,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_FUN_PREPROP(40),
 
-    /** **Function solver engine:
+    /** 
+     * **Function solver engine:
      *    Stochastic local search sequential portfolio.**
      *
      * When function solver engine is enabled, configure stochastic local
@@ -531,7 +568,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_FUN_PRESLS(41),
 
-    /** **Function solver engine:
+    /** 
+     * **Function solver engine:
      *    Represent store as lambda.**
      *
      * Represent array stores as lambdas.
@@ -546,13 +584,8 @@ enum class BitwuzlaOption(val value: Int) {
 
 /* --------------------- SLS Engine Options (Expert) --------------------- */
 
-
-
-
-
-
-
-    /** **Stochastic local search solver engine:
+    /** 
+     * **Stochastic local search solver engine:
      *    Justification-based path selection.**
      *
      * Configure justification-based path selection for SLS engine.
@@ -565,7 +598,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SLS_JUST(43),
 
-    /** **Stochastic local search solver engine:
+    /** 
+     * **Stochastic local search solver engine:
      *    Group-wise moves.**
      *
      * Configure group-wise moves for SLS engine. When enabled, rather than
@@ -580,7 +614,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SLS_MOVE_GW(44),
 
-    /** **Stochastic local search solver engine:
+    /** 
+     * **Stochastic local search solver engine:
      *    Incremental move test.**
      *
      * Configure that during best move selection, the previous best neighbor
@@ -595,7 +630,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SLS_MOVE_INC_MOVE_TEST(45),
 
-    /** **Stochastic local search solver engine:
+    /** 
+     * **Stochastic local search solver engine:
      *    Propagation moves.**
      *
      * Configure propagation moves, chosen with a ratio of number of propagation
@@ -610,7 +646,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SLS_MOVE_PROP(46),
 
-    /** **Stochastic local search solver engine:
+    /** 
+     * **Stochastic local search solver engine:
      *    Force random walks.**
      *
      * Configure that random walks are forcibly chosen as recovery moves in case
@@ -625,7 +662,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SLS_MOVE_PROP_FORCE_RW(47),
 
-    /** **Stochastic local search solver engine:
+    /** 
+     * **Stochastic local search solver engine:
      *    Number of propagation moves.**
      *
      * Configure the number of propagation moves to be performed when propagation
@@ -643,7 +681,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SLS_MOVE_PROP_NPROPS(48),
 
-    /** **Stochastic local search solver engine:
+    /** 
+     * **Stochastic local search solver engine:
      *    Number of regular SLS moves.**
      *
      * Configure the number of regular SLS moves to be performed when propagation
@@ -661,7 +700,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SLS_MOVE_PROP_NSLSS(49),
 
-    /** **Stochastic local search solver engine:
+    /** 
+     * **Stochastic local search solver engine:
      *    Randomize all candidates.**
      *
      * Configure the randomization of all candidate variables (rather than just
@@ -675,7 +715,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SLS_MOVE_RAND_ALL(50),
 
-    /** **Stochastic local search solver engine:
+    /** 
+     * **Stochastic local search solver engine:
      *    Randomize bit ranges.**
      *
      * Configure the randomization of bit ranges (rather than all bits) of
@@ -689,7 +730,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SLS_MOVE_RAND_RANGE(51),
 
-    /** **Stochastic local search solver engine:
+    /** 
+     * **Stochastic local search solver engine:
      *    Random walk.**
      *
      * Configure random walk moves, where one out of all possible neighbors is
@@ -707,7 +749,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SLS_MOVE_RAND_WALK(52),
 
-    /** **Stochastic local search solver engine:
+    /** 
+     * **Stochastic local search solver engine:
      *    Range-wise bit-flip moves.**
      *
      * Configure range-wise bit-flip moves for SLS engine. When enabled, try
@@ -722,7 +765,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SLS_MOVE_RANGE(53),
 
-    /** **Stochastic local search solver engine:
+    /** 
+     * **Stochastic local search solver engine:
      *    Segment-wise bit-flip moves.**
      *
      * Configure range-wise bit-flip moves for SLS engine. When enabled, try
@@ -737,7 +781,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SLS_MOVE_SEGMENT(54),
 
-    /** **Stochastic local search solver engine:
+    /** 
+     * **Stochastic local search solver engine:
      *    Probability for random walks.**
      *
      * Configure the probability with which a random walk is chosen if random
@@ -752,7 +797,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SLS_PROB_MOVE_RAND_WALK(55),
 
-    /** **Stochastic local search solver engine:
+    /** 
+     * **Stochastic local search solver engine:
      *    Number of bit flips.**
      *
      * Configure the number of bit flips used as a limit for the SLS engine.
@@ -764,7 +810,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SLS_NFLIPS(56),
 
-    /** **Stochastic local search solver engine:
+    /** 
+     * **Stochastic local search solver engine:
      *    Move strategy.**
      *
      * Configure the move selection strategy for the SLS engine.
@@ -786,7 +833,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SLS_STRATEGY(57),
 
-    /** **Stochastic local search solver engine:
+    /** 
+     * **Stochastic local search solver engine:
      *    Restarts.**
      *
      * Values:
@@ -797,7 +845,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SLS_USE_RESTARTS(58),
 
-    /** **Stochastic local search solver engine:
+    /** 
+     * **Stochastic local search solver engine:
      *    Bandit scheme.**
      *
      * Configure bandit scheme heuristic for selecting root constraints.
@@ -813,7 +862,8 @@ enum class BitwuzlaOption(val value: Int) {
 
     /* -------------------- Prop Engine Options (Expert) --------------------- */
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Value computation for xor.**
      *
      * When enabled, detect arithmetic right shift operations (are rewritten on
@@ -827,7 +877,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_ASHR(60),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Constant bits.**
      *
      * Configure constant bit propagation (requries bit-blasting to AIG).
@@ -840,7 +891,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_CONST_BITS(61),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Domain propagators.**
      *
      * Configure the use of domain propagators for determining constant bits
@@ -854,7 +906,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_CONST_DOMAINS(62),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Entailed propagations.**
      *
      * Maintain a work queue with entailed propagations.
@@ -876,7 +929,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_ENTAILED(63),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Delta for flipping ite conditions with constant branches.**
      *
      * Configure the delta by which [BITWUZLA_OPT_PROP_PROB_FLIP_COND_CONST] is
@@ -890,7 +944,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_FLIP_COND_CONST_DELTA(64),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Limit for flipping ite conditions with constant branches.**
      *
      * Configure the limit for how often the path to the condition for ite
@@ -905,7 +960,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_FLIP_COND_CONST_NPATHSEL(65),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Infer bounds for inequalities for value computation.**
      *
      * When enabled, infer bounds for value computation for inequalities based on
@@ -919,7 +975,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_INFER_INEQ_BOUNDS(66),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    No move on conflict.**
      *
      * When enabled, no move is performed when running into a conflict during
@@ -937,7 +994,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_NO_MOVE_ON_CONFLICT(67),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Number of propagations.**
      *
      * Configure the number of propagations used as a limit for the
@@ -950,7 +1008,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_NPROPS(68),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Number of updates.**
      *
      * Configure the number of model value updates used as a limit for the
@@ -963,7 +1022,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_NUPDATES(69),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Path selection.**
      *
      * Configure mode for path selection.
@@ -978,7 +1038,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_PATH_SEL(70),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Probability for producing inverse rather than consistent values.**
      *
      * Values:
@@ -988,7 +1049,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_PROB_FALLBACK_RANDOM_VALUE(71),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Probability for flipping one of the don't care bits for ands.**
      *
      * Configure the probability with which to keep the current assignement of
@@ -1003,7 +1065,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_PROB_AND_FLIP(72),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Probability for using the current assignment with one bit flipped for
      *    equalities.**
      *
@@ -1018,7 +1081,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_PROB_EQ_FLIP(73),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Probability for flipping ite condition.**
      *
      * Configure the probability with which to select the path to the condition
@@ -1032,7 +1096,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_PROB_FLIP_COND(74),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Probability for flipping ite condition with constant branches.**
      *
      * Configure the probability with which to select the path to the condition
@@ -1046,7 +1111,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_PROB_FLIP_COND_CONST(75),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Probability for selecting random input.**
      *
      * Configure the probability with which to select a random input instead of
@@ -1059,7 +1125,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_PROB_RANDOM_INPUT(76),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Probability for flipping one of the don't care bits for extracts.**
      *
      * Configure the probability with which to flip one of the don't care bits of
@@ -1075,7 +1142,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_PROB_SLICE_FLIP(77),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Probability for keeping the value of don't care bits for extracts.**
      *
      * Configure the probability with which to keep the current value of don't
@@ -1089,7 +1157,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_PROB_SLICE_KEEP_DC(78),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Probability for inverse values.**
      *
      * Configure the probability with which to choose an inverse value over a
@@ -1102,7 +1171,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_PROB_USE_INV_VALUE(79),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Bandit scheme.**
      *
      * Configure bandit scheme heuristic for selecting root constraints.
@@ -1118,7 +1188,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_USE_BANDIT(80),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Inverse value computation for inequalities over concats.**
      *
      * When enabled, use special inverse value computation for inequality over
@@ -1132,7 +1203,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_USE_INV_LT_CONCAT(81),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Restarts.**
      *
      * Values:
@@ -1143,7 +1215,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_USE_RESTARTS(82),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Value computation for sign extension.**
      *
      * When enabled, detect sign extension operations (are rewritten on
@@ -1157,7 +1230,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_SEXT(83),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Skip if no progress.**
      *
      * When enabled, moves that make no progress, that is, that produce a target
@@ -1172,7 +1246,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PROP_SKIP_NO_PROGRESS(84),
 
-    /** **Propagation-based local search solver engine:
+    /** 
+     * **Propagation-based local search solver engine:
      *    Value computation for xor.**
      *
      * When enabled, detect xor operations (are rewritten on construction) and
@@ -1188,7 +1263,8 @@ enum class BitwuzlaOption(val value: Int) {
 
     /* ------------------- AigProp Engine Options (Expert) ------------------- */
 
-    /** **AIG-level propagation-based local search solver engine:
+    /** 
+     * **AIG-level propagation-based local search solver engine:
      *    Number of propagations.**
      *
      * Configure the number of propagations used as a limit for the
@@ -1201,7 +1277,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_AIGPROP_NPROPS(86),
 
-    /** **AIG-level propagation-based local search solver engine:
+    /** 
+     * **AIG-level propagation-based local search solver engine:
      *    Bandit scheme.**
      *
      * Configure bandit scheme heuristic for selecting root constraints.
@@ -1217,7 +1294,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_AIGPROP_USE_BANDIT(87),
 
-    /** **AIG-level propagation-based local search solver engine:
+    /** 
+     * **AIG-level propagation-based local search solver engine:
      *    Restarts.**
      *
      * Values:
@@ -1230,7 +1308,8 @@ enum class BitwuzlaOption(val value: Int) {
 
     /* ----------------- Quantifier Eninge Options (Expert) ------------------ */
 
-    /** **Quantifier solver engine:
+    /** 
+     * **Quantifier solver engine:
      *    Constructive Equality Resolution.**
      *
      * Configure the use of Constructive Equality Resolution simplification in
@@ -1245,7 +1324,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_QUANT_CER(89),
 
-    /** **Quantifier solver engine:
+    /** 
+     * **Quantifier solver engine:
      *    Destructive Equality Resolution.**
      *
      * Configure the use of Destructive Equality Resolution simplification in
@@ -1260,7 +1340,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_QUANT_DER(90),
 
-    /** **Quantifier solver engine:
+    /** 
+     * **Quantifier solver engine:
      *    Dual solver.**
      *
      * Configure the use of the dual (negated) version of the quantified formula.
@@ -1274,7 +1355,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_QUANT_DUAL_SOLVER(91),
 
-    /** **Quantifier solver engine:
+    /** 
+     * **Quantifier solver engine:
      *    Miniscoping.**
      *
      * Configure the use of miniscoping in the quantifier solver engine.
@@ -1288,7 +1370,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_QUANT_MINISCOPE(92),
 
-    /** **Quantifier solver engine:
+    /** 
+     * **Quantifier solver engine:
      *    Synthesis mode.**
      *
      * Configure mode for synthesizing Skolem functions.
@@ -1312,7 +1395,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_QUANT_SYNTH(93),
 
-    /** **Quantifier solver engine:
+    /** 
+     * **Quantifier solver engine:
      *    Update model with respect to synthesized skolem.**
      *
      * Configure to update the current model with respect to the synthesized
@@ -1327,7 +1411,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_QUANT_FIXSYNTH(94),
 
-    /** **Quantifier solver engine:
+    /** 
+     * **Quantifier solver engine:
      *    Base case for ITE model.**
      *
      * Configure the base case of a concrete model for ITEs. Constant if enabled,
@@ -1342,7 +1427,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_QUANT_SYNTH_ITE_COMPLETE(95),
 
-    /** **Quantifier solver engine:
+    /** 
+     * **Quantifier solver engine:
      *    Limit for synthesis.**
      *
      * Configure the limit of enumerated expressions for the enumerative learning
@@ -1356,7 +1442,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_QUANT_SYNTH_LIMIT(96),
 
-    /** **Quantifier solver engine:
+    /** 
+     * **Quantifier solver engine:
      *    Quantifier instantiation.**
      *
      * Configure the generalization of quantifier instantiations via enumerative
@@ -1373,7 +1460,8 @@ enum class BitwuzlaOption(val value: Int) {
 
     /* ------------------------ Other Expert Options ------------------------- */
 
-    /** **Check model (debug only).**
+    /** 
+     * **Check model (debug only).**
      *
      * Values:
      *  * **1**: enable **(default)**
@@ -1383,7 +1471,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_CHECK_MODEL(98),
 
-    /** **Check result when unconstrained optimization is enabled (debug only).**
+    /** 
+     * **Check result when unconstrained optimization is enabled (debug only).**
      *
      * Values:
      *  * **1**: enable **(default)**
@@ -1393,7 +1482,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_CHECK_UNCONSTRAINED(99),
 
-    /** **Check unsat assumptions (debug only).**
+    /** 
+     * **Check unsat assumptions (debug only).**
      *
      * Values:
      *  * **1**: enable **(default)**
@@ -1403,7 +1493,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_CHECK_UNSAT_ASSUMPTIONS(100),
 
-    /** **Interpret sorts introduced with declare-sort as bit-vectors of given
+    /** 
+     * **Interpret sorts introduced with declare-sort as bit-vectors of given
      *    width.**
      *
      * Disabled if zero.
@@ -1415,7 +1506,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_DECLSORT_BV_WIDTH(101),
 
-    /** **Share partial models determined via local search with bit-blasting
+    /** 
+     * **Share partial models determined via local search with bit-blasting
      *    engine.**
      *
      * This option is only effective when local search engines are combined with
@@ -1429,7 +1521,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_LS_SHARE_SAT(102),
 
-    /** **Interactive parsing mode.**
+    /** 
+     * **Interactive parsing mode.**
      *
      * Values:
      *  * **1**: enable **(default)**
@@ -1439,7 +1532,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_PARSE_INTERACTIVE(103),
 
-    /** **Use CaDiCaL's freeze/melt.**
+    /** 
+     * **Use CaDiCaL's freeze/melt.**
      *
      * Values:
      *  * **1**: enable
@@ -1449,7 +1543,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SAT_ENGINE_CADICAL_FREEZE(104),
 
-    /** **Lingeling fork mode.**
+    /** 
+     * **Lingeling fork mode.**
      *
      * Values:
      *  * **1**: enable **(default)**
@@ -1459,7 +1554,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SAT_ENGINE_LGL_FORK(105),
 
-    /** **Number of threads to use in the SAT solver.**
+    /** 
+     * **Number of threads to use in the SAT solver.**
      *
      * This option is only effective for SAT solvers with support for
      * multi-threading.
@@ -1471,7 +1567,8 @@ enum class BitwuzlaOption(val value: Int) {
      */
     BITWUZLA_OPT_SAT_ENGINE_N_THREADS(106),
 
-    /** **Enable SMT-COMP mode.**
+    /** 
+     * **Enable SMT-COMP mode.**
      *
      * Parser only option. Only effective when an SMT2 input file is parsed.
      *

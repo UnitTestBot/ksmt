@@ -12,5 +12,5 @@ interface SmtLibParser {
      * */
     fun parse(ctx: KContext, path: Path): List<KExpr<KBoolSort>>
 
-    class ParseError(cause: Throwable): Exception(cause)
+    class ParseError(cause: Throwable) : Exception(cause)
 }

@@ -23,11 +23,11 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver {
     private var lastCheckStatus = KSolverStatus.UNKNOWN
 
     init {
-        Native.bitwuzlaSetOption(bitwuzlaCtx.bitwuzla, BitwuzlaOption.BITWUZLA_OPT_PRODUCE_MODELS, 1)
-        Native.bitwuzlaSetOption(bitwuzlaCtx.bitwuzla, BitwuzlaOption.BITWUZLA_OPT_PRODUCE_UNSAT_CORES, 1)
+        Native.bitwuzlaSetOption(bitwuzlaCtx.bitwuzla, BitwuzlaOption.BITWUZLA_OPT_PRODUCE_MODELS, value = 1)
+        Native.bitwuzlaSetOption(bitwuzlaCtx.bitwuzla, BitwuzlaOption.BITWUZLA_OPT_PRODUCE_UNSAT_CORES, value = 1)
     }
 
-    private var currentLevelTrackedAssertions = mutableSetOf<BitwuzlaTerm>()
+    private var currentLevelTrackedAssertions = hashSetOf<BitwuzlaTerm>()
     private val trackedAssertions = mutableListOf(currentLevelTrackedAssertions)
 
     override fun assert(expr: KExpr<KBoolSort>) = bitwuzlaCtx.bitwuzlaTry {
@@ -40,6 +40,7 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver {
         val trackedExpr = with(ctx) { !trackVar or expr }
         val exprTerm = with(exprInternalizer) { trackedExpr.internalize() }
         val trackVarTerm = with(exprInternalizer) { trackVar.internalize() }
+
         currentLevelTrackedAssertions += trackVarTerm
 
         Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, exprTerm)
@@ -51,14 +52,14 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver {
     override fun push(): Unit = bitwuzlaCtx.bitwuzlaTry {
         Native.bitwuzlaPush(bitwuzlaCtx.bitwuzla, nlevels = 1)
 
-        currentLevelTrackedAssertions = mutableSetOf()
+        currentLevelTrackedAssertions = hashSetOf()
         trackedAssertions.add(currentLevelTrackedAssertions)
     }
 
     override fun pop(n: UInt): Unit = bitwuzlaCtx.bitwuzlaTry {
         val currentLevel = trackedAssertions.lastIndex.toUInt()
         require(n <= currentLevel) {
-            "Can not pop $n scope levels because current scope level is $currentLevel"
+            "Cannot pop $n scope levels because current scope level is $currentLevel"
         }
 
         if (n == 0u) return
@@ -95,16 +96,21 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver {
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = bitwuzlaCtx.bitwuzlaTry {
         require(lastCheckStatus == KSolverStatus.UNSAT) { "Unsat cores are only available after UNSAT checks" }
+
         val fullCore = Native.bitwuzlaGetUnsatCore(bitwuzlaCtx.bitwuzla)
         val trackVars = trackedAssertions.flatten().toSet()
         val onlyTrackedAssertions = fullCore.filter { it in trackVars }
         val unsatAssumptions = Native.bitwuzlaGetUnsatAssumptions(bitwuzlaCtx.bitwuzla)
         val unsatCore = onlyTrackedAssertions + unsatAssumptions
+
         return with(exprConverter) { unsatCore.map { it.convertExpr(ctx.boolSort) } }
     }
 
     override fun reasonOfUnknown(): String = bitwuzlaCtx.bitwuzlaTry {
-        require(lastCheckStatus == KSolverStatus.UNKNOWN) { "Unknown reason is only available after UNKNOWN checks" }
+        require(lastCheckStatus == KSolverStatus.UNKNOWN) {
+            "Unknown reason is only available after UNKNOWN checks"
+        }
+
         // There is no way to retrieve reason of unknown from Bitwuzla in general case.
         return "unknown"
     }

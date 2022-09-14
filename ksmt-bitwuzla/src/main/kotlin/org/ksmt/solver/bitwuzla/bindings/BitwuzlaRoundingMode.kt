@@ -1,13 +1,14 @@
 @file:Suppress("MagicNumber")
+
 package org.ksmt.solver.bitwuzla.bindings
 
 /**
  * Rounding mode for floating-point operations.
- * 
+ *
  * For some floating-point operations, infinitely precise results may not be
  * representable in a given format. Hence, they are rounded modulo one of five
  * rounding modes to a representable floating-point number.
- * 
+ *
  * The following rounding modes follow the SMT-LIB theory for floating-point
  * arithmetic, which in turn is based on IEEE Standard 754.
  * The rounding modes are specified in Sections 4.3.1 and 4.3.2 of the IEEE Standard 754.
@@ -19,7 +20,7 @@ enum class BitwuzlaRoundingMode(val value: Int) {
      * If the two nearest floating-point numbers bracketing an unrepresentable
      * infinitely precise result are equally near, the one with an even least
      * significant digit will be delivered.
-     * 
+     *
      * SMT-LIB: `RNE` `roundNearestTiesToEven`
      */
     BITWUZLA_RM_RNE(0),

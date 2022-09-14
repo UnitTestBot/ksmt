@@ -16,7 +16,6 @@ fun main() = with(KContext()) {
 
     val bv8 = mkBv(0.toByte())
     val byteBits = Byte.SIZE_BITS
-    // how to restrict such casts to avoid misscast? For example, you can write `as KBitVec16Expr` as well
     val sameBv8 = mkBv("0".repeat(byteBits), byteBits.toUInt()) as KBitVec8Value
     check(bv8 === sameBv8)
 

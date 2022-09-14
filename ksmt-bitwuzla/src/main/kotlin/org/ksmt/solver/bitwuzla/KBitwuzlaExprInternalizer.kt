@@ -4,6 +4,7 @@ import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KDeclVisitor
 import org.ksmt.decl.KFuncDecl
+import org.ksmt.expr.KAddArithExpr
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
@@ -16,6 +17,7 @@ import org.ksmt.expr.KBitVec64Value
 import org.ksmt.expr.KBitVec8Value
 import org.ksmt.expr.KBitVecCustomValue
 import org.ksmt.expr.KBitVecNumberValue
+import org.ksmt.expr.KBv2IntExpr
 import org.ksmt.expr.KBvAddExpr
 import org.ksmt.expr.KBvAddNoOverflowExpr
 import org.ksmt.expr.KBvAddNoUnderflowExpr
@@ -53,6 +55,7 @@ import org.ksmt.expr.KBvSignedRemExpr
 import org.ksmt.expr.KBvSubExpr
 import org.ksmt.expr.KBvSubNoOverflowExpr
 import org.ksmt.expr.KBvSubNoUnderflowExpr
+import org.ksmt.expr.KBvToFpExpr
 import org.ksmt.expr.KBvUnsignedDivExpr
 import org.ksmt.expr.KBvUnsignedGreaterExpr
 import org.ksmt.expr.KBvUnsignedGreaterOrEqualExpr
@@ -64,17 +67,72 @@ import org.ksmt.expr.KBvXorExpr
 import org.ksmt.expr.KBvZeroExtensionExpr
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KDistinctExpr
+import org.ksmt.expr.KDivArithExpr
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFalse
+import org.ksmt.expr.KFp128Value
+import org.ksmt.expr.KFp16Value
+import org.ksmt.expr.KFp32Value
+import org.ksmt.expr.KFp64Value
+import org.ksmt.expr.KFpAbsExpr
+import org.ksmt.expr.KFpAddExpr
+import org.ksmt.expr.KFpCustomSizeValue
+import org.ksmt.expr.KFpDivExpr
+import org.ksmt.expr.KFpEqualExpr
+import org.ksmt.expr.KFpFromBvExpr
+import org.ksmt.expr.KFpFusedMulAddExpr
+import org.ksmt.expr.KFpGreaterExpr
+import org.ksmt.expr.KFpGreaterOrEqualExpr
+import org.ksmt.expr.KFpIsInfiniteExpr
+import org.ksmt.expr.KFpIsNaNExpr
+import org.ksmt.expr.KFpIsNegativeExpr
+import org.ksmt.expr.KFpIsNormalExpr
+import org.ksmt.expr.KFpIsPositiveExpr
+import org.ksmt.expr.KFpIsSubnormalExpr
+import org.ksmt.expr.KFpIsZeroExpr
+import org.ksmt.expr.KFpLessExpr
+import org.ksmt.expr.KFpLessOrEqualExpr
+import org.ksmt.expr.KFpMaxExpr
+import org.ksmt.expr.KFpMinExpr
+import org.ksmt.expr.KFpMulExpr
+import org.ksmt.expr.KFpNegationExpr
+import org.ksmt.expr.KFpRemExpr
+import org.ksmt.expr.KFpRoundToIntegralExpr
+import org.ksmt.expr.KFpRoundingModeExpr
+import org.ksmt.expr.KFpSqrtExpr
+import org.ksmt.expr.KFpSubExpr
+import org.ksmt.expr.KFpToBvExpr
+import org.ksmt.expr.KFpToFpExpr
+import org.ksmt.expr.KFpToIEEEBvExpr
+import org.ksmt.expr.KFpToRealExpr
 import org.ksmt.expr.KFunctionApp
+import org.ksmt.expr.KFunctionAsArray
+import org.ksmt.expr.KGeArithExpr
+import org.ksmt.expr.KGtArithExpr
 import org.ksmt.expr.KImpliesExpr
+import org.ksmt.expr.KInt32NumExpr
+import org.ksmt.expr.KInt64NumExpr
+import org.ksmt.expr.KIntBigNumExpr
+import org.ksmt.expr.KIsIntRealExpr
 import org.ksmt.expr.KIteExpr
+import org.ksmt.expr.KLeArithExpr
+import org.ksmt.expr.KLtArithExpr
+import org.ksmt.expr.KModIntExpr
+import org.ksmt.expr.KMulArithExpr
 import org.ksmt.expr.KNotExpr
 import org.ksmt.expr.KOrExpr
+import org.ksmt.expr.KPowerArithExpr
 import org.ksmt.expr.KQuantifier
+import org.ksmt.expr.KRealNumExpr
+import org.ksmt.expr.KRealToFpExpr
+import org.ksmt.expr.KRemIntExpr
+import org.ksmt.expr.KSubArithExpr
+import org.ksmt.expr.KToIntRealExpr
+import org.ksmt.expr.KToRealIntExpr
 import org.ksmt.expr.KTrue
+import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.solver.KSolverUnsupportedFeatureException
@@ -84,6 +142,7 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.solver.util.KExprInternalizerBase
+import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv16Sort
@@ -91,6 +150,10 @@ import org.ksmt.sort.KBv32Sort
 import org.ksmt.sort.KBv64Sort
 import org.ksmt.sort.KBv8Sort
 import org.ksmt.sort.KBvSort
+import org.ksmt.sort.KFp128Sort
+import org.ksmt.sort.KFp16Sort
+import org.ksmt.sort.KFp32Sort
+import org.ksmt.sort.KFp64Sort
 import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KIntSort
@@ -100,7 +163,7 @@ import org.ksmt.sort.KSortVisitor
 import org.ksmt.sort.KUninterpretedSort
 
 open class KBitwuzlaExprInternalizer(
-    override val ctx: KContext,
+    private val ctx: KContext,
     val bitwuzlaCtx: KBitwuzlaContext
 ) : KExprInternalizerBase<BitwuzlaTerm>() {
 
@@ -117,33 +180,34 @@ open class KBitwuzlaExprInternalizer(
         saveExprInternalizationResult(expr, internalized)
     }
 
-    /*
-    * Create Bitwuzla term from KSmt expression
+    /**
+    * Create Bitwuzla term from KSMT expression
     * */
     fun <T : KSort> KExpr<T>.internalize(): BitwuzlaTerm {
         bitwuzlaCtx.ensureActive()
         return internalizeExpr()
     }
 
-    /*
-    * Create Bitwuzla sort from KSmt sort
+    /**
+    * Create Bitwuzla sort from KSMT sort
     * */
     fun <T : KSort> T.internalizeSort(): BitwuzlaSort = accept(sortInternalizer)
 
-    /*
-    * Create Bitwuzla function sort for KSmt declaration.
-    * If declaration is a constant then nonfunction sort is returned
+    /**
+    * Create Bitwuzla function sort for KSMT declaration.
+     *
+    * If [this] declaration is a constant then non-function sort is returned
     * */
     fun <T : KSort> KDecl<T>.bitwuzlaFunctionSort(): BitwuzlaSort = accept(functionSortInternalizer)
 
-    fun saveExprInternalizationResult(expr: KExpr<*>, term: BitwuzlaTerm) {
+    private fun saveExprInternalizationResult(expr: KExpr<*>, term: BitwuzlaTerm) {
         bitwuzlaCtx.internalizeExpr(expr) { term }
         val kind = Native.bitwuzlaTermGetKind(term)
 
-        /**
+        /*
          * Save internalized values for [KBitwuzlaExprConverter] needs
          * @see [KBitwuzlaContext.saveInternalizedValue]
-         * */
+         */
         if (kind != BitwuzlaKind.BITWUZLA_KIND_VAL) return
 
         if (bitwuzlaCtx.convertValue(term) != null) return
@@ -153,17 +217,11 @@ open class KBitwuzlaExprInternalizer(
         }
     }
 
-    /**
-     * [KBitwuzlaExprInternalizer] overrides transform for all supported Bitwuzla expressions.
-     * Therefore, if basic expr transform is invoked expression is unsupported.
-     * */
-    override fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> =
-        error("Unsupported expr $expr")
-
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = with(expr) {
         transformList(args) { args: Array<BitwuzlaTerm> ->
             val const = bitwuzlaCtx.mkConstant(decl, decl.bitwuzlaFunctionSort())
             val termArgs = (listOf(const) + args).toTypedArray()
+
             Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, termArgs)
         }
     }
@@ -376,7 +434,8 @@ open class KBitwuzlaExprInternalizer(
         transform(value) { arg: BitwuzlaTerm ->
             Native.bitwuzlaMkTerm1Indexed2(
                 bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_EXTRACT,
-                arg, expr.high, expr.low
+                arg,
+                high, low
             )
         }
     }
@@ -385,7 +444,8 @@ open class KBitwuzlaExprInternalizer(
         transform(value) { arg: BitwuzlaTerm ->
             Native.bitwuzlaMkTerm1Indexed1(
                 bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_SIGN_EXTEND,
-                arg, expr.i
+                arg,
+                extensionSize
             )
         }
     }
@@ -394,7 +454,8 @@ open class KBitwuzlaExprInternalizer(
         transform(value) { arg: BitwuzlaTerm ->
             Native.bitwuzlaMkTerm1Indexed1(
                 bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_ZERO_EXTEND,
-                arg, expr.i
+                arg,
+                extensionSize
             )
         }
     }
@@ -403,7 +464,8 @@ open class KBitwuzlaExprInternalizer(
         transform(value) { arg: BitwuzlaTerm ->
             Native.bitwuzlaMkTerm1Indexed1(
                 bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_REPEAT,
-                arg, expr.i
+                arg,
+                repeatNumber
             )
         }
     }
@@ -432,7 +494,8 @@ open class KBitwuzlaExprInternalizer(
         transform(value) { arg: BitwuzlaTerm ->
             Native.bitwuzlaMkTerm1Indexed1(
                 bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_ROLI,
-                arg, expr.i
+                arg,
+                rotationNumber
             )
         }
     }
@@ -441,7 +504,8 @@ open class KBitwuzlaExprInternalizer(
         transform(value) { arg: BitwuzlaTerm ->
             Native.bitwuzlaMkTerm1Indexed1(
                 bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_RORI,
-                arg, expr.i
+                arg,
+                rotationNumber
             )
         }
     }
@@ -455,25 +519,22 @@ open class KBitwuzlaExprInternalizer(
         transform(arg0, arg1, kind)
     }
 
-    override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>) = with(expr) {
+    override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>) =
         TODO("no direct support for $expr")
-    }
 
     override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>) = with(expr) {
         transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SSUB_OVERFLOW)
     }
 
-    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>) = with(expr) {
+    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>) =
         TODO("no direct support for $expr")
-    }
 
     override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>) = with(expr) {
         transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SDIV_OVERFLOW)
     }
 
-    override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>) = with(expr) {
+    override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>) =
         TODO("no direct support for $expr")
-    }
 
     override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>) = with(expr) {
         val kind = if (isSigned) {
@@ -481,12 +542,12 @@ open class KBitwuzlaExprInternalizer(
         } else {
             BitwuzlaKind.BITWUZLA_KIND_BV_UMUL_OVERFLOW
         }
+
         transform(arg0, arg1, kind)
     }
 
-    override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) = with(expr) {
+    override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) =
         TODO("no direct support for $expr")
-    }
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) = with(expr) {
         transform(array, index, value, BitwuzlaKind.BITWUZLA_KIND_ARRAY_STORE)
@@ -512,28 +573,267 @@ open class KBitwuzlaExprInternalizer(
                     body.internalize()
                 }
                 val bodyKind = Native.bitwuzlaTermGetKind(body)
+
                 if (bodyKind == BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT) {
                     val selectArgs = Native.bitwuzlaTermGetChildren(body)
                     if (selectArgs[1] == indexVar) {
-                        /** Recognize and support special case of lambda expressions
-                         * which can be produced by [KBitwuzlaExprConverter].
-                         *
-                         * (lambda (i) (select array i)) -> array
+                        /*
+                         Recognize and support special case of lambda expressions
+                         which can be produced by [KBitwuzlaExprConverter].
+
+                         (lambda (i) (select array i)) -> array
                          */
                         return@transform selectArgs[0]
                     }
                 }
+
                 throw KSolverUnsupportedFeatureException("array lambda expressions are not supported in Bitwuzla")
             }
         }
     }
 
-    override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> = expr.internalizeQuantifier { args ->
+    override fun transform(
+        expr: KExistentialQuantifier
+    ): KExpr<KBoolSort> = expr.internalizeQuantifier { args ->
         Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EXISTS, args)
     }
 
-    override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> = expr.internalizeQuantifier { args ->
+    override fun transform(
+        expr: KUniversalQuantifier
+    ): KExpr<KBoolSort> = expr.internalizeQuantifier { args ->
         Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FORALL, args)
+    }
+
+    override fun transform(expr: KBv2IntExpr): KExpr<KIntSort> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpToRealExpr<T>): KExpr<KRealSort> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KRealToFpExpr<T>): KExpr<T> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KModIntExpr): KExpr<KIntSort> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KRemIntExpr): KExpr<KIntSort> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KToRealIntExpr): KExpr<KRealSort> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KInt32NumExpr): KExpr<KIntSort> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KInt64NumExpr): KExpr<KIntSort> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KIntBigNumExpr): KExpr<KIntSort> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KToIntRealExpr): KExpr<KIntSort> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KIsIntRealExpr): KExpr<KBoolSort> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KRealNumExpr): KExpr<KRealSort> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>): KExpr<T> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun <T : KArithSort<T>> transform(expr: KMulArithExpr<T>): KExpr<T> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun <T : KArithSort<T>> transform(expr: KSubArithExpr<T>): KExpr<T> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun <T : KArithSort<T>> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>): KExpr<T> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>): KExpr<T> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun <T : KArithSort<T>> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun <T : KArithSort<T>> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun <T : KArithSort<T>> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun <T : KArithSort<T>> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> {
+        throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KFp16Value): KExpr<KFp16Sort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun transform(expr: KFp32Value): KExpr<KFp32Sort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun transform(expr: KFp64Value): KExpr<KFp64Sort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun transform(expr: KFp128Value): KExpr<KFp128Sort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun transform(expr: KFpCustomSizeValue): KExpr<KFpSort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun transform(expr: KFpRoundingModeExpr): KExpr<KFpRoundingModeSort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpAbsExpr<T>): KExpr<T> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpNegationExpr<T>): KExpr<T> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpAddExpr<T>): KExpr<T> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpSubExpr<T>): KExpr<T> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpMulExpr<T>): KExpr<T> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpDivExpr<T>): KExpr<T> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpFusedMulAddExpr<T>): KExpr<T> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpSqrtExpr<T>): KExpr<T> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpRemExpr<T>): KExpr<T> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpRoundToIntegralExpr<T>): KExpr<T> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpMinExpr<T>): KExpr<T> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpMaxExpr<T>): KExpr<T> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpLessOrEqualExpr<T>): KExpr<KBoolSort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpLessExpr<T>): KExpr<KBoolSort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpGreaterOrEqualExpr<T>): KExpr<KBoolSort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpGreaterExpr<T>): KExpr<KBoolSort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpEqualExpr<T>): KExpr<KBoolSort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpIsNormalExpr<T>): KExpr<KBoolSort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpIsSubnormalExpr<T>): KExpr<KBoolSort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpIsZeroExpr<T>): KExpr<KBoolSort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpIsInfiniteExpr<T>): KExpr<KBoolSort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpIsNaNExpr<T>): KExpr<KBoolSort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpIsNegativeExpr<T>): KExpr<KBoolSort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpIsPositiveExpr<T>): KExpr<KBoolSort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>): KExpr<KBvSort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <T : KFpSort> transform(expr: KBvToFpExpr<T>): KExpr<T> {
+        TODO("Fp theory is not yet supported in bitwuzla")
+    }
+
+    override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
+        TODO("KFunctionAsArray internalization is not implemented in bitwuzla")
     }
 
     inline fun <T : KQuantifier> T.internalizeQuantifier(
@@ -547,8 +847,11 @@ open class KBitwuzlaExprInternalizer(
             val body = with(bodyInternalizer) {
                 body.internalize()
             }
+
             if (bounds.isEmpty()) return@transform body
+
             val args = (boundVars + body).toTypedArray()
+
             internalizer(args)
         }
     }
@@ -563,18 +866,21 @@ open class KBitwuzlaExprInternalizer(
                 if (sort.range is KArraySort<*, *> || sort.domain is KArraySort<*, *>) {
                     throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support nested arrays")
                 }
+
                 val domain = sort.domain.accept(this@SortInternalizer)
                 val range = sort.range.accept(this@SortInternalizer)
+
                 Native.bitwuzlaMkArraySort(bitwuzlaCtx.bitwuzla, domain, range)
             }
 
         override fun <S : KBvSort> visit(sort: S): BitwuzlaSort =
             bitwuzlaCtx.internalizeSort(sort) {
                 val size = sort.sizeBits.toInt()
+
                 if (size == 1) {
                     bitwuzlaCtx.boolSort
                 } else {
-                    Native.bitwuzlaMkBvSort(bitwuzlaCtx.bitwuzla, sort.sizeBits.toInt())
+                    Native.bitwuzlaMkBvSort(bitwuzlaCtx.bitwuzla, size)
                 }
             }
 
@@ -606,12 +912,16 @@ open class KBitwuzlaExprInternalizer(
             if (decl.argSorts.any { it is KArraySort<*, *> }) {
                 throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support functions with arrays in domain")
             }
+
             if (decl.argSorts.isNotEmpty() && decl.sort is KArraySort<*, *>) {
                 throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support functions with arrays in range")
             }
+
             val domain = decl.argSorts.map { it.accept(sortInternalizer) }.toTypedArray()
             val range = decl.sort.accept(sortInternalizer)
+
             if (domain.isEmpty()) return@internalizeDeclSort range
+
             Native.bitwuzlaMkFunSort(bitwuzlaCtx.bitwuzla, domain.size, domain, range)
         }
     }

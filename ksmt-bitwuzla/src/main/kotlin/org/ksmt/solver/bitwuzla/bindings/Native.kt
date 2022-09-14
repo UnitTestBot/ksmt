@@ -70,7 +70,7 @@ object Native {
      * This deletes the given instance and creates a new instance in place.
      * The given instance must have been created via [bitwuzla_new].
      *
-     * Note:  All sorts and terms associated with the given instance are released
+     * Note: All sorts and terms associated with the given instance are released
      * and thus invalidated.
      *
      * @param bitwuzla The Bitwuzla instance to reset.
@@ -198,7 +198,7 @@ object Native {
      * Configure an abort callback function, which is called instead of exit
      * on abort conditions.
      *
-     * Note:  This function is not thread safe (the function pointer is maintained
+     * Note: This function is not thread safe (the function pointer is maintained
      * as a global variable). It you use threading, make sure to set the
      * abort callback prior to creating threads.
      *
@@ -332,7 +332,7 @@ object Native {
     /**
      * Create a Boolean sort.
      *
-     * Note:  A Boolean sort is a bit-vector sort of size 1.
+     * Note: A Boolean sort is a bit-vector sort of size 1.
      *
      * @param bitwuzla The Bitwuzla instance.
      *
@@ -438,7 +438,7 @@ object Native {
     /**
      * Create a true value.
      *
-     * Note:  This creates a bit-vector value 1 of size 1.
+     * Note: This creates a bit-vector value 1 of size 1.
      *
      * @param bitwuzla The Bitwuzla instance.
      *
@@ -453,7 +453,7 @@ object Native {
     /**
      * Create a false value.
      *
-     * Note:  This creates a bit-vector value 0 of size 1.
+     * Note: This creates a bit-vector value 0 of size 1.
      *
      * @param bitwuzla The Bitwuzla instance.
      *
@@ -638,7 +638,7 @@ object Native {
      *
      * Parameter `base` determines the base of the string representation.
      *
-     * Note:  Given value must fit into a bit-vector of given size (sort).
+     * Note: Given value must fit into a bit-vector of given size (sort).
      *
      * @param bitwuzla The Bitwuzla instance.
      * @param sort The sort of the value.
@@ -669,7 +669,7 @@ object Native {
     /**
      * Create a bit-vector value from its unsigned integer representation.
      *
-     * Note:  If given value does not fit into a bit-vector of given size (sort),
+     * Note: If given value does not fit into a bit-vector of given size (sort),
      * the value is truncated to fit.
      *
      * @param bitwuzla The Bitwuzla instance.
@@ -1082,7 +1082,7 @@ object Native {
     /**
      * Create a variable of given sort with given symbol.
      *
-     * Note:  This creates a variable to be bound by quantifiers or lambdas.
+     * Note: This creates a variable to be bound by quantifiers or lambdas.
      *
      * @param bitwuzla The Bitwuzla instance.
      * @param sort The sort of the variable.
@@ -1108,7 +1108,7 @@ object Native {
      * Requires that incremental solving has been enabled via
      * [bitwuzla_set_option].
      *
-     * Note:  Assumptions added via this [bitwuzla_assume] are not affected by
+     * Note: Assumptions added via this [bitwuzla_assume] are not affected by
      * context level changes and are only valid until the next
      * [bitwuzla_check_sat] call, no matter at which level they were
      * assumed.
@@ -1131,7 +1131,7 @@ object Native {
      * Requires that incremental solving has been enabled via
      * [bitwuzla_set_option].
      *
-     * Note:  Assumptions added via this [bitwuzla_assume] are not affected by
+     * Note: Assumptions added via this [bitwuzla_assume] are not affected by
      * context level changes and are only valid until the next
      * [bitwuzla_check_sat] call, no matter at which level they were
      * assumed.
@@ -1166,7 +1166,7 @@ object Native {
      * Requires that incremental solving has been enabled via
      * [bitwuzla_set_option].
      *
-     * Note:  Assumptions added via this function are not affected by context level
+     * Note: Assumptions added via this function are not affected by context level
      * changes and are only valid until the next [bitwuzla_check_sat] call,
      * no matter at which level they were assumed.
      *
@@ -1238,6 +1238,7 @@ object Native {
     fun bitwuzlaGetUnsatAssumptions(bitwuzla: Bitwuzla): Array<BitwuzlaTerm> {
         val size = IntByReference()
         val resultPtr = bitwuzla_get_unsat_assumptions(bitwuzla, size).checkError()
+
         return resultPtr.load(size.value)
     }
 
@@ -1298,7 +1299,7 @@ object Native {
     /**
      * Simplify the current input formula.
      *
-     * Note:  Assumptions are not considered for simplification.
+     * Note: Assumptions are not considered for simplification.
      *
      * @param bitwuzla The Bitwuzla instance.
      *
@@ -1322,7 +1323,7 @@ object Native {
      * The search for a solution can by guided by making assumptions via
      * [bitwuzla_assume].
      *
-     * Note:  Assertions and assumptions are combined via Boolean and.  Multiple
+     * Note: Assertions and assumptions are combined via Boolean and.  Multiple
      * calls to this function require enabling incremental solving via
      * [bitwuzla_set_option].
      *
@@ -1395,7 +1396,9 @@ object Native {
         val exponentPtr = PointerByReference()
         val significandPtr = PointerByReference()
         bitwuzla_get_fp_value(bitwuzla, term, signPtr, exponentPtr, significandPtr)
+
         checkError()
+
         return FpValue(
             signPtr.value.getString(0),
             exponentPtr.value.getString(0),
@@ -1455,6 +1458,7 @@ object Native {
         bitwuzla_get_array_value(bitwuzla, term, indices, values, size, defaultValue)
         checkError()
         val sz = size.value
+
         return ArrayValue(
             sz,
             indices.value.load(sz),
@@ -1683,9 +1687,12 @@ object Native {
         val parsedStatus = IntByReference()
         val result = bitwuzla_parse_format(
             bitwuzla, format, infile.ptr, infileName, outfile.ptr, errorMsg, parsedStatus
-        ).checkError()
+        )
+        result.checkError()
+
         infile.close()
         outfile.close()
+
         return ParseFormatResult(
             BitwuzlaResult.fromValue(result),
             errorMsg.value?.let { if (Pointer.NULL == it) null else it.getString(0) },
@@ -1734,8 +1741,13 @@ object Native {
         term: BitwuzlaTerm,
         mapKeys: Array<BitwuzlaTerm>,
         mapValues: Array<BitwuzlaTerm>
-    ): BitwuzlaTerm = bitwuzla_substitute_term(bitwuzla, term, mapKeys.size, mapKeys.mkPtr(), mapValues.mkPtr())
-        .checkError()
+    ): BitwuzlaTerm = bitwuzla_substitute_term(
+        bitwuzla,
+        term,
+        mapKeys.size,
+        mapKeys.mkPtr(),
+        mapValues.mkPtr()
+    ).checkError()
 
     private external fun bitwuzla_substitute_term(
         bitwuzla: Bitwuzla,
@@ -1767,8 +1779,11 @@ object Native {
     ) {
         val termsPtr = terms.mkPtr()
         bitwuzla_substitute_terms(bitwuzla, terms.size, termsPtr, mapKeys.size, mapKeys.mkPtr(), mapValues.mkPtr())
+
         checkError()
+
         val result = termsPtr.load(terms.size)
+
         for (i in terms.indices) {
             terms[i] = result[i]
         }
@@ -2729,14 +2744,17 @@ object Native {
 
     private fun <T : Pointer> Array<T>.mkPtr(): Pointer {
         val memory = Memory(Native.POINTER_SIZE.toLong() * size)
+
         for (i in indices) {
             memory.setPointer(Native.POINTER_SIZE.toLong() * i, this[i])
         }
+
         return memory
     }
 
     private fun Pointer?.load(size: Int): Array<Pointer> {
         if (this == null || Pointer.NULL == this || size == 0) return emptyArray()
+
         return getPointerArray(0, size)
     }
 
@@ -2744,11 +2762,12 @@ object Native {
 
     private fun <T> T.checkError(): T {
         val pendingError = error
+
         if (pendingError != null) {
             error = null
             throw BitwuzlaException(pendingError)
         }
+
         return this
     }
-
 }

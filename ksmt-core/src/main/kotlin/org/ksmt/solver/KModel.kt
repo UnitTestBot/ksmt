@@ -6,8 +6,11 @@ import org.ksmt.sort.KSort
 
 interface KModel {
     val declarations: Set<KDecl<*>>
-    fun <T : KSort> eval(expr: KExpr<T>, complete: Boolean = false): KExpr<T>
+
+    fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean = false): KExpr<T>
+
     fun <T : KSort> interpretation(decl: KDecl<T>): KFuncInterp<T>?
+
     fun detach(): KModel
 
     data class KFuncInterp<T : KSort>(

@@ -125,6 +125,7 @@ open class KZ3Solver(private val ctx: KContext) : KSolver {
             "Model are only available after SAT checks, current solver status: $lastCheckStatus"
         }
         val model = solver.model
+
         KZ3Model(model, ctx, z3InternCtx, exprInternalizer, exprConverter)
     }
 
@@ -192,6 +193,7 @@ open class KZ3Solver(private val ctx: KContext) : KSolver {
             cleanupStaleContexts()
             val cleanupHandler = PhantomReference(solver, cleanupHandlers)
             contextForCleanup[cleanupHandler] = context
+
             return cleanupHandler
         }
 

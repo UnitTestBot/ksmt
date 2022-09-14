@@ -151,7 +151,7 @@ class BenchmarksBasedTest {
             with(converter) { assignments.map { (const, value) -> const.convert<KSort>() to value } }
         }
         val assignmentsToCheck = expectedModelAssignments.map { (const, expectedValue) ->
-            val actualValue = actualModel.eval(const, complete = false)
+            val actualValue = actualModel.eval(const, isComplete = false)
             Triple(const, expectedValue, actualValue)
         }
 

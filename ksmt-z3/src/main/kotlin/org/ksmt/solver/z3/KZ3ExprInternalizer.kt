@@ -153,10 +153,12 @@ import org.ksmt.expr.KFpToFpExpr
 import org.ksmt.expr.KFpToIEEEBvExpr
 import org.ksmt.expr.KFpToRealExpr
 import org.ksmt.expr.KFpValue
+import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KRealToFpExpr
 import org.ksmt.expr.KXorExpr
 import org.ksmt.solver.util.KExprInternalizerBase
 import org.ksmt.sort.KArithSort
+import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFp128Sort
@@ -170,14 +172,14 @@ import org.ksmt.sort.KSort
 
 @Suppress("SpreadOperator")
 open class KZ3ExprInternalizer(
-    override val ctx: KContext,
+    val ctx: KContext,
     private val z3Ctx: Context,
     private val z3InternCtx: KZ3InternalizationContext,
     private val sortInternalizer: KZ3SortInternalizer,
     private val declInternalizer: KZ3DeclInternalizer
 ) : KExprInternalizerBase<Expr<*>>() {
-
     override fun findInternalizedExpr(expr: KExpr<*>): Expr<*>? = z3InternCtx.findInternalizedExpr(expr)
+
     override fun saveInternalizedExpr(expr: KExpr<*>, internalized: Expr<*>) {
         z3InternCtx.internalizeExpr(expr) { internalized }
     }
@@ -187,9 +189,6 @@ open class KZ3ExprInternalizer(
     fun <T : KDecl<*>> T.internalizeDecl(): FuncDecl<*> = accept(declInternalizer)
 
     fun <T : KSort> T.internalizeSort(): Sort = accept(sortInternalizer)
-
-    override fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> =
-        error("Unexpected expr $expr")
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>) = with(expr) {
         transformList(args) { args: Array<Expr<*>> ->
@@ -231,8 +230,9 @@ open class KZ3ExprInternalizer(
         )
     }
 
-    override fun <T : KBvSort> transformBitVecValue(expr: KBitVecValue<T>) = expr.transform {
+    fun <T : KBvSort> transformBitVecValue(expr: KBitVecValue<T>) = expr.transform {
         val sizeBits = expr.sort().sizeBits.toInt()
+
         when (expr) {
             is KBitVec1Value -> z3Ctx.mkBvNumeral(booleanArrayOf(expr.value))
             is KBitVec8Value, is KBitVec16Value, is KBitVec32Value -> {
@@ -244,6 +244,7 @@ open class KZ3ExprInternalizer(
                     BooleanArray(value.length) { value[it] == '1' }
                 }
                 check(bits.size == sizeBits) { "bv bits size mismatch" }
+
                 z3Ctx.mkBvNumeral(bits)
             }
             else -> error("Unknown bv expression class ${expr::class} in transformation method: $expr")
@@ -348,15 +349,15 @@ open class KZ3ExprInternalizer(
     }
 
     override fun transform(expr: KBvSignExtensionExpr) = with(expr) {
-        transform(value) { value: BitVecExpr -> z3Ctx.mkSignExt(i, value) }
+        transform(value) { value: BitVecExpr -> z3Ctx.mkSignExt(extensionSize, value) }
     }
 
     override fun transform(expr: KBvZeroExtensionExpr) = with(expr) {
-        transform(value) { value: BitVecExpr -> z3Ctx.mkZeroExt(i, value) }
+        transform(value) { value: BitVecExpr -> z3Ctx.mkZeroExt(extensionSize, value) }
     }
 
     override fun transform(expr: KBvRepeatExpr) = with(expr) {
-        transform(value) { value: BitVecExpr -> z3Ctx.mkRepeat(i, value) }
+        transform(value) { value: BitVecExpr -> z3Ctx.mkRepeat(repeatNumber, value) }
     }
 
     override fun <T : KBvSort> transform(expr: KBvShiftLeftExpr<T>) =
@@ -372,14 +373,14 @@ open class KZ3ExprInternalizer(
         with(expr) { transform(arg0, arg1, z3Ctx::mkBVRotateLeft) }
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftIndexedExpr<T>) = with(expr) {
-        transform(value) { value: BitVecExpr -> z3Ctx.mkBVRotateLeft(i, value) }
+        transform(value) { value: BitVecExpr -> z3Ctx.mkBVRotateLeft(rotationNumber, value) }
     }
 
     override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>) =
         with(expr) { transform(arg0, arg1, z3Ctx::mkBVRotateRight) }
 
     override fun <T : KBvSort> transform(expr: KBvRotateRightIndexedExpr<T>) = with(expr) {
-        transform(value) { value: BitVecExpr -> z3Ctx.mkBVRotateRight(i, value) }
+        transform(value) { value: BitVecExpr -> z3Ctx.mkBVRotateRight(rotationNumber, value) }
     }
 
     override fun transform(expr: KBv2IntExpr) = with(expr) {
@@ -419,8 +420,9 @@ open class KZ3ExprInternalizer(
     override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) =
         with(expr) { transform(arg0, arg1, z3Ctx::mkBVMulNoUnderflow) }
 
-    override fun <T : KFpSort> transformFpValue(expr: KFpValue<T>): KExpr<T> = expr.transform {
+    fun <T : KFpSort> transformFpValue(expr: KFpValue<T>): KExpr<T> = expr.transform {
         val sort = with(ctx) { expr.sort.internalizeSort() } as FPSort
+
         with(expr) {
             when (this) {
                 is KFp16Value -> z3Ctx.mkFP(value, sort)
@@ -698,5 +700,9 @@ open class KZ3ExprInternalizer(
                 skolemId = null
             )
         }
+    }
+
+    override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
+        TODO("KFunctionAsArray internalization is not implemented in z3")
     }
 }

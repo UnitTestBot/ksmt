@@ -48,7 +48,6 @@ open class KZ3ExprConverter(
     private val ctx: KContext,
     private val z3InternCtx: KZ3InternalizationContext
 ) : KExprConverterBase<Expr<*>>() {
-
     override fun findConvertedNative(expr: Expr<*>): KExpr<*>? {
         return z3InternCtx.findConvertedExpr(expr)
     }
@@ -72,6 +71,7 @@ open class KZ3ExprConverter(
     open fun convertDecl(decl: FuncDecl<*>): KDecl<*> = with(ctx) {
         val sort = convertSort(decl.range)
         val args = decl.domain.map { convertSort(it) }
+
         return mkFuncDecl("${decl.name}", sort, args)
     }
 
@@ -88,7 +88,6 @@ open class KZ3ExprConverter(
                 val fpSort = sort as FPSort
                 mkFpSort(fpSort.eBits.toUInt(), fpSort.sBits.toUInt())
             }
-
             Z3_sort_kind.Z3_UNINTERPRETED_SORT -> mkUninterpretedSort(sort.name.toString())
             Z3_sort_kind.Z3_ROUNDING_MODE_SORT -> mkFpRoundingModeSort()
             Z3_sort_kind.Z3_DATATYPE_SORT,
@@ -205,19 +204,23 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_CONCAT -> expr.convertReduced(::mkBvConcatExpr)
             Z3_decl_kind.Z3_OP_SIGN_EXT -> expr.convert { arg: KExpr<KBvSort> ->
                 val size = expr.funcDecl.parameters[0].int
+
                 mkBvSignExtensionExpr(size, arg)
             }
             Z3_decl_kind.Z3_OP_ZERO_EXT -> expr.convert { arg: KExpr<KBvSort> ->
                 val size = expr.funcDecl.parameters[0].int
+
                 mkBvZeroExtensionExpr(size, arg)
             }
             Z3_decl_kind.Z3_OP_EXTRACT -> expr.convert { arg: KExpr<KBvSort> ->
                 val high = expr.funcDecl.parameters[0].int
                 val low = expr.funcDecl.parameters[1].int
+
                 mkBvExtractExpr(high, low, arg)
             }
             Z3_decl_kind.Z3_OP_REPEAT -> expr.convert { arg: KExpr<KBvSort> ->
                 val repeatCount = expr.funcDecl.parameters[0].int
+
                 mkBvRepeatExpr(repeatCount, arg)
             }
             Z3_decl_kind.Z3_OP_BREDOR -> expr.convert(::mkBvReductionOrExpr)
@@ -228,10 +231,12 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_BASHR -> expr.convert(::mkBvArithShiftRightExpr)
             Z3_decl_kind.Z3_OP_ROTATE_LEFT -> expr.convert { arg: KExpr<KBvSort> ->
                 val rotation = expr.funcDecl.parameters[0].int
+
                 mkBvRotateLeftExpr(rotation, arg)
             }
             Z3_decl_kind.Z3_OP_ROTATE_RIGHT -> expr.convert { arg: KExpr<KBvSort> ->
                 val rotation = expr.funcDecl.parameters[0].int
+
                 mkBvRotateRightExpr(rotation, arg)
             }
             Z3_decl_kind.Z3_OP_EXT_ROTATE_LEFT -> expr.convert(::mkBvRotateLeftExpr)
@@ -261,8 +266,7 @@ open class KZ3ExprConverter(
                 val z3Decl = expr.funcDecl.parameters[0].funcDecl
 
                 @Suppress("UNCHECKED_CAST")
-                val decl = convertDecl(z3Decl) as? KFuncDecl<KSort>
-                    ?: error("unexpected as-array decl $z3Decl")
+                val decl = convertDecl(z3Decl) as? KFuncDecl<KSort> ?: error("unexpected as-array decl $z3Decl")
                 mkFunctionAsArray<KSort, KSort>(decl)
             }
 
@@ -348,6 +352,7 @@ open class KZ3ExprConverter(
         val fpSort = convertSort(expr.sort) as KFpSort
         val args = expr.args
         val sorts = args.map { it.sort }
+
         return when {
             args.size == 1 && sorts[0] is BitVecSort -> expr.convert { bv: KExpr<KBvSort> ->
                 val exponentBits = fpSort.exponentBits.toInt()
@@ -376,14 +381,18 @@ open class KZ3ExprConverter(
                 expr.convert { sign: KExpr<KBv1Sort>, exp: KExpr<KBvSort>, significand: KExpr<KBvSort> ->
                     mkFpFromBvExpr(sign, exp, significand)
                 }
-
             args.size == 3 && sorts[0] is FPRMSort && sorts[1] is ArithSort && sorts[2] is ArithSort ->
-                expr.convert<KFpSort, KFpRoundingModeSort, KArithSort<*>, KArithSort<*>> {
-                        rm: KExpr<KFpRoundingModeSort>, arg1: KExpr<KArithSort<*>>, arg2: KExpr<KArithSort<*>> ->
-                    TODO("${rm.sort} + real (${arg1.sort}) + int (${arg2.sort}) -> float")
-                }
+                expr.convert(::convertRealToFpExpr)
             else -> error("unexpected fpaTofp: $expr")
         }
+    }
+
+    private fun convertRealToFpExpr(
+        rm: KExpr<KFpRoundingModeSort>,
+        arg1: KExpr<KArithSort<*>>,
+        arg2: KExpr<KArithSort<*>>
+    ): KExpr<KFpSort> = with(ctx) {
+        TODO("unsupported fpaTofp: ${rm.sort} + real (${arg1.sort}) + int (${arg2.sort}) -> float")
     }
 
     open fun convertNumeral(expr: Expr<*>): ExprConversionResult = when (expr.sort.sortKind) {
@@ -397,7 +406,8 @@ open class KZ3ExprConverter(
 
     @Suppress("MemberVisibilityCanBePrivate")
     fun convertNumeral(expr: IntNum): KIntNumExpr = with(ctx) {
-        expr.intOrNull()?.let { mkIntNum(it) }
+        expr.intOrNull()
+            ?.let { mkIntNum(it) }
             ?: expr.longOrNull()?.let { mkIntNum(it) }
             ?: mkIntNum(expr.bigInteger)
     }
@@ -460,9 +470,11 @@ open class KZ3ExprConverter(
         val preparedBody = expr.body.substituteVars(z3Bounds.toTypedArray())
 
         val body = findConvertedNative(preparedBody)
+
         if (body == null) {
             exprStack.add(expr)
             exprStack.add(preparedBody)
+
             return argumentsConversionRequired
         }
 
@@ -477,6 +489,7 @@ open class KZ3ExprConverter(
             expr.isLambda -> TODO("array lambda converter")
             else -> TODO("unexpected quantifier: $expr")
         }
+
         ExprConversionResult(convertedExpr)
     }
 

@@ -12,7 +12,7 @@ repositories {
 
 val z3native by configurations.creating
 
-val z3Version = "4.10.2"
+val z3Version = "4.11.2"
 
 val z3JavaJar by lazy { z3Release("x64-win", "*.jar") }
 
@@ -112,7 +112,7 @@ tasks.withType<ShadowJar> {
     }
     val implementation = project.configurations["implementation"].dependencies.toSet()
     val runtimeOnly = project.configurations["runtimeOnly"].dependencies.toSet()
-    val dependencies =  (implementation + runtimeOnly)
+    val dependencies = (implementation + runtimeOnly)
     project.configurations.shadow.get().dependencies.addAll(dependencies)
 }
 

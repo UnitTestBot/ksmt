@@ -13,12 +13,15 @@ open class KModelImpl(
     override val declarations: Set<KDecl<*>>
         get() = interpretations.keys
 
-    override fun <T : KSort> eval(expr: KExpr<T>, complete: Boolean): KExpr<T> =
-        with(KModelEvaluator(ctx, this, complete)) { expr.eval() }
+    override fun <T : KSort> eval(
+        expr: KExpr<T>,
+        isComplete: Boolean
+    ): KExpr<T> = with(KModelEvaluator(ctx, this, isComplete)) { expr.eval() }
 
     @Suppress("UNCHECKED_CAST")
-    override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? =
-        interpretations[decl] as? KModel.KFuncInterp<T>
+    override fun <T : KSort> interpretation(
+        decl: KDecl<T>
+    ): KModel.KFuncInterp<T>? = interpretations[decl] as? KModel.KFuncInterp<T>
 
     override fun detach(): KModel = this
 }

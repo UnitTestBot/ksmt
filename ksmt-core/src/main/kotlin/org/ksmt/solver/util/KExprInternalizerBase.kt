@@ -1,25 +1,26 @@
 package org.ksmt.solver.util
 
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.KFpRoundingMode
-import org.ksmt.expr.transformer.KTransformer
+import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.solver.util.KExprInternalizerBase.ExprInternalizationResult.Companion.argumentsInternalizationRequired
 import org.ksmt.solver.util.KExprInternalizerBase.ExprInternalizationResult.Companion.notInitializedInternalizationResult
 import org.ksmt.sort.KSort
 
-abstract class KExprInternalizerBase<T : Any> : KTransformer {
+abstract class KExprInternalizerBase<T : Any> : KTransformerBase {
     val exprStack = arrayListOf<KExpr<*>>()
 
     /**
-     * Keeps result of last [KTransformer.transform] invocation.
+     * Keeps result of last [KTransformerBase.transform] invocation.
      * */
     var lastExprInternalizationResult: ExprInternalizationResult = notInitializedInternalizationResult
 
     abstract fun findInternalizedExpr(expr: KExpr<*>): T?
+
     abstract fun saveInternalizedExpr(expr: KExpr<*>, internalized: T)
 
     fun <S : KSort> KExpr<S>.internalizeExpr(): T {
         exprStack.add(this)
+
         while (exprStack.isNotEmpty()) {
             lastExprInternalizationResult = notInitializedInternalizationResult
             val expr = exprStack.removeLast()
@@ -40,7 +41,7 @@ abstract class KExprInternalizerBase<T : Any> : KTransformer {
                 "Internalization result wasn't initialized during expr internalization"
             }
 
-            if (!lastExprInternalizationResult.argumentsInternalizationRequired) {
+            if (!lastExprInternalizationResult.isArgumentsInternalizationRequired) {
                 saveInternalizedExpr(expr, lastExprInternalizationResult.internalizedExpr())
             }
         }
@@ -60,12 +61,13 @@ abstract class KExprInternalizerBase<T : Any> : KTransformer {
         operation: (A0) -> T
     ): S = also {
         val internalizedArg = findInternalizedExpr(arg)
-        if (internalizedArg == null) {
+
+        lastExprInternalizationResult = if (internalizedArg == null) {
             exprStack.add(this)
             exprStack.add(arg)
-            lastExprInternalizationResult = argumentsInternalizationRequired
+            argumentsInternalizationRequired
         } else {
-            lastExprInternalizationResult = ExprInternalizationResult(operation(internalizedArg as A0))
+            ExprInternalizationResult(operation(internalizedArg as A0))
         }
     }
 
@@ -76,13 +78,14 @@ abstract class KExprInternalizerBase<T : Any> : KTransformer {
     ): S = also {
         val internalizedArg0 = findInternalizedExpr(arg0)
         val internalizedArg1 = findInternalizedExpr(arg1)
-        if (internalizedArg0 == null || internalizedArg1 == null) {
+
+        lastExprInternalizationResult = if (internalizedArg0 == null || internalizedArg1 == null) {
             exprStack.add(this)
             internalizedArg0 ?: exprStack.add(arg0)
             internalizedArg1 ?: exprStack.add(arg1)
-            lastExprInternalizationResult = argumentsInternalizationRequired
+            argumentsInternalizationRequired
         } else {
-            lastExprInternalizationResult = ExprInternalizationResult(
+            ExprInternalizationResult(
                 operation(internalizedArg0 as A0, internalizedArg1 as A1)
             )
         }
@@ -97,14 +100,17 @@ abstract class KExprInternalizerBase<T : Any> : KTransformer {
         val internalizedArg0 = findInternalizedExpr(arg0)
         val internalizedArg1 = findInternalizedExpr(arg1)
         val internalizedArg2 = findInternalizedExpr(arg2)
-        if (internalizedArg0 == null || internalizedArg1 == null || internalizedArg2 == null) {
+
+        val someArgumentIsNull = internalizedArg0 == null || internalizedArg1 == null || internalizedArg2 == null
+
+        lastExprInternalizationResult = if (someArgumentIsNull) {
             exprStack.add(this)
             internalizedArg0 ?: exprStack.add(arg0)
             internalizedArg1 ?: exprStack.add(arg1)
             internalizedArg2 ?: exprStack.add(arg2)
-            lastExprInternalizationResult = argumentsInternalizationRequired
+            argumentsInternalizationRequired
         } else {
-            lastExprInternalizationResult = ExprInternalizationResult(
+            ExprInternalizationResult(
                 operation(internalizedArg0 as A0, internalizedArg1 as A1, internalizedArg2 as A2)
             )
         }
@@ -153,19 +159,25 @@ abstract class KExprInternalizerBase<T : Any> : KTransformer {
         val internalizedArgs = mutableListOf<A>()
         var exprAdded = false
         var argsReady = true
+
         for (arg in args) {
             val internalized = findInternalizedExpr(arg)
+
             if (internalized != null) {
                 internalizedArgs.add(internalized as A)
                 continue
             }
+
             argsReady = false
+
             if (!exprAdded) {
                 exprStack.add(this)
                 exprAdded = true
             }
+
             exprStack.add(arg)
         }
+
         lastExprInternalizationResult = if (argsReady) {
             ExprInternalizationResult(operation(internalizedArgs.toTypedArray()))
         } else {
@@ -175,7 +187,7 @@ abstract class KExprInternalizerBase<T : Any> : KTransformer {
 
     @JvmInline
     value class ExprInternalizationResult(private val value: Any) {
-        val argumentsInternalizationRequired: Boolean
+        val isArgumentsInternalizationRequired: Boolean
             get() = value === argumentsInternalizationRequiredMarker
 
         val notInitialized: Boolean

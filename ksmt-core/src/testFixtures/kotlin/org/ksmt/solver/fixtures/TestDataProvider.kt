@@ -6,7 +6,8 @@ import kotlin.io.path.listDirectoryEntries
 
 object TestDataProvider {
     fun testDataLocation(): Path = this::class.java.classLoader
-        .getResource("testData")?.toURI()
+        .getResource("testData")
+        ?.toURI()
         ?.let { Paths.get(it) }
         ?: error("No test data")
 

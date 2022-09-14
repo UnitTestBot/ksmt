@@ -5,13 +5,16 @@ import org.ksmt.sort.KSort
 
 abstract class KExprConverterBase<T : Any> {
     abstract fun findConvertedNative(expr: T): KExpr<*>?
+
     abstract fun saveConvertedNative(native: T, converted: KExpr<*>)
+
     abstract fun convertNativeExpr(expr: T): ExprConversionResult
 
     val exprStack = arrayListOf<T>()
 
     fun <S : KSort> T.convertFromNative(): KExpr<S> {
         exprStack.add(this)
+
         while (exprStack.isNotEmpty()) {
             val expr = exprStack.removeLast()
 
@@ -19,13 +22,13 @@ abstract class KExprConverterBase<T : Any> {
 
             val converted = convertNativeExpr(expr)
 
-            if (!converted.argumentsConversionRequired) {
+            if (!converted.isArgumentsConversionRequired) {
                 saveConvertedNative(expr, converted.convertedExpr)
             }
         }
+
         @Suppress("UNCHECKED_CAST")
-        return findConvertedNative(this) as? KExpr<S>
-            ?: error("expr is not properly converted")
+        return findConvertedNative(this) as? KExpr<S> ?: error("expr is not properly converted")
     }
 
     /**
@@ -38,21 +41,29 @@ abstract class KExprConverterBase<T : Any> {
         expectedSize: Int,
         converter: (List<KExpr<*>>) -> KExpr<*>
     ): ExprConversionResult {
-        check(args.size == expectedSize) { "arguments size mismatch: expected $expectedSize, actual ${args.size}" }
+        check(args.size == expectedSize) {
+            "arguments size mismatch: expected $expectedSize, actual ${args.size}"
+        }
+
         val convertedArgs = mutableListOf<KExpr<*>>()
         var exprAdded = false
         var argsReady = true
+
         for (arg in args) {
             val converted = findConvertedNative(arg)
+
             if (converted != null) {
                 convertedArgs.add(converted)
                 continue
             }
+
             argsReady = false
+
             if (!exprAdded) {
                 exprStack.add(expr)
                 exprAdded = true
             }
+
             exprStack.add(arg)
         }
 
@@ -85,7 +96,11 @@ abstract class KExprConverterBase<T : Any> {
         args: Array<T>,
         op: (KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<S>
     ) = ensureArgsConvertedAndConvert(this, args, expectedSize = 3) { convertedArgs ->
-        op(convertedArgs[0] as KExpr<A0>, convertedArgs[1] as KExpr<A1>, convertedArgs[2] as KExpr<A2>)
+        op(
+            convertedArgs[0] as KExpr<A0>,
+            convertedArgs[1] as KExpr<A1>,
+            convertedArgs[2] as KExpr<A2>
+        )
     }
 
     @Suppress("UNCHECKED_CAST", "MagicNumber")
@@ -119,7 +134,7 @@ abstract class KExprConverterBase<T : Any> {
 
     @JvmInline
     value class ExprConversionResult(private val expr: KExpr<*>?) {
-        val argumentsConversionRequired: Boolean
+        val isArgumentsConversionRequired: Boolean
             get() = expr == null
 
         val convertedExpr: KExpr<*>

@@ -6,12 +6,10 @@ import com.microsoft.z3.Sort
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KSort
-import java.lang.ref.WeakReference
-import java.util.WeakHashMap
 
 @Suppress("TooManyFunctions")
 class KZ3InternalizationContext : AutoCloseable {
-    private var closed = false
+    private var isClosed = false
     private val expressions = HashMap<KExpr<*>, Expr<*>>()
     private val z3Expressions = HashMap<Expr<*>, KExpr<*>>()
     private val sorts = HashMap<KSort, Sort>()
@@ -20,7 +18,7 @@ class KZ3InternalizationContext : AutoCloseable {
     private val z3Decls = HashMap<FuncDecl<*>, KDecl<*>>()
 
     val isActive: Boolean
-        get() = !closed
+        get() = !isClosed
 
     fun findInternalizedExpr(expr: KExpr<*>): Expr<*>? = expressions[expr]
 
@@ -66,11 +64,12 @@ class KZ3InternalizationContext : AutoCloseable {
         val converted = converter(key)
         cache.getOrPut(converted) { key }
         reverseCache[key] = converted
+
         return converted
     }
 
     override fun close() {
-        closed = true
+        isClosed = true
         sorts.clear()
         decls.clear()
         expressions.clear()
