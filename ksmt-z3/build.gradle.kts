@@ -10,41 +10,60 @@ repositories {
     mavenCentral()
 }
 
-val z3native by configurations.creating
-
 val z3Version = "4.11.2"
 
-val z3JavaJar by lazy { z3Release("x64-win", "*.jar") }
+val z3JavaJar by lazy { mkZ3ReleaseDownloadTask("x64-win", "*.jar") }
+
+val z3Binaries = listOf(
+    mkZ3ReleaseDownloadTask("x64-win", "*.dll"),
+    mkZ3ReleaseDownloadTask("x64-glibc-2.31", "*.so"),
+    mkZ3ReleaseDownloadTask("x64-osx-10.16", "*.dylib")
+)
 
 dependencies {
     implementation(project(":ksmt-core"))
-    implementation(z3JavaJar)
+    implementation(fileTree(z3JavaJar.outputDirectory) {
+        builtBy(z3JavaJar)
+    })
 
     testImplementation(testFixtures(project(":ksmt-core")))
     testFixturesApi(testFixtures(project(":ksmt-core")))
-    testFixturesImplementation(z3Release("x64-win", "*.jar"))
-
-    z3native(z3Release("x64-win", "*.dll"))
-    z3native(z3Release("x64-glibc-2.31", "*.so"))
-    z3native(z3Release("x64-osx-10.16", "*.dylib"))
+    testFixturesImplementation(fileTree(z3JavaJar.outputDirectory) {
+        builtBy(z3JavaJar)
+    })
 }
 
 tasks.withType<ProcessResources> {
-    from(z3native.resolvedConfiguration.files) {
-        into("lib/x64")
+    dependsOn.addAll(z3Binaries)
+    z3Binaries.forEach { z3BinaryTask ->
+        from(z3BinaryTask.outputFiles) {
+            into("lib/x64")
+        }
     }
 }
 
-fun z3Release(arch: String, artifactPattern: String): FileTree {
+fun Project.mkZ3ReleaseDownloadTask(arch: String, artifactPattern: String): TaskProvider<Task> {
     val z3ReleaseBaseUrl = "https://github.com/Z3Prover/z3/releases/download"
     val releaseName = "z3-${z3Version}"
     val packageName = "z3-${z3Version}-${arch}.zip"
     val packageDownloadTarget = buildDir.resolve("dist").resolve(releaseName).resolve(packageName)
-    download(listOf(z3ReleaseBaseUrl, releaseName, packageName).joinToString("/"), packageDownloadTarget)
-    return zipTree(packageDownloadTarget).matching { include("**/$artifactPattern") }
+    val downloadUrl = listOf(z3ReleaseBaseUrl, releaseName, packageName).joinToString("/")
+    val downloadTaskName = "z3-release-$releaseName-$arch-${artifactPattern.replace('*', '-')}"
+    return tasks.register(downloadTaskName) {
+        val outputDir = buildDir.resolve("dist").resolve(downloadTaskName)
+        doLast {
+            download(downloadUrl, packageDownloadTarget)
+            val files = zipTree(packageDownloadTarget).matching { include("**/$artifactPattern") }
+            copy {
+                from(files.files)
+                into(outputDir)
+            }
+        }
+        outputs.dir(outputDir)
+    }
 }
 
-val runBenchmarksBasedTests = project.booleanProperty("z3.runBenchmarksBasedTests") ?: true
+val runBenchmarksBasedTests = project.booleanProperty("z3.runBenchmarksBasedTests") ?: false
 
 // skip big benchmarks to achieve faster tests build and run time
 val skipBigBenchmarks = project.booleanProperty("z3.skipBigBenchmarks") ?: true
@@ -108,7 +127,7 @@ tasks.withType<Test> {
 tasks.withType<ShadowJar> {
     archiveClassifier.set("")
     dependencies {
-        include(dependency(z3JavaJar))
+        include(dependency(z3JavaJar.outputFiles))
     }
     val implementation = project.configurations["implementation"].dependencies.toSet()
     val runtimeOnly = project.configurations["runtimeOnly"].dependencies.toSet()
@@ -124,3 +143,9 @@ publishing {
         }
     }
 }
+
+val TaskProvider<Task>.outputDirectory: File
+    get() = get().outputs.files.singleFile
+
+val TaskProvider<Task>.outputFiles: FileTree
+    get() = fileTree(outputDirectory)
