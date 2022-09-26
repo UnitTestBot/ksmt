@@ -38,7 +38,7 @@ tasks.withType<ProcessResources> {
     }
 }
 
-val runBenchmarksBasedTests = project.booleanProperty("bitwuzla.runBenchmarksBasedTests") ?: true
+val runBenchmarksBasedTests = project.booleanProperty("bitwuzla.runBenchmarksBasedTests") ?: false
 
 // skip big benchmarks to achieve faster tests build and run time
 val skipBigBenchmarks = project.booleanProperty("bitwuzla.skipBigBenchmarks") ?: true
