@@ -3,7 +3,7 @@ include("ksmt-core")
 include("ksmt-z3")
 include("ksmt-bitwuzla")
 include("ksmt-runner")
-
+include("ksmt-test")
 
 pluginManagement {
     resolutionStrategy {

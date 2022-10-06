@@ -2,6 +2,7 @@ package org.ksmt.runner.serializer
 
 import com.jetbrains.rd.framework.AbstractBuffer
 import com.jetbrains.rd.framework.writeEnum
+import org.ksmt.KAst
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KDeclVisitor
 import org.ksmt.decl.KFuncDecl
@@ -158,6 +159,8 @@ class AstSerializer(
     private val output: AbstractBuffer
 ) : KExprInternalizerBase<Int>() {
 
+    private val exprKindMapper = ExprKindMapper()
+
     fun <T : KSort> KExpr<T>.serializeExpr(): Int = internalizeExpr()
 
     fun <T : KDecl<*>> T.serializeDecl(): Int {
@@ -182,62 +185,54 @@ class AstSerializer(
 
     @OptIn(ExperimentalUnsignedTypes::class)
     private inner class SortSerializer : KSortVisitor<Int> {
-        override fun visit(sort: KBoolSort): Int = serializeSort(sort, SortKind.Bool)
+        override fun visit(sort: KBoolSort): Int = serializeSort(sort, SortKind.Bool) {}
 
-        override fun visit(sort: KIntSort): Int = serializeSort(sort, SortKind.Int)
+        override fun visit(sort: KIntSort): Int = serializeSort(sort, SortKind.Int) {}
 
-        override fun visit(sort: KRealSort): Int = serializeSort(sort, SortKind.Real)
+        override fun visit(sort: KRealSort): Int = serializeSort(sort, SortKind.Real) {}
 
-        override fun <S : KBvSort> visit(sort: S): Int {
-            val idx = serializeSort(sort, SortKind.Bv)
-            output.writeUInt(sort.sizeBits)
-            return idx
+        override fun <S : KBvSort> visit(sort: S): Int = serializeSort(sort, SortKind.Bv) {
+            writeUInt(sort.sizeBits)
         }
 
-        override fun <S : KFpSort> visit(sort: S): Int {
-            val idx = serializeSort(sort, SortKind.Fp)
-            output.writeUInt(sort.exponentBits)
-            output.writeUInt(sort.significandBits)
-            return idx
+        override fun <S : KFpSort> visit(sort: S): Int = serializeSort(sort, SortKind.Fp) {
+            writeUInt(sort.exponentBits)
+            writeUInt(sort.significandBits)
         }
 
         override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): Int {
             val domain = sort.domain.serializeSort()
             val range = sort.range.serializeSort()
-            val idx = serializeSort(sort, SortKind.Array)
-            output.writeAst(domain)
-            output.writeAst(range)
-            return idx
+            return serializeSort(sort, SortKind.Array) {
+                writeAst(domain)
+                writeAst(range)
+            }
         }
 
-        override fun visit(sort: KFpRoundingModeSort): Int = serializeSort(sort, SortKind.FpRM)
+        override fun visit(sort: KFpRoundingModeSort): Int = serializeSort(sort, SortKind.FpRM) {}
 
-        override fun visit(sort: KUninterpretedSort): Int {
-            val idx = serializeSort(sort, SortKind.Uninterpreted)
-            output.writeString(sort.name)
-            return idx
+        override fun visit(sort: KUninterpretedSort): Int = serializeSort(sort, SortKind.Uninterpreted) {
+            writeString(sort.name)
         }
 
-        private fun serializeSort(sort: KSort, kind: SortKind): Int {
-            val idx = serializationCtx.mkAstIdx(sort)
-            output.writeAst(idx)
-            output.writeEnum(AstKind.Sort)
-            output.writeEnum(kind)
-            return idx
-        }
+        private inline fun serializeSort(sort: KSort, kind: SortKind, sortArgs: AbstractBuffer.() -> Unit): Int =
+            sort.serializeAst {
+                output.writeEnum(AstKind.Sort)
+                output.writeEnum(kind)
+                sortArgs()
+            }
     }
 
     private inner class DeclSerializer : KDeclVisitor<Int> {
         override fun <S : KSort> visit(decl: KFuncDecl<S>): Int {
-            val args = IntArray(decl.argSorts.size) { decl.argSorts[it].serializeSort() }
+            val args = decl.argSorts.map { it.serializeSort() }
             val sort = decl.sort.serializeSort()
-            val idx = serializationCtx.mkAstIdx(decl)
-            output.writeAst(idx)
-            output.writeEnum(AstKind.Decl)
-            output.writeString(decl.name)
-            output.writeIntArray(args)
-            output.writeAst(sort)
-            return idx
+            return decl.serializeAst {
+                writeEnum(AstKind.Decl)
+                writeString(decl.name)
+                writeAstArray(args)
+                writeAst(sort)
+            }
         }
     }
 
@@ -245,13 +240,29 @@ class AstSerializer(
         writeInt(idx)
     }
 
-    private inline fun KExpr<*>.writeExpr(argWriter: AbstractBuffer.() -> Unit): Int {
+    private fun AbstractBuffer.writeAstArray(asts: List<Int>) {
+        val indices = asts.toIntArray()
+        writeIntArray(indices)
+    }
+
+    private fun AbstractBuffer.writeAstArray(asts: Array<Int>) {
+        val indices = asts.toIntArray()
+        writeIntArray(indices)
+    }
+
+    private inline fun KAst.serializeAst(body: AbstractBuffer.() -> Unit): Int {
         val idx = serializationCtx.mkAstIdx(this)
-        output.writeAst(idx)
-        output.writeEnum(AstKind.Expr)
-        output.writeEnum(ExprKindMapper.getKind(this))
-        output.argWriter()
+        output.writeInt(idx)
+        output.body()
+        output.writeInt(AstSerializationCtx.SERIALIZED_AST_ENTRY_END)
         return idx
+    }
+
+    private inline fun KExpr<*>.writeExpr(argWriter: AbstractBuffer.() -> Unit): Int = serializeAst {
+        val kind = exprKindMapper.getKind(this@writeExpr)
+        writeEnum(AstKind.Expr)
+        writeEnum(kind)
+        argWriter()
     }
 
     private fun <S : KExpr<*>> S.serialize(
@@ -289,7 +300,7 @@ class AstSerializer(
             val declIdx = decl.serializeDecl()
             writeExpr {
                 writeAst(declIdx)
-                writeIntArray(args.toIntArray())
+                writeAstArray(args)
             }
         }
     }
@@ -306,7 +317,7 @@ class AstSerializer(
     override fun transform(expr: KAndExpr) = with(expr) {
         transformList(args) { args: Array<Int> ->
             writeExpr {
-                writeIntArray(args.toIntArray())
+                writeAstArray(args)
             }
         }
     }
@@ -314,7 +325,7 @@ class AstSerializer(
     override fun transform(expr: KOrExpr) = with(expr) {
         transformList(args) { args: Array<Int> ->
             writeExpr {
-                writeIntArray(args.toIntArray())
+                writeAstArray(args)
             }
         }
     }
@@ -334,7 +345,7 @@ class AstSerializer(
     override fun <T : KSort> transform(expr: KDistinctExpr<T>) = with(expr) {
         transformList(args) { args: Array<Int> ->
             writeExpr {
-                writeIntArray(args.toIntArray())
+                writeAstArray(args)
             }
         }
     }
@@ -810,7 +821,7 @@ class AstSerializer(
     override fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>) = with(expr) {
         transformList(args) { args: Array<Int> ->
             writeExpr {
-                writeIntArray(args.toIntArray())
+                writeAstArray(args)
             }
         }
     }
@@ -818,7 +829,7 @@ class AstSerializer(
     override fun <T : KArithSort<T>> transform(expr: KSubArithExpr<T>) = with(expr) {
         transformList(args) { args: Array<Int> ->
             writeExpr {
-                writeIntArray(args.toIntArray())
+                writeAstArray(args)
             }
         }
     }
@@ -826,7 +837,7 @@ class AstSerializer(
     override fun <T : KArithSort<T>> transform(expr: KMulArithExpr<T>) = with(expr) {
         transformList(args) { args: Array<Int> ->
             writeExpr {
-                writeIntArray(args.toIntArray())
+                writeAstArray(args)
             }
         }
     }
@@ -877,7 +888,7 @@ class AstSerializer(
         transform(body) { body: Int ->
             val bounds = bounds.map { it.serializeDecl() }
             writeExpr {
-                writeIntArray(bounds.toIntArray())
+                writeAstArray(bounds)
                 writeAst(body)
             }
         }
@@ -887,7 +898,7 @@ class AstSerializer(
         transform(body) { body: Int ->
             val bounds = bounds.map { it.serializeDecl() }
             writeExpr {
-                writeIntArray(bounds.toIntArray())
+                writeAstArray(bounds)
                 writeAst(body)
             }
         }

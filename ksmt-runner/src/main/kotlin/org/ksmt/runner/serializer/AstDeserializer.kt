@@ -19,9 +19,10 @@ class AstDeserializer(
     private val serializationCtx: AstSerializationCtx,
     private val input: AbstractBuffer
 ) {
-    private fun readAst(): KAst {
+    private inline fun <reified T : KAst> readAst(): T {
         val idx = input.readInt()
-        return serializationCtx.getAstByIndexOrError(idx)
+        val ast = serializationCtx.getAstByIndexOrError(idx)
+        return ast as T
     }
 
     private fun readAstArray(): List<KAst> {
@@ -29,11 +30,9 @@ class AstDeserializer(
         return indices.map { serializationCtx.getAstByIndexOrError(it) }
     }
 
-    private fun readDecl(): KDecl<*> = readAst() as KDecl<*>
-    private fun readSort(): KSort = readAst() as KSort
-
-    @Suppress("UNCHECKED_CAST")
-    private fun <T : KSort> readExpr(): KExpr<T> = readAst() as KExpr<T>
+    private fun readDecl(): KDecl<*> = readAst()
+    private fun readSort(): KSort = readAst()
+    private fun <T : KSort> readExpr(): KExpr<T> = readAst()
 
     fun deserialize() {
         while (true) {
@@ -57,6 +56,12 @@ class AstDeserializer(
 
                 AstKind.Decl -> input.deserializeDecl()
             }
+
+            val entryEndMarker = input.readInt()
+            check(entryEndMarker == AstSerializationCtx.SERIALIZED_AST_ENTRY_END) {
+                "Serialization failed: end marker expected"
+            }
+
             serializationCtx.writeAst(idx, deserialized)
         }
     }

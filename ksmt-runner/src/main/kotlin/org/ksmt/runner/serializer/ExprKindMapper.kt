@@ -149,7 +149,7 @@ import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 
-object ExprKindMapper: KTransformerBase {
+class ExprKindMapper: KTransformerBase {
 
     fun getKind(expr: KExpr<*>): ExprKind {
         expr.accept(this)

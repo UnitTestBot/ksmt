@@ -19,8 +19,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
+import org.ksmt.runner.core.process.NormalProcess
+import org.ksmt.runner.core.process.ProcessWrapper
 import org.ksmt.runner.serializer.AstSerializationCtx
-import kotlin.reflect.KClass
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -65,10 +66,12 @@ class KsmtWorkerPool<Model>(
     }
 
     fun killWorker(worker: KsmtWorkerBase<*>) {
-        if (workers.remove(worker.id) == null) return
-        activeWorkers.decrementAndGet()
-
         worker.terminate()
+    }
+
+    private fun handleWorkerTermination(id: Int) {
+        if (workers.remove(id) == null) return
+        activeWorkers.decrementAndGet()
 
         // awake all waiting clients in getOrCreateFreeWorker
         readyWorkers.trySendBlocking(null)
@@ -115,11 +118,11 @@ class KsmtWorkerPool<Model>(
 
     private suspend fun initWorker(lifetime: Lifetime, id: Int): KsmtWorkerBase<Model> =
         withTimeout(initializationTimeout) {
-            val rdProcess = startProcessWithRdServer(lifetime) { port ->
+            val rdProcess = startProcessWithRdServer(lifetime, id) { port ->
                 val basicArgs = KsmtWorkerArgs(id, port, workerProcessIdleTimeout)
                 val args = workerFactory.updateArgs(basicArgs)
 
-                startProcess(workerFactory.childProcessEntrypoint, args.toList())
+                NormalProcess.start(workerFactory.childProcessEntrypoint, args.toList())
             }
             val worker = workerFactory.mkWorker(id, rdProcess)
             worker.init(keepAliveMessagePeriod)
@@ -128,19 +131,26 @@ class KsmtWorkerPool<Model>(
 
     private suspend fun startProcessWithRdServer(
         lifetime: Lifetime,
-        factory: (Int) -> Process
+        id: Int,
+        factory: (Int) -> ProcessWrapper
     ): RdServerProcess {
         lifetime.throwIfNotAlive()
 
         val port = NetUtils.findFreePort(0)
 
-        val worker = factory(port)
+        val process = factory(port)
 
-        return initRdServer(lifetime.createNested(), worker, port)
+        return initRdServer(lifetime.createNested(), process, port, id)
     }
 
-    private suspend fun initRdServer(lifetime: LifetimeDefinition, workerProcess: Process, port: Int): RdServerProcess {
+    private suspend fun initRdServer(
+        lifetime: LifetimeDefinition,
+        workerProcess: ProcessWrapper,
+        port: Int,
+        id: Int
+    ): RdServerProcess {
         lifetime.onTermination {
+            handleWorkerTermination(id)
             workerProcess.destroyForcibly()
         }
         val nestedDef = lifetime.createNested()
@@ -167,19 +177,4 @@ class KsmtWorkerPool<Model>(
 
         return RdServerProcess(workerProcess, lifetime, protocol, astSerializationCtx)
     }
-
-    private fun startProcess(entrypoint: KClass<*>, args: List<String>): Process {
-        val classPath = System.getProperty("java.class.path") ?: error("No class path")
-        val entrypointClassName = entrypoint.qualifiedName ?: error("Entrypoint class name is not available")
-        val javaExecutable = ProcessHandle.current().info().command().orElseThrow()
-        val workerCommand = listOf(
-            javaExecutable,
-            "-classpath", classPath,
-        ) + listOf(
-            entrypointClassName
-        ) + args
-        val pb = ProcessBuilder(workerCommand).inheritIO()
-        return pb.start()
-    }
-
 }

@@ -35,8 +35,8 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
 
-    implementation("com.jetbrains.rd:rd-core:2022.3.2")
-    implementation("com.jetbrains.rd:rd-framework:2022.3.2")
+    api("com.jetbrains.rd:rd-core:2022.3.2")
+    api("com.jetbrains.rd:rd-framework:2022.3.2")
 
     implementation("com.jetbrains.rd:rd-gen:2022.3.2")
     rdgenModelsCompileClasspath("com.jetbrains.rd:rd-gen:2022.3.2")
@@ -72,4 +72,13 @@ tasks.withType<KotlinCompile> {
 tasks.getByName<KotlinCompile>("compileKotlin") {
     // don't treat warnings as errors because of warnings in generated rd models
     kotlinOptions.allWarningsAsErrors = false
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["java"])
+            artifact(tasks["kotlinSourcesJar"])
+        }
+    }
 }

@@ -25,74 +25,65 @@ import kotlin.time.Duration.Companion.milliseconds
 class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
     override fun IProtocol.protocolModel(): SolverProtocolModel = solverProtocolModel
 
-    private var ctx: KContext? = null
-    private var solver: KSolver? = null
+    private var workerCtx: KContext? = null
+    private var workerSolver: KSolver? = null
 
-    private fun ensureInitialized() {
-        check(ctx != null) { "Solver is not initialized" }
-    }
+    private val ctx: KContext
+        get() = workerCtx ?: error("Solver is not initialized")
+
+    private val solver: KSolver
+        get() = workerSolver ?: error("Solver is not initialized")
 
     override fun parseArgs(args: Array<String>) = KsmtWorkerArgs.fromList(args.toList())
 
     @Suppress("LongMethod")
     override fun SolverProtocolModel.setup(astSerializationCtx: AstSerializationCtx, onStop: () -> Unit) {
         initSolver.measureExecutionForTermination { params ->
-            check(ctx == null) { "Solver is initialized" }
-            ctx = KContext()
-            astSerializationCtx.initCtx(ctx!!)
-            solver = when (params.type) {
-                SolverType.Z3 -> KZ3Solver(ctx!!)
-                SolverType.Bitwuzla -> KBitwuzlaSolver(ctx!!)
+            check(workerCtx == null) { "Solver is initialized" }
+            workerCtx = KContext()
+            astSerializationCtx.initCtx(ctx)
+            workerSolver = when (params.type) {
+                SolverType.Z3 -> KZ3Solver(ctx)
+                SolverType.Bitwuzla -> KBitwuzlaSolver(ctx)
             }
         }
         deleteSolver.measureExecutionForTermination {
-            ensureInitialized()
-            solver?.close()
-            ctx?.close()
+            solver.close()
+            ctx.close()
             astSerializationCtx.resetCtx()
-            solver = null
-            ctx = null
+            workerSolver = null
+            workerCtx = null
         }
         assert.measureExecutionForTermination { params ->
-            ensureInitialized()
-
             @Suppress("UNCHECKED_CAST")
-            solver!!.assert(params.expression as KExpr<KBoolSort>)
+            solver.assert(params.expression as KExpr<KBoolSort>)
         }
         assertAndTrack.measureExecutionForTermination { params ->
-            ensureInitialized()
-
             @Suppress("UNCHECKED_CAST")
-            val track = solver!!.assertAndTrack(params.expression as KExpr<KBoolSort>)
-
+            val track = solver.assertAndTrack(params.expression as KExpr<KBoolSort>)
             AssertAndTrackResult(track)
         }
         push.measureExecutionForTermination {
-            ensureInitialized()
-            solver!!.push()
+            solver.push()
         }
         pop.measureExecutionForTermination { params ->
-            ensureInitialized()
-            solver!!.pop(params.levels)
+            solver.pop(params.levels)
         }
         check.measureExecutionForTermination { params ->
-            ensureInitialized()
             val timeout = params.timeout.milliseconds
-            val status = solver!!.check(timeout)
+            val status = solver.check(timeout)
             CheckResult(status)
         }
         checkWithAssumptions.measureExecutionForTermination { params ->
-            ensureInitialized()
             val timeout = params.timeout.milliseconds
 
             @Suppress("UNCHECKED_CAST")
-            val status = solver!!.checkWithAssumptions(params.assumptions as List<KExpr<KBoolSort>>, timeout)
+            val status = solver.checkWithAssumptions(params.assumptions as List<KExpr<KBoolSort>>, timeout)
 
             CheckResult(status)
         }
         model.measureExecutionForTermination {
-            ensureInitialized()
-            val model = solver!!.model().detach()
+            val model = solver.model().detach()
             val declarations = model.declarations.toList()
             val interpretations = declarations.map {
                 val interp = model.interpretation(it) ?: error("No interpretation for model declaration $it")
@@ -102,13 +93,11 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
             ModelResult(declarations, interpretations)
         }
         unsatCore.measureExecutionForTermination {
-            ensureInitialized()
-            val core = solver!!.unsatCore()
+            val core = solver.unsatCore()
             UnsatCoreResult(core)
         }
         reasonOfUnknown.measureExecutionForTermination {
-            ensureInitialized()
-            val reason = solver!!.reasonOfUnknown()
+            val reason = solver.reasonOfUnknown()
             ReasonUnknownResult(reason)
         }
     }

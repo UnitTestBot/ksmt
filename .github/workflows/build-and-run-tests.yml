@@ -37,13 +37,11 @@ jobs:
             build
             --no-daemon
             --continue
-            -Pz3.runBenchmarksBasedTests=false
-            -Pbitwuzla.runBenchmarksBasedTests=false
+            -PrunBenchmarksBasedTests=false
 
-# todo: test report uploading is temporarily disabled (https://github.com/UnitTestBot/ksmt/pull/18)
-#      - name: Upload ksmt test reports
-#        uses: actions/upload-artifact@v3
-#        if: always()
-#        with:
-#          name: ksmt_tests_report
-#          path: ./**/build/reports/tests/test/
+      - name: Upload ksmt test reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: ksmt_tests_report
+          path: ./**/build/reports/tests/test/

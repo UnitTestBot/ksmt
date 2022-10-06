@@ -47,6 +47,9 @@ class KSolverRunner(
 
     private fun ensureActive() {
         check(active) { "Solver is already closed" }
+        if (!worker.isAlive) {
+            throw KSolverException("Worker is not alive")
+        }
     }
 
     override fun assert(expr: KExpr<KBoolSort>) = runBlocking {

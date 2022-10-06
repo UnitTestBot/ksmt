@@ -2,37 +2,16 @@ package org.ksmt.runner.models
 
 import com.jetbrains.rd.generator.nova.Ext
 import com.jetbrains.rd.generator.nova.PredefinedType
-import com.jetbrains.rd.generator.nova.Struct
-import com.jetbrains.rd.generator.nova.Enum
 import com.jetbrains.rd.generator.nova.async
 import com.jetbrains.rd.generator.nova.call
 import com.jetbrains.rd.generator.nova.field
 import com.jetbrains.rd.generator.nova.immutableList
-import com.jetbrains.rd.generator.nova.kotlin.Kotlin11Generator.Intrinsic
-import com.jetbrains.rd.generator.nova.kotlin.Kotlin11Generator.Namespace
-import com.jetbrains.rd.generator.nova.kotlin.KotlinIntrinsicMarshaller
 import com.jetbrains.rd.generator.nova.nullable
 
 @Suppress("unused")
 object SolverProtocolModel : Ext(ProtocolRoot) {
-    private const val ksmtPackage = "org.ksmt"
-    private const val kastClassName = "$ksmtPackage.KAst"
-    private const val serializerClassName = "$ksmtPackage.runner.serializer.AstSerializationCtx"
-
-    private val kastType by lazy {
-        val marshaller = KotlinIntrinsicMarshaller(
-            "(ctx.serializers.get($serializerClassName.marshallerId)!! as IMarshaller<$kastClassName>)"
-        )
-        Struct.Open("KAst", this, null).apply {
-            settings[Namespace] = ksmtPackage
-            settings[Intrinsic] = marshaller
-        }
-    }
-
-    private val statusType = Enum("KSolverStatus", this).apply {
-        settings[Namespace] = "$ksmtPackage.solver"
-    }
-
+    private val kastType = kastType()
+    private val statusType = solverStatusType()
 
     private val createSolverParams = structdef {
         field("type", enum("SolverType") {

@@ -1,6 +1,7 @@
 package org.ksmt.utils
 
 import java.nio.file.Files
+import kotlin.io.path.deleteIfExists
 import kotlin.io.path.outputStream
 
 object NativeLibraryLoader {
@@ -47,6 +48,8 @@ object NativeLibraryLoader {
                 }
 
             System.load(libFile.toAbsolutePath().toString())
+
+            libFile.deleteIfExists()
         }
     }
 }

@@ -17,11 +17,13 @@ import kotlin.time.Duration.Companion.seconds
 
 class KSolverRunnerManager(
     workerPoolSize: Int = 1,
-    private val hardTimeout: Duration = 10.seconds
+    private val hardTimeout: Duration = 10.seconds,
+    private val workerProcessIdleTimeout: Duration = 100.seconds
 ) : AutoCloseable {
     private val workers = KsmtWorkerPool(
         maxWorkerPoolSize = workerPoolSize,
         initializationTimeout = 15.seconds,
+        workerProcessIdleTimeout = workerProcessIdleTimeout,
         workerFactory = object : KsmtWorkerFactory<SolverProtocolModel> {
             override val childProcessEntrypoint = KSolverWorkerProcess::class
             override fun mkWorker(id: Int, process: RdServer) = KSolverWorker(id, process)
