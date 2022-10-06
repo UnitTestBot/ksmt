@@ -1,7 +1,6 @@
 package org.ksmt.utils
 
 import java.nio.file.Files
-import kotlin.io.path.deleteIfExists
 import kotlin.io.path.outputStream
 
 object NativeLibraryLoader {
@@ -39,7 +38,9 @@ object NativeLibraryLoader {
                 continue
             }
 
-            val libFile = Files.createTempFile(libName, libraryExt)
+            // use directory to preserve dll name on Windows
+            val libUnpackDirectory = Files.createTempDirectory("ksmt")
+            val libFile = libUnpackDirectory.resolve(libName + libraryExt)
 
             NativeLibraryLoader::class.java.classLoader
                 .getResourceAsStream(resourceName)
@@ -49,7 +50,8 @@ object NativeLibraryLoader {
 
             System.load(libFile.toAbsolutePath().toString())
 
-            libFile.deleteIfExists()
+            // tmp files are not removed on Windows
+            libFile.toFile().delete()
         }
     }
 }
