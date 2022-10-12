@@ -4,12 +4,11 @@ import com.jetbrains.rd.util.reactive.RdFault
 import kotlinx.coroutines.withTimeout
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
-import org.ksmt.runner.core.KsmtWorkerBase
-import org.ksmt.runner.core.KsmtWorkerPool
-import org.ksmt.runner.generated.EqualityCheckParams
-import org.ksmt.runner.generated.TestAssertParams
-import org.ksmt.runner.generated.TestInternalizeAndConvertParams
-import org.ksmt.runner.generated.TestProtocolModel
+import org.ksmt.runner.core.KsmtWorkerSession
+import org.ksmt.runner.models.generated.EqualityCheckParams
+import org.ksmt.runner.models.generated.TestAssertParams
+import org.ksmt.runner.models.generated.TestInternalizeAndConvertParams
+import org.ksmt.runner.models.generated.TestProtocolModel
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.sort.KBoolSort
@@ -18,28 +17,14 @@ import kotlin.time.Duration.Companion.seconds
 
 class TestRunner(
     val ctx: KContext,
-    private val worker: KsmtWorkerBase<TestProtocolModel>,
-    private val workers: KsmtWorkerPool<TestProtocolModel>
-) : AutoCloseable {
-
-    private var isNotClosed = true
-
-    private val isActive: Boolean
-        get() = isNotClosed && worker.isAlive
-
-    override fun close() {
-        isNotClosed = false
-        workers.releaseWorker(worker)
-    }
-
-    suspend fun init(ctx: KContext) = withTimeoutAndExceptionHandling {
-        worker.astSerializationCtx.initCtx(ctx)
+    private val worker: KsmtWorkerSession<TestProtocolModel>,
+) {
+    suspend fun init() = withTimeoutAndExceptionHandling {
         worker.protocolModel.create.startSuspending(worker.lifetime, Unit)
     }
 
     suspend fun delete() = withTimeoutAndExceptionHandling {
-        worker.astSerializationCtx.resetCtx()
-        if (!isActive) return@withTimeoutAndExceptionHandling
+        if (!worker.isAlive) return@withTimeoutAndExceptionHandling
         worker.protocolModel.delete.startSuspending(worker.lifetime, Unit)
     }
 
@@ -108,8 +93,7 @@ class TestRunner(
         } catch (ex: RdFault) {
             throw rdExceptionCause(ex) ?: ex
         } catch (ex: Exception) {
-            isNotClosed = false
-            workers.killWorker(worker)
+            worker.terminate()
             throw ex
         }
     }

@@ -1,33 +1,39 @@
 package org.ksmt.runner.core
 
-import com.jetbrains.rd.framework.base.static
-import com.jetbrains.rd.framework.impl.RdSignal
+import com.jetbrains.rd.framework.IProtocol
 import kotlinx.coroutines.delay
-import kotlin.time.Duration
+import org.ksmt.runner.models.generated.syncProtocolModel
+import kotlin.time.Duration.Companion.milliseconds
 
 abstract class KsmtWorkerBase<Model>(
     val id: Int,
-    private val rdServer: RdServer
+    private val rdServer: RdServer,
 ) : RdServer by rdServer {
-    private val sync = RdSignal<String>().static(1).apply { async = true }
 
-    abstract val protocolModel: Model
+    private var model: Model? = null
 
-    suspend fun init(keepAliveMessagePeriod: Duration): KsmtWorkerBase<Model> {
+    val protocolModel: Model
+        get() = model ?: error("Protocol model is not initialized")
+
+    abstract fun initProtocolModel(protocol: IProtocol): Model
+
+    suspend fun init(): KsmtWorkerBase<Model> {
 
         protocol.scheduler.pumpAsync(lifetime) {
-            sync.bind(lifetime, protocol, sync.rdid.toString())
-            protocolModel
+            protocol.syncProtocolModel
+            model = initProtocolModel(protocol)
         }.await()
 
 
-        val messageFromChild = sync.adviseForConditionAsync(lifetime) {
-            it == CHILD_PROCESS_NAME
-        }
+        protocol.syncProtocolModel.synchronizationSignal.let { sync ->
+            val messageFromChild = sync.adviseForConditionAsync(lifetime) {
+                it == CHILD_PROCESS_NAME
+            }
 
-        while (messageFromChild.isActive) {
-            sync.fire(MAIN_PROCESS_NAME)
-            delay(keepAliveMessagePeriod)
+            while (messageFromChild.isActive) {
+                sync.fire(MAIN_PROCESS_NAME)
+                delay(20.milliseconds)
+            }
         }
 
         return this

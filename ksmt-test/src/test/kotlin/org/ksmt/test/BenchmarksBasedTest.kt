@@ -1,5 +1,6 @@
 package org.ksmt.test
 
+import com.jetbrains.rd.util.LogLevel
 import com.jetbrains.rd.util.reactive.RdFault
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
@@ -17,7 +18,7 @@ import org.ksmt.runner.core.KsmtWorkerArgs
 import org.ksmt.runner.core.KsmtWorkerFactory
 import org.ksmt.runner.core.KsmtWorkerPool
 import org.ksmt.runner.core.RdServer
-import org.ksmt.runner.generated.TestProtocolModel
+import org.ksmt.runner.models.generated.TestProtocolModel
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverException
@@ -131,15 +132,20 @@ abstract class BenchmarksBasedTest {
     internal fun KsmtWorkerPool<TestProtocolModel>.withWorker(
         ctx: KContext,
         body: suspend (TestRunner) -> Unit
-    ) = runBlocking {
-        val worker = getOrCreateFreeWorker()
-        TestRunner(ctx, worker, this@withWorker).use {
-            try {
-                it.init(ctx)
-                body(it)
-            } finally {
-                it.delete()
+    ) = KsmtWorkerPool.logger.withLoglevel(LogLevel.Debug) {
+        runBlocking {
+            val worker = getOrCreateFreeWorker()
+            worker.astSerializationCtx.initCtx(ctx)
+            worker.lifetime.onTermination { worker.astSerializationCtx.resetCtx() }
+            TestRunner(ctx, worker).let {
+                try {
+                    it.init()
+                    body(it)
+                } finally {
+                    it.delete()
+                }
             }
+            worker.release()
         }
     }
 
@@ -183,7 +189,7 @@ abstract class BenchmarksBasedTest {
         @JvmStatic
         fun closeWorkerPools() {
             solverManager.close()
-            testWorkers.close()
+            testWorkers.terminate()
         }
     }
 

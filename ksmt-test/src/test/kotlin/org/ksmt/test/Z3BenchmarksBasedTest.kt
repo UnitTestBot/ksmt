@@ -32,9 +32,6 @@ class Z3BenchmarksBasedTest : BenchmarksBasedTest() {
 
     companion object {
         @JvmStatic
-        fun z3TestData() = testData().skipUnsupportedTheories()
-
-        private fun List<BenchmarkTestArguments>.skipUnsupportedTheories() =
-            filterNot { "QF_" !in it.name || "ABVFPLRA" in it.name || "ABVFP" in it.name }
+        fun z3TestData() = testData()
     }
 }

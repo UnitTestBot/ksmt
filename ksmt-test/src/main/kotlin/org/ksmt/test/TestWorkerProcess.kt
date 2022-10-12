@@ -13,12 +13,11 @@ import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.runner.core.ChildProcessBase
 import org.ksmt.runner.core.KsmtWorkerArgs
-import org.ksmt.runner.generated.TestCheckResult
-import org.ksmt.runner.generated.TestConversionResult
-import org.ksmt.runner.generated.TestProtocolModel
-import org.ksmt.runner.generated.testProtocolModel
+import org.ksmt.runner.models.generated.TestCheckResult
+import org.ksmt.runner.models.generated.TestConversionResult
+import org.ksmt.runner.models.generated.TestProtocolModel
+import org.ksmt.runner.models.generated.testProtocolModel
 import org.ksmt.runner.serializer.AstSerializationCtx
-import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.bitwuzla.KBitwuzlaContext
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprConverter
@@ -123,18 +122,6 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         return solvers[solver].check().processCheckResult()
     }
 
-    private fun getModel(solver: Int): KModel {
-        val model = solvers[solver].model
-        return z3Ctx.wrapModel(ctx, model)
-    }
-
-    private fun modelEval(solver: Int, expr: KExpr<*>): Long {
-        val solverExpr = internalize(expr)
-        val evaluated = solvers[solver].model.eval(solverExpr, false)
-        nativeAsts += evaluated
-        return z3Ctx.unwrapAST(evaluated)
-    }
-
     private fun exprToString(expr: Long): String {
         return z3Ctx.wrapAST(expr).toString()
     }
@@ -198,12 +185,13 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
 
     private data class EqualityCheck(val actual: Expr<*>, val expected: Expr<*>)
 
-    override fun IProtocol.protocolModel() = testProtocolModel
-
     override fun parseArgs(args: Array<String>) = KsmtWorkerArgs.fromList(args.toList())
 
+    override fun initProtocolModel(protocol: IProtocol): TestProtocolModel =
+        protocol.testProtocolModel
+
     @Suppress("LongMethod")
-    override fun TestProtocolModel.setup(astSerializationCtx: AstSerializationCtx, onStop: () -> Unit) {
+    override fun TestProtocolModel.setup(astSerializationCtx: AstSerializationCtx) {
         // Limit z3 native memory usage to avoid OOM
         Native.globalParamSet("memory_high_watermark_mb", "2048") // 2048 megabytes
 

@@ -6,16 +6,16 @@ import com.jetbrains.rd.framework.Identities
 import com.jetbrains.rd.framework.Protocol
 import com.jetbrains.rd.framework.Serializers
 import com.jetbrains.rd.framework.SocketWire
-import com.jetbrains.rd.framework.base.static
 import com.jetbrains.rd.framework.impl.RdCall
-import com.jetbrains.rd.framework.impl.RdSignal
 import com.jetbrains.rd.framework.util.launch
 import com.jetbrains.rd.util.lifetime.Lifetime
 import com.jetbrains.rd.util.lifetime.LifetimeDefinition
-import kotlinx.coroutines.CompletableDeferred
+import com.jetbrains.rd.util.threading.SingleThreadScheduler
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import org.ksmt.runner.models.generated.syncProtocolModel
 import org.ksmt.runner.serializer.AstSerializationCtx
 import kotlin.time.Duration
 
@@ -28,25 +28,28 @@ abstract class ChildProcessBase<Model> {
 
     private val synchronizer = Channel<State>(capacity = 1)
 
-    abstract fun IProtocol.protocolModel(): Model
-    abstract fun Model.setup(astSerializationCtx: AstSerializationCtx, onStop: () -> Unit)
+    abstract fun initProtocolModel(protocol: IProtocol): Model
+    abstract fun Model.setup(astSerializationCtx: AstSerializationCtx)
     abstract fun parseArgs(args: Array<String>): KsmtWorkerArgs
 
     fun start(args: Array<String>) = runBlocking {
         val workerArgs = parseArgs(args)
+        LoggerFactory.create(workerArgs.logLevel)
 
         val def = LifetimeDefinition()
-        def.launch {
-            checkAliveLoop(def, workerArgs.workerTimeout)
-        }
+        def.terminateOnException {
+            def.launch {
+                checkAliveLoop(def, workerArgs.workerTimeout)
+            }
 
-        def.usingNested { lifetime ->
-            initiate(lifetime, workerArgs.port)
+            initiate(def, workerArgs.port)
+
+            def.awaitTermination()
         }
     }
 
     private suspend fun checkAliveLoop(lifetime: LifetimeDefinition, timeout: Duration) {
-        var lastState = State.STARTED
+        var lastState = State.ENDED
         while (true) {
             val current = withTimeoutOrNull(timeout) {
                 synchronizer.receive()
@@ -64,10 +67,7 @@ abstract class ChildProcessBase<Model> {
     }
 
     private suspend fun initiate(lifetime: Lifetime, port: Int) {
-        val deferred = CompletableDeferred<Unit>()
-        lifetime.onTermination { deferred.complete(Unit) }
-
-        val scheduler = KsmtSingleThreadScheduler("ksmt-child-scheduler")
+        val scheduler = SingleThreadScheduler(lifetime, "ksmt-child-scheduler")
         val serializers = Serializers()
         val astSerializationCtx = AstSerializationCtx.register(serializers)
         val clientProtocol = Protocol(
@@ -78,45 +78,35 @@ abstract class ChildProcessBase<Model> {
             SocketWire.Client(lifetime, scheduler, port),
             lifetime
         )
-        val (sync, protocolModel) = obtainClientIO(lifetime, clientProtocol)
 
-        protocolModel.setup(astSerializationCtx) {
-            deferred.complete(Unit)
-        }
+        val protocolModel = clientProtocol.scheduler.pumpAsync(lifetime) {
+            clientProtocol.syncProtocolModel
+            initProtocolModel(clientProtocol)
+        }.await()
 
-        val answerFromMainProcess = sync.adviseForConditionAsync(lifetime) {
-            if (it == MAIN_PROCESS_NAME) {
-                measureExecutionForTermination {
-                    sync.fire(CHILD_PROCESS_NAME)
+        protocolModel.setup(astSerializationCtx)
+
+        clientProtocol.syncProtocolModel.synchronizationSignal.let { sync ->
+            val answerFromMainProcess = sync.adviseForConditionAsync(lifetime) {
+                if (it == MAIN_PROCESS_NAME) {
+                    measureExecutionForTermination {
+                        sync.fire(CHILD_PROCESS_NAME)
+                    }
+                    true
+                } else {
+                    false
                 }
-                true
-            } else {
-                false
             }
+            answerFromMainProcess.await()
         }
-
-        answerFromMainProcess.await()
-        deferred.await()
     }
 
-    private suspend fun obtainClientIO(lifetime: Lifetime, protocol: Protocol): Pair<RdSignal<String>, Model> =
-        protocol.scheduler
-            .pumpAsync(lifetime) {
-                val sync = RdSignal<String>().static(1).apply {
-                    async = true
-                    bind(lifetime, protocol, rdid.toString())
-                }
-                sync to protocol.protocolModel()
-            }
-            .await()
-
-
-    private fun <T> measureExecutionForTermination(block: () -> T): T = runBlocking {
+    private inline fun <T> measureExecutionForTermination(block: () -> T): T {
         try {
-            synchronizer.send(State.STARTED)
-            return@runBlocking block()
+            synchronizer.trySendBlocking(State.STARTED).exceptionOrNull()
+            return block()
         } finally {
-            synchronizer.send(State.ENDED)
+            synchronizer.trySendBlocking(State.ENDED).exceptionOrNull()
         }
     }
 

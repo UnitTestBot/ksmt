@@ -5,14 +5,14 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
-import org.ksmt.runner.core.KsmtWorkerBase
-import org.ksmt.runner.generated.AssertParams
-import org.ksmt.runner.generated.CheckParams
-import org.ksmt.runner.generated.CheckWithAssumptionsParams
-import org.ksmt.runner.generated.CreateSolverParams
-import org.ksmt.runner.generated.PopParams
-import org.ksmt.runner.generated.SolverProtocolModel
-import org.ksmt.runner.generated.SolverType
+import org.ksmt.runner.core.KsmtWorkerSession
+import org.ksmt.runner.models.generated.AssertParams
+import org.ksmt.runner.models.generated.CheckParams
+import org.ksmt.runner.models.generated.CheckWithAssumptionsParams
+import org.ksmt.runner.models.generated.CreateSolverParams
+import org.ksmt.runner.models.generated.PopParams
+import org.ksmt.runner.models.generated.SolverProtocolModel
+import org.ksmt.runner.models.generated.SolverType
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverException
@@ -24,31 +24,23 @@ import kotlin.time.Duration
 
 class KSolverRunner(
     private val hardTimeout: Duration,
-    private val manager: KSolverRunnerManager,
-    internal val worker: KsmtWorkerBase<SolverProtocolModel>,
-) : KSolver, AutoCloseable {
-
-    var active = true
-        private set
+    private val worker: KsmtWorkerSession<SolverProtocolModel>,
+) : KSolver {
 
     override fun close() {
-        if (!active) return
-        active = false
         runBlocking {
             deleteSolver()
         }
-        manager.deleteSolver(this@KSolverRunner)
+        worker.release()
     }
 
     private fun terminate() {
-        active = false
-        manager.terminateSolver(this@KSolverRunner)
+        worker.terminate()
     }
 
     private fun ensureActive() {
-        check(active) { "Solver is already closed" }
         if (!worker.isAlive) {
-            throw KSolverException("Worker is not alive")
+            throw KSolverException("Solver worker is terminated")
         }
     }
 

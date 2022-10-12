@@ -125,7 +125,7 @@ complexity:
     ignoreDefaultParameters: false
     ignoreDataClasses: true
     ignoreAnnotatedParameter: []
-    excludes: ['**/test/**', '**/example/**']
+    excludes: ['**/test/**', '**/example/**', '**/generated/**']
   MethodOverloading:
     active: false
     threshold: 6
@@ -276,6 +276,7 @@ exceptions:
 
 naming:
   active: true
+  excludes: [ '**/test/**', '**/example/**', '**/generated/**' ]
   BooleanPropertyNaming:
     active: false
     allowedPattern: '^(is|has|are)'
@@ -559,6 +560,7 @@ style:
     active: false
   MaxLineLength:
     active: true
+    excludes: [ '**/test/**', '**/example/**', '**/generated/**' ]
     maxLineLength: 120
     excludePackageStatements: true
     excludeImportStatements: true
@@ -675,6 +677,6 @@ style:
     active: true
   WildcardImport:
     active: true
-    excludes: ['**/test/**', '**/example/**']
+    excludes: ['**/test/**', '**/example/**', '**/generated/**']
     excludeImports:
       - 'java.util.*'

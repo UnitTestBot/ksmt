@@ -5,16 +5,16 @@ import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.runner.core.ChildProcessBase
 import org.ksmt.runner.core.KsmtWorkerArgs
-import org.ksmt.runner.generated.AssertAndTrackResult
-import org.ksmt.runner.generated.CheckResult
-import org.ksmt.runner.generated.ModelEntry
-import org.ksmt.runner.generated.ModelFuncInterpEntry
-import org.ksmt.runner.generated.ModelResult
-import org.ksmt.runner.generated.ReasonUnknownResult
-import org.ksmt.runner.generated.SolverProtocolModel
-import org.ksmt.runner.generated.SolverType
-import org.ksmt.runner.generated.UnsatCoreResult
-import org.ksmt.runner.generated.solverProtocolModel
+import org.ksmt.runner.models.generated.AssertAndTrackResult
+import org.ksmt.runner.models.generated.CheckResult
+import org.ksmt.runner.models.generated.ModelEntry
+import org.ksmt.runner.models.generated.ModelFuncInterpEntry
+import org.ksmt.runner.models.generated.ModelResult
+import org.ksmt.runner.models.generated.ReasonUnknownResult
+import org.ksmt.runner.models.generated.SolverProtocolModel
+import org.ksmt.runner.models.generated.SolverType
+import org.ksmt.runner.models.generated.UnsatCoreResult
+import org.ksmt.runner.models.generated.solverProtocolModel
 import org.ksmt.runner.serializer.AstSerializationCtx
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
@@ -23,8 +23,6 @@ import org.ksmt.sort.KBoolSort
 import kotlin.time.Duration.Companion.milliseconds
 
 class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
-    override fun IProtocol.protocolModel(): SolverProtocolModel = solverProtocolModel
-
     private var workerCtx: KContext? = null
     private var workerSolver: KSolver? = null
 
@@ -36,8 +34,11 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
 
     override fun parseArgs(args: Array<String>) = KsmtWorkerArgs.fromList(args.toList())
 
+    override fun initProtocolModel(protocol: IProtocol): SolverProtocolModel =
+        protocol.solverProtocolModel
+
     @Suppress("LongMethod")
-    override fun SolverProtocolModel.setup(astSerializationCtx: AstSerializationCtx, onStop: () -> Unit) {
+    override fun SolverProtocolModel.setup(astSerializationCtx: AstSerializationCtx) {
         initSolver.measureExecutionForTermination { params ->
             check(workerCtx == null) { "Solver is initialized" }
             workerCtx = KContext()

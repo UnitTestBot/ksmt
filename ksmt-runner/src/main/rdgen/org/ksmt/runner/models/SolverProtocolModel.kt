@@ -1,5 +1,6 @@
 package org.ksmt.runner.models
 
+import com.jetbrains.rd.generator.nova.Root
 import com.jetbrains.rd.generator.nova.Ext
 import com.jetbrains.rd.generator.nova.PredefinedType
 import com.jetbrains.rd.generator.nova.async
@@ -8,8 +9,10 @@ import com.jetbrains.rd.generator.nova.field
 import com.jetbrains.rd.generator.nova.immutableList
 import com.jetbrains.rd.generator.nova.nullable
 
+object SolverProtocolRoot : Root()
+
 @Suppress("unused")
-object SolverProtocolModel : Ext(ProtocolRoot) {
+object SolverProtocolModel : Ext(SolverProtocolRoot) {
     private val kastType = kastType()
     private val statusType = solverStatusType()
 

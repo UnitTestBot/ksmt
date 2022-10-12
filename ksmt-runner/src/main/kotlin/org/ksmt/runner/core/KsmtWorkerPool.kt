@@ -6,44 +6,86 @@ import com.jetbrains.rd.framework.Protocol
 import com.jetbrains.rd.framework.Serializers
 import com.jetbrains.rd.framework.SocketWire
 import com.jetbrains.rd.framework.util.NetUtils
-import com.jetbrains.rd.framework.util.synchronizeWith
 import com.jetbrains.rd.util.AtomicInteger
+import com.jetbrains.rd.util.LogLevel
 import com.jetbrains.rd.util.concurrentMapOf
 import com.jetbrains.rd.util.lifetime.Lifetime
 import com.jetbrains.rd.util.lifetime.LifetimeDefinition
 import com.jetbrains.rd.util.lifetime.isAlive
 import com.jetbrains.rd.util.lifetime.throwIfNotAlive
+import com.jetbrains.rd.util.threading.SingleThreadScheduler
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.ksmt.runner.core.process.NormalProcess
 import org.ksmt.runner.core.process.ProcessWrapper
 import org.ksmt.runner.serializer.AstSerializationCtx
+import kotlin.reflect.KClass
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+/**
+ * Pool of reusable process based workers.
+ *
+ * Worker phases:
+ * 1. Initialization (see [createWorker])
+ *
+ *    Create and initialize new worker process.
+ *    Add the successfully initialized worker to [readyWorkers] and
+ *    notify all waiting clients (see [getOrCreateFreeWorker]).
+ *
+ * 2. Acquiring (see [getOrCreateFreeWorker])
+ *
+ *    The worker is acquired by a client and removed from [readyWorkers].
+ *    If there are no workers available and the pool size is not exhausted
+ *    create a new worker (see Initialization).
+ *
+ * 3. Release (see [releaseWorker])
+ *
+ *    Worker is released by client. If worker is alive return it to [readyWorkers] and
+ *    notify all waiting clients. Otherwise, kill worker (see Termination).
+ *
+ * 4. Termination (see [killWorker])
+ *
+ *   The worker is released by the client, but it is not alive anymore (e.g. native exception occurred).
+ *   Kill underlying process and notify all waiting clients.
+ *
+ * */
 class KsmtWorkerPool<Model>(
     private val maxWorkerPoolSize: Int = 1,
     private val initializationTimeout: Duration = 5.seconds,
     private val checkProcessAliveDelay: Duration = 1.seconds,
     private val workerProcessIdleTimeout: Duration = 10.seconds,
-    private val keepAliveMessagePeriod: Duration = 10.milliseconds,
+    private val processFactory: (KClass<*>, List<String>) -> ProcessWrapper = ::normalProcessFactory,
     private val workerFactory: KsmtWorkerFactory<Model>
-) : AutoCloseable {
+) : Lifetimed {
+
+    /**
+     * Available workers.
+     *
+     * [null] is used to notify waiting clients about changes in a pool size to allow
+     * a new worker process to be created when possible.
+     *
+     * Note: In some situations, the actual size of [readyWorkers] may be
+     * slightly greater than [maxWorkerPoolSize] due to nulls.
+     * */
     private val readyWorkers = Channel<KsmtWorkerBase<Model>?>(capacity = Channel.UNLIMITED)
+
     private val workers = concurrentMapOf<Int, KsmtWorkerBase<Model>>()
     private val activeWorkers = AtomicInteger(0)
     private val workerId = AtomicInteger(1)
-    private val ldef = LifetimeDefinition()
-    private val scheduler = KsmtSingleThreadScheduler("ksmt-runner-scheduler")
-    private val coroutineScope = KsmtRdCoroutineScope(ldef, scheduler)
+    override val lifetime = LifetimeDefinition()
+    private val scheduler = SingleThreadScheduler(lifetime, "ksmt-runner-scheduler")
+    private val coroutineScope = KsmtRdCoroutineScope(lifetime, scheduler)
 
-    suspend fun getOrCreateFreeWorker(): KsmtWorkerBase<Model> {
-        while (ldef.isAlive) {
+    init {
+        lifetime.onTermination { terminatePool() }
+    }
+
+    suspend fun getOrCreateFreeWorker(): KsmtWorkerSession<Model> {
+        while (lifetime.isAlive) {
             if (activeWorkers.get() < maxWorkerPoolSize) {
                 createWorker()
                 continue
@@ -52,7 +94,8 @@ class KsmtWorkerPool<Model>(
                 readyWorkers.receive()
             }
             if (worker != null && checkWorker(worker)) {
-                return worker
+                val sessionLifetime = worker.lifetime.createNested()
+                return KsmtWorkerSession(sessionLifetime, worker, this)
             }
         }
         throw WorkerInitializationFailedException("Worker pool is not alive")
@@ -69,6 +112,10 @@ class KsmtWorkerPool<Model>(
         worker.terminate()
     }
 
+    override fun terminate() {
+        lifetime.terminate()
+    }
+
     private fun handleWorkerTermination(id: Int) {
         if (workers.remove(id) == null) return
         activeWorkers.decrementAndGet()
@@ -77,8 +124,7 @@ class KsmtWorkerPool<Model>(
         readyWorkers.trySendBlocking(null)
     }
 
-    override fun close() {
-        ldef.terminate()
+    private fun terminatePool() {
         readyWorkers.close()
         val allWorkers = workers.values.toList()
         allWorkers.forEach { killWorker(it) }
@@ -103,7 +149,7 @@ class KsmtWorkerPool<Model>(
         if (!increaseActiveWorkersCount()) return
 
         val id = workerId.getAndIncrement()
-        val workerLifetime = ldef.createNested()
+        val workerLifetime = lifetime.createNested()
         val worker = try {
             initWorker(workerLifetime, id)
         } catch (ex: Exception) {
@@ -119,13 +165,13 @@ class KsmtWorkerPool<Model>(
     private suspend fun initWorker(lifetime: Lifetime, id: Int): KsmtWorkerBase<Model> =
         withTimeout(initializationTimeout) {
             val rdProcess = startProcessWithRdServer(lifetime, id) { port ->
-                val basicArgs = KsmtWorkerArgs(id, port, workerProcessIdleTimeout)
+                val basicArgs = KsmtWorkerArgs(id, port, workerProcessIdleTimeout, logger.level)
                 val args = workerFactory.updateArgs(basicArgs)
 
-                NormalProcess.start(workerFactory.childProcessEntrypoint, args.toList())
+                processFactory(workerFactory.childProcessEntrypoint, args.toList())
             }
             val worker = workerFactory.mkWorker(id, rdProcess)
-            worker.init(keepAliveMessagePeriod)
+            worker.init()
             worker
         }
 
@@ -153,14 +199,6 @@ class KsmtWorkerPool<Model>(
             handleWorkerTermination(id)
             workerProcess.destroyForcibly()
         }
-        val nestedDef = lifetime.createNested()
-        val aliveCheckJob = coroutineScope.launch {
-            while (workerProcess.isAlive) {
-                delay(checkProcessAliveDelay)
-            }
-            lifetime.terminate()
-        }
-        nestedDef.synchronizeWith(aliveCheckJob)
 
         val serializers = Serializers()
         val astSerializationCtx = AstSerializationCtx.register(serializers)
@@ -175,6 +213,23 @@ class KsmtWorkerPool<Model>(
 
         protocol.wire.connected.adviseForConditionAsync(lifetime).await()
 
+        coroutineScope.launch(lifetime) {
+            while (workerProcess.isAlive) {
+                delay(checkProcessAliveDelay)
+            }
+            lifetime.terminate()
+        }
+
         return RdServerProcess(workerProcess, lifetime, protocol, astSerializationCtx)
+    }
+
+    companion object{
+        val logger = LoggerFactory.create(minLevel = LogLevel.Error)
+
+        fun normalProcessFactory(entrypoint: KClass<*>, args: List<String>): ProcessWrapper =
+            NormalProcess.start(entrypoint, args)
+
+        fun processWithDebuggerFactory(entrypoint: KClass<*>, args: List<String>): ProcessWrapper =
+            NormalProcess.startWithDebugger(entrypoint, args)
     }
 }

@@ -15,14 +15,7 @@ val rdgenModelsCompileClasspath by configurations.creating {
     extendsFrom(configurations.compileClasspath.get())
 }
 
-val generatedSourcesDir by lazy {
-    buildDir.resolve("generated/kotlin")
-}
-
 kotlin {
-    sourceSets["main"].apply {
-        kotlin.srcDir(generatedSourcesDir)
-    }
     sourceSets.create("rdgenModels").apply {
         kotlin.srcDir("src/main/rdgen")
     }
@@ -38,7 +31,6 @@ dependencies {
     api("com.jetbrains.rd:rd-core:2022.3.2")
     api("com.jetbrains.rd:rd-framework:2022.3.2")
 
-    implementation("com.jetbrains.rd:rd-gen:2022.3.2")
     rdgenModelsCompileClasspath("com.jetbrains.rd:rd-gen:2022.3.2")
 
     testImplementation(kotlin("test"))
@@ -47,6 +39,9 @@ dependencies {
 val generateModels = tasks.register<RdGenTask>("generateProtocolModels") {
     val rdParams = extensions.getByName("params") as RdGenExtension
     val sourcesDir = projectDir.resolve("src/main/rdgen").resolve("org/ksmt/runner/models")
+    val sourcesBaseDir = projectDir.resolve("src/main/kotlin")
+    val generatedModelsPackage = "org.ksmt.runner.models.generated"
+    val generatedSourceDir = sourcesBaseDir.resolve(generatedModelsPackage.replace('.', '/'))
 
     group = "rdgen"
     rdParams.verbose = true
@@ -58,15 +53,29 @@ val generateModels = tasks.register<RdGenTask>("generateProtocolModels") {
     rdParams.generator {
         language = "kotlin"
         transform = "symmetric"
-        root = "org.ksmt.runner.models.ProtocolRoot"
+        root = "org.ksmt.runner.models.SolverProtocolRoot"
 
-        directory = generatedSourcesDir.absolutePath
-        namespace = "org.ksmt.runner.generated"
+        directory = generatedSourceDir.absolutePath
+        namespace = generatedModelsPackage
     }
-}
 
-tasks.withType<KotlinCompile> {
-    dependsOn.add(generateModels)
+    rdParams.generator {
+        language = "kotlin"
+        transform = "symmetric"
+        root = "org.ksmt.runner.models.TestProtocolRoot"
+
+        directory = generatedSourceDir.absolutePath
+        namespace = generatedModelsPackage
+    }
+
+    rdParams.generator {
+        language = "kotlin"
+        transform = "symmetric"
+        root = "org.ksmt.runner.models.SyncProtocolRoot"
+
+        directory = generatedSourceDir.absolutePath
+        namespace = generatedModelsPackage
+    }
 }
 
 tasks.getByName<KotlinCompile>("compileKotlin") {
