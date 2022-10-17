@@ -1,12 +1,18 @@
 # KSMT
 Kotlin API for various SMT solvers
 
-[![KSMT: build](https://github.com/UnitTestBot/ksmt/actions/workflows/build-and-run-tests.yml/badge.svg)](https://github.com/UnitTestBot/UTBotJava/ksmt/workflows/build-and-run-tests.yml)
+[![KSMT: build](https://github.com/UnitTestBot/ksmt/actions/workflows/build-and-run-tests.yml/badge.svg)](https://github.com/UnitTestBot/ksmt/workflows/build-and-run-tests.yml)
+[![JitPack](https://jitpack.io/v/UnitTestBot/ksmt.svg)](https://jitpack.io/#UnitTestBot/ksmt)
 
 # Getting started
-Install via JitPack and Gradle
+Install via [JitPack](https://jitpack.io/) and Gradle
 
 ```kotlin
+// JitPack repository
+repositories {
+    maven { url = uri("https://jitpack.io") }
+}
+
 // core 
 implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.1.0")
 // z3 solver
@@ -14,10 +20,10 @@ implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.1.0")
 ```
 
 ## Usage
-See [examples](examples)
+Check out our [getting started guide](docs/getting-started.md) and [example project](examples)
 
 # Features
-Currently KSMT supports the following SMT solvers:
+Currently, KSMT supports the following SMT solvers:
 
 | SMT Solver                                       |     Linux-x64      |    Windows-x64     |     MacOS-x64      |
 |--------------------------------------------------|:------------------:|:------------------:|:------------------:|
