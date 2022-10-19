@@ -20,7 +20,8 @@ implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.1.0")
 ```
 
 ## Usage
-Check out our [getting started guide](docs/getting-started.md) and [example project](examples)
+Check out our [getting started guide](docs/getting-started.md) and [example project](examples).
+For Java usage examples check out [java examples](examples/src/main/java).
 
 # Features
 Currently, KSMT supports the following SMT solvers:

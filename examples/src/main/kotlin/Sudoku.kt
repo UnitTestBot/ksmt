@@ -123,7 +123,7 @@ private fun parseSudoku(task: String): List<List<Int>> =
 
 private fun Char.cellValueOrNull(): Int? = when {
     isDigit() -> digitToInt()
-    this == '*' -> 0
+    this == '*' -> EMPTY_CELL_VALUE
     else -> null
 }
 
