@@ -2,6 +2,7 @@ import org.ksmt.KContext;
 import org.ksmt.expr.KExpr;
 import org.ksmt.expr.KInt32NumExpr;
 import org.ksmt.solver.KModel;
+import org.ksmt.solver.KSolver;
 import org.ksmt.solver.KSolverStatus;
 import org.ksmt.solver.z3.KZ3Solver;
 import org.ksmt.sort.KBoolSort;
@@ -12,6 +13,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
+
+import kotlin.time.DurationUnit;
+import static kotlin.time.DurationKt.toDuration;
 
 public class Sudoku {
     private static final int BLOCK_SIZE = 3;
@@ -48,13 +52,14 @@ public class Sudoku {
             final List<KExpr<KBoolSort>> symbolAssignments = assignSymbols(ctx, symbols, initialGrid);
 
             // Create Z3 SMT solver instance.
-            try (final KZ3Solver solver = new KZ3Solver(ctx)) {
+            try (final KSolver solver = new KZ3Solver(ctx)) {
                 // Assert all constraints.
-                rules.forEach(expr -> JavaCompatibilityUtils.solverAssert(solver, expr));
-                symbolAssignments.forEach(expr -> JavaCompatibilityUtils.solverAssert(solver, expr));
+                rules.forEach(solver::assertExpr);
+                symbolAssignments.forEach(solver::assertExpr);
 
                 // Solve Sudoku.
-                final KSolverStatus status = JavaCompatibilityUtils.check(solver);
+                long solverTimeout = toDuration(1, DurationUnit.SECONDS);
+                final KSolverStatus status = solver.check(solverTimeout);
                 if (status != KSolverStatus.SAT) {
                     throw new IllegalArgumentException("Sudoku is unsolvable");
                 }

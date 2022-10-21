@@ -9,7 +9,7 @@ repositories {
 
 dependencies {
     // core
-    implementation("com.github.UnitTestBot.ksmt:ksmt-core:main-SNAPSHOT")
+    implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.1.1")
     // z3 solver
-    implementation("com.github.UnitTestBot.ksmt:ksmt-z3:main-SNAPSHOT")
+    implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.1.1")
 }
