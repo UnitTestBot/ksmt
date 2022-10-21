@@ -4,6 +4,7 @@ import org.ksmt.expr.KExpr
 import org.ksmt.sort.KBoolSort
 import kotlin.time.Duration
 
+@Suppress("OVERLOADS_INTERFACE", "INAPPLICABLE_JVM_NAME")
 interface KSolver : AutoCloseable {
 
     /**
@@ -11,7 +12,6 @@ interface KSolver : AutoCloseable {
      *
      * @see check
      * */
-    @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("assertExpr")
     fun assert(expr: KExpr<KBoolSort>)
 
@@ -38,7 +38,7 @@ interface KSolver : AutoCloseable {
      * @param n number of pushed scopes to revert.
      * @see push
      * */
-    @Suppress("INAPPLICABLE_JVM_NAME")
+    @JvmOverloads
     @JvmName("pop")
     fun pop(n: UInt = 1u)
 
@@ -52,7 +52,7 @@ interface KSolver : AutoCloseable {
      * * [KSolverStatus.UNKNOWN] solver failed to check satisfiability due to timeout or internal reasons.
      * Brief reason description may be obtained via [reasonOfUnknown].
      * */
-    @Suppress("INAPPLICABLE_JVM_NAME")
+    @JvmOverloads
     @JvmName("check")
     fun check(timeout: Duration = Duration.INFINITE): KSolverStatus
 
@@ -63,7 +63,7 @@ interface KSolver : AutoCloseable {
      * @see check
      * @see unsatCore
      * */
-    @Suppress("INAPPLICABLE_JVM_NAME")
+    @JvmOverloads
     @JvmName("checkWithAssumptions")
     fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration = Duration.INFINITE): KSolverStatus
 
