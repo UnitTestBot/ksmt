@@ -126,6 +126,7 @@ class KsmtWorkerPool<Model>(
 
     private fun terminatePool() {
         readyWorkers.close()
+        // keep immutable copy of workers since [killWorker] modifies [workers]
         val allWorkers = workers.values.toList()
         allWorkers.forEach { killWorker(it) }
         workers.clear()

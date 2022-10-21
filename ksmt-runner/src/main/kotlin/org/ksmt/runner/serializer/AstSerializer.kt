@@ -161,15 +161,28 @@ class AstSerializer(
 
     private val exprKindMapper = ExprKindMapper()
 
-    fun <T : KSort> KExpr<T>.serializeExpr(): Int = internalizeExpr()
+    fun serializeAst(ast: KAst) {
+        val serializedAst = run {
+            when (ast) {
+                is KDecl<*> -> ast.serializeDecl()
+                is KSort -> ast.serializeSort()
+                is KExpr<*> -> ast.serializeExpr()
+                else -> error("Unexpected ast: ${ast::class}")
+            }
+        }
+        output.writeInt(AstSerializationCtx.SERIALIZED_DATA_END_IDX)
+        output.writeInt(serializedAst)
+    }
 
-    fun <T : KDecl<*>> T.serializeDecl(): Int {
+    private fun <T : KSort> KExpr<T>.serializeExpr(): Int = internalizeExpr()
+
+    private fun <T : KDecl<*>> T.serializeDecl(): Int {
         val idx = serializationCtx.getAstIndex(this)
         if (idx != null) return idx
         return accept(declSerializer)
     }
 
-    fun <T : KSort> T.serializeSort(): Int {
+    private fun <T : KSort> T.serializeSort(): Int {
         val idx = serializationCtx.getAstIndex(this)
         if (idx != null) return idx
         return accept(sortSerializer)
@@ -178,6 +191,7 @@ class AstSerializer(
     override fun findInternalizedExpr(expr: KExpr<*>): Int? = serializationCtx.getAstIndex(expr)
 
     override fun saveInternalizedExpr(expr: KExpr<*>, internalized: Int) {
+        // Do nothing since expr is already saved into serializationCtx
     }
 
     private val sortSerializer = SortSerializer()
@@ -265,6 +279,8 @@ class AstSerializer(
         argWriter()
     }
 
+    private fun <S : KExpr<*>> S.serialize(): S = transform { writeExpr { } }
+
     private fun <S : KExpr<*>> S.serialize(
         arg: KExpr<*>
     ): S = transform(arg) { argIdx: Int ->
@@ -336,9 +352,9 @@ class AstSerializer(
 
     override fun transform(expr: KXorExpr) = with(expr) { serialize(a, b) }
 
-    override fun transform(expr: KTrue) = expr.transform { expr.writeExpr { } }
+    override fun transform(expr: KTrue) = with(expr) { serialize() }
 
-    override fun transform(expr: KFalse) = expr.transform { expr.writeExpr { } }
+    override fun transform(expr: KFalse) = with(expr) { serialize() }
 
     override fun <T : KSort> transform(expr: KEqExpr<T>) = with(expr) { serialize(lhs, rhs) }
 

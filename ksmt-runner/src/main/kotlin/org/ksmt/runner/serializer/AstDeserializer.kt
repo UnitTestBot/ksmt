@@ -34,7 +34,7 @@ class AstDeserializer(
     private fun readSort(): KSort = readAst()
     private fun <T : KSort> readExpr(): KExpr<T> = readAst()
 
-    fun deserialize() {
+    fun deserializeAst(): KAst {
         while (true) {
             val idx = input.readInt()
 
@@ -64,6 +64,9 @@ class AstDeserializer(
 
             serializationCtx.writeAst(idx, deserialized)
         }
+
+        val serializedAstIdx = input.readInt()
+        return serializationCtx.getAstByIndexOrError(serializedAstIdx)
     }
 
     @Suppress("UNCHECKED_CAST")
