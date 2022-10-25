@@ -38,7 +38,9 @@ object NativeLibraryLoader {
                 continue
             }
 
-            val libFile = Files.createTempFile(libName, libraryExt)
+            // use directory to preserve dll name on Windows
+            val libUnpackDirectory = Files.createTempDirectory("ksmt")
+            val libFile = libUnpackDirectory.resolve(libName + libraryExt)
 
             NativeLibraryLoader::class.java.classLoader
                 .getResourceAsStream(resourceName)
@@ -47,6 +49,9 @@ object NativeLibraryLoader {
                 }
 
             System.load(libFile.toAbsolutePath().toString())
+
+            // tmp files are not removed on Windows
+            libFile.toFile().delete()
         }
     }
 }

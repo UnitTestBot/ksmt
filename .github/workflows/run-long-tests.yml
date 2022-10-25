@@ -27,8 +27,7 @@ jobs:
             build
             --no-daemon
             --continue
-            -Pz3.runBenchmarksBasedTests=true
-            -Pbitwuzla.runBenchmarksBasedTests=true
+            -PrunBenchmarksBasedTests=true
 
       - name: Upload ksmt test reports
         uses: actions/upload-artifact@v3

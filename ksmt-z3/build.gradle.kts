@@ -2,7 +2,6 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     id("org.ksmt.ksmt-base")
-    `java-test-fixtures`
     id("com.github.johnrengelman.shadow") version "7.1.2"
 }
 
@@ -22,13 +21,7 @@ val z3Binaries = listOf(
 
 dependencies {
     implementation(project(":ksmt-core"))
-    implementation(fileTree(z3JavaJar.outputDirectory) {
-        builtBy(z3JavaJar)
-    })
-
-    testImplementation(testFixtures(project(":ksmt-core")))
-    testFixturesApi(testFixtures(project(":ksmt-core")))
-    testFixturesImplementation(fileTree(z3JavaJar.outputDirectory) {
+    api(fileTree(z3JavaJar.outputDirectory) {
         builtBy(z3JavaJar)
     })
 }
@@ -60,67 +53,6 @@ fun Project.mkZ3ReleaseDownloadTask(arch: String, artifactPattern: String): Task
             }
         }
         outputs.dir(outputDir)
-    }
-}
-
-val runBenchmarksBasedTests = project.booleanProperty("z3.runBenchmarksBasedTests") ?: false
-
-// skip big benchmarks to achieve faster tests build and run time
-val skipBigBenchmarks = project.booleanProperty("z3.skipBigBenchmarks") ?: true
-
-// skip to achieve faster tests run time
-val skipZ3SolverTest = project.booleanProperty("z3.skipSolverTest") ?: true
-
-val smtLibBenchmarks = listOfNotNull(
-    "QF_ALIA", // 12M
-    "QF_AUFLIA", // 1.5M
-    if (!skipBigBenchmarks) "QF_LIA" else null, // 5.2G
-    "QF_LIRA", // 500K
-    if (!skipBigBenchmarks) "QF_LRA" else null, // 1.1G
-    if (!skipBigBenchmarks) "QF_UF" else null, // 100M
-    "QF_UFLIA",// 1.3M
-    if (!skipBigBenchmarks) "QF_UFLRA" else null, // 422M
-    "ALIA", // 400K
-    "AUFLIA", // 12M
-    "AUFLIRA", // 19M
-    "LIA", // 1.2M
-    "LRA", // 4.5M
-//    "UFLIA", // 64M // skipped, because systematically fails to download
-    "UFLRA", // 276K
-    "ABV", // 400K
-    if (!skipBigBenchmarks) "AUFBV" else null, // 1.2G
-    if (!skipBigBenchmarks) "BV" else null, // 847M
-    "QF_ABV", // 253M
-    if (!skipBigBenchmarks) "QF_BV" else null,// 12.3G
-    "ABVFP", // 276K
-    "ABVFPLRA", // 246K
-    "AUFBVFP", // 14M
-    "BVFP", // 400K
-    "BVFPLRA", // 500K
-    "FP", // 1M
-    "FPLRA", // 700K
-    "QF_ABVFP", // 13M
-    "QF_ABVFPLRA", // 300K
-    "QF_AUFBVFP", // 200K
-    "QF_BVFP", // 7M
-    "QF_BVFPLRA", // 300K
-    "QF_FPLRA", // 250K
-    "QF_FP", // 30M
-)
-
-val smtLibBenchmarkTestData = smtLibBenchmarks.map { mkSmtLibBenchmarkTestData(it) }
-
-val prepareTestData by tasks.registering {
-    dependsOn.addAll(smtLibBenchmarkTestData)
-}
-
-tasks.withType<Test> {
-    if (runBenchmarksBasedTests) {
-        environment("z3.benchmarksBasedTests", "enabled")
-        dependsOn.add(prepareTestData)
-        if (!skipZ3SolverTest) {
-            environment("z3.testSolver", "enabled")
-        }
     }
 }
 
