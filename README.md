@@ -14,9 +14,9 @@ repositories {
 }
 
 // core 
-implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.1.1")
+implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.2.0")
 // z3 solver
-implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.1.1")
+implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.2.0")
 ```
 
 ## Usage
