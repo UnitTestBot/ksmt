@@ -15,6 +15,7 @@ import org.ksmt.runner.models.generated.SolverProtocolModel
 import org.ksmt.runner.models.generated.SolverType
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
+import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.model.KModelImpl
@@ -22,10 +23,11 @@ import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import kotlin.time.Duration
 
-class KSolverRunner(
+class KSolverRunner<Config: KSolverConfiguration>(
     private val hardTimeout: Duration,
     private val worker: KsmtWorkerSession<SolverProtocolModel>,
-) : KSolver {
+    private val configurationBuilder: KSolverUniversalConfigurationBuilder<Config>,
+) : KSolver<Config> {
 
     override fun close() {
         runBlocking {
@@ -41,6 +43,18 @@ class KSolverRunner(
     private fun ensureActive() {
         if (!worker.isAlive) {
             throw KSolverException("Solver worker is terminated")
+        }
+    }
+
+    override fun configure(configurator: Config.() -> Unit) = runBlocking {
+        configureAsync(configurator)
+    }
+
+    suspend fun configureAsync(configurator: Config.() -> Unit) {
+        ensureActive()
+        val config = configurationBuilder.build { configurator() }
+        withTimeoutAndExceptionHandling {
+            worker.protocolModel.configure.startSuspending(worker.lifetime, config)
         }
     }
 

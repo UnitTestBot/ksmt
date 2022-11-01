@@ -19,7 +19,7 @@ import java.util.IdentityHashMap
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 
-open class KZ3Solver(private val ctx: KContext) : KSolver {
+open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration> {
     private val z3Ctx = KZ3Context()
     private val solver = createSolver()
     private var lastCheckStatus = KSolverStatus.UNKNOWN
@@ -40,6 +40,12 @@ open class KZ3Solver(private val ctx: KContext) : KSolver {
     open fun createExprConverter(z3Ctx: KZ3Context) = KZ3ExprConverter(ctx, z3Ctx)
 
     private fun createSolver(): Solver = z3Ctx.nativeContext.mkSolver()
+
+    override fun configure(configurator: KZ3SolverConfiguration.() -> Unit) {
+        val params = z3Ctx.nativeContext.mkParams()
+        KZ3SolverConfigurationImpl(params).configurator()
+        solver.setParameters(params)
+    }
 
     override fun push() {
         solver.push()

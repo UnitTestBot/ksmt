@@ -21,6 +21,7 @@ import org.ksmt.runner.core.RdServer
 import org.ksmt.runner.models.generated.TestProtocolModel
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
+import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.KSolverUnsupportedFeatureException
@@ -66,10 +67,10 @@ abstract class BenchmarksBasedTest {
         }
     }
 
-    fun testModelConversion(
+    fun <C : KSolverConfiguration> testModelConversion(
         name: String,
         samplePath: Path,
-        solverType: KClass<out KSolver>
+        solverType: KClass<out KSolver<C>>
     ) {
         val ctx = KContext()
         testWorkers.withWorker(ctx) { worker ->
@@ -89,10 +90,10 @@ abstract class BenchmarksBasedTest {
         }
     }
 
-    fun testSolver(
+    fun <C : KSolverConfiguration> testSolver(
         name: String,
         samplePath: Path,
-        solverType: KClass<out KSolver>
+        solverType: KClass<out KSolver<C>>
     ) {
         val ctx = KContext()
         testWorkers.withWorker(ctx) { worker ->

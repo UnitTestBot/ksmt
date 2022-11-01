@@ -8,15 +8,17 @@ import org.ksmt.KContext
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.z3.KZ3Solver
+import org.ksmt.solver.z3.KZ3SolverConfiguration
 import org.ksmt.utils.mkConst
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 
 class IncrementalApiTest {
     private lateinit var context: KContext
-    private lateinit var solver: KSolver
+    private lateinit var solver: KSolver<KZ3SolverConfiguration>
 
     @BeforeEach
     fun createNewEnvironment() {
@@ -119,5 +121,32 @@ class IncrementalApiTest {
         val status = solver.checkWithAssumptions(emptyList(), timeout = 1.milliseconds)
         assertEquals(KSolverStatus.UNKNOWN, status)
         assertEquals("timeout", solver.reasonOfUnknown())
+    }
+
+    @Test
+    fun testSolverConfiguration(): Unit = with(context) {
+        val i by intSort
+        val j by intSort
+
+        val expr = (i gt j) or (i lt j)
+        solver.assert(expr)
+
+        solver.configure { setZ3Option("random_seed", 17) }
+        val status1 = solver.check()
+        assertEquals(KSolverStatus.SAT, status1)
+        val model1 = solver.model()
+
+        solver.configure { setZ3Option("random_seed", 42) }
+        val status2 = solver.check()
+        assertEquals(KSolverStatus.SAT, status2)
+        val model2 = solver.model()
+
+        solver.configure { setZ3Option("random_seed", 17) }
+        val status3 = solver.check()
+        assertEquals(KSolverStatus.SAT, status3)
+        val model3 = solver.model()
+
+        assertNotEquals(model1, model2)
+        assertEquals(model1, model3)
     }
 }
