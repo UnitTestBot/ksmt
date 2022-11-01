@@ -19,6 +19,8 @@ typealias Bitwuzla = Pointer
 typealias BitwuzlaTerm = Pointer
 typealias BitwuzlaSort = Pointer
 typealias BitwuzlaBitVector = Pointer
+typealias BitwuzlaFloatingPoint = Pointer
+typealias BitwuzlaCore = Pointer
 
 object Native {
 
@@ -2737,10 +2739,24 @@ object Native {
     fun bitwuzlaBvBitsGetBit(bv: BitwuzlaBitVector, pos: Int): Int =
         bzla_bv_get_bit(bv, pos).checkError()
 
+    /**
+     * Get fp const bits. Only safe if [bitwuzlaTermIsFpValue] is true for [term]
+     * */
+    fun bitwuzlaFpConstNodeGetBits(bitwuzla: Bitwuzla, term: BitwuzlaTerm): BitwuzlaBitVector {
+        val bitwuzlaCore = bitwuzla_get_bzla(bitwuzla).checkError()
+        val nativeFp = bzla_node_fp_const_get_fp(term).checkError()
+        return bzla_fp_as_bv(bitwuzlaCore, nativeFp).checkError()
+    }
+
     private external fun bzla_node_bv_const_get_bits(term: BitwuzlaTerm): BitwuzlaBitVector
     private external fun bzla_bv_get_width(bv: BitwuzlaBitVector): Int
     private external fun bzla_bv_to_uint64(bv: BitwuzlaBitVector): Long
     private external fun bzla_bv_get_bit(bv: BitwuzlaBitVector, pos: Int): Int
+
+    private external fun bzla_node_fp_const_get_fp(term: BitwuzlaTerm): BitwuzlaFloatingPoint
+    private external fun bzla_fp_as_bv(bzla: BitwuzlaCore, fp: BitwuzlaFloatingPoint): BitwuzlaBitVector
+
+    private external fun bitwuzla_get_bzla(bitwuzla: Bitwuzla): BitwuzlaCore
 
     private fun <T : Pointer> Array<T>.mkPtr(): Pointer {
         val memory = Memory(Native.POINTER_SIZE.toLong() * size)

@@ -5,8 +5,10 @@ import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.expr.transformer.KTransformerBase
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBitVector
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
@@ -16,8 +18,11 @@ import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBvSort
+import org.ksmt.sort.KFpRoundingModeSort
+import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
 
+@Suppress("LargeClass")
 open class KBitwuzlaExprConverter(
     private val ctx: KContext,
     val bitwuzlaCtx: KBitwuzlaContext
@@ -78,6 +83,14 @@ open class KBitwuzlaExprConverter(
             Native.bitwuzlaSortIsBv(sort) -> {
                 val size = Native.bitwuzlaSortBvGetSize(sort)
                 mkBvSort(size.toUInt())
+            }
+            Native.bitwuzlaSortIsFp(sort) -> {
+                val exponent = Native.bitwuzlaSortFpGetExpSize(sort)
+                val significand = Native.bitwuzlaSortFpGetSigSize(sort)
+                mkFpSort(exponent.toUInt(), significand.toUInt())
+            }
+            Native.bitwuzlaSortIsRm(sort) -> {
+                mkFpRoundingModeSort()
             }
             else -> TODO("Given sort $sort is not supported yet")
         }
@@ -204,7 +217,7 @@ open class KBitwuzlaExprConverter(
             BitwuzlaKind.BITWUZLA_KIND_FP_TO_FP_FROM_SBV,
             BitwuzlaKind.BITWUZLA_KIND_FP_TO_FP_FROM_UBV,
             BitwuzlaKind.BITWUZLA_KIND_FP_TO_SBV,
-            BitwuzlaKind.BITWUZLA_KIND_FP_TO_UBV -> TODO("FP are not supported yet")
+            BitwuzlaKind.BITWUZLA_KIND_FP_TO_UBV -> convertFpExpr(expr, kind)
 
             // unsupported
             BitwuzlaKind.BITWUZLA_NUM_KINDS,
@@ -278,10 +291,23 @@ open class KBitwuzlaExprConverter(
             Native.bitwuzlaTermIsBv(expr) -> bitwuzlaCtx.convertValue(expr) ?: run {
                 convertBvValue(expr)
             }
-            Native.bitwuzlaTermIsFp(expr) -> TODO("FP are not supported yet")
+            Native.bitwuzlaTermIsFp(expr) -> bitwuzlaCtx.convertValue(expr) ?: run {
+                convertFpValue(expr)
+            }
+            Native.bitwuzlaTermIsRm(expr) -> bitwuzlaCtx.convertValue(expr) ?: run {
+                convertRmValue(expr)
+            }
             else -> TODO("unsupported value $expr")
         }
     }
+
+    private fun BitwuzlaBitVector.getBit(idx: Int): Boolean =
+        Native.bitwuzlaBvBitsGetBit(this, idx) != 0
+
+    private fun BooleanArray.toReversedBinaryString() = String(CharArray(size) { charIdx ->
+        val bitIdx = size - 1 - charIdx
+        if (this[bitIdx]) '1' else '0'
+    })
 
     private fun KContext.convertBvValue(expr: BitwuzlaTerm): KBitVecValue<KBvSort> {
         val size = Native.bitwuzlaTermBvGetSize(expr)
@@ -297,12 +323,8 @@ open class KBitwuzlaExprConverter(
                 val numericValue = Native.bitwuzlaBvBitsToUInt64(nativeBits).toULong()
                 numericValue.toString(radix = 2).padStart(size, '0')
             } else {
-                val bitChars = CharArray(size) { charIdx ->
-                    val bitIdx = size - 1 - charIdx
-                    val bit = Native.bitwuzlaBvBitsGetBit(nativeBits, bitIdx) != 0
-                    if (bit) '1' else '0'
-                }
-                String(bitChars)
+                val bits = BooleanArray(size) { nativeBits.getBit(it) }
+                bits.toReversedBinaryString()
             }
 
             mkBv(bits, size.toUInt())
@@ -314,6 +336,76 @@ open class KBitwuzlaExprConverter(
         bitwuzlaCtx.saveInternalizedValue(convertedValue, expr)
 
         return convertedValue
+    }
+
+    private fun KContext.convertFpValue(expr: BitwuzlaTerm): KExpr<KFpSort> {
+        val sort = Native.bitwuzlaTermGetSort(expr).convertSort() as KFpSort
+
+        val convertedValue = if (Native.bitwuzlaTermIsFpValue(expr)) {
+            // convert Fp value from native representation
+            val nativeBits = Native.bitwuzlaFpConstNodeGetBits(bitwuzlaCtx.bitwuzla, expr)
+            val nativeBitsSize = Native.bitwuzlaBvBitsGetWidth(nativeBits)
+            val size = (sort.exponentBits + sort.significandBits).toInt()
+            check(size == nativeBitsSize) {
+                "Fp size mismatch, expr size $size, native size $nativeBitsSize "
+            }
+
+            when (size) {
+                Double.SIZE_BITS -> {
+                    val numericValue = Native.bitwuzlaBvBitsToUInt64(nativeBits)
+                    mkFp(Double.fromBits(numericValue), sort)
+                }
+                Float.SIZE_BITS -> {
+                    val numericValue = Native.bitwuzlaBvBitsToUInt64(nativeBits)
+                    mkFp(Float.fromBits(numericValue.toInt()), sort)
+                }
+                else -> {
+                    val exponentSize = sort.exponentBits
+                    val significandSize = sort.significandBits
+
+                    val signBit = nativeBits.getBit(size - 1)
+                    val exponentBits = BooleanArray(exponentSize.toInt()) {
+                        val lowestBit = size - 1 - exponentSize.toInt()
+                        nativeBits.getBit(lowestBit + it)
+                    }
+                    val significandBits = BooleanArray(significandSize.toInt() - 1) {
+                        nativeBits.getBit(it)
+                    }
+
+                    mkFpFromBvExpr(
+                        sign = mkBv(signBit),
+                        exponent = mkBv(exponentBits.toReversedBinaryString(), exponentSize),
+                        significand = mkBv(significandBits.toReversedBinaryString(), significandSize - 1u)
+                    )
+                }
+            }
+
+        } else {
+            val value = Native.bitwuzlaGetFpValue(bitwuzlaCtx.bitwuzla, expr)
+
+            @Suppress("UNCHECKED_CAST")
+            mkFpFromBvExpr(
+                sign = mkBv(value.sign, sizeBits = 1u) as KExpr<KBv1Sort>,
+                exponent = mkBv(value.exponent, value.exponent.length.toUInt()),
+                significand = mkBv(value.significand, value.significand.length.toUInt())
+            )
+        }
+
+        bitwuzlaCtx.saveInternalizedValue(convertedValue, expr)
+
+        return convertedValue
+    }
+
+    private fun KContext.convertRmValue(expr: BitwuzlaTerm): KExpr<KFpRoundingModeSort> {
+        val kind = when {
+            Native.bitwuzlaTermIsRmValueRne(expr) -> KFpRoundingMode.RoundNearestTiesToEven
+            Native.bitwuzlaTermIsRmValueRna(expr) -> KFpRoundingMode.RoundNearestTiesToAway
+            Native.bitwuzlaTermIsRmValueRtp(expr) -> KFpRoundingMode.RoundTowardPositive
+            Native.bitwuzlaTermIsRmValueRtn(expr) -> KFpRoundingMode.RoundTowardNegative
+            Native.bitwuzlaTermIsRmValueRtz(expr) -> KFpRoundingMode.RoundTowardZero
+            else -> error("Unexpected rounding mode")
+        }
+        return mkFpRoundingModeExpr(kind)
     }
 
     open fun KContext.convertBoolExpr(expr: BitwuzlaTerm, kind: BitwuzlaKind): ExprConversionResult = when (kind) {
@@ -422,6 +514,94 @@ open class KBitwuzlaExprConverter(
         BitwuzlaKind.BITWUZLA_KIND_BV_CONCAT -> expr.convertBv(::mkBvConcatExpr)
         BitwuzlaKind.BITWUZLA_KIND_BV_COMP -> TODO("$kind")
         else -> error("unexpected BV kind $kind")
+    }
+
+    @Suppress("LongMethod", "ComplexMethod")
+    open fun convertFpExpr(expr: BitwuzlaTerm, kind: BitwuzlaKind): ExprConversionResult = when (kind) {
+        BitwuzlaKind.BITWUZLA_KIND_FP_ABS -> expr.convert(ctx::mkFpAbsExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_ADD -> expr.convert(ctx::mkFpAddExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_SUB -> expr.convert(ctx::mkFpSubExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_MUL -> expr.convert(ctx::mkFpMulExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_FMA -> expr.convert(ctx::mkFpFusedMulAddExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_DIV -> expr.convert(ctx::mkFpDivExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_REM -> expr.convert(ctx::mkFpRemExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_MAX -> expr.convert(ctx::mkFpMaxExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_MIN -> expr.convert(ctx::mkFpMinExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_NEG -> expr.convert(ctx::mkFpNegationExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_RTI -> expr.convert(ctx::mkFpRoundToIntegralExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_SQRT -> expr.convert(ctx::mkFpSqrtExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_IS_INF -> expr.convert(ctx::mkFpIsInfiniteExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_IS_NAN -> expr.convert(ctx::mkFpIsNaNExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_IS_NORMAL -> expr.convert(ctx::mkFpIsNormalExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_IS_SUBNORMAL -> expr.convert(ctx::mkFpIsSubnormalExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_IS_NEG -> expr.convert(ctx::mkFpIsNegativeExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_IS_POS -> expr.convert(ctx::mkFpIsPositiveExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_IS_ZERO -> expr.convert(ctx::mkFpIsZeroExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_EQ -> expr.convert(ctx::mkFpEqualExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_LEQ -> expr.convert(ctx::mkFpLessOrEqualExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_LT -> expr.convert(ctx::mkFpLessExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_GEQ -> expr.convert(ctx::mkFpGreaterOrEqualExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_GT -> expr.convert(ctx::mkFpGreaterExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_TO_SBV ->
+            expr.convert { rm: KExpr<KFpRoundingModeSort>, value: KExpr<KFpSort> ->
+                val bvSize = Native.bitwuzlaTermGetIndices(expr).single()
+                ctx.mkFpToBvExpr(rm, value, bvSize, isSigned = true)
+            }
+        BitwuzlaKind.BITWUZLA_KIND_FP_TO_UBV ->
+            expr.convert { rm: KExpr<KFpRoundingModeSort>, value: KExpr<KFpSort> ->
+                val bvSize = Native.bitwuzlaTermGetIndices(expr).single()
+                ctx.mkFpToBvExpr(rm, value, bvSize, isSigned = false)
+            }
+        BitwuzlaKind.BITWUZLA_KIND_FP_TO_FP_FROM_SBV ->
+            expr.convert { rm: KExpr<KFpRoundingModeSort>, value: KExpr<KBvSort> ->
+                val sort = Native.bitwuzlaTermGetSort(expr).convertSort() as KFpSort
+                ctx.mkBvToFpExpr(sort, rm, value, signed = true)
+            }
+        BitwuzlaKind.BITWUZLA_KIND_FP_TO_FP_FROM_UBV ->
+            expr.convert { rm: KExpr<KFpRoundingModeSort>, value: KExpr<KBvSort> ->
+                val sort = Native.bitwuzlaTermGetSort(expr).convertSort() as KFpSort
+                ctx.mkBvToFpExpr(sort, rm, value, signed = false)
+            }
+        BitwuzlaKind.BITWUZLA_KIND_FP_FP -> expr.convert(ctx::mkFpFromBvExpr)
+        BitwuzlaKind.BITWUZLA_KIND_FP_TO_FP_FROM_BV -> {
+            val indices = Native.bitwuzlaTermGetIndices(expr)
+            check(indices.size == 2) { "unexpected fp-from-bv indices: $indices" }
+            val (exponentSize, significandSize) = indices
+            val bvValue = Native.bitwuzlaTermGetChildren(expr).single()
+            val bvSize = Native.bitwuzlaTermBvGetSize(bvValue)
+            check(bvSize == exponentSize + significandSize) {
+                "unexpected bv size in fp-from-bv: bv-size $bvSize, exp $exponentSize, significand $significandSize"
+            }
+
+            // rewrite expression as fp_fp
+            val signBv = Native.bitwuzlaMkTerm1Indexed2(
+                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_EXTRACT,
+                bvValue,
+                bvSize - 1, bvSize - 1
+            )
+            val exponentBv = Native.bitwuzlaMkTerm1Indexed2(
+                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_EXTRACT,
+                bvValue,
+                bvSize - 2, bvSize - 1 - exponentSize
+            )
+            val significandBv = Native.bitwuzlaMkTerm1Indexed2(
+                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_EXTRACT,
+                bvValue,
+                significandSize - 2, 0
+            )
+            val rewritedExpr = Native.bitwuzlaMkTerm3(
+                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FP_FP,
+                signBv, exponentBv, significandBv
+            )
+
+            convertNativeExpr(rewritedExpr)
+        }
+        BitwuzlaKind.BITWUZLA_KIND_FP_TO_FP_FROM_FP ->
+            expr.convert { rm: KExpr<KFpRoundingModeSort>, value: KExpr<KFpSort> ->
+                val sort = Native.bitwuzlaTermGetSort(expr).convertSort() as KFpSort
+                ctx.mkFpToFpExpr(sort, rm, value)
+            }
+        else -> error("unexpected Fp kind $kind")
     }
 
     private fun <T : KDecl<*>> generateDecl(term: BitwuzlaTerm, generator: (String) -> T): T {
@@ -746,6 +926,13 @@ open class KBitwuzlaExprConverter(
 
     inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> BitwuzlaTerm.convert(
         op: (KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<T>
+    ): ExprConversionResult {
+        val args = Native.bitwuzlaTermGetChildren(this)
+        return convert(args, op)
+    }
+
+    inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort> BitwuzlaTerm.convert(
+        op: (KExpr<A0>, KExpr<A1>, KExpr<A2>, KExpr<A3>) -> KExpr<T>
     ): ExprConversionResult {
         val args = Native.bitwuzlaTermGetChildren(this)
         return convert(args, op)

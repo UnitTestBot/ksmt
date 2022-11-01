@@ -47,7 +47,7 @@ class KFp16Value internal constructor(
 ) : KFpValue<KFp16Sort>(
     ctx,
     significand = with(ctx) { value.halfPrecisionSignificand.toBv(KFp16Sort.significandBits - 1u) },
-    exponent = with(ctx) { value.getHalfPrecisionExponent(isBiased = false).toBv(KFp16Sort.exponentBits) },
+    exponent = with(ctx) { value.getHalfPrecisionExponent(isBiased = true).toBv(KFp16Sort.exponentBits) },
     signBit = value.booleanSignBit
 ) {
     init {
@@ -67,7 +67,7 @@ class KFp32Value internal constructor(
 ) : KFpValue<KFp32Sort>(
     ctx,
     significand = with(ctx) { value.significand.toBv(KFp32Sort.significandBits - 1u) },
-    exponent = with(ctx) { value.getExponent(isBiased = false).toBv(KFp32Sort.exponentBits) },
+    exponent = with(ctx) { value.getExponent(isBiased = true).toBv(KFp32Sort.exponentBits) },
     signBit = value.booleanSignBit
 ) {
     override fun decl(): KDecl<KFp32Sort> = ctx.mkFp32Decl(value)
@@ -83,7 +83,7 @@ class KFp64Value internal constructor(
 ) : KFpValue<KFp64Sort>(
     ctx,
     significand = with(ctx) { value.significand.toBv(KFp64Sort.significandBits - 1u) },
-    exponent = with(ctx) { value.getExponent(isBiased = false).toBv(KFp64Sort.exponentBits) },
+    exponent = with(ctx) { value.getExponent(isBiased = true).toBv(KFp64Sort.exponentBits) },
     signBit = value.booleanSignBit
 ) {
     override fun decl(): KDecl<KFp64Sort> = ctx.mkFp64Decl(value)

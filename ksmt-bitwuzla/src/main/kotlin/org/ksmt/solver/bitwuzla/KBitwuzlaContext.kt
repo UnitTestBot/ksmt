@@ -30,7 +30,7 @@ open class KBitwuzlaContext : AutoCloseable {
     private val bitwuzlaSorts = hashMapOf<BitwuzlaSort, KSort>()
     private val declSorts = hashMapOf<KDecl<*>, BitwuzlaSort>()
     private val bitwuzlaConstants = hashMapOf<BitwuzlaTerm, KDecl<*>>()
-    private val bvValues = hashMapOf<BitwuzlaTerm, KExpr<*>>()
+    private val bitwuzlaValues = hashMapOf<BitwuzlaTerm, KExpr<*>>()
 
     operator fun get(expr: KExpr<*>): BitwuzlaTerm? = expressions[expr]
     operator fun get(sort: KSort): BitwuzlaSort? = sorts[sort]
@@ -67,7 +67,7 @@ open class KBitwuzlaContext : AutoCloseable {
      * expressions.
      * */
     fun saveInternalizedValue(expr: KExpr<*>, term: BitwuzlaTerm) {
-        bvValues[term] = expr
+        bitwuzlaValues[term] = expr
     }
 
     fun findConvertedExpr(expr: BitwuzlaTerm): KExpr<*>? = bitwuzlaExpressions[expr]
@@ -78,7 +78,7 @@ open class KBitwuzlaContext : AutoCloseable {
     fun convertSort(sort: BitwuzlaSort, converter: (BitwuzlaSort) -> KSort): KSort =
         convert(sorts, bitwuzlaSorts, sort, converter)
 
-    fun convertValue(value: BitwuzlaTerm): KExpr<*>? = bvValues[value]
+    fun convertValue(value: BitwuzlaTerm): KExpr<*>? = bitwuzlaValues[value]
 
     // Constant is known only if it was previously internalized
     fun convertConstantIfKnown(term: BitwuzlaTerm): KDecl<*>? = bitwuzlaConstants[term]
