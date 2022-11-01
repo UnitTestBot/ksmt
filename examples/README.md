@@ -2,9 +2,9 @@
 
 ### Gradle configuration
 
-Check out [gradle build configuration](build.gradle.kts) for an example gradle configuration.
+Try our example [Gradle build configuration](build.gradle.kts).
 
 ### Usage examples
 
-Check out [examples](src/main/kotlin) for usage examples.
-For Java usage examples check out [java examples](src/main/java).
+To learn more about usage, check out the [examples](src/main/kotlin).
+Also, try the [Java examples](src/main/java).

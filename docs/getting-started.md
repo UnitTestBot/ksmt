@@ -1,12 +1,12 @@
 # Getting started
 
-For existing code examples, please check out our [example project](/examples).
+For code examples, please check out our [project](/examples).
 
 ## Installation
 
 Installation via [JitPack](https://jitpack.io/) and [Gradle](https://gradle.org/).
 
-#### 1. Enable JitPack repository in your build configuration
+#### 1. Enable JitPack repository in your build configuration:
 ```kotlin
 // JitPack repository
 repositories {
@@ -14,7 +14,7 @@ repositories {
 }
 ```
 
-#### 2. Add KSMT core dependency
+#### 2. Add KSMT core dependency:
 ```kotlin
 dependencies {
     // core 
@@ -22,7 +22,7 @@ dependencies {
 }
 ```
 
-#### 3. Add one or more SMT solver dependencies
+#### 3. Add one or more SMT solver dependencies:
 ```kotlin
 dependencies {
     // z3 
@@ -32,6 +32,7 @@ dependencies {
 }
 ```
 SMT solver specific packages are provided with solver native binaries. 
+Check OS compatibility [here](https://github.com/UnitTestBot/ksmt/tree/docs#features).
 
 ## KSMT usage
 
@@ -42,12 +43,12 @@ val ctx = KContext()
 
 ### Working with SMT formulas
 
-Once context is initialized, we can create an expressions. 
+Once the context is initialized, we can create expressions. 
 In this example, we want to create an expression 
 
 `a && (b >= c + 3)`
 
-over boolean variable `a` and integer variables `b` and `c`.
+over Boolean variable `a` and integer variables `b` and `c`.
 
 ```kotlin
 with(ctx) {
@@ -61,7 +62,7 @@ with(ctx) {
 }
 ```
 All KSMT expressions are typed and incorrect terms (e.g. `and` with integer arguments) 
-will result in a compile-time error.
+result in a compile-time error.
 
 ### Working with SMT solvers
 
@@ -71,7 +72,7 @@ and we use Z3 as an SMT solver.
 
 ```kotlin
 with(ctx) {
-    KZ3Solver(this).use { solver -> // create s Z3 Smt solver instance
+    KZ3Solver(this).use { solver -> // create s Z3 SMT solver instance
         // assert expression
         solver.assert(constraint)
         
@@ -88,16 +89,16 @@ with(ctx) {
     }
 }
 ```
-The formula in the example above is satisfiable and we can obtain a model. 
-The model contains a concrete values of our symbolic variables `a`, `b` and `c`
+The formula in the example above is satisfiable and we can obtain a model.
+The model contains concrete values of our symbolic variables `a`, `b` and `c`
 which evaluate our formula to `true`.
 
 Note the use of kotlin `.use { }` construction 
 which is useful for releasing all native resources acquired by the solver.
 
-### Solver incremental api
+### Solver incremental API
 
-KSMT solver api provides two approaches to incremental formula solving: push/pop
+KSMT solver API provides two approaches to incremental formula solving: push/pop
 and assumptions. 
 
 #### Incremental solving with push/pop
@@ -201,7 +202,7 @@ with(ctx) {
 
 #### Incremental solving with assumptions
 
-Assumptions mechanism allows us to assert an expression for a single check 
+Assumption mechanism allows us to assert an expression for a single check 
 without actually adding it to the assertions.
 The following example shows how to implement the previous example using assumptions
 instead of push and pop operations.
@@ -289,7 +290,7 @@ with(ctx) {
 
 ### Solver unsat cores
 
-If the asserted SMT formula is unsatisfiable we can extract the unsat core. 
+If the asserted SMT formula is unsatisfiable, we can extract the [unsat core](https://en.wikipedia.org/wiki/Unsatisfiable_core). 
 The unsat core is a subset of inconsistent assertions and assumptions.
 
 ```kotlin
