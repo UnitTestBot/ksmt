@@ -89,4 +89,13 @@ open class KZ3Model(
     }
 
     private fun ensureContextActive() = check(internCtx.isActive) { "Context already closed" }
+
+    override fun toString(): String = detach().toString()
+    override fun hashCode(): Int = detach().hashCode()
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is KModel) return false
+        return detach() == other
+    }
+
 }
