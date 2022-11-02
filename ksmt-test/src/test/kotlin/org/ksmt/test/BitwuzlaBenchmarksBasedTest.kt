@@ -36,6 +36,6 @@ class BitwuzlaBenchmarksBasedTest : BenchmarksBasedTest() {
         fun bitwuzlaTestData() = testData().skipUnsupportedTheories()
 
         private fun List<BenchmarkTestArguments>.skipUnsupportedTheories() =
-            filterNot { "FP" in it.name || "QF_" !in it.name }
+            filterNot { "QF_" !in it.name }
     }
 }

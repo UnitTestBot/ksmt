@@ -100,6 +100,7 @@ import org.ksmt.expr.KFpMulExpr
 import org.ksmt.expr.KFpNegationExpr
 import org.ksmt.expr.KFpRemExpr
 import org.ksmt.expr.KFpRoundToIntegralExpr
+import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.KFpRoundingModeExpr
 import org.ksmt.expr.KFpSqrtExpr
 import org.ksmt.expr.KFpSubExpr
@@ -107,6 +108,7 @@ import org.ksmt.expr.KFpToBvExpr
 import org.ksmt.expr.KFpToFpExpr
 import org.ksmt.expr.KFpToIEEEBvExpr
 import org.ksmt.expr.KFpToRealExpr
+import org.ksmt.expr.KFpValue
 import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KGeArithExpr
@@ -138,6 +140,7 @@ import org.ksmt.expr.KXorExpr
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBVBase
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaRoundingMode
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
@@ -692,144 +695,175 @@ open class KBitwuzlaExprInternalizer(
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun transform(expr: KFp16Value): KExpr<KFp16Sort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    private fun <T : KFpValue<*>> transformFpValue(expr: T): T = with(expr) {
+        transform(exponent, significand) { exponent: BitwuzlaTerm, significand: BitwuzlaTerm ->
+            val sign = if (signBit) bitwuzlaCtx.trueTerm else bitwuzlaCtx.falseTerm
+            Native.bitwuzlaMkFpValue(bitwuzlaCtx.bitwuzla, sign, exponent, significand)
+        }
     }
 
-    override fun transform(expr: KFp32Value): KExpr<KFp32Sort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun transform(expr: KFp16Value): KExpr<KFp16Sort> = transformFpValue(expr)
+
+    override fun transform(expr: KFp32Value): KExpr<KFp32Sort> = transformFpValue(expr)
+
+    override fun transform(expr: KFp64Value): KExpr<KFp64Sort> = transformFpValue(expr)
+
+    override fun transform(expr: KFp128Value): KExpr<KFp128Sort> = transformFpValue(expr)
+
+    override fun transform(expr: KFpCustomSizeValue): KExpr<KFpSort> = transformFpValue(expr)
+
+    override fun transform(expr: KFpRoundingModeExpr): KExpr<KFpRoundingModeSort> = with(expr) {
+        transform {
+            val rmMode = when (value) {
+                KFpRoundingMode.RoundNearestTiesToEven -> BitwuzlaRoundingMode.BITWUZLA_RM_RNE
+                KFpRoundingMode.RoundNearestTiesToAway -> BitwuzlaRoundingMode.BITWUZLA_RM_RNA
+                KFpRoundingMode.RoundTowardPositive -> BitwuzlaRoundingMode.BITWUZLA_RM_RTP
+                KFpRoundingMode.RoundTowardNegative -> BitwuzlaRoundingMode.BITWUZLA_RM_RTN
+                KFpRoundingMode.RoundTowardZero -> BitwuzlaRoundingMode.BITWUZLA_RM_RTZ
+            }
+            Native.bitwuzlaMkRmValue(bitwuzlaCtx.bitwuzla, rmMode)
+        }
     }
 
-    override fun transform(expr: KFp64Value): KExpr<KFp64Sort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpAbsExpr<T>): KExpr<T> = with(expr) {
+        transform(value, BitwuzlaKind.BITWUZLA_KIND_FP_ABS)
     }
 
-    override fun transform(expr: KFp128Value): KExpr<KFp128Sort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpNegationExpr<T>): KExpr<T> = with(expr) {
+        transform(value, BitwuzlaKind.BITWUZLA_KIND_FP_NEG)
     }
 
-    override fun transform(expr: KFpCustomSizeValue): KExpr<KFpSort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpAddExpr<T>): KExpr<T> = with(expr) {
+        transform(roundingMode, arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_FP_ADD)
     }
 
-    override fun transform(expr: KFpRoundingModeExpr): KExpr<KFpRoundingModeSort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpSubExpr<T>): KExpr<T> = with(expr) {
+        transform(roundingMode, arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_FP_SUB)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpAbsExpr<T>): KExpr<T> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpMulExpr<T>): KExpr<T> = with(expr) {
+        transform(roundingMode, arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_FP_MUL)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpNegationExpr<T>): KExpr<T> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpDivExpr<T>): KExpr<T> = with(expr) {
+        transform(roundingMode, arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_FP_DIV)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpAddExpr<T>): KExpr<T> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpFusedMulAddExpr<T>): KExpr<T> = with(expr) {
+        transform(roundingMode, arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_FP_FMA)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpSubExpr<T>): KExpr<T> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpSqrtExpr<T>): KExpr<T> = with(expr) {
+        transform(roundingMode, value, BitwuzlaKind.BITWUZLA_KIND_FP_SQRT)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpMulExpr<T>): KExpr<T> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpRemExpr<T>): KExpr<T> = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_FP_REM)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpDivExpr<T>): KExpr<T> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpRoundToIntegralExpr<T>): KExpr<T> = with(expr) {
+        transform(roundingMode, value, BitwuzlaKind.BITWUZLA_KIND_FP_RTI)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpFusedMulAddExpr<T>): KExpr<T> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpMinExpr<T>): KExpr<T> = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_FP_MIN)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpSqrtExpr<T>): KExpr<T> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpMaxExpr<T>): KExpr<T> = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_FP_MAX)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpRemExpr<T>): KExpr<T> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpLessOrEqualExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_FP_LEQ)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpRoundToIntegralExpr<T>): KExpr<T> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpLessExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_FP_LT)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpMinExpr<T>): KExpr<T> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpGreaterOrEqualExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_FP_GEQ)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpMaxExpr<T>): KExpr<T> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpGreaterExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_FP_GT)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpLessOrEqualExpr<T>): KExpr<KBoolSort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpEqualExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_FP_EQ)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpLessExpr<T>): KExpr<KBoolSort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpIsNormalExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(value, BitwuzlaKind.BITWUZLA_KIND_FP_IS_NORMAL)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpGreaterOrEqualExpr<T>): KExpr<KBoolSort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpIsSubnormalExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(value, BitwuzlaKind.BITWUZLA_KIND_FP_IS_SUBNORMAL)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpGreaterExpr<T>): KExpr<KBoolSort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpIsZeroExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(value, BitwuzlaKind.BITWUZLA_KIND_FP_IS_ZERO)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpEqualExpr<T>): KExpr<KBoolSort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpIsInfiniteExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(value, BitwuzlaKind.BITWUZLA_KIND_FP_IS_INF)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpIsNormalExpr<T>): KExpr<KBoolSort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpIsNaNExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(value, BitwuzlaKind.BITWUZLA_KIND_FP_IS_NAN)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpIsSubnormalExpr<T>): KExpr<KBoolSort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpIsNegativeExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(value, BitwuzlaKind.BITWUZLA_KIND_FP_IS_NEG)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpIsZeroExpr<T>): KExpr<KBoolSort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpIsPositiveExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform(value, BitwuzlaKind.BITWUZLA_KIND_FP_IS_POS)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpIsInfiniteExpr<T>): KExpr<KBoolSort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>): KExpr<KBvSort> = with(expr) {
+        transform(roundingMode, value) { rm: BitwuzlaTerm, value: BitwuzlaTerm ->
+            val operation = if (isSigned) BitwuzlaKind.BITWUZLA_KIND_FP_TO_SBV else BitwuzlaKind.BITWUZLA_KIND_FP_TO_UBV
+            Native.bitwuzlaMkTerm2Indexed1(bitwuzlaCtx.bitwuzla, operation, rm, value, bvSize)
+        }
     }
 
-    override fun <T : KFpSort> transform(expr: KFpIsNaNExpr<T>): KExpr<KBoolSort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> = with(expr) {
+        TODO("KFpToIEEEBvExpr is not yet supported in bitwuzla")
     }
 
-    override fun <T : KFpSort> transform(expr: KFpIsNegativeExpr<T>): KExpr<KBoolSort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> = with(expr) {
+        transform(roundingMode, value) { rm: BitwuzlaTerm, value: BitwuzlaTerm ->
+            Native.bitwuzlaMkTerm2Indexed2(
+                bitwuzlaCtx.bitwuzla,
+                BitwuzlaKind.BITWUZLA_KIND_FP_TO_FP_FROM_FP,
+                rm,
+                value,
+                sort.exponentBits.toInt(),
+                sort.significandBits.toInt()
+            )
+        }
     }
 
-    override fun <T : KFpSort> transform(expr: KFpIsPositiveExpr<T>): KExpr<KBoolSort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> = with(expr) {
+        transform(sign, exponent, significand) { sign: BitwuzlaTerm, exp: BitwuzlaTerm, significand: BitwuzlaTerm ->
+            Native.bitwuzlaMkTerm3(
+                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FP_FP, sign, exp, significand
+            )
+        }
     }
 
-    override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>): KExpr<KBvSort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
-    }
-
-    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> {
-        TODO("Fp theory is not yet supported in bitwuzla")
-    }
-
-    override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> {
-        TODO("Fp theory is not yet supported in bitwuzla")
-    }
-
-    override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> {
-        TODO("Fp theory is not yet supported in bitwuzla")
-    }
-
-    override fun <T : KFpSort> transform(expr: KBvToFpExpr<T>): KExpr<T> {
-        TODO("Fp theory is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KBvToFpExpr<T>): KExpr<T> = with(expr) {
+        transform(roundingMode, value) { rm: BitwuzlaTerm, value: BitwuzlaTerm ->
+            val operation = if (signed) {
+                BitwuzlaKind.BITWUZLA_KIND_FP_TO_FP_FROM_SBV
+            } else {
+                BitwuzlaKind.BITWUZLA_KIND_FP_TO_FP_FROM_UBV
+            }
+            Native.bitwuzlaMkTerm2Indexed2(
+                bitwuzlaCtx.bitwuzla, operation, rm, value, sort.exponentBits.toInt(), sort.significandBits.toInt()
+            )
+        }
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
@@ -897,11 +931,18 @@ open class KBitwuzlaExprInternalizer(
             throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
 
         override fun <S : KFpSort> visit(sort: S): BitwuzlaSort =
-            TODO("We do not support KFP sort yet")
+            bitwuzlaCtx.internalizeSort(sort) {
+                Native.bitwuzlaMkFpSort(
+                    bitwuzlaCtx.bitwuzla,
+                    expSize = sort.exponentBits.toInt(),
+                    sigSize = sort.significandBits.toInt()
+                )
+            }
 
-        override fun visit(sort: KFpRoundingModeSort): BitwuzlaSort {
-            TODO("We do not support KFpRoundingModeSort yet")
-        }
+        override fun visit(sort: KFpRoundingModeSort): BitwuzlaSort =
+            bitwuzlaCtx.internalizeSort(sort) {
+                Native.bitwuzlaMkRmSort(bitwuzlaCtx.bitwuzla)
+            }
     }
 
     open class FunctionSortInternalizer(
