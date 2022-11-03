@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "org.ksmt"
-version = "0.0.1"
+version = "0.2.1"
 
 repositories {
     mavenCentral()
