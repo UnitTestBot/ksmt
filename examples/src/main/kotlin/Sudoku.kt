@@ -1,10 +1,9 @@
-package org.ksmt.solver.z3
-
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KInt32NumExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolverStatus
+import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KIntSort
 import kotlin.time.Duration.Companion.seconds
@@ -124,7 +123,7 @@ private fun parseSudoku(task: String): List<List<Int>> =
 
 private fun Char.cellValueOrNull(): Int? = when {
     isDigit() -> digitToInt()
-    this == '*' -> 0
+    this == '*' -> EMPTY_CELL_VALUE
     else -> null
 }
 
