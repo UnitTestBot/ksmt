@@ -6,6 +6,7 @@ import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KIntSort
+import kotlin.system.measureTimeMillis
 import kotlin.time.Duration.Companion.seconds
 
 const val BLOCK_SIZE = 3
@@ -15,17 +16,17 @@ const val EMPTY_CELL_VALUE = 0
 val sudokuIndices = 0 until SIZE
 
 val sudokuTask = """
-    2 * * | 9 * 6 | * * 1
-    * * 6 | * 4 * | * * 9
-    * * * | 5 2 * | 4 * *
+    9 * 6 | * 7 * | 4 * 3
+    * * * | 4 * * | 2 * *
+    * 7 * | * 2 3 | * 1 *
     ------ ------- ------
-    3 * 2 | * * 7 | * 5 *
-    * * * | 2 * * | 1 * *
-    * 9 * | 3 * * | 7 * *
+    5 * * | * * * | 1 * *
+    * 4 * | 2 * 8 | * 6 *
+    * * 3 | * * * | * * 5
     ------ ------- ------
-    * 8 7 | * 5 * | 3 1 *
-    6 * 3 | * 1 * | 8 * *
-    4 * * | * * 9 | * * *
+    * 3 * | 7 * * | * 5 *
+    * * 7 | * * 5 | * * *
+    4 * 5 | * 1 * | 7 * 8
 """.trimIndent()
 
 fun main() = KContext().useWith {
@@ -49,22 +50,36 @@ fun main() = KContext().useWith {
     val symbolAssignments = assignSymbols(symbols, initialGrid)
 
     // Create Z3 SMT solver instance.
-    val solution = KZ3Solver(this).useWith {
+    KZ3Solver(this).useWith {
 
         // Assert all constraints.
         rules.forEach { assert(it) }
         symbolAssignments.forEach { assert(it) }
 
-        // Solve Sudoku.
-        val status = check(timeout = 1.seconds)
-        check(status == KSolverStatus.SAT) { "Sudoku is unsolvable" }
+        while (true) {
+            val solution: List<List<Int>>
+            val timeMs = measureTimeMillis {
 
-        // Get the SMT model and convert it to a Sudoku solution.
-        buildSolution(symbols, model())
+                // Solve Sudoku.
+                val status = check(timeout = 1.seconds)
+                if (status != KSolverStatus.SAT) {
+                    println("No more solutions")
+                    return
+                }
+
+                // Get the SMT model and convert it to a Sudoku solution.
+                solution = buildSolution(symbols, model())
+            }
+
+            println("Solution (in $timeMs ms):")
+            println(printSudokuGrid(solution))
+
+            assert(mkAnd(assignSymbols(symbols, solution)).not())
+        }
+
     }
 
-    println("Solution:")
-    println(printSudokuGrid(solution))
+
 }
 
 private fun KContext.sudokuRules(symbols: List<List<KExpr<KIntSort>>>): List<KExpr<KBoolSort>> {
