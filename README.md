@@ -37,6 +37,31 @@ KSMT can express formulas in the following theories:
 |-------------------------|:------------------:|:------------------:|
 | Bitvectors              | :heavy_check_mark: | :heavy_check_mark: |
 | Arrays                  | :heavy_check_mark: | :heavy_check_mark: |
-| IEEE Floats             | :heavy_check_mark: |                    |
+| IEEE Floats             | :heavy_check_mark: | :heavy_check_mark: |
 | Uninterpreted Functions | :heavy_check_mark: | :heavy_check_mark: |
 | Arithmetic              | :heavy_check_mark: |                    |
+
+# Why KSMT?
+
+### Kotlin based DSL for SMT formulas
+KSMT provides simple and concise DSL for expressions.
+```kotlin
+val array by mkArraySort(intSort, intSort)
+val index by intSort
+val value by intSort
+
+val expr = (array.select(index - 1.intExpr) lt value) and
+        (array.select(index + 1.intExpr) gt value)
+```
+Check out our [example project](examples) for more complicated examples.
+
+### Solver agnostic SMT formula representation
+KSMT provides a solver-independent formula representation
+with back and forth transformations to the solver's native representation.
+Such representation allows introspection of formulas and transformation of formulas 
+independent of the solver.
+
+### Process based solver runner
+KSMT provides a high-performant API for running SMT solvers in separate processes.
+This feature is important for implementing hard timeouts and 
+solving using multiple solvers in portfolio mode.
