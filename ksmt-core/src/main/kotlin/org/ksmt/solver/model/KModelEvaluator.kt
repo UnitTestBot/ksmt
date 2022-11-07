@@ -183,7 +183,7 @@ open class KModelEvaluator(
     open fun <T : KSort> T.sampleValue(): KExpr<T> = with(ctx) {
         accept(object : KSortVisitor<KExpr<T>> {
             override fun visit(sort: KBoolSort): KExpr<T> = trueExpr as KExpr<T>
-            override fun visit(sort: KIntSort): KExpr<T> = 0.intExpr as KExpr<T>
+            override fun visit(sort: KIntSort): KExpr<T> = 0.expr as KExpr<T>
             override fun visit(sort: KRealSort): KExpr<T> = mkRealNum(0) as KExpr<T>
             override fun <S : KBvSort> visit(sort: S): KExpr<T> = mkBv("0", sort.sizeBits) as KExpr<T>
             override fun <S : KFpSort> visit(sort: S): KExpr<T> = mkFp(0f, sort) as KExpr<T>

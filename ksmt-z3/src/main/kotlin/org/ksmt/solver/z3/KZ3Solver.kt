@@ -13,6 +13,7 @@ import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.sort.KBoolSort
 import org.ksmt.utils.NativeLibraryLoader
+import org.ksmt.utils.mkFreshConst
 import java.lang.ref.PhantomReference
 import java.lang.ref.ReferenceQueue
 import java.util.IdentityHashMap

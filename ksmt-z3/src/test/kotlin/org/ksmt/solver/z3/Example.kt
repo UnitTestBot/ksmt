@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import org.ksmt.KContext
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.sort.KArraySort
+import org.ksmt.utils.mkConst
 
 class Example {
 
@@ -22,15 +23,15 @@ class Example {
         solver.assert(a)
         solver.assert(
             mkUniversalQuantifier(
-                !(c gt 0.intExpr and !(c eq 17.intExpr)) or b.apply(listOf(c)), listOf(c.decl)
+                !(c gt 0.expr and !(c eq 17.expr)) or b.apply(listOf(c)), listOf(c.decl)
             )
         )
         solver.assert(
             mkUniversalQuantifier(
-                !(c le 0.intExpr) or !b.apply(listOf(c)), listOf(c.decl)
+                !(c le 0.expr) or !b.apply(listOf(c)), listOf(c.decl)
             )
         )
-        solver.assert(e.select(3.intExpr) ge 0.intExpr)
+        solver.assert(e.select(3.expr) ge 0.expr)
 
         val bvVariable = mkBv32Sort().mkConst("A")
         val bvValue = mkBv(256)
