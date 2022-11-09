@@ -339,3 +339,21 @@ with(ctx) {
     }
 }
 ```
+
+### Parsing formulas in SMT-LIB2 format
+
+KSMT provides an API for parsing formulas in the SMT-LIB2 format. 
+Currently, KSMT provides a parser implemented on top of the Z3 solver API 
+and therefore `ksmt-z3` module is required for parsing.
+
+```kotlin
+val formula = """
+    (declare-fun x () Int)
+    (declare-fun y () Int)
+    (assert (>= x y))
+    (assert (>= y x))
+"""
+with(ctx) {
+    val assertions = KZ3SMTLibParser().parse(formula)
+}
+```
