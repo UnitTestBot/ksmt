@@ -1,28 +1,64 @@
-1. Expression interning/hash consing
-2. SMT-LIB2 based solver (problems: UNSAT CORE, SMT-LIB2)
-3. Parsing SMT-LIB2
-4. Z3-solver
-5. Unsupported features -> Unsupported exeception
-6. Expression naming
-7. Z3 Test -> Test system
-8. External process - mirror process - to kill
-9. Portfolio solver
-10. Benchmark solver request
-11. Don't use Z3Java API
-12. Bitwoozla as second priority solver
-13. Bv, Arrays, Ints, FP, Q-
-14. Recommendation - switch to other solver (if fails)
-15. Easy deployment via JitPack
-16. Incremental via lemma. Drop? Assumption incrementality (check-sat with params)
-17. Pop/push
-18. Options for each solver implementation
-19. Timeout - suspend function?
-20. Model - on kotlin part in terms of Expression (model completion!)
-21. Generics?
 
-### Naming
-- org.ksmt
-- KAndExpression
-- KModel
-- KSolver
-- KArrayStoreExpression
+| Feature                                       | Status |
+|-----------------------------------------------|--------|
+| [Rich expression system](#rich-expression-system)    | -      |
+| [Expression interning](#expression-interning) | -      |
+| ...                                           | -      |
+
+
+### Rich expression system
+Instead of wrapper object for solver expression z3 expression 
+
+### Expression interning
+Aka [hash consing](https://en.wikipedia.org/wiki/Hash_consing) is needed for ...
+
+### Serialize to SMT-LIB2
+
+And provide interface to pass this SMT-LIB2 to corresponding solver. 
+This way is also an easy to interact with new solver
+
+### Parse SMT-LIB2 
+For benchmarking - we can use rich database of benchmarks from SMT-COMP to verify correctness
+
+### Solvers support
+This is the most detailed sections. Please write here what features of what solvers 
+we support now, which are going to support and which will not support
+
+### Theories support
+Bv, Arrays, Ints, FP, Q-
+
+### Unsupported features
+If some solver doesn't support some theory (like Bitvec) or some feature(unsat-core) we need to throw 
+specialized exception. Exception should contain recommendation to switch to other solver.
+
+### Expression naming
+Add debug information into expression for future visualization
+
+### External process
+
+### Portfolio solver
+
+### Performance tests
+Describe how to write performance tests that measure overhead of KSMT for typical operations.
+After done, add results here
+
+### Solver Native API support
+Don't use Z3Java API
+
+### Ease of use
+Easy deployment via JitPack, maven central
+
+### Solver options
+Options for each solver implementation
+
+###  Pop/push
+
+### Incremental lemma
+Incremental via lemma. Drop? Assumption incrementality (check-sat with params)
+
+### Solver timeout
+What happens if timeout. Suspend function?
+
+### Evaluate model
+On kotlin part in terms of Expression (model completion)
+
