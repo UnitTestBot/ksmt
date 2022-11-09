@@ -5,6 +5,7 @@ import org.ksmt.expr.KConst
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.sort.KSort
+import org.ksmt.utils.mkConst
 
 class ConstCollector(override val ctx: KContext) : KTransformer {
     val constants = hashSetOf<KConst<*>>()

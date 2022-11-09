@@ -2,6 +2,7 @@ package org.ksmt.solver.z3
 
 import org.ksmt.KContext
 import org.ksmt.solver.KSolverStatus
+import org.ksmt.utils.mkConst
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

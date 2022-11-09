@@ -21,6 +21,7 @@ import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.mkFreshConst
 
 @Suppress("LargeClass")
 open class KBitwuzlaExprConverter(

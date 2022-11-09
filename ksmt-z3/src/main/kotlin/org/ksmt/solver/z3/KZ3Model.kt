@@ -8,6 +8,7 @@ import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KSort
+import org.ksmt.utils.mkFreshConst
 
 open class KZ3Model(
     private val model: Model,

@@ -490,6 +490,7 @@ open class KContext : AutoCloseable {
     infix fun KExpr<KBoolSort>.or(other: KExpr<KBoolSort>) = mkOr(this, other)
     infix fun KExpr<KBoolSort>.xor(other: KExpr<KBoolSort>) = mkXor(this, other)
     infix fun KExpr<KBoolSort>.implies(other: KExpr<KBoolSort>) = mkImplies(this, other)
+    infix fun <T : KSort> KExpr<T>.neq(other: KExpr<T>) = !(this eq other)
 
     val trueExpr: KTrue
         get() = mkTrue()
@@ -524,14 +525,9 @@ open class KContext : AutoCloseable {
 
     fun <T : KSort> mkConstApp(decl: KDecl<T>): KConst<T> = constAppCache.createIfContextActive(decl).cast()
 
-    fun <T : KSort> T.mkConst(name: String): KApp<T, *> = with(mkConstDecl(name)) { apply() }
+    fun <T : KSort> mkConst(name: String, sort: T): KApp<T, *> = with(mkConstDecl(name, sort)) { apply() }
 
-    fun <T : KSort> T.mkFreshConst(name: String): KApp<T, *> = with(mkFreshConstDecl(name)) { apply() }
-
-    inline operator fun <reified T : KSort> T.getValue(
-        thisRef: Any?,
-        property: KProperty<*>
-    ): KApp<T, *> = mkConst(property.name)
+    fun <T : KSort> mkFreshConst(name: String, sort: T): KApp<T, *> = with(mkFreshConstDecl(name, sort)) { apply() }
 
     // array
     private val arrayStoreCache = mkContextCheckingCache { a: KExpr<KArraySort<KSort, KSort>>,
@@ -743,11 +739,11 @@ open class KContext : AutoCloseable {
     infix fun KExpr<KIntSort>.rem(rhs: KExpr<KIntSort>) = mkIntRem(this, rhs)
     fun KExpr<KIntSort>.toRealExpr() = mkIntToReal(this)
 
-    val Int.intExpr
+    val Int.expr
         get() = mkIntNum(this)
-    val Long.intExpr
+    val Long.expr
         get() = mkIntNum(this)
-    val BigInteger.intExpr
+    val BigInteger.expr
         get() = mkIntNum(this)
 
     // real
@@ -772,7 +768,7 @@ open class KContext : AutoCloseable {
         realNumCache.createIfContextActive(numerator, denominator)
 
     @Suppress("MemberVisibilityCanBePrivate")
-    fun mkRealNum(numerator: KIntNumExpr) = mkRealNum(numerator, 1.intExpr)
+    fun mkRealNum(numerator: KIntNumExpr) = mkRealNum(numerator, 1.expr)
     fun mkRealNum(numerator: Int) = mkRealNum(mkIntNum(numerator))
     fun mkRealNum(numerator: Int, denominator: Int) = mkRealNum(mkIntNum(numerator), mkIntNum(denominator))
     fun mkRealNum(numerator: Long) = mkRealNum(mkIntNum(numerator))
@@ -1325,6 +1321,12 @@ open class KContext : AutoCloseable {
     fun mkFp64(value: Double): KFp64Value = fp64Cache.createIfContextActive(value)
     fun mkFp128(significand: Long, exponent: Long, signBit: Boolean): KFp128Value =
         fp128Cache.createIfContextActive(significand, exponent, signBit)
+
+    val Float.expr
+        get() = mkFp32(this)
+
+    val Double.expr
+        get() = mkFp64(this)
 
     /**
      * Creates FP with a custom size.
@@ -1912,9 +1914,6 @@ open class KContext : AutoCloseable {
     fun <T : KSort> mkConstDecl(name: String, sort: T): KConstDecl<T> =
         constDeclCache.createIfContextActive(name, sort).cast()
 
-    @Suppress("MemberVisibilityCanBePrivate")
-    fun <T : KSort> T.mkConstDecl(name: String) = mkConstDecl(name, this)
-
     /* Since any two KFuncDecl are only equivalent if they are the same kotlin object,
      * we can guarantee that the returned KFuncDecl is not equal to any other declaration.
     */
@@ -1932,9 +1931,6 @@ open class KContext : AutoCloseable {
         ensureContextMatch(sort)
         return KConstDecl(this, "$name!fresh!${freshConstIdx++}", sort)
     }
-
-    @Suppress("MemberVisibilityCanBePrivate")
-    fun <T : KSort> T.mkFreshConstDecl(name: String) = mkFreshConstDecl(name, this)
 
     // bool
     private val falseDeclCache = mkClosableCache<KFalseDecl> { KFalseDecl(this) }

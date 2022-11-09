@@ -31,6 +31,8 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.utils.booleanSignBit
 import org.ksmt.utils.extractExponent
 import org.ksmt.utils.extractSignificand
+import org.ksmt.utils.getValue
+import org.ksmt.utils.mkConst
 
 
 class FloatingPointTest {

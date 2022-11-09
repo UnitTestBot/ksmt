@@ -28,6 +28,7 @@ import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBv32Sort
 import org.ksmt.sort.KBv64Sort
 import org.ksmt.sort.KBv8Sort
+import org.ksmt.utils.mkConst
 import org.ksmt.utils.toBinary
 
 class BitVecTest {
