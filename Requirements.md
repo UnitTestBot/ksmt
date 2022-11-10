@@ -15,10 +15,10 @@
 | [Portfolio solver](#portfolio-solver)                                             | TODO           |
 | [Solver configuration API](#solver-configuration-api)                             | In progress    |
 | [Deployment](#deployment)                                                         | Done partially |
-| [Expression simplification / evaluation](#expression-simplification-/-evaluation) | TODO           |
-| [Performance tests](#performance tests)                                           | TODO           |
+| [Expression simplification / evaluation](#expression-simplification--evaluation)  | TODO           |
+| [Performance tests](#performance-tests)                                           | TODO           |
 | [Better Z3 API](#better-z3-api)                                                   | TODO           |
-| [Better Bitwuzla bindings](#better-itwuzla-bindings)                              | TODO           |
+| [Better Bitwuzla bindings](#better-bitwuzla-bindings)                             | TODO           |
 | [Solver specific features API](#solver-specific-features-api)                     | TODO           |
 | [Quantifier elimination](#quantifier-elimination)                                 | TODO           |
 | [Interpolation](#interpolation)                                                   | TODO           |
