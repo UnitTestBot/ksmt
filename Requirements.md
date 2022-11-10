@@ -16,7 +16,16 @@
 | [Solver configuration API](#solver-configuration-api)                             | In progress    |
 | [Deployment](#deployment)                                                         | Done partially |
 | [Expression simplification / evaluation](#expression-simplification-/-evaluation) | TODO           |
+| [Performance tests](#performance tests)                                           | TODO           |
+| [Better Z3 API](#better-z3-api)                                                   | TODO           |
+| [Better Bitwuzla bindings](#better-itwuzla-bindings)                              | TODO           |
+| [Solver specific features API](#solver-specific-features-api)                     | TODO           |
+| [Quantifier elimination](#quantifier-elimination)                                 | TODO           |
+| [Interpolation](#interpolation)                                                   | TODO           |
+| [Model based projection](#model-based-projection)                                 | TODO           |
+| [Support more theories](#support-more-theories)                                   | TODO           |
 | ...                                                                               | -              |
+
 
 ### Rich expression system
 
@@ -207,14 +216,64 @@ Implement simplification rules for KSMT expressions, and apply it to:
 3. Expression evaluation wrt model (special case of simplification)
 
 
-
-
 ### Performance tests
 
-Describe how to write performance tests that measure overhead of KSMT for typical operations.
-After done, add results here
+Measure overhead of the following operations for all supported solvers:
+1. Expression interanlization (conversion from KSMT to solver native). The most used and the most expensive operation.
+2. Expression conversion (from solver native to KSMT). Usually operates on small expressions, obtained from model. 
+3. KSMT expression simplification (when availiable).
 
-### Solver Native API support
+**Current state**
 
-Don't use Z3Java API
+Z3 expr intrnalization overhead
 
+Setup: 300 random samples from SMT-LIB benchmarks, use z3 java api. Measure overhead of internalize + assert over assert.
+
+Results: 10% overhead on average, 90% of samples performed with less than 25% overhead.
+
+### Better Z3 api
+
+Reduce expression internalization time and memory consumption by switching 
+from using Z3 expression wrappers to working directly with native pointers.
+
+### Better Bitwuzla bindings
+
+Currently, Biwuzla bindings are implemented via JNA framework with the following issues:
+1. JNA has huge function call overhead.
+2. Error handling in Bitwuzla is performed via callbacks mechanism. There is no way to setup callback from JNA to properly handle native errors.
+3. Bitwuzla use callbacks for timeouts checks. Currently, Bitwuzla performs many slow calls from native to java to check timeout.
+
+
+### Solver specific features API
+
+SMT solvers provides their own specific features (e.g. tactics in Z3). 
+
+Currently, KSMT provides expression internalization (from KSMT to solver native) and 
+expression conversion (from solver native to KSMT) features, which allows us to potentially use
+any solver feature. 
+
+
+### Quantifier elimination
+
+Implement quantifier elimination in KSMT. 
+Provide a pure KSMT implementation or use solver (e.g. `qe_lite` tactic in Z3).
+
+### Interpolation
+
+Implement [interpolant](https://en.wikipedia.org/wiki/Craig_interpolation) computation in KSMT.
+
+
+### Model based projection
+
+[Model based projection](https://dl.acm.org/doi/10.1007/s10703-016-0249-4)  under-approximates
+existential quantification with quantifier-free formulas. Implement MBP in a pure KSMT or use
+solver provided implementation (e.g. Z3).
+
+### Support more theories
+
+Add support for the following theories:
+1. [**Strings**](http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml). Operations over string terms.
+2. [**Datatypes**](https://cvc5.github.io/docs/cvc5-1.0.2/theories/datatypes.html). Algebraic data types.
+3. [**Sequences**](https://cvc5.github.io/docs/cvc5-1.0.2/theories/sequences.html). Sequences of known length.
+
+Some solvers provide native support for theories above, e.g. Z3 and CVC5.
