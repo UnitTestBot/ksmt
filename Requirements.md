@@ -24,6 +24,7 @@
 | [Interpolation](#interpolation)                                                   | TODO           |
 | [Model based projection](#model-based-projection)                                 | TODO           |
 | [Support more theories](#support-more-theories)                                   | TODO           |
+| [Solver proofs](#solver-proofs)                                                   | TODO           |
 | ...                                                                               | -              |
 
 
@@ -277,3 +278,10 @@ Add support for the following theories:
 3. [**Sequences**](https://cvc5.github.io/docs/cvc5-1.0.2/theories/sequences.html). Sequences of known length.
 
 Some solvers provide native support for theories above, e.g. Z3 and CVC5.
+
+### Solver proofs
+
+In case of UNSAT many solvers can produce proof. 
+
+Provide a universal representation of proof in KSMT and implement conversion from solver native proof.
+
