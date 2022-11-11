@@ -41,6 +41,8 @@ KSMT can express formulas in the following theories:
 | Uninterpreted Functions | :heavy_check_mark: | :heavy_check_mark: |
 | Arithmetic              | :heavy_check_mark: |                    |
 
+Check out our [roadmap](Requirements.md) for detailed description of features and future plans.
+
 # Why KSMT?
 
 ### Kotlin based DSL for SMT formulas
