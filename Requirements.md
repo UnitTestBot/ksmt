@@ -220,26 +220,26 @@ Implement simplification rules for KSMT expressions, and apply it to:
 ### Performance tests
 
 Measure overhead of the following operations for all supported solvers:
-1. Expression interanlization (conversion from KSMT to solver native). The most used and the most expensive operation.
-2. Expression conversion (from solver native to KSMT). Usually operates on small expressions, obtained from model. 
-3. KSMT expression simplification (when availiable).
+1. Expression translation from KSMT to solver native. The most used and the most expensive operation.
+2. Expression conversion from solver native to KSMT. Usually operates on small expressions, obtained from model. 
+3. KSMT expression simplification (when available).
 
 **Current state**
 
-Z3 expr intrnalization overhead
+Z3 expr translation overhead
 
-Setup: 300 random samples from SMT-LIB benchmarks, use z3 java api. Measure overhead of internalize + assert over assert.
+Setup: 300 random samples from SMT-LIB benchmarks, use z3 java api. Measure overhead of translate + assert over assert.
 
 Results: 10% overhead on average, 90% of samples performed with less than 25% overhead.
 
 ### Better Z3 api
 
-Reduce expression internalization time and memory consumption by switching 
+Reduce expression translation time and memory consumption by switching 
 from using Z3 expression wrappers to working directly with native pointers.
 
 ### Better Bitwuzla bindings
 
-Currently, Biwuzla bindings are implemented via JNA framework with the following issues:
+Currently, Bitwuzla bindings are implemented via JNA framework with the following issues:
 1. JNA has huge function call overhead.
 2. Error handling in Bitwuzla is performed via callbacks mechanism. There is no way to setup callback from JNA to properly handle native errors.
 3. Bitwuzla use callbacks for timeouts checks. Currently, Bitwuzla performs many slow calls from native to java to check timeout.
@@ -249,8 +249,8 @@ Currently, Biwuzla bindings are implemented via JNA framework with the following
 
 SMT solvers provides their own specific features (e.g. tactics in Z3). 
 
-Currently, KSMT provides expression internalization (from KSMT to solver native) and 
-expression conversion (from solver native to KSMT) features, which allows us to potentially use
+Currently, KSMT provides expression translation from KSMT to solver native and 
+expression translation from solver native to KSMT features, which allows us to potentially use
 any solver feature. 
 
 
