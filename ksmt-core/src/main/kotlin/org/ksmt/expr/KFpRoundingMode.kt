@@ -22,7 +22,8 @@ class KFpRoundingModeExpr(
 
     override fun decl(): KDecl<KFpRoundingModeSort> = ctx.mkFpRoundingModeDecl(value)
 
-    override fun sort(): KFpRoundingModeSort = ctx.mkFpRoundingModeSort()
+    override val sort: KFpRoundingModeSort
+        get() = ctx.mkFpRoundingModeSort()
 
     override fun accept(transformer: KTransformerBase): KExpr<KFpRoundingModeSort> = transformer.transform(this)
 }

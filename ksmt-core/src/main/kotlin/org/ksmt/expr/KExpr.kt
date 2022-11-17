@@ -6,7 +6,10 @@ import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KSort
 
 abstract class KExpr<T : KSort>(ctx: KContext) : KAst(ctx) {
-    abstract fun sort(): T
+    abstract val sort: T
+
+    @Deprecated("Use property access syntax", ReplaceWith("sort"))
+    fun sort(): T = sort
 
     abstract fun accept(transformer: KTransformerBase): KExpr<T>
 
@@ -14,4 +17,7 @@ abstract class KExpr<T : KSort>(ctx: KContext) : KAst(ctx) {
     override fun equals(other: Any?): Boolean = this === other
 
     override fun hashCode(): Int = System.identityHashCode(this)
+
+    open fun computeExprSort(): T = sort
+    open fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {}
 }

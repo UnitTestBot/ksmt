@@ -35,7 +35,8 @@ open class KFunctionApp<T : KSort> internal constructor(
     val decl: KDecl<T>,
     override val args: List<KExpr<*>>
 ) : KApp<T, KExpr<*>>(ctx) {
-    override fun sort(): T = decl.sort
+    override val sort: T
+        get() = decl.sort
 
     override fun decl(): KDecl<T> = decl
 

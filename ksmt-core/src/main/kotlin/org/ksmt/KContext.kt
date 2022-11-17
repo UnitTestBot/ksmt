@@ -198,7 +198,6 @@ import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
 import java.math.BigInteger
-import kotlin.reflect.KProperty
 import org.ksmt.decl.KBvRotateLeftIndexedDecl
 import org.ksmt.decl.KBvRotateRightIndexedDecl
 import org.ksmt.decl.KBvSubNoUnderflowDecl
@@ -1171,7 +1170,7 @@ open class KContext : AutoCloseable {
         bvRotateLeftIndexedExprCache.createIfContextActive(i, value.cast()).cast()
 
     fun <T : KBvSort> mkBvRotateLeftExpr(arg0: Int, arg1: KExpr<T>): KBvRotateLeftExpr<T> =
-        mkBvRotateLeftExpr(mkBv(arg0, arg1.sort().sizeBits), arg1.cast()).cast()
+        mkBvRotateLeftExpr(mkBv(arg0, arg1.sort.sizeBits), arg1.cast()).cast()
 
     private val bvRotateRightIndexedExprCache = mkClosableCache { i: Int,
                                                                   value: KExpr<KBvSort> ->
@@ -1191,7 +1190,7 @@ open class KContext : AutoCloseable {
         bvRotateRightExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
 
     fun <T : KBvSort> mkBvRotateRightExpr(arg0: Int, arg1: KExpr<T>): KBvRotateRightExpr<T> =
-        mkBvRotateRightExpr(mkBv(arg0, arg1.sort().sizeBits), arg1.cast()).cast()
+        mkBvRotateRightExpr(mkBv(arg0, arg1.sort.sizeBits), arg1.cast()).cast()
 
     private val bv2IntExprCache = mkClosableCache { value: KExpr<KBvSort>,
                                                     isSigned: Boolean ->
@@ -1876,9 +1875,35 @@ open class KContext : AutoCloseable {
         universalQuantifierCache.createIfContextActive(body, bounds)
 
     // utils
-    private val exprSortCache = mkClosableCache { expr: KExpr<*> -> with(expr) { sort() } }
-    val <T : KSort> KExpr<T>.sort: T
-        get() = exprSortCache.createIfContextActive(this).uncheckedCast()
+    private val exprSortCache = mkClosableCache { expr: KExpr<*> -> computeExprSort(expr) }
+    private fun computeExprSort(expr: KExpr<*>): KSort {
+        val exprsToComputeSorts = arrayListOf<KExpr<*>>()
+        val dependency = arrayListOf<KExpr<*>>()
+
+        expr.sortComputationExprDependency(dependency)
+
+        while (dependency.isNotEmpty()) {
+            val e = dependency.removeLast()
+
+            if (e in exprSortCache) continue
+
+            val sizeBeforeExpand = dependency.size
+            e.sortComputationExprDependency(dependency)
+
+            if (sizeBeforeExpand != dependency.size) {
+                exprsToComputeSorts += e
+            }
+        }
+
+        exprsToComputeSorts.asReversed().forEach {
+            it.sort
+        }
+
+        return expr.computeExprSort()
+    }
+
+    fun <T : KSort> getExprSort(expr: KExpr<T>): T =
+        exprSortCache.createIfContextActive(expr).uncheckedCast()
 
     private val exprDeclCache = mkClosableCache { expr: KApp<*, *> -> with(expr) { decl() } }
     val <T : KSort> KApp<T, *>.decl: KDecl<T>
