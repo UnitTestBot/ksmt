@@ -1,27 +1,17 @@
 package org.ksmt.solver.z3
 
-import com.microsoft.z3.ArithSort
-import com.microsoft.z3.ArraySort
-import com.microsoft.z3.BitVecNum
-import com.microsoft.z3.BitVecSort
 import com.microsoft.z3.Expr
-import com.microsoft.z3.FPExpr
-import com.microsoft.z3.FPNum
-import com.microsoft.z3.FPRMNum
-import com.microsoft.z3.FPRMSort
-import com.microsoft.z3.FPSort
 import com.microsoft.z3.FuncDecl
-import com.microsoft.z3.IntNum
-import com.microsoft.z3.Quantifier
-import com.microsoft.z3.RatNum
-import com.microsoft.z3.RealSort
-import com.microsoft.z3.Sort
-import com.microsoft.z3.ctx
+import com.microsoft.z3.Native
 import com.microsoft.z3.enumerations.Z3_ast_kind
 import com.microsoft.z3.enumerations.Z3_decl_kind
 import com.microsoft.z3.enumerations.Z3_sort_kind
+import com.microsoft.z3.enumerations.Z3_symbol_kind
+import com.microsoft.z3.fpExponentInt64OrNull
+import com.microsoft.z3.fpSignOrNull
+import com.microsoft.z3.fpSignificandUInt64OrNull
+import com.microsoft.z3.getAppArgs
 import com.microsoft.z3.intOrNull
-import com.microsoft.z3.isLambda
 import com.microsoft.z3.longOrNull
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
@@ -46,49 +36,72 @@ import org.ksmt.sort.KSort
 
 open class KZ3ExprConverter(
     private val ctx: KContext,
-    private val z3InternCtx: KZ3InternalizationContext
-) : KExprConverterBase<Expr<*>>() {
-    override fun findConvertedNative(expr: Expr<*>): KExpr<*>? {
-        return z3InternCtx.findConvertedExpr(expr)
+    private val z3Ctx: KZ3Context
+) : KExprConverterBase<Long>() {
+
+    private val internalizer = KZ3ExprInternalizer(ctx, z3Ctx)
+
+    val nCtx: Long = z3Ctx.nCtx
+
+    override fun findConvertedNative(expr: Long): KExpr<*>? {
+        return z3Ctx.findConvertedExpr(expr)
     }
 
-    override fun saveConvertedNative(native: Expr<*>, converted: KExpr<*>) {
-        z3InternCtx.convertExpr(native) { converted }
+    override fun saveConvertedNative(native: Long, converted: KExpr<*>) {
+        z3Ctx.saveConvertedExpr(native, converted)
     }
 
-    fun <T : KSort> Expr<*>.convert(): KExpr<T> = convertFromNative()
+    fun <T : KSort> Expr<*>.convertExprWrapped(): KExpr<T> =
+        z3Ctx.nativeContext.unwrapAST(this).convertExpr()
+
+    fun <T : KSort> FuncDecl<*>.convertDeclWrapped(): KDecl<T> =
+        z3Ctx.nativeContext.unwrapAST(this).convertDecl()
+
+    fun <T : KSort> Long.convertExpr(): KExpr<T> = convertFromNative()
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : KSort> Sort.convert(): T = z3InternCtx.convertSort(this) {
-        convertSort(this)
+    fun <T : KSort> Long.convertSort(): T = z3Ctx.convertSort(this) {
+        convertNativeSort(this)
     } as? T ?: error("sort is not properly converted")
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : KSort> FuncDecl<*>.convert(): KDecl<T> = z3InternCtx.convertDecl(this) {
-        convertDecl(this)
+    fun <T : KSort> Long.convertDecl(): KDecl<T> = z3Ctx.convertDecl(this) {
+        convertNativeDecl(this)
     } as? KDecl<T> ?: error("decl is not properly converted")
 
-    open fun convertDecl(decl: FuncDecl<*>): KDecl<*> = with(ctx) {
-        val sort = convertSort(decl.range)
-        val args = decl.domain.map { convertSort(it) }
+    open fun convertNativeSymbol(symbol: Long): String =
+        when (Z3_symbol_kind.fromInt(Native.getSymbolKind(nCtx, symbol))!!) {
+            Z3_symbol_kind.Z3_INT_SYMBOL -> Native.getSymbolInt(nCtx, symbol).toString()
+            Z3_symbol_kind.Z3_STRING_SYMBOL -> Native.getSymbolString(nCtx, symbol)
+        }
 
-        return mkFuncDecl("${decl.name}", sort, args)
+    open fun convertNativeDecl(decl: Long): KDecl<*> = with(ctx) {
+        val range = Native.getRange(nCtx, decl).convertSort<KSort>()
+        val domainSize = Native.getDomainSize(nCtx, decl)
+        val domain = List(domainSize) { idx ->
+            Native.getDomain(nCtx, decl, idx).convertSort<KSort>()
+        }
+        val name = convertNativeSymbol(Native.getDeclName(nCtx, decl))
+        return mkFuncDecl(name, range, domain)
     }
 
-    open fun convertSort(sort: Sort): KSort = with(ctx) {
-        when (sort.sortKind) {
+    open fun convertNativeSort(sort: Long): KSort = with(ctx) {
+        when (Z3_sort_kind.fromInt(Native.getSortKind(nCtx, sort))) {
             Z3_sort_kind.Z3_BOOL_SORT -> boolSort
             Z3_sort_kind.Z3_INT_SORT -> intSort
             Z3_sort_kind.Z3_REAL_SORT -> realSort
-            Z3_sort_kind.Z3_ARRAY_SORT -> (sort as ArraySort<*, *>).let {
-                mkArraySort(convertSort(it.domain), convertSort(it.range))
+            Z3_sort_kind.Z3_ARRAY_SORT -> {
+                val domain = Native.getArraySortDomain(nCtx, sort)
+                val range = Native.getArraySortRange(nCtx, sort)
+                mkArraySort(domain.convertSort(), range.convertSort())
             }
-            Z3_sort_kind.Z3_BV_SORT -> mkBvSort((sort as BitVecSort).size.toUInt())
-            Z3_sort_kind.Z3_FLOATING_POINT_SORT -> {
-                val fpSort = sort as FPSort
-                mkFpSort(fpSort.eBits.toUInt(), fpSort.sBits.toUInt())
+            Z3_sort_kind.Z3_BV_SORT -> mkBvSort(Native.getBvSortSize(nCtx, sort).toUInt())
+            Z3_sort_kind.Z3_FLOATING_POINT_SORT ->
+                mkFpSort(Native.fpaGetEbits(nCtx, sort).toUInt(), Native.fpaGetSbits(nCtx, sort).toUInt())
+            Z3_sort_kind.Z3_UNINTERPRETED_SORT -> {
+                val name = convertNativeSymbol(Native.getSortName(nCtx, sort))
+                mkUninterpretedSort(name)
             }
-            Z3_sort_kind.Z3_UNINTERPRETED_SORT -> mkUninterpretedSort(sort.name.toString())
             Z3_sort_kind.Z3_ROUNDING_MODE_SORT -> mkFpRoundingModeSort()
             Z3_sort_kind.Z3_DATATYPE_SORT,
             Z3_sort_kind.Z3_RELATION_SORT,
@@ -103,43 +116,42 @@ open class KZ3ExprConverter(
 
     /**
      * Convert expression non-recursively.
-     * 1. Ensure all expression arguments are already converted and available in [z3InternCtx].
+     * 1. Ensure all expression arguments are already converted and available in [z3Ctx].
      * If any argument is not converted [argumentsConversionRequired] is returned.
      * 2. If all arguments are available converted expression is returned.
      * */
-    override fun convertNativeExpr(expr: Expr<*>): ExprConversionResult = when (expr.astKind) {
-        Z3_ast_kind.Z3_NUMERAL_AST -> convertNumeral(expr)
-        Z3_ast_kind.Z3_APP_AST -> convertApp(expr)
-        Z3_ast_kind.Z3_QUANTIFIER_AST -> convertQuantifier(expr as Quantifier)
+    override fun convertNativeExpr(expr: Long): ExprConversionResult =
+        when (Z3_ast_kind.fromInt(Native.getAstKind(nCtx, expr))) {
+            Z3_ast_kind.Z3_NUMERAL_AST -> convertNumeral(expr)
+            Z3_ast_kind.Z3_APP_AST -> convertApp(expr)
+            Z3_ast_kind.Z3_QUANTIFIER_AST -> convertQuantifier(expr)
 
-        /**
-         * Vars are only possible in Quantifier bodies and function interpretations.
-         * Currently we remove vars in all of these cases and therefore
-         * if a var occurs then we are missing something
-         * */
-        Z3_ast_kind.Z3_VAR_AST -> error("unexpected var")
+            /**
+             * Vars are only possible in Quantifier bodies and function interpretations.
+             * Currently we remove vars in all of these cases and therefore
+             * if a var occurs then we are missing something
+             * */
+            Z3_ast_kind.Z3_VAR_AST -> error("unexpected var")
 
-        Z3_ast_kind.Z3_SORT_AST,
-        Z3_ast_kind.Z3_FUNC_DECL_AST,
-        Z3_ast_kind.Z3_UNKNOWN_AST -> error("impossible ast kind for expressions")
+            Z3_ast_kind.Z3_SORT_AST,
+            Z3_ast_kind.Z3_FUNC_DECL_AST,
+            Z3_ast_kind.Z3_UNKNOWN_AST -> error("impossible ast kind for expressions")
 
-        null -> error("z3 ast kind cannot be null")
-    }
+            null -> error("z3 ast kind cannot be null")
+        }
 
 
     @Suppress(
-        "RemoveExplicitTypeArguments",
-        "USELESS_CAST",
-        "UPPER_BOUND_VIOLATED_WARNING",
         "LongMethod",
         "ComplexMethod"
     )
-    open fun convertApp(expr: Expr<*>): ExprConversionResult = with(ctx) {
-        when (expr.funcDecl.declKind) {
+    open fun convertApp(expr: Long): ExprConversionResult = with(ctx) {
+        val decl = Native.getAppDecl(nCtx, expr)
+        when (val declKind = Z3_decl_kind.fromInt(Native.getDeclKind(nCtx, decl))) {
             Z3_decl_kind.Z3_OP_TRUE -> convert { trueExpr }
             Z3_decl_kind.Z3_OP_FALSE -> convert { falseExpr }
             Z3_decl_kind.Z3_OP_UNINTERPRETED -> expr.convertList { args: List<KExpr<KSort>> ->
-                mkApp(convertDecl(expr.funcDecl), args)
+                mkApp(decl.convertDecl(), args)
             }
             Z3_decl_kind.Z3_OP_AND -> expr.convertList(::mkAnd)
             Z3_decl_kind.Z3_OP_OR -> expr.convertList(::mkOr)
@@ -167,7 +179,8 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_STORE -> expr.convert(::mkArrayStore)
             Z3_decl_kind.Z3_OP_SELECT -> expr.convert(::mkArraySelect)
             Z3_decl_kind.Z3_OP_CONST_ARRAY -> expr.convert { arg: KExpr<KSort> ->
-                mkArrayConst(convertSort(expr.funcDecl.range) as KArraySort<*, *>, arg)
+                val range = Native.getRange(nCtx, decl).convertSort<KArraySort<*, *>>()
+                mkArrayConst(range, arg)
             }
             Z3_decl_kind.Z3_OP_BNUM,
             Z3_decl_kind.Z3_OP_BIT1,
@@ -203,23 +216,23 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_BXNOR -> expr.convert(::mkBvXNorExpr)
             Z3_decl_kind.Z3_OP_CONCAT -> expr.convertReduced(::mkBvConcatExpr)
             Z3_decl_kind.Z3_OP_SIGN_EXT -> expr.convert { arg: KExpr<KBvSort> ->
-                val size = expr.funcDecl.parameters[0].int
+                val size = Native.getDeclIntParameter(nCtx, decl, 0)
 
                 mkBvSignExtensionExpr(size, arg)
             }
             Z3_decl_kind.Z3_OP_ZERO_EXT -> expr.convert { arg: KExpr<KBvSort> ->
-                val size = expr.funcDecl.parameters[0].int
+                val size = Native.getDeclIntParameter(nCtx, decl, 0)
 
                 mkBvZeroExtensionExpr(size, arg)
             }
             Z3_decl_kind.Z3_OP_EXTRACT -> expr.convert { arg: KExpr<KBvSort> ->
-                val high = expr.funcDecl.parameters[0].int
-                val low = expr.funcDecl.parameters[1].int
+                val high = Native.getDeclIntParameter(nCtx, decl, 0)
+                val low = Native.getDeclIntParameter(nCtx, decl, 1)
 
                 mkBvExtractExpr(high, low, arg)
             }
             Z3_decl_kind.Z3_OP_REPEAT -> expr.convert { arg: KExpr<KBvSort> ->
-                val repeatCount = expr.funcDecl.parameters[0].int
+                val repeatCount = Native.getDeclIntParameter(nCtx, decl, 0)
 
                 mkBvRepeatExpr(repeatCount, arg)
             }
@@ -230,12 +243,12 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_BLSHR -> expr.convert(::mkBvLogicalShiftRightExpr)
             Z3_decl_kind.Z3_OP_BASHR -> expr.convert(::mkBvArithShiftRightExpr)
             Z3_decl_kind.Z3_OP_ROTATE_LEFT -> expr.convert { arg: KExpr<KBvSort> ->
-                val rotation = expr.funcDecl.parameters[0].int
+                val rotation = Native.getDeclIntParameter(nCtx, decl, 0)
 
                 mkBvRotateLeftExpr(rotation, arg)
             }
             Z3_decl_kind.Z3_OP_ROTATE_RIGHT -> expr.convert { arg: KExpr<KBvSort> ->
-                val rotation = expr.funcDecl.parameters[0].int
+                val rotation = Native.getDeclIntParameter(nCtx, decl, 0)
 
                 mkBvRotateRightExpr(rotation, arg)
             }
@@ -263,11 +276,9 @@ open class KZ3ExprConverter(
 
             Z3_decl_kind.Z3_OP_BSMUL_NO_UDFL -> expr.convert(::mkBvMulNoUnderflowExpr)
             Z3_decl_kind.Z3_OP_AS_ARRAY -> convert {
-                val z3Decl = expr.funcDecl.parameters[0].funcDecl
-
-                @Suppress("UNCHECKED_CAST")
-                val decl = convertDecl(z3Decl) as? KFuncDecl<KSort> ?: error("unexpected as-array decl $z3Decl")
-                mkFunctionAsArray<KSort, KSort>(decl)
+                val z3Decl = Native.getDeclFuncDeclParameter(nCtx, decl, 0).convertDecl<KSort>()
+                val funDecl = z3Decl as? KFuncDecl<KSort> ?: error("unexpected as-array decl $z3Decl")
+                mkFunctionAsArray<KSort, KSort>(funDecl)
             }
 
             Z3_decl_kind.Z3_OP_FPA_NEG -> expr.convert(::mkFpNegationExpr)
@@ -295,12 +306,12 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_FPA_IS_NEGATIVE -> expr.convert(::mkFpIsNegativeExpr)
             Z3_decl_kind.Z3_OP_FPA_IS_POSITIVE -> expr.convert(::mkFpIsPositiveExpr)
             Z3_decl_kind.Z3_OP_FPA_TO_UBV -> expr.convert { rm: KExpr<KFpRoundingModeSort>, value: KExpr<KFpSort> ->
-                val size = expr.funcDecl.parameters[0].int
+                val size = Native.getDeclIntParameter(nCtx, decl, 0)
                 mkFpToBvExpr(rm, value, bvSize = size, isSigned = false)
             }
 
             Z3_decl_kind.Z3_OP_FPA_TO_SBV -> expr.convert { rm: KExpr<KFpRoundingModeSort>, value: KExpr<KFpSort> ->
-                val size = expr.funcDecl.parameters[0].int
+                val size = Native.getDeclIntParameter(nCtx, decl, 0)
                 mkFpToBvExpr(rm, value, bvSize = size, isSigned = true)
             }
 
@@ -309,52 +320,53 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_FPA_TO_IEEE_BV -> expr.convert(::mkFpToIEEEBvExpr)
             Z3_decl_kind.Z3_OP_FPA_TO_FP -> convertFpaToFp(expr)
             Z3_decl_kind.Z3_OP_FPA_PLUS_INF -> convert {
-                val sort = convertSort(expr.sort) as KFpSort
+                val sort = Native.getSort(nCtx, expr).convertSort<KFpSort>()
                 mkFpInf(signBit = false, sort)
             }
 
             Z3_decl_kind.Z3_OP_FPA_MINUS_INF -> convert {
-                val sort = convertSort(expr.sort) as KFpSort
+                val sort = Native.getSort(nCtx, expr).convertSort<KFpSort>()
                 mkFpInf(signBit = true, sort)
             }
 
             Z3_decl_kind.Z3_OP_FPA_NAN -> convert {
-                val sort = convertSort(expr.sort) as KFpSort
+                val sort = Native.getSort(nCtx, expr).convertSort<KFpSort>()
                 mkFpNan(sort)
             }
 
             Z3_decl_kind.Z3_OP_FPA_PLUS_ZERO -> convert {
-                val sort = convertSort(expr.sort) as KFpSort
+                val sort = Native.getSort(nCtx, expr).convertSort<KFpSort>()
                 mkFpZero(signBit = false, sort)
             }
 
             Z3_decl_kind.Z3_OP_FPA_MINUS_ZERO -> convert {
-                val sort = convertSort(expr.sort) as KFpSort
+                val sort = Native.getSort(nCtx, expr).convertSort<KFpSort>()
                 mkFpZero(signBit = true, sort)
             }
 
-            Z3_decl_kind.Z3_OP_FPA_NUM -> convertNumeral(expr as FPExpr)
+            Z3_decl_kind.Z3_OP_FPA_NUM -> convertFpNumeral(expr, Native.getSort(nCtx, expr))
             Z3_decl_kind.Z3_OP_FPA_TO_FP_UNSIGNED ->
                 expr.convert { rm: KExpr<KFpRoundingModeSort>, value: KExpr<KBvSort> ->
-                    val fpSort = convertSort(expr.sort) as KFpSort
+                    val fpSort = Native.getSort(nCtx, expr).convertSort<KFpSort>()
                     mkBvToFpExpr(fpSort, rm, value, signed = false)
                 }
             Z3_decl_kind.Z3_OP_FPA_BVWRAP,
             Z3_decl_kind.Z3_OP_FPA_BV2RM -> {
-                TODO("Fp ${expr.funcDecl} (${expr.funcDecl.declKind}) is not supported")
+                TODO("Fp $declKind is not supported")
             }
-            else -> TODO("${expr.funcDecl} (${expr.funcDecl.declKind}) is not supported")
+            else -> TODO("$declKind is not supported")
         }
     }
 
     @Suppress("ComplexMethod", "MagicNumber")
-    private fun KContext.convertFpaToFp(expr: Expr<*>): ExprConversionResult {
-        val fpSort = convertSort(expr.sort) as KFpSort
-        val args = expr.args
-        val sorts = args.map { it.sort }
+    private fun KContext.convertFpaToFp(expr: Long): ExprConversionResult {
+        val fpSort = Native.getSort(nCtx, expr).convertSort<KFpSort>()
+        val args = getAppArgs(nCtx, expr)
+        val sorts = args.map { Native.getSort(nCtx, it) }
+        val sortKinds = sorts.map { Z3_sort_kind.fromInt(Native.getSortKind(nCtx, it)) }
 
         return when {
-            args.size == 1 && sorts[0] is BitVecSort -> expr.convert { bv: KExpr<KBvSort> ->
+            args.size == 1 && sortKinds.single() == Z3_sort_kind.Z3_BV_SORT -> expr.convert { bv: KExpr<KBvSort> ->
                 val exponentBits = fpSort.exponentBits.toInt()
                 val size = bv.sort.sizeBits.toInt()
 
@@ -365,25 +377,29 @@ open class KZ3ExprConverter(
 
                 mkFpFromBvExpr(sign, exponent, significand)
             }
-            args.size == 2 && sorts[0] is FPRMSort -> when (sorts[1]) {
-                is FPSort -> expr.convert { rm: KExpr<KFpRoundingModeSort>, value: KExpr<KFpSort> ->
-                    mkFpToFpExpr(fpSort, rm, value)
-                }
-                is RealSort -> expr.convert { rm: KExpr<KFpRoundingModeSort>, value: KExpr<KRealSort> ->
-                    mkRealToFpExpr(fpSort, rm, value)
-                }
-                is BitVecSort -> expr.convert { rm: KExpr<KFpRoundingModeSort>, value: KExpr<KBvSort> ->
-                    mkBvToFpExpr(fpSort, rm, value, signed = true)
-                }
+            args.size == 2 && sortKinds[0] == Z3_sort_kind.Z3_ROUNDING_MODE_SORT -> when (sortKinds[1]) {
+                Z3_sort_kind.Z3_FLOATING_POINT_SORT ->
+                    expr.convert { rm: KExpr<KFpRoundingModeSort>, value: KExpr<KFpSort> ->
+                        mkFpToFpExpr(fpSort, rm, value)
+                    }
+                Z3_sort_kind.Z3_REAL_SORT ->
+                    expr.convert { rm: KExpr<KFpRoundingModeSort>, value: KExpr<KRealSort> ->
+                        mkRealToFpExpr(fpSort, rm, value)
+                    }
+                Z3_sort_kind.Z3_BV_SORT ->
+                    expr.convert { rm: KExpr<KFpRoundingModeSort>, value: KExpr<KBvSort> ->
+                        mkBvToFpExpr(fpSort, rm, value, signed = true)
+                    }
                 else -> TODO("unsupported fpaTofp: $expr")
             }
-            args.size == 3 && sorts[0] is BitVecSort && sorts[1] is BitVecSort && sorts[2] is BitVecSort ->
+            args.size == 3 && sortKinds.all { it == Z3_sort_kind.Z3_BV_SORT } ->
                 expr.convert { sign: KExpr<KBv1Sort>, exp: KExpr<KBvSort>, significand: KExpr<KBvSort> ->
                     mkFpFromBvExpr(sign, exp, significand)
                 }
-            args.size == 3 && sorts[0] is FPRMSort && sorts[1] is ArithSort && sorts[2] is ArithSort ->
+            args.size == 3 && sortKinds[0] == Z3_sort_kind.Z3_ROUNDING_MODE_SORT
+                    && sortKinds.drop(1).all { it == Z3_sort_kind.Z3_INT_SORT || it == Z3_sort_kind.Z3_REAL_SORT } ->
                 expr.convert(::convertRealToFpExpr)
-            else -> error("unexpected fpaTofp: $expr")
+            else -> error("unexpected fpaTofp: ${Native.astToString(nCtx, expr)}")
         }
     }
 
@@ -395,79 +411,105 @@ open class KZ3ExprConverter(
         TODO("unsupported fpaTofp: ${rm.sort} + real (${arg1.sort}) + int (${arg2.sort}) -> float")
     }
 
-    open fun convertNumeral(expr: Expr<*>): ExprConversionResult = when (expr.sort.sortKind) {
-        Z3_sort_kind.Z3_INT_SORT -> convert { convertNumeral(expr as IntNum) }
-        Z3_sort_kind.Z3_REAL_SORT -> convert { convertNumeral(expr as RatNum) }
-        Z3_sort_kind.Z3_BV_SORT -> convert { convertNumeral(expr as BitVecNum) }
-        Z3_sort_kind.Z3_ROUNDING_MODE_SORT -> convert { convertNumeral(expr as FPRMNum) }
-        Z3_sort_kind.Z3_FLOATING_POINT_SORT -> convertNumeral(expr as FPExpr)
-        else -> TODO("numerals with ${expr.sort} are not supported")
+    open fun convertNumeral(expr: Long): ExprConversionResult {
+        val sort = Native.getSort(nCtx, expr)
+        return when (Z3_sort_kind.fromInt(Native.getSortKind(nCtx, sort))) {
+            Z3_sort_kind.Z3_INT_SORT -> convert { convertIntNumeral(expr) }
+            Z3_sort_kind.Z3_REAL_SORT -> convert { convertRealNumeral(expr) }
+            Z3_sort_kind.Z3_BV_SORT -> convert { convertBvNumeral(expr, sort) }
+            Z3_sort_kind.Z3_ROUNDING_MODE_SORT -> convert { convertFpRmNumeral(expr) }
+            Z3_sort_kind.Z3_FLOATING_POINT_SORT -> convertFpNumeral(expr, sort)
+            else -> TODO("numerals with ${Native.sortToString(nCtx, sort)} are not supported")
+        }
     }
 
     @Suppress("MemberVisibilityCanBePrivate")
-    fun convertNumeral(expr: IntNum): KIntNumExpr = with(ctx) {
-        expr.intOrNull()
+    fun convertIntNumeral(expr: Long): KIntNumExpr = with(ctx) {
+        intOrNull(nCtx, expr)
             ?.let { mkIntNum(it) }
-            ?: expr.longOrNull()?.let { mkIntNum(it) }
-            ?: mkIntNum(expr.bigInteger)
+            ?: longOrNull(nCtx, expr)?.let { mkIntNum(it) }
+            ?: mkIntNum(Native.getNumeralString(nCtx, expr))
     }
 
     @Suppress("MemberVisibilityCanBePrivate")
-    fun convertNumeral(expr: RatNum): KRealNumExpr = with(ctx) {
-        mkRealNum(convertNumeral(expr.numerator), convertNumeral(expr.denominator))
+    fun convertRealNumeral(expr: Long): KRealNumExpr = with(ctx) {
+        val numerator = z3Ctx.temporaryAst(Native.getNumerator(nCtx, expr))
+        val denominator = z3Ctx.temporaryAst(Native.getDenominator(nCtx, expr))
+        mkRealNum(convertIntNumeral(numerator), convertIntNumeral(denominator)).also {
+            z3Ctx.releaseTemporaryAst(numerator)
+            z3Ctx.releaseTemporaryAst(denominator)
+        }
     }
 
     @Suppress("MemberVisibilityCanBePrivate")
-    fun convertNumeral(expr: BitVecNum): KBitVecValue<*> = with(ctx) {
-        val sizeBits = expr.sortSize.toUInt()
-        mkBv(value = expr.toBinaryString().padStart(sizeBits.toInt(), '0'), sizeBits)
+    fun convertBvNumeral(expr: Long, sort: Long): KBitVecValue<*> = with(ctx) {
+        val sizeBits = Native.getBvSortSize(nCtx, sort).toUInt()
+        val bits = Native.getNumeralBinaryString(nCtx, expr)
+        mkBv(value = bits.padStart(sizeBits.toInt(), '0'), sizeBits)
     }
 
     @Suppress("MemberVisibilityCanBePrivate")
-    fun convertNumeral(expr: FPExpr): ExprConversionResult = when {
-        expr is FPNum -> convert {
+    fun convertFpNumeral(expr: Long, sortx: Long): ExprConversionResult = when {
+        Native.isNumeralAst(nCtx, expr) -> convert {
             with(ctx) {
-                val sort = convertSort(expr.sort) as KFpSort
+                val sort = sortx.convertSort<KFpSort>()
                 val sBits = sort.significandBits.toInt()
                 val fp64SizeBits = KFp64Sort.exponentBits.toInt() + KFp64Sort.significandBits.toInt()
 
                 // if we have sBits greater than long size bits, take it all, otherwise take last (sBits - 1) bits
                 val significandMask = if (sBits < fp64SizeBits) (1L shl (sBits - 1)) - 1 else -1
                 // TODO it is not right if we have significand with number of bits greater than 64
-                val significand = expr.significandUInt64 and significandMask
+                val significandValue = fpSignificandUInt64OrNull(nCtx, expr)
+                    ?: error("unexpected fp value")
+                val significand = significandValue and significandMask
 
+                val exponentValue = fpExponentInt64OrNull(nCtx, expr, biased = false)
+                    ?: error("unexpected fp value")
                 val exponentMask = (1L shl sort.exponentBits.toInt()) - 1
-                val exponent = expr.getExponentInt64(false) and exponentMask
+                val exponent = exponentValue and exponentMask
 
-                mkFp(significand, exponent, expr.sign, sort)
+                val signValue = fpSignOrNull(nCtx, expr)
+                    ?: error("unexpected fp value")
+
+                mkFp(significand, exponent, signValue, sort)
             }
         }
-        expr.funcDecl.declKind == Z3_decl_kind.Z3_OP_FPA_NUM -> {
+        Z3_decl_kind.Z3_OP_FPA_NUM.toInt() == Native.getDeclKind(nCtx, Native.getAppDecl(nCtx, expr)) -> {
             TODO("unexpected fpa num")
         }
         else -> convertApp(expr)
     }
 
     @Suppress("MemberVisibilityCanBePrivate")
-    fun convertNumeral(expr: FPRMNum): KFpRoundingModeExpr = with(ctx) {
-        val roundingMode = when (expr.funcDecl.declKind) {
+    fun convertFpRmNumeral(expr: Long): KFpRoundingModeExpr = with(ctx) {
+        val decl = Native.getAppDecl(nCtx, expr)
+        val roundingMode = when (Z3_decl_kind.fromInt(Native.getDeclKind(nCtx, decl))) {
             Z3_decl_kind.Z3_OP_FPA_RM_NEAREST_TIES_TO_EVEN -> KFpRoundingMode.RoundNearestTiesToEven
             Z3_decl_kind.Z3_OP_FPA_RM_NEAREST_TIES_TO_AWAY -> KFpRoundingMode.RoundNearestTiesToAway
             Z3_decl_kind.Z3_OP_FPA_RM_TOWARD_POSITIVE -> KFpRoundingMode.RoundTowardPositive
             Z3_decl_kind.Z3_OP_FPA_RM_TOWARD_NEGATIVE -> KFpRoundingMode.RoundTowardNegative
             Z3_decl_kind.Z3_OP_FPA_RM_TOWARD_ZERO -> KFpRoundingMode.RoundTowardZero
-            else -> error("unexpected rounding mode: $expr")
+            else -> error("unexpected rounding mode: ${Native.astToString(nCtx, expr)}")
         }
         mkFpRoundingModeExpr(roundingMode)
     }
 
-    open fun convertQuantifier(expr: Quantifier): ExprConversionResult = with(ctx) {
-        val z3Bounds = expr.boundVariableSorts
-            .zip(expr.boundVariableNames)
-            .map { (sort, name) -> expr.ctx.mkConst(name, sort) }
+    open fun convertQuantifier(expr: Long): ExprConversionResult = with(ctx) {
+        val numBound = Native.getQuantifierNumBound(nCtx, expr)
+        val boundSorts = List(numBound) { idx -> Native.getQuantifierBoundSort(nCtx, expr, idx) }
+        val boundNames = List(numBound) { idx -> Native.getQuantifierBoundName(nCtx, expr, idx) }
+        val bodyWithVars = Native.getQuantifierBody(nCtx, expr)
+
+        val bounds = boundSorts.zip(boundNames)
+            .map { (sort, name) -> mkConstDecl(convertNativeSymbol(name), sort.convertSort()) }
+
+        val z3Bounds = bounds.map { mkConstApp(it) }
+            .map { with(internalizer) { it.internalizeExpr() } }
             .asReversed()
 
-        val preparedBody = expr.body.substituteVars(z3Bounds.toTypedArray())
+        val preparedBody = z3Ctx.temporaryAst(
+            Native.substituteVars(nCtx, bodyWithVars, z3Bounds.size, z3Bounds.toLongArray())
+        )
 
         val body = findConvertedNative(preparedBody)
 
@@ -478,36 +520,43 @@ open class KZ3ExprConverter(
             return argumentsConversionRequired
         }
 
+        z3Ctx.releaseTemporaryAst(preparedBody)
+
         @Suppress("UNCHECKED_CAST")
         body as? KExpr<KBoolSort> ?: error("Body is not properly converted")
 
-        val bounds = z3Bounds.map { it.funcDecl.convert<KSort>() }
-
         val convertedExpr = when {
-            expr.isUniversal -> mkUniversalQuantifier(body, bounds)
-            expr.isExistential -> mkExistentialQuantifier(body, bounds)
-            expr.isLambda -> TODO("array lambda converter")
-            else -> TODO("unexpected quantifier: $expr")
+            Native.isQuantifierForall(nCtx, expr) -> mkUniversalQuantifier(body, bounds)
+            Native.isQuantifierExists(nCtx, expr) -> mkExistentialQuantifier(body, bounds)
+            Native.isLambda(nCtx, expr) -> TODO("array lambda converter")
+            else -> TODO("unexpected quantifier: ${Native.astToString(nCtx, expr)}")
         }
 
         ExprConversionResult(convertedExpr)
     }
 
-    inline fun <T : KSort, A0 : KSort> Expr<*>.convert(op: (KExpr<A0>) -> KExpr<T>) = convert(args, op)
+    inline fun <T : KSort, A0 : KSort> Long.convert(op: (KExpr<A0>) -> KExpr<T>) =
+        convert(appArgs(nCtx, this), op)
 
-    inline fun <T : KSort, A0 : KSort, A1 : KSort> Expr<*>.convert(op: (KExpr<A0>, KExpr<A1>) -> KExpr<T>) =
-        convert(args, op)
+    inline fun <T : KSort, A0 : KSort, A1 : KSort> Long.convert(op: (KExpr<A0>, KExpr<A1>) -> KExpr<T>) =
+        convert(appArgs(nCtx, this), op)
 
-    inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> Expr<*>.convert(
+    inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> Long.convert(
         op: (KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<T>
-    ) = convert(args, op)
+    ) = convert(appArgs(nCtx, this), op)
 
-    inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort> Expr<*>.convert(
+    inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort> Long.convert(
         op: (KExpr<A0>, KExpr<A1>, KExpr<A2>, KExpr<A3>) -> KExpr<T>
-    ) = convert(args, op)
+    ) = convert(appArgs(nCtx, this), op)
 
-    inline fun <T : KSort, A : KSort> Expr<*>.convertList(op: (List<KExpr<A>>) -> KExpr<T>) = convertList(args, op)
+    inline fun <T : KSort, A : KSort> Long.convertList(op: (List<KExpr<A>>) -> KExpr<T>) =
+        convertList(appArgs(nCtx, this), op)
 
-    inline fun <T : KSort> Expr<*>.convertReduced(op: (KExpr<T>, KExpr<T>) -> KExpr<T>) = convertReduced(args, op)
+    inline fun <T : KSort> Long.convertReduced(op: (KExpr<T>, KExpr<T>) -> KExpr<T>) =
+        convertReduced(appArgs(nCtx, this), op)
+
+    @Suppress("ArrayPrimitive")
+    fun appArgs(ctx: Long, expr: Long): Array<Long> =
+        getAppArgs(ctx, expr).toTypedArray()
 
 }
