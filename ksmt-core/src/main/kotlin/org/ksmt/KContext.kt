@@ -1902,12 +1902,13 @@ open class KContext : AutoCloseable {
         return expr.computeExprSort()
     }
 
+    /**
+     * Compute expression sort using cache.
+     * Useful for non-recursive sort computation of deeply nested expressions.
+     * See [KExpr.computeExprSort].
+     * */
     fun <T : KSort> getExprSort(expr: KExpr<T>): T =
         exprSortCache.createIfContextActive(expr).uncheckedCast()
-
-    private val exprDeclCache = mkClosableCache { expr: KApp<*, *> -> with(expr) { decl() } }
-    val <T : KSort> KApp<T, *>.decl: KDecl<T>
-        get() = exprDeclCache.createIfContextActive(this).uncheckedCast()
 
     /*
     * declarations

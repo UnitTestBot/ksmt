@@ -54,7 +54,8 @@ class KFp16Value internal constructor(
         // TODO add checks for the bounds
     }
 
-    override fun decl(): KDecl<KFp16Sort> = ctx.mkFp16Decl(value)
+    override val decl: KDecl<KFp16Sort>
+        get() = ctx.mkFp16Decl(value)
 
     override val sort: KFp16Sort
         get() = ctx.mkFp16Sort()
@@ -71,7 +72,8 @@ class KFp32Value internal constructor(
     exponent = with(ctx) { value.getExponent(isBiased = true).toBv(KFp32Sort.exponentBits) },
     signBit = value.booleanSignBit
 ) {
-    override fun decl(): KDecl<KFp32Sort> = ctx.mkFp32Decl(value)
+    override val decl: KDecl<KFp32Sort>
+        get() = ctx.mkFp32Decl(value)
 
     override val sort: KFp32Sort
         get() = ctx.mkFp32Sort()
@@ -88,7 +90,8 @@ class KFp64Value internal constructor(
     exponent = with(ctx) { value.getExponent(isBiased = true).toBv(KFp64Sort.exponentBits) },
     signBit = value.booleanSignBit
 ) {
-    override fun decl(): KDecl<KFp64Sort> = ctx.mkFp64Decl(value)
+    override val decl: KDecl<KFp64Sort>
+        get() = ctx.mkFp64Decl(value)
 
     override val sort: KFp64Sort
         get() = ctx.mkFp64Sort()
@@ -113,7 +116,8 @@ class KFp128Value internal constructor(
     exponent = with(ctx) { exponentValue.toBv(KFp128Sort.exponentBits) },
     signBit
 ) {
-    override fun decl(): KDecl<KFp128Sort> = ctx.mkFp128Decl(significandValue, exponentValue, signBit)
+    override val decl: KDecl<KFp128Sort>
+        get() = ctx.mkFp128Decl(significandValue, exponentValue, signBit)
 
     override val sort: KFp128Sort
         get() = ctx.mkFp128Sort()
@@ -147,13 +151,14 @@ class KFpCustomSizeValue internal constructor(
         }
     }
 
-    override fun decl(): KDecl<KFpSort> = ctx.mkFpCustomSizeDecl(
-        significandSize,
-        exponentSize,
-        significandValue,
-        exponentValue,
-        signBit
-    )
+    override val decl: KDecl<KFpSort>
+        get() = ctx.mkFpCustomSizeDecl(
+            significandSize,
+            exponentSize,
+            significandValue,
+            exponentValue,
+            signBit
+        )
 
     override val sort: KFpSort
         get() = ctx.mkFpSort(exponentSize, significandSize)
@@ -168,7 +173,8 @@ class KFpAbsExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
-    override fun decl(): KDecl<S> = ctx.mkFpAbsDecl(value.sort)
+    override val decl: KDecl<S>
+        get() = ctx.mkFpAbsDecl(value.sort)
 
     override val sort: S
         get() = ctx.getExprSort(this)
@@ -192,7 +198,8 @@ class KFpNegationExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
-    override fun decl(): KDecl<S> = ctx.mkFpNegationDecl(value.sort)
+    override val decl: KDecl<S>
+        get() = ctx.mkFpNegationDecl(value.sort)
 
     override val sort: S
         get() = ctx.getExprSort(this)
@@ -216,7 +223,8 @@ class KFpAddExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<*>>
         get() = listOf(roundingMode, arg0, arg1)
 
-    override fun decl(): KDecl<S> = with(ctx) { mkFpAddDecl(roundingMode.sort, arg0.sort, arg1.sort) }
+    override val decl: KDecl<S>
+        get() = ctx.mkFpAddDecl(roundingMode.sort, arg0.sort, arg1.sort)
 
     override val sort: S
         get() = ctx.getExprSort(this)
@@ -239,7 +247,8 @@ class KFpSubExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<*>>
         get() = listOf(roundingMode, arg0, arg1)
 
-    override fun decl(): KDecl<S> = with(ctx) { mkFpSubDecl(roundingMode.sort, arg0.sort, arg1.sort) }
+    override val decl: KDecl<S>
+        get() = ctx.mkFpSubDecl(roundingMode.sort, arg0.sort, arg1.sort)
 
     override val sort: S
         get() = ctx.getExprSort(this)
@@ -262,7 +271,8 @@ class KFpMulExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<*>>
         get() = listOf(roundingMode, arg0, arg1)
 
-    override fun decl(): KDecl<S> = with(ctx) { mkFpMulDecl(roundingMode.sort, arg0.sort, arg1.sort) }
+    override val decl: KDecl<S>
+        get() = ctx.mkFpMulDecl(roundingMode.sort, arg0.sort, arg1.sort)
 
     override val sort: S
         get() = ctx.getExprSort(this)
@@ -285,7 +295,8 @@ class KFpDivExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<*>>
         get() = listOf(roundingMode, arg0, arg1)
 
-    override fun decl(): KDecl<S> = with(ctx) { mkFpDivDecl(roundingMode.sort, arg0.sort, arg1.sort) }
+    override val decl: KDecl<S>
+        get() = ctx.mkFpDivDecl(roundingMode.sort, arg0.sort, arg1.sort)
 
     override val sort: S
         get() = ctx.getExprSort(this)
@@ -309,14 +320,14 @@ class KFpFusedMulAddExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<*>>
         get() = listOf(roundingMode, arg0, arg1, arg2)
 
-    override fun decl(): KDecl<S> = with(ctx) {
-        mkFpFusedMulAddDecl(
+    override val decl: KDecl<S>
+        get() = ctx.mkFpFusedMulAddDecl(
             roundingMode.sort,
             arg0.sort,
             arg1.sort,
             arg2.sort
         )
-    }
+
 
     override val sort: S
         get() = ctx.getExprSort(this)
@@ -339,7 +350,8 @@ class KFpSqrtExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<*>>
         get() = listOf(roundingMode, value)
 
-    override fun decl(): KDecl<S> = with(ctx) { mkFpSqrtDecl(roundingMode.sort, value.sort) }
+    override val decl: KDecl<S>
+        get() = ctx.mkFpSqrtDecl(roundingMode.sort, value.sort)
 
     override val sort: S
         get() = ctx.getExprSort(this)
@@ -362,7 +374,8 @@ class KFpRemExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
-    override fun decl(): KDecl<S> = ctx.mkFpRemDecl(arg0.sort, arg1.sort)
+    override val decl: KDecl<S>
+        get() = ctx.mkFpRemDecl(arg0.sort, arg1.sort)
 
     override val sort: S
         get() = ctx.getExprSort(this)
@@ -384,7 +397,8 @@ class KFpRoundToIntegralExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<*>>
         get() = listOf(roundingMode, value)
 
-    override fun decl(): KDecl<S> = with(ctx) { mkFpRoundToIntegralDecl(roundingMode.sort, value.sort) }
+    override val decl: KDecl<S>
+        get() = ctx.mkFpRoundToIntegralDecl(roundingMode.sort, value.sort)
 
     override val sort: S
         get() = ctx.getExprSort(this)
@@ -407,7 +421,8 @@ class KFpMinExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
-    override fun decl(): KDecl<S> = ctx.mkFpMinDecl(arg0.sort, arg1.sort)
+    override val decl: KDecl<S>
+        get() = ctx.mkFpMinDecl(arg0.sort, arg1.sort)
 
     override val sort: S
         get() = ctx.getExprSort(this)
@@ -429,7 +444,8 @@ class KFpMaxExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
-    override fun decl(): KDecl<S> = ctx.mkFpMaxDecl(arg0.sort, arg1.sort)
+    override val decl: KDecl<S>
+        get() = ctx.mkFpMaxDecl(arg0.sort, arg1.sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 
@@ -451,7 +467,8 @@ class KFpLessOrEqualExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
-    override fun decl(): KDecl<KBoolSort> = ctx.mkFpLessOrEqualDecl(arg0.sort, arg1.sort)
+    override val decl: KDecl<KBoolSort>
+        get() = ctx.mkFpLessOrEqualDecl(arg0.sort, arg1.sort)
 
     override val sort: KBoolSort
         get() = ctx.boolSort
@@ -467,7 +484,8 @@ class KFpLessExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
-    override fun decl(): KDecl<KBoolSort> = ctx.mkFpLessDecl(arg0.sort, arg1.sort)
+    override val decl: KDecl<KBoolSort>
+        get() = ctx.mkFpLessDecl(arg0.sort, arg1.sort)
 
     override val sort: KBoolSort
         get() = ctx.boolSort
@@ -483,7 +501,8 @@ class KFpGreaterOrEqualExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
-    override fun decl(): KDecl<KBoolSort> = ctx.mkFpGreaterOrEqualDecl(arg0.sort, arg1.sort)
+    override val decl: KDecl<KBoolSort>
+        get() = ctx.mkFpGreaterOrEqualDecl(arg0.sort, arg1.sort)
 
     override val sort: KBoolSort
         get() = ctx.boolSort
@@ -499,7 +518,8 @@ class KFpGreaterExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
-    override fun decl(): KDecl<KBoolSort> = ctx.mkFpGreaterDecl(arg0.sort, arg1.sort)
+    override val decl: KDecl<KBoolSort>
+        get() = ctx.mkFpGreaterDecl(arg0.sort, arg1.sort)
 
     override val sort: KBoolSort
         get() = ctx.boolSort
@@ -515,7 +535,8 @@ class KFpEqualExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
-    override fun decl(): KDecl<KBoolSort> = ctx.mkFpEqualDecl(arg0.sort, arg1.sort)
+    override val decl: KDecl<KBoolSort>
+        get() = ctx.mkFpEqualDecl(arg0.sort, arg1.sort)
 
     override val sort: KBoolSort
         get() = ctx.boolSort
@@ -530,7 +551,8 @@ class KFpIsNormalExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
-    override fun decl(): KDecl<KBoolSort> = ctx.mkFpIsNormalDecl(value.sort)
+    override val decl: KDecl<KBoolSort>
+        get() = ctx.mkFpIsNormalDecl(value.sort)
 
     override val sort: KBoolSort
         get() = ctx.boolSort
@@ -545,7 +567,8 @@ class KFpIsSubnormalExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
-    override fun decl(): KDecl<KBoolSort> = ctx.mkFpIsSubnormalDecl(value.sort)
+    override val decl: KDecl<KBoolSort>
+        get() = ctx.mkFpIsSubnormalDecl(value.sort)
 
     override val sort: KBoolSort
         get() = ctx.boolSort
@@ -560,7 +583,8 @@ class KFpIsZeroExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
-    override fun decl(): KDecl<KBoolSort> = ctx.mkFpIsZeroDecl(value.sort)
+    override val decl: KDecl<KBoolSort>
+        get() = ctx.mkFpIsZeroDecl(value.sort)
 
     override val sort: KBoolSort
         get() = ctx.boolSort
@@ -575,7 +599,8 @@ class KFpIsInfiniteExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
-    override fun decl(): KDecl<KBoolSort> = ctx.mkFpIsInfiniteDecl(value.sort)
+    override val decl: KDecl<KBoolSort>
+        get() = ctx.mkFpIsInfiniteDecl(value.sort)
 
     override val sort: KBoolSort
         get() = ctx.boolSort
@@ -590,7 +615,8 @@ class KFpIsNaNExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
-    override fun decl(): KDecl<KBoolSort> = ctx.mkFpIsNaNDecl(value.sort)
+    override val decl: KDecl<KBoolSort>
+        get() = ctx.mkFpIsNaNDecl(value.sort)
 
     override val sort: KBoolSort
         get() = ctx.boolSort
@@ -605,7 +631,8 @@ class KFpIsNegativeExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
-    override fun decl(): KDecl<KBoolSort> = ctx.mkFpIsNegativeDecl(value.sort)
+    override val decl: KDecl<KBoolSort>
+        get() = ctx.mkFpIsNegativeDecl(value.sort)
 
     override val sort: KBoolSort
         get() = ctx.boolSort
@@ -620,7 +647,8 @@ class KFpIsPositiveExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
-    override fun decl(): KDecl<KBoolSort> = ctx.mkFpIsPositiveDecl(value.sort)
+    override val decl: KDecl<KBoolSort>
+        get() = ctx.mkFpIsPositiveDecl(value.sort)
 
     override val sort: KBoolSort
         get() = ctx.boolSort
@@ -640,9 +668,8 @@ class KFpToBvExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<*>>
         get() = listOf(roundingMode, value)
 
-    override fun decl(): KDecl<KBvSort> = with(ctx) {
-        mkFpToBvDecl(roundingMode.sort, value.sort, bvSize, isSigned)
-    }
+    override val decl: KDecl<KBvSort>
+        get() = ctx.mkFpToBvDecl(roundingMode.sort, value.sort, bvSize, isSigned)
 
     override val sort: KBvSort
         get() = ctx.mkBvSort(bvSize.toUInt())
@@ -658,7 +685,8 @@ class KFpToRealExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
-    override fun decl(): KDecl<KRealSort> = ctx.mkFpToRealDecl(value.sort)
+    override val decl: KDecl<KRealSort>
+        get() = ctx.mkFpToRealDecl(value.sort)
 
     override val sort: KRealSort
         get() = ctx.realSort
@@ -673,7 +701,8 @@ class KFpToIEEEBvExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
-    override fun decl(): KDecl<KBvSort> = ctx.mkFpToIEEEBvDecl(value.sort)
+    override val decl: KDecl<KBvSort>
+        get() = ctx.mkFpToIEEEBvDecl(value.sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<KBvSort> = transformer.transform(this)
 
@@ -698,9 +727,8 @@ class KFpFromBvExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<out KBvSort>>
         get() = listOf(sign, exponent, significand)
 
-    override fun decl(): KDecl<S> = with(ctx) {
-        mkFpFromBvDecl(sign.sort, exponent.sort, significand.sort)
-    }
+    override val decl: KDecl<S>
+        get() = ctx.mkFpFromBvDecl(sign.sort, exponent.sort, significand.sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 }
@@ -714,9 +742,8 @@ class KFpToFpExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<*>>
         get() = listOf(roundingMode, value)
 
-    override fun decl(): KDecl<S> = with(ctx) {
-        mkFpToFpDecl(sort, roundingMode.sort, value.sort)
-    }
+    override val decl: KDecl<S>
+        get() = ctx.mkFpToFpDecl(sort, roundingMode.sort, value.sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 }
@@ -730,9 +757,8 @@ class KRealToFpExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<*>>
         get() = listOf(roundingMode, value)
 
-    override fun decl(): KDecl<S> = with(ctx) {
-        mkRealToFpDecl(sort, roundingMode.sort, value.sort)
-    }
+    override val decl: KDecl<S>
+        get() = ctx.mkRealToFpDecl(sort, roundingMode.sort, value.sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 }
@@ -747,9 +773,8 @@ class KBvToFpExpr<S : KFpSort> internal constructor(
     override val args: List<KExpr<*>>
         get() = listOf(roundingMode, value)
 
-    override fun decl(): KDecl<S> = with(ctx) {
-        mkBvToFpDecl(sort, roundingMode.sort, value.sort, signed)
-    }
+    override val decl: KDecl<S>
+        get() = ctx.mkBvToFpDecl(sort, roundingMode.sort, value.sort, signed)
 
     override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 }

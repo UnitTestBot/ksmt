@@ -18,7 +18,8 @@ class KModIntExpr internal constructor(
     override val sort: KIntSort
         get() = ctx.intSort
 
-    override fun decl(): KIntModDecl = ctx.mkIntModDecl()
+    override val decl: KIntModDecl
+        get() = ctx.mkIntModDecl()
 
     override val args: List<KExpr<KIntSort>>
         get() = listOf(lhs, rhs)
@@ -34,7 +35,8 @@ class KRemIntExpr internal constructor(
     override val sort: KIntSort
         get() = ctx.intSort
 
-    override fun decl(): KIntRemDecl = ctx.mkIntRemDecl()
+    override val decl: KIntRemDecl
+        get() = ctx.mkIntRemDecl()
 
     override val args: List<KExpr<KIntSort>>
         get() = listOf(lhs, rhs)
@@ -49,7 +51,8 @@ class KToRealIntExpr internal constructor(
     override val sort: KRealSort
         get() = ctx.realSort
 
-    override fun decl(): KIntToRealDecl = ctx.mkIntToRealDecl()
+    override val decl: KIntToRealDecl
+        get() = ctx.mkIntToRealDecl()
 
     override val args: List<KExpr<KIntSort>>
         get() = listOf(arg)
@@ -64,7 +67,8 @@ abstract class KIntNumExpr(
     override val sort: KIntSort
         get() = ctx.intSort
 
-    override fun decl(): KIntNumDecl = ctx.mkIntNumDecl("$value")
+    override val decl: KIntNumDecl
+        get() = ctx.mkIntNumDecl("$value")
 
     override val args = emptyList<KExpr<*>>()
 }

@@ -6,9 +6,13 @@ import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KSort
 
 abstract class KApp<T : KSort, A : KExpr<*>> internal constructor(ctx: KContext) : KExpr<T>(ctx) {
+
     abstract val args: List<A>
 
-    abstract fun decl(): KDecl<T>
+    abstract val decl: KDecl<T>
+
+    @Deprecated("Use property", ReplaceWith("decl"))
+    fun decl(): KDecl<T> = decl
 
     override fun print(builder: StringBuilder): Unit = with(ctx) {
         with(builder) {
@@ -32,13 +36,11 @@ abstract class KApp<T : KSort, A : KExpr<*>> internal constructor(ctx: KContext)
 
 open class KFunctionApp<T : KSort> internal constructor(
     ctx: KContext,
-    val decl: KDecl<T>,
+    override val decl: KDecl<T>,
     override val args: List<KExpr<*>>
 ) : KApp<T, KExpr<*>>(ctx) {
     override val sort: T
         get() = decl.sort
-
-    override fun decl(): KDecl<T> = decl
 
     override fun accept(transformer: KTransformerBase): KExpr<T> = transformer.transform(this)
 }

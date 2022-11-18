@@ -23,7 +23,8 @@ class KAddArithExpr<T : KArithSort<T>> internal constructor(
         require(args.isNotEmpty()) { "add requires at least a single argument" }
     }
 
-    override fun decl(): KArithAddDecl<T> = with(ctx) { mkArithAddDecl(sort) }
+    override val decl: KArithAddDecl<T>
+        get() = ctx.mkArithAddDecl(sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<T> = transformer.transform(this)
 
@@ -45,7 +46,8 @@ class KMulArithExpr<T : KArithSort<T>> internal constructor(
         require(args.isNotEmpty()) { "mul requires at least a single argument" }
     }
 
-    override fun decl(): KArithMulDecl<T> = with(ctx) { mkArithMulDecl(sort) }
+    override val decl: KArithMulDecl<T>
+        get() = ctx.mkArithMulDecl(sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<T> = transformer.transform(this)
 
@@ -67,7 +69,8 @@ class KSubArithExpr<T : KArithSort<T>> internal constructor(
         require(args.isNotEmpty()) { "sub requires at least a single argument" }
     }
 
-    override fun decl(): KArithSubDecl<T> = with(ctx) { mkArithSubDecl(sort) }
+    override val decl: KArithSubDecl<T>
+        get() = ctx.mkArithSubDecl(sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<T> = transformer.transform(this)
 
@@ -86,7 +89,8 @@ class KUnaryMinusArithExpr<T : KArithSort<T>> internal constructor(
     val arg: KExpr<T>
 ) : KApp<T, KExpr<T>>(ctx) {
 
-    override fun decl(): KArithUnaryMinusDecl<T> = with(ctx) { mkArithUnaryMinusDecl(sort) }
+    override val decl: KArithUnaryMinusDecl<T>
+        get() = ctx.mkArithUnaryMinusDecl(sort)
 
     override val args: List<KExpr<T>>
         get() = listOf(arg)
@@ -109,7 +113,8 @@ class KDivArithExpr<T : KArithSort<T>> internal constructor(
     val rhs: KExpr<T>
 ) : KApp<T, KExpr<T>>(ctx) {
 
-    override fun decl(): KArithDivDecl<T> = with(ctx) { mkArithDivDecl(sort) }
+    override val decl: KArithDivDecl<T>
+        get() = ctx.mkArithDivDecl(sort)
 
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)
@@ -132,7 +137,8 @@ class KPowerArithExpr<T : KArithSort<T>> internal constructor(
     val rhs: KExpr<T>
 ) : KApp<T, KExpr<T>>(ctx) {
 
-    override fun decl(): KArithPowerDecl<T> = with(ctx) { mkArithPowerDecl(sort) }
+    override val decl: KArithPowerDecl<T>
+        get() = ctx.mkArithPowerDecl(sort)
 
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)
@@ -157,7 +163,8 @@ class KLtArithExpr<T : KArithSort<T>> internal constructor(
     override val sort: KBoolSort
         get() = ctx.boolSort
 
-    override fun decl(): KArithLtDecl<T> = with(ctx) { mkArithLtDecl(lhs.sort) }
+    override val decl: KArithLtDecl<T>
+        get() = ctx.mkArithLtDecl(lhs.sort)
 
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)
@@ -173,7 +180,8 @@ class KLeArithExpr<T : KArithSort<T>> internal constructor(
     override val sort: KBoolSort
         get() = ctx.boolSort
 
-    override fun decl(): KArithLeDecl<T> = with(ctx) { mkArithLeDecl(lhs.sort) }
+    override val decl: KArithLeDecl<T>
+        get() = ctx.mkArithLeDecl(lhs.sort)
 
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)
@@ -189,7 +197,8 @@ class KGtArithExpr<T : KArithSort<T>> internal constructor(
     override val sort: KBoolSort
         get() = ctx.boolSort
 
-    override fun decl(): KArithGtDecl<T> = with(ctx) { mkArithGtDecl(lhs.sort) }
+    override val decl: KArithGtDecl<T>
+        get() = ctx.mkArithGtDecl(lhs.sort)
 
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)
@@ -205,7 +214,8 @@ class KGeArithExpr<T : KArithSort<T>> internal constructor(
     override val sort: KBoolSort
         get() = ctx.boolSort
 
-    override fun decl(): KArithGeDecl<T> = with(ctx) { mkArithGeDecl(lhs.sort) }
+    override val decl: KArithGeDecl<T>
+        get() = ctx.mkArithGeDecl(lhs.sort)
 
     override val args: List<KExpr<T>>
         get() = listOf(lhs, rhs)

@@ -15,7 +15,8 @@ class KArrayStore<D : KSort, R : KSort> internal constructor(
     val value: KExpr<R>
 ) : KApp<KArraySort<D, R>, KExpr<*>>(ctx) {
 
-    override fun decl(): KDecl<KArraySort<D, R>> = with(ctx) { mkArrayStoreDecl(array.sort) }
+    override val decl: KDecl<KArraySort<D, R>>
+        get() = ctx.mkArrayStoreDecl(array.sort)
 
     override val args: List<KExpr<*>>
         get() = listOf(array, index, value)
@@ -37,7 +38,9 @@ class KArraySelect<D : KSort, R : KSort> internal constructor(
     val array: KExpr<KArraySort<D, R>>,
     val index: KExpr<D>
 ) : KApp<R, KExpr<*>>(ctx) {
-    override fun decl(): KDecl<R> = with(ctx) { mkArraySelectDecl(array.sort) }
+
+    override val decl: KDecl<R>
+        get() = ctx.mkArraySelectDecl(array.sort)
 
     override val args: List<KExpr<*>>
         get() = listOf(array, index)
@@ -60,7 +63,8 @@ class KArrayConst<D : KSort, R : KSort> internal constructor(
     val value: KExpr<R>
 ) : KApp<KArraySort<D, R>, KExpr<R>>(ctx) {
 
-    override fun decl(): KArrayConstDecl<D, R> = ctx.mkArrayConstDecl(sort)
+    override val decl: KArrayConstDecl<D, R>
+        get() = ctx.mkArrayConstDecl(sort)
 
     override val args: List<KExpr<R>>
         get() = listOf(value)

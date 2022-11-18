@@ -16,7 +16,8 @@ class KToIntRealExpr internal constructor(
     override val sort: KIntSort
         get() = ctx.intSort
 
-    override fun decl(): KRealToIntDecl = ctx.mkRealToIntDecl()
+    override val decl: KRealToIntDecl
+        get() = ctx.mkRealToIntDecl()
 
     override val args: List<KExpr<KRealSort>>
         get() = listOf(arg)
@@ -31,7 +32,8 @@ class KIsIntRealExpr internal constructor(
     override val sort: KBoolSort
         get() = ctx.boolSort
 
-    override fun decl(): KRealIsIntDecl = ctx.mkRealIsIntDecl()
+    override val decl: KRealIsIntDecl
+        get() = ctx.mkRealIsIntDecl()
 
     override val args: List<KExpr<KRealSort>>
         get() = listOf(arg)
@@ -47,7 +49,8 @@ class KRealNumExpr internal constructor(
     override val sort: KRealSort
         get() = ctx.realSort
 
-    override fun decl(): KRealNumDecl = ctx.mkRealNumDecl("$numerator/$denominator")
+    override val decl: KRealNumDecl
+        get() = ctx.mkRealNumDecl("$numerator/$denominator")
 
     override val args = emptyList<KExpr<*>>()
 
