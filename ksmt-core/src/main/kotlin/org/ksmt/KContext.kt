@@ -715,24 +715,28 @@ open class KContext : AutoCloseable {
         KInt32NumExpr(this, v)
     }
 
-    fun mkIntNum(value: Int): KInt32NumExpr = int32NumCache.createIfContextActive(value)
-
     private val int64NumCache = mkClosableCache { v: Long ->
         KInt64NumExpr(this, v)
     }
-
-    fun mkIntNum(value: Long): KInt64NumExpr = int64NumCache.createIfContextActive(value)
 
     private val intBigNumCache = mkClosableCache { v: BigInteger ->
         KIntBigNumExpr(this, v)
     }
 
-    fun mkIntNum(value: BigInteger): KIntBigNumExpr = intBigNumCache.createIfContextActive(value)
-    fun mkIntNum(value: String) =
-        value.toIntOrNull()
-            ?.let { mkIntNum(it) }
-            ?: value.toLongOrNull()?.let { mkIntNum(it) }
-            ?: mkIntNum(value.toBigInteger())
+    fun mkIntNum(value: Int): KIntNumExpr = int32NumCache.createIfContextActive(value)
+    fun mkIntNum(value: Long): KIntNumExpr = if (value.toInt().toLong() == value) {
+        mkIntNum(value.toInt())
+    } else {
+        int64NumCache.createIfContextActive(value)
+    }
+    fun mkIntNum(value: BigInteger): KIntNumExpr = if (value.toLong().toBigInteger() == value) {
+        mkIntNum(value.toLong())
+    } else {
+        intBigNumCache.createIfContextActive(value)
+    }
+
+    fun mkIntNum(value: String): KIntNumExpr =
+        mkIntNum(value.toBigInteger())
 
     infix fun KExpr<KIntSort>.mod(rhs: KExpr<KIntSort>) = mkIntMod(this, rhs)
     infix fun KExpr<KIntSort>.rem(rhs: KExpr<KIntSort>) = mkIntRem(this, rhs)
