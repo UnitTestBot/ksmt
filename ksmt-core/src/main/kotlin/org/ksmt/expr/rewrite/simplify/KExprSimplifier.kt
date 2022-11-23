@@ -65,14 +65,14 @@ class KExprSimplifier(ctx: KContext) :
         }
     }
 
-    override fun <T : KSort> rewrittenOrNull(expr: KExpr<T>): KExpr<T>? {
+    fun <T : KSort> rewrittenOrNull(expr: KExpr<T>): KExpr<T>? {
         val rewritten = rewrittenExpressions.remove(expr) ?: return null
         val result = transformedExpr(rewritten)
             ?: error("Nested rewrite failed")
         return result.asExpr(expr.sort)
     }
 
-    override fun postRewrite(original: KExpr<*>, rewritten: KExpr<*>) {
+    fun postRewrite(original: KExpr<*>, rewritten: KExpr<*>) {
         rewrittenExpressions[original] = rewritten
         original.transformAfter(listOf(rewritten))
         markExpressionAsNotTransformed()
@@ -82,7 +82,7 @@ class KExprSimplifier(ctx: KContext) :
 
 inline fun <T : KSort, A : KSort> KExprSimplifierBase.simplifyApp(
     expr: KApp<T, KExpr<A>>,
-    simplifier: (List<KExpr<A>>) -> KExpr<T>
+    crossinline simplifier: KContext.(List<KExpr<A>>) -> KExpr<T>
 ): KExpr<T> {
     this as KExprSimplifier
 
@@ -92,7 +92,7 @@ inline fun <T : KSort, A : KSort> KExprSimplifierBase.simplifyApp(
         return rewritten
     }
 
-    val transformed = transformAppAfterArgsTransformed(expr, simplifier)
+    val transformed = transformAppAfterArgsTransformed(expr) { args -> ctx.simplifier(args) }
 
     if (transformed != expr) {
         postRewrite(expr, transformed)

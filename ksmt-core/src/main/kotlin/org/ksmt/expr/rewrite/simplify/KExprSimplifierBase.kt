@@ -6,7 +6,4 @@ import org.ksmt.sort.KSort
 
 interface KExprSimplifierBase : KTransformer {
     fun <T : KSort> areDefinitelyDistinct(lhs: KExpr<T>, rhs: KExpr<T>): Boolean
-
-    fun <T : KSort> rewrittenOrNull(expr: KExpr<T>): KExpr<T>?
-    fun postRewrite(original: KExpr<*>, rewritten: KExpr<*>)
 }

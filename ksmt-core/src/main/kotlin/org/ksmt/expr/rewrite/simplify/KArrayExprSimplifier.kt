@@ -67,9 +67,9 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
                     if (store.index == index) {
                         var base = store.array as KExpr<KArraySort<*, *>>
                         parentStores.asReversed().forEach {
-                            base = ctx.mkArrayStore(base, it.index as KExpr<KSort>, it.value as KExpr<KSort>)
+                            base = mkArrayStore(base, it.index as KExpr<KSort>, it.value as KExpr<KSort>)
                         }
-                        return@simplifyApp ctx.mkArrayStore(base, index, value).asExpr(expr.sort)
+                        return@simplifyApp mkArrayStore(base, index, value).asExpr(expr.sort)
                     }
 
                     if (areDefinitelyDistinct(index, store.index.asExpr(index.sort))) {
@@ -82,7 +82,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
                 }
             }
 
-            ctx.mkArrayStore(array.asExpr(expr.sort), index, value).asExpr(expr.sort)
+            mkArrayStore(array.asExpr(expr.sort), index, value).asExpr(expr.sort)
         }
 
     @Suppress("UNCHECKED_CAST")
@@ -114,7 +114,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
 
             // todo: array_rewriter.cpp:199
 
-            ctx.mkArraySelect(selectBaseArray.asExpr(expr.array.sort), index)
+            mkArraySelect(selectBaseArray.asExpr(expr.array.sort), index)
         }
 
     @Suppress("UNCHECKED_CAST")

@@ -7,6 +7,7 @@ import org.ksmt.expr.KGeArithExpr
 import org.ksmt.expr.KGtArithExpr
 import org.ksmt.expr.KInt32NumExpr
 import org.ksmt.expr.KInt64NumExpr
+import org.ksmt.expr.KIntBigNumExpr
 import org.ksmt.expr.KIntNumExpr
 import org.ksmt.expr.KIsIntRealExpr
 import org.ksmt.expr.KLeArithExpr
@@ -70,54 +71,46 @@ interface KArithExprSimplifier : KExprSimplifierBase {
     // todo: lt, gt, le, ge: arith_rewriter.cpp:514
     override fun <T : KArithSort<T>> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (lhs, rhs) ->
-            with(ctx) {
-                if (lhs is KIntNumExpr && rhs is KIntNumExpr) {
-                    return@simplifyApp (lhs < rhs).expr
-                }
-                if (lhs is KRealNumExpr && rhs is KRealNumExpr) {
-                    return@simplifyApp (lhs < rhs).expr
-                }
-                mkArithLt(lhs, rhs)
+            if (lhs is KIntNumExpr && rhs is KIntNumExpr) {
+                return@simplifyApp (lhs < rhs).expr
             }
+            if (lhs is KRealNumExpr && rhs is KRealNumExpr) {
+                return@simplifyApp (lhs < rhs).expr
+            }
+            mkArithLt(lhs, rhs)
         }
 
     override fun <T : KArithSort<T>> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (lhs, rhs) ->
-            with(ctx) {
-                if (lhs is KIntNumExpr && rhs is KIntNumExpr) {
-                    return@simplifyApp (lhs <= rhs).expr
-                }
-                if (lhs is KRealNumExpr && rhs is KRealNumExpr) {
-                    return@simplifyApp (lhs <= rhs).expr
-                }
-                mkArithLe(lhs, rhs)
+            if (lhs is KIntNumExpr && rhs is KIntNumExpr) {
+                return@simplifyApp (lhs <= rhs).expr
             }
+            if (lhs is KRealNumExpr && rhs is KRealNumExpr) {
+                return@simplifyApp (lhs <= rhs).expr
+            }
+            mkArithLe(lhs, rhs)
         }
 
     override fun <T : KArithSort<T>> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (lhs, rhs) ->
-            with(ctx) {
-                if (lhs is KIntNumExpr && rhs is KIntNumExpr) {
-                    return@simplifyApp (lhs > rhs).expr
-                }
-                if (lhs is KRealNumExpr && rhs is KRealNumExpr) {
-                    return@simplifyApp (lhs > rhs).expr
-                }
-                mkArithGt(lhs, rhs)
+            if (lhs is KIntNumExpr && rhs is KIntNumExpr) {
+                return@simplifyApp (lhs > rhs).expr
             }
+            if (lhs is KRealNumExpr && rhs is KRealNumExpr) {
+                return@simplifyApp (lhs > rhs).expr
+            }
+            mkArithGt(lhs, rhs)
         }
 
     override fun <T : KArithSort<T>> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (lhs, rhs) ->
-            with(ctx) {
-                if (lhs is KIntNumExpr && rhs is KIntNumExpr) {
-                    return@simplifyApp (lhs >= rhs).expr
-                }
-                if (lhs is KRealNumExpr && rhs is KRealNumExpr) {
-                    return@simplifyApp (lhs >= rhs).expr
-                }
-                mkArithGe(lhs, rhs)
+            if (lhs is KIntNumExpr && rhs is KIntNumExpr) {
+                return@simplifyApp (lhs >= rhs).expr
             }
+            if (lhs is KRealNumExpr && rhs is KRealNumExpr) {
+                return@simplifyApp (lhs >= rhs).expr
+            }
+            mkArithGe(lhs, rhs)
         }
 
     override fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>): KExpr<T> = simplifyApp(expr) { args ->
@@ -129,7 +122,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         when (simplifiedArgs.size) {
             0 -> numericValue(BigInteger.ZERO, sort = expr.sort)
             1 -> simplifiedArgs.single()
-            else -> ctx.mkArithAdd(simplifiedArgs)
+            else -> mkArithAdd(simplifiedArgs)
         }
     }
 
@@ -142,7 +135,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         when (simplifiedArgs.size) {
             0 -> numericValue(BigInteger.ONE, sort = expr.sort)
             1 -> simplifiedArgs.single()
-            else -> ctx.mkArithMul(simplifiedArgs)
+            else -> mkArithMul(simplifiedArgs)
         }
     }
 
@@ -152,32 +145,29 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         } else {
             val simplifiedArgs = arrayListOf(args.first())
             for (arg in args.drop(1)) {
-                simplifiedArgs += ctx.mkArithUnaryMinus(arg)
+                simplifiedArgs += mkArithUnaryMinus(arg)
             }
-            ctx.mkArithAdd(simplifiedArgs)
+            mkArithAdd(simplifiedArgs)
         }
     }
 
     override fun <T : KArithSort<T>> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> = simplifyApp(expr) { (arg) ->
         if (arg is KIntNumExpr) {
-            return@simplifyApp ctx.mkIntNum(-arg.value).asExpr(expr.sort)
+            return@simplifyApp mkIntNum(-arg.value).asExpr(expr.sort)
         }
         if (arg is KRealNumExpr) {
-            return@simplifyApp ctx.mkRealNum(
-                ctx.mkIntNum(-arg.numerator.value),
-                arg.denominator
+            return@simplifyApp mkRealNum(
+                mkIntNum(-arg.numerator.value), arg.denominator
             ).asExpr(expr.sort)
         }
-        ctx.mkArithUnaryMinus(arg)
+        mkArithUnaryMinus(arg)
     }
 
     override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
-        with(ctx) {
-            when (expr.sort) {
-                intSort -> simplifyIntegerDiv(lhs.asExpr(intSort), rhs.asExpr(intSort)).asExpr(expr.sort)
-                realSort -> simplifyRealDiv(lhs.asExpr(realSort), rhs.asExpr(realSort)).asExpr(expr.sort)
-                else -> mkArithDiv(lhs, rhs)
-            }
+        when (expr.sort) {
+            intSort -> simplifyIntegerDiv(lhs.asExpr(intSort), rhs.asExpr(intSort)).asExpr(expr.sort)
+            realSort -> simplifyRealDiv(lhs.asExpr(realSort), rhs.asExpr(realSort)).asExpr(expr.sort)
+            else -> mkArithDiv(lhs, rhs)
         }
     }
 
@@ -216,74 +206,65 @@ interface KArithExprSimplifier : KExprSimplifierBase {
     }
 
     override fun transform(expr: KModIntExpr): KExpr<KIntSort> = simplifyApp(expr) { (lhs, rhs) ->
-        with(ctx) {
-            if (rhs is KIntNumExpr) {
-                val rValue = rhs.value
-                when (rValue) {
-                    BigInteger.ZERO -> return@simplifyApp mkIntMod(lhs, rhs)
-                    BigInteger.ONE, -BigInteger.ONE -> return@simplifyApp 0.expr
-                }
-                if (lhs is KIntNumExpr) {
-                    return@simplifyApp (lhs.value.mod(rValue)).expr
-                }
+        if (rhs is KIntNumExpr) {
+            val rValue = rhs.value
+            when (rValue) {
+                BigInteger.ZERO -> return@simplifyApp mkIntMod(lhs, rhs)
+                BigInteger.ONE, -BigInteger.ONE -> return@simplifyApp 0.expr
             }
-            // todo: arith_rewriter.cpp:1196
-            mkIntMod(lhs, rhs)
+            if (lhs is KIntNumExpr) {
+                return@simplifyApp (lhs.value.mod(rValue)).expr
+            }
         }
+        // todo: arith_rewriter.cpp:1196
+        mkIntMod(lhs, rhs)
+
     }
 
     override fun transform(expr: KRemIntExpr): KExpr<KIntSort> = simplifyApp(expr) { (lhs, rhs) ->
-        with(ctx) {
-            if (rhs is KIntNumExpr) {
-                val rValue = rhs.value
-                when (rValue) {
-                    BigInteger.ZERO -> return@simplifyApp mkIntMod(lhs, rhs)
-                    BigInteger.ONE, -BigInteger.ONE -> return@simplifyApp 0.expr
-                }
-                if (lhs is KIntNumExpr) {
-                    return@simplifyApp (lhs.value.rem(rValue)).expr
-                }
+        if (rhs is KIntNumExpr) {
+            val rValue = rhs.value
+            when (rValue) {
+                BigInteger.ZERO -> return@simplifyApp mkIntMod(lhs, rhs)
+                BigInteger.ONE, -BigInteger.ONE -> return@simplifyApp 0.expr
             }
-            // todo: arith_rewriter.cpp:1257
-            mkIntRem(lhs, rhs)
+            if (lhs is KIntNumExpr) {
+                return@simplifyApp (lhs.value.rem(rValue)).expr
+            }
         }
+        // todo: arith_rewriter.cpp:1257
+        mkIntRem(lhs, rhs)
     }
 
     override fun transform(expr: KToIntRealExpr): KExpr<KIntSort> = simplifyApp(expr) { (arg) ->
-        with(ctx) {
-            if (arg is KRealNumExpr) {
-                val numer = arg.numerator.value
-                val denom = arg.denominator.value
-                return@simplifyApp (numer / denom).expr
-            }
-            if (arg is KToRealIntExpr) {
-                return@simplifyApp arg.arg
-            }
-            // todo: arith_rewriter.cpp:1487
-            mkRealToInt(arg)
+        if (arg is KRealNumExpr) {
+            val numer = arg.numerator.value
+            val denom = arg.denominator.value
+            return@simplifyApp (numer / denom).expr
         }
+        if (arg is KToRealIntExpr) {
+            return@simplifyApp arg.arg
+        }
+        // todo: arith_rewriter.cpp:1487
+        mkRealToInt(arg)
     }
 
     override fun transform(expr: KIsIntRealExpr): KExpr<KBoolSort> = simplifyApp(expr) { (arg) ->
-        with(ctx) {
-            if (arg is KRealNumExpr) {
-                return@simplifyApp (arg.denominator.value == BigInteger.ONE).expr
-            }
-            if (arg is KToRealIntExpr) {
-                return@simplifyApp trueExpr
-            }
-            mkRealIsInt(arg)
+        if (arg is KRealNumExpr) {
+            return@simplifyApp (arg.denominator.value == BigInteger.ONE).expr
         }
+        if (arg is KToRealIntExpr) {
+            return@simplifyApp trueExpr
+        }
+        mkRealIsInt(arg)
     }
 
     override fun transform(expr: KToRealIntExpr): KExpr<KRealSort> = simplifyApp(expr) { (arg) ->
-        with(ctx) {
-            if (arg is KIntNumExpr) {
-                return@simplifyApp mkRealNum(arg)
-            }
-            // todo: arith_rewriter.cpp:1540
-            mkIntToReal(arg)
+        if (arg is KIntNumExpr) {
+            return@simplifyApp mkRealNum(arg)
         }
+        // todo: arith_rewriter.cpp:1540
+        mkIntToReal(arg)
     }
 
     private fun <T : KArithSort<T>> sumNumerals(
@@ -372,6 +353,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         get() = when (this) {
             is KInt32NumExpr -> value.toBigInteger()
             is KInt64NumExpr -> value.toBigInteger()
+            is KIntBigNumExpr -> value
             else -> decl.value.toBigInteger()
         }
 }
