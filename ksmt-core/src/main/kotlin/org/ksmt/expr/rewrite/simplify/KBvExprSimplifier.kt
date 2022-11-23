@@ -55,12 +55,18 @@ import org.ksmt.expr.KBvXNorExpr
 import org.ksmt.expr.KBvXorExpr
 import org.ksmt.expr.KBvZeroExtensionExpr
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KIteExpr
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KIntSort
+import org.ksmt.sort.KSort
 import org.ksmt.utils.asExpr
+import org.ksmt.utils.cast
 import java.math.BigInteger
+import kotlin.experimental.inv
+import kotlin.experimental.or
+import kotlin.experimental.xor
 
 interface KBvExprSimplifier : KExprSimplifierBase {
 
@@ -231,99 +237,6 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         mkBvMulExpr(lhs, rhs)
     }
 
-    private fun <T : KBvSort> trySimplifyBvAddWithConstant(
-        value: KBitVecValue<*>,
-        other: KExpr<T>,
-        sort: T
-    ): KExpr<T>? = with(ctx) {
-        // (+ 0 a) ==> a
-        if (value == zero(value.sort.sizeBits)) {
-            return other
-        }
-
-        if (other is KBvAddExpr<*>) {
-            tryFlatBvAdd(value, other, sort)?.let { return it }
-        }
-
-        return null
-    }
-
-    private fun <T : KBvSort> trySimplifyBvMulWithConstant(
-        value: KBitVecValue<*>,
-        other: KExpr<T>,
-        sort: T
-    ): KExpr<T>? = with(ctx) {
-        val size = value.sort.sizeBits
-
-        // (* 0 a) ==> 0
-        if (value == zero(size)) {
-            return zero(size).asExpr(sort)
-        }
-
-        // (* 1 a) ==> a
-        if (value == one(size)) {
-            return other
-        }
-
-        // (* -1 a) ==> -a
-        val minusOne = zero(size) - one(size)
-        if (value == minusOne) {
-            return mkBvNegationExpr(other).asExpr(sort)
-        }
-
-        if (other is KBvMulExpr<*>) {
-            tryFlatBvMul(value, other, sort)?.let { return it }
-        }
-
-        return null
-    }
-
-    // (+ const1 (+ const2 x)) ==> (+ (+ const1 const2) x)
-    private fun <T : KBvSort> tryFlatBvAdd(value: KBitVecValue<*>, other: KBvAddExpr<*>, sort: T): KExpr<T>? =
-        tryFlatBvOperation(
-            value = value,
-            lhs = other.arg0.asExpr(sort),
-            rhs = other.arg1.asExpr(sort),
-            sort = sort,
-            operation = { a, b -> a + b },
-            mkExpr = { a, b -> mkBvAddExpr(a, b) }
-        )
-
-    // (* const1 (* const2 x)) ==> (* (* const1 const2) x)
-    private fun <T : KBvSort> tryFlatBvMul(value: KBitVecValue<*>, other: KBvMulExpr<*>, sort: T): KExpr<T>? =
-        tryFlatBvOperation(
-            value = value,
-            lhs = other.arg0.asExpr(sort),
-            rhs = other.arg1.asExpr(sort),
-            sort = sort,
-            operation = { a, b -> a * b },
-            mkExpr = { a, b -> mkBvMulExpr(a, b) }
-        )
-
-    private inline fun <T : KBvSort> tryFlatBvOperation(
-        value: KBitVecValue<*>,
-        lhs: KExpr<T>,
-        rhs: KExpr<T>,
-        sort: T,
-        operation: (KBitVecValue<*>, KBitVecValue<*>) -> KBitVecValue<*>,
-        mkExpr: KContext.(KExpr<T>, KExpr<T>) -> KExpr<T>
-    ): KExpr<T>? = with(ctx) {
-        val lhsValue = lhs as? KBitVecValue<*>
-        val rhsValue = rhs as? KBitVecValue<*>
-
-        if (lhsValue != null) {
-            val valueBv = operation(value, lhsValue).asExpr(sort)
-            return mkExpr(valueBv, rhs)
-        }
-
-        if (rhsValue != null) {
-            val valueBv = operation(value, rhsValue).asExpr(sort)
-            return mkExpr(valueBv, lhs)
-        }
-
-        return null
-    }
-
     override fun <T : KBvSort> transform(expr: KBvNegationExpr<T>): KExpr<T> = simplifyApp(expr) { (arg) ->
         if (arg is KBitVecValue<*>) {
             return@simplifyApp (zero(expr.sort.sizeBits) - arg).asExpr(expr.sort)
@@ -457,48 +370,329 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         mkBvSignedModExpr(lhs, rhs)
     }
 
-    override fun <T : KBvSort> transform(expr: KBvNotExpr<T>): KExpr<T> {
-        return super.transform(expr)
+    override fun <T : KBvSort> transform(expr: KBvNotExpr<T>): KExpr<T> = simplifyApp(expr) { (arg) ->
+        // (bvnot (bvnot a)) ==> a
+        if (arg is KBvNotExpr<*>) {
+            return@simplifyApp arg.value.asExpr(expr.sort)
+        }
+
+        if (arg is KBitVecValue<*>) {
+            return@simplifyApp arg.bitwiseNot().asExpr(expr.sort)
+        }
+
+        // (bvnot (concat a b)) ==> (concat (bvnot a) (bvnot b))
+        if (arg is KBvConcatExpr) {
+            val concatParts = flatConcat(arg)
+            val negatedParts = concatParts.map { mkBvNotExpr(it) }
+            return@simplifyApp negatedParts.reduceRight(::mkBvConcatExpr).asExpr(expr.sort)
+        }
+
+        // (bvnot (ite c a b)) ==> (ite c (bvnot a) (bvnot b))
+        if (arg is KIteExpr<*>) {
+            val trueValue = arg.trueBranch as? KBitVecValue<*>
+            val falseValue = arg.falseBranch as? KBitVecValue<*>
+            if (trueValue != null || falseValue != null) {
+                val newTrue = trueValue?.bitwiseNot() ?: arg.trueBranch
+                val newFalse = falseValue?.bitwiseNot() ?: arg.falseBranch
+                return@simplifyApp mkIte(arg.condition, newTrue.asExpr(expr.sort), newFalse.asExpr(expr.sort))
+            }
+        }
+
+        // todo: bv_rewriter.cpp:2007
+
+        mkBvNotExpr(arg)
     }
 
-    override fun <T : KBvSort> transform(expr: KBvAndExpr<T>): KExpr<T> {
-        return super.transform(expr)
+    override fun <T : KBvSort> transform(expr: KBvOrExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
+        val size = expr.sort.sizeBits
+        val lhsValue = lhs as? KBitVecValue<*>
+        val rhsValue = rhs as? KBitVecValue<*>
+
+        if (lhsValue != null) {
+            if (rhsValue != null) {
+                return@simplifyApp (lhsValue.bitwiseOr(rhsValue)).asExpr(expr.sort)
+            }
+
+            trySimplifyBvOrWithConstant(lhsValue, rhs, expr.sort)?.let { return@simplifyApp it }
+        }
+
+        if (rhsValue != null) {
+            trySimplifyBvOrWithConstant(rhsValue, lhs, expr.sort)?.let { return@simplifyApp it }
+        }
+
+        // (bvor a a) ==> a
+        if (lhs == rhs) {
+            return@simplifyApp lhs
+        }
+
+        // (bvor (bvnot a) a) ==> 0xFFFF...
+        if (lhs is KBvNotExpr<*> && lhs.value == rhs) {
+            return@simplifyApp maxValueUnsigned(size).asExpr(expr.sort)
+        }
+
+        // (bvor a (bvnot a)) ==> 0xFFFF...
+        if (rhs is KBvNotExpr<*> && rhs.value == lhs) {
+            return@simplifyApp maxValueUnsigned(size).asExpr(expr.sort)
+        }
+
+        if (lhs is KBvConcatExpr || rhs is KBvConcatExpr) {
+            return@simplifyApp distributeOrOverConcat(lhs, rhs).asExpr(expr.sort)
+        }
+
+        // todo: bv_rewriter.cpp:1638
+
+        mkBvOrExpr(lhs, rhs)
     }
 
-    override fun <T : KBvSort> transform(expr: KBvOrExpr<T>): KExpr<T> {
-        return super.transform(expr)
+    override fun <T : KBvSort> transform(expr: KBvXorExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
+        val size = expr.sort.sizeBits
+        val lhsValue = lhs as? KBitVecValue<*>
+        val rhsValue = rhs as? KBitVecValue<*>
+
+        if (lhsValue != null) {
+            if (rhsValue != null) {
+                return@simplifyApp (lhsValue.bitwiseXor(rhsValue)).asExpr(expr.sort)
+            }
+
+            trySimplifyBvXorWithConstant(lhsValue, rhs, expr.sort)?.let { return@simplifyApp it }
+        }
+
+        if (rhsValue != null) {
+            trySimplifyBvXorWithConstant(rhsValue, lhs, expr.sort)?.let { return@simplifyApp it }
+        }
+
+        // (bvxor a a) ==> a
+        if (lhs == rhs) {
+            return@simplifyApp zero(size).asExpr(expr.sort)
+        }
+
+        // (bvxor (bvnot a) a) ==> 0xFFFF...
+        if (lhs is KBvNotExpr<*> && lhs.value == rhs) {
+            return@simplifyApp maxValueUnsigned(size).asExpr(expr.sort)
+        }
+
+        // (bvxor a (bvnot a)) ==> 0xFFFF...
+        if (rhs is KBvNotExpr<*> && rhs.value == lhs) {
+            return@simplifyApp maxValueUnsigned(size).asExpr(expr.sort)
+        }
+
+        if (lhs is KBvConcatExpr || rhs is KBvConcatExpr) {
+            return@simplifyApp distributeXorOverConcat(lhs, rhs).asExpr(expr.sort)
+        }
+
+        // todo: bv_rewriter.cpp:1810
+
+        mkBvXorExpr(lhs, rhs)
     }
 
-    override fun <T : KBvSort> transform(expr: KBvXorExpr<T>): KExpr<T> {
-        return super.transform(expr)
+    // (bvand a b) ==> (bvnot (bvor (bvnot a) (bvnot b)))
+    override fun <T : KBvSort> transform(expr: KBvAndExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
+        mkBvNotExpr(mkBvOrExpr(mkBvNotExpr(lhs), mkBvNotExpr(rhs)))
     }
 
-    override fun <T : KBvSort> transform(expr: KBvNAndExpr<T>): KExpr<T> {
-        return super.transform(expr)
+    // (bvnand a b) ==> (bvor (bvnot a) (bvnot b))
+    override fun <T : KBvSort> transform(expr: KBvNAndExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
+        mkBvOrExpr(mkBvNotExpr(lhs), mkBvNotExpr(rhs))
     }
 
-    override fun <T : KBvSort> transform(expr: KBvNorExpr<T>): KExpr<T> {
-        return super.transform(expr)
+    // (bvnor a b) ==> (bvnot (bvor a b))
+    override fun <T : KBvSort> transform(expr: KBvNorExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
+        mkBvNotExpr(mkBvOrExpr(lhs, rhs))
     }
 
-    override fun <T : KBvSort> transform(expr: KBvXNorExpr<T>): KExpr<T> {
-        return super.transform(expr)
+    // (bvxnor a b) ==> (bvnot (bvxor a b))
+    override fun <T : KBvSort> transform(expr: KBvXNorExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
+        mkBvNotExpr(mkBvXorExpr(lhs, rhs))
     }
 
-    override fun <T : KBvSort> transform(expr: KBvReductionAndExpr<T>): KExpr<KBv1Sort> {
-        return super.transform(expr)
+    override fun <T : KBvSort> transform(expr: KBvReductionAndExpr<T>): KExpr<KBv1Sort> = simplifyApp(expr) { (arg) ->
+        if (arg is KBitVecValue<*>) {
+            val result = arg == maxValueUnsigned(arg.sort.sizeBits)
+            return@simplifyApp mkBv(result)
+        }
+        mkBvReductionAndExpr(arg)
     }
 
-    override fun <T : KBvSort> transform(expr: KBvReductionOrExpr<T>): KExpr<KBv1Sort> {
-        return super.transform(expr)
+    override fun <T : KBvSort> transform(expr: KBvReductionOrExpr<T>): KExpr<KBv1Sort> = simplifyApp(expr) { (arg) ->
+        if (arg is KBitVecValue<*>) {
+            val result = arg != zero(arg.sort.sizeBits)
+            return@simplifyApp mkBv(result)
+        }
+        mkBvReductionOrExpr(arg)
     }
 
-    override fun transform(expr: KBvConcatExpr): KExpr<KBvSort> {
-        return super.transform(expr)
+    override fun transform(expr: KBvConcatExpr): KExpr<KBvSort> = simplifyApp(expr) { (lhs, rhs) ->
+        val lhsValue = lhs as? KBitVecValue<*>
+        val rhsValue = rhs as? KBitVecValue<*>
+
+        if (lhsValue != null && rhsValue != null) {
+            return@simplifyApp concatBv(lhsValue, rhsValue).asExpr(expr.sort)
+        }
+
+        if (lhs is KBvConcatExpr || rhs is KBvConcatExpr) {
+            val lhsParts = (lhs as? KBvConcatExpr)?.let { flatConcat(it) } ?: listOf(lhs)
+            val rhsParts = (rhs as? KBvConcatExpr)?.let { flatConcat(it) } ?: listOf(rhs)
+            val allParts = lhsParts + rhsParts
+            val mergedParts = arrayListOf(allParts.first())
+            for (part in allParts.drop(1)) {
+                val lastPart = mergedParts.last()
+
+                // (concat (concat a const1) (concat const2 b)) ==> (concat a (concat (concat const1 const2) b))
+                if (lastPart is KBitVecValue<*> && part is KBitVecValue<*>) {
+                    mergedParts.removeLast()
+                    mergedParts.add(concatBv(lastPart, part).cast())
+                    continue
+                }
+
+                // (concat (extract[h1, l1] a) (extract[h2, l2] a)), l1 == h2 + 1 ==> (extract[h1, l2] a)
+                if (lastPart is KBvExtractExpr && part is KBvExtractExpr) {
+                    val possiblyMerged = tryMergeBvConcatExtract(lastPart, part)
+                    if (possiblyMerged != null) {
+                        mergedParts.removeLast()
+                        mergedParts.add(possiblyMerged)
+                        continue
+                    }
+                }
+                mergedParts.add(part)
+            }
+
+            if (mergedParts.size < allParts.size) {
+                return@simplifyApp mergedParts.reduceRight(::mkBvConcatExpr)
+            }
+        }
+
+        // (concat (extract[h1, l1] a) (extract[h2, l2] a)), l1 == h2 + 1 ==> (extract[h1, l2] a)
+        if (lhs is KBvExtractExpr && rhs is KBvExtractExpr) {
+            tryMergeBvConcatExtract(lhs, rhs)?.let { return@simplifyApp it }
+        }
+
+        mkBvConcatExpr(lhs, rhs)
     }
 
-    override fun transform(expr: KBvExtractExpr): KExpr<KBvSort> {
-        return super.transform(expr)
+    override fun transform(expr: KBvExtractExpr): KExpr<KBvSort> = simplifyApp(expr) { (arg) ->
+        val size = expr.sort.sizeBits
+
+        if (expr.low == 0 && expr.high == size.toInt() - 1) {
+            return@simplifyApp arg
+        }
+
+        if (arg is KBitVecValue<*>) {
+            return@simplifyApp extractBv(arg, expr.high, expr.low).asExpr(expr.sort)
+        }
+
+        // (extract[high:low] (extract[_:nestedLow] x)) ==> (extract[high+nestedLow : low+nestedLow] x)
+        if (arg is KBvExtractExpr) {
+            val nestedLow = arg.low
+            return@simplifyApp mkBvExtractExpr(
+                high = expr.high + nestedLow,
+                low = expr.low + nestedLow,
+                value = arg.value
+            )
+        }
+
+        // (extract (concat a b)) ==> (concat (extract a) (extract b))
+        if (arg is KBvConcatExpr) {
+            val parts = flatConcat(arg)
+            var idx = arg.sort.sizeBits.toInt()
+            for (firstPartIdx in parts.indices) {
+                val firstPart = parts[firstPartIdx]
+                val firstPartSize = firstPart.sort.sizeBits.toInt()
+                idx -= firstPartSize
+
+                // before first part
+                if (idx > expr.high) {
+                    continue
+                }
+
+                // extract from a single part
+                if (idx <= expr.low) {
+                    if (idx == expr.low && size.toInt() == firstPartSize) {
+                        return@simplifyApp firstPart
+                    } else {
+                        return@simplifyApp mkBvExtractExpr(
+                            high = expr.high - idx,
+                            low = expr.low - idx,
+                            value = firstPart
+                        )
+                    }
+                }
+
+                // extract from multiple parts
+                val partsToExtractFrom = arrayListOf<KExpr<KBvSort>>()
+                if (expr.high - idx == firstPartSize - 1) {
+                    partsToExtractFrom += firstPart
+                } else {
+                    partsToExtractFrom += mkBvExtractExpr(
+                        high = expr.high - idx,
+                        low = 0,
+                        value = firstPart
+                    )
+                }
+
+                for (partIdx in firstPartIdx + 1 until parts.size) {
+                    val part = parts[partIdx]
+                    val partSize = part.sort.sizeBits.toInt()
+                    idx -= partSize
+
+                    when {
+                        idx > expr.low -> {
+                            // not a last part
+                            partsToExtractFrom += part
+                            continue
+                        }
+
+                        idx == expr.low -> {
+                            partsToExtractFrom += part
+                            break
+                        }
+
+                        else -> {
+                            partsToExtractFrom += mkBvExtractExpr(
+                                high = partSize - 1,
+                                low = expr.low - idx,
+                                value = part
+                            )
+                            break
+                        }
+                    }
+                }
+
+                return@simplifyApp partsToExtractFrom.reduceRight(::mkBvConcatExpr)
+            }
+        }
+
+        when {
+            // (extract [h:l] (bvnot x)) ==> (bvnot (extract [h:l] x))
+            arg is KBvNotExpr<*> -> mkBvNotExpr(mkBvExtractExpr(expr.high, expr.low, arg.value))
+            // (extract [h:l] (bvor a b)) ==> (bvor (extract [h:l] a) (extract [h:l] b))
+            arg is KBvOrExpr<*> -> {
+                val lhs = mkBvExtractExpr(expr.high, expr.low, arg.arg0)
+                val rhs = mkBvExtractExpr(expr.high, expr.low, arg.arg1)
+                mkBvOrExpr(lhs, rhs)
+            }
+            // (extract [h:l] (bvxor a b)) ==> (bvxor (extract [h:l] a) (extract [h:l] b))
+            arg is KBvXorExpr<*> -> {
+                val lhs = mkBvExtractExpr(expr.high, expr.low, arg.arg0)
+                val rhs = mkBvExtractExpr(expr.high, expr.low, arg.arg1)
+                mkBvXorExpr(lhs, rhs)
+            }
+            // (extract [h:0] (bvadd a b)) ==> (bvadd (extract [h:0] a) (extract [h:0] b))
+            arg is KBvAddExpr<*> && expr.low == 0 -> {
+                val lhs = mkBvExtractExpr(expr.high, low = 0, arg.arg0)
+                val rhs = mkBvExtractExpr(expr.high, low = 0, arg.arg1)
+                mkBvAddExpr(lhs, rhs)
+            }
+            // (extract [h:0] (bvmul a b)) ==> (bvmul (extract [h:0] a) (extract [h:0] b))
+            arg is KBvMulExpr<*> && expr.low == 0 -> {
+                val lhs = mkBvExtractExpr(expr.high, low = 0, arg.arg0)
+                val rhs = mkBvExtractExpr(expr.high, low = 0, arg.arg1)
+                mkBvMulExpr(lhs, rhs)
+            }
+        }
+
+        // todo: bv_rewriter.cpp:681
+
+        mkBvExtractExpr(expr.high, expr.low, arg)
     }
 
     override fun transform(expr: KBvSignExtensionExpr): KExpr<KBvSort> {
@@ -577,6 +771,165 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         return super.transform(expr)
     }
 
+    private fun <T : KBvSort> trySimplifyBvAddWithConstant(
+        value: KBitVecValue<*>,
+        other: KExpr<T>,
+        sort: T
+    ): KExpr<T>? = with(ctx) {
+        // (+ 0 a) ==> a
+        if (value == zero(value.sort.sizeBits)) {
+            return other
+        }
+
+        if (other is KBvAddExpr<*>) {
+            tryFlatBvAdd(value, other, sort)?.let { return it }
+        }
+
+        return null
+    }
+
+    private fun <T : KBvSort> trySimplifyBvMulWithConstant(
+        value: KBitVecValue<*>,
+        other: KExpr<T>,
+        sort: T
+    ): KExpr<T>? = with(ctx) {
+        val size = value.sort.sizeBits
+
+        // (* 0 a) ==> 0
+        if (value == zero(size)) {
+            return zero(size).asExpr(sort)
+        }
+
+        // (* 1 a) ==> a
+        if (value == one(size)) {
+            return other
+        }
+
+        // (* -1 a) ==> -a
+        val minusOne = zero(size) - one(size)
+        if (value == minusOne) {
+            return mkBvNegationExpr(other).asExpr(sort)
+        }
+
+        if (other is KBvMulExpr<*>) {
+            tryFlatBvMul(value, other, sort)?.let { return it }
+        }
+
+        return null
+    }
+
+    private fun <T : KBvSort> trySimplifyBvOrWithConstant(
+        value: KBitVecValue<*>,
+        other: KExpr<T>,
+        sort: T
+    ): KExpr<T>? = with(ctx) {
+        // (bvor 0 a) ==> a
+        if (value == zero(value.sort.sizeBits)) {
+            return other
+        }
+
+        // (bvor 0xFFFF... a) ==> 0xFFFF...
+        if (value == maxValueUnsigned(value.sort.sizeBits)) {
+            return maxValueUnsigned(value.sort.sizeBits).asExpr(sort)
+        }
+
+        if (other is KBvOrExpr<*>) {
+            tryFlatBvOr(value, other, sort)?.let { return it }
+        }
+
+        return null
+    }
+
+    private fun <T : KBvSort> trySimplifyBvXorWithConstant(
+        value: KBitVecValue<*>,
+        other: KExpr<T>,
+        sort: T
+    ): KExpr<T>? = with(ctx) {
+        // (bvxor 0 a) ==> a
+        if (value == zero(value.sort.sizeBits)) {
+            return other
+        }
+
+        // (bvxor 0xFFFF... a) ==> (bvnot a)
+        if (value == maxValueUnsigned(value.sort.sizeBits)) {
+            return mkBvNotExpr(other)
+        }
+
+        if (other is KBvXorExpr<*>) {
+            tryFlatBvXor(value, other, sort)?.let { return it }
+        }
+
+        return null
+    }
+
+    // (+ const1 (+ const2 x)) ==> (+ (+ const1 const2) x)
+    private fun <T : KBvSort> tryFlatBvAdd(value: KBitVecValue<*>, other: KBvAddExpr<*>, sort: T): KExpr<T>? =
+        tryFlatBvOperation(
+            value = value,
+            lhs = other.arg0.asExpr(sort),
+            rhs = other.arg1.asExpr(sort),
+            sort = sort,
+            operation = { a, b -> a + b },
+            mkExpr = { a, b -> mkBvAddExpr(a, b) }
+        )
+
+    // (* const1 (* const2 x)) ==> (* (* const1 const2) x)
+    private fun <T : KBvSort> tryFlatBvMul(value: KBitVecValue<*>, other: KBvMulExpr<*>, sort: T): KExpr<T>? =
+        tryFlatBvOperation(
+            value = value,
+            lhs = other.arg0.asExpr(sort),
+            rhs = other.arg1.asExpr(sort),
+            sort = sort,
+            operation = { a, b -> a * b },
+            mkExpr = { a, b -> mkBvMulExpr(a, b) }
+        )
+
+    // (bvor const1 (bvor const2 x)) ==> (bvor (bvor const1 const2) x)
+    private fun <T : KBvSort> tryFlatBvOr(value: KBitVecValue<*>, other: KBvOrExpr<*>, sort: T): KExpr<T>? =
+        tryFlatBvOperation(
+            value = value,
+            lhs = other.arg0.asExpr(sort),
+            rhs = other.arg1.asExpr(sort),
+            sort = sort,
+            operation = { a, b -> a.bitwiseOr(b) },
+            mkExpr = { a, b -> mkBvOrExpr(a, b) }
+        )
+
+    // (bvxor const1 (bvxor const2 x)) ==> (bvxor (bvxor const1 const2) x)
+    private fun <T : KBvSort> tryFlatBvXor(value: KBitVecValue<*>, other: KBvXorExpr<*>, sort: T): KExpr<T>? =
+        tryFlatBvOperation(
+            value = value,
+            lhs = other.arg0.asExpr(sort),
+            rhs = other.arg1.asExpr(sort),
+            sort = sort,
+            operation = { a, b -> a.bitwiseXor(b) },
+            mkExpr = { a, b -> mkBvXorExpr(a, b) }
+        )
+
+    private inline fun <T : KBvSort> tryFlatBvOperation(
+        value: KBitVecValue<*>,
+        lhs: KExpr<T>,
+        rhs: KExpr<T>,
+        sort: T,
+        operation: (KBitVecValue<*>, KBitVecValue<*>) -> KBitVecValue<*>,
+        mkExpr: KContext.(KExpr<T>, KExpr<T>) -> KExpr<T>
+    ): KExpr<T>? = with(ctx) {
+        val lhsValue = lhs as? KBitVecValue<*>
+        val rhsValue = rhs as? KBitVecValue<*>
+
+        if (lhsValue != null) {
+            val valueBv = operation(value, lhsValue).asExpr(sort)
+            return mkExpr(valueBv, rhs)
+        }
+
+        if (rhsValue != null) {
+            val valueBv = operation(value, rhsValue).asExpr(sort)
+            return mkExpr(valueBv, lhs)
+        }
+
+        return null
+    }
+
     /**
      * (= (concat a b) c) ==>
      *  (and
@@ -585,9 +938,42 @@ interface KBvExprSimplifier : KExprSimplifierBase {
      *  )
      * */
     fun <T : KBvSort> simplifyBvConcatEq(l: KExpr<T>, r: KExpr<T>): KExpr<KBoolSort> = with(ctx) {
+        val newEqualities = distributeOperationOverConcat(l, r) { a, b -> a eq b }
+        return mkAnd(newEqualities)
+    }
+
+    /**
+     * (bvor (concat a b) c) ==>
+     *  (concat
+     *      (bvor (extract (0, <a_size>) c))
+     *      (bvor b (extract (<a_size>, <a_size> + <b_size>) c))
+     *  )
+     * */
+    fun <T : KBvSort> distributeOrOverConcat(l: KExpr<T>, r: KExpr<T>): KExpr<T> = with(ctx) {
+        val concatParts = distributeOperationOverConcat(l, r) { a, b -> mkBvOrExpr(a, b) }
+        return concatParts.reduceRight(::mkBvConcatExpr).asExpr(l.sort)
+    }
+
+    /**
+     * (bvxor (concat a b) c) ==>
+     *  (concat
+     *      (bvxor (extract (0, <a_size>) c))
+     *      (bvxor b (extract (<a_size>, <a_size> + <b_size>) c))
+     *  )
+     * */
+    fun <T : KBvSort> distributeXorOverConcat(l: KExpr<T>, r: KExpr<T>): KExpr<T> = with(ctx) {
+        val concatParts = distributeOperationOverConcat(l, r) { a, b -> mkBvXorExpr(a, b) }
+        return concatParts.reduceRight(::mkBvConcatExpr).asExpr(l.sort)
+    }
+
+    private inline fun <T : KBvSort, R : KSort> distributeOperationOverConcat(
+        l: KExpr<T>,
+        r: KExpr<T>,
+        operation: (KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<R>
+    ): List<KExpr<R>> = with(ctx) {
         val lArgs = if (l is KBvConcatExpr) flatConcat(l) else listOf(l)
         val rArgs = if (r is KBvConcatExpr) flatConcat(r) else listOf(r)
-        val newEqualities = arrayListOf<KExpr<KBoolSort>>()
+        val result = arrayListOf<KExpr<R>>()
         var lowL = 0
         var lowR = 0
         var lIdx = lArgs.size
@@ -603,7 +989,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                 remainSizeL == remainSizeR -> {
                     val newL = mkBvExtractExpr(high = lSize - 1, low = lowL, value = lArg)
                     val newR = mkBvExtractExpr(high = rSize - 1, low = lowR, value = rArg)
-                    newEqualities += newL eq newR
+                    result += operation(newL, newR)
                     lowL = 0
                     lowR = 0
                     lIdx--
@@ -613,7 +999,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                 remainSizeL < remainSizeR -> {
                     val newL = mkBvExtractExpr(high = lSize - 1, low = lowL, value = lArg)
                     val newR = mkBvExtractExpr(high = remainSizeL + lowR - 1, low = lowR, value = rArg)
-                    newEqualities += newL eq newR
+                    result += operation(newL, newR)
                     lowL = 0
                     lowR += remainSizeL
                     lIdx--
@@ -622,14 +1008,14 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                 else -> {
                     val newL = mkBvExtractExpr(high = remainSizeR + lowL - 1, low = lowL, value = lArg)
                     val newR = mkBvExtractExpr(high = rSize - 1, low = lowR, value = rArg)
-                    newEqualities += newL eq newR
+                    result += operation(newL, newR)
                     lowL += remainSizeR
                     lowR = 0
                     rIdx--
                 }
             }
         }
-        return mkAnd(newEqualities)
+        return result
     }
 
     private fun flatConcat(expr: KBvConcatExpr): List<KExpr<KBvSort>> {
@@ -646,6 +1032,47 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             unprocessed += e.arg0
         }
         return flatten
+    }
+
+    private fun concatBv(lhs: KBitVecValue<*>, rhs: KBitVecValue<*>): KBitVecValue<*> = with(ctx) {
+        when {
+            lhs is KBitVec8Value && rhs is KBitVec8Value -> {
+                var result = lhs.numberValue.toInt() shl Byte.SIZE_BITS
+                result = result or rhs.numberValue.toInt()
+                mkBv(result.toShort())
+            }
+
+            lhs is KBitVec16Value && rhs is KBitVec16Value -> {
+                var result = lhs.numberValue.toInt() shl Short.SIZE_BITS
+                result = result or rhs.numberValue.toInt()
+                mkBv(result)
+            }
+
+            lhs is KBitVec32Value && rhs is KBitVec32Value -> {
+                var result = lhs.numberValue.toLong() shl Int.SIZE_BITS
+                result = result or rhs.numberValue.toLong()
+                mkBv(result)
+            }
+
+            else -> {
+                val concatenatedBinary = lhs.stringValue + rhs.stringValue
+                mkBv(concatenatedBinary, lhs.sort.sizeBits + rhs.sort.sizeBits)
+            }
+        }
+    }
+
+    private fun extractBv(value: KBitVecValue<*>, high: Int, low: Int): KBitVecValue<*> = with(ctx) {
+        val size = high - low + 1
+        val bits = value.stringValue.toList().asReversed().subList(low, high).asReversed().toCharArray()
+        mkBv(String(bits), size.toUInt())
+    }
+
+    // (concat (extract[h1, l1] a) (extract[h2, l2] a)), l1 == h2 + 1 ==> (extract[h1, l2] a)
+    private fun tryMergeBvConcatExtract(lhs: KBvExtractExpr, rhs: KBvExtractExpr): KExpr<KBvSort>? = with(ctx) {
+        if (lhs.value != rhs.value || lhs.low != rhs.high + 1) {
+            return null
+        }
+        mkBvExtractExpr(lhs.high, rhs.low, lhs.value)
     }
 
     private fun minValueSigned(size: UInt): KBitVecValue<*> = with(ctx) {
@@ -731,119 +1158,178 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         else -> stringValue <= other.stringValue
     }
 
-    private operator fun KBitVecValue<*>.plus(other: KBitVecValue<*>): KBitVecValue<*> = with(ctx) {
-        when (this@plus) {
-            is KBitVec1Value -> mkBv(value xor (other as KBitVec1Value).value)
-            is KBitVec8Value -> bvOperation(other) { a, b -> (a + b).toByte() }
-            is KBitVec16Value -> bvOperation(other) { a, b -> (a + b).toShort() }
-            is KBitVec32Value -> bvOperation(other) { a, b -> a + b }
-            is KBitVec64Value -> bvOperation(other) { a, b -> a + b }
-            else -> bvOperationDefault(other) { a, b -> a + b }
-        }
+    private operator fun KBitVecValue<*>.plus(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+        other = other,
+        bv1 = { a, b -> a xor b },
+        bv8 = { a, b -> (a + b).toByte() },
+        bv16 = { a, b -> (a + b).toShort() },
+        bv32 = { a, b -> a + b },
+        bv64 = { a, b -> a + b },
+        bvDefault = { a, b -> a + b },
+    )
+
+    private operator fun KBitVecValue<*>.minus(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+        other = other,
+        bv1 = { a, b -> a xor b },
+        bv8 = { a, b -> (a - b).toByte() },
+        bv16 = { a, b -> (a - b).toShort() },
+        bv32 = { a, b -> a - b },
+        bv64 = { a, b -> a - b },
+        bvDefault = { a, b -> a - b },
+    )
+
+    private operator fun KBitVecValue<*>.times(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+        other = other,
+        bv1 = { a, b -> a && b },
+        bv8 = { a, b -> (a * b).toByte() },
+        bv16 = { a, b -> (a * b).toShort() },
+        bv32 = { a, b -> a * b },
+        bv64 = { a, b -> a * b },
+        bvDefault = { a, b -> a * b },
+    )
+
+    private fun KBitVecValue<*>.signedDivide(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+        other = other,
+        bv1 = { a, b -> a == b },
+        bv8 = { a, b -> (a / b).toByte() },
+        bv16 = { a, b -> (a / b).toShort() },
+        bv32 = { a, b -> a / b },
+        bv64 = { a, b -> a / b },
+        bvDefault = { a, b -> a / b },
+    )
+
+    private fun KBitVecValue<*>.unsignedDivide(other: KBitVecValue<*>): KBitVecValue<*> = bvUnsignedOperation(
+        other = other,
+        bv1 = { a, b -> a == b },
+        bv8 = { a, b -> (a / b).toUByte() },
+        bv16 = { a, b -> (a / b).toUShort() },
+        bv32 = { a, b -> a / b },
+        bv64 = { a, b -> a / b },
+        bvDefault = { a, b -> a / b },
+    )
+
+    private fun KBitVecValue<*>.signedRem(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+        other = other,
+        bv1 = { a, b -> a != b },
+        bv8 = { a, b -> (a.rem(b)).toByte() },
+        bv16 = { a, b -> (a.rem(b)).toShort() },
+        bv32 = { a, b -> a.rem(b) },
+        bv64 = { a, b -> a.rem(b) },
+        bvDefault = { a, b -> a.rem(b) },
+    )
+
+    private fun KBitVecValue<*>.unsignedRem(other: KBitVecValue<*>): KBitVecValue<*> = bvUnsignedOperation(
+        other = other,
+        bv1 = { a, b -> a != b },
+        bv8 = { a, b -> (a.rem(b)).toUByte() },
+        bv16 = { a, b -> (a.rem(b)).toUShort() },
+        bv32 = { a, b -> a.rem(b) },
+        bv64 = { a, b -> a.rem(b) },
+        bvDefault = { a, b -> a.rem(b) },
+    )
+
+    private fun KBitVecValue<*>.signedMod(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+        other = other,
+        bv1 = { a, b -> a != b },
+        bv8 = { a, b -> a.mod(b) },
+        bv16 = { a, b -> a.mod(b) },
+        bv32 = { a, b -> a.mod(b) },
+        bv64 = { a, b -> a.mod(b) },
+        bvDefault = { a, b -> a.mod(b) },
+    )
+
+    private fun KBitVecValue<*>.bitwiseNot(): KBitVecValue<*> = bvOperation(
+        other = zero(sort.sizeBits),
+        bv1 = { a, _ -> a.not() },
+        bv8 = { a, _ -> a.inv() },
+        bv16 = { a, _ -> a.inv() },
+        bv32 = { a, _ -> a.inv() },
+        bv64 = { a, _ -> a.inv() },
+        bvDefault = { a, _ -> a.inv() },
+    )
+
+    private fun KBitVecValue<*>.bitwiseOr(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+        other = other,
+        bv1 = { a, b -> a || b },
+        bv8 = { a, b -> a or b },
+        bv16 = { a, b -> a or b },
+        bv32 = { a, b -> a or b },
+        bv64 = { a, b -> a or b },
+        bvDefault = { a, b -> a or b },
+    )
+
+    private fun KBitVecValue<*>.bitwiseXor(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+        other = other,
+        bv1 = { a, b -> a xor b },
+        bv8 = { a, b -> a xor b },
+        bv16 = { a, b -> a xor b },
+        bv32 = { a, b -> a xor b },
+        bv64 = { a, b -> a xor b },
+        bvDefault = { a, b -> a xor b },
+    )
+
+    private inline fun KBitVecValue<*>.bvUnsignedOperation(
+        other: KBitVecValue<*>,
+        bv1: (Boolean, Boolean) -> Boolean,
+        bv8: (UByte, UByte) -> UByte,
+        bv16: (UShort, UShort) -> UShort,
+        bv32: (UInt, UInt) -> UInt,
+        bv64: (ULong, ULong) -> ULong,
+        bvDefault: (BigInteger, BigInteger) -> BigInteger,
+    ): KBitVecValue<*> = when (this@bvUnsignedOperation) {
+        is KBitVec1Value -> bv1Operation(other, bv1)
+        is KBitVec8Value -> bv8UnsignedOperation(other, bv8)
+        is KBitVec16Value -> bv16UnsignedOperation(other, bv16)
+        is KBitVec32Value -> bv32UnsignedOperation(other, bv32)
+        is KBitVec64Value -> bv64UnsignedOperation(other, bv64)
+        else -> bvOperationDefault(other, signed = false, bvDefault)
     }
 
-    private operator fun KBitVecValue<*>.minus(other: KBitVecValue<*>): KBitVecValue<*> = with(ctx) {
-        when (this@minus) {
-            is KBitVec1Value -> mkBv(value xor (other as KBitVec1Value).value)
-            is KBitVec8Value -> bvOperation(other) { a, b -> (a - b).toByte() }
-            is KBitVec16Value -> bvOperation(other) { a, b -> (a - b).toShort() }
-            is KBitVec32Value -> bvOperation(other) { a, b -> a - b }
-            is KBitVec64Value -> bvOperation(other) { a, b -> a - b }
-            else -> bvOperationDefault(other) { a, b -> a - b }
-        }
+    private inline fun KBitVecValue<*>.bvOperation(
+        other: KBitVecValue<*>,
+        bv1: (Boolean, Boolean) -> Boolean,
+        bv8: (Byte, Byte) -> Byte,
+        bv16: (Short, Short) -> Short,
+        bv32: (Int, Int) -> Int,
+        bv64: (Long, Long) -> Long,
+        bvDefault: (BigInteger, BigInteger) -> BigInteger,
+    ): KBitVecValue<*> = when (this@bvOperation) {
+        is KBitVec1Value -> bv1Operation(other, bv1)
+        is KBitVec8Value -> bv8Operation(other, bv8)
+        is KBitVec16Value -> bv16Operation(other, bv16)
+        is KBitVec32Value -> bv32Operation(other, bv32)
+        is KBitVec64Value -> bv64Operation(other, bv64)
+        else -> bvOperationDefault(other, signed = true, bvDefault)
     }
 
-    private operator fun KBitVecValue<*>.times(other: KBitVecValue<*>): KBitVecValue<*> = with(ctx) {
-        when (this@times) {
-            is KBitVec1Value -> mkBv(value && (other as KBitVec1Value).value)
-            is KBitVec8Value -> bvOperation(other) { a, b -> (a * b).toByte() }
-            is KBitVec16Value -> bvOperation(other) { a, b -> (a * b).toShort() }
-            is KBitVec32Value -> bvOperation(other) { a, b -> a * b }
-            is KBitVec64Value -> bvOperation(other) { a, b -> a * b }
-            else -> bvOperationDefault(other) { a, b -> a * b }
-        }
-    }
+    private inline fun KBitVec1Value.bv1Operation(other: KBitVecValue<*>, op: (Boolean, Boolean) -> Boolean) =
+        ctx.mkBv(op(value, (other as KBitVec1Value).value))
 
-    private fun KBitVecValue<*>.signedDivide(other: KBitVecValue<*>): KBitVecValue<*> = with(ctx) {
-        when (this@signedDivide) {
-            is KBitVec1Value -> mkBv(value == (other as KBitVec1Value).value)
-            is KBitVec8Value -> bvOperation(other) { a, b -> (a / b).toByte() }
-            is KBitVec16Value -> bvOperation(other) { a, b -> (a / b).toShort() }
-            is KBitVec32Value -> bvOperation(other) { a, b -> a / b }
-            is KBitVec64Value -> bvOperation(other) { a, b -> a / b }
-            else -> bvOperationDefault(other, signed = true) { a, b -> a / b }
-        }
-    }
-
-    private fun KBitVecValue<*>.unsignedDivide(other: KBitVecValue<*>): KBitVecValue<*> = with(ctx) {
-        when (this@unsignedDivide) {
-            is KBitVec1Value -> mkBv(value == (other as KBitVec1Value).value)
-            is KBitVec8Value -> bvUnsignedOperation(other) { a, b -> (a / b).toUByte() }
-            is KBitVec16Value -> bvUnsignedOperation(other) { a, b -> (a / b).toUShort() }
-            is KBitVec32Value -> bvUnsignedOperation(other) { a, b -> a / b }
-            is KBitVec64Value -> bvUnsignedOperation(other) { a, b -> a / b }
-            else -> bvOperationDefault(other, signed = false) { a, b -> a / b }
-        }
-    }
-
-    private fun KBitVecValue<*>.signedRem(other: KBitVecValue<*>): KBitVecValue<*> = with(ctx) {
-        when (this@signedRem) {
-            is KBitVec1Value -> mkBv(value != (other as KBitVec1Value).value)
-            is KBitVec8Value -> bvOperation(other) { a, b -> a.rem(b).toByte() }
-            is KBitVec16Value -> bvOperation(other) { a, b -> a.rem(b).toShort() }
-            is KBitVec32Value -> bvOperation(other) { a, b -> a.rem(b) }
-            is KBitVec64Value -> bvOperation(other) { a, b -> a.rem(b) }
-            else -> bvOperationDefault(other, signed = true) { a, b -> a.rem(b) }
-        }
-    }
-
-    private fun KBitVecValue<*>.unsignedRem(other: KBitVecValue<*>): KBitVecValue<*> = with(ctx) {
-        when (this@unsignedRem) {
-            is KBitVec1Value -> mkBv(value != (other as KBitVec1Value).value)
-            is KBitVec8Value -> bvUnsignedOperation(other) { a, b -> a.rem(b).toUByte() }
-            is KBitVec16Value -> bvUnsignedOperation(other) { a, b -> a.rem(b).toUShort() }
-            is KBitVec32Value -> bvUnsignedOperation(other) { a, b -> a.rem(b) }
-            is KBitVec64Value -> bvUnsignedOperation(other) { a, b -> a.rem(b) }
-            else -> bvOperationDefault(other, signed = false) { a, b -> a.rem(b) }
-        }
-    }
-
-    private fun KBitVecValue<*>.signedMod(other: KBitVecValue<*>): KBitVecValue<*> = with(ctx) {
-        when (this@signedMod) {
-            is KBitVec1Value -> mkBv(value != (other as KBitVec1Value).value)
-            is KBitVec8Value -> bvOperation(other) { a, b -> a.mod(b) }
-            is KBitVec16Value -> bvOperation(other) { a, b -> a.mod(b) }
-            is KBitVec32Value -> bvOperation(other) { a, b -> a.mod(b) }
-            is KBitVec64Value -> bvOperation(other) { a, b -> a.mod(b) }
-            else -> bvOperationDefault(other, signed = true) { a, b -> a.mod(b) }
-        }
-    }
-
-    private inline fun KBitVec8Value.bvOperation(other: KBitVecValue<*>, op: (Byte, Byte) -> Byte) =
+    private inline fun KBitVec8Value.bv8Operation(other: KBitVecValue<*>, op: (Byte, Byte) -> Byte) =
         ctx.mkBv(op(numberValue, (other as KBitVec8Value).numberValue))
 
-    private inline fun KBitVec8Value.bvUnsignedOperation(other: KBitVecValue<*>, op: (UByte, UByte) -> UByte) =
+    private inline fun KBitVec8Value.bv8UnsignedOperation(other: KBitVecValue<*>, op: (UByte, UByte) -> UByte) =
         ctx.mkBv(op(numberValue.toUByte(), (other as KBitVec8Value).numberValue.toUByte()).toByte())
 
-    private inline fun KBitVec16Value.bvOperation(other: KBitVecValue<*>, op: (Short, Short) -> Short) =
+    private inline fun KBitVec16Value.bv16Operation(other: KBitVecValue<*>, op: (Short, Short) -> Short) =
         ctx.mkBv(op(numberValue, (other as KBitVec16Value).numberValue))
 
-    private inline fun KBitVec16Value.bvUnsignedOperation(other: KBitVecValue<*>, op: (UShort, UShort) -> UShort) =
+    private inline fun KBitVec16Value.bv16UnsignedOperation(other: KBitVecValue<*>, op: (UShort, UShort) -> UShort) =
         ctx.mkBv(op(numberValue.toUShort(), (other as KBitVec16Value).numberValue.toUShort()).toShort())
 
-    private inline fun KBitVec32Value.bvOperation(other: KBitVecValue<*>, op: (Int, Int) -> Int) =
+    private inline fun KBitVec32Value.bv32Operation(other: KBitVecValue<*>, op: (Int, Int) -> Int) =
         ctx.mkBv(op(numberValue, (other as KBitVec32Value).numberValue))
 
-    private inline fun KBitVec32Value.bvUnsignedOperation(other: KBitVecValue<*>, op: (UInt, UInt) -> UInt) =
+    private inline fun KBitVec32Value.bv32UnsignedOperation(other: KBitVecValue<*>, op: (UInt, UInt) -> UInt) =
         ctx.mkBv(op(numberValue.toUInt(), (other as KBitVec32Value).numberValue.toUInt()).toInt())
 
-    private inline fun KBitVec64Value.bvOperation(other: KBitVecValue<*>, op: (Long, Long) -> Long) =
+    private inline fun KBitVec64Value.bv64Operation(other: KBitVecValue<*>, op: (Long, Long) -> Long) =
         ctx.mkBv(op(numberValue, (other as KBitVec64Value).numberValue))
 
-    private inline fun KBitVec64Value.bvUnsignedOperation(other: KBitVecValue<*>, op: (ULong, ULong) -> ULong) =
+    private inline fun KBitVec64Value.bv64UnsignedOperation(other: KBitVecValue<*>, op: (ULong, ULong) -> ULong) =
         ctx.mkBv(op(numberValue.toULong(), (other as KBitVec64Value).numberValue.toULong()).toLong())
 
-    private fun KBitVecValue<*>.bvOperationDefault(
+    private inline fun KBitVecValue<*>.bvOperationDefault(
         rhs: KBitVecValue<*>,
         signed: Boolean = false,
         operation: (BigInteger, BigInteger) -> BigInteger
