@@ -107,17 +107,26 @@ class KFp64Value internal constructor(
  */
 class KFp128Value internal constructor(
     ctx: KContext,
-    val significandValue: Long,
-    val exponentValue: Long,
+    significandValue: KBitVecValue<*>,
+    exponentValue: KBitVecValue<*>,
     signBit: Boolean
 ) : KFpValue<KFp128Sort>(
     ctx,
-    significand = with(ctx) { significandValue.toBv(KFp128Sort.significandBits - 1u) },
-    exponent = with(ctx) { exponentValue.toBv(KFp128Sort.exponentBits) },
+    significand = significandValue,
+    exponent = exponentValue,
     signBit
 ) {
+    init {
+        require(exponentValue.sort.sizeBits == KFp128Sort.exponentBits) {
+            "Exponent size must be ${KFp128Sort.exponentBits}."
+        }
+        require(significandValue.sort.sizeBits == KFp128Sort.significandBits - 1u) {
+            "Significand size must be ${KFp128Sort.significandBits - 1u}."
+        }
+    }
+
     override val decl: KDecl<KFp128Sort>
-        get() = ctx.mkFp128Decl(significandValue, exponentValue, signBit)
+        get() = ctx.mkFp128Decl(significand, exponent, signBit)
 
     override val sort: KFp128Sort
         get() = ctx.mkFp128Sort()
@@ -127,27 +136,26 @@ class KFp128Value internal constructor(
 
 /**
  * KFp value of custom size.
- *
- * Note: if [exponentValue] contains more than [KFp128Sort.exponentBits] meaningful bits,
- * only the last [KFp128Sort.exponentBits] of then will be taken.
- * The same is true for the significand.
  */
 class KFpCustomSizeValue internal constructor(
     ctx: KContext,
     val significandSize: UInt,
     val exponentSize: UInt,
-    val significandValue: Long,
-    val exponentValue: Long,
+    significandValue: KBitVecValue<*>,
+    exponentValue: KBitVecValue<*>,
     signBit: Boolean
 ) : KFpValue<KFpSort>(
     ctx,
-    significand = with(ctx) { significandValue.toBv(significandSize - 1u) },
-    exponent = with(ctx) { exponentValue.toBv(exponentSize) },
+    significand = significandValue,
+    exponent = exponentValue,
     signBit
 ) {
     init {
-        require(exponentSize.toInt() <= MAX_EXPONENT_SIZE) {
-            "Maximum number of exponent bits is $MAX_EXPONENT_SIZE"
+        require(exponentValue.sort.sizeBits == exponentSize) {
+            "Exponent size must be $exponentSize."
+        }
+        require(significandValue.sort.sizeBits == significandSize - 1u) {
+            "Significand size must be ${significandSize - 1u}."
         }
     }
 
@@ -155,8 +163,8 @@ class KFpCustomSizeValue internal constructor(
         get() = ctx.mkFpCustomSizeDecl(
             significandSize,
             exponentSize,
-            significandValue,
-            exponentValue,
+            significand,
+            exponent,
             signBit
         )
 

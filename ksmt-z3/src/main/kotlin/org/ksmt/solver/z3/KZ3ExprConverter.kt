@@ -452,6 +452,19 @@ open class KZ3ExprConverter(
     fun convertFpNumeral(expr: Long, sortx: Long): ExprConversionResult = when {
         Native.isNumeralAst(nCtx, expr) -> convert {
             with(ctx) {
+                /**
+                 * val exponentBv = expr.getExponentBV(false)
+                val significandBv = expr.significandBV
+                expr.convert(arrayOf(exponentBv, significandBv)) { exponent: KExpr<KBvSort>, significand: KExpr<KBvSort> ->
+                val sort = convertSort(expr.sort) as KFpSort
+                ctx.mkFp(
+                significand as KBitVecValue<*>,
+                exponent as KBitVecValue<*>,
+                expr.sign,
+                sort
+                )
+                }
+                 * */
                 val sort = sortx.convertSort<KFpSort>()
                 val sBits = sort.significandBits.toInt()
                 val fp64SizeBits = KFp64Sort.exponentBits.toInt() + KFp64Sort.significandBits.toInt()
