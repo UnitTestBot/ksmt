@@ -1382,7 +1382,7 @@ open class KContext : AutoCloseable {
 
         return mkFpCustomSize(
             exponent.sort.sizeBits,
-            significand.sort.sizeBits,
+            significand.sort.sizeBits + 1u, // +1 for sign bit
             exponentLongValue,
             significandLongValue,
             signBit

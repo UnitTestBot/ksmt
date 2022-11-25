@@ -2,6 +2,8 @@ package org.ksmt.expr.rewrite.simplify
 
 import org.ksmt.KContext
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KBitVec1Value
+import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KBvToFpExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFp32Value
@@ -38,6 +40,7 @@ import org.ksmt.expr.KFpToFpExpr
 import org.ksmt.expr.KFpToIEEEBvExpr
 import org.ksmt.expr.KFpToRealExpr
 import org.ksmt.expr.KFpValue
+import org.ksmt.expr.KRealNumExpr
 import org.ksmt.expr.KRealToFpExpr
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
@@ -46,10 +49,14 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.asExpr
+import java.math.BigDecimal
+import java.math.BigInteger
+import java.math.RoundingMode
 import kotlin.math.IEEErem
+import kotlin.math.absoluteValue
 import kotlin.math.sqrt
 
-interface KFpExprSimplifier : KExprSimplifierBase {
+interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
 
     fun <T : KFpSort> simplifyEqFp(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> = with(ctx) {
         if (lhs == rhs) return trueExpr
@@ -269,7 +276,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
                 check?.let { return@simplifyApp it }
             }
 
-            mkFpLessOrEqualExpr(lhs, rhs)
+            mkFpLessExpr(lhs, rhs)
         }
 
     override fun <T : KFpSort> transform(expr: KFpGreaterOrEqualExpr<T>): KExpr<KBoolSort> =
@@ -351,33 +358,125 @@ interface KFpExprSimplifier : KExprSimplifierBase {
             mkFpIsPositiveExpr(arg)
         }
 
-    override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>): KExpr<KBvSort> {
-        return super.transform(expr)
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> =
+        simplifyApp(expr as KApp<T, KExpr<KBvSort>>) { (sign, exp, significand) ->
+            if (sign is KBitVecValue<*> && exp is KBitVecValue<*> && significand is KBitVecValue<*>) {
+
+                val unbiasedExponent = fpUnbiasExponent(exp)
+                return@simplifyApp mkFpCustomSize(
+                    exponent = unbiasedExponent,
+                    significand = significand,
+                    signBit = (sign as KBitVec1Value).value
+                )
+            }
+            mkFpFromBvExpr(sign.asExpr(bv1Sort), exp, significand)
+        }
+
+    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> = simplifyApp(expr) { (arg) ->
+        if (arg is KFpValue<*>) {
+            if (arg.isNan()) {
+                // ensure NaN bits are the same, as in KContext
+                val nan = ctx.mkFpNan(arg.sort) as KFpValue<*>
+                return@simplifyApp mkBvConcatExpr(mkBv(nan.signBit), mkBvConcatExpr(nan.exponent, nan.significand))
+            }
+            return@simplifyApp mkBvConcatExpr(mkBv(arg.signBit), mkBvConcatExpr(arg.exponent, arg.significand))
+        }
+        mkFpToIEEEBvExpr(arg)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpToRealExpr<T>): KExpr<KRealSort> {
-        return super.transform(expr)
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> =
+        simplifyApp(expr as KApp<T, KExpr<KSort>>) { (rmArg, valueArg) ->
+            val rm = rmArg.asExpr(mkFpRoundingModeSort())
+            val value = valueArg.asExpr(expr.value.sort)
+
+            if (rm is KFpRoundingModeExpr && value is KFpValue<*>) {
+                // todo: fpa_rewriter.cpp:169
+                return@simplifyApp mkFpToFpExpr(expr.sort, rm, value)
+            }
+
+            mkFpToFpExpr(expr.sort, rm, value)
+        }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : KFpSort> transform(expr: KRealToFpExpr<T>): KExpr<T> =
+        simplifyApp(expr as KApp<T, KExpr<KSort>>) { (rmArg, valueArg) ->
+            val rm = rmArg.asExpr(mkFpRoundingModeSort())
+            val value = valueArg.asExpr(expr.value.sort)
+
+            if (rm is KFpRoundingModeExpr && value is KRealNumExpr) {
+                // todo: fpa_rewriter.cpp:160
+                return@simplifyApp mkRealToFpExpr(expr.sort, rm, value)
+            }
+
+            mkRealToFpExpr(expr.sort, rm, value)
+        }
+
+    override fun <T : KFpSort> transform(expr: KFpToRealExpr<T>): KExpr<KRealSort> = simplifyApp(expr) { (arg) ->
+        if (arg is KFpValue<*>) {
+            if (!arg.isNan() && !arg.isInfinity()) {
+                val decimalValue = fpDecimalValue(arg)
+                if (decimalValue != null) {
+                    val decimalPower = decimalValue.scale()
+                    var numerator = decimalValue.unscaledValue()
+                    var denominator = BigInteger.ONE
+                    if (decimalPower >= 0) {
+                        numerator *= BigInteger.TEN.pow(decimalPower)
+                    } else {
+                        denominator = BigInteger.TEN.pow(decimalPower.absoluteValue)
+                    }
+                    return@simplifyApp mkRealNum(numerator.expr, denominator.expr)
+                }
+            }
+        }
+        mkFpToRealExpr(arg)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> {
-        return super.transform(expr)
-    }
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : KFpSort> transform(expr: KBvToFpExpr<T>): KExpr<T> =
+        simplifyApp(expr as KApp<T, KExpr<KSort>>) { (rmArg, bvValueArg) ->
+            val rm = rmArg.asExpr(mkFpRoundingModeSort())
+            val value = bvValueArg.asExpr(expr.value.sort)
 
-    override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> {
-        return super.transform(expr)
-    }
+            if (rm is KFpRoundingModeExpr && value is KBitVecValue<*>) {
+                // todo: fpa_rewriter.cpp:179
+                return@simplifyApp mkBvToFpExpr(expr.sort, rm, value, expr.signed)
+            }
 
-    override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> {
-        return super.transform(expr)
-    }
+            mkBvToFpExpr(expr.sort, rm, value, expr.signed)
+        }
 
-    override fun <T : KFpSort> transform(expr: KRealToFpExpr<T>): KExpr<T> {
-        return super.transform(expr)
-    }
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>): KExpr<KBvSort> =
+        simplifyApp(this as KApp<KBvSort, KExpr<KSort>>) { (rmArg, valueArg) ->
+            val rm = rmArg.asExpr(mkFpRoundingModeSort())
+            val value = valueArg.asExpr(expr.value.sort)
 
-    override fun <T : KFpSort> transform(expr: KBvToFpExpr<T>): KExpr<T> {
-        return super.transform(expr)
-    }
+            if (rm is KFpRoundingModeExpr && value is KFpValue<*>) {
+                if (!value.isNan() && !value.isInfinity()) {
+                    val decimalValue = fpDecimalValue(value)
+                    if (decimalValue != null) {
+                        val lowLimit = if (expr.isSigned) {
+                            -BigDecimal.valueOf(2).pow(expr.bvSize - 1)
+                        } else {
+                            BigDecimal.ZERO
+                        }
+                        val upperLimit = if (expr.isSigned) {
+                            BigDecimal.valueOf(2).pow(expr.bvSize - 1) - BigDecimal.valueOf(1)
+                        } else {
+                            BigDecimal.valueOf(2).pow(expr.bvSize) - BigDecimal.valueOf(1)
+                        }
+                        if (decimalValue >= lowLimit && decimalValue <= upperLimit) {
+                            val intValue = decimalValue.unscaledValue(rm.value).toBigInteger()
+                            return@simplifyApp mkBvFromBigInteger(intValue, expr.bvSize.toUInt())
+                        }
+                    }
+                }
+            }
+
+            mkFpToBvExpr(rm, value, expr.bvSize, expr.isSigned)
+        }
 
     @Suppress("UNCHECKED_CAST")
     private inline fun <T : KFpSort> KExpr<T>.simplifyFpUnaryOp(
@@ -559,5 +658,26 @@ interface KFpExprSimplifier : KExprSimplifierBase {
         is KFp32Value -> lhs.value <= (rhs as KFp32Value).value
         is KFp64Value -> lhs.value <= (rhs as KFp64Value).value
         else -> null
+    }
+
+    private fun fpDecimalValue(value: KFpValue<*>): BigDecimal? = when (value) {
+        is KFp32Value -> BigDecimal.valueOf(value.value.toDouble())
+        is KFp64Value -> BigDecimal.valueOf(value.value)
+        else -> null
+    }
+
+    private fun fpUnbiasExponent(value: KBitVecValue<*>): KBitVecValue<*> = with(this as KBvExprSimplifier) {
+        value - maxValueSigned(value.sort.sizeBits)
+    }
+
+    private fun BigDecimal.unscaledValue(rm: KFpRoundingMode): BigDecimal {
+        val decimalRm = when (rm) {
+            KFpRoundingMode.RoundNearestTiesToEven -> RoundingMode.HALF_EVEN
+            KFpRoundingMode.RoundNearestTiesToAway -> RoundingMode.HALF_UP
+            KFpRoundingMode.RoundTowardPositive -> RoundingMode.CEILING
+            KFpRoundingMode.RoundTowardNegative -> RoundingMode.FLOOR
+            KFpRoundingMode.RoundTowardZero -> RoundingMode.DOWN
+        }
+        return setScale(0, decimalRm)
     }
 }

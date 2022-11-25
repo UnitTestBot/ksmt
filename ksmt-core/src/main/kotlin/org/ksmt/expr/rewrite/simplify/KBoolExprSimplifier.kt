@@ -63,6 +63,10 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
             }
             resultArgs += arg
         }
+
+        // restore original arguments order
+        resultArgs.reverse()
+
         when (resultArgs.size) {
             0 -> trueExpr
             1 -> resultArgs.single()
@@ -119,6 +123,10 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
             }
             resultArgs += arg
         }
+
+        // restore original arguments order
+        resultArgs.reverse()
+
         when (resultArgs.size) {
             0 -> falseExpr
             1 -> resultArgs.single()

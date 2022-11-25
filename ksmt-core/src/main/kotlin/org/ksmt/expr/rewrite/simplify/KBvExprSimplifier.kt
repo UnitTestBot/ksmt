@@ -707,9 +707,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     }
 
     override fun transform(expr: KBvExtractExpr): KExpr<KBvSort> = simplifyApp(expr) { (arg) ->
-        val size = expr.sort.sizeBits
-
-        if (expr.low == 0 && expr.high == size.toInt() - 1) {
+        if (expr.low == 0 && expr.high == arg.sort.sizeBits.toInt() - 1) {
             return@simplifyApp arg
         }
 
@@ -743,7 +741,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
 
                 // extract from a single part
                 if (idx <= expr.low) {
-                    if (idx == expr.low && size.toInt() == firstPartSize) {
+                    if (idx == expr.low && expr.high - idx == firstPartSize) {
                         return@simplifyApp firstPart
                     } else {
                         return@simplifyApp mkBvExtractExpr(
@@ -1342,6 +1340,10 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                 }
             }
         }
+
+        // restore concat order
+        result.reverse()
+
         return result
     }
 
@@ -1434,8 +1436,11 @@ interface KBvExprSimplifier : KExprSimplifierBase {
 
     private fun extractBv(value: KBitVecValue<*>, high: Int, low: Int): KBitVecValue<*> = with(ctx) {
         val size = high - low + 1
-        val bits = value.stringValue.toList().asReversed().subList(low, high).asReversed().toCharArray()
-        mkBv(String(bits), size.toUInt())
+        val allBits = value.stringValue
+        val highBitIdx = allBits.length - high - 1
+        val lowBitIdx = allBits.length - low - 1
+        val bits = allBits.substring(highBitIdx, lowBitIdx + 1)
+        mkBv(bits, size.toUInt())
     }
 
     // (concat (extract[h1, l1] a) (extract[h2, l2] a)), l1 == h2 + 1 ==> (extract[h1, l2] a)
@@ -1453,7 +1458,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         return ctx.mkBv(extension + binary, sort.sizeBits + extensionSize.toUInt())
     }
 
-    private fun minValueSigned(size: UInt): KBitVecValue<*> = with(ctx) {
+    fun minValueSigned(size: UInt): KBitVecValue<*> = with(ctx) {
         when (size.toInt()) {
             1 -> mkBv(false)
             Byte.SIZE_BITS -> mkBv(Byte.MIN_VALUE)
@@ -1467,7 +1472,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         }
     }
 
-    private fun maxValueSigned(size: UInt): KBitVecValue<*> = with(ctx) {
+    fun maxValueSigned(size: UInt): KBitVecValue<*> = with(ctx) {
         when (size.toInt()) {
             1 -> mkBv(true)
             Byte.SIZE_BITS -> mkBv(Byte.MAX_VALUE)
@@ -1481,7 +1486,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         }
     }
 
-    private fun maxValueUnsigned(size: UInt): KBitVecValue<*> = with(ctx) {
+    fun maxValueUnsigned(size: UInt): KBitVecValue<*> = with(ctx) {
         when (size.toInt()) {
             1 -> mkBv(true)
             Byte.SIZE_BITS -> mkBv((-1).toByte())
@@ -1509,7 +1514,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         }
     }
 
-    private fun KBitVecValue<*>.signedGreaterOrEqual(other: Int): Boolean = when (this) {
+    fun KBitVecValue<*>.signedGreaterOrEqual(other: Int): Boolean = when (this) {
         is KBitVec1Value -> value >= (other == 1)
         is KBitVec8Value -> numberValue >= other
         is KBitVec16Value -> numberValue >= other
@@ -1518,7 +1523,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         else -> signedBigIntFromBinary(stringValue) >= other.toBigInteger()
     }
 
-    private fun KBitVecValue<*>.signedLessOrEqual(other: KBitVecValue<*>): Boolean = when (this) {
+    fun KBitVecValue<*>.signedLessOrEqual(other: KBitVecValue<*>): Boolean = when (this) {
         is KBitVec1Value -> value <= (other as KBitVec1Value).value
         is KBitVec8Value -> numberValue <= (other as KBitVec8Value).numberValue
         is KBitVec16Value -> numberValue <= (other as KBitVec16Value).numberValue
@@ -1537,7 +1542,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         else -> stringValue <= other.stringValue
     }
 
-    private operator fun KBitVecValue<*>.plus(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+    operator fun KBitVecValue<*>.plus(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
         other = other,
         bv1 = { a, b -> a xor b },
         bv8 = { a, b -> (a + b).toByte() },
@@ -1547,7 +1552,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         bvDefault = { a, b -> a + b },
     )
 
-    private operator fun KBitVecValue<*>.minus(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+    operator fun KBitVecValue<*>.minus(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
         other = other,
         bv1 = { a, b -> a xor b },
         bv8 = { a, b -> (a - b).toByte() },
@@ -1748,9 +1753,13 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         val lValue = lhs.stringValue.let { if (!signed) unsignedBigIntFromBinary(it) else signedBigIntFromBinary(it) }
         val rValue = rhs.stringValue.let { if (!signed) unsignedBigIntFromBinary(it) else signedBigIntFromBinary(it) }
         val resultValue = operation(lValue, rValue)
-        val normalizedValue = resultValue.mod(BigInteger.valueOf(2).pow(size.toInt()))
-        val resultBinary = unsignedBinaryString(normalizedValue)
-        mkBv(resultBinary, size)
+        mkBvFromBigInteger(resultValue, size)
+    }
+
+    fun mkBvFromBigInteger(value: BigInteger, size: UInt): KBitVecValue<KBvSort> {
+        val normalizedValue = value.mod(BigInteger.valueOf(2).pow(size.toInt()))
+        val resultBinary = unsignedBinaryString(normalizedValue).padStart(size.toInt(), '0')
+        return ctx.mkBv(resultBinary, size)
     }
 
     private fun KBitVecValue<*>.powerOfTwoOrNull(): Int? {
