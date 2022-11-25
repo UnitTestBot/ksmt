@@ -449,7 +449,7 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>): KExpr<KBvSort> =
-        simplifyApp(this as KApp<KBvSort, KExpr<KSort>>) { (rmArg, valueArg) ->
+        simplifyApp(expr as KApp<KBvSort, KExpr<KSort>>) { (rmArg, valueArg) ->
             val rm = rmArg.asExpr(mkFpRoundingModeSort())
             val value = valueArg.asExpr(expr.value.sort)
 
