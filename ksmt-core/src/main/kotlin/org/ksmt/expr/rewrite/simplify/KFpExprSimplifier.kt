@@ -54,6 +54,7 @@ import java.math.BigInteger
 import java.math.RoundingMode
 import kotlin.math.IEEErem
 import kotlin.math.absoluteValue
+import kotlin.math.round
 import kotlin.math.sqrt
 
 interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
@@ -128,9 +129,14 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
     }
 
     // a - b ==> a + (-b)
-    override fun <T : KFpSort> transform(expr: KFpSubExpr<T>): KExpr<T> = expr.simplifyFpBinaryOp { rm, lhs, rhs ->
-        return@simplifyFpBinaryOp mkFpAddExpr(rm, lhs, mkFpNegationExpr(rhs))
-    }
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : KFpSort> transform(expr: KFpSubExpr<T>): KExpr<T> =
+        simplifyApp(
+            expr = expr as KApp<T, KExpr<KSort>>,
+            preprocess = { mkFpAddExpr(expr.roundingMode, expr.arg0, mkFpNegationExpr(expr.arg1)) }
+        ) {
+            error("Always preprocessed")
+        }
 
     override fun <T : KFpSort> transform(expr: KFpMulExpr<T>): KExpr<T> = expr.simplifyFpBinaryOp { rm, lhs, rhs ->
         if (lhs is KFpValue<*> && rhs is KFpValue<*> && rm is KFpRoundingModeExpr) {
@@ -280,13 +286,19 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
         }
 
     override fun <T : KFpSort> transform(expr: KFpGreaterOrEqualExpr<T>): KExpr<KBoolSort> =
-        simplifyApp(expr) { (lhs, rhs) ->
-            return@simplifyApp mkFpLessOrEqualExpr(rhs, lhs)
+        simplifyApp(
+            expr = expr,
+            preprocess = { mkFpLessOrEqualExpr(expr.arg1, expr.arg0) }
+        ) {
+            error("Always preprocessed")
         }
 
     override fun <T : KFpSort> transform(expr: KFpGreaterExpr<T>): KExpr<KBoolSort> =
-        simplifyApp(expr) { (lhs, rhs) ->
-            return@simplifyApp mkFpLessExpr(rhs, lhs)
+        simplifyApp(
+            expr = expr,
+            preprocess = { mkFpLessExpr(expr.arg1, expr.arg0) }
+        ) {
+            error("Always preprocessed")
         }
 
     override fun <T : KFpSort> transform(expr: KFpEqualExpr<T>): KExpr<KBoolSort> =
@@ -379,8 +391,10 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
                 // ensure NaN bits are the same, as in KContext
                 val nan = ctx.mkFpNan(arg.sort) as KFpValue<*>
                 return@simplifyApp mkBvConcatExpr(mkBv(nan.signBit), mkBvConcatExpr(nan.biasedExponent, nan.significand))
+                    .also { rewrite(it) }
             }
             return@simplifyApp mkBvConcatExpr(mkBv(arg.signBit), mkBvConcatExpr(arg.biasedExponent, arg.significand))
+                .also { rewrite(it) }
         }
         mkFpToIEEEBvExpr(arg)
     }
@@ -602,8 +616,8 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
             return null
         }
         when (arg) {
-            is KFp32Value -> mkFp(Math.round(arg.value).toFloat(), arg.sort) as KFpValue<*>
-            is KFp64Value -> mkFp(Math.round(arg.value).toDouble(), arg.sort) as KFpValue<*>
+            is KFp32Value -> mkFp(round(arg.value), arg.sort) as KFpValue<*>
+            is KFp64Value -> mkFp(round(arg.value), arg.sort) as KFpValue<*>
             else -> null
         }
     }

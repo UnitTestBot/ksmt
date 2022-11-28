@@ -343,13 +343,18 @@ open class KContext : AutoCloseable {
             else -> KBvCustomSizeSort(this, sizeBits)
         }
     }
+    private val bv1SortCache = mkClosableCache<KBv1Sort> { mkBvSort(sizeBits = 1u).cast() }
+    private val bv8SortCache = mkClosableCache<KBv8Sort> { mkBvSort(Byte.SIZE_BITS.toUInt()).cast() }
+    private val bv16SortCache = mkClosableCache<KBv16Sort> { mkBvSort(Short.SIZE_BITS.toUInt()).cast() }
+    private val bv32SortCache = mkClosableCache<KBv32Sort> { mkBvSort(Int.SIZE_BITS.toUInt()).cast() }
+    private val bv64SortCache = mkClosableCache<KBv64Sort> { mkBvSort(Long.SIZE_BITS.toUInt()).cast() }
 
     fun mkBvSort(sizeBits: UInt): KBvSort = bvSortCache.createIfContextActive(sizeBits)
-    fun mkBv1Sort(): KBv1Sort = mkBvSort(sizeBits = 1u).cast()
-    fun mkBv8Sort(): KBv8Sort = mkBvSort(Byte.SIZE_BITS.toUInt()).cast()
-    fun mkBv16Sort(): KBv16Sort = mkBvSort(Short.SIZE_BITS.toUInt()).cast()
-    fun mkBv32Sort(): KBv32Sort = mkBvSort(Int.SIZE_BITS.toUInt()).cast()
-    fun mkBv64Sort(): KBv64Sort = mkBvSort(Long.SIZE_BITS.toUInt()).cast()
+    fun mkBv1Sort(): KBv1Sort = bv1SortCache.createIfContextActive()
+    fun mkBv8Sort(): KBv8Sort = bv8SortCache.createIfContextActive()
+    fun mkBv16Sort(): KBv16Sort = bv16SortCache.createIfContextActive()
+    fun mkBv32Sort(): KBv32Sort = bv32SortCache.createIfContextActive()
+    fun mkBv64Sort(): KBv64Sort = bv64SortCache.createIfContextActive()
 
     private val realSortCache = mkClosableCache<KRealSort> { KRealSort(this) }
     fun mkRealSort(): KRealSort = realSortCache.createIfContextActive()
@@ -367,20 +372,23 @@ open class KContext : AutoCloseable {
             else -> KFpCustomSizeSort(this, exponentBits, significandBits)
         }
     }
+    private val fp16SortCache = mkClosableCache<KFp16Sort> {
+        mkFpSort(KFp16Sort.exponentBits, KFp16Sort.significandBits).cast()
+    }
 
-    fun mkFp16Sort(): KFp16Sort = fpSortCache.createIfContextActive(
-        KFp16Sort.exponentBits, KFp16Sort.significandBits
-    ).cast()
+    private val fp32SortCache = mkClosableCache<KFp32Sort> {
+        mkFpSort(KFp32Sort.exponentBits, KFp32Sort.significandBits).cast()
+    }
 
-    fun mkFp32Sort(): KFp32Sort = fpSortCache.createIfContextActive(
-        KFp32Sort.exponentBits, KFp32Sort.significandBits
-    ).cast()
+    private val fp64SortCache = mkClosableCache<KFp64Sort> {
+        mkFpSort(KFp64Sort.exponentBits, KFp64Sort.significandBits).cast()
+    }
 
-    fun mkFp64Sort(): KFp64Sort = fpSortCache.createIfContextActive(
-        KFp64Sort.exponentBits, KFp64Sort.significandBits
-    ).cast()
+    fun mkFp16Sort(): KFp16Sort = fp16SortCache.createIfContextActive()
+    fun mkFp32Sort(): KFp32Sort = fp32SortCache.createIfContextActive()
+    fun mkFp64Sort(): KFp64Sort = fp64SortCache.createIfContextActive()
 
-    fun mkFp128Sort(): KFp128Sort = fpSortCache.createIfContextActive(
+    fun mkFp128Sort(): KFp128Sort = mkFpSort(
         KFp128Sort.exponentBits, KFp128Sort.significandBits
     ).cast()
 
@@ -402,6 +410,27 @@ open class KContext : AutoCloseable {
 
     val bv1Sort: KBv1Sort
         get() = mkBv1Sort()
+
+    val bv8Sort: KBv8Sort
+        get() = mkBv8Sort()
+
+    val bv16Sort: KBv16Sort
+        get() = mkBv16Sort()
+
+    val bv32Sort: KBv32Sort
+        get() = mkBv32Sort()
+
+    val bv64Sort: KBv64Sort
+        get() = mkBv64Sort()
+
+    val fp16Sort: KFp16Sort
+        get() = mkFp16Sort()
+
+    val fp32Sort: KFp32Sort
+        get() = mkFp32Sort()
+
+    val fp64Sort: KFp64Sort
+        get() = mkFp64Sort()
 
     /*
     * expressions
@@ -802,33 +831,44 @@ open class KContext : AutoCloseable {
         val intValue = (if (value) 1 else 0) as Number
         return mkBv(intValue, sizeBits)
     }
+    fun <T : KBvSort> mkBv(value: Boolean, sort: T): KBitVecValue<T> =
+        mkBv(value, sort.sizeBits).cast()
 
     fun Boolean.toBv(): KBitVec1Value = mkBv(this)
     fun Boolean.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
+    fun <T : KBvSort> Boolean.toBv(sort: T): KBitVecValue<T> = mkBv(this, sort)
 
 
     fun mkBv(value: Byte): KBitVec8Value = bv8Cache.createIfContextActive(value)
     fun mkBv(value: Byte, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
+    fun <T : KBvSort> mkBv(value: Byte, sort: T): KBitVecValue<T> = mkBv(value as Number, sort)
     fun Byte.toBv(): KBitVec8Value = mkBv(this)
     fun Byte.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
+    fun <T : KBvSort> Byte.toBv(sort: T): KBitVecValue<T> = mkBv(this, sort)
     fun UByte.toBv(): KBitVec8Value = mkBv(toByte())
 
     fun mkBv(value: Short): KBitVec16Value = bv16Cache.createIfContextActive(value)
     fun mkBv(value: Short, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
+    fun <T : KBvSort> mkBv(value: Short, sort: T): KBitVecValue<T> = mkBv(value as Number, sort)
     fun Short.toBv(): KBitVec16Value = mkBv(this)
     fun Short.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
+    fun <T : KBvSort> Short.toBv(sort: T): KBitVecValue<T> = mkBv(this, sort)
     fun UShort.toBv(): KBitVec16Value = mkBv(toShort())
 
     fun mkBv(value: Int): KBitVec32Value = bv32Cache.createIfContextActive(value)
     fun mkBv(value: Int, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
+    fun <T : KBvSort> mkBv(value: Int, sort: T): KBitVecValue<T> = mkBv(value as Number, sort)
     fun Int.toBv(): KBitVec32Value = mkBv(this)
     fun Int.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
+    fun <T : KBvSort> Int.toBv(sort: T): KBitVecValue<T> = mkBv(this, sort)
     fun UInt.toBv(): KBitVec32Value = mkBv(toInt())
 
     fun mkBv(value: Long): KBitVec64Value = bv64Cache.createIfContextActive(value)
     fun mkBv(value: Long, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
+    fun <T : KBvSort> mkBv(value: Long, sort: T): KBitVecValue<T> = mkBv(value as Number, sort)
     fun Long.toBv(): KBitVec64Value = mkBv(this)
     fun Long.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
+    fun <T : KBvSort> Long.toBv(sort: T): KBitVecValue<T> = mkBv(this, sort)
     fun ULong.toBv(): KBitVec64Value = mkBv(toLong())
 
     /**
@@ -846,6 +886,9 @@ open class KContext : AutoCloseable {
 
         return mkBv(paddedString, sizeBits)
     }
+
+    private fun <T : KBvSort> mkBv(value: Number, sort: T): KBitVecValue<T> =
+        mkBv(value, sort.sizeBits).cast()
 
     /**
      * Constructs a bit vector from the given [value] containing of [sizeBits] bits.

@@ -39,7 +39,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
                 val idx = store.index as KExpr<KSort>
                 checks += lhs.select(idx) eq rhs.select(idx)
             }
-            return mkAnd(checks)
+            return mkAnd(checks).also { rewrite(it) }
         }
 
         // todo: array_rewriter.cpp:740
@@ -59,27 +59,28 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
                 return@simplifyApp array.asExpr(expr.sort)
             }
 
-            val (stores, _) = expandStores(array as KExpr<KArraySort<*, *>>)
-            if (stores.isNotEmpty()) {
-                val parentStores = arrayListOf<KArrayStore<*, *>>()
-                for (store in stores) {
-                    // (store (store a i x) i y) ==> (store a i y)
-                    if (store.index == index) {
-                        var base = store.array as KExpr<KArraySort<*, *>>
-                        parentStores.asReversed().forEach {
-                            base = mkArrayStore(base, it.index as KExpr<KSort>, it.value as KExpr<KSort>)
-                        }
-                        return@simplifyApp mkArrayStore(base, index, value).asExpr(expr.sort)
+            val parentStores = arrayListOf<KArrayStore<*, *>>()
+            var store = array as KExpr<KArraySort<*, *>>
+            while (store is KArrayStore<*, *>) {
+                // (store (store a i x) i y) ==> (store a i y)
+                if (store.index == index) {
+                    var base = store.array as KExpr<KArraySort<*, *>>
+                    parentStores.asReversed().forEach {
+                        base = mkArrayStore(base, it.index as KExpr<KSort>, it.value as KExpr<KSort>)
                     }
-
-                    if (areDefinitelyDistinct(index, store.index.asExpr(index.sort))) {
-                        // (store (store a i x) j y), i != j ==> (store (store a j y) i x)
-                        parentStores += store
-                    } else {
-                        // possibly equal index, we can't squash stores
-                        break
-                    }
+                    // do not rewrite
+                    return@simplifyApp mkArrayStore(base, index, value).asExpr(expr.sort)
                 }
+
+                if (areDefinitelyDistinct(index, store.index.asExpr(index.sort))) {
+                    // (store (store a i x) j y), i != j ==> (store (store a j y) i x)
+                    parentStores.add(store)
+                } else {
+                    // possibly equal index, we can't squash stores
+                    break
+                }
+
+                store = store.array as KExpr<KArraySort<*, *>>
             }
 
             mkArrayStore(array.asExpr(expr.sort), index, value).asExpr(expr.sort)

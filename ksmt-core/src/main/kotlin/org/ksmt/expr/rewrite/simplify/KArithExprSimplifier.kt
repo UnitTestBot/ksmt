@@ -147,7 +147,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
             for (arg in args.drop(1)) {
                 simplifiedArgs += mkArithUnaryMinus(arg)
             }
-            mkArithAdd(simplifiedArgs)
+            mkArithAdd(simplifiedArgs).also { rewrite(it) }
         }
     }
 
@@ -165,8 +165,10 @@ interface KArithExprSimplifier : KExprSimplifierBase {
 
     override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
         when (expr.sort) {
-            intSort -> simplifyIntegerDiv(lhs.asExpr(intSort), rhs.asExpr(intSort)).asExpr(expr.sort)
-            realSort -> simplifyRealDiv(lhs.asExpr(realSort), rhs.asExpr(realSort)).asExpr(expr.sort)
+            intSort -> simplifyIntegerDiv(lhs.asExpr(intSort), rhs.asExpr(intSort))
+                .asExpr(expr.sort).also { rewrite(it) }
+            realSort -> simplifyRealDiv(lhs.asExpr(realSort), rhs.asExpr(realSort))
+                .asExpr(expr.sort).also { rewrite(it) }
             else -> mkArithDiv(lhs, rhs)
         }
     }
@@ -218,7 +220,6 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         }
         // todo: arith_rewriter.cpp:1196
         mkIntMod(lhs, rhs)
-
     }
 
     override fun transform(expr: KRemIntExpr): KExpr<KIntSort> = simplifyApp(expr) { (lhs, rhs) ->
