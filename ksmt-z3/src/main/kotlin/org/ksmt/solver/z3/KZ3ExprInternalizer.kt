@@ -111,7 +111,6 @@ import org.ksmt.expr.KFpToBvExpr
 import org.ksmt.expr.KFpToFpExpr
 import org.ksmt.expr.KFpToIEEEBvExpr
 import org.ksmt.expr.KFpToRealExpr
-import org.ksmt.expr.KFpValue
 import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KGeArithExpr
@@ -436,11 +435,11 @@ open class KZ3ExprInternalizer(
 
     override fun transform(expr: KFp128Value): KExpr<KFp128Sort> = with(expr) {
         // mkFpaNumeralInt64Uint64
-        transform(ctx.mkBv(signBit), exponent, significand, z3Ctx::mkFP)
+        transform(ctx.mkBv(signBit), biasedExponent, significand, z3Ctx::mkFP)
     }
 
     override fun transform(expr: KFpCustomSizeValue): KExpr<KFpSort> = with(expr) {
-        transform(ctx.mkBv(signBit), exponent, significand, z3Ctx::mkFP)
+        transform(ctx.mkBv(signBit), biasedExponent, significand, z3Ctx::mkFP)
     }
 
     override fun transform(expr: KFpRoundingModeExpr): KExpr<KFpRoundingModeSort> = with(expr) {
@@ -575,7 +574,7 @@ open class KZ3ExprInternalizer(
     }
 
     override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> = with(expr) {
-        transform(sign, exponent, significand, Native::mkFpaFp)
+        transform(sign, biasedExponent, significand, Native::mkFpaFp)
     }
 
     override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> = with(expr) {

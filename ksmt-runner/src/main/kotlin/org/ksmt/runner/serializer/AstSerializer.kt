@@ -617,22 +617,22 @@ class AstSerializer(
     }
 
     override fun transform(expr: KFp128Value): KExpr<KFp128Sort> = with(expr) {
-        transform {
+        transform(biasedExponent, significand) { exp: Int, significand: Int ->
             writeExpr {
-                writeLong(significandValue)
-                writeLong(exponentValue)
+                writeAst(significand)
+                writeAst(exp)
                 writeBoolean(signBit)
             }
         }
     }
 
     override fun transform(expr: KFpCustomSizeValue): KExpr<KFpSort> = with(expr) {
-        transform {
+        transform(biasedExponent, significand) { exp: Int, significand: Int ->
             writeExpr {
-                writeUInt(exponentSize)
                 writeUInt(significandSize)
-                writeLong(exponentValue)
-                writeLong(significandValue)
+                writeUInt(exponentSize)
+                writeAst(significand)
+                writeAst(exp)
                 writeBoolean(signBit)
             }
         }
@@ -769,7 +769,7 @@ class AstSerializer(
     }
 
     override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> = with(expr) {
-        serialize(sign, exponent, significand)
+        serialize(sign, biasedExponent, significand)
     }
 
     override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> = with(expr) {

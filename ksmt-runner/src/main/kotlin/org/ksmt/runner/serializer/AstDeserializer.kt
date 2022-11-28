@@ -161,8 +161,14 @@ class AstDeserializer(
             ExprKind.Fp16Value -> mkFp16(readFloat())
             ExprKind.Fp32Value -> mkFp32(readFloat())
             ExprKind.Fp64Value -> mkFp64(readDouble())
-            ExprKind.Fp128Value -> mkFp128(readLong(), readLong(), readBoolean())
-            ExprKind.FpCustomSizeValue -> mkFpCustomSize(readUInt(), readUInt(), readLong(), readLong(), readBoolean())
+            ExprKind.Fp128Value -> mkFp128Biased(readAst(), readAst(), readBoolean())
+            ExprKind.FpCustomSizeValue -> mkFpCustomSizeBiased(
+                significandSize = readUInt(),
+                exponentSize = readUInt(),
+                significand = readAst(),
+                biasedExponent = readAst(),
+                signBit = readBoolean()
+            )
             ExprKind.FpRoundingModeExpr -> mkFpRoundingModeExpr(readEnum())
             ExprKind.FpAbsExpr -> deserialize(::mkFpAbsExpr)
             ExprKind.FpNegationExpr -> deserialize(::mkFpNegationExpr)

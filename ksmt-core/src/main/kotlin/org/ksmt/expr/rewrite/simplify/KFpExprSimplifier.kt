@@ -365,7 +365,7 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
 
                 val unbiasedExponent = fpUnbiasExponent(exp)
                 return@simplifyApp mkFpCustomSize(
-                    exponent = unbiasedExponent,
+                    unbiasedExponent = unbiasedExponent,
                     significand = significand,
                     signBit = (sign as KBitVec1Value).value
                 )
@@ -378,9 +378,9 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
             if (arg.isNan()) {
                 // ensure NaN bits are the same, as in KContext
                 val nan = ctx.mkFpNan(arg.sort) as KFpValue<*>
-                return@simplifyApp mkBvConcatExpr(mkBv(nan.signBit), mkBvConcatExpr(nan.exponent, nan.significand))
+                return@simplifyApp mkBvConcatExpr(mkBv(nan.signBit), mkBvConcatExpr(nan.biasedExponent, nan.significand))
             }
-            return@simplifyApp mkBvConcatExpr(mkBv(arg.signBit), mkBvConcatExpr(arg.exponent, arg.significand))
+            return@simplifyApp mkBvConcatExpr(mkBv(arg.signBit), mkBvConcatExpr(arg.biasedExponent, arg.significand))
         }
         mkFpToIEEEBvExpr(arg)
     }
@@ -633,13 +633,13 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
     }
 
     private fun fpIsNormal(arg: KFpValue<*>): Boolean {
-        val topExp = (ctx.mkFpInf(signBit = false, arg.sort) as KFpValue<*>).exponent
-        return !(arg.isZero() || fpIsDenormal(arg) || arg.exponent == topExp)
+        val topExp = (ctx.mkFpInf(signBit = false, arg.sort) as KFpValue<*>).biasedExponent
+        return !(arg.isZero() || fpIsDenormal(arg) || arg.biasedExponent == topExp)
     }
 
     private fun fpIsDenormal(arg: KFpValue<*>): Boolean {
-        val botExp = (ctx.mkFpZero(signBit = false, arg.sort) as KFpValue<*>).exponent
-        return !arg.isZero() && arg.exponent == botExp
+        val botExp = (ctx.mkFpZero(signBit = false, arg.sort) as KFpValue<*>).biasedExponent
+        return !arg.isZero() && arg.biasedExponent == botExp
     }
 
     private fun fpEq(lhs: KFpValue<*>, rhs: KFpValue<*>): Boolean? = when (lhs) {

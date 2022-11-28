@@ -28,7 +28,6 @@ import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBvSort
-import org.ksmt.sort.KFp64Sort
 import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
@@ -453,15 +452,17 @@ open class KZ3ExprConverter(
         Native.isNumeralAst(nCtx, expr) -> convert {
             with(ctx) {
                 /**
-                 * val exponentBv = expr.getExponentBV(false)
+                val unbiasedExponentBv = expr.getExponentBV(false)
                 val significandBv = expr.significandBV
-                expr.convert(arrayOf(exponentBv, significandBv)) { exponent: KExpr<KBvSort>, significand: KExpr<KBvSort> ->
+                expr.convert(
+                arrayOf(unbiasedExponentBv, significandBv)
+                ) { exponent: KExpr<KBvSort>, significand: KExpr<KBvSort> ->
                 val sort = convertSort(expr.sort) as KFpSort
                 ctx.mkFp(
-                significand as KBitVecValue<*>,
-                exponent as KBitVecValue<*>,
-                expr.sign,
-                sort
+                significand = significand as KBitVecValue<*>,
+                unbiasedExponent = exponent as KBitVecValue<*>,
+                signBit = expr.sign,
+                sort = sort
                 )
                 }
                  * */

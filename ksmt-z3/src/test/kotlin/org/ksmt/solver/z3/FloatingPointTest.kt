@@ -16,6 +16,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.ksmt.KContext
+import org.ksmt.decl.KConstDecl
+import org.ksmt.expr.KApp
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFp16Value
 import org.ksmt.expr.KFp32Value
@@ -88,7 +90,8 @@ class FloatingPointTest {
             it.extractExponent(sort, isBiased = false).toLong(),
             signBit = it.booleanSignBit,
             sort
-        )
+        ),
+        ((mkSpecificSort(it) as KApp<S, *>).decl as KConstDecl<S>).apply()
     )
 
     private fun <S : KFpSort> KContext.createSymbolicValues(
@@ -407,11 +410,17 @@ class FloatingPointTest {
     ): Unit = with(context) {
         val constVar by sort
 
-        solver.assert(symbolicOperation() eq constVar)
+        val symbolicValue = symbolicOperation()
+
+        val decl = (symbolicValue as KApp<S, *>).decl as KConstDecl<S>
+        val declValue = decl.apply()
+
+        solver.assert(symbolicValue eq constVar)
 
         solver.check()
         with(solver.model()) {
             assertEquals(concreteOperation(), valueGetter(eval(constVar)))
+            assertEquals(symbolicValue, declValue)
         }
     }
 

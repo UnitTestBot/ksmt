@@ -696,7 +696,7 @@ open class KBitwuzlaExprInternalizer(
     }
 
     private fun <T : KFpValue<*>> transformFpValue(expr: T): T = with(expr) {
-        transform(exponent, significand) { exponent: BitwuzlaTerm, significand: BitwuzlaTerm ->
+        transform(biasedExponent, significand) { exponent: BitwuzlaTerm, significand: BitwuzlaTerm ->
             val sign = if (signBit) bitwuzlaCtx.trueTerm else bitwuzlaCtx.falseTerm
             Native.bitwuzlaMkFpValue(bitwuzlaCtx.bitwuzla, sign, exponent, significand)
         }
@@ -846,7 +846,7 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> = with(expr) {
-        transform(sign, exponent, significand) { sign: BitwuzlaTerm, exp: BitwuzlaTerm, significand: BitwuzlaTerm ->
+        transform(sign, biasedExponent, significand) { sign: BitwuzlaTerm, exp: BitwuzlaTerm, significand: BitwuzlaTerm ->
             Native.bitwuzlaMkTerm3(
                 bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FP_FP, sign, exp, significand
             )
