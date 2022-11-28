@@ -16,7 +16,10 @@ open class KModelImpl(
     override fun <T : KSort> eval(
         expr: KExpr<T>,
         isComplete: Boolean
-    ): KExpr<T> = with(KModelEvaluator(ctx, this, isComplete)) { expr.eval() }
+    ): KExpr<T> {
+        val evaluator = KModelEvaluator(ctx, this, isComplete)
+        return evaluator.apply(expr)
+    }
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> interpretation(

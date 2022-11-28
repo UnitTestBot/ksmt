@@ -13,7 +13,7 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.asExpr
 
-class KExprSimplifier(ctx: KContext) :
+open class KExprSimplifier(ctx: KContext) :
     KNonRecursiveTransformer(ctx),
     KExprSimplifierBase,
     KBoolExprSimplifier,
