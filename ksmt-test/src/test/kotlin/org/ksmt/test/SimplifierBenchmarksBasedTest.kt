@@ -21,6 +21,5 @@ class SimplifierBenchmarksBasedTest : BenchmarksBasedTest() {
     companion object {
         @JvmStatic
         fun simplifierTestData() = testData().filter { it.name.startsWith("QF_") }
-//            .filter { it.name.startsWith("QF_ABVFP_query.") }
     }
 }

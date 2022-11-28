@@ -135,16 +135,21 @@ abstract class BenchmarksBasedTest {
     ) = runBlocking {
         val worker = getOrCreateFreeWorker()
         worker.astSerializationCtx.initCtx(ctx)
-        worker.lifetime.onTermination { worker.astSerializationCtx.resetCtx() }
-        TestRunner(ctx, worker).let {
-            try {
-                it.init()
-                body(it)
-            } finally {
-                it.delete()
-            }
+        worker.lifetime.onTermination {
+            worker.astSerializationCtx.resetCtx()
         }
-        worker.release()
+        try {
+            TestRunner(ctx, worker).let {
+                try {
+                    it.init()
+                    body(it)
+                } finally {
+                    it.delete()
+                }
+            }
+        } finally {
+            worker.release()
+        }
     }
 
     companion object {
