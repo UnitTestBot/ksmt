@@ -47,6 +47,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
     override fun transform(expr: KOrExpr): KExpr<KBoolSort> = simplifyApp(
         expr = expr,
         preprocess = {
+            // (or a (or b c)) ==> (or a b c)
             val flatArgs = flatOr(expr)
             if (flatArgs.size != expr.args.size) {
                 mkOr(flatArgs)
@@ -254,31 +255,27 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
     fun simplifyEqBool(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> = with(ctx) {
         if (lhs == rhs) return trueExpr
 
-        var l = lhs
-        var r = rhs
-
         // (= (not a) (not b)) ==> (= a b)
-        if (l is KNotExpr && r is KNotExpr) {
-            l = l.arg
-            r = r.arg
+        if (lhs is KNotExpr && rhs is KNotExpr) {
+            return mkEq(lhs.arg, rhs.arg).also { rewrite(it) }
         }
 
-        when (l) {
-            trueExpr -> return r
-            falseExpr -> return !r.also { rewrite(it) }
+        when (lhs) {
+            trueExpr -> return rhs
+            falseExpr -> return !rhs.also { rewrite(it) }
         }
 
-        when (r) {
-            trueExpr -> return l
-            falseExpr -> return !l.also { rewrite(it) }
+        when (rhs) {
+            trueExpr -> return lhs
+            falseExpr -> return !lhs.also { rewrite(it) }
         }
 
         // (= a (not a)) ==> false
-        if (isComplement(l, r)) {
+        if (isComplement(lhs, rhs)) {
             return falseExpr
         }
 
-        mkEq(l, r)
+        mkEq(lhs, rhs)
     }
 
     fun areDefinitelyDistinctBool(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): Boolean =
