@@ -49,7 +49,10 @@ open class KExprSimplifier(ctx: KContext) :
             }
         }
     ) { args ->
-        // todo: bool_rewriter.cpp:786
+        // (distinct a a) ==> false
+        if (args.toSet().size != args.size) {
+            return@simplifyApp falseExpr
+        }
         mkDistinct(args)
     }
 
@@ -94,6 +97,12 @@ open class KExprSimplifier(ctx: KContext) :
     }
 }
 
+/**
+ * Simplify an expression.
+ * 1. Preprocess. Rewrite an expression before simplification of an arguments (top-down).
+ * 2. Simplify. Rewrite an expression after arguments simplification (bottom-up).
+ * 3. Post rewrite. Perform a simplification of a simplification result.
+ * */
 inline fun <T : KSort, A : KSort> KExprSimplifierBase.simplifyApp(
     expr: KApp<T, KExpr<A>>,
     preprocess: KContext.() -> KExpr<T> = { expr },
@@ -104,6 +113,10 @@ inline fun <T : KSort, A : KSort> KExprSimplifierBase.simplifyApp(
     val rewritten = rewrittenOrNull(expr)
 
     if (rewritten != null) {
+        /**
+         * Expression has already been simplified and replaced with [rewritten].
+         * [rewritten] has also been simplified.
+         * */
         return rewritten
     }
 
@@ -111,15 +124,25 @@ inline fun <T : KSort, A : KSort> KExprSimplifierBase.simplifyApp(
 
     val preprocessed = ctx.preprocess()
     if (preprocessed != expr) {
+        /**
+         * Expression has been rewritten to another expression [preprocessed].
+         * Simplify [preprocessed] and replace current expression with simplification result.
+         * */
         postRewrite(expr, preprocessed)
         return expr
     }
 
     disablePostRewrite()
 
+    // Simplify
     val transformed = transformAppAfterArgsTransformed(expr) { args -> ctx.simplifier(args) }
 
     if (transformed != expr && postRewriteEnabled()) {
+        /**
+         * Expression was simplified to another expression [transformed] and
+         * post rewrite was requested for a [transformed].
+         * Simplify [transformed] and replace current expression with simplification result.
+         * */
         postRewrite(expr, transformed)
         return expr
     }

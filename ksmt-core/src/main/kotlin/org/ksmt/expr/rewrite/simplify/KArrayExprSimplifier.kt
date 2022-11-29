@@ -33,6 +33,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         if (lBase == rBase || lBase is KArrayConst<*, *> && rBase is KArrayConst<*, *>) {
             val checks = arrayListOf<KExpr<KBoolSort>>()
             if (lBase is KArrayConst<*, *> && rBase is KArrayConst<*, *>) {
+                // (= (const a) (const b)) ==> (= a b)
                 checks += mkEq(lBase.value.asExpr(lhs.sort.range), rBase.value.asExpr(lhs.sort.range))
             }
             for (store in (lStores + rStores)) {
@@ -42,7 +43,6 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             return mkAnd(checks).also { rewrite(it) }
         }
 
-        // todo: array_rewriter.cpp:740
         return mkEq(lhs, rhs)
     }
 
@@ -112,8 +112,6 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             if (selectBaseArray is KArrayConst<*, *>) {
                 return@simplifyApp selectBaseArray.value.asExpr(expr.sort)
             }
-
-            // todo: array_rewriter.cpp:199
 
             mkArraySelect(selectBaseArray.asExpr(expr.array.sort), index)
         }

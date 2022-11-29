@@ -80,8 +80,6 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             return simplifyBvConcatEq(lhs, rhs).also { rewrite(it) }
         }
 
-        // todo: bv_rewriter.cpp:2681
-
         mkEq(lhs, rhs)
     }
 
@@ -202,8 +200,6 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                     }
                 }
             }
-
-            // todo: bv_rewriter.cpp:433
 
             if (signed) {
                 mkBvSignedLessOrEqualExpr(lhs, rhs)
@@ -481,8 +477,6 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             }
         }
 
-        // todo: bv_rewriter.cpp:2007
-
         mkBvNotExpr(arg)
     }
 
@@ -576,8 +570,6 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                 .asExpr(expr.sort).also { rewrite(it) }
         }
 
-        // todo: bv_rewriter.cpp:1638
-
         mkBvOrExpr(lhs, rhs)
     }
 
@@ -647,8 +639,6 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             return@simplifyApp distributeXorOverConcat(lhs, rhs)
                 .asExpr(expr.sort).also { rewrite(it) }
         }
-
-        // todo: bv_rewriter.cpp:1810
 
         mkBvXorExpr(lhs, rhs)
     }
@@ -755,6 +745,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     }
 
     override fun transform(expr: KBvExtractExpr): KExpr<KBvSort> = simplifyApp(expr) { (arg) ->
+        // (extract [size-1:0] x) ==> x
         if (expr.low == 0 && expr.high == arg.sort.sizeBits.toInt() - 1) {
             return@simplifyApp arg
         }
@@ -879,8 +870,6 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             return@simplifyApp simplified.also { rewrite(it) }
         }
 
-        // todo: bv_rewriter.cpp:681
-
         mkBvExtractExpr(expr.high, expr.low, arg)
     }
 
@@ -989,11 +978,10 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                 }
             }
 
-            // todo: bv_rewriter.cpp:923
-
             mkBvArithShiftRightExpr(arg, shift)
         }
 
+    // (repeat a x) ==> (concat a a ..[x].. a)
     override fun transform(expr: KBvRepeatExpr): KExpr<KBvSort> = simplifyApp(expr) { (arg) ->
         val repeats = arrayListOf<KExpr<KBvSort>>()
         for (i in 0 until expr.repeatNumber) {
@@ -1007,6 +995,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         return@simplifyApp repeats.reduce(::mkBvConcatExpr).also { rewrite(it) }
     }
 
+    // (zeroext a) ==> (concat 0 a)
     override fun transform(expr: KBvZeroExtensionExpr): KExpr<KBvSort> = simplifyApp(expr) { (arg) ->
         if (expr.extensionSize == 0) {
             return@simplifyApp arg
@@ -1028,11 +1017,13 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         return@simplifyApp mkBvSignExtensionExpr(expr.extensionSize, arg)
     }
 
+    // (rotateLeft a x) ==> (concat (extract [size-1-x:0] a) (extract [size-1:size-x] a))
     override fun <T : KBvSort> transform(expr: KBvRotateLeftIndexedExpr<T>): KExpr<T> = simplifyApp(expr) { (arg) ->
         val size = expr.sort.sizeBits.toInt()
         return@simplifyApp rotateLeft(arg, size, expr.rotationNumber)
     }
 
+    // (rotateRight a x) ==> (rotateLeft a (- size x))
     override fun <T : KBvSort> transform(expr: KBvRotateRightIndexedExpr<T>): KExpr<T> = simplifyApp(expr) { (arg) ->
         val size = expr.sort.sizeBits.toInt()
         val rotation = expr.rotationNumber % size
@@ -1100,7 +1091,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                 val highestBitIdx = sum.sort.sizeBits.toInt() - 1
                 val sumFirstBit = mkBvExtractExpr(highestBitIdx, highestBitIdx, sum)
 
-                return@simplifyApp zeroBit eq sumFirstBit.asExpr(bv1Sort).also { rewrite(it) }
+                return@simplifyApp (zeroBit eq sumFirstBit.asExpr(bv1Sort)).also { rewrite(it) }
             }
         }
 

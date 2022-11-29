@@ -37,8 +37,6 @@ interface KArithExprSimplifier : KExprSimplifierBase {
             return (lhs.compareTo(rhs) == 0).expr
         }
 
-        // todo: arith_rewriter.cpp:694
-
         return mkEq(lhs, rhs)
     }
 
@@ -56,8 +54,6 @@ interface KArithExprSimplifier : KExprSimplifierBase {
             return (lhs.compareTo(rhs) == 0).expr
         }
 
-        // todo: arith_rewriter.cpp:694
-
         return mkEq(lhs, rhs)
     }
 
@@ -68,7 +64,6 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         return false
     }
 
-    // todo: lt, gt, le, ge: arith_rewriter.cpp:514
     override fun <T : KArithSort<T>> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (lhs, rhs) ->
             if (lhs is KIntNumExpr && rhs is KIntNumExpr) {
@@ -189,8 +184,6 @@ interface KArithExprSimplifier : KExprSimplifierBase {
             return mkIte(lhs eq 0.expr, mkArithDiv(0.expr, 0.expr), 1.expr)
         }
 
-        // todo: arith_rewriter.cpp:1046
-
         return mkArithDiv(lhs, rhs)
     }
 
@@ -202,10 +195,11 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         return mkArithDiv(lhs, rhs)
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>): KExpr<T> {
-        // todo: arith_rewriter.cpp:1319
-        return super.transform(expr)
-    }
+    override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>): KExpr<T> =
+        simplifyApp(expr) { (base, power) ->
+            // todo: evaluate
+            mkArithPower(base, power)
+        }
 
     override fun transform(expr: KModIntExpr): KExpr<KIntSort> = simplifyApp(expr) { (lhs, rhs) ->
         if (rhs is KIntNumExpr) {
@@ -218,7 +212,6 @@ interface KArithExprSimplifier : KExprSimplifierBase {
                 return@simplifyApp (lhs.value.mod(rValue)).expr
             }
         }
-        // todo: arith_rewriter.cpp:1196
         mkIntMod(lhs, rhs)
     }
 
@@ -233,7 +226,6 @@ interface KArithExprSimplifier : KExprSimplifierBase {
                 return@simplifyApp (lhs.value.rem(rValue)).expr
             }
         }
-        // todo: arith_rewriter.cpp:1257
         mkIntRem(lhs, rhs)
     }
 
@@ -243,10 +235,10 @@ interface KArithExprSimplifier : KExprSimplifierBase {
             val denom = arg.denominator.value
             return@simplifyApp (numer / denom).expr
         }
+        // (real2int (int2real x)) ==> x
         if (arg is KToRealIntExpr) {
             return@simplifyApp arg.arg
         }
-        // todo: arith_rewriter.cpp:1487
         mkRealToInt(arg)
     }
 
@@ -254,6 +246,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         if (arg is KRealNumExpr) {
             return@simplifyApp (arg.denominator.value == BigInteger.ONE).expr
         }
+        // (isInt (int2real x)) ==> true
         if (arg is KToRealIntExpr) {
             return@simplifyApp trueExpr
         }
@@ -264,7 +257,6 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         if (arg is KIntNumExpr) {
             return@simplifyApp mkRealNum(arg)
         }
-        // todo: arith_rewriter.cpp:1540
         mkIntToReal(arg)
     }
 

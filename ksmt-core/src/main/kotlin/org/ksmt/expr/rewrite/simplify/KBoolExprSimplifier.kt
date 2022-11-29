@@ -158,6 +158,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
         when (arg) {
             trueExpr -> falseExpr
             falseExpr -> trueExpr
+            // (not (not x)) ==> x
             is KNotExpr -> arg.arg
             else -> mkNot(arg)
         }
@@ -250,8 +251,6 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
                 }
             }
 
-            // todo: ite extra rules: bool_rewriter.cpp:846
-
             mkIte(c, t, e)
         }
 
@@ -295,8 +294,6 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
         if (isComplement(l, r)) {
             return falseExpr
         }
-
-        // todo: bool_rewriter.cpp:700
 
         mkEq(l, r)
     }

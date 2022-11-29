@@ -406,7 +406,7 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
             val value = valueArg.asExpr(expr.value.sort)
 
             if (rm is KFpRoundingModeExpr && value is KFpValue<*>) {
-                // todo: fpa_rewriter.cpp:169
+                // todo: evaluate
                 return@simplifyApp mkFpToFpExpr(expr.sort, rm, value)
             }
 
@@ -420,7 +420,7 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
             val value = valueArg.asExpr(expr.value.sort)
 
             if (rm is KFpRoundingModeExpr && value is KRealNumExpr) {
-                // todo: fpa_rewriter.cpp:160
+                // todo: evaluate
                 return@simplifyApp mkRealToFpExpr(expr.sort, rm, value)
             }
 
@@ -454,7 +454,7 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
             val value = bvValueArg.asExpr(expr.value.sort)
 
             if (rm is KFpRoundingModeExpr && value is KBitVecValue<*>) {
-                // todo: fpa_rewriter.cpp:179
+                // todo: evaluate
                 return@simplifyApp mkBvToFpExpr(expr.sort, rm, value, expr.signed)
             }
 
