@@ -33,17 +33,16 @@ class KZ3SMTLibParser(private val ctx: KContext) : KSMTLibParser {
     }
 
     private fun parse(parser: Context.() -> Array<BoolExpr>) = try {
-        Context().use {
-            convertAssertions(it.parser().toList())
+        KZ3Context().use {
+            it.convertAssertions(it.nativeContext.parser().toList())
         }
     } catch (ex: Z3Exception) {
         throw KSMTLibParseException(ex)
     }
 
-    private fun convertAssertions(assertions: List<BoolExpr>): List<KExpr<KBoolSort>> {
-        val internCtx = KZ3InternalizationContext()
-        val converter = KZ3ExprConverter(ctx, internCtx)
-        return with(converter) { assertions.map { it.convert() } }
+    private fun KZ3Context.convertAssertions(assertions: List<BoolExpr>): List<KExpr<KBoolSort>> {
+        val converter = KZ3ExprConverter(ctx, this)
+        return with(converter) { assertions.map { it.convertExprWrapped() } }
     }
 
     companion object {

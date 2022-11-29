@@ -1,44 +1,48 @@
 package com.microsoft.z3
 
-fun IntNum.intOrNull(): Int? {
+fun intOrNull(ctx: Long, expr: Long): Int? {
     val result = Native.IntPtr()
-    if (!Native.getNumeralInt(context.nCtx(), nativeObject, result)) return null
+    if (!Native.getNumeralInt(ctx, expr, result)) return null
     return result.value
 }
 
-fun IntNum.longOrNull(): Long? {
+fun longOrNull(ctx: Long, expr: Long): Long? {
     val result = Native.LongPtr()
-    if (!Native.getNumeralInt64(context.nCtx(), nativeObject, result)) return null
+    if (!Native.getNumeralInt64(ctx, expr, result)) return null
     return result.value
 }
 
-@Suppress("LongParameterList")
-fun Context.mkExistsQuantifier(
-    boundConstants: Array<Expr<*>>,
-    body: Expr<BoolSort>,
-    weight: Int,
-    patterns: Array<Pattern>,
-    noPatterns: Array<Expr<*>>,
-    quantifierId: Symbol?,
-    skolemId: Symbol?
-): Quantifier = mkExists(boundConstants, body, weight, patterns, noPatterns, quantifierId, skolemId)
+fun fpSignificandUInt64OrNull(ctx: Long, expr: Long): Long? {
+    val result = Native.LongPtr()
+    if (!Native.fpaGetNumeralSignificandUint64(ctx, expr, result)) return null
+    return result.value
+}
+
+fun fpExponentInt64OrNull(ctx: Long, expr: Long, biased: Boolean): Long? {
+    val result = Native.LongPtr()
+    if (!Native.fpaGetNumeralExponentInt64(ctx, expr, result, biased)) return null
+    return result.value
+}
+
+fun fpSignOrNull(ctx: Long, expr: Long): Boolean? {
+    val result = Native.IntPtr()
+    if (!Native.fpaGetNumeralSign(ctx, expr, result)) return null
+    return result.value != 0
+}
 
 @Suppress("LongParameterList")
-fun Context.mkForallQuantifier(
-    boundConstants: Array<Expr<*>>,
-    body: Expr<BoolSort>,
+fun mkQuantifier(
+    ctx: Long,
+    isUniversal: Boolean,
+    boundConsts: LongArray,
+    body: Long,
     weight: Int,
-    patterns: Array<Pattern>,
-    noPatterns: Array<Expr<*>>,
-    quantifierId: Symbol?,
-    skolemId: Symbol?
-): Quantifier = mkForall(boundConstants, body, weight, patterns, noPatterns, quantifierId, skolemId)
+    patterns: LongArray
+): Long = Native.mkQuantifierConst(
+    ctx, isUniversal, weight, boundConsts.size, boundConsts, patterns.size, patterns, body
+)
 
-val Expr<*>.ctx: Context
-    get() = context
-
-fun Context.mkBvNumeral(bits: BooleanArray): Expr<*> =
-    Expr.create(this, Native.mkBvNumeral(nCtx(), bits.size, bits))
-
-val Quantifier.isLambda: Boolean
-    get() = Native.isLambda(context.nCtx(), nativeObject)
+fun getAppArgs(ctx: Long, expr: Long): LongArray {
+    val size = Native.getAppNumArgs(ctx, expr)
+    return LongArray(size) { idx -> Native.getAppArg(ctx, expr, idx) }
+}
