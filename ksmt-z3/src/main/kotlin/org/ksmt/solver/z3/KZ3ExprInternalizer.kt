@@ -417,29 +417,26 @@ open class KZ3ExprInternalizer(
         with(expr) { transform(arg0, arg1, Native::mkBvmulNoUnderflow) }
 
     override fun transform(expr: KFp16Value): KExpr<KFp16Sort> = expr.transform {
-        val sort = expr.sort.internalizeSort() as FPSort
-        z3Ctx.mkFP(expr.value, sort)
+        val sort = expr.sort.internalizeSort()
+        Native.mkFpaNumeralFloat(nCtx, expr.value, sort)
     }
 
     override fun transform(expr: KFp32Value): KExpr<KFp32Sort> = expr.transform {
         val sort = expr.sort.internalizeSort()
-        // mkFpaNumeralFloat
-        z3Ctx.mkFP(expr.value, sort)
+        Native.mkFpaNumeralFloat(nCtx, expr.value, sort)
     }
 
     override fun transform(expr: KFp64Value): KExpr<KFp64Sort> = expr.transform {
         val sort = expr.sort.internalizeSort()
-        // mkFpaNumeralDouble
-        z3Ctx.mkFP(expr.value, sort)
+        Native.mkFpaNumeralDouble(nCtx, expr.value, sort)
     }
 
     override fun transform(expr: KFp128Value): KExpr<KFp128Sort> = with(expr) {
-        // mkFpaNumeralInt64Uint64
-        transform(ctx.mkBv(signBit), biasedExponent, significand, z3Ctx::mkFP)
+        transform(ctx.mkBv(signBit), biasedExponent, significand, Native::mkFpaFp)
     }
 
     override fun transform(expr: KFpCustomSizeValue): KExpr<KFpSort> = with(expr) {
-        transform(ctx.mkBv(signBit), biasedExponent, significand, z3Ctx::mkFP)
+        transform(ctx.mkBv(signBit), biasedExponent, significand, Native::mkFpaFp)
     }
 
     override fun transform(expr: KFpRoundingModeExpr): KExpr<KFpRoundingModeSort> = with(expr) {

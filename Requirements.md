@@ -15,7 +15,7 @@
 | [Portfolio solver](#portfolio-solver)                                             | TODO            |
 | [Solver configuration API](#solver-configuration-api)                             | In progress     |
 | [Deployment](#deployment)                                                         | Done partially  |
-| [Expression simplification / evaluation](#expression-simplification--evaluation)  | TODO            |
+| [Expression simplification / evaluation](#expression-simplification--evaluation)  | Done partially  |
 | [Performance tests](#performance-tests)                                           | TODO            |
 | [Better Z3 API](#better-z3-api)                                                   | Done partially  |
 | [Better Bitwuzla bindings](#better-bitwuzla-bindings)                             | TODO            |
