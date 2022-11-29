@@ -216,6 +216,8 @@ Implement simplification rules for KSMT expressions, and apply it to:
 2. Lightweight eager simplification during expressions creation
 3. Expression evaluation wrt model (special case of simplification)
 
+List of currently implemented simplification
+rules: [simplification rules](ksmt-core/src/main/kotlin/org/ksmt/expr/rewrite/simplify/Rules.md)
 
 ### Performance tests
 

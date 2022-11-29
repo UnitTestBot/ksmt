@@ -57,9 +57,7 @@ import kotlin.math.absoluteValue
 import kotlin.math.round
 import kotlin.math.sqrt
 
-@Suppress(
-    "ForbiddenComment"
-)
+@Suppress("ForbiddenComment")
 interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
 
     fun <T : KFpSort> simplifyEqFp(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> = with(ctx) {
@@ -162,9 +160,9 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
     @Suppress("ComplexCondition")
     override fun <T : KFpSort> transform(expr: KFpFusedMulAddExpr<T>): KExpr<T> =
         expr.simplifyFpTernaryOp { rm, a0, a1, a2 ->
-            if (rm is KFpRoundingModeExpr && a0 is KFpValue<*> && a1 is KFpValue<*> && a2 is KFpValue<*>) {
-                val result = fpFma(rm.value, a0, a1, a2)?.asExpr(expr.sort)
-                result?.let { return@simplifyFpTernaryOp it }
+            if (rm is KFpRoundingModeExpr && a0 is KFpValue<T> && a1 is KFpValue<T> && a2 is KFpValue<T>) {
+                // todo: evaluate
+                mkFpFusedMulAddExpr(rm, a0, a1, a2)
             }
             mkFpFusedMulAddExpr(rm, a0, a1, a2)
         }
@@ -588,23 +586,6 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
         when (lhs) {
             is KFp32Value -> mkFp(lhs.value / (rhs as KFp32Value).value, lhs.sort) as KFpValue<*>
             is KFp64Value -> mkFp(lhs.value / (rhs as KFp64Value).value, lhs.sort) as KFpValue<*>
-            else -> null
-        }
-    }
-
-    private fun fpFma(rm: KFpRoundingMode, a: KFpValue<*>, b: KFpValue<*>, c: KFpValue<*>): KFpValue<*>? = with(ctx) {
-        if (rm != KFpRoundingMode.RoundNearestTiesToEven) {
-            // todo: RNE is JVM default. Support others.
-            return null
-        }
-
-        when (a) {
-            is KFp32Value ->
-                mkFp(Math.fma(a.value, (b as KFp32Value).value, (c as KFp32Value).value), a.sort) as KFpValue<*>
-
-            is KFp64Value ->
-                mkFp(Math.fma(a.value, (b as KFp64Value).value, (c as KFp64Value).value), a.sort) as KFpValue<*>
-
             else -> null
         }
     }
