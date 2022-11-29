@@ -227,13 +227,13 @@ open class KZ3ExprInternalizer(
             }
 
             is KBitVec8Value, is KBitVec16Value, is KBitVec32Value -> {
-                val sort = with(ctx) { expr.sort.internalizeSort() }
+                val sort = expr.sort.internalizeSort()
                 val intValue = (expr as KBitVecNumberValue<*, *>).numberValue.toInt()
                 Native.mkInt(nCtx, intValue, sort)
             }
 
             is KBitVec64Value -> {
-                val sort = with(ctx) { expr.sort.internalizeSort() }
+                val sort = expr.sort.internalizeSort()
                 Native.mkInt64(nCtx, expr.numberValue, sort)
             }
 
@@ -418,7 +418,7 @@ open class KZ3ExprInternalizer(
         with(expr) { transform(arg0, arg1, Native::mkBvmulNoUnderflow) }
 
     fun <T : KFpSort> transformFpValue(expr: KFpValue<T>): KExpr<T> = expr.transform {
-        val sort = with(ctx) { expr.sort.internalizeSort() }
+        val sort = expr.sort.internalizeSort()
 
         with(expr) {
             when (this) {
@@ -685,7 +685,7 @@ open class KZ3ExprInternalizer(
     private fun transformQuantifier(expr: KQuantifier, isUniversal: Boolean) = with(expr) {
         val boundConstants = bounds.map { ctx.mkConstApp(it) }
         transformArray(boundConstants + body) { args ->
-            val body = args[args.lastIndex]
+            val body = args.last()
             val bounds = args.copyOf(args.size - 1)
             mkQuantifier(
                 ctx = nCtx,
