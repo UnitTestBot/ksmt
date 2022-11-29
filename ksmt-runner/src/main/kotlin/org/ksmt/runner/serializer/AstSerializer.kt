@@ -394,7 +394,7 @@ class AstSerializer(
         transform {
             writeExpr {
                 writeString(binaryStringValue)
-                writeUInt(sort().sizeBits)
+                writeUInt(sort.sizeBits)
             }
         }
     }

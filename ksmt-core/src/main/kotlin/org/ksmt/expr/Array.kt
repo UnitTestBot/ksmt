@@ -14,14 +14,23 @@ class KArrayStore<D : KSort, R : KSort> internal constructor(
     val index: KExpr<D>,
     val value: KExpr<R>
 ) : KApp<KArraySort<D, R>, KExpr<*>>(ctx) {
-    override fun sort(): KArraySort<D, R> = with(ctx) { array.sort }
 
-    override fun decl(): KDecl<KArraySort<D, R>> = with(ctx) { mkArrayStoreDecl(array.sort) }
+    override val decl: KDecl<KArraySort<D, R>>
+        get() = ctx.mkArrayStoreDecl(array.sort)
 
     override val args: List<KExpr<*>>
         get() = listOf(array, index, value)
 
     override fun accept(transformer: KTransformerBase): KExpr<KArraySort<D, R>> = transformer.transform(this)
+
+    override val sort: KArraySort<D, R>
+        get() = ctx.getExprSort(this)
+
+    override fun computeExprSort(): KArraySort<D, R> = array.sort
+
+    override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
+        dependency += array
+    }
 }
 
 class KArraySelect<D : KSort, R : KSort> internal constructor(
@@ -29,24 +38,33 @@ class KArraySelect<D : KSort, R : KSort> internal constructor(
     val array: KExpr<KArraySort<D, R>>,
     val index: KExpr<D>
 ) : KApp<R, KExpr<*>>(ctx) {
-    override fun sort(): R = with(ctx) { array.sort.range }
 
-    override fun decl(): KDecl<R> = with(ctx) { mkArraySelectDecl(array.sort) }
+    override val decl: KDecl<R>
+        get() = ctx.mkArraySelectDecl(array.sort)
 
     override val args: List<KExpr<*>>
         get() = listOf(array, index)
 
     override fun accept(transformer: KTransformerBase): KExpr<R> = transformer.transform(this)
+
+    override val sort: R
+        get() = ctx.getExprSort(this)
+
+    override fun computeExprSort(): R = array.sort.range
+
+    override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
+        dependency += array
+    }
 }
 
 class KArrayConst<D : KSort, R : KSort> internal constructor(
     ctx: KContext,
-    val sort: KArraySort<D, R>,
+    override val sort: KArraySort<D, R>,
     val value: KExpr<R>
 ) : KApp<KArraySort<D, R>, KExpr<R>>(ctx) {
-    override fun sort(): KArraySort<D, R> = sort
 
-    override fun decl(): KArrayConstDecl<D, R> = ctx.mkArrayConstDecl(sort)
+    override val decl: KArrayConstDecl<D, R>
+        get() = ctx.mkArrayConstDecl(sort)
 
     override val args: List<KExpr<R>>
         get() = listOf(value)
@@ -68,7 +86,8 @@ class KFunctionAsArray<D : KSort, R : KSort> internal constructor(
         domainSort = function.argSorts.single() as D
     }
 
-    override fun sort(): KArraySort<D, R> = with(ctx) { mkArraySort(domainSort, function.sort) }
+    override val sort: KArraySort<D, R>
+        get() = ctx.mkArraySort(domainSort, function.sort)
 
     override fun print(builder: StringBuilder): Unit = with(builder) {
         append("(asArray ")
@@ -88,7 +107,6 @@ class KArrayLambda<D : KSort, R : KSort> internal constructor(
     val indexVarDecl: KDecl<D>,
     val body: KExpr<R>
 ) : KExpr<KArraySort<D, R>>(ctx) {
-    override fun sort(): KArraySort<D, R> = with(ctx) { mkArraySort(indexVarDecl.sort, body.sort) }
 
     override fun print(builder: StringBuilder): Unit = with(builder) {
         append("(lambda ((")
@@ -104,4 +122,13 @@ class KArrayLambda<D : KSort, R : KSort> internal constructor(
     }
 
     override fun accept(transformer: KTransformerBase): KExpr<KArraySort<D, R>> = transformer.transform(this)
+
+    override val sort: KArraySort<D, R>
+        get() = ctx.getExprSort(this)
+
+    override fun computeExprSort(): KArraySort<D, R> = ctx.mkArraySort(indexVarDecl.sort, body.sort)
+
+    override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
+        dependency += body
+    }
 }

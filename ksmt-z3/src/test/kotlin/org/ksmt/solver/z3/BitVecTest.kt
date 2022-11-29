@@ -1,10 +1,5 @@
 package org.ksmt.solver.z3
 
-import kotlin.random.Random
-import kotlin.random.nextUInt
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -30,6 +25,11 @@ import org.ksmt.sort.KBv64Sort
 import org.ksmt.sort.KBv8Sort
 import org.ksmt.utils.mkConst
 import org.ksmt.utils.toBinary
+import kotlin.random.Random
+import kotlin.random.nextUInt
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class BitVecTest {
     private var context = KContext()
@@ -211,8 +211,8 @@ class BitVecTest {
         val negativeBv = mkBv(negativeValue, negativeSizeBits)
         val positiveBv = mkBv(positiveValue, positiveSizeBits)
 
-        val negativeSymbolicValue = negativeBv.sort().mkConst("negative_symbolic_variable")
-        val positiveSymbolicValue = positiveBv.sort().mkConst("positive_symbolic_variable")
+        val negativeSymbolicValue = negativeBv.sort.mkConst("negative_symbolic_variable")
+        val positiveSymbolicValue = positiveBv.sort.mkConst("positive_symbolic_variable")
 
         solver.assert(mkBvNotExpr(mkBvNotExpr(negativeBv)) eq negativeBv)
         solver.assert(mkBvNotExpr(negativeBv) eq negativeSymbolicValue)
@@ -224,7 +224,7 @@ class BitVecTest {
 
         val actualNegativeValue = (solver.model().eval(negativeSymbolicValue) as KBitVec64Value).numberValue.toBinary()
         val actualPositiveValue = (solver.model().eval(positiveSymbolicValue) as KBitVec64Value).numberValue.toBinary()
-        val sizeBits = negativeBv.sort().sizeBits
+        val sizeBits = negativeBv.sort.sizeBits
 
         val expectedValueTransformation = { stringValue: String ->
             stringValue
@@ -620,7 +620,7 @@ class BitVecTest {
         val value = Random.nextLong().toBv()
         val shiftSize = Random.nextInt(from = 1, until = 50).toLong().toBv()
 
-        val symbolicVariable = value.sort().mkConst("symbolicVariable")
+        val symbolicVariable = value.sort.mkConst("symbolicVariable")
 
         solver.assert(symbolicVariable eq symbolicOperation(value, shiftSize))
         solver.check()
@@ -645,7 +645,7 @@ class BitVecTest {
         val bv = Random.nextLong().toBv()
         val rotateSize = Random.nextLong(from = 1, until = 4).toBv()
 
-        val symbolicVariable = bv.sort().mkConst("symbolicVariable")
+        val symbolicVariable = bv.sort.mkConst("symbolicVariable")
 
         solver.assert(symbolicVariable eq mkBvRotateLeftExpr(bv, rotateSize))
         solver.check()
@@ -663,7 +663,7 @@ class BitVecTest {
         val bv = Random.nextLong().toBv()
         val rotateSize = Random.nextInt(from = 1, until = 4)
 
-        val symbolicVariable = bv.sort().mkConst("symbolicVariable")
+        val symbolicVariable = bv.sort.mkConst("symbolicVariable")
 
         solver.assert(symbolicVariable eq mkBvRotateLeftIndexedExpr(rotateSize, bv))
         solver.check()
@@ -681,7 +681,7 @@ class BitVecTest {
         val bv = Random.nextLong().toBv()
         val rotateSize = Random.nextLong(from = 1, until = 4).toBv()
 
-        val symbolicVariable = bv.sort().mkConst("symbolicVariable")
+        val symbolicVariable = bv.sort.mkConst("symbolicVariable")
 
         solver.assert(symbolicVariable eq mkBvRotateRightExpr(bv, rotateSize))
         solver.check()
@@ -701,7 +701,7 @@ class BitVecTest {
         val bv = Random.nextLong().toBv()
         val rotateSize = Random.nextInt(from = 1, until = 4)
 
-        val symbolicVariable = bv.sort().mkConst("symbolicVariable")
+        val symbolicVariable = bv.sort.mkConst("symbolicVariable")
 
         solver.assert(symbolicVariable eq mkBvRotateRightIndexedExpr(rotateSize, bv))
         solver.check()

@@ -231,7 +231,7 @@ open class KZ3ExprInternalizer(
     }
 
     fun <T : KBvSort> transformBitVecValue(expr: KBitVecValue<T>) = expr.transform {
-        val sizeBits = expr.sort().sizeBits.toInt()
+        val sizeBits = expr.sort.sizeBits.toInt()
 
         when (expr) {
             is KBitVec1Value -> z3Ctx.mkBvNumeral(booleanArrayOf(expr.value))
