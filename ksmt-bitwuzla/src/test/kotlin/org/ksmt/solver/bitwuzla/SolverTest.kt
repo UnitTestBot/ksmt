@@ -6,6 +6,7 @@ import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.Native
+import org.ksmt.utils.getValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

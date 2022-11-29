@@ -12,6 +12,7 @@ import org.ksmt.solver.bitwuzla.bindings.FilePtrUtils
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.getValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

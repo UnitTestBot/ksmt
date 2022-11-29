@@ -21,6 +21,7 @@ import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.mkFreshConst
 
 @Suppress("LargeClass")
 open class KBitwuzlaExprConverter(
@@ -737,7 +738,8 @@ open class KBitwuzlaExprConverter(
     }
 
     private inner class BoolToBv1AdapterExpr(val arg: KExpr<KBoolSort>) : KExpr<KBv1Sort>(ctx) {
-        override fun sort(): KBv1Sort = ctx.bv1Sort
+        override val sort: KBv1Sort
+            get() = ctx.bv1Sort
 
         override fun print(builder: StringBuilder) {
             builder.append("(toBV1 ")
@@ -752,7 +754,8 @@ open class KBitwuzlaExprConverter(
     }
 
     private inner class Bv1ToBoolAdapterExpr(val arg: KExpr<KBv1Sort>) : KExpr<KBoolSort>(ctx) {
-        override fun sort(): KBoolSort = ctx.boolSort
+        override val sort: KBoolSort
+            get() = ctx.boolSort
 
         override fun print(builder: StringBuilder) {
             builder.append("(toBool ")
@@ -771,11 +774,12 @@ open class KBitwuzlaExprConverter(
         val toDomainSort: ToDomain,
         val toRangeSort: ToRange
     ) : KExpr<KArraySort<ToDomain, ToRange>>(ctx) {
-        override fun sort(): KArraySort<ToDomain, ToRange> = ctx.mkArraySort(toDomainSort, toRangeSort)
+        override val sort: KArraySort<ToDomain, ToRange>
+            get() = ctx.mkArraySort(toDomainSort, toRangeSort)
 
         override fun print(builder: StringBuilder) {
             builder.append("(toArray ")
-            sort().print(builder)
+            sort.print(builder)
             builder.append(' ')
             arg.print(builder)
             builder.append(')')

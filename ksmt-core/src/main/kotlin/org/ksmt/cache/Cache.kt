@@ -26,6 +26,8 @@ class Cache1<T, A0>(val builder: (A0) -> T) : AutoCloseable {
 
     fun create(a0: A0): T = cache.getOrPut(a0) { builder(a0) }
 
+    operator fun contains(key: A0): Boolean = key in cache
+
     override fun close() {
         cache.clear()
     }

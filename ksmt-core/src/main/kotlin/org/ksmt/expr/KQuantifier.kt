@@ -9,7 +9,8 @@ abstract class KQuantifier(
     val body: KExpr<KBoolSort>,
     val bounds: List<KDecl<*>>,
 ) : KExpr<KBoolSort>(ctx) {
-    override fun sort(): KBoolSort = ctx.mkBoolSort()
+    override val sort: KBoolSort
+        get() = ctx.boolSort
 
     abstract fun printQuantifierName(): String
 

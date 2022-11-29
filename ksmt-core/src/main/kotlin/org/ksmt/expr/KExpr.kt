@@ -6,7 +6,11 @@ import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KSort
 
 abstract class KExpr<T : KSort>(ctx: KContext) : KAst(ctx) {
-    abstract fun sort(): T
+
+    abstract val sort: T
+
+    @Deprecated("Use property", ReplaceWith("sort"))
+    fun sort(): T = sort
 
     abstract fun accept(transformer: KTransformerBase): KExpr<T>
 
@@ -14,4 +18,17 @@ abstract class KExpr<T : KSort>(ctx: KContext) : KAst(ctx) {
     override fun equals(other: Any?): Boolean = this === other
 
     override fun hashCode(): Int = System.identityHashCode(this)
+
+    /**
+     * Some expressions require evaluation of nested expressions sorts in order to compute the sort.
+     * To compute sort non-recursively, override this method and use [KContext.getExprSort].
+     * */
+    open fun computeExprSort(): T = sort
+
+    /**
+     * Add the expressions, needed to compute the sort, to the provided [dependency] list.
+     * To compute sort non-recursively, override this method.
+     * @see [computeExprSort]
+     * */
+    open fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {}
 }

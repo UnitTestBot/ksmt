@@ -15,9 +15,11 @@ class KModIntExpr internal constructor(
     val lhs: KExpr<KIntSort>,
     val rhs: KExpr<KIntSort>
 ) : KApp<KIntSort, KExpr<KIntSort>>(ctx) {
-    override fun sort(): KIntSort = ctx.mkIntSort()
+    override val sort: KIntSort
+        get() = ctx.intSort
 
-    override fun decl(): KIntModDecl = ctx.mkIntModDecl()
+    override val decl: KIntModDecl
+        get() = ctx.mkIntModDecl()
 
     override val args: List<KExpr<KIntSort>>
         get() = listOf(lhs, rhs)
@@ -30,9 +32,11 @@ class KRemIntExpr internal constructor(
     val lhs: KExpr<KIntSort>,
     val rhs: KExpr<KIntSort>
 ) : KApp<KIntSort, KExpr<KIntSort>>(ctx) {
-    override fun sort(): KIntSort = ctx.mkIntSort()
+    override val sort: KIntSort
+        get() = ctx.intSort
 
-    override fun decl(): KIntRemDecl = ctx.mkIntRemDecl()
+    override val decl: KIntRemDecl
+        get() = ctx.mkIntRemDecl()
 
     override val args: List<KExpr<KIntSort>>
         get() = listOf(lhs, rhs)
@@ -44,9 +48,11 @@ class KToRealIntExpr internal constructor(
     ctx: KContext,
     val arg: KExpr<KIntSort>
 ) : KApp<KRealSort, KExpr<KIntSort>>(ctx) {
-    override fun sort(): KRealSort = ctx.mkRealSort()
+    override val sort: KRealSort
+        get() = ctx.realSort
 
-    override fun decl(): KIntToRealDecl = ctx.mkIntToRealDecl()
+    override val decl: KIntToRealDecl
+        get() = ctx.mkIntToRealDecl()
 
     override val args: List<KExpr<KIntSort>>
         get() = listOf(arg)
@@ -58,9 +64,11 @@ abstract class KIntNumExpr(
     ctx: KContext,
     private val value: Number
 ) : KApp<KIntSort, KExpr<*>>(ctx) {
-    override fun sort(): KIntSort = ctx.mkIntSort()
+    override val sort: KIntSort
+        get() = ctx.intSort
 
-    override fun decl(): KIntNumDecl = ctx.mkIntNumDecl("$value")
+    override val decl: KIntNumDecl
+        get() = ctx.mkIntNumDecl("$value")
 
     override val args = emptyList<KExpr<*>>()
 }

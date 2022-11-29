@@ -4,21 +4,23 @@ import com.microsoft.z3.FuncDecl
 import com.microsoft.z3.Model
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
+import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KSort
+import org.ksmt.utils.mkFreshConst
 
 open class KZ3Model(
     private val model: Model,
     private val ctx: KContext,
-    private val internCtx: KZ3InternalizationContext,
+    private val internCtx: KZ3Context,
     private val internalizer: KZ3ExprInternalizer,
     private val converter: KZ3ExprConverter
 ) : KModel {
     override val declarations: Set<KDecl<*>> by lazy {
         with(converter) {
-            model.decls.mapTo(hashSetOf()) { it.convert<KSort>() }
+            model.decls.mapTo(hashSetOf()) { it.convertDeclWrapped<KSort>() }
         }
     }
 
@@ -27,10 +29,10 @@ open class KZ3Model(
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
         ensureContextActive()
 
-        val z3Expr = with(internalizer) { expr.internalize() }
+        val z3Expr = with(internalizer) { expr.internalizeExprWrapped() }
         val z3Result = model.eval(z3Expr, isComplete)
 
-        return with(converter) { z3Result.convert() }
+        return with(converter) { z3Result.convertExprWrapped() }
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -40,7 +42,7 @@ open class KZ3Model(
 
             if (decl !in declarations) return@getOrPut null
 
-            val z3Decl = with(internalizer) { decl.internalizeDecl() }
+            val z3Decl = with(internalizer) { decl.internalizeDeclWrapped() }
 
             when (z3Decl) {
                 in model.constDecls -> constInterp<T>(z3Decl)
@@ -52,7 +54,7 @@ open class KZ3Model(
     private fun <T : KSort> constInterp(decl: FuncDecl<*>): KModel.KFuncInterp<T>? {
         val z3Expr = model.getConstInterp(decl) ?: return null
 
-        val expr = with(converter) { z3Expr.convert<T>() }
+        val expr = with(converter) { z3Expr.convertExprWrapped<T>() }
 
         return with(ctx) {
             KModel.KFuncInterp(sort = expr.sort, vars = emptyList(), entries = emptyList(), default = expr)
@@ -61,22 +63,21 @@ open class KZ3Model(
 
     private fun <T : KSort> funcInterp(decl: FuncDecl<*>): KModel.KFuncInterp<T>? = with(converter) {
         val z3Interp = model.getFuncInterp(decl) ?: return null
+        val convertedDecl = decl.convertDeclWrapped<T>() as KFuncDecl<T>
 
-        val varSorts = decl.domain.map { it.convert<KSort>() }
-        val vars = varSorts.map { with(ctx) { it.mkFreshConst("x") } }
-        val z3Vars = vars.map { with(internalizer) { it.internalize() } }.toTypedArray()
+        val vars = convertedDecl.argSorts.map { it.mkFreshConst("x") }
+        val z3Vars = vars.map { with(internalizer) { it.internalizeExprWrapped() } }.toTypedArray()
 
         val entries = z3Interp.entries.map { entry ->
-            val args = entry.args.map { it.substituteVars(z3Vars).convert<KSort>() }
-            val value = entry.value.substituteVars(z3Vars).convert<T>()
+            val args = entry.args.map { it.substituteVars(z3Vars).convertExprWrapped<KSort>() }
+            val value = entry.value.substituteVars(z3Vars).convertExprWrapped<T>()
             KModel.KFuncInterpEntry(args, value)
         }
 
-        val default = z3Interp.getElse().substituteVars(z3Vars).convert<T>()
-        val sort = decl.range.convert<T>()
+        val default = z3Interp.getElse().substituteVars(z3Vars).convertExprWrapped<T>()
         val varDecls = vars.map { with(ctx) { it.decl } }
 
-        return KModel.KFuncInterp(sort, varDecls, entries, default)
+        return KModel.KFuncInterp(convertedDecl.sort, varDecls, entries, default)
     }
 
     override fun detach(): KModel {

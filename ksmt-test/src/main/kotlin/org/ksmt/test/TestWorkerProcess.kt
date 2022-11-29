@@ -5,7 +5,6 @@ import com.microsoft.z3.AST
 import com.microsoft.z3.BoolSort
 import com.microsoft.z3.Context
 import com.microsoft.z3.Expr
-import com.microsoft.z3.Model
 import com.microsoft.z3.Native
 import com.microsoft.z3.Solver
 import com.microsoft.z3.Status
@@ -22,13 +21,10 @@ import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.bitwuzla.KBitwuzlaContext
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprConverter
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprInternalizer
-import org.ksmt.solver.z3.KZ3DeclInternalizer
+import org.ksmt.solver.z3.KZ3Context
 import org.ksmt.solver.z3.KZ3ExprConverter
 import org.ksmt.solver.z3.KZ3ExprInternalizer
-import org.ksmt.solver.z3.KZ3InternalizationContext
-import org.ksmt.solver.z3.KZ3Model
 import org.ksmt.solver.z3.KZ3Solver
-import org.ksmt.solver.z3.KZ3SortInternalizer
 import org.ksmt.sort.KBoolSort
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
@@ -80,10 +76,8 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
     }
 
     private fun convertAssertions(nativeAssertions: List<Long>): List<KExpr<KBoolSort>> {
-        val internCtx = KZ3InternalizationContext()
-        val converter = KZ3ExprConverter(ctx, internCtx)
-        val assertions = nativeAssertions.map { z3Ctx.wrapAST(it) as Expr<*> }
-        return with(converter) { assertions.map { it.convert() } }
+        val converter = KZ3ExprConverter(ctx, KZ3Context(z3Ctx))
+        return with(converter) { nativeAssertions.map { it.convertExpr() } }
     }
 
     private fun internalizeAndConvertBitwuzla(assertions: List<KExpr<KBoolSort>>): List<KExpr<KBoolSort>> =
@@ -137,19 +131,19 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         checks += EqualityCheck(actual = actualExpr, expected = expectedExpr)
     }
 
-    private fun checkEqualities(solver: Int): KSolverStatus {
+    private fun checkEqualities(solver: Int): KSolverStatus = with(z3Ctx) {
         val checks = equalityChecks[solver] ?: emptyList()
-        val equalityBindings = checks.map { z3Ctx.mkNot(z3Ctx.mkEq(it.actual, it.expected)) }
-        solvers[solver].add(z3Ctx.mkOr(*equalityBindings.toTypedArray()))
+        val equalityBindings = checks.map { mkNot(mkEq(it.actual, it.expected)) }
+        solvers[solver].add(mkOr(*equalityBindings.toTypedArray()))
         return check(solver)
     }
 
-    private fun findFirstFailedEquality(solver: Int): Int? {
+    private fun findFirstFailedEquality(solver: Int): Int? = with(z3Ctx){
         val solverInstance = solvers[solver]
         val checks = equalityChecks[solver] ?: emptyList()
         for ((idx, check) in checks.withIndex()) {
             solverInstance.push()
-            val binding = z3Ctx.mkNot(z3Ctx.mkEq(check.actual, check.expected))
+            val binding = mkNot(mkEq(check.actual, check.expected))
             solverInstance.add(binding)
             val status = solverInstance.check()
             solverInstance.pop()
@@ -165,22 +159,9 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         null -> KSolverStatus.UNKNOWN
     }
 
-    private fun Context.wrapModel(ctx: KContext, model: Model): KZ3Model {
-        val internCtx = KZ3InternalizationContext()
-        val sortInternalizer = KZ3SortInternalizer(this, internCtx)
-        val declInternalizer = KZ3DeclInternalizer(this, internCtx, sortInternalizer)
-        val internalizer = KZ3ExprInternalizer(ctx, this, internCtx, sortInternalizer, declInternalizer)
-        val converter = KZ3ExprConverter(ctx, internCtx)
-        return KZ3Model(model, ctx, internCtx, internalizer, converter)
-    }
-
-
     private fun internalize(expr: KExpr<*>): Expr<*> {
-        val internCtx = KZ3InternalizationContext()
-        val sortInternalizer = KZ3SortInternalizer(z3Ctx, internCtx)
-        val declInternalizer = KZ3DeclInternalizer(z3Ctx, internCtx, sortInternalizer)
-        val internalizer = KZ3ExprInternalizer(ctx, z3Ctx, internCtx, sortInternalizer, declInternalizer)
-        return with(internalizer) { expr.internalize() }
+        val internalizer = KZ3ExprInternalizer(ctx, KZ3Context(z3Ctx))
+        return with(internalizer) { expr.internalizeExprWrapped() }
     }
 
     private data class EqualityCheck(val actual: Expr<*>, val expected: Expr<*>)

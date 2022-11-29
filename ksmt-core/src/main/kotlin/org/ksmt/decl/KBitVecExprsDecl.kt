@@ -479,7 +479,7 @@ class KBvExtractDecl internal constructor(
     ctx,
     name = "extract",
     resultSort = ctx.mkBvSort((high - low + 1).toUInt()),
-    value.sort(),
+    value.sort,
 ), KParameterizedFuncDecl {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 

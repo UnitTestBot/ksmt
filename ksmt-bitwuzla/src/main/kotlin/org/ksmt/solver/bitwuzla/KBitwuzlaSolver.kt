@@ -10,6 +10,7 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaResult
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KBoolSort
+import org.ksmt.utils.mkFreshConst
 import kotlin.time.Duration
 
 open class KBitwuzlaSolver(private val ctx: KContext) : KSolver {
