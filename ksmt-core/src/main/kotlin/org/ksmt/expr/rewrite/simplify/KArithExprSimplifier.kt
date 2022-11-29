@@ -195,6 +195,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         return mkArithDiv(lhs, rhs)
     }
 
+    @Suppress("ForbiddenComment")
     override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>): KExpr<T> =
         simplifyApp(expr) { (base, power) ->
             // todo: evaluate

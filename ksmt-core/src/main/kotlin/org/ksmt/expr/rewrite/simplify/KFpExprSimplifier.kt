@@ -57,6 +57,9 @@ import kotlin.math.absoluteValue
 import kotlin.math.round
 import kotlin.math.sqrt
 
+@Suppress(
+    "ForbiddenComment"
+)
 interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
 
     fun <T : KFpSort> simplifyEqFp(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> = with(ctx) {
@@ -156,6 +159,7 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
         mkFpDivExpr(rm, lhs, rhs)
     }
 
+    @Suppress("ComplexCondition")
     override fun <T : KFpSort> transform(expr: KFpFusedMulAddExpr<T>): KExpr<T> =
         expr.simplifyFpTernaryOp { rm, a0, a1, a2 ->
             if (rm is KFpRoundingModeExpr && a0 is KFpValue<*> && a1 is KFpValue<*> && a2 is KFpValue<*>) {
@@ -243,6 +247,7 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
         mkFpMaxExpr(lhs, rhs)
     }
 
+    @Suppress("ComplexCondition")
     override fun <T : KFpSort> transform(expr: KFpLessOrEqualExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (lhs, rhs) ->
             val lhsValue = lhs as? KFpValue<*>
@@ -260,6 +265,7 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
             mkFpLessOrEqualExpr(lhs, rhs)
         }
 
+    @Suppress("ComplexCondition")
     override fun <T : KFpSort> transform(expr: KFpLessExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (lhs, rhs) ->
             val lhsValue = lhs as? KFpValue<*>
@@ -390,11 +396,15 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
             if (arg.isNan()) {
                 // ensure NaN bits are the same, as in KContext
                 val nan = ctx.mkFpNan(arg.sort) as KFpValue<*>
-                return@simplifyApp mkBvConcatExpr(mkBv(nan.signBit), mkBvConcatExpr(nan.biasedExponent, nan.significand))
-                    .also { rewrite(it) }
+                return@simplifyApp mkBvConcatExpr(
+                    mkBv(nan.signBit),
+                    mkBvConcatExpr(nan.biasedExponent, nan.significand)
+                ).also { rewrite(it) }
             }
-            return@simplifyApp mkBvConcatExpr(mkBv(arg.signBit), mkBvConcatExpr(arg.biasedExponent, arg.significand))
-                .also { rewrite(it) }
+            return@simplifyApp mkBvConcatExpr(
+                mkBv(arg.signBit),
+                mkBvConcatExpr(arg.biasedExponent, arg.significand)
+            ).also { rewrite(it) }
         }
         mkFpToIEEEBvExpr(arg)
     }
@@ -519,6 +529,7 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
         else -> this == ctx.mkFpNan(sort)
     }
 
+    @Suppress("MagicNumber")
     private fun KFpValue<*>.isZero(): Boolean = when (this) {
         is KFp32Value -> value == 0.0f || value == -0.0f
         is KFp64Value -> value == 0.0 || value == -0.0

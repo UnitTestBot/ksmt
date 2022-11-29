@@ -17,6 +17,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
     override fun transform(expr: KAndExpr): KExpr<KBoolSort> = simplifyApp(
         expr = expr,
         preprocess = {
+            // (and a (and b c)) ==> (and a b c)
             val flatArgs = flatAnd(expr)
             if (flatArgs.size != expr.args.size) {
                 mkAnd(flatArgs)
@@ -25,57 +26,16 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
             }
         }
     ) { args ->
-        val posLiterals = hashSetOf<KExpr<*>>()
-        val negLiterals = hashSetOf<KExpr<*>>()
-        val argsToProcess = arrayListOf<KExpr<KBoolSort>>()
-        argsToProcess += args
-        val resultArgs = arrayListOf<KExpr<KBoolSort>>()
-        while (argsToProcess.isNotEmpty()) {
-            val arg = argsToProcess.removeLast()
 
+        val resultArgs = simplifyAndOr(
+            args = args,
             // (and a b true) ==> (and a b)
-            if (arg == trueExpr) {
-                continue
-            }
-
+            neutralElement = trueExpr,
             // (and a b false) ==> false
-            if (arg == falseExpr) {
-                return@simplifyApp falseExpr
-            }
-
-            // (and a (and b c)) ==> (and a b c)
-            if (arg is KAndExpr) {
-                argsToProcess += arg.args
-                continue
-            }
-
-            if (arg is KNotExpr) {
-                val lit = arg.arg
-                // (and a b a) ==> (and a b)
-                if (!negLiterals.add(lit)) {
-                    continue
-                }
-
-                // (and a (not a)) ==> false
-                if (lit in posLiterals) {
-                    return@simplifyApp falseExpr
-                }
-            } else {
-                // (and a b a) ==> (and a b)
-                if (!posLiterals.add(arg)) {
-                    continue
-                }
-
-                // (and a (not a)) ==> false
-                if (arg in negLiterals) {
-                    return@simplifyApp falseExpr
-                }
-            }
-            resultArgs += arg
-        }
-
-        // restore original arguments order
-        resultArgs.reverse()
+            zeroElement = falseExpr,
+            // (and a (not a)) ==> false
+            complementValue = falseExpr
+        )
 
         when (resultArgs.size) {
             0 -> trueExpr
@@ -95,63 +55,71 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
             }
         }
     ) { args ->
-        val posLiterals = hashSetOf<KExpr<*>>()
-        val negLiterals = hashSetOf<KExpr<*>>()
-        val argsToProcess = arrayListOf<KExpr<KBoolSort>>()
-        argsToProcess += args
-        val resultArgs = arrayListOf<KExpr<KBoolSort>>()
-        while (argsToProcess.isNotEmpty()) {
-            val arg = argsToProcess.removeLast()
 
-            // (or a b true) ==> true
-            if (arg == trueExpr) {
-                return@simplifyApp trueExpr
-            }
-
+        val resultArgs = simplifyAndOr(
+            args = args,
             // (or a b false) ==> (or a b)
-            if (arg == falseExpr) {
-                continue
-            }
-
-            // (or a (or a c)) ==> (or a b c)
-            if (arg is KOrExpr) {
-                argsToProcess += arg.args
-                continue
-            }
-
-            if (arg is KNotExpr) {
-                val lit = arg.arg
-                // (or a b a) ==> (or a b)
-                if (!negLiterals.add(lit)) {
-                    continue
-                }
-
-                // (or a (not a)) ==> true
-                if (lit in posLiterals) {
-                    return@simplifyApp trueExpr
-                }
-            } else {
-                // (or a b a) ==> (or a b)
-                if (!posLiterals.add(arg)) {
-                    continue
-                }
-
-                // (or a (not a)) ==> true
-                if (arg in negLiterals) {
-                    return@simplifyApp trueExpr
-                }
-            }
-            resultArgs += arg
-        }
-
-        // restore original arguments order
-        resultArgs.reverse()
+            neutralElement = falseExpr,
+            // (or a b true) ==> true
+            zeroElement = trueExpr,
+            // (or a (not a)) ==> true
+            complementValue = trueExpr
+        )
 
         when (resultArgs.size) {
             0 -> falseExpr
             1 -> resultArgs.single()
             else -> mkOr(resultArgs)
         }
+    }
+
+    @Suppress("LoopWithTooManyJumpStatements", "NestedBlockDepth")
+    private fun simplifyAndOr(
+        args: List<KExpr<KBoolSort>>,
+        neutralElement: KExpr<KBoolSort>,
+        zeroElement: KExpr<KBoolSort>,
+        complementValue: KExpr<KBoolSort>
+    ): List<KExpr<KBoolSort>> = with(ctx) {
+        val posLiterals = hashSetOf<KExpr<*>>()
+        val negLiterals = hashSetOf<KExpr<*>>()
+        val resultArgs = arrayListOf<KExpr<KBoolSort>>()
+
+        for (arg in args) {
+            // (operation a b neutral) ==> (operation a b)
+            if (arg == neutralElement) {
+                continue
+            }
+            // (operation a b zero) ==> zero
+            if (arg == zeroElement) {
+                return listOf(zeroElement)
+            }
+
+            if (arg is KNotExpr) {
+                val lit = arg.arg
+                // (operation (not a) b (not a)) ==> (operation (not a) b)
+                if (!negLiterals.add(lit)) {
+                    continue
+                }
+
+                // (operation a (not a)) ==> complement
+                if (lit in posLiterals) {
+                    return listOf(complementValue)
+                }
+            } else {
+                // (operation a b a) ==> (operation a b)
+                if (!posLiterals.add(arg)) {
+                    continue
+                }
+
+                // (operation a (not a)) ==> complement
+                if (arg in negLiterals) {
+                    return listOf(complementValue)
+                }
+            }
+            resultArgs += arg
+        }
+
+        return resultArgs
     }
 
     override fun transform(expr: KNotExpr) = simplifyApp(expr) { (arg) ->
@@ -164,7 +132,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
+    @Suppress("UNCHECKED_CAST", "ComplexMethod")
     override fun <T : KSort> transform(expr: KIteExpr<T>): KExpr<T> =
         simplifyApp(expr as KApp<T, KExpr<KSort>>) { (condArg, thenArg, elseArg) ->
             var c = condArg.asExpr(boolSort)
@@ -214,45 +182,60 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
             }
 
             if (t.sort == boolSort) {
-                // (ite c true e) ==> (or c e)
-                if (t == trueExpr) {
-                    if (e == falseExpr) {
-                        return@simplifyApp c.asExpr(expr.sort)
-                    }
-                    return@simplifyApp (c or e.asExpr(boolSort)).asExpr(expr.sort).also { rewrite(it) }
-                }
-
-                // (ite c false e) ==> (and (not c) e)
-                if (t == falseExpr) {
-                    if (e == trueExpr) {
-                        return@simplifyApp mkNot(c).asExpr(expr.sort).also { rewrite(it) }
-                    }
-                    return@simplifyApp (!c and e.asExpr(boolSort)).asExpr(expr.sort).also { rewrite(it) }
-                }
-
-                // (ite c t true) ==> (or (not c) t)
-                if (e == trueExpr) {
-                    return@simplifyApp (!c or t.asExpr(boolSort)).asExpr(expr.sort).also { rewrite(it) }
-                }
-
-                // (ite c t false) ==> (and c t)
-                if (e == falseExpr) {
-                    return@simplifyApp (c and t.asExpr(boolSort)).asExpr(expr.sort).also { rewrite(it) }
-                }
-
-                // (ite c t c) ==> (and c t)
-                if (c == e) {
-                    return@simplifyApp (c and t.asExpr(boolSort)).asExpr(expr.sort).also { rewrite(it) }
-                }
-
-                // (ite c c e) ==> (or c e)
-                if (c == t) {
-                    return@simplifyApp (c or e.asExpr(boolSort)).asExpr(expr.sort).also { rewrite(it) }
+                trySimplifyBoolIte(
+                    condition = c,
+                    thenBranch = t.asExpr(boolSort),
+                    elseBranch = e.asExpr(boolSort)
+                )?.let { simplified ->
+                    return@simplifyApp simplified.asExpr(expr.sort).also { rewrite(it) }
                 }
             }
 
             mkIte(c, t, e)
         }
+
+    private fun trySimplifyBoolIte(
+        condition: KExpr<KBoolSort>,
+        thenBranch: KExpr<KBoolSort>,
+        elseBranch: KExpr<KBoolSort>
+    ): KExpr<KBoolSort>? = with(ctx) {
+        // (ite c true e) ==> (or c e)
+        if (thenBranch == trueExpr) {
+            if (elseBranch == falseExpr) {
+                return condition
+            }
+            return condition or elseBranch
+        }
+
+        // (ite c false e) ==> (and (not c) e)
+        if (thenBranch == falseExpr) {
+            if (elseBranch == trueExpr) {
+                return !condition
+            }
+            return !condition and elseBranch
+        }
+
+        // (ite c t true) ==> (or (not c) t)
+        if (elseBranch == trueExpr) {
+            return !condition or thenBranch
+        }
+
+        // (ite c t false) ==> (and c t)
+        if (elseBranch == falseExpr) {
+            return condition and thenBranch
+        }
+
+        // (ite c t c) ==> (and c t)
+        if (condition == elseBranch) {
+            return condition and thenBranch
+        }
+
+        // (ite c c e) ==> (or c e)
+        if (condition == thenBranch) {
+            return condition or elseBranch
+        }
+        return null
+    }
 
     override fun transform(expr: KImpliesExpr): KExpr<KBoolSort> = simplifyApp(
         expr = expr,
@@ -282,12 +265,12 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
 
         when (l) {
             trueExpr -> return r
-            falseExpr -> return !r
+            falseExpr -> return !r.also { rewrite(it) }
         }
 
         when (r) {
             trueExpr -> return l
-            falseExpr -> return !l
+            falseExpr -> return !l.also { rewrite(it) }
         }
 
         // (= a (not a)) ==> false

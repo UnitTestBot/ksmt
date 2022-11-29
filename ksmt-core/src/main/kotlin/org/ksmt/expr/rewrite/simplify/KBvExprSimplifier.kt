@@ -67,6 +67,12 @@ import kotlin.experimental.inv
 import kotlin.experimental.or
 import kotlin.experimental.xor
 
+@Suppress(
+    "LargeClass",
+    "LongMethod",
+    "LongParameterList",
+    "ComplexMethod"
+)
 interface KBvExprSimplifier : KExprSimplifierBase {
 
     fun <T : KBvSort> simplifyEqBv(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> = with(ctx) {
@@ -154,6 +160,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             error("Always preprocessed")
         }
 
+    @Suppress("NestedBlockDepth")
     private fun <T : KBvSort> bvLessOrEqual(lhs: KExpr<T>, rhs: KExpr<T>, signed: Boolean): KExpr<KBoolSort> =
         with(ctx) {
             if (lhs == rhs) return trueExpr
@@ -480,6 +487,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         mkBvNotExpr(arg)
     }
 
+    @Suppress("LoopWithTooManyJumpStatements")
     override fun <T : KBvSort> transform(expr: KBvOrExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
         val size = expr.sort.sizeBits
         val lhsValue = lhs as? KBitVecValue<*>
@@ -695,6 +703,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         mkBvReductionOrExpr(arg)
     }
 
+    @Suppress("LoopWithTooManyJumpStatements")
     override fun transform(expr: KBvConcatExpr): KExpr<KBvSort> = simplifyApp(expr) { (lhs, rhs) ->
         val lhsValue = lhs as? KBitVecValue<*>
         val rhsValue = rhs as? KBitVecValue<*>
@@ -766,74 +775,8 @@ interface KBvExprSimplifier : KExprSimplifierBase {
 
         // (extract (concat a b)) ==> (concat (extract a) (extract b))
         if (arg is KBvConcatExpr) {
-            val parts = flatConcat(arg)
-            var idx = arg.sort.sizeBits.toInt()
-            for (firstPartIdx in parts.indices) {
-                val firstPart = parts[firstPartIdx]
-                val firstPartSize = firstPart.sort.sizeBits.toInt()
-                idx -= firstPartSize
-
-                // before first part
-                if (idx > expr.high) {
-                    continue
-                }
-
-                // extract from a single part
-                if (idx <= expr.low) {
-                    if (idx == expr.low && expr.high - idx == firstPartSize) {
-                        return@simplifyApp firstPart.also { rewrite(it) }
-                    } else {
-                        return@simplifyApp mkBvExtractExpr(
-                            high = expr.high - idx,
-                            low = expr.low - idx,
-                            value = firstPart
-                        ).also { rewrite(it) }
-                    }
-                }
-
-                // extract from multiple parts
-                val partsToExtractFrom = arrayListOf<KExpr<KBvSort>>()
-                if (expr.high - idx == firstPartSize - 1) {
-                    partsToExtractFrom += firstPart
-                } else {
-                    partsToExtractFrom += mkBvExtractExpr(
-                        high = expr.high - idx,
-                        low = 0,
-                        value = firstPart
-                    )
-                }
-
-                for (partIdx in firstPartIdx + 1 until parts.size) {
-                    val part = parts[partIdx]
-                    val partSize = part.sort.sizeBits.toInt()
-                    idx -= partSize
-
-                    when {
-                        idx > expr.low -> {
-                            // not a last part
-                            partsToExtractFrom += part
-                            continue
-                        }
-
-                        idx == expr.low -> {
-                            partsToExtractFrom += part
-                            break
-                        }
-
-                        else -> {
-                            partsToExtractFrom += mkBvExtractExpr(
-                                high = partSize - 1,
-                                low = expr.low - idx,
-                                value = part
-                            )
-                            break
-                        }
-                    }
-                }
-
-                return@simplifyApp partsToExtractFrom.reduceRight(::mkBvConcatExpr)
-                    .also { rewrite(it) }
-            }
+            return@simplifyApp distributeExtractOverConcat(arg, expr.high, expr.low)
+                .also { rewrite(it) }
         }
 
         val simplified = when {
@@ -871,6 +814,98 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         }
 
         mkBvExtractExpr(expr.high, expr.low, arg)
+    }
+
+    // (extract (concat a b)) ==> (concat (extract a) (extract b))
+    @Suppress("LoopWithTooManyJumpStatements", "NestedBlockDepth")
+    private fun distributeExtractOverConcat(
+        concatenation: KBvConcatExpr,
+        high: Int,
+        low: Int
+    ): KExpr<KBvSort> = with(ctx) {
+        val parts = flatConcat(concatenation)
+
+        var idx = concatenation.sort.sizeBits.toInt()
+        var firstPartIdx = 0
+
+        // find first part to extract from
+        do {
+            val firstPart = parts[firstPartIdx]
+            val firstPartSize = firstPart.sort.sizeBits.toInt()
+            idx -= firstPartSize
+
+            // before first part
+            if (idx > high) {
+                firstPartIdx++
+                continue
+            }
+
+            // extract from a single part
+            if (idx <= low) {
+                return if (idx == low && high - idx == firstPartSize) {
+                    firstPart
+                } else {
+                    mkBvExtractExpr(
+                        high = high - idx,
+                        low = low - idx,
+                        value = firstPart
+                    )
+                }
+            }
+
+            /**
+             * idx <= high && idx > low
+             * extract from multiple parts starting from firstPartIdx
+             * */
+            break
+
+        } while (firstPartIdx < parts.size)
+
+
+        // extract from multiple parts
+        val partsToExtractFrom = arrayListOf<KExpr<KBvSort>>()
+        val firstPart = parts[firstPartIdx]
+        val firstPartSize = firstPart.sort.sizeBits.toInt()
+
+        if (high - idx == firstPartSize - 1) {
+            partsToExtractFrom += firstPart
+        } else {
+            partsToExtractFrom += mkBvExtractExpr(
+                high = high - idx,
+                low = 0,
+                value = firstPart
+            )
+        }
+
+        for (partIdx in firstPartIdx + 1 until parts.size) {
+            val part = parts[partIdx]
+            val partSize = part.sort.sizeBits.toInt()
+            idx -= partSize
+
+            when {
+                idx > low -> {
+                    // not a last part
+                    partsToExtractFrom += part
+                    continue
+                }
+
+                idx == low -> {
+                    partsToExtractFrom += part
+                    break
+                }
+
+                else -> {
+                    partsToExtractFrom += mkBvExtractExpr(
+                        high = partSize - 1,
+                        low = low - idx,
+                        value = part
+                    )
+                    break
+                }
+            }
+        }
+
+        return partsToExtractFrom.reduceRight(::mkBvConcatExpr)
     }
 
     override fun <T : KBvSort> transform(expr: KBvShiftLeftExpr<T>): KExpr<T> = simplifyApp(expr) { (arg, shift) ->
@@ -984,7 +1019,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     // (repeat a x) ==> (concat a a ..[x].. a)
     override fun transform(expr: KBvRepeatExpr): KExpr<KBvSort> = simplifyApp(expr) { (arg) ->
         val repeats = arrayListOf<KExpr<KBvSort>>()
-        for (i in 0 until expr.repeatNumber) {
+        repeat(expr.repeatNumber) {
             repeats += arg
         }
 
@@ -1194,6 +1229,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             trySimplifyBvSignedMulNoOverflow(lhs, rhs, isOverflow = false) ?: mkBvMulNoUnderflowExpr(lhs, rhs)
         }
 
+    @Suppress("NestedBlockDepth", "ComplexCondition")
     private fun <T : KBvSort> trySimplifyBvSignedMulNoOverflow(
         lhs: KExpr<T>,
         rhs: KExpr<T>,
