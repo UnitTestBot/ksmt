@@ -294,6 +294,9 @@ import org.ksmt.utils.booleanSignBit
 import org.ksmt.utils.cast
 import org.ksmt.utils.extractExponent
 import org.ksmt.utils.extractSignificand
+import org.ksmt.utils.getHalfPrecisionExponent
+import org.ksmt.utils.halfPrecisionSignificand
+import org.ksmt.utils.signBit
 import org.ksmt.utils.toBinary
 import org.ksmt.utils.uncheckedCast
 
@@ -1371,7 +1374,12 @@ open class KContext : AutoCloseable {
      * take required for FP16 bits, and this will be **unbiased** FP16 exponent.
      * The same is true for other methods but [mkFpCustomSize].
      * */
-    fun mkFp16(value: Float): KFp16Value = fp16Cache.createIfContextActive(value)
+    fun mkFp16(value: Float): KFp16Value {
+        val exponent = value.getHalfPrecisionExponent(isBiased = false)
+        val significand = value.halfPrecisionSignificand
+        val normalizedValue = constructFp16Number(exponent.toLong(), significand.toLong(), value.signBit)
+        return fp16Cache.createIfContextActive(normalizedValue)
+    }
     fun mkFp32(value: Float): KFp32Value = fp32Cache.createIfContextActive(value)
     fun mkFp64(value: Double): KFp64Value = fp64Cache.createIfContextActive(value)
     fun mkFp128Biased(significand: KBitVecValue<*>, biasedExponent: KBitVecValue<*>, signBit: Boolean): KFp128Value =

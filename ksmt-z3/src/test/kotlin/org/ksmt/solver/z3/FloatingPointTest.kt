@@ -33,7 +33,9 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.utils.booleanSignBit
 import org.ksmt.utils.extractExponent
 import org.ksmt.utils.extractSignificand
+import org.ksmt.utils.getHalfPrecisionExponent
 import org.ksmt.utils.getValue
+import org.ksmt.utils.halfPrecisionSignificand
 import org.ksmt.utils.mkConst
 
 
@@ -132,6 +134,27 @@ class FloatingPointTest {
         }
 
         symbolicValuesCheck(symbolicValues, sort)
+    }
+
+    @Test
+    fun testFp16Normalization(): Unit = with(context) {
+        val sign = 1
+        val exponent1 = "10001111".toInt(radix = 2)
+        val exponent2 = "10101111".toInt(radix = 2)
+        val significand1 = "11001100110000000000000".toInt(radix = 2)
+        val significand2 = "11001100110001111111111".toInt(radix = 2)
+
+        val value1 = intBitsToFloat(((sign shl 31) or (exponent1 shl 23) or significand1))
+        val value2 = intBitsToFloat(((sign shl 31) or (exponent2 shl 23) or significand2))
+
+        assertEquals(value1.getHalfPrecisionExponent(true), value2.getHalfPrecisionExponent(true))
+        assertEquals(value1.halfPrecisionSignificand, value2.halfPrecisionSignificand)
+
+        val symbolicValues1 = createSymbolicValues(value1, fp16Sort, context::mkFp16)
+        val symbolicValues2 = createSymbolicValues(value2, fp16Sort, context::mkFp16)
+
+        val distinctSymbolicValues = (symbolicValues1 + symbolicValues2).distinct()
+        assertEquals(1, distinctSymbolicValues.size)
     }
 
     @Test

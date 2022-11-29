@@ -20,6 +20,6 @@ class SimplifierBenchmarksBasedTest : BenchmarksBasedTest() {
 
     companion object {
         @JvmStatic
-        fun simplifierTestData() = testData().filter { it.name.startsWith("QF_") }
+        fun simplifierTestData() = testData()
     }
 }
