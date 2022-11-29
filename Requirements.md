@@ -1,31 +1,31 @@
-| Feature                                                                           | Status         |
-|-----------------------------------------------------------------------------------|----------------|
-| [Rich expression system](#rich-expression-system)                                 | Done           |
-| [Expression interning](#expression-interning)                                     | Done           |
-| [Basic theories support](#basic-theories-support)                                 | Done           |
-| [SMT-LIB2 parser](#smt-lib2-parser)                                               | Done partially |
-| [SMT-LIB2 serializer](#smt-lib2-serializer)                                       | TODO           |
-| [Unsupported features handling](#unsupported-features-handling)                   | Done partially |
-| [SMT solver support](#smt-solver-support)                                         | Done           |
-| [Z3 solver support](#z3-solver-support)                                           | Done           |
-| [Bitwuzla solver support](#bitwuzla-solver-support)                               | Done           |
-| [Yices2 solver support](#yices2-solver-support)                                   | In progress    |
-| [CVC5 solver support](#cvc5-solver-support)                                       | TODO           |
-| [External process runner](#external-process-runner)                               | Done           |
-| [Portfolio solver](#portfolio-solver)                                             | TODO           |
-| [Solver configuration API](#solver-configuration-api)                             | In progress    |
-| [Deployment](#deployment)                                                         | Done partially |
-| [Expression simplification / evaluation](#expression-simplification--evaluation)  | TODO           |
-| [Performance tests](#performance-tests)                                           | TODO           |
-| [Better Z3 API](#better-z3-api)                                                   | TODO           |
-| [Better Bitwuzla bindings](#better-bitwuzla-bindings)                             | TODO           |
-| [Solver specific features API](#solver-specific-features-api)                     | TODO           |
-| [Quantifier elimination](#quantifier-elimination)                                 | TODO           |
-| [Interpolation](#interpolation)                                                   | TODO           |
-| [Model based projection](#model-based-projection)                                 | TODO           |
-| [Support more theories](#support-more-theories)                                   | TODO           |
-| [Solver proofs](#solver-proofs)                                                   | TODO           |
-| ...                                                                               | -              |
+| Feature                                                                           | Status          |
+|-----------------------------------------------------------------------------------|-----------------|
+| [Rich expression system](#rich-expression-system)                                 | Done            |
+| [Expression interning](#expression-interning)                                     | Done            |
+| [Basic theories support](#basic-theories-support)                                 | Done            |
+| [SMT-LIB2 parser](#smt-lib2-parser)                                               | Done partially  |
+| [SMT-LIB2 serializer](#smt-lib2-serializer)                                       | TODO            |
+| [Unsupported features handling](#unsupported-features-handling)                   | Done partially  |
+| [SMT solver support](#smt-solver-support)                                         | Done            |
+| [Z3 solver support](#z3-solver-support)                                           | Done            |
+| [Bitwuzla solver support](#bitwuzla-solver-support)                               | Done            |
+| [Yices2 solver support](#yices2-solver-support)                                   | In progress     |
+| [CVC5 solver support](#cvc5-solver-support)                                       | TODO            |
+| [External process runner](#external-process-runner)                               | Done            |
+| [Portfolio solver](#portfolio-solver)                                             | TODO            |
+| [Solver configuration API](#solver-configuration-api)                             | In progress     |
+| [Deployment](#deployment)                                                         | Done partially  |
+| [Expression simplification / evaluation](#expression-simplification--evaluation)  | TODO            |
+| [Performance tests](#performance-tests)                                           | TODO            |
+| [Better Z3 API](#better-z3-api)                                                   | Done partially  |
+| [Better Bitwuzla bindings](#better-bitwuzla-bindings)                             | TODO            |
+| [Solver specific features API](#solver-specific-features-api)                     | TODO            |
+| [Quantifier elimination](#quantifier-elimination)                                 | TODO            |
+| [Interpolation](#interpolation)                                                   | TODO            |
+| [Model based projection](#model-based-projection)                                 | TODO            |
+| [Support more theories](#support-more-theories)                                   | TODO            |
+| [Solver proofs](#solver-proofs)                                                   | TODO            |
+| ...                                                                               | -               |
 
 
 ### Rich expression system
@@ -226,11 +226,21 @@ Measure overhead of the following operations for all supported solvers:
 
 **Current state**
 
-Z3 expr translation overhead
+Measure the performance of the expression assertion as it requires internalization and is the most possible bottleneck.
 
-Setup: 300 random samples from SMT-LIB benchmarks, use z3 java api. Measure overhead of translate + assert over assert.
+**Internalization performance**
 
-Results: 10% overhead on average, 90% of samples performed with less than 25% overhead.
+Single term internalization requires about 1 microsecond on average.
+
+Compared to other numbers, solver instance creation (a single native call) takes about 1 millisecond.
+
+Comparing to the Z3 native SMT-LIB parser, the KSMT internalizer is 2.3 times faster on average and 1.1 faster in the worst case.
+
+**KSMT runner performace**
+
+Runner adds some overhead, since it performs serialization / deserialization and network communication.
+
+Expression assertion via runner is 5 times slower on average and is 7.1 slower in the worst case.
 
 ### Better Z3 api
 
