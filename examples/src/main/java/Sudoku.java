@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import kotlin.time.DurationUnit;
@@ -22,18 +23,18 @@ public class Sudoku {
     private static final int SIZE = 9;
     private static final int EMPTY_CELL_VALUE = 0;
 
-    private static final String sudokuTask = """
-            2 * * | 9 * 6 | * * 1
-            * * 6 | * 4 * | * * 9
-            * * * | 5 2 * | 4 * *
-            ------ ------- ------
-            3 * 2 | * * 7 | * 5 *
-            * * * | 2 * * | 1 * *
-            * 9 * | 3 * * | 7 * *
-            ------ ------- ------
-            * 8 7 | * 5 * | 3 1 *
-            6 * 3 | * 1 * | 8 * *
-            4 * * | * * 9 | * * *""".stripIndent();
+    private static final String sudokuTask =
+            "2 * * | 9 * 6 | * * 1\n"+
+            "* * 6 | * 4 * | * * 9\n"+
+            "* * * | 5 2 * | 4 * *\n"+
+            "------ ------- ------\n"+
+            "3 * 2 | * * 7 | * 5 *\n"+
+            "* * * | 2 * * | 1 * *\n"+
+            "* 9 * | 3 * * | 7 * *\n"+
+            "------ ------- ------\n"+
+            "* 8 7 | * 5 * | 3 1 *\n"+
+            "6 * 3 | * 1 * | 8 * *\n"+
+            "4 * * | * * 9 | * * *\n";
 
     public static void main(String[] args) {
         // Parse and display a given Sudoku grid.
@@ -97,7 +98,7 @@ public class Sudoku {
 
         // Each row contains distinct numbers.
         final Stream<KExpr<KBoolSort>> rowDistinctConstraints = symbols.stream()
-                .map(row -> ctx.mkDistinct(row));
+                .map(ctx::mkDistinct);
 
         // Each column contains distinct numbers.
         final List<KExpr<KBoolSort>> colDistinctConstraints = new ArrayList<>();
@@ -126,7 +127,7 @@ public class Sudoku {
         return Stream.concat(
                 Stream.concat(symbolConstraints, rowDistinctConstraints),
                 Stream.concat(colDistinctConstraints.stream(), blockDistinctConstraints.stream())
-        ).toList();
+        ).collect(Collectors.toList());
     }
 
     private static List<KExpr<KBoolSort>> assignSymbols(final KContext ctx,
@@ -166,9 +167,9 @@ public class Sudoku {
                         .chars()
                         .mapToObj(Sudoku::cellValueOrNull)
                         .filter(Objects::nonNull))
-                .map(Stream::toList)
+                .map(it -> it.collect(Collectors.toList()))
                 .filter(it -> !it.isEmpty())
-                .toList();
+                .collect(Collectors.toList());
     }
 
     private static Integer cellValueOrNull(int symbol) {
