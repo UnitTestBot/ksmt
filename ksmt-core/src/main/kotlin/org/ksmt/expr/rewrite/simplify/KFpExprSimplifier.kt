@@ -48,6 +48,9 @@ import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.BvUtils.bvMaxValueSigned
+import org.ksmt.utils.BvUtils.minus
+import org.ksmt.utils.BvUtils.mkBvFromBigInteger
 import org.ksmt.utils.asExpr
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -58,7 +61,7 @@ import kotlin.math.round
 import kotlin.math.sqrt
 
 @Suppress("ForbiddenComment")
-interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
+interface KFpExprSimplifier : KExprSimplifierBase {
 
     fun <T : KFpSort> simplifyEqFp(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> = with(ctx) {
         if (lhs == rhs) return trueExpr
@@ -672,8 +675,8 @@ interface KFpExprSimplifier : KExprSimplifierBase, KBvExprSimplifier {
         else -> null
     }
 
-    private fun fpUnbiasExponent(value: KBitVecValue<*>): KBitVecValue<*> = with(this as KBvExprSimplifier) {
-        value - maxValueSigned(value.sort.sizeBits)
+    private fun fpUnbiasExponent(value: KBitVecValue<*>): KBitVecValue<*> = with(ctx) {
+        value - bvMaxValueSigned(value.sort.sizeBits)
     }
 
     private fun BigDecimal.unscaledValue(rm: KFpRoundingMode): BigDecimal {

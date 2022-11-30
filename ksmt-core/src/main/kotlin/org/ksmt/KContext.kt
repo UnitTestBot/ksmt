@@ -288,8 +288,9 @@ import org.ksmt.expr.KFpToRealExpr
 import org.ksmt.expr.KFpValue
 import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KRealToFpExpr
-import org.ksmt.expr.rewrite.simplify.KExprSimplifier
 import org.ksmt.sort.KFpRoundingModeSort
+import org.ksmt.utils.BvUtils.bvMaxValueSigned
+import org.ksmt.utils.BvUtils.plus
 import org.ksmt.utils.booleanSignBit
 import org.ksmt.utils.cast
 import org.ksmt.utils.extractExponent
@@ -1517,16 +1518,11 @@ open class KContext : AutoCloseable {
         return longBitsToDouble(longValue)
     }
 
-    private fun biasFp128Exponent(exponent: KBitVecValue<*>): KBitVecValue<*> = with(KExprSimplifier(this)) {
-        exponent + maxValueSigned(KFp128Sort.exponentBits)
-    }
+    private fun biasFp128Exponent(exponent: KBitVecValue<*>): KBitVecValue<*> =
+        exponent + bvMaxValueSigned(KFp128Sort.exponentBits)
 
-    private fun biasFpCustomSizeExponent(
-        exponent: KBitVecValue<*>,
-        exponentSize: UInt
-    ): KBitVecValue<*> = with(KExprSimplifier(this)) {
-        exponent + maxValueSigned(exponentSize)
-    }
+    private fun biasFpCustomSizeExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> =
+        exponent + bvMaxValueSigned(exponentSize)
 
     fun <T : KFpSort> mkFp(value: Float, sort: T): KExpr<T> {
         if (sort == mkFp32Sort()) {
