@@ -362,3 +362,21 @@ with(ctx) {
     val assertions = KZ3SMTLibParser().parse(formula)
 }
 ```
+
+### Solver configuration
+
+KSMT provides an API for modifying solver-specific parameters. 
+Since the parameters and their correct values are solver-specific 
+KSMT does not perform any checks. 
+See the corresponding solver documentation for a list of available options. 
+
+```kotlin
+with(ctx) {
+    KZ3Solver(this).use { solver ->
+        solver.configure {
+            // set Z3 solver parameter random_seed to 42 
+            setZ3Option("random_seed", 42)
+        }
+    }
+}
+```
