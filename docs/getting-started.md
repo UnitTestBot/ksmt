@@ -51,6 +51,8 @@ In this example, we want to create an expression
 over Boolean variable `a` and integer variables `b` and `c`.
 
 ```kotlin
+import org.ksmt.utils.getValue
+
 with(ctx) {
     // create symbolic variables
     val a by boolSort
@@ -58,11 +60,14 @@ with(ctx) {
     val c by intSort
 
     // create expression
-    val constraint = a and (b ge c + 3.intExpr)
+    val constraint = a and (b ge c + 3.expr)
 }
 ```
 All KSMT expressions are typed and incorrect terms (e.g. `and` with integer arguments) 
 result in a compile-time error.
+
+Note the use of `import getValue`, which is required for the `by` syntax.
+Alternatively, `mkConst(name, sort)` can be used. 
 
 ### Working with SMT solvers
 
