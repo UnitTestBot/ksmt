@@ -9,6 +9,7 @@ import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.solver.z3.KZ3SolverConfiguration
+import org.ksmt.utils.getValue
 import org.ksmt.utils.mkConst
 import kotlin.test.Test
 import kotlin.test.assertEquals
