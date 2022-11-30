@@ -9,7 +9,7 @@ fun Project.mkSmtLibBenchmarkTestData(name: String) = tasks.register("smtLibBenc
     doLast {
         val path = buildDir.resolve("smtLibBenchmark/$name")
         val downloadTarget = path.resolve("$name.zip")
-        val url = "$BENCHMARK_REPO_URL/api/v4/projects/SMT-LIB-benchmarks%2F$name/repository/archive.zip"
+        val url = "$BENCHMARK_REPO_URL/zip/$name.zip"
 
         download(url, downloadTarget)
 
@@ -77,4 +77,4 @@ private fun Project.testResourceDir(): File? {
     return sourceSets["test"]?.output?.resourcesDir
 }
 
-private const val BENCHMARK_REPO_URL = "https://clc-gitlab.cs.uiowa.edu:2443"
+private const val BENCHMARK_REPO_URL = "http://smt-lib.loria.fr"
