@@ -147,6 +147,10 @@ abstract class BenchmarksBasedTest {
                     it.delete()
                 }
             }
+        } catch (ex: TimeoutCancellationException) {
+            val testIgnoreReason = "worker timeout -- ${ex.message}"
+            System.err.println(testIgnoreReason)
+            Assumptions.assumeTrue(false, testIgnoreReason)
         } finally {
             worker.release()
         }
