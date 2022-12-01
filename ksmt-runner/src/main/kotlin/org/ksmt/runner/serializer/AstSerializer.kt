@@ -518,16 +518,16 @@ class AstSerializer(
     }
 
     override fun <T : KBvSort> transform(expr: KBvShiftLeftExpr<T>) =
-        with(expr) { serialize(arg0, arg1) }
+        with(expr) { serialize(arg, shift) }
 
     override fun <T : KBvSort> transform(expr: KBvLogicalShiftRightExpr<T>) =
-        with(expr) { serialize(arg0, arg1) }
+        with(expr) { serialize(arg, shift) }
 
     override fun <T : KBvSort> transform(expr: KBvArithShiftRightExpr<T>) =
-        with(expr) { serialize(arg0, arg1) }
+        with(expr) { serialize(arg, shift) }
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>) =
-        with(expr) { serialize(arg0, arg1) }
+        with(expr) { serialize(arg, rotation) }
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftIndexedExpr<T>) = with(expr) {
         transform(value) { value: Int ->
@@ -539,7 +539,7 @@ class AstSerializer(
     }
 
     override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>) =
-        with(expr) { serialize(arg0, arg1) }
+        with(expr) { serialize(arg, rotation) }
 
     override fun <T : KBvSort> transform(expr: KBvRotateRightIndexedExpr<T>) = with(expr) {
         transform(value) { value: Int ->

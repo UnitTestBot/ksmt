@@ -217,7 +217,7 @@ object BvUtils {
         bv8 = { a, b -> (a.toInt() ushr b.toInt()).toUByte() },
         bv16 = { a, b -> (a.toInt() ushr b.toInt()).toUShort() },
         bv32 = { a, b -> (a.toInt() ushr b.toInt()).toUInt() },
-        bv64 = { a, b -> (a.toInt() ushr b.toInt()).toULong() },
+        bv64 = { a, b -> (a.toLong() ushr b.toInt()).toULong() },
         bvDefault = { a, b -> (a shr b.toInt()) },
     )
 

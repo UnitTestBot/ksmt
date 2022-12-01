@@ -357,23 +357,23 @@ open class KZ3ExprInternalizer(
     }
 
     override fun <T : KBvSort> transform(expr: KBvShiftLeftExpr<T>) =
-        with(expr) { transform(arg0, arg1, Native::mkBvshl) }
+        with(expr) { transform(arg, shift, Native::mkBvshl) }
 
     override fun <T : KBvSort> transform(expr: KBvLogicalShiftRightExpr<T>) =
-        with(expr) { transform(arg0, arg1, Native::mkBvlshr) }
+        with(expr) { transform(arg, shift, Native::mkBvlshr) }
 
     override fun <T : KBvSort> transform(expr: KBvArithShiftRightExpr<T>) =
-        with(expr) { transform(arg0, arg1, Native::mkBvashr) }
+        with(expr) { transform(arg, shift, Native::mkBvashr) }
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>) =
-        with(expr) { transform(arg0, arg1, Native::mkExtRotateLeft) }
+        with(expr) { transform(arg, rotation, Native::mkExtRotateLeft) }
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftIndexedExpr<T>) = with(expr) {
         transform(value) { value: Long -> Native.mkRotateLeft(nCtx, rotationNumber, value) }
     }
 
     override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>) =
-        with(expr) { transform(arg0, arg1, Native::mkExtRotateRight) }
+        with(expr) { transform(arg, rotation, Native::mkExtRotateRight) }
 
     override fun <T : KBvSort> transform(expr: KBvRotateRightIndexedExpr<T>) = with(expr) {
         transform(value) { value: Long -> Native.mkRotateRight(nCtx, rotationNumber, value) }

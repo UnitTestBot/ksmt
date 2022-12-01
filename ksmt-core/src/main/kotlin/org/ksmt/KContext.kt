@@ -1159,98 +1159,92 @@ open class KContext : AutoCloseable {
     fun <T : KBvSort> mkBvExtractExpr(high: Int, low: Int, value: KExpr<T>) =
         extractExprCache.createIfContextActive(high, low, value.cast())
 
-    private val signExtensionExprCache = mkClosableCache { i: Int,
+    private val signExtensionExprCache = mkClosableCache { extensionSize: Int,
                                                            value: KExpr<KBvSort> ->
-        KBvSignExtensionExpr(this, i, value)
+        KBvSignExtensionExpr(this, extensionSize, value)
     }
 
     fun <T : KBvSort> mkBvSignExtensionExpr(
-        i: Int,
+        extensionSize: Int,
         value: KExpr<T>
-    ) = signExtensionExprCache.createIfContextActive(i, value.cast())
+    ) = signExtensionExprCache.createIfContextActive(extensionSize, value.cast())
 
-    private val zeroExtensionExprCache = mkClosableCache { i: Int,
+    private val zeroExtensionExprCache = mkClosableCache { extensionSize: Int,
                                                            value: KExpr<KBvSort> ->
-        KBvZeroExtensionExpr(this, i, value)
+        KBvZeroExtensionExpr(this, extensionSize, value)
     }
 
     fun <T : KBvSort> mkBvZeroExtensionExpr(
-        i: Int,
+        extensionSize: Int,
         value: KExpr<T>
-    ) = zeroExtensionExprCache.createIfContextActive(i, value.cast())
+    ) = zeroExtensionExprCache.createIfContextActive(extensionSize, value.cast())
 
-    private val repeatExprCache = mkClosableCache { i: Int,
+    private val repeatExprCache = mkClosableCache { repeatNumber: Int,
                                                     value: KExpr<KBvSort> ->
-        KBvRepeatExpr(this, i, value)
+        KBvRepeatExpr(this, repeatNumber, value)
     }
 
     fun <T : KBvSort> mkBvRepeatExpr(
-        i: Int,
+        repeatNumber: Int,
         value: KExpr<T>
-    ) = repeatExprCache.createIfContextActive(i, value.cast())
+    ) = repeatExprCache.createIfContextActive(repeatNumber, value.cast())
 
-    private val bvShiftLeftExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
-                                                         arg1: KExpr<KBvSort> ->
-        KBvShiftLeftExpr(this, arg0, arg1)
+    private val bvShiftLeftExprCache = mkClosableCache { arg: KExpr<KBvSort>,
+                                                         shift: KExpr<KBvSort> ->
+        KBvShiftLeftExpr(this, arg, shift)
     }
 
-    fun <T : KBvSort> mkBvShiftLeftExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvShiftLeftExpr<T> =
-        bvShiftLeftExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
+    fun <T : KBvSort> mkBvShiftLeftExpr(arg: KExpr<T>, shift: KExpr<T>): KBvShiftLeftExpr<T> =
+        bvShiftLeftExprCache.createIfContextActive(arg.cast(), shift.cast()).cast()
 
-    private val bvLogicalShiftRightExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
-                                                                 arg1: KExpr<KBvSort> ->
-        KBvLogicalShiftRightExpr(this, arg0, arg1)
+    private val bvLogicalShiftRightExprCache = mkClosableCache { arg: KExpr<KBvSort>,
+                                                                 shift: KExpr<KBvSort> ->
+        KBvLogicalShiftRightExpr(this, arg, shift)
     }
 
-    fun <T : KBvSort> mkBvLogicalShiftRightExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvLogicalShiftRightExpr<T> =
-        bvLogicalShiftRightExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
+    fun <T : KBvSort> mkBvLogicalShiftRightExpr(arg: KExpr<T>, shift: KExpr<T>): KBvLogicalShiftRightExpr<T> =
+        bvLogicalShiftRightExprCache.createIfContextActive(arg.cast(), shift.cast()).cast()
 
-    private val bvArithShiftRightExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
-                                                               arg1: KExpr<KBvSort> ->
-        KBvArithShiftRightExpr(this, arg0, arg1)
+    private val bvArithShiftRightExprCache = mkClosableCache { arg: KExpr<KBvSort>,
+                                                               shift: KExpr<KBvSort> ->
+        KBvArithShiftRightExpr(this, arg, shift)
     }
 
-    fun <T : KBvSort> mkBvArithShiftRightExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvArithShiftRightExpr<T> =
-        bvArithShiftRightExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
+    fun <T : KBvSort> mkBvArithShiftRightExpr(arg: KExpr<T>, shift: KExpr<T>): KBvArithShiftRightExpr<T> =
+        bvArithShiftRightExprCache.createIfContextActive(arg.cast(), shift.cast()).cast()
 
-    private val bvRotateLeftExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
-                                                          arg1: KExpr<KBvSort> ->
-        KBvRotateLeftExpr(this, arg0, arg1)
+    private val bvRotateLeftExprCache = mkClosableCache { arg: KExpr<KBvSort>,
+                                                          rotation: KExpr<KBvSort> ->
+        KBvRotateLeftExpr(this, arg, rotation)
     }
 
-    fun <T : KBvSort> mkBvRotateLeftExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvRotateLeftExpr<T> =
-        bvRotateLeftExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
+    fun <T : KBvSort> mkBvRotateLeftExpr(arg: KExpr<T>, rotation: KExpr<T>): KBvRotateLeftExpr<T> =
+        bvRotateLeftExprCache.createIfContextActive(arg.cast(), rotation.cast()).cast()
 
-    private val bvRotateLeftIndexedExprCache = mkClosableCache { i: Int,
+    private val bvRotateLeftIndexedExprCache = mkClosableCache { rotation: Int,
                                                                  value: KExpr<KBvSort> ->
-        KBvRotateLeftIndexedExpr(this, i, value)
+        KBvRotateLeftIndexedExpr(this, rotation, value)
     }
 
-    fun <T : KBvSort> mkBvRotateLeftIndexedExpr(i: Int, value: KExpr<T>): KBvRotateLeftIndexedExpr<T> =
-        bvRotateLeftIndexedExprCache.createIfContextActive(i, value.cast()).cast()
+    fun <T : KBvSort> mkBvRotateLeftIndexedExpr(rotation: Int, value: KExpr<T>): KBvRotateLeftIndexedExpr<T> =
+        bvRotateLeftIndexedExprCache.createIfContextActive(rotation, value.cast()).cast()
 
-    fun <T : KBvSort> mkBvRotateLeftExpr(arg0: Int, arg1: KExpr<T>): KBvRotateLeftExpr<T> =
-        mkBvRotateLeftExpr(mkBv(arg0, arg1.sort.sizeBits), arg1.cast()).cast()
-
-    private val bvRotateRightIndexedExprCache = mkClosableCache { i: Int,
+    private val bvRotateRightIndexedExprCache = mkClosableCache { rotation: Int,
                                                                   value: KExpr<KBvSort> ->
-        KBvRotateRightIndexedExpr(this, i, value)
+        KBvRotateRightIndexedExpr(this, rotation, value)
     }
 
-    fun <T : KBvSort> mkBvRotateRightIndexedExpr(i: Int, value: KExpr<T>): KBvRotateRightIndexedExpr<T> =
-        bvRotateRightIndexedExprCache.createIfContextActive(i, value.cast()).cast()
+    fun <T : KBvSort> mkBvRotateRightIndexedExpr(rotation: Int, value: KExpr<T>): KBvRotateRightIndexedExpr<T> =
+        bvRotateRightIndexedExprCache.createIfContextActive(rotation, value.cast()).cast()
 
 
-    private val bvRotateRightExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
-                                                           arg1: KExpr<KBvSort> ->
-        KBvRotateRightExpr(this, arg0, arg1)
+    private val bvRotateRightExprCache = mkClosableCache { arg: KExpr<KBvSort>,
+                                                           rotation: KExpr<KBvSort> ->
+        KBvRotateRightExpr(this, arg, rotation)
     }
 
-    fun <T : KBvSort> mkBvRotateRightExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvRotateRightExpr<T> =
-        bvRotateRightExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
-
-    fun <T : KBvSort> mkBvRotateRightExpr(arg0: Int, arg1: KExpr<T>): KBvRotateRightExpr<T> =
-        mkBvRotateRightExpr(mkBv(arg0, arg1.sort.sizeBits), arg1.cast()).cast()
+    fun <T : KBvSort> mkBvRotateRightExpr(arg: KExpr<T>, rotation: KExpr<T>): KBvRotateRightExpr<T> =
+        bvRotateRightExprCache.createIfContextActive(arg.cast(), rotation.cast()).cast()
 
     private val bv2IntExprCache = mkClosableCache { value: KExpr<KBvSort>,
                                                     isSigned: Boolean ->

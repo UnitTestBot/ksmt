@@ -244,12 +244,12 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_ROTATE_LEFT -> expr.convert { arg: KExpr<KBvSort> ->
                 val rotation = Native.getDeclIntParameter(nCtx, decl, 0)
 
-                mkBvRotateLeftExpr(rotation, arg)
+                mkBvRotateLeftIndexedExpr(rotation, arg)
             }
             Z3_decl_kind.Z3_OP_ROTATE_RIGHT -> expr.convert { arg: KExpr<KBvSort> ->
                 val rotation = Native.getDeclIntParameter(nCtx, decl, 0)
 
-                mkBvRotateRightExpr(rotation, arg)
+                mkBvRotateRightIndexedExpr(rotation, arg)
             }
             Z3_decl_kind.Z3_OP_EXT_ROTATE_LEFT -> expr.convert(::mkBvRotateLeftExpr)
             Z3_decl_kind.Z3_OP_EXT_ROTATE_RIGHT -> expr.convert(::mkBvRotateRightExpr)

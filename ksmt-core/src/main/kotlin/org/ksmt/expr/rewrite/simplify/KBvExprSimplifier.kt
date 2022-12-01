@@ -962,8 +962,8 @@ interface KBvExprSimplifier : KExprSimplifierBase {
          *      (ite (bvule nestedShift (+ nestedShift shift)) (bvshl x (+ nestedShift shift)) 0)
          * */
         if (arg is KBvShiftLeftExpr<*>) {
-            val nestedArg = arg.arg0.asExpr(expr.sort)
-            val nestedShift = arg.arg1.asExpr(expr.sort)
+            val nestedArg = arg.arg.asExpr(expr.sort)
+            val nestedShift = arg.shift.asExpr(expr.sort)
             val sum = mkBvAddExpr(nestedShift, shift)
             val cond = mkBvUnsignedLessOrEqualExpr(nestedShift, sum)
             return@simplifyApp mkIte(

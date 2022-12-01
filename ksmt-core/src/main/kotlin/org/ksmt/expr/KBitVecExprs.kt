@@ -890,56 +890,56 @@ class KBvRepeatExpr internal constructor(
 /**
  * Shift left.
  *
- * It is equivalent to multiplication by `2^x`, where `x` is the value of [arg1].
+ * It is equivalent to multiplication by `2^x`, where `x` is the value of [shift].
  */
 class KBvShiftLeftExpr<S : KBvSort> internal constructor(
     ctx: KContext,
-    val arg0: KExpr<S>,
-    val arg1: KExpr<S>
+    val arg: KExpr<S>,
+    val shift: KExpr<S>
 ) : KApp<S, KExpr<S>>(ctx) {
     override val args: List<KExpr<S>>
-        get() = listOf(arg0, arg1)
+        get() = listOf(arg, shift)
 
     override val decl: KDecl<S>
-        get() = ctx.mkBvShiftLeftDecl(arg0.sort, arg1.sort)
+        get() = ctx.mkBvShiftLeftDecl(arg.sort, shift.sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 
     override val sort: S
         get() = ctx.getExprSort(this)
 
-    override fun computeExprSort(): S = arg0.sort
+    override fun computeExprSort(): S = arg.sort
 
     override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
-        dependency += arg0
+        dependency += arg
     }
 }
 
 /**
  * Logical shift right.
  *
- * It is equivalent to unsigned division by `2^x`, where `x` is the value of [arg1].
+ * It is equivalent to unsigned division by `2^x`, where `x` is the value of [shift].
  */
 class KBvLogicalShiftRightExpr<S : KBvSort> internal constructor(
     ctx: KContext,
-    val arg0: KExpr<S>,
-    val arg1: KExpr<S>
+    val arg: KExpr<S>,
+    val shift: KExpr<S>
 ) : KApp<S, KExpr<S>>(ctx) {
     override val args: List<KExpr<S>>
-        get() = listOf(arg0, arg1)
+        get() = listOf(arg, shift)
 
     override val decl: KDecl<S>
-        get() = ctx.mkBvLogicalShiftRightDecl(arg0.sort, arg1.sort)
+        get() = ctx.mkBvLogicalShiftRightDecl(arg.sort, shift.sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 
     override val sort: S
         get() = ctx.getExprSort(this)
 
-    override fun computeExprSort(): S = arg0.sort
+    override fun computeExprSort(): S = arg.sort
 
     override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
-        dependency += arg0
+        dependency += arg
     }
 }
 
@@ -951,24 +951,24 @@ class KBvLogicalShiftRightExpr<S : KBvSort> internal constructor(
  */
 class KBvArithShiftRightExpr<S : KBvSort> internal constructor(
     ctx: KContext,
-    val arg0: KExpr<S>,
-    val arg1: KExpr<S>
+    val arg: KExpr<S>,
+    val shift: KExpr<S>
 ) : KApp<S, KExpr<S>>(ctx) {
     override val args: List<KExpr<S>>
-        get() = listOf(arg0, arg1)
+        get() = listOf(arg, shift)
 
     override val decl: KDecl<S>
-        get() = ctx.mkBvArithShiftRightDecl(arg0.sort, arg1.sort)
+        get() = ctx.mkBvArithShiftRightDecl(arg.sort, shift.sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 
     override val sort: S
         get() = ctx.getExprSort(this)
 
-    override fun computeExprSort(): S = arg0.sort
+    override fun computeExprSort(): S = arg.sort
 
     override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
-        dependency += arg0
+        dependency += arg
     }
 
 }
@@ -976,28 +976,28 @@ class KBvArithShiftRightExpr<S : KBvSort> internal constructor(
 /**
  * Rotate left.
  *
- * Rotates bits of the [arg0] to the left [arg1] times.
+ * Rotates bits of the [arg] to the left [rotation] times.
  */
 class KBvRotateLeftExpr<S : KBvSort> internal constructor(
     ctx: KContext,
-    val arg0: KExpr<S>,
-    val arg1: KExpr<S>
+    val arg: KExpr<S>,
+    val rotation: KExpr<S>
 ) : KApp<S, KExpr<S>>(ctx) {
     override val args: List<KExpr<S>>
-        get() = listOf(arg0, arg1)
+        get() = listOf(arg, rotation)
 
     override val decl: KDecl<S>
-        get() = ctx.mkBvRotateLeftDecl(arg0.sort, arg1.sort)
+        get() = ctx.mkBvRotateLeftDecl(arg.sort, rotation.sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 
     override val sort: S
         get() = ctx.getExprSort(this)
 
-    override fun computeExprSort(): S = arg0.sort
+    override fun computeExprSort(): S = arg.sort
 
     override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
-        dependency += arg0
+        dependency += arg
     }
 }
 
@@ -1032,28 +1032,28 @@ class KBvRotateLeftIndexedExpr<S : KBvSort> internal constructor(
 /**
  * Rotate right.
  *
- * Rotates bits of the [arg0] to the right [arg1] times.
+ * Rotates bits of the [arg] to the right [rotation] times.
  */
 class KBvRotateRightExpr<S : KBvSort> internal constructor(
     ctx: KContext,
-    val arg0: KExpr<S>,
-    val arg1: KExpr<S>
+    val arg: KExpr<S>,
+    val rotation: KExpr<S>
 ) : KApp<S, KExpr<S>>(ctx) {
     override val args: List<KExpr<S>>
-        get() = listOf(arg0, arg1)
+        get() = listOf(arg, rotation)
 
     override val decl: KDecl<S>
-        get() = ctx.mkBvRotateRightDecl(arg0.sort, arg1.sort)
+        get() = ctx.mkBvRotateRightDecl(arg.sort, rotation.sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 
     override val sort: S
         get() = ctx.getExprSort(this)
 
-    override fun computeExprSort(): S = arg0.sort
+    override fun computeExprSort(): S = arg.sort
 
     override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
-        dependency += arg0
+        dependency += arg
     }
 }
 
