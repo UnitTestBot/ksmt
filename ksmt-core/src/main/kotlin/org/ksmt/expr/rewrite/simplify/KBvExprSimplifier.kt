@@ -256,6 +256,10 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             resultParts += arg
         }
 
+        if (resultParts.isEmpty()) {
+            return@simplifyApp constantValue.asExpr(expr.sort)
+        }
+
         if (constantValue != zero) {
             resultParts.add(constantValue.asExpr(expr.sort))
         }
@@ -535,6 +539,10 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             return@simplifyApp maxValue.asExpr(expr.sort)
         }
 
+        if (resultParts.isEmpty()) {
+            return@simplifyApp constantValue.asExpr(expr.sort)
+        }
+
         // (bvor 0 a) ==> a
         if (constantValue != zero) {
             resultParts.add(constantValue.asExpr(expr.sort))
@@ -609,6 +617,10 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         val resultParts = arrayListOf<KExpr<T>>().apply {
             addAll(positiveParts)
             addAll(negativeParts.map { mkBvNotExpr(it) })
+        }
+
+        if (resultParts.isEmpty()) {
+            return@simplifyApp constantValue.asExpr(expr.sort)
         }
 
         var negateResult = false
@@ -1364,7 +1376,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             )
             args2 += mkBvExtractExpr(
                 high = size - partSize - 1,
-                low = size - 0,
+                low = 0,
                 expr
             )
         }
