@@ -101,12 +101,20 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
                      * Otherwise, we need to perform full check of parent indices.
                      * */
                     if (!index.definitelyIsConstant || storedIndexPosition < lastNonConstantIndex) {
-                        for (checkIdx in (storedIndexPosition + 1..simplifiedIndices.lastIndex)) {
+                        // Shortcut
+                        if (lastNonConstantIndex > storedIndexPosition
+                            && !areDefinitelyDistinct(index, simplifiedIndices[lastNonConstantIndex])
+                        ) {
+                            allParentIndicesAreDistinct = false
+                        }
+
+                        var checkIdx = storedIndexPosition + 1
+                        while (allParentIndicesAreDistinct && checkIdx < simplifiedIndices.size) {
                             if (!areDefinitelyDistinct(index, simplifiedIndices[checkIdx])) {
                                 // possibly equal index, we can't squash stores
                                 allParentIndicesAreDistinct = false
-                                break
                             }
+                            checkIdx++
                         }
                     }
 
