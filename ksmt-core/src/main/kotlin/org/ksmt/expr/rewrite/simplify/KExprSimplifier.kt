@@ -10,7 +10,7 @@ import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
-import org.ksmt.utils.asExpr
+import org.ksmt.utils.uncheckedCast
 
 open class KExprSimplifier(ctx: KContext) :
     KNonRecursiveTransformer(ctx),
@@ -28,13 +28,13 @@ open class KExprSimplifier(ctx: KContext) :
         expr = expr,
         preprocess = { if (expr.lhs == expr.rhs) trueExpr else expr }
     ) { (lhs, rhs) ->
-        when (val sort = lhs.sort) {
-            boolSort -> simplifyEqBool(lhs.asExpr(boolSort), rhs.asExpr(boolSort))
-            intSort -> simplifyEqInt(lhs.asExpr(intSort), rhs.asExpr(intSort))
-            realSort -> simplifyEqReal(lhs.asExpr(realSort), rhs.asExpr(realSort))
-            is KBvSort -> simplifyEqBv(lhs.asExpr(sort), rhs.asExpr(sort))
-            is KFpSort -> simplifyEqFp(lhs.asExpr(sort), rhs.asExpr(sort))
-            is KArraySort<*, *> -> simplifyEqArray(lhs.asExpr(sort), rhs.asExpr(sort))
+        when (lhs.sort) {
+            boolSort -> simplifyEqBool(lhs.uncheckedCast(), rhs.uncheckedCast())
+            intSort -> simplifyEqInt(lhs.uncheckedCast(), rhs.uncheckedCast())
+            realSort -> simplifyEqReal(lhs.uncheckedCast(), rhs .uncheckedCast())
+            is KBvSort -> simplifyEqBv(lhs as KExpr<KBvSort>, rhs.uncheckedCast() )
+            is KFpSort -> simplifyEqFp(lhs as KExpr<KFpSort>, rhs.uncheckedCast() )
+            is KArraySort<*, *> -> simplifyEqArray(lhs as KExpr<KArraySort<KSort, KSort>>, rhs.uncheckedCast())
             else -> mkEq(lhs, rhs)
         }
     }
@@ -58,12 +58,12 @@ open class KExprSimplifier(ctx: KContext) :
 
     override fun <T : KSort> areDefinitelyDistinct(lhs: KExpr<T>, rhs: KExpr<T>): Boolean = with(ctx) {
         if (lhs == rhs) return false
-        return when (val sort = lhs.sort) {
-            boolSort -> areDefinitelyDistinctBool(lhs.asExpr(boolSort), rhs.asExpr(boolSort))
-            intSort -> areDefinitelyDistinctInt(lhs.asExpr(intSort), rhs.asExpr(intSort))
-            realSort -> areDefinitelyDistinctReal(lhs.asExpr(realSort), rhs.asExpr(realSort))
-            is KBvSort -> areDefinitelyDistinctBv(lhs.asExpr(sort), rhs.asExpr(sort))
-            is KFpSort -> areDefinitelyDistinctFp(lhs.asExpr(sort), rhs.asExpr(sort))
+        return when (lhs.sort) {
+            boolSort -> areDefinitelyDistinctBool(lhs.uncheckedCast(), rhs.uncheckedCast())
+            intSort -> areDefinitelyDistinctInt(lhs.uncheckedCast(), rhs.uncheckedCast())
+            realSort -> areDefinitelyDistinctReal(lhs.uncheckedCast(), rhs.uncheckedCast())
+            is KBvSort -> areDefinitelyDistinctBv(lhs as KExpr<KBvSort>, rhs.uncheckedCast())
+            is KFpSort -> areDefinitelyDistinctFp(lhs as KExpr<KFpSort>, rhs.uncheckedCast())
             else -> false
         }
     }
@@ -72,7 +72,7 @@ open class KExprSimplifier(ctx: KContext) :
         val rewritten = rewrittenExpressions.remove(expr) ?: return null
         val result = transformedExpr(rewritten)
             ?: error("Nested rewrite failed")
-        return result.asExpr(expr.sort)
+        return result.uncheckedCast()
     }
 
     fun postRewrite(original: KExpr<*>, rewritten: KExpr<*>) {

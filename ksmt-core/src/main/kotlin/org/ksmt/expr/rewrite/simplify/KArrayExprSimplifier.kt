@@ -1,18 +1,26 @@
 package org.ksmt.expr.rewrite.simplify
 
+import org.ksmt.KContext
+import org.ksmt.decl.KDecl
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
+import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFalse
+import org.ksmt.expr.KFpValue
+import org.ksmt.expr.KIntNumExpr
+import org.ksmt.expr.KRealNumExpr
+import org.ksmt.expr.KTrue
+import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
-import org.ksmt.utils.asExpr
+import org.ksmt.utils.uncheckedCast
 
 interface KArrayExprSimplifier : KExprSimplifierBase {
 
-    @Suppress("UNCHECKED_CAST")
     fun <T : KArraySort<*, *>> simplifyEqArray(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> = with(ctx) {
         if (lhs == rhs) return trueExpr
 
@@ -34,7 +42,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             val checks = arrayListOf<KExpr<KBoolSort>>()
             if (lBase is KArrayConst<*, *> && rBase is KArrayConst<*, *>) {
                 // (= (const a) (const b)) ==> (= a b)
-                checks += mkEq(lBase.value.asExpr(lhs.sort.range), rBase.value.asExpr(lhs.sort.range))
+                checks += mkEq(lBase.value as KExpr<KSort>, rBase.value.uncheckedCast())
             }
             for (store in (lStores + rStores)) {
                 val idx = store.index as KExpr<KSort>
@@ -46,45 +54,111 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         return mkEq(lhs, rhs)
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> =
-        simplifyApp(expr as KApp<KArraySort<D, R>, KExpr<KSort>>) { (array, index, value) ->
-            // (store (const v) i v) ==> (const v)
-            if (array is KArrayConst<*, *> && array.value == value) {
-                return@simplifyApp array.asExpr(expr.sort)
-            }
-
-            // (store a i (select a i)) ==> a
-            if (value is KArraySelect<*, *> && array == value.array && index == value.index) {
-                return@simplifyApp array.asExpr(expr.sort)
-            }
-
-            val parentStores = arrayListOf<KArrayStore<*, *>>()
-            var store = array as KExpr<KArraySort<*, *>>
-            while (store is KArrayStore<*, *>) {
-                // (store (store a i x) i y) ==> (store a i y)
-                if (store.index == index) {
-                    var base = store.array as KExpr<KArraySort<*, *>>
-                    parentStores.asReversed().forEach {
-                        base = mkArrayStore(base, it.index as KExpr<KSort>, it.value as KExpr<KSort>)
-                    }
-                    // do not rewrite
-                    return@simplifyApp mkArrayStore(base, index, value).asExpr(expr.sort)
-                }
-
-                if (areDefinitelyDistinct(index, store.index.asExpr(index.sort))) {
-                    // (store (store a i x) j y), i != j ==> (store (store a j y) i x)
-                    parentStores.add(store)
-                } else {
-                    // possibly equal index, we can't squash stores
-                    break
-                }
-
-                store = store.array as KExpr<KArraySort<*, *>>
-            }
-
-            mkArrayStore(array.asExpr(expr.sort), index, value).asExpr(expr.sort)
+        simplifyApp(
+            expr = expr as KApp<KArraySort<D, R>, KExpr<KSort>>,
+            preprocess = { flatStores(expr) }
+        ) {
+            error("Always preprocessed")
         }
+
+    private fun <D : KSort, R : KSort> transform(expr: SimplifierFlatArrayStoreExpr<D, R>): KExpr<KArraySort<D, R>> =
+        simplifyApp(expr) { transformedArgs ->
+            val base: KExpr<KArraySort<D, R>> = transformedArgs.first().uncheckedCast()
+            val indices: List<KExpr<D>> = transformedArgs.subList(
+                fromIndex = 1, toIndex = 1 + expr.indices.size
+            ).uncheckedCast()
+            val values: List<KExpr<R>> = transformedArgs.subList(
+                fromIndex = 1 + expr.indices.size, toIndex = transformedArgs.size
+            ).uncheckedCast()
+
+            if (indices.isEmpty()) {
+                return@simplifyApp base
+            }
+
+            val storedIndices = hashMapOf<KExpr<D>, Int>()
+            val simplifiedIndices = arrayListOf<KExpr<D>>()
+            val simplifiedValues = arrayListOf<KExpr<R>>()
+            var lastNonConstantIndex = -1
+
+            for (i in indices.indices.reversed()) {
+                val index = indices[i]
+                val value = values[i]
+
+                val storedIndexPosition = storedIndices[index]
+                if (storedIndexPosition != null) {
+
+                    /** Try push store.
+                     * (store (store a i x) j y), i != j ==> (store (store a j y) i x)
+                     *
+                     * Store can be pushed only if all parent indices are definitely not equal.
+                     * */
+                    var allParentIndicesAreDistinct = true
+
+                    /**
+                     * Since all constants are trivially comparable we can guarantee, that
+                     * all parents are distinct.
+                     * Otherwise, we need to perform full check of parent indices.
+                     * */
+                    if (!index.definitelyIsConstant || storedIndexPosition < lastNonConstantIndex) {
+                        for (checkIdx in (storedIndexPosition + 1..simplifiedIndices.lastIndex)) {
+                            if (!areDefinitelyDistinct(index, simplifiedIndices[checkIdx])) {
+                                // possibly equal index, we can't squash stores
+                                allParentIndicesAreDistinct = false
+                                break
+                            }
+                        }
+                    }
+
+                    if (allParentIndicesAreDistinct) {
+                        simplifiedValues[storedIndexPosition] = value
+                        if (!index.definitelyIsConstant) {
+                            lastNonConstantIndex = maxOf(lastNonConstantIndex, storedIndexPosition)
+                        }
+                        continue
+                    }
+                }
+
+                // simplify direct store to array
+                if (storedIndices.isEmpty()) {
+                    // (store (const v) i v) ==> (const v)
+                    if (base is KArrayConst<D, R> && base.value == value) {
+                        continue
+                    }
+
+                    // (store a i (select a i)) ==> a
+                    if (value is KArraySelect<*, *> && base == value.array && index == value.index) {
+                        continue
+                    }
+                }
+
+                // store
+                simplifiedIndices.add(index)
+                simplifiedValues.add(value)
+                val indexPosition = simplifiedIndices.size
+                storedIndices[index] = indexPosition
+                if (!index.definitelyIsConstant) {
+                    lastNonConstantIndex = maxOf(lastNonConstantIndex, indexPosition)
+                }
+            }
+
+            var result = base
+            for (i in simplifiedIndices.indices) {
+                val index = simplifiedIndices[i]
+                val value = simplifiedValues[i]
+                result = result.store(index, value)
+            }
+
+            return@simplifyApp result
+        }
+
+    private val KExpr<*>.definitelyIsConstant: Boolean
+        get() = this is KBitVecValue<*>
+                || this is KFpValue<*>
+                || this is KIntNumExpr
+                || this is KRealNumExpr
+                || this is KTrue
+                || this is KFalse
 
     @Suppress("UNCHECKED_CAST")
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> =
@@ -96,10 +170,10 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             for (store in stores) {
                 // (select (store i v) i) ==> v
                 if (store.index == index) {
-                    return@simplifyApp store.value.asExpr(expr.sort)
+                    return@simplifyApp store.value.uncheckedCast()
                 }
 
-                if (areDefinitelyDistinct(index, store.index.asExpr(index.sort))) {
+                if (areDefinitelyDistinct(index, store.index.uncheckedCast())) {
                     // (select (store a i v) j), i != j ==> (select a j)
                     selectBaseArray = store.array as KExpr<KArraySort<*, *>>
                 } else {
@@ -110,13 +184,12 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
 
             // (select (const v) i) ==> v
             if (selectBaseArray is KArrayConst<*, *>) {
-                return@simplifyApp selectBaseArray.value.asExpr(expr.sort)
+                return@simplifyApp selectBaseArray.value.uncheckedCast()
             }
 
-            mkArraySelect(selectBaseArray.asExpr(expr.array.sort), index)
+            mkArraySelect(selectBaseArray.uncheckedCast(), index)
         }
 
-    @Suppress("UNCHECKED_CAST")
     private fun <T : KArraySort<*, *>> expandStores(
         expr: KExpr<T>
     ): Pair<List<KArrayStore<*, *>>, KExpr<T>> {
@@ -127,6 +200,42 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             base = base.array as KExpr<T>
         }
         return stores to base
+    }
+
+    private fun <D : KSort, R : KSort> flatStores(expr: KExpr<KArraySort<D, R>>): SimplifierFlatArrayStoreExpr<D, R> {
+        val stores = arrayListOf<KArrayStore<D, R>>()
+        var base = expr
+        while (base is KArrayStore<D, R>) {
+            stores += base
+            base = base.array
+        }
+        return SimplifierFlatArrayStoreExpr(
+            ctx = ctx,
+            base = base,
+            indices = stores.map { it.index },
+            values = stores.map { it.value }
+        )
+    }
+
+    private class SimplifierFlatArrayStoreExpr<D : KSort, R : KSort>(
+        ctx: KContext,
+        val base: KExpr<KArraySort<D, R>>,
+        val indices: List<KExpr<D>>,
+        val values: List<KExpr<R>>
+    ) : KApp<KArraySort<D, R>, KExpr<KSort>>(ctx) {
+
+        override val args: List<KExpr<KSort>> = (listOf(base) + indices + values).uncheckedCast()
+
+        override val decl: KDecl<KArraySort<D, R>>
+            get() = ctx.mkArrayStoreDecl(base.sort)
+
+        override val sort: KArraySort<D, R>
+            get() = base.sort
+
+        override fun accept(transformer: KTransformerBase): KExpr<KArraySort<D, R>> {
+            transformer as KArrayExprSimplifier
+            return transformer.transform(this)
+        }
     }
 
 }

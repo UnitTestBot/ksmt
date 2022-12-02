@@ -51,7 +51,7 @@ import org.ksmt.sort.KSort
 import org.ksmt.utils.BvUtils.bvMaxValueSigned
 import org.ksmt.utils.BvUtils.minus
 import org.ksmt.utils.BvUtils.mkBvFromBigInteger
-import org.ksmt.utils.asExpr
+import org.ksmt.utils.uncheckedCast
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.math.RoundingMode
@@ -66,7 +66,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     fun <T : KFpSort> simplifyEqFp(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> = with(ctx) {
         if (lhs == rhs) return trueExpr
 
-        if (lhs is KFpValue<*> && rhs is KFpValue<*>) {
+        if (lhs is KFpValue<T> && rhs is KFpValue<T>) {
             // special cases
             if (lhs.isNan() && rhs.isNan()) return trueExpr
             if (lhs.isZero() && rhs.isZero() && lhs.signBit != rhs.signBit) return falseExpr
@@ -79,7 +79,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     }
 
     fun <T : KFpSort> areDefinitelyDistinctFp(lhs: KExpr<T>, rhs: KExpr<T>): Boolean {
-        if (lhs is KFpValue<*> && rhs is KFpValue<*>) {
+        if (lhs is KFpValue<T> && rhs is KFpValue<T>) {
             // special cases
             if (lhs.isNan() != rhs.isNan()) return true
             if (lhs.isZero() != rhs.isZero()) return true
@@ -92,41 +92,41 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     }
 
     override fun <T : KFpSort> transform(expr: KFpAbsExpr<T>): KExpr<T> = simplifyApp(expr) { (arg) ->
-        if (arg is KFpValue<*>) {
+        if (arg is KFpValue<T>) {
             // (abs NaN) ==> Nan
             if (arg.isNan()) {
-                return@simplifyApp arg.asExpr(expr.sort)
+                return@simplifyApp arg
             }
 
             if (arg.signBit) {
                 // (abs x), x < 0 ==> -x
-                val negated = arg.fpUnaryMinus()?.asExpr(expr.sort)
-                negated?.let { return@simplifyApp it }
+                val negated = arg.fpUnaryMinus()
+                negated?.let { return@simplifyApp it.uncheckedCast() }
             } else {
                 // (abs x), x >= 0 ==> x
-                return@simplifyApp arg.asExpr(expr.sort)
+                return@simplifyApp arg
             }
         }
         mkFpAbsExpr(arg)
     }
 
     override fun <T : KFpSort> transform(expr: KFpNegationExpr<T>): KExpr<T> = simplifyApp(expr) { (arg) ->
-        if (arg is KFpValue<*>) {
-            arg.fpUnaryMinus()?.asExpr(expr.sort)?.let { return@simplifyApp it }
+        if (arg is KFpValue<T>) {
+            arg.fpUnaryMinus()?.let { return@simplifyApp it.uncheckedCast() }
         }
 
         // (- -x) ==> x
-        if (arg is KFpNegationExpr<*>) {
-            return@simplifyApp arg.value.asExpr(expr.sort)
+        if (arg is KFpNegationExpr<T>) {
+            return@simplifyApp arg.value
         }
 
         mkFpNegationExpr(arg)
     }
 
     override fun <T : KFpSort> transform(expr: KFpAddExpr<T>): KExpr<T> = expr.simplifyFpBinaryOp { rm, lhs, rhs ->
-        if (lhs is KFpValue<*> && rhs is KFpValue<*> && rm is KFpRoundingModeExpr) {
-            val result = fpAdd(rm.value, lhs, rhs)?.asExpr(expr.sort)
-            result?.let { return@simplifyFpBinaryOp it }
+        if (lhs is KFpValue<T> && rhs is KFpValue<T> && rm is KFpRoundingModeExpr) {
+            val result = fpAdd(rm.value, lhs, rhs)
+            result?.let { return@simplifyFpBinaryOp it.uncheckedCast() }
         }
 
         mkFpAddExpr(rm, lhs, rhs)
@@ -143,18 +143,18 @@ interface KFpExprSimplifier : KExprSimplifierBase {
         }
 
     override fun <T : KFpSort> transform(expr: KFpMulExpr<T>): KExpr<T> = expr.simplifyFpBinaryOp { rm, lhs, rhs ->
-        if (lhs is KFpValue<*> && rhs is KFpValue<*> && rm is KFpRoundingModeExpr) {
-            val result = fpMul(rm.value, lhs, rhs)?.asExpr(expr.sort)
-            result?.let { return@simplifyFpBinaryOp it }
+        if (lhs is KFpValue<T> && rhs is KFpValue<T> && rm is KFpRoundingModeExpr) {
+            val result = fpMul(rm.value, lhs, rhs)
+            result?.let { return@simplifyFpBinaryOp it.uncheckedCast() }
         }
 
         mkFpMulExpr(rm, lhs, rhs)
     }
 
     override fun <T : KFpSort> transform(expr: KFpDivExpr<T>): KExpr<T> = expr.simplifyFpBinaryOp { rm, lhs, rhs ->
-        if (lhs is KFpValue<*> && rhs is KFpValue<*> && rm is KFpRoundingModeExpr) {
-            val result = fpDiv(rm.value, lhs, rhs)?.asExpr(expr.sort)
-            result?.let { return@simplifyFpBinaryOp it }
+        if (lhs is KFpValue<T> && rhs is KFpValue<T> && rm is KFpRoundingModeExpr) {
+            val result = fpDiv(rm.value, lhs, rhs)
+            result?.let { return@simplifyFpBinaryOp it.uncheckedCast() }
         }
 
         mkFpDivExpr(rm, lhs, rhs)
@@ -172,37 +172,37 @@ interface KFpExprSimplifier : KExprSimplifierBase {
 
     override fun <T : KFpSort> transform(expr: KFpSqrtExpr<T>): KExpr<T> =
         expr.simplifyFpUnaryOp { rm, arg ->
-            if (arg is KFpValue<*> && rm is KFpRoundingModeExpr) {
-                val result = fpSqrt(rm.value, arg)?.asExpr(expr.sort)
-                result?.let { return@simplifyFpUnaryOp it }
+            if (arg is KFpValue<T> && rm is KFpRoundingModeExpr) {
+                val result = fpSqrt(rm.value, arg)
+                result?.let { return@simplifyFpUnaryOp it.uncheckedCast() }
             }
             mkFpSqrtExpr(rm, arg)
         }
 
     override fun <T : KFpSort> transform(expr: KFpRoundToIntegralExpr<T>): KExpr<T> =
         expr.simplifyFpUnaryOp { rm, arg ->
-            if (arg is KFpValue<*> && rm is KFpRoundingModeExpr) {
-                val result = fpRoundToIntegral(rm.value, arg)?.asExpr(expr.sort)
-                result?.let { return@simplifyFpUnaryOp it }
+            if (arg is KFpValue<T> && rm is KFpRoundingModeExpr) {
+                val result = fpRoundToIntegral(rm.value, arg)
+                result?.let { return@simplifyFpUnaryOp it.uncheckedCast() }
             }
             mkFpRoundToIntegralExpr(rm, arg)
         }
 
     override fun <T : KFpSort> transform(expr: KFpRemExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
-        val lhsValue = lhs as? KFpValue<*>
-        val rhsValue = rhs as? KFpValue<*>
+        val lhsValue = lhs as? KFpValue<T>
+        val rhsValue = rhs as? KFpValue<T>
 
         if (lhsValue != null && rhsValue != null) {
-            val result = fpRem(lhsValue, rhsValue)?.asExpr(expr.sort)
-            result?.let { return@simplifyApp it }
+            val result = fpRem(lhsValue, rhsValue)
+            result?.let { return@simplifyApp it.uncheckedCast() }
         }
 
         mkFpRemExpr(lhs, rhs)
     }
 
     override fun <T : KFpSort> transform(expr: KFpMinExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
-        val lhsValue = lhs as? KFpValue<*>
-        val rhsValue = rhs as? KFpValue<*>
+        val lhsValue = lhs as? KFpValue<T>
+        val rhsValue = rhs as? KFpValue<T>
 
         if (lhsValue != null && lhsValue.isNan()) {
             return@simplifyApp rhs
@@ -214,19 +214,19 @@ interface KFpExprSimplifier : KExprSimplifierBase {
 
         if (lhsValue != null && rhsValue != null) {
             if (lhsValue.isZero() && rhsValue.isZero() && lhsValue.signBit != rhsValue.signBit) {
-                return@simplifyApp mkFpMinExpr(lhs.asExpr(expr.sort), rhs.asExpr(expr.sort))
+                return@simplifyApp mkFpMinExpr(lhs, rhs)
             }
 
-            val result = fpMin(lhsValue, rhsValue)?.asExpr(expr.sort)
-            result?.let { return@simplifyApp it }
+            val result = fpMin(lhsValue, rhsValue)
+            result?.let { return@simplifyApp it.uncheckedCast() }
         }
 
         mkFpMinExpr(lhs, rhs)
     }
 
     override fun <T : KFpSort> transform(expr: KFpMaxExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
-        val lhsValue = lhs as? KFpValue<*>
-        val rhsValue = rhs as? KFpValue<*>
+        val lhsValue = lhs as? KFpValue<T>
+        val rhsValue = rhs as? KFpValue<T>
 
         if (lhsValue != null && lhsValue.isNan()) {
             return@simplifyApp rhs
@@ -238,11 +238,11 @@ interface KFpExprSimplifier : KExprSimplifierBase {
 
         if (lhsValue != null && rhsValue != null) {
             if (lhsValue.isZero() && rhsValue.isZero() && lhsValue.signBit != rhsValue.signBit) {
-                return@simplifyApp mkFpMaxExpr(lhs.asExpr(expr.sort), rhs.asExpr(expr.sort))
+                return@simplifyApp mkFpMaxExpr(lhs, rhs)
             }
 
-            val result = fpMax(lhsValue, rhsValue)?.asExpr(expr.sort)
-            result?.let { return@simplifyApp it }
+            val result = fpMax(lhsValue, rhsValue)
+            result?.let { return@simplifyApp it.uncheckedCast() }
         }
 
         mkFpMaxExpr(lhs, rhs)
@@ -251,8 +251,8 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     @Suppress("ComplexCondition")
     override fun <T : KFpSort> transform(expr: KFpLessOrEqualExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (lhs, rhs) ->
-            val lhsValue = lhs as? KFpValue<*>
-            val rhsValue = rhs as? KFpValue<*>
+            val lhsValue = lhs as? KFpValue<T>
+            val rhsValue = rhs as? KFpValue<T>
 
             if (lhsValue != null && lhsValue.isNan() || rhsValue != null && rhsValue.isNan()) {
                 return@simplifyApp falseExpr
@@ -269,8 +269,8 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     @Suppress("ComplexCondition")
     override fun <T : KFpSort> transform(expr: KFpLessExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (lhs, rhs) ->
-            val lhsValue = lhs as? KFpValue<*>
-            val rhsValue = rhs as? KFpValue<*>
+            val lhsValue = lhs as? KFpValue<T>
+            val rhsValue = rhs as? KFpValue<T>
 
             if (lhsValue != null && lhsValue.isNan() || rhsValue != null && rhsValue.isNan()) {
                 return@simplifyApp falseExpr
@@ -310,8 +310,8 @@ interface KFpExprSimplifier : KExprSimplifierBase {
 
     override fun <T : KFpSort> transform(expr: KFpEqualExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (lhs, rhs) ->
-            val lhsValue = lhs as? KFpValue<*>
-            val rhsValue = rhs as? KFpValue<*>
+            val lhsValue = lhs as? KFpValue<T>
+            val rhsValue = rhs as? KFpValue<T>
 
             if (lhsValue != null && rhsValue != null) {
                 val check = fpEq(lhsValue, rhsValue)?.expr
@@ -323,7 +323,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
 
     override fun <T : KFpSort> transform(expr: KFpIsNormalExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (arg) ->
-            if (arg is KFpValue<*>) {
+            if (arg is KFpValue<T>) {
                 return@simplifyApp fpIsNormal(arg).expr
             }
             mkFpIsNormalExpr(arg)
@@ -331,7 +331,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
 
     override fun <T : KFpSort> transform(expr: KFpIsSubnormalExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (arg) ->
-            if (arg is KFpValue<*>) {
+            if (arg is KFpValue<T>) {
                 return@simplifyApp fpIsDenormal(arg).expr
             }
             mkFpIsSubnormalExpr(arg)
@@ -339,7 +339,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
 
     override fun <T : KFpSort> transform(expr: KFpIsZeroExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (arg) ->
-            if (arg is KFpValue<*>) {
+            if (arg is KFpValue<T>) {
                 return@simplifyApp arg.isZero().expr
             }
             mkFpIsZeroExpr(arg)
@@ -347,7 +347,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
 
     override fun <T : KFpSort> transform(expr: KFpIsInfiniteExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (arg) ->
-            if (arg is KFpValue<*>) {
+            if (arg is KFpValue<T>) {
                 return@simplifyApp arg.isInfinity().expr
             }
             mkFpIsInfiniteExpr(arg)
@@ -355,7 +355,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
 
     override fun <T : KFpSort> transform(expr: KFpIsNaNExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (arg) ->
-            if (arg is KFpValue<*>) {
+            if (arg is KFpValue<T>) {
                 return@simplifyApp arg.isNan().expr
             }
             mkFpIsNaNExpr(arg)
@@ -363,7 +363,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
 
     override fun <T : KFpSort> transform(expr: KFpIsNegativeExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (arg) ->
-            if (arg is KFpValue<*>) {
+            if (arg is KFpValue<T>) {
                 return@simplifyApp (!arg.isNan() && arg.signBit).expr
             }
             mkFpIsNegativeExpr(arg)
@@ -371,7 +371,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
 
     override fun <T : KFpSort> transform(expr: KFpIsPositiveExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (arg) ->
-            if (arg is KFpValue<*>) {
+            if (arg is KFpValue<T>) {
                 return@simplifyApp (!arg.isNan() && !arg.signBit).expr
             }
             mkFpIsPositiveExpr(arg)
@@ -389,11 +389,11 @@ interface KFpExprSimplifier : KExprSimplifierBase {
                     signBit = (sign as KBitVec1Value).value
                 )
             }
-            mkFpFromBvExpr(sign.asExpr(bv1Sort), exp, significand)
+            mkFpFromBvExpr(sign.uncheckedCast(), exp, significand)
         }
 
     override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> = simplifyApp(expr) { (arg) ->
-        if (arg is KFpValue<*>) {
+        if (arg is KFpValue<T>) {
             if (arg.isNan()) {
                 // ensure NaN bits are the same, as in KContext
                 val nan = ctx.mkFpNan(arg.sort) as KFpValue<*>
@@ -413,8 +413,8 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     @Suppress("UNCHECKED_CAST")
     override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> =
         simplifyApp(expr as KApp<T, KExpr<KSort>>) { (rmArg, valueArg) ->
-            val rm = rmArg.asExpr(mkFpRoundingModeSort())
-            val value = valueArg.asExpr(expr.value.sort)
+            val rm: KExpr<KFpRoundingModeSort> = rmArg.uncheckedCast()
+            val value: KExpr<KFpSort> = valueArg.uncheckedCast()
 
             if (rm is KFpRoundingModeExpr && value is KFpValue<*>) {
                 // todo: evaluate
@@ -427,8 +427,8 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     @Suppress("UNCHECKED_CAST")
     override fun <T : KFpSort> transform(expr: KRealToFpExpr<T>): KExpr<T> =
         simplifyApp(expr as KApp<T, KExpr<KSort>>) { (rmArg, valueArg) ->
-            val rm = rmArg.asExpr(mkFpRoundingModeSort())
-            val value = valueArg.asExpr(expr.value.sort)
+            val rm: KExpr<KFpRoundingModeSort> = rmArg.uncheckedCast()
+            val value: KExpr<KRealSort> = valueArg.uncheckedCast()
 
             if (rm is KFpRoundingModeExpr && value is KRealNumExpr) {
                 // todo: evaluate
@@ -439,7 +439,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
         }
 
     override fun <T : KFpSort> transform(expr: KFpToRealExpr<T>): KExpr<KRealSort> = simplifyApp(expr) { (arg) ->
-        if (arg is KFpValue<*>) {
+        if (arg is KFpValue<T>) {
             if (!arg.isNan() && !arg.isInfinity()) {
                 val decimalValue = fpDecimalValue(arg)
                 if (decimalValue != null) {
@@ -461,8 +461,8 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     @Suppress("UNCHECKED_CAST")
     override fun <T : KFpSort> transform(expr: KBvToFpExpr<T>): KExpr<T> =
         simplifyApp(expr as KApp<T, KExpr<KSort>>) { (rmArg, bvValueArg) ->
-            val rm = rmArg.asExpr(mkFpRoundingModeSort())
-            val value = bvValueArg.asExpr(expr.value.sort)
+            val rm: KExpr<KFpRoundingModeSort> = rmArg.uncheckedCast()
+            val value: KExpr<KBvSort> = bvValueArg.uncheckedCast()
 
             if (rm is KFpRoundingModeExpr && value is KBitVecValue<*>) {
                 // todo: evaluate
@@ -475,10 +475,10 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     @Suppress("UNCHECKED_CAST")
     override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>): KExpr<KBvSort> =
         simplifyApp(expr as KApp<KBvSort, KExpr<KSort>>) { (rmArg, valueArg) ->
-            val rm = rmArg.asExpr(mkFpRoundingModeSort())
-            val value = valueArg.asExpr(expr.value.sort)
+            val rm: KExpr<KFpRoundingModeSort> = rmArg.uncheckedCast()
+            val value: KExpr<T> = valueArg.uncheckedCast()
 
-            if (rm is KFpRoundingModeExpr && value is KFpValue<*>) {
+            if (rm is KFpRoundingModeExpr && value is KFpValue<T>) {
                 if (!value.isNan() && !value.isInfinity()) {
                     val decimalValue = fpDecimalValue(value)
                     if (decimalValue != null) {
@@ -507,21 +507,21 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     private inline fun <T : KFpSort> KExpr<T>.simplifyFpUnaryOp(
         crossinline simplifier: KContext.(KExpr<KFpRoundingModeSort>, KExpr<T>) -> KExpr<T>
     ): KExpr<T> = simplifyApp(this as KApp<T, KExpr<KSort>>) { (rm, value) ->
-        simplifier(ctx, rm.asExpr(mkFpRoundingModeSort()), value.asExpr(sort))
+        simplifier(ctx, rm.uncheckedCast(), value.uncheckedCast())
     }
 
     @Suppress("UNCHECKED_CAST")
     private inline fun <T : KFpSort> KExpr<T>.simplifyFpBinaryOp(
         crossinline simplifier: KContext.(KExpr<KFpRoundingModeSort>, KExpr<T>, KExpr<T>) -> KExpr<T>
     ): KExpr<T> = simplifyApp(this as KApp<T, KExpr<KSort>>) { (rm, lhs, rhs) ->
-        simplifier(ctx, rm.asExpr(mkFpRoundingModeSort()), lhs.asExpr(sort), rhs.asExpr(sort))
+        simplifier(ctx, rm.uncheckedCast(), lhs.uncheckedCast(), rhs.uncheckedCast())
     }
 
     @Suppress("UNCHECKED_CAST")
     private inline fun <T : KFpSort> KExpr<T>.simplifyFpTernaryOp(
         crossinline simplifier: KContext.(KExpr<KFpRoundingModeSort>, KExpr<T>, KExpr<T>, KExpr<T>) -> KExpr<T>
     ): KExpr<T> = simplifyApp(this as KApp<T, KExpr<KSort>>) { (rm, a0, a1, a2) ->
-        simplifier(ctx, rm.asExpr(mkFpRoundingModeSort()), a0.asExpr(sort), a1.asExpr(sort), a2.asExpr(sort))
+        simplifier(ctx, rm.uncheckedCast(), a0.uncheckedCast(), a1.uncheckedCast(), a2.uncheckedCast())
     }
 
     private fun KFpValue<*>.isNan(): Boolean = when (this) {

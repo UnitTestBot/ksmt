@@ -10,7 +10,7 @@ import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KXorExpr
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
-import org.ksmt.utils.asExpr
+import org.ksmt.utils.uncheckedCast
 
 interface KBoolExprSimplifier : KExprSimplifierBase {
 
@@ -136,9 +136,9 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
     @Suppress("UNCHECKED_CAST", "ComplexMethod")
     override fun <T : KSort> transform(expr: KIteExpr<T>): KExpr<T> =
         simplifyApp(expr as KApp<T, KExpr<KSort>>) { (condArg, thenArg, elseArg) ->
-            var c = condArg.asExpr(boolSort)
-            var t = thenArg.asExpr(expr.sort)
-            var e = elseArg.asExpr(expr.sort)
+            var c = condArg as KExpr<KBoolSort>
+            var t = thenArg as KExpr<T>
+            var e = elseArg as KExpr<T>
 
             // (ite (not c) a b) ==> (ite c b a)
             if (c is KNotExpr) {
@@ -150,12 +150,12 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
 
             // (ite c (ite c t1 t2) t3)  ==> (ite c t1 t3)
             if (t is KIteExpr<*> && t.condition == c) {
-                t = t.trueBranch.asExpr(t.sort)
+                t = t.trueBranch.uncheckedCast()
             }
 
             // (ite c t1 (ite c t2 t3))  ==> (ite c t1 t3)
             if (e is KIteExpr<*> && e.condition == c) {
-                e = e.falseBranch.asExpr(t.sort)
+                e = e.falseBranch.uncheckedCast()
             }
 
             // (ite c t1 (ite c2 t1 t2)) ==> (ite (or c c2) t1 t2)
@@ -163,7 +163,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
                 return@simplifyApp mkIte(
                     condition = c or e.condition,
                     trueBranch = t,
-                    falseBranch = e.falseBranch.asExpr(expr.sort)
+                    falseBranch = e.falseBranch.uncheckedCast()
                 ).also { rewrite(it) }
             }
 
@@ -185,10 +185,10 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
             if (t.sort == boolSort) {
                 trySimplifyBoolIte(
                     condition = c,
-                    thenBranch = t.asExpr(boolSort),
-                    elseBranch = e.asExpr(boolSort)
+                    thenBranch = t.uncheckedCast(),
+                    elseBranch = e.uncheckedCast()
                 )?.let { simplified ->
-                    return@simplifyApp simplified.asExpr(expr.sort).also { rewrite(it) }
+                    return@simplifyApp (simplified as KExpr<T>).also { rewrite(it) }
                 }
             }
 

@@ -25,7 +25,7 @@ import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
-import org.ksmt.utils.asExpr
+import org.ksmt.utils.uncheckedCast
 import java.math.BigInteger
 
 interface KArithExprSimplifier : KExprSimplifierBase {
@@ -148,22 +148,22 @@ interface KArithExprSimplifier : KExprSimplifierBase {
 
     override fun <T : KArithSort<T>> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> = simplifyApp(expr) { (arg) ->
         if (arg is KIntNumExpr) {
-            return@simplifyApp mkIntNum(-arg.value).asExpr(expr.sort)
+            return@simplifyApp mkIntNum(-arg.value).uncheckedCast()
         }
         if (arg is KRealNumExpr) {
             return@simplifyApp mkRealNum(
                 mkIntNum(-arg.numerator.value), arg.denominator
-            ).asExpr(expr.sort)
+            ).uncheckedCast()
         }
         mkArithUnaryMinus(arg)
     }
 
     override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
         when (expr.sort) {
-            intSort -> simplifyIntegerDiv(lhs.asExpr(intSort), rhs.asExpr(intSort))
-                .asExpr(expr.sort).also { rewrite(it) }
-            realSort -> simplifyRealDiv(lhs.asExpr(realSort), rhs.asExpr(realSort))
-                .asExpr(expr.sort).also { rewrite(it) }
+            intSort -> (simplifyIntegerDiv(lhs.uncheckedCast(), rhs.uncheckedCast()) as KExpr<T>)
+                .also { rewrite(it) }
+            realSort -> (simplifyRealDiv(lhs.uncheckedCast(), rhs.uncheckedCast()) as KExpr<T>)
+                .also { rewrite(it) }
             else -> mkArithDiv(lhs, rhs)
         }
     }
@@ -298,12 +298,13 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         return numericValue(numerator, denominator, sort)
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun <T : KArithSort<T>> numericValue(
         numerator: BigInteger, denominator: BigInteger = BigInteger.ONE, sort: T
     ): KExpr<T> = with(ctx) {
         when (sort) {
-            intSort -> mkIntNum(numerator).asExpr(sort)
-            realSort -> mkRealNum(mkIntNum(numerator), mkIntNum(denominator)).asExpr(sort)
+            intSort -> mkIntNum(numerator) as KExpr<T>
+            realSort -> mkRealNum(mkIntNum(numerator), mkIntNum(denominator)) as KExpr<T>
             else -> error("Unexpected arith sort: $sort")
         }
     }
