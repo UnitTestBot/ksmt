@@ -397,15 +397,19 @@ interface KFpExprSimplifier : KExprSimplifierBase {
             if (arg.isNan()) {
                 // ensure NaN bits are the same, as in KContext
                 val nan = ctx.mkFpNan(arg.sort) as KFpValue<*>
-                return@simplifyApp mkBvConcatExpr(
-                    mkBv(nan.signBit),
-                    mkBvConcatExpr(nan.biasedExponent, nan.significand)
-                ).also { rewrite(it) }
+                return@simplifyApp rewrite(
+                    mkBvConcatExpr(
+                        mkBv(nan.signBit),
+                        mkBvConcatExpr(nan.biasedExponent, nan.significand)
+                    )
+                )
             }
-            return@simplifyApp mkBvConcatExpr(
-                mkBv(arg.signBit),
-                mkBvConcatExpr(arg.biasedExponent, arg.significand)
-            ).also { rewrite(it) }
+            return@simplifyApp rewrite(
+                mkBvConcatExpr(
+                    mkBv(arg.signBit),
+                    mkBvConcatExpr(arg.biasedExponent, arg.significand)
+                )
+            )
         }
         mkFpToIEEEBvExpr(arg)
     }

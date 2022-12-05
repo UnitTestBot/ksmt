@@ -142,7 +142,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
             for (arg in args.drop(1)) {
                 simplifiedArgs += mkArithUnaryMinus(arg)
             }
-            mkArithAdd(simplifiedArgs).also { rewrite(it) }
+            rewrite(mkArithAdd(simplifiedArgs))
         }
     }
 
@@ -160,10 +160,8 @@ interface KArithExprSimplifier : KExprSimplifierBase {
 
     override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
         when (expr.sort) {
-            intSort -> (simplifyIntegerDiv(lhs.uncheckedCast(), rhs.uncheckedCast()) as KExpr<T>)
-                .also { rewrite(it) }
-            realSort -> (simplifyRealDiv(lhs.uncheckedCast(), rhs.uncheckedCast()) as KExpr<T>)
-                .also { rewrite(it) }
+            intSort -> rewrite(simplifyIntegerDiv(lhs.uncheckedCast(), rhs.uncheckedCast()) as KExpr<T>)
+            realSort -> rewrite(simplifyRealDiv(lhs.uncheckedCast(), rhs.uncheckedCast()) as KExpr<T>)
             else -> mkArithDiv(lhs, rhs)
         }
     }

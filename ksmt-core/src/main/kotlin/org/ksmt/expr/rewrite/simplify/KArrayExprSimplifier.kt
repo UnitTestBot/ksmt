@@ -48,7 +48,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
                 val idx = store.index as KExpr<KSort>
                 checks += lhs.select(idx) eq rhs.select(idx)
             }
-            return mkAnd(checks).also { rewrite(it) }
+            return rewrite(mkAnd(checks))
         }
 
         return mkEq(lhs, rhs)

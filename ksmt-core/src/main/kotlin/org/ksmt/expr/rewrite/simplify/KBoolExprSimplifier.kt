@@ -160,11 +160,13 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
 
             // (ite c t1 (ite c2 t1 t2)) ==> (ite (or c c2) t1 t2)
             if (e is KIteExpr<*> && e.trueBranch == t) {
-                return@simplifyApp mkIte(
-                    condition = c or e.condition,
-                    trueBranch = t,
-                    falseBranch = e.falseBranch.uncheckedCast()
-                ).also { rewrite(it) }
+                return@simplifyApp rewrite(
+                    mkIte(
+                        condition = c or e.condition,
+                        trueBranch = t,
+                        falseBranch = e.falseBranch.uncheckedCast()
+                    )
+                )
             }
 
             // (ite true t e) ==> t
@@ -188,7 +190,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
                     thenBranch = t.uncheckedCast(),
                     elseBranch = e.uncheckedCast()
                 )?.let { simplified ->
-                    return@simplifyApp (simplified as KExpr<T>).also { rewrite(it) }
+                    return@simplifyApp rewrite(simplified as KExpr<T>)
                 }
             }
 
@@ -257,17 +259,17 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
 
         // (= (not a) (not b)) ==> (= a b)
         if (lhs is KNotExpr && rhs is KNotExpr) {
-            return mkEq(lhs.arg, rhs.arg).also { rewrite(it) }
+            return rewrite(mkEq(lhs.arg, rhs.arg))
         }
 
         when (lhs) {
             trueExpr -> return rhs
-            falseExpr -> return !rhs.also { rewrite(it) }
+            falseExpr -> return rewrite(!rhs)
         }
 
         when (rhs) {
             trueExpr -> return lhs
-            falseExpr -> return !lhs.also { rewrite(it) }
+            falseExpr -> return rewrite(!lhs)
         }
 
         // (= a (not a)) ==> false

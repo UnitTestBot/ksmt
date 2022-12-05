@@ -106,7 +106,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         }
 
         if (lhs is KBvConcatExpr || rhs is KBvConcatExpr) {
-            return simplifyBvConcatEq(lhs, rhs).also { rewrite(it) }
+            return rewrite(simplifyBvConcatEq(lhs, rhs))
         }
 
         mkEq(lhs, rhs)
@@ -211,7 +211,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                 if (rhsValue != null) {
                     // a <= b, b == MIN_VALUE ==> a == b
                     if (rhsValue == lower) {
-                        return (lhs eq rhs).also { rewrite(it) }
+                        return rewrite(lhs eq rhs)
                     }
                     // a <= b, b == MAX_VALUE ==> true
                     if (rhsValue == upper) {
@@ -226,7 +226,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                     }
                     // a <= b, a == MAX_VALUE ==> a == b
                     if (lhsValue == upper) {
-                        return (lhs eq rhs).also { rewrite(it) }
+                        return rewrite(lhs eq rhs)
                     }
                 }
             }
@@ -370,8 +370,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             }
 
             rhsValue.powerOfTwoOrNull()?.let { shift ->
-                return@simplifyApp mkBvLogicalShiftRightExpr(lhs, mkBv(shift, size).uncheckedCast())
-                    .also { rewrite(it) }
+                return@simplifyApp rewrite(mkBvLogicalShiftRightExpr(lhs, mkBv(shift, size).uncheckedCast()))
             }
         }
 
@@ -421,10 +420,12 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             }
 
             rhsValue.powerOfTwoOrNull()?.let { shift ->
-                return@simplifyApp mkBvConcatExpr(
-                    bvZero(size - shift.toUInt()),
-                    mkBvExtractExpr(shift - 1, 0, lhs)
-                ).also { rewrite(it) }.uncheckedCast()
+                return@simplifyApp rewrite(
+                    mkBvConcatExpr(
+                        bvZero(size - shift.toUInt()),
+                        mkBvExtractExpr(shift - 1, 0, lhs)
+                    ).uncheckedCast()
+                )
             }
         }
 
@@ -468,8 +469,9 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         if (arg is KBvConcatExpr) {
             val concatParts = flatConcat(arg).args
             val negatedParts = concatParts.map { mkBvNotExpr(it) }
-            return@simplifyApp negatedParts.reduceBinaryBvExpr(::mkBvConcatExpr)
-                .also { rewrite(it) }.uncheckedCast()
+            return@simplifyApp rewrite(
+                SimplifierFlatBvConcatExpr(ctx, arg.sort, negatedParts).uncheckedCast()
+            )
         }
 
         // (bvnot (ite c a b)) ==> (ite c (bvnot a) (bvnot b))
@@ -477,11 +479,13 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             val trueValue = arg.trueBranch as? KBitVecValue<T>
             val falseValue = arg.falseBranch as? KBitVecValue<T>
             if (trueValue != null || falseValue != null) {
-                return@simplifyApp mkIte(
-                    condition = arg.condition,
-                    trueBranch = mkBvNotExpr(arg.trueBranch),
-                    falseBranch = mkBvNotExpr(arg.falseBranch)
-                ).also { rewrite(it) }
+                return@simplifyApp rewrite(
+                    mkIte(
+                        condition = arg.condition,
+                        trueBranch = mkBvNotExpr(arg.trueBranch),
+                        falseBranch = mkBvNotExpr(arg.falseBranch)
+                    )
+                )
             }
         }
 
@@ -556,7 +560,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
          *  )
          * */
         if (resultParts.any { it is KBvConcatExpr }) {
-            return@simplifyApp distributeOrOverConcat(resultParts).also { rewrite(it) }
+            return@simplifyApp rewrite(distributeOrOverConcat(resultParts))
         }
 
         resultParts.reduceBinaryBvExpr(::mkBvOrExpr)
@@ -640,7 +644,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         if (resultParts.any { it is KBvConcatExpr }) {
             val preResult = distributeXorOverConcat(resultParts)
             val result = if (negateResult) mkBvNotExpr(preResult) else preResult
-            return@simplifyApp result.also { rewrite(it) }
+            return@simplifyApp rewrite(result)
         }
 
         val preResult = resultParts.reduceBinaryBvExpr(::mkBvXorExpr)
@@ -732,7 +736,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
 
         val result = mergedParts.reduceBinaryBvExpr(::mkBvConcatExpr)
         if (mergedParts.size < flatten.size) {
-            result.also { rewrite(it) }
+            rewrite(result)
         } else {
             result
         }
@@ -751,17 +755,18 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         // (extract[high:low] (extract[_:nestedLow] x)) ==> (extract[high+nestedLow : low+nestedLow] x)
         if (arg is KBvExtractExpr) {
             val nestedLow = arg.low
-            return@simplifyApp mkBvExtractExpr(
-                high = expr.high + nestedLow,
-                low = expr.low + nestedLow,
-                value = arg.value
-            ).also { rewrite(it) }
+            return@simplifyApp rewrite(
+                mkBvExtractExpr(
+                    high = expr.high + nestedLow,
+                    low = expr.low + nestedLow,
+                    value = arg.value
+                )
+            )
         }
 
         // (extract (concat a b)) ==> (concat (extract a) (extract b))
         if (arg is KBvConcatExpr) {
-            return@simplifyApp distributeExtractOverConcat(arg, expr.high, expr.low)
-                .also { rewrite(it) }
+            return@simplifyApp rewrite(distributeExtractOverConcat(arg, expr.high, expr.low))
         }
 
         val simplified = when {
@@ -795,7 +800,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         }
 
         if (simplified != null) {
-            return@simplifyApp simplified.also { rewrite(it) }
+            return@simplifyApp rewrite(simplified)
         }
 
         mkBvExtractExpr(expr.high, expr.low, arg)
@@ -918,8 +923,9 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             if (intShiftValue != null) {
                 val lhs = mkBvExtractExpr(high = size.toInt() - 1 - intShiftValue, low = 0, arg)
                 val rhs = bvZero(intShiftValue.toUInt())
-                return@simplifyApp mkBvConcatExpr(lhs, rhs)
-                    .also { rewrite(it) }.uncheckedCast()
+                return@simplifyApp rewrite(
+                    mkBvConcatExpr(lhs, rhs).uncheckedCast()
+                )
             }
         }
 
@@ -932,11 +938,13 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             val nestedShift = arg.shift
             val sum = mkBvAddExpr(nestedShift, shift)
             val cond = mkBvUnsignedLessOrEqualExpr(nestedShift, sum)
-            return@simplifyApp mkIte(
-                condition = cond,
-                trueBranch = mkBvShiftLeftExpr(nestedArg, sum),
-                falseBranch = bvZero(size).uncheckedCast()
-            ).also { rewrite(it) }
+            return@simplifyApp rewrite(
+                mkIte(
+                    condition = cond,
+                    trueBranch = mkBvShiftLeftExpr(nestedArg, sum),
+                    falseBranch = bvZero(size).uncheckedCast()
+                )
+            )
         }
 
         mkBvShiftLeftExpr(arg, shift)
@@ -968,8 +976,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                 if (intShiftValue != null) {
                     val lhs = bvZero(intShiftValue.toUInt())
                     val rhs = mkBvExtractExpr(high = size.toInt() - 1, low = intShiftValue, arg)
-                    return@simplifyApp mkBvConcatExpr(lhs, rhs)
-                        .also { rewrite(it) }.uncheckedCast()
+                    return@simplifyApp rewrite(mkBvConcatExpr(lhs, rhs).uncheckedCast())
                 }
             }
 
@@ -1012,7 +1019,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             return@simplifyApp mkBvRepeatExpr(expr.repeatNumber, arg)
         }
 
-        return@simplifyApp repeats.reduceBinaryBvExpr(::mkBvConcatExpr).also { rewrite(it) }
+        return@simplifyApp rewrite(SimplifierFlatBvConcatExpr(ctx, expr.sort, repeats))
     }
 
     // (zeroext a) ==> (concat 0 a)
@@ -1022,7 +1029,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         }
 
         val extension = bvZero(expr.extensionSize.toUInt())
-        return@simplifyApp mkBvConcatExpr(extension, arg).also { rewrite(it) }
+        return@simplifyApp rewrite(mkBvConcatExpr(extension, arg))
     }
 
     override fun transform(expr: KBvSignExtensionExpr): KExpr<KBvSort> = simplifyApp(expr) { (arg) ->
@@ -1060,14 +1067,14 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         val lhs = mkBvExtractExpr(high = size - rotation - 1, low = 0, arg)
         val rhs = mkBvExtractExpr(high = size - 1, low = size - rotation, arg)
 
-        return mkBvConcatExpr(lhs, rhs).also { rewrite(it) }.uncheckedCast()
+        return rewrite(mkBvConcatExpr(lhs, rhs).uncheckedCast())
     }
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>): KExpr<T> = simplifyApp(expr) { (arg, rotation) ->
         if (rotation is KBitVecValue<T>) {
             val intValue = rotation.intValueOrNull()
             if (intValue != null) {
-                return@simplifyApp mkBvRotateLeftIndexedExpr(intValue, arg).also { rewrite(it) }
+                return@simplifyApp rewrite(mkBvRotateLeftIndexedExpr(intValue, arg))
             }
         }
         return@simplifyApp mkBvRotateLeftExpr(arg, rotation)
@@ -1077,7 +1084,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         if (rotation is KBitVecValue<T>) {
             val intValue = rotation.intValueOrNull()
             if (intValue != null) {
-                return@simplifyApp mkBvRotateRightIndexedExpr(intValue, arg).also { rewrite(it) }
+                return@simplifyApp rewrite(mkBvRotateRightIndexedExpr(intValue, arg))
             }
         }
         return@simplifyApp mkBvRotateRightExpr(arg, rotation)
@@ -1097,7 +1104,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                 val sum = mkBvAddExpr(lhs, rhs)
                 val zeroSltSum = mkBvSignedLessExpr(zero, sum)
 
-                return@simplifyApp mkImplies(zeroSltA and zeroSltB, zeroSltSum).also { rewrite(it) }
+                return@simplifyApp rewrite(mkImplies(zeroSltA and zeroSltB, zeroSltSum))
             } else {
                 /**
                  * (bvadd no ovf unsigned a b) ==>
@@ -1111,7 +1118,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                 val highestBitIdx = sum.sort.sizeBits.toInt() - 1
                 val sumFirstBit = mkBvExtractExpr(highestBitIdx, highestBitIdx, sum)
 
-                return@simplifyApp (zeroBit eq sumFirstBit.uncheckedCast()).also { rewrite(it) }
+                return@simplifyApp rewrite(zeroBit eq sumFirstBit.uncheckedCast())
             }
         }
 
@@ -1128,7 +1135,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             val sum = mkBvAddExpr(lhs, rhs)
             val sumLtZero = mkBvSignedLessExpr(sum, zero)
 
-            return@simplifyApp mkImplies(aLtZero and bLtZero, sumLtZero).also { rewrite(it) }
+            return@simplifyApp rewrite(mkImplies(aLtZero and bLtZero, sumLtZero))
         }
 
     override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>): KExpr<KBoolSort> =
@@ -1146,7 +1153,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             val aLtZero = mkBvSignedLessExpr(lhs, zero)
             val noOverflow = mkBvAddNoOverflowExpr(lhs, minusB, isSigned = true)
 
-            return@simplifyApp mkIte(bIsMin, aLtZero, noOverflow).also { rewrite(it) }
+            return@simplifyApp rewrite(mkIte(bIsMin, aLtZero, noOverflow))
         }
 
     override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>): KExpr<KBoolSort> =
@@ -1161,13 +1168,13 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                 val zeroLtB = mkBvSignedLessExpr(zero, rhs)
                 val noOverflow = mkBvAddNoUnderflowExpr(lhs, minusB)
 
-                return@simplifyApp mkImplies(zeroLtB, noOverflow).also { rewrite(it) }
+                return@simplifyApp rewrite(mkImplies(zeroLtB, noOverflow))
             } else {
                 /**
                  * (bvsub no udf unsigned a b) ==>
                  *    (bvule b a)
                  * */
-                return@simplifyApp mkBvUnsignedLessOrEqualExpr(rhs, lhs).also { rewrite(it) }
+                return@simplifyApp rewrite(mkBvUnsignedLessOrEqualExpr(rhs, lhs))
             }
         }
 
@@ -1177,7 +1184,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
              * (bvneg no ovf a) ==> (not (= a MIN_VALUE))
              * */
             val minValue = bvMinValueSigned(arg.sort.sizeBits)
-            return@simplifyApp !(arg eq minValue.uncheckedCast()).also { rewrite(it) }
+            return@simplifyApp rewrite(!(arg eq minValue.uncheckedCast()))
         }
 
     override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>): KExpr<KBoolSort> =
@@ -1196,7 +1203,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
 
             val aIsMsb = lhs eq mostSignificantBit.uncheckedCast()
             val bIsMinusOne = rhs eq minusOne.uncheckedCast()
-            return@simplifyApp !(aIsMsb and bIsMinusOne).also { rewrite(it) }
+            return@simplifyApp rewrite(!(aIsMsb and bIsMinusOne))
         }
 
     override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>): KExpr<KBoolSort> =
