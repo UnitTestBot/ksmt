@@ -101,7 +101,11 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
                      * Otherwise, we need to perform full check of parent indices.
                      * */
                     if (!index.definitelyIsConstant || storedIndexPosition < lastNonConstantIndex) {
-                        // Shortcut
+                        /**
+                         *  If non-constant index is among the indices we need to check,
+                         *  we can check it first. Since non-constant indices are usually
+                         *  not definitely distinct, we will not check all other indices.
+                         * */
                         if (lastNonConstantIndex > storedIndexPosition
                             && !areDefinitelyDistinct(index, simplifiedIndices[lastNonConstantIndex])
                         ) {
@@ -143,7 +147,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
                 // store
                 simplifiedIndices.add(index)
                 simplifiedValues.add(value)
-                val indexPosition = simplifiedIndices.size
+                val indexPosition = simplifiedIndices.lastIndex
                 storedIndices[index] = indexPosition
                 if (!index.definitelyIsConstant) {
                     lastNonConstantIndex = maxOf(lastNonConstantIndex, indexPosition)
