@@ -134,17 +134,24 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KSubArithExpr<T>): KExpr<T> = simplifyApp(expr) { args ->
-        if (args.size == 1) {
-            args.single()
-        } else {
-            val simplifiedArgs = arrayListOf(args.first())
-            for (arg in args.drop(1)) {
-                simplifiedArgs += mkArithUnaryMinus(arg)
+    override fun <T : KArithSort<T>> transform(expr: KSubArithExpr<T>): KExpr<T> =
+        simplifyApp(
+            expr = expr,
+            preprocess = {
+                val args = expr.args
+                if (args.size == 1) {
+                    args.single()
+                } else {
+                    val simplifiedArgs = arrayListOf(args.first())
+                    for (arg in args.drop(1)) {
+                        simplifiedArgs += mkArithUnaryMinus(arg)
+                    }
+                    mkArithAdd(simplifiedArgs)
+                }
             }
-            rewrite(mkArithAdd(simplifiedArgs))
+        ) {
+            error("Always preprocessed")
         }
-    }
 
     override fun <T : KArithSort<T>> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> = simplifyApp(expr) { (arg) ->
         if (arg is KIntNumExpr) {

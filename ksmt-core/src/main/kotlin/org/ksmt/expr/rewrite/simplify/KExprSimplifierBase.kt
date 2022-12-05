@@ -18,3 +18,12 @@ interface KExprSimplifierBase : KTransformer {
      * */
     fun <T : KSort> rewrite(expr: KExpr<T>): KExpr<T>
 }
+
+@JvmInline
+internal value class SimplifierAuxExpression<T : KSort>(val expr: KExpr<T>)
+
+internal inline fun <T : KSort> auxExpr(builder: () -> KExpr<T>): SimplifierAuxExpression<T> =
+    SimplifierAuxExpression(builder())
+
+internal fun <T : KSort> KExprSimplifierBase.rewrite(expr: SimplifierAuxExpression<T>): KExpr<T> =
+    rewrite(expr.expr)

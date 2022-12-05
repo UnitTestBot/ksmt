@@ -2,6 +2,7 @@ package org.ksmt.expr.rewrite.simplify
 
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KImpliesExpr
 import org.ksmt.expr.KIteExpr
@@ -161,11 +162,14 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
             // (ite c t1 (ite c2 t1 t2)) ==> (ite (or c c2) t1 t2)
             if (e is KIteExpr<*> && e.trueBranch == t) {
                 return@simplifyApp rewrite(
-                    mkIte(
-                        condition = c or e.condition,
-                        trueBranch = t,
-                        falseBranch = e.falseBranch.uncheckedCast()
-                    )
+                    auxExpr {
+                        KIteExpr(
+                            ctx,
+                            condition = c or e.condition,
+                            trueBranch = t,
+                            falseBranch = e.falseBranch.uncheckedCast()
+                        )
+                    }
                 )
             }
 
@@ -259,17 +263,23 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
 
         // (= (not a) (not b)) ==> (= a b)
         if (lhs is KNotExpr && rhs is KNotExpr) {
-            return rewrite(mkEq(lhs.arg, rhs.arg))
+            return rewrite(
+                auxExpr { KEqExpr(ctx, lhs.arg, rhs.arg) }
+            )
         }
 
         when (lhs) {
             trueExpr -> return rhs
-            falseExpr -> return rewrite(!rhs)
+            falseExpr -> return rewrite(
+                auxExpr { KNotExpr(ctx, rhs) }
+            )
         }
 
         when (rhs) {
             trueExpr -> return lhs
-            falseExpr -> return rewrite(!lhs)
+            falseExpr -> return rewrite(
+                auxExpr { KNotExpr(ctx, lhs) }
+            )
         }
 
         // (= a (not a)) ==> false
