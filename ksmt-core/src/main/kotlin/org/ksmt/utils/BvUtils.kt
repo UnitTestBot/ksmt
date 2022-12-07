@@ -168,7 +168,19 @@ object BvUtils {
         bv16 = { a, b -> a.mod(b) },
         bv32 = { a, b -> a.mod(b) },
         bv64 = { a, b -> a.mod(b) },
-        bvDefault = { a, b -> a.mod(b) },
+        bvDefault = { a, b ->
+            val size = sort.sizeBits
+            val aAbs = a.abs().normalizeValue(size)
+            val bAbs = b.abs().normalizeValue(size)
+            val u = aAbs.mod(bAbs).normalizeValue(size)
+            when {
+                u == BigInteger.ZERO -> BigInteger.ZERO
+                a >= BigInteger.ZERO && b >= BigInteger.ZERO -> u
+                a < BigInteger.ZERO && b >= BigInteger.ZERO -> (-u + b).normalizeValue(size)
+                a >= BigInteger.ZERO && b < BigInteger.ZERO -> (u + b).normalizeValue(size)
+                else -> (-u).normalizeValue(size)
+            }
+        },
     )
 
     fun KBitVecValue<*>.bitwiseNot(): KBitVecValue<*> = bvOperation(
@@ -248,7 +260,7 @@ object BvUtils {
     }
 
     fun KContext.mkBvFromBigInteger(value: BigInteger, size: UInt): KBitVecValue<KBvSort> {
-        val normalizedValue = value.mod(BigInteger.valueOf(2).pow(size.toInt()))
+        val normalizedValue = value.normalizeValue(size)
         val resultBinary = unsignedBinaryString(normalizedValue).padStart(size.toInt(), '0')
         return mkBv(resultBinary, size)
     }
@@ -349,5 +361,8 @@ object BvUtils {
 
     private fun unsignedBinaryString(value: BigInteger): String =
         value.toString(2)
+
+    private fun BigInteger.normalizeValue(size: UInt): BigInteger =
+        this.mod(BigInteger.valueOf(2).pow(size.toInt()))
 
 }
