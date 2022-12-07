@@ -86,6 +86,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         KAndExpr(ctx, checks)
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> =
         simplifyApp(
             expr = expr as KApp<KArraySort<D, R>, KExpr<KSort>>,
@@ -94,6 +95,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             error("Always preprocessed")
         }
 
+    @Suppress("UNCHECKED_CAST")
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> =
         simplifyApp(
             expr = expr as KApp<R, KExpr<KSort>>,
@@ -112,6 +114,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             error("Always preprocessed")
         }
 
+    @Suppress("ComplexMethod", "LoopWithTooManyJumpStatements")
     private fun <D : KSort, R : KSort> transform(expr: SimplifierFlatArrayStoreExpr<D, R>): KExpr<KArraySort<D, R>> =
         simplifyApp(expr) { transformedArgs ->
             val base: KExpr<KArraySort<D, R>> = transformedArgs.first().uncheckedCast()
@@ -143,34 +146,12 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
                      *
                      * Store can be pushed only if all parent indices are definitely not equal.
                      * */
-                    var allParentIndicesAreDistinct = true
-
-                    /**
-                     * Since all constants are trivially comparable we can guarantee, that
-                     * all parents are distinct.
-                     * Otherwise, we need to perform full check of parent indices.
-                     * */
-                    if (!index.definitelyIsConstant || storedIndexPosition < lastNonConstantIndex) {
-                        /**
-                         *  If non-constant index is among the indices we need to check,
-                         *  we can check it first. Since non-constant indices are usually
-                         *  not definitely distinct, we will not check all other indices.
-                         * */
-                        if (lastNonConstantIndex > storedIndexPosition
-                            && !areDefinitelyDistinct(index, simplifiedIndices[lastNonConstantIndex])
-                        ) {
-                            allParentIndicesAreDistinct = false
-                        }
-
-                        var checkIdx = storedIndexPosition + 1
-                        while (allParentIndicesAreDistinct && checkIdx < simplifiedIndices.size) {
-                            if (!areDefinitelyDistinct(index, simplifiedIndices[checkIdx])) {
-                                // possibly equal index, we can't squash stores
-                                allParentIndicesAreDistinct = false
-                            }
-                            checkIdx++
-                        }
-                    }
+                    val allParentIndicesAreDistinct = allParentSoreIndicesAreDistinct(
+                        index = index,
+                        storedIndexPosition = storedIndexPosition,
+                        lastNonConstantIndex = lastNonConstantIndex,
+                        simplifiedIndices = simplifiedIndices
+                    )
 
                     if (allParentIndicesAreDistinct) {
                         simplifiedValues[storedIndexPosition] = value
@@ -213,6 +194,40 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
 
             return@simplifyApp result
         }
+
+    private fun <D : KSort> allParentSoreIndicesAreDistinct(
+        index: KExpr<D>,
+        storedIndexPosition: Int,
+        lastNonConstantIndex: Int,
+        simplifiedIndices: List<KExpr<D>>
+    ): Boolean {
+        /**
+         * Since all constants are trivially comparable we can guarantee, that
+         * all parents are distinct.
+         * Otherwise, we need to perform full check of parent indices.
+         * */
+        if (index.definitelyIsConstant && storedIndexPosition >= lastNonConstantIndex) return true
+
+        /**
+         *  If non-constant index is among the indices we need to check,
+         *  we can check it first. Since non-constant indices are usually
+         *  not definitely distinct, we will not check all other indices.
+         * */
+        if (lastNonConstantIndex > storedIndexPosition
+            && !areDefinitelyDistinct(index, simplifiedIndices[lastNonConstantIndex])
+        ) {
+            return false
+        }
+
+        for (checkIdx in (storedIndexPosition + 1) until simplifiedIndices.size) {
+            if (!areDefinitelyDistinct(index, simplifiedIndices[checkIdx])) {
+                // possibly equal index, we can't squash stores
+                return false
+            }
+        }
+
+        return true
+    }
 
     /**
      * Try to simplify only indices first.

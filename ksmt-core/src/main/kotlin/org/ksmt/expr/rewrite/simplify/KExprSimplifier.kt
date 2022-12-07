@@ -24,6 +24,7 @@ open class KExprSimplifier(ctx: KContext) :
     private var needPostRewrite = false
     private val rewrittenExpressions = hashMapOf<KExpr<*>, KExpr<*>>()
 
+    @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> transform(expr: KEqExpr<T>) = simplifyApp(
         expr = expr,
         preprocess = { if (expr.lhs == expr.rhs) trueExpr else expr }
@@ -56,6 +57,7 @@ open class KExprSimplifier(ctx: KContext) :
         mkDistinct(args)
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> areDefinitelyDistinct(lhs: KExpr<T>, rhs: KExpr<T>): Boolean = with(ctx) {
         if (lhs == rhs) return false
         return when (lhs.sort) {

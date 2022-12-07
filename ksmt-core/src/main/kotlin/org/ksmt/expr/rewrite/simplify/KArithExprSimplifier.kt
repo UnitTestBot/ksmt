@@ -165,6 +165,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         mkArithUnaryMinus(arg)
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
         when (expr.sort) {
             intSort -> rewrite(simplifyIntegerDiv(lhs.uncheckedCast(), rhs.uncheckedCast()) as KExpr<T>)
