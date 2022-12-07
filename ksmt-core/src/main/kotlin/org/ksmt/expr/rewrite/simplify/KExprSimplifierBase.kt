@@ -19,6 +19,15 @@ interface KExprSimplifierBase : KTransformer {
     fun <T : KSort> rewrite(expr: KExpr<T>): KExpr<T>
 }
 
+/**
+ * Aux expressions.
+ * During the simplification process, we create many auxiliary expressions
+ * that will be immediately rewritten.
+ * Since we have no option to cleanup [KContext] it is important to store
+ * as fewer expressions as possible.
+ * We abuse the fact that expression will be rewritten
+ * and skip hash-consing via KContext.
+ * */
 @JvmInline
 internal value class SimplifierAuxExpression<T : KSort>(val expr: KExpr<T>)
 
