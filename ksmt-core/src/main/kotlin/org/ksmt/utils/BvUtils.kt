@@ -291,77 +291,152 @@ object BvUtils {
     @Suppress("LongParameterList")
     private inline fun KBitVecValue<*>.bvUnsignedOperation(
         other: KBitVecValue<*>,
-        bv1: (Boolean, Boolean) -> Boolean,
-        bv8: (UByte, UByte) -> UByte,
-        bv16: (UShort, UShort) -> UShort,
-        bv32: (UInt, UInt) -> UInt,
-        bv64: (ULong, ULong) -> ULong,
-        bvDefault: (BigInteger, BigInteger) -> BigInteger,
+        crossinline bv1: (Boolean, Boolean) -> Boolean,
+        crossinline bv8: (UByte, UByte) -> UByte,
+        crossinline bv16: (UShort, UShort) -> UShort,
+        crossinline bv32: (UInt, UInt) -> UInt,
+        crossinline bv64: (ULong, ULong) -> ULong,
+        crossinline bvDefault: (BigInteger, BigInteger) -> BigInteger,
     ): KBitVecValue<*> = when (this@bvUnsignedOperation) {
-        is KBitVec1Value -> bv1Operation(other, bv1)
-        is KBitVec8Value -> bv8UnsignedOperation(other, bv8)
-        is KBitVec16Value -> bv16UnsignedOperation(other, bv16)
-        is KBitVec32Value -> bv32UnsignedOperation(other, bv32)
-        is KBitVec64Value -> bv64UnsignedOperation(other, bv64)
-        else -> bvOperationDefault(other, signed = false, bvDefault)
+        is KBitVec1Value -> bv1Operation(other, op = bv1)
+        is KBitVec8Value -> bv8UnsignedOperation(other, op = bv8)
+        is KBitVec16Value -> bv16UnsignedOperation(other, op = bv16)
+        is KBitVec32Value -> bv32UnsignedOperation(other, op = bv32)
+        is KBitVec64Value -> bv64UnsignedOperation(other, op = bv64)
+        else -> bvOperationDefault(other, signed = false, operation = bvDefault)
     }
 
     @Suppress("LongParameterList")
     private inline fun KBitVecValue<*>.bvOperation(
         other: KBitVecValue<*>,
-        bv1: (Boolean, Boolean) -> Boolean,
-        bv8: (Byte, Byte) -> Byte,
-        bv16: (Short, Short) -> Short,
-        bv32: (Int, Int) -> Int,
-        bv64: (Long, Long) -> Long,
-        bvDefault: (BigInteger, BigInteger) -> BigInteger,
+        crossinline bv1: (Boolean, Boolean) -> Boolean,
+        crossinline bv8: (Byte, Byte) -> Byte,
+        crossinline bv16: (Short, Short) -> Short,
+        crossinline bv32: (Int, Int) -> Int,
+        crossinline bv64: (Long, Long) -> Long,
+        crossinline bvDefault: (BigInteger, BigInteger) -> BigInteger,
     ): KBitVecValue<*> = when (this@bvOperation) {
-        is KBitVec1Value -> bv1Operation(other, bv1)
-        is KBitVec8Value -> bv8Operation(other, bv8)
-        is KBitVec16Value -> bv16Operation(other, bv16)
-        is KBitVec32Value -> bv32Operation(other, bv32)
-        is KBitVec64Value -> bv64Operation(other, bv64)
-        else -> bvOperationDefault(other, signed = true, bvDefault)
+        is KBitVec1Value -> bv1Operation(other, op = bv1)
+        is KBitVec8Value -> bv8Operation(other, op = bv8)
+        is KBitVec16Value -> bv16Operation(other, op = bv16)
+        is KBitVec32Value -> bv32Operation(other, op = bv32)
+        is KBitVec64Value -> bv64Operation(other, op = bv64)
+        else -> bvOperationDefault(other, signed = true, operation = bvDefault)
     }
 
-    private inline fun KBitVec1Value.bv1Operation(other: KBitVecValue<*>, op: (Boolean, Boolean) -> Boolean) =
-        ctx.mkBv(op(value, (other as KBitVec1Value).value))
+    private inline fun KBitVec1Value.bv1Operation(
+        other: KBitVecValue<*>,
+        crossinline op: (Boolean, Boolean) -> Boolean
+    ): KBitVec1Value = bvNumericOperation(
+        this, other,
+        unwrap = { it.value },
+        wrap = ctx::mkBv,
+        op = op
+    )
 
-    private inline fun KBitVec8Value.bv8Operation(other: KBitVecValue<*>, op: (Byte, Byte) -> Byte) =
-        ctx.mkBv(op(numberValue, (other as KBitVec8Value).numberValue))
+    private inline fun KBitVec8Value.bv8Operation(
+        other: KBitVecValue<*>,
+        crossinline op: (Byte, Byte) -> Byte
+    ): KBitVec8Value = bvNumericOperation(
+        this, other,
+        unwrap = { it.numberValue },
+        wrap = ctx::mkBv,
+        op = op
+    )
 
-    private inline fun KBitVec8Value.bv8UnsignedOperation(other: KBitVecValue<*>, op: (UByte, UByte) -> UByte) =
-        ctx.mkBv(op(numberValue.toUByte(), (other as KBitVec8Value).numberValue.toUByte()).toByte())
+    private inline fun KBitVec8Value.bv8UnsignedOperation(
+        other: KBitVecValue<*>,
+        crossinline op: (UByte, UByte) -> UByte
+    ): KBitVec8Value = bvNumericOperation(
+        this, other,
+        unwrap = { it.numberValue.toUByte() },
+        wrap = { ctx.mkBv(it.toByte()) },
+        op = op
+    )
 
-    private inline fun KBitVec16Value.bv16Operation(other: KBitVecValue<*>, op: (Short, Short) -> Short) =
-        ctx.mkBv(op(numberValue, (other as KBitVec16Value).numberValue))
+    private inline fun KBitVec16Value.bv16Operation(
+        other: KBitVecValue<*>,
+        crossinline op: (Short, Short) -> Short
+    ): KBitVec16Value = bvNumericOperation(
+        this, other,
+        unwrap = { it.numberValue },
+        wrap = ctx::mkBv,
+        op = op
+    )
 
-    private inline fun KBitVec16Value.bv16UnsignedOperation(other: KBitVecValue<*>, op: (UShort, UShort) -> UShort) =
-        ctx.mkBv(op(numberValue.toUShort(), (other as KBitVec16Value).numberValue.toUShort()).toShort())
+    private inline fun KBitVec16Value.bv16UnsignedOperation(
+        other: KBitVecValue<*>,
+        crossinline op: (UShort, UShort) -> UShort
+    ): KBitVec16Value = bvNumericOperation(
+        this, other,
+        unwrap = { it.numberValue.toUShort() },
+        wrap = { ctx.mkBv(it.toShort()) },
+        op = op
+    )
 
-    private inline fun KBitVec32Value.bv32Operation(other: KBitVecValue<*>, op: (Int, Int) -> Int) =
-        ctx.mkBv(op(numberValue, (other as KBitVec32Value).numberValue))
+    private inline fun KBitVec32Value.bv32Operation(
+        other: KBitVecValue<*>,
+        crossinline op: (Int, Int) -> Int
+    ): KBitVec32Value = bvNumericOperation(
+        this, other,
+        unwrap = { it.numberValue },
+        wrap = ctx::mkBv,
+        op = op
+    )
 
-    private inline fun KBitVec32Value.bv32UnsignedOperation(other: KBitVecValue<*>, op: (UInt, UInt) -> UInt) =
-        ctx.mkBv(op(numberValue.toUInt(), (other as KBitVec32Value).numberValue.toUInt()).toInt())
+    private inline fun KBitVec32Value.bv32UnsignedOperation(
+        other: KBitVecValue<*>,
+        crossinline op: (UInt, UInt) -> UInt
+    ): KBitVec32Value = bvNumericOperation(
+        this, other,
+        unwrap = { it.numberValue.toUInt() },
+        wrap = { ctx.mkBv(it.toInt()) },
+        op = op
+    )
 
-    private inline fun KBitVec64Value.bv64Operation(other: KBitVecValue<*>, op: (Long, Long) -> Long) =
-        ctx.mkBv(op(numberValue, (other as KBitVec64Value).numberValue))
+    private inline fun KBitVec64Value.bv64Operation(
+        other: KBitVecValue<*>,
+        crossinline op: (Long, Long) -> Long
+    ): KBitVec64Value = bvNumericOperation(
+        this, other,
+        unwrap = { it.numberValue },
+        wrap = ctx::mkBv,
+        op = op
+    )
 
-    private inline fun KBitVec64Value.bv64UnsignedOperation(other: KBitVecValue<*>, op: (ULong, ULong) -> ULong) =
-        ctx.mkBv(op(numberValue.toULong(), (other as KBitVec64Value).numberValue.toULong()).toLong())
+    private inline fun KBitVec64Value.bv64UnsignedOperation(
+        other: KBitVecValue<*>,
+        crossinline op: (ULong, ULong) -> ULong
+    ): KBitVec64Value = bvNumericOperation(
+        this, other,
+        unwrap = { it.numberValue.toULong() },
+        wrap = { ctx.mkBv(it.toLong()) },
+        op = op
+    )
 
     private inline fun KBitVecValue<*>.bvOperationDefault(
-        rhs: KBitVecValue<*>,
+        other: KBitVecValue<*>,
         signed: Boolean = false,
-        operation: (BigInteger, BigInteger) -> BigInteger
-    ): KBitVecValue<*> = with(ctx) {
-        val lhs = this@bvOperationDefault
-        val size = lhs.sort.sizeBits
-        val lValue = lhs.stringValue.let { if (!signed) unsignedBigIntFromBinary(it) else signedBigIntFromBinary(it) }
-        val rValue = rhs.stringValue.let { if (!signed) unsignedBigIntFromBinary(it) else signedBigIntFromBinary(it) }
-        val resultValue = operation(lValue, rValue)
-        mkBvFromBigInteger(resultValue, size)
+        crossinline operation: (BigInteger, BigInteger) -> BigInteger
+    ): KBitVecValue<*> = bvNumericOperation(
+        this, other,
+        unwrap = { if (!signed) unsignedBigIntFromBinary(it.stringValue) else signedBigIntFromBinary(it.stringValue) },
+        wrap = {
+            val size = this.sort.sizeBits
+            ctx.mkBvFromBigInteger(it, size)
+        },
+        op = operation
+    )
+
+    private inline fun <reified T, reified V> bvNumericOperation(
+        arg0: KBitVecValue<*>, arg1: KBitVecValue<*>,
+        crossinline unwrap: (T) -> V,
+        crossinline wrap: (V) -> T,
+        crossinline op: (V, V) -> V
+    ): T {
+        val a0 = unwrap(arg0 as T)
+        val a1 = unwrap(arg1 as T)
+        return wrap(op(a0, a1))
     }
 
     private fun signedBigIntFromBinary(value: String): BigInteger {
