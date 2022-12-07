@@ -16,7 +16,7 @@ import kotlin.experimental.xor
 object BvUtils {
 
     fun KContext.bvMinValueSigned(size: UInt): KBitVecValue<*> = when (size.toInt()) {
-        1 -> mkBv(false)
+        1 -> mkBv(true) // sign bit 1
         Byte.SIZE_BITS -> mkBv(Byte.MIN_VALUE)
         Short.SIZE_BITS -> mkBv(Short.MIN_VALUE)
         Int.SIZE_BITS -> mkBv(Int.MIN_VALUE)
@@ -28,7 +28,7 @@ object BvUtils {
     }
 
     fun KContext.bvMaxValueSigned(size: UInt): KBitVecValue<*> = when (size.toInt()) {
-        1 -> mkBv(true)
+        1 -> mkBv(false) // sign bit 0
         Byte.SIZE_BITS -> mkBv(Byte.MAX_VALUE)
         Short.SIZE_BITS -> mkBv(Short.MAX_VALUE)
         Int.SIZE_BITS -> mkBv(Int.MAX_VALUE)
@@ -64,7 +64,15 @@ object BvUtils {
     }
 
     fun KBitVecValue<*>.signedGreaterOrEqual(other: Int): Boolean = when (this) {
-        is KBitVec1Value -> value >= (other == 1)
+        is KBitVec1Value -> if (value) {
+            // 1 >= 1 -> true
+            // 1 >= 0 -> false
+            other == 1
+        } else {
+            // 0 >= 1 -> true
+            // 0 >= 0 -> true
+            true
+        }
         is KBitVec8Value -> numberValue >= other
         is KBitVec16Value -> numberValue >= other
         is KBitVec32Value -> numberValue >= other
@@ -73,7 +81,16 @@ object BvUtils {
     }
 
     fun KBitVecValue<*>.signedLessOrEqual(other: KBitVecValue<*>): Boolean = when (this) {
-        is KBitVec1Value -> value <= (other as KBitVec1Value).value
+        is KBitVec1Value -> if (value) {
+            // 1 <= 0 -> true
+            // 1 <= 1 -> true
+            true
+        } else {
+            // 0 <= 1 -> false
+            // 0 <= 0 -> true
+            val otherValue = (other as KBitVec1Value).value
+            !otherValue
+        }
         is KBitVec8Value -> numberValue <= (other as KBitVec8Value).numberValue
         is KBitVec16Value -> numberValue <= (other as KBitVec16Value).numberValue
         is KBitVec32Value -> numberValue <= (other as KBitVec32Value).numberValue
