@@ -5,6 +5,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.ksmt.KContext
+import org.ksmt.runner.models.generated.SolverType
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.z3.KZ3Solver
@@ -119,5 +120,11 @@ class IncrementalApiTest {
         val status = solver.checkWithAssumptions(emptyList(), timeout = 1.milliseconds)
         assertEquals(KSolverStatus.UNKNOWN, status)
         assertEquals("timeout", solver.reasonOfUnknown())
+    }
+
+    @Test
+    fun testSolverInstanceCreation(): Unit = with(context){
+        SolverType.Z3.createInstance(this)
+        SolverType.Bitwuzla.createInstance(this)
     }
 }
