@@ -64,26 +64,105 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         rhs: KExpr<KArraySort<D, R>>,
         rightArray: SimplifierFlatArrayStoreExpr<D, R>,
     ): SimplifierAuxExpression<KBoolSort> = auxExpr {
-        val lBase = leftArray.base
-        val rBase = rightArray.base
         val checks = arrayListOf<KExpr<KBoolSort>>()
-        if (lBase is KArrayConst<D, R> && rBase is KArrayConst<D, R>) {
+        if (leftArray.base is KArrayConst<D, R> && rightArray.base is KArrayConst<D, R>) {
             // (= (const a) (const b)) ==> (= a b)
-            checks += KEqExpr(ctx, lBase.value, rBase.value)
+            checks += KEqExpr(ctx, leftArray.base.value, rightArray.base.value)
         }
+
+        val leftArraySearchInfo = analyzeArrayStores(leftArray)
+        val rightArraySearchInfo = analyzeArrayStores(rightArray)
 
         val allIndices = leftArray.indices.toSet() + rightArray.indices.toSet()
         for (idx in allIndices) {
-            val lSelect = SimplifierFlatArraySelectExpr(
-                ctx, lhs, lBase, leftArray.indices, leftArray.values, idx
-            )
-            val rSelect = SimplifierFlatArraySelectExpr(
-                ctx, rhs, rBase, rightArray.indices, rightArray.values, idx
-            )
-            checks += KEqExpr(ctx, lSelect, rSelect)
+            val lValue = selectArrayValue(idx, leftArraySearchInfo, lhs, leftArray)
+            val rValue = selectArrayValue(idx, rightArraySearchInfo, rhs, rightArray)
+            if (lValue != rValue) {
+                checks += KEqExpr(ctx, lValue, rValue)
+            }
         }
 
         KAndExpr(ctx, checks)
+    }
+
+    private class ArrayStoreSearchInfo<D : KSort, R : KSort>(
+        val storeIndices: Map<KExpr<D>, Int>,
+        val storeValues: List<KExpr<R>>,
+        val nonConstants: List<KExpr<D>>,
+        val nonConstantsToCheck: IntArray
+    )
+
+    private fun <D : KSort, R : KSort> selectArrayValue(
+        selectIndex: KExpr<D>,
+        arraySearchInfo: ArrayStoreSearchInfo<D, R>,
+        originalArrayExpr: KExpr<KArraySort<D, R>>,
+        flatArray: SimplifierFlatArrayStoreExpr<D, R>
+    ): KExpr<R> =
+        findStoredArrayValue(arraySearchInfo, selectIndex)
+            ?: SimplifierFlatArraySelectExpr(
+                ctx,
+                originalArrayExpr,
+                flatArray.base,
+                flatArray.indices,
+                flatArray.values,
+                selectIndex
+            )
+
+    /**
+     * Preprocess flat array stores for faster index search.
+     * @see [findStoredArrayValue]
+     * */
+    private fun <D : KSort, R : KSort> analyzeArrayStores(
+        array: SimplifierFlatArrayStoreExpr<D, R>
+    ): ArrayStoreSearchInfo<D, R> {
+        val indices = array.indices
+        val indexId = hashMapOf<KExpr<D>, Int>()
+        val nonConstants = arrayListOf<KExpr<D>>()
+        val nonConstantsToCheck = IntArray(indices.size)
+
+        for (i in indices.indices) {
+            val storeIndex = indices[i]
+            if (storeIndex !in indexId) {
+                indexId[storeIndex] = i
+                if (!storeIndex.definitelyIsConstant) {
+                    nonConstants += storeIndex
+                }
+            }
+            nonConstantsToCheck[i] = nonConstants.size
+        }
+
+        return ArrayStoreSearchInfo(
+            storeIndices = indexId,
+            storeValues = array.values,
+            nonConstants = nonConstants,
+            nonConstantsToCheck = nonConstantsToCheck
+        )
+    }
+
+    /**
+     * Try to find stored value for the provided index.
+     * @return null if there is no such index in the array,
+     * or it is impossible to establish equality of some of the stored indices.
+     * */
+    private fun <D : KSort, R : KSort> findStoredArrayValue(
+        array: ArrayStoreSearchInfo<D, R>,
+        selectIndex: KExpr<D>,
+    ): KExpr<R>? {
+        val storeIndex = array.storeIndices[selectIndex] ?: return null
+
+        /**
+         * Since all constants are trivially comparable we need to check
+         * only non-constant stored indices.
+         * */
+        val lastNonConstantToCheck = array.nonConstantsToCheck[storeIndex]
+        for (i in 0 until lastNonConstantToCheck) {
+            val nonConstant = array.nonConstants[i]
+            if (!areDefinitelyDistinct(selectIndex, nonConstant)) {
+                return null
+            }
+        }
+
+        return array.storeValues[storeIndex]
     }
 
     @Suppress("UNCHECKED_CAST")
