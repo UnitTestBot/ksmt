@@ -18,6 +18,9 @@ dependencies {
 
 val runBenchmarksBasedTests = project.booleanProperty("runBenchmarksBasedTests") ?: false
 
+// use benchmarks from testData directory instead of downloading
+val usePreparedBenchmarks = project.booleanProperty("usePreparedBenchmarks") ?: true
+
 // skip big benchmarks to achieve faster tests build and run time
 val skipBigBenchmarks = project.booleanProperty("skipBigBenchmarks") ?: true
 
@@ -58,11 +61,18 @@ val smtLibBenchmarks = listOfNotNull(
     "QF_FP", // 30M
 )
 
-val smtLibBenchmarkTestData = smtLibBenchmarks.map { mkSmtLibBenchmarkTestData(it) }
+val smtLibBenchmarkTestDataDownload = smtLibBenchmarks.map { mkSmtLibBenchmarkTestData(it) }
+val smtLibBenchmarkTestDataUnpack = unpackSmtLibBenchmarkTestData(
+    path = projectDir.resolve("testData/benchmarks.zip")
+)
 
 val prepareTestData by tasks.registering {
     tasks.withType<ProcessResources>().forEach { it.enabled = false }
-    dependsOn.addAll(smtLibBenchmarkTestData)
+    if (usePreparedBenchmarks) {
+        dependsOn.add(smtLibBenchmarkTestDataUnpack)
+    } else {
+        dependsOn.addAll(smtLibBenchmarkTestDataDownload)
+    }
 }
 
 tasks.withType<Test> {

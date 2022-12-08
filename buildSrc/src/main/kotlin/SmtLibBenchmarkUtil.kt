@@ -41,6 +41,18 @@ fun Project.mkSmtLibBenchmarkTestData(name: String) = tasks.register("smtLibBenc
     }
 }
 
+fun Project.unpackSmtLibBenchmarkTestData(path: File) = tasks.register("smtLibBenchmark-data-unpack") {
+    doLast {
+        val testResources = testResourceDir() ?: error("No resource directory found for benchmarks")
+        val testData = testResources.resolve("testData")
+        copy {
+            from(zipTree(path))
+            into(testData)
+            duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        }
+    }
+}
+
 private fun Project.testResourceDir(): File? {
     val sourceSets = (this as ExtensionAware).extensions.getByName("sourceSets") as SourceSetContainer
     return sourceSets["test"]?.output?.resourcesDir
