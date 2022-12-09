@@ -1,6 +1,14 @@
 name: Build and run long ksmt tests
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      tests:
+        description: > 
+          Comma separated list of tests to run from ksmt-test module. 
+          For example: Z3BenchmarksBasedTest.testConverter,Z3BenchmarksBasedTest.testSolver
+        required: true
+        type: string
 
 jobs:
   run_tests:
@@ -8,7 +16,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
-        test: ${{ github.event.client_payload.tests }}
+        test: ${{ fromJSON(format('[{0}]', github.event.client_payload.tests)) }}
 
     name: Run ${{ matrix.test }} on ${{ matrix.os }}
 
