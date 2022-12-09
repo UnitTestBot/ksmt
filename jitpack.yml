@@ -1,0 +1,2 @@
+before_install:
+  - git lfs pull --exclude "ksmt-test/testData/benchmarks.zip"
