@@ -4,10 +4,13 @@ on: workflow_dispatch
 
 jobs:
   run_tests:
-    name: Run tests
+    continue-on-error: true
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
+        test: ${{ github.event.client_payload.tests }}
+
+    name: Run ${{ matrix.test }} on ${{ matrix.os }}
 
     runs-on: ${{ matrix.os }}
 
@@ -23,11 +26,11 @@ jobs:
           distribution: 'zulu'
           cache: gradle
 
-      - name: Build and run long tests
+      - name: Run ${{ matrix.test }}
         uses: gradle/gradle-build-action@v2
         with:
           arguments: |
-            build
+            :ksmt-test:test --tests "org.ksmt.test.${{ matrix.test }}"
             --no-daemon
             --continue
             -PrunBenchmarksBasedTests=true
