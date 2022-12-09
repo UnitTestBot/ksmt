@@ -16,12 +16,12 @@ jobs:
     steps:
       - id: debug-print
         env:
-          PAYLOAD: ${{ toJson(github.event.client_payload) }}
+          PAYLOAD: ${{ toJson(inputs) }}
         run: echo "$PAYLOAD"
 
       - id: debug-print2
         env:
-          PAYLOAD2: ${{ fromJSON(format('[{0}]', github.event.client_payload.tests)) }}
+          PAYLOAD2: ${{ fromJSON(format('[{0}]', inputs.tests)) }}
         run: echo "$PAYLOAD2"
 
 
@@ -30,7 +30,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
-        test: ${{ fromJSON(format('[{0}]', github.event.client_payload.tests)) }}
+        test: ${{ fromJSON(format('[{0}]', inputs.tests)) }}
 
     name: Run ${{ matrix.test }} on ${{ matrix.os }}
 
