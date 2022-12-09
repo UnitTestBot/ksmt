@@ -11,6 +11,20 @@ on:
         type: string
 
 jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - id: debug-print
+        env:
+          PAYLOAD: ${{ toJson(github.event.client_payload) }}
+        run: echo "$PAYLOAD"
+
+      - id: debug-print2
+        env:
+          PAYLOAD2: ${{ fromJSON(format('[{0}]', github.event.client_payload.tests)) }}
+        run: echo "$PAYLOAD2"
+
+
   run_tests:
     continue-on-error: true
     strategy:
