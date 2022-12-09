@@ -6,31 +6,29 @@ on:
       tests:
         description: > 
           Comma separated list of tests to run from ksmt-test module. 
-          For example: Z3BenchmarksBasedTest.testConverter,Z3BenchmarksBasedTest.testSolver
+          For example: Z3BenchmarksBasedTest.testConverter, Z3BenchmarksBasedTest.testSolver
         required: true
         type: string
 
 jobs:
-  debug:
+  setup:
     runs-on: ubuntu-latest
+    outputs:
+      matrix-tests: ${{ steps.set-tests.outputs.tests }}
+    # Convert comma separated list to JSON array: 'a, b' -> '["a","b"]'
     steps:
-      - id: debug-print
-        env:
-          PAYLOAD: ${{ toJson(inputs) }}
-        run: echo "$PAYLOAD"
-
-      - id: debug-print2
-        env:
-          PAYLOAD2: ${{ fromJSON(format('[{0}]', inputs.tests)) }}
-        run: echo "$PAYLOAD2"
-
+      - id: set-tests
+        run: |
+          testStr="${{ inputs.tests }}"
+          echo "::set-output name=tests::[\"${testStr//', '/\",\"}\"]"
 
   run_tests:
+    needs: setup
     continue-on-error: true
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
-        test: ${{ fromJSON(format('[{0}]', inputs.tests)) }}
+        test: ${{ fromJSON(needs.setup.outputs.matrix-tests) }}
 
     name: Run ${{ matrix.test }} on ${{ matrix.os }}
 
