@@ -17,8 +17,8 @@ on:
       testDataSize:
         description: Size of test dataset
         required: true
-          type: number
-          default: 170000
+        type: number
+        default: 170000
 
 jobs:
   setup:
