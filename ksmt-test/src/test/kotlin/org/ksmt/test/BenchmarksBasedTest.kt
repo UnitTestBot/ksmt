@@ -132,21 +132,19 @@ abstract class BenchmarksBasedTest {
     internal fun KsmtWorkerPool<TestProtocolModel>.withWorker(
         ctx: KContext,
         body: suspend (TestRunner) -> Unit
-    ) = KsmtWorkerPool.logger.withLoglevel(LogLevel.Debug) {
-        runBlocking {
-            val worker = getOrCreateFreeWorker()
-            worker.astSerializationCtx.initCtx(ctx)
-            worker.lifetime.onTermination { worker.astSerializationCtx.resetCtx() }
-            TestRunner(ctx, worker).let {
-                try {
-                    it.init()
-                    body(it)
-                } finally {
-                    it.delete()
-                }
+    ) = runBlocking {
+        val worker = getOrCreateFreeWorker()
+        worker.astSerializationCtx.initCtx(ctx)
+        worker.lifetime.onTermination { worker.astSerializationCtx.resetCtx() }
+        TestRunner(ctx, worker).let {
+            try {
+                it.init()
+                body(it)
+            } finally {
+                it.delete()
             }
-            worker.release()
         }
+        worker.release()
     }
 
     companion object {
