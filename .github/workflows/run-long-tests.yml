@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tests:
-        description: > 
+        description: >
           Comma separated list of tests to run from ksmt-test module. 
           For example: Z3BenchmarksBasedTest.testConverter, Z3BenchmarksBasedTest.testSolver
         required: true
@@ -28,8 +28,8 @@ jobs:
       matrix-chunks: ${{ steps.set-chunks.outputs.chunks }}
     steps:
       - id: set-chunks
+        name: Calculate chunk indices based on size of the dataset
         run: |
-          : # Calculate chunk indices based on size of the dataset
           LIMIT="${{ inputs.testDataSize }}"
           SIZE="${{ inputs.chunkSize }}"
           CHUNKS_AMOUNT=$((LIMIT / SIZE - 1))
@@ -39,9 +39,10 @@ jobs:
           done
           CHUNKS+="]"
           echo "chunks=$CHUNKS" >> $GITHUB_OUTPUT
-      -id: set-tests
+      - id: set-tests
+        name: >
+          Convert comma separated list to JSON array: 'a, b' -> '["a","b"]'
         run: |
-          : # Convert comma separated list to JSON array: 'a, b' -> '["a","b"]'
           STR="${{ inputs.tests }}"
           IFS=',' read -r -a array <<< "$STR"
           ARRAY_SIZE="${#array[@]}"
