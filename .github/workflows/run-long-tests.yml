@@ -9,18 +9,54 @@ on:
           For example: Z3BenchmarksBasedTest.testConverter, Z3BenchmarksBasedTest.testSolver
         required: true
         type: string
+      chunkSize:
+        description: Maximal size of a single test data chunk
+        required: true
+        type: number
+        default: 10000
+      testDataSize:
+        description: Size of test dataset
+        required: true
+          type: number
+          default: 170000
 
 jobs:
   setup:
     runs-on: ubuntu-latest
     outputs:
       matrix-tests: ${{ steps.set-tests.outputs.tests }}
-    # Convert comma separated list to JSON array: 'a, b' -> '["a","b"]'
+      matrix-chunks: ${{ steps.set-chunks.outputs.chunks }}
     steps:
-      - id: set-tests
+      # Calculate chunk indices based on size of the dataset
+      - id: set-chunks
         run: |
-          testStr="${{ inputs.tests }}"
-          echo "tests=[\"${testStr//', '/\",\"}\"]" >> $GITHUB_OUTPUT
+          LIMIT="${{ inputs.testDataSize }}"
+          SIZE="${{ inputs.chunkSize }}"
+          CHUNKS_AMOUNT=$((LIMIT / SIZE - 1))
+          CHUNKS="[0"
+          for (( i=1; i<=$CHUNKS_AMOUNT; i+=1 )); do
+            CHUNKS+=",$i";
+          done
+          CHUNKS+="]"
+          echo "chunks=$CHUNKS" >> $GITHUB_OUTPUT
+
+      # Convert comma separated list to JSON array: 'a, b' -> '["a","b"]'
+      -id: set-tests
+        run: |
+          STR="${{ inputs.tests }}"
+          IFS=',' read -r -a array <<< "$STR"
+          ARRAY_SIZE="${#array[@]}"
+          TEST_ARRAY="["
+          if test $ARRAY_SIZE -gt 0; then
+            TRIM="$(echo -e "${array[0]}" | tr -d '[:space:]')"
+            TEST_ARRAY+="\"$TRIM\""
+            for (( i=1; i<$ARRAY_SIZE; i+=1 )); do
+              TRIM="$(echo -e "${array[i]}" | tr -d '[:space:]')"
+              TEST_ARRAY+=",\"$TRIM\""
+            done
+          fi
+          TEST_ARRAY+="]"
+          echo "tests=$TEST_ARRAY" >> $GITHUB_OUTPUT
 
   run_tests:
     needs: setup
@@ -29,8 +65,9 @@ jobs:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
         test: ${{ fromJSON(needs.setup.outputs.matrix-tests) }}
+        chunk: ${{ fromJSON(needs.setup.outputs.matrix-chunks) }}
 
-    name: Run ${{ matrix.test }} on ${{ matrix.os }}
+    name: Run ${{ matrix.test }}[${{ matrix.chunk }}] on ${{ matrix.os }}
 
     runs-on: ${{ matrix.os }}
 
@@ -54,6 +91,8 @@ jobs:
             --no-daemon
             --continue
             -PrunBenchmarksBasedTests=true
+            -PbenchmarkChunkSize=${{ inputs.chunkSize }}
+            -PbenchmarkChunk=${{ matrix.chunk }}
 
       - name: Upload ksmt test reports
         uses: actions/upload-artifact@v3

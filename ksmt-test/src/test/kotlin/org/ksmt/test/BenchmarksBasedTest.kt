@@ -153,6 +153,9 @@ abstract class BenchmarksBasedTest {
         internal lateinit var solverManager: KSolverRunnerManager
         internal lateinit var testWorkers: KsmtWorkerPool<TestProtocolModel>
 
+        private val testDataChunkSize = System.getenv("benchmarkChunkMaxSize")?.toIntOrNull() ?: Int.MAX_VALUE
+        private val testDataChunk = System.getenv("benchmarkChunk")?.toIntOrNull() ?: 0
+
         private fun testDataLocation(): Path = this::class.java.classLoader
             .getResource("testData")
             ?.toURI()
@@ -161,9 +164,12 @@ abstract class BenchmarksBasedTest {
 
         fun testData(): List<BenchmarkTestArguments> {
             val testDataLocation = testDataLocation()
-            return testDataLocation.listDirectoryEntries("*.smt2").sorted().map {
-                BenchmarkTestArguments(it.relativeTo(testDataLocation).toString(), it)
-            }
+            return testDataLocation
+                .listDirectoryEntries("*.smt2")
+                .sorted()
+                .drop(testDataChunk * testDataChunkSize)
+                .take(testDataChunkSize)
+                .map { BenchmarkTestArguments(it.relativeTo(testDataLocation).toString(), it) }
         }
 
         @BeforeAll

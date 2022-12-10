@@ -18,6 +18,11 @@ dependencies {
 
 val runBenchmarksBasedTests = project.booleanProperty("runBenchmarksBasedTests") ?: false
 
+// Split all benchmarks test data on a several [benchmarkChunkMaxSize] sized chunks
+val benchmarkChunkMaxSize = project.intProperty("benchmarkChunkSize") ?: Int.MAX_VALUE
+// Use only a [benchmarkChunk] chunk of test data
+val benchmarkChunk = project.intProperty("benchmarkChunk") ?: 0
+
 // use benchmarks from testData directory instead of downloading
 val usePreparedBenchmarks = project.booleanProperty("usePreparedBenchmarks") ?: true
 
@@ -80,4 +85,6 @@ tasks.withType<Test> {
     if (runBenchmarksBasedTests) {
         dependsOn.add(prepareTestData)
     }
+    environment("benchmarkChunkMaxSize", benchmarkChunkMaxSize)
+    environment("benchmarkChunk", benchmarkChunk)
 }

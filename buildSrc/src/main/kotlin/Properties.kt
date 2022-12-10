@@ -7,3 +7,11 @@ fun Project.booleanProperty(name: String): Boolean? {
 
     return project.property(name)?.toString()?.toBoolean()
 }
+
+fun Project.intProperty(name: String): Int? {
+    if (!project.hasProperty(name)) {
+        return null
+    }
+
+    return project.property(name)?.toString()?.toIntOrNull()
+}
