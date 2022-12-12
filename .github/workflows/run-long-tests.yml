@@ -122,4 +122,4 @@ jobs:
         if: always()
         with:
           name: ksmt_tests_report
-          path: ./**/build/reports/tests/test/
+          path: ksmt-test/build/reports/tests/test/
