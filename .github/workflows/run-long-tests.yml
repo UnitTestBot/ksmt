@@ -94,7 +94,7 @@ jobs:
         env:
           cache-name: cache-test-data
         with:
-          key: test-data-0.2.1-${{ runner.os }}
+          key: test-data-0.2.1-${{ matrix.os }}
           path: ksmt-test/testData
 
       - name: Prepare test data (download)
@@ -121,5 +121,5 @@ jobs:
         uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: ksmt_tests_report
+          name: ${{ format('ksmt-test-report-{0}-{1}-{2}', matrix.os, matrix.test, matrix.chunk) }}
           path: ksmt-test/build/reports/tests/test/
