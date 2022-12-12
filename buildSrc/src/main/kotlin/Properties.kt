@@ -15,3 +15,11 @@ fun Project.intProperty(name: String): Int? {
 
     return project.property(name)?.toString()?.toIntOrNull()
 }
+
+fun Project.stringProperty(name: String): String? {
+    if (!project.hasProperty(name)) {
+        return null
+    }
+
+    return project.property(name).toString()
+}

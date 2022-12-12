@@ -81,6 +81,31 @@ jobs:
           distribution: 'zulu'
           cache: gradle
 
+      - name: Build project
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: |
+            build
+            --no-daemon
+
+      - name: Prepare test data (cache)
+        id: test-data-cache
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-test-data
+        with:
+          key: test-data-0.2.1-${{ runner.os }}
+          path: ksmt-test/testData
+
+      - name: Prepare test data (download)
+        if: steps.test-data-cache.outputs.cache-hit != 'true'
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: |
+            :ksmt-test:downloadPreparedSmtLibBenchmarkTestData
+            --no-daemon
+            -PtestDataRevision="0.2.1"
+
       - name: Run ${{ matrix.test }}
         uses: gradle/gradle-build-action@v2
         with:
