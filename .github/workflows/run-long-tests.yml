@@ -104,7 +104,7 @@ jobs:
           arguments: |
             :ksmt-test:downloadPreparedSmtLibBenchmarkTestData
             --no-daemon
-            -PtestDataRevision="0.2.1"
+            -PtestDataRevision=0.2.1
 
       - name: Run ${{ matrix.test }}
         uses: gradle/gradle-build-action@v2
