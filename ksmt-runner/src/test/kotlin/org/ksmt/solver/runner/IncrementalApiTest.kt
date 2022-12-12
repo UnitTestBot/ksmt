@@ -118,6 +118,6 @@ class IncrementalApiTest {
 
         val status = solver.checkWithAssumptions(emptyList(), timeout = 1.milliseconds)
         assertEquals(KSolverStatus.UNKNOWN, status)
-        assertEquals("timeout", solver.reasonOfUnknown())
+        assertTrue("timeout" in solver.reasonOfUnknown())
     }
 }

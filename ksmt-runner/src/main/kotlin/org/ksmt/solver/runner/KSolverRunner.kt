@@ -1,6 +1,7 @@
 package org.ksmt.solver.runner
 
 import com.jetbrains.rd.util.reactive.RdFault
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.ksmt.decl.KDecl
@@ -43,6 +44,8 @@ class KSolverRunner(
             throw KSolverException("Solver worker is terminated")
         }
     }
+
+    private var lastReasonOfUnknown: String? = null
 
     override fun assert(expr: KExpr<KBoolSort>) = runBlocking {
         assertAsync(expr)
@@ -101,10 +104,12 @@ class KSolverRunner(
     suspend fun checkAsync(timeout: Duration): KSolverStatus {
         ensureActive()
         val params = CheckParams(timeout.inWholeMilliseconds)
-        val result = withTimeoutAndExceptionHandling {
-            worker.protocolModel.check.startSuspending(worker.lifetime, params)
+        return handleTimeoutAsUnknown {
+            val result = withTimeoutAndExceptionHandling {
+                worker.protocolModel.check.startSuspending(worker.lifetime, params)
+            }
+            result.status
         }
-        return result.status
     }
 
     override fun checkWithAssumptions(
@@ -120,10 +125,12 @@ class KSolverRunner(
     ): KSolverStatus {
         ensureActive()
         val params = CheckWithAssumptionsParams(assumptions, timeout.inWholeMilliseconds)
-        val result = withTimeoutAndExceptionHandling {
-            worker.protocolModel.checkWithAssumptions.startSuspending(worker.lifetime, params)
+        return handleTimeoutAsUnknown {
+            val result = withTimeoutAndExceptionHandling {
+                worker.protocolModel.checkWithAssumptions.startSuspending(worker.lifetime, params)
+            }
+            result.status
         }
-        return result.status
     }
 
     override fun model(): KModel = runBlocking {
@@ -171,10 +178,14 @@ class KSolverRunner(
     }
 
     suspend fun reasonOfUnknownAsync(): String {
+        lastReasonOfUnknown?.let { return it }
+
         ensureActive()
         val result = withTimeoutAndExceptionHandling {
             worker.protocolModel.reasonOfUnknown.startSuspending(worker.lifetime, Unit)
         }
+
+        lastReasonOfUnknown = result.reasonUnknown
         return result.reasonUnknown
     }
 
@@ -189,6 +200,20 @@ class KSolverRunner(
     private suspend fun deleteSolver() {
         withTimeoutAndExceptionHandling {
             worker.protocolModel.deleteSolver.startSuspending(worker.lifetime, Unit)
+        }
+    }
+
+    private suspend inline fun handleTimeoutAsUnknown(crossinline body: suspend () -> KSolverStatus): KSolverStatus {
+        try {
+            lastReasonOfUnknown = null
+            return body()
+        } catch (ex: KSolverException) {
+            val cause = ex.cause
+            if (cause is TimeoutCancellationException) {
+                lastReasonOfUnknown = "timeout: ${cause.message}"
+                return KSolverStatus.UNKNOWN
+            }
+            throw ex
         }
     }
 
