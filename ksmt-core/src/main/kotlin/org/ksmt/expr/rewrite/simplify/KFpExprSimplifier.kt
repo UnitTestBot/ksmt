@@ -63,6 +63,10 @@ import kotlin.math.sqrt
 @Suppress("ForbiddenComment")
 interface KFpExprSimplifier : KExprSimplifierBase {
 
+    /**
+     * Simplify an expression of the form (= a b).
+     * For the simplification of (fp.eq a b) see [KFpEqualExpr].
+     * */
     fun <T : KFpSort> simplifyEqFp(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> = with(ctx) {
         if (lhs == rhs) return trueExpr
 
