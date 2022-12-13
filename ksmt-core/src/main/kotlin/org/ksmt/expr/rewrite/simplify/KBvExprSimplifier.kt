@@ -869,11 +869,6 @@ interface KBvExprSimplifier : KExprSimplifierBase {
              * idx <= high && idx > low
              * extract from multiple parts starting from firstPartIdx
              * */
-
-            /**
-             * idx <= high && idx > low
-             * extract from multiple parts starting from firstPartIdx
-             * */
             break
 
         } while (firstPartIdx < parts.size)
@@ -1693,13 +1688,22 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         override val args: List<KExpr<KBvSort>>
     ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
 
-        // Decl sort is incorrect, but we don't care since decl is unused
+        // We have no decl, but we don't care since decl is unused
         override val decl: KDecl<KBvSort>
-            get() = ctx.mkBvConcatDecl(sort, sort)
+            get() = error("Decl of SimplifierFlatBvConcatExpr should not be used")
 
         override fun accept(transformer: KTransformerBase): KExpr<KBvSort> {
             transformer as KBvExprSimplifier
             return transformer.transform(this)
+        }
+
+        override fun print(builder: StringBuilder): Unit = with(builder) {
+            append("(concat")
+            for (arg in args) {
+                append(" ")
+                arg.print(this)
+            }
+            append(")")
         }
     }
 

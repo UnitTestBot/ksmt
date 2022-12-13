@@ -88,7 +88,7 @@ open class KExprSimplifier(ctx: KContext) :
     }
 
     fun enablePostRewrite() {
-        needPostRewrite = false
+        needPostRewrite = true
     }
 
     fun postRewriteEnabled(): Boolean = needPostRewrite

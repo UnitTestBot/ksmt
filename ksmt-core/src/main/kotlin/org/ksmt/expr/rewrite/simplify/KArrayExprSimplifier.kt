@@ -7,14 +7,9 @@ import org.ksmt.expr.KApp
 import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
-import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.KFalse
-import org.ksmt.expr.KFpValue
-import org.ksmt.expr.KIntNumExpr
-import org.ksmt.expr.KRealNumExpr
-import org.ksmt.expr.KTrue
+import org.ksmt.expr.KInterpretedConstant
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
@@ -37,8 +32,8 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         /**
          * (= (store a i v) (store b x y)) ==>
          * (and
-         *   (= (select a i) (select b i))
-         *   (= (select a x) (select b x))
+         *   (= (select (store a i v) i) (select (store b x y) i))
+         *   (= (select (store a i v) x) (select (store b x y) x))
          *   (= a b)
          * )
          */
@@ -53,8 +48,8 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
     /**
      * (= (store a i v) (store b x y)) ==>
      * (and
-     *   (= (select a i) (select b i))
-     *   (= (select a x) (select b x))
+     *   (= (select (store a i v) i) (select (store b x y) i))
+     *   (= (select (store a i v) x) (select (store b x y) x))
      *   (= a b)
      * )
      */
@@ -68,6 +63,10 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         if (leftArray.base is KArrayConst<D, R> && rightArray.base is KArrayConst<D, R>) {
             // (= (const a) (const b)) ==> (= a b)
             checks += KEqExpr(ctx, leftArray.base.value, rightArray.base.value)
+        } else {
+            check(leftArray.base == rightArray.base) {
+                "Base arrays expected to be equal or constant"
+            }
         }
 
         val leftArraySearchInfo = analyzeArrayStores(leftArray)
@@ -389,12 +388,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
     }
 
     private val KExpr<*>.definitelyIsConstant: Boolean
-        get() = this is KBitVecValue<*>
-                || this is KFpValue<*>
-                || this is KIntNumExpr
-                || this is KRealNumExpr
-                || this is KTrue
-                || this is KFalse
+        get() = this is KInterpretedConstant
 
     /**
      * Auxiliary expression to handle expanded array stores.

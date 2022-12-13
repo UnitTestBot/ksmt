@@ -15,7 +15,7 @@ import org.ksmt.utils.toBinary
 
 abstract class KBitVecValue<S : KBvSort>(
     ctx: KContext
-) : KApp<S, KExpr<*>>(ctx) {
+) : KApp<S, KExpr<*>>(ctx), KInterpretedConstant {
     override val args: List<KExpr<*>> = emptyList()
 
     abstract val stringValue: String

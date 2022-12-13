@@ -24,7 +24,7 @@ abstract class KFpValue<T : KFpSort>(
     val significand: KBitVecValue<out KBvSort>,
     val biasedExponent: KBitVecValue<out KBvSort>,
     val signBit: Boolean
-) : KApp<T, KExpr<*>>(ctx) {
+) : KApp<T, KExpr<*>>(ctx), KInterpretedConstant {
     override val args: List<KExpr<*>> = emptyList()
 }
 

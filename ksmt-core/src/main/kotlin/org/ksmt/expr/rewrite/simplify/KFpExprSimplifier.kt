@@ -487,7 +487,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
                     val decimalValue = fpDecimalValue(value)
                     if (decimalValue != null) {
                         val lowLimit = if (expr.isSigned) {
-                            -BigDecimal.valueOf(2).pow(expr.bvSize - 1)
+                            -(BigDecimal.valueOf(2).pow(expr.bvSize - 1))
                         } else {
                             BigDecimal.ZERO
                         }
