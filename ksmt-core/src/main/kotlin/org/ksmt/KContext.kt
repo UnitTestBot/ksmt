@@ -290,6 +290,7 @@ import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KRealToFpExpr
 import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.utils.BvUtils.bvMaxValueSigned
+import org.ksmt.utils.BvUtils.minus
 import org.ksmt.utils.BvUtils.plus
 import org.ksmt.utils.booleanSignBit
 import org.ksmt.utils.cast
@@ -1515,8 +1516,14 @@ open class KContext : AutoCloseable {
     private fun biasFp128Exponent(exponent: KBitVecValue<*>): KBitVecValue<*> =
         exponent + bvMaxValueSigned(KFp128Sort.exponentBits)
 
+    private fun unbiasFp128Exponent(exponent: KBitVecValue<*>): KBitVecValue<*> =
+        exponent - bvMaxValueSigned(KFp128Sort.exponentBits)
+
     private fun biasFpCustomSizeExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> =
         exponent + bvMaxValueSigned(exponentSize)
+
+    private fun unbiasFpCustomSizeExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> =
+        exponent - bvMaxValueSigned(exponentSize)
 
     fun <T : KFpSort> mkFp(value: Float, sort: T): KExpr<T> {
         if (sort == mkFp32Sort()) {
@@ -2572,6 +2579,16 @@ open class KContext : AutoCloseable {
     fun mkFp128Decl(significandBits: KBitVecValue<*>, unbiasedExponent: KBitVecValue<*>, signBit: Boolean): KFp128Decl =
         fp128DeclCache.createIfContextActive(significandBits, unbiasedExponent, signBit)
 
+    fun mkFp128DeclBiased(
+        significandBits: KBitVecValue<*>,
+        biasedExponent: KBitVecValue<*>,
+        signBit: Boolean
+    ): KFp128Decl = mkFp128Decl(
+        significandBits = significandBits,
+        unbiasedExponent = unbiasFp128Exponent(biasedExponent),
+        signBit = signBit
+    )
+
     private val fpCustomSizeDeclCache = mkClosableCache { significandSize: UInt,
                                                           exponentSize: UInt,
                                                           significand: KBitVecValue<*>,
@@ -2621,6 +2638,20 @@ open class KContext : AutoCloseable {
             else -> error("Sort declaration for an unknown $sort")
         }
     }
+
+    fun <T : KFpSort> mkFpCustomSizeDeclBiased(
+        significandSize: UInt,
+        exponentSize: UInt,
+        significand: KBitVecValue<*>,
+        biasedExponent: KBitVecValue<*>,
+        signBit: Boolean
+    ): KFpDecl<T> = mkFpCustomSizeDecl(
+        significandSize = significandSize,
+        exponentSize = exponentSize,
+        significand = significand,
+        unbiasedExponent = unbiasFpCustomSizeExponent(biasedExponent, exponentSize),
+        signBit = signBit
+    )
 
     private val roundingModeDeclCache = mkClosableCache { value: KFpRoundingMode ->
         KFpRoundingModeDecl(this, value)

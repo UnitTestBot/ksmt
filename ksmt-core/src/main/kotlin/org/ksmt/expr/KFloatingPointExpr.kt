@@ -122,7 +122,11 @@ class KFp128Value internal constructor(
     }
 
     override val decl: KDecl<KFp128Sort>
-        get() = ctx.mkFp128Decl(significand, biasedExponent, signBit)
+        get() = ctx.mkFp128DeclBiased(
+            significandBits = significand,
+            biasedExponent = biasedExponent,
+            signBit = signBit
+        )
 
     override val sort: KFp128Sort
         get() = ctx.mkFp128Sort()
@@ -156,12 +160,12 @@ class KFpCustomSizeValue internal constructor(
     }
 
     override val decl: KDecl<KFpSort>
-        get() = ctx.mkFpCustomSizeDecl(
-            significandSize,
-            exponentSize,
-            significand,
-            biasedExponent,
-            signBit
+        get() = ctx.mkFpCustomSizeDeclBiased(
+            significandSize = significandSize,
+            exponentSize = exponentSize,
+            significand = significand,
+            biasedExponent = biasedExponent,
+            signBit = signBit
         )
 
     override val sort: KFpSort
