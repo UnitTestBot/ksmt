@@ -63,6 +63,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Cleanup
+        run: |
+          rm -rf ksmt-test/testData
+
       - name: Prepare test data (cache)
         id: test-data-cache
         uses: actions/cache@v3
@@ -72,21 +76,28 @@ jobs:
           key: test-data-0.2.1
           path: ksmt-test/testData
 
-      - name: Set up JDK 1.8
-        uses: actions/setup-java@v3
-        with:
-          java-version: 8
-          distribution: 'zulu'
-          cache: gradle
-
-      - name: Prepare test data (download)
+      - name: debug create
         if: steps.test-data-cache.outputs.cache-hit != 'true'
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: |
-            :ksmt-test:downloadPreparedSmtLibBenchmarkTestData
-            --no-daemon
-            -PtestDataRevision=0.2.1
+        run: |
+          mkdir ksmt-test/testData
+          touch ksmt-test/testData/test_file.txt
+
+#      - name: Set up JDK 1.8
+#        if: steps.test-data-cache.outputs.cache-hit != 'true'
+#        uses: actions/setup-java@v3
+#        with:
+#          java-version: 8
+#          distribution: 'zulu'
+#          cache: gradle
+#
+#      - name: Prepare test data (download)
+#        if: steps.test-data-cache.outputs.cache-hit != 'true'
+#        uses: gradle/gradle-build-action@v2
+#        with:
+#          arguments: |
+#            :ksmt-test:downloadPreparedSmtLibBenchmarkTestData
+#            --no-daemon
+#            -PtestDataRevision=0.2.1
 
   run_tests:
     needs: [setup, prepare_test_data]
