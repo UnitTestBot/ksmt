@@ -53,7 +53,7 @@ public class Sudoku {
             final List<KExpr<KBoolSort>> symbolAssignments = assignSymbols(ctx, symbols, initialGrid);
 
             // Create Z3 SMT solver instance.
-            try (final KSolver solver = new KZ3Solver(ctx)) {
+            try (final KSolver<?> solver = new KZ3Solver(ctx)) {
                 // Assert all constraints.
                 rules.forEach(solver::assertExpr);
                 symbolAssignments.forEach(solver::assertExpr);

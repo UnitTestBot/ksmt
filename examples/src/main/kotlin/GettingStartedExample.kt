@@ -47,10 +47,10 @@ private fun pushPopIncrementalExample(ctx: KContext) =
         // create symbolic variables
         val cond1 by boolSort
         val cond2 by boolSort
-        val a by mkBv32Sort()
-        val b by mkBv32Sort()
-        val c by mkBv32Sort()
-        val goal by mkBv32Sort()
+        val a by bv32Sort
+        val b by bv32Sort
+        val c by bv32Sort
+        val goal by bv32Sort
 
         KZ3Solver(this).use { solver ->
             // a == 0
@@ -139,10 +139,10 @@ private fun assumptionsIncrementalExample(ctx: KContext) =
         // create symbolic variables
         val cond1 by boolSort
         val cond2 by boolSort
-        val a by mkBv32Sort()
-        val b by mkBv32Sort()
-        val c by mkBv32Sort()
-        val goal by mkBv32Sort()
+        val a by bv32Sort
+        val b by bv32Sort
+        val c by bv32Sort
+        val goal by bv32Sort
 
         KZ3Solver(this).use { solver ->
             // a == 0

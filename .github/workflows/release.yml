@@ -31,4 +31,5 @@ jobs:
             ksmt-core/build/release/**/ksmt-core-*.jar
             ksmt-z3/build/release/**/ksmt-z3-*.jar
             ksmt-bitwuzla/build/release/**/ksmt-bitwuzla-*.jar
+            ksmt-runner/build/release/**/ksmt-runner-*.jar
             

@@ -14,9 +14,9 @@ repositories {
 }
 
 // core 
-implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.2.1")
+implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.3.0")
 // z3 solver
-implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.2.1")
+implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.3.0")
 ```
 
 ## Usage
@@ -52,8 +52,8 @@ val array by mkArraySort(intSort, intSort)
 val index by intSort
 val value by intSort
 
-val expr = (array.select(index - 1.intExpr) lt value) and
-        (array.select(index + 1.intExpr) gt value)
+val expr = (array.select(index - 1.expr) lt value) and
+        (array.select(index + 1.expr) gt value)
 ```
 Check out our [example project](examples) for more complicated examples.
 

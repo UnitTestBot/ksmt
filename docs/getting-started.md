@@ -18,7 +18,7 @@ repositories {
 ```kotlin
 dependencies {
     // core 
-    implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.2.1")    
+    implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.3.0")    
 }
 ```
 
@@ -26,9 +26,9 @@ dependencies {
 ```kotlin
 dependencies {
     // z3 
-    implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.2.1")
+    implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.3.0")
     // bitwuzla
-    implementation("com.github.UnitTestBot.ksmt:ksmt-bitwuzla:0.2.1")
+    implementation("com.github.UnitTestBot.ksmt:ksmt-bitwuzla:0.3.0")
 }
 ```
 SMT solver specific packages are provided with solver native binaries. 
@@ -117,10 +117,10 @@ with(ctx) {
     // create symbolic variables
     val cond1 by boolSort
     val cond2 by boolSort
-    val a by mkBv32Sort()
-    val b by mkBv32Sort()
-    val c by mkBv32Sort()
-    val goal by mkBv32Sort()
+    val a by bv32Sort
+    val b by bv32Sort
+    val c by bv32Sort
+    val goal by bv32Sort
 
     KZ3Solver(this).use { solver ->
         // a == 0
@@ -217,10 +217,10 @@ with(ctx) {
     // create symbolic variables
     val cond1 by boolSort
     val cond2 by boolSort
-    val a by mkBv32Sort()
-    val b by mkBv32Sort()
-    val c by mkBv32Sort()
-    val goal by mkBv32Sort()
+    val a by bv32Sort
+    val b by bv32Sort
+    val c by bv32Sort
+    val goal by bv32Sort
 
     KZ3Solver(this).use { solver ->
         // a == 0
