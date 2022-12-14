@@ -74,10 +74,12 @@ val smtLibBenchmarks = listOfNotNull(
     "QF_AUFNIA", //531K
 )
 
-val testDatDir = projectDir.resolve("testData")
+val testDataDir = projectDir.resolve("testData")
+val unpackedTestDataDir = testDataDir.resolve("data")
+val downloadedTestData = testDataDir.resolve("testData.zip")
 
 val smtLibBenchmarkTestDataDownload = smtLibBenchmarks.map { mkSmtLibBenchmarkTestData(it) }
-val smtLibBenchmarkTestDataPrepared = usePreparedSmtLibBenchmarkTestData(testDatDir)
+val smtLibBenchmarkTestDataPrepared = usePreparedSmtLibBenchmarkTestData(unpackedTestDataDir)
 
 val prepareTestData by tasks.registering {
     tasks.withType<ProcessResources>().forEach { it.enabled = false }
@@ -89,7 +91,11 @@ val prepareTestData by tasks.registering {
 }
 
 val testDataRevision = project.stringProperty("testDataRevision") ?: "no-revision"
-val downloadPreparedBenchmarksTestData = downloadPreparedSmtLibBenchmarkTestData(testDatDir, testDataRevision)
+val downloadPreparedBenchmarksTestData = downloadPreparedSmtLibBenchmarkTestData(
+    downloadPath = downloadedTestData,
+    testDataPath = unpackedTestDataDir,
+    version = testDataRevision
+)
 
 tasks.withType<Test> {
     enabled = runBenchmarksBasedTests

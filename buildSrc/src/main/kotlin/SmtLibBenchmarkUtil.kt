@@ -54,19 +54,16 @@ fun Project.usePreparedSmtLibBenchmarkTestData(path: File) = tasks.register("smt
     }
 }
 
-fun Project.downloadPreparedSmtLibBenchmarkTestData(path: File, version: String) =
+fun Project.downloadPreparedSmtLibBenchmarkTestData(downloadPath: File, testDataPath: File, version: String) =
     tasks.register("downloadPreparedSmtLibBenchmarkTestData") {
         doLast {
-            path.mkdir()
-
             val benchmarksUrl = "https://github.com/UnitTestBot/ksmt/releases/download/$version/benchmarks.zip"
-            val downloadPath = buildDir.resolve("benchmarks.zip")
 
             download(benchmarksUrl, downloadPath)
 
             copy {
                 from(zipTree(downloadPath))
-                into(path)
+                into(testDataPath)
                 duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             }
         }
