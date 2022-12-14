@@ -20,6 +20,9 @@ on:
         type: number
         default: 170000
 
+env:
+  TEST_DATA_REVISION: 0.2.1
+
 jobs:
   setup:
     runs-on: ubuntu-latest
@@ -58,8 +61,44 @@ jobs:
           TEST_ARRAY+="]"
           echo "tests=$TEST_ARRAY" >> $GITHUB_OUTPUT
 
+  prepare_test_data:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Prepare test data (cache)
+        id: test-data-cache
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-test-data
+        with:
+          key: test-data-${{ env.TEST_DATA_REVISION }}-${{ matrix.os }}
+          path: ksmt-test/testData/testData.zip
+
+      - name: Set up JDK 1.8
+        if: steps.test-data-cache.outputs.cache-hit != 'true'
+        uses: actions/setup-java@v3
+        with:
+          java-version: 8
+          distribution: 'zulu'
+          cache: gradle
+
+      - name: Prepare test data (download)
+        if: steps.test-data-cache.outputs.cache-hit != 'true'
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: |
+            :ksmt-test:downloadPreparedSmtLibBenchmarkTestData
+            --no-daemon
+            -PtestDataRevision=${{ env.TEST_DATA_REVISION }}
+
   run_tests:
-    needs: setup
+    needs: [setup, prepare_test_data]
     continue-on-error: true
     strategy:
       matrix:
@@ -74,6 +113,21 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Prepare test data (cache)
+        id: test-data-cache
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-test-data
+        with:
+          key: test-data-${{ env.TEST_DATA_REVISION }}-${{ matrix.os }}
+          path: ksmt-test/testData/testData.zip
+
+      - name: Check test data downloaded
+        if: steps.test-data-cache.outputs.cache-hit != 'true'
+        run: |
+          echo "Test data is not available"
+          exit 1
+
       - name: Set up JDK 1.8
         uses: actions/setup-java@v3
         with:
@@ -81,30 +135,21 @@ jobs:
           distribution: 'zulu'
           cache: gradle
 
+      # Since ksmt-test/testData/testData.zip exists task will not download it again
+      - name: Prepare test data (unpack)
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: |
+            :ksmt-test:downloadPreparedSmtLibBenchmarkTestData
+            --no-daemon
+            -PtestDataRevision=${{ env.TEST_DATA_REVISION }}
+
       - name: Build project
         uses: gradle/gradle-build-action@v2
         with:
           arguments: |
             build
             --no-daemon
-
-      - name: Prepare test data (cache)
-        id: test-data-cache
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-test-data
-        with:
-          key: test-data-0.2.1-${{ matrix.os }}
-          path: ksmt-test/testData
-
-      - name: Prepare test data (download)
-        if: steps.test-data-cache.outputs.cache-hit != 'true'
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: |
-            :ksmt-test:downloadPreparedSmtLibBenchmarkTestData
-            --no-daemon
-            -PtestDataRevision=0.2.1
 
       - name: Run ${{ matrix.test }}
         uses: gradle/gradle-build-action@v2

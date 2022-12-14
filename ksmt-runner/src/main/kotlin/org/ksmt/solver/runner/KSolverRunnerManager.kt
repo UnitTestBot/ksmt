@@ -10,6 +10,7 @@ import org.ksmt.runner.core.RdServer
 import org.ksmt.runner.models.generated.SolverProtocolModel
 import org.ksmt.runner.models.generated.SolverType
 import org.ksmt.solver.KSolver
+import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
 import org.ksmt.solver.z3.KZ3Solver
@@ -37,11 +38,15 @@ class KSolverRunnerManager(
         workers.terminate()
     }
 
-    fun createSolver(ctx: KContext, solver: KClass<out KSolver>): KSolverRunner = runBlocking {
-        createSolverAsync(ctx, solver)
-    }
+    fun <C : KSolverConfiguration> createSolver(ctx: KContext, solver: KClass<out KSolver<C>>): KSolverRunner<C> =
+        runBlocking {
+            createSolverAsync(ctx, solver)
+        }
 
-    suspend fun createSolverAsync(ctx: KContext, solver: KClass<out KSolver>): KSolverRunner {
+    suspend fun <C : KSolverConfiguration> createSolverAsync(
+        ctx: KContext,
+        solver: KClass<out KSolver<C>>
+    ): KSolverRunner<C> {
         if (workers.lifetime.isNotAlive) {
             throw KSolverException("Solver runner manager is terminated")
         }
@@ -49,7 +54,8 @@ class KSolverRunnerManager(
         val worker = workers.getOrCreateFreeWorker()
         worker.astSerializationCtx.initCtx(ctx)
         worker.lifetime.onTermination { worker.astSerializationCtx.resetCtx() }
-        return KSolverRunner(hardTimeout, worker).also {
+        val configurationBuilder = solverConfigurationBuilder(solver)
+        return KSolverRunner(hardTimeout, worker, configurationBuilder).also {
             it.initSolver(solverType)
         }
     }
@@ -59,5 +65,17 @@ class KSolverRunnerManager(
             KZ3Solver::class to SolverType.Z3,
             KBitwuzlaSolver::class to SolverType.Bitwuzla
         )
+
+        @Suppress("UNCHECKED_CAST")
+        private fun <C : KSolverConfiguration> solverConfigurationBuilder(
+            solver: KClass<out KSolver<C>>
+        ): KSolverUniversalConfigurationBuilder<C> =
+            when (solver) {
+                KZ3Solver::class ->
+                    KZ3SolverUniversalConfigurationBuilder() as KSolverUniversalConfigurationBuilder<C>
+                KBitwuzlaSolver::class ->
+                    KBitwuzlaSolverUniversalConfigurationBuilder() as KSolverUniversalConfigurationBuilder<C>
+                else -> error("Unknown solver type: $solver")
+            }
     }
 }

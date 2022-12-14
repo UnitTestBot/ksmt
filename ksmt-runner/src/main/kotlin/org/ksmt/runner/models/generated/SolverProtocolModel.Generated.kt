@@ -20,6 +20,7 @@ import kotlin.jvm.JvmStatic
 class SolverProtocolModel private constructor(
     private val _initSolver: RdCall<CreateSolverParams, Unit>,
     private val _deleteSolver: RdCall<Unit, Unit>,
+    private val _configure: RdCall<List<SolverConfigurationParam>, Unit>,
     private val _assert: RdCall<AssertParams, Unit>,
     private val _assertAndTrack: RdCall<AssertParams, AssertAndTrackResult>,
     private val _push: RdCall<Unit, Unit>,
@@ -36,6 +37,7 @@ class SolverProtocolModel private constructor(
         
         override fun registerSerializersCore(serializers: ISerializers)  {
             serializers.register(CreateSolverParams)
+            serializers.register(SolverConfigurationParam)
             serializers.register(AssertParams)
             serializers.register(AssertAndTrackResult)
             serializers.register(PopParams)
@@ -48,6 +50,7 @@ class SolverProtocolModel private constructor(
             serializers.register(ModelEntry)
             serializers.register(ModelResult)
             serializers.register(SolverType.marshaller)
+            serializers.register(ConfigurationParamKind.marshaller)
         }
         
         
@@ -70,8 +73,9 @@ class SolverProtocolModel private constructor(
             }
         }
         
+        private val __SolverConfigurationParamListSerializer = SolverConfigurationParam.list()
         
-        const val serializationHash = 3612013452435752699L
+        const val serializationHash = 2376534082034507660L
         
     }
     override val serializersOwner: ISerializersOwner get() = SolverProtocolModel
@@ -88,6 +92,11 @@ class SolverProtocolModel private constructor(
      * Delete solver
      */
     val deleteSolver: RdCall<Unit, Unit> get() = _deleteSolver
+    
+    /**
+     * Configure solver with parameters
+     */
+    val configure: RdCall<List<SolverConfigurationParam>, Unit> get() = _configure
     
     /**
      * Assert expression
@@ -138,6 +147,7 @@ class SolverProtocolModel private constructor(
     init {
         _initSolver.async = true
         _deleteSolver.async = true
+        _configure.async = true
         _assert.async = true
         _assertAndTrack.async = true
         _push.async = true
@@ -152,6 +162,7 @@ class SolverProtocolModel private constructor(
     init {
         bindableChildren.add("initSolver" to _initSolver)
         bindableChildren.add("deleteSolver" to _deleteSolver)
+        bindableChildren.add("configure" to _configure)
         bindableChildren.add("assert" to _assert)
         bindableChildren.add("assertAndTrack" to _assertAndTrack)
         bindableChildren.add("push" to _push)
@@ -168,6 +179,7 @@ class SolverProtocolModel private constructor(
     ) : this(
         RdCall<CreateSolverParams, Unit>(CreateSolverParams, FrameworkMarshallers.Void),
         RdCall<Unit, Unit>(FrameworkMarshallers.Void, FrameworkMarshallers.Void),
+        RdCall<List<SolverConfigurationParam>, Unit>(__SolverConfigurationParamListSerializer, FrameworkMarshallers.Void),
         RdCall<AssertParams, Unit>(AssertParams, FrameworkMarshallers.Void),
         RdCall<AssertParams, AssertAndTrackResult>(AssertParams, AssertAndTrackResult),
         RdCall<Unit, Unit>(FrameworkMarshallers.Void, FrameworkMarshallers.Void),
@@ -187,6 +199,7 @@ class SolverProtocolModel private constructor(
         printer.indent {
             print("initSolver = "); _initSolver.print(printer); println()
             print("deleteSolver = "); _deleteSolver.print(printer); println()
+            print("configure = "); _configure.print(printer); println()
             print("assert = "); _assert.print(printer); println()
             print("assertAndTrack = "); _assertAndTrack.print(printer); println()
             print("push = "); _push.print(printer); println()
@@ -204,6 +217,7 @@ class SolverProtocolModel private constructor(
         return SolverProtocolModel(
             _initSolver.deepClonePolymorphic(),
             _deleteSolver.deepClonePolymorphic(),
+            _configure.deepClonePolymorphic(),
             _assert.deepClonePolymorphic(),
             _assertAndTrack.deepClonePolymorphic(),
             _push.deepClonePolymorphic(),
@@ -222,7 +236,7 @@ val IProtocol.solverProtocolModel get() = getOrCreateExtension(SolverProtocolMod
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:30]
+ * #### Generated from [SolverProtocolModel.kt:41]
  */
 data class AssertAndTrackResult (
     val expression: org.ksmt.KAst
@@ -279,7 +293,7 @@ data class AssertAndTrackResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:26]
+ * #### Generated from [SolverProtocolModel.kt:37]
  */
 data class AssertParams (
     val expression: org.ksmt.KAst
@@ -336,7 +350,7 @@ data class AssertParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:38]
+ * #### Generated from [SolverProtocolModel.kt:49]
  */
 data class CheckParams (
     val timeout: Long
@@ -393,7 +407,7 @@ data class CheckParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:42]
+ * #### Generated from [SolverProtocolModel.kt:53]
  */
 data class CheckResult (
     val status: org.ksmt.solver.KSolverStatus
@@ -450,7 +464,7 @@ data class CheckResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:46]
+ * #### Generated from [SolverProtocolModel.kt:57]
  */
 data class CheckWithAssumptionsParams (
     val assumptions: List<org.ksmt.KAst>,
@@ -513,6 +527,22 @@ data class CheckWithAssumptionsParams (
 
 
 /**
+ * #### Generated from [SolverProtocolModel.kt:27]
+ */
+enum class ConfigurationParamKind {
+    String, 
+    Bool, 
+    Int, 
+    Double;
+    
+    companion object {
+        val marshaller = FrameworkMarshallers.enum<ConfigurationParamKind>()
+        
+    }
+}
+
+
+/**
  * #### Generated from [SolverProtocolModel.kt:19]
  */
 data class CreateSolverParams (
@@ -570,7 +600,7 @@ data class CreateSolverParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:64]
+ * #### Generated from [SolverProtocolModel.kt:75]
  */
 data class ModelEntry (
     val sort: org.ksmt.KAst,
@@ -645,7 +675,7 @@ data class ModelEntry (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:59]
+ * #### Generated from [SolverProtocolModel.kt:70]
  */
 data class ModelFuncInterpEntry (
     val args: List<org.ksmt.KAst>,
@@ -708,7 +738,7 @@ data class ModelFuncInterpEntry (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:71]
+ * #### Generated from [SolverProtocolModel.kt:82]
  */
 data class ModelResult (
     val declarations: List<org.ksmt.KAst>,
@@ -771,7 +801,7 @@ data class ModelResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:34]
+ * #### Generated from [SolverProtocolModel.kt:45]
  */
 data class PopParams (
     val levels: UInt
@@ -828,7 +858,7 @@ data class PopParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:55]
+ * #### Generated from [SolverProtocolModel.kt:66]
  */
 data class ReasonUnknownResult (
     val reasonUnknown: String
@@ -885,6 +915,75 @@ data class ReasonUnknownResult (
 
 
 /**
+ * #### Generated from [SolverProtocolModel.kt:26]
+ */
+data class SolverConfigurationParam (
+    val kind: ConfigurationParamKind,
+    val name: String,
+    val value: String
+) : IPrintable {
+    //companion
+    
+    companion object : IMarshaller<SolverConfigurationParam> {
+        override val _type: KClass<SolverConfigurationParam> = SolverConfigurationParam::class
+        
+        @Suppress("UNCHECKED_CAST")
+        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): SolverConfigurationParam  {
+            val kind = buffer.readEnum<ConfigurationParamKind>()
+            val name = buffer.readString()
+            val value = buffer.readString()
+            return SolverConfigurationParam(kind, name, value)
+        }
+        
+        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: SolverConfigurationParam)  {
+            buffer.writeEnum(value.kind)
+            buffer.writeString(value.name)
+            buffer.writeString(value.value)
+        }
+        
+        
+    }
+    //fields
+    //methods
+    //initializer
+    //secondary constructor
+    //equals trait
+    override fun equals(other: Any?): Boolean  {
+        if (this === other) return true
+        if (other == null || other::class != this::class) return false
+        
+        other as SolverConfigurationParam
+        
+        if (kind != other.kind) return false
+        if (name != other.name) return false
+        if (value != other.value) return false
+        
+        return true
+    }
+    //hash code trait
+    override fun hashCode(): Int  {
+        var __r = 0
+        __r = __r*31 + kind.hashCode()
+        __r = __r*31 + name.hashCode()
+        __r = __r*31 + value.hashCode()
+        return __r
+    }
+    //pretty print
+    override fun print(printer: PrettyPrinter)  {
+        printer.println("SolverConfigurationParam (")
+        printer.indent {
+            print("kind = "); kind.print(printer); println()
+            print("name = "); name.print(printer); println()
+            print("value = "); value.print(printer); println()
+        }
+        printer.print(")")
+    }
+    //deepClone
+    //contexts
+}
+
+
+/**
  * #### Generated from [SolverProtocolModel.kt:20]
  */
 enum class SolverType {
@@ -899,7 +998,7 @@ enum class SolverType {
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:51]
+ * #### Generated from [SolverProtocolModel.kt:62]
  */
 data class UnsatCoreResult (
     val core: List<org.ksmt.KAst>

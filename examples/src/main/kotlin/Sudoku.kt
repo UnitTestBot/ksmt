@@ -6,6 +6,7 @@ import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KIntSort
+import org.ksmt.utils.mkConst
 import kotlin.system.measureTimeMillis
 import kotlin.time.Duration.Companion.seconds
 
@@ -85,7 +86,7 @@ fun main() = KContext().useWith {
 private fun KContext.sudokuRules(symbols: List<List<KExpr<KIntSort>>>): List<KExpr<KBoolSort>> {
 
     // Each cell has a value from 1 to 9.
-    val symbolConstraints = symbols.flatten().map { (it ge 1.intExpr) and (it le 9.intExpr) }
+    val symbolConstraints = symbols.flatten().map { (it ge 1.expr) and (it le 9.expr) }
 
     // Each row contains distinct numbers.
     val rowDistinctConstraints = symbols.map { row -> mkDistinct(row) }
@@ -118,7 +119,7 @@ private fun KContext.assignSymbols(
     sudokuIndices.flatMap { row ->
         sudokuIndices.mapNotNull { col ->
             val value = grid[row][col]
-            if (value != EMPTY_CELL_VALUE) symbols[row][col] eq value.intExpr else null
+            if (value != EMPTY_CELL_VALUE) symbols[row][col] eq value.expr else null
         }
     }
 

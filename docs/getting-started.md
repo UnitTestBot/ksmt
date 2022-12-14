@@ -18,7 +18,7 @@ repositories {
 ```kotlin
 dependencies {
     // core 
-    implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.2.1")    
+    implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.3.0")    
 }
 ```
 
@@ -26,9 +26,9 @@ dependencies {
 ```kotlin
 dependencies {
     // z3 
-    implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.2.1")
+    implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.3.0")
     // bitwuzla
-    implementation("com.github.UnitTestBot.ksmt:ksmt-bitwuzla:0.2.1")
+    implementation("com.github.UnitTestBot.ksmt:ksmt-bitwuzla:0.3.0")
 }
 ```
 SMT solver specific packages are provided with solver native binaries. 
@@ -51,6 +51,8 @@ In this example, we want to create an expression
 over Boolean variable `a` and integer variables `b` and `c`.
 
 ```kotlin
+import org.ksmt.utils.getValue
+
 with(ctx) {
     // create symbolic variables
     val a by boolSort
@@ -58,11 +60,14 @@ with(ctx) {
     val c by intSort
 
     // create expression
-    val constraint = a and (b ge c + 3.intExpr)
+    val constraint = a and (b ge c + 3.expr)
 }
 ```
 All KSMT expressions are typed and incorrect terms (e.g. `and` with integer arguments) 
 result in a compile-time error.
+
+Note the use of `import getValue`, which is required for the `by` syntax.
+Alternatively, `mkConst(name, sort)` can be used. 
 
 ### Working with SMT solvers
 
@@ -112,10 +117,10 @@ with(ctx) {
     // create symbolic variables
     val cond1 by boolSort
     val cond2 by boolSort
-    val a by mkBv32Sort()
-    val b by mkBv32Sort()
-    val c by mkBv32Sort()
-    val goal by mkBv32Sort()
+    val a by bv32Sort
+    val b by bv32Sort
+    val c by bv32Sort
+    val goal by bv32Sort
 
     KZ3Solver(this).use { solver ->
         // a == 0
@@ -212,10 +217,10 @@ with(ctx) {
     // create symbolic variables
     val cond1 by boolSort
     val cond2 by boolSort
-    val a by mkBv32Sort()
-    val b by mkBv32Sort()
-    val c by mkBv32Sort()
-    val goal by mkBv32Sort()
+    val a by bv32Sort
+    val b by bv32Sort
+    val c by bv32Sort
+    val goal by bv32Sort
 
     KZ3Solver(this).use { solver ->
         // a == 0
@@ -355,5 +360,23 @@ val formula = """
 """
 with(ctx) {
     val assertions = KZ3SMTLibParser().parse(formula)
+}
+```
+
+### Solver configuration
+
+KSMT provides an API for modifying solver-specific parameters. 
+Since the parameters and their correct values are solver-specific 
+KSMT does not perform any checks. 
+See the corresponding solver documentation for a list of available options. 
+
+```kotlin
+with(ctx) {
+    KZ3Solver(this).use { solver ->
+        solver.configure {
+            // set Z3 solver parameter random_seed to 42 
+            setZ3Option("random_seed", 42)
+        }
+    }
 }
 ```

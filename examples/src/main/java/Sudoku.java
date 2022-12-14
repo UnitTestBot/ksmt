@@ -53,7 +53,7 @@ public class Sudoku {
             final List<KExpr<KBoolSort>> symbolAssignments = assignSymbols(ctx, symbols, initialGrid);
 
             // Create Z3 SMT solver instance.
-            try (final KSolver solver = new KZ3Solver(ctx)) {
+            try (final KSolver<?> solver = new KZ3Solver(ctx)) {
                 // Assert all constraints.
                 rules.forEach(solver::assertExpr);
                 symbolAssignments.forEach(solver::assertExpr);
@@ -79,7 +79,7 @@ public class Sudoku {
         for (int row = 0; row < SIZE; row++) {
             final List<KExpr<KIntSort>> gridRow = new ArrayList<>();
             for (int col = 0; col < SIZE; col++) {
-                gridRow.add(ctx.mkConst(ctx.getIntSort(), "x_" + row + "_" + col));
+                gridRow.add(ctx.mkConst("x_" + row + "_" + col, ctx.getIntSort()));
             }
             grid.add(gridRow);
         }
@@ -93,8 +93,8 @@ public class Sudoku {
         final Stream<KExpr<KBoolSort>> symbolConstraints = symbols
                 .stream().flatMap(Collection::stream)
                 .map(cell -> ctx.and(
-                        ctx.ge(cell, ctx.getIntExpr(1)),
-                        ctx.le(cell, ctx.getIntExpr(9))));
+                        ctx.ge(cell, ctx.getExpr(1)),
+                        ctx.le(cell, ctx.getExpr(9))));
 
         // Each row contains distinct numbers.
         final Stream<KExpr<KBoolSort>> rowDistinctConstraints = symbols.stream()
@@ -138,7 +138,7 @@ public class Sudoku {
             for (int col = 0; col < SIZE; col++) {
                 int cell = grid.get(row).get(col);
                 if (cell != EMPTY_CELL_VALUE) {
-                    assignments.add(ctx.eq(symbols.get(row).get(col), ctx.getIntExpr(cell)));
+                    assignments.add(ctx.eq(symbols.get(row).get(col), ctx.getExpr(cell)));
                 }
             }
         }

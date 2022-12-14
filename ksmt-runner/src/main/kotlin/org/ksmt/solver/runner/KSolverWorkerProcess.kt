@@ -18,18 +18,20 @@ import org.ksmt.runner.models.generated.solverProtocolModel
 import org.ksmt.runner.serializer.AstSerializationCtx
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
+import org.ksmt.solver.bitwuzla.KBitwuzlaSolverConfiguration
 import org.ksmt.solver.z3.KZ3Solver
+import org.ksmt.solver.z3.KZ3SolverConfiguration
 import org.ksmt.sort.KBoolSort
 import kotlin.time.Duration.Companion.milliseconds
 
 class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
     private var workerCtx: KContext? = null
-    private var workerSolver: KSolver? = null
+    private var workerSolver: KSolver<*>? = null
 
     private val ctx: KContext
         get() = workerCtx ?: error("Solver is not initialized")
 
-    private val solver: KSolver
+    private val solver: KSolver<*>
         get() = workerSolver ?: error("Solver is not initialized")
 
     override fun parseArgs(args: Array<String>) = KsmtWorkerArgs.fromList(args.toList())
@@ -54,6 +56,15 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
             astSerializationCtx.resetCtx()
             workerSolver = null
             workerCtx = null
+        }
+        configure.measureExecutionForTermination { config ->
+            solver.configure {
+                when (this) {
+                    is KZ3SolverConfiguration -> config.forEach { addUniversalParam(it) }
+                    is KBitwuzlaSolverConfiguration -> config.forEach { addUniversalParam(it) }
+                    else -> error("Unexpected configuration: ${this::class}")
+                }
+            }
         }
         assert.measureExecutionForTermination { params ->
             @Suppress("UNCHECKED_CAST")

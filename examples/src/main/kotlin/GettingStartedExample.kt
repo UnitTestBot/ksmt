@@ -1,5 +1,6 @@
 import org.ksmt.KContext
 import org.ksmt.solver.z3.KZ3Solver
+import org.ksmt.utils.getValue
 import kotlin.time.Duration.Companion.seconds
 
 fun main() {
@@ -22,7 +23,7 @@ private fun basicSolverUsageExample(ctx: KContext) =
         val c by intSort
 
         // create expression
-        val constraint = a and (b ge c + 3.intExpr)
+        val constraint = a and (b ge c + 3.expr)
 
         KZ3Solver(this).use { solver -> // create s Z3 Smt solver instance
             // assert expression
@@ -46,10 +47,10 @@ private fun pushPopIncrementalExample(ctx: KContext) =
         // create symbolic variables
         val cond1 by boolSort
         val cond2 by boolSort
-        val a by mkBv32Sort()
-        val b by mkBv32Sort()
-        val c by mkBv32Sort()
-        val goal by mkBv32Sort()
+        val a by bv32Sort
+        val b by bv32Sort
+        val c by bv32Sort
+        val goal by bv32Sort
 
         KZ3Solver(this).use { solver ->
             // a == 0
@@ -138,10 +139,10 @@ private fun assumptionsIncrementalExample(ctx: KContext) =
         // create symbolic variables
         val cond1 by boolSort
         val cond2 by boolSort
-        val a by mkBv32Sort()
-        val b by mkBv32Sort()
-        val c by mkBv32Sort()
-        val goal by mkBv32Sort()
+        val a by bv32Sort
+        val b by bv32Sort
+        val c by bv32Sort
+        val goal by bv32Sort
 
         KZ3Solver(this).use { solver ->
             // a == 0

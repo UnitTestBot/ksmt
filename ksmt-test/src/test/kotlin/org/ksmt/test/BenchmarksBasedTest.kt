@@ -18,9 +18,11 @@ import org.ksmt.runner.core.KsmtWorkerArgs
 import org.ksmt.runner.core.KsmtWorkerFactory
 import org.ksmt.runner.core.KsmtWorkerPool
 import org.ksmt.runner.core.RdServer
+import org.ksmt.runner.core.WorkerInitializationFailedException
 import org.ksmt.runner.models.generated.TestProtocolModel
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
+import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.KSolverUnsupportedFeatureException
@@ -66,10 +68,10 @@ abstract class BenchmarksBasedTest {
         }
     }
 
-    fun testModelConversion(
+    fun <C : KSolverConfiguration> testModelConversion(
         name: String,
         samplePath: Path,
-        solverType: KClass<out KSolver>
+        solverType: KClass<out KSolver<C>>
     ) {
         val ctx = KContext()
         testWorkers.withWorker(ctx) { worker ->
@@ -89,10 +91,10 @@ abstract class BenchmarksBasedTest {
         }
     }
 
-    fun testSolver(
+    fun <C : KSolverConfiguration> testSolver(
         name: String,
         samplePath: Path,
-        solverType: KClass<out KSolver>
+        solverType: KClass<out KSolver<C>>
     ) {
         val ctx = KContext()
         testWorkers.withWorker(ctx) { worker ->
@@ -133,7 +135,14 @@ abstract class BenchmarksBasedTest {
         ctx: KContext,
         body: suspend (TestRunner) -> Unit
     ) = runBlocking {
-        val worker = getOrCreateFreeWorker()
+        val worker = try {
+            getOrCreateFreeWorker()
+        } catch (ex: WorkerInitializationFailedException) {
+            val testIgnoreReason = "worker initialization failed -- ${ex.message}"
+            System.err.println(testIgnoreReason)
+            Assumptions.assumeTrue(false, testIgnoreReason)
+            error("ignored")
+        }
         worker.astSerializationCtx.initCtx(ctx)
         worker.lifetime.onTermination {
             worker.astSerializationCtx.resetCtx()
@@ -177,7 +186,18 @@ abstract class BenchmarksBasedTest {
                 .drop(testDataChunk * testDataChunkSize)
                 .take(testDataChunkSize)
                 .map { BenchmarkTestArguments(it.relativeTo(testDataLocation).toString(), it) }
+                .skipBadTestCases()
         }
+
+        private fun List<BenchmarkTestArguments>.skipBadTestCases(): List<BenchmarkTestArguments> =
+            /**
+             * Contains a declaration with an empty name.
+             * Normally, such declarations have special <null> name in Z3,
+             * but in this case it is not true. After internalization via API,
+             * resulting declaration has <null> name as excepted.
+             * Therefore, declarations are not equal, but this is not our issue.
+             * */
+            filterNot { it.name == "QF_BV_symbols.smt2" }
 
         @BeforeAll
         @JvmStatic

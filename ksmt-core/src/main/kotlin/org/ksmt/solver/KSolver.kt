@@ -5,7 +5,12 @@ import org.ksmt.sort.KBoolSort
 import kotlin.time.Duration
 
 @Suppress("OVERLOADS_INTERFACE", "INAPPLICABLE_JVM_NAME")
-interface KSolver : AutoCloseable {
+interface KSolver<Config: KSolverConfiguration> : AutoCloseable {
+
+    /**
+     * Set solver specific options.
+     * */
+    fun configure(configurator: Config.() -> Unit)
 
     /**
      * Assert an expression into solver.

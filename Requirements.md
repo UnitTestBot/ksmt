@@ -13,7 +13,7 @@
 | [CVC5 solver support](#cvc5-solver-support)                                       | TODO            |
 | [External process runner](#external-process-runner)                               | Done            |
 | [Portfolio solver](#portfolio-solver)                                             | TODO            |
-| [Solver configuration API](#solver-configuration-api)                             | In progress     |
+| [Solver configuration API](#solver-configuration-api)                             | Done            |
 | [Deployment](#deployment)                                                         | Done partially  |
 | [Expression simplification / evaluation](#expression-simplification--evaluation)  | Done partially  |
 | [Performance tests](#performance-tests)                                           | TODO            |

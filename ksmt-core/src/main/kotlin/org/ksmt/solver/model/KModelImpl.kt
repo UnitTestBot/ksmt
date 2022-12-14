@@ -27,4 +27,27 @@ open class KModelImpl(
     ): KModel.KFuncInterp<T>? = interpretations[decl] as? KModel.KFuncInterp<T>
 
     override fun detach(): KModel = this
+
+    override fun toString(): String = buildString {
+        interpretations.forEach { (decl, interp) ->
+            append(decl)
+            append(":=\n\t")
+            append(interp)
+            appendLine()
+        }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as KModelImpl
+
+        if (ctx != other.ctx) return false
+        if (interpretations != other.interpretations) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int = interpretations.hashCode()
 }

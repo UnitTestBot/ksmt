@@ -13,7 +13,7 @@ import org.ksmt.sort.KBoolSort
 import org.ksmt.utils.mkFreshConst
 import kotlin.time.Duration
 
-open class KBitwuzlaSolver(private val ctx: KContext) : KSolver {
+open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverConfiguration> {
     open val bitwuzlaCtx = KBitwuzlaContext()
     open val exprInternalizer: KBitwuzlaExprInternalizer by lazy {
         KBitwuzlaExprInternalizer(ctx, bitwuzlaCtx)
@@ -30,6 +30,10 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver {
 
     private var currentLevelTrackedAssertions = hashSetOf<BitwuzlaTerm>()
     private val trackedAssertions = mutableListOf(currentLevelTrackedAssertions)
+
+    override fun configure(configurator: KBitwuzlaSolverConfiguration.() -> Unit) {
+        KBitwuzlaSolverConfigurationImpl(bitwuzlaCtx.bitwuzla).configurator()
+    }
 
     override fun assert(expr: KExpr<KBoolSort>) = bitwuzlaCtx.bitwuzlaTry {
         val term = with(exprInternalizer) { expr.internalize() }
