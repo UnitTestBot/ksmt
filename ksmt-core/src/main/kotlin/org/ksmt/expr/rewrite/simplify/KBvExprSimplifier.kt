@@ -57,6 +57,7 @@ import org.ksmt.expr.KBvZeroExtensionExpr
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KIteExpr
+import org.ksmt.expr.printer.ExpressionPrinter
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
@@ -1697,13 +1698,15 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             return transformer.transform(this)
         }
 
-        override fun print(builder: StringBuilder): Unit = with(builder) {
-            append("(concat")
-            for (arg in args) {
-                append(" ")
-                arg.print(this)
+        override fun print(printer: ExpressionPrinter) {
+            with(printer) {
+                append("(concat")
+                for (arg in args) {
+                    append(" ")
+                    append(arg)
+                }
+                append(")")
             }
-            append(")")
         }
     }
 
