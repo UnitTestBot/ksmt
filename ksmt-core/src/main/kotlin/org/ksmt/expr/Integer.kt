@@ -63,7 +63,7 @@ class KToRealIntExpr internal constructor(
 abstract class KIntNumExpr(
     ctx: KContext,
     private val value: Number
-) : KApp<KIntSort, KExpr<*>>(ctx) {
+) : KApp<KIntSort, KExpr<*>>(ctx), KInterpretedConstant {
     override val sort: KIntSort
         get() = ctx.intSort
 

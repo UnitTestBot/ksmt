@@ -22,14 +22,10 @@ import org.ksmt.utils.significand
 abstract class KFpValue<T : KFpSort>(
     ctx: KContext,
     val significand: KBitVecValue<out KBvSort>,
-    val exponent: KBitVecValue<out KBvSort>,
+    val biasedExponent: KBitVecValue<out KBvSort>,
     val signBit: Boolean
-) : KApp<T, KExpr<*>>(ctx) {
+) : KApp<T, KExpr<*>>(ctx), KInterpretedConstant {
     override val args: List<KExpr<*>> = emptyList()
-
-    companion object {
-        const val MAX_EXPONENT_SIZE = 63
-    }
 }
 
 /**
@@ -47,7 +43,7 @@ class KFp16Value internal constructor(
 ) : KFpValue<KFp16Sort>(
     ctx,
     significand = with(ctx) { value.halfPrecisionSignificand.toBv(KFp16Sort.significandBits - 1u) },
-    exponent = with(ctx) { value.getHalfPrecisionExponent(isBiased = true).toBv(KFp16Sort.exponentBits) },
+    biasedExponent = with(ctx) { value.getHalfPrecisionExponent(isBiased = true).toBv(KFp16Sort.exponentBits) },
     signBit = value.booleanSignBit
 ) {
     init {
@@ -69,7 +65,7 @@ class KFp32Value internal constructor(
 ) : KFpValue<KFp32Sort>(
     ctx,
     significand = with(ctx) { value.significand.toBv(KFp32Sort.significandBits - 1u) },
-    exponent = with(ctx) { value.getExponent(isBiased = true).toBv(KFp32Sort.exponentBits) },
+    biasedExponent = with(ctx) { value.getExponent(isBiased = true).toBv(KFp32Sort.exponentBits) },
     signBit = value.booleanSignBit
 ) {
     override val decl: KDecl<KFp32Sort>
@@ -87,7 +83,7 @@ class KFp64Value internal constructor(
 ) : KFpValue<KFp64Sort>(
     ctx,
     significand = with(ctx) { value.significand.toBv(KFp64Sort.significandBits - 1u) },
-    exponent = with(ctx) { value.getExponent(isBiased = true).toBv(KFp64Sort.exponentBits) },
+    biasedExponent = with(ctx) { value.getExponent(isBiased = true).toBv(KFp64Sort.exponentBits) },
     signBit = value.booleanSignBit
 ) {
     override val decl: KDecl<KFp64Sort>
@@ -107,17 +103,26 @@ class KFp64Value internal constructor(
  */
 class KFp128Value internal constructor(
     ctx: KContext,
-    val significandValue: Long,
-    val exponentValue: Long,
+    significandValue: KBitVecValue<*>,
+    exponentValue: KBitVecValue<*>,
     signBit: Boolean
 ) : KFpValue<KFp128Sort>(
     ctx,
-    significand = with(ctx) { significandValue.toBv(KFp128Sort.significandBits - 1u) },
-    exponent = with(ctx) { exponentValue.toBv(KFp128Sort.exponentBits) },
+    significand = significandValue,
+    biasedExponent = exponentValue,
     signBit
 ) {
+    init {
+        require(exponentValue.sort.sizeBits == KFp128Sort.exponentBits) {
+            "Exponent size must be ${KFp128Sort.exponentBits}."
+        }
+        require(significandValue.sort.sizeBits == KFp128Sort.significandBits - 1u) {
+            "Significand size must be ${KFp128Sort.significandBits - 1u}."
+        }
+    }
+
     override val decl: KDecl<KFp128Sort>
-        get() = ctx.mkFp128Decl(significandValue, exponentValue, signBit)
+        get() = ctx.mkFp128Decl(significand, biasedExponent, signBit)
 
     override val sort: KFp128Sort
         get() = ctx.mkFp128Sort()
@@ -127,27 +132,26 @@ class KFp128Value internal constructor(
 
 /**
  * KFp value of custom size.
- *
- * Note: if [exponentValue] contains more than [KFp128Sort.exponentBits] meaningful bits,
- * only the last [KFp128Sort.exponentBits] of then will be taken.
- * The same is true for the significand.
  */
 class KFpCustomSizeValue internal constructor(
     ctx: KContext,
     val significandSize: UInt,
     val exponentSize: UInt,
-    val significandValue: Long,
-    val exponentValue: Long,
+    significandValue: KBitVecValue<*>,
+    exponentValue: KBitVecValue<*>,
     signBit: Boolean
 ) : KFpValue<KFpSort>(
     ctx,
-    significand = with(ctx) { significandValue.toBv(significandSize - 1u) },
-    exponent = with(ctx) { exponentValue.toBv(exponentSize) },
+    significand = significandValue,
+    biasedExponent = exponentValue,
     signBit
 ) {
     init {
-        require(exponentSize.toInt() <= MAX_EXPONENT_SIZE) {
-            "Maximum number of exponent bits is $MAX_EXPONENT_SIZE"
+        require(exponentValue.sort.sizeBits == exponentSize) {
+            "Exponent size must be $exponentSize."
+        }
+        require(significandValue.sort.sizeBits == significandSize - 1u) {
+            "Significand size must be ${significandSize - 1u}."
         }
     }
 
@@ -155,8 +159,8 @@ class KFpCustomSizeValue internal constructor(
         get() = ctx.mkFpCustomSizeDecl(
             significandSize,
             exponentSize,
-            significandValue,
-            exponentValue,
+            significand,
+            biasedExponent,
             signBit
         )
 
@@ -721,14 +725,14 @@ class KFpFromBvExpr<S : KFpSort> internal constructor(
     ctx: KContext,
     override val sort: S,
     val sign: KExpr<KBv1Sort>,
-    val exponent: KExpr<out KBvSort>,
+    val biasedExponent: KExpr<out KBvSort>,
     val significand: KExpr<out KBvSort>,
 ) : KApp<S, KExpr<out KBvSort>>(ctx) {
     override val args: List<KExpr<out KBvSort>>
-        get() = listOf(sign, exponent, significand)
+        get() = listOf(sign, biasedExponent, significand)
 
     override val decl: KDecl<S>
-        get() = ctx.mkFpFromBvDecl(sign.sort, exponent.sort, significand.sort)
+        get() = ctx.mkFpFromBvDecl(sign.sort, biasedExponent.sort, significand.sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 }

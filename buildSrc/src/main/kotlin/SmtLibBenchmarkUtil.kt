@@ -9,7 +9,7 @@ fun Project.mkSmtLibBenchmarkTestData(name: String) = tasks.register("smtLibBenc
     doLast {
         val path = buildDir.resolve("smtLibBenchmark/$name")
         val downloadTarget = path.resolve("$name.zip")
-        val url = "$BENCHMARK_REPO_URL/api/v4/projects/SMT-LIB-benchmarks%2F$name/repository/archive.zip"
+        val url = "$BENCHMARK_REPO_URL/zip/$name.zip"
 
         download(url, downloadTarget)
 
@@ -41,21 +41,40 @@ fun Project.mkSmtLibBenchmarkTestData(name: String) = tasks.register("smtLibBenc
     }
 }
 
-fun Project.unpackSmtLibBenchmarkTestData(path: File) = tasks.register("smtLibBenchmark-data-unpack") {
+fun Project.usePreparedSmtLibBenchmarkTestData(path: File) = tasks.register("smtLibBenchmark-data-use") {
     doLast {
+        check(path.exists()) { "No test data provided" }
         val testResources = testResourceDir() ?: error("No resource directory found for benchmarks")
         val testData = testResources.resolve("testData")
         copy {
-            from(zipTree(path))
+            from(path)
             into(testData)
             duplicatesStrategy = DuplicatesStrategy.EXCLUDE
         }
     }
 }
 
+fun Project.downloadPreparedSmtLibBenchmarkTestData(path: File, version: String) =
+    tasks.register("downloadPreparedSmtLibBenchmarkTestData") {
+        doLast {
+            path.mkdir()
+
+            val benchmarksUrl = "https://github.com/UnitTestBot/ksmt/releases/download/$version/benchmarks.zip"
+            val downloadPath = buildDir.resolve("benchmarks.zip")
+
+            download(benchmarksUrl, downloadPath)
+
+            copy {
+                from(zipTree(downloadPath))
+                into(path)
+                duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+            }
+        }
+    }
+
 private fun Project.testResourceDir(): File? {
     val sourceSets = (this as ExtensionAware).extensions.getByName("sourceSets") as SourceSetContainer
     return sourceSets["test"]?.output?.resourcesDir
 }
 
-private const val BENCHMARK_REPO_URL = "https://clc-gitlab.cs.uiowa.edu:2443"
+private const val BENCHMARK_REPO_URL = "http://smt-lib.loria.fr"

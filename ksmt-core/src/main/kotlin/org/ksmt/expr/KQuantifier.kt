@@ -2,6 +2,7 @@ package org.ksmt.expr
 
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
+import org.ksmt.expr.printer.ExpressionPrinter
 import org.ksmt.sort.KBoolSort
 
 abstract class KQuantifier(
@@ -14,21 +15,25 @@ abstract class KQuantifier(
 
     abstract fun printQuantifierName(): String
 
-    override fun print(builder: StringBuilder): Unit = with(builder) {
-        append('(')
-        append(printQuantifierName())
-        append('(')
-
-        bounds.forEach { bound ->
+    override fun print(printer: ExpressionPrinter) {
+        val str = buildString {
             append('(')
-            append(bound.name)
-            append(' ')
-            bound.sort.print(this)
+            append(printQuantifierName())
+            append('(')
+
+            bounds.forEach { bound ->
+                append('(')
+                append(bound.name)
+                append(' ')
+                bound.sort.print(this)
+                append(')')
+            }
+
+            appendLine(')')
+            body.print(this)
+            appendLine()
             append(')')
         }
-
-        append(')')
-        body.print(this)
-        append(')')
+        printer.append(str)
     }
 }

@@ -28,7 +28,6 @@ import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBvSort
-import org.ksmt.sort.KFp64Sort
 import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
@@ -245,12 +244,12 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_ROTATE_LEFT -> expr.convert { arg: KExpr<KBvSort> ->
                 val rotation = Native.getDeclIntParameter(nCtx, decl, 0)
 
-                mkBvRotateLeftExpr(rotation, arg)
+                mkBvRotateLeftIndexedExpr(rotation, arg)
             }
             Z3_decl_kind.Z3_OP_ROTATE_RIGHT -> expr.convert { arg: KExpr<KBvSort> ->
                 val rotation = Native.getDeclIntParameter(nCtx, decl, 0)
 
-                mkBvRotateRightExpr(rotation, arg)
+                mkBvRotateRightIndexedExpr(rotation, arg)
             }
             Z3_decl_kind.Z3_OP_EXT_ROTATE_LEFT -> expr.convert(::mkBvRotateLeftExpr)
             Z3_decl_kind.Z3_OP_EXT_ROTATE_RIGHT -> expr.convert(::mkBvRotateRightExpr)
@@ -450,28 +449,28 @@ open class KZ3ExprConverter(
 
     @Suppress("MemberVisibilityCanBePrivate")
     fun convertFpNumeral(expr: Long, sortx: Long): ExprConversionResult = when {
-        Native.isNumeralAst(nCtx, expr) -> convert {
+        Native.isNumeralAst(nCtx, expr) -> {
             with(ctx) {
-                val sort = sortx.convertSort<KFpSort>()
-                val sBits = sort.significandBits.toInt()
-                val fp64SizeBits = KFp64Sort.exponentBits.toInt() + KFp64Sort.significandBits.toInt()
+                val unbiasedExponentBv = z3Ctx.temporaryAst(Native.fpaGetNumeralExponentBv(nCtx, expr, false))
+                val significandBv = z3Ctx.temporaryAst(Native.fpaGetNumeralSignificandBv(nCtx, expr))
 
-                // if we have sBits greater than long size bits, take it all, otherwise take last (sBits - 1) bits
-                val significandMask = if (sBits < fp64SizeBits) (1L shl (sBits - 1)) - 1 else -1
-                // TODO it is not right if we have significand with number of bits greater than 64
-                val significandValue = fpSignificandUInt64OrNull(nCtx, expr)
-                    ?: error("unexpected fp value")
-                val significand = significandValue and significandMask
+                expr.convert(
+                    arrayOf(unbiasedExponentBv, significandBv)
+                ) { exponent: KExpr<KBvSort>, significand: KExpr<KBvSort> ->
+                    val sort = sortx.convertSort<KFpSort>()
 
-                val exponentValue = fpExponentInt64OrNull(nCtx, expr, biased = false)
-                    ?: error("unexpected fp value")
-                val exponentMask = (1L shl sort.exponentBits.toInt()) - 1
-                val exponent = exponentValue and exponentMask
+                    val sign = fpSignOrNull(nCtx, expr) ?: error("unexpected fp value")
 
-                val signValue = fpSignOrNull(nCtx, expr)
-                    ?: error("unexpected fp value")
+                    z3Ctx.releaseTemporaryAst(unbiasedExponentBv)
+                    z3Ctx.releaseTemporaryAst(significandBv)
 
-                mkFp(significand, exponent, signValue, sort)
+                    ctx.mkFp(
+                        significand = significand as KBitVecValue<*>,
+                        unbiasedExponent = exponent as KBitVecValue<*>,
+                        signBit = sign,
+                        sort = sort
+                    )
+                }
             }
         }
         Z3_decl_kind.Z3_OP_FPA_NUM.toInt() == Native.getDeclKind(nCtx, Native.getAppDecl(nCtx, expr)) -> {

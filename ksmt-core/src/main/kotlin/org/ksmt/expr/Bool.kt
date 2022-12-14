@@ -149,7 +149,7 @@ class KIteExpr<T : KSort> internal constructor(
     }
 }
 
-class KTrue(ctx: KContext) : KApp<KBoolSort, KExpr<*>>(ctx) {
+class KTrue(ctx: KContext) : KApp<KBoolSort, KExpr<*>>(ctx), KInterpretedConstant {
     override val sort: KBoolSort
         get() = ctx.boolSort
 
@@ -161,7 +161,7 @@ class KTrue(ctx: KContext) : KApp<KBoolSort, KExpr<*>>(ctx) {
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 }
 
-class KFalse(ctx: KContext) : KApp<KBoolSort, KExpr<*>>(ctx) {
+class KFalse(ctx: KContext) : KApp<KBoolSort, KExpr<*>>(ctx), KInterpretedConstant {
     override val sort: KBoolSort
         get() = ctx.boolSort
 

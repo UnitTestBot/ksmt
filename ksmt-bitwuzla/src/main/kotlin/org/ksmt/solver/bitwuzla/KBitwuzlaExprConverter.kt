@@ -6,6 +6,7 @@ import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpRoundingMode
+import org.ksmt.expr.printer.ExpressionPrinter
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBitVector
@@ -375,7 +376,7 @@ open class KBitwuzlaExprConverter(
 
                     mkFpFromBvExpr(
                         sign = mkBv(signBit),
-                        exponent = mkBv(exponentBits.toReversedBinaryString(), exponentSize),
+                        biasedExponent = mkBv(exponentBits.toReversedBinaryString(), exponentSize),
                         significand = mkBv(significandBits.toReversedBinaryString(), significandSize - 1u)
                     )
                 }
@@ -387,7 +388,7 @@ open class KBitwuzlaExprConverter(
             @Suppress("UNCHECKED_CAST")
             mkFpFromBvExpr(
                 sign = mkBv(value.sign, sizeBits = 1u) as KExpr<KBv1Sort>,
-                exponent = mkBv(value.exponent, value.exponent.length.toUInt()),
+                biasedExponent = mkBv(value.exponent, value.exponent.length.toUInt()),
                 significand = mkBv(value.significand, value.significand.length.toUInt())
             )
         }
@@ -741,10 +742,10 @@ open class KBitwuzlaExprConverter(
         override val sort: KBv1Sort
             get() = ctx.bv1Sort
 
-        override fun print(builder: StringBuilder) {
-            builder.append("(toBV1 ")
-            arg.print(builder)
-            builder.append(')')
+        override fun print(printer: ExpressionPrinter) = with(printer) {
+            append("(toBV1 ")
+            append(arg)
+            append(")")
         }
 
         override fun accept(transformer: KTransformerBase): KExpr<KBv1Sort> {
@@ -757,10 +758,10 @@ open class KBitwuzlaExprConverter(
         override val sort: KBoolSort
             get() = ctx.boolSort
 
-        override fun print(builder: StringBuilder) {
-            builder.append("(toBool ")
-            arg.print(builder)
-            builder.append(')')
+        override fun print(printer: ExpressionPrinter) = with(printer) {
+            append("(toBool ")
+            append(arg)
+            append(")")
         }
 
         override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> {
@@ -777,12 +778,12 @@ open class KBitwuzlaExprConverter(
         override val sort: KArraySort<ToDomain, ToRange>
             get() = ctx.mkArraySort(toDomainSort, toRangeSort)
 
-        override fun print(builder: StringBuilder) {
-            builder.append("(toArray ")
-            sort.print(builder)
-            builder.append(' ')
-            arg.print(builder)
-            builder.append(')')
+        override fun print(printer: ExpressionPrinter) = with(printer) {
+            append("(toArray ")
+            append("$sort")
+            append(" ")
+            append(arg)
+            append(")")
         }
 
         override fun accept(transformer: KTransformerBase): KExpr<KArraySort<ToDomain, ToRange>> {

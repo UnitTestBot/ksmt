@@ -289,13 +289,15 @@ import org.ksmt.expr.KFpValue
 import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KRealToFpExpr
 import org.ksmt.sort.KFpRoundingModeSort
+import org.ksmt.utils.BvUtils.bvMaxValueSigned
+import org.ksmt.utils.BvUtils.plus
 import org.ksmt.utils.booleanSignBit
 import org.ksmt.utils.cast
-import org.ksmt.utils.extendWithLeadingZeros
 import org.ksmt.utils.extractExponent
 import org.ksmt.utils.extractSignificand
-import org.ksmt.utils.getExponent
 import org.ksmt.utils.getHalfPrecisionExponent
+import org.ksmt.utils.halfPrecisionSignificand
+import org.ksmt.utils.signBit
 import org.ksmt.utils.toBinary
 import org.ksmt.utils.uncheckedCast
 
@@ -345,13 +347,18 @@ open class KContext : AutoCloseable {
             else -> KBvCustomSizeSort(this, sizeBits)
         }
     }
+    private val bv1SortCache = mkClosableCache<KBv1Sort> { mkBvSort(sizeBits = 1u).cast() }
+    private val bv8SortCache = mkClosableCache<KBv8Sort> { mkBvSort(Byte.SIZE_BITS.toUInt()).cast() }
+    private val bv16SortCache = mkClosableCache<KBv16Sort> { mkBvSort(Short.SIZE_BITS.toUInt()).cast() }
+    private val bv32SortCache = mkClosableCache<KBv32Sort> { mkBvSort(Int.SIZE_BITS.toUInt()).cast() }
+    private val bv64SortCache = mkClosableCache<KBv64Sort> { mkBvSort(Long.SIZE_BITS.toUInt()).cast() }
 
     fun mkBvSort(sizeBits: UInt): KBvSort = bvSortCache.createIfContextActive(sizeBits)
-    fun mkBv1Sort(): KBv1Sort = mkBvSort(sizeBits = 1u).cast()
-    fun mkBv8Sort(): KBv8Sort = mkBvSort(Byte.SIZE_BITS.toUInt()).cast()
-    fun mkBv16Sort(): KBv16Sort = mkBvSort(Short.SIZE_BITS.toUInt()).cast()
-    fun mkBv32Sort(): KBv32Sort = mkBvSort(Int.SIZE_BITS.toUInt()).cast()
-    fun mkBv64Sort(): KBv64Sort = mkBvSort(Long.SIZE_BITS.toUInt()).cast()
+    fun mkBv1Sort(): KBv1Sort = bv1SortCache.createIfContextActive()
+    fun mkBv8Sort(): KBv8Sort = bv8SortCache.createIfContextActive()
+    fun mkBv16Sort(): KBv16Sort = bv16SortCache.createIfContextActive()
+    fun mkBv32Sort(): KBv32Sort = bv32SortCache.createIfContextActive()
+    fun mkBv64Sort(): KBv64Sort = bv64SortCache.createIfContextActive()
 
     private val realSortCache = mkClosableCache<KRealSort> { KRealSort(this) }
     fun mkRealSort(): KRealSort = realSortCache.createIfContextActive()
@@ -369,20 +376,23 @@ open class KContext : AutoCloseable {
             else -> KFpCustomSizeSort(this, exponentBits, significandBits)
         }
     }
+    private val fp16SortCache = mkClosableCache<KFp16Sort> {
+        mkFpSort(KFp16Sort.exponentBits, KFp16Sort.significandBits).cast()
+    }
 
-    fun mkFp16Sort(): KFp16Sort = fpSortCache.createIfContextActive(
-        KFp16Sort.exponentBits, KFp16Sort.significandBits
-    ).cast()
+    private val fp32SortCache = mkClosableCache<KFp32Sort> {
+        mkFpSort(KFp32Sort.exponentBits, KFp32Sort.significandBits).cast()
+    }
 
-    fun mkFp32Sort(): KFp32Sort = fpSortCache.createIfContextActive(
-        KFp32Sort.exponentBits, KFp32Sort.significandBits
-    ).cast()
+    private val fp64SortCache = mkClosableCache<KFp64Sort> {
+        mkFpSort(KFp64Sort.exponentBits, KFp64Sort.significandBits).cast()
+    }
 
-    fun mkFp64Sort(): KFp64Sort = fpSortCache.createIfContextActive(
-        KFp64Sort.exponentBits, KFp64Sort.significandBits
-    ).cast()
+    fun mkFp16Sort(): KFp16Sort = fp16SortCache.createIfContextActive()
+    fun mkFp32Sort(): KFp32Sort = fp32SortCache.createIfContextActive()
+    fun mkFp64Sort(): KFp64Sort = fp64SortCache.createIfContextActive()
 
-    fun mkFp128Sort(): KFp128Sort = fpSortCache.createIfContextActive(
+    fun mkFp128Sort(): KFp128Sort = mkFpSort(
         KFp128Sort.exponentBits, KFp128Sort.significandBits
     ).cast()
 
@@ -404,6 +414,27 @@ open class KContext : AutoCloseable {
 
     val bv1Sort: KBv1Sort
         get() = mkBv1Sort()
+
+    val bv8Sort: KBv8Sort
+        get() = mkBv8Sort()
+
+    val bv16Sort: KBv16Sort
+        get() = mkBv16Sort()
+
+    val bv32Sort: KBv32Sort
+        get() = mkBv32Sort()
+
+    val bv64Sort: KBv64Sort
+        get() = mkBv64Sort()
+
+    val fp16Sort: KFp16Sort
+        get() = mkFp16Sort()
+
+    val fp32Sort: KFp32Sort
+        get() = mkFp32Sort()
+
+    val fp64Sort: KFp64Sort
+        get() = mkFp64Sort()
 
     /*
     * expressions
@@ -497,7 +528,7 @@ open class KContext : AutoCloseable {
     val falseExpr: KFalse
         get() = mkFalse()
 
-    val Boolean.expr
+    val Boolean.expr: KExpr<KBoolSort>
         get() = if (this) trueExpr else falseExpr
 
     // functions
@@ -715,24 +746,28 @@ open class KContext : AutoCloseable {
         KInt32NumExpr(this, v)
     }
 
-    fun mkIntNum(value: Int): KInt32NumExpr = int32NumCache.createIfContextActive(value)
-
     private val int64NumCache = mkClosableCache { v: Long ->
         KInt64NumExpr(this, v)
     }
-
-    fun mkIntNum(value: Long): KInt64NumExpr = int64NumCache.createIfContextActive(value)
 
     private val intBigNumCache = mkClosableCache { v: BigInteger ->
         KIntBigNumExpr(this, v)
     }
 
-    fun mkIntNum(value: BigInteger): KIntBigNumExpr = intBigNumCache.createIfContextActive(value)
-    fun mkIntNum(value: String) =
-        value.toIntOrNull()
-            ?.let { mkIntNum(it) }
-            ?: value.toLongOrNull()?.let { mkIntNum(it) }
-            ?: mkIntNum(value.toBigInteger())
+    fun mkIntNum(value: Int): KIntNumExpr = int32NumCache.createIfContextActive(value)
+    fun mkIntNum(value: Long): KIntNumExpr = if (value.toInt().toLong() == value) {
+        mkIntNum(value.toInt())
+    } else {
+        int64NumCache.createIfContextActive(value)
+    }
+    fun mkIntNum(value: BigInteger): KIntNumExpr = if (value.toLong().toBigInteger() == value) {
+        mkIntNum(value.toLong())
+    } else {
+        intBigNumCache.createIfContextActive(value)
+    }
+
+    fun mkIntNum(value: String): KIntNumExpr =
+        mkIntNum(value.toBigInteger())
 
     infix fun KExpr<KIntSort>.mod(rhs: KExpr<KIntSort>) = mkIntMod(this, rhs)
     infix fun KExpr<KIntSort>.rem(rhs: KExpr<KIntSort>) = mkIntRem(this, rhs)
@@ -800,33 +835,44 @@ open class KContext : AutoCloseable {
         val intValue = (if (value) 1 else 0) as Number
         return mkBv(intValue, sizeBits)
     }
+    fun <T : KBvSort> mkBv(value: Boolean, sort: T): KBitVecValue<T> =
+        mkBv(value, sort.sizeBits).cast()
 
     fun Boolean.toBv(): KBitVec1Value = mkBv(this)
     fun Boolean.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
+    fun <T : KBvSort> Boolean.toBv(sort: T): KBitVecValue<T> = mkBv(this, sort)
 
 
     fun mkBv(value: Byte): KBitVec8Value = bv8Cache.createIfContextActive(value)
     fun mkBv(value: Byte, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
+    fun <T : KBvSort> mkBv(value: Byte, sort: T): KBitVecValue<T> = mkBv(value as Number, sort)
     fun Byte.toBv(): KBitVec8Value = mkBv(this)
     fun Byte.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
+    fun <T : KBvSort> Byte.toBv(sort: T): KBitVecValue<T> = mkBv(this, sort)
     fun UByte.toBv(): KBitVec8Value = mkBv(toByte())
 
     fun mkBv(value: Short): KBitVec16Value = bv16Cache.createIfContextActive(value)
     fun mkBv(value: Short, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
+    fun <T : KBvSort> mkBv(value: Short, sort: T): KBitVecValue<T> = mkBv(value as Number, sort)
     fun Short.toBv(): KBitVec16Value = mkBv(this)
     fun Short.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
+    fun <T : KBvSort> Short.toBv(sort: T): KBitVecValue<T> = mkBv(this, sort)
     fun UShort.toBv(): KBitVec16Value = mkBv(toShort())
 
     fun mkBv(value: Int): KBitVec32Value = bv32Cache.createIfContextActive(value)
     fun mkBv(value: Int, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
+    fun <T : KBvSort> mkBv(value: Int, sort: T): KBitVecValue<T> = mkBv(value as Number, sort)
     fun Int.toBv(): KBitVec32Value = mkBv(this)
     fun Int.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
+    fun <T : KBvSort> Int.toBv(sort: T): KBitVecValue<T> = mkBv(this, sort)
     fun UInt.toBv(): KBitVec32Value = mkBv(toInt())
 
     fun mkBv(value: Long): KBitVec64Value = bv64Cache.createIfContextActive(value)
     fun mkBv(value: Long, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
+    fun <T : KBvSort> mkBv(value: Long, sort: T): KBitVecValue<T> = mkBv(value as Number, sort)
     fun Long.toBv(): KBitVec64Value = mkBv(this)
     fun Long.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
+    fun <T : KBvSort> Long.toBv(sort: T): KBitVecValue<T> = mkBv(this, sort)
     fun ULong.toBv(): KBitVec64Value = mkBv(toLong())
 
     /**
@@ -841,6 +887,20 @@ open class KContext : AutoCloseable {
     private fun mkBv(value: Number, sizeBits: UInt): KBitVecValue<KBvSort> {
         val binaryString = value.toBinary().takeLast(sizeBits.toInt())
         val paddedString = binaryString.padStart(sizeBits.toInt(), binaryString.first())
+
+        return mkBv(paddedString, sizeBits)
+    }
+
+    private fun <T : KBvSort> mkBv(value: Number, sort: T): KBitVecValue<T> =
+        mkBv(value, sort.sizeBits).cast()
+
+    /**
+     * Constructs a bit vector from the given [value] containing of [sizeBits] bits.
+     * Binary representation of the [value] will be padded from the start with 0.
+     */
+    private fun mkBvUnsigned(value: Number, sizeBits: UInt): KBitVecValue<KBvSort> {
+        val binaryString = value.toBinary().takeLast(sizeBits.toInt())
+        val paddedString = binaryString.padStart(sizeBits.toInt(), '0')
 
         return mkBv(paddedString, sizeBits)
     }
@@ -1099,98 +1159,92 @@ open class KContext : AutoCloseable {
     fun <T : KBvSort> mkBvExtractExpr(high: Int, low: Int, value: KExpr<T>) =
         extractExprCache.createIfContextActive(high, low, value.cast())
 
-    private val signExtensionExprCache = mkClosableCache { i: Int,
+    private val signExtensionExprCache = mkClosableCache { extensionSize: Int,
                                                            value: KExpr<KBvSort> ->
-        KBvSignExtensionExpr(this, i, value)
+        KBvSignExtensionExpr(this, extensionSize, value)
     }
 
     fun <T : KBvSort> mkBvSignExtensionExpr(
-        i: Int,
+        extensionSize: Int,
         value: KExpr<T>
-    ) = signExtensionExprCache.createIfContextActive(i, value.cast())
+    ) = signExtensionExprCache.createIfContextActive(extensionSize, value.cast())
 
-    private val zeroExtensionExprCache = mkClosableCache { i: Int,
+    private val zeroExtensionExprCache = mkClosableCache { extensionSize: Int,
                                                            value: KExpr<KBvSort> ->
-        KBvZeroExtensionExpr(this, i, value)
+        KBvZeroExtensionExpr(this, extensionSize, value)
     }
 
     fun <T : KBvSort> mkBvZeroExtensionExpr(
-        i: Int,
+        extensionSize: Int,
         value: KExpr<T>
-    ) = zeroExtensionExprCache.createIfContextActive(i, value.cast())
+    ) = zeroExtensionExprCache.createIfContextActive(extensionSize, value.cast())
 
-    private val repeatExprCache = mkClosableCache { i: Int,
+    private val repeatExprCache = mkClosableCache { repeatNumber: Int,
                                                     value: KExpr<KBvSort> ->
-        KBvRepeatExpr(this, i, value)
+        KBvRepeatExpr(this, repeatNumber, value)
     }
 
     fun <T : KBvSort> mkBvRepeatExpr(
-        i: Int,
+        repeatNumber: Int,
         value: KExpr<T>
-    ) = repeatExprCache.createIfContextActive(i, value.cast())
+    ) = repeatExprCache.createIfContextActive(repeatNumber, value.cast())
 
-    private val bvShiftLeftExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
-                                                         arg1: KExpr<KBvSort> ->
-        KBvShiftLeftExpr(this, arg0, arg1)
+    private val bvShiftLeftExprCache = mkClosableCache { arg: KExpr<KBvSort>,
+                                                         shift: KExpr<KBvSort> ->
+        KBvShiftLeftExpr(this, arg, shift)
     }
 
-    fun <T : KBvSort> mkBvShiftLeftExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvShiftLeftExpr<T> =
-        bvShiftLeftExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
+    fun <T : KBvSort> mkBvShiftLeftExpr(arg: KExpr<T>, shift: KExpr<T>): KBvShiftLeftExpr<T> =
+        bvShiftLeftExprCache.createIfContextActive(arg.cast(), shift.cast()).cast()
 
-    private val bvLogicalShiftRightExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
-                                                                 arg1: KExpr<KBvSort> ->
-        KBvLogicalShiftRightExpr(this, arg0, arg1)
+    private val bvLogicalShiftRightExprCache = mkClosableCache { arg: KExpr<KBvSort>,
+                                                                 shift: KExpr<KBvSort> ->
+        KBvLogicalShiftRightExpr(this, arg, shift)
     }
 
-    fun <T : KBvSort> mkBvLogicalShiftRightExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvLogicalShiftRightExpr<T> =
-        bvLogicalShiftRightExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
+    fun <T : KBvSort> mkBvLogicalShiftRightExpr(arg: KExpr<T>, shift: KExpr<T>): KBvLogicalShiftRightExpr<T> =
+        bvLogicalShiftRightExprCache.createIfContextActive(arg.cast(), shift.cast()).cast()
 
-    private val bvArithShiftRightExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
-                                                               arg1: KExpr<KBvSort> ->
-        KBvArithShiftRightExpr(this, arg0, arg1)
+    private val bvArithShiftRightExprCache = mkClosableCache { arg: KExpr<KBvSort>,
+                                                               shift: KExpr<KBvSort> ->
+        KBvArithShiftRightExpr(this, arg, shift)
     }
 
-    fun <T : KBvSort> mkBvArithShiftRightExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvArithShiftRightExpr<T> =
-        bvArithShiftRightExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
+    fun <T : KBvSort> mkBvArithShiftRightExpr(arg: KExpr<T>, shift: KExpr<T>): KBvArithShiftRightExpr<T> =
+        bvArithShiftRightExprCache.createIfContextActive(arg.cast(), shift.cast()).cast()
 
-    private val bvRotateLeftExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
-                                                          arg1: KExpr<KBvSort> ->
-        KBvRotateLeftExpr(this, arg0, arg1)
+    private val bvRotateLeftExprCache = mkClosableCache { arg: KExpr<KBvSort>,
+                                                          rotation: KExpr<KBvSort> ->
+        KBvRotateLeftExpr(this, arg, rotation)
     }
 
-    fun <T : KBvSort> mkBvRotateLeftExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvRotateLeftExpr<T> =
-        bvRotateLeftExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
+    fun <T : KBvSort> mkBvRotateLeftExpr(arg: KExpr<T>, rotation: KExpr<T>): KBvRotateLeftExpr<T> =
+        bvRotateLeftExprCache.createIfContextActive(arg.cast(), rotation.cast()).cast()
 
-    private val bvRotateLeftIndexedExprCache = mkClosableCache { i: Int,
+    private val bvRotateLeftIndexedExprCache = mkClosableCache { rotation: Int,
                                                                  value: KExpr<KBvSort> ->
-        KBvRotateLeftIndexedExpr(this, i, value)
+        KBvRotateLeftIndexedExpr(this, rotation, value)
     }
 
-    fun <T : KBvSort> mkBvRotateLeftIndexedExpr(i: Int, value: KExpr<T>): KBvRotateLeftIndexedExpr<T> =
-        bvRotateLeftIndexedExprCache.createIfContextActive(i, value.cast()).cast()
+    fun <T : KBvSort> mkBvRotateLeftIndexedExpr(rotation: Int, value: KExpr<T>): KBvRotateLeftIndexedExpr<T> =
+        bvRotateLeftIndexedExprCache.createIfContextActive(rotation, value.cast()).cast()
 
-    fun <T : KBvSort> mkBvRotateLeftExpr(arg0: Int, arg1: KExpr<T>): KBvRotateLeftExpr<T> =
-        mkBvRotateLeftExpr(mkBv(arg0, arg1.sort.sizeBits), arg1.cast()).cast()
-
-    private val bvRotateRightIndexedExprCache = mkClosableCache { i: Int,
+    private val bvRotateRightIndexedExprCache = mkClosableCache { rotation: Int,
                                                                   value: KExpr<KBvSort> ->
-        KBvRotateRightIndexedExpr(this, i, value)
+        KBvRotateRightIndexedExpr(this, rotation, value)
     }
 
-    fun <T : KBvSort> mkBvRotateRightIndexedExpr(i: Int, value: KExpr<T>): KBvRotateRightIndexedExpr<T> =
-        bvRotateRightIndexedExprCache.createIfContextActive(i, value.cast()).cast()
+    fun <T : KBvSort> mkBvRotateRightIndexedExpr(rotation: Int, value: KExpr<T>): KBvRotateRightIndexedExpr<T> =
+        bvRotateRightIndexedExprCache.createIfContextActive(rotation, value.cast()).cast()
 
 
-    private val bvRotateRightExprCache = mkClosableCache { arg0: KExpr<KBvSort>,
-                                                           arg1: KExpr<KBvSort> ->
-        KBvRotateRightExpr(this, arg0, arg1)
+    private val bvRotateRightExprCache = mkClosableCache { arg: KExpr<KBvSort>,
+                                                           rotation: KExpr<KBvSort> ->
+        KBvRotateRightExpr(this, arg, rotation)
     }
 
-    fun <T : KBvSort> mkBvRotateRightExpr(arg0: KExpr<T>, arg1: KExpr<T>): KBvRotateRightExpr<T> =
-        bvRotateRightExprCache.createIfContextActive(arg0.cast(), arg1.cast()).cast()
-
-    fun <T : KBvSort> mkBvRotateRightExpr(arg0: Int, arg1: KExpr<T>): KBvRotateRightExpr<T> =
-        mkBvRotateRightExpr(mkBv(arg0, arg1.sort.sizeBits), arg1.cast()).cast()
+    fun <T : KBvSort> mkBvRotateRightExpr(arg: KExpr<T>, rotation: KExpr<T>): KBvRotateRightExpr<T> =
+        bvRotateRightExprCache.createIfContextActive(arg.cast(), rotation.cast()).cast()
 
     private val bv2IntExprCache = mkClosableCache { value: KExpr<KBvSort>,
                                                     isSigned: Boolean ->
@@ -1294,17 +1348,17 @@ open class KContext : AutoCloseable {
     private val fp16Cache = mkClosableCache { value: Float -> KFp16Value(this, value) }
     private val fp32Cache = mkClosableCache { value: Float -> KFp32Value(this, value) }
     private val fp64Cache = mkClosableCache { value: Double -> KFp64Value(this, value) }
-    private val fp128Cache = mkClosableCache { significand: Long,
-                                               exponent: Long,
+    private val fp128Cache = mkClosableCache { significand: KBitVecValue<*>,
+                                               biasedExponent: KBitVecValue<*>,
                                                signBit: Boolean ->
-        KFp128Value(this, significand, exponent, signBit)
+        KFp128Value(this, significand, biasedExponent, signBit)
     }
     private val fpCustomSizeCache = mkClosableCache { significandSize: UInt,
                                                       exponentSize: UInt,
-                                                      significand: Long,
-                                                      exponent: Long,
+                                                      significand: KBitVecValue<*>,
+                                                      biasedExponent: KBitVecValue<*>,
                                                       signBit: Boolean ->
-        KFpCustomSizeValue(this, significandSize, exponentSize, significand, exponent, signBit)
+        KFpCustomSizeValue(this, significandSize, exponentSize, significand, biasedExponent, signBit)
     }
 
     /**
@@ -1315,11 +1369,53 @@ open class KContext : AutoCloseable {
      * take required for FP16 bits, and this will be **unbiased** FP16 exponent.
      * The same is true for other methods but [mkFpCustomSize].
      * */
-    fun mkFp16(value: Float): KFp16Value = fp16Cache.createIfContextActive(value)
+    fun mkFp16(value: Float): KFp16Value {
+        val exponent = value.getHalfPrecisionExponent(isBiased = false)
+        val significand = value.halfPrecisionSignificand
+        val normalizedValue = constructFp16Number(exponent.toLong(), significand.toLong(), value.signBit)
+        return fp16Cache.createIfContextActive(normalizedValue)
+    }
     fun mkFp32(value: Float): KFp32Value = fp32Cache.createIfContextActive(value)
     fun mkFp64(value: Double): KFp64Value = fp64Cache.createIfContextActive(value)
-    fun mkFp128(significand: Long, exponent: Long, signBit: Boolean): KFp128Value =
-        fp128Cache.createIfContextActive(significand, exponent, signBit)
+    fun mkFp128Biased(significand: KBitVecValue<*>, biasedExponent: KBitVecValue<*>, signBit: Boolean): KFp128Value =
+        fp128Cache.createIfContextActive(significand, biasedExponent, signBit)
+    fun mkFpCustomSizeBiased(
+        significandSize: UInt,
+        exponentSize: UInt,
+        significand: KBitVecValue<*>,
+        biasedExponent: KBitVecValue<*>,
+        signBit: Boolean
+    ): KFpCustomSizeValue {
+        check(significandSize != KFp16Sort.significandBits && exponentSize != KFp16Sort.exponentBits) {
+            "Use mkFp16 to construct fp16 from biased exponent"
+        }
+        check(significandSize != KFp32Sort.significandBits && exponentSize != KFp32Sort.exponentBits) {
+            "Use mkFp32 to construct fp32 from biased exponent"
+        }
+        check(significandSize != KFp64Sort.significandBits && exponentSize != KFp64Sort.exponentBits) {
+            "Use mkFp64 to construct fp64 from biased exponent"
+        }
+        check(significandSize != KFp128Sort.significandBits && exponentSize != KFp128Sort.exponentBits) {
+            "Use mkFp128Biased to construct fp128 from biased exponent"
+        }
+        return fpCustomSizeCache.createIfContextActive(
+            significandSize, exponentSize, significand, biasedExponent, signBit
+        )
+    }
+
+    fun mkFp128(significand: KBitVecValue<*>, unbiasedExponent: KBitVecValue<*>, signBit: Boolean): KFp128Value =
+        mkFp128Biased(
+            significand = significand,
+            biasedExponent = biasFp128Exponent(unbiasedExponent),
+            signBit = signBit
+        )
+
+    fun mkFp128(significand: Long, unbiasedExponent: Long, signBit: Boolean): KFp128Value =
+        mkFp128(
+            significand = mkBvUnsigned(significand, KFp128Sort.significandBits - 1u),
+            unbiasedExponent = mkBvUnsigned(unbiasedExponent, KFp128Sort.exponentBits),
+            signBit = signBit
+        )
 
     val Float.expr
         get() = mkFp32(this)
@@ -1329,61 +1425,54 @@ open class KContext : AutoCloseable {
 
     /**
      * Creates FP with a custom size.
-     * Important: [exponent] here is an **unbiased** value.
+     * Important: [unbiasedExponent] here is an **unbiased** value.
      */
     fun <T : KFpSort> mkFpCustomSize(
         exponentSize: UInt,
         significandSize: UInt,
-        exponent: Long,
-        significand: Long,
+        unbiasedExponent: KBitVecValue<*>,
+        significand: KBitVecValue<*>,
         signBit: Boolean
     ): KFpValue<T> {
         val intSignBit = if (signBit) 1 else 0
 
         return when (mkFpSort(exponentSize, significandSize)) {
             is KFp16Sort -> {
-                val number = constructFp16Number(exponent, significand, intSignBit)
+                val number = constructFp16Number(unbiasedExponent.longValue(), significand.longValue(), intSignBit)
 
                 mkFp16(number).cast()
             }
             is KFp32Sort -> {
-                val number = constructFp32Number(exponent, significand, intSignBit)
+                val number = constructFp32Number(unbiasedExponent.longValue(), significand.longValue(), intSignBit)
 
                 mkFp32(number).cast()
             }
             is KFp64Sort -> {
-                val number = constructFp64Number(exponent, significand, intSignBit)
+                val number = constructFp64Number(unbiasedExponent.longValue(), significand.longValue(), intSignBit)
 
                 mkFp64(number).cast()
             }
-            is KFp128Sort -> mkFp128(significand, exponent, signBit).cast()
+            is KFp128Sort -> mkFp128(significand, unbiasedExponent, signBit).cast()
             else -> {
-                val fpValue = fpCustomSizeCache.createIfContextActive(
-                    significandSize, exponentSize, significand, exponent, signBit
-                )
-
-                fpValue.cast()
+                val biasedExponent = biasFpCustomSizeExponent(unbiasedExponent, exponentSize)
+                mkFpCustomSizeBiased(significandSize, exponentSize, significand, biasedExponent, signBit).cast()
             }
         }
     }
 
     fun <T : KFpSort> mkFpCustomSize(
-        exponent: KBitVecValue<out KBvSort>,
+        unbiasedExponent: KBitVecValue<out KBvSort>,
         significand: KBitVecValue<out KBvSort>,
         signBit: Boolean
-    ): KFpValue<T> {
-        // TODO we should not use numbers and work with bitvectors. Change it later
-        val exponentLongValue = exponent.stringValue.toULong(radix = 2).toLong()
-        val significandLongValue = significand.stringValue.toULong(radix = 2).toLong()
+    ): KFpValue<T> = mkFpCustomSize(
+        unbiasedExponent.sort.sizeBits,
+        significand.sort.sizeBits + 1u, // +1 for sign bit
+        unbiasedExponent,
+        significand,
+        signBit
+    )
 
-        return mkFpCustomSize(
-            exponent.sort.sizeBits,
-            significand.sort.sizeBits,
-            exponentLongValue,
-            significandLongValue,
-            signBit
-        )
-    }
+    private fun KBitVecValue<*>.longValue() = stringValue.toULong(radix = 2).toLong()
 
     @Suppress("MagicNumber")
     private fun constructFp16Number(exponent: Long, significand: Long, intSignBit: Int): Float {
@@ -1423,23 +1512,37 @@ open class KContext : AutoCloseable {
         return longBitsToDouble(longValue)
     }
 
+    private fun biasFp128Exponent(exponent: KBitVecValue<*>): KBitVecValue<*> =
+        exponent + bvMaxValueSigned(KFp128Sort.exponentBits)
+
+    private fun biasFpCustomSizeExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> =
+        exponent + bvMaxValueSigned(exponentSize)
+
     fun <T : KFpSort> mkFp(value: Float, sort: T): KExpr<T> {
-        val significand = value.extractSignificand(sort)
-        val exponent = value.extractExponent(sort, isBiased = false).extendWithLeadingZeros()
+        if (sort == mkFp32Sort()) {
+            return mkFp32(value).cast()
+        }
+
+        val significand = mkBvUnsigned(value.extractSignificand(sort), sort.significandBits - 1u)
+        val exponent = mkBvUnsigned(value.extractExponent(sort, isBiased = false), sort.exponentBits)
         val sign = value.booleanSignBit
 
         return mkFpCustomSize(
             sort.exponentBits,
             sort.significandBits,
             exponent,
-            significand.extendWithLeadingZeros(),
+            significand,
             sign
         )
     }
 
     fun <T : KFpSort> mkFp(value: Double, sort: T): KExpr<T> {
-        val significand = value.extractSignificand(sort)
-        val exponent = value.extractExponent(sort, isBiased = false)
+        if (sort == mkFp64Sort()) {
+            return mkFp64(value).cast()
+        }
+
+        val significand = mkBvUnsigned(value.extractSignificand(sort), sort.significandBits - 1u)
+        val exponent = mkBvUnsigned(value.extractExponent(sort, isBiased = false), sort.exponentBits)
         val sign = value.booleanSignBit
 
         return mkFpCustomSize(sort.exponentBits, sort.significandBits, exponent, significand, sign)
@@ -1449,63 +1552,85 @@ open class KContext : AutoCloseable {
 
     fun Float.toFp(sort: KFpSort = mkFp32Sort()): KExpr<KFpSort> = mkFp(this, sort)
 
-    fun <T : KFpSort> mkFp(significand: Int, exponent: Int, signBit: Boolean, sort: T): KExpr<T> =
+    fun <T : KFpSort> mkFp(significand: Int, unbiasedExponent: Int, signBit: Boolean, sort: T): KExpr<T> =
         mkFpCustomSize(
-            sort.exponentBits,
-            sort.significandBits,
-            exponent.extendWithLeadingZeros(),
-            significand.extendWithLeadingZeros(),
-            signBit
+            exponentSize = sort.exponentBits,
+            significandSize = sort.significandBits,
+            unbiasedExponent = mkBvUnsigned(unbiasedExponent, sort.exponentBits),
+            significand = mkBvUnsigned(significand, sort.significandBits - 1u),
+            signBit = signBit
         )
 
-    fun <T : KFpSort> mkFp(significand: Long, exponent: Long, signBit: Boolean, sort: T): KExpr<T> =
-        mkFpCustomSize(sort.exponentBits, sort.significandBits, exponent, significand, signBit)
+    fun <T : KFpSort> mkFp(significand: Long, unbiasedExponent: Long, signBit: Boolean, sort: T): KExpr<T> =
+        mkFpCustomSize(
+            exponentSize = sort.exponentBits,
+            significandSize = sort.significandBits,
+            unbiasedExponent = mkBvUnsigned(unbiasedExponent, sort.exponentBits),
+            significand = mkBvUnsigned(significand, sort.significandBits - 1u),
+            signBit = signBit
+        )
+
+    fun <T : KFpSort> mkFp(
+        significand: KBitVecValue<*>,
+        unbiasedExponent: KBitVecValue<*>,
+        signBit: Boolean,
+        sort: T
+    ): KExpr<T> = mkFpCustomSize(
+        exponentSize = sort.exponentBits,
+        significandSize = sort.significandBits,
+        unbiasedExponent = unbiasedExponent,
+        significand = significand,
+        signBit = signBit
+    )
 
     /**
      * Special Fp values
      * */
-    fun <T : KFpSort> mkFpZero(signBit: Boolean, sort: T): KExpr<T> =
-        mkFpCustomSize(
+    @Suppress("MagicNumber")
+    fun <T : KFpSort> mkFpZero(signBit: Boolean, sort: T): KExpr<T> = when(sort) {
+        is KFp16Sort -> mkFp16(if (signBit) -0.0f else 0.0f).cast()
+        is KFp32Sort -> mkFp32(if (signBit) -0.0f else 0.0f).cast()
+        is KFp64Sort -> mkFp64(if (signBit) -0.0 else 0.0).cast()
+        else -> mkFpCustomSize(
             sort.exponentBits,
             sort.significandBits,
-            exponent = fpZeroExponentUnbiased(sort),
-            significand = 0L,
+            unbiasedExponent = fpZeroExponentUnbiased(sort),
+            significand = mkBvUnsigned(0, sort.significandBits - 1u),
             signBit = signBit
         )
+    }
 
-    fun <T : KFpSort> mkFpInf(signBit: Boolean, sort: T): KExpr<T> =
-        mkFpCustomSize(
+    fun <T : KFpSort> mkFpInf(signBit: Boolean, sort: T): KExpr<T> = when (sort) {
+        is KFp16Sort -> mkFp16(if (signBit) Float.NEGATIVE_INFINITY else Float.POSITIVE_INFINITY).cast()
+        is KFp32Sort -> mkFp32(if (signBit) Float.NEGATIVE_INFINITY else Float.POSITIVE_INFINITY).cast()
+        is KFp64Sort -> mkFp64(if (signBit) Double.NEGATIVE_INFINITY else Double.POSITIVE_INFINITY).cast()
+        else -> mkFpCustomSize(
             sort.exponentBits,
             sort.significandBits,
-            exponent = fpTopExponentUnbiased(sort),
-            significand = 0L,
+            unbiasedExponent = fpTopExponentUnbiased(sort),
+            significand = mkBvUnsigned(0, sort.significandBits - 1u),
             signBit
         )
+    }
 
-    fun <T : KFpSort> mkFpNan(sort: T): KExpr<T> =
-        mkFpCustomSize(
+    fun <T : KFpSort> mkFpNan(sort: T): KExpr<T> = when (sort) {
+        is KFp16Sort -> mkFp16(Float.NaN).cast()
+        is KFp32Sort -> mkFp32(Float.NaN).cast()
+        is KFp64Sort -> mkFp64(Double.NaN).cast()
+        else -> mkFpCustomSize(
             sort.exponentBits,
             sort.significandBits,
-            exponent = fpTopExponentUnbiased(sort),
-            significand = 1L,
+            unbiasedExponent = fpTopExponentUnbiased(sort),
+            significand = mkBvUnsigned(1, sort.significandBits - 1u),
             signBit = false
         )
-
-    private fun fpTopExponentUnbiased(sort: KFpSort): Long = when (sort) {
-        is KFp16Sort -> Float.POSITIVE_INFINITY.getHalfPrecisionExponent(isBiased = false).toLong()
-        is KFp32Sort -> Float.POSITIVE_INFINITY.getExponent(isBiased = false).toLong()
-        is KFp64Sort -> Double.POSITIVE_INFINITY.getExponent(isBiased = false)
-        is KFp128Sort -> TODO("fp 128 top exponent")
-        is KFpCustomSizeSort -> TODO("custom fp top exponent")
     }
 
-    private fun fpZeroExponentUnbiased(sort: KFpSort): Long = when (sort) {
-        is KFp16Sort -> 0.0f.getHalfPrecisionExponent(isBiased = false).toLong()
-        is KFp32Sort -> 0.0f.getExponent(isBiased = false).toLong()
-        is KFp64Sort -> 0.0.getExponent(isBiased = false)
-        is KFp128Sort -> TODO("fp 128 zero exponent")
-        is KFpCustomSizeSort -> TODO("custom fp zero exponent")
-    }
+    private fun fpTopExponentUnbiased(sort: KFpSort): KBitVecValue<*> =
+        mkBv("1" + "0".repeat(sort.exponentBits.toInt() - 1), sort.exponentBits)
+
+    private fun fpZeroExponentUnbiased(sort: KFpSort): KBitVecValue<*> =
+        mkBv("1" + "0".repeat(sort.exponentBits.toInt() - 2) + "1", sort.exponentBits)
 
     private val roundingModeCache = mkClosableCache { value: KFpRoundingMode ->
         KFpRoundingModeExpr(this, value)
@@ -1802,21 +1927,21 @@ open class KContext : AutoCloseable {
         fpToIEEEBvExprCache.createIfContextActive(value.cast()).cast()
 
     private val fpFromBvExprCache = mkClosableCache { sign: KExpr<KBv1Sort>,
-                                                      exponent: KExpr<out KBvSort>,
+                                                      biasedExponent: KExpr<out KBvSort>,
                                                       significand: KExpr<out KBvSort> ->
-        val exponentBits = exponent.sort.sizeBits
+        val exponentBits = biasedExponent.sort.sizeBits
         // +1 it required since bv doesn't contain `hidden bit`
         val significandBits = significand.sort.sizeBits + 1u
         val sort = mkFpSort(exponentBits, significandBits)
 
-        KFpFromBvExpr(this, sort, sign, exponent, significand)
+        KFpFromBvExpr(this, sort, sign, biasedExponent, significand)
     }
 
     fun <T : KFpSort> mkFpFromBvExpr(
         sign: KExpr<KBv1Sort>,
-        exponent: KExpr<out KBvSort>,
+        biasedExponent: KExpr<out KBvSort>,
         significand: KExpr<out KBvSort>,
-    ): KFpFromBvExpr<T> = fpFromBvExprCache.createIfContextActive(sign, exponent, significand).cast()
+    ): KFpFromBvExpr<T> = fpFromBvExprCache.createIfContextActive(sign, biasedExponent, significand).cast()
 
     private val fpToFpExprCache = mkClosableCache { sort: KFpSort,
                                                     rm: KExpr<KFpRoundingModeSort>,
@@ -2438,61 +2563,60 @@ open class KContext : AutoCloseable {
     private val fp64DeclCache = mkClosableCache { value: Double -> KFp64Decl(this, value) }
     fun mkFp64Decl(value: Double): KFp64Decl = fp64DeclCache.createIfContextActive(value)
 
-    private val fp128DeclCache = mkClosableCache { significand: Long,
-                                                   exponent: Long,
+    private val fp128DeclCache = mkClosableCache { significand: KBitVecValue<*>,
+                                                   unbiasedExponent: KBitVecValue<*>,
                                                    signBit: Boolean ->
-        KFp128Decl(this, significand, exponent, signBit)
+        KFp128Decl(this, significand, unbiasedExponent, signBit)
     }
 
-    fun mkFp128Decl(significandBits: Long, exponent: Long, signBit: Boolean): KFp128Decl =
-        fp128DeclCache.createIfContextActive(significandBits, exponent, signBit)
+    fun mkFp128Decl(significandBits: KBitVecValue<*>, unbiasedExponent: KBitVecValue<*>, signBit: Boolean): KFp128Decl =
+        fp128DeclCache.createIfContextActive(significandBits, unbiasedExponent, signBit)
 
     private val fpCustomSizeDeclCache = mkClosableCache { significandSize: UInt,
                                                           exponentSize: UInt,
-                                                          significand: Long,
-                                                          exponent: Long,
+                                                          significand: KBitVecValue<*>,
+                                                          unbiasedExponent: KBitVecValue<*>,
                                                           signBit: Boolean ->
-        KFpCustomSizeDecl(this, significandSize, exponentSize, significand, exponent, signBit)
+        KFpCustomSizeDecl(this, significandSize, exponentSize, significand, unbiasedExponent, signBit)
     }
 
     fun <T : KFpSort> mkFpCustomSizeDecl(
         significandSize: UInt,
         exponentSize: UInt,
-        significand: Long,
-        exponent: Long,
+        significand: KBitVecValue<*>,
+        unbiasedExponent: KBitVecValue<*>,
         signBit: Boolean
-    ): KFpDecl<T, *> {
+    ): KFpDecl<T> {
         val sort = mkFpSort(exponentSize, significandSize)
 
         if (sort is KFpCustomSizeSort) {
             val fpDecl = fpCustomSizeDeclCache.createIfContextActive(
-                significandSize, exponentSize, significand, exponent, signBit
+                significandSize, exponentSize, significand, unbiasedExponent, signBit
             )
 
             return fpDecl.cast()
-        }
-
-        if (sort is KFp128Sort) {
-            return fp128DeclCache.createIfContextActive(significand, exponent, signBit).cast()
         }
 
         val intSignBit = if (signBit) 1 else 0
 
         return when (sort) {
             is KFp16Sort -> {
-                val fp16Number = constructFp16Number(exponent, significand, intSignBit)
+                val fp16Number = constructFp16Number(unbiasedExponent.longValue(), significand.longValue(), intSignBit)
 
                 mkFp16Decl(fp16Number).cast()
             }
             is KFp32Sort -> {
-                val fp32Number = constructFp32Number(exponent, significand, intSignBit)
+                val fp32Number = constructFp32Number(unbiasedExponent.longValue(), significand.longValue(), intSignBit)
 
                 mkFp32Decl(fp32Number).cast()
             }
             is KFp64Sort -> {
-                val fp64Number = constructFp64Number(exponent, significand, intSignBit)
+                val fp64Number = constructFp64Number(unbiasedExponent.longValue(), significand.longValue(), intSignBit)
 
                 mkFp64Decl(fp64Number).cast()
+            }
+            is KFp128Sort -> {
+                mkFp128Decl(significand, unbiasedExponent, signBit).cast()
             }
             else -> error("Sort declaration for an unknown $sort")
         }

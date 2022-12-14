@@ -2,6 +2,8 @@ package org.ksmt.expr
 
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
+import org.ksmt.decl.KParameterizedFuncDecl
+import org.ksmt.expr.printer.ExpressionPrinter
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KSort
 
@@ -14,22 +16,33 @@ abstract class KApp<T : KSort, A : KExpr<*>> internal constructor(ctx: KContext)
     @Deprecated("Use property", ReplaceWith("decl"))
     fun decl(): KDecl<T> = decl
 
-    override fun print(builder: StringBuilder): Unit = with(ctx) {
-        with(builder) {
+    override fun print(printer: ExpressionPrinter) {
+        with(printer) {
             if (args.isEmpty()) {
-                append(decl.name)
+                append(decl)
                 return
             }
 
-            append('(')
-            append(decl.name)
+            append("(")
+            append(decl)
 
             for (arg in args) {
-                append(' ')
-                arg.print(this)
+                append(" ")
+                append(arg)
             }
 
-            append(')')
+            append(")")
+        }
+    }
+
+    private fun ExpressionPrinter.append(decl: KDecl<*>) {
+        append(decl.name)
+        if (decl is KParameterizedFuncDecl) {
+            append(" (_")
+            for (param in decl.parameters) {
+                append(" $param")
+            }
+            append(")")
         }
     }
 }
@@ -51,3 +64,8 @@ class KConst<T : KSort> internal constructor(
 ) : KFunctionApp<T>(ctx, decl, args = emptyList()) {
     override fun accept(transformer: KTransformerBase): KExpr<T> = transformer.transform(this)
 }
+
+/**
+ * Specify that the expression is an interpreted constant in some theory.
+ * */
+interface KInterpretedConstant
