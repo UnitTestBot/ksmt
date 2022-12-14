@@ -132,26 +132,27 @@ abstract class BenchmarksBasedTest {
     internal fun KsmtWorkerPool<TestProtocolModel>.withWorker(
         ctx: KContext,
         body: suspend (TestRunner) -> Unit
-    ) = KsmtWorkerPool.logger.withLoglevel(LogLevel.Debug) {
-        runBlocking {
-            val worker = getOrCreateFreeWorker()
-            worker.astSerializationCtx.initCtx(ctx)
-            worker.lifetime.onTermination { worker.astSerializationCtx.resetCtx() }
-            TestRunner(ctx, worker).let {
-                try {
-                    it.init()
-                    body(it)
-                } finally {
-                    it.delete()
-                }
+    ) = runBlocking {
+        val worker = getOrCreateFreeWorker()
+        worker.astSerializationCtx.initCtx(ctx)
+        worker.lifetime.onTermination { worker.astSerializationCtx.resetCtx() }
+        TestRunner(ctx, worker).let {
+            try {
+                it.init()
+                body(it)
+            } finally {
+                it.delete()
             }
-            worker.release()
         }
+        worker.release()
     }
 
     companion object {
         internal lateinit var solverManager: KSolverRunnerManager
         internal lateinit var testWorkers: KsmtWorkerPool<TestProtocolModel>
+
+        private val testDataChunkSize = System.getenv("benchmarkChunkMaxSize")?.toIntOrNull() ?: Int.MAX_VALUE
+        private val testDataChunk = System.getenv("benchmarkChunk")?.toIntOrNull() ?: 0
 
         private fun testDataLocation(): Path = this::class.java.classLoader
             .getResource("testData")
@@ -161,9 +162,12 @@ abstract class BenchmarksBasedTest {
 
         fun testData(): List<BenchmarkTestArguments> {
             val testDataLocation = testDataLocation()
-            return testDataLocation.listDirectoryEntries("*.smt2").sorted().map {
-                BenchmarkTestArguments(it.relativeTo(testDataLocation).toString(), it)
-            }
+            return testDataLocation
+                .listDirectoryEntries("*.smt2")
+                .sorted()
+                .drop(testDataChunk * testDataChunkSize)
+                .take(testDataChunkSize)
+                .map { BenchmarkTestArguments(it.relativeTo(testDataLocation).toString(), it) }
         }
 
         @BeforeAll

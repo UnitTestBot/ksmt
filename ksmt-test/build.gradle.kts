@@ -18,6 +18,11 @@ dependencies {
 
 val runBenchmarksBasedTests = project.booleanProperty("runBenchmarksBasedTests") ?: false
 
+// Split all benchmarks test data on a several [benchmarkChunkMaxSize] sized chunks
+val benchmarkChunkMaxSize = project.intProperty("benchmarkChunkSize") ?: Int.MAX_VALUE
+// Use only a [benchmarkChunk] chunk of test data
+val benchmarkChunk = project.intProperty("benchmarkChunk") ?: 0
+
 // use benchmarks from testData directory instead of downloading
 val usePreparedBenchmarks = project.booleanProperty("usePreparedBenchmarks") ?: true
 
@@ -61,23 +66,28 @@ val smtLibBenchmarks = listOfNotNull(
     "QF_FP", // 30M
 )
 
+val testDatDir = projectDir.resolve("testData")
+
 val smtLibBenchmarkTestDataDownload = smtLibBenchmarks.map { mkSmtLibBenchmarkTestData(it) }
-val smtLibBenchmarkTestDataUnpack = unpackSmtLibBenchmarkTestData(
-    path = projectDir.resolve("testData/benchmarks.zip")
-)
+val smtLibBenchmarkTestDataPrepared = usePreparedSmtLibBenchmarkTestData(testDatDir)
 
 val prepareTestData by tasks.registering {
     tasks.withType<ProcessResources>().forEach { it.enabled = false }
     if (usePreparedBenchmarks) {
-        dependsOn.add(smtLibBenchmarkTestDataUnpack)
+        dependsOn.add(smtLibBenchmarkTestDataPrepared)
     } else {
         dependsOn.addAll(smtLibBenchmarkTestDataDownload)
     }
 }
+
+val testDataRevision = project.stringProperty("testDataRevision") ?: "no-revision"
+val downloadPreparedBenchmarksTestData = downloadPreparedSmtLibBenchmarkTestData(testDatDir, testDataRevision)
 
 tasks.withType<Test> {
     enabled = runBenchmarksBasedTests
     if (runBenchmarksBasedTests) {
         dependsOn.add(prepareTestData)
     }
+    environment("benchmarkChunkMaxSize", benchmarkChunkMaxSize)
+    environment("benchmarkChunk", benchmarkChunk)
 }
