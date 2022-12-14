@@ -178,7 +178,18 @@ abstract class BenchmarksBasedTest {
                 .drop(testDataChunk * testDataChunkSize)
                 .take(testDataChunkSize)
                 .map { BenchmarkTestArguments(it.relativeTo(testDataLocation).toString(), it) }
+                .skipBadTestCases()
         }
+
+        private fun List<BenchmarkTestArguments>.skipBadTestCases(): List<BenchmarkTestArguments> =
+            /**
+             * Contains a declaration with an empty name.
+             * Normally, such declarations have special <null> name in Z3,
+             * but in this case it is not true. After internalization via API,
+             * resulting declaration has <null> name as excepted.
+             * Therefore, declarations are not equal, but this is not our issue.
+             * */
+            filterNot { it.name == "QF_BV_symbols.smt2" }
 
         @BeforeAll
         @JvmStatic
