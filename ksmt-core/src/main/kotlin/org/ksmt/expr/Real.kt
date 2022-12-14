@@ -45,7 +45,7 @@ class KRealNumExpr internal constructor(
     ctx: KContext,
     val numerator: KIntNumExpr,
     val denominator: KIntNumExpr
-) : KApp<KRealSort, KExpr<*>>(ctx) {
+) : KApp<KRealSort, KExpr<*>>(ctx), KInterpretedConstant {
     override val sort: KRealSort
         get() = ctx.realSort
 

@@ -474,23 +474,23 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun <T : KBvSort> transform(expr: KBvShiftLeftExpr<T>) = with(expr) {
-        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SHL)
+        transform(arg, shift, BitwuzlaKind.BITWUZLA_KIND_BV_SHL)
     }
 
     override fun <T : KBvSort> transform(expr: KBvLogicalShiftRightExpr<T>) = with(expr) {
-        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SHR)
+        transform(arg, shift, BitwuzlaKind.BITWUZLA_KIND_BV_SHR)
     }
 
     override fun <T : KBvSort> transform(expr: KBvArithShiftRightExpr<T>) = with(expr) {
-        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_ASHR)
+        transform(arg, shift, BitwuzlaKind.BITWUZLA_KIND_BV_ASHR)
     }
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>) = with(expr) {
-        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_ROL)
+        transform(arg, rotation, BitwuzlaKind.BITWUZLA_KIND_BV_ROL)
     }
 
     override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>) = with(expr) {
-        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_ROR)
+        transform(arg, rotation, BitwuzlaKind.BITWUZLA_KIND_BV_ROR)
     }
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftIndexedExpr<T>) = with(expr) {
@@ -696,7 +696,7 @@ open class KBitwuzlaExprInternalizer(
     }
 
     private fun <T : KFpValue<*>> transformFpValue(expr: T): T = with(expr) {
-        transform(exponent, significand) { exponent: BitwuzlaTerm, significand: BitwuzlaTerm ->
+        transform(biasedExponent, significand) { exponent: BitwuzlaTerm, significand: BitwuzlaTerm ->
             val sign = if (signBit) bitwuzlaCtx.trueTerm else bitwuzlaCtx.falseTerm
             Native.bitwuzlaMkFpValue(bitwuzlaCtx.bitwuzla, sign, exponent, significand)
         }
@@ -846,7 +846,11 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> = with(expr) {
-        transform(sign, exponent, significand) { sign: BitwuzlaTerm, exp: BitwuzlaTerm, significand: BitwuzlaTerm ->
+        transform(
+            sign,
+            biasedExponent,
+            significand
+        ) { sign: BitwuzlaTerm, exp: BitwuzlaTerm, significand: BitwuzlaTerm ->
             Native.bitwuzlaMkTerm3(
                 bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FP_FP, sign, exp, significand
             )

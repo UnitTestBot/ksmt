@@ -43,27 +43,35 @@ val smtLibBenchmarks = listOfNotNull(
     "AUFLIRA", // 19M
     "LIA", // 1.2M
     "LRA", // 4.5M
-//    "UFLIA", // 64M // skipped, because systematically fails to download
+    "UFLIA", // 64M
     "UFLRA", // 276K
-    "ABV", // 400K
-    if (!skipBigBenchmarks) "AUFBV" else null, // 1.2G
     if (!skipBigBenchmarks) "BV" else null, // 847M
     "QF_ABV", // 253M
     if (!skipBigBenchmarks) "QF_BV" else null,// 12.3G
     "ABVFP", // 276K
-    "ABVFPLRA", // 246K
-    "AUFBVFP", // 14M
     "BVFP", // 400K
-    "BVFPLRA", // 500K
     "FP", // 1M
-    "FPLRA", // 700K
     "QF_ABVFP", // 13M
-    "QF_ABVFPLRA", // 300K
-    "QF_AUFBVFP", // 200K
     "QF_BVFP", // 7M
     "QF_BVFPLRA", // 300K
     "QF_FPLRA", // 250K
     "QF_FP", // 30M
+    if (!skipBigBenchmarks) "UFNIA" else null, //112M
+    "UF", //47M
+    "UFBV", //13M
+    "NIA", //13K
+    "NRA", //4.2M
+    "AUFNIA", //3.1K
+    "AUFNIRA", //4.6M
+    "QF_UFNIA", //583K
+    "QF_UFNRA", //186K
+    "QF_UFBV", //37M
+    if (!skipBigBenchmarks) "QF_NIA" else null, //281M
+    "QF_NIRA", //139K
+    if (!skipBigBenchmarks) "QF_NRA" else null, //182M
+    "QF_ANIA", //2.1M
+    "QF_AUFBV", //1.1M
+    "QF_AUFNIA", //531K
 )
 
 val testDatDir = projectDir.resolve("testData")

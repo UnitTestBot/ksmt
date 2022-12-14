@@ -140,14 +140,15 @@ fun Float.extractExponent(sort: KFpSort, isBiased: Boolean): Int {
     // extract an exponent from the value in fp32 format
     val exponent = getExponent(isBiased = false)
 
-    // find a sign of the exponent
-    val sign = (exponent shr 7) and 1
+    val maxUnbiasedExponentValue = 1 shl (sort.exponentBits.toInt() - 1)
+    val minUnbiasedExponentValue = -(maxUnbiasedExponentValue - 1)
 
-    // take last (exponentBits - 1) bits of the exponent, where exponentBits is specific for the sort
-    val exponentBits = exponent and ((1 shl (sort.exponentBits.toInt() - 1)) - 1)
-
-    // construct a sort specific exponent
-    val constructedExponent = (sign shl sort.exponentBits.toInt() - 1) or exponentBits
+    // move unbiased exponent to range
+    val constructedExponent = when {
+        exponent <= minUnbiasedExponentValue -> minUnbiasedExponentValue
+        exponent >= maxUnbiasedExponentValue -> maxUnbiasedExponentValue
+        else -> exponent
+    }
 
     return if (isBiased) constructedExponent + sort.exponentShiftSize() else constructedExponent
 }

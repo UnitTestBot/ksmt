@@ -9,6 +9,7 @@ import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.solver.KModel
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
+import org.ksmt.solver.model.DefaultValueSampler.Companion.sampleValue
 import org.ksmt.solver.model.KModelEvaluator
 import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KArraySort
@@ -139,11 +140,6 @@ open class KBitwuzlaModel(
         return KModelImpl(ctx, interpretations.toMutableMap())
     }
 
-    private val valueSampler: KModelEvaluator by lazy {
-        val modelStub = KModelImpl(ctx, interpretations = emptyMap())
-        KModelEvaluator(ctx, modelStub, true)
-    }
-
     /**
      * Generate concrete values instead of unknown constants.
      * */
@@ -155,7 +151,7 @@ open class KBitwuzlaModel(
 
         override fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> = with(ctx) {
             if (expr == evaluatedExpr) {
-                return with(valueSampler) { expr.sort.sampleValue() }
+                return expr.sort.sampleValue()
             }
 
             return super.transformExpr(expr)
@@ -163,7 +159,7 @@ open class KBitwuzlaModel(
 
         override fun <T : KSort> transformApp(expr: KApp<T, *>): KExpr<T> = with(ctx) {
             if (expr.decl in incompleteDecls) {
-                return with(valueSampler) { expr.sort.sampleValue() }
+                return expr.sort.sampleValue()
             }
 
             return super.transformApp(expr)

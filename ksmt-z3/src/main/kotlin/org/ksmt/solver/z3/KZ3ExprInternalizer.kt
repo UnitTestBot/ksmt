@@ -111,7 +111,6 @@ import org.ksmt.expr.KFpToBvExpr
 import org.ksmt.expr.KFpToFpExpr
 import org.ksmt.expr.KFpToIEEEBvExpr
 import org.ksmt.expr.KFpToRealExpr
-import org.ksmt.expr.KFpValue
 import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KGeArithExpr
@@ -358,23 +357,23 @@ open class KZ3ExprInternalizer(
     }
 
     override fun <T : KBvSort> transform(expr: KBvShiftLeftExpr<T>) =
-        with(expr) { transform(arg0, arg1, Native::mkBvshl) }
+        with(expr) { transform(arg, shift, Native::mkBvshl) }
 
     override fun <T : KBvSort> transform(expr: KBvLogicalShiftRightExpr<T>) =
-        with(expr) { transform(arg0, arg1, Native::mkBvlshr) }
+        with(expr) { transform(arg, shift, Native::mkBvlshr) }
 
     override fun <T : KBvSort> transform(expr: KBvArithShiftRightExpr<T>) =
-        with(expr) { transform(arg0, arg1, Native::mkBvashr) }
+        with(expr) { transform(arg, shift, Native::mkBvashr) }
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>) =
-        with(expr) { transform(arg0, arg1, Native::mkExtRotateLeft) }
+        with(expr) { transform(arg, rotation, Native::mkExtRotateLeft) }
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftIndexedExpr<T>) = with(expr) {
         transform(value) { value: Long -> Native.mkRotateLeft(nCtx, rotationNumber, value) }
     }
 
     override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>) =
-        with(expr) { transform(arg0, arg1, Native::mkExtRotateRight) }
+        with(expr) { transform(arg, rotation, Native::mkExtRotateRight) }
 
     override fun <T : KBvSort> transform(expr: KBvRotateRightIndexedExpr<T>) = with(expr) {
         transform(value) { value: Long -> Native.mkRotateRight(nCtx, rotationNumber, value) }
@@ -417,32 +416,28 @@ open class KZ3ExprInternalizer(
     override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) =
         with(expr) { transform(arg0, arg1, Native::mkBvmulNoUnderflow) }
 
-    fun <T : KFpSort> transformFpValue(expr: KFpValue<T>): KExpr<T> = expr.transform {
+    override fun transform(expr: KFp16Value): KExpr<KFp16Sort> = expr.transform {
         val sort = expr.sort.internalizeSort()
-
-        with(expr) {
-            when (this) {
-                is KFp16Value -> Native.mkFpaNumeralFloat(nCtx, value, sort)
-                is KFp32Value -> Native.mkFpaNumeralFloat(nCtx, value, sort)
-                is KFp64Value -> Native.mkFpaNumeralDouble(nCtx, value, sort)
-                is KFp128Value ->
-                    Native.mkFpaNumeralInt64Uint64(nCtx, signBit, exponentValue, significandValue, sort)
-                is KFpCustomSizeValue ->
-                    Native.mkFpaNumeralInt64Uint64(nCtx, signBit, exponentValue, significandValue, sort)
-                else -> error("Unexpected KFpValue type: ${this::class.qualifiedName}")
-            }
-        }
+        Native.mkFpaNumeralFloat(nCtx, expr.value, sort)
     }
 
-    override fun transform(expr: KFp16Value): KExpr<KFp16Sort> = transformFpValue(expr)
+    override fun transform(expr: KFp32Value): KExpr<KFp32Sort> = expr.transform {
+        val sort = expr.sort.internalizeSort()
+        Native.mkFpaNumeralFloat(nCtx, expr.value, sort)
+    }
 
-    override fun transform(expr: KFp32Value): KExpr<KFp32Sort> = transformFpValue(expr)
+    override fun transform(expr: KFp64Value): KExpr<KFp64Sort> = expr.transform {
+        val sort = expr.sort.internalizeSort()
+        Native.mkFpaNumeralDouble(nCtx, expr.value, sort)
+    }
 
-    override fun transform(expr: KFp64Value): KExpr<KFp64Sort> = transformFpValue(expr)
+    override fun transform(expr: KFp128Value): KExpr<KFp128Sort> = with(expr) {
+        transform(ctx.mkBv(signBit), biasedExponent, significand, Native::mkFpaFp)
+    }
 
-    override fun transform(expr: KFp128Value): KExpr<KFp128Sort> = transformFpValue(expr)
-
-    override fun transform(expr: KFpCustomSizeValue): KExpr<KFpSort> = transformFpValue(expr)
+    override fun transform(expr: KFpCustomSizeValue): KExpr<KFpSort> = with(expr) {
+        transform(ctx.mkBv(signBit), biasedExponent, significand, Native::mkFpaFp)
+    }
 
     override fun transform(expr: KFpRoundingModeExpr): KExpr<KFpRoundingModeSort> = with(expr) {
         transform { transformRoundingModeNumeral(value) }
@@ -576,7 +571,7 @@ open class KZ3ExprInternalizer(
     }
 
     override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> = with(expr) {
-        transform(sign, exponent, significand, Native::mkFpaFp)
+        transform(sign, biasedExponent, significand, Native::mkFpaFp)
     }
 
     override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> = with(expr) {

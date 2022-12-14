@@ -16,7 +16,7 @@ enum class KFpRoundingMode(val modeName: String) {
 class KFpRoundingModeExpr(
     ctx: KContext,
     val value: KFpRoundingMode
-) : KApp<KFpRoundingModeSort, KExpr<*>>(ctx) {
+) : KApp<KFpRoundingModeSort, KExpr<*>>(ctx), KInterpretedConstant {
     override val args: List<KExpr<*>>
         get() = emptyList()
 

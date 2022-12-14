@@ -375,7 +375,7 @@ open class KBitwuzlaExprConverter(
 
                     mkFpFromBvExpr(
                         sign = mkBv(signBit),
-                        exponent = mkBv(exponentBits.toReversedBinaryString(), exponentSize),
+                        biasedExponent = mkBv(exponentBits.toReversedBinaryString(), exponentSize),
                         significand = mkBv(significandBits.toReversedBinaryString(), significandSize - 1u)
                     )
                 }
@@ -387,7 +387,7 @@ open class KBitwuzlaExprConverter(
             @Suppress("UNCHECKED_CAST")
             mkFpFromBvExpr(
                 sign = mkBv(value.sign, sizeBits = 1u) as KExpr<KBv1Sort>,
-                exponent = mkBv(value.exponent, value.exponent.length.toUInt()),
+                biasedExponent = mkBv(value.exponent, value.exponent.length.toUInt()),
                 significand = mkBv(value.significand, value.significand.length.toUInt())
             )
         }
