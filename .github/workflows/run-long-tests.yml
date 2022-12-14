@@ -62,7 +62,12 @@ jobs:
           echo "tests=$TEST_ARRAY" >> $GITHUB_OUTPUT
 
   prepare_test_data:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+
+    runs-on: ${{ matrix.os }}
+
     steps:
       - uses: actions/checkout@v3
 
@@ -72,7 +77,7 @@ jobs:
         env:
           cache-name: cache-test-data
         with:
-          key: test-data-${{ env.TEST_DATA_REVISION }}
+          key: test-data-${{ env.TEST_DATA_REVISION }}-${{ matrix.os }}
           path: ksmt-test/testData/testData.zip
 
       - name: Set up JDK 1.8
@@ -114,7 +119,7 @@ jobs:
         env:
           cache-name: cache-test-data
         with:
-          key: test-data-${{ env.TEST_DATA_REVISION }}
+          key: test-data-${{ env.TEST_DATA_REVISION }}-${{ matrix.os }}
           path: ksmt-test/testData/testData.zip
 
       - name: Check test data downloaded
@@ -130,7 +135,7 @@ jobs:
           distribution: 'zulu'
           cache: gradle
 
-      # Since ksmt-test/testData/testData.zip exists it will not download it again
+      # Since ksmt-test/testData/testData.zip exists task will not download it again
       - name: Prepare test data (unpack)
         uses: gradle/gradle-build-action@v2
         with:
