@@ -18,6 +18,7 @@ import org.ksmt.runner.core.KsmtWorkerArgs
 import org.ksmt.runner.core.KsmtWorkerFactory
 import org.ksmt.runner.core.KsmtWorkerPool
 import org.ksmt.runner.core.RdServer
+import org.ksmt.runner.core.WorkerInitializationFailedException
 import org.ksmt.runner.models.generated.TestProtocolModel
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
@@ -134,7 +135,14 @@ abstract class BenchmarksBasedTest {
         ctx: KContext,
         body: suspend (TestRunner) -> Unit
     ) = runBlocking {
-        val worker = getOrCreateFreeWorker()
+        val worker = try {
+            getOrCreateFreeWorker()
+        } catch (ex: WorkerInitializationFailedException) {
+            val testIgnoreReason = "worker initialization failed -- ${ex.message}"
+            System.err.println(testIgnoreReason)
+            Assumptions.assumeTrue(false, testIgnoreReason)
+            error("ignored")
+        }
         worker.astSerializationCtx.initCtx(ctx)
         worker.lifetime.onTermination {
             worker.astSerializationCtx.resetCtx()
