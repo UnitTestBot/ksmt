@@ -1,6 +1,8 @@
 package org.ksmt.solver.runner
 
+import com.jetbrains.rd.util.AtomicReference
 import com.jetbrains.rd.util.reactive.RdFault
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.ksmt.decl.KDecl
@@ -29,9 +31,13 @@ class KSolverRunner<Config: KSolverConfiguration>(
     private val configurationBuilder: KSolverUniversalConfigurationBuilder<Config>,
 ) : KSolver<Config> {
 
+    private val lastReasonOfUnknown = AtomicReference<String?>(null)
+
     override fun close() {
         runBlocking {
-            deleteSolver()
+            suppressAllRunnerExceptions {
+                deleteSolver()
+            }
         }
         worker.release()
     }
@@ -115,10 +121,12 @@ class KSolverRunner<Config: KSolverConfiguration>(
     suspend fun checkAsync(timeout: Duration): KSolverStatus {
         ensureActive()
         val params = CheckParams(timeout.inWholeMilliseconds)
-        val result = withTimeoutAndExceptionHandling {
-            worker.protocolModel.check.startSuspending(worker.lifetime, params)
+        return handleCheckTimeoutAsUnknown {
+            val result = withTimeoutAndExceptionHandling {
+                worker.protocolModel.check.startSuspending(worker.lifetime, params)
+            }
+            result.status
         }
-        return result.status
     }
 
     override fun checkWithAssumptions(
@@ -134,10 +142,12 @@ class KSolverRunner<Config: KSolverConfiguration>(
     ): KSolverStatus {
         ensureActive()
         val params = CheckWithAssumptionsParams(assumptions, timeout.inWholeMilliseconds)
-        val result = withTimeoutAndExceptionHandling {
-            worker.protocolModel.checkWithAssumptions.startSuspending(worker.lifetime, params)
+        return handleCheckTimeoutAsUnknown {
+            val result = withTimeoutAndExceptionHandling {
+                worker.protocolModel.checkWithAssumptions.startSuspending(worker.lifetime, params)
+            }
+            result.status
         }
-        return result.status
     }
 
     override fun model(): KModel = runBlocking {
@@ -184,12 +194,12 @@ class KSolverRunner<Config: KSolverConfiguration>(
         reasonOfUnknownAsync()
     }
 
-    suspend fun reasonOfUnknownAsync(): String {
+    suspend fun reasonOfUnknownAsync(): String = lastReasonOfUnknown.updateIfNull {
         ensureActive()
         val result = withTimeoutAndExceptionHandling {
             worker.protocolModel.reasonOfUnknown.startSuspending(worker.lifetime, Unit)
         }
-        return result.reasonUnknown
+        result.reasonUnknown
     }
 
     internal suspend fun initSolver(solverType: SolverType) {
@@ -218,5 +228,45 @@ class KSolverRunner<Config: KSolverConfiguration>(
             terminate()
             throw KSolverException(ex)
         }
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private suspend inline fun suppressAllRunnerExceptions(crossinline body: suspend () -> Unit) {
+        try {
+            body()
+        } catch (ex: Exception) {
+            // Propagate exceptions caused by the exceptions on remote side.
+            if (ex is KSolverException && ex.cause is RdFault) {
+                throw ex
+            }
+        }
+    }
+
+    private suspend inline fun handleCheckTimeoutAsUnknown(
+        crossinline body: suspend () -> KSolverStatus
+    ): KSolverStatus {
+        try {
+            lastReasonOfUnknown.getAndSet(null)
+            return body()
+        } catch (ex: KSolverException) {
+            val cause = ex.cause
+            if (cause is TimeoutCancellationException) {
+                lastReasonOfUnknown.getAndSet("timeout: ${cause.message}")
+                return KSolverStatus.UNKNOWN
+            }
+            throw ex
+        }
+    }
+
+    private suspend inline fun <T> AtomicReference<T?>.updateIfNull(
+        crossinline body: suspend () -> T
+    ): T {
+        val oldValue = get()
+        if (oldValue != null) return oldValue
+
+        val newValue = body()
+
+        getAndSet(newValue)
+        return newValue
     }
 }
