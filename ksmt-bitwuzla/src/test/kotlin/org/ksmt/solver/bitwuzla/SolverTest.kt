@@ -153,4 +153,13 @@ class SolverTest {
         assertEquals(KSolverStatus.UNKNOWN, status)
     }
 
+    @Test
+    fun testFpSupport(): Unit = with(ctx) {
+        val a by fp32Sort
+        val expr = mkFpGreaterExpr(a, 0.0f.expr) and mkFpLessExpr(a, 10.0f.expr)
+        solver.assert(expr)
+        val status = solver.check()
+        assertEquals(KSolverStatus.SAT, status)
+    }
+
 }
