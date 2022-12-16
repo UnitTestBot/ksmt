@@ -1,6 +1,5 @@
 package org.ksmt.test
 
-import com.jetbrains.rd.util.LogLevel
 import com.jetbrains.rd.util.reactive.RdFault
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
@@ -32,6 +31,7 @@ import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.io.path.Path
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.relativeTo
 import kotlin.reflect.KClass
@@ -48,6 +48,7 @@ abstract class BenchmarksBasedTest {
         samplePath: Path,
         mkKsmtAssertions: suspend TestRunner.(List<KExpr<KBoolSort>>) -> List<KExpr<KBoolSort>>
     ) {
+        ignoreNoTestDataStub(name)
         val ctx = KContext()
         testWorkers.withWorker(ctx) { worker ->
             worker.skipBadTestCases {
@@ -73,6 +74,7 @@ abstract class BenchmarksBasedTest {
         samplePath: Path,
         solverType: KClass<out KSolver<C>>
     ) {
+        ignoreNoTestDataStub(name)
         val ctx = KContext()
         testWorkers.withWorker(ctx) { worker ->
             worker.skipBadTestCases {
@@ -96,6 +98,7 @@ abstract class BenchmarksBasedTest {
         samplePath: Path,
         solverType: KClass<out KSolver<C>>
     ) {
+        ignoreNoTestDataStub(name)
         val ctx = KContext()
         testWorkers.withWorker(ctx) { worker ->
             worker.skipBadTestCases {
@@ -172,6 +175,8 @@ abstract class BenchmarksBasedTest {
         private val testDataChunkSize = System.getenv("benchmarkChunkMaxSize")?.toIntOrNull() ?: Int.MAX_VALUE
         private val testDataChunk = System.getenv("benchmarkChunk")?.toIntOrNull() ?: 0
 
+        private val NO_TEST_DATA = BenchmarkTestArguments("__NO__TEST__DATA__", Path("."))
+
         private fun testDataLocation(): Path = this::class.java.classLoader
             .getResource("testData")
             ?.toURI()
@@ -187,6 +192,20 @@ abstract class BenchmarksBasedTest {
                 .take(testDataChunkSize)
                 .map { BenchmarkTestArguments(it.relativeTo(testDataLocation).toString(), it) }
                 .skipBadTestCases()
+                .ensureNotEmpty()
+        }
+
+        /**
+         * Parametrized tests require at least one argument.
+         * In some cases, we may filter out all provided test samples,
+         * which will cause JUnit failure. To overcome this problem,
+         * we use [NO_TEST_DATA] stub, which is handled
+         * by [ignoreNoTestDataStub] and results in a single ignored test.
+         * */
+        fun List<BenchmarkTestArguments>.ensureNotEmpty() = ifEmpty { listOf(NO_TEST_DATA) }
+
+        fun ignoreNoTestDataStub(name: String) {
+            Assumptions.assumeTrue(name != NO_TEST_DATA.name)
         }
 
         private fun List<BenchmarkTestArguments>.skipBadTestCases(): List<BenchmarkTestArguments> =
