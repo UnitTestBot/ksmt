@@ -9,8 +9,10 @@
 package org.ksmt.solver.bitwuzla.bindings
 
 import com.sun.jna.Callback
+import com.sun.jna.Library
 import com.sun.jna.Memory
 import com.sun.jna.Native
+import com.sun.jna.Platform
 import com.sun.jna.Pointer
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
@@ -32,6 +34,9 @@ object Native {
     }
 
     init {
+        if (Platform.isWindows()) {
+            Native.load("libgmp-10", Library::class.java)
+        }
         Native.register("bitwuzla")
         bitwuzlaSetAbortCallback(defaultAbortHandler)
     }

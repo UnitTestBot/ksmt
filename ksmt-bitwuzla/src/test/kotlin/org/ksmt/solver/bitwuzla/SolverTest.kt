@@ -3,10 +3,10 @@ package org.ksmt.solver.bitwuzla
 import org.ksmt.KContext
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
-import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.utils.getValue
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -17,6 +17,7 @@ class SolverTest {
     private val ctx = KContext()
     private val solver = KBitwuzlaSolver(ctx)
 
+    @Ignore
     @Test
     fun testAbortHandling(): Unit = with(ctx) {
         val x by mkBv32Sort()
