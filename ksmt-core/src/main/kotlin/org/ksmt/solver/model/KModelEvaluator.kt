@@ -7,6 +7,7 @@ import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.rewrite.KExprSubstitutor
+import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector.Companion.collectUninterpretedDeclarations
 import org.ksmt.expr.rewrite.simplify.KExprSimplifier
 import org.ksmt.expr.rewrite.simplify.simplifyApp
 import org.ksmt.solver.KModel
@@ -14,6 +15,7 @@ import org.ksmt.solver.model.DefaultValueSampler.Companion.sampleValue
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.asExpr
+import org.ksmt.utils.uncheckedCast
 
 open class KModelEvaluator(
     ctx: KContext,
@@ -43,21 +45,61 @@ open class KModelEvaluator(
                 return@getOrPut expr.sort.sampleValue()
             }
 
-            check(interpretation.vars.isEmpty()) {
-                "Function ${expr.function} has free vars but used in as-array"
-            }
-
-            with(ctx) {
-                val defaultValue = interpretation.default ?: interpretation.sort.sampleValue()
-                val defaultArray: KExpr<KArraySort<D, R>> = mkArrayConst(expr.sort, defaultValue)
-
-                interpretation.entries.foldRight(defaultArray) { entry, acc ->
-                    val idx = entry.args.single().asExpr(expr.domainSort)
-                    acc.store(idx, entry.value)
-                }
+            when (interpretation.vars.size) {
+                0 -> evalArrayInterpretation(expr.sort, interpretation)
+                1 -> evalArrayFunction(
+                    expr.sort,
+                    expr.function,
+                    interpretation.vars.single().uncheckedCast(),
+                    interpretation
+                )
+                else -> error("Function ${expr.function} has free vars but used in as-array")
             }
         }
         return evaluatedArray.asExpr(expr.sort).also { rewrite(it) }
+    }
+
+    private fun <D : KSort, R : KSort> evalArrayFunction(
+        sort: KArraySort<D, R>,
+        function: KDecl<R>,
+        indexVar: KDecl<D>,
+        interpretation: KModel.KFuncInterp<R>
+    ): KExpr<KArraySort<D, R>> {
+        val usedDeclarations = interpretation.usedDeclarations()
+
+        // argument value is unused in function interpretation.
+        if (indexVar !in usedDeclarations) {
+            return evalArrayInterpretation(sort, interpretation)
+        }
+
+        val index = ctx.mkConstApp(indexVar)
+        val evaluated = evalFunction(function, listOf(index))
+        return ctx.mkArrayLambda(index.decl, evaluated)
+    }
+
+    private fun <D : KSort, R : KSort> evalArrayInterpretation(
+        sort: KArraySort<D, R>,
+        interpretation: KModel.KFuncInterp<R>
+    ): KExpr<KArraySort<D, R>> = with(ctx) {
+        val defaultValue = interpretation.default ?: sort.range.sampleValue()
+        val defaultArray: KExpr<KArraySort<D, R>> = mkArrayConst(sort, defaultValue)
+
+        interpretation.entries.foldRight(defaultArray) { entry, acc ->
+            val idx = entry.args.single().asExpr(sort.domain)
+            acc.store(idx, entry.value)
+        }
+    }
+
+    private fun KModel.KFuncInterp<*>.usedDeclarations(): Set<KDecl<*>> {
+        val result = hashSetOf<KDecl<*>>()
+        entries.forEach { entry ->
+            result += collectUninterpretedDeclarations(entry.value)
+            entry.args.forEach {
+                result += collectUninterpretedDeclarations(it)
+            }
+        }
+        default?.also { result += collectUninterpretedDeclarations(it) }
+        return result
     }
 
     private fun <T : KSort> evalFunction(decl: KDecl<T>, args: List<KExpr<*>>): KExpr<T> {

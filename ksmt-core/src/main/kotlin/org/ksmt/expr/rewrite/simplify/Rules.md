@@ -74,6 +74,7 @@ Note: todo -- additional simplification rules implemented in Z3
    * ``(select (store i v) i) ==> v``
    * ``(select (store a i v) j), i != j ==> (select a j)``
    * ``(select (const v) i) ==> v``
+   * ``(select (lambda x body) i) ==> body[i/x]``
    * todo: array_rewriter.cpp:199
 
 ### Arithmetic
