@@ -92,5 +92,9 @@ object TestProtocolModel : Ext(TestProtocolRoot) {
             async
             documentation = "Find first failed equality check"
         }
+        call("mkTrueExpr", PredefinedType.void, PredefinedType.long).apply {
+            async
+            documentation = "Create true expression"
+        }
     }
 }

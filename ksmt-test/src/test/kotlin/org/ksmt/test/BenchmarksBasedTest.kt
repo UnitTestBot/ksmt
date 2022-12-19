@@ -81,14 +81,23 @@ abstract class BenchmarksBasedTest {
                 val assertions = worker.parseFile(samplePath)
                 val ksmtAssertions = worker.convertAssertions(assertions)
 
-                val testSolver = solverManager.createSolver(ctx, solverType)
-                ksmtAssertions.forEach { testSolver.assertAsync(it) }
+                val model = solverManager.createSolver(ctx, solverType).use { testSolver ->
+                    ksmtAssertions.forEach { testSolver.assertAsync(it) }
 
-                val status = testSolver.checkAsync(timeout = 1.seconds)
-                Assumptions.assumeTrue(status == KSolverStatus.SAT, "No model to check")
+                    val status = testSolver.checkAsync(timeout = 1.seconds)
+                    Assumptions.assumeTrue(status == KSolverStatus.SAT, "No model to check")
 
-                val model = testSolver.modelAsync()
+                    testSolver.modelAsync()
+                }
+
                 checkAsArrayDeclsPresentInModel(ctx, model)
+
+                val evaluatedAssertions = ksmtAssertions.map { model.eval(it, isComplete = true) }
+
+                worker.performEqualityChecks {
+                    evaluatedAssertions.forEach { isTrue(it) }
+                    check { "assertions are not true in model" }
+                }
             }
         }
     }
@@ -109,27 +118,24 @@ abstract class BenchmarksBasedTest {
                 }
 
                 val expectedStatus = worker.check(solver)
-                if (expectedStatus == KSolverStatus.UNKNOWN) {
-                    Assumptions.assumeTrue(false, "expected status: unknown")
+                Assumptions.assumeTrue(expectedStatus != KSolverStatus.UNKNOWN) {
+                    "expected status: unknown"
                 }
 
                 val ksmtAssertions = worker.convertAssertions(assertions)
 
-                val testSolver = solverManager.createSolver(ctx, solverType)
-                testSolver.use { ksmtSolver ->
-                    ksmtAssertions.forEach { ksmtSolver.assert(it) }
-                    // use greater timeout to avoid false-positive unknowns
-                    val actualStatus = ksmtSolver.check(timeout = 2.seconds)
-                    val message by lazy {
-                        val failInfo = if (actualStatus == KSolverStatus.UNKNOWN) {
-                            " -- ${ksmtSolver.reasonOfUnknown()}"
-                        } else {
-                            ""
-                        }
-                        "solver check-sat mismatch$failInfo"
+                val actualStatus = solverManager.createSolver(ctx, solverType).use { ksmtSolver ->
+                    ksmtAssertions.forEach { ksmtSolver.assertAsync(it) }
+
+                    // use greater timeout to reduce false-positive unknowns
+                    val status = ksmtSolver.check(timeout = 2.seconds)
+                    Assumptions.assumeTrue(status != KSolverStatus.UNKNOWN) {
+                        "Actual status is unknown: ${ksmtSolver.reasonOfUnknown()}"
                     }
-                    assertEquals(expectedStatus, actualStatus, message)
+
+                    status
                 }
+                assertEquals(expectedStatus, actualStatus, "solver check-sat mismatch")
             }
         }
     }
@@ -183,7 +189,7 @@ abstract class BenchmarksBasedTest {
             ?.let { Paths.get(it) }
             ?: error("No test data")
 
-        fun testData(): List<BenchmarkTestArguments> {
+        private fun prepareTestData(): List<BenchmarkTestArguments> {
             val testDataLocation = testDataLocation()
             return testDataLocation
                 .listDirectoryEntries("*.smt2")
@@ -193,6 +199,10 @@ abstract class BenchmarksBasedTest {
                 .map { BenchmarkTestArguments(it.relativeTo(testDataLocation).toString(), it) }
                 .skipBadTestCases()
                 .ensureNotEmpty()
+        }
+
+        val testData by lazy {
+            prepareTestData()
         }
 
         /**
@@ -228,7 +238,7 @@ abstract class BenchmarksBasedTest {
             )
             testWorkers = KsmtWorkerPool(
                 maxWorkerPoolSize = 4,
-                workerProcessIdleTimeout = 50.seconds,
+                workerProcessIdleTimeout = 300.seconds,
                 workerFactory = object : KsmtWorkerFactory<TestProtocolModel> {
                     override val childProcessEntrypoint = TestWorkerProcess::class
                     override fun updateArgs(args: KsmtWorkerArgs): KsmtWorkerArgs = args
@@ -292,10 +302,14 @@ abstract class BenchmarksBasedTest {
         private val solver: Int,
     ) {
         private val equalityChecks = mutableListOf<EqualityCheck>()
+        private val workerTrueExpr: Long by lazy { runBlocking { worker.mkTrueExpr() } }
+
         suspend fun areEqual(actual: KExpr<*>, expected: Long) {
             worker.addEqualityCheck(solver, actual, expected)
             equalityChecks += EqualityCheck(actual, expected)
         }
+
+        suspend fun isTrue(actual: KExpr<*>) = areEqual(actual, workerTrueExpr)
 
         suspend fun check(message: () -> String) {
             val status = worker.checkEqualities(solver)

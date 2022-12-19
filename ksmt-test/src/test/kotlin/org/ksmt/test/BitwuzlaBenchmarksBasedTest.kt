@@ -33,7 +33,7 @@ class BitwuzlaBenchmarksBasedTest : BenchmarksBasedTest() {
 
     companion object {
         @JvmStatic
-        fun bitwuzlaTestData() = testData()
+        fun bitwuzlaTestData() = testData
             .skipUnsupportedTheories()
             .ensureNotEmpty()
 

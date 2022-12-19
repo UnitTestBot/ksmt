@@ -30,7 +30,8 @@ class TestProtocolModel private constructor(
     private val _getReasonUnknown: RdCall<Int, String>,
     private val _addEqualityCheck: RdCall<EqualityCheckParams, Unit>,
     private val _checkEqualities: RdCall<Int, TestCheckResult>,
-    private val _findFirstFailedEquality: RdCall<Int, Int?>
+    private val _findFirstFailedEquality: RdCall<Int, Int?>,
+    private val _mkTrueExpr: RdCall<Unit, Long>
 ) : RdExtBase() {
     //companion
     
@@ -67,7 +68,7 @@ class TestProtocolModel private constructor(
         private val __LongListSerializer = FrameworkMarshallers.Long.list()
         private val __IntNullableSerializer = FrameworkMarshallers.Int.nullable()
         
-        const val serializationHash = 3379332879384107871L
+        const val serializationHash = -213203582714111536L
         
     }
     override val serializersOwner: ISerializersOwner get() = TestProtocolModel
@@ -139,6 +140,11 @@ class TestProtocolModel private constructor(
      * Find first failed equality check
      */
     val findFirstFailedEquality: RdCall<Int, Int?> get() = _findFirstFailedEquality
+    
+    /**
+     * Create true expression
+     */
+    val mkTrueExpr: RdCall<Unit, Long> get() = _mkTrueExpr
     //methods
     //initializer
     init {
@@ -155,6 +161,7 @@ class TestProtocolModel private constructor(
         _addEqualityCheck.async = true
         _checkEqualities.async = true
         _findFirstFailedEquality.async = true
+        _mkTrueExpr.async = true
     }
     
     init {
@@ -171,6 +178,7 @@ class TestProtocolModel private constructor(
         bindableChildren.add("addEqualityCheck" to _addEqualityCheck)
         bindableChildren.add("checkEqualities" to _checkEqualities)
         bindableChildren.add("findFirstFailedEquality" to _findFirstFailedEquality)
+        bindableChildren.add("mkTrueExpr" to _mkTrueExpr)
     }
     
     //secondary constructor
@@ -188,7 +196,8 @@ class TestProtocolModel private constructor(
         RdCall<Int, String>(FrameworkMarshallers.Int, FrameworkMarshallers.String),
         RdCall<EqualityCheckParams, Unit>(EqualityCheckParams, FrameworkMarshallers.Void),
         RdCall<Int, TestCheckResult>(FrameworkMarshallers.Int, TestCheckResult),
-        RdCall<Int, Int?>(FrameworkMarshallers.Int, __IntNullableSerializer)
+        RdCall<Int, Int?>(FrameworkMarshallers.Int, __IntNullableSerializer),
+        RdCall<Unit, Long>(FrameworkMarshallers.Void, FrameworkMarshallers.Long)
     )
     
     //equals trait
@@ -210,6 +219,7 @@ class TestProtocolModel private constructor(
             print("addEqualityCheck = "); _addEqualityCheck.print(printer); println()
             print("checkEqualities = "); _checkEqualities.print(printer); println()
             print("findFirstFailedEquality = "); _findFirstFailedEquality.print(printer); println()
+            print("mkTrueExpr = "); _mkTrueExpr.print(printer); println()
         }
         printer.print(")")
     }
@@ -228,7 +238,8 @@ class TestProtocolModel private constructor(
             _getReasonUnknown.deepClonePolymorphic(),
             _addEqualityCheck.deepClonePolymorphic(),
             _checkEqualities.deepClonePolymorphic(),
-            _findFirstFailedEquality.deepClonePolymorphic()
+            _findFirstFailedEquality.deepClonePolymorphic(),
+            _mkTrueExpr.deepClonePolymorphic()
         )
     }
     //contexts

@@ -84,6 +84,10 @@ class TestRunner(
         worker.protocolModel.getReasonUnknown.startSuspending(worker.lifetime, solver)
     }
 
+    suspend fun mkTrueExpr(): Long = withTimeoutAndExceptionHandling {
+        worker.protocolModel.mkTrueExpr.startSuspending(worker.lifetime, Unit)
+    }
+
     @Suppress("TooGenericExceptionCaught", "SwallowedException", "ThrowsCount")
     private suspend inline fun <T> withTimeoutAndExceptionHandling(crossinline body: suspend () -> T): T {
         try {

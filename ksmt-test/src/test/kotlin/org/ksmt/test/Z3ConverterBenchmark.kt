@@ -170,7 +170,7 @@ class Z3ConverterBenchmark : BenchmarksBasedTest() {
         }
 
         @JvmStatic
-        fun z3TestData() = testData().skipSlowSamples()
+        fun z3TestData() = testData.skipSlowSamples()
 
         // skip samples with slow native assert
         private fun List<BenchmarkTestArguments>.skipSlowSamples() = this

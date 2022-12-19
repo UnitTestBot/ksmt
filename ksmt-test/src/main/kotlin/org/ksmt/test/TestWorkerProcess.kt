@@ -152,6 +152,11 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         return null
     }
 
+    private fun mkTrueExpr(): Long = with(z3Ctx) {
+        val trueExpr = mkTrue().also { nativeAsts.add(it) }
+        unwrapAST(trueExpr)
+    }
+
     private fun Status?.processCheckResult() = when (this) {
         Status.SATISFIABLE -> KSolverStatus.SAT
         Status.UNSATISFIABLE -> KSolverStatus.UNSAT
@@ -232,6 +237,9 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         }
         findFirstFailedEquality.measureExecutionForTermination { solver ->
             findFirstFailedEquality(solver)
+        }
+        mkTrueExpr.measureExecutionForTermination {
+            mkTrueExpr()
         }
     }
 
