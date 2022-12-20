@@ -13,6 +13,7 @@ import org.ksmt.expr.rewrite.simplify.simplifyApp
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.DefaultValueSampler.Companion.sampleValue
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.asExpr
@@ -58,6 +59,31 @@ open class KModelEvaluator(
             }
         }
         return evaluatedArray.asExpr(expr.sort).also { rewrite(it) }
+    }
+
+    override fun simplifyEqUninterpreted(
+        lhs: KExpr<KUninterpretedSort>,
+        rhs: KExpr<KUninterpretedSort>
+    ): KExpr<KBoolSort> = with(ctx) {
+        if (isUninterpretedValue(lhs.sort, lhs) && isUninterpretedValue(lhs.sort, rhs)) {
+            return (lhs == rhs).expr
+        }
+        super.simplifyEqUninterpreted(lhs, rhs)
+    }
+
+    override fun areDefinitelyDistinctUninterpreted(
+        lhs: KExpr<KUninterpretedSort>,
+        rhs: KExpr<KUninterpretedSort>
+    ): Boolean {
+        if (isUninterpretedValue(lhs.sort, lhs) && isUninterpretedValue(lhs.sort, rhs)) {
+            return lhs != rhs
+        }
+        return super.areDefinitelyDistinctUninterpreted(lhs, rhs)
+    }
+
+    private fun isUninterpretedValue(sort: KUninterpretedSort, expr: KExpr<KUninterpretedSort>): Boolean {
+        val sortUniverse = model.uninterpretedSortUniverse(sort) ?: return false
+        return expr in sortUniverse
     }
 
     private fun <D : KSort, R : KSort> evalArrayFunction(
