@@ -1380,29 +1380,6 @@ open class KContext : AutoCloseable {
     fun mkFp64(value: Double): KFp64Value = fp64Cache.createIfContextActive(value)
     fun mkFp128Biased(significand: KBitVecValue<*>, biasedExponent: KBitVecValue<*>, signBit: Boolean): KFp128Value =
         fp128Cache.createIfContextActive(significand, biasedExponent, signBit)
-    fun mkFpCustomSizeBiased(
-        significandSize: UInt,
-        exponentSize: UInt,
-        significand: KBitVecValue<*>,
-        biasedExponent: KBitVecValue<*>,
-        signBit: Boolean
-    ): KFpCustomSizeValue {
-        check(significandSize != KFp16Sort.significandBits && exponentSize != KFp16Sort.exponentBits) {
-            "Use mkFp16 to construct fp16 from biased exponent"
-        }
-        check(significandSize != KFp32Sort.significandBits && exponentSize != KFp32Sort.exponentBits) {
-            "Use mkFp32 to construct fp32 from biased exponent"
-        }
-        check(significandSize != KFp64Sort.significandBits && exponentSize != KFp64Sort.exponentBits) {
-            "Use mkFp64 to construct fp64 from biased exponent"
-        }
-        check(significandSize != KFp128Sort.significandBits && exponentSize != KFp128Sort.exponentBits) {
-            "Use mkFp128Biased to construct fp128 from biased exponent"
-        }
-        return fpCustomSizeCache.createIfContextActive(
-            significandSize, exponentSize, significand, biasedExponent, signBit
-        )
-    }
 
     fun mkFp128(significand: KBitVecValue<*>, unbiasedExponent: KBitVecValue<*>, signBit: Boolean): KFp128Value =
         mkFp128Biased(
@@ -1456,7 +1433,48 @@ open class KContext : AutoCloseable {
             is KFp128Sort -> mkFp128(significand, unbiasedExponent, signBit).cast()
             else -> {
                 val biasedExponent = biasFpCustomSizeExponent(unbiasedExponent, exponentSize)
-                mkFpCustomSizeBiased(significandSize, exponentSize, significand, biasedExponent, signBit).cast()
+                mkFpCustomSizeBiased(significandSize, exponentSize, significand, biasedExponent, signBit)
+            }
+        }
+    }
+
+    /**
+     * Creates FP with a custom size.
+     * Important: [biasedExponent] here is an **biased** value.
+     */
+    fun <T : KFpSort> mkFpCustomSizeBiased(
+        significandSize: UInt,
+        exponentSize: UInt,
+        significand: KBitVecValue<*>,
+        biasedExponent: KBitVecValue<*>,
+        signBit: Boolean
+    ): KFpValue<T>  {
+        val intSignBit = if (signBit) 1 else 0
+
+        return when (mkFpSort(exponentSize, significandSize)) {
+            is KFp16Sort -> {
+                val number = constructFp16NumberBiased(biasedExponent.longValue(), significand.longValue(), intSignBit)
+
+                mkFp16(number).cast()
+            }
+
+            is KFp32Sort -> {
+                val number = constructFp32NumberBiased(biasedExponent.longValue(), significand.longValue(), intSignBit)
+
+                mkFp32(number).cast()
+            }
+
+            is KFp64Sort -> {
+                val number = constructFp64NumberBiased(biasedExponent.longValue(), significand.longValue(), intSignBit)
+
+                mkFp64(number).cast()
+            }
+
+            is KFp128Sort -> mkFp128Biased(significand, biasedExponent, signBit).cast()
+            else -> {
+                fpCustomSizeCache.createIfContextActive(
+                    significandSize, exponentSize, significand, biasedExponent, signBit
+                ).cast()
             }
         }
     }
@@ -1494,6 +1512,24 @@ open class KContext : AutoCloseable {
     }
 
     @Suppress("MagicNumber")
+    private fun constructFp16NumberBiased(biasedExponent: Long, significand: Long, intSignBit: Int): Float {
+        // get sign and `body` of the biased exponent
+        val exponentSign = (biasedExponent.toInt() shr 4) and 1
+        val otherExponent = biasedExponent.toInt() and 0b1111
+
+        // Transform fp16 exponent into fp32 exponent adding three zeroes between the sign and the body
+        // Then normalize exponent with 0xff
+        val biasedFloatExponent = ((exponentSign shl 7) or otherExponent) and 0xff
+
+        // get fp16 significand part -- last 10 bits
+        val significandBits = significand.toInt() and 0b1111_1111_11
+
+        val bits = (intSignBit shl 31) or (biasedFloatExponent shl 23) or (significandBits shl 13)
+
+        return intBitsToFloat(bits)
+    }
+
+    @Suppress("MagicNumber")
     private fun constructFp32Number(exponent: Long, significand: Long, intSignBit: Int): Float {
         // `and 0xff` here is to avoid overloading when we have a number greater than 255,
         // and the result of the addition will affect the sign bit
@@ -1504,11 +1540,29 @@ open class KContext : AutoCloseable {
     }
 
     @Suppress("MagicNumber")
+    private fun constructFp32NumberBiased(biasedExponent: Long, significand: Long, intSignBit: Int): Float {
+        // `and 0xff` here is to normalize exponent value
+        val normalizedBiasedExponent = (biasedExponent.toInt()) and 0xff
+        val intValue = (intSignBit shl 31) or (normalizedBiasedExponent shl 23) or significand.toInt()
+
+        return intBitsToFloat(intValue)
+    }
+
+    @Suppress("MagicNumber")
     private fun constructFp64Number(exponent: Long, significand: Long, intSignBit: Int): Double {
         // `and 0b111_1111_1111` here is to avoid overloading when we have a number greater than 255,
         // and the result of the addition will affect the sign bit
         val biasedExponent = (exponent + KFp64Sort.exponentShiftSize) and 0b111_1111_1111
         val longValue = (intSignBit.toLong() shl 63) or (biasedExponent shl 52) or significand
+
+        return longBitsToDouble(longValue)
+    }
+
+    @Suppress("MagicNumber")
+    private fun constructFp64NumberBiased(biasedExponent: Long, significand: Long, intSignBit: Int): Double {
+        // `and 0b111_1111_1111` here is to normalize exponent value
+        val normalizedBiasedExponent = biasedExponent and 0b111_1111_1111
+        val longValue = (intSignBit.toLong() shl 63) or (normalizedBiasedExponent shl 52) or significand
 
         return longBitsToDouble(longValue)
     }
@@ -1586,6 +1640,37 @@ open class KContext : AutoCloseable {
         exponentSize = sort.exponentBits,
         significandSize = sort.significandBits,
         unbiasedExponent = unbiasedExponent,
+        significand = significand,
+        signBit = signBit
+    )
+
+    fun <T : KFpSort> mkFpBiased(significand: Int, biasedExponent: Int, signBit: Boolean, sort: T): KExpr<T> =
+        mkFpCustomSizeBiased(
+            exponentSize = sort.exponentBits,
+            significandSize = sort.significandBits,
+            biasedExponent = mkBvUnsigned(biasedExponent, sort.exponentBits),
+            significand = mkBvUnsigned(significand, sort.significandBits - 1u),
+            signBit = signBit
+        )
+
+    fun <T : KFpSort> mkFpBiased(significand: Long, biasedExponent: Long, signBit: Boolean, sort: T): KExpr<T> =
+        mkFpCustomSizeBiased(
+            exponentSize = sort.exponentBits,
+            significandSize = sort.significandBits,
+            biasedExponent = mkBvUnsigned(biasedExponent, sort.exponentBits),
+            significand = mkBvUnsigned(significand, sort.significandBits - 1u),
+            signBit = signBit
+        )
+
+    fun <T : KFpSort> mkFpBiased(
+        significand: KBitVecValue<*>,
+        biasedExponent: KBitVecValue<*>,
+        signBit: Boolean,
+        sort: T
+    ): KExpr<T> = mkFpCustomSizeBiased(
+        exponentSize = sort.exponentBits,
+        significandSize = sort.significandBits,
+        biasedExponent = biasedExponent,
         significand = significand,
         signBit = signBit
     )

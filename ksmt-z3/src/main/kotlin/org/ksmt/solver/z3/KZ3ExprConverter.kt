@@ -8,9 +8,7 @@ import com.microsoft.z3.enumerations.Z3_ast_kind
 import com.microsoft.z3.enumerations.Z3_decl_kind
 import com.microsoft.z3.enumerations.Z3_sort_kind
 import com.microsoft.z3.enumerations.Z3_symbol_kind
-import com.microsoft.z3.fpExponentInt64OrNull
 import com.microsoft.z3.fpSignOrNull
-import com.microsoft.z3.fpSignificandUInt64OrNull
 import com.microsoft.z3.getAppArgs
 import com.microsoft.z3.intOrNull
 import com.microsoft.z3.longOrNull
@@ -455,22 +453,22 @@ open class KZ3ExprConverter(
     fun convertFpNumeral(expr: Long, sortx: Long): ExprConversionResult = when {
         Native.isNumeralAst(nCtx, expr) -> {
             with(ctx) {
-                val unbiasedExponentBv = z3Ctx.temporaryAst(Native.fpaGetNumeralExponentBv(nCtx, expr, false))
+                val biasedExponentBv = z3Ctx.temporaryAst(Native.fpaGetNumeralExponentBv(nCtx, expr, true))
                 val significandBv = z3Ctx.temporaryAst(Native.fpaGetNumeralSignificandBv(nCtx, expr))
 
                 expr.convert(
-                    arrayOf(unbiasedExponentBv, significandBv)
+                    arrayOf(biasedExponentBv, significandBv)
                 ) { exponent: KExpr<KBvSort>, significand: KExpr<KBvSort> ->
                     val sort = sortx.convertSort<KFpSort>()
 
                     val sign = fpSignOrNull(nCtx, expr) ?: error("unexpected fp value")
 
-                    z3Ctx.releaseTemporaryAst(unbiasedExponentBv)
+                    z3Ctx.releaseTemporaryAst(biasedExponentBv)
                     z3Ctx.releaseTemporaryAst(significandBv)
 
-                    ctx.mkFp(
+                    ctx.mkFpBiased(
                         significand = significand as KBitVecValue<*>,
-                        unbiasedExponent = exponent as KBitVecValue<*>,
+                        biasedExponent = exponent as KBitVecValue<*>,
                         signBit = sign,
                         sort = sort
                     )
