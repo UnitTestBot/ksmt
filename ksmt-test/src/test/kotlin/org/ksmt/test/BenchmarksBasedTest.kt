@@ -92,7 +92,7 @@ abstract class BenchmarksBasedTest {
 
                 checkAsArrayDeclsPresentInModel(ctx, model)
 
-                val evaluatedAssertions = ksmtAssertions.map { model.eval(it, isComplete = false) }
+                val evaluatedAssertions = ksmtAssertions.map { model.eval(it, isComplete = true) }
 
                 val cardinalityConstraints = model.uninterpretedSorts.mapNotNull { sort ->
                     model.uninterpretedSortUniverse(sort)?.let { sort to it }

@@ -3,9 +3,12 @@ package org.ksmt.solver.model
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KFunctionAsArray
+import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector.Companion.collectUninterpretedDeclarations
 import org.ksmt.expr.rewrite.simplify.KExprSimplifier
@@ -22,7 +25,8 @@ import org.ksmt.utils.uncheckedCast
 open class KModelEvaluator(
     ctx: KContext,
     private val model: KModel,
-    private val isComplete: Boolean
+    private val isComplete: Boolean,
+    private val quantifiedVars: Set<KDecl<*>> = emptySet()
 ) : KExprSimplifier(ctx) {
     private val evaluatedFunctionApp: MutableMap<Pair<KDecl<*>, List<KExpr<*>>>, KExpr<*>> = hashMapOf()
     private val evaluatedFunctionArray: MutableMap<KDecl<*>, KExpr<*>> = hashMapOf()
@@ -30,10 +34,23 @@ open class KModelEvaluator(
     @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> =
         simplifyApp(expr as KApp<T, KExpr<KSort>>) { args ->
+            /**
+             * Don't evaluate expr when it is quantified since
+             * it is definitely not present in the model.
+             * */
+            if (expr.decl in quantifiedVars) {
+                return@simplifyApp expr.decl.apply(args)
+            }
+
             evalFunction(expr.decl, args).also { rewrite(it) }
         }
 
     override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
+        // No way to evaluate f when it is quantified in (as-array f)
+        if (expr.function in quantifiedVars) {
+            return expr
+        }
+
         val evaluatedArray = evaluatedFunctionArray.getOrPut(expr.function) {
             val interpretation = model.interpretation(expr.function)
 
@@ -59,6 +76,32 @@ open class KModelEvaluator(
             }
         }
         return evaluatedArray.asExpr(expr.sort).also { rewrite(it) }
+    }
+
+    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> =
+        transformQuantifiedExpression(setOf(expr.indexVarDecl), expr.body) { body ->
+            ctx.mkArrayLambda(expr.indexVarDecl, body)
+        }
+
+    override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> =
+        transformQuantifiedExpression(expr.bounds.toSet(), expr.body) { body ->
+            ctx.mkExistentialQuantifier(body, expr.bounds)
+        }
+
+    override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> =
+        transformQuantifiedExpression(expr.bounds.toSet(), expr.body) { body ->
+            ctx.mkUniversalQuantifier(body, expr.bounds)
+        }
+
+    private inline fun <B : KSort, T: KSort> transformQuantifiedExpression(
+        quantifiedVars: Set<KDecl<*>>,
+        body: KExpr<B>,
+        crossinline quantifierBuilder: (KExpr<B>) -> KExpr<T>
+    ): KExpr<T> {
+        val allQuantifiedVars = this.quantifiedVars.union(quantifiedVars)
+        val quantifierBodyEvaluator = KModelEvaluator(ctx, model, isComplete, allQuantifiedVars)
+        val evaluatedBody = quantifierBodyEvaluator.apply(body)
+        return quantifierBuilder(evaluatedBody)
     }
 
     override fun simplifyEqUninterpreted(
