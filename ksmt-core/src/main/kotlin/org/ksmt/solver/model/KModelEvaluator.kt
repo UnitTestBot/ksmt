@@ -14,6 +14,7 @@ import org.ksmt.solver.KModel
 import org.ksmt.solver.model.DefaultValueSampler.Companion.sampleValue
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.asExpr
 import org.ksmt.utils.uncheckedCast
 
@@ -42,7 +43,7 @@ open class KModelEvaluator(
 
             if (interpretation == null) {
                 // isComplete = true, return and cache
-                return@getOrPut expr.sort.sampleValue()
+                return@getOrPut completeModelValue(expr.sort)
             }
 
             when (interpretation.vars.size) {
@@ -81,7 +82,7 @@ open class KModelEvaluator(
         sort: KArraySort<D, R>,
         interpretation: KModel.KFuncInterp<R>
     ): KExpr<KArraySort<D, R>> = with(ctx) {
-        val defaultValue = interpretation.default ?: sort.range.sampleValue()
+        val defaultValue = interpretation.default ?: completeModelValue(sort.range)
         val defaultArray: KExpr<KArraySort<D, R>> = mkArrayConst(sort, defaultValue)
 
         interpretation.entries.foldRight(defaultArray) { entry, acc ->
@@ -111,9 +112,18 @@ open class KModelEvaluator(
                 return ctx.mkApp(decl, args)
             }
 
+            // Check if expr is an uninterpreted value of a sort
+            if (interpretation == null && decl.sort is KUninterpretedSort) {
+                val universe = model.uninterpretedSortUniverse(decl.sort) ?: emptySet()
+                val expr = ctx.mkApp(decl, args)
+                if (expr.uncheckedCast() in universe) {
+                    return expr
+                }
+            }
+
+            // isComplete = true, return and cache
             if (interpretation == null) {
-                // isComplete = true, return and cache
-                return@getOrPut decl.sort.sampleValue()
+                return@getOrPut completeModelValue(decl.sort)
             }
 
             check(args.size == interpretation.vars.size) {
@@ -145,12 +155,29 @@ open class KModelEvaluator(
         }
 
         // in case of partial interpretation we can generate any default expr to preserve expression correctness
-        val defaultExpr = interpretation.default ?: interpretation.sort.sampleValue()
+        val defaultExpr = interpretation.default ?: completeModelValue(interpretation.sort)
         val default = varSubstitution.apply(defaultExpr)
 
         return entries.foldRight(default) { entry, acc ->
             val argBinding = mkAnd(entry.args.zip(args) { ea, a -> mkEq(ea as KExpr<KSort>, a as KExpr<KSort>) })
             mkIte(argBinding, entry.value, acc)
         }
+    }
+
+    private fun <T : KSort> completeModelValue(sort: T): KExpr<T> {
+        val value = when (sort) {
+            is KUninterpretedSort ->
+                model.uninterpretedSortUniverse(sort)
+                    ?.randomOrNull()
+                    ?: sort.sampleValue()
+
+            is KArraySort<*, *> -> {
+                val arrayValue = completeModelValue(sort.range)
+                ctx.mkArrayConst(sort, arrayValue)
+            }
+
+            else -> sort.sampleValue()
+        }
+        return value.asExpr(sort)
     }
 }

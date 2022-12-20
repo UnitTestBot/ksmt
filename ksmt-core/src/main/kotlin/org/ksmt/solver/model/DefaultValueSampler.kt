@@ -49,7 +49,7 @@ class DefaultValueSampler<T : KSort> private constructor(
     }
 
     override fun visit(sort: KUninterpretedSort): KExpr<T> =
-        error("Uninterpreted sort has no values")
+        ctx.uninterpretedSortDefaultValue(sort).asExpr(this@DefaultValueSampler.sort)
 
     companion object{
         fun <T : KSort> T.sampleValue(): KExpr<T> =

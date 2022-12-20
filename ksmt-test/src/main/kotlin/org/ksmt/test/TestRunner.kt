@@ -5,6 +5,7 @@ import kotlinx.coroutines.withTimeout
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.runner.core.KsmtWorkerSession
+import org.ksmt.runner.models.generated.EqualityCheckAssumptionsParams
 import org.ksmt.runner.models.generated.EqualityCheckParams
 import org.ksmt.runner.models.generated.TestAssertParams
 import org.ksmt.runner.models.generated.TestInternalizeAndConvertParams
@@ -67,6 +68,12 @@ class TestRunner(
         val params = EqualityCheckParams(solver, actual, expected)
         worker.protocolModel.addEqualityCheck.startSuspending(worker.lifetime, params)
     }
+
+    suspend fun addEqualityCheckAssumption(solver: Int, assumption: KExpr<KBoolSort>) =
+        withTimeoutAndExceptionHandling {
+            val params = EqualityCheckAssumptionsParams(solver, assumption)
+            worker.protocolModel.addEqualityCheckAssumption.startSuspending(worker.lifetime, params)
+        }
 
     suspend fun checkEqualities(solver: Int): KSolverStatus = withTimeoutAndExceptionHandling {
         worker.protocolModel.checkEqualities.startSuspending(worker.lifetime, solver).status

@@ -3,6 +3,7 @@ package org.ksmt.solver.z3
 import com.microsoft.z3.Expr
 import com.microsoft.z3.FuncDecl
 import com.microsoft.z3.Native
+import com.microsoft.z3.Sort
 import com.microsoft.z3.enumerations.Z3_ast_kind
 import com.microsoft.z3.enumerations.Z3_decl_kind
 import com.microsoft.z3.enumerations.Z3_sort_kind
@@ -55,6 +56,9 @@ open class KZ3ExprConverter(
 
     fun <T : KSort> FuncDecl<*>.convertDeclWrapped(): KDecl<T> =
         z3Ctx.nativeContext.unwrapAST(this).convertDecl()
+
+    fun Sort.convertSortWrapped(): KSort =
+        z3Ctx.nativeContext.unwrapAST(this).convertSort()
 
     fun <T : KSort> Long.convertExpr(): KExpr<T> = convertFromNative()
 

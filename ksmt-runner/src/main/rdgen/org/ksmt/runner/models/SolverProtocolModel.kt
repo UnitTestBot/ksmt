@@ -7,6 +7,7 @@ import com.jetbrains.rd.generator.nova.async
 import com.jetbrains.rd.generator.nova.call
 import com.jetbrains.rd.generator.nova.field
 import com.jetbrains.rd.generator.nova.immutableList
+import com.jetbrains.rd.generator.nova.map
 import com.jetbrains.rd.generator.nova.nullable
 
 object SolverProtocolRoot : Root()
@@ -79,9 +80,15 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
         field("default", kastType.nullable)
     }
 
+    private val modelUninterpretedSortUniverse = structdef {
+        field("sort", kastType)
+        field("universe", immutableList(kastType))
+    }
+
     private val modelResult = structdef {
         field("declarations", immutableList(kastType))
         field("interpretations", immutableList(modelEntry))
+        field("uninterpretedSortUniverse", immutableList(modelUninterpretedSortUniverse))
     }
 
     init {

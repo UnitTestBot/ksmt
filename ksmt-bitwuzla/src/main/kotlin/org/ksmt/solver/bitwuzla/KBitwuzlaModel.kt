@@ -10,10 +10,10 @@ import org.ksmt.solver.KModel
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.solver.model.DefaultValueSampler.Companion.sampleValue
-import org.ksmt.solver.model.KModelEvaluator
 import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 
 open class KBitwuzlaModel(
     private val ctx: KContext,
@@ -42,6 +42,12 @@ open class KBitwuzlaModel(
             }
         }
     }
+
+    // Uninterpreted sorts are not supported in bitwuzla
+    override val uninterpretedSorts: Set<KUninterpretedSort>
+        get() = emptySet()
+
+    override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KExpr<KUninterpretedSort>>? = null
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> interpretation(
@@ -137,7 +143,7 @@ open class KBitwuzlaModel(
 
     override fun detach(): KModel {
         declarations.forEach { interpretation(it) }
-        return KModelImpl(ctx, interpretations.toMutableMap())
+        return KModelImpl(ctx, interpretations.toMutableMap(), uninterpretedSortsUniverses = emptyMap())
     }
 
     /**

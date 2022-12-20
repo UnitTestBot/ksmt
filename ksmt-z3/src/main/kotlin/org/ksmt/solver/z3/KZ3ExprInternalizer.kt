@@ -3,6 +3,7 @@ package org.ksmt.solver.z3
 import com.microsoft.z3.Expr
 import com.microsoft.z3.FuncDecl
 import com.microsoft.z3.Native
+import com.microsoft.z3.Sort
 import com.microsoft.z3.mkQuantifier
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
@@ -175,6 +176,9 @@ open class KZ3ExprInternalizer(
 
     fun <T : KDecl<*>> T.internalizeDeclWrapped(): FuncDecl<*> =
         z3InternCtx.nativeContext.wrapAST(internalizeDecl()) as FuncDecl<*>
+
+    fun KSort.internalizeSortWrapped(): Sort =
+        z3InternCtx.nativeContext.wrapAST(internalizeSort()) as Sort
 
     fun <T : KDecl<*>> T.internalizeDecl(): Long = accept(declInternalizer)
 

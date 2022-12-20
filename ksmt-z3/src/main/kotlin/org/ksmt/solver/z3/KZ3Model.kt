@@ -9,6 +9,7 @@ import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.mkFreshConst
 
 open class KZ3Model(
@@ -24,7 +25,14 @@ open class KZ3Model(
         }
     }
 
+    override val uninterpretedSorts: Set<KUninterpretedSort> by lazy {
+        with(converter) {
+            model.sorts.mapTo(hashSetOf()) { it.convertSortWrapped() as KUninterpretedSort }
+        }
+    }
+
     private val interpretations = hashMapOf<KDecl<*>, KModel.KFuncInterp<*>?>()
+    private val uninterpretedSortsUniverses = hashMapOf<KUninterpretedSort, Set<KExpr<KUninterpretedSort>>>()
 
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
         ensureContextActive()
@@ -50,6 +58,17 @@ open class KZ3Model(
                 else -> error("decl $decl is in model declarations but not present in model")
             }
         } as? KModel.KFuncInterp<T>
+
+    override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KExpr<KUninterpretedSort>>? =
+        uninterpretedSortsUniverses.getOrPut(sort) {
+            if (sort !in uninterpretedSorts) {
+                return@getOrPut emptySet()
+            }
+
+            val z3Sort = with(internalizer) { sort.internalizeSortWrapped() }
+            val z3SortUniverse = model.getSortUniverse(z3Sort)
+            with(converter) { z3SortUniverse.mapTo(hashSetOf()) { it.convertExprWrapped() } }
+        }
 
     private fun <T : KSort> constInterp(decl: FuncDecl<*>): KModel.KFuncInterp<T>? {
         val z3Expr = model.getConstInterp(decl) ?: return null
@@ -83,7 +102,11 @@ open class KZ3Model(
             interpretation(it) ?: error("missed interpretation for $it")
         }
 
-        return KModelImpl(ctx, interpretations)
+        val uninterpretedSortsUniverses = uninterpretedSorts.associateWith {
+            uninterpretedSortUniverse(it) ?: error("missed sort universe for $it")
+        }
+
+        return KModelImpl(ctx, interpretations, uninterpretedSortsUniverses)
     }
 
     private fun ensureContextActive() = check(internCtx.isActive) { "Context already closed" }

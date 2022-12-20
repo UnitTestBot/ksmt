@@ -2006,6 +2006,14 @@ open class KContext : AutoCloseable {
     fun mkUniversalQuantifier(body: KExpr<KBoolSort>, bounds: List<KDecl<*>>) =
         universalQuantifierCache.createIfContextActive(body, bounds)
 
+    private val uninterpretedSortDefaultValueCache = mkClosableCache { sort: KUninterpretedSort ->
+        ensureContextMatch(sort)
+        mkFreshConst("${sort.name}_default_value", sort)
+    }
+
+    fun uninterpretedSortDefaultValue(sort: KUninterpretedSort): KExpr<KUninterpretedSort> =
+        uninterpretedSortDefaultValueCache.createIfContextActive(sort)
+
     // utils
     private val exprSortCache = mkClosableCache { expr: KExpr<*> -> computeExprSort(expr) }
     private fun computeExprSort(expr: KExpr<*>): KSort {

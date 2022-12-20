@@ -92,9 +92,21 @@ abstract class BenchmarksBasedTest {
 
                 checkAsArrayDeclsPresentInModel(ctx, model)
 
-                val evaluatedAssertions = ksmtAssertions.map { model.eval(it, isComplete = true) }
+                val evaluatedAssertions = ksmtAssertions.map { model.eval(it, isComplete = false) }
+
+                val cardinalityConstraints = model.uninterpretedSorts.mapNotNull { sort ->
+                    model.uninterpretedSortUniverse(sort)?.let { sort to it }
+                }.map { (sort, universe) ->
+                    with(ctx) {
+                        val x = mkFreshConst("x", sort)
+                        val variants = mkOr(universe.map { x eq it })
+                        val uniqueness = mkDistinct(universe.toList())
+                        mkUniversalQuantifier(variants and uniqueness, listOf(x.decl))
+                    }
+                }
 
                 worker.performEqualityChecks {
+                    cardinalityConstraints.forEach { assume(it) }
                     evaluatedAssertions.forEach { isTrue(it) }
                     check { "assertions are not true in model" }
                 }
@@ -310,6 +322,10 @@ abstract class BenchmarksBasedTest {
         }
 
         suspend fun isTrue(actual: KExpr<*>) = areEqual(actual, workerTrueExpr)
+
+        suspend fun assume(expr: KExpr<KBoolSort>) {
+            worker.addEqualityCheckAssumption(solver, expr)
+        }
 
         suspend fun check(message: () -> String) {
             val status = worker.checkEqualities(solver)

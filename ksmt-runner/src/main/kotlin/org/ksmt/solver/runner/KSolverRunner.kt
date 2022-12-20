@@ -23,6 +23,7 @@ import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 import kotlin.time.Duration
 
 class KSolverRunner<Config: KSolverConfiguration>(
@@ -173,7 +174,11 @@ class KSolverRunner<Config: KSolverConfiguration>(
             )
             (decl as KDecl<*>) to functionInterp
         }
-        return KModelImpl(worker.astSerializationCtx.ctx, interpretations.toMap())
+        val uninterpretedSortUniverse = result.uninterpretedSortUniverse.associateBy(
+            { entry -> entry.sort as KUninterpretedSort },
+            { entry -> entry.universe.mapTo(hashSetOf()) { it as KExpr<KUninterpretedSort> } }
+        )
+        return KModelImpl(worker.astSerializationCtx.ctx, interpretations.toMap(), uninterpretedSortUniverse)
     }
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = runBlocking {
