@@ -9,8 +9,12 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.params.provider.Arguments
 import org.ksmt.KContext
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KDivArithExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFunctionAsArray
+import org.ksmt.expr.KModIntExpr
+import org.ksmt.expr.KPowerArithExpr
+import org.ksmt.expr.KRemIntExpr
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.runner.core.KsmtWorkerArgs
@@ -26,8 +30,10 @@ import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.runner.KSolverRunnerManager
+import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KSort
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -105,9 +111,18 @@ abstract class BenchmarksBasedTest {
                     }
                 }
 
+                /**
+                 * Evaluated assertion may contain some underspecified
+                 * operations (e.g division by zero). Currently used test oracle (Z3)
+                 * can define any interpretation for the underspecified operations
+                 * and therefore (not (= a true)) check will always be SAT.
+                 * We consider such cases as false positives.
+                 * */
+                val assertionsToCheck = evaluatedAssertions.filterNot { hasUnderspecifiedOperations(it) }
+
                 worker.performEqualityChecks {
                     cardinalityConstraints.forEach { assume(it) }
-                    evaluatedAssertions.forEach { isTrue(it) }
+                    assertionsToCheck.forEach { isTrue(it) }
                     check { "assertions are not true in model" }
                 }
             }
@@ -183,6 +198,46 @@ abstract class BenchmarksBasedTest {
             Assumptions.assumeTrue(false, testIgnoreReason)
         } finally {
             worker.release()
+        }
+    }
+
+    /**
+     * Check if expression contains underspecified operations:
+     * 1. division by zero
+     * 2. integer mod/rem with zero divisor
+     * 3. zero to the zero power
+     * */
+    private fun hasUnderspecifiedOperations(expr: KExpr<*>): Boolean {
+        val detector = UnderspecifiedOperationDetector(expr.ctx)
+        detector.apply(expr)
+        return detector.hasUnderspecifiedOperation
+    }
+
+    private class UnderspecifiedOperationDetector(ctx: KContext) : KNonRecursiveTransformer(ctx) {
+        var hasUnderspecifiedOperation = false
+
+        override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>): KExpr<T> =
+            super.transform(expr).also { checkDivisionByZero(expr.rhs) }
+
+        override fun transform(expr: KModIntExpr): KExpr<KIntSort> =
+            super.transform(expr).also { checkDivisionByZero(expr.rhs) }
+
+        override fun transform(expr: KRemIntExpr): KExpr<KIntSort> =
+            super.transform(expr).also { checkDivisionByZero(expr.rhs) }
+
+        override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>): KExpr<T> =
+            super.transform(expr).also { checkZeroToZeroPower(expr.lhs, expr.rhs) }
+
+        private fun checkDivisionByZero(divisor: KExpr<*>) = with(ctx) {
+            if (divisor == 0.expr) {
+                hasUnderspecifiedOperation = true
+            }
+        }
+
+        private fun checkZeroToZeroPower(base: KExpr<*>, power: KExpr<*>) = with(ctx) {
+            if (base == 0.expr && power == 0.expr) {
+                hasUnderspecifiedOperation = true
+            }
         }
     }
 
