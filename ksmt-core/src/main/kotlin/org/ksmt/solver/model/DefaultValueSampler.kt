@@ -32,7 +32,7 @@ class DefaultValueSampler<T : KSort> private constructor(
     }
 
     override fun <S : KBvSort> visit(sort: S): KExpr<T> = with(ctx) {
-        mkBv("0", sort.sizeBits).asExpr(this@DefaultValueSampler.sort)
+        mkBv(0, sort.sizeBits).asExpr(this@DefaultValueSampler.sort)
     }
 
     override fun <S : KFpSort> visit(sort: S): KExpr<T> = with(ctx) {
