@@ -169,12 +169,12 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
             }
 
             // (ite true t e) ==> t
-            if (simplifiedCondition == trueExpr) {
+            if (c == trueExpr) {
                 return@simplifyApp rewrite(t)
             }
 
             // (ite false t e) ==> e
-            if (simplifiedCondition == falseExpr) {
+            if (c == falseExpr) {
                 return@simplifyApp rewrite(e)
             }
 
