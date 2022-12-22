@@ -44,7 +44,7 @@ class KYicesModel(
             sort = decl.sort,
             vars = emptyList(),
             entries = emptyList(),
-            default = mkBv(model.bvValue(yval).toTypedArray(), decl.sort.sizeBits)
+            default = mkBv(model.bvValue(yval), decl.sort.sizeBits)
         )
     }
 

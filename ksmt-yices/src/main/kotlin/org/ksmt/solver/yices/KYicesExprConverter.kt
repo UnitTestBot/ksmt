@@ -183,7 +183,7 @@ open class KYicesExprConverter(
             }
 
             Constructor.BV_CONSTANT -> convert {
-                mkBv(Terms.bvConstValue(expr).toTypedArray(), Terms.bitSize(expr).toUInt())
+                mkBv(Terms.bvConstValue(expr), Terms.bitSize(expr).toUInt())
             }
 
             Constructor.VARIABLE, Constructor.UNINTERPRETED_TERM -> convert {
@@ -240,7 +240,7 @@ open class KYicesExprConverter(
             }
 
             Pair(
-                mkBv(component.constValue, bvSize),
+                mkBv(component.constValue.toBooleanArray(), bvSize),
                 component.term
             )
         }.unzip()
