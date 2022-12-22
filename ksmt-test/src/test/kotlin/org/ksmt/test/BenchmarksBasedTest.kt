@@ -11,6 +11,8 @@ import org.ksmt.KContext
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KDivArithExpr
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFpToBvExpr
+import org.ksmt.expr.KFpToRealExpr
 import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KModIntExpr
 import org.ksmt.expr.KPowerArithExpr
@@ -33,7 +35,10 @@ import org.ksmt.solver.runner.KSolverRunnerManager
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KBvSort
+import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KIntSort
+import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -206,6 +211,7 @@ abstract class BenchmarksBasedTest {
      * 1. division by zero
      * 2. integer mod/rem with zero divisor
      * 3. zero to the zero power
+     * 4. Fp to number conversions with NaN and Inf
      * */
     private fun hasUnderspecifiedOperations(expr: KExpr<*>): Boolean {
         val detector = UnderspecifiedOperationDetector(expr.ctx)
@@ -228,6 +234,12 @@ abstract class BenchmarksBasedTest {
         override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>): KExpr<T> =
             super.transform(expr).also { checkZeroToZeroPower(expr.lhs, expr.rhs) }
 
+        override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>): KExpr<KBvSort> =
+            super.transform(expr).also { checkFpNanOrInf(expr.value) }
+
+        override fun <T : KFpSort> transform(expr: KFpToRealExpr<T>): KExpr<KRealSort>  =
+            super.transform(expr).also { checkFpNanOrInf(expr.value) }
+
         private fun checkDivisionByZero(divisor: KExpr<*>) = with(ctx) {
             if (divisor == 0.expr) {
                 hasUnderspecifiedOperation = true
@@ -236,6 +248,17 @@ abstract class BenchmarksBasedTest {
 
         private fun checkZeroToZeroPower(base: KExpr<*>, power: KExpr<*>) = with(ctx) {
             if (base == 0.expr && power == 0.expr) {
+                hasUnderspecifiedOperation = true
+            }
+        }
+
+        private fun <T: KFpSort> checkFpNanOrInf(value: KExpr<T>) = with(ctx) {
+            val underspecifiedValues = setOf(
+                mkFpNan(value.sort),
+                mkFpInf(signBit = true, value.sort),
+                mkFpInf(signBit = false, value.sort),
+            )
+            if (value in underspecifiedValues) {
                 hasUnderspecifiedOperation = true
             }
         }
