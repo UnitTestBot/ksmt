@@ -527,7 +527,10 @@ open class KZ3ExprConverter(
         val convertedExpr = when {
             Native.isQuantifierForall(nCtx, expr) -> mkUniversalQuantifier(body, bounds)
             Native.isQuantifierExists(nCtx, expr) -> mkExistentialQuantifier(body, bounds)
-            Native.isLambda(nCtx, expr) -> TODO("array lambda converter")
+            Native.isLambda(nCtx, expr) -> {
+                val boundVar = bounds.singleOrNull() ?: TODO("Array lambda with multiple indices")
+                mkArrayLambda(boundVar, body)
+            }
             else -> TODO("unexpected quantifier: ${Native.astToString(nCtx, expr)}")
         }
 
