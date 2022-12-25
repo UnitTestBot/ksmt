@@ -58,7 +58,7 @@ abstract class BenchmarksBasedTest {
         name: String,
         samplePath: Path,
         mkKsmtAssertions: suspend TestRunner.(List<KExpr<KBoolSort>>) -> List<KExpr<KBoolSort>>
-    ) {
+    ) = handleIgnoredTests("testConverter[$name]") {
         ignoreNoTestDataStub(name)
         val ctx = KContext()
         testWorkers.withWorker(ctx) { worker ->
@@ -84,7 +84,7 @@ abstract class BenchmarksBasedTest {
         name: String,
         samplePath: Path,
         solverType: KClass<out KSolver<C>>
-    ) {
+    ) = handleIgnoredTests("testModelConversion[$name]") {
         ignoreNoTestDataStub(name)
         val ctx = KContext()
         testWorkers.withWorker(ctx) { worker ->
@@ -96,7 +96,9 @@ abstract class BenchmarksBasedTest {
                     ksmtAssertions.forEach { testSolver.assertAsync(it) }
 
                     val status = testSolver.checkAsync(timeout = 1.seconds)
-                    Assumptions.assumeTrue(status == KSolverStatus.SAT, "No model to check")
+                    if (status != KSolverStatus.SAT) {
+                        ignoreTest { "No model to check" }
+                    }
 
                     testSolver.modelAsync()
                 }
@@ -138,7 +140,7 @@ abstract class BenchmarksBasedTest {
         name: String,
         samplePath: Path,
         solverType: KClass<out KSolver<C>>
-    ) {
+    ) = handleIgnoredTests("testSolver[$name]") {
         ignoreNoTestDataStub(name)
         val ctx = KContext()
         testWorkers.withWorker(ctx) { worker ->
@@ -150,8 +152,8 @@ abstract class BenchmarksBasedTest {
                 }
 
                 val expectedStatus = worker.check(solver)
-                Assumptions.assumeTrue(expectedStatus != KSolverStatus.UNKNOWN) {
-                    "expected status: unknown"
+                if (expectedStatus == KSolverStatus.UNKNOWN) {
+                    ignoreTest { "Expected status is unknown" }
                 }
 
                 val ksmtAssertions = worker.convertAssertions(assertions)
@@ -161,8 +163,8 @@ abstract class BenchmarksBasedTest {
 
                     // use greater timeout to reduce false-positive unknowns
                     val status = ksmtSolver.check(timeout = 2.seconds)
-                    Assumptions.assumeTrue(status != KSolverStatus.UNKNOWN) {
-                        "Actual status is unknown: ${ksmtSolver.reasonOfUnknown()}"
+                    if (status == KSolverStatus.UNKNOWN) {
+                        ignoreTest { "Actual status is unknown: ${ksmtSolver.reasonOfUnknown()}" }
                     }
 
                     status
@@ -179,10 +181,7 @@ abstract class BenchmarksBasedTest {
         val worker = try {
             getOrCreateFreeWorker()
         } catch (ex: WorkerInitializationFailedException) {
-            val testIgnoreReason = "worker initialization failed -- ${ex.message}"
-            System.err.println(testIgnoreReason)
-            Assumptions.assumeTrue(false, testIgnoreReason)
-            error("ignored")
+            ignoreTest { "worker initialization failed -- ${ex.message}" }
         }
         worker.astSerializationCtx.initCtx(ctx)
         worker.lifetime.onTermination {
@@ -198,9 +197,7 @@ abstract class BenchmarksBasedTest {
                 }
             }
         } catch (ex: TimeoutCancellationException) {
-            val testIgnoreReason = "worker timeout -- ${ex.message}"
-            System.err.println(testIgnoreReason)
-            Assumptions.assumeTrue(false, testIgnoreReason)
+            ignoreTest { "worker timeout -- ${ex.message}" }
         } finally {
             worker.release()
         }
@@ -343,6 +340,11 @@ abstract class BenchmarksBasedTest {
             solverManager.close()
             testWorkers.terminate()
         }
+
+        // See [handleIgnoredTests]
+        inline fun ignoreTest(message: () -> String?): Nothing {
+            throw IgnoreTestException(message())
+        }
     }
 
     data class BenchmarkTestArguments(
@@ -418,10 +420,8 @@ abstract class BenchmarksBasedTest {
                     assertTrue(false, message())
                 }
 
-                KSolverStatus.UNKNOWN -> {
-                    val testIgnoreReason = "equality check: unknown -- ${worker.getReasonUnknown(solver)}"
-                    System.err.println(testIgnoreReason)
-                    Assumptions.assumeTrue(false, testIgnoreReason)
+                KSolverStatus.UNKNOWN -> ignoreTest {
+                    "equality check: unknown -- ${worker.getReasonUnknown(solver)}"
                 }
             }
         }
@@ -432,13 +432,9 @@ abstract class BenchmarksBasedTest {
             body()
         }
     } catch (ex: SmtLibParseError) {
-        val testIgnoreReason = "parse failed -- ${ex.message}"
-        System.err.println(testIgnoreReason)
-        Assumptions.assumeTrue(false, testIgnoreReason)
+        ignoreTest { "parse failed -- ${ex.message}" }
     } catch (ex: TimeoutCancellationException) {
-        val testIgnoreReason = "timeout -- ${ex.message}"
-        System.err.println(testIgnoreReason)
-        Assumptions.assumeTrue(false, testIgnoreReason)
+        ignoreTest { "timeout -- ${ex.message}" }
     }
 
     inline fun TestRunner.skipUnsupportedSolverFeatures(body: () -> Unit) = try {
@@ -446,15 +442,13 @@ abstract class BenchmarksBasedTest {
             body()
         }
     } catch (ex: NotImplementedError) {
-        val reducedStackTrace = ex.stackTrace.take(5).joinToString("\n") { it.toString() }
-        val report = "${ex.message}\n$reducedStackTrace"
-
-        System.err.println(report)
         // skip test with not implemented feature
-
-        Assumptions.assumeTrue(false, ex.message)
+        ignoreTest {
+            val reducedStackTrace = ex.stackTrace.take(5).joinToString("\n") { it.toString() }
+            "${ex.message}\n$reducedStackTrace"
+        }
     } catch (ex: KSolverUnsupportedFeatureException) {
-        Assumptions.assumeTrue(false, ex.message)
+        ignoreTest { ex.message }
     }
 
     inline fun <reified T> TestRunner.handleWrappedSolverException(body: () -> T): T = try {
@@ -468,4 +462,21 @@ abstract class BenchmarksBasedTest {
         throw unwrappedException
     }
 
+    class IgnoreTestException(message: String?) : Exception(message)
+
+    /**
+     * When a test is ignored via JUnit assumption the reason (message)
+     * of the ignore is not shown in the test report.
+     * To keep some insight on the ignore reasons we use
+     * logging to stderr, since it is present in test reports.
+     * */
+    fun handleIgnoredTests(testName: String, testBody: () -> Unit) {
+        try {
+            testBody()
+        } catch (ignore: IgnoreTestException) {
+            val testClassName = javaClass.canonicalName
+            System.err.println("IGNORE $testClassName.$testName: ${ignore.message}")
+            Assumptions.assumeTrue(false)
+        }
+    }
 }

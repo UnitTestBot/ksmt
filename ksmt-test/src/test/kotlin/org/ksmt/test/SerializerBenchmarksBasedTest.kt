@@ -25,7 +25,7 @@ class SerializerBenchmarksBasedTest : BenchmarksBasedTest() {
     fun testSerializer(
         name: String,
         samplePath: Path
-    ) {
+    ) = handleIgnoredTests("testSerializer[$name]") {
         val ctx1 = KContext()
         val ctx2 = KContext()
         testWorkers.withWorker(ctx1) { worker ->
