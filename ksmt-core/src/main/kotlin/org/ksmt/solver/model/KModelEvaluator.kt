@@ -64,16 +64,15 @@ open class KModelEvaluator(
                 return@getOrPut completeModelValue(expr.sort)
             }
 
-            when (interpretation.vars.size) {
-                0 -> evalArrayInterpretation(expr.sort, interpretation)
-                1 -> evalArrayFunction(
-                    expr.sort,
-                    expr.function,
-                    interpretation.vars.single().uncheckedCast(),
-                    interpretation
-                )
-                else -> error("Function ${expr.function} has free vars but used in as-array")
-            }
+            val idxDecl = interpretation.vars.singleOrNull()
+                ?: error("Function ${expr.function} has ${interpretation.vars} vars but used in as-array")
+
+            evalArrayFunction(
+                expr.sort,
+                expr.function,
+                idxDecl.uncheckedCast(),
+                interpretation
+            )
         }
         return evaluatedArray.asExpr(expr.sort).also { rewrite(it) }
     }

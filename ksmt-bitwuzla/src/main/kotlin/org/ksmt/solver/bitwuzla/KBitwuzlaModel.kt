@@ -14,6 +14,8 @@ import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
+import org.ksmt.utils.mkFreshConst
+import org.ksmt.utils.mkFreshConstDecl
 
 open class KBitwuzlaModel(
     private val ctx: KContext,
@@ -97,7 +99,9 @@ open class KBitwuzlaModel(
             "function arity mismatch: ${interp.arity} and ${decl.argSorts.size}"
         }
 
+        val vars = decl.argSorts.map { it.mkFreshConstDecl("x") }
         for (i in 0 until interp.size) {
+            // Don't substitute vars since arguments in Bitwuzla model are always constants
             val args = interp.args[i].zip(decl.argSorts) { arg, sort -> arg.convertExpr(sort) }
             val value = interp.values[i].convertExpr(decl.sort)
             entries += KModel.KFuncInterpEntry(args, value)
@@ -105,7 +109,7 @@ open class KBitwuzlaModel(
 
         KModel.KFuncInterp(
             sort = decl.sort,
-            vars = emptyList(),
+            vars = vars,
             entries = entries,
             default = null
         )
@@ -128,10 +132,11 @@ open class KBitwuzlaModel(
 
         val default = interp.defaultValue?.convertExpr(sort.range)
         val arrayInterpDecl = mkFreshFuncDecl("array", sort.range, listOf(sort.domain))
+        val arrayInterpIndexDecl = mkFreshConstDecl("idx", sort.domain)
 
         interpretations[arrayInterpDecl] = KModel.KFuncInterp(
             sort = sort.range,
-            vars = emptyList(),
+            vars = listOf(arrayInterpIndexDecl),
             entries = entries,
             default = default
         )

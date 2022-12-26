@@ -52,7 +52,7 @@ class ModelEvaluationTest {
         val tmpDecl = mkFreshFuncDecl("array", bv32Sort, listOf(bv32Sort))
         val tmpInterp = KModel.KFuncInterp(
             sort = bv32Sort,
-            vars = emptyList(),
+            vars = listOf(mkFreshConstDecl("idx", bv32Sort)),
             entries = listOf(
                 KModel.KFuncInterpEntry(
                     args = listOf(idx),

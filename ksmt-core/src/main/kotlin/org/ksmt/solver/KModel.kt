@@ -27,6 +27,12 @@ interface KModel {
         val entries: List<KFuncInterpEntry<T>>,
         val default: KExpr<T>?
     ){
+        init {
+            require(entries.all { it.args.size == vars.size }) {
+                "Function interpretation arguments mismatch"
+            }
+        }
+
         override fun toString(): String {
             if (entries.isEmpty()) return default.toString()
             return buildString {
