@@ -28,6 +28,7 @@ open class KBitwuzlaModel(
 
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> = bitwuzlaCtx.bitwuzlaTry {
         with(ctx) {
+            ctx.ensureContextMatch(expr)
             bitwuzlaCtx.ensureActive()
 
             val term = with(internalizer) { expr.internalize() }
@@ -53,6 +54,8 @@ open class KBitwuzlaModel(
     override fun <T : KSort> interpretation(
         decl: KDecl<T>
     ): KModel.KFuncInterp<T> = with(ctx) {
+        ensureContextMatch(decl)
+
         val interpretation = interpretations.getOrPut(decl) {
             bitwuzlaCtx.bitwuzlaTry {
                 bitwuzlaCtx.ensureActive()

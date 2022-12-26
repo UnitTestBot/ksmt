@@ -35,6 +35,7 @@ open class KZ3Model(
     private val uninterpretedSortsUniverses = hashMapOf<KUninterpretedSort, Set<KExpr<KUninterpretedSort>>>()
 
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
+        ctx.ensureContextMatch(expr)
         ensureContextActive()
 
         val z3Expr = with(internalizer) { expr.internalizeExprWrapped() }
@@ -46,6 +47,7 @@ open class KZ3Model(
     @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? =
         interpretations.getOrPut(decl) {
+            ctx.ensureContextMatch(decl)
             ensureContextActive()
 
             if (decl !in declarations) return@getOrPut null
@@ -61,6 +63,8 @@ open class KZ3Model(
 
     override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KExpr<KUninterpretedSort>>? =
         uninterpretedSortsUniverses.getOrPut(sort) {
+            ctx.ensureContextMatch(sort)
+
             if (sort !in uninterpretedSorts) {
                 return@getOrPut emptySet()
             }

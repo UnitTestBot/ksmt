@@ -5,6 +5,7 @@ import com.jetbrains.rd.util.reactive.RdFault
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.runner.core.KsmtWorkerSession
@@ -27,6 +28,7 @@ import org.ksmt.sort.KUninterpretedSort
 import kotlin.time.Duration
 
 class KSolverRunner<Config: KSolverConfiguration>(
+    private val ctx: KContext,
     private val hardTimeout: Duration,
     private val worker: KsmtWorkerSession<SolverProtocolModel>,
     private val configurationBuilder: KSolverUniversalConfigurationBuilder<Config>,
@@ -70,7 +72,9 @@ class KSolverRunner<Config: KSolverConfiguration>(
     }
 
     suspend fun assertAsync(expr: KExpr<KBoolSort>) {
+        ctx.ensureContextMatch(expr)
         ensureActive()
+
         val params = AssertParams(expr)
         withTimeoutAndExceptionHandling {
             worker.protocolModel.assert.startSuspending(worker.lifetime, params)
@@ -82,7 +86,9 @@ class KSolverRunner<Config: KSolverConfiguration>(
     }
 
     suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>): KExpr<KBoolSort> {
+        ctx.ensureContextMatch(expr)
         ensureActive()
+
         val params = AssertParams(expr)
         val result = withTimeoutAndExceptionHandling {
             worker.protocolModel.assertAndTrack.startSuspending(worker.lifetime, params)
@@ -141,7 +147,9 @@ class KSolverRunner<Config: KSolverConfiguration>(
         assumptions: List<KExpr<KBoolSort>>,
         timeout: Duration
     ): KSolverStatus {
+        ctx.ensureContextMatch(assumptions)
         ensureActive()
+
         val params = CheckWithAssumptionsParams(assumptions, timeout.inWholeMilliseconds)
         return handleCheckTimeoutAsUnknown {
             val result = withTimeoutAndExceptionHandling {

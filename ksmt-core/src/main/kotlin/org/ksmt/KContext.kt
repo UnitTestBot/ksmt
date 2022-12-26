@@ -3046,7 +3046,7 @@ open class KContext : AutoCloseable {
         get() = buildString { print(this) }
 
     // context utils
-    private fun ensureContextMatch(vararg args: KAst) {
+    fun ensureContextMatch(vararg args: KAst) {
         for (arg in args) {
             require(this === arg.ctx) { "Context mismatch" }
         }

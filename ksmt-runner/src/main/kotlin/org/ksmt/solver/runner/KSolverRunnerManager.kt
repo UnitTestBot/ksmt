@@ -55,7 +55,7 @@ class KSolverRunnerManager(
         worker.astSerializationCtx.initCtx(ctx)
         worker.lifetime.onTermination { worker.astSerializationCtx.resetCtx() }
         val configurationBuilder = solverConfigurationBuilder(solver)
-        return KSolverRunner(hardTimeout, worker, configurationBuilder).also {
+        return KSolverRunner(ctx, hardTimeout, worker, configurationBuilder).also {
             it.initSolver(solverType)
         }
     }

@@ -22,6 +22,8 @@ open class KModelImpl(
         expr: KExpr<T>,
         isComplete: Boolean
     ): KExpr<T> {
+        ctx.ensureContextMatch(expr)
+
         val evaluator = KModelEvaluator(ctx, this, isComplete)
         return evaluator.apply(expr)
     }
@@ -29,10 +31,17 @@ open class KModelImpl(
     @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> interpretation(
         decl: KDecl<T>
-    ): KModel.KFuncInterp<T>? = interpretations[decl] as? KModel.KFuncInterp<T>
+    ): KModel.KFuncInterp<T>? {
+        ctx.ensureContextMatch(decl)
 
-    override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KExpr<KUninterpretedSort>>? =
-        uninterpretedSortsUniverses[sort]
+        return interpretations[decl] as? KModel.KFuncInterp<T>
+    }
+
+    override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KExpr<KUninterpretedSort>>? {
+        ctx.ensureContextMatch(sort)
+
+        return uninterpretedSortsUniverses[sort]
+    }
 
     override fun detach(): KModel = this
 
