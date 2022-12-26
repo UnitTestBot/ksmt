@@ -2737,8 +2737,16 @@ object Native {
      * Convert bv const bits to uint64.
      * Only safe if [bitwuzlaBvBitsGetWidth] <= 64.
      * */
+    @Deprecated("Doesn't work on Windows because of JNA", level = DeprecationLevel.ERROR)
     fun bitwuzlaBvBitsToUInt64(bv: BitwuzlaBitVector): Long =
         bzla_bv_to_uint64(bv).checkError()
+
+    /**
+     * Convert bv const bits to uint32.
+     * Only safe if [bitwuzlaBvBitsGetWidth] <= 32.
+     * */
+    fun bitwuzlaBvBitsToUInt32(bv: BitwuzlaBitVector): Int =
+        bzla_bv_to_uint64(bv).toInt().checkError()
 
     /**
      * Get a single bit (0 or 1) from bv const bits.

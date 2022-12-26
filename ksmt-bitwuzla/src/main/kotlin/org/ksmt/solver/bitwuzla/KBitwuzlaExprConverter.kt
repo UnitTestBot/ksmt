@@ -322,12 +322,23 @@ open class KBitwuzlaExprConverter(
 
             check(size == nativeBitsSize) { "Bv size mismatch, expr size $size, native size $nativeBitsSize " }
 
-            val bits = if (size <= Long.SIZE_BITS) {
+            val bits = when {
+                size <= Int.SIZE_BITS -> {
+                    val numericValue = Native.bitwuzlaBvBitsToUInt32(nativeBits).toUInt()
+                    numericValue.toString(radix = 2).padStart(size, '0')
+                }
+                /**
+                Disabled until [Native.bitwuzlaBvBitsToUInt64] will be fixed
+
+                size <= Long.SIZE_BITS -> {
                 val numericValue = Native.bitwuzlaBvBitsToUInt64(nativeBits).toULong()
                 numericValue.toString(radix = 2).padStart(size, '0')
-            } else {
-                val bits = BooleanArray(size) { nativeBits.getBit(it) }
-                bits.toReversedBinaryString()
+                }
+                 */
+                else -> {
+                    val bits = BooleanArray(size) { nativeBits.getBit(it) }
+                    bits.toReversedBinaryString()
+                }
             }
 
             mkBv(bits, size.toUInt())
@@ -354,13 +365,17 @@ open class KBitwuzlaExprConverter(
             }
 
             when (size) {
+                /**
+                Disabled until [Native.bitwuzlaBvBitsToUInt64] will be fixed
+
                 Double.SIZE_BITS -> {
-                    val numericValue = Native.bitwuzlaBvBitsToUInt64(nativeBits)
-                    mkFp(Double.fromBits(numericValue), sort)
+                val numericValue = Native.bitwuzlaBvBitsToUInt64(nativeBits)
+                mkFp(Double.fromBits(numericValue), sort)
                 }
+                 */
                 Float.SIZE_BITS -> {
-                    val numericValue = Native.bitwuzlaBvBitsToUInt64(nativeBits)
-                    mkFp(Float.fromBits(numericValue.toInt()), sort)
+                    val numericValue = Native.bitwuzlaBvBitsToUInt32(nativeBits)
+                    mkFp(Float.fromBits(numericValue), sort)
                 }
                 else -> {
                     val exponentSize = sort.exponentBits

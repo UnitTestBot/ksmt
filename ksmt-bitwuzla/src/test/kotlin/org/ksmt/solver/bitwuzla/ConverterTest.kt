@@ -2,6 +2,7 @@ package org.ksmt.solver.bitwuzla
 
 import org.ksmt.KContext
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
@@ -167,4 +168,19 @@ class ConverterTest {
         Native.bitwuzlaPop(bitwuzla, 1)
         status == BitwuzlaResult.BITWUZLA_UNSAT
     }
+
+    @Test
+    fun testBvValueConversion() = with(bitwuzlaCtx) {
+        val ctx = KContext()
+        val converter = KBitwuzlaExprConverter(ctx, this)
+
+        val ones52 = Native.bitwuzlaMkBvOnes(bitwuzla, Native.bitwuzlaMkBvSort(bitwuzla, 52))
+        val ksmtOnes52 = with(converter) { ones52.convertExpr(ctx.mkBvSort(52u)) }
+        assertEquals(52, (ksmtOnes52 as KBitVecValue<*>).stringValue.count { it == '1' })
+
+        val ones32 = Native.bitwuzlaMkBvOnes(bitwuzla, Native.bitwuzlaMkBvSort(bitwuzla, 32))
+        val ksmtOnes32 = with(converter) { ones32.convertExpr(ctx.bv32Sort) }
+        assertEquals(32, (ksmtOnes32 as KBitVecValue<*>).stringValue.count { it == '1' })
+    }
+
 }
