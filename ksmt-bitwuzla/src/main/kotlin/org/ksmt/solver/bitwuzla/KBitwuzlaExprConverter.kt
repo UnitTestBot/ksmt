@@ -23,6 +23,7 @@ import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.mkFreshConst
+import org.ksmt.utils.uncheckedCast
 
 @Suppress("LargeClass")
 open class KBitwuzlaExprConverter(
@@ -565,39 +566,21 @@ open class KBitwuzlaExprConverter(
                 ctx.mkBvToFpExpr(sort, rm, value, signed = false)
             }
         BitwuzlaKind.BITWUZLA_KIND_FP_FP -> expr.convert(ctx::mkFpFromBvExpr)
-        BitwuzlaKind.BITWUZLA_KIND_FP_TO_FP_FROM_BV -> {
-            val indices = Native.bitwuzlaTermGetIndices(expr)
-            check(indices.size == 2) { "unexpected fp-from-bv indices: $indices" }
-            val (exponentSize, significandSize) = indices
-            val bvValue = Native.bitwuzlaTermGetChildren(expr).single()
-            val bvSize = Native.bitwuzlaTermBvGetSize(bvValue)
-            check(bvSize == exponentSize + significandSize) {
-                "unexpected bv size in fp-from-bv: bv-size $bvSize, exp $exponentSize, significand $significandSize"
+        BitwuzlaKind.BITWUZLA_KIND_FP_TO_FP_FROM_BV ->
+            expr.convert { bv: KExpr<KBvSort> ->
+                with(ctx) {
+                    val indices = Native.bitwuzlaTermGetIndices(expr)
+                    check(indices.size == 2) { "unexpected fp-from-bv indices: $indices" }
+                    val exponentSize = indices.first()
+                    val size = bv.sort.sizeBits.toInt()
+
+                    val sign = mkBvExtractExpr(size - 1, size - 1, bv)
+                    val exponent = mkBvExtractExpr(size - 2, size - exponentSize - 1, bv)
+                    val significand = mkBvExtractExpr(size - exponentSize - 2, 0, bv)
+
+                    mkFpFromBvExpr(sign.uncheckedCast(), exponent, significand)
+                }
             }
-
-            // rewrite expression as fp_fp
-            val signBv = Native.bitwuzlaMkTerm1Indexed2(
-                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_EXTRACT,
-                bvValue,
-                bvSize - 1, bvSize - 1
-            )
-            val exponentBv = Native.bitwuzlaMkTerm1Indexed2(
-                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_EXTRACT,
-                bvValue,
-                bvSize - 2, bvSize - 1 - exponentSize
-            )
-            val significandBv = Native.bitwuzlaMkTerm1Indexed2(
-                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_EXTRACT,
-                bvValue,
-                significandSize - 2, 0
-            )
-            val rewritedExpr = Native.bitwuzlaMkTerm3(
-                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FP_FP,
-                signBv, exponentBv, significandBv
-            )
-
-            convertNativeExpr(rewritedExpr)
-        }
         BitwuzlaKind.BITWUZLA_KIND_FP_TO_FP_FROM_FP ->
             expr.convert { rm: KExpr<KFpRoundingModeSort>, value: KExpr<KFpSort> ->
                 val sort = Native.bitwuzlaTermGetSort(expr).convertSort() as KFpSort
