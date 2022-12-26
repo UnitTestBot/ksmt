@@ -34,8 +34,13 @@ object Native {
     }
 
     init {
-        if (Platform.isWindows()) {
-            Native.load("libgmp-10", Library::class.java)
+        when {
+            Platform.isWindows() -> {
+                Native.load("libgmp-10", Library::class.java)
+            }
+            Platform.isLinux() -> {
+                Native.load("libgmp.so.10", Library::class.java)
+            }
         }
         Native.register("bitwuzla")
         bitwuzlaSetAbortCallback(defaultAbortHandler)
