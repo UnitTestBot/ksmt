@@ -175,7 +175,7 @@ class KSolverRunner<Config: KSolverConfiguration>(
             }
 
             val functionInterp = KModel.KFuncInterp(
-                interp.sort as KSort,
+                interp.decl as KDecl<KSort>,
                 interp.vars as List<KDecl<*>>,
                 interpEntries,
                 interp.default as? KExpr<KSort>?

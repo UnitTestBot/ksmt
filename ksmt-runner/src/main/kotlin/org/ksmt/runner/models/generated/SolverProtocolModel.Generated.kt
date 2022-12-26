@@ -76,7 +76,7 @@ class SolverProtocolModel private constructor(
         
         private val __SolverConfigurationParamListSerializer = SolverConfigurationParam.list()
         
-        const val serializationHash = 2419029814328334104L
+        const val serializationHash = -2649282789874977820L
         
     }
     override val serializersOwner: ISerializersOwner get() = SolverProtocolModel
@@ -604,7 +604,7 @@ data class CreateSolverParams (
  * #### Generated from [SolverProtocolModel.kt:76]
  */
 data class ModelEntry (
-    val sort: org.ksmt.KAst,
+    val decl: org.ksmt.KAst,
     val vars: List<org.ksmt.KAst>,
     val entries: List<ModelFuncInterpEntry>,
     val default: org.ksmt.KAst?
@@ -616,15 +616,15 @@ data class ModelEntry (
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ModelEntry  {
-            val sort = (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer)
+            val decl = (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer)
             val vars = buffer.readList { (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer) }
             val entries = buffer.readList { ModelFuncInterpEntry.read(ctx, buffer) }
             val default = buffer.readNullable { (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer) }
-            return ModelEntry(sort, vars, entries, default)
+            return ModelEntry(decl, vars, entries, default)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ModelEntry)  {
-            (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, value.sort)
+            (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, value.decl)
             buffer.writeList(value.vars) { v -> (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, v) }
             buffer.writeList(value.entries) { v -> ModelFuncInterpEntry.write(ctx, buffer, v) }
             buffer.writeNullable(value.default) { (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, it) }
@@ -643,7 +643,7 @@ data class ModelEntry (
         
         other as ModelEntry
         
-        if (sort != other.sort) return false
+        if (decl != other.decl) return false
         if (vars != other.vars) return false
         if (entries != other.entries) return false
         if (default != other.default) return false
@@ -653,7 +653,7 @@ data class ModelEntry (
     //hash code trait
     override fun hashCode(): Int  {
         var __r = 0
-        __r = __r*31 + sort.hashCode()
+        __r = __r*31 + decl.hashCode()
         __r = __r*31 + vars.hashCode()
         __r = __r*31 + entries.hashCode()
         __r = __r*31 + if (default != null) default.hashCode() else 0
@@ -663,7 +663,7 @@ data class ModelEntry (
     override fun print(printer: PrettyPrinter)  {
         printer.println("ModelEntry (")
         printer.indent {
-            print("sort = "); sort.print(printer); println()
+            print("decl = "); decl.print(printer); println()
             print("vars = "); vars.print(printer); println()
             print("entries = "); entries.print(printer); println()
             print("default = "); default.print(printer); println()

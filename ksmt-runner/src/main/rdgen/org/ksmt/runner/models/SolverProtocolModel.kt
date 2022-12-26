@@ -74,7 +74,7 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
     }
 
     private val modelEntry = structdef {
-        field("sort", kastType)
+        field("decl", kastType)
         field("vars", immutableList(kastType))
         field("entries", immutableList(modelFuncInterpEntry))
         field("default", kastType.nullable)

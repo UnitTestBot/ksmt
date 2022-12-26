@@ -101,7 +101,7 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
             val interpretations = declarations.map {
                 val interp = model.interpretation(it) ?: error("No interpretation for model declaration $it")
                 val interpEntries = interp.entries.map { ModelFuncInterpEntry(it.args, it.value) }
-                ModelEntry(interp.sort, interp.vars, interpEntries, interp.default)
+                ModelEntry(interp.decl, interp.vars, interpEntries, interp.default)
             }
             val uninterpretedSortUniverse = model.uninterpretedSorts.map { sort ->
                 val universe = model.uninterpretedSortUniverse(sort)

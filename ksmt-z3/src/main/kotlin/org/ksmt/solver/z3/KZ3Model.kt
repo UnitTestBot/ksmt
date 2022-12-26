@@ -77,9 +77,10 @@ open class KZ3Model(
     private fun <T : KSort> constInterp(decl: FuncDecl<*>): KModel.KFuncInterp<T>? {
         val z3Expr = model.getConstInterp(decl) ?: return null
 
+        val convertedDecl = with(converter) { decl.convertDeclWrapped<T>() as KFuncDecl<T> }
         val expr = with(converter) { z3Expr.convertExprWrapped<T>() }
 
-        return KModel.KFuncInterp(sort = expr.sort, vars = emptyList(), entries = emptyList(), default = expr)
+        return KModel.KFuncInterp(decl = convertedDecl, vars = emptyList(), entries = emptyList(), default = expr)
     }
 
     private fun <T : KSort> funcInterp(decl: FuncDecl<*>): KModel.KFuncInterp<T>? = with(converter) {
@@ -98,7 +99,7 @@ open class KZ3Model(
         val default = z3Interp.getElse().substituteVars(z3Vars).convertExprWrapped<T>()
         val varDecls = vars.map { it.decl }
 
-        return KModel.KFuncInterp(convertedDecl.sort, varDecls, entries, default)
+        return KModel.KFuncInterp(convertedDecl, varDecls, entries, default)
     }
 
     override fun detach(): KModel {

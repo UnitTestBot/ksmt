@@ -73,7 +73,7 @@ open class KBitwuzlaModel(
                         val value = Native.bitwuzlaGetValue(bitwuzlaCtx.bitwuzla, term)
                         val convertedValue = with(converter) { value.convertExpr(decl.sort) }
                         KModel.KFuncInterp(
-                            sort = decl.sort,
+                            decl = decl,
                             vars = emptyList(),
                             entries = emptyList(),
                             default = convertedValue
@@ -108,7 +108,7 @@ open class KBitwuzlaModel(
         }
 
         KModel.KFuncInterp(
-            sort = decl.sort,
+            decl = decl,
             vars = vars,
             entries = entries,
             default = null
@@ -135,14 +135,14 @@ open class KBitwuzlaModel(
         val arrayInterpIndexDecl = mkFreshConstDecl("idx", sort.domain)
 
         interpretations[arrayInterpDecl] = KModel.KFuncInterp(
-            sort = sort.range,
+            decl = arrayInterpDecl,
             vars = listOf(arrayInterpIndexDecl),
             entries = entries,
             default = default
         )
 
         KModel.KFuncInterp(
-            sort = decl.sort,
+            decl = decl,
             vars = emptyList(),
             entries = emptyList(),
             default = mkFunctionAsArray<KSort, KSort>(arrayInterpDecl) as KExpr<T>
