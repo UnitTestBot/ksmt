@@ -9,13 +9,12 @@
 package org.ksmt.solver.bitwuzla.bindings
 
 import com.sun.jna.Callback
-import com.sun.jna.Library
 import com.sun.jna.Memory
 import com.sun.jna.Native
-import com.sun.jna.Platform
 import com.sun.jna.Pointer
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
+import org.ksmt.utils.NativeLibraryLoader
 
 typealias Bitwuzla = Pointer
 typealias BitwuzlaTerm = Pointer
@@ -34,12 +33,11 @@ object Native {
     }
 
     init {
-        when {
-            Platform.isWindows() -> {
-                Native.load("libgmp-10", Library::class.java)
-            }
-            Platform.isLinux() -> {
-                Native.load("libgmp.so.10", Library::class.java)
+        NativeLibraryLoader.load { os ->
+            when (os) {
+                NativeLibraryLoader.OS.LINUX -> listOf("libgmp-10")
+                NativeLibraryLoader.OS.WINDOWS -> listOf("libgmp-10")
+                NativeLibraryLoader.OS.MACOS -> TODO("Mac os platform is not supported")
             }
         }
         Native.register("bitwuzla")
