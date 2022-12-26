@@ -116,6 +116,7 @@ import org.ksmt.expr.KImpliesExpr
 import org.ksmt.expr.KInt32NumExpr
 import org.ksmt.expr.KInt64NumExpr
 import org.ksmt.expr.KIntBigNumExpr
+import org.ksmt.expr.KInterpretedConstant
 import org.ksmt.expr.KIsIntRealExpr
 import org.ksmt.expr.KIteExpr
 import org.ksmt.expr.KLeArithExpr
@@ -203,6 +204,10 @@ open class KBitwuzlaExprInternalizer(
 
     private fun saveExprInternalizationResult(expr: KExpr<*>, term: BitwuzlaTerm) {
         bitwuzlaCtx.internalizeExpr(expr) { term }
+
+        // Save only constants
+        if (expr !is KInterpretedConstant) return
+
         val kind = Native.bitwuzlaTermGetKind(term)
 
         /*
