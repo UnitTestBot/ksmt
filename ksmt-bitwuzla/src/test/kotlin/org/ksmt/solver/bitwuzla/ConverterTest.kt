@@ -20,7 +20,7 @@ import kotlin.test.assertTrue
 class ConverterTest {
     private val ctx = KContext()
     private val bitwuzlaCtx = KBitwuzlaContext()
-    private val internalizer = KBitwuzlaExprInternalizer(ctx, bitwuzlaCtx)
+    private val internalizer = KBitwuzlaExprInternalizer(bitwuzlaCtx)
     private val converter = KBitwuzlaExprConverter(ctx, bitwuzlaCtx)
     private val sortChecker = SortChecker(ctx)
 

@@ -86,7 +86,7 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
 
     private fun internalizeAndConvertBitwuzla(assertions: List<KExpr<KBoolSort>>): List<KExpr<KBoolSort>> =
         KBitwuzlaContext().use { bitwuzlaCtx ->
-            val internalizer = KBitwuzlaExprInternalizer(ctx, bitwuzlaCtx)
+            val internalizer = KBitwuzlaExprInternalizer(bitwuzlaCtx)
             val bitwuzlaAssertions = with(internalizer) {
                 assertions.map { it.internalize() }
             }

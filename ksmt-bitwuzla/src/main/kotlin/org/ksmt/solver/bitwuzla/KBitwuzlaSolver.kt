@@ -16,7 +16,7 @@ import kotlin.time.Duration
 open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverConfiguration> {
     open val bitwuzlaCtx = KBitwuzlaContext()
     open val exprInternalizer: KBitwuzlaExprInternalizer by lazy {
-        KBitwuzlaExprInternalizer(ctx, bitwuzlaCtx)
+        KBitwuzlaExprInternalizer(bitwuzlaCtx)
     }
     open val exprConverter: KBitwuzlaExprConverter by lazy {
         KBitwuzlaExprConverter(ctx, bitwuzlaCtx)
