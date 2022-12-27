@@ -296,17 +296,44 @@ open class KBitwuzlaExprInternalizer(
         transform { if (value) bitwuzlaCtx.trueTerm else bitwuzlaCtx.falseTerm }
     }
 
-    override fun transform(expr: KBitVec8Value): KExpr<KBv8Sort> = transformBvNumber(expr)
-    override fun transform(expr: KBitVec16Value): KExpr<KBv16Sort> = transformBvNumber(expr)
-    override fun transform(expr: KBitVec32Value): KExpr<KBv32Sort> = transformBvNumber(expr)
-    override fun transform(expr: KBitVec64Value): KExpr<KBv64Sort> = transformBvNumber(expr)
+    override fun transform(expr: KBitVec8Value): KExpr<KBv8Sort> = transformBv32Number(expr)
+    override fun transform(expr: KBitVec16Value): KExpr<KBv16Sort> = transformBv32Number(expr)
+    override fun transform(expr: KBitVec32Value): KExpr<KBv32Sort> = transformBv32Number(expr)
+    override fun transform(expr: KBitVec64Value): KExpr<KBv64Sort> = transformBv64Number(expr)
 
-    fun <T : KBitVecNumberValue<S, *>, S : KBvSort> transformBvNumber(expr: T): T = with(expr) {
+    fun <T : KBitVecNumberValue<S, *>, S : KBvSort> transformBv32Number(expr: T): T = with(expr) {
         transform {
-            Native.bitwuzlaMkBvValueUint64(
+            Native.bitwuzlaMkBvValueUint32(
                 bitwuzlaCtx.bitwuzla,
                 sort.internalizeSort(),
-                numberValue.toLong()
+                numberValue.toInt()
+            ).also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
+        }
+    }
+
+    /**
+     * Use uint32 values since uint64 doesn't work on Windows.
+     * @see [Native.bitwuzlaMkBvValueUint64]
+     * */
+    fun <T : KBitVecNumberValue<S, *>, S : KBvSort> transformBv64Number(expr: T): T = with(expr) {
+        transform {
+            val lowerBits = numberValue.toInt()
+            val higherBits = (numberValue.toLong() ushr Int.SIZE_BITS).toInt()
+            val lowerBitsTerm = Native.bitwuzlaMkBvValueUint32(
+                bitwuzlaCtx.bitwuzla,
+                ctx.bv32Sort.internalizeSort(),
+                lowerBits
+            )
+            val higherBitsTerm = Native.bitwuzlaMkBvValueUint32(
+                bitwuzlaCtx.bitwuzla,
+                ctx.bv32Sort.internalizeSort(),
+                higherBits
+            )
+            Native.bitwuzlaMkTerm2(
+                bitwuzlaCtx.bitwuzla,
+                BitwuzlaKind.BITWUZLA_KIND_BV_CONCAT,
+                higherBitsTerm,
+                lowerBitsTerm
             ).also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
         }
     }

@@ -183,4 +183,23 @@ class ConverterTest {
         assertEquals(32, (ksmtOnes32 as KBitVecValue<*>).stringValue.count { it == '1' })
     }
 
+    @Test
+    fun testBvValueInternalization() = with(bitwuzlaCtx) {
+        val ctx = KContext()
+        val internalizer = KBitwuzlaExprInternalizer(this)
+        val converter = KBitwuzlaExprConverter(ctx, this)
+
+        val ones64 = ctx.mkBvConcatExpr(ctx.mkBv(-1), ctx.mkBv(-1))
+        val ones128 = ctx.mkBvConcatExpr(ctx.mkBv(-1L), ctx.mkBv(-1L))
+
+        val bzlaOnes64 = with(internalizer) { ones64.internalize() }
+        val bzlaOnes128 = with(internalizer) { ones128.internalize() }
+
+        val ksmtOnes64 = with(converter) { bzlaOnes64.convertExpr(ones64.sort) }
+        val ksmtOnes128 = with(converter) { bzlaOnes128.convertExpr(ones128.sort) }
+
+        assertEquals(64, (ksmtOnes64 as KBitVecValue<*>).stringValue.count { it == '1' })
+        assertEquals(128, (ksmtOnes128 as KBitVecValue<*>).stringValue.count { it == '1' })
+    }
+
 }
