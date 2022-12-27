@@ -165,6 +165,7 @@ import org.ksmt.sort.KSort
 import org.ksmt.sort.KSortVisitor
 import org.ksmt.sort.KUninterpretedSort
 
+@Suppress("LargeClass")
 open class KBitwuzlaExprInternalizer(
     val bitwuzlaCtx: KBitwuzlaContext
 ) : KExprInternalizerBase<BitwuzlaTerm>() {
