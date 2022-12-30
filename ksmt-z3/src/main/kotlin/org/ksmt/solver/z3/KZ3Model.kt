@@ -9,6 +9,7 @@ import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.mkFreshConst
 
 open class KZ3Model(
@@ -24,9 +25,17 @@ open class KZ3Model(
         }
     }
 
+    override val uninterpretedSorts: Set<KUninterpretedSort> by lazy {
+        with(converter) {
+            model.sorts.mapTo(hashSetOf()) { it.convertSortWrapped() as KUninterpretedSort }
+        }
+    }
+
     private val interpretations = hashMapOf<KDecl<*>, KModel.KFuncInterp<*>?>()
+    private val uninterpretedSortsUniverses = hashMapOf<KUninterpretedSort, Set<KExpr<KUninterpretedSort>>>()
 
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
+        ctx.ensureContextMatch(expr)
         ensureContextActive()
 
         val z3Expr = with(internalizer) { expr.internalizeExprWrapped() }
@@ -38,6 +47,7 @@ open class KZ3Model(
     @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? =
         interpretations.getOrPut(decl) {
+            ctx.ensureContextMatch(decl)
             ensureContextActive()
 
             if (decl !in declarations) return@getOrPut null
@@ -51,14 +61,26 @@ open class KZ3Model(
             }
         } as? KModel.KFuncInterp<T>
 
+    override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KExpr<KUninterpretedSort>>? =
+        uninterpretedSortsUniverses.getOrPut(sort) {
+            ctx.ensureContextMatch(sort)
+
+            if (sort !in uninterpretedSorts) {
+                return@getOrPut emptySet()
+            }
+
+            val z3Sort = with(internalizer) { sort.internalizeSortWrapped() }
+            val z3SortUniverse = model.getSortUniverse(z3Sort)
+            with(converter) { z3SortUniverse.mapTo(hashSetOf()) { it.convertExprWrapped() } }
+        }
+
     private fun <T : KSort> constInterp(decl: FuncDecl<*>): KModel.KFuncInterp<T>? {
         val z3Expr = model.getConstInterp(decl) ?: return null
 
+        val convertedDecl = with(converter) { decl.convertDeclWrapped<T>() as KFuncDecl<T> }
         val expr = with(converter) { z3Expr.convertExprWrapped<T>() }
 
-        return with(ctx) {
-            KModel.KFuncInterp(sort = expr.sort, vars = emptyList(), entries = emptyList(), default = expr)
-        }
+        return KModel.KFuncInterp(decl = convertedDecl, vars = emptyList(), entries = emptyList(), default = expr)
     }
 
     private fun <T : KSort> funcInterp(decl: FuncDecl<*>): KModel.KFuncInterp<T>? = with(converter) {
@@ -75,9 +97,9 @@ open class KZ3Model(
         }
 
         val default = z3Interp.getElse().substituteVars(z3Vars).convertExprWrapped<T>()
-        val varDecls = vars.map { with(ctx) { it.decl } }
+        val varDecls = vars.map { it.decl }
 
-        return KModel.KFuncInterp(convertedDecl.sort, varDecls, entries, default)
+        return KModel.KFuncInterp(convertedDecl, varDecls, entries, default)
     }
 
     override fun detach(): KModel {
@@ -85,7 +107,11 @@ open class KZ3Model(
             interpretation(it) ?: error("missed interpretation for $it")
         }
 
-        return KModelImpl(ctx, interpretations)
+        val uninterpretedSortsUniverses = uninterpretedSorts.associateWith {
+            uninterpretedSortUniverse(it) ?: error("missed sort universe for $it")
+        }
+
+        return KModelImpl(ctx, interpretations, uninterpretedSortsUniverses)
     }
 
     private fun ensureContextActive() = check(internCtx.isActive) { "Context already closed" }

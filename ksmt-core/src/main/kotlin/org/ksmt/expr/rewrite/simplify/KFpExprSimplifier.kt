@@ -614,7 +614,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     }
 
     private fun fpRoundToIntegral(rm: KFpRoundingMode, arg: KFpValue<*>): KFpValue<*>? = with(ctx) {
-        if (rm != KFpRoundingMode.RoundTowardPositive) {
+        if (rm != KFpRoundingMode.RoundNearestTiesToEven) {
             // todo: JVM Math rounds toward positive.
             return null
         }

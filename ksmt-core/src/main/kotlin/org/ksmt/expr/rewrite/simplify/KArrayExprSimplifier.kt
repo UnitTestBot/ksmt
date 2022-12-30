@@ -5,11 +5,13 @@ import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KArrayConst
+import org.ksmt.expr.KArrayLambda
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KInterpretedConstant
+import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
@@ -360,11 +362,22 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
                 }
             }
 
-            // (select (const v) i) ==> v
-            if (array is KArrayConst<D, R>) {
-                array.value
-            } else {
-                mkArraySelect(array, index)
+            when (array) {
+                // (select (const v) i) ==> v
+                is KArrayConst<D, R> -> {
+                    array.value
+                }
+                // (select (lambda x body) i) ==> body[i/x]
+                is KArrayLambda<D, R> -> {
+                    val resolvedBody = KExprSubstitutor(ctx).apply {
+                        val indexVarExpr = mkConstApp(array.indexVarDecl)
+                        substitute(indexVarExpr, index)
+                    }.apply(array.body)
+                    rewrite(resolvedBody)
+                }
+                else -> {
+                    mkArraySelect(array, index)
+                }
             }
         }
 

@@ -16,7 +16,7 @@ import kotlin.time.Duration
 open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverConfiguration> {
     open val bitwuzlaCtx = KBitwuzlaContext()
     open val exprInternalizer: KBitwuzlaExprInternalizer by lazy {
-        KBitwuzlaExprInternalizer(ctx, bitwuzlaCtx)
+        KBitwuzlaExprInternalizer(bitwuzlaCtx)
     }
     open val exprConverter: KBitwuzlaExprConverter by lazy {
         KBitwuzlaExprConverter(ctx, bitwuzlaCtx)
@@ -36,11 +36,15 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
     }
 
     override fun assert(expr: KExpr<KBoolSort>) = bitwuzlaCtx.bitwuzlaTry {
+        ctx.ensureContextMatch(expr)
+
         val term = with(exprInternalizer) { expr.internalize() }
         Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, term)
     }
 
     override fun assertAndTrack(expr: KExpr<KBoolSort>): KExpr<KBoolSort> = bitwuzlaCtx.bitwuzlaTry {
+        ctx.ensureContextMatch(expr)
+
         val trackVar = with(ctx) { boolSort.mkFreshConst("track") }
         val trackedExpr = with(ctx) { !trackVar or expr }
         val exprTerm = with(exprInternalizer) { trackedExpr.internalize() }
@@ -83,6 +87,8 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
 
     override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus =
         bitwuzlaCtx.bitwuzlaTry {
+            ctx.ensureContextMatch(assumptions)
+
             val bitwuzlaAssumptions = with(exprInternalizer) {
                 assumptions.map { it.internalize() }
             }

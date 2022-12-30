@@ -33,9 +33,13 @@ class BitwuzlaBenchmarksBasedTest : BenchmarksBasedTest() {
 
     companion object {
         @JvmStatic
-        fun bitwuzlaTestData() = testData().skipUnsupportedTheories()
+        fun bitwuzlaTestData() = testData
+            .skipUnsupportedTheories()
+            .ensureNotEmpty()
 
         private fun List<BenchmarkTestArguments>.skipUnsupportedTheories() =
-            filterNot { "QF_" !in it.name }
+            filter { "QF_" in it.name }
+                .filterNot { "LIA" in it.name || "LRA" in it.name }
+                .filterNot { "NIA" in it.name || "NRA" in it.name }
     }
 }

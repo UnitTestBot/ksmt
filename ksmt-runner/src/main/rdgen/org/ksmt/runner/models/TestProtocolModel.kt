@@ -22,6 +22,11 @@ object TestProtocolModel : Ext(TestProtocolRoot) {
         field("expected", PredefinedType.long)
     }
 
+    private val equalityCheckAssumptionsParams = structdef {
+        field("solver", PredefinedType.int)
+        field("assumption", kastType)
+    }
+
     private val testAssertParams = structdef {
         field("solver", PredefinedType.int)
         field("expr", PredefinedType.long)
@@ -84,6 +89,10 @@ object TestProtocolModel : Ext(TestProtocolRoot) {
             async
             documentation = "Add equality check"
         }
+        call("addEqualityCheckAssumption", equalityCheckAssumptionsParams, PredefinedType.void).apply {
+            async
+            documentation = "Add assumptions for the subsequent equality check"
+        }
         call("checkEqualities", PredefinedType.int, testCheckResult).apply {
             async
             documentation = "Check added equalities"
@@ -91,6 +100,10 @@ object TestProtocolModel : Ext(TestProtocolRoot) {
         call("findFirstFailedEquality", PredefinedType.int, PredefinedType.int.nullable).apply {
             async
             documentation = "Find first failed equality check"
+        }
+        call("mkTrueExpr", PredefinedType.void, PredefinedType.long).apply {
+            async
+            documentation = "Create true expression"
         }
     }
 }

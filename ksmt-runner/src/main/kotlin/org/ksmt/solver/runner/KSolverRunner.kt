@@ -5,6 +5,7 @@ import com.jetbrains.rd.util.reactive.RdFault
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.runner.core.KsmtWorkerSession
@@ -23,9 +24,11 @@ import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 import kotlin.time.Duration
 
 class KSolverRunner<Config: KSolverConfiguration>(
+    private val ctx: KContext,
     private val hardTimeout: Duration,
     private val worker: KsmtWorkerSession<SolverProtocolModel>,
     private val configurationBuilder: KSolverUniversalConfigurationBuilder<Config>,
@@ -69,7 +72,9 @@ class KSolverRunner<Config: KSolverConfiguration>(
     }
 
     suspend fun assertAsync(expr: KExpr<KBoolSort>) {
+        ctx.ensureContextMatch(expr)
         ensureActive()
+
         val params = AssertParams(expr)
         withTimeoutAndExceptionHandling {
             worker.protocolModel.assert.startSuspending(worker.lifetime, params)
@@ -81,7 +86,9 @@ class KSolverRunner<Config: KSolverConfiguration>(
     }
 
     suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>): KExpr<KBoolSort> {
+        ctx.ensureContextMatch(expr)
         ensureActive()
+
         val params = AssertParams(expr)
         val result = withTimeoutAndExceptionHandling {
             worker.protocolModel.assertAndTrack.startSuspending(worker.lifetime, params)
@@ -140,7 +147,9 @@ class KSolverRunner<Config: KSolverConfiguration>(
         assumptions: List<KExpr<KBoolSort>>,
         timeout: Duration
     ): KSolverStatus {
+        ctx.ensureContextMatch(assumptions)
         ensureActive()
+
         val params = CheckWithAssumptionsParams(assumptions, timeout.inWholeMilliseconds)
         return handleCheckTimeoutAsUnknown {
             val result = withTimeoutAndExceptionHandling {
@@ -166,14 +175,18 @@ class KSolverRunner<Config: KSolverConfiguration>(
             }
 
             val functionInterp = KModel.KFuncInterp(
-                interp.sort as KSort,
+                interp.decl as KDecl<KSort>,
                 interp.vars as List<KDecl<*>>,
                 interpEntries,
                 interp.default as? KExpr<KSort>?
             )
             (decl as KDecl<*>) to functionInterp
         }
-        return KModelImpl(worker.astSerializationCtx.ctx, interpretations.toMap())
+        val uninterpretedSortUniverse = result.uninterpretedSortUniverse.associateBy(
+            { entry -> entry.sort as KUninterpretedSort },
+            { entry -> entry.universe.mapTo(hashSetOf()) { it as KExpr<KUninterpretedSort> } }
+        )
+        return KModelImpl(worker.astSerializationCtx.ctx, interpretations.toMap(), uninterpretedSortUniverse)
     }
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = runBlocking {

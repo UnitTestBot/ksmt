@@ -2,6 +2,7 @@ package org.ksmt.solver.bitwuzla
 
 import org.ksmt.KContext
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
@@ -20,7 +21,7 @@ import kotlin.test.assertTrue
 class ConverterTest {
     private val ctx = KContext()
     private val bitwuzlaCtx = KBitwuzlaContext()
-    private val internalizer = KBitwuzlaExprInternalizer(ctx, bitwuzlaCtx)
+    private val internalizer = KBitwuzlaExprInternalizer(bitwuzlaCtx)
     private val converter = KBitwuzlaExprConverter(ctx, bitwuzlaCtx)
     private val sortChecker = SortChecker(ctx)
 
@@ -167,4 +168,38 @@ class ConverterTest {
         Native.bitwuzlaPop(bitwuzla, 1)
         status == BitwuzlaResult.BITWUZLA_UNSAT
     }
+
+    @Test
+    fun testBvValueConversion() = with(bitwuzlaCtx) {
+        val ctx = KContext()
+        val converter = KBitwuzlaExprConverter(ctx, this)
+
+        val ones52 = Native.bitwuzlaMkBvOnes(bitwuzla, Native.bitwuzlaMkBvSort(bitwuzla, 52))
+        val ksmtOnes52 = with(converter) { ones52.convertExpr(ctx.mkBvSort(52u)) }
+        assertEquals(52, (ksmtOnes52 as KBitVecValue<*>).stringValue.count { it == '1' })
+
+        val ones32 = Native.bitwuzlaMkBvOnes(bitwuzla, Native.bitwuzlaMkBvSort(bitwuzla, 32))
+        val ksmtOnes32 = with(converter) { ones32.convertExpr(ctx.bv32Sort) }
+        assertEquals(32, (ksmtOnes32 as KBitVecValue<*>).stringValue.count { it == '1' })
+    }
+
+    @Test
+    fun testBvValueInternalization() = with(bitwuzlaCtx) {
+        val ctx = KContext()
+        val internalizer = KBitwuzlaExprInternalizer(this)
+        val converter = KBitwuzlaExprConverter(ctx, this)
+
+        val ones64 = ctx.mkBvConcatExpr(ctx.mkBv(-1), ctx.mkBv(-1))
+        val ones128 = ctx.mkBvConcatExpr(ctx.mkBv(-1L), ctx.mkBv(-1L))
+
+        val bzlaOnes64 = with(internalizer) { ones64.internalize() }
+        val bzlaOnes128 = with(internalizer) { ones128.internalize() }
+
+        val ksmtOnes64 = with(converter) { bzlaOnes64.convertExpr(ones64.sort) }
+        val ksmtOnes128 = with(converter) { bzlaOnes128.convertExpr(ones128.sort) }
+
+        assertEquals(64, (ksmtOnes64 as KBitVecValue<*>).stringValue.count { it == '1' })
+        assertEquals(128, (ksmtOnes128 as KBitVecValue<*>).stringValue.count { it == '1' })
+    }
+
 }

@@ -105,3 +105,17 @@ tasks.withType<Test> {
     environment("benchmarkChunkMaxSize", benchmarkChunkMaxSize)
     environment("benchmarkChunk", benchmarkChunk)
 }
+
+/**
+ * Merge all binary test reports starting with [testReportMergePrefix]
+ * from the [reports] directory into a single HTML report.
+ * Used in CI in a combination with [benchmarkChunk].
+ * */
+task<TestReport>("mergeTestReports") {
+    val mergePrefix = stringProperty("testReportMergePrefix")
+    if (mergePrefix != null) {
+        destinationDir = rootDir.resolve(mergePrefix)
+        val reports = rootDir.resolve("reports").listFiles { f: File -> f.name.startsWith(mergePrefix) }
+        reportOn(*reports)
+    }
+}

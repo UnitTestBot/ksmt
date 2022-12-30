@@ -26,6 +26,7 @@ import org.ksmt.solver.z3.KZ3ExprConverter
 import org.ksmt.solver.z3.KZ3ExprInternalizer
 import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.sort.KBoolSort
+import org.ksmt.utils.uncheckedCast
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
 
@@ -42,17 +43,20 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
     private val solvers = mutableListOf<Solver>()
     private val nativeAsts = mutableListOf<AST>()
     private val equalityChecks = mutableMapOf<Int, MutableList<EqualityCheck>>()
+    private val equalityCheckAssumptions = mutableMapOf<Int, MutableList<Expr<BoolSort>>>()
 
     private fun create() {
         workerCtx = KContext()
         workerZ3Ctx = Context()
         equalityChecks.clear()
+        equalityCheckAssumptions.clear()
         solvers.clear()
         nativeAsts.clear()
     }
 
     private fun delete() {
         equalityChecks.clear()
+        equalityCheckAssumptions.clear()
         nativeAsts.clear()
         solvers.clear()
         ctx.close()
@@ -82,7 +86,7 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
 
     private fun internalizeAndConvertBitwuzla(assertions: List<KExpr<KBoolSort>>): List<KExpr<KBoolSort>> =
         KBitwuzlaContext().use { bitwuzlaCtx ->
-            val internalizer = KBitwuzlaExprInternalizer(ctx, bitwuzlaCtx)
+            val internalizer = KBitwuzlaExprInternalizer(bitwuzlaCtx)
             val bitwuzlaAssertions = with(internalizer) {
                 assertions.map { it.internalize() }
             }
@@ -131,15 +135,23 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         checks += EqualityCheck(actual = actualExpr, expected = expectedExpr)
     }
 
+    private fun addEqualityCheckAssumption(solver: Int, assumption: KExpr<*>) {
+        val assumptionExpr = internalize(assumption)
+        val assumptions = equalityCheckAssumptions.getOrPut(solver) { mutableListOf() }
+        assumptions.add(assumptionExpr.uncheckedCast())
+    }
+
     private fun checkEqualities(solver: Int): KSolverStatus = with(z3Ctx) {
         val checks = equalityChecks[solver] ?: emptyList()
         val equalityBindings = checks.map { mkNot(mkEq(it.actual, it.expected)) }
+        equalityCheckAssumptions[solver]?.forEach { solvers[solver].add(it) }
         solvers[solver].add(mkOr(*equalityBindings.toTypedArray()))
         return check(solver)
     }
 
     private fun findFirstFailedEquality(solver: Int): Int? = with(z3Ctx){
         val solverInstance = solvers[solver]
+        equalityCheckAssumptions[solver]?.forEach { solvers[solver].add(it) }
         val checks = equalityChecks[solver] ?: emptyList()
         for ((idx, check) in checks.withIndex()) {
             solverInstance.push()
@@ -147,9 +159,15 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
             solverInstance.add(binding)
             val status = solverInstance.check()
             solverInstance.pop()
-            if (status == Status.SATISFIABLE) return idx
+            if (status == Status.SATISFIABLE)
+                return idx
         }
         return null
+    }
+
+    private fun mkTrueExpr(): Long = with(z3Ctx) {
+        val trueExpr = mkTrue().also { nativeAsts.add(it) }
+        unwrapAST(trueExpr)
     }
 
     private fun Status?.processCheckResult() = when (this) {
@@ -226,12 +244,18 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         addEqualityCheck.measureExecutionForTermination { params ->
             addEqualityCheck(params.solver, params.actual as KExpr<*>, params.expected)
         }
+        addEqualityCheckAssumption.measureExecutionForTermination { params ->
+            addEqualityCheckAssumption(params.solver, params.assumption as KExpr<*>)
+        }
         checkEqualities.measureExecutionForTermination { solver ->
             val status = checkEqualities(solver)
             TestCheckResult(status)
         }
         findFirstFailedEquality.measureExecutionForTermination { solver ->
             findFirstFailedEquality(solver)
+        }
+        mkTrueExpr.measureExecutionForTermination {
+            mkTrueExpr()
         }
     }
 

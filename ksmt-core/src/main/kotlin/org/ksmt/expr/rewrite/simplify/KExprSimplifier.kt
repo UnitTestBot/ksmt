@@ -5,11 +5,14 @@ import org.ksmt.expr.KApp
 import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KInterpretedConstant
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.uncheckedCast
 
 open class KExprSimplifier(ctx: KContext) :
@@ -29,6 +32,7 @@ open class KExprSimplifier(ctx: KContext) :
         expr = expr,
         preprocess = { if (expr.lhs == expr.rhs) trueExpr else expr }
     ) { (lhs, rhs) ->
+        if (lhs == rhs) return@simplifyApp trueExpr
         when (lhs.sort) {
             boolSort -> simplifyEqBool(lhs.uncheckedCast(), rhs.uncheckedCast())
             intSort -> simplifyEqInt(lhs.uncheckedCast(), rhs.uncheckedCast())
@@ -36,6 +40,7 @@ open class KExprSimplifier(ctx: KContext) :
             is KBvSort -> simplifyEqBv(lhs as KExpr<KBvSort>, rhs.uncheckedCast() )
             is KFpSort -> simplifyEqFp(lhs as KExpr<KFpSort>, rhs.uncheckedCast() )
             is KArraySort<*, *> -> simplifyEqArray(lhs as KExpr<KArraySort<KSort, KSort>>, rhs.uncheckedCast())
+            is KUninterpretedSort -> simplifyEqUninterpreted(lhs.uncheckedCast(), rhs.uncheckedCast())
             else -> mkEq(lhs, rhs)
         }
     }
@@ -50,11 +55,34 @@ open class KExprSimplifier(ctx: KContext) :
             }
         }
     ) { args ->
-        // (distinct a a) ==> false
-        if (args.toSet().size != args.size) {
-            return@simplifyApp falseExpr
+        val distinct = checkAllExpressionsAreDistinct(args)
+        distinct?.expr ?: mkDistinct(args)
+    }
+
+    private fun <T : KSort> checkAllExpressionsAreDistinct(expressions: List<KExpr<T>>): Boolean? {
+        val visitedExprs = hashSetOf<KExpr<T>>()
+        var allDistinct = true
+        var allExpressionsAreConstants = true
+
+        for (expr in expressions) {
+            // (distinct a a) ==> false
+            if (!visitedExprs.add(expr)) {
+                return false
+            }
+
+            allExpressionsAreConstants = allExpressionsAreConstants && expr is KInterpretedConstant
+
+            /**
+             *  Check all previously visited expressions and current expression are distinct.
+             *  Don't check if all expressions are constants as they are trivially comparable.
+             *  */
+            allDistinct = allDistinct
+                    && !allExpressionsAreConstants
+                    && visitedExprs.all { areDefinitelyDistinct(it, expr) }
         }
-        mkDistinct(args)
+
+        if (allDistinct) return true
+        return null
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -66,9 +94,20 @@ open class KExprSimplifier(ctx: KContext) :
             realSort -> areDefinitelyDistinctReal(lhs.uncheckedCast(), rhs.uncheckedCast())
             is KBvSort -> areDefinitelyDistinctBv(lhs as KExpr<KBvSort>, rhs.uncheckedCast())
             is KFpSort -> areDefinitelyDistinctFp(lhs as KExpr<KFpSort>, rhs.uncheckedCast())
+            is KUninterpretedSort -> areDefinitelyDistinctUninterpreted(lhs.uncheckedCast(), rhs.uncheckedCast())
             else -> false
         }
     }
+
+    open fun simplifyEqUninterpreted(
+        lhs: KExpr<KUninterpretedSort>,
+        rhs: KExpr<KUninterpretedSort>
+    ): KExpr<KBoolSort> = ctx.mkEq(lhs, rhs)
+
+    open fun areDefinitelyDistinctUninterpreted(
+        lhs: KExpr<KUninterpretedSort>,
+        rhs: KExpr<KUninterpretedSort>
+    ): Boolean = false
 
     fun <T : KSort> rewrittenOrNull(expr: KExpr<T>): KExpr<T>? {
         val rewritten = rewrittenExpressions.remove(expr) ?: return null

@@ -230,34 +230,57 @@ object BvUtils {
         bvDefault = { a, b -> a xor b },
     )
 
+    private val bv8PossibleShift = 0 until Byte.SIZE_BITS
+    private val bv16PossibleShift = 0 until Short.SIZE_BITS
+    private val bv32PossibleShift = 0 until Int.SIZE_BITS
+    private val bv64PossibleShift = 0 until Long.SIZE_BITS
+
     fun KBitVecValue<*>.shiftLeft(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
         other = other,
         bv1 = { a, b -> if (b) false else a },
-        bv8 = { a, b -> (a.toInt() shl b.toInt()).toByte() },
-        bv16 = { a, b -> (a.toInt() shl b.toInt()).toShort() },
-        bv32 = { a, b -> a shl b },
-        bv64 = { a, b -> a shl b.toInt() },
-        bvDefault = { a, b -> a shl b.toInt() },
+        bv8 = { a, b -> if (b !in bv8PossibleShift) 0 else (a.toInt() shl b.toInt()).toByte() },
+        bv16 = { a, b -> if (b !in bv16PossibleShift) 0 else (a.toInt() shl b.toInt()).toShort() },
+        bv32 = { a, b -> if (b !in bv32PossibleShift) 0 else (a shl b) },
+        bv64 = { a, b -> if (b !in bv64PossibleShift) 0 else (a shl b.toInt()) },
+        bvDefault = { a, b ->
+            if (b < BigInteger.ZERO || b >= sort.sizeBits.toInt().toBigInteger()) {
+                BigInteger.ZERO
+            } else {
+                a shl b.toInt()
+            }
+        },
     )
 
     fun KBitVecValue<*>.shiftRightLogical(other: KBitVecValue<*>): KBitVecValue<*> = bvUnsignedOperation(
         other = other,
         bv1 = { a, b -> if (b) false else a },
-        bv8 = { a, b -> (a.toInt() ushr b.toInt()).toUByte() },
-        bv16 = { a, b -> (a.toInt() ushr b.toInt()).toUShort() },
-        bv32 = { a, b -> (a.toInt() ushr b.toInt()).toUInt() },
-        bv64 = { a, b -> (a.toLong() ushr b.toInt()).toULong() },
-        bvDefault = { a, b -> (a shr b.toInt()) },
+        bv8 = { a, b -> if (b.toInt() !in bv8PossibleShift) 0u else (a.toInt() ushr b.toInt()).toUByte() },
+        bv16 = { a, b -> if (b.toInt() !in bv16PossibleShift) 0u else (a.toInt() ushr b.toInt()).toUShort() },
+        bv32 = { a, b -> if (b.toInt() !in bv32PossibleShift) 0u else (a.toInt() ushr b.toInt()).toUInt() },
+        bv64 = { a, b -> if (b.toInt() !in bv64PossibleShift) 0u else (a.toLong() ushr b.toInt()).toULong() },
+        bvDefault = { a, b ->
+            if (b < BigInteger.ZERO || b >= sort.sizeBits.toInt().toBigInteger()) {
+                BigInteger.ZERO
+            } else {
+                a shr b.toInt()
+            }
+        },
     )
 
     fun KBitVecValue<*>.shiftRightArith(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
         other = other,
         bv1 = { a, _ -> a },
-        bv8 = { a, b -> (a.toInt() shr b.toInt()).toByte() },
-        bv16 = { a, b -> (a.toInt() shr b.toInt()).toShort() },
-        bv32 = { a, b -> a shr b },
-        bv64 = { a, b -> a shr b.toInt() },
-        bvDefault = { a, b -> a shr b.toInt() },
+        bv8 = { a, b -> if (b !in bv8PossibleShift) (if (a < 0) -1 else 0) else (a.toInt() shr b.toInt()).toByte() },
+        bv16 = { a, b -> if (b !in bv16PossibleShift) (if (a < 0) -1 else 0) else (a.toInt() shr b.toInt()).toShort() },
+        bv32 = { a, b -> if (b !in bv32PossibleShift) (if (a < 0) -1 else 0) else (a shr b) },
+        bv64 = { a, b -> if (b !in bv64PossibleShift) (if (a < 0) -1L else 0L) else (a shr b.toInt()) },
+        bvDefault = { a, b ->
+            if (b < BigInteger.ZERO || b >= sort.sizeBits.toInt().toBigInteger()) {
+                if (a < BigInteger.ZERO) BigInteger.valueOf(-1) else BigInteger.ZERO
+            } else {
+                a shr b.toInt()
+            }
+        },
     )
 
     fun KBitVecValue<*>.powerOfTwoOrNull(): Int? {

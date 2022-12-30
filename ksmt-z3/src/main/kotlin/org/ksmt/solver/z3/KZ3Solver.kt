@@ -62,11 +62,15 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
     }
 
     override fun assert(expr: KExpr<KBoolSort>) = z3Try {
+        ctx.ensureContextMatch(expr)
+
         val z3Expr = with(exprInternalizer) { expr.internalizeExprWrapped() }
         solver.add(z3Expr as BoolExpr)
     }
 
     override fun assertAndTrack(expr: KExpr<KBoolSort>): KExpr<KBoolSort> = z3Try {
+        ctx.ensureContextMatch(expr)
+
         val z3Expr = with(exprInternalizer) { expr.internalizeExprWrapped() } as BoolExpr
         val trackVar = with(ctx) { boolSort.mkFreshConst("track") }
         val z3TrackVar = with(exprInternalizer) { trackVar.internalizeExprWrapped() } as BoolExpr
@@ -86,6 +90,8 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
         assumptions: List<KExpr<KBoolSort>>,
         timeout: Duration
     ): KSolverStatus = z3Try {
+        ctx.ensureContextMatch(assumptions)
+
         val z3Assumptions = with(exprInternalizer) { assumptions.map { it.internalizeExprWrapped() as BoolExpr } }
         solver.updateTimeout(timeout)
         solver.check(*z3Assumptions.toTypedArray()).processCheckResult()

@@ -93,6 +93,18 @@ class FloatingPointTest {
             signBit = it.booleanSignBit,
             sort
         ),
+        mkFpBiased(
+            it.extractSignificand(sort),
+            it.extractExponent(sort, isBiased = true),
+            signBit = it.booleanSignBit,
+            sort
+        ),
+        mkFpBiased(
+            it.extractSignificand(sort).toLong(),
+            it.extractExponent(sort, isBiased = true).toLong(),
+            signBit = it.booleanSignBit,
+            sort
+        ),
         ((mkSpecificSort(it) as KApp<S, *>).decl as KConstDecl<S>).apply()
     )
 
@@ -109,9 +121,9 @@ class FloatingPointTest {
             signBit = it.booleanSignBit,
             sort
         ),
-        mkFp(
+        mkFpBiased(
             it.extractSignificand(sort),
-            it.extractExponent(sort, isBiased = false),
+            it.extractExponent(sort, isBiased = true),
             signBit = it.booleanSignBit,
             sort
         )

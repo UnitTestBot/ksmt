@@ -3,22 +3,30 @@ package org.ksmt.solver.model
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KFunctionAsArray
+import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.rewrite.KExprSubstitutor
+import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector.Companion.collectUninterpretedDeclarations
 import org.ksmt.expr.rewrite.simplify.KExprSimplifier
 import org.ksmt.expr.rewrite.simplify.simplifyApp
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.DefaultValueSampler.Companion.sampleValue
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.asExpr
+import org.ksmt.utils.uncheckedCast
 
 open class KModelEvaluator(
     ctx: KContext,
     private val model: KModel,
-    private val isComplete: Boolean
+    private val isComplete: Boolean,
+    private val quantifiedVars: Set<KDecl<*>> = emptySet()
 ) : KExprSimplifier(ctx) {
     private val evaluatedFunctionApp: MutableMap<Pair<KDecl<*>, List<KExpr<*>>>, KExpr<*>> = hashMapOf()
     private val evaluatedFunctionArray: MutableMap<KDecl<*>, KExpr<*>> = hashMapOf()
@@ -26,10 +34,23 @@ open class KModelEvaluator(
     @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> =
         simplifyApp(expr as KApp<T, KExpr<KSort>>) { args ->
+            /**
+             * Don't evaluate expr when it is quantified since
+             * it is definitely not present in the model.
+             * */
+            if (expr.decl in quantifiedVars) {
+                return@simplifyApp expr.decl.apply(args)
+            }
+
             evalFunction(expr.decl, args).also { rewrite(it) }
         }
 
     override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
+        // No way to evaluate f when it is quantified in (as-array f)
+        if (expr.function in quantifiedVars) {
+            return expr
+        }
+
         val evaluatedArray = evaluatedFunctionArray.getOrPut(expr.function) {
             val interpretation = model.interpretation(expr.function)
 
@@ -40,24 +61,114 @@ open class KModelEvaluator(
 
             if (interpretation == null) {
                 // isComplete = true, return and cache
-                return@getOrPut expr.sort.sampleValue()
+                return@getOrPut completeModelValue(expr.sort)
             }
 
-            check(interpretation.vars.isEmpty()) {
-                "Function ${expr.function} has free vars but used in as-array"
-            }
+            val idxDecl = interpretation.vars.singleOrNull()
+                ?: error("Function ${expr.function} has ${interpretation.vars} vars but used in as-array")
 
-            with(ctx) {
-                val defaultValue = interpretation.default ?: interpretation.sort.sampleValue()
-                val defaultArray: KExpr<KArraySort<D, R>> = mkArrayConst(expr.sort, defaultValue)
-
-                interpretation.entries.foldRight(defaultArray) { entry, acc ->
-                    val idx = entry.args.single().asExpr(expr.domainSort)
-                    acc.store(idx, entry.value)
-                }
-            }
+            evalArrayFunction(
+                expr.sort,
+                expr.function,
+                idxDecl.uncheckedCast(),
+                interpretation
+            )
         }
         return evaluatedArray.asExpr(expr.sort).also { rewrite(it) }
+    }
+
+    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> =
+        transformQuantifiedExpression(setOf(expr.indexVarDecl), expr.body) { body ->
+            ctx.mkArrayLambda(expr.indexVarDecl, body)
+        }
+
+    override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> =
+        transformQuantifiedExpression(expr.bounds.toSet(), expr.body) { body ->
+            ctx.mkExistentialQuantifier(body, expr.bounds)
+        }
+
+    override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> =
+        transformQuantifiedExpression(expr.bounds.toSet(), expr.body) { body ->
+            ctx.mkUniversalQuantifier(body, expr.bounds)
+        }
+
+    private inline fun <B : KSort, T: KSort> transformQuantifiedExpression(
+        quantifiedVars: Set<KDecl<*>>,
+        body: KExpr<B>,
+        crossinline quantifierBuilder: (KExpr<B>) -> KExpr<T>
+    ): KExpr<T> {
+        val allQuantifiedVars = this.quantifiedVars.union(quantifiedVars)
+        val quantifierBodyEvaluator = KModelEvaluator(ctx, model, isComplete, allQuantifiedVars)
+        val evaluatedBody = quantifierBodyEvaluator.apply(body)
+        return quantifierBuilder(evaluatedBody)
+    }
+
+    override fun simplifyEqUninterpreted(
+        lhs: KExpr<KUninterpretedSort>,
+        rhs: KExpr<KUninterpretedSort>
+    ): KExpr<KBoolSort> = with(ctx) {
+        if (isUninterpretedValue(lhs.sort, lhs) && isUninterpretedValue(lhs.sort, rhs)) {
+            return (lhs == rhs).expr
+        }
+        super.simplifyEqUninterpreted(lhs, rhs)
+    }
+
+    override fun areDefinitelyDistinctUninterpreted(
+        lhs: KExpr<KUninterpretedSort>,
+        rhs: KExpr<KUninterpretedSort>
+    ): Boolean {
+        if (isUninterpretedValue(lhs.sort, lhs) && isUninterpretedValue(lhs.sort, rhs)) {
+            return lhs != rhs
+        }
+        return super.areDefinitelyDistinctUninterpreted(lhs, rhs)
+    }
+
+    private fun isUninterpretedValue(sort: KUninterpretedSort, expr: KExpr<KUninterpretedSort>): Boolean {
+        val sortUniverse = model.uninterpretedSortUniverse(sort) ?: return false
+        return expr in sortUniverse
+    }
+
+    private fun <D : KSort, R : KSort> evalArrayFunction(
+        sort: KArraySort<D, R>,
+        function: KDecl<R>,
+        indexVar: KDecl<D>,
+        interpretation: KModel.KFuncInterp<R>
+    ): KExpr<KArraySort<D, R>> {
+        val usedDeclarations = interpretation.usedDeclarations()
+
+        // argument value is unused in function interpretation.
+        if (indexVar !in usedDeclarations) {
+            return evalArrayInterpretation(sort, interpretation)
+        }
+
+        val index = ctx.mkConstApp(indexVar)
+        val evaluated = evalFunction(function, listOf(index))
+        return ctx.mkArrayLambda(index.decl, evaluated)
+    }
+
+    private fun <D : KSort, R : KSort> evalArrayInterpretation(
+        sort: KArraySort<D, R>,
+        interpretation: KModel.KFuncInterp<R>
+    ): KExpr<KArraySort<D, R>> = with(ctx) {
+        val defaultValue = interpretation.default ?: completeModelValue(sort.range)
+        val defaultArray: KExpr<KArraySort<D, R>> = mkArrayConst(sort, defaultValue)
+
+        interpretation.entries.foldRight(defaultArray) { entry, acc ->
+            val idx = entry.args.single().asExpr(sort.domain)
+            acc.store(idx, entry.value)
+        }
+    }
+
+    private fun KModel.KFuncInterp<*>.usedDeclarations(): Set<KDecl<*>> {
+        val result = hashSetOf<KDecl<*>>()
+        entries.forEach { entry ->
+            result += collectUninterpretedDeclarations(entry.value)
+            entry.args.forEach {
+                result += collectUninterpretedDeclarations(it)
+            }
+        }
+        default?.also { result += collectUninterpretedDeclarations(it) }
+        return result
     }
 
     private fun <T : KSort> evalFunction(decl: KDecl<T>, args: List<KExpr<*>>): KExpr<T> {
@@ -69,9 +180,18 @@ open class KModelEvaluator(
                 return ctx.mkApp(decl, args)
             }
 
+            // Check if expr is an uninterpreted value of a sort
+            if (interpretation == null && decl.sort is KUninterpretedSort) {
+                val universe = model.uninterpretedSortUniverse(decl.sort) ?: emptySet()
+                val expr = ctx.mkApp(decl, args)
+                if (expr.uncheckedCast() in universe) {
+                    return expr
+                }
+            }
+
+            // isComplete = true, return and cache
             if (interpretation == null) {
-                // isComplete = true, return and cache
-                return@getOrPut decl.sort.sampleValue()
+                return@getOrPut completeModelValue(decl.sort)
             }
 
             check(args.size == interpretation.vars.size) {
@@ -103,12 +223,29 @@ open class KModelEvaluator(
         }
 
         // in case of partial interpretation we can generate any default expr to preserve expression correctness
-        val defaultExpr = interpretation.default ?: interpretation.sort.sampleValue()
+        val defaultExpr = interpretation.default ?: completeModelValue(interpretation.sort)
         val default = varSubstitution.apply(defaultExpr)
 
         return entries.foldRight(default) { entry, acc ->
             val argBinding = mkAnd(entry.args.zip(args) { ea, a -> mkEq(ea as KExpr<KSort>, a as KExpr<KSort>) })
             mkIte(argBinding, entry.value, acc)
         }
+    }
+
+    private fun <T : KSort> completeModelValue(sort: T): KExpr<T> {
+        val value = when (sort) {
+            is KUninterpretedSort ->
+                model.uninterpretedSortUniverse(sort)
+                    ?.randomOrNull()
+                    ?: sort.sampleValue()
+
+            is KArraySort<*, *> -> {
+                val arrayValue = completeModelValue(sort.range)
+                ctx.mkArrayConst(sort, arrayValue)
+            }
+
+            else -> sort.sampleValue()
+        }
+        return value.asExpr(sort)
     }
 }

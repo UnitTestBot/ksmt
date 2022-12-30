@@ -1,6 +1,5 @@
 package org.ksmt.solver.bitwuzla
 
-import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KDeclVisitor
 import org.ksmt.decl.KFuncDecl
@@ -117,6 +116,7 @@ import org.ksmt.expr.KImpliesExpr
 import org.ksmt.expr.KInt32NumExpr
 import org.ksmt.expr.KInt64NumExpr
 import org.ksmt.expr.KIntBigNumExpr
+import org.ksmt.expr.KInterpretedConstant
 import org.ksmt.expr.KIsIntRealExpr
 import org.ksmt.expr.KIteExpr
 import org.ksmt.expr.KLeArithExpr
@@ -165,8 +165,8 @@ import org.ksmt.sort.KSort
 import org.ksmt.sort.KSortVisitor
 import org.ksmt.sort.KUninterpretedSort
 
+@Suppress("LargeClass")
 open class KBitwuzlaExprInternalizer(
-    private val ctx: KContext,
     val bitwuzlaCtx: KBitwuzlaContext
 ) : KExprInternalizerBase<BitwuzlaTerm>() {
 
@@ -205,6 +205,10 @@ open class KBitwuzlaExprInternalizer(
 
     private fun saveExprInternalizationResult(expr: KExpr<*>, term: BitwuzlaTerm) {
         bitwuzlaCtx.internalizeExpr(expr) { term }
+
+        // Save only constants
+        if (expr !is KInterpretedConstant) return
+
         val kind = Native.bitwuzlaTermGetKind(term)
 
         /*
@@ -230,9 +234,7 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun <T : KSort> transform(expr: KConst<T>) = expr.transform {
-        with(ctx) {
-            bitwuzlaCtx.mkConstant(expr.decl, expr.sort.internalizeSort())
-        }
+        bitwuzlaCtx.mkConstant(expr.decl, expr.sort.internalizeSort())
     }
 
     override fun transform(expr: KAndExpr) = with(expr) {
@@ -295,33 +297,56 @@ open class KBitwuzlaExprInternalizer(
         transform { if (value) bitwuzlaCtx.trueTerm else bitwuzlaCtx.falseTerm }
     }
 
-    override fun transform(expr: KBitVec8Value): KExpr<KBv8Sort> = transformBvNumber(expr)
-    override fun transform(expr: KBitVec16Value): KExpr<KBv16Sort> = transformBvNumber(expr)
-    override fun transform(expr: KBitVec32Value): KExpr<KBv32Sort> = transformBvNumber(expr)
-    override fun transform(expr: KBitVec64Value): KExpr<KBv64Sort> = transformBvNumber(expr)
+    override fun transform(expr: KBitVec8Value): KExpr<KBv8Sort> = transformBv32Number(expr)
+    override fun transform(expr: KBitVec16Value): KExpr<KBv16Sort> = transformBv32Number(expr)
+    override fun transform(expr: KBitVec32Value): KExpr<KBv32Sort> = transformBv32Number(expr)
+    override fun transform(expr: KBitVec64Value): KExpr<KBv64Sort> = transformBv64Number(expr)
 
-    fun <T : KBitVecNumberValue<S, *>, S : KBvSort> transformBvNumber(expr: T): T = with(expr) {
+    fun <T : KBitVecNumberValue<S, *>, S : KBvSort> transformBv32Number(expr: T): T = with(expr) {
         transform {
-            with(ctx) {
-                Native.bitwuzlaMkBvValueUint64(
-                    bitwuzlaCtx.bitwuzla,
-                    sort.internalizeSort(),
-                    numberValue.toLong()
-                ).also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
-            }
+            Native.bitwuzlaMkBvValueUint32(
+                bitwuzlaCtx.bitwuzla,
+                sort.internalizeSort(),
+                numberValue.toInt()
+            ).also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
+        }
+    }
+
+    /**
+     * Use uint32 values since uint64 doesn't work on Windows.
+     * @see [Native.bitwuzlaMkBvValueUint64]
+     * */
+    fun <T : KBitVecNumberValue<S, *>, S : KBvSort> transformBv64Number(expr: T): T = with(expr) {
+        transform {
+            val lowerBits = numberValue.toInt()
+            val higherBits = (numberValue.toLong() ushr Int.SIZE_BITS).toInt()
+            val lowerBitsTerm = Native.bitwuzlaMkBvValueUint32(
+                bitwuzlaCtx.bitwuzla,
+                ctx.bv32Sort.internalizeSort(),
+                lowerBits
+            )
+            val higherBitsTerm = Native.bitwuzlaMkBvValueUint32(
+                bitwuzlaCtx.bitwuzla,
+                ctx.bv32Sort.internalizeSort(),
+                higherBits
+            )
+            Native.bitwuzlaMkTerm2(
+                bitwuzlaCtx.bitwuzla,
+                BitwuzlaKind.BITWUZLA_KIND_BV_CONCAT,
+                higherBitsTerm,
+                lowerBitsTerm
+            ).also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
         }
     }
 
     override fun transform(expr: KBitVecCustomValue) = with(expr) {
         transform {
-            with(ctx) {
-                Native.bitwuzlaMkBvValue(
-                    bitwuzlaCtx.bitwuzla,
-                    sort.internalizeSort(),
-                    binaryStringValue,
-                    BitwuzlaBVBase.BITWUZLA_BV_BASE_BIN
-                ).also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
-            }
+            Native.bitwuzlaMkBvValue(
+                bitwuzlaCtx.bitwuzla,
+                sort.internalizeSort(),
+                binaryStringValue,
+                BitwuzlaBVBase.BITWUZLA_BV_BASE_BIN
+            ).also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
         }
     }
 
@@ -571,7 +596,7 @@ open class KBitwuzlaExprInternalizer(
         transform {
             bitwuzlaCtx.withConstantScope {
                 val indexVar = mkVar(indexVarDecl, indexVarDecl.sort.internalizeSort())
-                val bodyInternalizer = KBitwuzlaExprInternalizer(ctx, bitwuzlaCtx)
+                val bodyInternalizer = KBitwuzlaExprInternalizer(bitwuzlaCtx)
                 val body = with(bodyInternalizer) {
                     body.internalize()
                 }
@@ -750,7 +775,7 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun <T : KFpSort> transform(expr: KFpFusedMulAddExpr<T>): KExpr<T> = with(expr) {
-        transform(roundingMode, arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_FP_FMA)
+        transform(roundingMode, arg0, arg1, arg2, BitwuzlaKind.BITWUZLA_KIND_FP_FMA)
     }
 
     override fun <T : KFpSort> transform(expr: KFpSqrtExpr<T>): KExpr<T> = with(expr) {
@@ -881,7 +906,7 @@ open class KBitwuzlaExprInternalizer(
             val boundVars = bounds.map {
                 mkVar(it, it.sort.internalizeSort())
             }
-            val bodyInternalizer = KBitwuzlaExprInternalizer(ctx, bitwuzlaCtx)
+            val bodyInternalizer = KBitwuzlaExprInternalizer(bitwuzlaCtx)
             val body = with(bodyInternalizer) {
                 body.internalize()
             }
@@ -992,5 +1017,16 @@ open class KBitwuzlaExprInternalizer(
         kind: BitwuzlaKind
     ): S = transform(arg0, arg1, arg2) { a0: BitwuzlaTerm, a1: BitwuzlaTerm, a2: BitwuzlaTerm ->
         Native.bitwuzlaMkTerm3(bitwuzlaCtx.bitwuzla, kind, a0, a1, a2)
+    }
+
+    fun <S : KExpr<*>> S.transform(
+        arg0: KExpr<*>,
+        arg1: KExpr<*>,
+        arg2: KExpr<*>,
+        arg3: KExpr<*>,
+        kind: BitwuzlaKind
+    ): S = transform(arg0, arg1, arg2, arg3) { a0: BitwuzlaTerm, a1: BitwuzlaTerm, a2: BitwuzlaTerm, a3: BitwuzlaTerm ->
+        val args = arrayOf(a0, a1, a2, a3)
+        Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, kind, args)
     }
 }

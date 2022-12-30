@@ -32,7 +32,7 @@ class DefaultValueSampler<T : KSort> private constructor(
     }
 
     override fun <S : KBvSort> visit(sort: S): KExpr<T> = with(ctx) {
-        mkBv("0", sort.sizeBits).asExpr(this@DefaultValueSampler.sort)
+        mkBv(0, sort.sizeBits).asExpr(this@DefaultValueSampler.sort)
     }
 
     override fun <S : KFpSort> visit(sort: S): KExpr<T> = with(ctx) {
@@ -49,7 +49,7 @@ class DefaultValueSampler<T : KSort> private constructor(
     }
 
     override fun visit(sort: KUninterpretedSort): KExpr<T> =
-        error("Uninterpreted sort has no values")
+        ctx.uninterpretedSortDefaultValue(sort).asExpr(this@DefaultValueSampler.sort)
 
     companion object{
         fun <T : KSort> T.sampleValue(): KExpr<T> =

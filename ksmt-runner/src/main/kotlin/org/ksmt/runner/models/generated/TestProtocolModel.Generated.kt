@@ -29,8 +29,10 @@ class TestProtocolModel private constructor(
     private val _exprToString: RdCall<Long, String>,
     private val _getReasonUnknown: RdCall<Int, String>,
     private val _addEqualityCheck: RdCall<EqualityCheckParams, Unit>,
+    private val _addEqualityCheckAssumption: RdCall<EqualityCheckAssumptionsParams, Unit>,
     private val _checkEqualities: RdCall<Int, TestCheckResult>,
-    private val _findFirstFailedEquality: RdCall<Int, Int?>
+    private val _findFirstFailedEquality: RdCall<Int, Int?>,
+    private val _mkTrueExpr: RdCall<Unit, Long>
 ) : RdExtBase() {
     //companion
     
@@ -38,6 +40,7 @@ class TestProtocolModel private constructor(
         
         override fun registerSerializersCore(serializers: ISerializers)  {
             serializers.register(EqualityCheckParams)
+            serializers.register(EqualityCheckAssumptionsParams)
             serializers.register(TestAssertParams)
             serializers.register(TestCheckResult)
             serializers.register(TestConversionResult)
@@ -67,7 +70,7 @@ class TestProtocolModel private constructor(
         private val __LongListSerializer = FrameworkMarshallers.Long.list()
         private val __IntNullableSerializer = FrameworkMarshallers.Int.nullable()
         
-        const val serializationHash = 3379332879384107871L
+        const val serializationHash = 7382766109533773681L
         
     }
     override val serializersOwner: ISerializersOwner get() = TestProtocolModel
@@ -131,6 +134,11 @@ class TestProtocolModel private constructor(
     val addEqualityCheck: RdCall<EqualityCheckParams, Unit> get() = _addEqualityCheck
     
     /**
+     * Add assumptions for the subsequent equality check
+     */
+    val addEqualityCheckAssumption: RdCall<EqualityCheckAssumptionsParams, Unit> get() = _addEqualityCheckAssumption
+    
+    /**
      * Check added equalities
      */
     val checkEqualities: RdCall<Int, TestCheckResult> get() = _checkEqualities
@@ -139,6 +147,11 @@ class TestProtocolModel private constructor(
      * Find first failed equality check
      */
     val findFirstFailedEquality: RdCall<Int, Int?> get() = _findFirstFailedEquality
+    
+    /**
+     * Create true expression
+     */
+    val mkTrueExpr: RdCall<Unit, Long> get() = _mkTrueExpr
     //methods
     //initializer
     init {
@@ -153,8 +166,10 @@ class TestProtocolModel private constructor(
         _exprToString.async = true
         _getReasonUnknown.async = true
         _addEqualityCheck.async = true
+        _addEqualityCheckAssumption.async = true
         _checkEqualities.async = true
         _findFirstFailedEquality.async = true
+        _mkTrueExpr.async = true
     }
     
     init {
@@ -169,8 +184,10 @@ class TestProtocolModel private constructor(
         bindableChildren.add("exprToString" to _exprToString)
         bindableChildren.add("getReasonUnknown" to _getReasonUnknown)
         bindableChildren.add("addEqualityCheck" to _addEqualityCheck)
+        bindableChildren.add("addEqualityCheckAssumption" to _addEqualityCheckAssumption)
         bindableChildren.add("checkEqualities" to _checkEqualities)
         bindableChildren.add("findFirstFailedEquality" to _findFirstFailedEquality)
+        bindableChildren.add("mkTrueExpr" to _mkTrueExpr)
     }
     
     //secondary constructor
@@ -187,8 +204,10 @@ class TestProtocolModel private constructor(
         RdCall<Long, String>(FrameworkMarshallers.Long, FrameworkMarshallers.String),
         RdCall<Int, String>(FrameworkMarshallers.Int, FrameworkMarshallers.String),
         RdCall<EqualityCheckParams, Unit>(EqualityCheckParams, FrameworkMarshallers.Void),
+        RdCall<EqualityCheckAssumptionsParams, Unit>(EqualityCheckAssumptionsParams, FrameworkMarshallers.Void),
         RdCall<Int, TestCheckResult>(FrameworkMarshallers.Int, TestCheckResult),
-        RdCall<Int, Int?>(FrameworkMarshallers.Int, __IntNullableSerializer)
+        RdCall<Int, Int?>(FrameworkMarshallers.Int, __IntNullableSerializer),
+        RdCall<Unit, Long>(FrameworkMarshallers.Void, FrameworkMarshallers.Long)
     )
     
     //equals trait
@@ -208,8 +227,10 @@ class TestProtocolModel private constructor(
             print("exprToString = "); _exprToString.print(printer); println()
             print("getReasonUnknown = "); _getReasonUnknown.print(printer); println()
             print("addEqualityCheck = "); _addEqualityCheck.print(printer); println()
+            print("addEqualityCheckAssumption = "); _addEqualityCheckAssumption.print(printer); println()
             print("checkEqualities = "); _checkEqualities.print(printer); println()
             print("findFirstFailedEquality = "); _findFirstFailedEquality.print(printer); println()
+            print("mkTrueExpr = "); _mkTrueExpr.print(printer); println()
         }
         printer.print(")")
     }
@@ -227,14 +248,79 @@ class TestProtocolModel private constructor(
             _exprToString.deepClonePolymorphic(),
             _getReasonUnknown.deepClonePolymorphic(),
             _addEqualityCheck.deepClonePolymorphic(),
+            _addEqualityCheckAssumption.deepClonePolymorphic(),
             _checkEqualities.deepClonePolymorphic(),
-            _findFirstFailedEquality.deepClonePolymorphic()
+            _findFirstFailedEquality.deepClonePolymorphic(),
+            _mkTrueExpr.deepClonePolymorphic()
         )
     }
     //contexts
 }
 val IProtocol.testProtocolModel get() = getOrCreateExtension(TestProtocolModel::class) { @Suppress("DEPRECATION") TestProtocolModel.create(lifetime, this) }
 
+
+
+/**
+ * #### Generated from [TestProtocolModel.kt:25]
+ */
+data class EqualityCheckAssumptionsParams (
+    val solver: Int,
+    val assumption: org.ksmt.KAst
+) : IPrintable {
+    //companion
+    
+    companion object : IMarshaller<EqualityCheckAssumptionsParams> {
+        override val _type: KClass<EqualityCheckAssumptionsParams> = EqualityCheckAssumptionsParams::class
+        
+        @Suppress("UNCHECKED_CAST")
+        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): EqualityCheckAssumptionsParams  {
+            val solver = buffer.readInt()
+            val assumption = (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer)
+            return EqualityCheckAssumptionsParams(solver, assumption)
+        }
+        
+        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: EqualityCheckAssumptionsParams)  {
+            buffer.writeInt(value.solver)
+            (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, value.assumption)
+        }
+        
+        
+    }
+    //fields
+    //methods
+    //initializer
+    //secondary constructor
+    //equals trait
+    override fun equals(other: Any?): Boolean  {
+        if (this === other) return true
+        if (other == null || other::class != this::class) return false
+        
+        other as EqualityCheckAssumptionsParams
+        
+        if (solver != other.solver) return false
+        if (assumption != other.assumption) return false
+        
+        return true
+    }
+    //hash code trait
+    override fun hashCode(): Int  {
+        var __r = 0
+        __r = __r*31 + solver.hashCode()
+        __r = __r*31 + assumption.hashCode()
+        return __r
+    }
+    //pretty print
+    override fun print(printer: PrettyPrinter)  {
+        printer.println("EqualityCheckAssumptionsParams (")
+        printer.indent {
+            print("solver = "); solver.print(printer); println()
+            print("assumption = "); assumption.print(printer); println()
+        }
+        printer.print(")")
+    }
+    //deepClone
+    //contexts
+}
 
 
 /**
@@ -307,7 +393,7 @@ data class EqualityCheckParams (
 
 
 /**
- * #### Generated from [TestProtocolModel.kt:25]
+ * #### Generated from [TestProtocolModel.kt:30]
  */
 data class TestAssertParams (
     val solver: Int,
@@ -370,7 +456,7 @@ data class TestAssertParams (
 
 
 /**
- * #### Generated from [TestProtocolModel.kt:30]
+ * #### Generated from [TestProtocolModel.kt:35]
  */
 data class TestCheckResult (
     val status: org.ksmt.solver.KSolverStatus
@@ -427,7 +513,7 @@ data class TestCheckResult (
 
 
 /**
- * #### Generated from [TestProtocolModel.kt:34]
+ * #### Generated from [TestProtocolModel.kt:39]
  */
 data class TestConversionResult (
     val expressions: List<org.ksmt.KAst>
@@ -484,7 +570,7 @@ data class TestConversionResult (
 
 
 /**
- * #### Generated from [TestProtocolModel.kt:38]
+ * #### Generated from [TestProtocolModel.kt:43]
  */
 data class TestInternalizeAndConvertParams (
     val expressions: List<org.ksmt.KAst>

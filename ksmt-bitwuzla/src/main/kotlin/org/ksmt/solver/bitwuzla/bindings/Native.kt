@@ -14,6 +14,7 @@ import com.sun.jna.Native
 import com.sun.jna.Pointer
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
+import org.ksmt.utils.NativeLibraryLoader
 
 typealias Bitwuzla = Pointer
 typealias BitwuzlaTerm = Pointer
@@ -32,6 +33,13 @@ object Native {
     }
 
     init {
+        NativeLibraryLoader.load { os ->
+            when (os) {
+                NativeLibraryLoader.OS.LINUX -> listOf("libgmp-10")
+                NativeLibraryLoader.OS.WINDOWS -> listOf("libgmp-10")
+                NativeLibraryLoader.OS.MACOS -> TODO("Mac os platform is not supported")
+            }
+        }
         Native.register("bitwuzla")
         bitwuzlaSetAbortCallback(defaultAbortHandler)
     }
@@ -682,9 +690,30 @@ object Native {
      * of given sort.
      *
      * @see bitwuzla_mk_bv_sort
+     *
+     * Note: doesn't work on Windows because JNA truncates Long to uint32.
      */
+    @Deprecated("Doesn't work on Windows because of JNA", level = DeprecationLevel.ERROR)
     fun bitwuzlaMkBvValueUint64(bitwuzla: Bitwuzla, sort: BitwuzlaSort, value: Long): BitwuzlaTerm =
         bitwuzla_mk_bv_value_uint64(bitwuzla, sort, value).checkError()
+
+    /**
+     * Create a bit-vector value from its unsigned integer representation.
+     *
+     * Note: If given value does not fit into a bit-vector of given size (sort),
+     * the value is truncated to fit.
+     *
+     * @param bitwuzla The Bitwuzla instance.
+     * @param sort The sort of the value.
+     * @param value The unsigned integer representation of the bit-vector value.
+     *
+     * @return A term of kind [BitwuzlaKind.BITWUZLA_KIND_VAL], representing the bit-vector value
+     * of given sort.
+     *
+     * @see bitwuzla_mk_bv_sort
+     */
+    fun bitwuzlaMkBvValueUint32(bitwuzla: Bitwuzla, sort: BitwuzlaSort, value: Int): BitwuzlaTerm =
+        bitwuzla_mk_bv_value_uint64(bitwuzla, sort, value.toLong()).checkError()
 
     private external fun bitwuzla_mk_bv_value_uint64(bitwuzla: Bitwuzla, sort: BitwuzlaSort, value: Long): BitwuzlaTerm
 
@@ -2728,9 +2757,19 @@ object Native {
     /**
      * Convert bv const bits to uint64.
      * Only safe if [bitwuzlaBvBitsGetWidth] <= 64.
+     *
+     * Note: doesn't work on Windows because JNA truncates Long to uint32.
      * */
+    @Deprecated("Doesn't work on Windows because of JNA", level = DeprecationLevel.ERROR)
     fun bitwuzlaBvBitsToUInt64(bv: BitwuzlaBitVector): Long =
         bzla_bv_to_uint64(bv).checkError()
+
+    /**
+     * Convert bv const bits to uint32.
+     * Only safe if [bitwuzlaBvBitsGetWidth] <= 32.
+     * */
+    fun bitwuzlaBvBitsToUInt32(bv: BitwuzlaBitVector): Int =
+        bzla_bv_to_uint64(bv).toInt().checkError()
 
     /**
      * Get a single bit (0 or 1) from bv const bits.

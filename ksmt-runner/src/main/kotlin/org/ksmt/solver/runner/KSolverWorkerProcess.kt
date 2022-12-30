@@ -10,6 +10,7 @@ import org.ksmt.runner.models.generated.CheckResult
 import org.ksmt.runner.models.generated.ModelEntry
 import org.ksmt.runner.models.generated.ModelFuncInterpEntry
 import org.ksmt.runner.models.generated.ModelResult
+import org.ksmt.runner.models.generated.ModelUninterpretedSortUniverse
 import org.ksmt.runner.models.generated.ReasonUnknownResult
 import org.ksmt.runner.models.generated.SolverProtocolModel
 import org.ksmt.runner.models.generated.SolverType
@@ -100,9 +101,14 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
             val interpretations = declarations.map {
                 val interp = model.interpretation(it) ?: error("No interpretation for model declaration $it")
                 val interpEntries = interp.entries.map { ModelFuncInterpEntry(it.args, it.value) }
-                ModelEntry(interp.sort, interp.vars, interpEntries, interp.default)
+                ModelEntry(interp.decl, interp.vars, interpEntries, interp.default)
             }
-            ModelResult(declarations, interpretations)
+            val uninterpretedSortUniverse = model.uninterpretedSorts.map { sort ->
+                val universe = model.uninterpretedSortUniverse(sort)
+                    ?: error("No universe for uninterpreted sort $it")
+                ModelUninterpretedSortUniverse(sort, universe.toList())
+            }
+            ModelResult(declarations, interpretations, uninterpretedSortUniverse)
         }
         unsatCore.measureExecutionForTermination {
             val core = solver.unsatCore()

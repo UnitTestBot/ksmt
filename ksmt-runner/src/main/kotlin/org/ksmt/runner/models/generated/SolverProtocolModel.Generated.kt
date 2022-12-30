@@ -15,7 +15,7 @@ import kotlin.jvm.JvmStatic
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:15]
+ * #### Generated from [SolverProtocolModel.kt:16]
  */
 class SolverProtocolModel private constructor(
     private val _initSolver: RdCall<CreateSolverParams, Unit>,
@@ -48,6 +48,7 @@ class SolverProtocolModel private constructor(
             serializers.register(ReasonUnknownResult)
             serializers.register(ModelFuncInterpEntry)
             serializers.register(ModelEntry)
+            serializers.register(ModelUninterpretedSortUniverse)
             serializers.register(ModelResult)
             serializers.register(SolverType.marshaller)
             serializers.register(ConfigurationParamKind.marshaller)
@@ -75,7 +76,7 @@ class SolverProtocolModel private constructor(
         
         private val __SolverConfigurationParamListSerializer = SolverConfigurationParam.list()
         
-        const val serializationHash = 2376534082034507660L
+        const val serializationHash = -2649282789874977820L
         
     }
     override val serializersOwner: ISerializersOwner get() = SolverProtocolModel
@@ -236,7 +237,7 @@ val IProtocol.solverProtocolModel get() = getOrCreateExtension(SolverProtocolMod
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:41]
+ * #### Generated from [SolverProtocolModel.kt:42]
  */
 data class AssertAndTrackResult (
     val expression: org.ksmt.KAst
@@ -293,7 +294,7 @@ data class AssertAndTrackResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:37]
+ * #### Generated from [SolverProtocolModel.kt:38]
  */
 data class AssertParams (
     val expression: org.ksmt.KAst
@@ -350,7 +351,7 @@ data class AssertParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:49]
+ * #### Generated from [SolverProtocolModel.kt:50]
  */
 data class CheckParams (
     val timeout: Long
@@ -407,7 +408,7 @@ data class CheckParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:53]
+ * #### Generated from [SolverProtocolModel.kt:54]
  */
 data class CheckResult (
     val status: org.ksmt.solver.KSolverStatus
@@ -464,7 +465,7 @@ data class CheckResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:57]
+ * #### Generated from [SolverProtocolModel.kt:58]
  */
 data class CheckWithAssumptionsParams (
     val assumptions: List<org.ksmt.KAst>,
@@ -527,7 +528,7 @@ data class CheckWithAssumptionsParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:27]
+ * #### Generated from [SolverProtocolModel.kt:28]
  */
 enum class ConfigurationParamKind {
     String, 
@@ -543,7 +544,7 @@ enum class ConfigurationParamKind {
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:19]
+ * #### Generated from [SolverProtocolModel.kt:20]
  */
 data class CreateSolverParams (
     val type: SolverType
@@ -600,10 +601,10 @@ data class CreateSolverParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:75]
+ * #### Generated from [SolverProtocolModel.kt:76]
  */
 data class ModelEntry (
-    val sort: org.ksmt.KAst,
+    val decl: org.ksmt.KAst,
     val vars: List<org.ksmt.KAst>,
     val entries: List<ModelFuncInterpEntry>,
     val default: org.ksmt.KAst?
@@ -615,15 +616,15 @@ data class ModelEntry (
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ModelEntry  {
-            val sort = (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer)
+            val decl = (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer)
             val vars = buffer.readList { (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer) }
             val entries = buffer.readList { ModelFuncInterpEntry.read(ctx, buffer) }
             val default = buffer.readNullable { (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer) }
-            return ModelEntry(sort, vars, entries, default)
+            return ModelEntry(decl, vars, entries, default)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ModelEntry)  {
-            (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, value.sort)
+            (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, value.decl)
             buffer.writeList(value.vars) { v -> (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, v) }
             buffer.writeList(value.entries) { v -> ModelFuncInterpEntry.write(ctx, buffer, v) }
             buffer.writeNullable(value.default) { (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, it) }
@@ -642,7 +643,7 @@ data class ModelEntry (
         
         other as ModelEntry
         
-        if (sort != other.sort) return false
+        if (decl != other.decl) return false
         if (vars != other.vars) return false
         if (entries != other.entries) return false
         if (default != other.default) return false
@@ -652,7 +653,7 @@ data class ModelEntry (
     //hash code trait
     override fun hashCode(): Int  {
         var __r = 0
-        __r = __r*31 + sort.hashCode()
+        __r = __r*31 + decl.hashCode()
         __r = __r*31 + vars.hashCode()
         __r = __r*31 + entries.hashCode()
         __r = __r*31 + if (default != null) default.hashCode() else 0
@@ -662,7 +663,7 @@ data class ModelEntry (
     override fun print(printer: PrettyPrinter)  {
         printer.println("ModelEntry (")
         printer.indent {
-            print("sort = "); sort.print(printer); println()
+            print("decl = "); decl.print(printer); println()
             print("vars = "); vars.print(printer); println()
             print("entries = "); entries.print(printer); println()
             print("default = "); default.print(printer); println()
@@ -675,7 +676,7 @@ data class ModelEntry (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:70]
+ * #### Generated from [SolverProtocolModel.kt:71]
  */
 data class ModelFuncInterpEntry (
     val args: List<org.ksmt.KAst>,
@@ -738,11 +739,12 @@ data class ModelFuncInterpEntry (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:82]
+ * #### Generated from [SolverProtocolModel.kt:88]
  */
 data class ModelResult (
     val declarations: List<org.ksmt.KAst>,
-    val interpretations: List<ModelEntry>
+    val interpretations: List<ModelEntry>,
+    val uninterpretedSortUniverse: List<ModelUninterpretedSortUniverse>
 ) : IPrintable {
     //companion
     
@@ -753,12 +755,14 @@ data class ModelResult (
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ModelResult  {
             val declarations = buffer.readList { (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer) }
             val interpretations = buffer.readList { ModelEntry.read(ctx, buffer) }
-            return ModelResult(declarations, interpretations)
+            val uninterpretedSortUniverse = buffer.readList { ModelUninterpretedSortUniverse.read(ctx, buffer) }
+            return ModelResult(declarations, interpretations, uninterpretedSortUniverse)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ModelResult)  {
             buffer.writeList(value.declarations) { v -> (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, v) }
             buffer.writeList(value.interpretations) { v -> ModelEntry.write(ctx, buffer, v) }
+            buffer.writeList(value.uninterpretedSortUniverse) { v -> ModelUninterpretedSortUniverse.write(ctx, buffer, v) }
         }
         
         
@@ -776,6 +780,7 @@ data class ModelResult (
         
         if (declarations != other.declarations) return false
         if (interpretations != other.interpretations) return false
+        if (uninterpretedSortUniverse != other.uninterpretedSortUniverse) return false
         
         return true
     }
@@ -784,6 +789,7 @@ data class ModelResult (
         var __r = 0
         __r = __r*31 + declarations.hashCode()
         __r = __r*31 + interpretations.hashCode()
+        __r = __r*31 + uninterpretedSortUniverse.hashCode()
         return __r
     }
     //pretty print
@@ -792,6 +798,7 @@ data class ModelResult (
         printer.indent {
             print("declarations = "); declarations.print(printer); println()
             print("interpretations = "); interpretations.print(printer); println()
+            print("uninterpretedSortUniverse = "); uninterpretedSortUniverse.print(printer); println()
         }
         printer.print(")")
     }
@@ -801,7 +808,70 @@ data class ModelResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:45]
+ * #### Generated from [SolverProtocolModel.kt:83]
+ */
+data class ModelUninterpretedSortUniverse (
+    val sort: org.ksmt.KAst,
+    val universe: List<org.ksmt.KAst>
+) : IPrintable {
+    //companion
+    
+    companion object : IMarshaller<ModelUninterpretedSortUniverse> {
+        override val _type: KClass<ModelUninterpretedSortUniverse> = ModelUninterpretedSortUniverse::class
+        
+        @Suppress("UNCHECKED_CAST")
+        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ModelUninterpretedSortUniverse  {
+            val sort = (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer)
+            val universe = buffer.readList { (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer) }
+            return ModelUninterpretedSortUniverse(sort, universe)
+        }
+        
+        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ModelUninterpretedSortUniverse)  {
+            (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, value.sort)
+            buffer.writeList(value.universe) { v -> (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, v) }
+        }
+        
+        
+    }
+    //fields
+    //methods
+    //initializer
+    //secondary constructor
+    //equals trait
+    override fun equals(other: Any?): Boolean  {
+        if (this === other) return true
+        if (other == null || other::class != this::class) return false
+        
+        other as ModelUninterpretedSortUniverse
+        
+        if (sort != other.sort) return false
+        if (universe != other.universe) return false
+        
+        return true
+    }
+    //hash code trait
+    override fun hashCode(): Int  {
+        var __r = 0
+        __r = __r*31 + sort.hashCode()
+        __r = __r*31 + universe.hashCode()
+        return __r
+    }
+    //pretty print
+    override fun print(printer: PrettyPrinter)  {
+        printer.println("ModelUninterpretedSortUniverse (")
+        printer.indent {
+            print("sort = "); sort.print(printer); println()
+            print("universe = "); universe.print(printer); println()
+        }
+        printer.print(")")
+    }
+    //deepClone
+    //contexts
+}
+
+
+/**
+ * #### Generated from [SolverProtocolModel.kt:46]
  */
 data class PopParams (
     val levels: UInt
@@ -858,7 +928,7 @@ data class PopParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:66]
+ * #### Generated from [SolverProtocolModel.kt:67]
  */
 data class ReasonUnknownResult (
     val reasonUnknown: String
@@ -915,7 +985,7 @@ data class ReasonUnknownResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:26]
+ * #### Generated from [SolverProtocolModel.kt:27]
  */
 data class SolverConfigurationParam (
     val kind: ConfigurationParamKind,
@@ -984,7 +1054,7 @@ data class SolverConfigurationParam (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:20]
+ * #### Generated from [SolverProtocolModel.kt:21]
  */
 enum class SolverType {
     Z3, 
@@ -998,7 +1068,7 @@ enum class SolverType {
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:62]
+ * #### Generated from [SolverProtocolModel.kt:63]
  */
 data class UnsatCoreResult (
     val core: List<org.ksmt.KAst>
