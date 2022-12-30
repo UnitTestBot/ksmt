@@ -12,6 +12,7 @@ dependencies {
     implementation(project(":ksmt-bitwuzla"))
     implementation(project(":ksmt-runner"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+    implementation(kotlin("reflect"))
 
     testImplementation("org.junit.jupiter", "junit-jupiter-params", "5.8.2")
 }
