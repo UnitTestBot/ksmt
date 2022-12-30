@@ -790,6 +790,10 @@ class KBvExtractExpr internal constructor(
     val low: Int,
     val value: KExpr<KBvSort>
 ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
+    init {
+        require(low <= high) { "High bit $high must be greater than lower bit $low" }
+    }
+
     override val args: List<KExpr<KBvSort>>
         get() = listOf(value)
 

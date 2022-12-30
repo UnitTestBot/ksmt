@@ -1,9 +1,20 @@
 package org.ksmt.test
 
+import org.ksmt.KAst
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFpRoundingMode
+import org.ksmt.expr.KInterpretedConstant
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KBvSort
+import org.ksmt.sort.KFpRoundingModeSort
+import org.ksmt.sort.KFpSort
+import org.ksmt.sort.KIntSort
+import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KSortVisitor
+import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.uncheckedCast
 import java.lang.reflect.InvocationTargetException
 import kotlin.random.Random
@@ -23,10 +34,10 @@ import kotlin.reflect.full.isSubclassOf
 class RandomExpressionGenerator(private val ctx: KContext, private val random: Random = Random(42)) {
     private val trace = arrayListOf<Any>()
     private val expressions = hashMapOf<KSort, MutableList<KExpr<*>>>()
-    private val generators = arrayListOf<ExpressionGenerator>()
-    private val sortGenerators = arrayListOf<SortGenerator>()
-    private lateinit var mkConstFunction: KFunction<*>
-    private lateinit var mkArraySortFunction: KFunction<*>
+    private val generators = arrayListOf<AstGenerator<KExpr<*>>>()
+    private val sortGenerators = arrayListOf<AstGenerator<KSort>>()
+    private lateinit var mkConstFunction: KFunction<KExpr<*>>
+    private lateinit var mkArraySortFunction: KFunction<KSort>
 
     fun generate(limit: Int): KExpr<*> {
         trace.clear()
@@ -55,18 +66,23 @@ class RandomExpressionGenerator(private val ctx: KContext, private val random: R
             .filter { it.visibility == KVisibility.PUBLIC }
             .filterIsInstance<KFunction<*>>()
 
-        val expressionGenerators = ctxFunctions
+        val expressionGenerators = ctxFunctions.asSequence()
             .filter { it.returnType.isKExpr() }
-            .mapNotNull { it.mkGenerator { f, refSorts, args -> ExpressionGenerator(f, refSorts, args) } }
+            .map { it as KFunction<KExpr<*>> }
+            .filterNot { (it.name == "mkBv" && it.parameters.any { p -> p.type.isSubclassOf(String::class) }) }
+            .filterNot { (it.name == "mkIntNum" && it.parameters.any { p -> p.type.isSubclassOf(String::class) }) }
+            .filterNot { (it.name == "mkRealNum" && it.parameters.any { p -> p.type.isSubclassOf(String::class) }) }
+            .mapNotNull { it.mkGenerator() }
 
         val sortGenerators = ctxFunctions
             .filter { it.returnType.isKSort() }
-            .mapNotNull { it.mkGenerator { f, refSorts, args -> SortGenerator(f, refSorts, args) } }
+            .map { it as KFunction<KSort> }
+            .mapNotNull { it.mkGenerator() }
 
         this.generators.addAll(expressionGenerators)
         this.sortGenerators.addAll(sortGenerators)
-        mkConstFunction = ctxFunctions.single { it.name == "mkConst" }
-        mkArraySortFunction = ctxFunctions.single { it.name == "mkArraySort" }
+        mkConstFunction = ctxFunctions.single { it.name == "mkConst" }.uncheckedCast()
+        mkArraySortFunction = ctxFunctions.single { it.name == "mkArraySort" }.uncheckedCast()
     }
 
     private fun generateInitialSeed(sortVariants: Int) {
@@ -82,8 +98,8 @@ class RandomExpressionGenerator(private val ctx: KContext, private val random: R
         }
     }
 
-    private fun SortGenerator.mkSeed(context: Map<String, KSort> = emptyMap()): KSort {
-        val exprGenerator = ExpressionGenerator(
+    private fun AstGenerator<KSort>.mkSeed(context: Map<String, KSort> = emptyMap()): KSort {
+        val exprGenerator = AstGenerator<KExpr<*>>(
             mkConstFunction,
             emptyMap(),
             listOf(SimpleProvider(String::class), this)
@@ -97,14 +113,9 @@ class RandomExpressionGenerator(private val ctx: KContext, private val random: R
         return expr.sort
     }
 
-    private inline fun <reified G> KFunction<*>.mkGenerator(
-        generator: (KFunction<*>, Map<String, SortProvider>, List<ArgumentProvider>) -> G
-    ): G? {
-        if (parameters.isEmpty()) return null
-        if (parameters.any { it.kind == KParameter.Kind.EXTENSION_RECEIVER }) return null
-        if (parameters[0].kind != KParameter.Kind.INSTANCE || !parameters[0].type.isKContext()) return null
+    private fun <T : KAst> KFunction<T>.mkGenerator(): AstGenerator<T>? {
+        if (!parametersAreCorrect()) return null
         val valueParams = parameters.drop(1)
-        if (valueParams.any { it.kind != KParameter.Kind.VALUE }) return null
 
         val typeParametersProviders = hashMapOf<String, SortProvider>()
         typeParameters.forEach {
@@ -112,13 +123,30 @@ class RandomExpressionGenerator(private val ctx: KContext, private val random: R
         }
 
         val argumentProviders = valueParams.map { it.mkArgProvider(typeParametersProviders) ?: return null }
-        return generator(this, typeParametersProviders, argumentProviders)
+        return AstGenerator(this, typeParametersProviders, argumentProviders) { args ->
+            when (name) {
+                "mkBvRepeatExpr" -> arrayOf((args[0] as Int) % 3, args[1])
+                else -> args.toTypedArray()
+            }
+        }
+    }
+
+    private fun KFunction<*>.parametersAreCorrect(): Boolean {
+        if (parameters.isEmpty()) return false
+        if (parameters.any { it.kind == KParameter.Kind.EXTENSION_RECEIVER }) return false
+        if (parameters[0].kind != KParameter.Kind.INSTANCE || !parameters[0].type.isKContext()) return false
+        if (parameters.drop(1).any { it.kind != KParameter.Kind.VALUE }) return false
+        return true
     }
 
     private fun KParameter.mkArgProvider(typeParametersProviders: MutableMap<String, SortProvider>): ArgumentProvider? {
         if (type.isKExpr()) {
             val sortProvider = type.mkKExprSortProvider(typeParametersProviders)
-            return ExprProvider(sortProvider)
+            return if (type.isConst()) {
+                ConstExprProvider(sortProvider)
+            } else {
+                ExprProvider(sortProvider)
+            }
         }
         if (type.isKSort()) {
             return type.mkSortProvider(typeParametersProviders)
@@ -198,6 +226,7 @@ class RandomExpressionGenerator(private val ctx: KContext, private val random: R
     ).any { isSubclassOf(it) }
 
     private fun KType.isKExpr(): Boolean = isSubclassOf(KExpr::class)
+    private fun KType.isConst(): Boolean = isSubclassOf(KInterpretedConstant::class)
 
     private fun KType.isKSort(): Boolean = isSubclassOf(KSort::class)
 
@@ -232,7 +261,7 @@ class RandomExpressionGenerator(private val ctx: KContext, private val random: R
                 "D" to domain,
                 "R" to range
             )
-            val generator = SortGenerator(
+            val generator = AstGenerator<KSort>(
                 mkArraySortFunction,
                 generationParams,
                 generationParams.keys.map { ReferenceSortProvider(it) }
@@ -260,56 +289,96 @@ class RandomExpressionGenerator(private val ctx: KContext, private val random: R
         override fun provide(references: Map<String, KSort>): Any {
             val concreteSort = sort.resolve(references)
             val candidateExpressions = expressions[concreteSort] ?: TODO()
-            return candidateExpressions.random(random)
+            return if (random.nextDouble() > 0.7) {
+                candidateExpressions.random(random)
+            } else {
+                candidateExpressions.last()
+            }
         }
     }
 
-    inner class ExpressionGenerator(
+    inner class ConstExprProvider(val sort: SortProvider) : ArgumentProvider {
+        override fun provide(references: Map<String, KSort>): Any {
+            val concreteSort = sort.resolve(references)
+            val candidateExpressions = expressions[concreteSort] ?: TODO()
+            val constants = candidateExpressions.filter { it is KInterpretedConstant }
+            return if (random.nextDouble() > 0.7 && constants.isNotEmpty()) {
+                constants.random(random)
+            } else {
+                concreteSort.accept(RandomConstExprGenerator()).also {
+                    registerExpr(it)
+                }
+            }
+        }
+    }
+
+    inner class RandomConstExprGenerator : KSortVisitor<KExpr<*>> {
+        override fun visit(sort: KBoolSort): KExpr<*> = if (random.nextBoolean()) ctx.trueExpr else ctx.falseExpr
+
+        override fun visit(sort: KIntSort): KExpr<*> = ctx.mkIntNum(random.nextInt())
+
+        override fun visit(sort: KRealSort): KExpr<*> = ctx.mkRealNum(random.nextInt())
+
+        override fun <S : KBvSort> visit(sort: S): KExpr<*> = ctx.mkBv(random.nextInt(), sort)
+
+        override fun <S : KFpSort> visit(sort: S): KExpr<*> = ctx.mkFp(random.nextDouble(), sort)
+
+        override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): KExpr<*> =
+            ctx.mkArrayConst(sort, sort.range.accept(this).uncheckedCast())
+
+        override fun visit(sort: KFpRoundingModeSort): KExpr<*> =
+            ctx.mkFpRoundingModeExpr(KFpRoundingMode.values().random(random))
+
+        override fun visit(sort: KUninterpretedSort): KExpr<*> = ctx.mkConst(randomString(10), sort)
+
+    }
+
+    inner class AstGenerator<T : KAst>(
         val function: KFunction<*>,
         val refSortProviders: Map<String, SortProvider>,
-        val argProviders: List<ArgumentProvider>
-    ) {
-        fun generate(context: Map<String, KSort> = emptyMap()): KExpr<*>? {
+        val argProviders: List<ArgumentProvider>,
+        val provideArguments: (List<Any>) -> Array<Any> = { it.toTypedArray() }
+    ) : ArgumentProvider {
+        override fun provide(references: Map<String, KSort>): Any = generate(references) ?: TODO()
+
+        fun generate(context: Map<String, KSort> = emptyMap()): T? {
             val resolvedRefProviders = refSortProviders.mapValues {
                 it.value.resolve(context)
             }
-            val arguments = argProviders.map { it.provide(context + resolvedRefProviders) }
+            val baseArguments = argProviders.map { it.provide(context + resolvedRefProviders) }
+            val arguments = provideArguments(baseArguments)
 
-            val expr = try {
-                function.call(ctx, *arguments.toTypedArray()) as KExpr<*>
+            val ast = try {
+                function.call(ctx, *arguments)
             } catch (ex: InvocationTargetException) {
-                System.err.println(ex.targetException.message)
+                System.err.println(function.name + "|" + ex.targetException.message)
                 return null
             } catch (ex: IllegalArgumentException) {
-                System.err.println(ex.message)
+                System.err.println(function.name + "|" + ex.message)
                 return null
             }
 
-            registerExpr(expr)
-            return expr
+            if (ast is KExpr<*>) {
+                if (!ast.isCorrect()) return null
+                registerExpr(ast)
+            }
+
+            return ast.uncheckedCast()
         }
     }
 
-    inner class SortGenerator(
-        val function: KFunction<*>,
-        val refSortProviders: Map<String, SortProvider>,
-        val argProviders: List<ArgumentProvider>
-    ) : ArgumentProvider {
-        override fun provide(references: Map<String, KSort>): Any {
-            val resolvedRefProviders = refSortProviders.mapValues {
-                it.value.resolve(references)
-            }
-            val arguments = argProviders.map { it.provide(resolvedRefProviders) }
-            return function.call(ctx, *arguments.toTypedArray()) as KSort
-        }
+    private fun KExpr<*>.isCorrect(): Boolean {
+        val sort = sort
+        if (sort is KBvSort && sort.sizeBits == 0u) return false
+        return true
     }
 
     private fun KClass<*>.generateSimpleValue(): Any = when (this) {
         Boolean::class -> random.nextBoolean()
         Byte::class -> random.nextInt().toByte()
         Short::class -> random.nextInt().toShort()
-        Int::class -> random.nextInt()
-        UInt::class -> random.nextUInt(3u..120u)
+        Int::class -> random.nextInt(3..100)
+        UInt::class -> random.nextUInt(3u..100u)
         Long::class -> random.nextLong()
         Float::class -> random.nextFloat()
         Double::class -> random.nextDouble()
@@ -330,6 +399,6 @@ class RandomExpressionGenerator(private val ctx: KContext, private val random: R
 
 fun main() {
     val generator = RandomExpressionGenerator(KContext())
-    val expr = generator.generate(1000)
+    val expr = generator.generate(100000)
     println(expr)
 }
