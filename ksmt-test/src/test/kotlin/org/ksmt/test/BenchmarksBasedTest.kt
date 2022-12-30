@@ -108,13 +108,13 @@ abstract class BenchmarksBasedTest {
                 val evaluatedAssertions = ksmtAssertions.map { model.eval(it, isComplete = true) }
 
                 val cardinalityConstraints = model.uninterpretedSorts.mapNotNull { sort ->
-                    model.uninterpretedSortUniverse(sort)?.let { sort to it }
-                }.map { (sort, universe) ->
-                    with(ctx) {
-                        val x = mkFreshConst("x", sort)
-                        val variants = mkOr(universe.map { x eq it })
-                        val uniqueness = mkDistinct(universe.toList())
-                        mkUniversalQuantifier(variants and uniqueness, listOf(x.decl))
+                    model.uninterpretedSortUniverse(sort)?.let { universe ->
+                        with(ctx) {
+                            val x = mkFreshConst("x", sort)
+                            val variants = mkOr(universe.map { x eq it })
+                            val uniqueness = mkDistinct(universe.toList())
+                            mkUniversalQuantifier(variants and uniqueness, listOf(x.decl))
+                        }
                     }
                 }
 
