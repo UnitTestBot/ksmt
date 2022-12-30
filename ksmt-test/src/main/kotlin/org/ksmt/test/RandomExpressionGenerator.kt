@@ -34,6 +34,7 @@ import kotlin.reflect.full.isSubclassOf
 class RandomExpressionGenerator(private val ctx: KContext, private val random: Random = Random(42)) {
     private val trace = arrayListOf<Any>()
     private val expressions = hashMapOf<KSort, MutableList<KExpr<*>>>()
+    private val sortIndex = hashMapOf<Class<*>, MutableList<KSort>>()
     private val generators = arrayListOf<AstGenerator<KExpr<*>>>()
     private val sortGenerators = arrayListOf<AstGenerator<KSort>>()
     private lateinit var mkConstFunction: KFunction<KExpr<*>>
@@ -56,7 +57,18 @@ class RandomExpressionGenerator(private val ctx: KContext, private val random: R
         return expr!!
     }
 
+    private fun registerSort(sort: KSort) {
+        if (sort in expressions) return
+        var sortCls: Class<*> = sort::class.java
+        while (sortCls != KSort::class.java) {
+            sortIndex.getOrPut(sortCls) { arrayListOf() }.add(sort)
+            sortCls = sortCls.superclass
+        }
+        sortIndex.getOrPut(sortCls) { arrayListOf() }.add(sort)
+    }
+
     private fun registerExpr(expr: KExpr<*>) {
+        registerSort(expr.sort)
         expressions.getOrPut(expr.sort) { arrayListOf() }.add(expr)
     }
 
@@ -185,7 +197,7 @@ class RandomExpressionGenerator(private val ctx: KContext, private val random: R
                 ?: TODO()
         }
         val sort = expr.arguments.single()
-        if (sort == KTypeProjection.STAR) return SingleSortProvider(KSort::class)
+        if (sort == KTypeProjection.STAR) return SingleSortProvider(KSort::class.java)
         val sortType = sort.type ?: TODO()
         return sortType.mkSortProvider(references)
     }
@@ -203,7 +215,7 @@ class RandomExpressionGenerator(private val ctx: KContext, private val random: R
             return ArraySortProvider(domain, range)
         }
         if (this.isKSort()) {
-            return SingleSortProvider(sortClass.uncheckedCast())
+            return SingleSortProvider((sortClass as KClass<KSort>).java)
         }
         TODO()
     }
@@ -241,9 +253,9 @@ class RandomExpressionGenerator(private val ctx: KContext, private val random: R
         fun resolve(references: Map<String, KSort>): KSort
     }
 
-    inner class SingleSortProvider(val sort: KClass<KSort>) : SortProvider {
+    inner class SingleSortProvider(val sort: Class<KSort>) : SortProvider {
         override fun resolve(references: Map<String, KSort>): KSort {
-            val candidates = expressions.keys.filter { it::class.isSubclassOf(sort) }
+            val candidates = sortIndex[sort] ?: TODO()
             return candidates.random(random)
         }
     }
@@ -399,6 +411,6 @@ class RandomExpressionGenerator(private val ctx: KContext, private val random: R
 
 fun main() {
     val generator = RandomExpressionGenerator(KContext())
-    val expr = generator.generate(100000)
+    val expr = generator.generate(1000000)
     println(expr)
 }
