@@ -16,6 +16,7 @@ import org.ksmt.sort.KSort
 import org.ksmt.sort.KSortVisitor
 import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.uncheckedCast
+import java.util.SortedMap
 import kotlin.random.Random
 import kotlin.random.nextInt
 import kotlin.random.nextUInt
@@ -37,7 +38,7 @@ class RandomExpressionGenerator {
     fun generate(limit: Int, context: KContext, random: Random = Random(42)): List<KExpr<*>> {
         generationContext = GenerationContext(random, context)
 
-        generateInitialSeed(sortVariants = 10)
+        generateInitialSeed(samplesPerSort = seedExpressionsPerSort)
 
         var i = 0
         do {
@@ -59,7 +60,8 @@ class RandomExpressionGenerator {
             val resolvedEntry = resolveTraceEntry(entry, replayContext)
             val result = resolvedEntry.call(context)
             when (result) {
-                is KExpr<*> -> replayContext.registerExpr(result)
+                // We don't care about expression depth since it is unused during replay
+                is KExpr<*> -> replayContext.registerExpr(result, depth = 0)
                 is KSort -> replayContext.registerSort(result)
             }
         }
@@ -78,24 +80,28 @@ class RandomExpressionGenerator {
         when (argument) {
             is SimpleArgument -> argument
             is ListArgument -> ListArgument(argument.nested.map { resolveArgument(it, replayContext) })
-            is ExprArgument -> ExprArgument(replayContext.expressions[argument.idx], argument.idx)
+            is ExprArgument -> ExprArgument(replayContext.expressions[argument.idx], argument.idx, argument.depth)
             is SortArgument -> SortArgument(replayContext.sorts[argument.idx], argument.idx)
         }
 
-    private fun generateInitialSeed(sortVariants: Int) {
+    private fun generateInitialSeed(samplesPerSort: Int) {
         for (sortGenerator in sortGenerators.filter { it.refSortProviders.isEmpty() }) {
-            repeat(sortVariants) {
+            repeat(samplesPerSort) {
                 nullIfGenerationFailed { sortGenerator.mkSeed(generationContext) }
             }
         }
         for (sortGenerator in sortGenerators.filter { it.refSortProviders.isNotEmpty() }) {
-            repeat(sortVariants) {
+            repeat(samplesPerSort) {
                 nullIfGenerationFailed { sortGenerator.mkSeed(generationContext) }
             }
         }
     }
 
     companion object {
+        private const val seedExpressionsPerSort = 10
+        private const val freshConstantExpressionProbability = 0.7
+        private const val deepExpressionProbability = 0.4
+
         private val ctxFunctions by lazy {
             KContext::class.members
                 .filter { it.visibility == KVisibility.PUBLIC }
@@ -312,16 +318,26 @@ class RandomExpressionGenerator {
 
         sealed interface Argument {
             val value: Any
+            val depth: Int
         }
 
         class ListArgument(val nested: List<Argument>) : Argument {
             override val value: Any
                 get() = nested.map { it.value }
+
+            override val depth: Int
+                get() = nested.maxOf { it.depth }
         }
 
-        class SimpleArgument(override val value: Any) : Argument
-        class SortArgument(override val value: KSort, val idx: Int) : Argument
-        class ExprArgument(override val value: KExpr<*>, val idx: Int) : Argument
+        class SimpleArgument(override val value: Any) : Argument {
+            override val depth: Int = 0
+        }
+
+        class SortArgument(override val value: KSort, val idx: Int) : Argument {
+            override val depth: Int = 0
+        }
+
+        class ExprArgument(override val value: KExpr<*>, val idx: Int, override val depth: Int) : Argument
 
         private sealed interface ArgumentProvider {
             fun provide(generationContext: GenerationContext, references: Map<String, SortArgument>): Argument
@@ -380,9 +396,9 @@ class RandomExpressionGenerator {
                 val candidateExpressions = generationContext.expressionIndex[concreteSort]
                     ?: generationFailed("No expressions for sort $concreteSort")
                 val nested = List(size) {
-                    val idx = candidateExpressions.random(generationContext.random)
-                    val expr = generationContext.expressions[idx]
-                    ExprArgument(expr, idx)
+                    val (exprId, exprDepth) = selectRandomExpressionId(generationContext.random, candidateExpressions)
+                    val expr = generationContext.expressions[exprId]
+                    ExprArgument(expr, exprId, exprDepth)
                 }
                 return ListArgument(nested)
             }
@@ -393,24 +409,21 @@ class RandomExpressionGenerator {
                 val concreteSort = sort.resolve(generationContext, references).value
                 val candidateExpressions = generationContext.expressionIndex[concreteSort]
                     ?: generationFailed("No expressions for sort $concreteSort")
-                val idx = if (generationContext.random.nextDouble() > 0.7) {
-                    candidateExpressions.random(generationContext.random)
-                } else {
-                    candidateExpressions.last()
-                }
-                return ExprArgument(generationContext.expressions[idx], idx)
+                val (exprId, exprDepth) = selectRandomExpressionId(generationContext.random, candidateExpressions)
+                return ExprArgument(generationContext.expressions[exprId], exprId, exprDepth)
             }
         }
 
         private class ConstExprProvider(val sort: SortProvider) : ArgumentProvider {
             override fun provide(generationContext: GenerationContext, references: Map<String, SortArgument>): Argument {
                 val concreteSort = sort.resolve(generationContext, references)
-                val candidateExpressions = generationContext.expressionIndex[concreteSort.value]
-                    ?: generationFailed("No expressions for sort $concreteSort")
-                val constants = candidateExpressions.filter { generationContext.expressions[it] is KInterpretedConstant }
-                return if (generationContext.random.nextDouble() > 0.7 && constants.isNotEmpty()) {
+                val constants = generationContext.constantIndex[concreteSort.value] ?: emptyList()
+                return if (
+                    constants.isNotEmpty()
+                    && generationContext.random.nextDouble() > freshConstantExpressionProbability
+                ) {
                     val idx = constants.random(generationContext.random)
-                    ExprArgument(generationContext.expressions[idx], idx)
+                    ExprArgument(generationContext.expressions[idx], idx, depth = 1)
                 } else {
                     val generator = concreteSort.value.accept(ConstExprGenerator(concreteSort, generationContext))
                     generator.generate(generationContext, references)
@@ -444,11 +457,12 @@ class RandomExpressionGenerator {
 
                 if (ast is KExpr<*>) {
                     if (!ast.isCorrect()) {
-                        generationFailed("Incorrect ast generated: $ast")
+                        generationFailed("Incorrect ast generated")
                     }
-                    val idx = generationContext.registerExpr(ast)
+                    val depth = (arguments.maxOfOrNull { it.depth } ?: 0) + 1
+                    val idx = generationContext.registerExpr(ast, depth)
                     generationContext.trace += invocation
-                    return ExprArgument(ast, idx).uncheckedCast()
+                    return ExprArgument(ast, idx, depth).uncheckedCast()
                 }
 
                 if (ast is KSort) {
@@ -479,17 +493,20 @@ class RandomExpressionGenerator {
                 emptyMap(),
                 listOf(SimpleProvider(String::class), this)
             )
-            val exprArg = exprGenerator.generate(generationContext, context)
-            val expr = exprArg.value
-            with(generationContext) {
-                expressionIndex[expr.sort]?.let { sortExprs ->
-                    // Don't store non unique seeds
-                    if (sortExprs.size > 1) {
-                        sortExprs.removeLast()
-                    }
-                }
+            return exprGenerator.generate(generationContext, context)
+        }
+
+        private fun selectRandomExpressionId(
+            random: Random,
+            expressionIds: SortedMap<Int, MutableList<Int>>
+        ): Pair<Int, Int> {
+            val expressionDepth = when (random.nextDouble()) {
+                in 0.0..deepExpressionProbability -> expressionIds.lastKey()
+                else -> expressionIds.keys.random(random)
             }
-            return exprArg
+            val candidateExpressions = expressionIds.getValue(expressionDepth)
+            val exprId = candidateExpressions.random(random)
+            return exprId to expressionDepth
         }
 
         private fun KClass<*>.generateSimpleValue(random: Random): Any = when (this) {
@@ -528,7 +545,8 @@ class RandomExpressionGenerator {
         private class GenerationContext(val random: Random, val context: KContext) {
             val expressions = arrayListOf<KExpr<*>>()
             val sorts = arrayListOf<KSort>()
-            val expressionIndex = hashMapOf<KSort, MutableList<Int>>()
+            val expressionIndex = hashMapOf<KSort, SortedMap<Int, MutableList<Int>>>()
+            val constantIndex = hashMapOf<KSort, MutableList<Int>>()
             val sortIndex = hashMapOf<Class<*>, MutableList<Int>>()
             val trace = arrayListOf<FunctionInvocation>()
 
@@ -548,12 +566,21 @@ class RandomExpressionGenerator {
                 return idx
             }
 
-            fun registerExpr(expr: KExpr<*>): Int {
+            fun registerExpr(expr: KExpr<*>, depth: Int): Int {
                 registerSort(expr.sort)
-                val idx = expressions.size
+
+                val exprId = expressions.size
                 expressions.add(expr)
-                expressionIndex.getOrPut(expr.sort) { arrayListOf() }.add(idx)
-                return idx
+
+                val index = expressionIndex.getOrPut(expr.sort) { sortedMapOf() }
+                val expressionIds = index.getOrPut(depth) { arrayListOf() }
+                expressionIds.add(exprId)
+
+                if (expr is KInterpretedConstant) {
+                    constantIndex.getOrPut(expr.sort) { arrayListOf() }.add(exprId)
+                }
+
+                return exprId
             }
 
             fun findSortIdx(sort: KSort): Int =
