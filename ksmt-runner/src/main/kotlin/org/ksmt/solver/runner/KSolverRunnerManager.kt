@@ -1,12 +1,12 @@
 package org.ksmt.solver.runner
 
 import com.jetbrains.rd.util.lifetime.isNotAlive
-import kotlinx.coroutines.runBlocking
 import org.ksmt.KContext
 import org.ksmt.runner.core.KsmtWorkerArgs
 import org.ksmt.runner.core.KsmtWorkerFactory
 import org.ksmt.runner.core.KsmtWorkerPool
 import org.ksmt.runner.core.RdServer
+import org.ksmt.runner.core.WorkerInitializationFailedException
 import org.ksmt.runner.models.generated.SolverProtocolModel
 import org.ksmt.runner.models.generated.SolverType
 import org.ksmt.solver.KSolver
@@ -39,12 +39,7 @@ class KSolverRunnerManager(
         workers.terminate()
     }
 
-    fun <C : KSolverConfiguration> createSolver(ctx: KContext, solver: KClass<out KSolver<C>>): KSolverRunner<C> =
-        runBlocking {
-            createSolverAsync(ctx, solver)
-        }
-
-    suspend fun <C : KSolverConfiguration> createSolverAsync(
+    fun <C : KSolverConfiguration> createSolver(
         ctx: KContext,
         solver: KClass<out KSolver<C>>
     ): KSolverRunner<C> {
@@ -52,11 +47,19 @@ class KSolverRunnerManager(
             throw KSolverException("Solver runner manager is terminated")
         }
         val solverType = solverTypes[solver] ?: error("Unknown solver type: $solver")
-        val worker = workers.getOrCreateFreeWorker()
+        val configurationBuilder = solverConfigurationBuilder(solver)
+        return KSolverRunner(this, ctx, configurationBuilder, solverType)
+    }
+
+    internal suspend fun createSolverExecutor(ctx: KContext, solverType: SolverType): KSolverRunnerExecutor {
+        val worker = try {
+            workers.getOrCreateFreeWorker()
+        } catch (ex: WorkerInitializationFailedException) {
+            throw KSolverExecutorWorkerInitializationException(ex)
+        }
         worker.astSerializationCtx.initCtx(ctx)
         worker.lifetime.onTermination { worker.astSerializationCtx.resetCtx() }
-        val configurationBuilder = solverConfigurationBuilder(solver)
-        return KSolverRunner(ctx, hardTimeout, worker, configurationBuilder).also {
+        return KSolverRunnerExecutor(hardTimeout, worker).also {
             it.initSolver(solverType)
         }
     }

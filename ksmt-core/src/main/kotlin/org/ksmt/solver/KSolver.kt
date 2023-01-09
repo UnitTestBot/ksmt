@@ -1,5 +1,6 @@
 package org.ksmt.solver
 
+import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KBoolSort
 import kotlin.time.Duration
@@ -28,7 +29,21 @@ interface KSolver<Config: KSolverConfiguration> : AutoCloseable {
      * @see checkWithAssumptions
      * @see unsatCore
      * */
-    fun assertAndTrack(expr: KExpr<KBoolSort>): KExpr<KBoolSort>
+    fun assertAndTrack(expr: KExpr<KBoolSort>): KExpr<KBoolSort> {
+        val trackVar = expr.ctx.mkFreshConstDecl("track", expr.ctx.boolSort)
+        assertAndTrack(expr, trackVar)
+        return trackVar.apply()
+    }
+
+    /**
+     * Assert an expression into solver.
+     *
+     * [trackVar] constant which is used to track a given assertion
+     * in unsat cores.
+     * @see checkWithAssumptions
+     * @see unsatCore
+     * */
+    fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>)
 
     /**
      * Create a backtracking point for assertion stack.

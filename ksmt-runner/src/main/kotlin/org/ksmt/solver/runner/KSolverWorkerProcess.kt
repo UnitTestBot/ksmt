@@ -2,10 +2,10 @@ package org.ksmt.solver.runner
 
 import com.jetbrains.rd.framework.IProtocol
 import org.ksmt.KContext
+import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.runner.core.ChildProcessBase
 import org.ksmt.runner.core.KsmtWorkerArgs
-import org.ksmt.runner.models.generated.AssertAndTrackResult
 import org.ksmt.runner.models.generated.CheckResult
 import org.ksmt.runner.models.generated.ModelEntry
 import org.ksmt.runner.models.generated.ModelFuncInterpEntry
@@ -77,8 +77,7 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
         }
         assertAndTrack.measureExecutionForTermination { params ->
             @Suppress("UNCHECKED_CAST")
-            val track = solver.assertAndTrack(params.expression as KExpr<KBoolSort>)
-            AssertAndTrackResult(track)
+            solver.assertAndTrack(params.expression as KExpr<KBoolSort>, params.trackVar as KConstDecl<KBoolSort>)
         }
         push.measureExecutionForTermination {
             solver.push()
