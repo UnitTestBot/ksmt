@@ -61,8 +61,8 @@ class RandomExpressionGenerator {
             val result = resolvedEntry.call(context)
             when (result) {
                 // We don't care about expression depth since it is unused during replay
-                is KExpr<*> -> replayContext.registerExpr(result, depth = 0)
-                is KSort -> replayContext.registerSort(result)
+                is KExpr<*> -> replayContext.registerExpr(result, depth = 0, inReplayMode = true)
+                is KSort -> replayContext.registerSort(result, inReplayMode = true)
             }
         }
         return replayContext.expressions
@@ -541,36 +541,50 @@ class RandomExpressionGenerator {
             }
         }
 
-
         private class GenerationContext(val random: Random, val context: KContext) {
             val expressions = arrayListOf<KExpr<*>>()
             val sorts = arrayListOf<KSort>()
+            val registeredSorts = hashMapOf<KSort, Int>()
             val expressionIndex = hashMapOf<KSort, SortedMap<Int, MutableList<Int>>>()
             val constantIndex = hashMapOf<KSort, MutableList<Int>>()
             val sortIndex = hashMapOf<Class<*>, MutableList<Int>>()
             val trace = arrayListOf<FunctionInvocation>()
 
-            fun registerSort(sort: KSort): Int {
-                if (sort in expressionIndex) return -1
+            fun registerSort(sort: KSort, inReplayMode: Boolean = false): Int {
+                val knownSortId = registeredSorts[sort]
 
-                val idx = sorts.size
-                sorts.add(sort)
+                val sortId = if (knownSortId != null) {
+                    knownSortId
+                } else {
+                    val idx = sorts.size
+                    sorts.add(sort)
+                    registeredSorts[sort] = idx
+                    idx
+                }
+
+                if (knownSortId != null || inReplayMode) {
+                    return sortId
+                }
 
                 var sortCls: Class<*> = sort::class.java
                 while (sortCls != KSort::class.java) {
-                    sortIndex.getOrPut(sortCls) { arrayListOf() }.add(idx)
+                    sortIndex.getOrPut(sortCls) { arrayListOf() }.add(sortId)
                     sortCls = sortCls.superclass
                 }
-                sortIndex.getOrPut(sortCls) { arrayListOf() }.add(idx)
+                sortIndex.getOrPut(sortCls) { arrayListOf() }.add(sortId)
 
-                return idx
+                return sortId
             }
 
-            fun registerExpr(expr: KExpr<*>, depth: Int): Int {
-                registerSort(expr.sort)
+            fun registerExpr(expr: KExpr<*>, depth: Int, inReplayMode: Boolean = false): Int {
+                registerSort(expr.sort, inReplayMode)
 
                 val exprId = expressions.size
                 expressions.add(expr)
+
+                if (inReplayMode) {
+                    return exprId
+                }
 
                 val index = expressionIndex.getOrPut(expr.sort) { sortedMapOf() }
                 val expressionIds = index.getOrPut(depth) { arrayListOf() }
@@ -584,8 +598,7 @@ class RandomExpressionGenerator {
             }
 
             fun findSortIdx(sort: KSort): Int =
-                sortIndex[sort::class.java]?.find { sorts[it] == sort }
-                    ?: generationFailed("No idx for sort $sort")
+                registeredSorts[sort] ?: generationFailed("No idx for sort $sort")
         }
     }
 }

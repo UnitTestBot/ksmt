@@ -1,5 +1,6 @@
 plugins {
     id("org.ksmt.ksmt-base")
+    id("me.champeau.jmh") version "0.6.8"
 }
 
 repositories {
@@ -15,6 +16,9 @@ dependencies {
     implementation(kotlin("reflect"))
 
     testImplementation("org.junit.jupiter", "junit-jupiter-params", "5.8.2")
+
+    jmh("org.openjdk.jmh:jmh-core:1.36")
+    jmh("org.openjdk.jmh:jmh-generator-annprocess:1.36")
 }
 
 val runBenchmarksBasedTests = project.booleanProperty("runBenchmarksBasedTests") ?: false
