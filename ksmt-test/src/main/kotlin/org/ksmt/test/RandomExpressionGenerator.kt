@@ -36,7 +36,12 @@ class RandomExpressionGenerator {
     private lateinit var generationContext: GenerationContext
 
     fun generate(limit: Int, context: KContext, random: Random = Random(42)): List<KExpr<*>> {
-        generationContext = GenerationContext(random, context)
+        generationContext = GenerationContext(
+            random = random,
+            context = context,
+            expressionsAmountEstimation = limit,
+            sortsAmountEstimation = 1000
+        )
 
         generateInitialSeed(samplesPerSort = seedExpressionsPerSort)
 
@@ -55,7 +60,12 @@ class RandomExpressionGenerator {
     }
 
     fun replay(context: KContext): List<KExpr<*>> {
-        val replayContext = GenerationContext(Random(0), context)
+        val replayContext = GenerationContext(
+            random = Random(0),
+            context = context,
+            expressionsAmountEstimation = generationContext.expressions.size,
+            sortsAmountEstimation = generationContext.sorts.size
+        )
         for (entry in generationContext.trace) {
             val resolvedEntry = resolveTraceEntry(entry, replayContext)
             val result = resolvedEntry.call(context)
@@ -541,14 +551,19 @@ class RandomExpressionGenerator {
             }
         }
 
-        private class GenerationContext(val random: Random, val context: KContext) {
-            val expressions = arrayListOf<KExpr<*>>()
-            val sorts = arrayListOf<KSort>()
-            val registeredSorts = hashMapOf<KSort, Int>()
+        private class GenerationContext(
+            val random: Random,
+            val context: KContext,
+            expressionsAmountEstimation: Int,
+            sortsAmountEstimation: Int
+        ) {
+            val expressions = ArrayList<KExpr<*>>(expressionsAmountEstimation)
+            val sorts = ArrayList<KSort>(sortsAmountEstimation)
+            val registeredSorts = HashMap<KSort, Int>(sortsAmountEstimation)
             val expressionIndex = hashMapOf<KSort, SortedMap<Int, MutableList<Int>>>()
             val constantIndex = hashMapOf<KSort, MutableList<Int>>()
             val sortIndex = hashMapOf<Class<*>, MutableList<Int>>()
-            val trace = arrayListOf<FunctionInvocation>()
+            val trace = ArrayList<FunctionInvocation>(expressionsAmountEstimation + sortsAmountEstimation)
 
             fun registerSort(sort: KSort, inReplayMode: Boolean = false): Int {
                 val knownSortId = registeredSorts[sort]
