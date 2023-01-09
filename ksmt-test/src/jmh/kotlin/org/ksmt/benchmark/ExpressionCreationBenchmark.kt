@@ -13,6 +13,7 @@ import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.Warmup
 import org.openjdk.jmh.infra.Blackhole
 import java.util.concurrent.TimeUnit
+import kotlin.random.Random
 
 open class ExpressionCreationBenchmark {
 
@@ -28,10 +29,11 @@ open class ExpressionCreationBenchmark {
     @State(Scope.Thread)
     open class ExprGenerationState {
         val generator = RandomExpressionGenerator()
+        private val random = Random(42)
 
         @Setup(Level.Iteration)
         fun regenerateExpressions() {
-            generator.generate(limit = 100000, KContext())
+            generator.generate(limit = 100000, KContext(), random)
         }
     }
 }

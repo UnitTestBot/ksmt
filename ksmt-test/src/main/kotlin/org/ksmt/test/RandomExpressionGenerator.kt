@@ -55,16 +55,13 @@ class RandomExpressionGenerator {
 
         generateInitialSeed(samplesPerSort = seedExpressionsPerSort)
 
-        var i = 0
-        do {
+        while (generationContext.expressions.size < limit) {
             val generator = generators.random(random)
 
             nullIfGenerationFailed {
                 generator.generate(generationContext)
-            } ?: continue
-
-            i++
-        } while (i <= limit)
+            }
+        }
 
         return generationContext.expressions
     }
