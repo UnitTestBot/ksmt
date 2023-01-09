@@ -93,6 +93,11 @@ interface KSolver<Config: KSolverConfiguration> : AutoCloseable {
     fun reasonOfUnknown(): String
 
     /**
+     * Cancel currently performing check-sat.
+     * */
+    fun interrupt()
+
+    /**
      * Close solver and release acquired native resources.
      * */
     override fun close()

@@ -146,6 +146,10 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
         return "unknown"
     }
 
+    override fun interrupt() = bitwuzlaCtx.bitwuzlaTry {
+        bitwuzlaCtx.interrupt()
+    }
+
     override fun close() = bitwuzlaCtx.bitwuzlaTry {
         bitwuzlaCtx.close()
     }

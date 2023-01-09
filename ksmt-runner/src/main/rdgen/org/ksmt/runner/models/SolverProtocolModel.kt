@@ -141,5 +141,9 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
             async
             documentation = "Get reason of unknown"
         }
+        call("interrupt", PredefinedType.void, PredefinedType.void).apply {
+            async
+            documentation = "Interrupt current check SAT"
+        }
     }
 }

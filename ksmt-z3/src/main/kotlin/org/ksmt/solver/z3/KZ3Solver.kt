@@ -118,6 +118,10 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
         solver.reasonUnknown
     }
 
+    override fun interrupt() = z3Try {
+        solver.interrupt()
+    }
+
     override fun close() {
         unregisterContextCleanup(contextCleanupActionHandler)
         z3Ctx.close()

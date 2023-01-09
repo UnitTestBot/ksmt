@@ -122,6 +122,9 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
             val reason = solver.reasonOfUnknown()
             ReasonUnknownResult(reason)
         }
+        interrupt.measureExecutionForTermination {
+            solver.interrupt()
+        }
     }
 
     companion object {

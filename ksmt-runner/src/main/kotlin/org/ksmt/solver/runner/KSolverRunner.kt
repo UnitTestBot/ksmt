@@ -215,6 +215,17 @@ class KSolverRunner<Config: KSolverConfiguration>(
         result.reasonUnknown
     }
 
+    override fun interrupt() = runBlocking {
+        interruptAsync()
+    }
+
+    suspend fun interruptAsync() {
+        ensureActive()
+        withTimeoutAndExceptionHandling {
+            worker.protocolModel.interrupt.startSuspending(worker.lifetime, Unit)
+        }
+    }
+
     internal suspend fun initSolver(solverType: SolverType) {
         ensureActive()
         val params = CreateSolverParams(solverType)
