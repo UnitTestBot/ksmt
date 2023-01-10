@@ -195,6 +195,10 @@ class KSolverRunner<Config : KSolverConfiguration>(
         executorRef.getAndSet(null)
     }
 
+    internal fun terminateSolverIfBusy() {
+        executorRef.get()?.terminateIfBusy()
+    }
+
     private suspend inline fun <T> runOnExecutor(
         executor: KSolverRunnerExecutor,
         onException: (KSolverExecutorException) -> T,
