@@ -111,4 +111,17 @@ class PortfolioSolverTest {
 
         assertEquals(KSolverStatus.SAT, status)
     }
+
+    @Test
+    fun testUnsupportedFeaturesHandling(): Unit = with(context) {
+        val a by intSort
+
+        solver.assert(a eq 0.expr)
+        solver.assert(a eq 1.expr)
+
+        val status = solver.check()
+
+        assertEquals(KSolverStatus.UNSAT, status)
+    }
+
 }

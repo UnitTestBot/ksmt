@@ -33,7 +33,7 @@ class PortfolioBenchmarksBasedTest : BenchmarksBasedTest() {
 
     companion object {
         @JvmStatic
-        fun portfolioTestData() = testData.take(20)
+        fun portfolioTestData() = testData
 
         private lateinit var portfolioSolverManager: KPortfolioSolverManager
 

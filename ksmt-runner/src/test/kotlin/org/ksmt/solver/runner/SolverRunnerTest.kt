@@ -17,7 +17,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 
-class IncrementalApiTest {
+class SolverRunnerTest {
     private lateinit var context: KContext
     private lateinit var solver: KSolver<KZ3SolverConfiguration>
 
