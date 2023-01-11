@@ -10,10 +10,10 @@ import org.ksmt.expr.KExpr
 import org.ksmt.runner.models.generated.SolverConfigurationParam
 import org.ksmt.runner.models.generated.SolverType
 import org.ksmt.solver.KModel
-import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
+import org.ksmt.solver.async.KAsyncSolver
 import org.ksmt.sort.KBoolSort
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -25,7 +25,7 @@ class KSolverRunner<Config : KSolverConfiguration>(
     private val ctx: KContext,
     private val configurationBuilder: KSolverUniversalConfigurationBuilder<Config>,
     private val solverType: SolverType,
-) : KSolver<Config> {
+) : KAsyncSolver<Config> {
     private val isActive = AtomicBoolean(true)
     private val executorInitializationLock = Mutex()
     private val executorRef = AtomicReference<KSolverRunnerExecutor?>(null)
@@ -55,11 +55,7 @@ class KSolverRunner<Config : KSolverConfiguration>(
         }
     }
 
-    override fun configure(configurator: Config.() -> Unit) = runBlocking {
-        configureAsync(configurator)
-    }
-
-    suspend fun configureAsync(configurator: Config.() -> Unit) {
+    override suspend fun configureAsync(configurator: Config.() -> Unit) {
         val config = configurationBuilder.build { configurator() }
 
         try {
@@ -71,11 +67,7 @@ class KSolverRunner<Config : KSolverConfiguration>(
         }
     }
 
-    override fun assert(expr: KExpr<KBoolSort>) = runBlocking {
-        assertAsync(expr)
-    }
-
-    suspend fun assertAsync(expr: KExpr<KBoolSort>) {
+    override suspend fun assertAsync(expr: KExpr<KBoolSort>) {
         ctx.ensureContextMatch(expr)
 
         try {
@@ -87,11 +79,7 @@ class KSolverRunner<Config : KSolverConfiguration>(
         }
     }
 
-    override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) = runBlocking {
-        assertAndTrackAsync(expr, trackVar)
-    }
-
-    suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) {
+    override suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) {
         ctx.ensureContextMatch(expr, trackVar)
 
         try {
@@ -103,11 +91,7 @@ class KSolverRunner<Config : KSolverConfiguration>(
         }
     }
 
-    override fun push(): Unit = runBlocking {
-        pushAsync()
-    }
-
-    suspend fun pushAsync() {
+    override suspend fun pushAsync() {
         try {
             executeIfInitialized(onException = {}) {
                 pushAsync()
@@ -117,11 +101,7 @@ class KSolverRunner<Config : KSolverConfiguration>(
         }
     }
 
-    override fun pop(n: UInt): Unit = runBlocking {
-        popAsync(n)
-    }
-
-    suspend fun popAsync(n: UInt) {
+    override suspend fun popAsync(n: UInt) {
         try {
             executeIfInitialized(onException = {}) {
                 popAsync(n)
@@ -133,23 +113,12 @@ class KSolverRunner<Config : KSolverConfiguration>(
         }
     }
 
-    override fun check(timeout: Duration): KSolverStatus = runBlocking {
-        checkAsync(timeout)
-    }
-
-    suspend fun checkAsync(timeout: Duration): KSolverStatus =
+    override suspend fun checkAsync(timeout: Duration): KSolverStatus =
         handleCheckSatExceptionAsUnknown {
             checkAsync(timeout)
         }
 
-    override fun checkWithAssumptions(
-        assumptions: List<KExpr<KBoolSort>>,
-        timeout: Duration
-    ): KSolverStatus = runBlocking {
-        checkWithAssumptionsAsync(assumptions, timeout)
-    }
-
-    suspend fun checkWithAssumptionsAsync(
+    override suspend fun checkWithAssumptionsAsync(
         assumptions: List<KExpr<KBoolSort>>,
         timeout: Duration
     ): KSolverStatus {
@@ -160,44 +129,28 @@ class KSolverRunner<Config : KSolverConfiguration>(
         }
     }
 
-    override fun model(): KModel = runBlocking {
-        modelAsync()
-    }
-
-    suspend fun modelAsync(): KModel = lastSatModel.updateIfNull {
+    override suspend fun modelAsync(): KModel = lastSatModel.updateIfNull {
         executeIfInitialized(
             onException = { ex -> throw KSolverException("Model is not available", ex) },
             body = { modelAsync() }
         ) ?: throw KSolverException("Solver is not initialized")
     }
 
-    override fun unsatCore(): List<KExpr<KBoolSort>> = runBlocking {
-        unsatCoreAsync()
-    }
-
-    suspend fun unsatCoreAsync(): List<KExpr<KBoolSort>> = lastUnsatCore.updateIfNull {
+    override suspend fun unsatCoreAsync(): List<KExpr<KBoolSort>> = lastUnsatCore.updateIfNull {
         executeIfInitialized(
             onException = { ex -> throw KSolverException("Unsat core is not available", ex) },
             body = { unsatCoreAsync() }
         ) ?: throw KSolverException("Solver is not initialized")
     }
 
-    override fun reasonOfUnknown(): String = runBlocking {
-        reasonOfUnknownAsync()
-    }
-
-    suspend fun reasonOfUnknownAsync(): String = lastReasonOfUnknown.updateIfNull {
+    override suspend fun reasonOfUnknownAsync(): String = lastReasonOfUnknown.updateIfNull {
         executeIfInitialized(
             onException = { ex -> throw KSolverException("Reason of unknown is not available", ex) },
             body = { reasonOfUnknownAsync() }
         ) ?: throw KSolverException("Solver is not initialized")
     }
 
-    override fun interrupt() = runBlocking {
-        interruptAsync()
-    }
-
-    suspend fun interruptAsync() {
+    override suspend fun interruptAsync() {
         executeIfInitialized(onException = {}) {
             interruptAsync()
         }
