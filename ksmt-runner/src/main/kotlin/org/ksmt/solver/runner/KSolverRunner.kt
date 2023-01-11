@@ -17,6 +17,7 @@ import org.ksmt.solver.KSolverStatus
 import org.ksmt.sort.KBoolSort
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration
 
 class KSolverRunner<Config : KSolverConfiguration>(
@@ -25,6 +26,7 @@ class KSolverRunner<Config : KSolverConfiguration>(
     private val configurationBuilder: KSolverUniversalConfigurationBuilder<Config>,
     private val solverType: SolverType,
 ) : KSolver<Config> {
+    private val isActive = AtomicBoolean(true)
     private val executorInitializationLock = Mutex()
     private val executorRef = AtomicReference<KSolverRunnerExecutor?>(null)
 
@@ -59,10 +61,13 @@ class KSolverRunner<Config : KSolverConfiguration>(
 
     suspend fun configureAsync(configurator: Config.() -> Unit) {
         val config = configurationBuilder.build { configurator() }
-        configuration.addAll(config)
 
-        ensureInitializedAndExecute(onException = {}) {
-            configureAsync(config)
+        try {
+            ensureInitializedAndExecute(onException = {}) {
+                configureAsync(config)
+            }
+        } finally {
+            configuration.addAll(config)
         }
     }
 
@@ -72,10 +77,13 @@ class KSolverRunner<Config : KSolverConfiguration>(
 
     suspend fun assertAsync(expr: KExpr<KBoolSort>) {
         ctx.ensureContextMatch(expr)
-        assertFrames.last.add(ExprAssertFrame(expr))
 
-        ensureInitializedAndExecute(onException = {}) {
-            assertAsync(expr)
+        try {
+            ensureInitializedAndExecute(onException = {}) {
+                assertAsync(expr)
+            }
+        } finally {
+            assertFrames.last.add(ExprAssertFrame(expr))
         }
     }
 
@@ -85,10 +93,13 @@ class KSolverRunner<Config : KSolverConfiguration>(
 
     suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) {
         ctx.ensureContextMatch(expr, trackVar)
-        assertFrames.last.add(AssertAndTrackFrame(expr, trackVar))
 
-        ensureInitializedAndExecute(onException = {}) {
-            assertAndTrackAsync(expr, trackVar)
+        try {
+            ensureInitializedAndExecute(onException = {}) {
+                assertAndTrackAsync(expr, trackVar)
+            }
+        } finally {
+            assertFrames.last.add(AssertAndTrackFrame(expr, trackVar))
         }
     }
 
@@ -97,10 +108,12 @@ class KSolverRunner<Config : KSolverConfiguration>(
     }
 
     suspend fun pushAsync() {
-        assertFrames.addLast(ConcurrentLinkedQueue())
-
-        executeIfInitialized(onException = {}) {
-            pushAsync()
+        try {
+            executeIfInitialized(onException = {}) {
+                pushAsync()
+            }
+        } finally {
+            assertFrames.addLast(ConcurrentLinkedQueue())
         }
     }
 
@@ -109,12 +122,14 @@ class KSolverRunner<Config : KSolverConfiguration>(
     }
 
     suspend fun popAsync(n: UInt) {
-        repeat(n.toInt()) {
-            assertFrames.removeLast()
-        }
-
-        executeIfInitialized(onException = {}) {
-            popAsync(n)
+        try {
+            executeIfInitialized(onException = {}) {
+                popAsync(n)
+            }
+        } finally {
+            repeat(n.toInt()) {
+                assertFrames.removeLast()
+            }
         }
     }
 
@@ -189,10 +204,11 @@ class KSolverRunner<Config : KSolverConfiguration>(
     }
 
     suspend fun deleteSolverAsync() {
-        executeIfInitialized(onException = {}) {
-            deleteSolver()
+        isActive.set(false)
+        executorInitializationLock.withLock {
+            val executor = executorRef.getAndSet(null)
+            executor?.let { runOnExecutor(it, onException = { }) { deleteSolver() } }
         }
-        executorRef.getAndSet(null)
     }
 
     internal fun terminateSolverIfBusy() {
@@ -243,6 +259,9 @@ class KSolverRunner<Config : KSolverConfiguration>(
     }
 
     private suspend fun initExecutor(): KSolverRunnerExecutor {
+        if (!isActive.get()) {
+            throw KSolverExecutorNotAliveException()
+        }
         val executor = manager.createSolverExecutor(ctx, solverType)
         applyConfigAndAssertions(executor)
         return executor

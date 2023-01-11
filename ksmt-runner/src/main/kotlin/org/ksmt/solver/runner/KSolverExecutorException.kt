@@ -5,6 +5,7 @@ import org.ksmt.runner.core.WorkerInitializationFailedException
 sealed class KSolverExecutorException : Exception {
     constructor(message: String?) : super(message)
     constructor(cause: Throwable?) : super(cause)
+    override fun fillInStackTrace(): Throwable = this
 }
 
 class KSolverExecutorNotAliveException : KSolverExecutorException("Solver executor is not alive")

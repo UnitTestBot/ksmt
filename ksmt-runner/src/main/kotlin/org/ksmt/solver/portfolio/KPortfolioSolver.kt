@@ -1,14 +1,11 @@
-package org.ksmt.solver.runner
+package org.ksmt.solver.portfolio
 
 import com.jetbrains.rd.util.AtomicInteger
 import com.jetbrains.rd.util.AtomicReference
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.runBlocking
-import org.ksmt.KContext
 import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
@@ -16,31 +13,17 @@ import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
+import org.ksmt.solver.runner.KSolverRunner
 import org.ksmt.sort.KBoolSort
 import java.util.concurrent.ConcurrentLinkedQueue
-import kotlin.reflect.KClass
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 
 class KPortfolioSolver(
-    private val ctx: KContext,
-    solvers: List<KClass<out KSolver<KSolverConfiguration>>>,
-    hardTimeout: Duration = 10.seconds
+    private val solverOperationScope: CoroutineScope,
+    private val solvers: List<KSolverRunner<*>>,
 ) : KSolver<KSolverConfiguration> {
-
-    @OptIn(DelicateCoroutinesApi::class)
-    private val coroutineContext = newSingleThreadContext("portfolio-solver")
-    private val coroutineScope = CoroutineScope(coroutineContext)
-
-    private val solverManager = KSolverRunnerManager(
-        workerPoolSize = solvers.size,
-        hardTimeout = hardTimeout
-    )
-
-    private val solverInstances = solvers.map { solverManager.createSolver(ctx, it) }
-    private val pendingTermination = ConcurrentLinkedQueue<KSolverRunner<*>>()
-
     private val lastSuccessfulSolver = AtomicReference<KSolverRunner<*>?>(null)
+    private val pendingTermination = ConcurrentLinkedQueue<KSolverRunner<*>>()
 
     override fun configure(configurator: KSolverConfiguration.() -> Unit) = runBlocking {
         configureAsync(configurator)
@@ -133,14 +116,21 @@ class KPortfolioSolver(
     }
 
     override fun close() {
-        coroutineContext.close()
-        solverManager.close()
+        solvers.forEach { solver ->
+            solverOperationScope.launch {
+                solver.deleteSolverAsync()
+            }
+        }
     }
 
     private suspend inline fun solverOperation(
         crossinline block: suspend KSolverRunner<*>.() -> Unit
     ) {
-        awaitFirstSolverOrNull(block) { true }
+        val result = awaitFirstSolverOrNull(block) { true }
+        if (result is SolverOperationFailure<*>) {
+            // throw exception if all solvers in portfolio failed with exception
+            result.findSuccessOrThrow()
+        }
     }
 
     private suspend inline fun solverQuery(
@@ -150,39 +140,72 @@ class KPortfolioSolver(
 
         lastSuccessfulSolver.getAndSet(null)
 
-        val (solver, status) = awaitFirstSolverOrNull(block) { it != KSolverStatus.UNKNOWN }
+        val result = awaitFirstSolverOrNull(block) { it != KSolverStatus.UNKNOWN }
+
+        val (solver, status) = when (result) {
+            is SolverOperationSuccess -> result.solver to result.result
+            /**
+             * All solvers finished with Unknown or failed with exception.
+             * If some solver ends up with Unknown we can treat this result as successful.
+             * */
+            is SolverOperationFailure -> result.findSuccessOrThrow().let { it.solver to it.result }
+        }
 
         lastSuccessfulSolver.getAndSet(solver)
 
-        solverInstances.filter { it != solver }.forEach { failedSolver ->
-            coroutineScope.launch {
+        solvers.filter { it != solver }.forEach { failedSolver ->
+            solverOperationScope.launch {
                 failedSolver.interruptAsync()
             }
             pendingTermination.offer(failedSolver)
         }
 
-        return status ?: KSolverStatus.UNKNOWN
+        return status
     }
 
     private suspend inline fun <T> awaitFirstSolverOrNull(
         crossinline operation: suspend KSolverRunner<*>.() -> T,
         crossinline predicate: (T) -> Boolean
-    ): Pair<KSolverRunner<*>, T?> {
-        val pendingSolvers = AtomicInteger(solverInstances.size)
-        val resultFuture = CompletableDeferred<Pair<KSolverRunner<*>, T?>>()
-        solverInstances.forEach { solver ->
-            coroutineScope.launch {
-                val operationResult = solver.operation()
-                if (predicate(operationResult)) {
-                    resultFuture.complete(solver to operationResult)
-                }
-                val pending = pendingSolvers.decrementAndGet()
-                if (pending == 0) {
-                    resultFuture.complete(solver to null)
+    ): SolverOperationResult<T> {
+        val pendingSolvers = AtomicInteger(solvers.size)
+        val results = ConcurrentLinkedQueue<Pair<KSolverRunner<*>, Result<T>>>()
+        val resultFuture = CompletableDeferred<SolverOperationResult<T>>()
+        solvers.forEach { solver ->
+            solverOperationScope.launch {
+                try {
+                    val operationResult = solver.operation()
+                    results.offer(solver to Result.success(operationResult))
+
+                    if (predicate(operationResult)) {
+                        val successResult = SolverOperationSuccess(solver, operationResult)
+                        resultFuture.complete(successResult)
+                    }
+                } catch (ex: KSolverException) {
+                    results.offer(solver to Result.failure(ex))
+                } finally {
+                    val pending = pendingSolvers.decrementAndGet()
+                    if (pending == 0) {
+                        val failure = SolverOperationFailure(results)
+                        resultFuture.complete(failure)
+                    }
                 }
             }
         }
         return resultFuture.await()
+    }
+
+    private fun <T> SolverOperationFailure<T>.findSuccessOrThrow(): SolverOperationSuccess<T> {
+        val exceptions = arrayListOf<Throwable>()
+        results.forEach { result ->
+            result.second
+                .onSuccess { successResult ->
+                    return SolverOperationSuccess(result.first, successResult)
+                }
+                .onFailure { ex -> exceptions.add(ex) }
+        }
+        throw KSolverException("Portfolio solver failed").also { ex ->
+            exceptions.forEach { ex.addSuppressed(it) }
+        }
     }
 
     private fun terminateIfNeeded() {
@@ -192,4 +215,14 @@ class KPortfolioSolver(
         } while (solver != null)
     }
 
+    private sealed interface SolverOperationResult<T>
+
+    private class SolverOperationSuccess<T>(
+        val solver: KSolverRunner<*>,
+        val result: T
+    ) : SolverOperationResult<T>
+
+    private class SolverOperationFailure<T>(
+        val results: Collection<Pair<KSolverRunner<*>, Result<T>>>
+    ) : SolverOperationResult<T>
 }
