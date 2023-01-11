@@ -19,10 +19,10 @@ import kotlin.reflect.KClass
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-class KSolverRunnerManager(
+open class KSolverRunnerManager(
     workerPoolSize: Int = 1,
     private val hardTimeout: Duration = 10.seconds,
-    private val workerProcessIdleTimeout: Duration = 100.seconds
+    workerProcessIdleTimeout: Duration = 100.seconds
 ) : AutoCloseable {
     private val workers = KsmtWorkerPool(
         maxWorkerPoolSize = workerPoolSize,

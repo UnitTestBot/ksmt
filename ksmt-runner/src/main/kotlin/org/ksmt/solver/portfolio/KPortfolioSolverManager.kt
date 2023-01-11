@@ -13,8 +13,14 @@ import kotlin.time.Duration.Companion.seconds
 
 class KPortfolioSolverManager(
     private val solvers: List<KClass<out KSolver<out KSolverConfiguration>>>,
-    hardTimeout: Duration = 10.seconds
-) : AutoCloseable {
+    portfolioPoolSize: Int = 1,
+    hardTimeout: Duration = 10.seconds,
+    workerProcessIdleTimeout: Duration = 100.seconds
+) : KSolverRunnerManager(
+    workerPoolSize = portfolioPoolSize * solvers.size,
+    hardTimeout = hardTimeout,
+    workerProcessIdleTimeout = workerProcessIdleTimeout
+) {
     init {
         require(solvers.isNotEmpty()) { "Empty solver portfolio" }
     }
@@ -23,25 +29,16 @@ class KPortfolioSolverManager(
     private val solverOperationScheduler = SingleThreadScheduler(lifetime, "portfolio-solver")
     private val solverOperationScope = PortfolioSolverCoroutineScope(lifetime, solverOperationScheduler)
 
-    private val solverManager = KSolverRunnerManager(
-        workerPoolSize = solvers.size,
-        hardTimeout = hardTimeout
-    )
-
-    init {
-        lifetime.onTermination { solverManager.close() }
-    }
-
     override fun close() {
         lifetime.terminate()
+        super.close()
     }
 
-    fun createSolver(ctx: KContext): KPortfolioSolver {
+    fun createPortfolioSolver(ctx: KContext): KPortfolioSolver {
         val solverInstances = solvers.map {
             val solverType: KClass<out KSolver<KSolverConfiguration>> = it.uncheckedCast()
-            solverManager.createSolver(ctx, solverType)
+            createSolver(ctx, solverType)
         }
         return KPortfolioSolver(solverOperationScope, solverInstances)
     }
-
 }

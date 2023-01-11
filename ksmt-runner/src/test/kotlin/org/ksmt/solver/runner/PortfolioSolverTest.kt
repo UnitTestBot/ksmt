@@ -22,7 +22,7 @@ class PortfolioSolverTest {
     @BeforeEach
     fun createNewEnvironment() {
         context = KContext()
-        solver = solverManager.createSolver(context)
+        solver = solverManager.createPortfolioSolver(context)
     }
 
     @AfterEach
