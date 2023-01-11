@@ -30,7 +30,6 @@ class PortfolioBenchmarksBasedTest : BenchmarksBasedTest() {
             portfolioSolverManager.createPortfolioSolver(ctx)
         }
 
-
     companion object {
         @JvmStatic
         fun portfolioTestData() = testData

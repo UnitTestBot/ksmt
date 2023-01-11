@@ -2,6 +2,7 @@ package org.ksmt.solver.portfolio
 
 import com.jetbrains.rd.util.AtomicInteger
 import com.jetbrains.rd.util.AtomicReference
+import com.jetbrains.rd.util.ConcurrentHashMap
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -23,7 +24,9 @@ class KPortfolioSolver(
 ) : KAsyncSolver<KSolverConfiguration> {
     private val lastSuccessfulSolver = AtomicReference<KSolverRunner<*>?>(null)
     private val pendingTermination = ConcurrentLinkedQueue<KSolverRunner<*>>()
-    private val solvers = ConcurrentLinkedQueue(solverRunners)
+    private val solvers = ConcurrentHashMap<KSolverRunner<*>, CompletableDeferred<Unit>>(
+        solverRunners.associateWith { CompletableDeferred(Unit) }
+    )
 
     override suspend fun configureAsync(configurator: KSolverConfiguration.() -> Unit) = solverOperation {
         configureAsync(configurator)
@@ -74,7 +77,7 @@ class KPortfolioSolver(
     }
 
     override fun close() {
-        solvers.forEach { solver ->
+        solvers.keys.forEach { solver ->
             solverOperationScope.launch {
                 solver.deleteSolverAsync()
             }
@@ -98,7 +101,9 @@ class KPortfolioSolver(
 
         lastSuccessfulSolver.getAndSet(null)
 
-        val awaitResult = awaitFirstSolver(block) { it != KSolverStatus.UNKNOWN }
+        val awaitResult = awaitFirstSolver(block) {
+            it != KSolverStatus.UNKNOWN
+        }
 
         val result = when (awaitResult) {
             is SolverAwaitSuccess -> awaitResult.result
@@ -111,7 +116,7 @@ class KPortfolioSolver(
 
         lastSuccessfulSolver.getAndSet(result.solver)
 
-        solvers.filter { it != result.solver }.forEach { failedSolver ->
+        solvers.keys.filter { it != result.solver }.forEach { failedSolver ->
             solverOperationScope.launch {
                 failedSolver.interruptAsync()
             }
@@ -128,9 +133,12 @@ class KPortfolioSolver(
         val pendingSolvers = AtomicInteger(solvers.size)
         val results = ConcurrentLinkedQueue<Result<SolverOperationResult<T>>>()
         val resultFuture = CompletableDeferred<SolverAwaitResult<T>>()
-        solvers.forEach { solver ->
+        solvers.keys.forEach { solver ->
+            val operationCompletion = CompletableDeferred<Unit>()
+            val previousOperationCompletion = solvers.put(solver, operationCompletion)
             solverOperationScope.launch {
                 try {
+                    previousOperationCompletion?.await()
                     val operationResult = solver.operation()
                     val solverOperationResult = SolverOperationResult(solver, operationResult)
                     results.offer(Result.success(solverOperationResult))
@@ -139,8 +147,11 @@ class KPortfolioSolver(
                         val successResult = SolverAwaitSuccess(solverOperationResult)
                         resultFuture.complete(successResult)
                     }
+                    operationCompletion.complete(Unit)
                 } catch (ex: Throwable) {
-                    removeSolverFromPortfolio(solver)
+                    solvers.remove(solver)
+                    operationCompletion.completeExceptionally(ex)
+                    solver.deleteSolverAsync()
                     results.offer(Result.failure(ex))
                 } finally {
                     val pending = pendingSolvers.decrementAndGet()
@@ -166,11 +177,6 @@ class KPortfolioSolver(
         throw KSolverException("Portfolio solver failed").also { ex ->
             exceptions.forEach { ex.addSuppressed(it) }
         }
-    }
-
-    private suspend fun removeSolverFromPortfolio(solver: KSolverRunner<*>) {
-        solvers.remove(solver)
-        solver.deleteSolverAsync()
     }
 
     private fun terminateIfNeeded() {
