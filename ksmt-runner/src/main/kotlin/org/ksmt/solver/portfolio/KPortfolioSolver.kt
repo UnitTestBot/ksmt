@@ -5,7 +5,9 @@ import com.jetbrains.rd.util.AtomicReference
 import com.jetbrains.rd.util.ConcurrentHashMap
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
@@ -76,12 +78,12 @@ class KPortfolioSolver(
         interruptAsync()
     }
 
-    override fun close() {
-        solvers.keys.forEach { solver ->
+    override fun close() = runBlocking {
+        solvers.keys.map { solver ->
             solverOperationScope.launch {
                 solver.deleteSolverAsync()
             }
-        }
+        }.joinAll()
     }
 
     private suspend inline fun solverOperation(
