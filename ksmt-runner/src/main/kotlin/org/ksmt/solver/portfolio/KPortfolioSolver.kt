@@ -24,8 +24,8 @@ class KPortfolioSolver(
 ) : KAsyncSolver<KSolverConfiguration> {
     private val lastSuccessfulSolver = AtomicReference<KSolverRunner<*>?>(null)
     private val pendingTermination = ConcurrentLinkedQueue<KSolverRunner<*>>()
-    private val solvers = ConcurrentHashMap<KSolverRunner<*>, CompletableDeferred<Unit>>(
-        solverRunners.associateWith { CompletableDeferred(Unit) }
+    private val solvers = ConcurrentHashMap<KSolverRunner<*>, AtomicReference<CompletableDeferred<Unit>?>>(
+        solverRunners.associateWith { AtomicReference(null) }
     )
 
     override suspend fun configureAsync(configurator: KSolverConfiguration.() -> Unit) = solverOperation {
@@ -135,7 +135,7 @@ class KPortfolioSolver(
         val resultFuture = CompletableDeferred<SolverAwaitResult<T>>()
         solvers.keys.forEach { solver ->
             val operationCompletion = CompletableDeferred<Unit>()
-            val previousOperationCompletion = solvers.put(solver, operationCompletion)
+            val previousOperationCompletion = solvers[solver]?.getAndSet(operationCompletion)
             solverOperationScope.launch {
                 try {
                     previousOperationCompletion?.await()
