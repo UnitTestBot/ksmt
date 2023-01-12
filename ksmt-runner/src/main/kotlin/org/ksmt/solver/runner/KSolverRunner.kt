@@ -7,7 +7,6 @@ import kotlinx.coroutines.sync.withLock
 import org.ksmt.KContext
 import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
-import org.ksmt.runner.models.generated.SolverConfigurationParam
 import org.ksmt.runner.models.generated.SolverType
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolverConfiguration
@@ -15,11 +14,15 @@ import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.async.KAsyncSolver
 import org.ksmt.sort.KBoolSort
-import java.util.concurrent.ConcurrentLinkedDeque
-import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration
 
+/**
+ * Stateful remote solver runner.
+ *
+ * Manages remote solver executor and can fully restore
+ * its state after failures (e.g. hard timeout) to allow incremental usage.
+ * */
 class KSolverRunner<Config : KSolverConfiguration>(
     private val manager: KSolverRunnerManager,
     private val ctx: KContext,
@@ -34,20 +37,7 @@ class KSolverRunner<Config : KSolverConfiguration>(
     private val lastSatModel = AtomicReference<KModel?>(null)
     private val lastUnsatCore = AtomicReference<List<KExpr<KBoolSort>>?>(null)
 
-    private val configuration = ConcurrentLinkedQueue<SolverConfigurationParam>()
-
-    private sealed interface AssertFrame
-    private data class ExprAssertFrame(val expr: KExpr<KBoolSort>) : AssertFrame
-    private data class AssertAndTrackFrame(
-        val expr: KExpr<KBoolSort>,
-        val trackVar: KConstDecl<KBoolSort>
-    ) : AssertFrame
-
-    private val assertFrames = ConcurrentLinkedDeque<ConcurrentLinkedQueue<AssertFrame>>()
-
-    init {
-        assertFrames.addLast(ConcurrentLinkedQueue())
-    }
+    private val solverState = KSolverState()
 
     override fun close() {
         runBlocking {
@@ -63,7 +53,7 @@ class KSolverRunner<Config : KSolverConfiguration>(
                 configureAsync(config)
             }
         } finally {
-            configuration.addAll(config)
+            solverState.configure(config)
         }
     }
 
@@ -75,7 +65,7 @@ class KSolverRunner<Config : KSolverConfiguration>(
                 assertAsync(expr)
             }
         } finally {
-            assertFrames.last.add(ExprAssertFrame(expr))
+            solverState.assert(expr)
         }
     }
 
@@ -87,7 +77,7 @@ class KSolverRunner<Config : KSolverConfiguration>(
                 assertAndTrackAsync(expr, trackVar)
             }
         } finally {
-            assertFrames.last.add(AssertAndTrackFrame(expr, trackVar))
+            solverState.assertAndTrack(expr, trackVar)
         }
     }
 
@@ -97,7 +87,7 @@ class KSolverRunner<Config : KSolverConfiguration>(
                 pushAsync()
             }
         } finally {
-            assertFrames.addLast(ConcurrentLinkedQueue())
+            solverState.push()
         }
     }
 
@@ -107,9 +97,7 @@ class KSolverRunner<Config : KSolverConfiguration>(
                 popAsync(n)
             }
         } finally {
-            repeat(n.toInt()) {
-                assertFrames.removeLast()
-            }
+            solverState.pop(n)
         }
     }
 
@@ -216,29 +204,8 @@ class KSolverRunner<Config : KSolverConfiguration>(
             throw KSolverExecutorNotAliveException()
         }
         val executor = manager.createSolverExecutor(ctx, solverType)
-        applyConfigAndAssertions(executor)
+        solverState.apply(executor)
         return executor
-    }
-
-    private suspend fun applyConfigAndAssertions(executor: KSolverRunnerExecutor) {
-        if (configuration.isNotEmpty()) {
-            executor.configureAsync(configuration.toList())
-        }
-
-        var firstFrame = true
-        for (frame in assertFrames) {
-            if (!firstFrame) {
-                executor.pushAsync()
-            }
-            firstFrame = false
-
-            for (assertion in frame) {
-                when (assertion) {
-                    is ExprAssertFrame -> executor.assertAsync(assertion.expr)
-                    is AssertAndTrackFrame -> executor.assertAndTrackAsync(assertion.expr, assertion.trackVar)
-                }
-            }
-        }
     }
 
     private suspend inline fun handleCheckSatExceptionAsUnknown(
