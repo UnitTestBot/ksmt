@@ -128,6 +128,10 @@ class KPortfolioSolver(
         return result.result
     }
 
+    /**
+     * Await for the first solver to complete the [operation]
+     * with a result matching the [predicate].
+     * */
     @Suppress("TooGenericExceptionCaught")
     private suspend inline fun <T> awaitFirstSolver(
         crossinline operation: suspend KSolverRunner<*>.() -> T,
@@ -141,7 +145,9 @@ class KPortfolioSolver(
             val previousOperationCompletion = solvers[solver]?.getAndSet(operationCompletion)
             solverOperationScope.launch {
                 try {
+                    // Ensure solver operation order
                     previousOperationCompletion?.await()
+
                     val operationResult = solver.operation()
                     val solverOperationResult = SolverOperationResult(solver, operationResult)
                     results.offer(Result.success(solverOperationResult))
@@ -150,6 +156,7 @@ class KPortfolioSolver(
                         val successResult = SolverAwaitSuccess(solverOperationResult)
                         resultFuture.complete(successResult)
                     }
+
                     operationCompletion.complete(Unit)
                 } catch (ex: Throwable) {
                     // Solver has incorrect state now. Remove it from portfolio
@@ -158,6 +165,10 @@ class KPortfolioSolver(
                     solver.deleteSolverAsync()
                     results.offer(Result.failure(ex))
                 } finally {
+                    /**
+                     * Return [SolverAwaitFailure]  if all solvers completed with
+                     * a result that didn't match the [predicate] or completed with an exception.
+                     * */
                     val pending = pendingSolvers.decrementAndGet()
                     if (pending == 0) {
                         val failure = SolverAwaitFailure(results)
