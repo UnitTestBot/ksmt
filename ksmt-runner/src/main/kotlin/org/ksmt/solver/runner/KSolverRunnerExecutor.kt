@@ -209,7 +209,11 @@ class KSolverRunnerExecutor(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
+    @Suppress(
+        "TooGenericExceptionCaught",
+        "SwallowedException",
+        "ThrowsCount"
+    )
     private suspend inline fun <T> queryWithTimeoutAndExceptionHandling(
         crossinline body: suspend SolverProtocolModel.() -> T
     ): T {
@@ -219,7 +223,7 @@ class KSolverRunnerExecutor(
             }
         } catch (ex: RdFault) {
             throw KSolverException(ex)
-        } catch (ex: Exception) {
+        } catch (ex: Throwable) {
             terminate()
             if (ex is TimeoutCancellationException) {
                 throw KSolverExecutorTimeoutException(ex.message)

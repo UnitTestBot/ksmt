@@ -126,6 +126,7 @@ class KPortfolioSolver(
         return result.result
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private suspend inline fun <T> awaitFirstSolver(
         crossinline operation: suspend KSolverRunner<*>.() -> T,
         crossinline predicate: (T) -> Boolean
@@ -149,6 +150,7 @@ class KPortfolioSolver(
                     }
                     operationCompletion.complete(Unit)
                 } catch (ex: Throwable) {
+                    // Solver has incorrect state now. Remove it from portfolio
                     solvers.remove(solver)
                     operationCompletion.completeExceptionally(ex)
                     solver.deleteSolverAsync()

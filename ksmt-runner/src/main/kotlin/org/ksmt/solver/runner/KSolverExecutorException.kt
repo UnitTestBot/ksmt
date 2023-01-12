@@ -10,5 +10,7 @@ sealed class KSolverExecutorException : Exception {
 
 class KSolverExecutorNotAliveException : KSolverExecutorException("Solver executor is not alive")
 class KSolverExecutorTimeoutException(message: String?) : KSolverExecutorException(message)
-class KSolverExecutorWorkerInitializationException(reason: WorkerInitializationFailedException): KSolverExecutorException(reason)
+class KSolverExecutorWorkerInitializationException(
+    reason: WorkerInitializationFailedException
+): KSolverExecutorException(reason)
 class KSolverExecutorOtherException(cause: Throwable?) : KSolverExecutorException(cause)
