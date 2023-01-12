@@ -20,6 +20,7 @@ import java.util.SortedMap
 import kotlin.random.Random
 import kotlin.random.nextInt
 import kotlin.random.nextUInt
+import kotlin.random.nextULong
 import kotlin.reflect.KClass
 import kotlin.reflect.KClassifier
 import kotlin.reflect.KFunction
@@ -32,28 +33,63 @@ import kotlin.reflect.full.allSupertypes
 import kotlin.reflect.full.createType
 import kotlin.reflect.full.isSubclassOf
 
+
+/**
+ * Expression generation parameters.
+ *
+ * [seedExpressionsPerSort] -- initial expressions for each KSMT sort.
+ *
+ * [deepExpressionProbability] -- probability of picking the most deeply nested expression as an argument.
+ * Controls the depth of generated expressions.
+ * Default: 0.4. In our experiments, the probability value of 0.4 results
+ * in an average expression depth of about 0.0023 * #generated expressions, 0.3 -- 0.0017, 0.5 -- 0.0029.
+ * For example, if we generate 10000 expressions, with a probability of 0.4, the average expression depth will be 23,
+ * 0.3 -- 17 and with a probability of 0.5 -- 29.
+ *
+ * [generatedListSize] -- allowed sizes of generated lists.
+ * Default: 2-10, since lists are mostly used for expressions like And, Or, etc.
+ * This size range seems to be the most common for expressions of such kind.
+ *
+ * [generatedStringLength] -- allowed sizes of generated strings.
+ * Default: 7-10, since most of generated strings are names of constants, functions, etc.
+ *
+ * [possibleIntValues] -- allowed values for Int and UInt values.
+ * Default: 3-100, since such values are often used for Bv size or Fp size,
+ * and we don't want these values to be extremely large.
+ *
+ * [possibleStringChars] -- allowed symbols for generated strings.
+ * Default: a-z, since most of generated strings are names of constants, functions, etc.
+ * */
+data class GenerationParameters(
+    val seedExpressionsPerSort: Int = 10,
+    val deepExpressionProbability: Double = 0.4,
+    val generatedListSize: IntRange = 2..10,
+    val generatedStringLength: IntRange = 7..10,
+    val possibleIntValues: IntRange = 3..100,
+    val possibleStringChars: CharRange = 'a'..'z'
+)
+
 class RandomExpressionGenerator {
     private lateinit var generationContext: GenerationContext
 
     /**
      * Generate [limit] random expressions with shared subexpressions.
-     *
-     * Parameters:
-     * [seedExpressionsPerSort] -- initial expressions for each KSMT sort.
-     * [freshConstantExpressionProbability] -- probability of generating a new interpreted constant
-     * instead of picking from those already generated. Controls the sharing of interpreted constants.
-     * [deepExpressionProbability] -- probability of picking the most deeply nested expression as an argument.
-     * Controls the depth of generated expressions.
      * */
-    fun generate(limit: Int, context: KContext, random: Random = Random(42)): List<KExpr<*>> {
+    fun generate(
+        limit: Int,
+        context: KContext,
+        random: Random = Random(42),
+        params: GenerationParameters = GenerationParameters()
+    ): List<KExpr<*>> {
         generationContext = GenerationContext(
             random = random,
             context = context,
+            params = params,
             expressionsAmountEstimation = limit,
             sortsAmountEstimation = 1000
         )
 
-        generateInitialSeed(samplesPerSort = seedExpressionsPerSort)
+        generateInitialSeed(samplesPerSort = params.seedExpressionsPerSort)
 
         while (generationContext.expressions.size < limit) {
             val generator = generators.random(random)
@@ -73,9 +109,11 @@ class RandomExpressionGenerator {
         val replayContext = GenerationContext(
             random = Random(0),
             context = context,
+            params = GenerationParameters(),
             expressionsAmountEstimation = generationContext.expressions.size,
             sortsAmountEstimation = generationContext.sorts.size
         )
+
         for (entry in generationContext.trace) {
             val resolvedEntry = resolveTraceEntry(entry, replayContext)
             val result = resolvedEntry.call(context)
@@ -85,6 +123,7 @@ class RandomExpressionGenerator {
                 is KSort -> replayContext.registerSort(result, inReplayMode = true)
             }
         }
+
         return replayContext.expressions
     }
 
@@ -105,12 +144,14 @@ class RandomExpressionGenerator {
         }
 
     private fun generateInitialSeed(samplesPerSort: Int) {
-        for (sortGenerator in sortGenerators.filter { it.refSortProviders.isEmpty() }) {
+        val (simpleGenerators, complexGenerators) = sortGenerators.partition { it.refSortProviders.isEmpty() }
+
+        for (sortGenerator in simpleGenerators) {
             repeat(samplesPerSort) {
                 nullIfGenerationFailed { sortGenerator.mkSeed(generationContext) }
             }
         }
-        for (sortGenerator in sortGenerators.filter { it.refSortProviders.isNotEmpty() }) {
+        for (sortGenerator in complexGenerators) {
             repeat(samplesPerSort) {
                 nullIfGenerationFailed { sortGenerator.mkSeed(generationContext) }
             }
@@ -118,10 +159,6 @@ class RandomExpressionGenerator {
     }
 
     companion object {
-        private const val seedExpressionsPerSort = 10
-        private const val freshConstantExpressionProbability = 0.7
-        private const val deepExpressionProbability = 0.4
-
         private val ctxFunctions by lazy {
             KContext::class.members
                 .filter { it.visibility == KVisibility.PUBLIC }
@@ -133,9 +170,7 @@ class RandomExpressionGenerator {
                 .asSequence()
                 .filter { it.returnType.isKExpr() }
                 .map { it.uncheckedCast<KFunction<*>, KFunction<KExpr<*>>>() }
-                .filterNot { (it.name == "mkBv" && it.parameters.any { p -> p.type.isSubclassOf(String::class) }) }
-                .filterNot { (it.name == "mkIntNum" && it.parameters.any { p -> p.type.isSubclassOf(String::class) }) }
-                .filterNot { (it.name == "mkRealNum" && it.parameters.any { p -> p.type.isSubclassOf(String::class) }) }
+                .filterComplexStringGenerators()
                 .mapNotNull {
                     nullIfGenerationFailed {
                         it.mkGenerator()?.uncheckedCast<AstGenerator<*>, AstGenerator<ExprArgument>>()
@@ -146,6 +181,7 @@ class RandomExpressionGenerator {
 
         private val sortGenerators by lazy {
             ctxFunctions
+                .asSequence()
                 .filter { it.returnType.isKSort() }
                 .map { it.uncheckedCast<KFunction<*>, KFunction<KSort>>() }
                 .mapNotNull {
@@ -153,17 +189,43 @@ class RandomExpressionGenerator {
                         it.mkGenerator()?.uncheckedCast<AstGenerator<*>, AstGenerator<SortArgument>>()
                     }
                 }
+                .toList()
         }
+
+        /**
+         * Filter out generators that require a string with special format.
+         * E.g. binary string for Bv or numeric for IntNum.
+         * */
+        private fun Sequence<KFunction<KExpr<*>>>.filterComplexStringGenerators() = this
+            .filterNot { (it.name == "mkBv" && it.parameters.any { p -> p.type.isSubclassOf(String::class) }) }
+            .filterNot { (it.name == "mkIntNum" && it.parameters.any { p -> p.type.isSubclassOf(String::class) }) }
+            .filterNot { (it.name == "mkRealNum" && it.parameters.any { p -> p.type.isSubclassOf(String::class) }) }
 
         private val boolGen by lazy { generators.single { it.function.match("mkBool", Boolean::class) } }
         private val intGen by lazy { generators.single { it.function.match("mkIntNum", Int::class) } }
         private val realGen by lazy { generators.single { it.function.match("mkRealNum", Int::class) } }
         private val bvGen by lazy { generators.single { it.function.match("mkBv", Int::class, UInt::class) } }
         private val fpGen by lazy { generators.single { it.function.match("mkFp", Double::class, KSort::class) } }
-        private val arrayGen by lazy { generators.single { it.function.match("mkArrayConst", KSort::class, KExpr::class) } }
-        private val fpRmGen by lazy { generators.single { it.function.match("mkFpRoundingModeExpr", KFpRoundingMode::class) } }
-        private val constGen by lazy { generators.single { it.function.match("mkConst", String::class, KSort::class) } }
-        private val arraySortGen by lazy { sortGenerators.single { it.function.match("mkArraySort", KSort::class, KSort::class) } }
+        private val arrayGen by lazy {
+            generators.single {
+                it.function.match("mkArrayConst", KSort::class, KExpr::class)
+            }
+        }
+        private val fpRmGen by lazy {
+            generators.single {
+                it.function.match("mkFpRoundingModeExpr", KFpRoundingMode::class)
+            }
+        }
+        private val constGen by lazy {
+            generators.single {
+                it.function.match("mkConst", String::class, KSort::class)
+            }
+        }
+        private val arraySortGen by lazy {
+            sortGenerators.single {
+                it.function.match("mkArraySort", KSort::class, KSort::class)
+            }
+        }
 
         private fun KType.isSubclassOf(other: KClass<*>): Boolean =
             when (val cls = classifier) {
@@ -172,24 +234,12 @@ class RandomExpressionGenerator {
                 else -> false
             }
 
-        private fun KType.isSimple(): Boolean = listOf(
-            Boolean::class,
-            Byte::class,
-            Short::class,
-            Int::class,
-            UInt::class,
-            Long::class,
-            Float::class,
-            Double::class,
-            String::class,
-            Enum::class
-        ).any { isSubclassOf(it) }
+        private fun KType.isSimple(): Boolean =
+            simpleValueGenerators.keys.any { this.isSubclassOf(it) }
 
         private fun KType.isKExpr(): Boolean = isSubclassOf(KExpr::class)
         private fun KType.isConst(): Boolean = isSubclassOf(KInterpretedConstant::class)
-
         private fun KType.isKSort(): Boolean = isSubclassOf(KSort::class)
-
         private fun KType.isKContext(): Boolean = this == KContext::class.createType()
 
         private fun KFunction<*>.match(name: String, vararg valueParams: KClass<*>): Boolean {
@@ -208,11 +258,18 @@ class RandomExpressionGenerator {
                 it.mkReferenceSortProvider(typeParametersProviders)
             }
 
-            val argumentProviders = valueParams.map { it.mkArgProvider(typeParametersProviders) ?: return null }
+            val argumentProviders = valueParams.map {
+                it.mkArgProvider(typeParametersProviders) ?: return null
+            }
+
             return AstGenerator<Argument>(this, typeParametersProviders, argumentProviders) { args ->
                 when (name) {
+                    /**
+                     * Bv repeat operation can enormously increase the size of bv.
+                     * To avoid extremely large bvs, we move the repetitions count to the range 1..3.
+                     * */
                     "mkBvRepeatExpr" -> listOf(
-                        SimpleArgument((args[0] as SimpleArgument).value as Int % 3),
+                        SimpleArgument(((args[0] as SimpleArgument).value as Int) % 3 + 1),
                         args[1]
                     )
 
@@ -238,23 +295,28 @@ class RandomExpressionGenerator {
                     ExprProvider(sortProvider)
                 }
             }
+
             if (type.isKSort()) {
                 return type.mkSortProvider(typeParametersProviders)
             }
+
             if (type.isSubclassOf(List::class)) {
                 val elementType = type.arguments.single().type ?: return null
                 if (!elementType.isKExpr()) return null
                 val sortProvider = elementType.mkKExprSortProvider(typeParametersProviders)
                 return ListProvider(sortProvider)
             }
+
             if (type.isSimple()) {
                 val cls = type.classifier as? KClass<*> ?: return null
                 return SimpleProvider(cls)
             }
+
             val sortClass = type.classifier
             if (sortClass is KTypeParameter && sortClass.name in typeParametersProviders) {
                 return type.mkSortProvider(typeParametersProviders)
             }
+
             return null
         }
 
@@ -268,16 +330,18 @@ class RandomExpressionGenerator {
         }
 
         private fun KType.mkKExprSortProvider(references: MutableMap<String, SortProvider>): SortProvider {
-            val expr = if (classifier == KExpr::class) {
-                this
-            } else {
-                (classifier as? KClass<*>)?.allSupertypes?.find { it.classifier == KExpr::class }
-                    ?: generationFailed("No KExpr superclass found")
-            }
+            val expr = findKExprType()
             val sort = expr.arguments.single()
             if (sort == KTypeProjection.STAR) return SingleSortProvider(KSort::class.java)
             val sortType = sort.type ?: generationFailed("No type available")
             return sortType.mkSortProvider(references)
+        }
+
+        private fun KType.findKExprType() = if (classifier == KExpr::class) {
+            this
+        } else {
+            (classifier as? KClass<*>)?.allSupertypes?.find { it.classifier == KExpr::class }
+                ?: generationFailed("No KExpr superclass found")
         }
 
         private fun KType.mkSortProvider(references: MutableMap<String, SortProvider>): SortProvider {
@@ -288,6 +352,7 @@ class RandomExpressionGenerator {
                 }
                 return ReferenceSortProvider(sortClass.name)
             }
+
             if (this.isSubclassOf(KArraySort::class)) {
                 val (domain, range) = arguments.map {
                     it.type?.mkSortProvider(references)
@@ -295,9 +360,11 @@ class RandomExpressionGenerator {
                 }
                 return ArraySortProvider(domain, range)
             }
+
             if (this.isKSort() && sortClass != null) {
                 return SingleSortProvider((sortClass.uncheckedCast<KClassifier, KClass<KSort>>()).java)
             }
+
             generationFailed("Unexpected type $this")
         }
 
@@ -404,7 +471,7 @@ class RandomExpressionGenerator {
 
         private class SimpleProvider(val type: KClass<*>) : ArgumentProvider {
             override fun provide(generationContext: GenerationContext, references: Map<String, SortArgument>): Argument {
-                val value = type.generateSimpleValue(generationContext.random)
+                val value = type.generateSimpleValue(generationContext)
                 return SimpleArgument(value)
             }
         }
@@ -412,11 +479,12 @@ class RandomExpressionGenerator {
         private class ListProvider(val element: SortProvider) : ArgumentProvider {
             override fun provide(generationContext: GenerationContext, references: Map<String, SortArgument>): Argument {
                 val concreteSort = element.resolve(generationContext, references).value
-                val size = generationContext.random.nextInt(2..10)
+                val size = generationContext.random.nextInt(generationContext.params.generatedListSize)
                 val candidateExpressions = generationContext.expressionIndex[concreteSort]
                     ?: generationFailed("No expressions for sort $concreteSort")
+
                 val nested = List(size) {
-                    val (exprId, exprDepth) = selectRandomExpressionId(generationContext.random, candidateExpressions)
+                    val (exprId, exprDepth) = selectRandomExpressionId(generationContext, candidateExpressions)
                     val expr = generationContext.expressions[exprId]
                     ExprArgument(expr, exprId, exprDepth)
                 }
@@ -429,7 +497,7 @@ class RandomExpressionGenerator {
                 val concreteSort = sort.resolve(generationContext, references).value
                 val candidateExpressions = generationContext.expressionIndex[concreteSort]
                     ?: generationFailed("No expressions for sort $concreteSort")
-                val (exprId, exprDepth) = selectRandomExpressionId(generationContext.random, candidateExpressions)
+                val (exprId, exprDepth) = selectRandomExpressionId(generationContext, candidateExpressions)
                 return ExprArgument(generationContext.expressions[exprId], exprId, exprDepth)
             }
         }
@@ -438,10 +506,8 @@ class RandomExpressionGenerator {
             override fun provide(generationContext: GenerationContext, references: Map<String, SortArgument>): Argument {
                 val concreteSort = sort.resolve(generationContext, references)
                 val constants = generationContext.constantIndex[concreteSort.value] ?: emptyList()
-                return if (
-                    constants.isNotEmpty()
-                    && generationContext.random.nextDouble() > freshConstantExpressionProbability
-                ) {
+
+                return if (constants.isNotEmpty()) {
                     val idx = constants.random(generationContext.random)
                     ExprArgument(generationContext.expressions[idx], idx, depth = 1)
                 } else {
@@ -464,7 +530,9 @@ class RandomExpressionGenerator {
                 val resolvedRefProviders = refSortProviders.mapValues {
                     it.value.resolve(generationContext, context)
                 }
-                val baseArguments = argProviders.map { it.provide(generationContext, context + resolvedRefProviders) }
+                val baseArguments = argProviders.map {
+                    it.provide(generationContext, context + resolvedRefProviders)
+                }
                 val arguments = provideArguments(baseArguments)
 
                 val invocation = FunctionInvocation(function, arguments)
@@ -517,38 +585,46 @@ class RandomExpressionGenerator {
         }
 
         private fun selectRandomExpressionId(
-            random: Random,
+            context: GenerationContext,
             expressionIds: SortedMap<Int, MutableList<Int>>
         ): Pair<Int, Int> {
-            val expressionDepth = when (random.nextDouble()) {
-                in 0.0..deepExpressionProbability -> expressionIds.lastKey()
-                else -> expressionIds.keys.random(random)
+            val expressionDepth = when (context.random.nextDouble()) {
+                in 0.0..context.params.deepExpressionProbability -> expressionIds.lastKey()
+                else -> expressionIds.keys.random(context.random)
             }
             val candidateExpressions = expressionIds.getValue(expressionDepth)
-            val exprId = candidateExpressions.random(random)
+            val exprId = candidateExpressions.random(context.random)
             return exprId to expressionDepth
         }
 
-        private fun KClass<*>.generateSimpleValue(random: Random): Any = when (this) {
-            Boolean::class -> random.nextBoolean()
-            Byte::class -> random.nextInt().toByte()
-            Short::class -> random.nextInt().toShort()
-            Int::class -> random.nextInt(3..100)
-            UInt::class -> random.nextUInt(3u..100u)
-            Long::class -> random.nextLong()
-            Float::class -> random.nextFloat()
-            Double::class -> random.nextDouble()
-            String::class -> randomString(random, length = 10)
-            else -> if (this.isSubclassOf(Enum::class)) {
-                java.enumConstants.random(random)
-            } else {
-                generationFailed("Unexpected simple type: $this")
-            }
-        }
+        private val simpleValueGenerators = mapOf<KClass<*>, GenerationContext.(KClass<*>) -> Any>(
+            Boolean::class to { random.nextBoolean() },
+            Byte::class to { random.nextInt().toByte() },
+            UByte::class to { random.nextInt().toUByte() },
+            Short::class to { random.nextInt().toShort() },
+            UShort::class to { random.nextInt().toUShort() },
+            Int::class to { random.nextInt(params.possibleIntValues) },
+            UInt::class to {
+                val range = params.possibleIntValues.let { it.first.toUInt()..it.last.toUInt() }
+                random.nextUInt(range)
+            },
+            Long::class to { random.nextLong() },
+            ULong::class to { random.nextULong() },
+            Float::class to { random.nextFloat() },
+            Double::class to { random.nextDouble() },
+            String::class to {
+                val stringLength = random.nextInt(params.generatedStringLength)
+                val chars = CharArray(stringLength) { params.possibleStringChars.random(random) }
+                String(chars)
+            },
+            Enum::class to { it.java.enumConstants.random(random) }
+        )
 
-        private fun randomString(random: Random, length: Int): String {
-            val chars = CharArray(length) { ('a'..'z').random(random) }
-            return String(chars)
+        private fun KClass<*>.generateSimpleValue(context: GenerationContext): Any {
+            val generator = simpleValueGenerators[this]
+                ?: (if (this.isSubclassOf(Enum::class)) simpleValueGenerators[Enum::class] else null)
+                ?: generationFailed("Unexpected simple type: $this")
+            return context.generator(this)
         }
 
         private class FunctionInvocation(
@@ -564,6 +640,7 @@ class RandomExpressionGenerator {
         private class GenerationContext(
             val random: Random,
             val context: KContext,
+            val params: GenerationParameters,
             expressionsAmountEstimation: Int,
             sortsAmountEstimation: Int
         ) {
