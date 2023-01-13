@@ -257,7 +257,7 @@ object BvUtils {
         bv8 = { a, b -> if (b.toInt() !in bv8PossibleShift) 0u else (a.toInt() ushr b.toInt()).toUByte() },
         bv16 = { a, b -> if (b.toInt() !in bv16PossibleShift) 0u else (a.toInt() ushr b.toInt()).toUShort() },
         bv32 = { a, b -> if (b.toInt() !in bv32PossibleShift) 0u else (a.toInt() ushr b.toInt()).toUInt() },
-        bv64 = { a, b -> if (b.toInt() !in bv64PossibleShift) 0u else (a.toLong() ushr b.toInt()).toULong() },
+        bv64 = { a, b -> if (b.toLong() !in bv64PossibleShift) 0u else (a.toLong() ushr b.toInt()).toULong() },
         bvDefault = { a, b ->
             if (b < BigInteger.ZERO || b >= sort.sizeBits.toInt().toBigInteger()) {
                 BigInteger.ZERO
