@@ -7,6 +7,7 @@ import org.ksmt.expr.KBitVec32Value
 import org.ksmt.expr.KBitVec64Value
 import org.ksmt.expr.KBitVec8Value
 import org.ksmt.expr.KBitVecCustomValue
+import org.ksmt.expr.KBitVecNumberValue
 import org.ksmt.expr.KBitVecValue
 import java.math.BigInteger
 import kotlin.experimental.inv
@@ -294,14 +295,11 @@ object BvUtils {
         return valueMinusOne.bitLength()
     }
 
-    fun KBitVecValue<*>.intValueOrNull(): Int? = when (this) {
-        is KBitVec1Value -> if (value) 1 else 0
-        is KBitVec8Value -> numberValue.toInt()
-        is KBitVec16Value -> numberValue.toInt()
-        is KBitVec32Value -> numberValue
-        is KBitVec64Value -> if (numberValue <= Int.MAX_VALUE) numberValue.toInt() else null
-        is KBitVecCustomValue -> if (value <= Int.MAX_VALUE.toBigInteger()) value.toInt() else null
-        else -> stringValue.toIntOrNull(radix = 2)
+    fun KBitVecValue<*>.bigIntValue(): BigInteger = when (this) {
+        is KBitVec1Value -> if (value) BigInteger.ONE else BigInteger.ZERO
+        is KBitVecNumberValue<*, *> -> numberValue.toBigInteger()
+        is KBitVecCustomValue -> value
+        else -> stringValue.toBigInteger(radix = 2)
     }
 
     fun KBitVecValue<*>.toBigIntegerSigned(): BigInteger =
