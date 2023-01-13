@@ -344,7 +344,7 @@ open class KBitwuzlaExprInternalizer(
             Native.bitwuzlaMkBvValue(
                 bitwuzlaCtx.bitwuzla,
                 sort.internalizeSort(),
-                binaryStringValue,
+                stringValue,
                 BitwuzlaBVBase.BITWUZLA_BV_BASE_BIN
             ).also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
         }

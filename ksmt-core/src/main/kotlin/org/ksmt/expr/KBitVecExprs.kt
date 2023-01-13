@@ -27,7 +27,8 @@ class KBitVec1Value internal constructor(
 ) : KBitVecValue<KBv1Sort>(ctx) {
     override fun accept(transformer: KTransformerBase): KExpr<KBv1Sort> = transformer.transform(this)
 
-    override val stringValue: String = if (value) "1" else "0"
+    override val stringValue: String
+        get() = if (value) "1" else "0"
 
     override val decl: KDecl<KBv1Sort>
         get() = ctx.mkBvDecl(value)
@@ -40,7 +41,8 @@ abstract class KBitVecNumberValue<S : KBvSort, N : Number>(
     ctx: KContext,
     val numberValue: N
 ) : KBitVecValue<S>(ctx) {
-    override val stringValue: String = numberValue.toBinary()
+    override val stringValue: String
+        get() = numberValue.toBinary()
 }
 
 class KBitVec8Value internal constructor(
@@ -97,7 +99,7 @@ class KBitVec64Value internal constructor(
 
 class KBitVecCustomValue internal constructor(
     ctx: KContext,
-    val binaryStringValue: String,
+    private val binaryStringValue: String,
     private val sizeBits: UInt
 ) : KBitVecValue<KBvSort>(ctx) {
     init {
@@ -109,7 +111,8 @@ class KBitVecCustomValue internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<KBvSort> = transformer.transform(this)
 
-    override val stringValue: String = binaryStringValue
+    override val stringValue: String
+        get() = binaryStringValue
 
     override val decl: KDecl<KBvSort>
         get() = ctx.mkBvDecl(binaryStringValue, sizeBits)
