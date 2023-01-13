@@ -110,7 +110,7 @@ class AstDeserializer(
             ExprKind.BitVec16Value -> mkBv(readShort())
             ExprKind.BitVec32Value -> mkBv(readInt())
             ExprKind.BitVec64Value -> mkBv(readLong())
-            ExprKind.BitVecCustomValue -> mkBv(readString(), readUInt())
+            ExprKind.BitVecCustomValue -> mkBv(readBigInteger(), readUInt())
             ExprKind.BvNotExpr -> deserialize(::mkBvNotExpr)
             ExprKind.BvReductionAndExpr -> deserialize(::mkBvReductionAndExpr)
             ExprKind.BvReductionOrExpr -> deserialize(::mkBvReductionOrExpr)

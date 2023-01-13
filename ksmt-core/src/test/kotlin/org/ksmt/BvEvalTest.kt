@@ -18,6 +18,7 @@ import org.ksmt.utils.BvUtils
 import org.ksmt.utils.uncheckedCast
 import kotlin.random.Random
 import kotlin.random.nextInt
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -247,6 +248,28 @@ class BvEvalTest {
         repeat(5) {
             val extension = random.nextInt(0..100)
             testOperation(sizeBits) { value -> mkBvZeroExtensionExpr(extension, value) }
+        }
+    }
+
+    @Test
+    fun testBvCreateFromNumber() {
+        testBvCreate<Byte>(8u, { random.nextInt().toByte() }, KContext::mkBv, KContext::mkBv)
+        testBvCreate<Short>(16u, { random.nextInt().toShort() }, KContext::mkBv, KContext::mkBv)
+        testBvCreate<Int>(32u, { random.nextInt() }, KContext::mkBv, KContext::mkBv)
+        testBvCreate<Long>(64u, { random.nextLong() }, KContext::mkBv, KContext::mkBv)
+    }
+
+    private inline fun <reified T : Number> testBvCreate(
+        size: UInt,
+        valueGen: () -> T,
+        specializedBuilder: KContext.(T) -> KExpr<*>,
+        genericBuilder: KContext.(T, UInt) -> KExpr<*>
+    ) = KContext().run {
+        repeat(100) {
+            val value = valueGen()
+            val createSpecialized = specializedBuilder(value)
+            val createGeneric = genericBuilder(value, size)
+            assertEquals(createSpecialized, createGeneric)
         }
     }
 

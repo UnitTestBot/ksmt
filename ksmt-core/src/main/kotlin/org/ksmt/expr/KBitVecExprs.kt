@@ -12,6 +12,7 @@ import org.ksmt.sort.KBv8Sort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.utils.toBinary
+import java.math.BigInteger
 
 abstract class KBitVecValue<S : KBvSort>(
     ctx: KContext
@@ -99,23 +100,17 @@ class KBitVec64Value internal constructor(
 
 class KBitVecCustomValue internal constructor(
     ctx: KContext,
-    private val binaryStringValue: String,
-    private val sizeBits: UInt
+    val value: BigInteger,
+    val sizeBits: UInt
 ) : KBitVecValue<KBvSort>(ctx) {
-    init {
-        require(binaryStringValue.length.toUInt() == sizeBits) {
-            "Provided string $binaryStringValue consist of ${binaryStringValue.length} " +
-                    "symbols, but $sizeBits were expected"
-        }
-    }
 
     override fun accept(transformer: KTransformerBase): KExpr<KBvSort> = transformer.transform(this)
 
     override val stringValue: String
-        get() = binaryStringValue
+        get() = value.toBinary(sizeBits)
 
     override val decl: KDecl<KBvSort>
-        get() = ctx.mkBvDecl(binaryStringValue, sizeBits)
+        get() = ctx.mkBvDecl(value, sizeBits)
 
     override val sort: KBvSort
         get() = ctx.mkBvSort(sizeBits)

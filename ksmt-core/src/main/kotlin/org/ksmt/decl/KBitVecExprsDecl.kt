@@ -12,6 +12,7 @@ import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KIntSort
 import org.ksmt.utils.toBinary
+import java.math.BigInteger
 
 abstract class KBitVecValueDecl<T : KBvSort> internal constructor(
     ctx: KContext,
@@ -72,10 +73,14 @@ class KBitVec64ValueDecl internal constructor(
 
 class KBitVecCustomSizeValueDecl internal constructor(
     ctx: KContext,
-    value: String,
+    val bigIntValue: BigInteger,
     sizeBits: UInt
-) : KBitVecValueDecl<KBvSort>(ctx, value, ctx.mkBvSort(sizeBits)) {
-    override fun apply(args: List<KExpr<*>>): KApp<KBvSort, *> = ctx.mkBv(value, sort.sizeBits)
+) : KBitVecValueDecl<KBvSort>(
+    ctx,
+    value = bigIntValue.toBinary(sizeBits),
+    ctx.mkBvSort(sizeBits)
+) {
+    override fun apply(args: List<KExpr<*>>): KApp<KBvSort, *> = ctx.mkBv(bigIntValue, sort.sizeBits)
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
