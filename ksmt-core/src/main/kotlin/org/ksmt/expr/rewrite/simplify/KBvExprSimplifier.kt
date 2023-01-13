@@ -1297,7 +1297,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             val lhsSign = lhsValue.stringValue[0] == '1'
             val rhsSign = rhsValue.stringValue[0] == '1'
 
-            when {
+            val operationOverflow = when {
                 // lhs < 0 && rhs < 0
                 lhsSign && rhsSign -> {
                     // no underflow possible
@@ -1305,7 +1305,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                     // overflow if rhs <= (MAX_VALUE / lhs - 1)
                     val maxValue = bvMaxValueSigned(size)
                     val limit = maxValue.signedDivide(lhsValue)
-                    return rhsValue.signedLessOrEqual(limit - one).expr
+                    rhsValue.signedLessOrEqual(limit - one)
                 }
                 // lhs > 0 && rhs > 0
                 !lhsSign && !rhsSign -> {
@@ -1314,7 +1314,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                     // overflow if MAX_VALUE / rhs <= lhs - 1
                     val maxValue = bvMaxValueSigned(size)
                     val limit = maxValue.signedDivide(rhsValue)
-                    return limit.signedLessOrEqual(lhsValue - one).expr
+                    limit.signedLessOrEqual(lhsValue - one)
                 }
                 // lhs < 0 && rhs > 0
                 lhsSign && !rhsSign -> {
@@ -1323,7 +1323,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                     // underflow if lhs <= MIN_VALUE / rhs - 1
                     val minValue = bvMinValueSigned(size)
                     val limit = minValue.signedDivide(rhsValue)
-                    return lhsValue.signedLessOrEqual(limit - one).expr
+                    lhsValue.signedLessOrEqual(limit - one)
                 }
                 // lhs > 0 && rhs < 0
                 else -> {
@@ -1332,9 +1332,11 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                     // underflow if rhs <= MIN_VALUE / lhs - 1
                     val minValue = bvMinValueSigned(size)
                     val limit = minValue.signedDivide(lhsValue)
-                    return rhsValue.signedLessOrEqual(limit - one).expr
+                    rhsValue.signedLessOrEqual(limit - one)
                 }
             }
+
+            return (!operationOverflow).expr
         }
         return null
     }
@@ -1363,7 +1365,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             val longMaxValue = concatBv(zero, bvMaxValueUnsigned(size))
 
             val product = longLhs * longRhs
-            return product.signedLessOrEqual(longMaxValue).expr
+            return product.unsignedLessOrEqual(longMaxValue).expr
         }
 
         return null
