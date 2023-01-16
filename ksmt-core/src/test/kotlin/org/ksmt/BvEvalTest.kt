@@ -5,6 +5,7 @@ import org.junit.jupiter.api.parallel.ExecutionMode
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import org.ksmt.expr.KApp
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KInterpretedConstant
@@ -361,6 +362,10 @@ class BvEvalTest {
             val expectedValue = solverValue(expr)
             val actualValue = evalBvExpr(expr)
             assertEquals(expectedValue, actualValue)
+
+            val decl = (expectedValue as KApp<*, *>).decl
+            val declValue = decl.apply(emptyList())
+            assertEquals(expectedValue, declValue)
         }
 
         private fun <T : KSort> solverValue(expr: KExpr<T>): KExpr<T> =

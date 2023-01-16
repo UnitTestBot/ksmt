@@ -2381,7 +2381,27 @@ open class KContext : AutoCloseable {
     fun mkBvDecl(value: Int): KDecl<KBv32Sort> = bv32DeclCache.createIfContextActive(value)
     fun mkBvDecl(value: Long): KDecl<KBv64Sort> = bv64DeclCache.createIfContextActive(value)
     fun mkBvDecl(value: BigInteger, size: UInt): KDecl<KBvSort> =
-        bvCustomSizeDeclCache.createIfContextActive(value, size)
+        mkBvDeclFromUnsignedBigInteger(value.normalizeValue(size), size)
+
+    fun mkBvDecl(value: String, sizeBits: UInt): KBitVecValue<KBvSort> =
+        mkBv(value.toBigInteger(radix = 2), sizeBits)
+
+    private fun mkBvDeclFromUnsignedBigInteger(
+        value: BigInteger,
+        sizeBits: UInt
+    ): KDecl<KBvSort> {
+        require(value.signum() >= 0) {
+            "Unsigned value required, but $value provided"
+        }
+        return when (sizeBits.toInt()) {
+            1 -> mkBvDecl(value != BigInteger.ZERO).cast()
+            Byte.SIZE_BITS -> mkBvDecl(value.toByte()).cast()
+            Short.SIZE_BITS -> mkBvDecl(value.toShort()).cast()
+            Int.SIZE_BITS -> mkBvDecl(value.toInt()).cast()
+            Long.SIZE_BITS -> mkBvDecl(value.toLong()).cast()
+            else -> bvCustomSizeDeclCache.createIfContextActive(value, sizeBits)
+        }
+    }
 
     private val bvNotDeclCache = mkClosableCache { sort: KBvSort -> KBvNotDecl(this, sort) }
     fun <T : KBvSort> mkBvNotDecl(sort: T): KBvNotDecl<T> = bvNotDeclCache.createIfContextActive(sort).cast()
