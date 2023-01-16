@@ -35,6 +35,11 @@ fun Number.toUnsignedBigInteger(): BigInteger =
 fun powerOfTwo(power: UInt): BigInteger =
     BigInteger.valueOf(2).pow(power.toInt())
 
+/**
+ * Ensure that BigInteger value is suitable for representation of Bv with [size] bits.
+ * 1. If the value is signed convert it to unsigned with the correct binary representation.
+ * 2. Trim value binary representation up to the [size] bits.
+ * */
 fun BigInteger.normalizeValue(size: UInt): BigInteger =
     this.mod(powerOfTwo(size))
 
