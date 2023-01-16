@@ -1742,10 +1742,10 @@ open class KContext : AutoCloseable {
     }
 
     private fun fpTopExponentUnbiased(sort: KFpSort): KBitVecValue<*> =
-        mkBv(powerOfTwo(sort.exponentBits), sort.exponentBits)
+        mkBv(powerOfTwo(sort.exponentBits - 1u), sort.exponentBits)
 
     private fun fpZeroExponentUnbiased(sort: KFpSort): KBitVecValue<*> =
-        mkBv(powerOfTwo(sort.exponentBits) + BigInteger.ONE, sort.exponentBits)
+        mkBv(powerOfTwo(sort.exponentBits - 1u) + BigInteger.ONE, sort.exponentBits)
 
     private val roundingModeCache = mkClosableCache { value: KFpRoundingMode ->
         KFpRoundingModeExpr(this, value)
