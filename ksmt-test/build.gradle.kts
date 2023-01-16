@@ -1,5 +1,6 @@
 plugins {
     id("org.ksmt.ksmt-base")
+    id("me.champeau.jmh") version "0.6.8"
 }
 
 repositories {
@@ -12,8 +13,12 @@ dependencies {
     implementation(project(":ksmt-bitwuzla"))
     implementation(project(":ksmt-runner"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+    implementation(kotlin("reflect"))
 
     testImplementation("org.junit.jupiter", "junit-jupiter-params", "5.8.2")
+
+    jmh("org.openjdk.jmh:jmh-core:1.36")
+    jmh("org.openjdk.jmh:jmh-generator-annprocess:1.36")
 }
 
 val runBenchmarksBasedTests = project.booleanProperty("runBenchmarksBasedTests") ?: false

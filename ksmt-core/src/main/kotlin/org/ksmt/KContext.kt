@@ -529,8 +529,11 @@ open class KContext : AutoCloseable {
     val falseExpr: KFalse
         get() = mkFalse()
 
+    fun mkBool(value: Boolean): KExpr<KBoolSort> =
+        if (value) trueExpr else falseExpr
+
     val Boolean.expr: KExpr<KBoolSort>
-        get() = if (this) trueExpr else falseExpr
+        get() = mkBool(this)
 
     // functions
     /*
