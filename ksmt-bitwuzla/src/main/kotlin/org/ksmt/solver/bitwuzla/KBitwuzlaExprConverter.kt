@@ -799,8 +799,12 @@ open class KBitwuzlaExprConverter(
          * (toBv x) -> (ite x #b1 #b0)
          * */
         fun transform(expr: BoolToBv1AdapterExpr): KExpr<KBv1Sort> = with(ctx) {
-            transformExprAfterTransformed(expr, listOf(expr.arg)) { transformedArg ->
-                mkIte(transformedArg.single(), bv1Sort.trueValue(), bv1Sort.falseValue())
+            transformExprAfterTransformed(expr, listOf(expr.arg)) { (transformedArg) ->
+                when (transformedArg) {
+                    trueExpr -> bv1Sort.trueValue()
+                    falseExpr -> bv1Sort.falseValue()
+                    else -> mkIte(transformedArg, bv1Sort.trueValue(), bv1Sort.falseValue())
+                }
             }
         }
 
@@ -809,8 +813,12 @@ open class KBitwuzlaExprConverter(
          * (toBool x) -> (ite (x == #b1) true false)
          * */
         fun transform(expr: Bv1ToBoolAdapterExpr): KExpr<KBoolSort> = with(ctx) {
-            transformExprAfterTransformed(expr, listOf(expr.arg)) { transformedArg ->
-                mkIte(transformedArg.single() eq bv1Sort.trueValue(), trueExpr, falseExpr)
+            transformExprAfterTransformed(expr, listOf(expr.arg)) { (transformedArg) ->
+                when (transformedArg) {
+                    bv1Sort.trueValue() -> trueExpr
+                    bv1Sort.falseValue() -> falseExpr
+                    else -> mkIte(transformedArg eq bv1Sort.trueValue(), trueExpr, falseExpr)
+                }
             }
         }
 
