@@ -1,6 +1,8 @@
 package org.ksmt.decl
 
 import org.ksmt.KContext
+import org.ksmt.cache.hash
+import org.ksmt.cache.structurallyEqual
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KSort
@@ -47,6 +49,15 @@ open class KFuncDecl<T : KSort>(
             "Arguments sort mismatch. Expected $argSorts but $providedSorts provided"
         }
     }
+
+    override fun customHashCode(): Int =
+        hash(javaClass, name, sort, argSorts, (this as? KParameterizedFuncDecl)?.parameters)
+
+    override fun customEquals(other: Any): Boolean =
+        structurallyEqual(other,
+            { javaClass }, { name }, { sort }, { argSorts },
+            { (this as? KParameterizedFuncDecl)?.parameters }
+        )
 }
 
 abstract class KFuncDecl1<T : KSort, A : KSort>(

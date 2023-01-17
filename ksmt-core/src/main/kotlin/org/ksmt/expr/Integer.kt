@@ -1,6 +1,8 @@
 package org.ksmt.expr
 
 import org.ksmt.KContext
+import org.ksmt.cache.hash
+import org.ksmt.cache.structurallyEqual
 import org.ksmt.decl.KIntModDecl
 import org.ksmt.decl.KIntNumDecl
 import org.ksmt.decl.KIntRemDecl
@@ -25,6 +27,9 @@ class KModIntExpr internal constructor(
         get() = listOf(lhs, rhs)
 
     override fun accept(transformer: KTransformerBase): KExpr<KIntSort> = transformer.transform(this)
+
+    override fun customHashCode(): Int = hash(lhs, rhs)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
 }
 
 class KRemIntExpr internal constructor(
@@ -42,6 +47,9 @@ class KRemIntExpr internal constructor(
         get() = listOf(lhs, rhs)
 
     override fun accept(transformer: KTransformerBase): KExpr<KIntSort> = transformer.transform(this)
+
+    override fun customHashCode(): Int = hash(lhs, rhs)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
 }
 
 class KToRealIntExpr internal constructor(
@@ -58,6 +66,9 @@ class KToRealIntExpr internal constructor(
         get() = listOf(arg)
 
     override fun accept(transformer: KTransformerBase): KExpr<KRealSort> = transformer.transform(this)
+
+    override fun customHashCode(): Int = hash(arg)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { arg })
 }
 
 abstract class KIntNumExpr(
@@ -69,6 +80,9 @@ abstract class KIntNumExpr(
 
     override val decl: KIntNumDecl
         get() = ctx.mkIntNumDecl("$value")
+
+    override fun customHashCode(): Int = hash(value)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { value })
 }
 
 class KInt32NumExpr internal constructor(
@@ -76,6 +90,9 @@ class KInt32NumExpr internal constructor(
     val value: Int
 ) : KIntNumExpr(ctx, value) {
     override fun accept(transformer: KTransformerBase): KExpr<KIntSort> = transformer.transform(this)
+
+    override fun customHashCode(): Int = hash(value)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { value })
 }
 
 class KInt64NumExpr internal constructor(
@@ -83,6 +100,9 @@ class KInt64NumExpr internal constructor(
     val value: Long
 ) : KIntNumExpr(ctx, value) {
     override fun accept(transformer: KTransformerBase): KExpr<KIntSort> = transformer.transform(this)
+
+    override fun customHashCode(): Int = hash(value)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { value })
 }
 
 class KIntBigNumExpr internal constructor(

@@ -1,6 +1,8 @@
 package org.ksmt.expr
 
 import org.ksmt.KContext
+import org.ksmt.cache.hash
+import org.ksmt.cache.structurallyEqual
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KParameterizedFuncDecl
 import org.ksmt.expr.printer.ExpressionPrinter
@@ -45,6 +47,9 @@ abstract class KApp<T : KSort, A : KSort> internal constructor(ctx: KContext) : 
             append(")")
         }
     }
+
+    override fun customHashCode(): Int = hash(decl, args)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { decl }, { args })
 }
 
 open class KFunctionApp<T : KSort> internal constructor(

@@ -1,6 +1,8 @@
 package org.ksmt.expr
 
 import org.ksmt.KContext
+import org.ksmt.cache.hash
+import org.ksmt.cache.structurallyEqual
 import org.ksmt.decl.KArithAddDecl
 import org.ksmt.decl.KArithDivDecl
 import org.ksmt.decl.KArithGeDecl
@@ -36,6 +38,9 @@ class KAddArithExpr<T : KArithSort> internal constructor(
     override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
         dependency += args.first()
     }
+
+    override fun customHashCode(): Int = hash(args)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { args })
 }
 
 class KMulArithExpr<T : KArithSort> internal constructor(
@@ -59,6 +64,9 @@ class KMulArithExpr<T : KArithSort> internal constructor(
     override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
         dependency += args.first()
     }
+
+    override fun customHashCode(): Int = hash(args)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { args })
 }
 
 class KSubArithExpr<T : KArithSort> internal constructor(
@@ -82,6 +90,9 @@ class KSubArithExpr<T : KArithSort> internal constructor(
     override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
         dependency += args.first()
     }
+
+    override fun customHashCode(): Int = hash(args)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { args })
 }
 
 class KUnaryMinusArithExpr<T : KArithSort> internal constructor(
@@ -105,6 +116,9 @@ class KUnaryMinusArithExpr<T : KArithSort> internal constructor(
     override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
         dependency += arg
     }
+
+    override fun customHashCode(): Int = hash(arg)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { arg })
 }
 
 class KDivArithExpr<T : KArithSort> internal constructor(
@@ -129,6 +143,9 @@ class KDivArithExpr<T : KArithSort> internal constructor(
     override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
         dependency += lhs
     }
+
+    override fun customHashCode(): Int = hash(lhs, rhs)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
 }
 
 class KPowerArithExpr<T : KArithSort> internal constructor(
@@ -153,6 +170,9 @@ class KPowerArithExpr<T : KArithSort> internal constructor(
     override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
         dependency += lhs
     }
+
+    override fun customHashCode(): Int = hash(lhs, rhs)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
 }
 
 class KLtArithExpr<T : KArithSort> internal constructor(
@@ -170,6 +190,9 @@ class KLtArithExpr<T : KArithSort> internal constructor(
         get() = listOf(lhs, rhs)
 
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
+
+    override fun customHashCode(): Int = hash(lhs, rhs)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
 }
 
 class KLeArithExpr<T : KArithSort> internal constructor(
@@ -187,6 +210,9 @@ class KLeArithExpr<T : KArithSort> internal constructor(
         get() = listOf(lhs, rhs)
 
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
+
+    override fun customHashCode(): Int = hash(lhs, rhs)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
 }
 
 class KGtArithExpr<T : KArithSort> internal constructor(
@@ -204,6 +230,9 @@ class KGtArithExpr<T : KArithSort> internal constructor(
         get() = listOf(lhs, rhs)
 
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
+
+    override fun customHashCode(): Int = hash(lhs, rhs)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
 }
 
 class KGeArithExpr<T : KArithSort> internal constructor(
@@ -221,4 +250,7 @@ class KGeArithExpr<T : KArithSort> internal constructor(
         get() = listOf(lhs, rhs)
 
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
+
+    override fun customHashCode(): Int = hash(lhs, rhs)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
 }

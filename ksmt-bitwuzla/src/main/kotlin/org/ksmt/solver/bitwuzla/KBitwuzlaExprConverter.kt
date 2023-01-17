@@ -1,6 +1,8 @@
 package org.ksmt.solver.bitwuzla
 
 import org.ksmt.KContext
+import org.ksmt.cache.hash
+import org.ksmt.cache.structurallyEqual
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KBitVecValue
@@ -746,6 +748,9 @@ open class KBitwuzlaExprConverter(
             check(transformer is AdapterTermRewriter) { "leaked adapter term" }
             return transformer.transform(this)
         }
+
+        override fun customHashCode(): Int = hash(arg)
+        override fun customEquals(other: Any): Boolean = structurallyEqual(other, { arg })
     }
 
     private inner class Bv1ToBoolAdapterExpr(val arg: KExpr<KBv1Sort>) : KExpr<KBoolSort>(ctx) {
@@ -762,6 +767,9 @@ open class KBitwuzlaExprConverter(
             check(transformer is AdapterTermRewriter) { "leaked adapter term" }
             return transformer.transform(this)
         }
+
+        override fun customHashCode(): Int = hash(arg)
+        override fun customEquals(other: Any): Boolean = structurallyEqual(other, { arg })
     }
 
     private inner class ArrayAdapterExpr<FromDomain : KSort, FromRange : KSort, ToDomain : KSort, ToRange : KSort>(
@@ -784,6 +792,10 @@ open class KBitwuzlaExprConverter(
             check(transformer is AdapterTermRewriter) { "leaked adapter term" }
             return transformer.transform(this)
         }
+
+        override fun customHashCode(): Int = hash(arg, toDomainSort, toRangeSort)
+        override fun customEquals(other: Any): Boolean =
+            structurallyEqual(other, { arg }, { toDomainSort }, { toRangeSort })
     }
 
     /**

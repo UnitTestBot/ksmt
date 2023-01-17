@@ -2,6 +2,8 @@ package org.ksmt.sort
 
 import org.ksmt.KAst
 import org.ksmt.KContext
+import org.ksmt.cache.hash
+import org.ksmt.cache.structurallyEqual
 
 abstract class KSort(ctx: KContext) : KAst(ctx) {
     abstract fun <T> accept(visitor: KSortVisitor<T>): T
@@ -13,6 +15,9 @@ class KBoolSort internal constructor(ctx: KContext) : KSort(ctx) {
     override fun print(builder: StringBuilder) {
         builder.append("Bool")
     }
+
+    override fun customHashCode(): Int = hash()
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other)
 }
 
 @Suppress("UnnecessaryAbstractClass")
@@ -24,6 +29,9 @@ class KIntSort internal constructor(ctx: KContext) : KArithSort(ctx) {
     override fun print(builder: StringBuilder) {
         builder.append("Int")
     }
+
+    override fun customHashCode(): Int = hash()
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other)
 }
 
 class KRealSort internal constructor(ctx: KContext) : KArithSort(ctx) {
@@ -32,6 +40,9 @@ class KRealSort internal constructor(ctx: KContext) : KArithSort(ctx) {
     override fun print(builder: StringBuilder) {
         builder.append("Real")
     }
+
+    override fun customHashCode(): Int = hash()
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other)
 }
 
 class KArraySort<out D : KSort, out R : KSort> internal constructor(
@@ -46,6 +57,9 @@ class KArraySort<out D : KSort, out R : KSort> internal constructor(
         range.print(this)
         append(')')
     }
+
+    override fun customHashCode(): Int = hash(domain, range)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { domain }, { range })
 }
 
 abstract class KBvSort(ctx: KContext) : KSort(ctx) {
@@ -56,6 +70,9 @@ abstract class KBvSort(ctx: KContext) : KSort(ctx) {
         append(sizeBits)
         append(')')
     }
+
+    override fun customHashCode(): Int = hash(sizeBits)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { sizeBits })
 }
 
 class KBv1Sort internal constructor(ctx: KContext) : KBvSort(ctx) {
@@ -98,6 +115,9 @@ class KUninterpretedSort internal constructor(val name: String, ctx: KContext) :
     override fun print(builder: StringBuilder) {
         builder.append(name)
     }
+
+    override fun customHashCode(): Int = hash(name)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { name })
 }
 
 sealed class KFpSort(ctx: KContext, val exponentBits: UInt, val significandBits: UInt) : KSort(ctx) {
@@ -108,6 +128,9 @@ sealed class KFpSort(ctx: KContext, val exponentBits: UInt, val significandBits:
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
 
     abstract fun exponentShiftSize(): Int
+
+    override fun customHashCode(): Int = hash(exponentBits, significandBits)
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { exponentBits }, { significandBits })
 }
 
 class KFp16Sort(ctx: KContext) : KFpSort(ctx, exponentBits, significandBits) {
@@ -164,4 +187,7 @@ class KFpRoundingModeSort(ctx: KContext) : KSort(ctx) {
     }
 
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
+
+    override fun customHashCode(): Int = hash()
+    override fun customEquals(other: Any): Boolean = structurallyEqual(other)
 }
