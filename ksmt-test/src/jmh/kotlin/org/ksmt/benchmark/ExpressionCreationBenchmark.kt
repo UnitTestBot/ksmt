@@ -4,6 +4,7 @@ import org.ksmt.KContext
 import org.ksmt.test.RandomExpressionGenerator
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
+import org.openjdk.jmh.annotations.Fork
 import org.openjdk.jmh.annotations.Level
 import org.openjdk.jmh.annotations.Measurement
 import org.openjdk.jmh.annotations.Mode
@@ -18,6 +19,7 @@ import kotlin.random.Random
 open class ExpressionCreationBenchmark {
 
     @Benchmark
+    @Fork(1)
     @BenchmarkMode(Mode.AverageTime)
     @Warmup(iterations = 5)
     @Measurement(iterations = 10, time = 20, timeUnit = TimeUnit.SECONDS)
