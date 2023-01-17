@@ -90,9 +90,6 @@ class KInt32NumExpr internal constructor(
     val value: Int
 ) : KIntNumExpr(ctx, value) {
     override fun accept(transformer: KTransformerBase): KExpr<KIntSort> = transformer.transform(this)
-
-    override fun customHashCode(): Int = hash(value)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { value })
 }
 
 class KInt64NumExpr internal constructor(
@@ -100,9 +97,6 @@ class KInt64NumExpr internal constructor(
     val value: Long
 ) : KIntNumExpr(ctx, value) {
     override fun accept(transformer: KTransformerBase): KExpr<KIntSort> = transformer.transform(this)
-
-    override fun customHashCode(): Int = hash(value)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { value })
 }
 
 class KIntBigNumExpr internal constructor(

@@ -1,5 +1,6 @@
 package org.ksmt.cache
 
+import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Interner
 import com.github.benmanes.caffeine.cache.mkWeakCustomEqualityInterner
 import org.ksmt.KAst
@@ -109,4 +110,7 @@ fun <T, A0, A1, A2> mkCache(builder: (A0, A1, A2) -> T) = Cache3(builder)
 fun <T, A0, A1, A2, A3> mkCache(builder: (A0, A1, A2, A3) -> T) = Cache4(builder)
 fun <T, A0, A1, A2, A3, A4> mkCache(builder: (A0, A1, A2, A3, A4) -> T) = Cache5(builder)
 
-fun <T : KAst> mkAstInterner(): Interner<T> = mkWeakCustomEqualityInterner()
+fun <T> mkAstInterner(): Interner<T> where T : KAst, T : CustomObjectEquality = mkWeakCustomEqualityInterner()
+fun <K : KAst, V> mkAstCache(): Cache<K, V> {
+    TODO()
+}

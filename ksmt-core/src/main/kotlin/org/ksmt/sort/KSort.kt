@@ -3,7 +3,6 @@ package org.ksmt.sort
 import org.ksmt.KAst
 import org.ksmt.KContext
 import org.ksmt.cache.hash
-import org.ksmt.cache.structurallyEqual
 
 abstract class KSort(ctx: KContext) : KAst(ctx) {
     abstract fun <T> accept(visitor: KSortVisitor<T>): T
@@ -16,8 +15,8 @@ class KBoolSort internal constructor(ctx: KContext) : KSort(ctx) {
         builder.append("Bool")
     }
 
-    override fun customHashCode(): Int = hash()
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other)
+    override fun hashCode(): Int = 0
+    override fun equals(other: Any?): Boolean = other is KBoolSort
 }
 
 @Suppress("UnnecessaryAbstractClass")
@@ -30,8 +29,8 @@ class KIntSort internal constructor(ctx: KContext) : KArithSort(ctx) {
         builder.append("Int")
     }
 
-    override fun customHashCode(): Int = hash()
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other)
+    override fun hashCode(): Int = 1
+    override fun equals(other: Any?): Boolean = other is KIntSort
 }
 
 class KRealSort internal constructor(ctx: KContext) : KArithSort(ctx) {
@@ -41,8 +40,8 @@ class KRealSort internal constructor(ctx: KContext) : KArithSort(ctx) {
         builder.append("Real")
     }
 
-    override fun customHashCode(): Int = hash()
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other)
+    override fun hashCode(): Int = 2
+    override fun equals(other: Any?): Boolean = other is KRealSort
 }
 
 class KArraySort<out D : KSort, out R : KSort> internal constructor(
@@ -58,8 +57,9 @@ class KArraySort<out D : KSort, out R : KSort> internal constructor(
         append(')')
     }
 
-    override fun customHashCode(): Int = hash(domain, range)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { domain }, { range })
+    override fun hashCode(): Int = (hash(domain, range) shl 4) or 3
+    override fun equals(other: Any?): Boolean =
+        other is KArraySort<*, *> && domain == other.domain && range == other.range
 }
 
 abstract class KBvSort(ctx: KContext) : KSort(ctx) {
@@ -71,8 +71,9 @@ abstract class KBvSort(ctx: KContext) : KSort(ctx) {
         append(')')
     }
 
-    override fun customHashCode(): Int = hash(sizeBits)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { sizeBits })
+    override fun hashCode(): Int = (sizeBits.toInt() shl 4) or 4
+    override fun equals(other: Any?): Boolean =
+        other is KBvSort && sizeBits == other.sizeBits
 }
 
 class KBv1Sort internal constructor(ctx: KContext) : KBvSort(ctx) {
@@ -116,8 +117,8 @@ class KUninterpretedSort internal constructor(val name: String, ctx: KContext) :
         builder.append(name)
     }
 
-    override fun customHashCode(): Int = hash(name)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { name })
+    override fun hashCode(): Int = (name.hashCode() shl 4) or 5
+    override fun equals(other: Any?): Boolean = other is KUninterpretedSort && name == other.name
 }
 
 sealed class KFpSort(ctx: KContext, val exponentBits: UInt, val significandBits: UInt) : KSort(ctx) {
@@ -129,8 +130,9 @@ sealed class KFpSort(ctx: KContext, val exponentBits: UInt, val significandBits:
 
     abstract fun exponentShiftSize(): Int
 
-    override fun customHashCode(): Int = hash(exponentBits, significandBits)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { exponentBits }, { significandBits })
+    override fun hashCode(): Int = (hash(exponentBits, significandBits) shl 4) or 6
+    override fun equals(other: Any?): Boolean =
+        other is KFpSort && exponentBits == other.exponentBits && significandBits == other.significandBits
 }
 
 class KFp16Sort(ctx: KContext) : KFpSort(ctx, exponentBits, significandBits) {
@@ -188,6 +190,6 @@ class KFpRoundingModeSort(ctx: KContext) : KSort(ctx) {
 
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
 
-    override fun customHashCode(): Int = hash()
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other)
+    override fun hashCode(): Int = 7
+    override fun equals(other: Any?): Boolean = other is KFpRoundingModeSort
 }
