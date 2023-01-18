@@ -1,14 +1,23 @@
 package org.ksmt.cache
 
-import java.util.Objects
+private const val HASH_SHIFT = 31
 
 @Suppress("FunctionOnlyReturningConstant")
 fun hash(): Int = 0
+
 fun <A0> hash(a0: A0): Int = a0.hashCode()
-fun <A0, A1> hash(a0: A0, a1: A1): Int = Objects.hash(a0, a1)
-fun <A0, A1, A2> hash(a0: A0, a1: A1, a2: A2): Int = Objects.hash(a0, a1, a2)
-fun <A0, A1, A2, A3> hash(a0: A0, a1: A1, a2: A2, a3: A3): Int = Objects.hash(a0, a1, a2, a3)
-fun <A0, A1, A2, A3, A4> hash(a0: A0, a1: A1, a2: A2, a3: A3, a4: A4): Int = Objects.hash(a0, a1, a2, a3, a4)
+
+fun <A0, A1> hash(a0: A0, a1: A1): Int =
+    a0.hashCode() * HASH_SHIFT + a1.hashCode()
+
+fun <A0, A1, A2> hash(a0: A0, a1: A1, a2: A2): Int =
+    (a0.hashCode() * HASH_SHIFT + a1.hashCode()) * HASH_SHIFT + a2.hashCode()
+
+fun <A0, A1, A2, A3> hash(a0: A0, a1: A1, a2: A2, a3: A3): Int =
+    hash(a0, a1) * HASH_SHIFT + hash(a2, a3)
+
+fun <A0, A1, A2, A3, A4> hash(a0: A0, a1: A1, a2: A2, a3: A3, a4: A4): Int =
+    hash(a0, a1, a2) * HASH_SHIFT + hash(a3, a4)
 
 inline fun <reified T> T.structurallyEqual(other: Any): Boolean = other is T
 
