@@ -16,8 +16,8 @@ class KExistentialQuantifier internal constructor(
 
     override fun printQuantifierName(): String = "exists"
 
-    override fun customHashCode(): Int = hash(body, bounds)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { body }, { bounds })
+    override fun internHashCode(): Int = hash(body, bounds)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { body }, { bounds })
 }
 
 class KUniversalQuantifier internal constructor(
@@ -29,6 +29,6 @@ class KUniversalQuantifier internal constructor(
 
     override fun printQuantifierName(): String = "forall"
 
-    override fun customHashCode(): Int = hash(body, bounds)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { body }, { bounds })
+    override fun internHashCode(): Int = hash(body, bounds)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { body }, { bounds })
 }

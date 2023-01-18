@@ -48,8 +48,8 @@ abstract class KApp<T : KSort, A : KSort> internal constructor(ctx: KContext) : 
         }
     }
 
-    override fun customHashCode(): Int = hash(decl, args)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { decl }, { args })
+    override fun internHashCode(): Int = hash(decl, args)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { decl }, { args })
 }
 
 open class KFunctionApp<T : KSort> internal constructor(

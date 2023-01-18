@@ -5,6 +5,7 @@ import java.lang.Double.longBitsToDouble
 import java.lang.Float.intBitsToFloat
 import org.ksmt.cache.mkAstInterner
 import org.ksmt.cache.mkAstCache
+import org.ksmt.cache.mkCache
 import org.ksmt.decl.KAndDecl
 import org.ksmt.decl.KArithAddDecl
 import org.ksmt.decl.KArithDivDecl
@@ -2060,7 +2061,7 @@ open class KContext : AutoCloseable {
             KUniversalQuantifier(this, body, bounds)
         }
 
-    private val uninterpretedSortDefaultValueCache = mkAstCache<KUninterpretedSort, KExpr<KUninterpretedSort>>()
+    private val uninterpretedSortDefaultValueCache = mkCache<KUninterpretedSort, KExpr<KUninterpretedSort>>()
 
     fun uninterpretedSortDefaultValue(sort: KUninterpretedSort): KExpr<KUninterpretedSort> =
         uninterpretedSortDefaultValueCache.get(sort) {

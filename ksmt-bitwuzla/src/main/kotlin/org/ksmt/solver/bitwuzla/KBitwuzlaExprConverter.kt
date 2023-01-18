@@ -749,8 +749,8 @@ open class KBitwuzlaExprConverter(
             return transformer.transform(this)
         }
 
-        override fun customHashCode(): Int = hash(arg)
-        override fun customEquals(other: Any): Boolean = structurallyEqual(other, { arg })
+        override fun internHashCode(): Int = hash(arg)
+        override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg })
     }
 
     private inner class Bv1ToBoolAdapterExpr(val arg: KExpr<KBv1Sort>) : KExpr<KBoolSort>(ctx) {
@@ -768,8 +768,8 @@ open class KBitwuzlaExprConverter(
             return transformer.transform(this)
         }
 
-        override fun customHashCode(): Int = hash(arg)
-        override fun customEquals(other: Any): Boolean = structurallyEqual(other, { arg })
+        override fun internHashCode(): Int = hash(arg)
+        override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg })
     }
 
     private inner class ArrayAdapterExpr<FromDomain : KSort, FromRange : KSort, ToDomain : KSort, ToRange : KSort>(
@@ -793,8 +793,8 @@ open class KBitwuzlaExprConverter(
             return transformer.transform(this)
         }
 
-        override fun customHashCode(): Int = hash(arg, toDomainSort, toRangeSort)
-        override fun customEquals(other: Any): Boolean =
+        override fun internHashCode(): Int = hash(arg, toDomainSort, toRangeSort)
+        override fun internEquals(other: Any): Boolean =
             structurallyEqual(other, { arg }, { toDomainSort }, { toRangeSort })
     }
 

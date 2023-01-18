@@ -1,7 +1,7 @@
 package org.ksmt.decl
 
 import org.ksmt.KContext
-import org.ksmt.cache.CustomObjectEquality
+import org.ksmt.cache.KInternedObject
 import org.ksmt.cache.hash
 import org.ksmt.cache.structurallyEqual
 import org.ksmt.expr.KApp
@@ -13,7 +13,7 @@ class KUninterpretedFuncDecl<T : KSort> internal constructor(
     name: String,
     resultSort: T,
     argSorts: List<KSort>,
-) : KFuncDecl<T>(ctx, name, resultSort, argSorts), CustomObjectEquality {
+) : KFuncDecl<T>(ctx, name, resultSort, argSorts), KInternedObject {
 
     //  Contexts guarantee that any two equivalent declarations will be the same kotlin object
     override fun hashCode(): Int = System.identityHashCode(this)
@@ -24,16 +24,16 @@ class KUninterpretedFuncDecl<T : KSort> internal constructor(
         return mkFunctionApp(this@KUninterpretedFuncDecl, args)
     }
 
-    override fun customHashCode(): Int = hash(name, sort, argSorts)
+    override fun internHashCode(): Int = hash(name, sort, argSorts)
 
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { name }, { sort }, { argSorts })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { name }, { sort }, { argSorts })
 }
 
 class KUninterpretedConstDecl<T : KSort> internal constructor(
     ctx: KContext,
     name: String,
     sort: T
-) : KConstDecl<T>(ctx, name, sort), CustomObjectEquality {
+) : KConstDecl<T>(ctx, name, sort), KInternedObject {
     //  Contexts guarantee that any two equivalent declarations will be the same kotlin object
     override fun hashCode(): Int = System.identityHashCode(this)
     override fun equals(other: Any?): Boolean = this === other
@@ -44,7 +44,7 @@ class KUninterpretedConstDecl<T : KSort> internal constructor(
         return ctx.mkConstApp(this@KUninterpretedConstDecl)
     }
 
-    override fun customHashCode(): Int = hash(name, sort)
+    override fun internHashCode(): Int = hash(name, sort)
 
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { name }, { sort })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { name }, { sort })
 }

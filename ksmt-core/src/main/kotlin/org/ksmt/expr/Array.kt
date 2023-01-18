@@ -36,8 +36,8 @@ class KArrayStore<D : KSort, R : KSort> internal constructor(
         dependency += array
     }
 
-    override fun customHashCode(): Int = hash(array, index, value)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { array }, { index }, { value })
+    override fun internHashCode(): Int = hash(array, index, value)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { array }, { index }, { value })
 }
 
 class KArraySelect<D : KSort, R : KSort> internal constructor(
@@ -63,8 +63,8 @@ class KArraySelect<D : KSort, R : KSort> internal constructor(
         dependency += array
     }
 
-    override fun customHashCode(): Int = hash(array, index)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { array }, { index })
+    override fun internHashCode(): Int = hash(array, index)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { array }, { index })
 }
 
 class KArrayConst<D : KSort, R : KSort> internal constructor(
@@ -81,8 +81,8 @@ class KArrayConst<D : KSort, R : KSort> internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<KArraySort<D, R>> = transformer.transform(this)
 
-    override fun customHashCode(): Int = hash(sort, value)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { sort }, { value })
+    override fun internHashCode(): Int = hash(sort, value)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { sort }, { value })
 }
 
 class KFunctionAsArray<D : KSort, R : KSort> internal constructor(
@@ -110,8 +110,8 @@ class KFunctionAsArray<D : KSort, R : KSort> internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<KArraySort<D, R>> = transformer.transform(this)
 
-    override fun customHashCode(): Int = hash(function)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { function })
+    override fun internHashCode(): Int = hash(function)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { function })
 }
 
 /** Array lambda binding.
@@ -151,6 +151,6 @@ class KArrayLambda<D : KSort, R : KSort> internal constructor(
         dependency += body
     }
 
-    override fun customHashCode(): Int = hash(indexVarDecl, body)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { indexVarDecl }, { body })
+    override fun internHashCode(): Int = hash(indexVarDecl, body)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { indexVarDecl }, { body })
 }

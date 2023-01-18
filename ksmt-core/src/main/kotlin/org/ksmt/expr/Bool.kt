@@ -30,8 +30,8 @@ class KAndExpr internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
-    override fun customHashCode(): Int = hash(args)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { args })
+    override fun internHashCode(): Int = hash(args)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { args })
 }
 
 class KOrExpr internal constructor(
@@ -46,8 +46,8 @@ class KOrExpr internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
-    override fun customHashCode(): Int = hash(args)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { args })
+    override fun internHashCode(): Int = hash(args)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { args })
 }
 
 class KNotExpr internal constructor(
@@ -65,8 +65,8 @@ class KNotExpr internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
-    override fun customHashCode(): Int = hash(arg)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { arg })
+    override fun internHashCode(): Int = hash(arg)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg })
 }
 
 class KImpliesExpr internal constructor(
@@ -85,8 +85,8 @@ class KImpliesExpr internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
-    override fun customHashCode(): Int = hash(p, q)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { p }, { q })
+    override fun internHashCode(): Int = hash(p, q)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { p }, { q })
 }
 
 class KXorExpr internal constructor(
@@ -105,8 +105,8 @@ class KXorExpr internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
-    override fun customHashCode(): Int = hash(a, b)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { a }, { b })
+    override fun internHashCode(): Int = hash(a, b)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { a }, { b })
 }
 
 class KEqExpr<T : KSort> internal constructor(
@@ -124,8 +124,8 @@ class KEqExpr<T : KSort> internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
-    override fun customHashCode(): Int = hash(lhs, rhs)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
+    override fun internHashCode(): Int = hash(lhs, rhs)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
 }
 
 class KDistinctExpr<T : KSort> internal constructor(
@@ -144,8 +144,8 @@ class KDistinctExpr<T : KSort> internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
-    override fun customHashCode(): Int = hash(args)
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other, { args })
+    override fun internHashCode(): Int = hash(args)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { args })
 }
 
 class KIteExpr<T : KSort> internal constructor(
@@ -172,8 +172,8 @@ class KIteExpr<T : KSort> internal constructor(
         dependency += trueBranch
     }
 
-    override fun customHashCode(): Int = hash(condition, trueBranch, falseBranch)
-    override fun customEquals(other: Any): Boolean =
+    override fun internHashCode(): Int = hash(condition, trueBranch, falseBranch)
+    override fun internEquals(other: Any): Boolean =
         structurallyEqual(other, { condition }, { trueBranch }, { falseBranch })
 }
 
@@ -186,8 +186,8 @@ class KTrue(ctx: KContext) : KInterpretedValue<KBoolSort>(ctx) {
 
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
-    override fun customHashCode(): Int = hash()
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other)
+    override fun internHashCode(): Int = hash()
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other)
 }
 
 class KFalse(ctx: KContext) : KInterpretedValue<KBoolSort>(ctx) {
@@ -199,6 +199,6 @@ class KFalse(ctx: KContext) : KInterpretedValue<KBoolSort>(ctx) {
 
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
-    override fun customHashCode(): Int = hash()
-    override fun customEquals(other: Any): Boolean = structurallyEqual(other)
+    override fun internHashCode(): Int = hash()
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other)
 }
