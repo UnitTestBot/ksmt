@@ -122,29 +122,41 @@ internal class CustomEqualityObjectInterned<K : KInternedObject> : Node<K, Any?>
     }
 }
 
+private const val INTERNER_INITIAL_CAPACITY = 64
+
 @Suppress("UNCHECKED_CAST")
 private fun <K : KInternedObject> mkWeakCustomEqualityCache(): BoundedLocalCache<K, Any?> {
-    val internCache = Caffeine.newWeakInterner<K>()
+    val builder = Caffeine.newBuilder()
+        .executor(Runnable::run)
+        .initialCapacity(INTERNER_INITIAL_CAPACITY)
+        .weakKeys()
+        .also { it.interner = true }
+    val internCache = LocalCacheFactory.newBoundedLocalCache(builder,  null,  false)
+
     val customEqualityNodeFactory = CustomEqualityObjectInterned<K>()
     cacheNodeFactory.set(internCache, customEqualityNodeFactory)
+
     return internCache as BoundedLocalCache<K, Any?>
 }
 
-
 internal class WeakCustomEqualityInterner<E: KInternedObject> : Interner<E> {
-    private val cache = mkWeakCustomEqualityCache<E>()
+    private val cache by lazy { mkWeakCustomEqualityCache<E>() }
 
     override fun intern(sample: E): E {
         while (true) {
+            val value = cache.putIfAbsent(sample, CustomEqualityObjectInterned.valueStub)
+
+            //  No previously associated value -> [sample] is a new unique object.
+            if (value == null) {
+                return sample
+            }
+
+            // Search for previously interned object
             val canonical = cache.getKey(sample)
             if (canonical != null) {
                 return canonical
             }
-            val value = cache.putIfAbsent(sample, CustomEqualityObjectInterned.valueStub)
-
-            if (value == null) {
-                return sample
-            }
+            // Previously interned object was removed. Retry interning
         }
     }
 }
