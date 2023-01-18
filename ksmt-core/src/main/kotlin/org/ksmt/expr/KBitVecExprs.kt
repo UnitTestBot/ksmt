@@ -39,10 +39,9 @@ class KBitVec1Value internal constructor(
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
 }
 
-abstract class KBitVecNumberValue<S : KBvSort, N : Number>(
-    ctx: KContext,
-    val numberValue: N
-) : KBitVecValue<S>(ctx) {
+abstract class KBitVecNumberValue<S : KBvSort, N : Number>(ctx: KContext) : KBitVecValue<S>(ctx) {
+    abstract val numberValue: N
+
     override val stringValue: String
         get() = numberValue.toBinary()
 
@@ -52,54 +51,78 @@ abstract class KBitVecNumberValue<S : KBvSort, N : Number>(
 
 class KBitVec8Value internal constructor(
     ctx: KContext,
-    byteValue: Byte
-) : KBitVecNumberValue<KBv8Sort, Byte>(ctx, byteValue) {
+    val byteValue: Byte
+) : KBitVecNumberValue<KBv8Sort, Byte>(ctx) {
     override fun accept(transformer: KTransformerBase): KExpr<KBv8Sort> = transformer.transform(this)
+
+    override val numberValue: Byte
+        get() = byteValue
 
     override val decl: KDecl<KBv8Sort>
         get() = ctx.mkBvDecl(numberValue)
 
     override val sort: KBv8Sort
         get() = ctx.mkBv8Sort()
+
+    override fun internHashCode(): Int = hash(byteValue)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { byteValue })
 }
 
 class KBitVec16Value internal constructor(
     ctx: KContext,
-    shortValue: Short
-) : KBitVecNumberValue<KBv16Sort, Short>(ctx, shortValue) {
+    val shortValue: Short
+) : KBitVecNumberValue<KBv16Sort, Short>(ctx) {
     override fun accept(transformer: KTransformerBase): KExpr<KBv16Sort> = transformer.transform(this)
+
+    override val numberValue: Short
+        get() = shortValue
 
     override val decl: KDecl<KBv16Sort>
         get() = ctx.mkBvDecl(numberValue)
 
     override val sort: KBv16Sort
         get() = ctx.mkBv16Sort()
+
+    override fun internHashCode(): Int = hash(shortValue)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { shortValue })
 }
 
 class KBitVec32Value internal constructor(
     ctx: KContext,
-    intValue: Int
-) : KBitVecNumberValue<KBv32Sort, Int>(ctx, intValue) {
+    val intValue: Int
+) : KBitVecNumberValue<KBv32Sort, Int>(ctx) {
     override fun accept(transformer: KTransformerBase): KExpr<KBv32Sort> = transformer.transform(this)
+
+    override val numberValue: Int
+        get() = intValue
 
     override val decl: KDecl<KBv32Sort>
         get() = ctx.mkBvDecl(numberValue)
 
     override val sort: KBv32Sort
         get() = ctx.mkBv32Sort()
+
+    override fun internHashCode(): Int = hash(intValue)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { intValue })
 }
 
 class KBitVec64Value internal constructor(
     ctx: KContext,
-    longValue: Long
-) : KBitVecNumberValue<KBv64Sort, Long>(ctx, longValue) {
+    val longValue: Long
+) : KBitVecNumberValue<KBv64Sort, Long>(ctx) {
     override fun accept(transformer: KTransformerBase): KExpr<KBv64Sort> = transformer.transform(this)
+
+    override val numberValue: Long
+        get() = longValue
 
     override val decl: KDecl<KBv64Sort>
         get() = ctx.mkBvDecl(numberValue)
 
     override val sort: KBv64Sort
         get() = ctx.mkBv64Sort()
+
+    override fun internHashCode(): Int = hash(longValue)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { longValue })
 }
 
 class KBitVecCustomValue internal constructor(
@@ -119,8 +142,8 @@ class KBitVecCustomValue internal constructor(
     override val sort: KBvSort
         get() = ctx.mkBvSort(sizeBits)
 
-    override fun internHashCode(): Int = hash(value, sizeBits)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value }, { sizeBits })
+    override fun internHashCode(): Int = hash(sizeBits, value)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { sizeBits }, { value })
 }
 
 // expressions for operations

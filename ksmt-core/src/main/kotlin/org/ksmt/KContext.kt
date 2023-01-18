@@ -2107,7 +2107,9 @@ open class KContext : AutoCloseable {
         if (current != null) return current.uncheckedCast()
 
         val exprSort = computeExprSort(expr)
-        exprSortCache.get(expr) { exprSort }.uncheckedCast()
+        exprSortCache.put(expr, exprSort)
+
+        exprSort.uncheckedCast()
     }
 
     /*
