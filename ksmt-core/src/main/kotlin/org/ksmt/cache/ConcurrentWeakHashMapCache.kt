@@ -1,78 +1,84 @@
 package org.ksmt.cache
 
+import java.lang.ref.Reference
 import java.lang.ref.ReferenceQueue
+import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
-abstract class Node<K : Any, V : Any> {
-    abstract fun getKeyReference(): Any
-    abstract fun getKey(): K?
-    abstract fun getValue(): V
-    abstract fun setValue(value: V)
-    abstract fun isAlive(): Boolean
-    abstract fun isDead(): Boolean
-    abstract fun retire()
-    abstract fun die()
-}
-
-interface RemoveHandler<K, V> {
-    fun onRemove(key: K?, value: V)
-}
-
-/** A cleanup is not taking place.  */
-private const val IDLE = 0
-
-/** A cleanup is required due to write modification.  */
-private const val REQUIRED = 1
-
-/** A cleanup is in progress and will transition to idle.  */
-private const val PROCESSING_TO_IDLE = 2
-
-/** A cleanup is in progress and will transition to required.  */
-private const val PROCESSING_TO_REQUIRED = 3
-
 abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
-    private val data = ConcurrentHashMap<Any, Node<K, V>>()
+    private val data = ConcurrentHashMap<Any, KeyRefNode<K, V>>()
     private val keyReferenceQueue = ReferenceQueue<K>()
     private val cleanupLock = ReentrantLock()
     private val cleanupStatus = AtomicInteger(IDLE)
-    private var removeHandler: RemoveHandler<K, V>? = null
+    private var removeHandler: CacheRemoveHandler<K, V>? = null
 
     abstract fun lookupKey(key: K): Any
 
-    abstract fun newNode(key: K, referenceQueue: ReferenceQueue<K>, value: V): Node<K, V>
+    abstract fun newNode(key: K, referenceQueue: ReferenceQueue<K>, value: V): KeyRefNode<K, V>
 
-    fun addRemoveHandler(handler: RemoveHandler<K, V>) {
+    abstract class KeyRefNode<K : Any, V : Any>(keyRef: Reference<K>) {
+        @Volatile
+        private var keyReference: Reference<out K> = keyRef
+
+        fun getKeyReference(): Any = keyReference
+
+        fun getKey(): K? = keyReference.get()
+
+
+        abstract fun getValue(): V
+        abstract fun setValue(value: V)
+
+        fun isAlive(): Boolean {
+            val keyRef = keyReference
+            return keyRef !== deadRef && keyRef !== retiredRef
+        }
+
+        fun isDead(): Boolean = keyReference === deadRef
+
+        fun retire() {
+            val keyRef = keyReference
+            keyReference = deadRef
+            keyRef.clear()
+        }
+
+        fun die() {
+            val keyRef = keyReference
+            keyReference = retiredRef
+            keyRef.clear()
+        }
+
+        companion object {
+            @JvmStatic
+            private val deadRef: Reference<Nothing> = WeakReference(null)
+
+            @JvmStatic
+            private val retiredRef: Reference<Nothing> = WeakReference(null)
+        }
+    }
+
+    fun addRemoveHandler(handler: CacheRemoveHandler<K, V>) {
         removeHandler = handler
     }
 
     fun get(key: K): V? = getNode(key)?.getValue()
 
-    fun put(key: K, value: V, onlyIfAbsent: Boolean): V? {
-        val lookupKey = lookupKey(key)
-        return putUtil(key, value, onlyIfAbsent, lookupKey)
-    }
+    fun put(key: K, value: V, onlyIfAbsent: Boolean): V? = putUtil(key, value, onlyIfAbsent)
 
-    fun internKey(key: K, valueStub: V): K {
-        val lookupKey = lookupKey(key)
-        return internUtil(key, valueStub, lookupKey)
-    }
+    fun internKey(key: K, valueStub: V): K = internUtil(key, valueStub)
 
-    private fun getNode(key: K): Node<K, V>? {
+    private fun getNode(key: K): KeyRefNode<K, V>? {
         val lookupKey = lookupKey(key)
         val node = data.get(lookupKey)
         afterRead()
         return node
     }
 
-    private fun putUtil(
-        key: K,
-        value: V,
-        onlyIfAbsent: Boolean,
-        lookupKey: Any,
-    ): V? {
-        var node: Node<K, V>? = null
+    @Suppress("LoopWithTooManyJumpStatements")
+    private fun putUtil(key: K, value: V, onlyIfAbsent: Boolean): V? {
+        var node: KeyRefNode<K, V>? = null
+        val lookupKey = lookupKey(key)
 
         while (true) {
             var current = data.get(lookupKey)
@@ -126,12 +132,10 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
         }
     }
 
-    private fun internUtil(
-        key: K,
-        value: V,
-        lookupKey: Any
-    ): K {
-        var node: Node<K, V>? = null
+    @Suppress("NestedBlockDepth")
+    private fun internUtil(key: K, value: V): K {
+        var node: KeyRefNode<K, V>? = null
+        val lookupKey = lookupKey(key)
 
         while (true) {
             var current = data.get(lookupKey)
@@ -168,7 +172,7 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
         }
     }
 
-    private fun updateValueIfAlive(node: Node<K, V>, value: V): V? = synchronized(node) {
+    private fun updateValueIfAlive(node: KeyRefNode<K, V>, value: V): V? = synchronized(node) {
         if (!node.isAlive()) return null
         val oldValue = node.getValue()
         node.setValue(value)
@@ -255,7 +259,7 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
         }
     }
 
-    private fun cleanupEntry(node: Node<K, V>) {
+    private fun cleanupEntry(node: KeyRefNode<K, V>) {
         val keyRef = node.getKeyReference()
         val key = node.getKey()
         var nodeResurrected = false
@@ -288,8 +292,22 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
         }
     }
 
-    private fun makeDead(node: Node<K, V>) = synchronized(node) {
+    private fun makeDead(node: KeyRefNode<K, V>) = synchronized(node) {
         if (node.isDead()) return
         node.die()
+    }
+
+    companion object {
+        /** A cleanup is not taking place.  */
+        private const val IDLE = 0
+
+        /** A cleanup is required due to write modification.  */
+        private const val REQUIRED = 1
+
+        /** A cleanup is in progress and will transition to idle.  */
+        private const val PROCESSING_TO_IDLE = 2
+
+        /** A cleanup is in progress and will transition to required.  */
+        private const val PROCESSING_TO_REQUIRED = 3
     }
 }
