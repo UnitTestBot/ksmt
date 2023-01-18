@@ -1,7 +1,6 @@
 package org.ksmt.solver.bitwuzla
 
 import com.sun.jna.Pointer
-import org.ksmt.cache.mkCache
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KSolverException
@@ -194,14 +193,15 @@ open class KBitwuzlaContext : AutoCloseable {
      * */
     inner class NormalConstantScope : ConstantScope {
         val constants = hashSetOf<KDecl<*>>()
-        private val constantCache = mkCache { decl: KDecl<*>, sort: BitwuzlaSort ->
-            Native.bitwuzlaMkConst(bitwuzla, sort, decl.name).also {
-                constants += decl
-                bitwuzlaConstants[it] = decl
-            }
-        }
+        private val constantCache = hashMapOf<Pair<KDecl<*>, BitwuzlaSort>, BitwuzlaTerm>()
 
-        override fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = constantCache.create(decl, sort)
+        override fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm =
+            constantCache.getOrPut(decl to sort) {
+                Native.bitwuzlaMkConst(bitwuzla, sort, decl.name).also {
+                    constants += decl
+                    bitwuzlaConstants[it] = decl
+                }
+            }
     }
 
     /**

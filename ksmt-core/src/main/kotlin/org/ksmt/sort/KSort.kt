@@ -15,7 +15,8 @@ class KBoolSort internal constructor(ctx: KContext) : KSort(ctx) {
         builder.append("Bool")
     }
 
-    override fun hashCode(): Int = 0
+    override fun hashCode(): Int = hash(javaClass)
+
     override fun equals(other: Any?): Boolean = other is KBoolSort
 }
 
@@ -29,7 +30,7 @@ class KIntSort internal constructor(ctx: KContext) : KArithSort(ctx) {
         builder.append("Int")
     }
 
-    override fun hashCode(): Int = 1
+    override fun hashCode(): Int = hash(javaClass)
     override fun equals(other: Any?): Boolean = other is KIntSort
 }
 
@@ -40,7 +41,8 @@ class KRealSort internal constructor(ctx: KContext) : KArithSort(ctx) {
         builder.append("Real")
     }
 
-    override fun hashCode(): Int = 2
+    override fun hashCode(): Int = hash(javaClass)
+
     override fun equals(other: Any?): Boolean = other is KRealSort
 }
 
@@ -57,7 +59,8 @@ class KArraySort<out D : KSort, out R : KSort> internal constructor(
         append(')')
     }
 
-    override fun hashCode(): Int = (hash(domain, range) shl 4) or 3
+    override fun hashCode(): Int = hash(javaClass, domain, range)
+
     override fun equals(other: Any?): Boolean =
         other is KArraySort<*, *> && domain == other.domain && range == other.range
 }
@@ -71,7 +74,8 @@ abstract class KBvSort(ctx: KContext) : KSort(ctx) {
         append(')')
     }
 
-    override fun hashCode(): Int = (sizeBits.toInt() shl 4) or 4
+    override fun hashCode(): Int = hash(javaClass, sizeBits)
+
     override fun equals(other: Any?): Boolean =
         other is KBvSort && sizeBits == other.sizeBits
 }
@@ -117,7 +121,8 @@ class KUninterpretedSort internal constructor(val name: String, ctx: KContext) :
         builder.append(name)
     }
 
-    override fun hashCode(): Int = (name.hashCode() shl 4) or 5
+    override fun hashCode(): Int = hash(javaClass, name)
+
     override fun equals(other: Any?): Boolean = other is KUninterpretedSort && name == other.name
 }
 
@@ -130,7 +135,8 @@ sealed class KFpSort(ctx: KContext, val exponentBits: UInt, val significandBits:
 
     abstract fun exponentShiftSize(): Int
 
-    override fun hashCode(): Int = (hash(exponentBits, significandBits) shl 4) or 6
+    override fun hashCode(): Int = hash(javaClass, exponentBits, significandBits)
+
     override fun equals(other: Any?): Boolean =
         other is KFpSort && exponentBits == other.exponentBits && significandBits == other.significandBits
 }
@@ -190,6 +196,7 @@ class KFpRoundingModeSort(ctx: KContext) : KSort(ctx) {
 
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
 
-    override fun hashCode(): Int = 7
+    override fun hashCode(): Int = hash(javaClass)
+
     override fun equals(other: Any?): Boolean = other is KFpRoundingModeSort
 }

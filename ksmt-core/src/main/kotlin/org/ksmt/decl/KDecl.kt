@@ -2,6 +2,7 @@ package org.ksmt.decl
 
 import org.ksmt.KAst
 import org.ksmt.KContext
+import org.ksmt.cache.hash
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KSort
@@ -64,11 +65,6 @@ abstract class KDecl<T : KSort>(
         return true
     }
 
-    override fun hashCode(): Int {
-        var result = name.hashCode()
-        result = 31 * result + sort.hashCode()
-        result = 31 * result + argSorts.hashCode()
-        result = 31 * result + ((this as? KParameterizedFuncDecl)?.parameters?.hashCode() ?: 0)
-        return result
-    }
+    override fun hashCode(): Int =
+        hash(javaClass, name, sort, argSorts, (this as? KParameterizedFuncDecl)?.parameters)
 }
