@@ -1,6 +1,7 @@
 package org.ksmt
 
-import com.github.benmanes.caffeine.cache.Interner
+import org.ksmt.cache.AstInterner
+import org.ksmt.cache.KInternedObject
 import java.lang.Double.longBitsToDouble
 import java.lang.Float.intBitsToFloat
 import org.ksmt.cache.mkAstInterner
@@ -2064,7 +2065,7 @@ open class KContext : AutoCloseable {
     private val uninterpretedSortDefaultValueCache = mkCache<KUninterpretedSort, KExpr<KUninterpretedSort>>()
 
     fun uninterpretedSortDefaultValue(sort: KUninterpretedSort): KExpr<KUninterpretedSort> =
-        uninterpretedSortDefaultValueCache.get(sort) {
+        uninterpretedSortDefaultValueCache.computeIfAbsent(sort) {
             ensureContextMatch(it)
             mkFreshConst("${it.name}_default_value", it)
         }
@@ -2080,7 +2081,7 @@ open class KContext : AutoCloseable {
         while (dependency.isNotEmpty()) {
             val e = dependency.removeLast()
 
-            if (exprSortCache.getIfPresent(e) != null) continue
+            if (exprSortCache.get(e) != null) continue
 
             val sizeBeforeExpand = dependency.size
             e.sortComputationExprDependency(dependency)
@@ -2103,11 +2104,11 @@ open class KContext : AutoCloseable {
      * See [KExpr.computeExprSort].
      * */
     fun <T : KSort> getExprSort(expr: KExpr<T>): T = ensureContextActive {
-        val current = exprSortCache.getIfPresent(expr)
+        val current = exprSortCache.get(expr)
         if (current != null) return current.uncheckedCast()
 
         val exprSort = computeExprSort(expr)
-        exprSortCache.put(expr, exprSort)
+        exprSortCache.put(expr, exprSort, onlyIfAbsent = true)
 
         exprSort.uncheckedCast()
     }
@@ -2669,9 +2670,9 @@ open class KContext : AutoCloseable {
         return block()
     }
 
-    private inline fun <T : KAst> Interner<T>.createIfContextActive(
+    private inline fun <T> AstInterner<T>.createIfContextActive(
         builder: () -> T
-    ): T = ensureContextActive {
+    ): T where T : KAst, T : KInternedObject = ensureContextActive {
         intern(builder())
     }
 }
