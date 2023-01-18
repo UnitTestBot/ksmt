@@ -1,7 +1,7 @@
 package com.github.benmanes.caffeine.cache
 
 import com.github.benmanes.caffeine.cache.References.InternalReference
-import org.ksmt.cache.CustomObjectEquality
+import org.ksmt.cache.KInternedObject
 import java.lang.ref.Reference
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
@@ -12,16 +12,16 @@ private val cacheNodeFactory by lazy {
         .also { it.isAccessible = true }
 }
 
-internal class WeakKeyCustomEqualityReference<K : CustomObjectEquality>(
+internal class WeakKeyCustomEqualityReference<K : KInternedObject>(
     key: K?, queue: ReferenceQueue<K>?
 ) : WeakReference<K>(key, queue), InternalReference<K> {
-    private val hashCode: Int = key?.customHashCode() ?: 0
+    private val hashCode: Int = key?.internHashCode() ?: 0
 
     override fun getKeyReference(): Any = this
 
     override fun equals(other: Any?): Boolean = when {
         other === this -> true
-        other is InternalReference<*> -> CustomObjectEquality.objectEquality(get(), other.get())
+        other is InternalReference<*> -> KInternedObject.objectEquality(get(), other.get())
         else -> false
     }
 
@@ -31,10 +31,10 @@ internal class WeakKeyCustomEqualityReference<K : CustomObjectEquality>(
         "{key=${get()} hash=$hashCode}"
 }
 
-internal class LookupKeyCustomEqualityReference<K : CustomObjectEquality>(
+internal class LookupKeyCustomEqualityReference<K : KInternedObject>(
     private val key: K
 ) : InternalReference<K> {
-    private val hashCode: Int = key.customHashCode()
+    private val hashCode: Int = key.internHashCode()
 
     override fun get(): K = key
 
@@ -42,7 +42,7 @@ internal class LookupKeyCustomEqualityReference<K : CustomObjectEquality>(
 
     override fun equals(other: Any?): Boolean = when {
         other === this -> true
-        other is InternalReference<*> -> CustomObjectEquality.objectEquality(get(), other.get())
+        other is InternalReference<*> -> KInternedObject.objectEquality(get(), other.get())
         else -> false
     }
 
@@ -52,7 +52,7 @@ internal class LookupKeyCustomEqualityReference<K : CustomObjectEquality>(
         "{key=${get()} hash=$hashCode}"
 }
 
-internal class CustomEqualityObjectInterned<K : CustomObjectEquality> : Node<K, Any?>, NodeFactory<K, Any?> {
+internal class CustomEqualityObjectInterned<K : KInternedObject> : Node<K, Any?>, NodeFactory<K, Any?> {
     @Volatile
     private var keyReference: Reference<*>? = null
 
@@ -123,7 +123,7 @@ internal class CustomEqualityObjectInterned<K : CustomObjectEquality> : Node<K, 
 }
 
 @Suppress("UNCHECKED_CAST")
-private fun <K : CustomObjectEquality> mkWeakCustomEqualityCache(): BoundedLocalCache<K, Any?> {
+private fun <K : KInternedObject> mkWeakCustomEqualityCache(): BoundedLocalCache<K, Any?> {
     val internCache = Caffeine.newWeakInterner<K>()
     val customEqualityNodeFactory = CustomEqualityObjectInterned<K>()
     cacheNodeFactory.set(internCache, customEqualityNodeFactory)
@@ -131,7 +131,7 @@ private fun <K : CustomObjectEquality> mkWeakCustomEqualityCache(): BoundedLocal
 }
 
 
-internal class WeakCustomEqualityInterner<E: CustomObjectEquality> : Interner<E> {
+internal class WeakCustomEqualityInterner<E: KInternedObject> : Interner<E> {
     private val cache = mkWeakCustomEqualityCache<E>()
 
     override fun intern(sample: E): E {
@@ -149,5 +149,5 @@ internal class WeakCustomEqualityInterner<E: CustomObjectEquality> : Interner<E>
     }
 }
 
-fun <T : CustomObjectEquality> mkWeakCustomEqualityInterner(): Interner<T> =
+fun <T : KInternedObject> mkWeakCustomEqualityInterner(): Interner<T> =
     WeakCustomEqualityInterner()
