@@ -15,7 +15,8 @@ class ConcurrentGcAstInterner<T> : AstInterner<T> where T : KAst, T : KInternedO
 
 private class NoGcInternKey<T : KInternedObject>(private val key: T) {
     override fun hashCode(): Int = key.internHashCode()
-    override fun equals(other: Any?): Boolean = other != null && key.internEquals(other)
+    override fun equals(other: Any?): Boolean =
+        other != null && key.internEquals((other as NoGcInternKey<*>).key)
 }
 
 class SingleThreadNoGcAstInterner<T> : AstInterner<T> where T : KAst, T : KInternedObject {
