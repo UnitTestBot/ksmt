@@ -34,7 +34,7 @@ class ConcurrentWeakInterner<T : KInternedObject> : ConcurrentWeakHashMapCache<T
 
         override fun equals(other: Any?): Boolean = when {
             other === this -> true
-            other is InternerKey<*> -> KInternedObject.objectEquality(get(), other.get())
+            other is InternerKey<*> -> objectEquality(get(), other.get())
             else -> false
         }
 
@@ -53,7 +53,7 @@ class ConcurrentWeakInterner<T : KInternedObject> : ConcurrentWeakHashMapCache<T
 
         override fun equals(other: Any?): Boolean = when {
             other === this -> true
-            other is InternerKey<*> -> KInternedObject.objectEquality(get(), other.get())
+            other is InternerKey<*> -> objectEquality(get(), other.get())
             else -> false
         }
 
@@ -65,5 +65,9 @@ class ConcurrentWeakInterner<T : KInternedObject> : ConcurrentWeakHashMapCache<T
 
     companion object {
         private val valueStub = Any()
+
+        @JvmStatic
+        fun objectEquality(lhs: KInternedObject?, rhs: Any?): Boolean =
+            (lhs === rhs) || (lhs !== null && rhs !== null && lhs.internEquals(rhs))
     }
 }
