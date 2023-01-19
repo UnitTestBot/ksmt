@@ -2,6 +2,8 @@ package org.ksmt.cache
 
 import org.ksmt.KAst
 import org.ksmt.KContext
+import org.ksmt.cache.weak.ConcurrentWeakInterner
+import org.ksmt.cache.weak.WeakInterner
 import java.util.concurrent.ConcurrentHashMap
 
 interface AstInterner<T> where T : KAst, T : KInternedObject {
@@ -10,6 +12,11 @@ interface AstInterner<T> where T : KAst, T : KInternedObject {
 
 class ConcurrentGcAstInterner<T> : AstInterner<T> where T : KAst, T : KInternedObject {
     private val interner by lazy { ConcurrentWeakInterner<T>() }
+    override fun intern(ast: T): T = interner.intern(ast)
+}
+
+class SingleThreadGcAstInterner<T> : AstInterner<T> where T : KAst, T : KInternedObject {
+    private val interner by lazy { WeakInterner<T>() }
     override fun intern(ast: T): T = interner.intern(ast)
 }
 
@@ -34,7 +41,7 @@ fun <T> mkAstInterner(
     astManagementMode: KContext.AstManagementMode
 ): AstInterner<T> where T : KAst, T : KInternedObject = when (operationMode) {
     KContext.OperationMode.SINGLE_THREAD -> when (astManagementMode) {
-        KContext.AstManagementMode.GC -> TODO()
+        KContext.AstManagementMode.GC -> SingleThreadGcAstInterner()
         KContext.AstManagementMode.NO_GC -> SingleThreadNoGcAstInterner()
     }
     KContext.OperationMode.CONCURRENT -> when (astManagementMode) {

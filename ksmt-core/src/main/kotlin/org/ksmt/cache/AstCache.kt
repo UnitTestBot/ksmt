@@ -2,6 +2,8 @@ package org.ksmt.cache
 
 import org.ksmt.KAst
 import org.ksmt.KContext
+import org.ksmt.cache.weak.ConcurrentWeakCache
+import org.ksmt.cache.weak.WeakCache
 import java.util.concurrent.ConcurrentHashMap
 
 interface AstCache<K, V : Any> where K : KAst, K : KInternedObject {
@@ -12,6 +14,14 @@ interface AstCache<K, V : Any> where K : KAst, K : KInternedObject {
 
 class ConcurrentGcAstCache<K, V : Any> : AstCache<K, V> where K : KAst, K : KInternedObject {
     private val cache = ConcurrentWeakCache<K, V>()
+
+    override fun get(ast: K): V? = cache.get(ast)
+    override fun put(ast: K, value: V): V? = cache.put(ast, value, onlyIfAbsent = false)
+    override fun putIfAbsent(ast: K, value: V): V? = cache.put(ast, value, onlyIfAbsent = true)
+}
+
+class SingleThreadGcAstCache<K, V : Any> : AstCache<K, V> where K : KAst, K : KInternedObject {
+    private val cache = WeakCache<K, V>()
 
     override fun get(ast: K): V? = cache.get(ast)
     override fun put(ast: K, value: V): V? = cache.put(ast, value, onlyIfAbsent = false)
@@ -39,7 +49,7 @@ fun <K, V : Any> mkAstCache(
     astManagementMode: KContext.AstManagementMode
 ): AstCache<K, V> where K : KAst, K : KInternedObject = when (operationMode) {
     KContext.OperationMode.SINGLE_THREAD -> when (astManagementMode) {
-        KContext.AstManagementMode.GC -> TODO()
+        KContext.AstManagementMode.GC -> SingleThreadGcAstCache()
         KContext.AstManagementMode.NO_GC -> SingleThreadNoGcAstCache()
     }
     KContext.OperationMode.CONCURRENT -> when (astManagementMode) {

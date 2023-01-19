@@ -1,5 +1,6 @@
-package org.ksmt.cache
+package org.ksmt.cache.weak
 
+import org.ksmt.cache.CacheRemoveHandler
 import java.lang.ref.Reference
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
