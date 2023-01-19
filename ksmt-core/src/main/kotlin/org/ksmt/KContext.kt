@@ -308,7 +308,20 @@ import org.ksmt.utils.toUnsignedBigInteger
 import org.ksmt.utils.uncheckedCast
 
 @Suppress("TooManyFunctions", "LargeClass", "unused")
-open class KContext : AutoCloseable {
+open class KContext(
+    private val operationMode: OperationMode = OperationMode.CONCURRENT,
+    private val astManagementMode: AstManagementMode = AstManagementMode.GC
+) : AutoCloseable {
+
+    enum class OperationMode {
+        SINGLE_THREAD,
+        CONCURRENT
+    }
+
+    enum class AstManagementMode {
+        GC,
+        NO_GC
+    }
 
     /**
      * KContext and all created expressions are only valid as long as
@@ -2062,7 +2075,8 @@ open class KContext : AutoCloseable {
             KUniversalQuantifier(this, body, bounds)
         }
 
-    private val uninterpretedSortDefaultValueCache = mkCache<KUninterpretedSort, KExpr<KUninterpretedSort>>()
+    private val uninterpretedSortDefaultValueCache =
+        mkCache<KUninterpretedSort, KExpr<KUninterpretedSort>>(operationMode)
 
     fun uninterpretedSortDefaultValue(sort: KUninterpretedSort): KExpr<KUninterpretedSort> =
         uninterpretedSortDefaultValueCache.computeIfAbsent(sort) {
@@ -2071,7 +2085,7 @@ open class KContext : AutoCloseable {
         }
 
     // utils
-    private val exprSortCache = mkAstCache<KExpr<*>, KSort>()
+    private val exprSortCache = mkAstCache<KExpr<*>, KSort>(operationMode, astManagementMode)
     private fun computeExprSort(expr: KExpr<*>): KSort {
         val exprsToComputeSorts = arrayListOf<KExpr<*>>()
         val dependency = arrayListOf<KExpr<*>>()
@@ -2108,7 +2122,7 @@ open class KContext : AutoCloseable {
         if (current != null) return current.uncheckedCast()
 
         val exprSort = computeExprSort(expr)
-        exprSortCache.put(expr, exprSort, onlyIfAbsent = true)
+        exprSortCache.putIfAbsent(expr, exprSort)
 
         exprSort.uncheckedCast()
     }
@@ -2675,4 +2689,7 @@ open class KContext : AutoCloseable {
     ): T where T : KAst, T : KInternedObject = ensureContextActive {
         intern(builder())
     }
+
+    private fun <T> mkAstInterner(): AstInterner<T> where T : KAst, T : KInternedObject =
+        mkAstInterner(operationMode, astManagementMode)
 }

@@ -1,8 +1,11 @@
 package org.ksmt.cache
 
-import org.ksmt.KAst
+import org.ksmt.KContext
 import java.util.concurrent.ConcurrentHashMap
 
-fun <K, V : Any> mkAstCache() where K : KAst, K : KInternedObject = ConcurrentWeakCache<K, V>()
 
-fun <K, V> mkCache() = ConcurrentHashMap<K, V>()
+fun <K, V> mkCache(operationMode: KContext.OperationMode): MutableMap<K, V> =
+    when (operationMode) {
+        KContext.OperationMode.SINGLE_THREAD -> HashMap()
+        KContext.OperationMode.CONCURRENT -> ConcurrentHashMap<K, V>()
+    }
