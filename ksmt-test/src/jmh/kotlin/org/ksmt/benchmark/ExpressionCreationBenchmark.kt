@@ -8,6 +8,7 @@ import org.openjdk.jmh.annotations.Fork
 import org.openjdk.jmh.annotations.Level
 import org.openjdk.jmh.annotations.Measurement
 import org.openjdk.jmh.annotations.Mode
+import org.openjdk.jmh.annotations.Param
 import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
@@ -19,17 +20,27 @@ import kotlin.random.Random
 open class ExpressionCreationBenchmark {
 
     @Benchmark
-    @Fork(1)
+    @Fork(5)
     @BenchmarkMode(Mode.AverageTime)
     @Warmup(iterations = 5)
     @Measurement(iterations = 10, time = 20, timeUnit = TimeUnit.SECONDS)
     fun expressionCreationBenchmark(state: ExprGenerationState, bh: Blackhole) {
-        val ctx = KContext()
+        val ctx = KContext(
+            operationMode = state.contextOperationMode,
+            astManagementMode = state.contextAstManagementMode
+        )
+
         bh.consume(state.generator.replay(ctx))
     }
 
     @State(Scope.Thread)
     open class ExprGenerationState {
+        @Param("SINGLE_THREAD", "CONCURRENT")
+        lateinit var contextOperationMode: KContext.OperationMode
+
+        @Param("GC", "NO_GC")
+        lateinit var contextAstManagementMode: KContext.AstManagementMode
+
         val generator = RandomExpressionGenerator()
         private val random = Random(42)
 
