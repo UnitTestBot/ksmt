@@ -12,6 +12,7 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
     private val keyReferenceQueue = ReferenceQueue<K>()
     private val cleanupLock = ReentrantLock()
     private val cleanupStatus = AtomicInteger(IDLE)
+    private val modificationsSinceLastCleanup = AtomicInteger(0)
     private var removeHandler: CacheRemoveHandler<K, V>? = null
 
     abstract fun lookupKey(key: K): Any
@@ -26,35 +27,22 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
 
         fun getKey(): K? = keyReference.get()
 
-
         abstract fun getValue(): V
         abstract fun setValue(value: V)
 
-        fun isAlive(): Boolean {
-            val keyRef = keyReference
-            return keyRef !== deadRef && keyRef !== retiredRef
-        }
+        fun isAlive(): Boolean = keyReference !== deadRef
 
         fun isDead(): Boolean = keyReference === deadRef
 
-        fun retire() {
-            val keyRef = keyReference
-            keyReference = deadRef
-            keyRef.clear()
-        }
-
         fun die() {
             val keyRef = keyReference
-            keyReference = retiredRef
+            keyReference = deadRef
             keyRef.clear()
         }
 
         companion object {
             @JvmStatic
             private val deadRef: Reference<Nothing> = WeakReference(null)
-
-            @JvmStatic
-            private val retiredRef: Reference<Nothing> = WeakReference(null)
         }
     }
 
@@ -158,7 +146,7 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
                     if (currentKey != null) return currentKey
 
                     // Previously interned object was removed. Try cleanup and retry interning
-                    afterWrite()
+                    scheduleCleanup()
                 }
 
             } else {
@@ -167,7 +155,7 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
                 if (currentKey != null) return currentKey
 
                 // Previously interned object was removed. Try cleanup and retry interning
-                afterWrite()
+                scheduleCleanup()
             }
         }
     }
@@ -184,35 +172,49 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
     }
 
     private fun afterRead() {
+        runCleanupIfRequired()
+    }
+
+    private fun afterWrite() {
+        if (modificationsSinceLastCleanup.incrementAndGet() >= MODIFICATIONS_TO_CLEANUP) {
+            modificationsSinceLastCleanup.set(0)
+            scheduleCleanup()
+        } else {
+            runCleanupIfRequired()
+        }
+    }
+
+    private fun runCleanupIfRequired() {
         if (cleanupStatus.get() == REQUIRED) {
             runCleanup()
         }
     }
 
-    private fun afterWrite() {
-        var status = cleanupStatus.get()
+    private fun scheduleCleanup() {
         while (true) {
-            when (status) {
+            when (cleanupStatus.get()) {
+                // No ongoing cleanup -> schedule and run
                 IDLE -> {
                     cleanupStatus.compareAndSet(IDLE, REQUIRED)
                     runCleanup()
                     return
                 }
-
+                // No ongoing cleanup and cleanup is already scheduled -> run
                 REQUIRED -> {
                     runCleanup()
                     return
                 }
-
+                // Cleanup is running. Try to reschedule cleanup after completion.
                 PROCESSING_TO_IDLE -> {
                     if (cleanupStatus.compareAndSet(PROCESSING_TO_IDLE, PROCESSING_TO_REQUIRED)) {
                         return
                     }
-                    status = cleanupStatus.get()
-                    continue
+                    // Cleanup status changed. Retry
                 }
-
-                PROCESSING_TO_REQUIRED -> return
+                // Cleanup is running and will be rescheduled right after completion.
+                PROCESSING_TO_REQUIRED -> {
+                    return
+                }
             }
         }
     }
@@ -236,7 +238,6 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
             }
         }
     }
-
 
     private fun cleanup() {
         cleanupStatus.set(PROCESSING_TO_IDLE)
@@ -266,18 +267,22 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
         var removed = false
 
         data.computeIfPresent(keyRef) { _, newNode ->
+            // We have a new node associated with the key. Our node was already removed.
             if (newNode != node) return@computeIfPresent newNode
 
             synchronized(newNode) {
+                // Key is reachable for some reason. Don't remove node
                 if (key != null) {
                     nodeResurrected = true
                     return@computeIfPresent newNode
                 }
 
+                // Mark node as removed
+                node.die()
                 removed = true
-                node.retire()
             }
 
+            // Remove node from data
             null
         }
 
@@ -285,29 +290,31 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
             return
         }
 
-        makeDead(node)
+        synchronized(node) {
+            // Mark node as removed
+            if (!node.isDead()) {
+                node.die()
+            }
+        }
 
         if (removed) {
             notifyRemove(key, node.getValue())
         }
     }
 
-    private fun makeDead(node: KeyRefNode<K, V>) = synchronized(node) {
-        if (node.isDead()) return
-        node.die()
-    }
-
     companion object {
-        /** A cleanup is not taking place.  */
+        private const val MODIFICATIONS_TO_CLEANUP = 16
+
+        //A cleanup is not taking place.
         private const val IDLE = 0
 
-        /** A cleanup is required due to write modification.  */
+        // A cleanup is required due to write modification.
         private const val REQUIRED = 1
 
-        /** A cleanup is in progress and will transition to idle.  */
+        // A cleanup is in progress and will transition to idle.
         private const val PROCESSING_TO_IDLE = 2
 
-        /** A cleanup is in progress and will transition to required.  */
+        // A cleanup is in progress and will transition to required.
         private const val PROCESSING_TO_REQUIRED = 3
     }
 }
