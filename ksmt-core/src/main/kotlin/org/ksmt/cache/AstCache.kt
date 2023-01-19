@@ -58,6 +58,14 @@ class SingleThreadGcAstCache<K, V : Any> : AstCache<K, V> where K : KAst, K : KI
     }
 }
 
+class SingleThreadGcAstCache<K, V : Any> : AstCache<K, V> where K : KAst, K : KInternedObject {
+    private val cache = WeakCache<K, V>()
+
+    override fun get(ast: K): V? = cache.get(ast)
+    override fun put(ast: K, value: V): V? = cache.put(ast, value, onlyIfAbsent = false)
+    override fun putIfAbsent(ast: K, value: V): V? = cache.put(ast, value, onlyIfAbsent = true)
+}
+
 class ConcurrentNoGcAstCache<K, V : Any> : AstCache<K, V> where K : KAst, K : KInternedObject {
     private val cache = ConcurrentHashMap<K, V>()
 
