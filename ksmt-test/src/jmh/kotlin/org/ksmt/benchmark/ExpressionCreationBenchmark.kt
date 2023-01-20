@@ -35,17 +35,23 @@ open class ExpressionCreationBenchmark {
 
     @State(Scope.Thread)
     open class ExprGenerationState {
-        @Param("SINGLE_THREAD", "CONCURRENT")
+        @Param(
+            "SINGLE_THREAD",
+            "CONCURRENT"
+        )
         lateinit var contextOperationMode: KContext.OperationMode
 
-        @Param("GC", "NO_GC")
+        @Param(
+            "GC",
+            "NO_GC"
+        )
         lateinit var contextAstManagementMode: KContext.AstManagementMode
 
         val generator = RandomExpressionGenerator()
-        private val random = Random(42)
 
         @Setup(Level.Iteration)
         fun regenerateExpressions() {
+            val random = Random(42)
             generator.generate(limit = 100000, KContext(), random)
         }
     }

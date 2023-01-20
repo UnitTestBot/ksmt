@@ -7,8 +7,8 @@ import java.lang.ref.ReferenceQueue
 class WeakCache<K : KInternedObject, V : Any> : WeakHashMapCache<K, V>() {
     override fun lookupKey(key: K): Any = WeakCacheKeyLookup(key)
 
-    override fun newNode(key: K, referenceQueue: ReferenceQueue<K>, value: V): KeyRefNode<K, V> {
-        val keyRef = WeakCacheKeyRef(key, referenceQueue)
+    override fun newNode(key: K, referenceQueue: ReferenceQueue<K>, value: V, hash: Int): KeyRefNode<K, V> {
+        val keyRef = WeakCacheKeyRef(key, referenceQueue, hash)
         return CacheNode(keyRef, value)
     }
 

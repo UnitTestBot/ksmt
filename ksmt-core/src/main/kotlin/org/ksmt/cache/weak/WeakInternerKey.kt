@@ -17,10 +17,9 @@ internal interface WeakInternerKey<T : KInternedObject> {
 }
 
 internal class WeakInternerKeyRef<T : KInternedObject>(
-    key: T?, queue: ReferenceQueue<T>?
+    key: T?, queue: ReferenceQueue<T>?,
+    private val hashCode: Int
 ) : WeakReference<T>(key, queue), WeakInternerKey<T> {
-    private val hashCode: Int = key?.internHashCode() ?: 0
-
     override fun equals(other: Any?): Boolean = when {
         other === this -> true
         other is WeakInternerKey<*> -> objectEquality(get(), other.get())
@@ -34,15 +33,15 @@ internal class WeakInternerKeyRef<T : KInternedObject>(
 }
 
 internal class WeakInternerKeyLookup<T : KInternedObject>(
-    private val key: T
+    private val key: T?
 ) : WeakInternerKey<T> {
-    private val hashCode: Int = key.internHashCode()
+    private val hashCode: Int = key?.internHashCode() ?: 0
 
-    override fun get(): T = key
+    override fun get(): T? = key
 
     override fun equals(other: Any?): Boolean = when {
         other === this -> true
-        other is WeakInternerKey<*> -> objectEquality(get(), other.get())
+        other is WeakInternerKey<*> -> objectEquality(key, other.get())
         else -> false
     }
 

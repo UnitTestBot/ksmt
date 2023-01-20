@@ -18,7 +18,7 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
 
     abstract fun lookupKey(key: K): Any
 
-    abstract fun newNode(key: K, referenceQueue: ReferenceQueue<K>, value: V): KeyRefNode<K, V>
+    abstract fun newNode(key: K, referenceQueue: ReferenceQueue<K>, value: V, hash: Int): KeyRefNode<K, V>
 
     abstract class KeyRefNode<K : Any, V : Any>(keyRef: Reference<K>) {
         @Volatile
@@ -75,7 +75,7 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
             if (current == null) {
 
                 if (node == null) {
-                    node = newNode(key, keyReferenceQueue, value)
+                    node = newNode(key, keyReferenceQueue, value, lookupKey.hashCode())
                 }
 
                 current = data.putIfAbsent(node.getKeyReference(), node)
@@ -132,7 +132,7 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
             if (current == null) {
 
                 if (node == null) {
-                    node = newNode(key, keyReferenceQueue, value)
+                    node = newNode(key, keyReferenceQueue, value, lookupKey.hashCode())
                 }
 
                 current = data.putIfAbsent(node.getKeyReference(), node)

@@ -12,7 +12,7 @@ abstract class WeakHashMapCache<K : Any, V : Any> {
 
     abstract fun lookupKey(key: K): Any
 
-    abstract fun newNode(key: K, referenceQueue: ReferenceQueue<K>, value: V): KeyRefNode<K, V>
+    abstract fun newNode(key: K, referenceQueue: ReferenceQueue<K>, value: V, hash: Int): KeyRefNode<K, V>
 
     abstract class KeyRefNode<K : Any, V : Any>(private val keyReference: Reference<K>) {
         fun getKeyReference(): Any = keyReference
@@ -33,7 +33,7 @@ abstract class WeakHashMapCache<K : Any, V : Any> {
         val current = data.get(lookupKey)
 
         return if (current == null) {
-            val node = newNode(key, keyReferenceQueue, value)
+            val node = newNode(key, keyReferenceQueue, value, lookupKey.hashCode())
             data.put(node.getKeyReference(), node)
             afterWrite()
             null
@@ -52,7 +52,7 @@ abstract class WeakHashMapCache<K : Any, V : Any> {
         val currentKey = current?.getKey()
 
         if (current == null || currentKey == null) {
-            val node = newNode(key, keyReferenceQueue, valueStub)
+            val node = newNode(key, keyReferenceQueue, valueStub, lookupKey.hashCode())
             data.put(node.getKeyReference(), node)
 
             if (current == null) {

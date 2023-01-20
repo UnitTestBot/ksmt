@@ -10,8 +10,8 @@ class WeakInterner<T : KInternedObject> : WeakHashMapCache<T, Any>() {
 
     override fun lookupKey(key: T): Any = WeakInternerKeyLookup(key)
 
-    override fun newNode(key: T, referenceQueue: ReferenceQueue<T>, value: Any): KeyRefNode<T, Any> {
-        val keyRef = WeakInternerKeyRef(key, referenceQueue)
+    override fun newNode(key: T, referenceQueue: ReferenceQueue<T>, value: Any, hash: Int): KeyRefNode<T, Any> {
+        val keyRef = WeakInternerKeyRef(key, referenceQueue, hash)
         return InternerNode(keyRef)
     }
 

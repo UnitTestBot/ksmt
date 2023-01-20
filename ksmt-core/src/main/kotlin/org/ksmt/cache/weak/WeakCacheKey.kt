@@ -9,9 +9,9 @@ internal interface WeakCacheKey<K : KInternedObject> {
 }
 
 internal class WeakCacheKeyRef<K : KInternedObject>(
-    key: K?, queue: ReferenceQueue<K>?
+    key: K?, queue: ReferenceQueue<K>?,
+    private val hashCode: Int
 ) : WeakReference<K>(key, queue), WeakCacheKey<K> {
-    private val hashCode: Int = System.identityHashCode(key)
 
     override fun equals(other: Any?): Boolean = when {
         other === this -> true
@@ -26,15 +26,15 @@ internal class WeakCacheKeyRef<K : KInternedObject>(
 }
 
 internal class WeakCacheKeyLookup<K : KInternedObject>(
-    private val key: K
+    private val key: K?
 ) : WeakCacheKey<K> {
     private val hashCode: Int = System.identityHashCode(key)
 
-    override fun get(): K = key
+    override fun get(): K? = key
 
     override fun equals(other: Any?): Boolean = when {
         other === this -> true
-        other is WeakCacheKey<*> -> get() === other.get()
+        other is WeakCacheKey<*> -> key === other.get()
         else -> false
     }
 
