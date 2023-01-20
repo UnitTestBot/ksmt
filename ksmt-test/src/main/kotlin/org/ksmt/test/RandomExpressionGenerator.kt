@@ -79,7 +79,8 @@ class RandomExpressionGenerator {
         limit: Int,
         context: KContext,
         random: Random = Random(42),
-        params: GenerationParameters = GenerationParameters()
+        params: GenerationParameters = GenerationParameters(),
+        generatorFilter: (KFunction<*>) -> Boolean = { true }
     ): List<KExpr<*>> {
         generationContext = GenerationContext(
             random = random,
@@ -91,8 +92,10 @@ class RandomExpressionGenerator {
 
         generateInitialSeed(samplesPerSort = params.seedExpressionsPerSort)
 
+        val filteredGenerators = generators.filter { generatorFilter(it.function) }
+
         while (generationContext.expressions.size < limit) {
-            val generator = generators.random(random)
+            val generator = filteredGenerators.random(random)
 
             nullIfGenerationFailed {
                 generator.generate(generationContext)
@@ -159,6 +162,9 @@ class RandomExpressionGenerator {
     }
 
     companion object {
+
+        val noFreshConstants: (KFunction<*>) -> Boolean = {  it != freshConstGen }
+
         private val ctxFunctions by lazy {
             KContext::class.members
                 .filter { it.visibility == KVisibility.PUBLIC }
@@ -191,6 +197,8 @@ class RandomExpressionGenerator {
                 }
                 .toList()
         }
+
+        private val freshConstGen: KFunction<KExpr<KSort>> by lazy { KContext::mkFreshConst }
 
         /**
          * Filter out generators that require a string with special format.
