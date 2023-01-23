@@ -293,6 +293,12 @@ import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.utils.BvUtils.bvMaxValueSigned
 import org.ksmt.utils.BvUtils.minus
 import org.ksmt.utils.BvUtils.plus
+import org.ksmt.utils.FpUtils.fpInfExponentBiased
+import org.ksmt.utils.FpUtils.fpInfSignificand
+import org.ksmt.utils.FpUtils.fpNanExponentBiased
+import org.ksmt.utils.FpUtils.fpNanSignificand
+import org.ksmt.utils.FpUtils.fpZeroExponentBiased
+import org.ksmt.utils.FpUtils.fpZeroSignificand
 import org.ksmt.utils.booleanSignBit
 import org.ksmt.utils.cast
 import org.ksmt.utils.extractExponent
@@ -1605,7 +1611,7 @@ open class KContext(
     private fun unbiasFpCustomSizeExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> =
         exponent - bvMaxValueSigned(exponentSize)
 
-    fun <T : KFpSort> mkFp(value: Float, sort: T): KExpr<T> {
+    fun <T : KFpSort> mkFp(value: Float, sort: T): KFpValue<T> {
         if (sort == mkFp32Sort()) {
             return mkFp32(value).cast()
         }
@@ -1623,7 +1629,7 @@ open class KContext(
         )
     }
 
-    fun <T : KFpSort> mkFp(value: Double, sort: T): KExpr<T> {
+    fun <T : KFpSort> mkFp(value: Double, sort: T): KFpValue<T> {
         if (sort == mkFp64Sort()) {
             return mkFp64(value).cast()
         }
@@ -1635,11 +1641,11 @@ open class KContext(
         return mkFpCustomSize(sort.exponentBits, sort.significandBits, exponent, significand, sign)
     }
 
-    fun Double.toFp(sort: KFpSort = mkFp64Sort()): KExpr<KFpSort> = mkFp(this, sort)
+    fun Double.toFp(sort: KFpSort = mkFp64Sort()): KFpValue<KFpSort> = mkFp(this, sort)
 
-    fun Float.toFp(sort: KFpSort = mkFp32Sort()): KExpr<KFpSort> = mkFp(this, sort)
+    fun Float.toFp(sort: KFpSort = mkFp32Sort()): KFpValue<KFpSort> = mkFp(this, sort)
 
-    fun <T : KFpSort> mkFp(significand: Int, unbiasedExponent: Int, signBit: Boolean, sort: T): KExpr<T> =
+    fun <T : KFpSort> mkFp(significand: Int, unbiasedExponent: Int, signBit: Boolean, sort: T): KFpValue<T> =
         mkFpCustomSize(
             exponentSize = sort.exponentBits,
             significandSize = sort.significandBits,
@@ -1648,7 +1654,7 @@ open class KContext(
             signBit = signBit
         )
 
-    fun <T : KFpSort> mkFp(significand: Long, unbiasedExponent: Long, signBit: Boolean, sort: T): KExpr<T> =
+    fun <T : KFpSort> mkFp(significand: Long, unbiasedExponent: Long, signBit: Boolean, sort: T): KFpValue<T> =
         mkFpCustomSize(
             exponentSize = sort.exponentBits,
             significandSize = sort.significandBits,
@@ -1662,7 +1668,7 @@ open class KContext(
         unbiasedExponent: KBitVecValue<*>,
         signBit: Boolean,
         sort: T
-    ): KExpr<T> = mkFpCustomSize(
+    ): KFpValue<T> = mkFpCustomSize(
         exponentSize = sort.exponentBits,
         significandSize = sort.significandBits,
         unbiasedExponent = unbiasedExponent,
@@ -1670,7 +1676,7 @@ open class KContext(
         signBit = signBit
     )
 
-    fun <T : KFpSort> mkFpBiased(significand: Int, biasedExponent: Int, signBit: Boolean, sort: T): KExpr<T> =
+    fun <T : KFpSort> mkFpBiased(significand: Int, biasedExponent: Int, signBit: Boolean, sort: T): KFpValue<T> =
         mkFpCustomSizeBiased(
             exponentSize = sort.exponentBits,
             significandSize = sort.significandBits,
@@ -1679,7 +1685,7 @@ open class KContext(
             signBit = signBit
         )
 
-    fun <T : KFpSort> mkFpBiased(significand: Long, biasedExponent: Long, signBit: Boolean, sort: T): KExpr<T> =
+    fun <T : KFpSort> mkFpBiased(significand: Long, biasedExponent: Long, signBit: Boolean, sort: T): KFpValue<T> =
         mkFpCustomSizeBiased(
             exponentSize = sort.exponentBits,
             significandSize = sort.significandBits,
@@ -1693,7 +1699,7 @@ open class KContext(
         biasedExponent: KBitVecValue<*>,
         signBit: Boolean,
         sort: T
-    ): KExpr<T> = mkFpCustomSizeBiased(
+    ): KFpValue<T> = mkFpCustomSizeBiased(
         exponentSize = sort.exponentBits,
         significandSize = sort.significandBits,
         biasedExponent = biasedExponent,
@@ -1705,50 +1711,44 @@ open class KContext(
      * Special Fp values
      * */
     @Suppress("MagicNumber")
-    fun <T : KFpSort> mkFpZero(signBit: Boolean, sort: T): KExpr<T> = when (sort) {
+    fun <T : KFpSort> mkFpZero(signBit: Boolean, sort: T): KFpValue<T> = when (sort) {
         is KFp16Sort -> mkFp16(if (signBit) -0.0f else 0.0f).cast()
         is KFp32Sort -> mkFp32(if (signBit) -0.0f else 0.0f).cast()
         is KFp64Sort -> mkFp64(if (signBit) -0.0 else 0.0).cast()
-        else -> mkFpCustomSize(
-            sort.exponentBits,
-            sort.significandBits,
-            unbiasedExponent = fpZeroExponentUnbiased(sort),
-            significand = mkBvUnsigned(0, sort.significandBits - 1u),
+        else -> mkFpCustomSizeBiased(
+            exponentSize = sort.exponentBits,
+            significandSize = sort.significandBits,
+            biasedExponent = fpZeroExponentBiased(sort),
+            significand = fpZeroSignificand(sort),
             signBit = signBit
         )
     }
 
-    fun <T : KFpSort> mkFpInf(signBit: Boolean, sort: T): KExpr<T> = when (sort) {
+    fun <T : KFpSort> mkFpInf(signBit: Boolean, sort: T): KFpValue<T> = when (sort) {
         is KFp16Sort -> mkFp16(if (signBit) Float.NEGATIVE_INFINITY else Float.POSITIVE_INFINITY).cast()
         is KFp32Sort -> mkFp32(if (signBit) Float.NEGATIVE_INFINITY else Float.POSITIVE_INFINITY).cast()
         is KFp64Sort -> mkFp64(if (signBit) Double.NEGATIVE_INFINITY else Double.POSITIVE_INFINITY).cast()
-        else -> mkFpCustomSize(
-            sort.exponentBits,
-            sort.significandBits,
-            unbiasedExponent = fpTopExponentUnbiased(sort),
-            significand = mkBvUnsigned(0, sort.significandBits - 1u),
-            signBit
+        else -> mkFpCustomSizeBiased(
+            exponentSize = sort.exponentBits,
+            significandSize = sort.significandBits,
+            biasedExponent = fpInfExponentBiased(sort),
+            significand = fpInfSignificand(sort),
+            signBit = signBit
         )
     }
 
-    fun <T : KFpSort> mkFpNan(sort: T): KExpr<T> = when (sort) {
+    fun <T : KFpSort> mkFpNan(sort: T): KFpValue<T> = when (sort) {
         is KFp16Sort -> mkFp16(Float.NaN).cast()
         is KFp32Sort -> mkFp32(Float.NaN).cast()
         is KFp64Sort -> mkFp64(Double.NaN).cast()
-        else -> mkFpCustomSize(
-            sort.exponentBits,
-            sort.significandBits,
-            unbiasedExponent = fpTopExponentUnbiased(sort),
-            significand = mkBvUnsigned(1, sort.significandBits - 1u),
+        else -> mkFpCustomSizeBiased(
+            exponentSize = sort.exponentBits,
+            significandSize = sort.significandBits,
+            biasedExponent = fpNanExponentBiased(sort),
+            significand = fpNanSignificand(sort),
             signBit = false
         )
     }
-
-    private fun fpTopExponentUnbiased(sort: KFpSort): KBitVecValue<*> =
-        mkBv(powerOfTwo(sort.exponentBits - 1u), sort.exponentBits)
-
-    private fun fpZeroExponentUnbiased(sort: KFpSort): KBitVecValue<*> =
-        mkBv(powerOfTwo(sort.exponentBits - 1u) + BigInteger.ONE, sort.exponentBits)
 
     private val roundingModeCache = mkAstInterner<KFpRoundingModeExpr>()
 
