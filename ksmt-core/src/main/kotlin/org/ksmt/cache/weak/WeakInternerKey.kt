@@ -1,19 +1,12 @@
 package org.ksmt.cache.weak
 
 import org.ksmt.cache.KInternedObject
-import org.ksmt.cache.weak.WeakInternerKey.Companion.objectEquality
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
 
 
 internal interface WeakInternerKey<T : KInternedObject> {
     fun get(): T?
-
-    companion object {
-        @JvmStatic
-        fun objectEquality(lhs: KInternedObject?, rhs: Any?): Boolean =
-            (lhs === rhs) || (lhs !== null && rhs !== null && lhs.internEquals(rhs))
-    }
 }
 
 internal class WeakInternerKeyRef<T : KInternedObject>(
@@ -22,7 +15,11 @@ internal class WeakInternerKeyRef<T : KInternedObject>(
 ) : WeakReference<T>(key, queue), WeakInternerKey<T> {
     override fun equals(other: Any?): Boolean = when {
         other === this -> true
-        other is WeakInternerKey<*> -> objectEquality(get(), other.get())
+        other is WeakInternerKey<*> -> {
+            val lhs = get()
+            val rhs = other.get()
+            (lhs === rhs) || (lhs !== null && rhs !== null && lhs.internEquals(rhs))
+        }
         else -> false
     }
 
@@ -41,7 +38,10 @@ internal class WeakInternerKeyLookup<T : KInternedObject>(
 
     override fun equals(other: Any?): Boolean = when {
         other === this -> true
-        other is WeakInternerKey<*> -> objectEquality(key, other.get())
+        other is WeakInternerKey<*> -> {
+            val rhs = other.get()
+            (key === rhs) || (key !== null && rhs !== null && key.internEquals(rhs))
+        }
         else -> false
     }
 
