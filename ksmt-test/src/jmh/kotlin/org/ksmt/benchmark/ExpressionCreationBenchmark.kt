@@ -76,7 +76,7 @@ open class ExpressionCreationBenchmark {
         @Param("SINGLE_THREAD", "CONCURRENT")
         lateinit var contextOperationMode: KContext.OperationMode
 
-        @Param("GC", "NO_GC")
+        @Param("NO_GC", "GC")
         lateinit var contextAstManagementMode: KContext.AstManagementMode
 
         val generator = RandomExpressionGenerator().apply {
@@ -94,7 +94,7 @@ open class ExpressionCreationBenchmark {
         @Param("SINGLE_THREAD", "CONCURRENT")
         lateinit var contextOperationMode: KContext.OperationMode
 
-        @Param("GC", "NO_GC")
+        @Param("NO_GC", "GC")
         lateinit var contextAstManagementMode: KContext.AstManagementMode
 
         val generators = (1..GENERATORS_COUNT).map { seed ->
@@ -111,7 +111,7 @@ open class ExpressionCreationBenchmark {
 
     @State(Scope.Benchmark)
     open class ExprConcurrentGenerationWithCleanUpState {
-        @Param("GC", "NO_GC")
+        @Param("NO_GC", "GC")
         lateinit var contextAstManagementMode: KContext.AstManagementMode
 
         val generators = (1..GENERATORS_COUNT).map { seed ->
