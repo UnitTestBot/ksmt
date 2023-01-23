@@ -166,8 +166,8 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     override fun <T : KFpSort> transform(expr: KFpFusedMulAddExpr<T>): KExpr<T> =
         expr.simplifyFpTernaryOp { rm, a0, a1, a2 ->
             if (rm is KFpRoundingModeExpr && a0 is KFpValue<T> && a1 is KFpValue<T> && a2 is KFpValue<T>) {
-                // todo: evaluate
-                mkFpFusedMulAddExpr(rm, a0, a1, a2)
+                val result = fpFma(rm.value, a0, a1, a2)
+                result?.let { return@simplifyFpTernaryOp it.uncheckedCast() }
             }
             mkFpFusedMulAddExpr(rm, a0, a1, a2)
         }
@@ -542,6 +542,10 @@ interface KFpExprSimplifier : KExprSimplifierBase {
             else -> null
         }
     }
+
+    // todo: eval
+    private fun fpFma(rm: KFpRoundingMode, a0: KFpValue<*>, a1: KFpValue<*>, a2: KFpValue<*>): KFpValue<*>? =
+        null
 
     private fun fpDiv(rm: KFpRoundingMode, lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*>? = with(ctx) {
         if (rm != KFpRoundingMode.RoundNearestTiesToEven) {
