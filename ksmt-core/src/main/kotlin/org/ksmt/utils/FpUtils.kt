@@ -43,7 +43,6 @@ object FpUtils {
     fun KFpValue<*>.isNormal(): Boolean =
         !isZero() && !isSubnormal() && !biasedExponent.isTopExponent(sort)
 
-
     fun fpStructurallyEqual(lhs: KFpValue<*>, rhs: KFpValue<*>): Boolean = when {
         lhs.isNan() && rhs.isNan() -> true
         lhs.isZero() && rhs.isZero() -> lhs.signBit == rhs.signBit
