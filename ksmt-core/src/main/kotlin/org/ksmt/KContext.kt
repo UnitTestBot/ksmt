@@ -313,11 +313,30 @@ open class KContext(
     private val astManagementMode: AstManagementMode = AstManagementMode.GC
 ) : AutoCloseable {
 
+    /**
+     * Allow or disallow concurrent execution of
+     * [KContext] operations (e.g. expression creation)
+     *
+     * [SINGLE_THREAD] --- disallow concurrent execution and maximize
+     * performance within a single thread.
+     * [CONCURRENT] --- allow concurrent execution with about 10% lower
+     * single thread performance compared to the [SINGLE_THREAD] mode.
+     * */
     enum class OperationMode {
         SINGLE_THREAD,
         CONCURRENT
     }
 
+    /**
+     * Enable or disable Garbage Collection of unused KSMT expressions.
+     *
+     * [NO_GC] --- all managed KSMT expressions will be kept in memory
+     * as long as their [KContext] is reachable.
+     * [GC] --- allow managed KSMT expressions to be garbage collected when they become unreachable.
+     * Enabling this option will result in a performance degradation of about 10%.
+     *
+     * Note: using [GC] only makes sense when working with a long-lived [KContext].
+     * */
     enum class AstManagementMode {
         GC,
         NO_GC
