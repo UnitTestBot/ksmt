@@ -544,6 +544,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     }
 
     // todo: eval
+    @Suppress("UNUSED_PARAMETER")
     private fun fpFma(rm: KFpRoundingMode, a0: KFpValue<*>, a1: KFpValue<*>, a2: KFpValue<*>): KFpValue<*>? =
         null
 
