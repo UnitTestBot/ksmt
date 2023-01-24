@@ -64,8 +64,3 @@ class KConst<T : KSort> internal constructor(
 ) : KFunctionApp<T>(ctx, decl, args = emptyList()) {
     override fun accept(transformer: KTransformerBase): KExpr<T> = transformer.transform(this)
 }
-
-/**
- * Specify that the expression is an interpreted constant in some theory.
- * */
-interface KInterpretedConstant

@@ -19,12 +19,10 @@ import org.ksmt.utils.getHalfPrecisionExponent
 import org.ksmt.utils.halfPrecisionSignificand
 import org.ksmt.utils.significand
 
-abstract class KFpValue<T : KFpSort>(ctx: KContext) : KApp<T, KExpr<*>>(ctx), KInterpretedConstant {
+abstract class KFpValue<T : KFpSort>(ctx: KContext) : KInterpretedValue<T>(ctx) {
     abstract val significand: KBitVecValue<out KBvSort>
     abstract val biasedExponent: KBitVecValue<out KBvSort>
     abstract val signBit: Boolean
-
-    override val args: List<KExpr<*>> = emptyList()
 }
 
 /**

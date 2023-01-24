@@ -5,7 +5,7 @@ import org.ksmt.expr.KApp
 import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.KInterpretedConstant
+import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
@@ -70,7 +70,7 @@ open class KExprSimplifier(ctx: KContext) :
                 return false
             }
 
-            allExpressionsAreConstants = allExpressionsAreConstants && expr is KInterpretedConstant
+            allExpressionsAreConstants = allExpressionsAreConstants && expr is KInterpretedValue<*>
 
             /**
              *  Check all previously visited expressions and current expression are distinct.

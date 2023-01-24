@@ -14,11 +14,7 @@ import org.ksmt.sort.KIntSort
 import org.ksmt.utils.toBinary
 import java.math.BigInteger
 
-abstract class KBitVecValue<S : KBvSort>(
-    ctx: KContext
-) : KApp<S, KExpr<*>>(ctx), KInterpretedConstant {
-    override val args: List<KExpr<*>> = emptyList()
-
+abstract class KBitVecValue<S : KBvSort>(ctx: KContext) : KInterpretedValue<S>(ctx){
     abstract val stringValue: String
 }
 

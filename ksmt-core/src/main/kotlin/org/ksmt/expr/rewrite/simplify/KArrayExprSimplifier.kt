@@ -10,7 +10,7 @@ import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.KInterpretedConstant
+import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KArraySort
@@ -401,7 +401,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
     }
 
     private val KExpr<*>.definitelyIsConstant: Boolean
-        get() = this is KInterpretedConstant
+        get() = this is KInterpretedValue<*>
 
     /**
      * Auxiliary expression to handle expanded array stores.

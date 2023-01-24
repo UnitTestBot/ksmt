@@ -63,14 +63,12 @@ class KToRealIntExpr internal constructor(
 abstract class KIntNumExpr(
     ctx: KContext,
     private val value: Number
-) : KApp<KIntSort, KExpr<*>>(ctx), KInterpretedConstant {
+) : KInterpretedValue<KIntSort>(ctx) {
     override val sort: KIntSort
         get() = ctx.intSort
 
     override val decl: KIntNumDecl
         get() = ctx.mkIntNumDecl("$value")
-
-    override val args = emptyList<KExpr<*>>()
 }
 
 class KInt32NumExpr internal constructor(

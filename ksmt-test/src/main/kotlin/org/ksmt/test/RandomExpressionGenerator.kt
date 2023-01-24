@@ -4,7 +4,7 @@ import org.ksmt.KAst
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpRoundingMode
-import org.ksmt.expr.KInterpretedConstant
+import org.ksmt.expr.KInterpretedValue
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
@@ -238,7 +238,7 @@ class RandomExpressionGenerator {
             simpleValueGenerators.keys.any { this.isSubclassOf(it) }
 
         private fun KType.isKExpr(): Boolean = isSubclassOf(KExpr::class)
-        private fun KType.isConst(): Boolean = isSubclassOf(KInterpretedConstant::class)
+        private fun KType.isConst(): Boolean = isSubclassOf(KInterpretedValue::class)
         private fun KType.isKSort(): Boolean = isSubclassOf(KSort::class)
         private fun KType.isKContext(): Boolean = this == KContext::class.createType()
 
@@ -692,7 +692,7 @@ class RandomExpressionGenerator {
                 val expressionIds = index.getOrPut(depth) { arrayListOf() }
                 expressionIds.add(exprId)
 
-                if (expr is KInterpretedConstant) {
+                if (expr is KInterpretedValue<*>) {
                     constantIndex.getOrPut(expr.sort) { arrayListOf() }.add(exprId)
                 }
 

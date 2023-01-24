@@ -45,14 +45,12 @@ class KRealNumExpr internal constructor(
     ctx: KContext,
     val numerator: KIntNumExpr,
     val denominator: KIntNumExpr
-) : KApp<KRealSort, KExpr<*>>(ctx), KInterpretedConstant {
+) : KInterpretedValue<KRealSort>(ctx) {
     override val sort: KRealSort
         get() = ctx.realSort
 
     override val decl: KRealNumDecl
         get() = ctx.mkRealNumDecl("$numerator/$denominator")
-
-    override val args = emptyList<KExpr<*>>()
 
     override fun accept(transformer: KTransformerBase): KExpr<KRealSort> = transformer.transform(this)
 }
