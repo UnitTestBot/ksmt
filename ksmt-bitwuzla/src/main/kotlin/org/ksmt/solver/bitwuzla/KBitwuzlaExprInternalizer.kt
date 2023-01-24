@@ -680,43 +680,43 @@ open class KBitwuzlaExprInternalizer(
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>): KExpr<T> {
+    override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KMulArithExpr<T>): KExpr<T> {
+    override fun <T : KArithSort> transform(expr: KMulArithExpr<T>): KExpr<T> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KSubArithExpr<T>): KExpr<T> {
+    override fun <T : KArithSort> transform(expr: KSubArithExpr<T>): KExpr<T> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> {
+    override fun <T : KArithSort> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>): KExpr<T> {
+    override fun <T : KArithSort> transform(expr: KDivArithExpr<T>): KExpr<T> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>): KExpr<T> {
+    override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>): KExpr<T> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> {
+    override fun <T : KArithSort> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> {
+    override fun <T : KArithSort> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> {
+    override fun <T : KArithSort> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> {
+    override fun <T : KArithSort> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 

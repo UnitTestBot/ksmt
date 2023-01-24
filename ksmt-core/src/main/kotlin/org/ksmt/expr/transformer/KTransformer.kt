@@ -165,7 +165,7 @@ interface KTransformer : KTransformerBase {
     // function transformers
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = transformApp(expr)
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = transform(expr as KFunctionApp<T>)
-    fun <T : KSort> transformApp(expr: KApp<T, *>): KExpr<T> = with(ctx) {
+    fun <T : KSort, A : KSort> transformApp(expr: KApp<T, KExpr<A>>): KExpr<T> = with(ctx) {
         val args = expr.args.map { it.accept(this@KTransformer) }
 
         return if (args == expr.args) {
@@ -308,16 +308,16 @@ interface KTransformer : KTransformerBase {
     }
 
     // arith transformers
-    override fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>): KExpr<T> = transformApp(expr)
-    override fun <T : KArithSort<T>> transform(expr: KMulArithExpr<T>): KExpr<T> = transformApp(expr)
-    override fun <T : KArithSort<T>> transform(expr: KSubArithExpr<T>): KExpr<T> = transformApp(expr)
-    override fun <T : KArithSort<T>> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> = transformApp(expr)
-    override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>): KExpr<T> = transformApp(expr)
-    override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>): KExpr<T> = transformApp(expr)
-    override fun <T : KArithSort<T>> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> = transformApp(expr)
-    override fun <T : KArithSort<T>> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> = transformApp(expr)
-    override fun <T : KArithSort<T>> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> = transformApp(expr)
-    override fun <T : KArithSort<T>> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KMulArithExpr<T>): KExpr<T> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KSubArithExpr<T>): KExpr<T> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KDivArithExpr<T>): KExpr<T> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>): KExpr<T> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> = transformApp(expr)
 
     // integer transformers
     override fun transform(expr: KModIntExpr): KExpr<KIntSort> = transformApp(expr)

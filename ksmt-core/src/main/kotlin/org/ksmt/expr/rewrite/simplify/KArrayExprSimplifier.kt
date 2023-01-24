@@ -166,19 +166,17 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         return array.storeValues[storeIndex]
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> =
         simplifyApp(
-            expr = expr as KApp<KArraySort<D, R>, KExpr<KSort>>,
+            expr = expr,
             preprocess = { flatStores(expr) }
         ) {
             error("Always preprocessed")
         }
 
-    @Suppress("UNCHECKED_CAST")
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> =
         simplifyApp(
-            expr = expr as KApp<R, KExpr<KSort>>,
+            expr = expr,
             preprocess = {
                 val array = flatStores(expr.array)
                 SimplifierFlatArraySelectExpr(

@@ -31,7 +31,6 @@ open class KModelEvaluator(
     private val evaluatedFunctionApp: MutableMap<Pair<KDecl<*>, List<KExpr<*>>>, KExpr<*>> = hashMapOf()
     private val evaluatedFunctionArray: MutableMap<KDecl<*>, KExpr<*>> = hashMapOf()
 
-    @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> =
         simplifyApp(expr as KApp<T, KExpr<KSort>>) { args ->
             /**
@@ -203,7 +202,6 @@ open class KModelEvaluator(
         return evaluated.asExpr(decl.sort)
     }
 
-    @Suppress("UNCHECKED_CAST")
     open fun <T : KSort> evalFuncInterp(
         interpretation: KModel.KFuncInterp<T>,
         args: List<KExpr<*>>

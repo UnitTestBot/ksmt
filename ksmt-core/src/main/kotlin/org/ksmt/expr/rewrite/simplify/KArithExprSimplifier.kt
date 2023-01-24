@@ -64,7 +64,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         return false
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> =
+    override fun <T : KArithSort> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (lhs, rhs) ->
             if (lhs is KIntNumExpr && rhs is KIntNumExpr) {
                 return@simplifyApp (lhs < rhs).expr
@@ -75,7 +75,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
             mkArithLt(lhs, rhs)
         }
 
-    override fun <T : KArithSort<T>> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> =
+    override fun <T : KArithSort> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (lhs, rhs) ->
             if (lhs is KIntNumExpr && rhs is KIntNumExpr) {
                 return@simplifyApp (lhs <= rhs).expr
@@ -86,7 +86,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
             mkArithLe(lhs, rhs)
         }
 
-    override fun <T : KArithSort<T>> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> =
+    override fun <T : KArithSort> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (lhs, rhs) ->
             if (lhs is KIntNumExpr && rhs is KIntNumExpr) {
                 return@simplifyApp (lhs > rhs).expr
@@ -97,7 +97,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
             mkArithGt(lhs, rhs)
         }
 
-    override fun <T : KArithSort<T>> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> =
+    override fun <T : KArithSort> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (lhs, rhs) ->
             if (lhs is KIntNumExpr && rhs is KIntNumExpr) {
                 return@simplifyApp (lhs >= rhs).expr
@@ -108,7 +108,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
             mkArithGe(lhs, rhs)
         }
 
-    override fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>): KExpr<T> = simplifyApp(expr) { args ->
+    override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> = simplifyApp(expr) { args ->
         val (numerals, nonNumerals) = args.partition { it is KIntNumExpr || it is KRealNumExpr }
         val simplifiedArgs = nonNumerals.toMutableList()
         if (numerals.isNotEmpty()) {
@@ -121,7 +121,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KMulArithExpr<T>): KExpr<T> = simplifyApp(expr) { args ->
+    override fun <T : KArithSort> transform(expr: KMulArithExpr<T>): KExpr<T> = simplifyApp(expr) { args ->
         val (numerals, nonNumerals) = args.partition { it is KIntNumExpr || it is KRealNumExpr }
         val simplifiedArgs = nonNumerals.toMutableList()
         if (numerals.isNotEmpty()) {
@@ -134,7 +134,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KSubArithExpr<T>): KExpr<T> =
+    override fun <T : KArithSort> transform(expr: KSubArithExpr<T>): KExpr<T> =
         simplifyApp(
             expr = expr,
             preprocess = {
@@ -153,7 +153,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
             error("Always preprocessed")
         }
 
-    override fun <T : KArithSort<T>> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> = simplifyApp(expr) { (arg) ->
+    override fun <T : KArithSort> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> = simplifyApp(expr) { (arg) ->
         if (arg is KIntNumExpr) {
             return@simplifyApp mkIntNum(-arg.value).uncheckedCast()
         }
@@ -165,11 +165,10 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         mkArithUnaryMinus(arg)
     }
 
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
+    override fun <T : KArithSort> transform(expr: KDivArithExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
         when (expr.sort) {
-            intSort -> rewrite(simplifyIntegerDiv(lhs.uncheckedCast(), rhs.uncheckedCast()) as KExpr<T>)
-            realSort -> rewrite(simplifyRealDiv(lhs.uncheckedCast(), rhs.uncheckedCast()) as KExpr<T>)
+            intSort -> rewrite(simplifyIntegerDiv(lhs.uncheckedCast(), rhs.uncheckedCast()).uncheckedCast())
+            realSort -> rewrite(simplifyRealDiv(lhs.uncheckedCast(), rhs.uncheckedCast()).uncheckedCast())
             else -> mkArithDiv(lhs, rhs)
         }
     }
@@ -202,7 +201,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
     }
 
     @Suppress("ForbiddenComment")
-    override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>): KExpr<T> =
+    override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>): KExpr<T> =
         simplifyApp(expr) { (base, power) ->
             // todo: evaluate
             mkArithPower(base, power)
@@ -267,7 +266,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         mkIntToReal(arg)
     }
 
-    private fun <T : KArithSort<T>> sumNumerals(
+    private fun <T : KArithSort> sumNumerals(
         numerals: List<KExpr<T>>, sort: T
     ): KExpr<T> {
         var numerator = BigInteger.ZERO
@@ -287,7 +286,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         return numericValue(numerator, denominator, sort)
     }
 
-    private fun <T : KArithSort<T>> timesNumerals(
+    private fun <T : KArithSort> timesNumerals(
         numerals: List<KExpr<T>>, sort: T
     ): KExpr<T> {
         var numerator = BigInteger.ONE
@@ -305,7 +304,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun <T : KArithSort<T>> numericValue(
+    private fun <T : KArithSort> numericValue(
         numerator: BigInteger, denominator: BigInteger = BigInteger.ONE, sort: T
     ): KExpr<T> = with(ctx) {
         when (sort) {

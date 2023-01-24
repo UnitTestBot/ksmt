@@ -143,10 +143,9 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
      * If condition is true/false only one branch simplification is required.
      * 2. Simplify ite branches [SimplifierStagedIteBranches].
      * */
-    @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> transform(expr: KIteExpr<T>): KExpr<T> =
         simplifyApp(
-            expr = expr as KApp<T, KExpr<KSort>>,
+            expr = expr,
             preprocess = {
                 SimplifierStagedIteCondition(ctx, expr.condition, expr.trueBranch, expr.falseBranch)
             }

@@ -1504,44 +1504,40 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         return SimplifierFlatBvConcatExpr(ctx, expr.sort, flatten)
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun <S : KBvSort> flatBvAdd(expr: KBvAddExpr<S>): SimplifierFlatBvAddExpr<S> {
         val flatten = flatBinaryBvExpr<KBvAddExpr<*>>(
-            expr as KExpr<KBvSort>,
+            expr,
             getLhs = { it.arg0 },
             getRhs = { it.arg1 }
         )
-        return SimplifierFlatBvAddExpr(ctx, flatten) as SimplifierFlatBvAddExpr<S>
+        return SimplifierFlatBvAddExpr(ctx, flatten).uncheckedCast()
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun <S : KBvSort> flatBvMul(expr: KBvMulExpr<S>): SimplifierFlatBvMulExpr<S> {
         val flatten = flatBinaryBvExpr<KBvMulExpr<*>>(
-            expr as KExpr<KBvSort>,
+            expr,
             getLhs = { it.arg0 },
             getRhs = { it.arg1 }
         )
-        return SimplifierFlatBvMulExpr(ctx, flatten) as SimplifierFlatBvMulExpr<S>
+        return SimplifierFlatBvMulExpr(ctx, flatten).uncheckedCast()
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun <S : KBvSort> flatBvOr(expr: KBvOrExpr<S>): SimplifierFlatBvOrExpr<S> {
         val flatten = flatBinaryBvExpr<KBvOrExpr<*>>(
-            expr as KExpr<KBvSort>,
+            expr,
             getLhs = { it.arg0 },
             getRhs = { it.arg1 }
         )
-        return SimplifierFlatBvOrExpr(ctx, flatten) as SimplifierFlatBvOrExpr<S>
+        return SimplifierFlatBvOrExpr(ctx, flatten).uncheckedCast()
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun <S : KBvSort> flatBvXor(expr: KBvXorExpr<S>): SimplifierFlatBvXorExpr<S> {
         val flatten = flatBinaryBvExpr<KBvXorExpr<*>>(
-            expr as KExpr<KBvSort>,
+            expr,
             getLhs = { it.arg0 },
             getRhs = { it.arg1 }
         )
-        return SimplifierFlatBvXorExpr(ctx, flatten) as SimplifierFlatBvXorExpr<S>
+        return SimplifierFlatBvXorExpr(ctx, flatten).uncheckedCast()
     }
 
     private inline fun <reified T> flatBinaryBvExpr(

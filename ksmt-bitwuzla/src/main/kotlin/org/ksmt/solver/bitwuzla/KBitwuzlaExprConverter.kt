@@ -399,9 +399,8 @@ open class KBitwuzlaExprConverter(
         } else {
             val value = Native.bitwuzlaGetFpValue(bitwuzlaCtx.bitwuzla, expr)
 
-            @Suppress("UNCHECKED_CAST")
             mkFpFromBvExpr(
-                sign = mkBv(value.sign, sizeBits = 1u) as KExpr<KBv1Sort>,
+                sign = mkBv(value.sign, sizeBits = 1u).uncheckedCast(),
                 biasedExponent = mkBv(value.exponent, value.exponent.length.toUInt()),
                 significand = mkBv(value.significand, value.significand.length.toUInt())
             )
@@ -637,7 +636,7 @@ open class KBitwuzlaExprConverter(
      * @see ensureArrayExprSortMatch
      * */
     @Suppress("UNCHECKED_CAST")
-    fun KExpr<*>.convertToBoolIfNeeded(): KExpr<*> = when (with(ctx) { sort }) {
+    fun KExpr<*>.convertToBoolIfNeeded(): KExpr<*> = when (sort) {
         ctx.bv1Sort -> ensureBoolExpr()
         is KArraySort<*, *> -> (this as KExpr<KArraySort<*, *>>)
             .ensureArrayExprSortMatch(
@@ -658,19 +657,19 @@ open class KBitwuzlaExprConverter(
      *
      * @see convertToBoolIfNeeded
      * */
-    @Suppress("UNCHECKED_CAST")
     fun <T : KSort> KExpr<*>.convertToExpectedIfNeeded(expected: T): KExpr<T> = when (expected) {
-        ctx.bv1Sort -> ensureBv1Expr() as KExpr<T>
-        ctx.boolSort -> ensureBoolExpr() as KExpr<T>
+        ctx.bv1Sort -> ensureBv1Expr().uncheckedCast()
+        ctx.boolSort -> ensureBoolExpr().uncheckedCast()
         is KArraySort<*, *> -> {
+            @Suppress("UNCHECKED_CAST")
             val array = this as? KExpr<KArraySort<*, *>> ?: error("An array was expected. Actual is $this")
 
             array.ensureArrayExprSortMatch(
                 domainExpected = { expected.domain },
                 rangeExpected = { expected.range }
-            ) as KExpr<T>
+            ).uncheckedCast()
         }
-        else -> this as KExpr<T>
+        else -> this.uncheckedCast()
     }
 
     /**
@@ -701,24 +700,22 @@ open class KBitwuzlaExprConverter(
     /**
      * Convert expression from (BitVec 1) to Bool.
      * */
-    @Suppress("UNCHECKED_CAST")
     private fun KExpr<*>.ensureBoolExpr(): KExpr<KBoolSort> = with(ctx) {
         when {
-            sort == boolSort -> this@ensureBoolExpr as KExpr<KBoolSort>
+            sort == boolSort -> this@ensureBoolExpr.uncheckedCast()
             this@ensureBoolExpr is BoolToBv1AdapterExpr -> arg
-            else -> Bv1ToBoolAdapterExpr(this@ensureBoolExpr as KExpr<KBv1Sort>)
+            else -> Bv1ToBoolAdapterExpr(this@ensureBoolExpr.uncheckedCast())
         }
     }
 
     /**
      * Convert expression from Bool to (BitVec 1).
      * */
-    @Suppress("UNCHECKED_CAST")
     private fun KExpr<*>.ensureBv1Expr(): KExpr<KBv1Sort> = with(ctx) {
         when {
-            sort == bv1Sort -> this@ensureBv1Expr as KExpr<KBv1Sort>
+            sort == bv1Sort -> this@ensureBv1Expr.uncheckedCast()
             this@ensureBv1Expr is Bv1ToBoolAdapterExpr -> arg
-            else -> BoolToBv1AdapterExpr(this@ensureBv1Expr as KExpr<KBoolSort>)
+            else -> BoolToBv1AdapterExpr(this@ensureBv1Expr.uncheckedCast())
         }
     }
 
@@ -730,8 +727,7 @@ open class KBitwuzlaExprConverter(
             this@ensureBvExpr
         }
 
-        @Suppress("UNCHECKED_CAST")
-        expr as KExpr<KBvSort>
+        expr.uncheckedCast()
     }
 
     private inner class BoolToBv1AdapterExpr(val arg: KExpr<KBoolSort>) : KExpr<KBv1Sort>(ctx) {
@@ -840,7 +836,6 @@ open class KBitwuzlaExprConverter(
          * ```
          * This array generation procedure can be represented as [org.ksmt.expr.KArrayLambda]
          * */
-        @Suppress("UNCHECKED_CAST")
         fun <FromDomain : KSort, FromRange : KSort, ToDomain : KSort, ToRange : KSort> transform(
             expr: ArrayAdapterExpr<FromDomain, FromRange, ToDomain, ToRange>
         ): KExpr<KArraySort<ToDomain, ToRange>> = with(ctx) {
@@ -850,7 +845,7 @@ open class KBitwuzlaExprConverter(
             val exprRangeSort = expr.toRangeSort
 
             if (fromSort.domain == exprDomainSort && fromSort.range == exprRangeSort) {
-                return@with expr.arg as KExpr<KArraySort<ToDomain, ToRange>>
+                return@with expr.arg.uncheckedCast()
             }
 
             val replacement = when (fromSort.domain) {
@@ -875,10 +870,10 @@ open class KBitwuzlaExprConverter(
                     }
 
                     val index = exprDomainSort.mkFreshConst("index")
-                    val bodyExpr = expr.arg.select(index as KExpr<FromDomain>)
+                    val bodyExpr = expr.arg.select(index.uncheckedCast())
                     val body: KExpr<ToRange> = when (exprRangeSort) {
-                        bv1Sort -> bodyExpr.ensureBv1Expr() as KExpr<ToRange>
-                        boolSort -> bodyExpr.ensureBoolExpr() as KExpr<ToRange>
+                        bv1Sort -> bodyExpr.ensureBv1Expr().uncheckedCast()
+                        boolSort -> bodyExpr.ensureBoolExpr().uncheckedCast()
                         else -> error("unexpected domain: $exprRangeSort")
                     }
 
@@ -892,17 +887,15 @@ open class KBitwuzlaExprConverter(
         private val bv1One: KExpr<KBv1Sort> by lazy { ctx.mkBv(true) }
         private val bv1Zero: KExpr<KBv1Sort> by lazy { ctx.mkBv(false) }
 
-        @Suppress("UNCHECKED_CAST")
         private fun <T : KSort> T.trueValue(): KExpr<T> = when (this) {
-            is KBv1Sort -> bv1One as KExpr<T>
-            is KBoolSort -> ctx.trueExpr as KExpr<T>
+            is KBv1Sort -> bv1One.uncheckedCast()
+            is KBoolSort -> ctx.trueExpr.uncheckedCast()
             else -> error("unexpected sort: $this")
         }
 
-        @Suppress("UNCHECKED_CAST")
         private fun <T : KSort> T.falseValue(): KExpr<T> = when (this) {
-            is KBv1Sort -> bv1Zero as KExpr<T>
-            is KBoolSort -> ctx.falseExpr as KExpr<T>
+            is KBv1Sort -> bv1Zero.uncheckedCast()
+            is KBoolSort -> ctx.falseExpr.uncheckedCast()
             else -> error("unexpected sort: $this")
         }
     }

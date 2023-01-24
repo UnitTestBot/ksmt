@@ -58,9 +58,8 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KTransform
         exprWasTransformed = false
     }
 
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : KSort> transformApp(expr: KApp<T, *>): KExpr<T> =
-        transformAppAfterArgsTransformed(expr as KApp<T, KExpr<KSort>>) { transformedArgs ->
+    override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, KExpr<A>>): KExpr<T> =
+        transformAppAfterArgsTransformed(expr) { transformedArgs ->
             if (transformedArgs == expr.args) return transformExpr(expr)
 
             val transformedApp = with(ctx) {

@@ -31,7 +31,7 @@ class SimplifierBenchmarksBasedTest : BenchmarksBasedTest() {
     }
 
     class ContextConsistencyChecker(ctx: KContext) : KNonRecursiveTransformer(ctx) {
-        override fun <T : KSort> transformApp(expr: KApp<T, *>): KExpr<T> = with(ctx) {
+        override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, KExpr<A>>): KExpr<T> = with(ctx) {
             check(expr === expr.decl.apply(expr.args)) {
                 "Context is inconsistent"
             }
