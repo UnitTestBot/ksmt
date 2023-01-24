@@ -3,9 +3,6 @@ package org.ksmt.expr.rewrite.simplify
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KApp
-import org.ksmt.expr.KBitVec16Value
-import org.ksmt.expr.KBitVec32Value
-import org.ksmt.expr.KBitVec8Value
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KBv2IntExpr
 import org.ksmt.expr.KBvAddExpr
@@ -72,12 +69,15 @@ import org.ksmt.utils.BvUtils.bvMinValueSigned
 import org.ksmt.utils.BvUtils.bvOne
 import org.ksmt.utils.BvUtils.bvZero
 import org.ksmt.utils.BvUtils.bigIntValue
+import org.ksmt.utils.BvUtils.concatBv
+import org.ksmt.utils.BvUtils.extractBv
 import org.ksmt.utils.BvUtils.minus
 import org.ksmt.utils.BvUtils.plus
 import org.ksmt.utils.BvUtils.powerOfTwoOrNull
 import org.ksmt.utils.BvUtils.shiftLeft
 import org.ksmt.utils.BvUtils.shiftRightArith
 import org.ksmt.utils.BvUtils.shiftRightLogical
+import org.ksmt.utils.BvUtils.signExtension
 import org.ksmt.utils.BvUtils.signedDivide
 import org.ksmt.utils.BvUtils.signedGreaterOrEqual
 import org.ksmt.utils.BvUtils.signedLessOrEqual
@@ -86,9 +86,11 @@ import org.ksmt.utils.BvUtils.signedRem
 import org.ksmt.utils.BvUtils.times
 import org.ksmt.utils.BvUtils.toBigIntegerSigned
 import org.ksmt.utils.BvUtils.toBigIntegerUnsigned
+import org.ksmt.utils.BvUtils.unaryMinus
 import org.ksmt.utils.BvUtils.unsignedDivide
 import org.ksmt.utils.BvUtils.unsignedLessOrEqual
 import org.ksmt.utils.BvUtils.unsignedRem
+import org.ksmt.utils.BvUtils.zeroExtension
 import org.ksmt.utils.cast
 import org.ksmt.utils.toBigInteger
 import org.ksmt.utils.uncheckedCast
@@ -329,7 +331,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
 
     override fun <T : KBvSort> transform(expr: KBvNegationExpr<T>): KExpr<T> = simplifyApp(expr) { (arg) ->
         if (arg is KBitVecValue<T>) {
-            return@simplifyApp (bvZero(expr.sort.sizeBits) - arg).uncheckedCast()
+            return@simplifyApp (-arg).uncheckedCast()
         }
         mkBvNegationExpr(arg)
     }
@@ -768,7 +770,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         }
 
         if (arg is KBitVecValue<*>) {
-            return@simplifyApp extractBv(arg, expr.high, expr.low).uncheckedCast()
+            return@simplifyApp arg.extractBv(expr.high, expr.low).uncheckedCast()
         }
 
         // (extract[high:low] (extract[_:nestedLow] x)) ==> (extract[high+nestedLow : low+nestedLow] x)
@@ -1073,10 +1075,13 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             return@simplifyApp arg
         }
 
-        val extension = bvZero(expr.extensionSize.toUInt())
+        if (arg is KBitVecValue<*>) {
+            return@simplifyApp arg.zeroExtension(expr.extensionSize.toUInt()).uncheckedCast()
+        }
+
         return@simplifyApp rewrite(
             auxExpr {
-                KBvConcatExpr(ctx, extension.uncheckedCast(), arg)
+                KBvConcatExpr(ctx, bvZero(expr.extensionSize.toUInt()).uncheckedCast(), arg)
             }
         )
     }
@@ -1087,7 +1092,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         }
 
         if (arg is KBitVecValue<*>) {
-            return@simplifyApp arg.signExtension(expr.extensionSize).uncheckedCast()
+            return@simplifyApp arg.signExtension(expr.extensionSize.toUInt()).uncheckedCast()
         }
 
         return@simplifyApp mkBvSignExtensionExpr(expr.extensionSize, arg)
@@ -1711,42 +1716,6 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         }
     }
 
-    private fun concatBv(lhs: KBitVecValue<*>, rhs: KBitVecValue<*>): KBitVecValue<*> = with(ctx) {
-        when {
-            lhs is KBitVec8Value && rhs is KBitVec8Value -> {
-                var result = lhs.numberValue.toUByte().toInt() shl Byte.SIZE_BITS
-                result = result or rhs.numberValue.toUByte().toInt()
-                mkBv(result.toShort())
-            }
-
-            lhs is KBitVec16Value && rhs is KBitVec16Value -> {
-                var result = lhs.numberValue.toUShort().toInt() shl Short.SIZE_BITS
-                result = result or rhs.numberValue.toUShort().toInt()
-                mkBv(result)
-            }
-
-            lhs is KBitVec32Value && rhs is KBitVec32Value -> {
-                var result = lhs.numberValue.toUInt().toLong() shl Int.SIZE_BITS
-                result = result or rhs.numberValue.toUInt().toLong()
-                mkBv(result)
-            }
-
-            else -> {
-                val concatenatedBinary = lhs.stringValue + rhs.stringValue
-                mkBv(concatenatedBinary, lhs.sort.sizeBits + rhs.sort.sizeBits)
-            }
-        }
-    }
-
-    private fun extractBv(value: KBitVecValue<*>, high: Int, low: Int): KBitVecValue<*> = with(ctx) {
-        val size = high - low + 1
-        val allBits = value.stringValue
-        val highBitIdx = allBits.length - high - 1
-        val lowBitIdx = allBits.length - low - 1
-        val bits = allBits.substring(highBitIdx, lowBitIdx + 1)
-        mkBv(bits, size.toUInt())
-    }
-
     // (concat (extract[h1, l1] a) (extract[h2, l2] a)), l1 == h2 + 1 ==> (extract[h1, l2] a)
     private fun tryMergeBvConcatExtract(lhs: KBvExtractExpr, rhs: KBvExtractExpr): KExpr<KBvSort>? = with(ctx) {
         if (lhs.value != rhs.value || lhs.low != rhs.high + 1) {
@@ -1754,12 +1723,4 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         }
         mkBvExtractExpr(lhs.high, rhs.low, lhs.value)
     }
-
-    private fun KBitVecValue<*>.signExtension(extensionSize: Int): KBitVecValue<*> {
-        val binary = stringValue
-        val sign = binary[0]
-        val extension = "$sign".repeat(extensionSize)
-        return ctx.mkBv(extension + binary, sort.sizeBits + extensionSize.toUInt())
-    }
-
 }

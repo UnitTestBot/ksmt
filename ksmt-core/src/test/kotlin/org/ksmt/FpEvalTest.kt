@@ -289,10 +289,10 @@ class FpEvalTest {
         fun <T : KSort> check(expr: KExpr<T>) {
             val expectedValue = solverValue(expr)
             val actualValue = evalFpExpr(expr)
-            if (actualValue !is KInterpretedConstant) {
-//                println("Skipped: $actualValue")
-                return
-            }
+//            if (actualValue !is KInterpretedConstant) {
+////                println("Skipped: $actualValue")
+//                return
+//            }
             assertEquals(expectedValue, actualValue)
 
             val decl = (expectedValue as KApp<*, *>).decl

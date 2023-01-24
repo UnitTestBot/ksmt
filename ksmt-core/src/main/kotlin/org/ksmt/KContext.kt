@@ -293,12 +293,14 @@ import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.utils.BvUtils.bvMaxValueSigned
 import org.ksmt.utils.BvUtils.minus
 import org.ksmt.utils.BvUtils.plus
+import org.ksmt.utils.FpUtils.biasFpExponent
 import org.ksmt.utils.FpUtils.fpInfExponentBiased
 import org.ksmt.utils.FpUtils.fpInfSignificand
 import org.ksmt.utils.FpUtils.fpNanExponentBiased
 import org.ksmt.utils.FpUtils.fpNanSignificand
 import org.ksmt.utils.FpUtils.fpZeroExponentBiased
 import org.ksmt.utils.FpUtils.fpZeroSignificand
+import org.ksmt.utils.FpUtils.unbiasFpExponent
 import org.ksmt.utils.booleanSignBit
 import org.ksmt.utils.cast
 import org.ksmt.utils.extractExponent
@@ -1600,16 +1602,16 @@ open class KContext(
     }
 
     private fun biasFp128Exponent(exponent: KBitVecValue<*>): KBitVecValue<*> =
-        exponent + bvMaxValueSigned(KFp128Sort.exponentBits)
+        biasFpExponent(exponent, KFp128Sort.exponentBits)
 
     private fun unbiasFp128Exponent(exponent: KBitVecValue<*>): KBitVecValue<*> =
-        exponent - bvMaxValueSigned(KFp128Sort.exponentBits)
+        unbiasFpExponent(exponent, KFp128Sort.exponentBits)
 
     private fun biasFpCustomSizeExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> =
-        exponent + bvMaxValueSigned(exponentSize)
+        biasFpExponent(exponent, exponentSize)
 
     private fun unbiasFpCustomSizeExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> =
-        exponent - bvMaxValueSigned(exponentSize)
+        unbiasFpExponent(exponent, exponentSize)
 
     fun <T : KFpSort> mkFp(value: Float, sort: T): KFpValue<T> {
         if (sort == mkFp32Sort()) {
