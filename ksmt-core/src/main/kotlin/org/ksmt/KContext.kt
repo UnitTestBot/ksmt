@@ -2042,8 +2042,8 @@ open class KContext : AutoCloseable {
         fpToIEEEBvExprCache.createIfContextActive(value.cast()).cast()
 
     private val fpFromBvExprCache = mkClosableCache { sign: KExpr<KBv1Sort>,
-                                                      biasedExponent: KExpr<out KBvSort>,
-                                                      significand: KExpr<out KBvSort> ->
+                                                      biasedExponent: KExpr<KBvSort>,
+                                                      significand: KExpr<KBvSort> ->
         val exponentBits = biasedExponent.sort.sizeBits
         // +1 it required since bv doesn't contain `hidden bit`
         val significandBits = significand.sort.sizeBits + 1u
@@ -2054,13 +2054,13 @@ open class KContext : AutoCloseable {
 
     fun <T : KFpSort> mkFpFromBvExpr(
         sign: KExpr<KBv1Sort>,
-        biasedExponent: KExpr<out KBvSort>,
-        significand: KExpr<out KBvSort>,
+        biasedExponent: KExpr<KBvSort>,
+        significand: KExpr<KBvSort>,
     ): KFpFromBvExpr<T> = fpFromBvExprCache.createIfContextActive(sign, biasedExponent, significand).cast()
 
     private val fpToFpExprCache = mkClosableCache { sort: KFpSort,
                                                     rm: KExpr<KFpRoundingModeSort>,
-                                                    value: KExpr<out KFpSort> ->
+                                                    value: KExpr<KFpSort> ->
         KFpToFpExpr(this, sort, rm, value)
     }
     private val realToFpExprCache = mkClosableCache { sort: KFpSort,
@@ -2078,7 +2078,7 @@ open class KContext : AutoCloseable {
     fun <T : KFpSort> mkFpToFpExpr(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
-        value: KExpr<out KFpSort>
+        value: KExpr<KFpSort>
     ): KFpToFpExpr<T> = fpToFpExprCache.createIfContextActive(sort, roundingMode, value).cast()
 
     fun <T : KFpSort> mkRealToFpExpr(

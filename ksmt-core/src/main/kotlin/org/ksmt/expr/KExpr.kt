@@ -7,7 +7,7 @@ import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KSort
 import org.ksmt.expr.printer.ExpressionPrinterWithLetBindings
 
-abstract class KExpr<T : KSort>(ctx: KContext) : KAst(ctx) {
+abstract class KExpr<out T : KSort>(ctx: KContext) : KAst(ctx) {
 
     abstract val sort: T
 

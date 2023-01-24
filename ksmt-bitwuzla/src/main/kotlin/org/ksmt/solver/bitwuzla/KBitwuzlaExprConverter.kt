@@ -266,8 +266,7 @@ open class KBitwuzlaExprConverter(
         val knownConstDecl = bitwuzlaCtx.convertConstantIfKnown(expr)
 
         if (knownConstDecl != null) {
-            @Suppress("UNCHECKED_CAST")
-            return@convert mkConstApp(knownConstDecl).convertToBoolIfNeeded() as KExpr<KSort>
+            return@convert mkConstApp(knownConstDecl).convertToBoolIfNeeded()
         }
 
         // newly generated constant
@@ -275,8 +274,7 @@ open class KBitwuzlaExprConverter(
 
         if (!Native.bitwuzlaSortIsFun(sort) || Native.bitwuzlaSortIsArray(sort)) {
             val decl = generateDecl(expr) { mkConstDecl(it, sort.convertSort()) }
-            @Suppress("UNCHECKED_CAST")
-            return@convert decl.apply().convertToBoolIfNeeded() as KExpr<KSort>
+            return@convert decl.apply().convertToBoolIfNeeded()
         }
 
         // newly generated functional constant

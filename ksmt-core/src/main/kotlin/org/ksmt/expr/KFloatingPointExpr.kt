@@ -748,10 +748,10 @@ class KFpFromBvExpr<S : KFpSort> internal constructor(
     ctx: KContext,
     override val sort: S,
     val sign: KExpr<KBv1Sort>,
-    val biasedExponent: KExpr<out KBvSort>,
-    val significand: KExpr<out KBvSort>,
-) : KApp<S, KExpr<out KBvSort>>(ctx) {
-    override val args: List<KExpr<out KBvSort>>
+    val biasedExponent: KExpr<KBvSort>,
+    val significand: KExpr<KBvSort>,
+) : KApp<S, KExpr<KBvSort>>(ctx) {
+    override val args: List<KExpr<KBvSort>>
         get() = listOf(sign, biasedExponent, significand)
 
     override val decl: KDecl<S>
@@ -764,7 +764,7 @@ class KFpToFpExpr<S : KFpSort> internal constructor(
     ctx: KContext,
     override val sort: S,
     val roundingMode: KExpr<KFpRoundingModeSort>,
-    val value: KExpr<out KFpSort>
+    val value: KExpr<KFpSort>
 ) : KApp<S, KExpr<*>>(ctx) {
     override val args: List<KExpr<*>>
         get() = listOf(roundingMode, value)

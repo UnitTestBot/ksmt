@@ -1508,8 +1508,8 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     private fun <S : KBvSort> flatBvAdd(expr: KBvAddExpr<S>): SimplifierFlatBvAddExpr<S> {
         val flatten = flatBinaryBvExpr<KBvAddExpr<*>>(
             expr as KExpr<KBvSort>,
-            getLhs = { it.arg0 as KExpr<KBvSort> },
-            getRhs = { it.arg1 as KExpr<KBvSort> }
+            getLhs = { it.arg0 },
+            getRhs = { it.arg1 }
         )
         return SimplifierFlatBvAddExpr(ctx, flatten) as SimplifierFlatBvAddExpr<S>
     }
@@ -1518,8 +1518,8 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     private fun <S : KBvSort> flatBvMul(expr: KBvMulExpr<S>): SimplifierFlatBvMulExpr<S> {
         val flatten = flatBinaryBvExpr<KBvMulExpr<*>>(
             expr as KExpr<KBvSort>,
-            getLhs = { it.arg0 as KExpr<KBvSort> },
-            getRhs = { it.arg1 as KExpr<KBvSort> }
+            getLhs = { it.arg0 },
+            getRhs = { it.arg1 }
         )
         return SimplifierFlatBvMulExpr(ctx, flatten) as SimplifierFlatBvMulExpr<S>
     }
@@ -1528,8 +1528,8 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     private fun <S : KBvSort> flatBvOr(expr: KBvOrExpr<S>): SimplifierFlatBvOrExpr<S> {
         val flatten = flatBinaryBvExpr<KBvOrExpr<*>>(
             expr as KExpr<KBvSort>,
-            getLhs = { it.arg0 as KExpr<KBvSort> },
-            getRhs = { it.arg1 as KExpr<KBvSort> }
+            getLhs = { it.arg0 },
+            getRhs = { it.arg1 }
         )
         return SimplifierFlatBvOrExpr(ctx, flatten) as SimplifierFlatBvOrExpr<S>
     }
@@ -1538,8 +1538,8 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     private fun <S : KBvSort> flatBvXor(expr: KBvXorExpr<S>): SimplifierFlatBvXorExpr<S> {
         val flatten = flatBinaryBvExpr<KBvXorExpr<*>>(
             expr as KExpr<KBvSort>,
-            getLhs = { it.arg0 as KExpr<KBvSort> },
-            getRhs = { it.arg1 as KExpr<KBvSort> }
+            getLhs = { it.arg0 },
+            getRhs = { it.arg1 }
         )
         return SimplifierFlatBvXorExpr(ctx, flatten) as SimplifierFlatBvXorExpr<S>
     }
