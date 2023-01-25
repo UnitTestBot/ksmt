@@ -10,6 +10,7 @@ repositories {
 dependencies {
     implementation(project(":ksmt-core"))
     implementation(project(":ksmt-z3"))
+    implementation(project(":ksmt-cvc5"))
     implementation(project(":ksmt-bitwuzla"))
     implementation(project(":ksmt-yices"))
     implementation(testFixtures(project(":ksmt-yices")))
