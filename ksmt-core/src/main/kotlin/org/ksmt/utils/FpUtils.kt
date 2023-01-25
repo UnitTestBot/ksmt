@@ -1,35 +1,21 @@
 package org.ksmt.utils
 
 import org.ksmt.KContext
-import org.ksmt.expr.KBitVec1Value
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KFp32Value
 import org.ksmt.expr.KFp64Value
 import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.KFpValue
 import org.ksmt.sort.KFpSort
-import org.ksmt.utils.BvUtils.bitwiseAnd
-import org.ksmt.utils.BvUtils.bitwiseNot
-import org.ksmt.utils.BvUtils.bitwiseOr
+import org.ksmt.utils.BvUtils.bigIntValue
 import org.ksmt.utils.BvUtils.bvMaxValueSigned
 import org.ksmt.utils.BvUtils.bvMaxValueUnsigned
-import org.ksmt.utils.BvUtils.bvMinValueSigned
 import org.ksmt.utils.BvUtils.bvOne
 import org.ksmt.utils.BvUtils.bvZero
-import org.ksmt.utils.BvUtils.concatBv
-import org.ksmt.utils.BvUtils.extractBv
 import org.ksmt.utils.BvUtils.minus
 import org.ksmt.utils.BvUtils.plus
-import org.ksmt.utils.BvUtils.shiftLeft
-import org.ksmt.utils.BvUtils.shiftRightArith
-import org.ksmt.utils.BvUtils.shiftRightLogical
-import org.ksmt.utils.BvUtils.signExtension
-import org.ksmt.utils.BvUtils.signedGreaterOrEqual
-import org.ksmt.utils.BvUtils.signedLessOrEqual
-import org.ksmt.utils.BvUtils.unaryMinus
-import org.ksmt.utils.BvUtils.unsignedGreaterOrEqual
 import org.ksmt.utils.BvUtils.unsignedLessOrEqual
-import org.ksmt.utils.BvUtils.zeroExtension
+import java.math.BigInteger
 
 object FpUtils {
 
@@ -153,6 +139,17 @@ object FpUtils {
     fun KContext.fpNanSignificand(sort: KFpSort): KBitVecValue<*> =
         bvOne(sort.significandBits - 1u)
 
+    fun <T : KFpSort> KContext.mkFpMaxValue(sort: T, signBit: Boolean): KFpValue<T> {
+        val maxSignificand = bvMaxValueUnsigned(sort.significandBits - 1u)
+        val maxExponent = fpTopExponentBiased(sort.exponentBits) - bvOne(sort.exponentBits)
+        return mkFpBiased(
+            significand = maxSignificand,
+            biasedExponent = maxExponent,
+            signBit = signBit,
+            sort = sort
+        )
+    }
+
     fun KContext.biasFpExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> =
         exponent + bvMaxValueSigned(exponentSize)
 
@@ -181,22 +178,32 @@ object FpUtils {
     }
 
     private fun KContext.fpAdd(rm: KFpRoundingMode, lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> = when {
+        // RNE is JVM default rounding mode
+        rm == KFpRoundingMode.RoundNearestTiesToEven && lhs is KFp32Value -> {
+            mkFp(lhs.value + (rhs as KFp32Value).value, lhs.sort)
+        }
+
+        rm == KFpRoundingMode.RoundNearestTiesToEven && lhs is KFp64Value -> {
+            mkFp(lhs.value + (rhs as KFp64Value).value, lhs.sort)
+        }
+
         lhs.isNan() || rhs.isNan() -> mkFpNan(lhs.sort)
+
         lhs.isInfinity() -> if (rhs.isInfinity() && lhs.signBit != rhs.signBit) {
             mkFpNan(lhs.sort)
         } else {
-            mkFpInf(lhs.signBit, lhs.sort)
+            lhs
         }
 
         rhs.isInfinity() -> if (lhs.isInfinity() && lhs.signBit != rhs.signBit) {
             mkFpNan(lhs.sort)
         } else {
-            mkFpInf(lhs.signBit, lhs.sort)
+            rhs
         }
 
         lhs.isZero() && rhs.isZero() -> {
             val bothNegative = lhs.isNegative() && rhs.isNegative()
-            val roundToNegative = rm == KFpRoundingMode.RoundTowardNegative && (lhs.isNegative() || rhs.isNegative())
+            val roundToNegative = rm == KFpRoundingMode.RoundTowardNegative && (lhs.isNegative() != rhs.isNegative())
             if (bothNegative || roundToNegative) {
                 mkFpZero(sort = lhs.sort, signBit = true)
             } else {
@@ -206,278 +213,333 @@ object FpUtils {
 
         lhs.isZero() -> rhs
         rhs.isZero() -> lhs
-        else -> fpAddUnpacked(rm, lhs.unpack(), rhs.unpack()).pack()
+        else -> fpUnpackAndAdd(rm, lhs, rhs)
     }
 
-    private fun KContext.fpAddUnpacked(
+    private fun KContext.fpUnpackAndAdd(
         rm: KFpRoundingMode,
-        lhs: UnpackedFp,
-        rhs: UnpackedFp
-    ): UnpackedFp {
-        val exponentCompare = fpCompareExponentForAdd(lhs.sort, lhs.unbiasedExponent, rhs.unbiasedExponent)
-        val (additionResult, rounderInfo) = fpArithmeticAdd(rm, lhs, rhs, exponentCompare)
-        return fpCustomRound(lhs.sort, rm, additionResult, rounderInfo)
+        lhs: KFpValue<*>,
+        rhs: KFpValue<*>
+    ): KFpValue<*> {
+        // Unpack lhs/rhs, this inserts the hidden bit and adjusts the exponent.
+        var unpackedLhs = lhs.unpack(normalizeSignificand = false)
+        var unpackedRhs = rhs.unpack(normalizeSignificand = false)
+
+        if (unpackedRhs.unbiasedExponent > unpackedLhs.unbiasedExponent) {
+            val tmp = unpackedLhs
+            unpackedLhs = unpackedRhs
+            unpackedRhs = tmp
+        }
+
+        return fpAddUnpacked(rm, unpackedLhs, unpackedRhs)
     }
 
-    private fun fpCustomRound(
-        sort: KFpSort,
-        rm: KFpRoundingMode,
-        value: UnpackedFp,
-        rounderInfo: CustomRounderInfo
-    ): UnpackedFp {
-
-    }
-
-    private fun KContext.fpArithmeticAdd(
-        rm: KFpRoundingMode,
-        lhs: UnpackedFp,
-        rhs: UnpackedFp,
-        ec: ExponentCompareInfo
-    ): Pair<UnpackedFp, CustomRounderInfo> {
-        val effectiveAdd = (lhs.sign xor rhs.sign) xor true
-
-        // Rounder flags
-        val  noOverflow = !effectiveAdd
-        val  noUnderflow = true
-        val  subnormalExact = true
-        val noSignificandOverflow =
-            (effectiveAdd && ec.diffIsZero) || (!effectiveAdd && (ec.diffIsZero || ec.diffIsOne))
-        val  stickyBitIsZero = ec.diffIsZero || ec.diffIsOne
-
-        val leftLarger = ec.leftIsGreater && if (!ec.diffIsZero) {
-            true
-        } else {
-            lhs.significand.unsignedGreaterOrEqual(rhs.significand)
+    private fun KContext.fpAddUnpacked(rm: KFpRoundingMode, lhs: UnpackedFp, rhs: UnpackedFp): KFpValue<*> {
+        // lhs.exponent >= rhs.exponent => expDelta >= 0
+        var expDelta = (lhs.unbiasedExponent - rhs.unbiasedExponent)
+        val significandSizePlusTwo = (lhs.significandSize.toInt() + 2).toBigInteger()
+        if (expDelta > significandSizePlusTwo) {
+            expDelta = significandSizePlusTwo
         }
 
-        val twoZeros =  bvZero(2u)
-        val lsig = if (leftLarger) {
-            lhs.significand
-        } else {
-            rhs.significand.zeroExtension(1u).let { concatBv(it, twoZeros) }
-        }
-        val ssig = if (leftLarger){
-            rhs.significand
-        } else {
-            lhs.significand.zeroExtension(1u).let { concatBv(it, twoZeros) }
-        }
+        // Introduce 3 extra bits into both numbers
+        val aSignificand = lhs.significand.mul2k(3u)
+        var bSignificand = rhs.significand.mul2k(3u)
 
-        val resultSign = if (leftLarger) {
-            lhs.sign
-        } else {
-            rhs.sign
-        }
+        // Alignment shift with sticky bit computation.
+        val (shiftedB, stickyRem) = bSignificand.divideAndRemainder(powerOfTwo(expDelta))
+        bSignificand = shiftedB
 
-        val negatedSmaller = if (!effectiveAdd) {
-            -ssig
-        } else {
-            ssig
-        }
-
-        val shiftAmount = ec.absoluteExponentDifference.zeroExtension(
-            negatedSmaller.sort.sizeBits - ec.absoluteExponentDifference.sort.sizeBits
-        )
-        val shiftedSignExtendedResult = negatedSmaller.stickyRightShift(shiftAmount)
-        val shiftedStickyBitX = negatedSmaller.rightShiftStickyBit(shiftAmount)
-
-        val negatedAlignedSmaller = if (ec.diffIsGreaterThanPrecisionPlusOne){
-            if (effectiveAdd) {
-                bvZero(negatedSmaller.sort.sizeBits)
-            } else {
-                bvZero(negatedSmaller.sort.sizeBits).bitwiseNot()
+        // Significand addition
+        val oSignificand = if (lhs.sign != rhs.sign) {
+            var res = aSignificand - bSignificand
+            if (!stickyRem.isZero() && res.isEven()) {
+                res--
             }
+            res
         } else {
-            shiftedSignExtendedResult
-        }
-        val shiftedStickyBit = if (ec.diffIsGreaterThanPrecision) {
-            bvOne(negatedSmaller.sort.sizeBits)
-        } else {
-            shiftedStickyBitX
-        }
-
-        val sum = lsig + negatedAlignedSmaller
-        val sumWidth = sum.sort.sizeBits.toInt()
-        val topBit = sum.extractBv(sumWidth - 1, sumWidth - 1).let { it as KBitVec1Value }.value
-        val alignedBit = sum.extractBv(sumWidth - 2, sumWidth - 2).let { it as KBitVec1Value }.value
-        val lowerBit = sum.extractBv(sumWidth - 3, sumWidth - 3).let { it as KBitVec1Value }.value
-
-        val  overflow = topBit
-        val  cancel = !topBit && !alignedBit
-        val  minorCancel = cancel && lowerBit
-        val  majorCancel = cancel && !lowerBit
-        val  fullCancel = majorCancel && sum.isZero()
-
-        val exact = cancel && (ec.diffIsZero || ec.diffIsOne)
-
-        val oneSumWidth = bvOne(sum.sort.sizeBits)
-        val alignedSumWithOverflow = if (overflow) {
-            sum.shiftRightLogical(oneSumWidth)
-        } else {
-            sum
-        }
-        val alignedSum = if (minorCancel) {
-            alignedSumWithOverflow.shiftLeft(oneSumWidth)
-        } else {
-            alignedSumWithOverflow
-        }
-
-        val exponentWidth = lhs.sort.exponentBits + 1u
-        val exponentCorrectionTerm = when {
-            minorCancel -> -bvOne(exponentWidth)
-            overflow -> bvOne(exponentWidth)
-            else -> bvZero(exponentWidth)
-        }
-        val correctedExponent = ec.maxExponent + exponentCorrectionTerm
-
-        val stickyBit = when {
-            stickyBitIsZero || majorCancel -> bvZero(alignedSum.sort.sizeBits)
-            !overflow -> shiftedStickyBit
-            else -> {
-                val newBit = sum.extractBv(0, 0).zeroExtension(alignedSum.sort.sizeBits - 1u)
-                shiftedStickyBit.bitwiseOr(newBit)
+            var res = aSignificand + bSignificand
+            if (!stickyRem.isZero() && res.isEven()) {
+                res++
             }
+            res
         }
 
-        val extendedFormat = mkFpSort(exponentWidth, lhs.sort.significandBits + 2u)
-        val resultSumSignificand = alignedSum.bitwiseOr(stickyBit).extractBv((alignedSum.sort.sizeBits - 2u).toInt(), 0)
-        val sumResult = UnpackedFp(extendedFormat, resultSign, correctedExponent, resultSumSignificand)
-
-        val additionResult = if (fullCancel){
+        if (oSignificand.isZero()) {
             val sign = rm == KFpRoundingMode.RoundTowardNegative
-            mkFpZero(sign, extendedFormat).unpack()
-        } else if (majorCancel){
-            sumResult.normalizeUp(extendedFormat)
-        } else {
-            sumResult
+            return mkFpZero(sign, mkFpSort(lhs.exponentSize, lhs.significandSize))
         }
-        val customRounderInfo = CustomRounderInfo(
-            noOverflow, noUnderflow, exact, subnormalExact, noSignificandOverflow
+
+        val neg = oSignificand.signum() < 0
+        val oSignificandValue = oSignificand.abs()
+
+        val sign = ((!lhs.sign && rhs.sign && neg)
+                || (lhs.sign && !rhs.sign && !neg)
+                || (lhs.sign && rhs.sign))
+        val unpackedResult = UnpackedFp(
+            lhs.exponentSize, lhs.significandSize, sign, lhs.unbiasedExponent, oSignificandValue
         )
-        return additionResult to customRounderInfo
+        return fpRound(rm, unpackedResult)
     }
 
-    private fun KContext.fpCompareExponentForAdd(
-        sort: KFpSort,
-        lhs: KBitVecValue<*>,
-        rhs: KBitVecValue<*>
-    ): ExponentCompareInfo {
-        val leftIsGreater = rhs.signedLessOrEqual(lhs)
+    private fun KContext.fpRound(rm: KFpRoundingMode, value: UnpackedFp): KFpValue<*> {
+        // Assumptions: significand is of the form f[-1:0] . f[1:sbits-1] [round,extra,sticky],
+        // i.e., it has 2 + (sbits-1) + 3 = sbits + 4 bits.
 
-        val extendedLeft = lhs.signExtension(1u)
-        val extendedRight = rhs.signExtension(1u)
-        val maxExponent = if (leftIsGreater) extendedLeft else extendedRight
+        val (roundedExponent, significandNormalizationShiftSize) = fpRoundExponent(value)
 
-        val zero = bvZero(sort.exponentBits + 1u)
-        val one = bvZero(sort.exponentBits + 1u)
+        val normalizedSignificand = significandNormalizationShift(significandNormalizationShiftSize, value.significand)
 
-        val exponentDifference = extendedLeft - extendedRight
-        val absoluteExponentDifference = if (exponentDifference.signedLessOrEqual(zero)) {
-             -exponentDifference
-        } else {
-            exponentDifference
-        }
+        val roundedSignificand = roundSignificand(normalizedSignificand, rm, value.sign)
 
-        val diffIsZero = absoluteExponentDifference == zero
-        val diffIsOne = absoluteExponentDifference == one
+        val (resultExponent, resultSignificand) = postNormalizeExponentAndSignificand(
+            value.significandSize, roundedSignificand, roundedExponent
+        )
 
-        val significandSize = sort.significandBits.toInt()
-        val diffIsGreaterThanPrecision = absoluteExponentDifference.signedGreaterOrEqual(significandSize + 1)
-        val diffIsGreaterThanPrecisionPlusOne = absoluteExponentDifference.signedGreaterOrEqual(significandSize + 2)
-        val diffIsTwoToPrecision = !diffIsZero && !diffIsOne && !diffIsGreaterThanPrecision
-
-        return ExponentCompareInfo(
-            leftIsGreater,
-            maxExponent,
-            absoluteExponentDifference,
-            diffIsZero,
-            diffIsOne,
-            diffIsGreaterThanPrecision,
-            diffIsTwoToPrecision,
-            diffIsGreaterThanPrecisionPlusOne
+        return mkRoundedValue(
+            rm, resultExponent, resultSignificand, value.sign, value.exponentSize, value.significandSize
         )
     }
 
-    private fun UnpackedFp.normalizeUp(format: KFpSort): UnpackedFp {
-        TODO()
+    private fun postNormalizeExponentAndSignificand(
+        significandSize: UInt,
+        significand: BigInteger,
+        exponent: BigInteger
+    ): Pair<BigInteger, BigInteger> {
+        var normalizedSignificand = significand
+        var normalizedExponent = exponent
+
+        val pSig = powerOfTwo(significandSize)
+        if (normalizedSignificand >= pSig) {
+            normalizedSignificand = normalizedSignificand.div2k(1u)
+            normalizedExponent++
+        }
+
+        return normalizedExponent to normalizedSignificand
+    }
+
+    private fun fpRoundExponent(value: UnpackedFp): Pair<BigInteger, BigInteger> {
+        val eMin = fpMinExponentValue(value.exponentSize)
+
+        val sigWidth = value.significand.log2() + 1
+        val lz = value.significandSize.toInt() + 4 - sigWidth
+        val beta = value.unbiasedExponent - lz.toBigInteger() + BigInteger.ONE
+
+        var sigma: BigInteger
+        val exponent: BigInteger
+        if (beta < eMin) {
+            // denormal significand/TINY
+            sigma = value.unbiasedExponent - eMin
+            exponent = eMin
+        } else {
+            sigma = (lz - 1).toBigInteger()
+            exponent = beta
+        }
+
+        val sigmaCap = (-(value.significandSize.toInt() + 2)).toBigInteger()
+        if (sigma < sigmaCap) {
+            sigma = sigmaCap
+        }
+
+        return exponent to sigma
+    }
+
+    private fun KContext.mkRoundedValue(
+        rm: KFpRoundingMode,
+        exponent: BigInteger,
+        significand: BigInteger,
+        sign: Boolean,
+        exponentSize: UInt,
+        significandSize: UInt
+    ): KFpValue<*> {
+        val hasOverflow = exponent > fpMaxExponentValue(exponentSize)
+        if (hasOverflow) {
+            return fpRoundInf(rm, exponentSize, significandSize, sign)
+        }
+
+        val leftMostOneBit = powerOfTwo(significandSize - 1u)
+        if (significand >= leftMostOneBit) {
+            // normal
+
+            // Strips the hidden bit.
+            val correctedSignificand = significand - leftMostOneBit
+
+            val exponentBias = powerOfTwo(exponentSize - 1u) - BigInteger.ONE
+            val biasedExponent = exponent + exponentBias
+
+            val significandBv = mkBv(correctedSignificand, significandSize - 1u)
+            val exponentBv = mkBv(biasedExponent, exponentSize)
+            return mkFpBiased(
+                significand = significandBv,
+                biasedExponent = exponentBv,
+                signBit = sign,
+                sort = mkFpSort(exponentSize, significandSize)
+            )
+        } else {
+            // denormal
+            val significandBv = mkBv(significand, significandSize - 1u)
+            val botBiasedExponent = bvZero(exponentSize)
+            return mkFpBiased(
+                significand = significandBv,
+                biasedExponent = botBiasedExponent,
+                signBit = sign,
+                sort = mkFpSort(exponentSize, significandSize)
+            )
+        }
+    }
+
+    private fun significandNormalizationShift(
+        normalizationShiftSize: BigInteger,
+        significand: BigInteger
+    ): BigInteger {
+        return if (normalizationShiftSize < BigInteger.ZERO) {
+            // Right shift
+            var (res, stickyRem) = significand.divideAndRemainder(powerOfTwo(-normalizationShiftSize))
+            if (!stickyRem.isZero() && res.isEven()) {
+                res++
+            }
+            res
+        } else {
+            // Left shift
+            significand.mul2k(normalizationShiftSize)
+        }
+    }
+
+    private fun roundSignificand(
+        significand: BigInteger,
+        rm: KFpRoundingMode,
+        sign: Boolean
+    ): BigInteger {
+        var result = significand
+
+        // last bit
+        var sticky = !result.isEven()
+        result = result.div2k(1u)
+
+        // pre-last bit
+        sticky = sticky || !result.isEven()
+        result = result.div2k(1u)
+
+        // pre-pre-last bit
+        val round = !result.isEven()
+        result = result.div2k(1u)
+
+        val last = !result.isEven()
+
+        // The significand has the right size now, but we might have to increment it
+        // depending on the sign, the last/round/sticky bits, and the rounding mode.
+        val inc = when (rm) {
+            KFpRoundingMode.RoundNearestTiesToEven -> round && (last || sticky)
+            KFpRoundingMode.RoundNearestTiesToAway -> round
+            KFpRoundingMode.RoundTowardPositive -> (!sign && (round || sticky))
+            KFpRoundingMode.RoundTowardNegative -> (sign && (round || sticky))
+            KFpRoundingMode.RoundTowardZero -> false
+        }
+
+        if (inc) {
+            result++
+        }
+        return result
+    }
+
+    private fun KContext.fpRoundInf(
+        rm: KFpRoundingMode,
+        exponentSize: UInt,
+        significandSize: UInt,
+        sign: Boolean
+    ): KFpValue<*> {
+        val sort = mkFpSort(exponentSize, significandSize)
+        return if (!sign) {
+            if (rm == KFpRoundingMode.RoundTowardZero || rm == KFpRoundingMode.RoundTowardNegative) {
+                mkFpMaxValue(signBit = false, sort = sort)
+            } else {
+                mkFpInf(signBit = false, sort = sort)
+            }
+        } else {
+            if (rm == KFpRoundingMode.RoundTowardZero || rm == KFpRoundingMode.RoundTowardPositive) {
+                mkFpMaxValue(signBit = true, sort = sort)
+            } else {
+                mkFpInf(signBit = true, sort = mkFpSort(exponentSize, significandSize))
+            }
+        }
+    }
+
+    private fun powerOfTwo(power: BigInteger): BigInteger {
+        check(power.signum() >= 0) { "Negative power" }
+        val intPower = power.intValueExact()
+        val two = BigInteger.valueOf(2L)
+        return two.pow(intPower)
+    }
+
+    private fun BigInteger.isEven(): Boolean = toInt() % 2 == 0
+    private fun BigInteger.isZero(): Boolean = this == BigInteger.ZERO
+    private fun BigInteger.log2(): Int = bitLength() - 1
+    private fun BigInteger.mul2k(k: UInt): BigInteger = this * powerOfTwo(k)
+    private fun BigInteger.mul2k(k: BigInteger): BigInteger = this * powerOfTwo(k)
+    private fun BigInteger.div2k(k: UInt): BigInteger = this / powerOfTwo(k)
+
+    private fun fpMinExponentValue(exponent: UInt): BigInteger {
+        val exponentBias = powerOfTwo(exponent - 1u) - BigInteger.ONE
+        return (-exponentBias) + BigInteger.ONE
+    }
+
+    private fun fpMaxExponentValue(exponent: UInt): BigInteger {
+        return powerOfTwo(exponent - 1u) - BigInteger.ONE
     }
 
     private data class UnpackedFp(
-        val sort: KFpSort,
+        val exponentSize: UInt,
+        val significandSize: UInt,
         val sign: Boolean,
-        val unbiasedExponent: KBitVecValue<*>,
-        val significand: KBitVecValue<*>
+        val unbiasedExponent: BigInteger,
+        val significand: BigInteger
     )
 
-    private fun KContext.leadingOne(size: UInt): KBitVecValue<*> =
-        bvMinValueSigned(size)
+    private fun KFpValue<*>.unpack(normalizeSignificand: Boolean): UnpackedFp = when {
+        isNormal() -> unpackNormalValue()
+        !normalizeSignificand -> unpackSubnormalValueWithoutSignificandNormalization()
+        else -> unpackSubnormalValueAndNormalizeSignificand()
+    }
 
-    private fun KFpValue<*>.unpack(): UnpackedFp {
-        val significandWithLeadingZero = significand.zeroExtension(sort.significandBits - significand.sort.sizeBits)
-        val leadingOne = ctx.leadingOne(sort.significandBits)
-        val significandWithLeadingOne = significandWithLeadingZero.bitwiseOr(leadingOne)
-        if (!isSubnormal()) {
-            return UnpackedFp(
-                sort = sort,
-                sign = signBit,
-                unbiasedExponent = ctx.unbiasFpExponent(biasedExponent, sort.exponentBits),
-                significand = significandWithLeadingOne
-            )
+    private fun KFpValue<*>.unpackNormalValue(): UnpackedFp {
+        val exponentBias = powerOfTwo(sort.exponentBits - 1u) - BigInteger.ONE
+        val biasedExponentValue = biasedExponent.bigIntValue().normalizeValue(sort.exponentBits)
+        val unbiasedExponent = biasedExponentValue - exponentBias
+
+        val significandValue = significand.bigIntValue().normalizeValue(sort.significandBits - 1u)
+        val significandWithHiddenBit = significandValue + powerOfTwo(sort.significandBits - 1u)
+
+        return UnpackedFp(
+            sort.exponentBits, sort.significandBits, signBit, unbiasedExponent, significandWithHiddenBit
+        )
+    }
+
+    private fun KFpValue<*>.unpackSubnormalValueWithoutSignificandNormalization(): UnpackedFp {
+        val normalizedExponent = fpMinExponentValue(sort.exponentBits)
+        val significandValue = significand.bigIntValue().normalizeValue(sort.significandBits - 1u)
+        return UnpackedFp(
+            sort.exponentBits, sort.significandBits, signBit, normalizedExponent, significandValue
+        )
+    }
+
+    private fun KFpValue<*>.unpackSubnormalValueAndNormalizeSignificand(): UnpackedFp {
+        var normalizedExponent = fpMinExponentValue(sort.exponentBits)
+
+        var significandValue = significand.bigIntValue().normalizeValue(sort.significandBits - 1u)
+        val normalizedSignificand = if (significandValue == BigInteger.ZERO) {
+            significandValue
         } else {
-            val subnormalBase = UnpackedFp(
-                sort = sort,
-                sign = signBit,
-                unbiasedExponent = sort.minNormalExponent(),
-                significand = significandWithLeadingZero
-            )
-            return subnormalBase.normalizeUp(sort)
+            val p = powerOfTwo(sort.significandBits - 1u)
+            while (p > significandValue) {
+                normalizedExponent--
+                significandValue = significandValue.mul2k(1u)
+            }
+            significandValue
         }
+
+        return UnpackedFp(
+            sort.exponentBits, sort.significandBits, signBit, normalizedExponent, normalizedSignificand
+        )
     }
 
-    private fun UnpackedFp.pack(): KFpValue<*> = with(sort.ctx) {
-        val inNormalRange = sort.minNormalExponent().signedLessOrEqual(unbiasedExponent)
-        val inSubnormalRange = !inNormalRange
-
-        val biasedExponent = biasFpExponent(unbiasedExponent, sort.exponentBits)
-
-
-        TODO()
-    }
-
-    private fun KFpSort.minNormalExponent(): KBitVecValue<*> = with(ctx) {
-        val bias = mkBv(exponentShiftSize(), exponentBits)
-        -(bias - bvOne(exponentBits))
-    }
-
-    private data class ExponentCompareInfo(
-        val leftIsGreater: Boolean,
-        val maxExponent: KBitVecValue<*>,
-        val absoluteExponentDifference: KBitVecValue<*>,
-        val diffIsZero: Boolean,
-        val diffIsOne: Boolean,
-        val diffIsGreaterThanPrecision: Boolean,
-        val diffIsTwoToPrecision: Boolean,
-        val diffIsGreaterThanPrecisionPlusOne: Boolean
-    )
-
-    data class CustomRounderInfo(
-        val noOverflow: Boolean,
-        val noUnderflow: Boolean,
-        val exact: Boolean,
-        val subnormalExact: Boolean,
-        val noSignificandOverflow: Boolean
-    )
-
-    private fun KBitVecValue<*>.stickyRightShift(shift: KBitVecValue<*>): KBitVecValue<*> = shiftRightArith(shift)
-
-    private fun KBitVecValue<*>.rightShiftStickyBit(shift: KBitVecValue<*>): KBitVecValue<*> {
-        val condition = shift.orderEncode().bitwiseAnd(this).isZero()
-        return if (condition) ctx.bvZero(sort.sizeBits) else ctx.bvOne(sort.sizeBits)
-    }
-
-    private fun KBitVecValue<*>.orderEncode(): KBitVecValue<*> = with(ctx) {
-        val width = sort.sizeBits
-        val extended = zeroExtension(1u)
-        val one = bvOne(width + 1u)
-        (one.shiftLeft(extended) - one).extractBv(width.toInt() - 1, 0)
-    }
 }

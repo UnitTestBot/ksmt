@@ -290,9 +290,6 @@ import org.ksmt.expr.KFpValue
 import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KRealToFpExpr
 import org.ksmt.sort.KFpRoundingModeSort
-import org.ksmt.utils.BvUtils.bvMaxValueSigned
-import org.ksmt.utils.BvUtils.minus
-import org.ksmt.utils.BvUtils.plus
 import org.ksmt.utils.FpUtils.biasFpExponent
 import org.ksmt.utils.FpUtils.fpInfExponentBiased
 import org.ksmt.utils.FpUtils.fpInfSignificand
@@ -300,6 +297,7 @@ import org.ksmt.utils.FpUtils.fpNanExponentBiased
 import org.ksmt.utils.FpUtils.fpNanSignificand
 import org.ksmt.utils.FpUtils.fpZeroExponentBiased
 import org.ksmt.utils.FpUtils.fpZeroSignificand
+import org.ksmt.utils.FpUtils.isNan
 import org.ksmt.utils.FpUtils.unbiasFpExponent
 import org.ksmt.utils.booleanSignBit
 import org.ksmt.utils.cast
@@ -308,7 +306,6 @@ import org.ksmt.utils.extractSignificand
 import org.ksmt.utils.getHalfPrecisionExponent
 import org.ksmt.utils.halfPrecisionSignificand
 import org.ksmt.utils.normalizeValue
-import org.ksmt.utils.powerOfTwo
 import org.ksmt.utils.signBit
 import org.ksmt.utils.toBigInteger
 import org.ksmt.utils.toULongValue
@@ -1394,14 +1391,35 @@ open class KContext(
         val exponent = value.getHalfPrecisionExponent(isBiased = false)
         val significand = value.halfPrecisionSignificand
         val normalizedValue = constructFp16Number(exponent.toLong(), significand.toLong(), value.signBit)
-        return fp16Cache.createIfContextActive { KFp16Value(this, normalizedValue) }
+        return if (KFp16Value(this, normalizedValue).isNan()) {
+            mkFp16NaN()
+        } else {
+            mkFp16WithoutNaNCheck(normalizedValue)
+        }
     }
+    fun mkFp16NaN(): KFp16Value = mkFp16WithoutNaNCheck(Float.NaN)
+    private fun mkFp16WithoutNaNCheck(value: Float): KFp16Value = fp16Cache.createIfContextActive { KFp16Value(this, value) }
 
-    fun mkFp32(value: Float): KFp32Value = fp32Cache.createIfContextActive { KFp32Value(this, value) }
-    fun mkFp64(value: Double): KFp64Value = fp64Cache.createIfContextActive { KFp64Value(this, value) }
+    fun mkFp32(value: Float): KFp32Value = if (value.isNaN()) mkFp32NaN() else mkFp32WithoutNaNCheck(value)
+    fun mkFp32NaN(): KFp32Value = mkFp32WithoutNaNCheck(Float.NaN)
+    private fun mkFp32WithoutNaNCheck(value: Float): KFp32Value = fp32Cache.createIfContextActive{ KFp32Value(this, value) }
 
+    fun mkFp64(value: Double): KFp64Value = if (value.isNaN()) mkFp64NaN() else mkFp64WithoutNaNCheck(value)
+    fun mkFp64NaN(): KFp64Value = mkFp64WithoutNaNCheck(Double.NaN)
+    private fun mkFp64WithoutNaNCheck(value: Double): KFp64Value = fp64Cache.createIfContextActive{ KFp64Value(this,value)
+}
     fun mkFp128Biased(significand: KBitVecValue<*>, biasedExponent: KBitVecValue<*>, signBit: Boolean): KFp128Value =
-        fp128Cache.createIfContextActive {
+        if (KFp128Value(this, significand, biasedExponent, signBit).isNan()) {
+            mkFp128NaN()
+        } else {
+            mkFp128BiasedWithoutNaNCheck(significand, biasedExponent, signBit)
+        }
+    fun mkFp128NaN(): KFp128Value = mkFpNan(mkFp128Sort()).cast()
+    private fun mkFp128BiasedWithoutNaNCheck(
+        significand: KBitVecValue<*>,
+        biasedExponent: KBitVecValue<*>,
+        signBit: Boolean
+    ): KFp128Value = fp128Cache.createIfContextActive {
             ensureContextMatch(significand, biasedExponent)
             KFp128Value(this, significand, biasedExponent, signBit)
         }
@@ -1479,7 +1497,7 @@ open class KContext(
     ): KFpValue<T> {
         val intSignBit = if (signBit) 1 else 0
 
-        return when (mkFpSort(exponentSize, significandSize)) {
+        return when (val sort = mkFpSort(exponentSize, significandSize)) {
             is KFp16Sort -> {
                 val number = constructFp16NumberBiased(biasedExponent.longValue(), significand.longValue(), intSignBit)
 
@@ -1500,9 +1518,50 @@ open class KContext(
 
             is KFp128Sort -> mkFp128Biased(significand, biasedExponent, signBit).cast()
             else -> {
+                val valueForNaNCheck = KFpCustomSizeValue(this,
+                    significandSize, exponentSize, significand, biasedExponent, signBit
+                )
+                if (valueForNaNCheck.isNan()) {
+                    mkFpNan(sort)
+                } else {
+                    mkFpCustomSizeBiasedWithoutNaNCheck(sort, significand, biasedExponent, signBit)
+                }.cast()
+            }
+        }
+    }
+
+    private fun <T : KFpSort> mkFpCustomSizeBiasedWithoutNaNCheck(
+        sort: T,
+        significand: KBitVecValue<*>,
+        biasedExponent: KBitVecValue<*>,
+        signBit: Boolean
+    ): KFpValue<T>  {
+        val intSignBit = if (signBit) 1 else 0
+
+        return when (sort) {
+            is KFp16Sort -> {
+                val number = constructFp16NumberBiased(biasedExponent.longValue(), significand.longValue(), intSignBit)
+
+                mkFp16WithoutNaNCheck(number).cast()
+            }
+
+            is KFp32Sort -> {
+                val number = constructFp32NumberBiased(biasedExponent.longValue(), significand.longValue(), intSignBit)
+
+                mkFp32WithoutNaNCheck(number).cast()
+            }
+
+            is KFp64Sort -> {
+                val number = constructFp64NumberBiased(biasedExponent.longValue(), significand.longValue(), intSignBit)
+
+                mkFp64WithoutNaNCheck(number).cast()
+            }
+
+            is KFp128Sort -> mkFp128BiasedWithoutNaNCheck(significand, biasedExponent, signBit).cast()
+            else -> {
                 fpCustomSizeCache.createIfContextActive {
                     ensureContextMatch(significand, biasedExponent)
-                    KFpCustomSizeValue(this, significandSize, exponentSize, significand, biasedExponent, signBit)
+                    KFpCustomSizeValue(this, sort.significandBits, sort.exponentBits, significand, biasedExponent, signBit)
                 }.cast()
             }
         }
@@ -1529,20 +1588,8 @@ open class KContext(
 
     @Suppress("MagicNumber")
     private fun constructFp16Number(exponent: Long, significand: Long, intSignBit: Int): Float {
-        // get sign and `body` of the unbiased exponent
-        val exponentSign = (exponent.toInt() shr 4) and 1
-        val otherExponent = exponent.toInt() and 0b1111
-
-        // get fp16 significand part -- last teb bits (eleventh stored implicitly)
-        val significandBits = significand.toInt() and 0b1111_1111_11
-
-        // Transform fp16 exponent into fp32 exponent adding three zeroes between the sign and the body
-        // Then add the bias for fp32 and apply the mask to avoid overflow of the eight bits
-        val biasedFloatExponent = (((exponentSign shl 7) or otherExponent) + KFp32Sort.exponentShiftSize) and 0xff
-
-        val bits = (intSignBit shl 31) or (biasedFloatExponent shl 23) or (significandBits shl 13)
-
-        return intBitsToFloat(bits)
+        val biasedExponent = exponent + KFp16Sort.exponentShiftSize
+        return constructFp16NumberBiased(biasedExponent, significand, intSignBit)
     }
 
     @Suppress("MagicNumber")
@@ -1551,9 +1598,11 @@ open class KContext(
         val exponentSign = (biasedExponent.toInt() shr 4) and 1
         val otherExponent = biasedExponent.toInt() and 0b1111
 
-        // Transform fp16 exponent into fp32 exponent adding three zeroes between the sign and the body
+        // Transform fp16 exponent into fp32 exponent adding three sign bits between the sign and the body
         // Then normalize exponent with 0xff
-        val biasedFloatExponent = ((exponentSign shl 7) or otherExponent) and 0xff
+        // We use sign bits to keep value compatible with Float.NaN, Inf, Zero
+        val signBits = (exponentSign shl 7) or (exponentSign shl 6) or (exponentSign shl 5) or (exponentSign shl 4)
+        val biasedFloatExponent = (signBits or otherExponent) and 0xff
 
         // get fp16 significand part -- last 10 bits
         val significandBits = significand.toInt() and 0b1111_1111_11
@@ -1740,12 +1789,11 @@ open class KContext(
     }
 
     fun <T : KFpSort> mkFpNan(sort: T): KFpValue<T> = when (sort) {
-        is KFp16Sort -> mkFp16(Float.NaN).cast()
-        is KFp32Sort -> mkFp32(Float.NaN).cast()
-        is KFp64Sort -> mkFp64(Double.NaN).cast()
-        else -> mkFpCustomSizeBiased(
-            exponentSize = sort.exponentBits,
-            significandSize = sort.significandBits,
+        is KFp16Sort -> mkFp16NaN().cast()
+        is KFp32Sort -> mkFp32NaN().cast()
+        is KFp64Sort -> mkFp64NaN().cast()
+        else -> mkFpCustomSizeBiasedWithoutNaNCheck(
+            sort = sort,
             biasedExponent = fpNanExponentBiased(sort),
             significand = fpNanSignificand(sort),
             signBit = false

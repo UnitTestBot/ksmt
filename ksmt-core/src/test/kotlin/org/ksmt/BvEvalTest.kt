@@ -6,7 +6,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.ksmt.expr.KApp
-import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.rewrite.simplify.KExprSimplifier
@@ -15,16 +14,14 @@ import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KSort
-import org.ksmt.utils.BvUtils
 import org.ksmt.utils.uncheckedCast
-import kotlin.random.Random
 import kotlin.random.nextInt
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @Execution(ExecutionMode.CONCURRENT)
-class BvEvalTest {
+class BvEvalTest : ExpressionEvalTest() {
 
     @ParameterizedTest
     @MethodSource("bvSizes")
@@ -274,42 +271,6 @@ class BvEvalTest {
         }
     }
 
-    private fun <S : KBvSort> KContext.randomBvValues(sort: S) = sequence<KBitVecValue<S>> {
-        // special values
-        with(BvUtils) {
-            yield(bvMaxValueSigned(sort.sizeBits).uncheckedCast())
-            yield(bvMaxValueUnsigned(sort.sizeBits).uncheckedCast())
-            yield(bvMinValueSigned(sort.sizeBits).uncheckedCast())
-            yield(bvZero(sort.sizeBits).uncheckedCast())
-            yield(bvOne(sort.sizeBits).uncheckedCast())
-        }
-
-        // small positive values
-        repeat(5) {
-            val value = random.nextInt(1..20)
-            yield(mkBv(value, sort))
-        }
-
-        // small negative values
-        repeat(5) {
-            val value = random.nextInt(1..20)
-            yield(mkBv(-value, sort))
-        }
-
-        // random values
-        repeat(30) {
-            val binaryValue = String(CharArray(sort.sizeBits.toInt()) {
-                if (random.nextBoolean()) '1' else '0'
-            })
-            yield(mkBv(binaryValue, sort.sizeBits).uncheckedCast())
-        }
-    }
-
-    private fun <S : KBvSort> KContext.nonZeroRandomValues(sort: S): Sequence<KBitVecValue<S>> {
-        val zero = mkBv(0, sort)
-        return randomBvValues(sort).filter { it != zero }
-    }
-
     private fun <S : KBvSort, T : KSort> testOperation(
         size: Int,
         operation: KContext.(KExpr<S>) -> KExpr<T>
@@ -337,7 +298,7 @@ class BvEvalTest {
         operation: KContext.(KExpr<S>, KExpr<S>) -> KExpr<T>
     ) = runTest(size) { sort: S, checker ->
         randomBvValues(sort).forEach { a ->
-            nonZeroRandomValues(sort).forEach { b ->
+            randomBvNonZeroValues(sort).forEach { b ->
                 val expr = operation(a, b)
                 checker.check(expr)
             }
@@ -395,8 +356,6 @@ class BvEvalTest {
     }
 
     companion object {
-        private val random = Random(42)
-
         private val bvSizesToTest by lazy {
             val context = KContext()
             val smallCustomBv = context.mkBvSort(17u)

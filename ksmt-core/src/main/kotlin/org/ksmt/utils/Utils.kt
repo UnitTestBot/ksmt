@@ -62,22 +62,14 @@ val Float.halfPrecisionSignificand: Int
  */
 @Suppress("MagicNumber")
 fun Float.getHalfPrecisionExponent(isBiased: Boolean): Int {
-    // take an unbiased exponent from the given value
-    val unbiasedFloatExponent = getExponent(isBiased = false)
-    val unbiasedFp16Exponent = when {
-        unbiasedFloatExponent <= -KFp16Sort.exponentShiftSize -> -KFp16Sort.exponentShiftSize
-        unbiasedFloatExponent >= KFp16Sort.exponentShiftSize + 1 -> KFp16Sort.exponentShiftSize + 1
-        else -> {
-            // extract a sign bit from it -- fifth one
-            val signBit = (unbiasedFloatExponent shr 4) and 1
-            // take remaining bits of the exponent
-            val otherBits = unbiasedFloatExponent and 0b1111
-            // create an unbiased fp16 exponent containing five bits
-            (signBit shl 4) or otherBits
-        }
-    }
+    val biasedFloatExponent = getExponent(isBiased = true)
 
-    return if (isBiased) unbiasedFp16Exponent + KFp16Sort.exponentShiftSize else unbiasedFp16Exponent
+    // Cancel out unused three bits between sign and others
+    val fp16ExponentSign = (biasedFloatExponent and 0x80) shr 3
+    val fp16ExponentOtherBits = biasedFloatExponent and 0x0f
+    val biasedFloat16Exponent = fp16ExponentSign or fp16ExponentOtherBits
+
+    return if (isBiased)  biasedFloat16Exponent else biasedFloat16Exponent - KFp16Sort.exponentShiftSize
 }
 
 /**
