@@ -153,7 +153,7 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
         } catch (ex: YicesException) {
             throw KSolverException(ex)
         } finally {
-            timer.cancel()
+            task.cancel()
         }
     }
 
