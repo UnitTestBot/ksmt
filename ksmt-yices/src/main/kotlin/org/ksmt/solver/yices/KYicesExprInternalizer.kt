@@ -159,10 +159,16 @@ import java.math.BigInteger
 open class KYicesExprInternalizer(
     private val ctx: KContext,
     private val yicesCtx: KYicesContext,
-    private val sortInternalizer: KYicesSortInternalizer,
-    private val declInternalizer: KYicesDeclInternalizer,
-    private val variableInternalizer: KYicesVariableInternalizer
 ) : KExprInternalizerBase<YicesTerm>() {
+
+    private val sortInternalizer: KYicesSortInternalizer by lazy { KYicesSortInternalizer(yicesCtx) }
+    private val declInternalizer: KYicesDeclInternalizer by lazy {
+        KYicesDeclInternalizer(yicesCtx, sortInternalizer)
+    }
+    private val variableInternalizer: KYicesVariableInternalizer by lazy {
+        KYicesVariableInternalizer(yicesCtx, sortInternalizer)
+    }
+
     override fun findInternalizedExpr(expr: KExpr<*>): YicesTerm? = yicesCtx.findInternalizedExpr(expr)
 
     override fun saveInternalizedExpr(expr: KExpr<*>, internalized: YicesTerm) {
@@ -742,7 +748,7 @@ open class KYicesExprInternalizer(
     }
 
     override fun transform(expr: KInt32NumExpr): KExpr<KIntSort> = with(expr) {
-        transform{ Terms.intConst(value.toLong()) }
+        transform { Terms.intConst(value.toLong()) }
     }
 
     override fun transform(expr: KInt64NumExpr): KExpr<KIntSort> = with(expr) {
@@ -767,13 +773,13 @@ open class KYicesExprInternalizer(
         }
     }
 
-    override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> = with (ctx) {
+    override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> = with(ctx) {
         internalizeQuantifier(expr, ::mkExistentialQuantifier) { body, variables ->
             Terms.exists(variables, body)
         }
     }
 
-    override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> = with (ctx) {
+    override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> = with(ctx) {
         internalizeQuantifier(expr, ::mkUniversalQuantifier) { body, variables ->
             Terms.forall(variables, body)
         }

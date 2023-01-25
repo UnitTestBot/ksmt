@@ -101,12 +101,7 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
 
     private fun internalizeAndConvertYices(assertions: List<KExpr<KBoolSort>>): List<KExpr<KBoolSort>> {
         KTestYicesContext().use { internContext ->
-            val sortInternalizer = KYicesSortInternalizer(internContext)
-            val internalizer = KYicesExprInternalizer(
-                ctx, internContext, sortInternalizer,
-                KYicesDeclInternalizer(internContext, sortInternalizer),
-                KYicesVariableInternalizer(internContext, sortInternalizer)
-            )
+            val internalizer = KYicesExprInternalizer(ctx, internContext)
 
             val yicesAssertions = with(internalizer) {
                 assertions.map { it.internalize() }

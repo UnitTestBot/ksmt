@@ -1,6 +1,5 @@
 package org.ksmt.solver.yices
 
-import com.sri.yices.Context
 import com.sri.yices.Yices
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
@@ -8,7 +7,6 @@ import org.ksmt.sort.KSort
 import org.ksmt.utils.NativeLibraryLoader
 
 open class KYicesContext : AutoCloseable {
-    val nativeContext = Context()
     private var isClosed = false
 
     protected val expressions = HashMap<KExpr<*>, YicesTerm>()
@@ -78,7 +76,6 @@ open class KYicesContext : AutoCloseable {
 
     override fun close() {
         isClosed = true
-        nativeContext.close()
     }
 
     companion object {

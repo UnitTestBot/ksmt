@@ -71,7 +71,7 @@ class TestProtocolModel private constructor(
         private val __LongListSerializer = FrameworkMarshallers.Long.list()
         private val __IntNullableSerializer = FrameworkMarshallers.Int.nullable()
         
-        const val serializationHash = 3379332879384107871L
+        const val serializationHash = -5618680705340996311L
         
     }
     override val serializersOwner: ISerializersOwner get() = TestProtocolModel
@@ -108,7 +108,7 @@ class TestProtocolModel private constructor(
      * Internalize and convert expressions using Yices converter/internalizer
      */
     val internalizeAndConvertYices: RdCall<TestInternalizeAndConvertParams, TestConversionResult> get() = _internalizeAndConvertYices
-
+    
     /**
      * Create solver
      */
@@ -143,7 +143,7 @@ class TestProtocolModel private constructor(
      * Add assumptions for the subsequent equality check
      */
     val addEqualityCheckAssumption: RdCall<EqualityCheckAssumptionsParams, Unit> get() = _addEqualityCheckAssumption
-
+    
     /**
      * Check added equalities
      */
@@ -153,7 +153,7 @@ class TestProtocolModel private constructor(
      * Find first failed equality check
      */
     val findFirstFailedEquality: RdCall<Int, Int?> get() = _findFirstFailedEquality
-
+    
     /**
      * Create true expression
      */
@@ -279,23 +279,23 @@ data class EqualityCheckAssumptionsParams (
     val assumption: org.ksmt.KAst
 ) : IPrintable {
     //companion
-
+    
     companion object : IMarshaller<EqualityCheckAssumptionsParams> {
         override val _type: KClass<EqualityCheckAssumptionsParams> = EqualityCheckAssumptionsParams::class
-
+        
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): EqualityCheckAssumptionsParams  {
             val solver = buffer.readInt()
             val assumption = (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer)
             return EqualityCheckAssumptionsParams(solver, assumption)
         }
-
+        
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: EqualityCheckAssumptionsParams)  {
             buffer.writeInt(value.solver)
             (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, value.assumption)
         }
-
-
+        
+        
     }
     //fields
     //methods
@@ -305,12 +305,12 @@ data class EqualityCheckAssumptionsParams (
     override fun equals(other: Any?): Boolean  {
         if (this === other) return true
         if (other == null || other::class != this::class) return false
-
+        
         other as EqualityCheckAssumptionsParams
-
+        
         if (solver != other.solver) return false
         if (assumption != other.assumption) return false
-
+        
         return true
     }
     //hash code trait

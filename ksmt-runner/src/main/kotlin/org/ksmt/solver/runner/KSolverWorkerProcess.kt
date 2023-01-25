@@ -20,6 +20,8 @@ import org.ksmt.runner.serializer.AstSerializationCtx
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolverConfiguration
+import org.ksmt.solver.yices.KYicesSolver
+import org.ksmt.solver.yices.KYicesSolverConfiguration
 import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.solver.z3.KZ3SolverConfiguration
 import org.ksmt.sort.KBoolSort
@@ -49,6 +51,7 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
             workerSolver = when (params.type) {
                 SolverType.Z3 -> KZ3Solver(ctx)
                 SolverType.Bitwuzla -> KBitwuzlaSolver(ctx)
+                SolverType.Yices -> KYicesSolver(ctx)
             }
         }
         deleteSolver.measureExecutionForTermination {
@@ -63,6 +66,7 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
                 when (this) {
                     is KZ3SolverConfiguration -> config.forEach { addUniversalParam(it) }
                     is KBitwuzlaSolverConfiguration -> config.forEach { addUniversalParam(it) }
+                    is KYicesSolverConfiguration -> config.forEach { addUniversalParam(it) }
                     else -> error("Unexpected configuration: ${this::class}")
                 }
             }

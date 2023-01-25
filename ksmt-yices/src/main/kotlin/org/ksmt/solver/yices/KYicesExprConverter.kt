@@ -179,7 +179,7 @@ open class KYicesExprConverter(
             Constructor.ARITH_CONSTANT -> convert {
                 val value = Terms.arithConstValue(expr)
 
-                mkRealNum(mkIntNum(value.numerator), mkIntNum(value.denominator))
+                mkRealNum(value)
             }
 
             Constructor.BV_CONSTANT -> convert {
@@ -215,7 +215,7 @@ open class KYicesExprConverter(
             }
 
             Pair(
-                mkRealNum(mkIntNum(component.constValue.numerator), mkIntNum(component.constValue.denominator)),
+                mkRealNum(component.constValue),
                 component.term
             )
         }.unzip()
