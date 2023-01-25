@@ -143,10 +143,10 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
     }
 
     private inline fun <T> withTimer(timeout: Duration, body: () -> T): T {
-        val delay = if (timeout.isFinite()) timeout.inWholeMilliseconds else Long.MAX_VALUE
         val task = StopSearchTask()
 
-        timer.schedule(task, delay)
+        if (timeout.isFinite())
+            timer.schedule(task, timeout.inWholeMilliseconds)
 
         return try {
             body()
