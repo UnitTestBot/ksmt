@@ -11,7 +11,6 @@ import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.mkFreshConst
-import java.util.TreeSet
 
 class KCvc5Model(
     private val ctx: KContext,
@@ -105,7 +104,7 @@ class KCvc5Model(
 
             val cvc5SortUniverse = Cvc5UninterpretedSortConstsCollector(cvc5SortInterps).collect(cvc5Sort)
 
-            with(converter) { cvc5SortUniverse.mapTo(TreeSet()) { it.convertExpr() } }
+            with(converter) { cvc5SortUniverse.mapTo(hashSetOf()) { it.convertExpr() } }
         }
 
     override fun detach(): KModel {
