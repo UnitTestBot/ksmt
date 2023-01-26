@@ -71,6 +71,8 @@ import org.ksmt.utils.BvUtils.bvZero
 import org.ksmt.utils.BvUtils.bigIntValue
 import org.ksmt.utils.BvUtils.concatBv
 import org.ksmt.utils.BvUtils.extractBv
+import org.ksmt.utils.BvUtils.isBvOne
+import org.ksmt.utils.BvUtils.isBvZero
 import org.ksmt.utils.BvUtils.minus
 import org.ksmt.utils.BvUtils.plus
 import org.ksmt.utils.BvUtils.powerOfTwoOrNull
@@ -305,7 +307,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         }
 
         // (* 0 a) ==> 0
-        if (constantValue == zero) {
+        if (constantValue.isBvZero()) {
             return@simplifyApp zero.uncheckedCast()
         }
 
@@ -314,7 +316,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         }
 
         // (* 1 a) ==> a
-        if (constantValue == one) {
+        if (constantValue.isBvOne()) {
             return@simplifyApp resultParts.reduceBinaryBvExpr(::mkBvMulExpr)
         }
 
@@ -337,17 +339,16 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     }
 
     override fun <T : KBvSort> transform(expr: KBvSignedDivExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
-        val size = expr.sort.sizeBits
         val lhsValue = lhs as? KBitVecValue<T>
         val rhsValue = rhs as? KBitVecValue<T>
 
         if (rhsValue != null) {
             // ignore zero
-            if (rhsValue == bvZero(size)) {
+            if (rhsValue.isBvZero()) {
                 return@simplifyApp mkBvSignedDivExpr(lhs, rhs)
             }
 
-            if (rhsValue == bvOne(size)) {
+            if (rhsValue.isBvOne()) {
                 return@simplifyApp lhs
             }
 
@@ -366,11 +367,11 @@ interface KBvExprSimplifier : KExprSimplifierBase {
 
         if (rhsValue != null) {
             // ignore zero
-            if (rhsValue == bvZero(size)) {
+            if (rhsValue.isBvZero()) {
                 return@simplifyApp mkBvUnsignedDivExpr(lhs, rhs)
             }
 
-            if (rhsValue == bvOne(size)) {
+            if (rhsValue.isBvOne()) {
                 return@simplifyApp lhs
             }
 
@@ -395,11 +396,11 @@ interface KBvExprSimplifier : KExprSimplifierBase {
 
         if (rhsValue != null) {
             // ignore zero
-            if (rhsValue == bvZero(size)) {
+            if (rhsValue.isBvZero()) {
                 return@simplifyApp mkBvSignedRemExpr(lhs, rhs)
             }
 
-            if (rhsValue == bvOne(size)) {
+            if (rhsValue.isBvOne()) {
                 return@simplifyApp bvZero(size).uncheckedCast()
             }
 
@@ -418,11 +419,11 @@ interface KBvExprSimplifier : KExprSimplifierBase {
 
         if (rhsValue != null) {
             // ignore zero
-            if (rhsValue == bvZero(size)) {
+            if (rhsValue.isBvZero()) {
                 return@simplifyApp mkBvUnsignedRemExpr(lhs, rhs)
             }
 
-            if (rhsValue == bvOne(size)) {
+            if (rhsValue.isBvOne()) {
                 return@simplifyApp bvZero(size).uncheckedCast()
             }
 
@@ -453,11 +454,11 @@ interface KBvExprSimplifier : KExprSimplifierBase {
 
         if (rhsValue != null) {
             // ignore zero
-            if (rhsValue == bvZero(size)) {
+            if (rhsValue.isBvZero()) {
                 return@simplifyApp mkBvSignedModExpr(lhs, rhs)
             }
 
-            if (rhsValue == bvOne(size)) {
+            if (rhsValue.isBvOne()) {
                 return@simplifyApp bvZero(size).uncheckedCast()
             }
 
@@ -934,7 +935,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
 
         if (shiftValue != null) {
             // (x << 0) ==> x
-            if (shiftValue == bvZero(size)) {
+            if (shiftValue.isBvZero()) {
                 return@simplifyApp arg
             }
 
@@ -996,7 +997,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
 
             if (shiftValue != null) {
                 // (x >>> 0) ==> x
-                if (shiftValue == bvZero(size)) {
+                if (shiftValue.isBvZero()) {
                     return@simplifyApp arg
                 }
 
@@ -1037,13 +1038,12 @@ interface KBvExprSimplifier : KExprSimplifierBase {
 
     override fun <T : KBvSort> transform(expr: KBvArithShiftRightExpr<T>): KExpr<T> =
         simplifyApp(expr) { (arg, shift) ->
-            val size = expr.sort.sizeBits
             val argValue = arg as? KBitVecValue<T>
             val shiftValue = shift as? KBitVecValue<T>
 
             if (shiftValue != null) {
                 // (x >> 0) ==> x
-                if (shiftValue == bvZero(size)) {
+                if (shiftValue.isBvZero()) {
                     return@simplifyApp arg
                 }
 
@@ -1287,17 +1287,16 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         val size = lhs.sort.sizeBits
         val lhsValue = lhs as? KBitVecValue<T>
         val rhsValue = rhs as? KBitVecValue<T>
-        val zero = bvZero(size)
+
+        if (lhsValue != null && (lhsValue.isBvZero() || (size != 1u && lhsValue.isBvOne()))) {
+            return trueExpr
+        }
+
+        if (rhsValue != null && (rhsValue.isBvZero() || (size != 1u && rhsValue.isBvOne()))) {
+            return trueExpr
+        }
+
         val one = bvOne(size)
-
-        if (lhsValue != null && (lhsValue == zero || (size != 1u && lhsValue == one))) {
-            return trueExpr
-        }
-
-        if (rhsValue != null && (rhsValue == zero || (size != 1u && rhsValue == one))) {
-            return trueExpr
-        }
-
         if (lhsValue != null && rhsValue != null) {
             val lhsSign = lhsValue.stringValue[0] == '1'
             val rhsSign = rhsValue.stringValue[0] == '1'
@@ -1353,17 +1352,16 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         val size = lhs.sort.sizeBits
         val lhsValue = lhs as? KBitVecValue<T>
         val rhsValue = rhs as? KBitVecValue<T>
+
+        if (lhsValue != null && (lhsValue.isBvZero() || (lhsValue.isBvOne()))) {
+            return trueExpr
+        }
+
+        if (rhsValue != null && (rhsValue.isBvZero() || (rhsValue.isBvOne()))) {
+            return trueExpr
+        }
+
         val zero = bvZero(size)
-        val one = bvOne(size)
-
-        if (lhsValue != null && (lhsValue == zero || (lhsValue == one))) {
-            return trueExpr
-        }
-
-        if (rhsValue != null && (rhsValue == zero || (rhsValue == one))) {
-            return trueExpr
-        }
-
         if (lhsValue != null && rhsValue != null) {
             val longLhs = concatBv(zero, lhsValue)
             val longRhs = concatBv(zero, rhsValue)

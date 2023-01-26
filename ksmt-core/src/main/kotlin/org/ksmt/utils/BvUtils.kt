@@ -9,7 +9,6 @@ import org.ksmt.expr.KBitVec8Value
 import org.ksmt.expr.KBitVecCustomValue
 import org.ksmt.expr.KBitVecNumberValue
 import org.ksmt.expr.KBitVecValue
-import org.ksmt.utils.BvUtils.bvZero
 import java.math.BigInteger
 import kotlin.experimental.inv
 import kotlin.experimental.or
@@ -17,44 +16,87 @@ import kotlin.experimental.xor
 
 object BvUtils {
 
-    fun KContext.bvMinValueSigned(size: UInt): KBitVecValue<*> = when (size.toInt()) {
-        1 -> mkBv(true) // sign bit 1
-        Byte.SIZE_BITS -> mkBv(Byte.MIN_VALUE)
-        Short.SIZE_BITS -> mkBv(Short.MIN_VALUE)
-        Int.SIZE_BITS -> mkBv(Int.MIN_VALUE)
-        Long.SIZE_BITS -> mkBv(Long.MIN_VALUE)
-        else -> mkBv(powerOfTwo(size - 1u), size)
+    private val bvMinValueSigned = object : BvSpecialValueSource {
+        override val bv1: Boolean = true // sign bit 1
+        override val bv8: Byte = Byte.MIN_VALUE
+        override val bv16: Short = Short.MIN_VALUE
+        override val bv32: Int = Int.MIN_VALUE
+        override val bv64: Long = Long.MIN_VALUE
+
+        override fun bvDefault(size: UInt): BigInteger =
+            powerOfTwo(size - 1u)
     }
 
-    fun KContext.bvMaxValueSigned(size: UInt): KBitVecValue<*> = when (size.toInt()) {
-        1 -> mkBv(false) // sign bit 0
-        Byte.SIZE_BITS -> mkBv(Byte.MAX_VALUE)
-        Short.SIZE_BITS -> mkBv(Short.MAX_VALUE)
-        Int.SIZE_BITS -> mkBv(Int.MAX_VALUE)
-        Long.SIZE_BITS -> mkBv(Long.MAX_VALUE)
-        else -> mkBv(powerOfTwo(size - 1u) - BigInteger.ONE, size)
+    fun KContext.bvMinValueSigned(size: UInt): KBitVecValue<*> = mkBvSpecialValue(size, bvMinValueSigned)
+    fun KBitVecValue<*>.isBvMinValueSigned(): Boolean = isBvSpecialValue(bvMinValueSigned)
+
+    private val bvMaxValueSigned = object : BvSpecialValueSource {
+        override val bv1: Boolean = false // sign bit 0
+        override val bv8: Byte = Byte.MAX_VALUE
+        override val bv16: Short = Short.MAX_VALUE
+        override val bv32: Int = Int.MAX_VALUE
+        override val bv64: Long = Long.MAX_VALUE
+
+        override fun bvDefault(size: UInt): BigInteger =
+            powerOfTwo(size - 1u) - BigInteger.ONE
     }
 
-    fun KContext.bvMaxValueUnsigned(size: UInt): KBitVecValue<*> = when (size.toInt()) {
-        1 -> mkBv(true)
-        Byte.SIZE_BITS -> mkBv((-1).toByte())
-        Short.SIZE_BITS -> mkBv((-1).toShort())
-        Int.SIZE_BITS -> mkBv(-1)
-        Long.SIZE_BITS -> mkBv(-1L)
-        else -> mkBv(powerOfTwo(size) - BigInteger.ONE, size)
+    fun KContext.bvMaxValueSigned(size: UInt): KBitVecValue<*> = mkBvSpecialValue(size, bvMaxValueSigned)
+    fun KBitVecValue<*>.isBvMaxValueSigned(): Boolean = isBvSpecialValue(bvMaxValueSigned)
+
+    private val bvMaxValueUnsigned = object : BvSpecialValueSource {
+        override val bv1: Boolean = true
+        override val bv8: Byte = (-1).toByte()
+        override val bv16: Short = (-1).toShort()
+        override val bv32: Int = -1
+        override val bv64: Long = -1L
+
+        override fun bvDefault(size: UInt): BigInteger =
+            powerOfTwo(size) - BigInteger.ONE
     }
 
-    fun KContext.bvZero(size: UInt): KBitVecValue<*> = bvValue(size, 0)
-    fun KContext.bvOne(size: UInt): KBitVecValue<*> = bvValue(size, 1)
+    fun KContext.bvMaxValueUnsigned(size: UInt): KBitVecValue<*> = mkBvSpecialValue(size, bvMaxValueUnsigned)
+    fun KBitVecValue<*>.isBvMaxValueUnsigned(): Boolean = isBvSpecialValue(bvMaxValueUnsigned)
 
-    fun KContext.bvValue(size: UInt, value: Int): KBitVecValue<*> = when (size.toInt()) {
-        1 -> mkBv(value == 1)
-        Byte.SIZE_BITS -> mkBv(value.toByte())
-        Short.SIZE_BITS -> mkBv(value.toShort())
-        Int.SIZE_BITS -> mkBv(value)
-        Long.SIZE_BITS -> mkBv(value.toLong())
-        else -> mkBv(value, size)
+    private val bvZeroValue = object : BvSpecialValueSource {
+        override val bv1: Boolean = false
+        override val bv8: Byte = 0
+        override val bv16: Short = 0
+        override val bv32: Int = 0
+        override val bv64: Long = 0
+
+        override fun bvDefault(size: UInt): BigInteger = BigInteger.ZERO
     }
+
+    fun KContext.bvZero(size: UInt): KBitVecValue<*> = mkBvSpecialValue(size, bvZeroValue)
+    fun KBitVecValue<*>.isBvZero(): Boolean = isBvSpecialValue(bvZeroValue)
+
+    private val bvOneValue = object : BvSpecialValueSource {
+        override val bv1: Boolean = true
+        override val bv8: Byte = 1
+        override val bv16: Short = 1
+        override val bv32: Int = 1
+        override val bv64: Long = 1L
+
+        override fun bvDefault(size: UInt): BigInteger = BigInteger.ONE
+    }
+
+    fun KContext.bvOne(size: UInt): KBitVecValue<*> = mkBvSpecialValue(size, bvOneValue)
+    fun KBitVecValue<*>.isBvOne(): Boolean = isBvSpecialValue(bvOneValue)
+
+    private class BvIntValue(val value: Int) : BvSpecialValueSource {
+        override val bv1: Boolean = value == 1
+        override val bv8: Byte = value.toByte()
+        override val bv16: Short = value.toShort()
+        override val bv32: Int = value
+        override val bv64: Long = value.toLong()
+
+        override fun bvDefault(size: UInt): BigInteger =
+            value.toBigInteger().normalizeValue(size)
+    }
+
+    fun KContext.bvValue(size: UInt, value: Int): KBitVecValue<*> = mkBvSpecialValue(size, BvIntValue(value))
+    fun KBitVecValue<*>.bvValueIs(value: Int): Boolean = isBvSpecialValue(BvIntValue(value))
 
     fun KBitVecValue<*>.signedGreaterOrEqual(other: Int): Boolean = when (this) {
         is KBitVec1Value -> if (value) {
@@ -552,6 +594,35 @@ object BvUtils {
         } else {
             this
         }
+    }
+
+    private interface BvSpecialValueSource {
+        val bv1: Boolean
+        val bv8: Byte
+        val bv16: Short
+        val bv32: Int
+        val bv64: Long
+        fun bvDefault(size: UInt): BigInteger
+    }
+
+    private fun KContext.mkBvSpecialValue(size: UInt, source: BvSpecialValueSource): KBitVecValue<*> =
+        when (size.toInt()) {
+            1 -> mkBv(source.bv1)
+            Byte.SIZE_BITS -> mkBv(source.bv8)
+            Short.SIZE_BITS -> mkBv(source.bv16)
+            Int.SIZE_BITS -> mkBv(source.bv32)
+            Long.SIZE_BITS -> mkBv(source.bv64)
+            else -> mkBv(source.bvDefault(size), size)
+        }
+
+    private fun KBitVecValue<*>.isBvSpecialValue(source: BvSpecialValueSource) = when (this) {
+        is KBitVec1Value -> value == source.bv1
+        is KBitVec8Value -> numberValue == source.bv8
+        is KBitVec16Value -> numberValue == source.bv16
+        is KBitVec32Value -> numberValue == source.bv32
+        is KBitVec64Value -> numberValue == source.bv64
+        is KBitVecCustomValue -> value == source.bvDefault(sizeBits)
+        else -> this == ctx.mkBvSpecialValue(sort.sizeBits, source)
     }
 
 }
