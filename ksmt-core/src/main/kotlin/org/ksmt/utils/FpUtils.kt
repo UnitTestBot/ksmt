@@ -6,6 +6,7 @@ import org.ksmt.expr.KFp32Value
 import org.ksmt.expr.KFp64Value
 import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.KFpValue
+import org.ksmt.expr.KRealNumExpr
 import org.ksmt.sort.KFpSort
 import org.ksmt.utils.BvUtils.bigIntValue
 import org.ksmt.utils.BvUtils.bvMaxValueSigned
@@ -163,6 +164,9 @@ object FpUtils {
         fpLt(lhs, rhs) -> lhs
         else -> rhs
     }
+
+    fun fpRealValueOrNull(value: KFpValue<*>): KRealNumExpr? =
+        value.ctx.fpRealValueOrNull(value)
 
     fun KContext.fpZeroExponentBiased(sort: KFpSort): KBitVecValue<*> =
         bvZero(sort.exponentBits)
@@ -434,6 +438,11 @@ object FpUtils {
             else -> fpUnpackAndToFp(rm, value, toFpSort)
         }
 
+    private fun KContext.fpRealValueOrNull(value: KFpValue<*>): KRealNumExpr? = when {
+        value.isNan() || value.isInfinity() -> null // Real value is unspecified for NaN and Inf
+        else -> fpUnpackAndGetRealValueOrNull(value)
+    }
+
     private fun KContext.fpUnpackAndAdd(
         rm: KFpRoundingMode,
         lhs: KFpValue<*>,
@@ -502,6 +511,45 @@ object FpUtils {
         val unpackedValue = value.unpack(normalizeSignificand = true)
 
         return fpToFpUnpacked(rm, unpackedValue, toFpSort.exponentBits, toFpSort.significandBits).uncheckedCast()
+    }
+
+    private fun KContext.fpUnpackAndGetRealValueOrNull(value: KFpValue<*>): KRealNumExpr? {
+        val unpackedValue = value.unpack(normalizeSignificand = true)
+
+        val maxAllowedExponent = Int.MAX_VALUE / 2
+        if (unpackedValue.unbiasedExponent.abs() >= maxAllowedExponent.toBigInteger()) {
+            // We don't want to compute 2^maxAllowedExponent
+            return null
+        }
+
+        var numerator = unpackedValue.significand
+        if (unpackedValue.sign) {
+            numerator = -numerator
+        }
+
+        var denominator = powerOfTwo(unpackedValue.significandSize - 1u)
+
+        if (unpackedValue.unbiasedExponent >= BigInteger.ZERO) {
+            numerator = numerator.mul2k(unpackedValue.unbiasedExponent)
+        } else {
+            denominator = denominator.mul2k(-unpackedValue.unbiasedExponent)
+        }
+
+        return normalizeAndCreateReal(numerator, denominator)
+    }
+
+    private fun KContext.normalizeAndCreateReal(numerator: BigInteger, denominator: BigInteger): KRealNumExpr {
+        val (signedNumerator, signedDenominator) = if (denominator.signum() < 0) {
+            -numerator to -denominator
+        } else {
+            numerator to denominator
+        }
+
+        val gcd = signedNumerator.gcd(signedDenominator)
+        val normalizedNumerator = signedNumerator.divide(gcd)
+        val normalizedDenominator = signedDenominator.divide(gcd)
+
+        return mkRealNum(mkIntNum(normalizedNumerator), mkIntNum(normalizedDenominator))
     }
 
     private fun KContext.fpAddUnpacked(rm: KFpRoundingMode, lhs: UnpackedFp, rhs: UnpackedFp): KFpValue<*> {
@@ -1004,9 +1052,12 @@ object FpUtils {
 
     private fun powerOfTwo(power: BigInteger): BigInteger {
         check(power.signum() >= 0) { "Negative power" }
-        val intPower = power.intValueExact()
-        val two = BigInteger.valueOf(2L)
-        return two.pow(intPower)
+        val intPower = power.longValueExact()
+        if (intPower <= Int.MAX_VALUE) {
+            return BigInteger.ONE.shiftLeft(intPower.toInt())
+        } else {
+            error("Number 2^$intPower is too big to be represented as a BigInteger")
+        }
     }
 
     private fun BigInteger.isEven(): Boolean = toInt() % 2 == 0

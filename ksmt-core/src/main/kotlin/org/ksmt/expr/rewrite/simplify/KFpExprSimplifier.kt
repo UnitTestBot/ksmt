@@ -57,6 +57,7 @@ import org.ksmt.utils.FpUtils.fpMax
 import org.ksmt.utils.FpUtils.fpMin
 import org.ksmt.utils.FpUtils.fpMul
 import org.ksmt.utils.FpUtils.fpNegate
+import org.ksmt.utils.FpUtils.fpRealValueOrNull
 import org.ksmt.utils.FpUtils.fpRoundToIntegral
 import org.ksmt.utils.FpUtils.fpSqrt
 import org.ksmt.utils.FpUtils.fpStructurallyEqual
@@ -70,10 +71,8 @@ import org.ksmt.utils.FpUtils.isPositive
 import org.ksmt.utils.FpUtils.isZero
 import org.ksmt.utils.uncheckedCast
 import java.math.BigDecimal
-import java.math.BigInteger
 import java.math.RoundingMode
 import kotlin.math.IEEErem
-import kotlin.math.absoluteValue
 
 @Suppress("ForbiddenComment")
 interface KFpExprSimplifier : KExprSimplifierBase {
@@ -442,19 +441,9 @@ interface KFpExprSimplifier : KExprSimplifierBase {
 
     override fun <T : KFpSort> transform(expr: KFpToRealExpr<T>): KExpr<KRealSort> = simplifyApp(expr) { (arg) ->
         if (arg is KFpValue<T>) {
-            if (!arg.isNan() && !arg.isInfinity()) {
-                val decimalValue = fpDecimalValue(arg)
-                if (decimalValue != null) {
-                    val decimalPower = decimalValue.scale()
-                    var numerator = decimalValue.unscaledValue()
-                    var denominator = BigInteger.ONE
-                    if (decimalPower >= 0) {
-                        numerator *= BigInteger.TEN.pow(decimalPower)
-                    } else {
-                        denominator = BigInteger.TEN.pow(decimalPower.absoluteValue)
-                    }
-                    return@simplifyApp mkRealNum(numerator.expr, denominator.expr)
-                }
+            val result = fpRealValueOrNull(arg)
+            if (result != null) {
+                return@simplifyApp result
             }
         }
         mkFpToRealExpr(arg)

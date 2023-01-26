@@ -14,6 +14,7 @@ import org.ksmt.sort.KFp64Sort
 import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.FpUtils.isInfinity
 import org.ksmt.utils.FpUtils.isNan
 import org.ksmt.utils.FpUtils.isNegative
 import org.ksmt.utils.FpUtils.isZero
@@ -136,12 +137,22 @@ class FpEvalTest : ExpressionEvalTest() {
 
     @ParameterizedTest
     @MethodSource("fpSizes")
-    fun testFpToReal(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpToRealExpr)
+    fun testFpToIEEEBv(exponent: Int, significand: Int) =
+        testOperationNoNan(exponent, significand, KContext::mkFpToIEEEBvExpr)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
-    fun testFpToIEEEBv(exponent: Int, significand: Int) =
-        testOperationNoNan(exponent, significand, KContext::mkFpToIEEEBvExpr)
+    fun testFpToReal(exponent: Int, significand: Int) {
+        Assumptions.assumeTrue(exponent <= Int.SIZE_BITS) {
+            "Exponent may contain values witch are too large to be represented as Real"
+        }
+        runTest(exponent, significand) { sort: KFpSort, checker ->
+            randomFpValues(sort).filterNot { it.isNan() || it.isInfinity() }.take(100).forEach { value ->
+                val expr = mkFpToRealExpr(value)
+                checker.check(expr) { "$value" }
+            }
+        }
+    }
 
     @ParameterizedTest
     @MethodSource("fpSizes")

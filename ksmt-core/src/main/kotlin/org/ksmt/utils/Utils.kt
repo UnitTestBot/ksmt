@@ -33,7 +33,7 @@ fun Number.toUnsignedBigInteger(): BigInteger =
     toULongValue().toLong().toBigInteger()
 
 fun powerOfTwo(power: UInt): BigInteger =
-    BigInteger.valueOf(2).pow(power.toInt())
+    BigInteger.ONE.shiftLeft(power.toInt())
 
 /**
  * Ensure that BigInteger value is suitable for representation of Bv with [size] bits.
