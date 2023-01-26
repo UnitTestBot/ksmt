@@ -243,6 +243,15 @@ object FpUtils {
     }
 
     private fun KContext.fpMul(rm: KFpRoundingMode, lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> = when {
+        // RNE is JVM default rounding mode
+        rm == KFpRoundingMode.RoundNearestTiesToEven && lhs is KFp32Value -> {
+            mkFp(lhs.value * (rhs as KFp32Value).value, lhs.sort)
+        }
+
+        rm == KFpRoundingMode.RoundNearestTiesToEven && lhs is KFp64Value -> {
+            mkFp(lhs.value * (rhs as KFp64Value).value, lhs.sort)
+        }
+
         lhs.isNan() || rhs.isNan() -> mkFpNan(lhs.sort)
 
         lhs.isInfinity() && lhs.isPositive() -> if (rhs.isZero()) {
