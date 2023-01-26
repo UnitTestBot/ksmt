@@ -395,8 +395,6 @@ class KCvc5ExprInternalizer(
 
     override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) = TODO("no direct support for $expr")
 
-
-    // TODO: maybe bitvector should contain unbiased exponent?
     private fun fpToBvTerm(signBit: Boolean, biasedExp: KBitVecValue<*>, significand: KBitVecValue<*>): Term {
         val signString = if (signBit) "1" else "0"
         val expString = biasedExp.stringValue
@@ -521,8 +519,6 @@ class KCvc5ExprInternalizer(
     override fun <T : KFpSort> transform(expr: KFpRoundToIntegralExpr<T>): KExpr<T> =
         with(expr) {
             transform(roundingMode, value) { roundingMode: Term, value: Term ->
-                // TODO: by cvc5 (1.0.2) documentation - args are terms of floating-point Sort (sorts must match)
-                // that's why it shouldn't work
                 nsolver.mkTerm(Kind.FLOATINGPOINT_RTI, roundingMode, value)
             }
         }
@@ -612,15 +608,12 @@ class KCvc5ExprInternalizer(
     }
 
 
-    @Suppress("UNUSED_ANONYMOUS_PARAMETER")
     override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>): KExpr<KBvSort> =
         with(expr) {
             transform(roundingMode, value) { rm: Term, value: Term ->
                 val opKind = if (isSigned) Kind.FLOATINGPOINT_TO_SBV else Kind.FLOATINGPOINT_TO_UBV
                 val op = nsolver.mkOp(opKind, bvSize)
-
-                // TODO: shouldn't work, by cvc5 (1.0.2) documentation there is only 1 arg - value (no rounding mode)
-                nsolver.mkTerm(op, value)
+                nsolver.mkTerm(op, rm, value)
             }
         }
 

@@ -73,7 +73,7 @@ open class KCvc5ExprConverter(
                 }
             }
 
-            Kind.LAMBDA -> TODO("no direct impl in ksmt now")
+            Kind.LAMBDA -> error("lambdas used only in interpretations, and they handled separately")
             Kind.SEXPR -> TODO("no direct impl in ksmt now (experimental in cvc5 1.0.2)")
 
             // arith
@@ -203,7 +203,7 @@ open class KCvc5ExprConverter(
             Kind.FLOATINGPOINT_FMA -> expr.convert(::mkFpFusedMulAddExpr)
             Kind.FLOATINGPOINT_SQRT -> expr.convert(::mkFpSqrtExpr)
             Kind.FLOATINGPOINT_REM -> expr.convert(::mkFpRemExpr)
-            Kind.FLOATINGPOINT_RTI -> TODO("in doc of cvc5: Terms of floating-point Sort (sorts must match). ||| Why no rounding mode?")
+            Kind.FLOATINGPOINT_RTI -> expr.convert(::mkFpRoundToIntegralExpr)
             Kind.FLOATINGPOINT_MIN -> expr.convert(::mkFpMinExpr)
             Kind.FLOATINGPOINT_MAX -> expr.convert(::mkFpMaxExpr)
             Kind.FLOATINGPOINT_LEQ -> expr.convert(::mkFpLessOrEqualExpr)
@@ -217,7 +217,19 @@ open class KCvc5ExprConverter(
             Kind.FLOATINGPOINT_IS_NAN -> expr.convert(::mkFpIsNaNExpr)
             Kind.FLOATINGPOINT_IS_NEG -> expr.convert(::mkFpIsNegativeExpr)
             Kind.FLOATINGPOINT_IS_POS -> expr.convert(::mkFpIsPositiveExpr)
-            Kind.FLOATINGPOINT_TO_FP_FROM_IEEE_BV -> TODO("no direct mapping of ${Kind.FLOATINGPOINT_TO_FP_FROM_IEEE_BV} in ksmt ||| use bv extract and mkFpFromBvExpr")
+            Kind.FLOATINGPOINT_TO_FP_FROM_IEEE_BV -> expr.convert { bv: KExpr<KBvSort> ->
+                val expSize = expr.toFpExponentSize
+                val significandSize = expr.toFpSignificandSize
+
+                val signPos = expSize + significandSize - 1
+
+                @Suppress("UNCHECKED_CAST")
+                val bvSign = mkBvExtractExpr(signPos, signPos, bv) as KExpr<KBv1Sort>
+                val bvExp = mkBvExtractExpr(signPos - 1, signPos - 1 - expSize + 1, bv)
+                val bvSignificand = mkBvExtractExpr(significandSize - 1 - 1, 0, bv) // without sign
+
+                mkFpFromBvExpr(bvSign, bvExp, bvSignificand)
+            }
             Kind.FLOATINGPOINT_TO_FP_FROM_FP -> expr.convert { roundingMode: KExpr<KFpRoundingModeSort>, fpExpr: KExpr<KFpSort> ->
                 mkFpToFpExpr(
                     mkFpSort(expr.toFpExponentSize.toUInt(), expr.toFpSignificandSize.toUInt()),
