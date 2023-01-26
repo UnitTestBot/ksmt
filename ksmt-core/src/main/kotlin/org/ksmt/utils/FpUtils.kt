@@ -264,44 +264,54 @@ object FpUtils {
             expDelta = significandSizePlusTwo
         }
 
+        val resultSignificand = fpAddSignificand(lhs.significand, rhs.significand, lhs.sign, rhs.sign, expDelta)
+
+        if (resultSignificand.isZero()) {
+            val sign = rm == KFpRoundingMode.RoundTowardNegative
+            return mkFpZero(sign, mkFpSort(lhs.exponentSize, lhs.significandSize))
+        }
+
+        val resIsNeg = resultSignificand.signum() < 0
+        val resSignificandValue = resultSignificand.abs()
+
+        val sign = ((!lhs.sign && rhs.sign && resIsNeg)
+                || (lhs.sign && !rhs.sign && !resIsNeg)
+                || (lhs.sign && rhs.sign))
+        val unpackedResult = UnpackedFp(
+            lhs.exponentSize, lhs.significandSize, sign, lhs.unbiasedExponent, resSignificandValue
+        )
+
+        return fpRound(rm, unpackedResult)
+    }
+
+    private fun fpAddSignificand(
+        lSignificand: BigInteger,
+        rSignificand: BigInteger,
+        lSign: Boolean,
+        rSign: Boolean,
+        expDelta: BigInteger
+    ): BigInteger {
         // Introduce 3 extra bits into both numbers
-        val aSignificand = lhs.significand.mul2k(3u)
-        var bSignificand = rhs.significand.mul2k(3u)
+        val lhsSignificand = lSignificand.mul2k(3u)
+        val rhsSignificand = rSignificand.mul2k(3u)
 
         // Alignment shift with sticky bit computation.
-        val (shiftedB, stickyRem) = bSignificand.divideAndRemainder(powerOfTwo(expDelta))
-        bSignificand = shiftedB
+        val (shiftedRhs, stickyRem) = rhsSignificand.divideAndRemainder(powerOfTwo(expDelta))
 
         // Significand addition
-        val oSignificand = if (lhs.sign != rhs.sign) {
-            var res = aSignificand - bSignificand
+        return if (lSign != rSign) {
+            var res = lhsSignificand - shiftedRhs
             if (!stickyRem.isZero() && res.isEven()) {
                 res--
             }
             res
         } else {
-            var res = aSignificand + bSignificand
+            var res = lhsSignificand + shiftedRhs
             if (!stickyRem.isZero() && res.isEven()) {
                 res++
             }
             res
         }
-
-        if (oSignificand.isZero()) {
-            val sign = rm == KFpRoundingMode.RoundTowardNegative
-            return mkFpZero(sign, mkFpSort(lhs.exponentSize, lhs.significandSize))
-        }
-
-        val neg = oSignificand.signum() < 0
-        val oSignificandValue = oSignificand.abs()
-
-        val sign = ((!lhs.sign && rhs.sign && neg)
-                || (lhs.sign && !rhs.sign && !neg)
-                || (lhs.sign && rhs.sign))
-        val unpackedResult = UnpackedFp(
-            lhs.exponentSize, lhs.significandSize, sign, lhs.unbiasedExponent, oSignificandValue
-        )
-        return fpRound(rm, unpackedResult)
     }
 
     private fun KContext.fpRound(rm: KFpRoundingMode, value: UnpackedFp): KFpValue<*> {
