@@ -44,7 +44,7 @@ class KCvc5ExprInternalizer(
 
     override fun <T : KSort> transform(expr: KConst<T>) = with(expr) {
         transform {
-            decl.internalizeDecl() // declaration in cvc5 is a Term too
+            decl.internalizeDecl()
         }
     }
 
@@ -819,7 +819,7 @@ class KCvc5ExprInternalizer(
     override fun transform(expr: KUniversalQuantifier) = transformQuantifier(expr, isUniversal = true)
 
     override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
-        TODO("No direct impl in cvc5")
+        TODO("No direct impl in cvc5 (as-array is CONST_ARRAY term with base array element)")
     }
 
     @Suppress("ArrayPrimitive")

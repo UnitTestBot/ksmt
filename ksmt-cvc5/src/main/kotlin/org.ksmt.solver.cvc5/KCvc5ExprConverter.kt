@@ -406,8 +406,8 @@ open class KCvc5ExprConverter(
         .map(::convertNativeVariableExpr)
 
     private fun <D: KSort, R: KSort> convertNativeConstArrayExpr(expr: Term): ExprConversionResult = with(ctx) {
-        expr.convert { arrayExpr: KExpr<KArraySort<D, R>>, valueExpr: KExpr<R> ->
-            mkArrayConst(arrayExpr.sort, valueExpr)
+        expr.convert(arrayOf(expr.constArrayBase)) { arrayBase: KExpr<R> ->
+            mkArrayConst(expr.sort.convertSort() as KArraySort<D, R>, arrayBase)
         }
     }
 
