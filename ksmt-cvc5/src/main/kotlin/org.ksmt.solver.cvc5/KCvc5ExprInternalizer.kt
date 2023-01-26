@@ -658,7 +658,7 @@ class KCvc5ExprInternalizer(
             val op = nsolver.mkOp(
                 Kind.FLOATINGPOINT_TO_FP_FROM_FP,
                 sort.exponentBits.toInt(),
-                sort.significandBits.toInt() + 1
+                sort.significandBits.toInt()
             )
 
             nsolver.mkTerm(op, rm, value)
@@ -670,7 +670,7 @@ class KCvc5ExprInternalizer(
             val op = nsolver.mkOp(
                 Kind.FLOATINGPOINT_TO_FP_FROM_REAL,
                 sort.exponentBits.toInt(),
-                sort.significandBits.toInt() + 1
+                sort.significandBits.toInt()
             )
 
             nsolver.mkTerm(op, rm, value)
@@ -683,7 +683,7 @@ class KCvc5ExprInternalizer(
             val op = nsolver.mkOp(
                 opKind,
                 sort.exponentBits.toInt(),
-                sort.significandBits.toInt() + 1
+                sort.significandBits.toInt()
             )
 
             nsolver.mkTerm(op, rm, value)

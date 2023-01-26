@@ -477,7 +477,7 @@ open class KCvc5ExprConverter(
         val bvValue = fpTriplet.third.bitVectorValue
         val fpSignBit = bvValue[0] == '1'
         val fpExponent = mkBv(bvValue.substring(1..exponentSize), exponentSize.toUInt())
-        val fpSignificand = mkBv(bvValue.substring(exponentSize + 1), significandSize.toUInt())
+        val fpSignificand = mkBv(bvValue.substring(exponentSize + 1), significandSize.toUInt() - 1u)
         convert {
             mkFpCustomSizeBiased(
                 significandSize = significandSize.toUInt(),
