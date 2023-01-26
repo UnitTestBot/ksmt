@@ -3,13 +3,13 @@ package io.github.cvc5
 @Suppress("unused")
 fun Solver.mkQuantifier(
     isUniversal: Boolean,
-    boundConsts: Array<Term>,
+    boundVars: Array<Term>,
     body: Term,
     patterns: Array<Term>
 ): Term {
     val kind = if (isUniversal) Kind.FORALL else Kind.EXISTS
 
-    val quantifiedVars = mkTerm(Kind.VARIABLE_LIST, boundConsts)
+    val quantifiedVars = mkTerm(Kind.VARIABLE_LIST, boundVars)
     val pattern = mkTerm(Kind.INST_PATTERN, patterns)
 
     return mkTerm(kind, quantifiedVars, body, pattern)
@@ -17,12 +17,12 @@ fun Solver.mkQuantifier(
 
 fun Solver.mkQuantifier(
     isUniversal: Boolean,
-    boundConsts: Array<Term>,
+    boundVars: Array<Term>,
     body: Term
 ): Term {
     val kind = if (isUniversal) Kind.FORALL else Kind.EXISTS
 
-    val quantifiedVars = mkTerm(Kind.VARIABLE_LIST, boundConsts)
+    val quantifiedVars = mkTerm(Kind.VARIABLE_LIST, boundVars)
 
     return mkTerm(kind, quantifiedVars, body)
 }

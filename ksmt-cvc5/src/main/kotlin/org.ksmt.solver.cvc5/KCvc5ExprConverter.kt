@@ -13,6 +13,8 @@ open class KCvc5ExprConverter(
     private val cvc5Ctx: KCvc5Context
 ) : KExprConverterBase<Term>() {
 
+    private val internalizer = KCvc5ExprInternalizer(cvc5Ctx)
+
     override fun findConvertedNative(expr: Term): KExpr<*>? = cvc5Ctx.findConvertedExpr(expr)
 
     override fun saveConvertedNative(native: Term, converted: KExpr<*>) {
@@ -382,24 +384,35 @@ open class KCvc5ExprConverter(
 
     }
 
-    // TODO: check name shadowing
+    @Suppress("UNCHECKED_CAST")
     private fun convertNativeQuantifierExpr(expr: Term) = with(ctx) {
         val mkQf = when (expr.kind) {
             Kind.FORALL -> ::mkUniversalQuantifier
-            Kind.EXISTS -> ::mkUniversalQuantifier
+            Kind.EXISTS -> ::mkExistentialQuantifier
             else -> error("Unknown term of quantifier. Kind of term: ${expr.kind}")
         }
 
-        val bodyTerm = expr.getChild(1)
+        val cvc5VarList = expr.getChild(0)
+        val cvc5BodyWithVars = expr.getChild(1)
 
-        expr.convert(arrayOf(bodyTerm)) { body: KExpr<KBoolSort> ->
-            val varListTerm = expr.getChild(0)
-            mkQf(body, convertNativeVariableListExpr(varListTerm))
+        // fresh bounds
+        val bounds = convertNativeVariableListExpr(cvc5VarList)
+        val cvc5ConstBounds = bounds.map { mkConstApp(it) }
+            .map { with(internalizer) { it.internalizeExpr() } }
+
+        val cvc5PreparedBody = cvc5BodyWithVars.substitute(cvc5VarList.getChildren(), cvc5ConstBounds.toTypedArray())
+
+        expr.convertList((cvc5ConstBounds + cvc5PreparedBody).toTypedArray()) { args: List<KExpr<KSort>> ->
+            val body = args.last() as KExpr<KBoolSort>
+            val boundConsts = args.subList(0, args.lastIndex) as List<KConst<*>>
+
+            require(bounds.toSet() == boundConsts.toSet())
+            mkQf(body, boundConsts.map { it.decl })
         }
     }
 
     private fun convertNativeVariableExpr(expr: Term): KDecl<*> = with(ctx) {
-        mkConstDecl(expr.symbol, expr.sort.convertSort())
+        mkFreshConstDecl(expr.symbol, expr.sort.convertSort())
     }
 
     private fun convertNativeVariableListExpr(expr: Term): List<KDecl<*>> = expr.getChildren()

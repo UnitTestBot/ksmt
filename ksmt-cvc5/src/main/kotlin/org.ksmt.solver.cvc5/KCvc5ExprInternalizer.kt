@@ -801,16 +801,14 @@ class KCvc5ExprInternalizer(
     }
 
     private fun transformQuantifier(expr: KQuantifier, isUniversal: Boolean) = with(expr) {
-        val boundConstants = bounds.map { ctx.mkConstApp(it) }
-        transformArray(boundConstants + body) { args ->
-            val body = args.last()
-            val bounds = args.copyOfRange(0, args.size - 1)
+        transformArray(bounds.map { ctx.mkConstApp(it) } + body) { args ->
+            val cvc5Consts = args.copyOfRange(0, args.size - 1)
+            val cvc5Body = args.last()
 
-            nsolver.mkQuantifier(
-                isUniversal = isUniversal,
-                boundConsts = bounds,
-                body = body
-            )
+            val cvc5Vars = cvc5Consts.map { nsolver.mkVar(it.sort, it.symbol) }.toTypedArray()
+            val cvc5BodySubstituted = cvc5Body.substitute(cvc5Consts, cvc5Vars)
+
+            nsolver.mkQuantifier(isUniversal, cvc5Vars, cvc5BodySubstituted)
         }
     }
 
