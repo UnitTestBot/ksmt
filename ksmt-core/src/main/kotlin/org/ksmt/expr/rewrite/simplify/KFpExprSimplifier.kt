@@ -59,6 +59,7 @@ import org.ksmt.utils.FpUtils.fpMax
 import org.ksmt.utils.FpUtils.fpMin
 import org.ksmt.utils.FpUtils.fpMul
 import org.ksmt.utils.FpUtils.fpNegate
+import org.ksmt.utils.FpUtils.fpSqrt
 import org.ksmt.utils.FpUtils.fpStructurallyEqual
 import org.ksmt.utils.FpUtils.isSubnormal
 import org.ksmt.utils.FpUtils.isInfinity
@@ -74,7 +75,6 @@ import java.math.RoundingMode
 import kotlin.math.IEEErem
 import kotlin.math.absoluteValue
 import kotlin.math.round
-import kotlin.math.sqrt
 
 @Suppress("ForbiddenComment")
 interface KFpExprSimplifier : KExprSimplifierBase {
@@ -181,7 +181,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
         expr.simplifyFpUnaryOp { rm, arg ->
             if (arg is KFpValue<T> && rm is KFpRoundingModeExpr) {
                 val result = fpSqrt(rm.value, arg)
-                result?.let { return@simplifyFpUnaryOp it.uncheckedCast() }
+                return@simplifyFpUnaryOp result.uncheckedCast()
             }
             mkFpSqrtExpr(rm, arg)
         }
@@ -528,18 +528,6 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     @Suppress("UNUSED_PARAMETER")
     private fun fpFma(rm: KFpRoundingMode, a0: KFpValue<*>, a1: KFpValue<*>, a2: KFpValue<*>): KFpValue<*>? =
         null
-
-    private fun fpSqrt(rm: KFpRoundingMode, arg: KFpValue<*>): KFpValue<*>? = with(ctx) {
-        if (rm != KFpRoundingMode.RoundNearestTiesToEven) {
-            // todo: RNE is JVM default. Support others.
-            return null
-        }
-        when (arg) {
-            is KFp32Value -> mkFp(sqrt(arg.value), arg.sort)
-            is KFp64Value -> mkFp(sqrt(arg.value), arg.sort)
-            else -> null
-        }
-    }
 
     private fun fpRoundToIntegral(rm: KFpRoundingMode, arg: KFpValue<*>): KFpValue<*>? = with(ctx) {
         if (rm != KFpRoundingMode.RoundNearestTiesToEven) {

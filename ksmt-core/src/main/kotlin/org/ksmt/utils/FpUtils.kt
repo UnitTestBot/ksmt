@@ -18,6 +18,7 @@ import org.ksmt.utils.BvUtils.minus
 import org.ksmt.utils.BvUtils.plus
 import org.ksmt.utils.BvUtils.unsignedLessOrEqual
 import java.math.BigInteger
+import kotlin.math.sqrt
 
 object FpUtils {
 
@@ -128,6 +129,9 @@ object FpUtils {
 
     fun fpDiv(rm: KFpRoundingMode, lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> =
         lhs.ctx.fpDiv(rm, lhs, rhs)
+
+    fun fpSqrt(rm: KFpRoundingMode, value: KFpValue<*>): KFpValue<*> =
+        value.ctx.fpSqrt(rm, value)
 
     fun fpMax(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> = when {
         lhs.isNan() -> rhs
@@ -335,6 +339,23 @@ object FpUtils {
         else -> fpUnpackAndDiv(rm, lhs, rhs)
     }
 
+    private fun KContext.fpSqrt(rm: KFpRoundingMode, value: KFpValue<*>): KFpValue<*> = when {
+        // RNE is JVM default rounding mode
+        rm == KFpRoundingMode.RoundNearestTiesToEven && value is KFp32Value -> {
+            mkFp(sqrt(value.value), value.sort)
+        }
+
+        rm == KFpRoundingMode.RoundNearestTiesToEven && value is KFp64Value -> {
+            mkFp(sqrt(value.value), value.sort)
+        }
+
+        value.isNan() -> value
+        value.isInfinity() && value.isPositive() -> value
+        value.isZero() -> value
+        value.isNegative() -> mkFpNan(value.sort)
+        else -> fpUnpackAndSqrt(rm, value)
+    }
+
     private fun KContext.fpUnpackAndAdd(
         rm: KFpRoundingMode,
         lhs: KFpValue<*>,
@@ -375,6 +396,15 @@ object FpUtils {
         val unpackedRhs = rhs.unpack(normalizeSignificand = true)
 
         return fpDivUnpacked(rm, unpackedLhs, unpackedRhs)
+    }
+
+    private fun KContext.fpUnpackAndSqrt(
+        rm: KFpRoundingMode,
+        value: KFpValue<*>
+    ): KFpValue<*> {
+        val unpackedValue = value.unpack(normalizeSignificand = true)
+
+        return fpSqrtUnpacked(rm, unpackedValue)
     }
 
     private fun KContext.fpAddUnpacked(rm: KFpRoundingMode, lhs: UnpackedFp, rhs: UnpackedFp): KFpValue<*> {
@@ -481,6 +511,41 @@ object FpUtils {
 
         val unpackedResult = UnpackedFp(
             lhs.exponentSize, lhs.significandSize, resultSign, resultExponent, normalizedResultSignificand
+        )
+
+        return fpRound(rm, unpackedResult)
+    }
+
+    private fun KContext.fpSqrtUnpacked(rm: KFpRoundingMode, value: UnpackedFp): KFpValue<*> {
+        val extraBits = if (value.unbiasedExponent.isEven()) 7u else 6u
+        val extendedSignificand = value.significand.mul2k(value.significandSize + extraBits)
+        val (rootIsPrecise, rootValue) = extendedSignificand.impreciseSqrt()
+
+        val resultSignificand = if (!rootIsPrecise) {
+            var fixedValue = rootValue
+
+            // If the result is inexact, it is 1 too large.
+            // We need a sticky bit in the last position here, so we fix that.
+            if (fixedValue.isEven()) {
+                fixedValue--
+            }
+
+            fixedValue
+        } else {
+            rootValue
+        }
+
+        var resultExponent = value.unbiasedExponent.shiftRight(1)
+        if (value.unbiasedExponent.isEven()) {
+            resultExponent--
+        }
+
+        val unpackedResult = UnpackedFp(
+            exponentSize = value.exponentSize,
+            significandSize = value.significandSize,
+            sign = false, // Sqrt is always positive
+            unbiasedExponent = resultExponent,
+            significand = resultSignificand
         )
 
         return fpRound(rm, unpackedResult)
@@ -668,29 +733,6 @@ object FpUtils {
         }
     }
 
-    private fun powerOfTwo(power: BigInteger): BigInteger {
-        check(power.signum() >= 0) { "Negative power" }
-        val intPower = power.intValueExact()
-        val two = BigInteger.valueOf(2L)
-        return two.pow(intPower)
-    }
-
-    private fun BigInteger.isEven(): Boolean = toInt() % 2 == 0
-    private fun BigInteger.isZero(): Boolean = this == BigInteger.ZERO
-    private fun BigInteger.log2(): Int = bitLength() - 1
-    private fun BigInteger.mul2k(k: UInt): BigInteger = this * powerOfTwo(k)
-    private fun BigInteger.mul2k(k: BigInteger): BigInteger = this * powerOfTwo(k)
-    private fun BigInteger.div2k(k: UInt): BigInteger = this / powerOfTwo(k)
-
-    private fun fpMinExponentValue(exponent: UInt): BigInteger {
-        val exponentBias = powerOfTwo(exponent - 1u) - BigInteger.ONE
-        return (-exponentBias) + BigInteger.ONE
-    }
-
-    private fun fpMaxExponentValue(exponent: UInt): BigInteger {
-        return powerOfTwo(exponent - 1u) - BigInteger.ONE
-    }
-
     private data class UnpackedFp(
         val exponentSize: UInt,
         val significandSize: UInt,
@@ -744,6 +786,83 @@ object FpUtils {
         return UnpackedFp(
             sort.exponentBits, sort.significandBits, signBit, normalizedExponent, normalizedSignificand
         )
+    }
+
+    private fun fpMinExponentValue(exponent: UInt): BigInteger {
+        val exponentBias = powerOfTwo(exponent - 1u) - BigInteger.ONE
+        return (-exponentBias) + BigInteger.ONE
+    }
+
+    private fun fpMaxExponentValue(exponent: UInt): BigInteger {
+        return powerOfTwo(exponent - 1u) - BigInteger.ONE
+    }
+
+    private fun powerOfTwo(power: BigInteger): BigInteger {
+        check(power.signum() >= 0) { "Negative power" }
+        val intPower = power.intValueExact()
+        val two = BigInteger.valueOf(2L)
+        return two.pow(intPower)
+    }
+
+    private fun BigInteger.isEven(): Boolean = toInt() % 2 == 0
+    private fun BigInteger.isZero(): Boolean = this == BigInteger.ZERO
+    private fun BigInteger.log2(): Int = bitLength() - 1
+    private fun BigInteger.mul2k(k: UInt): BigInteger = this * powerOfTwo(k)
+    private fun BigInteger.mul2k(k: BigInteger): BigInteger = this * powerOfTwo(k)
+    private fun BigInteger.div2k(k: UInt): BigInteger = this / powerOfTwo(k)
+    private fun UInt.ceilDiv(other: UInt): UInt =
+        if (this % other == 0u) {
+            this / other
+        } else {
+            this / other + 1u
+        }
+
+    private fun BigInteger.impreciseSqrt(): Pair<Boolean, BigInteger> {
+        check(signum() >= 0) { "Sqrt of negative value" }
+
+        if (isZero()) {
+            // precise
+            return true to BigInteger.ZERO
+        }
+
+        /**
+         * Initial approximation.
+         * We have that:
+         * 2^{log2(this)} <= this <= 2^{(log2(this) + 1)}
+         * Thus:
+         * 2^{floor_div(log2(this), 2)} <= this^{1/2} <=  2^{ceil_div(log2(this) + 1, 2)}
+         * */
+        val k = this.log2().toUInt()
+        var lower = powerOfTwo(k / 2u)
+        var upper = powerOfTwo((k + 1u).ceilDiv(2u))
+
+        if (lower == upper) {
+            return true to lower
+        }
+
+        // Refine using bisection.
+        val two = 2.toBigInteger()
+        while (true) {
+            val mid = (upper + lower).divide(two)
+            val midSquared = mid.pow(2)
+
+            // We have a precise square root
+            if (this == midSquared) {
+                return true to mid
+            }
+
+            // No precise square root exists
+            if (mid == lower || mid == upper) {
+                return false to upper
+            }
+
+            // Update search bounds
+            if (midSquared < this) {
+                lower = mid
+            } else {
+                upper = mid
+            }
+        }
     }
 
 }

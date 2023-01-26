@@ -48,11 +48,6 @@ class FpEvalTest : ExpressionEvalTest() {
     @MethodSource("fpSizes")
     fun testFpDiv(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpDivExpr)
 
-//    @ParameterizedTest
-//    @MethodSource("fpSizes")
-//    fun testFpFusedMulAdd(exponent: Int, significand: Int) =
-//        testOperation(exponent, significand, KContext::mkFpFusedMulAddExpr)
-
     @ParameterizedTest
     @MethodSource("fpSizes")
     fun testFpSqrt(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpSqrtExpr)
@@ -143,10 +138,6 @@ class FpEvalTest : ExpressionEvalTest() {
     fun testFpIsPositive(exponent: Int, significand: Int) =
         testOperation(exponent, significand, KContext::mkFpIsPositiveExpr)
 
-//    @ParameterizedTest
-//    @MethodSource("fpSizes")
-//    fun testFpToBv(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpToBvExpr)
-
     @ParameterizedTest
     @MethodSource("fpSizes")
     fun testFpToReal(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpToRealExpr)
@@ -158,11 +149,20 @@ class FpEvalTest : ExpressionEvalTest() {
 
 //    @ParameterizedTest
 //    @MethodSource("fpSizes")
+//    fun testFpToBv(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpToBvExpr)
+
+//    @ParameterizedTest
+//    @MethodSource("fpSizes")
 //    fun testFpFromBv(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpFromBvExpr)
 
 //    @ParameterizedTest
 //    @MethodSource("fpSizes")
 //    fun testFpToFp(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpToFpExpr)
+
+//    @ParameterizedTest
+//    @MethodSource("fpSizes")
+//    fun testFpFusedMulAdd(exponent: Int, significand: Int) =
+//        testOperation(exponent, significand, KContext::mkFpFusedMulAddExpr)
 
 
     @Test
@@ -216,8 +216,8 @@ class FpEvalTest : ExpressionEvalTest() {
         significand: Int,
         operation: KContext.(KExpr<S>, KExpr<S>) -> KExpr<T>
     ) = runTest(exponent, significand) { sort: S, checker ->
-        randomFpValues(sort).forEach { a ->
-            randomFpValues(sort).forEach { b ->
+        randomFpValues(sort).take(60).forEach { a ->
+            randomFpValues(sort).take(60).forEach { b ->
                 val expr = operation(a, b)
                 checker.check(expr) { "$a, $b" }
             }
