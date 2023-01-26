@@ -48,9 +48,6 @@ import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
-import org.ksmt.utils.BvUtils.bvMaxValueSigned
-import org.ksmt.utils.BvUtils.minus
-import org.ksmt.utils.FpUtils
 import org.ksmt.utils.FpUtils.fpAdd
 import org.ksmt.utils.FpUtils.fpDiv
 import org.ksmt.utils.FpUtils.fpEq
@@ -76,7 +73,6 @@ import java.math.BigInteger
 import java.math.RoundingMode
 import kotlin.math.IEEErem
 import kotlin.math.absoluteValue
-import kotlin.math.round
 
 @Suppress("ForbiddenComment")
 interface KFpExprSimplifier : KExprSimplifierBase {
@@ -173,7 +169,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     override fun <T : KFpSort> transform(expr: KFpFusedMulAddExpr<T>): KExpr<T> =
         expr.simplifyFpTernaryOp { rm, a0, a1, a2 ->
             if (rm is KFpRoundingModeExpr && a0 is KFpValue<T> && a1 is KFpValue<T> && a2 is KFpValue<T>) {
-                val result = fpFma(rm.value, a0, a1, a2)
+                val result = tryEvalFpFma(rm.value, a0, a1, a2)
                 result?.let { return@simplifyFpTernaryOp it.uncheckedCast() }
             }
             mkFpFusedMulAddExpr(rm, a0, a1, a2)
@@ -202,7 +198,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
         val rhsValue = rhs as? KFpValue<T>
 
         if (lhsValue != null && rhsValue != null) {
-            val result = fpRem(lhsValue, rhsValue)
+            val result = tryEvalFpRem(lhsValue, rhsValue)
             result?.let { return@simplifyApp it.uncheckedCast() }
         }
 
@@ -525,15 +521,59 @@ interface KFpExprSimplifier : KExprSimplifierBase {
         simplifier(ctx, rm.uncheckedCast(), a0.uncheckedCast(), a1.uncheckedCast(), a2.uncheckedCast())
     }
 
-    // todo: eval
-    @Suppress("UNUSED_PARAMETER")
-    private fun fpFma(rm: KFpRoundingMode, a0: KFpValue<*>, a1: KFpValue<*>, a2: KFpValue<*>): KFpValue<*>? =
-        null
+    // Eval x * y + z
+    private fun tryEvalFpFma(rm: KFpRoundingMode, x: KFpValue<*>, y: KFpValue<*>, z: KFpValue<*>): KFpValue<*>? =
+        with(ctx) {
+            when {
+                x.isNan() || y.isNan() || z.isNan() -> mkFpNan(x.sort)
 
-    private fun fpRem(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*>? = with(ctx) {
-        when (lhs) {
-            is KFp32Value -> mkFp(lhs.value.IEEErem((rhs as KFp32Value).value), lhs.sort)
-            is KFp64Value -> mkFp(lhs.value.IEEErem((rhs as KFp64Value).value), lhs.sort)
+                x.isInfinity() && x.isPositive() -> when {
+                    y.isZero() -> mkFpNan(x.sort)
+                    z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNan(x.sort)
+                    else -> mkFpInf(y.signBit, x.sort)
+                }
+
+                y.isInfinity() && y.isPositive() -> when {
+                    x.isZero() -> mkFpNan(x.sort)
+                    z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNan(x.sort)
+                    else -> mkFpInf(x.signBit, x.sort)
+                }
+
+                x.isInfinity() && x.isNegative() -> when {
+                    y.isZero() -> mkFpNan(x.sort)
+                    z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNan(x.sort)
+                    else -> mkFpInf(!y.signBit, x.sort)
+                }
+
+                y.isInfinity() && y.isNegative() -> when {
+                    x.isZero() -> mkFpNan(x.sort)
+                    z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNan(x.sort)
+                    else -> mkFpInf(!x.signBit, x.sort)
+                }
+
+                z.isInfinity() -> z
+
+                x.isZero() || y.isZero() -> if (z.isZero() && (x.signBit xor y.signBit xor z.signBit)) {
+                    mkFpZero(signBit = rm == KFpRoundingMode.RoundTowardNegative, sort = x.sort)
+                } else {
+                    z
+                }
+
+                // todo: eval fp fma
+                else -> null
+            }
+        }
+
+    private fun tryEvalFpRem(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*>? = with(ctx) {
+        when {
+            lhs is KFp32Value -> mkFp(lhs.value.IEEErem((rhs as KFp32Value).value), lhs.sort)
+            lhs is KFp64Value -> mkFp(lhs.value.IEEErem((rhs as KFp64Value).value), lhs.sort)
+            lhs.isNan() || rhs.isNan() -> mkFpNan(lhs.sort)
+            lhs.isInfinity() -> mkFpNan(lhs.sort)
+            rhs.isInfinity() -> lhs
+            rhs.isZero() -> mkFpNan(lhs.sort)
+            lhs.isZero() -> lhs
+            // todo: eval fp rem
             else -> null
         }
     }

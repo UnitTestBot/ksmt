@@ -1,5 +1,6 @@
 package org.ksmt
 
+import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -8,6 +9,8 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.ksmt.expr.KExpr
+import org.ksmt.sort.KFp32Sort
+import org.ksmt.sort.KFp64Sort
 import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
@@ -48,10 +51,6 @@ class FpEvalTest : ExpressionEvalTest() {
     @ParameterizedTest
     @MethodSource("fpSizes")
     fun testFpSqrt(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpSqrtExpr)
-
-    @ParameterizedTest
-    @MethodSource("fpSizes")
-    fun testFpRem(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpRemExpr)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
@@ -216,6 +215,17 @@ class FpEvalTest : ExpressionEvalTest() {
                 }
             }
         }
+    }
+
+    @ParameterizedTest
+    @MethodSource("fpSizes")
+    fun testFpRem(exponent: Int, significand: Int) {
+        val isFp32 = exponent.toUInt() == KFp32Sort.exponentBits && significand.toUInt() == KFp32Sort.significandBits
+        val isFp64 = exponent.toUInt() == KFp64Sort.exponentBits && significand.toUInt() == KFp64Sort.significandBits
+        Assumptions.assumeTrue(isFp32 || isFp64) {
+            "Fp rem eval is implemented only for Fp32 and Fp64"
+        }
+        testOperation(exponent, significand, KContext::mkFpRemExpr)
     }
 
     @Disabled // We have no eval fo FMA
