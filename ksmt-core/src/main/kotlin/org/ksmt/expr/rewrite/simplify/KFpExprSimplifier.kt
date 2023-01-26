@@ -50,8 +50,8 @@ import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.BvUtils.bvMaxValueSigned
 import org.ksmt.utils.BvUtils.minus
-import org.ksmt.utils.FpUtils
 import org.ksmt.utils.FpUtils.fpAdd
+import org.ksmt.utils.FpUtils.fpDiv
 import org.ksmt.utils.FpUtils.fpEq
 import org.ksmt.utils.FpUtils.fpLeq
 import org.ksmt.utils.FpUtils.fpLt
@@ -161,7 +161,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     override fun <T : KFpSort> transform(expr: KFpDivExpr<T>): KExpr<T> = expr.simplifyFpBinaryOp { rm, lhs, rhs ->
         if (lhs is KFpValue<T> && rhs is KFpValue<T> && rm is KFpRoundingModeExpr) {
             val result = fpDiv(rm.value, lhs, rhs)
-            result?.let { return@simplifyFpBinaryOp it.uncheckedCast() }
+            return@simplifyFpBinaryOp result.uncheckedCast()
         }
 
         mkFpDivExpr(rm, lhs, rhs)
@@ -528,18 +528,6 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     @Suppress("UNUSED_PARAMETER")
     private fun fpFma(rm: KFpRoundingMode, a0: KFpValue<*>, a1: KFpValue<*>, a2: KFpValue<*>): KFpValue<*>? =
         null
-
-    private fun fpDiv(rm: KFpRoundingMode, lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*>? = with(ctx) {
-        if (rm != KFpRoundingMode.RoundNearestTiesToEven) {
-            // todo: RNE is JVM default. Support others.
-            return null
-        }
-        when (lhs) {
-            is KFp32Value -> mkFp(lhs.value / (rhs as KFp32Value).value, lhs.sort)
-            is KFp64Value -> mkFp(lhs.value / (rhs as KFp64Value).value, lhs.sort)
-            else -> null
-        }
-    }
 
     private fun fpSqrt(rm: KFpRoundingMode, arg: KFpValue<*>): KFpValue<*>? = with(ctx) {
         if (rm != KFpRoundingMode.RoundNearestTiesToEven) {

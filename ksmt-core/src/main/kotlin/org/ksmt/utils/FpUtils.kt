@@ -126,6 +126,9 @@ object FpUtils {
     fun fpMul(rm: KFpRoundingMode, lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> =
         lhs.ctx.fpMul(rm, lhs, rhs)
 
+    fun fpDiv(rm: KFpRoundingMode, lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> =
+        lhs.ctx.fpDiv(rm, lhs, rhs)
+
     fun fpMax(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> = when {
         lhs.isNan() -> rhs
         rhs.isNan() -> lhs
@@ -285,6 +288,53 @@ object FpUtils {
         else -> fpUnpackAndMul(rm, lhs, rhs)
     }
 
+    private fun KContext.fpDiv(rm: KFpRoundingMode, lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> = when {
+        // RNE is JVM default rounding mode
+        rm == KFpRoundingMode.RoundNearestTiesToEven && lhs is KFp32Value -> {
+            mkFp(lhs.value / (rhs as KFp32Value).value, lhs.sort)
+        }
+
+        rm == KFpRoundingMode.RoundNearestTiesToEven && lhs is KFp64Value -> {
+            mkFp(lhs.value / (rhs as KFp64Value).value, lhs.sort)
+        }
+
+        lhs.isNan() || rhs.isNan() -> mkFpNan(lhs.sort)
+
+        lhs.isInfinity() && lhs.isPositive() -> if (rhs.isInfinity()) {
+            mkFpNan(lhs.sort)
+        } else {
+            mkFpInf(signBit = rhs.signBit, sort = lhs.sort)
+        }
+
+        rhs.isInfinity() && rhs.isPositive() -> if (lhs.isInfinity()) {
+            mkFpNan(lhs.sort)
+        } else {
+            mkFpZero(signBit = lhs.signBit, sort = lhs.sort)
+        }
+
+        lhs.isInfinity() && lhs.isNegative() -> if (rhs.isInfinity()) {
+            mkFpNan(lhs.sort)
+        } else {
+            mkFpInf(signBit = !rhs.signBit, lhs.sort)
+        }
+
+        rhs.isInfinity() && rhs.isNegative() -> if (lhs.isInfinity()) {
+            mkFpNan(lhs.sort)
+        } else {
+            mkFpZero(signBit = !lhs.signBit, sort = lhs.sort)
+        }
+
+        rhs.isZero() -> if (lhs.isZero()) {
+            mkFpNan(lhs.sort)
+        } else {
+            mkFpInf(signBit = lhs.signBit != rhs.signBit, sort = lhs.sort)
+        }
+
+        lhs.isZero() -> mkFpZero(signBit = lhs.signBit != rhs.signBit, sort = lhs.sort)
+
+        else -> fpUnpackAndDiv(rm, lhs, rhs)
+    }
+
     private fun KContext.fpUnpackAndAdd(
         rm: KFpRoundingMode,
         lhs: KFpValue<*>,
@@ -313,6 +363,18 @@ object FpUtils {
         val unpackedRhs = rhs.unpack(normalizeSignificand = true)
 
         return fpMulUnpacked(rm, unpackedLhs, unpackedRhs)
+    }
+
+    private fun KContext.fpUnpackAndDiv(
+        rm: KFpRoundingMode,
+        lhs: KFpValue<*>,
+        rhs: KFpValue<*>
+    ): KFpValue<*> {
+        // Unpack lhs/rhs, this inserts the hidden bit and adjusts the exponent.
+        val unpackedLhs = lhs.unpack(normalizeSignificand = true)
+        val unpackedRhs = rhs.unpack(normalizeSignificand = true)
+
+        return fpDivUnpacked(rm, unpackedLhs, unpackedRhs)
     }
 
     private fun KContext.fpAddUnpacked(rm: KFpRoundingMode, lhs: UnpackedFp, rhs: UnpackedFp): KFpValue<*> {
@@ -396,6 +458,29 @@ object FpUtils {
 
         val unpackedResult = UnpackedFp(
             lhs.exponentSize, lhs.significandSize, resultSign, resultExponent, normalizedSignificand
+        )
+
+        return fpRound(rm, unpackedResult)
+    }
+
+    private fun KContext.fpDivUnpacked(rm: KFpRoundingMode, lhs: UnpackedFp, rhs: UnpackedFp): KFpValue<*> {
+        val resultSign = lhs.sign xor rhs.sign
+        val resultExponent = lhs.unbiasedExponent - rhs.unbiasedExponent
+
+        val extraBits = lhs.significandSize + 2u
+        val lhsSignificandWithExtraBits = lhs.significand.mul2k(lhs.significandSize + extraBits)
+        val divisionResultSignificand = lhsSignificandWithExtraBits.divide(rhs.significand)
+
+        // Remove the extra bits, keeping a sticky bit.
+        var (normalizedResultSignificand, stickyRem) = divisionResultSignificand.divideAndRemainder(
+            powerOfTwo(extraBits - 2u)
+        )
+        if (!stickyRem.isZero() && normalizedResultSignificand.isEven()) {
+            normalizedResultSignificand++
+        }
+
+        val unpackedResult = UnpackedFp(
+            lhs.exponentSize, lhs.significandSize, resultSign, resultExponent, normalizedResultSignificand
         )
 
         return fpRound(rm, unpackedResult)
