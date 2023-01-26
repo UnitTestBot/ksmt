@@ -642,7 +642,13 @@ class KCvc5ExprInternalizer(
                 significand
             )
 
-            nsolver.mkFloatingPoint(sort.exponentBits.toInt(), sort.significandBits.toInt(), bvTerm)
+            val toFpOp = nsolver.mkOp(
+                Kind.FLOATINGPOINT_TO_FP_FROM_IEEE_BV,
+                sort.exponentBits.toInt(),
+                sort.significandBits.toInt()
+            )
+
+            nsolver.mkTerm(toFpOp, bvTerm)
         }
     }
 
