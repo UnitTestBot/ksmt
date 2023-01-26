@@ -97,12 +97,7 @@ class KCvc5Model(
             }
 
             val cvc5Sort = with(internalizer) { sort.internalizeSort() }
-
-            val sortDecls = declarations.filter { it.sort == sort }
-            val sortInterps = sortDecls.mapNotNull { interpretation(it) }
-            val cvc5SortInterps = with(internalizer) { sortInterps.mapNotNull { it.default?.internalizeExpr() } }
-
-            val cvc5SortUniverse = Cvc5UninterpretedSortConstsCollector(cvc5SortInterps).collect(cvc5Sort)
+            val cvc5SortUniverse = cvc5Ctx.nativeSolver.getModelDomainElements(cvc5Sort)
 
             with(converter) { cvc5SortUniverse.mapTo(hashSetOf()) { it.convertExpr() } }
         }
