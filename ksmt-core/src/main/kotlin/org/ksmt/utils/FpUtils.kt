@@ -18,6 +18,7 @@ import org.ksmt.utils.BvUtils.minus
 import org.ksmt.utils.BvUtils.plus
 import org.ksmt.utils.BvUtils.unsignedLessOrEqual
 import java.math.BigInteger
+import kotlin.math.round
 import kotlin.math.sqrt
 
 object FpUtils {
@@ -133,6 +134,9 @@ object FpUtils {
     fun fpSqrt(rm: KFpRoundingMode, value: KFpValue<*>): KFpValue<*> =
         value.ctx.fpSqrt(rm, value)
 
+    fun fpRoundToIntegral(rm: KFpRoundingMode, value: KFpValue<*>): KFpValue<*> =
+        value.ctx.fpRoundToIntegral(rm, value)
+
     fun fpMax(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> = when {
         lhs.isNan() -> rhs
         rhs.isNan() -> lhs
@@ -185,6 +189,13 @@ object FpUtils {
             sort = sort
         )
     }
+
+    fun <T : KFpSort> KContext.mkFpOne(sort: T, signBit: Boolean): KFpValue<T> = mkFp(
+        signBit = signBit,
+        unbiasedExponent = 0,
+        significand = 0,
+        sort = sort
+    )
 
     fun KContext.biasFpExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> =
         exponent + bvMaxValueSigned(exponentSize)
@@ -356,6 +367,61 @@ object FpUtils {
         else -> fpUnpackAndSqrt(rm, value)
     }
 
+    private fun KContext.fpRoundToIntegral(rm: KFpRoundingMode, value: KFpValue<*>): KFpValue<*> = when {
+        // RNE is JVM default rounding mode
+        rm == KFpRoundingMode.RoundNearestTiesToEven && value is KFp32Value -> {
+            mkFp(round(value.value), value.sort)
+        }
+
+        rm == KFpRoundingMode.RoundNearestTiesToEven && value is KFp64Value -> {
+            mkFp(round(value.value), value.sort)
+        }
+
+        value.isNan() -> value
+        value.isInfinity() -> value
+        value.isZero() -> value
+        else -> {
+            val exponent = value.unbiasedExponentValue()
+            when {
+                // Negative exponent -> value is not an integral
+                exponent.signum() < 0 -> fpRoundToIntegralNegativeExponent(rm, value, exponent)
+                // Big exponent -> value is integral
+                exponent >= (value.sort.significandBits - 1u).toInt().toBigInteger() -> value
+                else -> fpUnpackAndRoundToIntegral(rm, value)
+            }
+        }
+    }
+
+    private fun KContext.fpRoundToIntegralNegativeExponent(
+        rm: KFpRoundingMode,
+        value: KFpValue<*>,
+        exponent: BigInteger
+    ): KFpValue<*> = when (rm) {
+        KFpRoundingMode.RoundTowardZero -> mkFpZero(value.signBit, value.sort)
+        KFpRoundingMode.RoundTowardNegative -> if (value.isNegative()) {
+            mkFpOne(sort = value.sort, signBit = true)
+        } else {
+            mkFpZero(sort = value.sort, signBit = false)
+        }
+
+        KFpRoundingMode.RoundTowardPositive -> if (value.isNegative()) {
+            mkFpZero(sort = value.sort, signBit = true)
+        } else {
+            mkFpOne(sort = value.sort, signBit = false)
+        }
+
+        KFpRoundingMode.RoundNearestTiesToEven,
+        KFpRoundingMode.RoundNearestTiesToAway -> {
+            val tie = value.significand.isBvZero() && exponent == (-BigInteger.ONE)
+            when {
+                tie && rm == KFpRoundingMode.RoundNearestTiesToEven -> mkFpZero(value.signBit, value.sort)
+                tie && rm == KFpRoundingMode.RoundNearestTiesToAway -> mkFpOne(value.sort, value.signBit)
+                exponent < (-BigInteger.ONE) -> mkFpZero(value.signBit, value.sort)
+                else -> mkFpOne(value.sort, value.signBit)
+            }
+        }
+    }
+
     private fun KContext.fpUnpackAndAdd(
         rm: KFpRoundingMode,
         lhs: KFpValue<*>,
@@ -405,6 +471,15 @@ object FpUtils {
         val unpackedValue = value.unpack(normalizeSignificand = true)
 
         return fpSqrtUnpacked(rm, unpackedValue)
+    }
+
+    private fun KContext.fpUnpackAndRoundToIntegral(
+        rm: KFpRoundingMode,
+        value: KFpValue<*>
+    ): KFpValue<*> {
+        val unpackedValue = value.unpack(normalizeSignificand = true)
+
+        return fpRoundToIntegralUnpacked(rm, unpackedValue)
     }
 
     private fun KContext.fpAddUnpacked(rm: KFpRoundingMode, lhs: UnpackedFp, rhs: UnpackedFp): KFpValue<*> {
@@ -549,6 +624,67 @@ object FpUtils {
         )
 
         return fpRound(rm, unpackedResult)
+    }
+
+    private fun KContext.fpRoundToIntegralUnpacked(rm: KFpRoundingMode, value: UnpackedFp): KFpValue<*> {
+        val shift = (value.significandSize - 1u).toInt().toBigInteger() - value.unbiasedExponent
+
+        var resultSignificand = fpRoundSignificandToIntegral(value, shift, rm)
+        var resultExponent = value.unbiasedExponent
+
+        // re-normalize
+        val maxValue = powerOfTwo(value.significandSize)
+        while (resultSignificand >= maxValue) {
+            resultSignificand = resultSignificand.div2k(1u)
+            resultExponent++
+        }
+
+        return mkRoundedValue(
+            rm, resultExponent, resultSignificand, value.sign, value.exponentSize, value.significandSize
+        )
+    }
+
+    private fun fpRoundSignificandToIntegral(
+        value: UnpackedFp,
+        shift: BigInteger,
+        rm: KFpRoundingMode
+    ): BigInteger {
+        var (div, rem) = value.significand.divideAndRemainder(powerOfTwo(shift))
+
+        when (rm) {
+            KFpRoundingMode.RoundNearestTiesToEven,
+            KFpRoundingMode.RoundNearestTiesToAway -> {
+                val shiftMinusOne = powerOfTwo(shift - BigInteger.ONE)
+                val tie = rem == shiftMinusOne
+                if (tie) {
+                    val roundToEven = rm == KFpRoundingMode.RoundNearestTiesToEven && !div.isEven()
+                    if (roundToEven || rm == KFpRoundingMode.RoundNearestTiesToAway) {
+                        div++
+                    }
+                } else {
+                    val moreThanTie = rem > shiftMinusOne
+                    if (moreThanTie) {
+                        div++
+                    }
+                }
+            }
+
+            KFpRoundingMode.RoundTowardPositive -> {
+                if (!rem.isZero() && !value.sign) {
+                    div++
+                }
+            }
+
+            KFpRoundingMode.RoundTowardNegative -> {
+                if (!rem.isZero() && value.sign) {
+                    div++
+                }
+            }
+
+            KFpRoundingMode.RoundTowardZero -> {}
+        }
+
+        return div.mul2k(shift)
     }
 
     private fun KContext.fpRound(rm: KFpRoundingMode, value: UnpackedFp): KFpValue<*> {
@@ -747,10 +883,14 @@ object FpUtils {
         else -> unpackSubnormalValueAndNormalizeSignificand()
     }
 
-    private fun KFpValue<*>.unpackNormalValue(): UnpackedFp {
+    private fun KFpValue<*>.unbiasedExponentValue(): BigInteger {
         val exponentBias = powerOfTwo(sort.exponentBits - 1u) - BigInteger.ONE
         val biasedExponentValue = biasedExponent.bigIntValue().normalizeValue(sort.exponentBits)
-        val unbiasedExponent = biasedExponentValue - exponentBias
+        return biasedExponentValue - exponentBias
+    }
+
+    private fun KFpValue<*>.unpackNormalValue(): UnpackedFp {
+        val unbiasedExponent = unbiasedExponentValue()
 
         val significandValue = significand.bigIntValue().normalizeValue(sort.significandBits - 1u)
         val significandWithHiddenBit = significandValue + powerOfTwo(sort.significandBits - 1u)

@@ -50,6 +50,7 @@ import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.BvUtils.bvMaxValueSigned
 import org.ksmt.utils.BvUtils.minus
+import org.ksmt.utils.FpUtils
 import org.ksmt.utils.FpUtils.fpAdd
 import org.ksmt.utils.FpUtils.fpDiv
 import org.ksmt.utils.FpUtils.fpEq
@@ -59,6 +60,7 @@ import org.ksmt.utils.FpUtils.fpMax
 import org.ksmt.utils.FpUtils.fpMin
 import org.ksmt.utils.FpUtils.fpMul
 import org.ksmt.utils.FpUtils.fpNegate
+import org.ksmt.utils.FpUtils.fpRoundToIntegral
 import org.ksmt.utils.FpUtils.fpSqrt
 import org.ksmt.utils.FpUtils.fpStructurallyEqual
 import org.ksmt.utils.FpUtils.isSubnormal
@@ -190,7 +192,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
         expr.simplifyFpUnaryOp { rm, arg ->
             if (arg is KFpValue<T> && rm is KFpRoundingModeExpr) {
                 val result = fpRoundToIntegral(rm.value, arg)
-                result?.let { return@simplifyFpUnaryOp it.uncheckedCast() }
+                return@simplifyFpUnaryOp result.uncheckedCast()
             }
             mkFpRoundToIntegralExpr(rm, arg)
         }
@@ -528,18 +530,6 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     @Suppress("UNUSED_PARAMETER")
     private fun fpFma(rm: KFpRoundingMode, a0: KFpValue<*>, a1: KFpValue<*>, a2: KFpValue<*>): KFpValue<*>? =
         null
-
-    private fun fpRoundToIntegral(rm: KFpRoundingMode, arg: KFpValue<*>): KFpValue<*>? = with(ctx) {
-        if (rm != KFpRoundingMode.RoundNearestTiesToEven) {
-            // todo: JVM Math rounds toward positive.
-            return null
-        }
-        when (arg) {
-            is KFp32Value -> mkFp(round(arg.value), arg.sort)
-            is KFp64Value -> mkFp(round(arg.value), arg.sort)
-            else -> null
-        }
-    }
 
     private fun fpRem(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*>? = with(ctx) {
         when (lhs) {
