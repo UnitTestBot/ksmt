@@ -121,6 +121,28 @@ object FpUtils {
     fun fpAdd(rm: KFpRoundingMode, lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> =
         lhs.ctx.fpAdd(rm, lhs, rhs)
 
+    fun fpMax(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> = when {
+        lhs.isNan() -> rhs
+        rhs.isNan() -> lhs
+        lhs.isZero() && rhs.isZero() && lhs.signBit != rhs.signBit -> {
+            error("Unspecified: IEEE-754 says that max(+0,-0) = +/-0")
+        }
+        lhs.isZero() && rhs.isZero() -> rhs
+        fpGt(lhs, rhs) -> lhs
+        else -> rhs
+    }
+
+    fun fpMin(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> = when {
+        lhs.isNan() -> rhs
+        rhs.isNan() -> lhs
+        lhs.isZero() && rhs.isZero() && lhs.signBit != rhs.signBit -> {
+            error("Unspecified: IEEE-754 says that min(+0,-0) = +/-0")
+        }
+        lhs.isZero() && rhs.isZero() -> rhs
+        fpLt(lhs, rhs) -> lhs
+        else -> rhs
+    }
+
     fun KContext.fpZeroExponentBiased(sort: KFpSort): KBitVecValue<*> =
         bvZero(sort.exponentBits)
 

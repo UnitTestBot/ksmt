@@ -15,6 +15,8 @@ import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.FpUtils.isNan
+import org.ksmt.utils.FpUtils.isNegative
+import org.ksmt.utils.FpUtils.isZero
 import org.ksmt.utils.uncheckedCast
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -66,11 +68,25 @@ class FpEvalTest : ExpressionEvalTest() {
 
     @ParameterizedTest
     @MethodSource("fpSizes")
-    fun testFpMin(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpMinExpr)
+    fun testFpMin(exponent: Int, significand: Int) = runTest(exponent, significand) { sort: KFpSort, checker ->
+        randomFpValuesNoNegZero(sort).take(30).forEach { a ->
+            randomFpValuesNoNegZero(sort).take(30).forEach { b ->
+                val expr = mkFpMinExpr(a, b)
+                checker.check(expr) { "$a, $b" }
+            }
+        }
+    }
 
     @ParameterizedTest
     @MethodSource("fpSizes")
-    fun testFpMax(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpMaxExpr)
+    fun testFpMax(exponent: Int, significand: Int) = runTest(exponent, significand) { sort: KFpSort, checker ->
+        randomFpValuesNoNegZero(sort).take(30).forEach { a ->
+            randomFpValuesNoNegZero(sort).take(30).forEach { b ->
+                val expr = mkFpMaxExpr(a, b)
+                checker.check(expr) { "$a, $b" }
+            }
+        }
+    }
 
     @ParameterizedTest
     @MethodSource("fpSizes")
@@ -238,24 +254,6 @@ class FpEvalTest : ExpressionEvalTest() {
         }
     }
 
-    @JvmName("testOperationTernaryRm")
-    private fun <S : KFpSort, T : KSort> testOperation(
-        exponent: Int,
-        significand: Int,
-        operation: KContext.(KExpr<KFpRoundingModeSort>, KExpr<S>, KExpr<S>, KExpr<S>) -> KExpr<T>
-    ) = runTest(exponent, significand) { sort: S, checker ->
-        roundingModeValues().forEach { rm ->
-            randomFpValues(sort).forEach { a ->
-                randomFpValues(sort).forEach { b ->
-                    randomFpValues(sort).forEach { c ->
-                        val expr = operation(rm, a, b, c)
-                        checker.check(expr) { "$rm, $a, $b, $c" }
-                    }
-                }
-            }
-        }
-    }
-
     private fun <S : KFpSort> runTest(
         exponent: Int,
         significand: Int,
@@ -310,6 +308,9 @@ class FpEvalTest : ExpressionEvalTest() {
             solver.pop()
         }
     }
+
+    fun <S : KFpSort> KContext.randomFpValuesNoNegZero(sort: S) =
+        randomFpValues(sort).filterNot { it.isZero() && it.isNegative() }
 
     companion object {
         private val fpSizesToTest by lazy {

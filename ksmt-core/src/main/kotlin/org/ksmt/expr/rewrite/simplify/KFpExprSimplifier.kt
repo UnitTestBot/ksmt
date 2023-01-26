@@ -54,6 +54,8 @@ import org.ksmt.utils.FpUtils.fpAdd
 import org.ksmt.utils.FpUtils.fpEq
 import org.ksmt.utils.FpUtils.fpLeq
 import org.ksmt.utils.FpUtils.fpLt
+import org.ksmt.utils.FpUtils.fpMax
+import org.ksmt.utils.FpUtils.fpMin
 import org.ksmt.utils.FpUtils.fpNegate
 import org.ksmt.utils.FpUtils.fpStructurallyEqual
 import org.ksmt.utils.FpUtils.isSubnormal
@@ -221,7 +223,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
             }
 
             val result = fpMin(lhsValue, rhsValue)
-            result?.let { return@simplifyApp it.uncheckedCast() }
+            return@simplifyApp result.uncheckedCast()
         }
 
         mkFpMinExpr(lhs, rhs)
@@ -245,7 +247,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
             }
 
             val result = fpMax(lhsValue, rhsValue)
-            result?.let { return@simplifyApp it.uncheckedCast() }
+            return@simplifyApp result.uncheckedCast()
         }
 
         mkFpMaxExpr(lhs, rhs)
@@ -577,22 +579,6 @@ interface KFpExprSimplifier : KExprSimplifierBase {
         when (lhs) {
             is KFp32Value -> mkFp(lhs.value.IEEErem((rhs as KFp32Value).value), lhs.sort)
             is KFp64Value -> mkFp(lhs.value.IEEErem((rhs as KFp64Value).value), lhs.sort)
-            else -> null
-        }
-    }
-
-    private fun fpMin(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*>? = with(ctx) {
-        when (lhs) {
-            is KFp32Value -> mkFp(minOf(lhs.value, (rhs as KFp32Value).value), lhs.sort)
-            is KFp64Value -> mkFp(minOf(lhs.value, (rhs as KFp64Value).value), lhs.sort)
-            else -> null
-        }
-    }
-
-    private fun fpMax(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*>? = with(ctx) {
-        when (lhs) {
-            is KFp32Value -> mkFp(maxOf(lhs.value, (rhs as KFp32Value).value), lhs.sort)
-            is KFp64Value -> mkFp(maxOf(lhs.value, (rhs as KFp64Value).value), lhs.sort)
             else -> null
         }
     }
