@@ -50,12 +50,14 @@ import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.BvUtils.bvMaxValueSigned
 import org.ksmt.utils.BvUtils.minus
+import org.ksmt.utils.FpUtils
 import org.ksmt.utils.FpUtils.fpAdd
 import org.ksmt.utils.FpUtils.fpEq
 import org.ksmt.utils.FpUtils.fpLeq
 import org.ksmt.utils.FpUtils.fpLt
 import org.ksmt.utils.FpUtils.fpMax
 import org.ksmt.utils.FpUtils.fpMin
+import org.ksmt.utils.FpUtils.fpMul
 import org.ksmt.utils.FpUtils.fpNegate
 import org.ksmt.utils.FpUtils.fpStructurallyEqual
 import org.ksmt.utils.FpUtils.isSubnormal
@@ -150,7 +152,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     override fun <T : KFpSort> transform(expr: KFpMulExpr<T>): KExpr<T> = expr.simplifyFpBinaryOp { rm, lhs, rhs ->
         if (lhs is KFpValue<T> && rhs is KFpValue<T> && rm is KFpRoundingModeExpr) {
             val result = fpMul(rm.value, lhs, rhs)
-            result?.let { return@simplifyFpBinaryOp it.uncheckedCast() }
+            return@simplifyFpBinaryOp result.uncheckedCast()
         }
 
         mkFpMulExpr(rm, lhs, rhs)
@@ -520,18 +522,6 @@ interface KFpExprSimplifier : KExprSimplifierBase {
         crossinline simplifier: KContext.(KExpr<KFpRoundingModeSort>, KExpr<T>, KExpr<T>, KExpr<T>) -> KExpr<T>
     ): KExpr<T> = simplifyApp(this) { (rm, a0, a1, a2) ->
         simplifier(ctx, rm.uncheckedCast(), a0.uncheckedCast(), a1.uncheckedCast(), a2.uncheckedCast())
-    }
-
-    private fun fpMul(rm: KFpRoundingMode, lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*>? = with(ctx) {
-        if (rm != KFpRoundingMode.RoundNearestTiesToEven) {
-            // todo: RNE is JVM default. Support others.
-            return null
-        }
-        when (lhs) {
-            is KFp32Value -> mkFp(lhs.value * (rhs as KFp32Value).value, lhs.sort)
-            is KFp64Value -> mkFp(lhs.value * (rhs as KFp64Value).value, lhs.sort)
-            else -> null
-        }
     }
 
     // todo: eval

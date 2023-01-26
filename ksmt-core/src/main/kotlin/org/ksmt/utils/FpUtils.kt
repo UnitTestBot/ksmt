@@ -12,6 +12,8 @@ import org.ksmt.utils.BvUtils.bvMaxValueSigned
 import org.ksmt.utils.BvUtils.bvMaxValueUnsigned
 import org.ksmt.utils.BvUtils.bvOne
 import org.ksmt.utils.BvUtils.bvZero
+import org.ksmt.utils.BvUtils.isBvMaxValueUnsigned
+import org.ksmt.utils.BvUtils.isBvZero
 import org.ksmt.utils.BvUtils.minus
 import org.ksmt.utils.BvUtils.plus
 import org.ksmt.utils.BvUtils.unsignedLessOrEqual
@@ -23,19 +25,19 @@ object FpUtils {
     fun KFpValue<*>.isZero(): Boolean = when (this) {
         is KFp32Value -> value == 0.0f || value == -0.0f
         is KFp64Value -> value == 0.0 || value == -0.0
-        else -> biasedExponent.isZero() && significand.isZero()
+        else -> biasedExponent.isBvZero() && significand.isBvZero()
     }
 
     fun KFpValue<*>.isInfinity(): Boolean = when (this) {
         is KFp32Value -> value.isInfinite()
         is KFp64Value -> value.isInfinite()
-        else -> biasedExponent.isTopExponent(sort) && significand.isZero()
+        else -> biasedExponent.isTopExponent() && significand.isBvZero()
     }
 
     fun KFpValue<*>.isNan(): Boolean = when (this) {
         is KFp32Value -> value.isNaN()
         is KFp64Value -> value.isNaN()
-        else -> biasedExponent.isTopExponent(sort) && !significand.isZero()
+        else -> biasedExponent.isTopExponent() && !significand.isBvZero()
     }
 
     fun KFpValue<*>.isPositive(): Boolean = !signBit
@@ -44,10 +46,10 @@ object FpUtils {
 
     // Value is denormalized
     fun KFpValue<*>.isSubnormal(): Boolean =
-        biasedExponent.isZero() && !significand.isZero()
+        biasedExponent.isBvZero() && !significand.isBvZero()
 
     fun KFpValue<*>.isNormal(): Boolean =
-        !isZero() && !isSubnormal() && !biasedExponent.isTopExponent(sort)
+        !isZero() && !isSubnormal() && !biasedExponent.isTopExponent()
 
     fun fpStructurallyEqual(lhs: KFpValue<*>, rhs: KFpValue<*>): Boolean = when {
         lhs.isNan() && rhs.isNan() -> true
@@ -121,12 +123,16 @@ object FpUtils {
     fun fpAdd(rm: KFpRoundingMode, lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> =
         lhs.ctx.fpAdd(rm, lhs, rhs)
 
+    fun fpMul(rm: KFpRoundingMode, lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> =
+        lhs.ctx.fpMul(rm, lhs, rhs)
+
     fun fpMax(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> = when {
         lhs.isNan() -> rhs
         rhs.isNan() -> lhs
         lhs.isZero() && rhs.isZero() && lhs.signBit != rhs.signBit -> {
             error("Unspecified: IEEE-754 says that max(+0,-0) = +/-0")
         }
+
         lhs.isZero() && rhs.isZero() -> rhs
         fpGt(lhs, rhs) -> lhs
         else -> rhs
@@ -138,6 +144,7 @@ object FpUtils {
         lhs.isZero() && rhs.isZero() && lhs.signBit != rhs.signBit -> {
             error("Unspecified: IEEE-754 says that min(+0,-0) = +/-0")
         }
+
         lhs.isZero() && rhs.isZero() -> rhs
         fpLt(lhs, rhs) -> lhs
         else -> rhs
@@ -182,11 +189,8 @@ object FpUtils {
     private fun KContext.fpTopExponentBiased(size: UInt): KBitVecValue<*> =
         bvMaxValueUnsigned(size)
 
-    private fun KBitVecValue<*>.isTopExponent(sort: KFpSort): Boolean =
-        this == ctx.fpTopExponentBiased(sort.exponentBits)
-
-    private fun KBitVecValue<*>.isZero(): Boolean =
-        this == ctx.bvZero(sort.sizeBits)
+    private fun KBitVecValue<*>.isTopExponent(): Boolean =
+        isBvMaxValueUnsigned()
 
     private inline fun KFpValue<*>.fpCompareOperation(
         other: KFpValue<*>,
@@ -238,6 +242,40 @@ object FpUtils {
         else -> fpUnpackAndAdd(rm, lhs, rhs)
     }
 
+    private fun KContext.fpMul(rm: KFpRoundingMode, lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> = when {
+        lhs.isNan() || rhs.isNan() -> mkFpNan(lhs.sort)
+
+        lhs.isInfinity() && lhs.isPositive() -> if (rhs.isZero()) {
+            mkFpNan(lhs.sort)
+        } else {
+            mkFpInf(rhs.signBit, lhs.sort)
+        }
+
+        rhs.isInfinity() && rhs.isPositive() -> if (lhs.isZero()) {
+            mkFpNan(lhs.sort)
+        } else {
+            mkFpInf(lhs.signBit, lhs.sort)
+        }
+
+        lhs.isInfinity() && lhs.isNegative() -> if (rhs.isZero()) {
+            mkFpNan(lhs.sort)
+        } else {
+            mkFpInf(!rhs.signBit, lhs.sort)
+        }
+
+        rhs.isInfinity() && rhs.isNegative() -> if (lhs.isZero()) {
+            mkFpNan(lhs.sort)
+        } else {
+            mkFpInf(!lhs.signBit, lhs.sort)
+        }
+
+        lhs.isZero() || rhs.isZero() -> {
+            mkFpZero(sort = lhs.sort, signBit = lhs.signBit != rhs.signBit)
+        }
+
+        else -> fpUnpackAndMul(rm, lhs, rhs)
+    }
+
     private fun KContext.fpUnpackAndAdd(
         rm: KFpRoundingMode,
         lhs: KFpValue<*>,
@@ -254,6 +292,18 @@ object FpUtils {
         }
 
         return fpAddUnpacked(rm, unpackedLhs, unpackedRhs)
+    }
+
+    private fun KContext.fpUnpackAndMul(
+        rm: KFpRoundingMode,
+        lhs: KFpValue<*>,
+        rhs: KFpValue<*>
+    ): KFpValue<*> {
+        // Unpack lhs/rhs, this inserts the hidden bit and adjusts the exponent.
+        val unpackedLhs = lhs.unpack(normalizeSignificand = true)
+        val unpackedRhs = rhs.unpack(normalizeSignificand = true)
+
+        return fpMulUnpacked(rm, unpackedLhs, unpackedRhs)
     }
 
     private fun KContext.fpAddUnpacked(rm: KFpRoundingMode, lhs: UnpackedFp, rhs: UnpackedFp): KFpValue<*> {
@@ -312,6 +362,34 @@ object FpUtils {
             }
             res
         }
+    }
+
+    private fun KContext.fpMulUnpacked(rm: KFpRoundingMode, lhs: UnpackedFp, rhs: UnpackedFp): KFpValue<*> {
+        val resultSign = lhs.sign xor rhs.sign
+        val resultExponent = lhs.unbiasedExponent + rhs.unbiasedExponent
+
+        val multipliedSignificand = lhs.significand * rhs.significand
+
+        // Remove the extra bits, keeping a sticky bit.
+        var (normalizedSignificand, stickyRem) = if (lhs.significandSize >= 4u){
+            val resultWithReminder = multipliedSignificand.divideAndRemainder(
+                powerOfTwo(lhs.significandSize - 4u)
+            )
+            resultWithReminder[0] to resultWithReminder[1]
+        } else {
+            val correctedSignificand = multipliedSignificand.mul2k(4u - lhs.significandSize)
+            correctedSignificand to BigInteger.ZERO
+        }
+
+        if (!stickyRem.isZero() && normalizedSignificand.isEven()){
+           normalizedSignificand++
+        }
+
+        val unpackedResult = UnpackedFp(
+            lhs.exponentSize, lhs.significandSize, resultSign, resultExponent, normalizedSignificand
+        )
+
+        return fpRound(rm, unpackedResult)
     }
 
     private fun KContext.fpRound(rm: KFpRoundingMode, value: UnpackedFp): KFpValue<*> {
