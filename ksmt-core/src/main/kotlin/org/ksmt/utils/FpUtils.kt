@@ -137,6 +137,9 @@ object FpUtils {
     fun fpRoundToIntegral(rm: KFpRoundingMode, value: KFpValue<*>): KFpValue<*> =
         value.ctx.fpRoundToIntegral(rm, value)
 
+    fun <T : KFpSort> fpToFp(rm: KFpRoundingMode, value: KFpValue<*>, toFpSort: T): KFpValue<T> =
+        value.ctx.fpToFp(rm, value, toFpSort)
+
     fun fpMax(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> = when {
         lhs.isNan() -> rhs
         rhs.isNan() -> lhs
@@ -422,6 +425,15 @@ object FpUtils {
         }
     }
 
+    private fun <T : KFpSort> KContext.fpToFp(rm: KFpRoundingMode, value: KFpValue<*>, toFpSort: T): KFpValue<T> =
+        when {
+            value.isNan() -> mkFpNan(toFpSort)
+            value.isInfinity() -> mkFpInf(value.signBit, toFpSort)
+            value.isZero() -> mkFpZero(value.signBit, toFpSort)
+            value.sort == toFpSort -> value.uncheckedCast()
+            else -> fpUnpackAndToFp(rm, value, toFpSort)
+        }
+
     private fun KContext.fpUnpackAndAdd(
         rm: KFpRoundingMode,
         lhs: KFpValue<*>,
@@ -480,6 +492,16 @@ object FpUtils {
         val unpackedValue = value.unpack(normalizeSignificand = true)
 
         return fpRoundToIntegralUnpacked(rm, unpackedValue)
+    }
+
+    private fun <T : KFpSort> KContext.fpUnpackAndToFp(
+        rm: KFpRoundingMode,
+        value: KFpValue<*>,
+        toFpSort: T
+    ): KFpValue<T> {
+        val unpackedValue = value.unpack(normalizeSignificand = true)
+
+        return fpToFpUnpacked(rm, unpackedValue, toFpSort.exponentBits, toFpSort.significandBits).uncheckedCast()
     }
 
     private fun KContext.fpAddUnpacked(rm: KFpRoundingMode, lhs: UnpackedFp, rhs: UnpackedFp): KFpValue<*> {
@@ -685,6 +707,49 @@ object FpUtils {
         }
 
         return div.mul2k(shift)
+    }
+
+    private fun KContext.fpToFpUnpacked(
+        rm: KFpRoundingMode,
+        value: UnpackedFp,
+        toExponentSize: UInt,
+        toSignificandSize: UInt
+    ): KFpValue<*> {
+
+        var significandSizeDelta = toSignificandSize.toInt() - value.significandSize.toInt() + 3 // plus rounding bits
+
+        val resultSignificand = when {
+            significandSizeDelta > 0 -> value.significand.mul2k(significandSizeDelta.toUInt())
+
+            significandSizeDelta < 0 -> {
+                var sticky = false
+                var significand = value.significand
+
+                while (significandSizeDelta < 0) {
+                    sticky = sticky || !significand.isEven()
+                    significand = significand.div2k(1u)
+                    significandSizeDelta++
+                }
+
+                if (sticky && significand.isEven()) {
+                    significand++
+                }
+
+                significand
+            }
+
+            else -> value.significand
+        }
+
+        val unpackedResult = UnpackedFp(
+            exponentSize = toExponentSize,
+            significandSize = toSignificandSize,
+            sign = value.sign,
+            unbiasedExponent = value.unbiasedExponent,
+            significand = resultSignificand
+        )
+
+        return fpRound(rm, unpackedResult)
     }
 
     private fun KContext.fpRound(rm: KFpRoundingMode, value: UnpackedFp): KFpValue<*> {

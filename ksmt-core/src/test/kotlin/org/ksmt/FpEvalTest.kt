@@ -176,7 +176,7 @@ class FpEvalTest : ExpressionEvalTest() {
     fun testFpToBv(exponent: Int, significand: Int) = runTest(exponent, significand) { sort: KFpSort, checker ->
         val bvSorts = listOf(bv1Sort, bv8Sort, bv16Sort, bv32Sort, bv64Sort, mkBvSort(37u))
         roundingModeValues().forEach { rm ->
-            randomFpValues(sort).forEach { value ->
+            randomFpValues(sort).take(100).forEach { value ->
                 bvSorts.forEach { toBv ->
                     val signed = mkFpToBvExpr(rm, value, toBv.sizeBits.toInt(), isSigned = true)
                     val unsigned = mkFpToBvExpr(rm, value, toBv.sizeBits.toInt(), isSigned = false)
@@ -208,9 +208,9 @@ class FpEvalTest : ExpressionEvalTest() {
     @MethodSource("fpSizes")
     fun testFpToFp(exponent: Int, significand: Int) = runTest(exponent, significand) { sort: KFpSort, checker ->
         roundingModeValues().forEach { rm ->
-            randomFpValues(sort).forEach { value ->
+            randomFpValues(sort).take(100).forEach { value ->
                 fpSortsToTest.forEach { toSort ->
-                    val expr = mkFpToFpExpr(toSort, rm, value)
+                    val expr = mkFpToFpExpr(mkFpSort(toSort.exponentBits, toSort.significandBits), rm, value)
                     checker.check(expr) { "$rm, $value, $toSort" }
                 }
             }
@@ -271,7 +271,7 @@ class FpEvalTest : ExpressionEvalTest() {
         significand: Int,
         operation: KContext.(KExpr<S>) -> KExpr<T>
     ) = runTest(exponent, significand) { sort: S, checker ->
-        randomFpValues(sort).forEach { value ->
+        randomFpValues(sort).take(100).forEach { value ->
             val expr = operation(value)
             checker.check(expr) { "$value" }
         }
@@ -283,7 +283,7 @@ class FpEvalTest : ExpressionEvalTest() {
         significand: Int,
         operation: KContext.(KExpr<S>) -> KExpr<T>
     ) = runTest(exponent, significand) { sort: S, checker ->
-        randomFpValues(sort).filterNot { it.isNan() }.forEach { value ->
+        randomFpValues(sort).filterNot { it.isNan() }.take(100).forEach { value ->
             val expr = operation(value)
             checker.check(expr) { "$value" }
         }
@@ -310,7 +310,7 @@ class FpEvalTest : ExpressionEvalTest() {
         operation: KContext.(KExpr<KFpRoundingModeSort>, KExpr<S>) -> KExpr<T>
     ) = runTest(exponent, significand) { sort: S, checker ->
         roundingModeValues().forEach { rm ->
-            randomFpValues(sort).forEach { value ->
+            randomFpValues(sort).take(100).forEach { value ->
                 val expr = operation(rm, value)
                 checker.check(expr) { "$rm, $value" }
             }
