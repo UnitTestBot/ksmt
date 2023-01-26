@@ -386,10 +386,9 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> =
         simplifyApp(expr) { (sign, exp, significand) ->
             if (sign is KBitVecValue<*> && exp is KBitVecValue<*> && significand is KBitVecValue<*>) {
-
-                val unbiasedExponent = fpUnbiasExponent(exp)
-                return@simplifyApp mkFpCustomSize(
-                    unbiasedExponent = unbiasedExponent,
+                return@simplifyApp mkFpBiased(
+                    sort = expr.sort,
+                    biasedExponent = exp,
                     significand = significand,
                     signBit = (sign as KBitVec1Value).value
                 )
@@ -543,10 +542,6 @@ interface KFpExprSimplifier : KExprSimplifierBase {
         is KFp32Value -> BigDecimal.valueOf(value.value.toDouble())
         is KFp64Value -> BigDecimal.valueOf(value.value)
         else -> null
-    }
-
-    private fun fpUnbiasExponent(value: KBitVecValue<*>): KBitVecValue<*> = with(ctx) {
-        value - bvMaxValueSigned(value.sort.sizeBits)
     }
 
     private fun BigDecimal.unscaledValue(rm: KFpRoundingMode): BigDecimal {

@@ -6,7 +6,9 @@ import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.KFpRoundingModeExpr
 import org.ksmt.expr.KFpValue
+import org.ksmt.expr.KInt32NumExpr
 import org.ksmt.expr.KInterpretedConstant
+import org.ksmt.expr.KRealNumExpr
 import org.ksmt.expr.rewrite.simplify.KExprSimplifier
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverStatus
@@ -94,6 +96,20 @@ abstract class ExpressionEvalTest {
                 val value = mkFpBiased(significand, exponent, sign, sort)
                 yield(value)
             }
+        }
+    }
+
+    fun KContext.randomRealValues() = sequence<KRealNumExpr> {
+        randomIntValues().filterNot { it.value != 0 }.forEach { denominator ->
+            randomIntValues().forEach { numerator ->
+                yield(mkRealNum(numerator, denominator))
+            }
+        }
+    }
+
+    fun KContext.randomIntValues() = sequence<KInt32NumExpr> {
+        repeat(1000) {
+            yield(mkIntNum(random.nextInt()) as KInt32NumExpr)
         }
     }
 

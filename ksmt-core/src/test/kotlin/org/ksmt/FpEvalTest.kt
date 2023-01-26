@@ -2,6 +2,8 @@ package org.ksmt
 
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.parallel.Execution
+import org.junit.jupiter.api.parallel.ExecutionMode
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -15,6 +17,7 @@ import org.ksmt.utils.FpUtils.isZero
 import org.ksmt.utils.uncheckedCast
 import kotlin.test.assertEquals
 
+@Execution(ExecutionMode.CONCURRENT)
 class FpEvalTest : ExpressionEvalTest() {
 
     @ParameterizedTest
@@ -140,6 +143,34 @@ class FpEvalTest : ExpressionEvalTest() {
     @MethodSource("fpSizes")
     fun testFpToIEEEBv(exponent: Int, significand: Int) =
         testOperationNoNan(exponent, significand, KContext::mkFpToIEEEBvExpr)
+
+    @ParameterizedTest
+    @MethodSource("fpSizes")
+    fun testFpFromReal(exponent: Int, significand: Int) = runTest(exponent, significand) { sort: KFpSort, checker ->
+        roundingModeValues().forEach { rm ->
+            randomRealValues().take(100).forEach { value ->
+                val expr = mkRealToFpExpr(sort, rm, value)
+                checker.check(expr) { "$rm, $value" }
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("fpSizes")
+    fun testBvToFp(exponent: Int, significand: Int) = runTest(exponent, significand) { sort: KFpSort, checker ->
+        val bvSorts = listOf(bv1Sort, bv8Sort, bv16Sort, bv32Sort, bv64Sort, mkBvSort(37u))
+        roundingModeValues().forEach { rm ->
+            bvSorts.forEach { bvSort ->
+                randomBvValues(bvSort).forEach { value ->
+                    val signed = mkBvToFpExpr(sort, rm, value, signed = true)
+                    val unsigned = mkBvToFpExpr(sort, rm, value, signed = false)
+
+                    checker.check(signed) { "Signed: $rm, $value" }
+                    checker.check(unsigned) { "Unsigned: $rm, $value" }
+                }
+            }
+        }
+    }
 
     @ParameterizedTest
     @MethodSource("fpSizes")
