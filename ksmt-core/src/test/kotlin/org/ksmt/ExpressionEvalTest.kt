@@ -1,16 +1,26 @@
 package org.ksmt
 
+import org.ksmt.expr.KApp
 import org.ksmt.expr.KBitVecValue
+import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.KFpRoundingModeExpr
 import org.ksmt.expr.KFpValue
+import org.ksmt.expr.KInterpretedConstant
+import org.ksmt.expr.rewrite.simplify.KExprSimplifier
+import org.ksmt.solver.KSolver
+import org.ksmt.solver.KSolverStatus
+import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
+import org.ksmt.sort.KSort
 import org.ksmt.utils.BvUtils
 import org.ksmt.utils.FpUtils.mkFpMaxValue
 import org.ksmt.utils.uncheckedCast
 import kotlin.random.Random
 import kotlin.random.nextInt
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 abstract class ExpressionEvalTest {
 
@@ -84,6 +94,60 @@ abstract class ExpressionEvalTest {
                 val value = mkFpBiased(significand, exponent, sign, sort)
                 yield(value)
             }
+        }
+    }
+
+    internal fun <S : KSort> runTest(
+        mkSort: KContext.() -> S,
+        test: KContext.(S, TestRunner) -> Unit
+    ) {
+        val ctx = KContext()
+        val sort = ctx.mkSort()
+        KZ3Solver(ctx).use { solver ->
+            val checker = TestRunner(ctx, solver)
+            ctx.test(sort, checker)
+        }
+    }
+
+    internal class TestRunner(
+        private val ctx: KContext,
+        private val solver: KSolver<*>
+    ) {
+
+        fun <T : KSort> check(expr: KExpr<T>, printArgs: () -> String) {
+            val expectedValue = solverValue(expr)
+            val actualValue = evalExpr(expr)
+
+            assertEquals(expectedValue, actualValue, printArgs())
+
+            val decl = (expectedValue as KApp<*, *>).decl
+            val declValue = decl.apply(emptyList())
+            assertEquals(expectedValue, declValue, printArgs())
+        }
+
+        private fun <T : KSort> solverValue(expr: KExpr<T>): KExpr<T> =
+            withSolverScope { solver ->
+                with(ctx) {
+                    val valueVar = mkFreshConst("v", expr.sort)
+                    solver.assert(valueVar eq expr)
+                    assertEquals(KSolverStatus.SAT, solver.check())
+                    val value = solver.model().eval(valueVar)
+                    assertTrue(value is KInterpretedConstant)
+                    value
+                }
+            }
+
+
+        private fun <T : KSort> evalExpr(expr: KExpr<T>): KExpr<T> {
+            val evaluator = KExprSimplifier(ctx)
+            return evaluator.apply(expr)
+        }
+
+        private fun <T> withSolverScope(block: (KSolver<*>) -> T): T = try {
+            solver.push()
+            block(solver)
+        } finally {
+            solver.pop()
         }
     }
 

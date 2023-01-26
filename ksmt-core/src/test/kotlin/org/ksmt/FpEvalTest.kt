@@ -1,16 +1,11 @@
 package org.ksmt
 
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.ksmt.expr.KApp
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.KInterpretedConstant
-import org.ksmt.expr.rewrite.simplify.KExprSimplifier
-import org.ksmt.solver.KSolver
-import org.ksmt.solver.KSolverStatus
-import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
@@ -19,7 +14,6 @@ import org.ksmt.utils.FpUtils.isNegative
 import org.ksmt.utils.FpUtils.isZero
 import org.ksmt.utils.uncheckedCast
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class FpEvalTest : ExpressionEvalTest() {
 
@@ -147,23 +141,67 @@ class FpEvalTest : ExpressionEvalTest() {
     fun testFpToIEEEBv(exponent: Int, significand: Int) =
         testOperationNoNan(exponent, significand, KContext::mkFpToIEEEBvExpr)
 
-//    @ParameterizedTest
-//    @MethodSource("fpSizes")
-//    fun testFpToBv(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpToBvExpr)
+    @ParameterizedTest
+    @MethodSource("fpSizes")
+    fun testFpToBv(exponent: Int, significand: Int) = runTest(exponent, significand) { sort: KFpSort, checker ->
+        val bvSorts = listOf(bv1Sort, bv8Sort, bv16Sort, bv32Sort, bv64Sort, mkBvSort(37u))
+        roundingModeValues().forEach { rm ->
+            randomFpValues(sort).forEach { value ->
+                bvSorts.forEach { toBv ->
+                    val signed = mkFpToBvExpr(rm, value, toBv.sizeBits.toInt(), isSigned = true)
+                    val unsigned = mkFpToBvExpr(rm, value, toBv.sizeBits.toInt(), isSigned = false)
 
-//    @ParameterizedTest
-//    @MethodSource("fpSizes")
-//    fun testFpFromBv(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpFromBvExpr)
+                    checker.check(signed) { "Signed: $rm, $value, $toBv" }
+                    checker.check(unsigned) { "Unsigned: $rm, $value, $toBv" }
+                }
+            }
+        }
+    }
 
-//    @ParameterizedTest
-//    @MethodSource("fpSizes")
-//    fun testFpToFp(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpToFpExpr)
+    @ParameterizedTest
+    @MethodSource("fpSizes")
+    fun testFpFromBv(exponent: Int, significand: Int) = runTest(exponent, significand) { sort: KFpSort, checker ->
+        val signValues = listOf(mkBv(0, bv1Sort), mkBv(1, bv1Sort))
+        val exponentSort = mkBvSort(sort.exponentBits)
+        val significandSort = mkBvSort(sort.significandBits - 1u)
+        randomBvValues(exponentSort).forEach { exponent ->
+            randomBvValues(significandSort).forEach { significand ->
+                signValues.forEach { sign ->
+                    val expr = mkFpFromBvExpr<KFpSort>(sign, exponent, significand)
+                    checker.check(expr) { "$sign, $exponent, $significand" }
+                }
+            }
+        }
+    }
 
-//    @ParameterizedTest
-//    @MethodSource("fpSizes")
-//    fun testFpFusedMulAdd(exponent: Int, significand: Int) =
-//        testOperation(exponent, significand, KContext::mkFpFusedMulAddExpr)
+    @ParameterizedTest
+    @MethodSource("fpSizes")
+    fun testFpToFp(exponent: Int, significand: Int) = runTest(exponent, significand) { sort: KFpSort, checker ->
+        roundingModeValues().forEach { rm ->
+            randomFpValues(sort).forEach { value ->
+                fpSortsToTest.forEach { toSort ->
+                    val expr = mkFpToFpExpr(toSort, rm, value)
+                    checker.check(expr) { "$rm, $value, $toSort" }
+                }
+            }
+        }
+    }
 
+    @Disabled // We have no eval fo FMA
+    @ParameterizedTest
+    @MethodSource("fpSizes")
+    fun testFpFusedMulAdd(exponent: Int, significand: Int) = runTest(exponent, significand) { sort: KFpSort, checker ->
+        roundingModeValues().forEach { rm ->
+            randomFpValues(sort).forEach { a ->
+                randomFpValues(sort).forEach { b ->
+                    randomFpValues(sort).forEach { c ->
+                        val expr = mkFpFusedMulAddExpr(rm, a, b, c)
+                        checker.check(expr) { "$rm, $a, $b, $c" }
+                    }
+                }
+            }
+        }
+    }
 
     @Test
     fun testFp16Creation(): Unit = with(KContext()) {
@@ -258,62 +296,16 @@ class FpEvalTest : ExpressionEvalTest() {
         exponent: Int,
         significand: Int,
         test: KContext.(S, TestRunner) -> Unit
-    ) {
-        val ctx = KContext()
-        val sort: S = ctx.mkFpSort(exponent.toUInt(), significand.toUInt()).uncheckedCast()
-        KZ3Solver(ctx).use { solver ->
-            val checker = TestRunner(ctx, solver)
-            ctx.test(sort, checker)
-        }
-    }
+    ) = runTest(
+        mkSort = { mkFpSort(exponent.toUInt(), significand.toUInt()).uncheckedCast() },
+        test = test.uncheckedCast()
+    )
 
-    private class TestRunner(
-        private val ctx: KContext,
-        private val solver: KSolver<*>
-    ) {
-
-        fun <T : KSort> check(expr: KExpr<T>, printArgs: () -> String) {
-            val expectedValue = solverValue(expr)
-            val actualValue = evalFpExpr(expr)
-
-            assertEquals(expectedValue, actualValue, printArgs())
-
-            val decl = (expectedValue as KApp<*, *>).decl
-            val declValue = decl.apply(emptyList())
-            assertEquals(expectedValue, declValue)
-        }
-
-        private fun <T : KSort> solverValue(expr: KExpr<T>): KExpr<T> =
-            withSolverScope { solver ->
-                with(ctx) {
-                    val valueVar = mkFreshConst("v", expr.sort)
-                    solver.assert(valueVar eq expr)
-                    assertEquals(KSolverStatus.SAT, solver.check())
-                    val value = solver.model().eval(valueVar)
-                    assertTrue(value is KInterpretedConstant)
-                    value
-                }
-            }
-
-
-        private fun <T : KSort> evalFpExpr(expr: KExpr<T>): KExpr<T> {
-            val evaluator = KExprSimplifier(ctx)
-            return evaluator.apply(expr)
-        }
-
-        private fun <T> withSolverScope(block: (KSolver<*>) -> T): T = try {
-            solver.push()
-            block(solver)
-        } finally {
-            solver.pop()
-        }
-    }
-
-    fun <S : KFpSort> KContext.randomFpValuesNoNegZero(sort: S) =
+    private fun <S : KFpSort> KContext.randomFpValuesNoNegZero(sort: S) =
         randomFpValues(sort).filterNot { it.isZero() && it.isNegative() }
 
     companion object {
-        private val fpSizesToTest by lazy {
+        private val fpSortsToTest by lazy {
             val context = KContext()
             val smallCustomFp = context.mkFpSort(5u, 5u)
             val middleCustomFp = context.mkFpSort(17u, 17u)
@@ -327,7 +319,11 @@ class FpEvalTest : ExpressionEvalTest() {
                 smallCustomFp,
                 middleCustomFp,
                 largeCustomFp
-            ).map { it.exponentBits.toInt() to it.significandBits.toInt() }
+            )
+        }
+
+        private val fpSizesToTest by lazy {
+            fpSortsToTest.map { it.exponentBits.toInt() to it.significandBits.toInt() }
         }
 
         @JvmStatic

@@ -5,20 +5,13 @@ import org.junit.jupiter.api.parallel.ExecutionMode
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.ksmt.expr.KApp
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.KInterpretedValue
-import org.ksmt.expr.rewrite.simplify.KExprSimplifier
-import org.ksmt.solver.KSolver
-import org.ksmt.solver.KSolverStatus
-import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.uncheckedCast
 import kotlin.random.nextInt
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 @Execution(ExecutionMode.CONCURRENT)
 class BvEvalTest : ExpressionEvalTest() {
@@ -277,7 +270,7 @@ class BvEvalTest : ExpressionEvalTest() {
     ) = runTest(size) { sort: S, checker ->
         randomBvValues(sort).forEach { value ->
             val expr = operation(value)
-            checker.check(expr)
+            checker.check(expr){ "$value" }
         }
     }
 
@@ -288,7 +281,7 @@ class BvEvalTest : ExpressionEvalTest() {
         randomBvValues(sort).forEach { a ->
             randomBvValues(sort).forEach { b ->
                 val expr = operation(a, b)
-                checker.check(expr)
+                checker.check(expr){ "$a, $b" }
             }
         }
     }
@@ -300,60 +293,15 @@ class BvEvalTest : ExpressionEvalTest() {
         randomBvValues(sort).forEach { a ->
             randomBvNonZeroValues(sort).forEach { b ->
                 val expr = operation(a, b)
-                checker.check(expr)
+                checker.check(expr) { "$a, $b" }
             }
         }
     }
 
-    private fun <S : KBvSort> runTest(size: Int, test: KContext.(S, TestRunner) -> Unit) {
-        val ctx = KContext()
-        val sort: S = ctx.mkBvSort(size.toUInt()).uncheckedCast()
-        KZ3Solver(ctx).use { solver ->
-            val checker = TestRunner(ctx, solver)
-            ctx.test(sort, checker)
-        }
-    }
-
-    private class TestRunner(
-        private val ctx: KContext,
-        private val solver: KSolver<*>
-    ) {
-
-        fun <T : KSort> check(expr: KExpr<T>) {
-            val expectedValue = solverValue(expr)
-            val actualValue = evalBvExpr(expr)
-            assertEquals(expectedValue, actualValue)
-
-            val decl = (expectedValue as KApp<*, *>).decl
-            val declValue = decl.apply(emptyList())
-            assertEquals(expectedValue, declValue)
-        }
-
-        private fun <T : KSort> solverValue(expr: KExpr<T>): KExpr<T> =
-            withSolverScope { solver ->
-                with(ctx) {
-                    val valueVar = mkFreshConst("v", expr.sort)
-                    solver.assert(valueVar eq expr)
-                    assertEquals(KSolverStatus.SAT, solver.check())
-                    val value = solver.model().eval(valueVar)
-                    assertTrue(value is KInterpretedValue<*>)
-                    value
-                }
-            }
-
-
-        private fun <T : KSort> evalBvExpr(expr: KExpr<T>): KExpr<T> {
-            val evaluator = KExprSimplifier(ctx)
-            return evaluator.apply(expr)
-        }
-
-        private fun <T> withSolverScope(block: (KSolver<*>) -> T): T = try {
-            solver.push()
-            block(solver)
-        } finally {
-            solver.pop()
-        }
-    }
+    private fun <S : KBvSort> runTest(size: Int, test: KContext.(S, TestRunner) -> Unit) = runTest(
+        mkSort = { mkBvSort(size.toUInt()).uncheckedCast() },
+        test = test.uncheckedCast()
+    )
 
     companion object {
         private val bvSizesToTest by lazy {
