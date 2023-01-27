@@ -14,11 +14,12 @@ import org.ksmt.decl.KXorDecl
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.uncheckedCast
 
 class KAndExpr internal constructor(
     ctx: KContext,
     override val args: List<KExpr<KBoolSort>>
-) : KApp<KBoolSort, KExpr<KBoolSort>>(ctx) {
+) : KApp<KBoolSort, KBoolSort>(ctx) {
     override val sort: KBoolSort
         get() = ctx.boolSort
 
@@ -31,7 +32,7 @@ class KAndExpr internal constructor(
 class KOrExpr internal constructor(
     ctx: KContext,
     override val args: List<KExpr<KBoolSort>>
-) : KApp<KBoolSort, KExpr<KBoolSort>>(ctx) {
+) : KApp<KBoolSort, KBoolSort>(ctx) {
     override val sort: KBoolSort
         get() = ctx.boolSort
 
@@ -44,7 +45,7 @@ class KOrExpr internal constructor(
 class KNotExpr internal constructor(
     ctx: KContext,
     val arg: KExpr<KBoolSort>
-) : KApp<KBoolSort, KExpr<KBoolSort>>(ctx) {
+) : KApp<KBoolSort, KBoolSort>(ctx) {
     override val sort: KBoolSort
         get() = ctx.boolSort
 
@@ -61,7 +62,7 @@ class KImpliesExpr internal constructor(
     ctx: KContext,
     val p: KExpr<KBoolSort>,
     val q: KExpr<KBoolSort>
-) : KApp<KBoolSort, KExpr<KBoolSort>>(ctx) {
+) : KApp<KBoolSort, KBoolSort>(ctx) {
     override val sort: KBoolSort
         get() = ctx.boolSort
 
@@ -78,7 +79,7 @@ class KXorExpr internal constructor(
     ctx: KContext,
     val a: KExpr<KBoolSort>,
     val b: KExpr<KBoolSort>
-) : KApp<KBoolSort, KExpr<KBoolSort>>(ctx) {
+) : KApp<KBoolSort, KBoolSort>(ctx) {
     override val sort: KBoolSort
         get() = ctx.boolSort
 
@@ -94,7 +95,7 @@ class KXorExpr internal constructor(
 class KEqExpr<T : KSort> internal constructor(
     ctx: KContext,
     val lhs: KExpr<T>, val rhs: KExpr<T>
-) : KApp<KBoolSort, KExpr<T>>(ctx) {
+) : KApp<KBoolSort, T>(ctx) {
     override val sort: KBoolSort
         get() = ctx.boolSort
 
@@ -110,7 +111,7 @@ class KEqExpr<T : KSort> internal constructor(
 class KDistinctExpr<T : KSort> internal constructor(
     ctx: KContext,
     override val args: List<KExpr<T>>
-) : KApp<KBoolSort, KExpr<T>>(ctx) {
+) : KApp<KBoolSort, T>(ctx) {
     init {
         require(args.isNotEmpty()) { "distinct requires at least a single argument" }
     }
@@ -129,13 +130,13 @@ class KIteExpr<T : KSort> internal constructor(
     val condition: KExpr<KBoolSort>,
     val trueBranch: KExpr<T>,
     val falseBranch: KExpr<T>
-) : KApp<T, KExpr<*>>(ctx) {
+) : KApp<T, KSort>(ctx) {
 
     override val decl: KIteDecl<T>
         get() = ctx.mkIteDecl(trueBranch.sort)
 
-    override val args: List<KExpr<*>>
-        get() = listOf(condition, trueBranch, falseBranch)
+    override val args: List<KExpr<KSort>>
+        get() = listOf(condition, trueBranch, falseBranch).uncheckedCast()
 
     override fun accept(transformer: KTransformerBase): KExpr<T> = transformer.transform(this)
 

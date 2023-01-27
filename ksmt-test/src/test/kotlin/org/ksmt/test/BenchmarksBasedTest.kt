@@ -372,7 +372,7 @@ abstract class BenchmarksBasedTest {
     }
 
     class SortChecker(ctx: KContext) : KNonRecursiveTransformer(ctx) {
-        override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, KExpr<A>>): KExpr<T> = with(ctx) {
+        override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> = with(ctx) {
             // apply internally check arguments sorts
             expr.decl.apply(expr.args)
             return super.transformApp(expr).also {

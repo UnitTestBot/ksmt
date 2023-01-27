@@ -144,7 +144,7 @@ class KFpAbsDecl<T : KFpSort> internal constructor(
 ) : KFuncDecl1<T, T>(ctx, "fp.abs", valueSort, valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<T, KExpr<T>> = ctx.mkFpAbsExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<T, T> = ctx.mkFpAbsExpr(arg)
 }
 
 class KFpNegationDecl<T : KFpSort> internal constructor(
@@ -153,7 +153,7 @@ class KFpNegationDecl<T : KFpSort> internal constructor(
 ) : KFuncDecl1<T, T>(ctx, "fp.neg", valueSort, valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<T, KExpr<T>> = ctx.mkFpNegationExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<T, T> = ctx.mkFpNegationExpr(arg)
 }
 
 class KFpAddDecl<T : KFpSort> internal constructor(
@@ -403,7 +403,7 @@ class KFpIsNormalDecl<T : KFpSort> internal constructor(
 ) : KFuncDecl1<KBoolSort, T>(ctx, "fp.isNormal", ctx.mkBoolSort(), valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<KBoolSort, KExpr<T>> = ctx.mkFpIsNormalExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<KBoolSort, T> = ctx.mkFpIsNormalExpr(arg)
 }
 
 class KFpIsSubnormalDecl<T : KFpSort> internal constructor(
@@ -412,7 +412,7 @@ class KFpIsSubnormalDecl<T : KFpSort> internal constructor(
 ) : KFuncDecl1<KBoolSort, T>(ctx, "fp.isSubnormal", ctx.mkBoolSort(), valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<KBoolSort, KExpr<T>> = ctx.mkFpIsSubnormalExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<KBoolSort, T> = ctx.mkFpIsSubnormalExpr(arg)
 }
 
 class KFpIsZeroDecl<T : KFpSort> internal constructor(
@@ -421,7 +421,7 @@ class KFpIsZeroDecl<T : KFpSort> internal constructor(
 ) : KFuncDecl1<KBoolSort, T>(ctx, "fp.isZero", ctx.mkBoolSort(), valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<KBoolSort, KExpr<T>> = ctx.mkFpIsZeroExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<KBoolSort, T> = ctx.mkFpIsZeroExpr(arg)
 }
 
 class KFpIsInfiniteDecl<T : KFpSort> internal constructor(
@@ -430,7 +430,7 @@ class KFpIsInfiniteDecl<T : KFpSort> internal constructor(
 ) : KFuncDecl1<KBoolSort, T>(ctx, "fp.isInfinite", ctx.mkBoolSort(), valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<KBoolSort, KExpr<T>> = ctx.mkFpIsInfiniteExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<KBoolSort, T> = ctx.mkFpIsInfiniteExpr(arg)
 }
 
 class KFpIsNaNDecl<T : KFpSort> internal constructor(
@@ -439,7 +439,7 @@ class KFpIsNaNDecl<T : KFpSort> internal constructor(
 ) : KFuncDecl1<KBoolSort, T>(ctx, "fp.isNaN", ctx.mkBoolSort(), valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<KBoolSort, KExpr<T>> = ctx.mkFpIsNaNExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<KBoolSort, T> = ctx.mkFpIsNaNExpr(arg)
 }
 
 class KFpIsNegativeDecl<T : KFpSort> internal constructor(
@@ -448,7 +448,7 @@ class KFpIsNegativeDecl<T : KFpSort> internal constructor(
 ) : KFuncDecl1<KBoolSort, T>(ctx, "fp.isNegative", ctx.mkBoolSort(), valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<KBoolSort, KExpr<T>> = ctx.mkFpIsNegativeExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<KBoolSort, T> = ctx.mkFpIsNegativeExpr(arg)
 }
 
 class KFpIsPositiveDecl<T : KFpSort> internal constructor(
@@ -457,7 +457,7 @@ class KFpIsPositiveDecl<T : KFpSort> internal constructor(
 ) : KFuncDecl1<KBoolSort, T>(ctx, "fp.isPositive", ctx.mkBoolSort(), valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<KBoolSort, KExpr<T>> = ctx.mkFpIsPositiveExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<KBoolSort, T> = ctx.mkFpIsPositiveExpr(arg)
 }
 
 class KFpToBvDecl<T : KFpSort> internal constructor(
@@ -487,7 +487,7 @@ class KFpToRealDecl<T : KFpSort> internal constructor(
 ) : KFuncDecl1<KRealSort, T>(ctx, "fp.to_real", ctx.mkRealSort(), valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<KRealSort, KExpr<T>> = ctx.mkFpToRealExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<KRealSort, T> = ctx.mkFpToRealExpr(arg)
 }
 
 class KFpToIEEEBvDecl<T : KFpSort> internal constructor(
@@ -501,7 +501,7 @@ class KFpToIEEEBvDecl<T : KFpSort> internal constructor(
 ) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<KBvSort, KExpr<T>> = ctx.mkFpToIEEEBvExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<KBvSort, T> = ctx.mkFpToIEEEBvExpr(arg)
 }
 
 class KFpFromBvDecl<T : KFpSort> internal constructor(

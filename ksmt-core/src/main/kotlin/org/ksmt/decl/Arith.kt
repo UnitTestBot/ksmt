@@ -8,25 +8,25 @@ import org.ksmt.sort.KBoolSort
 
 class KArithAddDecl<T : KArithSort> internal constructor(ctx: KContext, argumentSort: T) :
     KFuncDeclChain<T, T>(ctx, "arithAdd", argumentSort, argumentSort) {
-    override fun KContext.applyChain(args: List<KExpr<T>>): KApp<T, KExpr<T>> = mkArithAdd(args)
+    override fun KContext.applyChain(args: List<KExpr<T>>): KApp<T, T> = mkArithAdd(args)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
 class KArithMulDecl<T : KArithSort> internal constructor(ctx: KContext, argumentSort: T) :
     KFuncDeclChain<T, T>(ctx, "arithMul", argumentSort, argumentSort) {
-    override fun KContext.applyChain(args: List<KExpr<T>>): KApp<T, KExpr<T>> = mkArithMul(args)
+    override fun KContext.applyChain(args: List<KExpr<T>>): KApp<T, T> = mkArithMul(args)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
 class KArithSubDecl<T : KArithSort> internal constructor(ctx: KContext, argumentSort: T) :
     KFuncDeclChain<T, T>(ctx, "arithSub", argumentSort, argumentSort) {
-    override fun KContext.applyChain(args: List<KExpr<T>>): KApp<T, KExpr<T>> = mkArithSub(args)
+    override fun KContext.applyChain(args: List<KExpr<T>>): KApp<T, T> = mkArithSub(args)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
 class KArithUnaryMinusDecl<T : KArithSort> internal constructor(ctx: KContext, argumentSort: T) :
     KFuncDecl1<T, T>(ctx, "arithUnaryMinus", argumentSort, argumentSort) {
-    override fun KContext.apply(arg: KExpr<T>): KApp<T, KExpr<T>> = mkArithUnaryMinus(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<T, T> = mkArithUnaryMinus(arg)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 

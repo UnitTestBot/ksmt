@@ -55,7 +55,7 @@ abstract class KFuncDecl1<T : KSort, A : KSort>(
     resultSort: T,
     val argSort: A,
 ) : KFuncDecl<T>(ctx, name, resultSort, listOf(argSort)) {
-    abstract fun KContext.apply(arg: KExpr<A>): KApp<T, KExpr<A>>
+    abstract fun KContext.apply(arg: KExpr<A>): KApp<T, A>
 
     @Suppress("UNCHECKED_CAST")
     override fun apply(args: List<KExpr<*>>): KApp<T, *> = with(ctx) {
@@ -138,7 +138,7 @@ abstract class KFuncDeclChain<T : KSort, A : KSort>(
     resultSort: T,
     val argSort: A,
 ) : KFuncDecl<T>(ctx, name, resultSort, listOf(argSort)) {
-    abstract fun KContext.applyChain(args: List<KExpr<A>>): KApp<T, KExpr<A>>
+    abstract fun KContext.applyChain(args: List<KExpr<A>>): KApp<T, A>
 
     override fun print(builder: StringBuilder) {
         builder.append('(')

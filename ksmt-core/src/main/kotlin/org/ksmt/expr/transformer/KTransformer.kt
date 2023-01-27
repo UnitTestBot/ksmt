@@ -165,7 +165,7 @@ interface KTransformer : KTransformerBase {
     // function transformers
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = transformApp(expr)
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = transform(expr as KFunctionApp<T>)
-    fun <T : KSort, A : KSort> transformApp(expr: KApp<T, KExpr<A>>): KExpr<T> = with(ctx) {
+    fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> = with(ctx) {
         val args = expr.args.map { it.accept(this@KTransformer) }
 
         return if (args == expr.args) {

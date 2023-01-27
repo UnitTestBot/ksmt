@@ -504,19 +504,19 @@ interface KFpExprSimplifier : KExprSimplifierBase {
             mkFpToBvExpr(rm, value, expr.bvSize, expr.isSigned)
         }
 
-    private inline fun <T : KFpSort> KApp<T, KExpr<KSort>>.simplifyFpUnaryOp(
+    private inline fun <T : KFpSort> KApp<T, KSort>.simplifyFpUnaryOp(
         crossinline simplifier: KContext.(KExpr<KFpRoundingModeSort>, KExpr<T>) -> KExpr<T>
     ): KExpr<T> = simplifyApp(this) { (rm, value) ->
         simplifier(ctx, rm.uncheckedCast(), value.uncheckedCast())
     }
 
-    private inline fun <T : KFpSort> KApp<T, KExpr<KSort>>.simplifyFpBinaryOp(
+    private inline fun <T : KFpSort> KApp<T, KSort>.simplifyFpBinaryOp(
         crossinline simplifier: KContext.(KExpr<KFpRoundingModeSort>, KExpr<T>, KExpr<T>) -> KExpr<T>
     ): KExpr<T> = simplifyApp(this) { (rm, lhs, rhs) ->
         simplifier(ctx, rm.uncheckedCast(), lhs.uncheckedCast(), rhs.uncheckedCast())
     }
 
-    private inline fun <T : KFpSort> KApp<T, KExpr<KSort>>.simplifyFpTernaryOp(
+    private inline fun <T : KFpSort> KApp<T, KSort>.simplifyFpTernaryOp(
         crossinline simplifier: KContext.(KExpr<KFpRoundingModeSort>, KExpr<T>, KExpr<T>, KExpr<T>) -> KExpr<T>
     ): KExpr<T> = simplifyApp(this) { (rm, a0, a1, a2) ->
         simplifier(ctx, rm.uncheckedCast(), a0.uncheckedCast(), a1.uncheckedCast(), a2.uncheckedCast())

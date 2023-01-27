@@ -358,7 +358,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
         val condition: KExpr<KBoolSort>,
         val trueBranch: KExpr<T>,
         val falseBranch: KExpr<T>
-    ) : KApp<T, KExpr<KBoolSort>>(ctx) {
+    ) : KApp<T, KBoolSort>(ctx) {
 
         override val decl: KDecl<T>
             get() = ctx.mkIteDecl(trueBranch.sort)
@@ -385,7 +385,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
         val simplifiedCondition: KExpr<KBoolSort>,
         val trueBranch: KExpr<T>,
         val falseBranch: KExpr<T>
-    ) : KApp<T, KExpr<T>>(ctx) {
+    ) : KApp<T, T>(ctx) {
 
         override val decl: KDecl<T>
             get() = ctx.mkIteDecl(trueBranch.sort)

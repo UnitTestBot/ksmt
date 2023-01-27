@@ -145,7 +145,7 @@ open class KExprSimplifier(ctx: KContext) :
  * 3. Post rewrite. Perform a simplification of a simplification result.
  * */
 inline fun <T : KSort, A : KSort> KExprSimplifierBase.simplifyApp(
-    expr: KApp<T, KExpr<A>>,
+    expr: KApp<T, A>,
     preprocess: KContext.() -> KExpr<T> = { expr },
     crossinline simplifier: KContext.(List<KExpr<A>>) -> KExpr<T>
 ): KExpr<T> {

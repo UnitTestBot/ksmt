@@ -1504,38 +1504,42 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         return SimplifierFlatBvConcatExpr(ctx, expr.sort, flatten)
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun <S : KBvSort> flatBvAdd(expr: KBvAddExpr<S>): SimplifierFlatBvAddExpr<S> {
         val flatten = flatBinaryBvExpr<KBvAddExpr<*>>(
-            expr,
-            getLhs = { it.arg0 },
-            getRhs = { it.arg1 }
+            expr as KExpr<KBvSort>,
+            getLhs = { it.arg0 as KExpr<KBvSort> },
+            getRhs = { it.arg1 as KExpr<KBvSort> }
         )
         return SimplifierFlatBvAddExpr(ctx, flatten).uncheckedCast()
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun <S : KBvSort> flatBvMul(expr: KBvMulExpr<S>): SimplifierFlatBvMulExpr<S> {
         val flatten = flatBinaryBvExpr<KBvMulExpr<*>>(
-            expr,
-            getLhs = { it.arg0 },
-            getRhs = { it.arg1 }
+            expr as KExpr<KBvSort>,
+            getLhs = { it.arg0 as KExpr<KBvSort> },
+            getRhs = { it.arg1 as KExpr<KBvSort> }
         )
         return SimplifierFlatBvMulExpr(ctx, flatten).uncheckedCast()
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun <S : KBvSort> flatBvOr(expr: KBvOrExpr<S>): SimplifierFlatBvOrExpr<S> {
         val flatten = flatBinaryBvExpr<KBvOrExpr<*>>(
-            expr,
-            getLhs = { it.arg0 },
-            getRhs = { it.arg1 }
+            expr as KExpr<KBvSort>,
+            getLhs = { it.arg0 as KExpr<KBvSort> },
+            getRhs = { it.arg1 as KExpr<KBvSort> }
         )
         return SimplifierFlatBvOrExpr(ctx, flatten).uncheckedCast()
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun <S : KBvSort> flatBvXor(expr: KBvXorExpr<S>): SimplifierFlatBvXorExpr<S> {
         val flatten = flatBinaryBvExpr<KBvXorExpr<*>>(
-            expr,
-            getLhs = { it.arg0 },
-            getRhs = { it.arg1 }
+            expr as KExpr<KBvSort>,
+            getLhs = { it.arg0 as KExpr<KBvSort> },
+            getRhs = { it.arg1 as KExpr<KBvSort> }
         )
         return SimplifierFlatBvXorExpr(ctx, flatten).uncheckedCast()
     }
@@ -1599,7 +1603,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     private class SimplifierFlatBvAddExpr<T : KBvSort>(
         ctx: KContext,
         override val args: List<KExpr<T>>
-    ) : KApp<T, KExpr<T>>(ctx) {
+    ) : KApp<T, T>(ctx) {
 
         override val decl: KDecl<T>
             get() = ctx.mkBvAddDecl(sort, sort)
@@ -1620,7 +1624,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     private class SimplifierFlatBvMulExpr<T : KBvSort>(
         ctx: KContext,
         override val args: List<KExpr<T>>
-    ) : KApp<T, KExpr<T>>(ctx) {
+    ) : KApp<T, T>(ctx) {
 
         override val decl: KDecl<T>
             get() = ctx.mkBvMulDecl(sort, sort)
@@ -1641,7 +1645,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     private class SimplifierFlatBvOrExpr<T : KBvSort>(
         ctx: KContext,
         override val args: List<KExpr<T>>
-    ) : KApp<T, KExpr<T>>(ctx) {
+    ) : KApp<T, T>(ctx) {
 
         override val decl: KDecl<T>
             get() = ctx.mkBvOrDecl(sort, sort)
@@ -1662,7 +1666,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     private class SimplifierFlatBvXorExpr<T : KBvSort>(
         ctx: KContext,
         override val args: List<KExpr<T>>
-    ) : KApp<T, KExpr<T>>(ctx) {
+    ) : KApp<T, T>(ctx) {
 
         override val decl: KDecl<T>
             get() = ctx.mkBvXorDecl(sort, sort)
@@ -1684,7 +1688,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         ctx: KContext,
         override val sort: KBvSort,
         override val args: List<KExpr<KBvSort>>
-    ) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
+    ) : KApp<KBvSort, KBvSort>(ctx) {
 
         // We have no decl, but we don't care since decl is unused
         override val decl: KDecl<KBvSort>

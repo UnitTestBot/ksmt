@@ -14,7 +14,6 @@ import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
-import org.ksmt.utils.mkFreshConst
 import org.ksmt.utils.mkFreshConstDecl
 import org.ksmt.utils.uncheckedCast
 
@@ -170,7 +169,7 @@ open class KBitwuzlaModel(
             return super.transformExpr(expr)
         }
 
-        override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, KExpr<A>>): KExpr<T> = with(ctx) {
+        override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> = with(ctx) {
             if (expr.decl in incompleteDecls) {
                 return expr.sort.sampleValue()
             }

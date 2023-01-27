@@ -8,19 +8,20 @@ import org.ksmt.expr.printer.ExpressionPrinter
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.uncheckedCast
 
 class KArrayStore<D : KSort, R : KSort> internal constructor(
     ctx: KContext,
     val array: KExpr<KArraySort<D, R>>,
     val index: KExpr<D>,
     val value: KExpr<R>
-) : KApp<KArraySort<D, R>, KExpr<*>>(ctx) {
+) : KApp<KArraySort<D, R>, KSort>(ctx) {
 
     override val decl: KDecl<KArraySort<D, R>>
         get() = ctx.mkArrayStoreDecl(array.sort)
 
-    override val args: List<KExpr<*>>
-        get() = listOf(array, index, value)
+    override val args: List<KExpr<KSort>>
+        get() = listOf(array, index, value).uncheckedCast()
 
     override fun accept(transformer: KTransformerBase): KExpr<KArraySort<D, R>> = transformer.transform(this)
 
@@ -38,13 +39,13 @@ class KArraySelect<D : KSort, R : KSort> internal constructor(
     ctx: KContext,
     val array: KExpr<KArraySort<D, R>>,
     val index: KExpr<D>
-) : KApp<R, KExpr<*>>(ctx) {
+) : KApp<R, KSort>(ctx) {
 
     override val decl: KDecl<R>
         get() = ctx.mkArraySelectDecl(array.sort)
 
-    override val args: List<KExpr<*>>
-        get() = listOf(array, index)
+    override val args: List<KExpr<KSort>>
+        get() = listOf(array, index).uncheckedCast()
 
     override fun accept(transformer: KTransformerBase): KExpr<R> = transformer.transform(this)
 
@@ -62,7 +63,7 @@ class KArrayConst<D : KSort, R : KSort> internal constructor(
     ctx: KContext,
     override val sort: KArraySort<D, R>,
     val value: KExpr<R>
-) : KApp<KArraySort<D, R>, KExpr<R>>(ctx) {
+) : KApp<KArraySort<D, R>, R>(ctx) {
 
     override val decl: KArrayConstDecl<D, R>
         get() = ctx.mkArrayConstDecl(sort)
