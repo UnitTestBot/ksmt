@@ -16,9 +16,9 @@ class KBoolSort internal constructor(ctx: KContext) : KSort(ctx) {
 }
 
 @Suppress("UnnecessaryAbstractClass")
-abstract class KArithSort<out T : KArithSort<T>>(ctx: KContext) : KSort(ctx)
+abstract class KArithSort(ctx: KContext) : KSort(ctx)
 
-class KIntSort internal constructor(ctx: KContext) : KArithSort<KIntSort>(ctx) {
+class KIntSort internal constructor(ctx: KContext) : KArithSort(ctx) {
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
 
     override fun print(builder: StringBuilder) {
@@ -26,7 +26,7 @@ class KIntSort internal constructor(ctx: KContext) : KArithSort<KIntSort>(ctx) {
     }
 }
 
-class KRealSort internal constructor(ctx: KContext) : KArithSort<KRealSort>(ctx) {
+class KRealSort internal constructor(ctx: KContext) : KArithSort(ctx) {
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
 
     override fun print(builder: StringBuilder) {

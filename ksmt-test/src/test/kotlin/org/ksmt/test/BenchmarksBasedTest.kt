@@ -219,7 +219,7 @@ abstract class BenchmarksBasedTest {
     private class UnderspecifiedOperationDetector(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         var hasUnderspecifiedOperation = false
 
-        override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>): KExpr<T> =
+        override fun <T : KArithSort> transform(expr: KDivArithExpr<T>): KExpr<T> =
             super.transform(expr).also { checkDivisionByZero(expr.rhs) }
 
         override fun transform(expr: KModIntExpr): KExpr<KIntSort> =
@@ -228,7 +228,7 @@ abstract class BenchmarksBasedTest {
         override fun transform(expr: KRemIntExpr): KExpr<KIntSort> =
             super.transform(expr).also { checkDivisionByZero(expr.rhs) }
 
-        override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>): KExpr<T> =
+        override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>): KExpr<T> =
             super.transform(expr).also { checkZeroToZeroPower(expr.lhs, expr.rhs) }
 
         override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>): KExpr<KBvSort> =
@@ -372,7 +372,7 @@ abstract class BenchmarksBasedTest {
     }
 
     class SortChecker(ctx: KContext) : KNonRecursiveTransformer(ctx) {
-        override fun <T : KSort> transformApp(expr: KApp<T, *>): KExpr<T> = with(ctx) {
+        override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> = with(ctx) {
             // apply internally check arguments sorts
             expr.decl.apply(expr.args)
             return super.transformApp(expr).also {

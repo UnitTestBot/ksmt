@@ -14,11 +14,7 @@ import org.ksmt.sort.KIntSort
 import org.ksmt.utils.toBinary
 import java.math.BigInteger
 
-abstract class KBitVecValue<S : KBvSort>(
-    ctx: KContext
-) : KApp<S, KExpr<*>>(ctx), KInterpretedConstant {
-    override val args: List<KExpr<*>> = emptyList()
-
+abstract class KBitVecValue<S : KBvSort>(ctx: KContext) : KInterpretedValue<S>(ctx){
     abstract val stringValue: String
 }
 
@@ -123,7 +119,7 @@ class KBitVecCustomValue internal constructor(
 class KBvNotExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val value: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
@@ -148,7 +144,7 @@ class KBvNotExpr<S : KBvSort> internal constructor(
 class KBvReductionAndExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val value: KExpr<S>
-) : KApp<KBv1Sort, KExpr<S>>(ctx) {
+) : KApp<KBv1Sort, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
@@ -167,7 +163,7 @@ class KBvReductionAndExpr<S : KBvSort> internal constructor(
 class KBvReductionOrExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val value: KExpr<S>
-) : KApp<KBv1Sort, KExpr<S>>(ctx) {
+) : KApp<KBv1Sort, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
@@ -187,7 +183,7 @@ class KBvAndExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -213,7 +209,7 @@ class KBvOrExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -239,7 +235,7 @@ class KBvXorExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -265,7 +261,7 @@ class KBvNAndExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -291,7 +287,7 @@ class KBvNorExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -317,7 +313,7 @@ class KBvXNorExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -342,7 +338,7 @@ class KBvXNorExpr<S : KBvSort> internal constructor(
 class KBvNegationExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val value: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
@@ -368,7 +364,7 @@ class KBvAddExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -394,7 +390,7 @@ class KBvSubExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -420,7 +416,7 @@ class KBvMulExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -449,7 +445,7 @@ class KBvUnsignedDivExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -480,7 +476,7 @@ class KBvSignedDivExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -509,7 +505,7 @@ class KBvUnsignedRemExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -539,7 +535,7 @@ class KBvSignedRemExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -566,7 +562,7 @@ class KBvSignedModExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -592,7 +588,7 @@ class KBvUnsignedLessExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<KBoolSort, KExpr<S>>(ctx) {
+) : KApp<KBoolSort, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -612,7 +608,7 @@ class KBvSignedLessExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<KBoolSort, KExpr<S>>(ctx) {
+) : KApp<KBoolSort, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -632,7 +628,7 @@ class KBvUnsignedLessOrEqualExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<KBoolSort, KExpr<S>>(ctx) {
+) : KApp<KBoolSort, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -653,7 +649,7 @@ class KBvSignedLessOrEqualExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<KBoolSort, KExpr<S>>(ctx) {
+) : KApp<KBoolSort, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -674,7 +670,7 @@ class KBvUnsignedGreaterOrEqualExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<KBoolSort, KExpr<S>>(ctx) {
+) : KApp<KBoolSort, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -694,7 +690,7 @@ class KBvSignedGreaterOrEqualExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<KBoolSort, KExpr<S>>(ctx) {
+) : KApp<KBoolSort, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -714,7 +710,7 @@ class KBvUnsignedGreaterExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<KBoolSort, KExpr<S>>(ctx) {
+) : KApp<KBoolSort, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -734,7 +730,7 @@ class KBvSignedGreaterExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>
-) : KApp<KBoolSort, KExpr<S>>(ctx) {
+) : KApp<KBoolSort, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -756,7 +752,7 @@ class KBvConcatExpr internal constructor(
     ctx: KContext,
     val arg0: KExpr<KBvSort>,
     val arg1: KExpr<KBvSort>
-) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
+) : KApp<KBvSort, KBvSort>(ctx) {
     override val args: List<KExpr<KBvSort>>
         get() = listOf(arg0, arg1)
 
@@ -787,7 +783,7 @@ class KBvExtractExpr internal constructor(
     val high: Int,
     val low: Int,
     val value: KExpr<KBvSort>
-) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
+) : KApp<KBvSort, KBvSort>(ctx) {
     init {
         require(low <= high) { "High bit $high must be greater than lower bit $low" }
     }
@@ -814,7 +810,7 @@ class KBvSignExtensionExpr internal constructor(
     ctx: KContext,
     val extensionSize: Int,
     val value: KExpr<KBvSort>
-) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
+) : KApp<KBvSort, KBvSort>(ctx) {
     override val args: List<KExpr<KBvSort>>
         get() = listOf(value)
 
@@ -843,7 +839,7 @@ class KBvZeroExtensionExpr internal constructor(
     ctx: KContext,
     val extensionSize: Int,
     val value: KExpr<KBvSort>
-) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
+) : KApp<KBvSort, KBvSort>(ctx) {
     override val args: List<KExpr<KBvSort>>
         get() = listOf(value)
 
@@ -869,7 +865,7 @@ class KBvRepeatExpr internal constructor(
     ctx: KContext,
     val repeatNumber: Int,
     val value: KExpr<KBvSort>
-) : KApp<KBvSort, KExpr<KBvSort>>(ctx) {
+) : KApp<KBvSort, KBvSort>(ctx) {
     override val args: List<KExpr<KBvSort>>
         get() = listOf(value)
 
@@ -898,7 +894,7 @@ class KBvShiftLeftExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg: KExpr<S>,
     val shift: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg, shift)
 
@@ -926,7 +922,7 @@ class KBvLogicalShiftRightExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg: KExpr<S>,
     val shift: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg, shift)
 
@@ -955,7 +951,7 @@ class KBvArithShiftRightExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg: KExpr<S>,
     val shift: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg, shift)
 
@@ -984,7 +980,7 @@ class KBvRotateLeftExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg: KExpr<S>,
     val rotation: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg, rotation)
 
@@ -1012,7 +1008,7 @@ class KBvRotateLeftIndexedExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val rotationNumber: Int,
     val value: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
@@ -1040,7 +1036,7 @@ class KBvRotateRightExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg: KExpr<S>,
     val rotation: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg, rotation)
 
@@ -1068,7 +1064,7 @@ class KBvRotateRightIndexedExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val rotationNumber: Int,
     val value: KExpr<S>
-) : KApp<S, KExpr<S>>(ctx) {
+) : KApp<S, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
@@ -1100,7 +1096,7 @@ class KBv2IntExpr internal constructor(
     ctx: KContext,
     val value: KExpr<KBvSort>,
     val isSigned: Boolean
-) : KApp<KIntSort, KExpr<KBvSort>>(ctx) {
+) : KApp<KIntSort, KBvSort>(ctx) {
     override val args: List<KExpr<KBvSort>>
         get() = listOf(value)
 
@@ -1118,7 +1114,7 @@ class KBvAddNoOverflowExpr<S : KBvSort> internal constructor(
     val arg0: KExpr<S>,
     val arg1: KExpr<S>,
     val isSigned: Boolean
-) : KApp<KBoolSort, KExpr<S>>(ctx) {
+) : KApp<KBoolSort, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -1135,7 +1131,7 @@ class KBvAddNoUnderflowExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>,
-) : KApp<KBoolSort, KExpr<S>>(ctx) {
+) : KApp<KBoolSort, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -1152,7 +1148,7 @@ class KBvSubNoOverflowExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>,
-) : KApp<KBoolSort, KExpr<S>>(ctx) {
+) : KApp<KBoolSort, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -1170,7 +1166,7 @@ class KBvSubNoUnderflowExpr<S : KBvSort> internal constructor(
     val arg0: KExpr<S>,
     val arg1: KExpr<S>,
     val isSigned: Boolean
-) : KApp<KBoolSort, KExpr<S>>(ctx) {
+) : KApp<KBoolSort, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -1187,7 +1183,7 @@ class KBvDivNoOverflowExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>,
-) : KApp<KBoolSort, KExpr<S>>(ctx) {
+) : KApp<KBoolSort, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -1203,7 +1199,7 @@ class KBvDivNoOverflowExpr<S : KBvSort> internal constructor(
 class KBvNegNoOverflowExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val value: KExpr<S>,
-) : KApp<KBoolSort, KExpr<S>>(ctx) {
+) : KApp<KBoolSort, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(value)
 
@@ -1221,7 +1217,7 @@ class KBvMulNoOverflowExpr<S : KBvSort> internal constructor(
     val arg0: KExpr<S>,
     val arg1: KExpr<S>,
     val isSigned: Boolean
-) : KApp<KBoolSort, KExpr<S>>(ctx) {
+) : KApp<KBoolSort, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 
@@ -1238,7 +1234,7 @@ class KBvMulNoUnderflowExpr<S : KBvSort> internal constructor(
     ctx: KContext,
     val arg0: KExpr<S>,
     val arg1: KExpr<S>,
-) : KApp<KBoolSort, KExpr<S>>(ctx) {
+) : KApp<KBoolSort, S>(ctx) {
     override val args: List<KExpr<S>>
         get() = listOf(arg0, arg1)
 

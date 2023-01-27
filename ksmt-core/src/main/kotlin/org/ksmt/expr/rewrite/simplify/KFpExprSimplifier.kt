@@ -136,10 +136,9 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     }
 
     // a - b ==> a + (-b)
-    @Suppress("UNCHECKED_CAST")
     override fun <T : KFpSort> transform(expr: KFpSubExpr<T>): KExpr<T> =
         simplifyApp(
-            expr = expr as KApp<T, KExpr<KSort>>,
+            expr = expr,
             preprocess = { mkFpAddExpr(expr.roundingMode, expr.arg0, mkFpNegationExpr(expr.arg1)) }
         ) {
             error("Always preprocessed")
@@ -380,9 +379,8 @@ interface KFpExprSimplifier : KExprSimplifierBase {
             mkFpIsPositiveExpr(arg)
         }
 
-    @Suppress("UNCHECKED_CAST")
     override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> =
-        simplifyApp(expr as KApp<T, KExpr<KBvSort>>) { (sign, exp, significand) ->
+        simplifyApp(expr) { (sign, exp, significand) ->
             if (sign is KBitVecValue<*> && exp is KBitVecValue<*> && significand is KBitVecValue<*>) {
 
                 val unbiasedExponent = fpUnbiasExponent(exp)
@@ -417,9 +415,8 @@ interface KFpExprSimplifier : KExprSimplifierBase {
         mkFpToIEEEBvExpr(arg)
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> =
-        simplifyApp(expr as KApp<T, KExpr<KSort>>) { (rmArg, valueArg) ->
+        simplifyApp(expr) { (rmArg, valueArg) ->
             val rm: KExpr<KFpRoundingModeSort> = rmArg.uncheckedCast()
             val value: KExpr<KFpSort> = valueArg.uncheckedCast()
 
@@ -431,9 +428,8 @@ interface KFpExprSimplifier : KExprSimplifierBase {
             mkFpToFpExpr(expr.sort, rm, value)
         }
 
-    @Suppress("UNCHECKED_CAST")
     override fun <T : KFpSort> transform(expr: KRealToFpExpr<T>): KExpr<T> =
-        simplifyApp(expr as KApp<T, KExpr<KSort>>) { (rmArg, valueArg) ->
+        simplifyApp(expr) { (rmArg, valueArg) ->
             val rm: KExpr<KFpRoundingModeSort> = rmArg.uncheckedCast()
             val value: KExpr<KRealSort> = valueArg.uncheckedCast()
 
@@ -465,9 +461,8 @@ interface KFpExprSimplifier : KExprSimplifierBase {
         mkFpToRealExpr(arg)
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun <T : KFpSort> transform(expr: KBvToFpExpr<T>): KExpr<T> =
-        simplifyApp(expr as KApp<T, KExpr<KSort>>) { (rmArg, bvValueArg) ->
+        simplifyApp(expr) { (rmArg, bvValueArg) ->
             val rm: KExpr<KFpRoundingModeSort> = rmArg.uncheckedCast()
             val value: KExpr<KBvSort> = bvValueArg.uncheckedCast()
 
@@ -479,9 +474,8 @@ interface KFpExprSimplifier : KExprSimplifierBase {
             mkBvToFpExpr(expr.sort, rm, value, expr.signed)
         }
 
-    @Suppress("UNCHECKED_CAST")
     override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>): KExpr<KBvSort> =
-        simplifyApp(expr as KApp<KBvSort, KExpr<KSort>>) { (rmArg, valueArg) ->
+        simplifyApp(expr) { (rmArg, valueArg) ->
             val rm: KExpr<KFpRoundingModeSort> = rmArg.uncheckedCast()
             val value: KExpr<T> = valueArg.uncheckedCast()
 
@@ -510,24 +504,21 @@ interface KFpExprSimplifier : KExprSimplifierBase {
             mkFpToBvExpr(rm, value, expr.bvSize, expr.isSigned)
         }
 
-    @Suppress("UNCHECKED_CAST")
-    private inline fun <T : KFpSort> KExpr<T>.simplifyFpUnaryOp(
+    private inline fun <T : KFpSort> KApp<T, KSort>.simplifyFpUnaryOp(
         crossinline simplifier: KContext.(KExpr<KFpRoundingModeSort>, KExpr<T>) -> KExpr<T>
-    ): KExpr<T> = simplifyApp(this as KApp<T, KExpr<KSort>>) { (rm, value) ->
+    ): KExpr<T> = simplifyApp(this) { (rm, value) ->
         simplifier(ctx, rm.uncheckedCast(), value.uncheckedCast())
     }
 
-    @Suppress("UNCHECKED_CAST")
-    private inline fun <T : KFpSort> KExpr<T>.simplifyFpBinaryOp(
+    private inline fun <T : KFpSort> KApp<T, KSort>.simplifyFpBinaryOp(
         crossinline simplifier: KContext.(KExpr<KFpRoundingModeSort>, KExpr<T>, KExpr<T>) -> KExpr<T>
-    ): KExpr<T> = simplifyApp(this as KApp<T, KExpr<KSort>>) { (rm, lhs, rhs) ->
+    ): KExpr<T> = simplifyApp(this) { (rm, lhs, rhs) ->
         simplifier(ctx, rm.uncheckedCast(), lhs.uncheckedCast(), rhs.uncheckedCast())
     }
 
-    @Suppress("UNCHECKED_CAST")
-    private inline fun <T : KFpSort> KExpr<T>.simplifyFpTernaryOp(
+    private inline fun <T : KFpSort> KApp<T, KSort>.simplifyFpTernaryOp(
         crossinline simplifier: KContext.(KExpr<KFpRoundingModeSort>, KExpr<T>, KExpr<T>, KExpr<T>) -> KExpr<T>
-    ): KExpr<T> = simplifyApp(this as KApp<T, KExpr<KSort>>) { (rm, a0, a1, a2) ->
+    ): KExpr<T> = simplifyApp(this) { (rm, a0, a1, a2) ->
         simplifier(ctx, rm.uncheckedCast(), a0.uncheckedCast(), a1.uncheckedCast(), a2.uncheckedCast())
     }
 

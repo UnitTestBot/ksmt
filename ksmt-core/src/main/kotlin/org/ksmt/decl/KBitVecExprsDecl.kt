@@ -93,7 +93,7 @@ class KBvNotDecl<T : KBvSort> internal constructor(
 ) : KFuncDecl1<T, T>(ctx, "bvnot", resultSort = valueSort, valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<T, KExpr<T>> = mkBvNotExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<T, T> = mkBvNotExpr(arg)
 }
 
 class KBvReductionAndDecl<T : KBvSort> internal constructor(
@@ -102,7 +102,7 @@ class KBvReductionAndDecl<T : KBvSort> internal constructor(
 ) : KFuncDecl1<KBv1Sort, T>(ctx, "bvredand", resultSort = ctx.mkBv1Sort(), valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<KBv1Sort, KExpr<T>> = mkBvReductionAndExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<KBv1Sort, T> = mkBvReductionAndExpr(arg)
 }
 
 class KBvReductionOrDecl<T : KBvSort> internal constructor(
@@ -111,7 +111,7 @@ class KBvReductionOrDecl<T : KBvSort> internal constructor(
 ) : KFuncDecl1<KBv1Sort, T>(ctx, "bvredor", resultSort = ctx.mkBv1Sort(), valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<KBv1Sort, KExpr<T>> = mkBvReductionOrExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<KBv1Sort, T> = mkBvReductionOrExpr(arg)
 }
 
 class KBvAndDecl<T : KBvSort> internal constructor(
@@ -204,7 +204,7 @@ class KBvNegationDecl<T : KBvSort> internal constructor(
 ) : KFuncDecl1<T, T>(ctx, "bvneg", resultSort = valueSort, valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<T, KExpr<T>> = mkBvNegationExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<T, T> = mkBvNegationExpr(arg)
 }
 
 class KBvAddDecl<T : KBvSort> internal constructor(
@@ -490,7 +490,7 @@ class KBvExtractDecl internal constructor(
 
     override fun KContext.apply(
         arg: KExpr<KBvSort>
-    ): KApp<KBvSort, KExpr<KBvSort>> = mkBvExtractExpr(high, low, arg)
+    ): KApp<KBvSort, KBvSort> = mkBvExtractExpr(high, low, arg)
 
     override val parameters: List<Any>
         get() = listOf(high, low)
@@ -510,7 +510,7 @@ class KSignExtDecl internal constructor(
 
     override fun KContext.apply(
         arg: KExpr<KBvSort>
-    ): KApp<KBvSort, KExpr<KBvSort>> = mkBvSignExtensionExpr(i, arg)
+    ): KApp<KBvSort, KBvSort> = mkBvSignExtensionExpr(i, arg)
 
     override val parameters: List<Any>
         get() = listOf(i)
@@ -530,7 +530,7 @@ class KZeroExtDecl internal constructor(
 
     override fun KContext.apply(
         arg: KExpr<KBvSort>
-    ): KApp<KBvSort, KExpr<KBvSort>> = mkBvZeroExtensionExpr(i, arg)
+    ): KApp<KBvSort, KBvSort> = mkBvZeroExtensionExpr(i, arg)
 
     override val parameters: List<Any>
         get() = listOf(i)
@@ -550,7 +550,7 @@ class KBvRepeatDecl internal constructor(
 
     override fun KContext.apply(
         arg: KExpr<KBvSort>
-    ): KApp<KBvSort, KExpr<KBvSort>> = mkBvRepeatExpr(i, arg)
+    ): KApp<KBvSort, KBvSort> = mkBvRepeatExpr(i, arg)
 
     override val parameters: List<Any>
         get() = listOf(i)
@@ -618,7 +618,7 @@ class KBvRotateLeftDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KApp<T, KExpr<T>> = mkBvRotateLeftExpr(arg0, arg1)
+    ): KApp<T, T> = mkBvRotateLeftExpr(arg0, arg1)
 }
 
 class KBvRotateLeftIndexedDecl<T : KBvSort> internal constructor(
@@ -630,7 +630,7 @@ class KBvRotateLeftIndexedDecl<T : KBvSort> internal constructor(
 
     override fun KContext.apply(
         arg: KExpr<T>
-    ): KApp<T, KExpr<T>> = mkBvRotateLeftIndexedExpr(i, arg)
+    ): KApp<T, T> = mkBvRotateLeftIndexedExpr(i, arg)
 
     override val parameters: List<Any>
         get() = listOf(i)
@@ -656,7 +656,7 @@ class KBvRotateRightDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KApp<T, KExpr<T>> = mkBvRotateRightExpr(arg0, arg1)
+    ): KApp<T, T> = mkBvRotateRightExpr(arg0, arg1)
 }
 
 class KBvRotateRightIndexedDecl<T : KBvSort> internal constructor(
@@ -673,7 +673,7 @@ class KBvRotateRightIndexedDecl<T : KBvSort> internal constructor(
 
     override fun KContext.apply(
         arg: KExpr<T>
-    ): KApp<T, KExpr<T>> = mkBvRotateRightIndexedExpr(i, arg)
+    ): KApp<T, T> = mkBvRotateRightIndexedExpr(i, arg)
 
     override val parameters: List<Any>
         get() = listOf(i)
@@ -693,7 +693,7 @@ class KBv2IntDecl internal constructor(
 
     override fun KContext.apply(
         arg: KExpr<KBvSort>
-    ): KApp<KIntSort, KExpr<KBvSort>> = mkBv2IntExpr(arg, isSigned)
+    ): KApp<KIntSort, KBvSort> = mkBv2IntExpr(arg, isSigned)
 
     override val parameters: List<Any>
         get() = listOf(isSigned)
@@ -835,7 +835,7 @@ class KBvNegNoOverflowDecl<T : KBvSort> internal constructor(
 
     override fun KContext.apply(
         arg: KExpr<T>
-    ): KApp<KBoolSort, KExpr<T>> = mkBvNegationNoOverflowExpr(arg)
+    ): KApp<KBoolSort, T> = mkBvNegationNoOverflowExpr(arg)
 }
 
 class KBvMulNoOverflowDecl<T : KBvSort> internal constructor(

@@ -7,9 +7,9 @@ import org.ksmt.expr.printer.ExpressionPrinter
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KSort
 
-abstract class KApp<T : KSort, A : KExpr<*>> internal constructor(ctx: KContext) : KExpr<T>(ctx) {
+abstract class KApp<T : KSort, A : KSort> internal constructor(ctx: KContext) : KExpr<T>(ctx) {
 
-    abstract val args: List<A>
+    abstract val args: List<KExpr<A>>
 
     abstract val decl: KDecl<T>
 
@@ -50,8 +50,8 @@ abstract class KApp<T : KSort, A : KExpr<*>> internal constructor(ctx: KContext)
 open class KFunctionApp<T : KSort> internal constructor(
     ctx: KContext,
     override val decl: KDecl<T>,
-    override val args: List<KExpr<*>>
-) : KApp<T, KExpr<*>>(ctx) {
+    override val args: List<KExpr<KSort>>
+) : KApp<T, KSort>(ctx) {
     override val sort: T
         get() = decl.sort
 
@@ -64,8 +64,3 @@ class KConst<T : KSort> internal constructor(
 ) : KFunctionApp<T>(ctx, decl, args = emptyList()) {
     override fun accept(transformer: KTransformerBase): KExpr<T> = transformer.transform(this)
 }
-
-/**
- * Specify that the expression is an interpreted constant in some theory.
- * */
-interface KInterpretedConstant

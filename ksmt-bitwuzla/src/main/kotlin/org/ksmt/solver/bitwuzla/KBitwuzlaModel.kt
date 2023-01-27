@@ -14,8 +14,8 @@ import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
-import org.ksmt.utils.mkFreshConst
 import org.ksmt.utils.mkFreshConstDecl
+import org.ksmt.utils.uncheckedCast
 
 open class KBitwuzlaModel(
     private val ctx: KContext,
@@ -52,7 +52,6 @@ open class KBitwuzlaModel(
 
     override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KExpr<KUninterpretedSort>>? = null
 
-    @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> interpretation(
         decl: KDecl<T>
     ): KModel.KFuncInterp<T> = with(ctx) {
@@ -83,7 +82,7 @@ open class KBitwuzlaModel(
             }
         }
 
-        interpretation as KModel.KFuncInterp<T>
+        interpretation.uncheckedCast()
     }
 
     private fun <T : KSort> functionInterpretation(
@@ -115,7 +114,6 @@ open class KBitwuzlaModel(
         )
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun <T : KSort> KContext.arrayInterpretation(
         decl: KDecl<T>,
         term: BitwuzlaTerm
@@ -145,7 +143,7 @@ open class KBitwuzlaModel(
             decl = decl,
             vars = emptyList(),
             entries = emptyList(),
-            default = mkFunctionAsArray<KSort, KSort>(arrayInterpDecl) as KExpr<T>
+            default = mkFunctionAsArray<KSort, KSort>(arrayInterpDecl).uncheckedCast()
         )
     }
 
@@ -171,7 +169,7 @@ open class KBitwuzlaModel(
             return super.transformExpr(expr)
         }
 
-        override fun <T : KSort> transformApp(expr: KApp<T, *>): KExpr<T> = with(ctx) {
+        override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> = with(ctx) {
             if (expr.decl in incompleteDecls) {
                 return expr.sort.sampleValue()
             }

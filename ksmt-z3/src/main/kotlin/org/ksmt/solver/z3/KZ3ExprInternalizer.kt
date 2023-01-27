@@ -621,37 +621,37 @@ open class KZ3ExprInternalizer(
         }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KAddArithExpr<T>) = with(expr) {
         transformArray(args) { args -> Native.mkAdd(nCtx, args.size, args) }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KSubArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KSubArithExpr<T>) = with(expr) {
         transformArray(args) { args -> Native.mkSub(nCtx, args.size, args) }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KMulArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KMulArithExpr<T>) = with(expr) {
         transformArray(args) { args -> Native.mkMul(nCtx, args.size, args) }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KUnaryMinusArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KUnaryMinusArithExpr<T>) = with(expr) {
         transform(arg, Native::mkUnaryMinus)
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KDivArithExpr<T>) = with(expr) {
         transform(lhs, rhs, Native::mkDiv)
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>) = with(expr) {
         transform(lhs, rhs, Native::mkPower)
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KLtArithExpr<T>) = with(expr) { transform(lhs, rhs, Native::mkLt) }
+    override fun <T : KArithSort> transform(expr: KLtArithExpr<T>) = with(expr) { transform(lhs, rhs, Native::mkLt) }
 
-    override fun <T : KArithSort<T>> transform(expr: KLeArithExpr<T>) = with(expr) { transform(lhs, rhs, Native::mkLe) }
+    override fun <T : KArithSort> transform(expr: KLeArithExpr<T>) = with(expr) { transform(lhs, rhs, Native::mkLe) }
 
-    override fun <T : KArithSort<T>> transform(expr: KGtArithExpr<T>) = with(expr) { transform(lhs, rhs, Native::mkGt) }
+    override fun <T : KArithSort> transform(expr: KGtArithExpr<T>) = with(expr) { transform(lhs, rhs, Native::mkGt) }
 
-    override fun <T : KArithSort<T>> transform(expr: KGeArithExpr<T>) = with(expr) { transform(lhs, rhs, Native::mkGe) }
+    override fun <T : KArithSort> transform(expr: KGeArithExpr<T>) = with(expr) { transform(lhs, rhs, Native::mkGe) }
 
     override fun transform(expr: KModIntExpr) = with(expr) { transform(lhs, rhs, Native::mkMod) }
 

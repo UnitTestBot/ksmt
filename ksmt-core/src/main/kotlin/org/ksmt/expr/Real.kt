@@ -12,7 +12,7 @@ import org.ksmt.sort.KRealSort
 class KToIntRealExpr internal constructor(
     ctx: KContext,
     val arg: KExpr<KRealSort>
-) : KApp<KIntSort, KExpr<KRealSort>>(ctx) {
+) : KApp<KIntSort, KRealSort>(ctx) {
     override val sort: KIntSort
         get() = ctx.intSort
 
@@ -28,7 +28,7 @@ class KToIntRealExpr internal constructor(
 class KIsIntRealExpr internal constructor(
     ctx: KContext,
     val arg: KExpr<KRealSort>
-) : KApp<KBoolSort, KExpr<KRealSort>>(ctx) {
+) : KApp<KBoolSort, KRealSort>(ctx) {
     override val sort: KBoolSort
         get() = ctx.boolSort
 
@@ -45,14 +45,12 @@ class KRealNumExpr internal constructor(
     ctx: KContext,
     val numerator: KIntNumExpr,
     val denominator: KIntNumExpr
-) : KApp<KRealSort, KExpr<*>>(ctx), KInterpretedConstant {
+) : KInterpretedValue<KRealSort>(ctx) {
     override val sort: KRealSort
         get() = ctx.realSort
 
     override val decl: KRealNumDecl
         get() = ctx.mkRealNumDecl("$numerator/$denominator")
-
-    override val args = emptyList<KExpr<*>>()
 
     override fun accept(transformer: KTransformerBase): KExpr<KRealSort> = transformer.transform(this)
 }

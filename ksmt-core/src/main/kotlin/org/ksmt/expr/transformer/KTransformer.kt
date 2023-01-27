@@ -115,6 +115,7 @@ import org.ksmt.expr.KInt32NumExpr
 import org.ksmt.expr.KInt64NumExpr
 import org.ksmt.expr.KIntBigNumExpr
 import org.ksmt.expr.KIntNumExpr
+import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.KIsIntRealExpr
 import org.ksmt.expr.KIteExpr
 import org.ksmt.expr.KLeArithExpr
@@ -164,7 +165,7 @@ interface KTransformer : KTransformerBase {
     // function transformers
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = transformApp(expr)
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = transform(expr as KFunctionApp<T>)
-    fun <T : KSort> transformApp(expr: KApp<T, *>): KExpr<T> = with(ctx) {
+    fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> = with(ctx) {
         val args = expr.args.map { it.accept(this@KTransformer) }
 
         return if (args == expr.args) {
@@ -174,20 +175,22 @@ interface KTransformer : KTransformerBase {
         }
     }
 
+    fun <T : KSort> transformValue(expr: KInterpretedValue<T>): KExpr<T> = transformApp(expr)
+
     // bool transformers
     override fun transform(expr: KAndExpr): KExpr<KBoolSort> = transformApp(expr)
     override fun transform(expr: KOrExpr): KExpr<KBoolSort> = transformApp(expr)
     override fun transform(expr: KNotExpr): KExpr<KBoolSort> = transformApp(expr)
     override fun transform(expr: KImpliesExpr): KExpr<KBoolSort> = transformApp(expr)
     override fun transform(expr: KXorExpr): KExpr<KBoolSort> = transformApp(expr)
-    override fun transform(expr: KTrue): KExpr<KBoolSort> = transformApp(expr)
-    override fun transform(expr: KFalse): KExpr<KBoolSort> = transformApp(expr)
+    override fun transform(expr: KTrue): KExpr<KBoolSort> = transformValue(expr)
+    override fun transform(expr: KFalse): KExpr<KBoolSort> = transformValue(expr)
     override fun <T : KSort> transform(expr: KEqExpr<T>): KExpr<KBoolSort> = transformApp(expr)
     override fun <T : KSort> transform(expr: KDistinctExpr<T>): KExpr<KBoolSort> = transformApp(expr)
     override fun <T : KSort> transform(expr: KIteExpr<T>): KExpr<T> = transformApp(expr)
 
     // bit-vec transformers
-    fun <T : KBvSort> transformBitVecValue(expr: KBitVecValue<T>): KExpr<T> = transformApp(expr)
+    fun <T : KBvSort> transformBitVecValue(expr: KBitVecValue<T>): KExpr<T> = transformValue(expr)
     override fun transform(expr: KBitVec1Value): KExpr<KBv1Sort> = transformBitVecValue(expr)
     override fun transform(expr: KBitVec8Value): KExpr<KBv8Sort> = transformBitVecValue(expr)
     override fun transform(expr: KBitVec16Value): KExpr<KBv16Sort> = transformBitVecValue(expr)
@@ -245,7 +248,7 @@ interface KTransformer : KTransformerBase {
     override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>): KExpr<KBoolSort> = transformApp(expr)
 
     // fp value transformers
-    fun <T : KFpSort> transformFpValue(expr: KFpValue<T>): KExpr<T> = transformApp(expr)
+    fun <T : KFpSort> transformFpValue(expr: KFpValue<T>): KExpr<T> = transformValue(expr)
     override fun transform(expr: KFp16Value): KExpr<KFp16Sort> = transformFpValue(expr)
     override fun transform(expr: KFp32Value): KExpr<KFp32Sort> = transformFpValue(expr)
     override fun transform(expr: KFp64Value): KExpr<KFp64Sort> = transformFpValue(expr)
@@ -253,7 +256,7 @@ interface KTransformer : KTransformerBase {
     override fun transform(expr: KFpCustomSizeValue): KExpr<KFpSort> = transformFpValue(expr)
 
     // fp rounding mode
-    override fun transform(expr: KFpRoundingModeExpr): KExpr<KFpRoundingModeSort> = transformApp(expr)
+    override fun transform(expr: KFpRoundingModeExpr): KExpr<KFpRoundingModeSort> = transformValue(expr)
 
     // fp operations tranformation
     override fun <T : KFpSort> transform(expr: KFpAbsExpr<T>): KExpr<T> = transformApp(expr)
@@ -305,23 +308,23 @@ interface KTransformer : KTransformerBase {
     }
 
     // arith transformers
-    override fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>): KExpr<T> = transformApp(expr)
-    override fun <T : KArithSort<T>> transform(expr: KMulArithExpr<T>): KExpr<T> = transformApp(expr)
-    override fun <T : KArithSort<T>> transform(expr: KSubArithExpr<T>): KExpr<T> = transformApp(expr)
-    override fun <T : KArithSort<T>> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> = transformApp(expr)
-    override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>): KExpr<T> = transformApp(expr)
-    override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>): KExpr<T> = transformApp(expr)
-    override fun <T : KArithSort<T>> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> = transformApp(expr)
-    override fun <T : KArithSort<T>> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> = transformApp(expr)
-    override fun <T : KArithSort<T>> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> = transformApp(expr)
-    override fun <T : KArithSort<T>> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KMulArithExpr<T>): KExpr<T> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KSubArithExpr<T>): KExpr<T> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KDivArithExpr<T>): KExpr<T> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>): KExpr<T> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> = transformApp(expr)
+    override fun <T : KArithSort> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> = transformApp(expr)
 
     // integer transformers
     override fun transform(expr: KModIntExpr): KExpr<KIntSort> = transformApp(expr)
     override fun transform(expr: KRemIntExpr): KExpr<KIntSort> = transformApp(expr)
     override fun transform(expr: KToRealIntExpr): KExpr<KRealSort> = transformApp(expr)
 
-    fun transformIntNum(expr: KIntNumExpr): KExpr<KIntSort> = transformApp(expr)
+    fun transformIntNum(expr: KIntNumExpr): KExpr<KIntSort> = transformValue(expr)
     override fun transform(expr: KInt32NumExpr): KExpr<KIntSort> = transformIntNum(expr)
     override fun transform(expr: KInt64NumExpr): KExpr<KIntSort> = transformIntNum(expr)
     override fun transform(expr: KIntBigNumExpr): KExpr<KIntSort> = transformIntNum(expr)
@@ -329,7 +332,7 @@ interface KTransformer : KTransformerBase {
     // real transformers
     override fun transform(expr: KToIntRealExpr): KExpr<KIntSort> = transformApp(expr)
     override fun transform(expr: KIsIntRealExpr): KExpr<KBoolSort> = transformApp(expr)
-    override fun transform(expr: KRealNumExpr): KExpr<KRealSort> = transformApp(expr)
+    override fun transform(expr: KRealNumExpr): KExpr<KRealSort> = transformValue(expr)
 
     // quantifier transformers
     override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> = with(ctx) {

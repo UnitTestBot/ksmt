@@ -47,7 +47,7 @@ class KArrayConstDecl<D : KSort, R : KSort>(
     ctx: KContext,
     sort: KArraySort<D, R>
 ) : KFuncDecl1<KArraySort<D, R>, R>(ctx, "const", sort, sort.range) {
-    override fun KContext.apply(arg: KExpr<R>): KApp<KArraySort<D, R>, KExpr<R>> = mkArrayConst(sort, arg)
+    override fun KContext.apply(arg: KExpr<R>): KApp<KArraySort<D, R>, R> = mkArrayConst(sort, arg)
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }

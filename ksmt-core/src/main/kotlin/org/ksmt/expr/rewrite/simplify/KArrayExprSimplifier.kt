@@ -10,7 +10,7 @@ import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.KInterpretedConstant
+import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KArraySort
@@ -166,19 +166,17 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         return array.storeValues[storeIndex]
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> =
         simplifyApp(
-            expr = expr as KApp<KArraySort<D, R>, KExpr<KSort>>,
+            expr = expr,
             preprocess = { flatStores(expr) }
         ) {
             error("Always preprocessed")
         }
 
-    @Suppress("UNCHECKED_CAST")
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> =
         simplifyApp(
-            expr = expr as KApp<R, KExpr<KSort>>,
+            expr = expr,
             preprocess = {
                 val array = flatStores(expr.array)
                 SimplifierFlatArraySelectExpr(
@@ -401,7 +399,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
     }
 
     private val KExpr<*>.definitelyIsConstant: Boolean
-        get() = this is KInterpretedConstant
+        get() = this is KInterpretedValue<*>
 
     /**
      * Auxiliary expression to handle expanded array stores.
@@ -412,7 +410,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         val base: KExpr<KArraySort<D, R>>,
         val indices: List<KExpr<D>>,
         val values: List<KExpr<R>>,
-    ) : KApp<KArraySort<D, R>, KExpr<KSort>>(ctx) {
+    ) : KApp<KArraySort<D, R>, KSort>(ctx) {
 
         override val args: List<KExpr<KSort>> =
             (listOf(base) + indices + values).uncheckedCast()
@@ -440,7 +438,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         val storedIndices: List<KExpr<D>>,
         val storedValues: List<KExpr<R>>,
         val index: KExpr<D>,
-    ) : KApp<R, KExpr<D>>(ctx) {
+    ) : KApp<R, D>(ctx) {
 
         override val args: List<KExpr<D>> =
             listOf(index) + storedIndices
@@ -465,7 +463,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         ctx: KContext,
         val array: KExpr<KArraySort<D, R>>,
         val index: KExpr<D>,
-    ) : KApp<R, KExpr<KSort>>(ctx) {
+    ) : KApp<R, KSort>(ctx) {
         override val args: List<KExpr<KSort>> = listOf(array, index).uncheckedCast()
 
         override val sort: R

@@ -143,10 +143,9 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
      * If condition is true/false only one branch simplification is required.
      * 2. Simplify ite branches [SimplifierStagedIteBranches].
      * */
-    @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> transform(expr: KIteExpr<T>): KExpr<T> =
         simplifyApp(
-            expr = expr as KApp<T, KExpr<KSort>>,
+            expr = expr,
             preprocess = {
                 SimplifierStagedIteCondition(ctx, expr.condition, expr.trueBranch, expr.falseBranch)
             }
@@ -359,7 +358,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
         val condition: KExpr<KBoolSort>,
         val trueBranch: KExpr<T>,
         val falseBranch: KExpr<T>
-    ) : KApp<T, KExpr<KBoolSort>>(ctx) {
+    ) : KApp<T, KBoolSort>(ctx) {
 
         override val decl: KDecl<T>
             get() = ctx.mkIteDecl(trueBranch.sort)
@@ -386,7 +385,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
         val simplifiedCondition: KExpr<KBoolSort>,
         val trueBranch: KExpr<T>,
         val falseBranch: KExpr<T>
-    ) : KApp<T, KExpr<T>>(ctx) {
+    ) : KApp<T, T>(ctx) {
 
         override val decl: KDecl<T>
             get() = ctx.mkIteDecl(trueBranch.sort)

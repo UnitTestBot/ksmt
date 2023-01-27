@@ -31,9 +31,8 @@ open class KModelEvaluator(
     private val evaluatedFunctionApp: MutableMap<Pair<KDecl<*>, List<KExpr<*>>>, KExpr<*>> = hashMapOf()
     private val evaluatedFunctionArray: MutableMap<KDecl<*>, KExpr<*>> = hashMapOf()
 
-    @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> =
-        simplifyApp(expr as KApp<T, KExpr<KSort>>) { args ->
+        simplifyApp(expr) { args ->
             /**
              * Don't evaluate expr when it is quantified since
              * it is definitely not present in the model.

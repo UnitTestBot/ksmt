@@ -48,7 +48,7 @@ class KIntToRealDecl internal constructor(
     ctx.mkRealSort(),
     ctx.mkIntSort()
 ) {
-    override fun KContext.apply(arg: KExpr<KIntSort>): KApp<KRealSort, KExpr<KIntSort>> = mkIntToReal(arg)
+    override fun KContext.apply(arg: KExpr<KIntSort>): KApp<KRealSort, KIntSort> = mkIntToReal(arg)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
