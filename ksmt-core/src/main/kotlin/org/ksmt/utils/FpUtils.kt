@@ -617,19 +617,7 @@ object FpUtils {
                 e++
             }
 
-            val inc = when (rm) {
-                KFpRoundingMode.RoundNearestTiesToEven -> round && (lastBit || sticky)
-                KFpRoundingMode.RoundNearestTiesToAway -> round
-                KFpRoundingMode.RoundTowardPositive -> (!sign && (round || sticky))
-                KFpRoundingMode.RoundTowardNegative -> (sign && (round || sticky))
-                KFpRoundingMode.RoundTowardZero -> false
-            }
-
-            if (inc) {
-                value++
-            }
-
-            value
+            value.roundSignificandIfNeeded(rm, sign, lastBit, round, sticky)
         } else {
             // Number is integral, no rounding needed
             significand.mul2k(e)
@@ -1036,6 +1024,16 @@ object FpUtils {
 
         // The significand has the right size now, but we might have to increment it
         // depending on the sign, the last/round/sticky bits, and the rounding mode.
+        return result.roundSignificandIfNeeded(rm, sign, last, round, sticky)
+    }
+
+    private fun BigInteger.roundSignificandIfNeeded(
+        rm: KFpRoundingMode,
+        sign: Boolean,
+        last: Boolean,
+        round: Boolean,
+        sticky: Boolean
+    ): BigInteger {
         val inc = when (rm) {
             KFpRoundingMode.RoundNearestTiesToEven -> round && (last || sticky)
             KFpRoundingMode.RoundNearestTiesToAway -> round
@@ -1043,11 +1041,7 @@ object FpUtils {
             KFpRoundingMode.RoundTowardNegative -> (sign && (round || sticky))
             KFpRoundingMode.RoundTowardZero -> false
         }
-
-        if (inc) {
-            result++
-        }
-        return result
+        return if (inc) this.inc() else this
     }
 
     private fun KContext.fpRoundInf(

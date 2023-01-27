@@ -17,6 +17,7 @@ import org.ksmt.sort.KSort
 import org.ksmt.utils.FpUtils.isInfinity
 import org.ksmt.utils.FpUtils.isNan
 import org.ksmt.utils.FpUtils.isNegative
+import org.ksmt.utils.FpUtils.isPositive
 import org.ksmt.utils.FpUtils.isZero
 import org.ksmt.utils.uncheckedCast
 import kotlin.test.assertEquals
@@ -185,18 +186,21 @@ class FpEvalTest : ExpressionEvalTest() {
     @ParameterizedTest
     @MethodSource("fpSizes")
     fun testFpToBv(exponent: Int, significand: Int) = runTest(exponent, significand) { sort: KFpSort, checker ->
-        Assumptions.assumeTrue(exponent <= Int.SIZE_BITS) {
-            "Exponent may contain values witch are too large to be represented as Bv"
+        Assumptions.assumeTrue(exponent <= KFp64Sort.exponentBits.toInt()) {
+            "Fp may contain values witch are too large to be represented as Bv"
         }
-        val bvSorts = listOf(bv1Sort, bv8Sort, bv16Sort, bv32Sort, bv64Sort, mkBvSort(37u))
+
+        // Big enough BV to hold values of this Fp
+        val bvSize = (1 shl exponent) + significand + 1
+
         roundingModeValues().forEach { rm ->
             randomFpValues(sort).filterNot { it.isNan() || it.isInfinity() }.take(100).forEach { value ->
-                bvSorts.forEach { toBv ->
-                    val signed = mkFpToBvExpr(rm, value, toBv.sizeBits.toInt(), isSigned = true)
-                    val unsigned = mkFpToBvExpr(rm, value, toBv.sizeBits.toInt(), isSigned = false)
+                val signed = mkFpToBvExpr(rm, value, bvSize, isSigned = true)
+                checker.check(signed) { "Signed: $rm, $value, $bvSize" }
 
-                    checker.check(signed) { "Signed: $rm, $value, $toBv" }
-                    checker.check(unsigned) { "Unsigned: $rm, $value, $toBv" }
+                if (value.isPositive()) {
+                    val unsigned = mkFpToBvExpr(rm, value, bvSize, isSigned = false)
+                    checker.check(unsigned) { "Unsigned: $rm, $value, $bvSize" }
                 }
             }
         }
