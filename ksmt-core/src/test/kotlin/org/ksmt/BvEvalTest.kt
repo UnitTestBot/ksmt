@@ -8,7 +8,7 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.KInterpretedConstant
+import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.rewrite.simplify.KExprSimplifier
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverStatus
@@ -375,7 +375,7 @@ class BvEvalTest {
                     solver.assert(valueVar eq expr)
                     assertEquals(KSolverStatus.SAT, solver.check())
                     val value = solver.model().eval(valueVar)
-                    assertTrue(value is KInterpretedConstant)
+                    assertTrue(value is KInterpretedValue<*>)
                     value
                 }
             }
