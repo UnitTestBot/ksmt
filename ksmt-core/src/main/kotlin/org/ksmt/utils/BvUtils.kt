@@ -98,6 +98,18 @@ object BvUtils {
     fun KContext.bvValue(size: UInt, value: Int): KBitVecValue<*> = mkBvSpecialValue(size, BvIntValue(value))
     fun KBitVecValue<*>.bvValueIs(value: Int): Boolean = isBvSpecialValue(BvIntValue(value))
 
+    fun KBitVecValue<*>.getBit(bit: UInt): Boolean {
+        check(bit < sort.sizeBits) { "Requested bit is out of bounds for $sort" }
+        return when (this) {
+            is KBitVec1Value -> value
+            is KBitVecNumberValue<*, *> -> ((numberValue.toLong() shr bit.toInt()) and 0x1L) == 0x1L
+            is KBitVecCustomValue -> value.testBit(bit.toInt())
+            else -> stringValue.let { it[it.lastIndex - bit.toInt()] == '1' }
+        }
+    }
+
+    fun KBitVecValue<*>.signBit(): Boolean = getBit(sort.sizeBits - 1u)
+
     fun KBitVecValue<*>.signedGreaterOrEqual(other: Int): Boolean = when (this) {
         is KBitVec1Value -> if (value) {
             // 1 >= 1 -> true
@@ -396,32 +408,40 @@ object BvUtils {
             }
 
             else -> {
-                val concatenatedBinary = lhs.stringValue + rhs.stringValue
-                mkBv(concatenatedBinary, lhs.sort.sizeBits + rhs.sort.sizeBits)
+                val lhsValue = lhs.bigIntValue().normalizeValue(lhs.sort.sizeBits)
+                val rhsValue = rhs.bigIntValue().normalizeValue(rhs.sort.sizeBits)
+                val concatenatedValue = concatValues(lhsValue, rhsValue, rhs.sort.sizeBits)
+                mkBv(concatenatedValue, lhs.sort.sizeBits + rhs.sort.sizeBits)
             }
         }
     }
 
     fun KBitVecValue<*>.extractBv(high: Int, low: Int): KBitVecValue<*> = with(ctx) {
-        val size = high - low + 1
-        val allBits = stringValue
-        val highBitIdx = allBits.length - high - 1
-        val lowBitIdx = allBits.length - low - 1
-        val bits = allBits.substring(highBitIdx, lowBitIdx + 1)
-        mkBv(bits, size.toUInt())
+        val size = (high - low + 1).toUInt()
+        val value = bigIntValue().normalizeValue(sort.sizeBits)
+        val trimLowerBits = value.shiftRight(low)
+        val trimHigherBits = trimLowerBits.and(binaryOnes(onesCount = size))
+        mkBv(trimHigherBits, size)
     }
 
-    fun KBitVecValue<*>.signExtension(extensionSize: UInt): KBitVecValue<*> {
-        val binary = stringValue
-        val sign = binary[0]
-        val extension = "$sign".repeat(extensionSize.toInt())
-        return ctx.mkBv(extension + binary, sort.sizeBits + extensionSize)
-    }
+    fun KBitVecValue<*>.signExtension(extensionSize: UInt): KBitVecValue<*> =
+        if (!signBit()) {
+            zeroExtension(extensionSize)
+        } else {
+            val extension = binaryOnes(onesCount = extensionSize)
+            val value = bigIntValue().normalizeValue(sort.sizeBits)
+            val extendedValue = concatValues(extension, value, sort.sizeBits)
+            ctx.mkBv(extendedValue, sort.sizeBits + extensionSize)
+        }
 
     fun KBitVecValue<*>.zeroExtension(extensionSize: UInt): KBitVecValue<*> = with(ctx) {
-        val extension = bvZero(extensionSize)
-        concatBv(extension, this@zeroExtension)
+        mkBv(bigIntValue().normalizeValue(sort.sizeBits), sort.sizeBits + extensionSize)
     }
+
+    private fun binaryOnes(onesCount: UInt): BigInteger = powerOfTwo(onesCount) - BigInteger.ONE
+
+    private fun concatValues(lhs: BigInteger, rhs: BigInteger, rhsSize: UInt): BigInteger =
+        lhs.shiftLeft(rhsSize.toInt()).or(rhs)
 
     @Suppress("LongParameterList")
     private inline fun KBitVecValue<*>.bvUnsignedOperation(
