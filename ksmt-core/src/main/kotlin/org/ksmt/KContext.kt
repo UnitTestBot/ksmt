@@ -678,7 +678,7 @@ open class KContext(
     fun <D : KSort, R : KSort> KExpr<KArraySort<D, R>>.select(index: KExpr<D>) = mkArraySelect(this, index)
 
     // arith
-    private val arithAddCache = mkAstInterner<KAddArithExpr<out KArithSort<*>>>()
+    private val arithAddCache = mkAstInterner<KAddArithExpr<out KArithSort>>()
 
     fun <T : KArithSort> mkArithAdd(args: List<KExpr<T>>): KAddArithExpr<T> =
         arithAddCache.createIfContextActive {
@@ -686,7 +686,7 @@ open class KContext(
             KAddArithExpr(this, args)
         }.cast()
 
-    private val arithMulCache = mkAstInterner<KMulArithExpr<out KArithSort<*>>>()
+    private val arithMulCache = mkAstInterner<KMulArithExpr<out KArithSort>>()
 
     fun <T : KArithSort> mkArithMul(args: List<KExpr<T>>): KMulArithExpr<T> =
         arithMulCache.createIfContextActive {
@@ -694,7 +694,7 @@ open class KContext(
             KMulArithExpr(this, args)
         }.cast()
 
-    private val arithSubCache = mkAstInterner<KSubArithExpr<out KArithSort<*>>>()
+    private val arithSubCache = mkAstInterner<KSubArithExpr<out KArithSort>>()
 
     fun <T : KArithSort> mkArithSub(args: List<KExpr<T>>): KSubArithExpr<T> =
         arithSubCache.createIfContextActive {
@@ -711,7 +711,7 @@ open class KContext(
     @Suppress("MemberVisibilityCanBePrivate")
     fun <T : KArithSort> mkArithSub(vararg args: KExpr<T>) = mkArithSub(args.toList())
 
-    private val arithUnaryMinusCache = mkAstInterner<KUnaryMinusArithExpr<out KArithSort<*>>>()
+    private val arithUnaryMinusCache = mkAstInterner<KUnaryMinusArithExpr<out KArithSort>>()
 
     fun <T : KArithSort> mkArithUnaryMinus(arg: KExpr<T>): KUnaryMinusArithExpr<T> =
         arithUnaryMinusCache.createIfContextActive {
@@ -719,7 +719,7 @@ open class KContext(
             KUnaryMinusArithExpr(this, arg)
         }.cast()
 
-    private val arithDivCache = mkAstInterner<KDivArithExpr<out KArithSort<*>>>()
+    private val arithDivCache = mkAstInterner<KDivArithExpr<out KArithSort>>()
 
     fun <T : KArithSort> mkArithDiv(lhs: KExpr<T>, rhs: KExpr<T>): KDivArithExpr<T> =
         arithDivCache.createIfContextActive {
@@ -727,7 +727,7 @@ open class KContext(
             KDivArithExpr(this, lhs, rhs)
         }.cast()
 
-    private val arithPowerCache = mkAstInterner<KPowerArithExpr<out KArithSort<*>>>()
+    private val arithPowerCache = mkAstInterner<KPowerArithExpr<out KArithSort>>()
 
     fun <T : KArithSort> mkArithPower(lhs: KExpr<T>, rhs: KExpr<T>): KPowerArithExpr<T> =
         arithPowerCache.createIfContextActive {
@@ -735,7 +735,7 @@ open class KContext(
             KPowerArithExpr(this, lhs, rhs)
         }.cast()
 
-    private val arithLtCache = mkAstInterner<KLtArithExpr<out KArithSort<*>>>()
+    private val arithLtCache = mkAstInterner<KLtArithExpr<out KArithSort>>()
 
     fun <T : KArithSort> mkArithLt(lhs: KExpr<T>, rhs: KExpr<T>): KLtArithExpr<T> =
         arithLtCache.createIfContextActive {
@@ -743,7 +743,7 @@ open class KContext(
             KLtArithExpr(this, lhs, rhs)
         }.cast()
 
-    private val arithLeCache = mkAstInterner<KLeArithExpr<out KArithSort<*>>>()
+    private val arithLeCache = mkAstInterner<KLeArithExpr<out KArithSort>>()
 
     fun <T : KArithSort> mkArithLe(lhs: KExpr<T>, rhs: KExpr<T>): KLeArithExpr<T> =
         arithLeCache.createIfContextActive {
@@ -751,7 +751,7 @@ open class KContext(
             KLeArithExpr(this, lhs, rhs)
         }.cast()
 
-    private val arithGtCache = mkAstInterner<KGtArithExpr<out KArithSort<*>>>()
+    private val arithGtCache = mkAstInterner<KGtArithExpr<out KArithSort>>()
 
     fun <T : KArithSort> mkArithGt(lhs: KExpr<T>, rhs: KExpr<T>): KGtArithExpr<T> =
         arithGtCache.createIfContextActive {
@@ -759,7 +759,7 @@ open class KContext(
             KGtArithExpr(this, lhs, rhs)
         }.cast()
 
-    private val arithGeCache = mkAstInterner<KGeArithExpr<out KArithSort<*>>>()
+    private val arithGeCache = mkAstInterner<KGeArithExpr<out KArithSort>>()
 
     fun <T : KArithSort> mkArithGe(lhs: KExpr<T>, rhs: KExpr<T>): KGeArithExpr<T> =
         arithGeCache.createIfContextActive {
@@ -2227,34 +2227,34 @@ open class KContext(
         KArrayConstDecl(this, array)
 
     // arith
-    fun <T : KArithSort<T>> mkArithAddDecl(arg: T): KArithAddDecl<T> =
+    fun <T : KArithSort> mkArithAddDecl(arg: T): KArithAddDecl<T> =
         KArithAddDecl(this, arg)
 
-    fun <T : KArithSort<T>> mkArithSubDecl(arg: T): KArithSubDecl<T> =
+    fun <T : KArithSort> mkArithSubDecl(arg: T): KArithSubDecl<T> =
         KArithSubDecl(this, arg)
 
-    fun <T : KArithSort<T>> mkArithMulDecl(arg: T): KArithMulDecl<T> =
+    fun <T : KArithSort> mkArithMulDecl(arg: T): KArithMulDecl<T> =
         KArithMulDecl(this, arg)
 
-    fun <T : KArithSort<T>> mkArithDivDecl(arg: T): KArithDivDecl<T> =
+    fun <T : KArithSort> mkArithDivDecl(arg: T): KArithDivDecl<T> =
         KArithDivDecl(this, arg)
 
-    fun <T : KArithSort<T>> mkArithPowerDecl(arg: T): KArithPowerDecl<T> =
+    fun <T : KArithSort> mkArithPowerDecl(arg: T): KArithPowerDecl<T> =
         KArithPowerDecl(this, arg)
 
-    fun <T : KArithSort<T>> mkArithUnaryMinusDecl(arg: T): KArithUnaryMinusDecl<T> =
+    fun <T : KArithSort> mkArithUnaryMinusDecl(arg: T): KArithUnaryMinusDecl<T> =
         KArithUnaryMinusDecl(this, arg)
 
-    fun <T : KArithSort<T>> mkArithGeDecl(arg: T): KArithGeDecl<T> =
+    fun <T : KArithSort> mkArithGeDecl(arg: T): KArithGeDecl<T> =
         KArithGeDecl(this, arg)
 
-    fun <T : KArithSort<T>> mkArithGtDecl(arg: T): KArithGtDecl<T> =
+    fun <T : KArithSort> mkArithGtDecl(arg: T): KArithGtDecl<T> =
         KArithGtDecl(this, arg)
 
-    fun <T : KArithSort<T>> mkArithLeDecl(arg: T): KArithLeDecl<T> =
+    fun <T : KArithSort> mkArithLeDecl(arg: T): KArithLeDecl<T> =
         KArithLeDecl(this, arg)
 
-    fun <T : KArithSort<T>> mkArithLtDecl(arg: T): KArithLtDecl<T> =
+    fun <T : KArithSort> mkArithLtDecl(arg: T): KArithLtDecl<T> =
         KArithLtDecl(this, arg)
 
     // int
