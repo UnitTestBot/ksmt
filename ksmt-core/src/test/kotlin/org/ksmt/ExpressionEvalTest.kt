@@ -7,7 +7,7 @@ import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.KFpRoundingModeExpr
 import org.ksmt.expr.KFpValue
 import org.ksmt.expr.KInt32NumExpr
-import org.ksmt.expr.KInterpretedConstant
+import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.KRealNumExpr
 import org.ksmt.expr.rewrite.simplify.KExprSimplifier
 import org.ksmt.solver.KSolver
@@ -100,7 +100,7 @@ abstract class ExpressionEvalTest {
     }
 
     fun KContext.randomRealValues() = sequence<KRealNumExpr> {
-        randomIntValues().filterNot { it.value != 0 }.forEach { denominator ->
+        randomIntValues().filter { it.value != 0 }.forEach { denominator ->
             randomIntValues().forEach { numerator ->
                 yield(mkRealNum(numerator, denominator))
             }
@@ -148,7 +148,7 @@ abstract class ExpressionEvalTest {
                     solver.assert(valueVar eq expr)
                     assertEquals(KSolverStatus.SAT, solver.check())
                     val value = solver.model().eval(valueVar)
-                    assertTrue(value is KInterpretedConstant)
+                    assertTrue(value is KInterpretedValue<*>)
                     value
                 }
             }
