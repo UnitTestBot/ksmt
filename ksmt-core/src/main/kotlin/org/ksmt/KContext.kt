@@ -245,6 +245,7 @@ import org.ksmt.expr.KBitVec32Value
 import org.ksmt.expr.KBitVec64Value
 import org.ksmt.expr.KBitVec8Value
 import org.ksmt.expr.KBitVecCustomValue
+import org.ksmt.expr.KBitVecNumberValue
 import org.ksmt.expr.KBvRotateLeftIndexedExpr
 import org.ksmt.expr.KBvRotateRightIndexedExpr
 import org.ksmt.expr.KBvSubNoUnderflowExpr
@@ -298,8 +299,12 @@ import org.ksmt.utils.extractExponent
 import org.ksmt.utils.extractSignificand
 import org.ksmt.utils.getHalfPrecisionExponent
 import org.ksmt.utils.halfPrecisionSignificand
+import org.ksmt.utils.normalizeValue
+import org.ksmt.utils.powerOfTwo
 import org.ksmt.utils.signBit
-import org.ksmt.utils.toBinary
+import org.ksmt.utils.toBigInteger
+import org.ksmt.utils.toULongValue
+import org.ksmt.utils.toUnsignedBigInteger
 import org.ksmt.utils.uncheckedCast
 
 @Suppress("TooManyFunctions", "LargeClass", "unused")
@@ -830,7 +835,7 @@ open class KContext : AutoCloseable {
     private val bv16Cache = mkClosableCache { value: Short -> KBitVec16Value(this, value) }
     private val bv32Cache = mkClosableCache { value: Int -> KBitVec32Value(this, value) }
     private val bv64Cache = mkClosableCache { value: Long -> KBitVec64Value(this, value) }
-    private val bvCache = mkClosableCache { value: String, sizeBits: UInt ->
+    private val bvCache = mkClosableCache { value: BigInteger, sizeBits: UInt ->
         KBitVecCustomValue(this, value, sizeBits)
     }
 
@@ -879,6 +884,9 @@ open class KContext : AutoCloseable {
     fun <T : KBvSort> Long.toBv(sort: T): KBitVecValue<T> = mkBv(this, sort)
     fun ULong.toBv(): KBitVec64Value = mkBv(toLong())
 
+    fun mkBv(value: BigInteger, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
+    fun <T : KBvSort> mkBv(value: BigInteger, sort: T): KBitVecValue<T> = mkBv(value as Number, sort)
+
     /**
      * Constructs a bit vector from the given [value] containing of [sizeBits] bits.
      *
@@ -889,10 +897,8 @@ open class KContext : AutoCloseable {
      * binary representation of the [value] will be padded from the start with its sign bit.
      */
     private fun mkBv(value: Number, sizeBits: UInt): KBitVecValue<KBvSort> {
-        val binaryString = value.toBinary().takeLast(sizeBits.toInt())
-        val paddedString = binaryString.padStart(sizeBits.toInt(), binaryString.first())
-
-        return mkBv(paddedString, sizeBits)
+        val bigIntValue = value.toBigInteger().normalizeValue(sizeBits)
+        return mkBvFromUnsignedBigInteger(bigIntValue, sizeBits)
     }
 
     private fun <T : KBvSort> mkBv(value: Number, sort: T): KBitVecValue<T> =
@@ -903,21 +909,30 @@ open class KContext : AutoCloseable {
      * Binary representation of the [value] will be padded from the start with 0.
      */
     private fun mkBvUnsigned(value: Number, sizeBits: UInt): KBitVecValue<KBvSort> {
-        val binaryString = value.toBinary().takeLast(sizeBits.toInt())
-        val paddedString = binaryString.padStart(sizeBits.toInt(), '0')
-
-        return mkBv(paddedString, sizeBits)
+        val bigIntValue = value.toUnsignedBigInteger().normalizeValue(sizeBits)
+        return mkBv(bigIntValue, sizeBits)
     }
 
     private fun Number.toBv(sizeBits: UInt) = mkBv(this, sizeBits)
 
-    fun mkBv(value: String, sizeBits: UInt): KBitVecValue<KBvSort> = when (sizeBits.toInt()) {
-        1 -> mkBv(value.toUInt(radix = 2).toInt() != 0).cast()
-        Byte.SIZE_BITS -> mkBv(value.toUByte(radix = 2).toByte()).cast()
-        Short.SIZE_BITS -> mkBv(value.toUShort(radix = 2).toShort()).cast()
-        Int.SIZE_BITS -> mkBv(value.toUInt(radix = 2).toInt()).cast()
-        Long.SIZE_BITS -> mkBv(value.toULong(radix = 2).toLong()).cast()
-        else -> bvCache.createIfContextActive(value, sizeBits)
+    fun mkBv(value: String, sizeBits: UInt): KBitVecValue<KBvSort> =
+        mkBv(value.toBigInteger(radix = 2), sizeBits)
+
+    private fun mkBvFromUnsignedBigInteger(
+        value: BigInteger,
+        sizeBits: UInt
+    ): KBitVecValue<KBvSort> {
+        require(value.signum() >= 0) {
+            "Unsigned value required, but $value provided"
+        }
+        return when (sizeBits.toInt()) {
+            1 -> mkBv(value != BigInteger.ZERO).cast()
+            Byte.SIZE_BITS -> mkBv(value.toByte()).cast()
+            Short.SIZE_BITS -> mkBv(value.toShort()).cast()
+            Int.SIZE_BITS -> mkBv(value.toInt()).cast()
+            Long.SIZE_BITS -> mkBv(value.toLong()).cast()
+            else -> bvCache.createIfContextActive(value, sizeBits)
+        }
     }
 
     private val bvNotExprCache = mkClosableCache { value: KExpr<KBvSort> -> KBvNotExpr(this, value) }
@@ -1494,7 +1509,12 @@ open class KContext : AutoCloseable {
         signBit
     )
 
-    private fun KBitVecValue<*>.longValue() = stringValue.toULong(radix = 2).toLong()
+    private fun KBitVecValue<*>.longValue() = when (this) {
+        is KBitVecNumberValue<*, *> -> numberValue.toULongValue().toLong()
+        is KBitVecCustomValue -> value.longValueExact()
+        is KBitVec1Value -> if (value) 1L else 0L
+        else -> stringValue.toULong(radix = 2).toLong()
+    }
 
     @Suppress("MagicNumber")
     private fun constructFp16Number(exponent: Long, significand: Long, intSignBit: Int): Float {
@@ -1722,10 +1742,10 @@ open class KContext : AutoCloseable {
     }
 
     private fun fpTopExponentUnbiased(sort: KFpSort): KBitVecValue<*> =
-        mkBv("1" + "0".repeat(sort.exponentBits.toInt() - 1), sort.exponentBits)
+        mkBv(powerOfTwo(sort.exponentBits - 1u), sort.exponentBits)
 
     private fun fpZeroExponentUnbiased(sort: KFpSort): KBitVecValue<*> =
-        mkBv("1" + "0".repeat(sort.exponentBits.toInt() - 2) + "1", sort.exponentBits)
+        mkBv(powerOfTwo(sort.exponentBits - 1u) + BigInteger.ONE, sort.exponentBits)
 
     private val roundingModeCache = mkClosableCache { value: KFpRoundingMode ->
         KFpRoundingModeExpr(this, value)
@@ -2351,7 +2371,7 @@ open class KContext : AutoCloseable {
     private val bv16DeclCache = mkClosableCache { value: Short -> KBitVec16ValueDecl(this, value) }
     private val bv32DeclCache = mkClosableCache { value: Int -> KBitVec32ValueDecl(this, value) }
     private val bv64DeclCache = mkClosableCache { value: Long -> KBitVec64ValueDecl(this, value) }
-    private val bvCustomSizeDeclCache = mkClosableCache { value: String, sizeBits: UInt ->
+    private val bvCustomSizeDeclCache = mkClosableCache { value: BigInteger, sizeBits: UInt ->
         KBitVecCustomSizeValueDecl(this, value, sizeBits)
     }
 
@@ -2360,14 +2380,27 @@ open class KContext : AutoCloseable {
     fun mkBvDecl(value: Short): KDecl<KBv16Sort> = bv16DeclCache.createIfContextActive(value)
     fun mkBvDecl(value: Int): KDecl<KBv32Sort> = bv32DeclCache.createIfContextActive(value)
     fun mkBvDecl(value: Long): KDecl<KBv64Sort> = bv64DeclCache.createIfContextActive(value)
+    fun mkBvDecl(value: BigInteger, size: UInt): KDecl<KBvSort> =
+        mkBvDeclFromUnsignedBigInteger(value.normalizeValue(size), size)
 
-    fun mkBvDecl(value: String, sizeBits: UInt): KDecl<KBvSort> = when (sizeBits.toInt()) {
-        1 -> mkBvDecl(value.toUInt(radix = 2).toInt() != 0).cast()
-        Byte.SIZE_BITS -> mkBvDecl(value.toUByte(radix = 2).toByte()).cast()
-        Short.SIZE_BITS -> mkBvDecl(value.toUShort(radix = 2).toShort()).cast()
-        Int.SIZE_BITS -> mkBvDecl(value.toUInt(radix = 2).toInt()).cast()
-        Long.SIZE_BITS -> mkBvDecl(value.toULong(radix = 2).toLong()).cast()
-        else -> bvCustomSizeDeclCache.createIfContextActive(value, sizeBits).cast()
+    fun mkBvDecl(value: String, sizeBits: UInt): KBitVecValue<KBvSort> =
+        mkBv(value.toBigInteger(radix = 2), sizeBits)
+
+    private fun mkBvDeclFromUnsignedBigInteger(
+        value: BigInteger,
+        sizeBits: UInt
+    ): KDecl<KBvSort> {
+        require(value.signum() >= 0) {
+            "Unsigned value required, but $value provided"
+        }
+        return when (sizeBits.toInt()) {
+            1 -> mkBvDecl(value != BigInteger.ZERO).cast()
+            Byte.SIZE_BITS -> mkBvDecl(value.toByte()).cast()
+            Short.SIZE_BITS -> mkBvDecl(value.toShort()).cast()
+            Int.SIZE_BITS -> mkBvDecl(value.toInt()).cast()
+            Long.SIZE_BITS -> mkBvDecl(value.toLong()).cast()
+            else -> bvCustomSizeDeclCache.createIfContextActive(value, sizeBits)
+        }
     }
 
     private val bvNotDeclCache = mkClosableCache { sort: KBvSort -> KBvNotDecl(this, sort) }

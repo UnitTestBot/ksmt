@@ -71,7 +71,7 @@ import org.ksmt.utils.BvUtils.bvMaxValueUnsigned
 import org.ksmt.utils.BvUtils.bvMinValueSigned
 import org.ksmt.utils.BvUtils.bvOne
 import org.ksmt.utils.BvUtils.bvZero
-import org.ksmt.utils.BvUtils.intValueOrNull
+import org.ksmt.utils.BvUtils.bigIntValue
 import org.ksmt.utils.BvUtils.minus
 import org.ksmt.utils.BvUtils.plus
 import org.ksmt.utils.BvUtils.powerOfTwoOrNull
@@ -90,7 +90,9 @@ import org.ksmt.utils.BvUtils.unsignedDivide
 import org.ksmt.utils.BvUtils.unsignedLessOrEqual
 import org.ksmt.utils.BvUtils.unsignedRem
 import org.ksmt.utils.cast
+import org.ksmt.utils.toBigInteger
 import org.ksmt.utils.uncheckedCast
+import java.math.BigInteger
 
 @Suppress(
     "LargeClass",
@@ -944,14 +946,19 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             }
 
             // (bvshl x shift) ==> (concat (extract [size-1-shift:0] x) 0.[shift].0)
-            val intShiftValue = shiftValue.intValueOrNull()
-            if (intShiftValue != null && intShiftValue >= 0) {
+            val intShiftValue = shiftValue.bigIntValue()
+            if (intShiftValue >= BigInteger.ZERO && intShiftValue <= Int.MAX_VALUE.toBigInteger()) {
                 return@simplifyApp rewrite(
                     auxExpr {
                         KBvConcatExpr(
                             ctx,
-                            KBvExtractExpr(ctx, high = size.toInt() - 1 - intShiftValue, low = 0, arg.uncheckedCast()),
-                            bvZero(intShiftValue.toUInt()).uncheckedCast()
+                            KBvExtractExpr(
+                                ctx,
+                                high = size.toInt() - 1 - intShiftValue.toInt(),
+                                low = 0,
+                                arg.uncheckedCast()
+                            ),
+                            bvZero(intShiftValue.toInt().toUInt()).uncheckedCast()
                         ).uncheckedCast()
                     }
                 )
@@ -1001,15 +1008,15 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                 }
 
                 // (bvlshr x shift) ==> (concat 0.[shift].0 (extract [size-1:shift] x))
-                val intShiftValue = shiftValue.intValueOrNull()
-                if (intShiftValue != null && intShiftValue >= 0) {
+                val intShiftValue = shiftValue.bigIntValue()
+                if (intShiftValue >= BigInteger.ZERO && intShiftValue <= Int.MAX_VALUE.toBigInteger()) {
                     return@simplifyApp rewrite(
                         auxExpr {
-                            val lhs = bvZero(intShiftValue.toUInt())
+                            val lhs = bvZero(intShiftValue.toInt().toUInt())
                             val rhs = KBvExtractExpr(
                                 ctx,
                                 high = size.toInt() - 1,
-                                low = intShiftValue,
+                                low = intShiftValue.toInt(),
                                 arg.uncheckedCast()
                             )
                             KBvConcatExpr(ctx, lhs.uncheckedCast(), rhs).uncheckedCast()
@@ -1092,6 +1099,16 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         return@simplifyApp rotateLeft(arg, size, expr.rotationNumber)
     }
 
+    override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>): KExpr<T> = simplifyApp(expr) { (arg, rotation) ->
+        if (rotation is KBitVecValue<T>) {
+            val size = expr.sort.sizeBits.toInt()
+            val intValue = rotation.bigIntValue()
+            val rotationValue = intValue.remainder(size.toBigInteger()).toInt()
+            return@simplifyApp rotateLeft(arg, size, rotationValue)
+        }
+        return@simplifyApp mkBvRotateLeftExpr(arg, rotation)
+    }
+
     // (rotateRight a x) ==> (rotateLeft a (- size x))
     override fun <T : KBvSort> transform(expr: KBvRotateRightIndexedExpr<T>): KExpr<T> = simplifyApp(expr) { (arg) ->
         val size = expr.sort.sizeBits.toInt()
@@ -1099,8 +1116,18 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         return@simplifyApp rotateLeft(arg, size, rotationNumber = size - rotation)
     }
 
+    override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>): KExpr<T> = simplifyApp(expr) { (arg, rotation) ->
+        if (rotation is KBitVecValue<T>) {
+            val size = expr.sort.sizeBits.toInt()
+            val intValue = rotation.bigIntValue()
+            val rotationValue = intValue.remainder(size.toBigInteger()).toInt()
+            return@simplifyApp rotateLeft(arg, size, rotationNumber = size - rotationValue)
+        }
+        return@simplifyApp mkBvRotateRightExpr(arg, rotation)
+    }
+
     fun <T : KBvSort> rotateLeft(arg: KExpr<T>, size: Int, rotationNumber: Int): KExpr<T> = with(ctx) {
-        val rotation = rotationNumber % size
+        val rotation = rotationNumber.mod(size)
 
         if (rotation == 0 || size == 1) {
             return arg
@@ -1113,34 +1140,6 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                 KBvConcatExpr(ctx, lhs, rhs).uncheckedCast()
             }
         )
-    }
-
-    override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>): KExpr<T> = simplifyApp(expr) { (arg, rotation) ->
-        if (rotation is KBitVecValue<T>) {
-            val intValue = rotation.intValueOrNull()
-            if (intValue != null && intValue >= 0) {
-                return@simplifyApp rewrite(
-                    auxExpr {
-                        KBvRotateLeftIndexedExpr(ctx, intValue, arg)
-                    }
-                )
-            }
-        }
-        return@simplifyApp mkBvRotateLeftExpr(arg, rotation)
-    }
-
-    override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>): KExpr<T> = simplifyApp(expr) { (arg, rotation) ->
-        if (rotation is KBitVecValue<T>) {
-            val intValue = rotation.intValueOrNull()
-            if (intValue != null && intValue >= 0) {
-                return@simplifyApp rewrite(
-                    auxExpr {
-                        KBvRotateRightIndexedExpr(ctx, intValue, arg)
-                    }
-                )
-            }
-        }
-        return@simplifyApp mkBvRotateRightExpr(arg, rotation)
     }
 
     override fun <T : KBvSort> transform(expr: KBvAddNoOverflowExpr<T>): KExpr<KBoolSort> =
@@ -1298,7 +1297,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             val lhsSign = lhsValue.stringValue[0] == '1'
             val rhsSign = rhsValue.stringValue[0] == '1'
 
-            when {
+            val operationOverflow = when {
                 // lhs < 0 && rhs < 0
                 lhsSign && rhsSign -> {
                     // no underflow possible
@@ -1306,7 +1305,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                     // overflow if rhs <= (MAX_VALUE / lhs - 1)
                     val maxValue = bvMaxValueSigned(size)
                     val limit = maxValue.signedDivide(lhsValue)
-                    return rhsValue.signedLessOrEqual(limit - one).expr
+                    rhsValue.signedLessOrEqual(limit - one)
                 }
                 // lhs > 0 && rhs > 0
                 !lhsSign && !rhsSign -> {
@@ -1315,7 +1314,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                     // overflow if MAX_VALUE / rhs <= lhs - 1
                     val maxValue = bvMaxValueSigned(size)
                     val limit = maxValue.signedDivide(rhsValue)
-                    return limit.signedLessOrEqual(lhsValue - one).expr
+                    limit.signedLessOrEqual(lhsValue - one)
                 }
                 // lhs < 0 && rhs > 0
                 lhsSign && !rhsSign -> {
@@ -1324,7 +1323,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                     // underflow if lhs <= MIN_VALUE / rhs - 1
                     val minValue = bvMinValueSigned(size)
                     val limit = minValue.signedDivide(rhsValue)
-                    return lhsValue.signedLessOrEqual(limit - one).expr
+                    lhsValue.signedLessOrEqual(limit - one)
                 }
                 // lhs > 0 && rhs < 0
                 else -> {
@@ -1333,9 +1332,11 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                     // underflow if rhs <= MIN_VALUE / lhs - 1
                     val minValue = bvMinValueSigned(size)
                     val limit = minValue.signedDivide(lhsValue)
-                    return rhsValue.signedLessOrEqual(limit - one).expr
+                    rhsValue.signedLessOrEqual(limit - one)
                 }
             }
+
+            return (!operationOverflow).expr
         }
         return null
     }
@@ -1364,7 +1365,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             val longMaxValue = concatBv(zero, bvMaxValueUnsigned(size))
 
             val product = longLhs * longRhs
-            return product.signedLessOrEqual(longMaxValue).expr
+            return product.unsignedLessOrEqual(longMaxValue).expr
         }
 
         return null

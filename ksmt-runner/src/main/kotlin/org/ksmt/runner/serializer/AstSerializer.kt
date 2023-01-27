@@ -393,7 +393,7 @@ class AstSerializer(
     override fun transform(expr: KBitVecCustomValue) = with(expr) {
         transform {
             writeExpr {
-                writeString(binaryStringValue)
+                writeBigInteger(value)
                 writeUInt(sort.sizeBits)
             }
         }

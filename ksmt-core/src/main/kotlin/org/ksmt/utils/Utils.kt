@@ -4,6 +4,7 @@ import org.ksmt.sort.KFp16Sort
 import org.ksmt.sort.KFp32Sort
 import org.ksmt.sort.KFp64Sort
 import org.ksmt.sort.KFpSort
+import java.math.BigInteger
 
 // We can have here `0` as a pad symbol since `toString` can return a string
 // containing fewer symbols than `sizeBits` only for non-negative numbers
@@ -16,6 +17,37 @@ fun Number.toBinary(): String = when (this) {
     is Double -> toRawBits().toBinary()
     else -> error("Unsupported type for transformation into a binary string: ${this::class.simpleName}")
 }
+
+fun Number.toULongValue(): ULong = when (this) {
+    is Byte -> toUByte().toULong()
+    is Short -> toUShort().toULong()
+    is Int -> toUInt().toULong()
+    is Long -> toULong()
+    else -> error("Unsupported type for transformation into a ULong: ${this::class.simpleName}")
+}
+
+fun Number.toBigInteger(): BigInteger =
+    if (this is BigInteger) this else BigInteger.valueOf(toLong())
+
+fun Number.toUnsignedBigInteger(): BigInteger =
+    toULongValue().toLong().toBigInteger()
+
+fun powerOfTwo(power: UInt): BigInteger =
+    BigInteger.valueOf(2).pow(power.toInt())
+
+/**
+ * Ensure that BigInteger value is suitable for representation of Bv with [size] bits.
+ * 1. If the value is signed convert it to unsigned with the correct binary representation.
+ * 2. Trim value binary representation up to the [size] bits.
+ * */
+fun BigInteger.normalizeValue(size: UInt): BigInteger =
+    this.mod(powerOfTwo(size))
+
+fun BigInteger.toBinary(size: UInt): String =
+    toString(2).padStart(size.toInt(), '0')
+
+fun String.toBigInteger(radix: Int): BigInteger =
+    BigInteger(this, radix)
 
 /**
  * Significand for Fp16 takes 10 bits from the float value: from 14 to 23 bits

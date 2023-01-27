@@ -241,9 +241,7 @@ open class KZ3ExprInternalizer(
             }
 
             is KBitVecCustomValue -> {
-                val bits = expr.binaryStringValue.reversed().let { value ->
-                    BooleanArray(value.length) { value[it] == '1' }
-                }
+                val bits = BooleanArray(expr.sizeBits.toInt()) { expr.value.testBit(it) }
                 Native.mkBvNumeral(nCtx, bits.size, bits)
             }
 

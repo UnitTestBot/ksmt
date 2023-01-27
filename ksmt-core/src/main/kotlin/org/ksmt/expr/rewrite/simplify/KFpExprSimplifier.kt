@@ -50,7 +50,6 @@ import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.BvUtils.bvMaxValueSigned
 import org.ksmt.utils.BvUtils.minus
-import org.ksmt.utils.BvUtils.mkBvFromBigInteger
 import org.ksmt.utils.uncheckedCast
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -502,7 +501,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
                         }
                         if (decimalValue >= lowLimit && decimalValue <= upperLimit) {
                             val intValue = decimalValue.unscaledValue(rm.value).toBigInteger()
-                            return@simplifyApp mkBvFromBigInteger(intValue, expr.bvSize.toUInt())
+                            return@simplifyApp mkBv(intValue, expr.bvSize.toUInt())
                         }
                     }
                 }
