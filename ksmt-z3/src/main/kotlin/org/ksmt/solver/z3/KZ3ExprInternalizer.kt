@@ -418,8 +418,9 @@ open class KZ3ExprInternalizer(
     override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) =
         with(expr) { transform(arg0, arg1, Native::mkBvmulNoUnderflow) }
 
-    override fun transform(expr: KFp16Value): KExpr<KFp16Sort> = with(expr) {
-        transform(ctx.mkBv(signBit), biasedExponent, significand, Native::mkFpaFp)
+    override fun transform(expr: KFp16Value): KExpr<KFp16Sort> = expr.transform {
+        val sort = expr.sort.internalizeSort()
+        Native.mkFpaNumeralFloat(nCtx, expr.value, sort)
     }
 
     override fun transform(expr: KFp32Value): KExpr<KFp32Sort> = expr.transform {
