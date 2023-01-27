@@ -49,6 +49,7 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.FpUtils.fpAdd
+import org.ksmt.utils.FpUtils.fpBvValueOrNull
 import org.ksmt.utils.FpUtils.fpDiv
 import org.ksmt.utils.FpUtils.fpEq
 import org.ksmt.utils.FpUtils.fpLeq
@@ -468,24 +469,9 @@ interface KFpExprSimplifier : KExprSimplifierBase {
             val value: KExpr<T> = valueArg.uncheckedCast()
 
             if (rm is KFpRoundingModeExpr && value is KFpValue<T>) {
-                if (!value.isNan() && !value.isInfinity()) {
-                    val decimalValue = fpDecimalValue(value)
-                    if (decimalValue != null) {
-                        val lowLimit = if (expr.isSigned) {
-                            -(BigDecimal.valueOf(2).pow(expr.bvSize - 1))
-                        } else {
-                            BigDecimal.ZERO
-                        }
-                        val upperLimit = if (expr.isSigned) {
-                            BigDecimal.valueOf(2).pow(expr.bvSize - 1) - BigDecimal.valueOf(1)
-                        } else {
-                            BigDecimal.valueOf(2).pow(expr.bvSize) - BigDecimal.valueOf(1)
-                        }
-                        if (decimalValue >= lowLimit && decimalValue <= upperLimit) {
-                            val intValue = decimalValue.unscaledValue(rm.value).toBigInteger()
-                            return@simplifyApp mkBv(intValue, expr.bvSize.toUInt())
-                        }
-                    }
+                val result = fpBvValueOrNull(value, rm.value, expr.sort, expr.isSigned)
+                if (result != null) {
+                    return@simplifyApp result
                 }
             }
 

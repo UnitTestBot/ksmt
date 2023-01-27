@@ -185,9 +185,12 @@ class FpEvalTest : ExpressionEvalTest() {
     @ParameterizedTest
     @MethodSource("fpSizes")
     fun testFpToBv(exponent: Int, significand: Int) = runTest(exponent, significand) { sort: KFpSort, checker ->
+        Assumptions.assumeTrue(exponent <= Int.SIZE_BITS) {
+            "Exponent may contain values witch are too large to be represented as Bv"
+        }
         val bvSorts = listOf(bv1Sort, bv8Sort, bv16Sort, bv32Sort, bv64Sort, mkBvSort(37u))
         roundingModeValues().forEach { rm ->
-            randomFpValues(sort).take(100).forEach { value ->
+            randomFpValues(sort).filterNot { it.isNan() || it.isInfinity() }.take(100).forEach { value ->
                 bvSorts.forEach { toBv ->
                     val signed = mkFpToBvExpr(rm, value, toBv.sizeBits.toInt(), isSigned = true)
                     val unsigned = mkFpToBvExpr(rm, value, toBv.sizeBits.toInt(), isSigned = false)

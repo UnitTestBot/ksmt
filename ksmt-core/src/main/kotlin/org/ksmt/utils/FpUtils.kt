@@ -7,6 +7,7 @@ import org.ksmt.expr.KFp64Value
 import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.KFpValue
 import org.ksmt.expr.KRealNumExpr
+import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.utils.BvUtils.bigIntValue
 import org.ksmt.utils.BvUtils.bvMaxValueSigned
@@ -167,6 +168,13 @@ object FpUtils {
 
     fun fpRealValueOrNull(value: KFpValue<*>): KRealNumExpr? =
         value.ctx.fpRealValueOrNull(value)
+
+    fun <T : KBvSort> fpBvValueOrNull(
+        value: KFpValue<*>,
+        rm: KFpRoundingMode,
+        bvSort: T,
+        signed: Boolean
+    ): KBitVecValue<T>? = value.ctx.fpBvValueOrNull(value, rm, bvSort, signed)
 
     fun KContext.fpZeroExponentBiased(sort: KFpSort): KBitVecValue<*> =
         bvZero(sort.exponentBits)
@@ -443,6 +451,16 @@ object FpUtils {
         else -> fpUnpackAndGetRealValueOrNull(value)
     }
 
+    private fun <T : KBvSort> KContext.fpBvValueOrNull(
+        value: KFpValue<*>,
+        rm: KFpRoundingMode,
+        bvSort: T,
+        signed: Boolean
+    ): KBitVecValue<T>? = when {
+        value.isNan() || value.isInfinity() -> null // Bv value is unspecified for NaN and Inf
+        else -> fpUnpackAndGetBvValueOrNull(value, rm, bvSort.sizeBits, signed)?.uncheckedCast()
+    }
+
     private fun KContext.fpUnpackAndAdd(
         rm: KFpRoundingMode,
         lhs: KFpValue<*>,
@@ -550,6 +568,78 @@ object FpUtils {
         val normalizedDenominator = signedDenominator.divide(gcd)
 
         return mkRealNum(mkIntNum(normalizedNumerator), mkIntNum(normalizedDenominator))
+    }
+
+    private fun KContext.fpUnpackAndGetBvValueOrNull(
+        value: KFpValue<*>,
+        rm: KFpRoundingMode,
+        bvSize: UInt,
+        signed: Boolean
+    ): KBitVecValue<*>? {
+        val unpackedValue = value.unpack(normalizeSignificand = true)
+
+        val maxAllowedExponent = Int.MAX_VALUE / 2
+        if (unpackedValue.unbiasedExponent.abs() >= maxAllowedExponent.toBigInteger()) {
+            // We don't want to compute 2^maxAllowedExponent
+            return null
+        }
+
+        val roundedBvValue = unpackedValue.fpBvValueUnpacked(rm)
+
+        val (upperLimit, lowerLimit) = if (!signed) {
+            (powerOfTwo(bvSize) - BigInteger.ONE) to BigInteger.ZERO
+        } else {
+            (powerOfTwo(bvSize - 1u) - BigInteger.ONE) to -(powerOfTwo(bvSize - 1u))
+        }
+
+        if (roundedBvValue > upperLimit || roundedBvValue < lowerLimit) {
+            return null
+        }
+
+        return mkBv(roundedBvValue, bvSize)
+    }
+
+    private fun UnpackedFp.fpBvValueUnpacked(rm: KFpRoundingMode): BigInteger {
+        var e = unbiasedExponent - significandSize.toInt().toBigInteger() + BigInteger.ONE
+
+        val roundedSignificandBvValue = if (e < BigInteger.ZERO) {
+            var value = significand
+
+            var lastBit = !value.isEven()
+            var round = false
+            var sticky = false
+
+            while (e != BigInteger.ZERO) {
+                value = value.div2k(1u)
+                sticky = sticky || round
+                round = lastBit
+                lastBit = !value.isEven()
+                e++
+            }
+
+            val inc = when (rm) {
+                KFpRoundingMode.RoundNearestTiesToEven -> round && (lastBit || sticky)
+                KFpRoundingMode.RoundNearestTiesToAway -> round
+                KFpRoundingMode.RoundTowardPositive -> (!sign && (round || sticky))
+                KFpRoundingMode.RoundTowardNegative -> (sign && (round || sticky))
+                KFpRoundingMode.RoundTowardZero -> false
+            }
+
+            if (inc) {
+                value++
+            }
+
+            value
+        } else {
+            // Number is integral, no rounding needed
+            significand.mul2k(e)
+        }
+
+        return if (sign) {
+            roundedSignificandBvValue.negate()
+        } else {
+            roundedSignificandBvValue
+        }
     }
 
     private fun KContext.fpAddUnpacked(rm: KFpRoundingMode, lhs: UnpackedFp, rhs: UnpackedFp): KFpValue<*> {
