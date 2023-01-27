@@ -220,5 +220,5 @@ fun Double.extractExponent(sort: KFpSort, isBiased: Boolean): Long {
 
 inline fun <reified T, reified Base> Base.cast(): T where T : Base = this as T
 
-@Suppress("UNCHECKED_CAST")
-fun <Base, T> Base.uncheckedCast(): T = this as T
+@Suppress("UNCHECKED_CAST", "NOTHING_TO_INLINE")
+inline fun <Base, T> Base.uncheckedCast(): T = this as T
