@@ -63,6 +63,7 @@ import org.ksmt.utils.FpUtils.fpRoundToIntegral
 import org.ksmt.utils.FpUtils.fpSqrt
 import org.ksmt.utils.FpUtils.fpStructurallyEqual
 import org.ksmt.utils.FpUtils.fpToFp
+import org.ksmt.utils.FpUtils.fpValueFromReal
 import org.ksmt.utils.FpUtils.isSubnormal
 import org.ksmt.utils.FpUtils.isInfinity
 import org.ksmt.utils.FpUtils.isNan
@@ -431,8 +432,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
             val value: KExpr<KRealSort> = valueArg.uncheckedCast()
 
             if (rm is KFpRoundingModeExpr && value is KRealNumExpr) {
-                // todo: evaluate
-                return@simplifyApp mkRealToFpExpr(expr.sort, rm, value)
+                return@simplifyApp fpValueFromReal(rm.value, value, expr.sort)
             }
 
             mkRealToFpExpr(expr.sort, rm, value)

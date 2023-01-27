@@ -6,6 +6,10 @@ import org.ksmt.expr.KFp32Value
 import org.ksmt.expr.KFp64Value
 import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.KFpValue
+import org.ksmt.expr.KInt32NumExpr
+import org.ksmt.expr.KInt64NumExpr
+import org.ksmt.expr.KIntBigNumExpr
+import org.ksmt.expr.KIntNumExpr
 import org.ksmt.expr.KRealNumExpr
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
@@ -175,6 +179,9 @@ object FpUtils {
         bvSort: T,
         signed: Boolean
     ): KBitVecValue<T>? = value.ctx.fpBvValueOrNull(value, rm, bvSort, signed)
+
+    fun <T : KFpSort> fpValueFromReal(rm: KFpRoundingMode, value: KRealNumExpr, sort: T): KFpValue<T> =
+        value.ctx.fpValueFromReal(rm, value, sort).uncheckedCast()
 
     fun KContext.fpZeroExponentBiased(sort: KFpSort): KBitVecValue<*> =
         bvZero(sort.exponentBits)
@@ -461,6 +468,69 @@ object FpUtils {
         else -> fpUnpackAndGetBvValueOrNull(value, rm, bvSort.sizeBits, signed)?.uncheckedCast()
     }
 
+    private fun KIntNumExpr.toBigInteger() = when (this) {
+        is KInt32NumExpr -> value.toBigInteger()
+        is KInt64NumExpr -> value.toBigInteger()
+        is KIntBigNumExpr -> value
+        else -> decl.value.toBigInteger()
+    }
+
+    private fun KContext.fpValueFromReal(rm: KFpRoundingMode, value: KRealNumExpr, sort: KFpSort): KFpValue<*> {
+        val realValue = RealValue.create(value.numerator.toBigInteger(), value.denominator.toBigInteger())
+
+        val sign = realValue.isNegative()
+        if (realValue.isZero()) {
+            return mkFpZero(sign, sort)
+        }
+
+        // Normalize such that 1.0 <= sig < 2.0
+        val denormalizedSignificand = realValue.abs()
+        val (resultExponent, normalizedSignificand) = when {
+            denormalizedSignificand < RealValue.create(BigInteger.ONE) -> {
+                val nearestInteger = denormalizedSignificand.inverse().floor()
+
+                var nearestPowerOfTwo = nearestInteger.log2()
+                if (denormalizedSignificand.inverse() != RealValue.create(nearestPowerOfTwo.toBigInteger())) {
+                    nearestPowerOfTwo++
+                }
+
+                val nearestPowerOfTwoValue = powerOfTwo(nearestPowerOfTwo.toUInt())
+                val significand = denormalizedSignificand.inverse().div(nearestPowerOfTwoValue).inverse()
+
+                -nearestPowerOfTwo.toBigInteger() to significand
+            }
+            denormalizedSignificand >= RealValue.create(2.toBigInteger()) -> {
+                val nearestInteger = denormalizedSignificand.floor()
+                val nearestPowerOfTwo = nearestInteger.log2()
+
+                val nearestPowerOfTwoValue = powerOfTwo(nearestPowerOfTwo.toUInt())
+                val significand = denormalizedSignificand.div(nearestPowerOfTwoValue)
+
+                nearestPowerOfTwo.toBigInteger() to significand
+            }
+            else -> {
+                BigInteger.ZERO to denormalizedSignificand
+            }
+        }
+
+        val significandWithStickyBitsShift = powerOfTwo(sort.significandBits + 3u - 1u)
+        var resultSignificand = normalizedSignificand.mul(significandWithStickyBitsShift).floor()
+
+        val dividend = RealValue.create(resultSignificand / significandWithStickyBitsShift)
+        val stickyRemainder = normalizedSignificand.sub(dividend)
+
+        // sticky
+        if (!stickyRemainder.isZero() && resultSignificand.isEven()) {
+            resultSignificand++
+        }
+
+        val unpackedResult = UnpackedFp(
+            sort.exponentBits, sort.significandBits, sign, resultExponent, resultSignificand
+        )
+
+        return fpRound(rm, unpackedResult)
+    }
+
     private fun KContext.fpUnpackAndAdd(
         rm: KFpRoundingMode,
         lhs: KFpValue<*>,
@@ -557,17 +627,8 @@ object FpUtils {
     }
 
     private fun KContext.normalizeAndCreateReal(numerator: BigInteger, denominator: BigInteger): KRealNumExpr {
-        val (signedNumerator, signedDenominator) = if (denominator.signum() < 0) {
-            -numerator to -denominator
-        } else {
-            numerator to denominator
-        }
-
-        val gcd = signedNumerator.gcd(signedDenominator)
-        val normalizedNumerator = signedNumerator.divide(gcd)
-        val normalizedDenominator = signedDenominator.divide(gcd)
-
-        return mkRealNum(mkIntNum(normalizedNumerator), mkIntNum(normalizedDenominator))
+        val realValue = RealValue.create(numerator, denominator)
+        return mkRealNum(mkIntNum(realValue.numerator), mkIntNum(realValue.denominator))
     }
 
     private fun KContext.fpUnpackAndGetBvValueOrNull(
@@ -1109,7 +1170,7 @@ object FpUtils {
         var normalizedExponent = fpMinExponentValue(sort.exponentBits)
 
         var significandValue = significand.bigIntValue().normalizeValue(sort.significandBits - 1u)
-        val normalizedSignificand = if (significandValue == BigInteger.ZERO) {
+        val normalizedSignificand = if (significandValue.isZero()) {
             significandValue
         } else {
             val p = powerOfTwo(sort.significandBits - 1u)
@@ -1205,4 +1266,79 @@ object FpUtils {
         }
     }
 
+    private class RealValue private constructor(
+        numerator: BigInteger,
+        denominator: BigInteger
+    ) : Comparable<RealValue> {
+        val numerator: BigInteger
+        val denominator: BigInteger
+
+        init {
+            if (denominator.signum() < 0) {
+                this.numerator = -numerator
+                this.denominator = -denominator
+            } else {
+                this.numerator = numerator
+                this.denominator = denominator
+            }
+        }
+
+        fun isNegative(): Boolean = numerator.signum() < 0
+
+        fun isZero(): Boolean = numerator.isZero()
+
+        fun abs() = RealValue(numerator.abs(), denominator)
+
+        fun inverse() = RealValue(denominator, numerator)
+
+        fun floor(): BigInteger {
+            if (denominator == BigInteger.ONE) {
+                return numerator
+            }
+
+            var result = numerator.divide(denominator)
+            if (isNegative()) {
+                result--
+            }
+            return result
+        }
+
+        fun div(value: BigInteger) = RealValue(numerator, denominator * value).normalize()
+
+        fun mul(value: BigInteger) = RealValue(numerator * value, denominator).normalize()
+
+        fun sub(other: RealValue): RealValue {
+            val resultNumerator = numerator * other.denominator - other.numerator * denominator
+            val resultDenominator = denominator * other.denominator
+            return RealValue(resultNumerator, resultDenominator).normalize()
+        }
+
+        override fun compareTo(other: RealValue): Int = when {
+            this.eq(other) -> 0
+            this.lt(other) -> -1
+            else -> 1
+        }
+
+        private fun eq(other: RealValue): Boolean =
+            numerator == other.numerator && denominator == other.denominator
+
+        private fun lt(b: RealValue): Boolean = when {
+            numerator.signum() < 0 && b.numerator.signum() >= 0 -> true
+            numerator.signum() > 0 && b.numerator.signum() <= 0 -> false
+            numerator.signum() == 0 -> b.numerator.signum() > 0
+            else -> numerator * b.denominator < b.numerator * denominator
+        }
+
+        private fun normalize(): RealValue {
+            val gcd = numerator.gcd(denominator)
+            val normalizedNumerator = numerator.divide(gcd)
+            val normalizedDenominator = denominator.divide(gcd)
+            return RealValue(normalizedNumerator, normalizedDenominator)
+        }
+
+        companion object{
+            fun create(numerator: BigInteger, denominator: BigInteger = BigInteger.ONE) =
+                RealValue(numerator, denominator).normalize()
+        }
+    }
 }
