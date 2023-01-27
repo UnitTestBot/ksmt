@@ -59,12 +59,11 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
 
         val trackVar = with(ctx) { boolSort.mkFreshConst("track") }
         val trackedExpr = with(ctx) { !trackVar or expr }
-        val yicesVar = with(exprInternalizer) { trackVar.internalize() }
+        val yicesTrackVar = with(exprInternalizer) { trackVar.internalize() }
         val yicesTrackedExpr = with(exprInternalizer) { trackedExpr.internalize() }
 
-        currentLevelTrackedAssertions += yicesVar
+        currentLevelTrackedAssertions += yicesTrackVar
 
-        nativeContext.assertFormula(yicesVar)
         nativeContext.assertFormula(yicesTrackedExpr)
 
         trackVar
@@ -93,8 +92,13 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
     }
 
     override fun check(timeout: Duration): KSolverStatus {
+        val trackedExpressions = trackedAssertions.flatten()
+
         return withTimer(timeout) {
-            nativeContext.check()
+            if (trackedExpressions.isEmpty())
+                nativeContext.check()
+            else
+                nativeContext.checkWithAssumptions(trackedExpressions.toIntArray())
         }.processCheckResult()
     }
 
@@ -105,12 +109,12 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
         ctx.ensureContextMatch(assumptions)
 
         val trackedExpressions = trackedAssertions.flatten()
-        val yicesAssumptions = with(exprInternalizer) { assumptions.map { it.internalize() } } +
-                trackedExpressions
+        val yicesAssumptions = with(exprInternalizer) {
+            assumptions.map { it.internalize() }
+        } + trackedExpressions
 
         return withTimer(timeout) {
-            nativeContext
-                .checkWithAssumptions(yicesAssumptions.toIntArray())
+            nativeContext.checkWithAssumptions(yicesAssumptions.toIntArray())
         }.processCheckResult()
     }
 
