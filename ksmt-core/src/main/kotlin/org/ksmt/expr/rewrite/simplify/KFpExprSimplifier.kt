@@ -71,8 +71,6 @@ import org.ksmt.utils.FpUtils.isNormal
 import org.ksmt.utils.FpUtils.isPositive
 import org.ksmt.utils.FpUtils.isZero
 import org.ksmt.utils.uncheckedCast
-import java.math.BigDecimal
-import java.math.RoundingMode
 import kotlin.math.IEEErem
 
 @Suppress("ForbiddenComment")
@@ -551,22 +549,5 @@ interface KFpExprSimplifier : KExprSimplifierBase {
             // todo: eval fp rem
             else -> null
         }
-    }
-
-    private fun fpDecimalValue(value: KFpValue<*>): BigDecimal? = when (value) {
-        is KFp32Value -> BigDecimal.valueOf(value.value.toDouble())
-        is KFp64Value -> BigDecimal.valueOf(value.value)
-        else -> null
-    }
-
-    private fun BigDecimal.unscaledValue(rm: KFpRoundingMode): BigDecimal {
-        val decimalRm = when (rm) {
-            KFpRoundingMode.RoundNearestTiesToEven -> RoundingMode.HALF_EVEN
-            KFpRoundingMode.RoundNearestTiesToAway -> RoundingMode.HALF_UP
-            KFpRoundingMode.RoundTowardPositive -> RoundingMode.CEILING
-            KFpRoundingMode.RoundTowardNegative -> RoundingMode.FLOOR
-            KFpRoundingMode.RoundTowardZero -> RoundingMode.DOWN
-        }
-        return setScale(0, decimalRm)
     }
 }
