@@ -183,6 +183,13 @@ object FpUtils {
     fun <T : KFpSort> fpValueFromReal(rm: KFpRoundingMode, value: KRealNumExpr, sort: T): KFpValue<T> =
         value.ctx.fpValueFromReal(rm, value, sort).uncheckedCast()
 
+    fun <T : KFpSort> fpValueFromBv(
+        rm: KFpRoundingMode,
+        value: KBitVecValue<*>,
+        signed: Boolean,
+        sort: T
+    ): KFpValue<T> = value.ctx.fpValueFromBv(rm, value, signed, sort).uncheckedCast()
+
     fun KContext.fpZeroExponentBiased(sort: KFpSort): KBitVecValue<*> =
         bvZero(sort.exponentBits)
 
@@ -477,58 +484,29 @@ object FpUtils {
 
     private fun KContext.fpValueFromReal(rm: KFpRoundingMode, value: KRealNumExpr, sort: KFpSort): KFpValue<*> {
         val realValue = RealValue.create(value.numerator.toBigInteger(), value.denominator.toBigInteger())
+        return fpValueFromReal(rm, realValue, sort)
+    }
 
-        val sign = realValue.isNegative()
-        if (realValue.isZero()) {
-            return mkFpZero(sign, sort)
-        }
-
-        // Normalize such that 1.0 <= sig < 2.0
-        val denormalizedSignificand = realValue.abs()
-        val (resultExponent, normalizedSignificand) = when {
-            denormalizedSignificand < RealValue.create(BigInteger.ONE) -> {
-                val nearestInteger = denormalizedSignificand.inverse().floor()
-
-                var nearestPowerOfTwo = nearestInteger.log2()
-                if (denormalizedSignificand.inverse() != RealValue.create(nearestPowerOfTwo.toBigInteger())) {
-                    nearestPowerOfTwo++
-                }
-
-                val nearestPowerOfTwoValue = powerOfTwo(nearestPowerOfTwo.toUInt())
-                val significand = denormalizedSignificand.inverse().div(nearestPowerOfTwoValue).inverse()
-
-                -nearestPowerOfTwo.toBigInteger() to significand
+    private fun KContext.fpValueFromBv(
+        rm: KFpRoundingMode,
+        value: KBitVecValue<*>,
+        signed: Boolean,
+        sort: KFpSort
+    ): KFpValue<*> {
+        var intValue = value.bigIntValue().normalizeValue(value.sort.sizeBits)
+        if (signed) {
+            val upperLimit = powerOfTwo(value.sort.sizeBits - 1u)
+            val lowerLimit = -powerOfTwo(value.sort.sizeBits - 1u)
+            if (intValue >= upperLimit) {
+                intValue -= powerOfTwo(value.sort.sizeBits)
             }
-            denormalizedSignificand >= RealValue.create(2.toBigInteger()) -> {
-                val nearestInteger = denormalizedSignificand.floor()
-                val nearestPowerOfTwo = nearestInteger.log2()
-
-                val nearestPowerOfTwoValue = powerOfTwo(nearestPowerOfTwo.toUInt())
-                val significand = denormalizedSignificand.div(nearestPowerOfTwoValue)
-
-                nearestPowerOfTwo.toBigInteger() to significand
-            }
-            else -> {
-                BigInteger.ZERO to denormalizedSignificand
+            if (intValue < lowerLimit) {
+                intValue += powerOfTwo(value.sort.sizeBits)
             }
         }
 
-        val significandWithStickyBitsShift = powerOfTwo(sort.significandBits + 3u - 1u)
-        var resultSignificand = normalizedSignificand.mul(significandWithStickyBitsShift).floor()
-
-        val dividend = RealValue.create(resultSignificand / significandWithStickyBitsShift)
-        val stickyRemainder = normalizedSignificand.sub(dividend)
-
-        // sticky
-        if (!stickyRemainder.isZero() && resultSignificand.isEven()) {
-            resultSignificand++
-        }
-
-        val unpackedResult = UnpackedFp(
-            sort.exponentBits, sort.significandBits, sign, resultExponent, resultSignificand
-        )
-
-        return fpRound(rm, unpackedResult)
+        val realValue = RealValue.create(intValue)
+        return fpValueFromReal(rm, realValue, sort)
     }
 
     private fun KContext.fpUnpackAndAdd(
@@ -934,6 +912,60 @@ object FpUtils {
             sign = value.sign,
             unbiasedExponent = value.unbiasedExponent,
             significand = resultSignificand
+        )
+
+        return fpRound(rm, unpackedResult)
+    }
+
+    private fun KContext.fpValueFromReal(rm: KFpRoundingMode, value: RealValue, sort: KFpSort): KFpValue<*> {
+        val sign = value.isNegative()
+        if (value.isZero()) {
+            return mkFpZero(sign, sort)
+        }
+
+        // Normalize such that 1.0 <= sig < 2.0
+        val denormalizedSignificand = value.abs()
+        val (resultExponent, normalizedSignificand) = when {
+            denormalizedSignificand < RealValue.create(BigInteger.ONE) -> {
+                val nearestInteger = denormalizedSignificand.inverse().floor()
+
+                var nearestPowerOfTwo = nearestInteger.log2()
+                if (denormalizedSignificand.inverse() != RealValue.create(nearestPowerOfTwo.toBigInteger())) {
+                    nearestPowerOfTwo++
+                }
+
+                val nearestPowerOfTwoValue = powerOfTwo(nearestPowerOfTwo.toUInt())
+                val significand = denormalizedSignificand.inverse().div(nearestPowerOfTwoValue).inverse()
+
+                -nearestPowerOfTwo.toBigInteger() to significand
+            }
+            denormalizedSignificand >= RealValue.create(2.toBigInteger()) -> {
+                val nearestInteger = denormalizedSignificand.floor()
+                val nearestPowerOfTwo = nearestInteger.log2()
+
+                val nearestPowerOfTwoValue = powerOfTwo(nearestPowerOfTwo.toUInt())
+                val significand = denormalizedSignificand.div(nearestPowerOfTwoValue)
+
+                nearestPowerOfTwo.toBigInteger() to significand
+            }
+            else -> {
+                BigInteger.ZERO to denormalizedSignificand
+            }
+        }
+
+        val significandWithStickyBitsShift = powerOfTwo(sort.significandBits + 3u - 1u)
+        var resultSignificand = normalizedSignificand.mul(significandWithStickyBitsShift).floor()
+
+        val dividend = RealValue.create(resultSignificand / significandWithStickyBitsShift)
+        val stickyRemainder = normalizedSignificand.sub(dividend)
+
+        // sticky
+        if (!stickyRemainder.isZero() && resultSignificand.isEven()) {
+            resultSignificand++
+        }
+
+        val unpackedResult = UnpackedFp(
+            sort.exponentBits, sort.significandBits, sign, resultExponent, resultSignificand
         )
 
         return fpRound(rm, unpackedResult)

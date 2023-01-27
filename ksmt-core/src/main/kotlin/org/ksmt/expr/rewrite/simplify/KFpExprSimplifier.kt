@@ -63,6 +63,7 @@ import org.ksmt.utils.FpUtils.fpRoundToIntegral
 import org.ksmt.utils.FpUtils.fpSqrt
 import org.ksmt.utils.FpUtils.fpStructurallyEqual
 import org.ksmt.utils.FpUtils.fpToFp
+import org.ksmt.utils.FpUtils.fpValueFromBv
 import org.ksmt.utils.FpUtils.fpValueFromReal
 import org.ksmt.utils.FpUtils.isSubnormal
 import org.ksmt.utils.FpUtils.isInfinity
@@ -454,8 +455,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
             val value: KExpr<KBvSort> = bvValueArg.uncheckedCast()
 
             if (rm is KFpRoundingModeExpr && value is KBitVecValue<*>) {
-                // todo: evaluate
-                return@simplifyApp mkBvToFpExpr(expr.sort, rm, value, expr.signed)
+                return@simplifyApp fpValueFromBv(rm.value, value, expr.signed, expr.sort)
             }
 
             mkBvToFpExpr(expr.sort, rm, value, expr.signed)
