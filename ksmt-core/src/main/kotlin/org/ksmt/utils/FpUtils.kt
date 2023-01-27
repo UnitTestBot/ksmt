@@ -956,7 +956,7 @@ object FpUtils {
         val significandWithStickyBitsShift = powerOfTwo(sort.significandBits + 3u - 1u)
         var resultSignificand = normalizedSignificand.mul(significandWithStickyBitsShift).floor()
 
-        val dividend = RealValue.create(resultSignificand / significandWithStickyBitsShift)
+        val dividend = RealValue.create(resultSignificand).div(significandWithStickyBitsShift)
         val stickyRemainder = normalizedSignificand.sub(dividend)
 
         // sticky
