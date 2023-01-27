@@ -495,6 +495,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     }
 
     // Eval x * y + z
+    @Suppress("ComplexMethod")
     private fun tryEvalFpFma(rm: KFpRoundingMode, x: KFpValue<*>, y: KFpValue<*>, z: KFpValue<*>): KFpValue<*>? =
         with(ctx) {
             when {

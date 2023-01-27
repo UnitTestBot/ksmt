@@ -24,7 +24,7 @@ import kotlin.random.nextInt
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-abstract class ExpressionEvalTest {
+open class ExpressionEvalTest {
 
     fun <S : KBvSort> KContext.randomBvValues(sort: S) = sequence<KBitVecValue<S>> {
         // special values

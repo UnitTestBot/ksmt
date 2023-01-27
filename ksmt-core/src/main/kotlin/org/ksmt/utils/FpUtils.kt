@@ -27,6 +27,7 @@ import java.math.BigInteger
 import kotlin.math.round
 import kotlin.math.sqrt
 
+@Suppress("LargeClass")
 object FpUtils {
 
     @Suppress("MagicNumber")
@@ -250,12 +251,14 @@ object FpUtils {
         else -> default(this, other)
     }
 
+    @Suppress("ComplexMethod")
     private fun KContext.fpAdd(rm: KFpRoundingMode, lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> = when {
-        // RNE is JVM default rounding mode
+        // RNE is JVM default rounding mode ==> use JVM Float +
         rm == KFpRoundingMode.RoundNearestTiesToEven && lhs is KFp32Value -> {
             mkFp(lhs.value + (rhs as KFp32Value).value, lhs.sort)
         }
 
+        // RNE is JVM default rounding mode ==> use JVM Double +
         rm == KFpRoundingMode.RoundNearestTiesToEven && lhs is KFp64Value -> {
             mkFp(lhs.value + (rhs as KFp64Value).value, lhs.sort)
         }
@@ -289,12 +292,14 @@ object FpUtils {
         else -> fpUnpackAndAdd(rm, lhs, rhs)
     }
 
+    @Suppress("ComplexMethod")
     private fun KContext.fpMul(rm: KFpRoundingMode, lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> = when {
-        // RNE is JVM default rounding mode
+        // RNE is JVM default rounding mode ==> use JVM Float *
         rm == KFpRoundingMode.RoundNearestTiesToEven && lhs is KFp32Value -> {
             mkFp(lhs.value * (rhs as KFp32Value).value, lhs.sort)
         }
 
+        // RNE is JVM default rounding mode ==> use JVM Double *
         rm == KFpRoundingMode.RoundNearestTiesToEven && lhs is KFp64Value -> {
             mkFp(lhs.value * (rhs as KFp64Value).value, lhs.sort)
         }
@@ -332,12 +337,14 @@ object FpUtils {
         else -> fpUnpackAndMul(rm, lhs, rhs)
     }
 
+    @Suppress("ComplexMethod")
     private fun KContext.fpDiv(rm: KFpRoundingMode, lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> = when {
-        // RNE is JVM default rounding mode
+        // RNE is JVM default rounding mode ==> use JVM Float /
         rm == KFpRoundingMode.RoundNearestTiesToEven && lhs is KFp32Value -> {
             mkFp(lhs.value / (rhs as KFp32Value).value, lhs.sort)
         }
 
+        // RNE is JVM default rounding mode ==> use JVM Double /
         rm == KFpRoundingMode.RoundNearestTiesToEven && lhs is KFp64Value -> {
             mkFp(lhs.value / (rhs as KFp64Value).value, lhs.sort)
         }
@@ -380,11 +387,12 @@ object FpUtils {
     }
 
     private fun KContext.fpSqrt(rm: KFpRoundingMode, value: KFpValue<*>): KFpValue<*> = when {
-        // RNE is JVM default rounding mode
+        // RNE is JVM default rounding mode ==> use JVM Float sqrt
         rm == KFpRoundingMode.RoundNearestTiesToEven && value is KFp32Value -> {
             mkFp(sqrt(value.value), value.sort)
         }
 
+        // RNE is JVM default rounding mode ==> use JVM Double sqrt
         rm == KFpRoundingMode.RoundNearestTiesToEven && value is KFp64Value -> {
             mkFp(sqrt(value.value), value.sort)
         }
@@ -397,11 +405,12 @@ object FpUtils {
     }
 
     private fun KContext.fpRoundToIntegral(rm: KFpRoundingMode, value: KFpValue<*>): KFpValue<*> = when {
-        // RNE is JVM default rounding mode
+        // RNE is JVM default rounding mode ==> use JVM Float round
         rm == KFpRoundingMode.RoundNearestTiesToEven && value is KFp32Value -> {
             mkFp(round(value.value), value.sort)
         }
 
+        // RNE is JVM default rounding mode ==> use JVM Double round
         rm == KFpRoundingMode.RoundNearestTiesToEven && value is KFp64Value -> {
             mkFp(round(value.value), value.sort)
         }
@@ -874,6 +883,7 @@ object FpUtils {
         return div.mul2k(shift)
     }
 
+    @Suppress("MagicNumber")
     private fun KContext.fpToFpUnpacked(
         rm: KFpRoundingMode,
         value: UnpackedFp,
@@ -972,9 +982,6 @@ object FpUtils {
     }
 
     private fun KContext.fpRound(rm: KFpRoundingMode, value: UnpackedFp): KFpValue<*> {
-        // Assumptions: significand is of the form f[-1:0] . f[1:sbits-1] [round,extra,sticky],
-        // i.e., it has 2 + (sbits-1) + 3 = sbits + 4 bits.
-
         val (roundedExponent, significandNormalizationShiftSize) = fpRoundExponent(value)
 
         val normalizedSignificand = significandNormalizationShift(significandNormalizationShiftSize, value.significand)
@@ -1007,9 +1014,12 @@ object FpUtils {
         return normalizedExponent to normalizedSignificand
     }
 
+    @Suppress("MagicNumber")
     private fun fpRoundExponent(value: UnpackedFp): Pair<BigInteger, BigInteger> {
         val eMin = fpMinExponentValue(value.exponentSize)
 
+        // Significand is of the form f[-1:0] . f[1:sbits-1] [round,extra,sticky],
+        // i.e., it has 2 + (sbits-1) + 3 = sbits + 4 bits.
         val sigWidth = value.significand.log2() + 1
         val lz = value.significandSize.toInt() + 4 - sigWidth
         val beta = value.unbiasedExponent - lz.toBigInteger() + BigInteger.ONE
@@ -1033,6 +1043,7 @@ object FpUtils {
         return exponent to sigma
     }
 
+    @Suppress("LongParameterList")
     private fun KContext.mkRoundedValue(
         rm: KFpRoundingMode,
         exponent: BigInteger,
