@@ -1588,28 +1588,33 @@ open class KContext(
 
     @Suppress("MagicNumber")
     private fun constructFp16Number(exponent: Long, significand: Long, intSignBit: Int): Float {
-        val biasedExponent = exponent + KFp16Sort.exponentShiftSize
-        return constructFp16NumberBiased(biasedExponent, significand, intSignBit)
-    }
+        /**
+         * Transform fp16 exponent into fp32 exponent.
+         * Transform fp16 top and bot exponent to fp32 top and bot exponent to
+         * preserve representation of special values (NaN, Infm Zero)
+         */
+        val unbiasedFp16Exponent = exponent.toInt()
+        val unbiasedFp32Exponent = when {
+            unbiasedFp16Exponent <= -KFp16Sort.exponentShiftSize -> -KFp32Sort.exponentShiftSize
+            unbiasedFp16Exponent >= KFp16Sort.exponentShiftSize + 1 -> KFp32Sort.exponentShiftSize + 1
+            else -> unbiasedFp16Exponent
+        }
 
-    @Suppress("MagicNumber")
-    private fun constructFp16NumberBiased(biasedExponent: Long, significand: Long, intSignBit: Int): Float {
-        // get sign and `body` of the biased exponent
-        val exponentSign = (biasedExponent.toInt() shr 4) and 1
-        val otherExponent = biasedExponent.toInt() and 0b1111
-
-        // Transform fp16 exponent into fp32 exponent adding three sign bits between the sign and the body
-        // Then normalize exponent with 0xff
-        // We use sign bits to keep value compatible with Float.NaN, Inf, Zero
-        val signBits = (exponentSign shl 7) or (exponentSign shl 6) or (exponentSign shl 5) or (exponentSign shl 4)
-        val biasedFloatExponent = (signBits or otherExponent) and 0xff
-
-        // get fp16 significand part -- last 10 bits
+        // get fp16 significand part -- last teb bits (eleventh stored implicitly)
         val significandBits = significand.toInt() and 0b1111_1111_11
+
+        // Add the bias for fp32 and apply the mask to avoid overflow of the eight bits
+        val biasedFloatExponent = (unbiasedFp32Exponent + KFp32Sort.exponentShiftSize) and 0xff
 
         val bits = (intSignBit shl 31) or (biasedFloatExponent shl 23) or (significandBits shl 13)
 
         return intBitsToFloat(bits)
+    }
+
+    @Suppress("MagicNumber")
+    private fun constructFp16NumberBiased(biasedExponent: Long, significand: Long, intSignBit: Int): Float {
+        val unbiasedExponent = biasedExponent - KFp16Sort.exponentShiftSize
+        return constructFp16Number(unbiasedExponent, significand, intSignBit)
     }
 
     @Suppress("MagicNumber")

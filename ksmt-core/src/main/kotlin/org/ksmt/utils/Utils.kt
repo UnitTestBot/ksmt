@@ -69,7 +69,7 @@ fun Float.getHalfPrecisionExponent(isBiased: Boolean): Int {
     val fp16ExponentOtherBits = biasedFloatExponent and 0x0f
     val biasedFloat16Exponent = fp16ExponentSign or fp16ExponentOtherBits
 
-    return if (isBiased)  biasedFloat16Exponent else biasedFloat16Exponent - KFp16Sort.exponentShiftSize
+    return if (isBiased) biasedFloat16Exponent else biasedFloat16Exponent - KFp16Sort.exponentShiftSize
 }
 
 /**
