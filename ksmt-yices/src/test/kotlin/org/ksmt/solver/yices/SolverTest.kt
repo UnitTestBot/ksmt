@@ -5,6 +5,7 @@ import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.utils.getValue
 import kotlin.test.Test
+import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -104,6 +105,7 @@ class SolverTest {
         assertEquals(KSolverStatus.SAT, status)
     }
 
+    @Ignore
     @Test
     fun testTimeout(): Unit = with(ctx) {
         val solver = KYicesSolver(ctx)

@@ -20,6 +20,7 @@ dependencies {
     testFixturesImplementation(project(":ksmt-core"))
 
     yicesNative("yices", "yices-native-linux-x86-64", "0.0", ext = "zip")
+    yicesNative("yices", "yices-native-win32-x86-64", "0.0", ext = "zip")
     api(files("$distDir/com.sri.yices.jar"))
 }
 
