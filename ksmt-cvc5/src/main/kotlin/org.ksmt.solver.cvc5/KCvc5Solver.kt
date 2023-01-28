@@ -43,6 +43,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     init {
         solver.setOption("produce-models", "true")
         solver.setOption("produce-unsat-cores", "true")
+        solver.setOption("fp-exp", "true") // Allow floating-point sorts of all sizes, rather than only Float32 (8/24) or Float64 (11/53) (experimental in cvc5 1.0.2)
     }
 
     open fun createExprInternalizer(cvc5Ctx: KCvc5Context): KCvc5ExprInternalizer = KCvc5ExprInternalizer(cvc5Ctx)
@@ -134,7 +135,6 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
 
     override fun close() {
         cvc5Ctx.close()
-        solver.close()
     }
 
     private fun Result.processCheckResult() = when {

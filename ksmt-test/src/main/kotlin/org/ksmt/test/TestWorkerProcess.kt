@@ -119,14 +119,16 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
     }
 
     private fun internalizeAndConvertCvc5(assertions: List<KExpr<KBoolSort>>): List<KExpr<KBoolSort>> {
-        KCvc5Solver(ctx) // ensure native libs loaded
+        KCvc5Solver(ctx).close() // ensure native libs loaded
 
-        return KCvc5Context(Cvc5Solver()).use { cvc5Ctx ->
-            val internalizer = KCvc5ExprInternalizer(cvc5Ctx)
-            val cvc5Assertions = with(internalizer) { assertions.map { it.internalizeExpr() } }
+        return Cvc5Solver().use { cvc5Solver ->
+            KCvc5Context(cvc5Solver).use { cvc5Ctx ->
+                val internalizer = KCvc5ExprInternalizer(cvc5Ctx)
+                val cvc5Assertions = with(internalizer) { assertions.map { it.internalizeExpr() } }
 
-            val converter = KCvc5ExprConverter(ctx, cvc5Ctx)
-            with (converter) { cvc5Assertions.map { it.convertExpr() } }
+                val converter = KCvc5ExprConverter(ctx, cvc5Ctx)
+                with(converter) { cvc5Assertions.map { it.convertExpr() } }
+            }
         }
     }
 
