@@ -7,18 +7,23 @@ plugins {
 
 repositories {
     mavenCentral()
+    flatDir { dirs("dist") }
 }
 
 val cvc5Version = "1.0.2"
-
 val cvc5Jar = File(projectDir, "dist/cvc5-$cvc5Version.jar")
-val cvc5NativeLibs = listOf(
-    File(projectDir, "dist/libcvc5.so"),
-    File(projectDir, "dist/libcvc5jni.so")
-)
+
+val cvc5NativeLib by configurations.creating
+val cvc5NativeDependency by configurations.creating
 
 dependencies {
     implementation(project(":ksmt-core"))
+
+    cvc5NativeLib("cvc5", "cvc5-native-linux-x86-64", cvc5Version, ext = "zip")
+    cvc5NativeDependency("cvc5", "cvc5-native-dependency-linux-x86-64", cvc5Version, ext = "zip")
+    cvc5NativeLib("cvc5", "cvc5-native-win32-x86-64", cvc5Version, ext = "zip")
+    cvc5NativeDependency("cvc5", "cvc5-native-dependency-win32-x86-64", cvc5Version, ext = "zip")
+
     api(fileTree(File(project.projectDir, "dist")) {
         include(cvc5Jar.name)
     })
@@ -27,8 +32,13 @@ dependencies {
 tasks.withType<ProcessResources> {
     dependsOn(tasks.compileJava)
 
-    cvc5NativeLibs.forEach { cvc5NativeLib ->
-        from(cvc5NativeLib) {
+    cvc5NativeLib.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
+        from(zipTree(artifact.file)) {
+            into("lib/x64")
+        }
+    }
+    cvc5NativeDependency.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
+        from(zipTree(artifact.file)) {
             into("lib/x64")
         }
     }

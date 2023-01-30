@@ -163,9 +163,9 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
             System.setProperty("cvc5.skipLibraryLoad", "true")
             NativeLibraryLoader.load { os ->
                 when (os) {
-                    NativeLibraryLoader.OS.LINUX -> listOf("libcvc5", "libcvc5jni")
+                    NativeLibraryLoader.OS.LINUX -> listOf("libgmp", "libpoly", "libpolyxx", "libcvc5", "libcvc5jni")
                     NativeLibraryLoader.OS.MACOS -> TODO("add macOS cvc5 libs")
-                    NativeLibraryLoader.OS.WINDOWS -> TODO("add Windows cvc5 libs")
+                    NativeLibraryLoader.OS.WINDOWS -> listOf("libgmp-10", "libpoly", "libpolyxx", "libcvc5", "libcvc5jni")
                 }
             }
         }
