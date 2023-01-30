@@ -28,5 +28,5 @@ class KFpRoundingModeExpr(
     override fun accept(transformer: KTransformerBase): KExpr<KFpRoundingModeSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }

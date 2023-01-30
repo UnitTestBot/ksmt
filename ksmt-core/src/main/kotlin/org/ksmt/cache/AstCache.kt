@@ -38,7 +38,7 @@ class SingleThreadGcAstCache<K, V : Any> : AstCache<K, V> where K : KAst, K : KI
 class ConcurrentNoGcAstCache<K, V : Any> : AstCache<K, V> where K : KAst, K : KInternedObject {
     private val cache = ConcurrentHashMap<K, V>()
 
-    override fun get(ast: K): V? = cache.get(ast)
+    override fun get(ast: K): V? = cache[ast]
     override fun put(ast: K, value: V): V? = cache.put(ast, value)
     override fun putIfAbsent(ast: K, value: V): V? = cache.putIfAbsent(ast, value)
     override fun registerOnDeleteHandler(handler: CacheRemoveHandler<K, V>) {
@@ -49,7 +49,7 @@ class ConcurrentNoGcAstCache<K, V : Any> : AstCache<K, V> where K : KAst, K : KI
 class SingleThreadNoGcAstCache<K, V : Any> : AstCache<K, V> where K : KAst, K : KInternedObject {
     private val cache = HashMap<K, V>()
 
-    override fun get(ast: K): V? = cache.get(ast)
+    override fun get(ast: K): V? = cache[ast]
     override fun put(ast: K, value: V): V? = cache.put(ast, value)
     override fun putIfAbsent(ast: K, value: V): V? = cache.putIfAbsent(ast, value)
     override fun registerOnDeleteHandler(handler: CacheRemoveHandler<K, V>) {

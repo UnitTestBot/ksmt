@@ -111,7 +111,7 @@ class KFunctionAsArray<D : KSort, R : KSort> internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KArraySort<D, R>> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(function)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { function })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { function }
 }
 
 /** Array lambda binding.

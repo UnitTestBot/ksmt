@@ -68,7 +68,7 @@ class KToRealIntExpr internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KRealSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(arg)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
 }
 
 abstract class KIntNumExpr(
@@ -82,7 +82,7 @@ abstract class KIntNumExpr(
         get() = ctx.mkIntNumDecl("$value")
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 class KInt32NumExpr internal constructor(
@@ -92,7 +92,7 @@ class KInt32NumExpr internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KIntSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 class KInt64NumExpr internal constructor(
@@ -102,7 +102,7 @@ class KInt64NumExpr internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KIntSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 class KIntBigNumExpr internal constructor(
@@ -112,5 +112,5 @@ class KIntBigNumExpr internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KIntSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }

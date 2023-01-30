@@ -27,7 +27,7 @@ class KToIntRealExpr internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KIntSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(arg)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
 }
 
 class KIsIntRealExpr internal constructor(
@@ -46,7 +46,7 @@ class KIsIntRealExpr internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(arg)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
 }
 
 class KRealNumExpr internal constructor(

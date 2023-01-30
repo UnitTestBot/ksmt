@@ -36,7 +36,7 @@ class KBitVec1Value internal constructor(
         get() = ctx.bv1Sort
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 abstract class KBitVecNumberValue<S : KBvSort, N : Number>(ctx: KContext) : KBitVecValue<S>(ctx) {
@@ -46,7 +46,7 @@ abstract class KBitVecNumberValue<S : KBvSort, N : Number>(ctx: KContext) : KBit
         get() = numberValue.toBinary()
 
     override fun internHashCode(): Int = hash(numberValue)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { numberValue })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { numberValue }
 }
 
 class KBitVec8Value internal constructor(
@@ -65,7 +65,7 @@ class KBitVec8Value internal constructor(
         get() = ctx.mkBv8Sort()
 
     override fun internHashCode(): Int = hash(byteValue)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { byteValue })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { byteValue }
 }
 
 class KBitVec16Value internal constructor(
@@ -84,7 +84,7 @@ class KBitVec16Value internal constructor(
         get() = ctx.mkBv16Sort()
 
     override fun internHashCode(): Int = hash(shortValue)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { shortValue })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { shortValue }
 }
 
 class KBitVec32Value internal constructor(
@@ -103,7 +103,7 @@ class KBitVec32Value internal constructor(
         get() = ctx.mkBv32Sort()
 
     override fun internHashCode(): Int = hash(intValue)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { intValue })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { intValue }
 }
 
 class KBitVec64Value internal constructor(
@@ -122,7 +122,7 @@ class KBitVec64Value internal constructor(
         get() = ctx.mkBv64Sort()
 
     override fun internHashCode(): Int = hash(longValue)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { longValue })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { longValue }
 }
 
 class KBitVecCustomValue internal constructor(
@@ -172,7 +172,7 @@ class KBvNotExpr<S : KBvSort> internal constructor(
     }
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 /**
@@ -194,7 +194,7 @@ class KBvReductionAndExpr<S : KBvSort> internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KBv1Sort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 /**
@@ -216,7 +216,7 @@ class KBvReductionOrExpr<S : KBvSort> internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KBv1Sort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 /**
@@ -418,7 +418,7 @@ class KBvNegationExpr<S : KBvSort> internal constructor(
     }
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 /**
@@ -1376,7 +1376,7 @@ class KBvNegNoOverflowExpr<S : KBvSort> internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 class KBvMulNoOverflowExpr<S : KBvSort> internal constructor(

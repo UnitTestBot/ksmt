@@ -30,11 +30,11 @@ abstract class WeakHashMapCache<K : Any, V : Any> {
 
     fun put(key: K, value: V, onlyIfAbsent: Boolean): V? {
         val lookupKey = lookupKey(key)
-        val current = data.get(lookupKey)
+        val current = data[lookupKey]
 
         return if (current == null) {
             val node = newNode(key, keyReferenceQueue, value, lookupKey.hashCode())
-            data.put(node.getKeyReference(), node)
+            data[node.getKeyReference()] = node
             afterWrite()
             null
         } else if (onlyIfAbsent) {
@@ -48,12 +48,12 @@ abstract class WeakHashMapCache<K : Any, V : Any> {
 
     fun internKey(key: K, valueStub: V): K {
         val lookupKey = lookupKey(key)
-        val current = data.get(lookupKey)
+        val current = data[lookupKey]
         val currentKey = current?.getKey()
 
         if (current == null || currentKey == null) {
             val node = newNode(key, keyReferenceQueue, valueStub, lookupKey.hashCode())
-            data.put(node.getKeyReference(), node)
+            data[node.getKeyReference()] = node
 
             if (current == null) {
                 afterWrite()
@@ -68,7 +68,7 @@ abstract class WeakHashMapCache<K : Any, V : Any> {
 
     private fun getNode(key: K): KeyRefNode<K, V>? {
         val lookupKey = lookupKey(key)
-        return data.get(lookupKey)
+        return data[lookupKey]
     }
 
     private fun notifyRemove(key: K?, value: V) {

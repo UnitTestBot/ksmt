@@ -40,7 +40,7 @@ class KAddArithExpr<T : KArithSort> internal constructor(
     }
 
     override fun internHashCode(): Int = hash(args)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { args })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { args }
 }
 
 class KMulArithExpr<T : KArithSort> internal constructor(
@@ -66,7 +66,7 @@ class KMulArithExpr<T : KArithSort> internal constructor(
     }
 
     override fun internHashCode(): Int = hash(args)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { args })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { args }
 }
 
 class KSubArithExpr<T : KArithSort> internal constructor(
@@ -92,7 +92,7 @@ class KSubArithExpr<T : KArithSort> internal constructor(
     }
 
     override fun internHashCode(): Int = hash(args)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { args })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { args }
 }
 
 class KUnaryMinusArithExpr<T : KArithSort> internal constructor(
@@ -118,7 +118,7 @@ class KUnaryMinusArithExpr<T : KArithSort> internal constructor(
     }
 
     override fun internHashCode(): Int = hash(arg)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
 }
 
 class KDivArithExpr<T : KArithSort> internal constructor(

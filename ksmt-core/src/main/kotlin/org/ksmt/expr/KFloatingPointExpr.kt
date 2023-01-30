@@ -68,7 +68,7 @@ class KFp16Value internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KFp16Sort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 class KFp32Value internal constructor(
@@ -101,7 +101,7 @@ class KFp32Value internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KFp32Sort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 class KFp64Value internal constructor(
@@ -134,7 +134,7 @@ class KFp64Value internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KFp64Sort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 /**
@@ -236,7 +236,7 @@ class KFpAbsExpr<S : KFpSort> internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 /**
@@ -264,7 +264,7 @@ class KFpNegationExpr<S : KFpSort> internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<S> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 // TODO Can they have different sorts?
@@ -670,7 +670,7 @@ class KFpIsNormalExpr<S : KFpSort> internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 class KFpIsSubnormalExpr<S : KFpSort> internal constructor(
@@ -689,7 +689,7 @@ class KFpIsSubnormalExpr<S : KFpSort> internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 class KFpIsZeroExpr<S : KFpSort> internal constructor(
@@ -708,7 +708,7 @@ class KFpIsZeroExpr<S : KFpSort> internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 class KFpIsInfiniteExpr<S : KFpSort> internal constructor(
@@ -727,7 +727,7 @@ class KFpIsInfiniteExpr<S : KFpSort> internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 class KFpIsNaNExpr<S : KFpSort> internal constructor(
@@ -746,7 +746,7 @@ class KFpIsNaNExpr<S : KFpSort> internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 class KFpIsNegativeExpr<S : KFpSort> internal constructor(
@@ -765,7 +765,7 @@ class KFpIsNegativeExpr<S : KFpSort> internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 class KFpIsPositiveExpr<S : KFpSort> internal constructor(
@@ -784,7 +784,7 @@ class KFpIsPositiveExpr<S : KFpSort> internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 class KFpToBvExpr<S : KFpSort> internal constructor(
@@ -826,7 +826,7 @@ class KFpToRealExpr<S : KFpSort> internal constructor(
     override fun accept(transformer: KTransformerBase): KExpr<KRealSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 class KFpToIEEEBvExpr<S : KFpSort> internal constructor(
@@ -852,7 +852,7 @@ class KFpToIEEEBvExpr<S : KFpSort> internal constructor(
     }
 
     override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { value })
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 class KFpFromBvExpr<S : KFpSort> internal constructor(

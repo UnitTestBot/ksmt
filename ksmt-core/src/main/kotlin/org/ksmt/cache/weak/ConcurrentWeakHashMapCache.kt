@@ -59,7 +59,7 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
 
     private fun getNode(key: K): KeyRefNode<K, V>? {
         val lookupKey = lookupKey(key)
-        val node = data.get(lookupKey)
+        val node = data[lookupKey]
         afterRead()
         return node
     }
@@ -70,7 +70,7 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
         val lookupKey = lookupKey(key)
 
         while (true) {
-            var current = data.get(lookupKey)
+            var current = data[lookupKey]
 
             if (current == null) {
 
@@ -127,7 +127,7 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
         val lookupKey = lookupKey(key)
 
         while (true) {
-            var current = data.get(lookupKey)
+            var current = data[lookupKey]
 
             if (current == null) {
 
@@ -254,7 +254,7 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
     private fun drainKeyReferences() {
         while (true) {
             val keyRef = keyReferenceQueue.poll() ?: break
-            val node = data.get(keyRef)
+            val node = data[keyRef]
             if (node != null) {
                 cleanupEntry(node)
             }
