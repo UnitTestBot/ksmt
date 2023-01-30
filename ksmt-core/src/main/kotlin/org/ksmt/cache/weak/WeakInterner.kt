@@ -20,6 +20,7 @@ class WeakInterner<T : KInternedObject> : WeakHashMapCache<T, Any>() {
         override fun getValue(): Any = valueStub
 
         override fun setValue(value: Any) {
+            // Values are not used for interning.
         }
     }
 
