@@ -154,6 +154,7 @@ import org.ksmt.sort.KBv64Sort
 import org.ksmt.sort.KBv8Sort
 import org.ksmt.sort.KIntSort
 import org.ksmt.utils.mkFreshConstDecl
+import org.ksmt.utils.uncheckedCast
 import java.math.BigInteger
 
 open class KYicesExprInternalizer(
@@ -255,7 +256,7 @@ open class KYicesExprInternalizer(
     }
 
     override fun transform(expr: KBitVecCustomValue): KExpr<KBvSort> = with(expr) {
-        transform { Terms.parseBvBin(binaryStringValue) }
+        transform { Terms.parseBvBin(stringValue) }
     }
 
     override fun <T : KBvSort> transform(expr: KBvNotExpr<T>): KExpr<T> = with(expr) {
@@ -654,7 +655,6 @@ open class KYicesExprInternalizer(
         transform { function.internalizeDecl() }
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>>  {
         val transformedExpr = yicesCtx.substituteDecls(expr) { term ->
             with(term) {
@@ -675,15 +675,15 @@ open class KYicesExprInternalizer(
         }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>): KExpr<T> = with(expr) {
+    override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> = with(expr) {
         transformList(args) { args: Array<YicesTerm> -> Terms.add(args.toList()) }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KMulArithExpr<T>): KExpr<T> = with(expr) {
+    override fun <T : KArithSort> transform(expr: KMulArithExpr<T>): KExpr<T> = with(expr) {
         transformList(args) { args: Array<YicesTerm> -> Terms.mul(args.toList()) }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KSubArithExpr<T>): KExpr<T> = with(expr) {
+    override fun <T : KArithSort> transform(expr: KSubArithExpr<T>): KExpr<T> = with(expr) {
         transformList(args) { args: Array<YicesTerm> ->
             if (args.size == 1)
                 args.first()
@@ -692,11 +692,11 @@ open class KYicesExprInternalizer(
         }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> = with(expr) {
+    override fun <T : KArithSort> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> = with(expr) {
         transform(arg, Terms::neg)
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>): KExpr<T> = with(expr) {
+    override fun <T : KArithSort> transform(expr: KDivArithExpr<T>): KExpr<T> = with(expr) {
         transform(lhs, rhs) { lhs: YicesTerm, rhs: YicesTerm ->
             when (sort) {
                 is KIntSort -> Terms.idiv(lhs, rhs)
@@ -705,23 +705,23 @@ open class KYicesExprInternalizer(
         }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>): KExpr<T> = with(expr) {
+    override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>): KExpr<T> = with(expr) {
         transform(lhs, rhs, Terms::power)
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> = with(expr) {
+    override fun <T : KArithSort> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> = with(expr) {
         transform(lhs, rhs, Terms::arithLt)
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> = with(expr) {
+    override fun <T : KArithSort> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> = with(expr) {
         transform(lhs, rhs, Terms::arithLeq)
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> = with(expr) {
+    override fun <T : KArithSort> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> = with(expr) {
         transform(lhs, rhs, Terms::arithGt)
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> = with(expr) {
+    override fun <T : KArithSort> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> = with(expr) {
         transform(lhs, rhs, Terms::arithGeq)
     }
 
@@ -785,7 +785,6 @@ open class KYicesExprInternalizer(
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
     private inline fun <T: KQuantifier> internalizeQuantifier(
         expr: T,
         crossinline constructor: (KExpr<KBoolSort>, List<KDecl<*>>) -> T,
@@ -797,7 +796,7 @@ open class KYicesExprInternalizer(
                 val newBounds = bounds.map { it.sort.mkFreshConstDecl(it.name) }
                 val transformer = KDeclSubstitutor(ctx).apply {
                     bounds.zip(newBounds).forEach { (bound, newBound) ->
-                        substitute(bound as KDecl<KSort>, newBound)
+                        substitute(bound.uncheckedCast(), newBound)
                     }
                 }
 

@@ -14,32 +14,30 @@ import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.mkFreshConstDecl
+import org.ksmt.utils.uncheckedCast
 
 class KDeclSubstitutor(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     private val substitution = hashMapOf<KDecl<*>, KDecl<*>>()
 
-    fun <T: KSort> substitute(from: KDecl<T>, to: KDecl<T>) {
+    fun <T : KSort> substitute(from: KDecl<T>, to: KDecl<T>) {
         substitution[from] = to
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun <T : KSort> transformDecl(decl: KDecl<T>): KDecl<T> =
-        (substitution[decl] as? KDecl<T>) ?: decl
+        (substitution[decl].uncheckedCast()) ?: decl
 
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : KSort> transformApp(expr: KApp<T, *>): KExpr<T> =
-        transformAppAfterArgsTransformed(expr as KApp<T, KExpr<KSort>>) { transformedArgs ->
+    override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> =
+        transformAppAfterArgsTransformed(expr) { transformedArgs ->
             val transformedDecl = transformDecl(expr.decl)
 
             ctx.mkApp(transformedDecl, transformedArgs)
         }
 
-    @Suppress("UNCHECKED_CAST")
     override fun <D : KSort, R : KSort> transform(
         expr: KArrayLambda<D, R>
     ): KExpr<KArraySort<D, R>> = with(expr) {
         transformQuantifierAfterBodyTransformed(body, listOf(indexVarDecl)) { transformedBody, transformedBounds ->
-            ctx.mkArrayLambda(transformedBounds.single() as KDecl<D>, transformedBody)
+            ctx.mkArrayLambda(transformedBounds.single().uncheckedCast(), transformedBody)
         }
     }
 

@@ -18,9 +18,9 @@ import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
-import org.ksmt.utils.asExpr
 import org.ksmt.utils.mkConst
 import org.ksmt.utils.mkFreshConstDecl
+import org.ksmt.utils.uncheckedCast
 
 class KYicesModel(
     private val model: Model,
@@ -52,7 +52,6 @@ class KYicesModel(
         return KModelEvaluator(ctx, this, isComplete).apply(expr)
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun getValue(yval: YVal, sort: KSort): KExpr<*> = with(ctx) {
         return when (sort) {
             is KBoolSort -> model.boolValue(yval).expr
@@ -71,7 +70,7 @@ class KYicesModel(
 
                 funcInterpretationsToDo.add(Pair(yval, funcDecl))
 
-                mkFunctionAsArray<KSort, KSort>(funcDecl).asExpr(sort)
+                mkFunctionAsArray<KSort, KSort>(funcDecl).uncheckedCast()
             }
             else -> error("Unsupported sort $sort")
         }
@@ -80,7 +79,7 @@ class KYicesModel(
     private fun <T: KSort> functionInterpretation(yval: YVal, decl: KFuncDecl<T>): KModel.KFuncInterp<T> {
         val functionChildren = model.expandFunction(yval)
         val default = if (yval.tag != YValTag.UNKNOWN)
-            getValue(functionChildren.value, decl.sort).asExpr(decl.sort)
+            getValue(functionChildren.value, decl.sort).uncheckedCast<_, KExpr<T>>()
         else
             null
 
@@ -89,7 +88,7 @@ class KYicesModel(
             val args = entry.vector.zip(decl.argSorts).map { (arg, sort) ->
                 getValue(arg, sort)
             }
-            val res = getValue(entry.value, decl.sort).asExpr(decl.sort)
+            val res = getValue(entry.value, decl.sort).uncheckedCast<_, KExpr<T>>()
 
             KModel.KFuncInterpEntry(args, res)
         }
@@ -102,7 +101,6 @@ class KYicesModel(
         )
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? = with(ctx) {
         interpretations.getOrPut(decl) {
             if (decl !in declarations) return@with null
@@ -116,7 +114,7 @@ class KYicesModel(
                     decl = decl,
                     vars = emptyList(),
                     entries = emptyList(),
-                    default = getValue(yval, sort).asExpr(sort)
+                    default = getValue(yval, sort).uncheckedCast()
                 )
                 is KFuncDecl<T> -> functionInterpretation(yval, decl)
                 else -> error("Unexpected declaration $decl")
@@ -129,7 +127,7 @@ class KYicesModel(
             }
 
             result
-        } as? KModel.KFuncInterp<T>
+        }.uncheckedCast<_, KModel.KFuncInterp<T>?>()
     }
 
     override fun detach(): KModel {

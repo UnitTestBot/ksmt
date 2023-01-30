@@ -5,6 +5,7 @@ import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KSort
 import org.ksmt.utils.NativeLibraryLoader
+import org.ksmt.utils.uncheckedCast
 
 open class KYicesContext : AutoCloseable {
     private var isClosed = false
@@ -26,9 +27,8 @@ open class KYicesContext : AutoCloseable {
 
     fun findConvertedDecl(decl: YicesTerm): KDecl<*>? = yicesDecls[decl]
 
-    @Suppress("UNCHECKED_CAST")
     fun <K: KExpr<*>> substituteDecls(expr: K, transform: (K) -> K): K =
-        transformed.getOrPut(expr) { transform(expr) } as K
+        transformed.getOrPut(expr) { transform(expr) }.uncheckedCast()
 
     open fun internalizeExpr(expr: KExpr<*>, internalizer: (KExpr<*>) -> YicesTerm): YicesTerm =
         internalize(expressions, yicesExpressions, expr, internalizer)

@@ -17,9 +17,9 @@ import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
-import org.ksmt.utils.asExpr
 import org.ksmt.utils.mkConst
 import org.ksmt.utils.mkFreshConst
+import org.ksmt.utils.uncheckedCast
 import java.util.LinkedList
 import java.util.Queue
 import kotlin.collections.HashSet
@@ -62,7 +62,7 @@ open class KYicesExprConverter(
         mkArrayLambda(indexDecl.decl, mkIntToReal(expr.select(indexDecl)))
     }
 
-    @Suppress("UNCHECKED_CAST", "ComplexMethod")
+    @Suppress("ComplexMethod")
     override fun findConvertedNative(expr: YicesTerm): KExpr<*>? = with(ctx) {
         val convertedExpr = yicesCtx.findConvertedExpr(expr)
 
@@ -76,19 +76,19 @@ open class KYicesExprConverter(
             val exprSort = convertedExpr.sort
 
             return when {
-                argType is KIntSort && exprSort is KRealSort -> castToInt(convertedExpr as KExpr<KRealSort>)
-                argType is KRealSort && exprSort is KIntSort -> castToReal(convertedExpr as KExpr<KIntSort>)
+                argType is KIntSort && exprSort is KRealSort -> castToInt(convertedExpr.uncheckedCast())
+                argType is KRealSort && exprSort is KIntSort -> castToReal(convertedExpr.uncheckedCast())
                 argType is KArraySort<*, *>
                         && argType.range is KIntSort
                         && exprSort is KArraySort<*, *>
                         && exprSort.range is KRealSort ->
-                    castArrayRangeToInt(convertedExpr as KExpr<KArraySort<*, KRealSort>>)
+                    castArrayRangeToInt(convertedExpr.uncheckedCast<_, KExpr<KArraySort<*, KRealSort>>>())
 
                 argType is KArraySort<*, *>
                         && argType.range is KRealSort
                         && exprSort is KArraySort<*, *>
                         && exprSort.range is KIntSort ->
-                    castArrayRangeToReal(convertedExpr as KExpr<KArraySort<*, KIntSort>>)
+                    castArrayRangeToReal(convertedExpr.uncheckedCast<_, KExpr<KArraySort<*, KIntSort>>>())
 
                 else -> error("Invalid state")
             }
@@ -319,7 +319,7 @@ open class KYicesExprConverter(
         mkIte(condition, mkFloor(div), mkCeil(div))
     }
 
-    @Suppress("UNCHECKED_CAST", "LongMethod", "ComplexMethod")
+    @Suppress("LongMethod", "ComplexMethod")
     private fun convertComposite(expr: YicesTerm) = with(ctx) {
         val yicesArgs = Terms.children(expr).toTypedArray()
         val numChildren = Terms.numChildren(expr)
@@ -361,7 +361,7 @@ open class KYicesExprConverter(
                     check(yicesArgs.size == 2)
                     argTypes.add(funcDecl.sort.toArraySort().domain)
                     expr.convert(yicesArgs.drop(1).toTypedArray()) { index: KExpr<KSort> ->
-                        mkArraySelect(funcDecl.apply() as KExpr<KArraySort<*, *>>, index)
+                        mkArraySelect(funcDecl.apply().uncheckedCast(), index)
                     }
                 } else {
                     argTypes.addAll(funcDecl.argSorts)
@@ -448,58 +448,58 @@ open class KYicesExprConverter(
             Constructor.BV_SGE_ATOM -> expr.convert(yicesArgs, ::mkBvSignedGreaterOrEqualExpr)
             Constructor.ARITH_GE_ATOM -> {
                 setArithArgTypes(yicesArgs)
-                expr.convert<KBoolSort, KArithSort<*>, KArithSort<*>>(yicesArgs, ::mkArithGe)
+                expr.convert(yicesArgs, ::mkArithGe)
             }
             Constructor.ABS -> {
-                expr.convert(yicesArgs) { x: KExpr<KArithSort<*>> ->
+                expr.convert(yicesArgs) { x: KExpr<KArithSort> ->
                     val isReal = x.sort == realSort
                     val condition = if (isReal)
-                        mkArithGe(x as KExpr<KRealSort>, mkRealNum(0))
+                        mkArithGe(x.uncheckedCast(), mkRealNum(0))
                     else
-                        mkArithGe(x as KExpr<KIntSort>, mkIntNum(0))
+                        mkArithGe(x.uncheckedCast(), mkIntNum(0))
 
                     mkIte(condition, x, mkArithUnaryMinus(x))
                 }
             }
             Constructor.CEIL -> {
-                expr.convert(yicesArgs) { x: KExpr<KArithSort<*>> ->
-                    if(x.sort == intSort)
+                expr.convert(yicesArgs) { x: KExpr<KArithSort> ->
+                    if (x.sort == intSort)
                         x
                     else
-                        mkCeil(x as KExpr<KRealSort>)
+                        mkCeil(x.uncheckedCast())
                 }
             }
             Constructor.FLOOR -> {
-                expr.convert(yicesArgs) { x: KExpr<KArithSort<*>> ->
-                    if(x.sort == intSort)
+                expr.convert(yicesArgs) { x: KExpr<KArithSort> ->
+                    if (x.sort == intSort)
                         x
                     else
-                        mkFloor(x as KExpr<KRealSort>)
+                        mkFloor(x.uncheckedCast())
                 }
             }
             Constructor.RDIV -> {
                 argTypes.addAll(List(numChildren) { realSort })
-                expr.convert<KArithSort<*>, KArithSort<*>, KArithSort<*>>(yicesArgs, ::mkArithDiv)
+                expr.convert(yicesArgs, ::mkArithDiv)
             }
             Constructor.IDIV -> {
                 setArithArgTypes(yicesArgs)
-                expr.convert(yicesArgs) { arg0: KExpr<KArithSort<*>>, arg1: KExpr<KArithSort<*>> ->
+                expr.convert(yicesArgs) { arg0: KExpr<KArithSort>, arg1: KExpr<KArithSort> ->
                     check(arg0.sort == arg1.sort)
                     if (arg0.sort is KIntSort)
-                        mkArithDiv(arg0.asExpr(intSort), arg1.asExpr(intSort))
+                        mkArithDiv(arg0.uncheckedCast(), arg1.uncheckedCast())
                     else
-                        mkIDiv(arg0.asExpr(realSort), arg1.asExpr(realSort))
+                        mkIDiv(arg0.uncheckedCast(), arg1.uncheckedCast())
                 }
             }
             Constructor.IMOD -> {
                 setArithArgTypes(yicesArgs)
-                expr.convert(yicesArgs) { arg0: KExpr<KArithSort<*>>, arg1: KExpr<KArithSort<*>> ->
+                expr.convert(yicesArgs) { arg0: KExpr<KArithSort>, arg1: KExpr<KArithSort> ->
                     check(arg0.sort == arg1.sort)
                     if (arg0.sort is KIntSort) {
-                        mkIntMod(arg0.asExpr(intSort), arg1.asExpr(intSort))
+                        mkIntMod(arg0.uncheckedCast(), arg1.uncheckedCast())
                     } else {
-                        val div = mkIntToReal(mkIDiv(arg0.asExpr(realSort), arg1.asExpr(realSort)))
-                        val mul = mkArithMul(arg1, div.asExpr(realSort))
+                        val div = mkIntToReal(mkIDiv(arg0.uncheckedCast(), arg1.uncheckedCast()))
+                        val mul = mkArithMul(arg1, div.uncheckedCast())
 
                         mkArithSub(arg0, mul)
                     }
@@ -507,21 +507,21 @@ open class KYicesExprConverter(
             }
             Constructor.IS_INT_ATOM -> {
                 setArithArgTypes(yicesArgs)
-                expr.convert(yicesArgs) { arg: KExpr<KArithSort<*>> ->
+                expr.convert(yicesArgs) { arg: KExpr<KArithSort> ->
                     if (arg.sort is KIntSort)
                         true.expr
                     else
-                        mkRealIsInt(arg.asExpr(realSort))
+                        mkRealIsInt(arg.uncheckedCast())
                 }
             }
             Constructor.DIVIDES_ATOM -> {
                 setArithArgTypes(yicesArgs)
-                expr.convert(yicesArgs) { arg0: KExpr<KArithSort<*>>, arg1: KExpr<KArithSort<*>> ->
+                expr.convert(yicesArgs) { arg0: KExpr<KArithSort>, arg1: KExpr<KArithSort> ->
                     check(arg0.sort == arg1.sort)
                     if (arg0.sort is KIntSort)
-                        mkIntRem(arg1.asExpr(intSort), arg0.asExpr(intSort)) eq mkIntNum(0)
+                        mkIntRem(arg1.uncheckedCast(), arg0.uncheckedCast()) eq mkIntNum(0)
                     else
-                        mkRealIsInt(mkArithDiv(arg1.asExpr(realSort), arg0.asExpr(realSort)))
+                        mkRealIsInt(mkArithDiv(arg1.uncheckedCast(), arg0.uncheckedCast()))
                 }
             }
             Constructor.ARITH_ROOT_ATOM -> TODO("ARITH_ROOT conversion is not supported")
