@@ -33,8 +33,6 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
 
         fun isAlive(): Boolean = keyReference !== deadRef
 
-        fun isDead(): Boolean = keyReference === deadRef
-
         fun die() {
             val keyRef = keyReference
             keyReference = deadRef
@@ -222,12 +220,20 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
 
     private inline fun ifNotProcessing(body: () -> Unit) {
         val status = cleanupStatus.get()
+        // We don't care about possible status changes (see this function usages).
         if (status == PROCESSING_TO_IDLE || status == PROCESSING_TO_REQUIRED) {
             return
         }
         body()
     }
 
+    /**
+     * Run cleanup if it's not already running (see [ifNotProcessing]).
+     *
+     * Note: cleanup status may change during status check.
+     * We don't care about such changes because according to
+     * the [cleanupStatus] automaton we will run cleanup after next read/write operation.
+     * */
     private fun runCleanup() = ifNotProcessing {
         if (cleanupLock.tryLock()) {
             try {
@@ -240,7 +246,17 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
         }
     }
 
+    /**
+     * Cleanup staled references.
+     * */
     private fun cleanup() {
+        /**
+         * Forcibly update cleanup status, because:
+         * 1. The [cleanupLock] ensures that we don't run [cleanup] in parallel.
+         * 2. Cleanup will be performed regardless of the status.
+         * 3. If someone requested a cleanup again before this status update we don't care (because of 2).
+         * 4. A situation when someone requested a cleanup AFTER status update is handled in finally block.
+         * */
         cleanupStatus.set(PROCESSING_TO_IDLE)
         try {
             drainKeyReferences()
@@ -251,6 +267,18 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
         }
     }
 
+    /**
+     * Retrieve and cleanup staled references from [keyReferenceQueue].
+     *
+     * Several modifications are possible during a cleanup session:
+     * 1. put/intern. See [cleanupEntry] for an explanation of why this is safe.
+     * 2. GC detected a new unreachable reference.
+     * 2.1 Staled reference was added to [keyReferenceQueue] during cleanup session.
+     * It is safe, because [ReferenceQueue] is synchronized.
+     * 2.2 Staled reference was NOT added to [keyReferenceQueue] during cleanup session.
+     * It is also safe, because it will be added to [keyReferenceQueue] after some time and
+     * will be cleaned during the next cleanup session.
+     * */
     private fun drainKeyReferences() {
         while (true) {
             val keyRef = keyReferenceQueue.poll() ?: break
@@ -261,25 +289,52 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
         }
     }
 
+    /**
+     * Cleanup a single staled reference.
+     *
+     * See the comments in the body of the method for the
+     * safety guarantees of possible modifications.
+     * */
     private fun cleanupEntry(node: KeyRefNode<K, V>) {
-        val keyRef = node.getKeyReference()
+        /**
+         * Hold a strong reference to the key object.
+         * If for some reasons key is not null (reachable) it won't be
+         * collected by GC until the method completes.
+         * */
         val key = node.getKey()
+
+        val keyRef = node.getKeyReference()
         var nodeResurrected = false
         var removed = false
 
+        /**
+         * Possible situations:
+         *
+         * 1. [key] is reachable. For some reasons (should be impossible) we try
+         * to cleanup an entry, with a reachable key.
+         * We detect such situations with a [nodeResurrected] and no cleanup is performed.
+         *
+         * 2. [key] is null (unreachable). The associated node can't be accessed anywhere else,
+         * because it's impossible to construct a lookupKey that is equal to the current key
+         * (we have no null keys and therefore `non null` == `null` is always false).
+         * */
         data.computeIfPresent(keyRef) { _, newNode ->
-            // We have a new node associated with the key. Our node was already removed.
-            if (newNode != node) return@computeIfPresent newNode
+            /**
+             * We have a new node associated with the key.
+             * Our node was already removed.
+             * Should be impossible because of the situations described above.
+             * */
+            if (newNode !== node) return@computeIfPresent newNode
 
             synchronized(newNode) {
-                // Key is reachable for some reason. Don't remove node
+                // Key is reachable for some reason. Don't remove node. (See situation 1)
                 if (key != null) {
                     nodeResurrected = true
                     return@computeIfPresent newNode
                 }
 
                 // Mark node as removed
-                node.die()
+                newNode.die()
                 removed = true
             }
 
@@ -293,7 +348,7 @@ abstract class ConcurrentWeakHashMapCache<K : Any, V : Any> {
 
         synchronized(node) {
             // Mark node as removed
-            if (!node.isDead()) {
+            if (node.isAlive()) {
                 node.die()
             }
         }
