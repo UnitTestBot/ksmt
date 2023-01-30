@@ -4,6 +4,7 @@ include("ksmt-z3")
 include("ksmt-bitwuzla")
 include("ksmt-runner")
 include("ksmt-test")
+include("ksmt-symfpu")
 
 pluginManagement {
     resolutionStrategy {

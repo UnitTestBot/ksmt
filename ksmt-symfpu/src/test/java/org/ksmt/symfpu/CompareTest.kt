@@ -1,6 +1,7 @@
-package org.ksmt
+package org.ksmt.symfpu
 
 import org.junit.jupiter.api.Test
+import org.ksmt.KContext
 import org.ksmt.solver.model.KModelImpl
 import org.ksmt.symfpu.Compare.Companion.fpToBvExpr
 import org.ksmt.utils.getValue
