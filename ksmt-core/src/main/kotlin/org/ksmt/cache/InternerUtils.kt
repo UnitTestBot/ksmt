@@ -13,11 +13,15 @@ fun <A0, A1> hash(a0: A0, a1: A1): Int =
 fun <A0, A1, A2> hash(a0: A0, a1: A1, a2: A2): Int =
     (a0.hashCode() * HASH_SHIFT + a1.hashCode()) * HASH_SHIFT + a2.hashCode()
 
-fun <A0, A1, A2, A3> hash(a0: A0, a1: A1, a2: A2, a3: A3): Int =
-    hash(a0, a1) * HASH_SHIFT + hash(a2, a3)
+fun <A0, A1, A2, A3> hash(a0: A0, a1: A1, a2: A2, a3: A3): Int {
+    val partialHash = (a0.hashCode() * HASH_SHIFT + a1.hashCode()) * HASH_SHIFT + a2.hashCode()
+    return partialHash * HASH_SHIFT + a3.hashCode()
+}
 
-fun <A0, A1, A2, A3, A4> hash(a0: A0, a1: A1, a2: A2, a3: A3, a4: A4): Int =
-    hash(a0, a1, a2) * HASH_SHIFT + hash(a3, a4)
+fun <A0, A1, A2, A3, A4> hash(a0: A0, a1: A1, a2: A2, a3: A3, a4: A4): Int {
+    val partialHash = (a0.hashCode() * HASH_SHIFT + a1.hashCode()) * HASH_SHIFT + a2.hashCode()
+    return (partialHash * HASH_SHIFT + a3.hashCode()) * HASH_SHIFT + a4.hashCode()
+}
 
 inline fun <reified T> T.structurallyEqual(other: Any): Boolean = other is T
 
