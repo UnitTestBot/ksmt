@@ -10,6 +10,10 @@ internal interface WeakCacheKey<K : KInternedObject> {
 
 internal class WeakCacheKeyRef<K : KInternedObject>(
     key: K?, queue: ReferenceQueue<K>?,
+    /**
+     * All [WeakCacheKeyRef] usages must ensure that [hashCode]
+     * is computed in the same way as for [WeakCacheKeyLookup].
+     * */
     private val hashCode: Int
 ) : WeakReference<K>(key, queue), WeakCacheKey<K> {
 

@@ -11,6 +11,10 @@ internal interface WeakInternerKey<T : KInternedObject> {
 
 internal class WeakInternerKeyRef<T : KInternedObject>(
     key: T?, queue: ReferenceQueue<T>?,
+    /**
+     * All [WeakInternerKeyRef] usages must ensure that [hashCode]
+     * is computed in the same way as for [WeakInternerKeyLookup].
+     * */
     private val hashCode: Int
 ) : WeakReference<T>(key, queue), WeakInternerKey<T> {
     override fun equals(other: Any?): Boolean = when {
