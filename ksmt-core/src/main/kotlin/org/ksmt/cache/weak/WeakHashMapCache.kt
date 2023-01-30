@@ -76,7 +76,7 @@ abstract class WeakHashMapCache<K : Any, V : Any> {
     }
 
     private fun afterWrite() {
-        if (modificationsSinceLastCleanup++ >= MODIFICATIONS_TO_CLEANUP) {
+        if (++modificationsSinceLastCleanup >= MODIFICATIONS_TO_CLEANUP) {
             modificationsSinceLastCleanup = 0
             cleanupReferences()
         }
