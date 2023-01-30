@@ -6,10 +6,33 @@ import org.ksmt.cache.weak.ConcurrentWeakCache
 import org.ksmt.cache.weak.WeakCache
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * A cache specialized to use [KAst] as a key.
+ *
+ * See [mkAstCache] for cache creation.
+ * */
 interface AstCache<K, V : Any> where K : KAst, K : KInternedObject {
+
+    /**
+     * Find a value associated with a [ast].
+     * */
     fun get(ast: K): V?
+
+    /**
+     * Store a value for the [ast].
+     * Return a previously associated value or null, if nothing was associated.
+     * */
     fun put(ast: K, value: V): V?
+
+    /**
+     * Store a value for the [ast] only if nothing was previously associated.
+     * Return a previously associated value or null, if nothing was associated.
+     * */
     fun putIfAbsent(ast: K, value: V): V?
+
+    /**
+     * Register a handler which is triggered when an entry is removed from the cache.
+     * */
     fun registerOnDeleteHandler(handler: CacheRemoveHandler<K, V>)
 }
 
@@ -57,6 +80,10 @@ class SingleThreadNoGcAstCache<K, V : Any> : AstCache<K, V> where K : KAst, K : 
     }
 }
 
+/**
+ * Select the proper [AstCache] implementation according to
+ * required [operationMode] and [astManagementMode].
+ * */
 fun <K, V : Any> mkAstCache(
     operationMode: KContext.OperationMode,
     astManagementMode: KContext.AstManagementMode

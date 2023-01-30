@@ -6,7 +6,22 @@ import org.ksmt.cache.weak.ConcurrentWeakInterner
 import org.ksmt.cache.weak.WeakInterner
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Interner for [KAst].
+ * Ensures that if any two objects are equals according to [KInternedObject.internEquals],
+ * they are equal by reference (actually the same object).
+ *
+ * See [mkAstInterner] for interner creation.
+ * */
 interface AstInterner<T> where T : KAst, T : KInternedObject {
+
+    /**
+     * Intern provided [ast].
+     *
+     * If there are no objects, which are equal to [ast]
+     * according to [KInternedObject.internEquals] save and return the provided [ast].
+     * Otherwise, return the previously exising object.
+     * */
     fun intern(ast: T): T
 }
 
@@ -36,6 +51,10 @@ class ConcurrentNoGcAstInterner<T> : AstInterner<T> where T : KAst, T : KInterne
     override fun intern(ast: T): T = interner.putIfAbsent(NoGcInternKey(ast), ast) ?: ast
 }
 
+/**
+ * Select the proper [AstInterner] implementation according to
+ * required [operationMode] and [astManagementMode].
+ * */
 fun <T> mkAstInterner(
     operationMode: KContext.OperationMode,
     astManagementMode: KContext.AstManagementMode
