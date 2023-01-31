@@ -32,11 +32,10 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     private var lastCheckStatus = KSolverStatus.UNKNOWN
     private var cvc5LastUnknownExplanation: UnknownExplanation? = null
 
-    // we can't use hashset with Term (hashcode is not implemented)
-    private var cvc5CurrentLevelTrackedAssertions = TreeSet<Term>()
+    private var cvc5CurrentLevelTrackedAssertions = mutableListOf<Term>()
     private val cvc5TrackedAssertions = mutableListOf(cvc5CurrentLevelTrackedAssertions)
 
-    private var cvc5CurrentLevelAssertions = TreeSet<Term>()
+    private var cvc5CurrentLevelAssertions = mutableListOf<Term>()
     private val cvc5Assertions = mutableListOf(cvc5CurrentLevelAssertions)
 
 
@@ -76,10 +75,10 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     }
 
     override fun push() = solver.push().also {
-        cvc5CurrentLevelTrackedAssertions = TreeSet()
+        cvc5CurrentLevelTrackedAssertions = mutableListOf()
         cvc5TrackedAssertions.add(cvc5CurrentLevelTrackedAssertions)
 
-        cvc5CurrentLevelAssertions = TreeSet()
+        cvc5CurrentLevelAssertions = mutableListOf()
         cvc5Assertions.add(cvc5CurrentLevelAssertions)
     }
 
@@ -123,7 +122,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = cvc5Try {
         require(lastCheckStatus == KSolverStatus.UNSAT) { "Unsat cores are only available after UNSAT checks" }
-        val cvc5TrackedVars = cvc5TrackedAssertions.flatten().toSet()
+        val cvc5TrackedVars = cvc5TrackedAssertions.flatten().toSortedSet() // we need TreeSet here (hashcode not implemented in Term)
         val cvc5FullCore = solver.unsatCore
         val cvc5OnlyTrackedAssertions = cvc5FullCore.filter { it in cvc5TrackedVars }
         val cvc5UnsatAssumptions = solver.unsatAssumptions
