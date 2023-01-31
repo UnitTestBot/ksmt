@@ -221,7 +221,7 @@ object BvUtils {
 
     fun KBitVecValue<*>.signedDivide(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
         other = other,
-        bv1 = { a, b -> a == b },
+        bv1 = { a, _ -> a },
         bv8 = { a, b -> (a / b).toByte() },
         bv16 = { a, b -> (a / b).toShort() },
         bv32 = { a, b -> a / b },
@@ -231,7 +231,7 @@ object BvUtils {
 
     fun KBitVecValue<*>.unsignedDivide(other: KBitVecValue<*>): KBitVecValue<*> = bvUnsignedOperation(
         other = other,
-        bv1 = { a, b -> a == b },
+        bv1 = { a, _ -> a },
         bv8 = { a, b -> (a / b).toUByte() },
         bv16 = { a, b -> (a / b).toUShort() },
         bv32 = { a, b -> a / b },
@@ -241,7 +241,7 @@ object BvUtils {
 
     fun KBitVecValue<*>.signedRem(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
         other = other,
-        bv1 = { a, b -> a != b },
+        bv1 = { _, _ -> false },
         bv8 = { a, b -> (a.rem(b)).toByte() },
         bv16 = { a, b -> (a.rem(b)).toShort() },
         bv32 = { a, b -> a.rem(b) },
@@ -251,7 +251,7 @@ object BvUtils {
 
     fun KBitVecValue<*>.unsignedRem(other: KBitVecValue<*>): KBitVecValue<*> = bvUnsignedOperation(
         other = other,
-        bv1 = { a, b -> a != b },
+        bv1 = { _, _ -> false },
         bv8 = { a, b -> (a.rem(b)).toUByte() },
         bv16 = { a, b -> (a.rem(b)).toUShort() },
         bv32 = { a, b -> a.rem(b) },
@@ -261,7 +261,7 @@ object BvUtils {
 
     fun KBitVecValue<*>.signedMod(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
         other = other,
-        bv1 = { a, b -> a != b },
+        bv1 = { _, _ -> false },
         bv8 = { a, b -> a.mod(b) },
         bv16 = { a, b -> a.mod(b) },
         bv32 = { a, b -> a.mod(b) },
