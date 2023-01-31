@@ -144,12 +144,12 @@ jobs:
             --no-daemon
             -PtestDataRevision=${{ env.TEST_DATA_REVISION }}
 
-      - name: Build project
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: |
-            build
-            --no-daemon
+#      - name: Build project
+#        uses: gradle/gradle-build-action@v2
+#        with:
+#          arguments: |
+#            build
+#            --no-daemon
 
       - name: Run ${{ matrix.test }}
         uses: gradle/gradle-build-action@v2
