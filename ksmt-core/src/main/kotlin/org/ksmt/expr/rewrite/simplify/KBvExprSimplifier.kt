@@ -538,19 +538,11 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         }
 
     override fun <T : KBvSort> transform(expr: KBvReductionAndExpr<T>): KExpr<KBv1Sort> = simplifyApp(expr) { (arg) ->
-        if (arg is KBitVecValue<T>) {
-            val result = arg == bvMaxValueUnsigned(arg.sort.sizeBits)
-            return@simplifyApp mkBv(result)
-        }
-        mkBvReductionAndExpr(arg)
+        simplifyBvReductionAndExpr(arg)
     }
 
     override fun <T : KBvSort> transform(expr: KBvReductionOrExpr<T>): KExpr<KBv1Sort> = simplifyApp(expr) { (arg) ->
-        if (arg is KBitVecValue<T>) {
-            val result = arg != bvZero(arg.sort.sizeBits)
-            return@simplifyApp mkBv(result)
-        }
-        mkBvReductionOrExpr(arg)
+        simplifyBvReductionOrExpr(arg)
     }
 
     override fun transform(expr: KBvConcatExpr): KExpr<KBvSort> =
