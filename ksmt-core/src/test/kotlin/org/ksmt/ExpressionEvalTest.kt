@@ -1,5 +1,6 @@
 package org.ksmt
 
+import org.ksmt.KContext.SimplificationMode.SIMPLIFY
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
@@ -117,7 +118,7 @@ open class ExpressionEvalTest {
         mkSort: KContext.() -> S,
         test: KContext.(S, TestRunner) -> Unit
     ) {
-        val ctx = KContext()
+        val ctx = KContext(simplificationMode = SIMPLIFY)
         val sort = ctx.mkSort()
         KZ3Solver(ctx).use { solver ->
             val checker = TestRunner(ctx, solver)
@@ -130,11 +131,12 @@ open class ExpressionEvalTest {
         private val solver: KSolver<*>
     ) {
 
-        fun <T : KSort> check(expr: KExpr<T>, printArgs: () -> String) {
-            val expectedValue = solverValue(expr)
-            val actualValue = evalExpr(expr)
+        fun <T : KSort> check(unsimplifiedExpr: KExpr<T>, simplifiedExpr: KExpr<T>, printArgs: () -> String) {
+            val expectedValue = solverValue(unsimplifiedExpr)
+            val simplifierValueValue = evalExpr(unsimplifiedExpr)
 
-            assertEquals(expectedValue, actualValue, printArgs())
+            assertEquals(expectedValue, simplifiedExpr, printArgs())
+            assertEquals(expectedValue, simplifierValueValue, printArgs())
 
             val decl = (expectedValue as KApp<*, *>).decl
             val declValue = decl.apply(emptyList())

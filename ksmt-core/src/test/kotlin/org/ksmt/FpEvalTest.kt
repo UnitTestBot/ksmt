@@ -27,37 +27,48 @@ class FpEvalTest : ExpressionEvalTest() {
 
     @ParameterizedTest
     @MethodSource("fpSizes")
-    fun testFpAbs(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpAbsExpr)
+    fun testFpAbs(exponent: Int, significand: Int) =
+        testOperation(exponent, significand, KContext::mkFpAbsExpr, KContext::mkFpAbsExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
     fun testFpNegation(exponent: Int, significand: Int) =
-        testOperation(exponent, significand, KContext::mkFpNegationExpr)
+        testOperation(exponent, significand, KContext::mkFpNegationExpr, KContext::mkFpNegationExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
-    fun testFpAdd(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpAddExpr)
+    fun testFpAdd(exponent: Int, significand: Int) =
+        testOperation(exponent, significand, KContext::mkFpAddExpr, KContext::mkFpAddExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
-    fun testFpSub(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpSubExpr)
+    fun testFpSub(exponent: Int, significand: Int) =
+        testOperation(exponent, significand, KContext::mkFpSubExpr, KContext::mkFpSubExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
-    fun testFpMul(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpMulExpr)
+    fun testFpMul(exponent: Int, significand: Int) =
+        testOperation(exponent, significand, KContext::mkFpMulExpr, KContext::mkFpMulExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
-    fun testFpDiv(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpDivExpr)
+    fun testFpDiv(exponent: Int, significand: Int) =
+        testOperation(exponent, significand, KContext::mkFpDivExpr, KContext::mkFpDivExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
-    fun testFpSqrt(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpSqrtExpr)
+    fun testFpSqrt(exponent: Int, significand: Int) =
+        testOperation(exponent, significand, KContext::mkFpSqrtExpr, KContext::mkFpSqrtExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
     fun testFpRoundToIntegral(exponent: Int, significand: Int) =
-        testOperation(exponent, significand, KContext::mkFpRoundToIntegralExpr)
+        testOperation(
+            exponent,
+            significand,
+            KContext::mkFpRoundToIntegralExpr,
+            KContext::mkFpRoundToIntegralExprNoSimplify
+        )
 
     @ParameterizedTest
     @MethodSource("fpSizes")
@@ -65,7 +76,8 @@ class FpEvalTest : ExpressionEvalTest() {
         randomFpValuesNoNegZero(sort).take(30).forEach { a ->
             randomFpValuesNoNegZero(sort).take(30).forEach { b ->
                 val expr = mkFpMinExpr(a, b)
-                checker.check(expr) { "$a, $b" }
+                val exprNoSimplify = mkFpMinExprNoSimplify(a, b)
+                checker.check(simplifiedExpr = expr, unsimplifiedExpr = exprNoSimplify) { "$a, $b" }
             }
         }
     }
@@ -76,7 +88,8 @@ class FpEvalTest : ExpressionEvalTest() {
         randomFpValuesNoNegZero(sort).take(30).forEach { a ->
             randomFpValuesNoNegZero(sort).take(30).forEach { b ->
                 val expr = mkFpMaxExpr(a, b)
-                checker.check(expr) { "$a, $b" }
+                val exprNoSimplify = mkFpMaxExprNoSimplify(a, b)
+                checker.check(simplifiedExpr = expr, unsimplifiedExpr = exprNoSimplify) { "$a, $b" }
             }
         }
     }
@@ -84,62 +97,72 @@ class FpEvalTest : ExpressionEvalTest() {
     @ParameterizedTest
     @MethodSource("fpSizes")
     fun testFpLessOrEqual(exponent: Int, significand: Int) =
-        testOperation(exponent, significand, KContext::mkFpLessOrEqualExpr)
+        testOperation(exponent, significand, KContext::mkFpLessOrEqualExpr, KContext::mkFpLessOrEqualExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
-    fun testFpLess(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpLessExpr)
+    fun testFpLess(exponent: Int, significand: Int) =
+        testOperation(exponent, significand, KContext::mkFpLessExpr, KContext::mkFpLessExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
     fun testFpGreaterOrEqual(exponent: Int, significand: Int) =
-        testOperation(exponent, significand, KContext::mkFpGreaterOrEqualExpr)
+        testOperation(
+            exponent,
+            significand,
+            KContext::mkFpGreaterOrEqualExpr,
+            KContext::mkFpGreaterOrEqualExprNoSimplify
+        )
 
     @ParameterizedTest
     @MethodSource("fpSizes")
-    fun testFpGreater(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpGreaterExpr)
+    fun testFpGreater(exponent: Int, significand: Int) =
+        testOperation(exponent, significand, KContext::mkFpGreaterExpr, KContext::mkFpGreaterExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
-    fun testFpEqual(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpEqualExpr)
+    fun testFpEqual(exponent: Int, significand: Int) =
+        testOperation(exponent, significand, KContext::mkFpEqualExpr, KContext::mkFpEqualExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
     fun testFpIsNormal(exponent: Int, significand: Int) =
-        testOperation(exponent, significand, KContext::mkFpIsNormalExpr)
+        testOperation(exponent, significand, KContext::mkFpIsNormalExpr, KContext::mkFpIsNormalExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
     fun testFpIsSubnormal(exponent: Int, significand: Int) =
-        testOperation(exponent, significand, KContext::mkFpIsSubnormalExpr)
+        testOperation(exponent, significand, KContext::mkFpIsSubnormalExpr, KContext::mkFpIsSubnormalExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
-    fun testFpIsZero(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpIsZeroExpr)
+    fun testFpIsZero(exponent: Int, significand: Int) =
+        testOperation(exponent, significand, KContext::mkFpIsZeroExpr, KContext::mkFpIsZeroExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
     fun testFpIsInfinite(exponent: Int, significand: Int) =
-        testOperation(exponent, significand, KContext::mkFpIsInfiniteExpr)
+        testOperation(exponent, significand, KContext::mkFpIsInfiniteExpr, KContext::mkFpIsInfiniteExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
-    fun testFpIsNaN(exponent: Int, significand: Int) = testOperation(exponent, significand, KContext::mkFpIsNaNExpr)
+    fun testFpIsNaN(exponent: Int, significand: Int) =
+        testOperation(exponent, significand, KContext::mkFpIsNaNExpr, KContext::mkFpIsNaNExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
     fun testFpIsNegative(exponent: Int, significand: Int) =
-        testOperation(exponent, significand, KContext::mkFpIsNegativeExpr)
+        testOperation(exponent, significand, KContext::mkFpIsNegativeExpr, KContext::mkFpIsNegativeExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
     fun testFpIsPositive(exponent: Int, significand: Int) =
-        testOperation(exponent, significand, KContext::mkFpIsPositiveExpr)
+        testOperation(exponent, significand, KContext::mkFpIsPositiveExpr, KContext::mkFpIsPositiveExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
     fun testFpToIEEEBv(exponent: Int, significand: Int) =
-        testOperationNoNaN(exponent, significand, KContext::mkFpToIEEEBvExpr)
+        testOperationNoNaN(exponent, significand, KContext::mkFpToIEEEBvExpr, KContext::mkFpToIEEEBvExprNoSimplify)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
@@ -150,7 +173,8 @@ class FpEvalTest : ExpressionEvalTest() {
         runTest(exponent, significand) { sort: KFpSort, checker ->
             randomFpValues(sort).filterNot { it.isNaN() || it.isInfinity() }.take(100).forEach { value ->
                 val expr = mkFpToRealExpr(value)
-                checker.check(expr) { "$value" }
+                val exprNoSimplify = mkFpToRealExprNoSimplify(value)
+                checker.check(simplifiedExpr = expr, unsimplifiedExpr = exprNoSimplify) { "$value" }
             }
         }
     }
@@ -161,7 +185,8 @@ class FpEvalTest : ExpressionEvalTest() {
         roundingModeValues().forEach { rm ->
             randomRealValues().take(100).forEach { value ->
                 val expr = mkRealToFpExpr(sort, rm, value)
-                checker.check(expr) { "$rm, $value" }
+                val exprNoSimplify = mkRealToFpExprNoSimplify(sort, rm, value)
+                checker.check(simplifiedExpr = expr, unsimplifiedExpr = exprNoSimplify) { "$rm, $value" }
             }
         }
     }
@@ -174,10 +199,18 @@ class FpEvalTest : ExpressionEvalTest() {
             bvSorts.forEach { bvSort ->
                 randomBvValues(bvSort).forEach { value ->
                     val signed = mkBvToFpExpr(sort, rm, value, signed = true)
-                    val unsigned = mkBvToFpExpr(sort, rm, value, signed = false)
+                    val signedNoSimplify = mkBvToFpExprNoSimplify(sort, rm, value, signed = true)
 
-                    checker.check(signed) { "Signed: $rm, $value" }
-                    checker.check(unsigned) { "Unsigned: $rm, $value" }
+                    checker.check(simplifiedExpr = signed, unsimplifiedExpr = signedNoSimplify) {
+                        "Signed: $rm, $value"
+                    }
+
+                    val unsigned = mkBvToFpExpr(sort, rm, value, signed = false)
+                    val unsignedNoSimplify = mkBvToFpExprNoSimplify(sort, rm, value, signed = false)
+
+                    checker.check(simplifiedExpr = unsigned, unsimplifiedExpr = unsignedNoSimplify) {
+                        "Unsigned: $rm, $value"
+                    }
                 }
             }
         }
@@ -196,11 +229,19 @@ class FpEvalTest : ExpressionEvalTest() {
         roundingModeValues().forEach { rm ->
             randomFpValues(sort).filterNot { it.isNaN() || it.isInfinity() }.take(100).forEach { value ->
                 val signed = mkFpToBvExpr(rm, value, bvSize, isSigned = true)
-                checker.check(signed) { "Signed: $rm, $value, $bvSize" }
+                val signedNoSimplify = mkFpToBvExprNoSimplify(rm, value, bvSize, isSigned = true)
+
+                checker.check(simplifiedExpr = signed, unsimplifiedExpr = signedNoSimplify) {
+                    "Signed: $rm, $value, $bvSize"
+                }
 
                 if (value.isPositive()) {
                     val unsigned = mkFpToBvExpr(rm, value, bvSize, isSigned = false)
-                    checker.check(unsigned) { "Unsigned: $rm, $value, $bvSize" }
+                    val unsignedNoSimplify = mkFpToBvExprNoSimplify(rm, value, bvSize, isSigned = false)
+
+                    checker.check(simplifiedExpr = unsigned, unsimplifiedExpr = unsignedNoSimplify) {
+                        "Unsigned: $rm, $value, $bvSize"
+                    }
                 }
             }
         }
@@ -216,7 +257,11 @@ class FpEvalTest : ExpressionEvalTest() {
             randomBvValues(significandSort).forEach { significand ->
                 signValues.forEach { sign ->
                     val expr = mkFpFromBvExpr<KFpSort>(sign, exponent, significand)
-                    checker.check(expr) { "$sign, $exponent, $significand" }
+                    val exprNoSimplify = mkFpFromBvExprNoSimplify<KFpSort>(sign, exponent, significand)
+                    checker.check(
+                        simplifiedExpr = expr,
+                        unsimplifiedExpr = exprNoSimplify
+                    ) { "$sign, $exponent, $significand" }
                 }
             }
         }
@@ -228,8 +273,10 @@ class FpEvalTest : ExpressionEvalTest() {
         roundingModeValues().forEach { rm ->
             randomFpValues(sort).take(100).forEach { value ->
                 fpSortsToTest.forEach { toSort ->
-                    val expr = mkFpToFpExpr(mkFpSort(toSort.exponentBits, toSort.significandBits), rm, value)
-                    checker.check(expr) { "$rm, $value, $toSort" }
+                    val toSortFixed = mkFpSort(toSort.exponentBits, toSort.significandBits)
+                    val expr = mkFpToFpExpr(toSortFixed, rm, value)
+                    val exprNoSimplify = mkFpToFpExprNoSimplify(toSortFixed, rm, value)
+                    checker.check(simplifiedExpr = expr, unsimplifiedExpr = exprNoSimplify) { "$rm, $value, $toSort" }
                 }
             }
         }
@@ -243,7 +290,7 @@ class FpEvalTest : ExpressionEvalTest() {
         Assumptions.assumeTrue(isFp32 || isFp64) {
             "Fp rem eval is implemented only for Fp32 and Fp64"
         }
-        testOperation(exponent, significand, KContext::mkFpRemExpr)
+        testOperation(exponent, significand, KContext::mkFpRemExpr, KContext::mkFpRemExprNoSimplify)
     }
 
     @Disabled // We have no eval fo FMA
@@ -255,7 +302,8 @@ class FpEvalTest : ExpressionEvalTest() {
                 randomFpValues(sort).forEach { b ->
                     randomFpValues(sort).forEach { c ->
                         val expr = mkFpFusedMulAddExpr(rm, a, b, c)
-                        checker.check(expr) { "$rm, $a, $b, $c" }
+                        val exprNoSimplify = mkFpFusedMulAddExprNoSimplify(rm, a, b, c)
+                        checker.check(simplifiedExpr = expr, unsimplifiedExpr = exprNoSimplify) { "$rm, $a, $b, $c" }
                     }
                 }
             }
@@ -287,11 +335,13 @@ class FpEvalTest : ExpressionEvalTest() {
     private fun <S : KFpSort, T : KSort> testOperation(
         exponent: Int,
         significand: Int,
-        operation: KContext.(KExpr<S>) -> KExpr<T>
+        operation: KContext.(KExpr<S>) -> KExpr<T>,
+        noSimplify: KContext.(KExpr<S>) -> KExpr<T>
     ) = runTest(exponent, significand) { sort: S, checker ->
         randomFpValues(sort).take(100).forEach { value ->
             val expr = operation(value)
-            checker.check(expr) { "$value" }
+            val exprNoSimplify = noSimplify(value)
+            checker.check(simplifiedExpr = expr, unsimplifiedExpr = exprNoSimplify) { "$value" }
         }
     }
 
@@ -299,11 +349,13 @@ class FpEvalTest : ExpressionEvalTest() {
     private fun <S : KFpSort, T : KSort> testOperationNoNaN(
         exponent: Int,
         significand: Int,
-        operation: KContext.(KExpr<S>) -> KExpr<T>
+        operation: KContext.(KExpr<S>) -> KExpr<T>,
+        noSimplify: KContext.(KExpr<S>) -> KExpr<T>
     ) = runTest(exponent, significand) { sort: S, checker ->
         randomFpValues(sort).filterNot { it.isNaN() }.take(100).forEach { value ->
             val expr = operation(value)
-            checker.check(expr) { "$value" }
+            val exprNoSimplify = noSimplify(value)
+            checker.check(simplifiedExpr = expr, unsimplifiedExpr = exprNoSimplify) { "$value" }
         }
     }
 
@@ -311,12 +363,14 @@ class FpEvalTest : ExpressionEvalTest() {
     private fun <S : KFpSort, T : KSort> testOperation(
         exponent: Int,
         significand: Int,
-        operation: KContext.(KExpr<S>, KExpr<S>) -> KExpr<T>
+        operation: KContext.(KExpr<S>, KExpr<S>) -> KExpr<T>,
+        noSimplify: KContext.(KExpr<S>, KExpr<S>) -> KExpr<T>
     ) = runTest(exponent, significand) { sort: S, checker ->
         randomFpValues(sort).take(60).forEach { a ->
             randomFpValues(sort).take(60).forEach { b ->
                 val expr = operation(a, b)
-                checker.check(expr) { "$a, $b" }
+                val exprNoSimplify = noSimplify(a, b)
+                checker.check(simplifiedExpr = expr, unsimplifiedExpr = exprNoSimplify) { "$a, $b" }
             }
         }
     }
@@ -325,12 +379,14 @@ class FpEvalTest : ExpressionEvalTest() {
     private fun <S : KFpSort, T : KSort> testOperation(
         exponent: Int,
         significand: Int,
-        operation: KContext.(KExpr<KFpRoundingModeSort>, KExpr<S>) -> KExpr<T>
+        operation: KContext.(KExpr<KFpRoundingModeSort>, KExpr<S>) -> KExpr<T>,
+        noSimplify: KContext.(KExpr<KFpRoundingModeSort>, KExpr<S>) -> KExpr<T>
     ) = runTest(exponent, significand) { sort: S, checker ->
         roundingModeValues().forEach { rm ->
             randomFpValues(sort).take(100).forEach { value ->
                 val expr = operation(rm, value)
-                checker.check(expr) { "$rm, $value" }
+                val exprNoSimplify = noSimplify(rm, value)
+                checker.check(simplifiedExpr = expr, unsimplifiedExpr = exprNoSimplify) { "$rm, $value" }
             }
         }
     }
@@ -339,13 +395,15 @@ class FpEvalTest : ExpressionEvalTest() {
     private fun <S : KFpSort, T : KSort> testOperation(
         exponent: Int,
         significand: Int,
-        operation: KContext.(KExpr<KFpRoundingModeSort>, KExpr<S>, KExpr<S>) -> KExpr<T>
+        operation: KContext.(KExpr<KFpRoundingModeSort>, KExpr<S>, KExpr<S>) -> KExpr<T>,
+        noSimplify: KContext.(KExpr<KFpRoundingModeSort>, KExpr<S>, KExpr<S>) -> KExpr<T>
     ) = runTest(exponent, significand) { sort: S, checker ->
         roundingModeValues().forEach { rm ->
             randomFpValues(sort).take(60).forEach { a ->
                 randomFpValues(sort).take(60).forEach { b ->
                     val expr = operation(rm, a, b)
-                    checker.check(expr) { "$rm, $a, $b" }
+                    val exprNoSimplify = noSimplify(rm, a, b)
+                    checker.check(simplifiedExpr = expr, unsimplifiedExpr = exprNoSimplify) { "$rm, $a, $b" }
                 }
             }
         }
