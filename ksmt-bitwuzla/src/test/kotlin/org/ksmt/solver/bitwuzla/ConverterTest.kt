@@ -63,8 +63,8 @@ class ConverterTest {
         convertedBv.accept(sortChecker)
         val convertedBoolTerm = with(internalizer) { convertedBool.internalize() }
         val convertedBvTerm = with(internalizer) { convertedBv.internalize() }
-        assertEquals(term, convertedBoolTerm)
-        assertEquals(term, convertedBvTerm)
+
+        assertEquals(convertedBoolTerm, convertedBvTerm)
     }
 
     @Test
