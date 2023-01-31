@@ -114,6 +114,7 @@ fun <T : KFpSort> KContext.simplifyFpRemExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExp
     return mkFpRemExprNoSimplify(lhs, rhs)
 }
 
+@Suppress("ComplexCondition")
 fun <T : KFpSort> KContext.simplifyFpFusedMulAddExpr(
     roundingMode: KExpr<KFpRoundingModeSort>,
     arg0: KExpr<T>,
@@ -252,36 +253,20 @@ fun <T : KFpSort> KContext.simplifyFpEqualExpr(lhs: KExpr<T>, rhs: KExpr<T>): KE
     return mkFpEqualExprNoSimplify(lhs, rhs)
 }
 
-fun <T : KFpSort> KContext.simplifyFpLessExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> {
-    if (lhs is KFpValue<T> && rhs is KFpValue<T>) {
-        return fpLt(lhs, rhs).expr
-    }
-
-    if (lhs is KFpValue<T> && lhs.isNan() || rhs is KFpValue<T> && rhs.isNan()) {
-        return falseExpr
-    }
-
-    if (lhs is KFpValue<T> && lhs.isInfinity() && lhs.isPositive()) {
-        return falseExpr
-    }
-
-    if (rhs is KFpValue<T> && rhs.isInfinity() && rhs.isNegative()) {
-        return falseExpr
-    }
-
-    return mkFpLessExprNoSimplify(lhs, rhs)
+fun <T : KFpSort> KContext.simplifyFpLessExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> = when {
+    lhs is KFpValue<T> && rhs is KFpValue<T> -> fpLt(lhs, rhs).expr
+    lhs is KFpValue<T> && lhs.isNan() -> falseExpr
+    rhs is KFpValue<T> && rhs.isNan() -> falseExpr
+    lhs is KFpValue<T> && lhs.isInfinity() && lhs.isPositive() -> falseExpr
+    rhs is KFpValue<T> && rhs.isInfinity() && rhs.isNegative() -> falseExpr
+    else -> mkFpLessExprNoSimplify(lhs, rhs)
 }
 
-fun <T : KFpSort> KContext.simplifyFpLessOrEqualExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> {
-    if (lhs is KFpValue<T> && rhs is KFpValue<T>) {
-        return fpLeq(lhs, rhs).expr
-    }
-
-    if (lhs is KFpValue<T> && lhs.isNan() || rhs is KFpValue<T> && rhs.isNan()) {
-        return falseExpr
-    }
-
-    return mkFpLessOrEqualExprNoSimplify(lhs, rhs)
+fun <T : KFpSort> KContext.simplifyFpLessOrEqualExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> = when {
+    lhs is KFpValue<T> && rhs is KFpValue<T> -> fpLeq(lhs, rhs).expr
+    lhs is KFpValue<T> && lhs.isNan() -> falseExpr
+    rhs is KFpValue<T> && rhs.isNan() -> falseExpr
+    else -> mkFpLessOrEqualExprNoSimplify(lhs, rhs)
 }
 
 fun <T : KFpSort> KContext.simplifyFpGreaterExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
@@ -350,7 +335,7 @@ fun <T : KFpSort> KContext.simplifyFpIsZeroExpr(arg: KExpr<T>): KExpr<KBoolSort>
 
 
 // Eval x * y + z
-@Suppress("ComplexMethod")
+@Suppress("ComplexMethod", "ForbiddenComment")
 private fun KContext.tryEvalFpFma(
     rm: KFpRoundingMode,
     x: KFpValue<*>,
@@ -395,6 +380,7 @@ private fun KContext.tryEvalFpFma(
     else -> null
 }
 
+@Suppress("ForbiddenComment")
 private fun KContext.tryEvalFpRem(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*>? = when {
     lhs is KFp32Value -> mkFp(lhs.value.IEEErem((rhs as KFp32Value).value), lhs.sort)
     lhs is KFp64Value -> mkFp(lhs.value.IEEErem((rhs as KFp64Value).value), lhs.sort)

@@ -835,66 +835,13 @@ private fun <T : KBvSort> KContext.trySimplifyBvSignedMulNoOverflow(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
     isOverflow: Boolean
-): KExpr<KBoolSort>? {
-    val size = lhs.sort.sizeBits
-    val lhsValue = lhs as? KBitVecValue<T>
-    val rhsValue = rhs as? KBitVecValue<T>
-
-    if (lhsValue != null && (lhsValue.isBvZero() || (size != 1u && lhsValue.isBvOne()))) {
-        return trueExpr
-    }
-
-    if (rhsValue != null && (rhsValue.isBvZero() || (size != 1u && rhsValue.isBvOne()))) {
-        return trueExpr
-    }
-
-    val one = bvOne(size)
-    if (lhsValue != null && rhsValue != null) {
-        val lhsSign = lhsValue.signBit()
-        val rhsSign = rhsValue.signBit()
-
-        val operationOverflow = when {
-            // lhs < 0 && rhs < 0
-            lhsSign && rhsSign -> {
-                // no underflow possible
-                if (!isOverflow) return trueExpr
-                // overflow if rhs <= (MAX_VALUE / lhs - 1)
-                val maxValue = bvMaxValueSigned(size)
-                val limit = maxValue.signedDivide(lhsValue)
-                rhsValue.signedLessOrEqual(limit - one)
-            }
-            // lhs > 0 && rhs > 0
-            !lhsSign && !rhsSign -> {
-                // no underflow possible
-                if (!isOverflow) return trueExpr
-                // overflow if MAX_VALUE / rhs <= lhs - 1
-                val maxValue = bvMaxValueSigned(size)
-                val limit = maxValue.signedDivide(rhsValue)
-                limit.signedLessOrEqual(lhsValue - one)
-            }
-            // lhs < 0 && rhs > 0
-            lhsSign && !rhsSign -> {
-                // no overflow possible
-                if (isOverflow) return trueExpr
-                // underflow if lhs <= MIN_VALUE / rhs - 1
-                val minValue = bvMinValueSigned(size)
-                val limit = minValue.signedDivide(rhsValue)
-                lhsValue.signedLessOrEqual(limit - one)
-            }
-            // lhs > 0 && rhs < 0
-            else -> {
-                // no overflow possible
-                if (isOverflow) return trueExpr
-                // underflow if rhs <= MIN_VALUE / lhs - 1
-                val minValue = bvMinValueSigned(size)
-                val limit = minValue.signedDivide(lhsValue)
-                rhsValue.signedLessOrEqual(limit - one)
-            }
-        }
-
-        return (!operationOverflow).expr
-    }
-    return null
+): KExpr<KBoolSort>? = when {
+    lhs is KBitVecValue<T> && lhs.isBvZero() -> trueExpr
+    lhs is KBitVecValue<T> && lhs.sort.sizeBits != 1u && lhs.isBvOne() -> trueExpr
+    rhs is KBitVecValue<T> && rhs.isBvZero() -> trueExpr
+    rhs is KBitVecValue<T> && rhs.sort.sizeBits != 1u && rhs.isBvOne() -> trueExpr
+    lhs is KBitVecValue<T> && rhs is KBitVecValue<T> -> evalBvSignedMulNoOverflow(lhs, rhs, isOverflow)
+    else -> null
 }
 
 private fun <T : KBvSort> KContext.trySimplifyBvUnsignedMulNoOverflow(
@@ -923,4 +870,57 @@ private fun <T : KBvSort> KContext.trySimplifyBvUnsignedMulNoOverflow(
     }
 
     return null
+}
+
+private fun <T : KBvSort> KContext.evalBvSignedMulNoOverflow(
+    lhsValue: KBitVecValue<T>,
+    rhsValue: KBitVecValue<T>,
+    isOverflow: Boolean
+): KExpr<KBoolSort> {
+    val size = lhsValue.sort.sizeBits
+    val one = bvOne(size)
+
+    val lhsSign = lhsValue.signBit()
+    val rhsSign = rhsValue.signBit()
+
+    val operationOverflow = when {
+        // lhs < 0 && rhs < 0
+        lhsSign && rhsSign -> {
+            // no underflow possible
+            if (!isOverflow) return trueExpr
+            // overflow if rhs <= (MAX_VALUE / lhs - 1)
+            val maxValue = bvMaxValueSigned(size)
+            val limit = maxValue.signedDivide(lhsValue)
+            rhsValue.signedLessOrEqual(limit - one)
+        }
+        // lhs > 0 && rhs > 0
+        !lhsSign && !rhsSign -> {
+            // no underflow possible
+            if (!isOverflow) return trueExpr
+            // overflow if MAX_VALUE / rhs <= lhs - 1
+            val maxValue = bvMaxValueSigned(size)
+            val limit = maxValue.signedDivide(rhsValue)
+            limit.signedLessOrEqual(lhsValue - one)
+        }
+        // lhs < 0 && rhs > 0
+        lhsSign && !rhsSign -> {
+            // no overflow possible
+            if (isOverflow) return trueExpr
+            // underflow if lhs <= MIN_VALUE / rhs - 1
+            val minValue = bvMinValueSigned(size)
+            val limit = minValue.signedDivide(rhsValue)
+            lhsValue.signedLessOrEqual(limit - one)
+        }
+        // lhs > 0 && rhs < 0
+        else -> {
+            // no overflow possible
+            if (isOverflow) return trueExpr
+            // underflow if rhs <= MIN_VALUE / lhs - 1
+            val minValue = bvMinValueSigned(size)
+            val limit = minValue.signedDivide(lhsValue)
+            rhsValue.signedLessOrEqual(limit - one)
+        }
+    }
+
+    return (!operationOverflow).expr
 }

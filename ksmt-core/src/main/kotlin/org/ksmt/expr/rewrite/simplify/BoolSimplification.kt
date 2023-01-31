@@ -139,6 +139,7 @@ fun KExpr<KBoolSort>.isComplement(other: KExpr<KBoolSort>) =
 private fun KContext.isComplementCore(a: KExpr<KBoolSort>, b: KExpr<KBoolSort>) =
     (a == trueExpr && b == falseExpr) || (a is KNotExpr && a.arg == b)
 
+@Suppress("NestedBlockDepth")
 private inline fun <reified T : KApp<KBoolSort, KBoolSort>> simplifyAndOr(
     args: List<KExpr<KBoolSort>>,
     neutralElement: KExpr<KBoolSort>,
@@ -169,6 +170,7 @@ private inline fun <reified T : KApp<KBoolSort, KBoolSort>> simplifyAndOr(
     }
 }
 
+@Suppress("LongParameterList")
 private fun trySimplifyAndOrElement(
     arg: KExpr<KBoolSort>,
     neutralElement: KExpr<KBoolSort>,

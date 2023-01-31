@@ -139,6 +139,7 @@ fun <T : KArithSort> KContext.simplifyArithDiv(lhs: KExpr<T>, rhs: KExpr<T>): KE
     return mkArithDivNoSimplify(lhs, rhs)
 }
 
+@Suppress("ForbiddenComment")
 fun <T : KArithSort> KContext.simplifyArithPower(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> {
     // todo: evaluate arith power
     return mkArithPowerNoSimplify(lhs, rhs)
