@@ -23,8 +23,8 @@ class Cvc5BenchmarksBasedTest : BenchmarksBasedTest() {
     @ParameterizedTest(name = "{0}")
     @MethodSource("cvc5TestData")
     fun testConverter(name: String, samplePath: Path) = testConverter(name, samplePath) { assertions ->
-            internalizeAndConvertCvc5(assertions)
-        }
+        internalizeAndConvertCvc5(assertions)
+    }
 
     companion object {
         @JvmStatic

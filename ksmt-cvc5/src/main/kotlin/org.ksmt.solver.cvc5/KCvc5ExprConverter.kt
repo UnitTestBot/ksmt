@@ -7,6 +7,7 @@ import org.ksmt.expr.*
 import org.ksmt.solver.util.KExprConverterBase
 import org.ksmt.sort.*
 import org.ksmt.utils.asExpr
+import java.util.*
 
 open class KCvc5ExprConverter(
     private val ctx: KContext,
@@ -396,6 +397,9 @@ open class KCvc5ExprConverter(
 
     }
 
+    // Kind.[FORALL/EXISTS] to Array of Kind.VARIABLE
+    private val qfVarsAsConsts = TreeMap<Term, Array<Term>>()
+
     @Suppress("UNCHECKED_CAST")
     private fun convertNativeQuantifierExpr(expr: Term) = with(ctx) {
         val mkQf = when (expr.kind) {
@@ -407,28 +411,43 @@ open class KCvc5ExprConverter(
         val cvc5VarList = expr.getChild(0)
         val cvc5BodyWithVars = expr.getChild(1)
 
-        // fresh bounds
-        val bounds = convertNativeVariableListExpr(cvc5VarList)
-        val cvc5ConstBounds = bounds.map { mkConstApp(it) }
-            .map { with(internalizer) { it.internalizeExpr() } }
+        val cvc5SubstitutedConsts = qfVarsAsConsts[expr]
+        if (cvc5SubstitutedConsts == null) {
 
-        val cvc5PreparedBody = cvc5BodyWithVars.substitute(cvc5VarList.getChildren(), cvc5ConstBounds.toTypedArray())
+            // fresh bounds
+            val bounds = cvc5VarList.getChildren().map { mkFreshConstDecl(it.symbol, it.sort.convertSort()) }
 
-        expr.convertList((cvc5ConstBounds + cvc5PreparedBody).toTypedArray()) { args: List<KExpr<KSort>> ->
-            val body = args.last() as KExpr<KBoolSort>
-            val boundConsts = args.subList(0, args.lastIndex) as List<KConst<*>>
+            val cvc5ConstBounds = bounds
+                .map { mkConstApp(it) }
+                .map { with(internalizer) { it.internalizeExpr() } }
+                .toTypedArray()
 
-            require(bounds.toSet() == boundConsts.toSet())
-            mkQf(body, boundConsts.map { it.decl })
+            val cvc5PreparedBody = cvc5BodyWithVars.substitute(cvc5VarList.getChildren(), cvc5ConstBounds)
+
+            val body = findConvertedNative(cvc5PreparedBody)
+            if (body == null) {
+                exprStack.add(expr)
+                exprStack.add(cvc5PreparedBody)
+
+                qfVarsAsConsts[expr] = cvc5ConstBounds
+                return@with argumentsConversionRequired
+            }
+
+            @Suppress("UNCHECKED_CAST")
+            body as? KExpr<KBoolSort> ?: error("Body is not properly converted")
+            return@with ExprConversionResult(mkQf(body, bounds))
         }
-    }
 
-    private fun convertNativeVariableExpr(expr: Term): KDecl<*> = with(ctx) {
-        mkFreshConstDecl(expr.symbol, expr.sort.convertSort())
-    }
+        val bounds = cvc5SubstitutedConsts.map { mkConstDecl(it.symbol, it.sort.convertSort()) }
+        val cvc5PreparedBody = cvc5BodyWithVars.substitute(cvc5VarList.getChildren(), cvc5SubstitutedConsts)
+        val body = findConvertedNative(cvc5PreparedBody) ?: error("Body must be converted here")
 
-    private fun convertNativeVariableListExpr(expr: Term): List<KDecl<*>> = expr.getChildren()
-        .map(::convertNativeVariableExpr)
+        @Suppress("UNCHECKED_CAST")
+        body as? KExpr<KBoolSort> ?: error("Body is not properly converted")
+
+        qfVarsAsConsts.remove(expr)
+        ExprConversionResult(mkQf(body, bounds))
+    }
 
     private fun <D: KSort, R: KSort> convertNativeConstArrayExpr(expr: Term): ExprConversionResult = with(ctx) {
         expr.convert(arrayOf(expr.constArrayBase)) { arrayBase: KExpr<R> ->

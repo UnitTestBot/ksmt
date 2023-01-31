@@ -122,10 +122,12 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         KCvc5Solver(ctx).close() // ensure native libs loaded
 
         return Cvc5Solver().use { cvc5Solver ->
-            KCvc5Context(cvc5Solver).use { cvc5Ctx ->
+            val cvc5Assertions = KCvc5Context(cvc5Solver).use { cvc5Ctx ->
                 val internalizer = KCvc5ExprInternalizer(cvc5Ctx)
-                val cvc5Assertions = with(internalizer) { assertions.map { it.internalizeExpr() } }
+                with(internalizer) { assertions.map { it.internalizeExpr() } }
+            }
 
+            KCvc5Context(cvc5Solver).use { cvc5Ctx ->
                 val converter = KCvc5ExprConverter(ctx, cvc5Ctx)
                 with(converter) { cvc5Assertions.map { it.convertExpr() } }
             }
