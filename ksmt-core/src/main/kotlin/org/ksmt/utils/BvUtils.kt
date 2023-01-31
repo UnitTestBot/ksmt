@@ -382,10 +382,10 @@ object BvUtils {
     }
 
     fun KBitVecValue<*>.toBigIntegerSigned(): BigInteger =
-        stringValue.toBigInteger(radix = 2).signedValue(sort.sizeBits)
+        toBigIntegerUnsigned().signedValue(sort.sizeBits)
 
     fun KBitVecValue<*>.toBigIntegerUnsigned(): BigInteger =
-        stringValue.toBigInteger(radix = 2)
+        bigIntValue().normalizeValue(sort.sizeBits)
 
     fun concatBv(lhs: KBitVecValue<*>, rhs: KBitVecValue<*>): KBitVecValue<*> = with(lhs.ctx) {
         when {

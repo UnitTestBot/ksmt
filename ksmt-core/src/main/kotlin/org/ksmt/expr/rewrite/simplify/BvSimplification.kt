@@ -4,6 +4,8 @@ import org.ksmt.KContext
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KBvAddExpr
 import org.ksmt.expr.KBvAndExpr
+import org.ksmt.expr.KBvConcatExpr
+import org.ksmt.expr.KBvExtractExpr
 import org.ksmt.expr.KBvMulExpr
 import org.ksmt.expr.KBvNotExpr
 import org.ksmt.expr.KBvOrExpr
@@ -13,28 +15,47 @@ import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KIntSort
+import org.ksmt.utils.BvUtils.bigIntValue
 import org.ksmt.utils.BvUtils.bitwiseAnd
 import org.ksmt.utils.BvUtils.bitwiseNot
 import org.ksmt.utils.BvUtils.bitwiseOr
 import org.ksmt.utils.BvUtils.bitwiseXor
+import org.ksmt.utils.BvUtils.bvMaxValueSigned
+import org.ksmt.utils.BvUtils.bvMaxValueUnsigned
+import org.ksmt.utils.BvUtils.bvMinValueSigned
+import org.ksmt.utils.BvUtils.bvOne
+import org.ksmt.utils.BvUtils.bvValue
 import org.ksmt.utils.BvUtils.bvValueIs
 import org.ksmt.utils.BvUtils.bvZero
+import org.ksmt.utils.BvUtils.concatBv
+import org.ksmt.utils.BvUtils.extractBv
 import org.ksmt.utils.BvUtils.isBvMaxValueSigned
 import org.ksmt.utils.BvUtils.isBvMaxValueUnsigned
 import org.ksmt.utils.BvUtils.isBvMinValueSigned
 import org.ksmt.utils.BvUtils.isBvOne
 import org.ksmt.utils.BvUtils.isBvZero
+import org.ksmt.utils.BvUtils.minus
 import org.ksmt.utils.BvUtils.plus
 import org.ksmt.utils.BvUtils.powerOfTwoOrNull
+import org.ksmt.utils.BvUtils.shiftLeft
+import org.ksmt.utils.BvUtils.shiftRightArith
+import org.ksmt.utils.BvUtils.shiftRightLogical
+import org.ksmt.utils.BvUtils.signBit
+import org.ksmt.utils.BvUtils.signExtension
 import org.ksmt.utils.BvUtils.signedDivide
+import org.ksmt.utils.BvUtils.signedGreaterOrEqual
 import org.ksmt.utils.BvUtils.signedLessOrEqual
 import org.ksmt.utils.BvUtils.signedMod
 import org.ksmt.utils.BvUtils.signedRem
 import org.ksmt.utils.BvUtils.times
+import org.ksmt.utils.BvUtils.toBigIntegerSigned
+import org.ksmt.utils.BvUtils.toBigIntegerUnsigned
 import org.ksmt.utils.BvUtils.unaryMinus
 import org.ksmt.utils.BvUtils.unsignedDivide
 import org.ksmt.utils.BvUtils.unsignedLessOrEqual
 import org.ksmt.utils.BvUtils.unsignedRem
+import org.ksmt.utils.BvUtils.zeroExtension
+import org.ksmt.utils.toBigInteger
 import org.ksmt.utils.uncheckedCast
 
 
@@ -290,42 +311,176 @@ fun <T : KBvSort> KContext.simplifyBvReductionOrExpr(arg: KExpr<T>): KExpr<KBv1S
         mkBvReductionOrExprNoSimplify(arg)
     }
 
-fun <T : KBvSort> KContext.simplifyBvArithShiftRightExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
-    mkBvArithShiftRightExprNoSimplify(lhs, rhs)
+fun <T : KBvSort> KContext.simplifyBvArithShiftRightExpr(lhs: KExpr<T>, shift: KExpr<T>): KExpr<T> {
+    if (shift is KBitVecValue<T>) {
+        if (lhs is KBitVecValue<T>) {
+            return lhs.shiftRightArith(shift).uncheckedCast()
+        }
 
-fun <T : KBvSort> KContext.simplifyBvLogicalShiftRightExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
-    mkBvLogicalShiftRightExprNoSimplify(lhs, rhs)
+        // (x >> 0) ==> x
+        if (shift.isBvZero()) {
+            return lhs
+        }
+    }
+    return mkBvArithShiftRightExprNoSimplify(lhs, shift)
+}
 
-fun <T : KBvSort> KContext.simplifyBvShiftLeftExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
-    mkBvShiftLeftExprNoSimplify(lhs, rhs)
+fun <T : KBvSort> KContext.simplifyBvLogicalShiftRightExpr(lhs: KExpr<T>, shift: KExpr<T>): KExpr<T> {
+    if (shift is KBitVecValue<T>) {
+        if (lhs is KBitVecValue<T>) {
+            return lhs.shiftRightLogical(shift).uncheckedCast()
+        }
 
-fun <T : KBvSort> KContext.simplifyBvRotateLeftExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
-    mkBvRotateLeftExprNoSimplify(lhs, rhs)
+        // (x >>> 0) ==> x
+        if (shift.isBvZero()) {
+            return lhs
+        }
 
-fun <T : KBvSort> KContext.simplifyBvRotateLeftIndexedExpr(rotation: Int, value: KExpr<T>): KExpr<T> =
-    mkBvRotateLeftIndexedExprNoSimplify(rotation, value)
+        // (x >>> shift), shift >= size ==> 0
+        if (shift.signedGreaterOrEqual(shift.sort.sizeBits.toInt())) {
+            return bvZero(shift.sort.sizeBits).uncheckedCast()
+        }
+    }
 
-fun <T : KBvSort> KContext.simplifyBvRotateRightExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
-    mkBvRotateRightExprNoSimplify(lhs, rhs)
+    // (x >>> x) ==> 0
+    if (lhs == shift) {
+        return bvZero(shift.sort.sizeBits).uncheckedCast()
+    }
 
-fun <T : KBvSort> KContext.simplifyBvRotateRightIndexedExpr(rotation: Int, value: KExpr<T>): KExpr<T> =
-    mkBvRotateRightIndexedExprNoSimplify(rotation, value)
+    return mkBvLogicalShiftRightExprNoSimplify(lhs, shift)
+}
 
+fun <T : KBvSort> KContext.simplifyBvShiftLeftExpr(lhs: KExpr<T>, shift: KExpr<T>): KExpr<T> {
+    if (shift is KBitVecValue<T>) {
+        if (lhs is KBitVecValue<T>) {
+            return lhs.shiftLeft(shift).uncheckedCast()
+        }
 
-fun <T : KBvSort> KContext.simplifyBvRepeatExpr(repeatNumber: Int, value: KExpr<T>): KExpr<KBvSort> =
-    mkBvRepeatExprNoSimplify(repeatNumber, value)
+        // (x << 0) ==> x
+        if (shift.isBvZero()) {
+            return lhs
+        }
 
-fun <T : KBvSort> KContext.simplifyBvZeroExtensionExpr(extensionSize: Int, value: KExpr<T>): KExpr<KBvSort> =
-    mkBvZeroExtensionExprNoSimplify(extensionSize, value)
+        // (x << shift), shift >= size ==> 0
+        if (shift.signedGreaterOrEqual(shift.sort.sizeBits.toInt())) {
+            return bvZero(shift.sort.sizeBits).uncheckedCast()
+        }
+    }
+    return mkBvShiftLeftExprNoSimplify(lhs, shift)
+}
 
-fun <T : KBvSort> KContext.simplifyBvSignExtensionExpr(extensionSize: Int, value: KExpr<T>): KExpr<KBvSort> =
-    mkBvSignExtensionExprNoSimplify(extensionSize, value)
+// (rotateLeft a x) ==> (concat (extract [size-1-x:0] a) (extract [size-1:size-x] a))
+fun <T : KBvSort> KContext.simplifyBvRotateLeftExpr(lhs: KExpr<T>, rotation: KExpr<T>): KExpr<T> {
+    if (rotation is KBitVecValue<T>) {
+        val size = rotation.sort.sizeBits.toInt()
+        val intValue = rotation.bigIntValue()
+        val rotationValue = intValue.remainder(size.toBigInteger()).toInt()
+        return simplifyBvRotateLeftIndexedExpr(rotationValue, lhs)
+    }
+    return mkBvRotateLeftExprNoSimplify(lhs, rotation)
+}
 
-fun <T : KBvSort> KContext.simplifyBvExtractExpr(high: Int, low: Int, value: KExpr<T>): KExpr<KBvSort> =
-    mkBvExtractExprNoSimplify(high, low, value)
+fun <T : KBvSort> KContext.simplifyBvRotateLeftIndexedExpr(rotation: Int, value: KExpr<T>): KExpr<T> {
+    val size = value.sort.sizeBits.toInt()
+    return rotateLeft(value, size, rotation)
+}
 
-fun <T : KBvSort, S : KBvSort> KContext.simplifyBvConcatExpr(lhs: KExpr<T>, rhs: KExpr<S>): KExpr<KBvSort> =
-    mkBvConcatExprNoSimplify(lhs, rhs)
+// (rotateRight a x) ==> (rotateLeft a (- size x))
+fun <T : KBvSort> KContext.simplifyBvRotateRightExpr(lhs: KExpr<T>, rotation: KExpr<T>): KExpr<T> {
+    if (rotation is KBitVecValue<T>) {
+        val size = rotation.sort.sizeBits.toInt()
+        val intValue = rotation.bigIntValue()
+        val rotationValue = intValue.remainder(size.toBigInteger()).toInt()
+        return simplifyBvRotateRightIndexedExpr(rotationValue, lhs)
+    }
+    return mkBvRotateRightExprNoSimplify(lhs, rotation)
+}
+
+fun <T : KBvSort> KContext.simplifyBvRotateRightIndexedExpr(rotation: Int, value: KExpr<T>): KExpr<T> {
+    val size = value.sort.sizeBits.toInt()
+    val normalizedRotation = rotation % size
+    return rotateLeft(value, size, rotationNumber = size - normalizedRotation)
+}
+
+// (repeat a x) ==> (concat a a ..[x].. a)
+fun <T : KBvSort> KContext.simplifyBvRepeatExpr(repeatNumber: Int, value: KExpr<T>): KExpr<KBvSort> {
+    if (value is KBitVecValue<T> && repeatNumber > 0) {
+        var result = value
+        repeat(repeatNumber - 1) {
+            result = concatBv(result.uncheckedCast(), value).uncheckedCast()
+        }
+    }
+    return mkBvRepeatExprNoSimplify(repeatNumber, value)
+}
+
+fun <T : KBvSort> KContext.simplifyBvZeroExtensionExpr(extensionSize: Int, value: KExpr<T>): KExpr<KBvSort> {
+    if (extensionSize == 0) {
+        return value.uncheckedCast()
+    }
+
+    if (value is KBitVecValue<T>) {
+        return value.zeroExtension(extensionSize.toUInt()).uncheckedCast()
+    }
+
+    return mkBvZeroExtensionExprNoSimplify(extensionSize, value)
+}
+
+fun <T : KBvSort> KContext.simplifyBvSignExtensionExpr(extensionSize: Int, value: KExpr<T>): KExpr<KBvSort> {
+    if (extensionSize == 0) {
+        return value.uncheckedCast()
+    }
+
+    if (value is KBitVecValue<T>) {
+        return value.signExtension(extensionSize.toUInt()).uncheckedCast()
+    }
+
+    return mkBvSignExtensionExprNoSimplify(extensionSize, value)
+}
+
+fun <T : KBvSort> KContext.simplifyBvExtractExpr(high: Int, low: Int, value: KExpr<T>): KExpr<KBvSort> {
+    // (extract [size-1:0] x) ==> x
+    if (low == 0 && high == value.sort.sizeBits.toInt() - 1) {
+        return value.uncheckedCast()
+    }
+
+    if (value is KBitVecValue<T>) {
+        return value.extractBv(high, low).uncheckedCast()
+    }
+
+    // (extract[high:low] (extract[_:nestedLow] x)) ==> (extract[high+nestedLow : low+nestedLow] x)
+    if (value is KBvExtractExpr) {
+        val nestedLow = value.low
+        return simplifyBvExtractExpr(
+            high = high + nestedLow,
+            low = low + nestedLow,
+            value = value.value
+        )
+    }
+
+    return mkBvExtractExprNoSimplify(high, low, value)
+}
+
+fun <T : KBvSort, S : KBvSort> KContext.simplifyBvConcatExpr(lhs: KExpr<T>, rhs: KExpr<S>): KExpr<KBvSort> {
+    if (lhs is KBitVecValue<T> && rhs is KBitVecValue<S>) {
+        return concatBv(lhs, rhs).uncheckedCast()
+    }
+
+    if (lhs is KBitVecValue<T> && rhs is KBvConcatExpr) {
+        val rhsLeft = rhs.arg0
+        if (rhsLeft is KBitVecValue<*>) {
+            return simplifyBvConcatExpr(concatBv(lhs, rhsLeft), rhs.arg1)
+        }
+    }
+
+    if (rhs is KBitVecValue<S> && lhs is KBvConcatExpr) {
+        val lhsRight = lhs.arg1
+        if (lhsRight is KBitVecValue<*>) {
+            return simplifyBvConcatExpr(lhs.arg0, concatBv(lhsRight, rhs))
+        }
+    }
+
+    return mkBvConcatExprNoSimplify(lhs, rhs)
+}
 
 
 // (sgt a b) ==> (not (sle a b))
@@ -359,42 +514,216 @@ fun <T : KBvSort> KContext.simplifyBvUnsignedLessOrEqualExpr(lhs: KExpr<T>, rhs:
     bvLessOrEqual(lhs, rhs, signed = false)
 
 
+fun <T : KBvSort> KContext.simplifyBv2IntExpr(value: KExpr<T>, isSigned: Boolean): KExpr<KIntSort> {
+    if (value is KBitVecValue<T>) {
+        val integerValue = if (isSigned) {
+            value.toBigIntegerSigned()
+        } else {
+            value.toBigIntegerUnsigned()
+        }
+        return mkIntNum(integerValue)
+    }
+    return mkBv2IntExprNoSimplify(value, isSigned)
+}
+
+
 fun <T : KBvSort> KContext.simplifyBvAddNoOverflowExpr(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
     isSigned: Boolean
-): KExpr<KBoolSort> = mkBvAddNoOverflowExprNoSimplify(lhs, rhs, isSigned)
+): KExpr<KBoolSort> {
+    if (lhs is KBitVecValue<T> && rhs is KBitVecValue<T>) {
+        return rewriteBvAddNoOverflowExpr(lhs, rhs, isSigned)
+    }
+    return mkBvAddNoOverflowExprNoSimplify(lhs, rhs, isSigned)
+}
 
-fun <T : KBvSort> KContext.simplifyBvAddNoUnderflowExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
-    mkBvAddNoUnderflowExprNoSimplify(lhs, rhs)
+fun <T : KBvSort> KContext.simplifyBvAddNoUnderflowExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> {
+    if (lhs is KBitVecValue<T> && rhs is KBitVecValue<T>) {
+        return rewriteBvAddNoUnderflowExpr(lhs, rhs)
+    }
+    return mkBvAddNoUnderflowExprNoSimplify(lhs, rhs)
+}
 
 fun <T : KBvSort> KContext.simplifyBvMulNoOverflowExpr(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
     isSigned: Boolean
-): KExpr<KBoolSort> = mkBvMulNoOverflowExprNoSimplify(lhs, rhs, isSigned)
+): KExpr<KBoolSort> {
+    if (lhs is KBitVecValue<T> && rhs is KBitVecValue<T>) {
+        return rewriteBvMulNoOverflowExpr(lhs, rhs, isSigned)
+    }
+    return mkBvMulNoOverflowExprNoSimplify(lhs, rhs, isSigned)
+}
 
-fun <T : KBvSort> KContext.simplifyBvMulNoUnderflowExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
-    mkBvMulNoUnderflowExprNoSimplify(lhs, rhs)
+fun <T : KBvSort> KContext.simplifyBvMulNoUnderflowExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> {
+    if (lhs is KBitVecValue<T> && rhs is KBitVecValue<T>) {
+        return rewriteBvMulNoUnderflowExpr(lhs, rhs)
+    }
+    return mkBvMulNoUnderflowExprNoSimplify(lhs, rhs)
+}
 
-fun <T : KBvSort> KContext.simplifyBvNegationNoOverflowExpr(arg: KExpr<T>): KExpr<KBoolSort> =
-    mkBvNegationNoOverflowExprNoSimplify(arg)
+fun <T : KBvSort> KContext.simplifyBvNegationNoOverflowExpr(arg: KExpr<T>): KExpr<KBoolSort> {
+    if (arg is KBitVecValue<T>) {
+        return rewriteBvNegNoOverflowExpr(arg)
+    }
+    return mkBvNegationNoOverflowExprNoSimplify(arg)
+}
 
-fun <T : KBvSort> KContext.simplifyBvDivNoOverflowExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
-    mkBvDivNoOverflowExprNoSimplify(lhs, rhs)
+fun <T : KBvSort> KContext.simplifyBvDivNoOverflowExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> {
+    if (lhs is KBitVecValue<T> && rhs is KBitVecValue<T>) {
+        return rewriteBvDivNoOverflowExpr(lhs, rhs)
+    }
+    return mkBvDivNoOverflowExprNoSimplify(lhs, rhs)
+}
 
-fun <T : KBvSort> KContext.simplifyBvSubNoOverflowExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
-    mkBvSubNoOverflowExprNoSimplify(lhs, rhs)
+fun <T : KBvSort> KContext.simplifyBvSubNoOverflowExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> {
+    if (lhs is KBitVecValue<T> && rhs is KBitVecValue<T>) {
+        return rewriteBvSubNoOverflowExpr(lhs, rhs)
+    }
+    return mkBvSubNoOverflowExprNoSimplify(lhs, rhs)
+}
 
 fun <T : KBvSort> KContext.simplifyBvSubNoUnderflowExpr(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
     isSigned: Boolean
-): KExpr<KBoolSort> = mkBvSubNoUnderflowExprNoSimplify(lhs, rhs, isSigned)
+): KExpr<KBoolSort> {
+    if (lhs is KBitVecValue<T> && rhs is KBitVecValue<T>) {
+        return rewriteBvSubNoUnderflowExpr(lhs, rhs, isSigned)
+    }
+    return mkBvSubNoUnderflowExprNoSimplify(lhs, rhs, isSigned)
+}
 
 
-fun <T : KBvSort> KContext.simplifyBv2IntExpr(value: KExpr<T>, isSigned: Boolean): KExpr<KIntSort> =
-    mkBv2IntExprNoSimplify(value, isSigned)
+fun <T : KBvSort> KContext.rewriteBvAddNoOverflowExpr(
+    lhs: KExpr<T>,
+    rhs: KExpr<T>,
+    isSigned: Boolean
+): KExpr<KBoolSort> {
+    if (isSigned) {
+        /**
+         * (bvadd no ovf signed a b) ==>
+         *    (=> (and (bvslt 0 a) (bvslt 0 b)) (bvslt 0 (bvadd a b)))
+         * */
+
+        val zero: KExpr<T> = bvZero(lhs.sort.sizeBits).uncheckedCast()
+        val zeroSltA = simplifyBvSignedLessExpr(zero, lhs)
+        val zeroSltB = simplifyBvSignedLessExpr(zero, rhs)
+        val sum = simplifyBvAddExpr(lhs, rhs)
+        val zeroSltSum = simplifyBvSignedLessExpr(zero, sum)
+
+        return simplifyImplies(simplifyAnd(listOf(zeroSltA, zeroSltB)), zeroSltSum)
+    } else {
+        /**
+         * (bvadd no ovf unsigned a b) ==>
+         *    (= 0 (extract [highestBit] (bvadd (concat 0 a) (concat 0 b))))
+         * */
+
+        val extA = simplifyBvZeroExtensionExpr(1, lhs)
+        val extB = simplifyBvZeroExtensionExpr(1, rhs)
+        val sum = simplifyBvAddExpr(extA, extB)
+        val highestBitIdx = sum.sort.sizeBits.toInt() - 1
+        val sumFirstBit = simplifyBvExtractExpr(highestBitIdx, highestBitIdx, sum)
+
+        return simplifyEq(sumFirstBit, mkBv(false).uncheckedCast())
+    }
+}
+
+fun <T : KBvSort> KContext.rewriteBvAddNoUnderflowExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> {
+    /**
+     * (bvadd no udf a b) ==>
+     *    (=> (and (bvslt a 0) (bvslt b 0)) (bvslt (bvadd a b) 0))
+     * */
+    val zero: KExpr<T> = bvZero(lhs.sort.sizeBits).uncheckedCast()
+    val aLtZero = simplifyBvSignedLessExpr(lhs, zero)
+    val bLtZero = simplifyBvSignedLessExpr(rhs, zero)
+    val sum = simplifyBvAddExpr(lhs, rhs)
+    val sumLtZero = simplifyBvSignedLessExpr(sum, zero)
+
+    return simplifyImplies(simplifyAnd(listOf(aLtZero, bLtZero)), sumLtZero)
+}
+
+fun <T : KBvSort> KContext.rewriteBvSubNoOverflowExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> {
+    /**
+     * (bvsub no ovf a b) ==>
+     *     (ite (= b MIN_VALUE) (bvslt a 0) (bvadd no ovf signed a (bvneg b)))
+     * */
+
+    val zero: KExpr<T> = bvZero(lhs.sort.sizeBits).uncheckedCast()
+    val minValue: KExpr<T> = bvMinValueSigned(lhs.sort.sizeBits).uncheckedCast()
+
+    val minusB = simplifyBvNegationExpr(rhs)
+    val bIsMin = simplifyEq(rhs, minValue)
+    val aLtZero = simplifyBvSignedLessExpr(lhs, zero)
+    val noOverflow = simplifyBvAddNoOverflowExpr(lhs, minusB, isSigned = true)
+
+    return simplifyIte(bIsMin, aLtZero, noOverflow)
+}
+
+fun <T : KBvSort> KContext.rewriteBvSubNoUnderflowExpr(
+    lhs: KExpr<T>,
+    rhs: KExpr<T>,
+    isSigned: Boolean
+): KExpr<KBoolSort> {
+    if (isSigned) {
+        /**
+         * (bvsub no udf signed a b) ==>
+         *    (=> (bvslt 0 b) (bvadd no udf (bvneg b)))
+         * */
+        val zero: KExpr<T> = bvZero(lhs.sort.sizeBits).uncheckedCast()
+        val minusB = simplifyBvNegationExpr(rhs)
+        val zeroLtB = simplifyBvSignedLessExpr(zero, rhs)
+        val noOverflow = simplifyBvAddNoUnderflowExpr(lhs, minusB)
+
+        return simplifyImplies(zeroLtB, noOverflow)
+    } else {
+        /**
+         * (bvsub no udf unsigned a b) ==>
+         *    (bvule b a)
+         * */
+        return simplifyBvUnsignedLessOrEqualExpr(rhs, lhs)
+    }
+}
+
+fun <T : KBvSort> KContext.rewriteBvNegNoOverflowExpr(arg: KExpr<T>): KExpr<KBoolSort> {
+    /**
+     * (bvneg no ovf a) ==> (not (= a MIN_VALUE))
+     * */
+    val minValue = bvMinValueSigned(arg.sort.sizeBits)
+    return simplifyNot(simplifyEq(arg, minValue.uncheckedCast()))
+}
+
+fun <T : KBvSort> KContext.rewriteBvDivNoOverflowExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> {
+    /**
+     * (bvsdiv no ovf a b) ==>
+     *     (not (and (= a MSB) (= b -1)))
+     * */
+    val size = lhs.sort.sizeBits
+    val mostSignificantBit = bvMinValueSigned(size)
+    val minusOne = bvValue(size, -1)
+
+    val aIsMsb = simplifyEq(lhs, mostSignificantBit.uncheckedCast())
+    val bIsMinusOne = simplifyEq(rhs, minusOne.uncheckedCast())
+    return simplifyNot(simplifyAnd(listOf(aIsMsb, bIsMinusOne)))
+}
+
+fun <T : KBvSort> KContext.rewriteBvMulNoOverflowExpr(
+    lhs: KExpr<T>,
+    rhs: KExpr<T>,
+    isSigned: Boolean
+): KExpr<KBoolSort> {
+    val simplified = if (isSigned) {
+        trySimplifyBvSignedMulNoOverflow(lhs, rhs, isOverflow = true)
+    } else {
+        trySimplifyBvUnsignedMulNoOverflow(lhs, rhs)
+    }
+    return simplified ?: mkBvMulNoOverflowExprNoSimplify(lhs, rhs, isSigned)
+}
+
+fun <T : KBvSort> KContext.rewriteBvMulNoUnderflowExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
+    trySimplifyBvSignedMulNoOverflow(lhs, rhs, isOverflow = false)
+        ?: mkBvMulNoUnderflowExprNoSimplify(lhs, rhs)
 
 
 private fun <T : KBvSort> KContext.bvLessOrEqual(lhs: KExpr<T>, rhs: KExpr<T>, signed: Boolean): KExpr<KBoolSort> {
@@ -487,4 +816,110 @@ private inline fun <reified T : KExpr<S>, S : KBvSort> tryFlatOneLevel(
     if (exprRight is KBitVecValue<S>) {
         return block(exprRight, exprLeft)
     }
+}
+
+private fun <T : KBvSort> KContext.rotateLeft(arg: KExpr<T>, size: Int, rotationNumber: Int): KExpr<T> {
+    val rotation = rotationNumber.mod(size)
+
+    if (rotation == 0 || size == 1) {
+        return arg
+    }
+
+    val lhs = simplifyBvExtractExpr(high = size - rotation - 1, low = 0, arg)
+    val rhs = simplifyBvExtractExpr(high = size - 1, low = size - rotation, arg)
+    return simplifyBvConcatExpr(lhs, rhs).uncheckedCast()
+}
+
+private fun <T : KBvSort> KContext.trySimplifyBvSignedMulNoOverflow(
+    lhs: KExpr<T>,
+    rhs: KExpr<T>,
+    isOverflow: Boolean
+): KExpr<KBoolSort>? {
+    val size = lhs.sort.sizeBits
+    val lhsValue = lhs as? KBitVecValue<T>
+    val rhsValue = rhs as? KBitVecValue<T>
+
+    if (lhsValue != null && (lhsValue.isBvZero() || (size != 1u && lhsValue.isBvOne()))) {
+        return trueExpr
+    }
+
+    if (rhsValue != null && (rhsValue.isBvZero() || (size != 1u && rhsValue.isBvOne()))) {
+        return trueExpr
+    }
+
+    val one = bvOne(size)
+    if (lhsValue != null && rhsValue != null) {
+        val lhsSign = lhsValue.signBit()
+        val rhsSign = rhsValue.signBit()
+
+        val operationOverflow = when {
+            // lhs < 0 && rhs < 0
+            lhsSign && rhsSign -> {
+                // no underflow possible
+                if (!isOverflow) return trueExpr
+                // overflow if rhs <= (MAX_VALUE / lhs - 1)
+                val maxValue = bvMaxValueSigned(size)
+                val limit = maxValue.signedDivide(lhsValue)
+                rhsValue.signedLessOrEqual(limit - one)
+            }
+            // lhs > 0 && rhs > 0
+            !lhsSign && !rhsSign -> {
+                // no underflow possible
+                if (!isOverflow) return trueExpr
+                // overflow if MAX_VALUE / rhs <= lhs - 1
+                val maxValue = bvMaxValueSigned(size)
+                val limit = maxValue.signedDivide(rhsValue)
+                limit.signedLessOrEqual(lhsValue - one)
+            }
+            // lhs < 0 && rhs > 0
+            lhsSign && !rhsSign -> {
+                // no overflow possible
+                if (isOverflow) return trueExpr
+                // underflow if lhs <= MIN_VALUE / rhs - 1
+                val minValue = bvMinValueSigned(size)
+                val limit = minValue.signedDivide(rhsValue)
+                lhsValue.signedLessOrEqual(limit - one)
+            }
+            // lhs > 0 && rhs < 0
+            else -> {
+                // no overflow possible
+                if (isOverflow) return trueExpr
+                // underflow if rhs <= MIN_VALUE / lhs - 1
+                val minValue = bvMinValueSigned(size)
+                val limit = minValue.signedDivide(lhsValue)
+                rhsValue.signedLessOrEqual(limit - one)
+            }
+        }
+
+        return (!operationOverflow).expr
+    }
+    return null
+}
+
+private fun <T : KBvSort> KContext.trySimplifyBvUnsignedMulNoOverflow(
+    lhs: KExpr<T>,
+    rhs: KExpr<T>
+): KExpr<KBoolSort>? {
+    val size = lhs.sort.sizeBits
+    val lhsValue = lhs as? KBitVecValue<T>
+    val rhsValue = rhs as? KBitVecValue<T>
+
+    if (lhsValue != null && (lhsValue.isBvZero() || (lhsValue.isBvOne()))) {
+        return trueExpr
+    }
+
+    if (rhsValue != null && (rhsValue.isBvZero() || (rhsValue.isBvOne()))) {
+        return trueExpr
+    }
+
+    if (lhsValue != null && rhsValue != null) {
+        val longLhs = lhsValue.zeroExtension(size)
+        val longRhs = rhsValue.zeroExtension(size)
+        val longMaxValue = bvMaxValueUnsigned(size).zeroExtension(size)
+
+        val product = longLhs * longRhs
+        return product.unsignedLessOrEqual(longMaxValue).expr
+    }
+
+    return null
 }
