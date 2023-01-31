@@ -256,6 +256,19 @@ fun <T : KFpSort> KContext.simplifyFpLessExpr(lhs: KExpr<T>, rhs: KExpr<T>): KEx
     if (lhs is KFpValue<T> && rhs is KFpValue<T>) {
         return fpLt(lhs, rhs).expr
     }
+
+    if (lhs is KFpValue<T> && lhs.isNan() || rhs is KFpValue<T> && rhs.isNan()) {
+        return falseExpr
+    }
+
+    if (lhs is KFpValue<T> && lhs.isInfinity() && lhs.isPositive()) {
+        return falseExpr
+    }
+
+    if (rhs is KFpValue<T> && rhs.isInfinity() && rhs.isNegative()) {
+        return falseExpr
+    }
+
     return mkFpLessExprNoSimplify(lhs, rhs)
 }
 
@@ -263,6 +276,11 @@ fun <T : KFpSort> KContext.simplifyFpLessOrEqualExpr(lhs: KExpr<T>, rhs: KExpr<T
     if (lhs is KFpValue<T> && rhs is KFpValue<T>) {
         return fpLeq(lhs, rhs).expr
     }
+
+    if (lhs is KFpValue<T> && lhs.isNan() || rhs is KFpValue<T> && rhs.isNan()) {
+        return falseExpr
+    }
+
     return mkFpLessOrEqualExprNoSimplify(lhs, rhs)
 }
 
