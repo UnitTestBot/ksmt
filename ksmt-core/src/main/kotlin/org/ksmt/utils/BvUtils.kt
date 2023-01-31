@@ -368,7 +368,7 @@ object BvUtils {
     )
 
     fun KBitVecValue<*>.powerOfTwoOrNull(): Int? {
-        val value = stringValue.toBigInteger(radix = 2)
+        val value = bigIntValue()
         val valueMinusOne = value - BigInteger.ONE
         if ((value and valueMinusOne) != BigInteger.ZERO) return null
         return valueMinusOne.bitLength()
