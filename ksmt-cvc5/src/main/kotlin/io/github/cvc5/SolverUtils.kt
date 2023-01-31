@@ -74,15 +74,24 @@ val Term.bvSizeToConvertTo: Int
         return op[0].integerValue.toInt()
     }
 
+private val toFpAllowedOps = listOf(
+    Kind.FLOATINGPOINT_TO_FP_FROM_IEEE_BV,
+    Kind.FLOATINGPOINT_TO_FP_FROM_REAL,
+    Kind.FLOATINGPOINT_TO_FP_FROM_FP,
+    Kind.FLOATINGPOINT_TO_FP_FROM_SBV,
+    Kind.FLOATINGPOINT_TO_FP_FROM_UBV
+
+)
+
 val Term.toFpExponentSize: Int
     get() {
-        require(kind == Kind.FLOATINGPOINT_TO_FP_FROM_IEEE_BV) { "Required op is ${Kind.FLOATINGPOINT_TO_FP_FROM_IEEE_BV}, but was $kind" }
+        require(kind in toFpAllowedOps) { "Required ops are $toFpAllowedOps, but was $kind" }
         return op[0].integerValue.toInt()
     }
 
 val Term.toFpSignificandSize: Int
     get() {
-        require(kind == Kind.FLOATINGPOINT_TO_FP_FROM_IEEE_BV) { "Required op is ${Kind.FLOATINGPOINT_TO_FP_FROM_IEEE_BV}, but was $kind" }
+        require(kind in toFpAllowedOps) { "Required ops are $toFpAllowedOps, but was $kind" }
         return op[1].integerValue.toInt()
     }
 
