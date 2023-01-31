@@ -6,22 +6,20 @@ import org.ksmt.expr.KFpEqualExpr
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KFpSort
+import org.ksmt.symfpu.UnpackedFp.Companion.unpackedFp
 
 class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
-    override fun <F : KFpSort> transform(expr: KFpEqualExpr<F>): KExpr<KBoolSort> = with(ctx) {
-        val left = expr.arg0
-        val right = expr.arg1
+    override fun <Fp : KFpSort> transform(expr: KFpEqualExpr<Fp>): KExpr<KBoolSort> = with(ctx) {
+        val left = unpackedFp(expr.arg0)
+        val right = unpackedFp(expr.arg1)
 
         // All comparison with NaN are false
-        val neitherNan = mkFpIsNaNExpr(left).not() and mkFpIsNaNExpr(right).not()
+        val neitherNan = left.isNaN.not() and right.isNaN.not()
 
-        val leftIsZero = mkFpIsZeroExpr(left)
-        val rightIsZero = mkFpIsZeroExpr(right)
-        val bothZero = leftIsZero and rightIsZero
-        val neitherZero = leftIsZero.not() and rightIsZero.not()
+        val bothZero = left.isZero and right.isZero
+        val neitherZero = left.isZero.not() and right.isZero.not()
+        val bitEq = left.bv eq right.bv
 
-        val bitEq = mkFpToIEEEBvExpr(left) eq mkFpToIEEEBvExpr(right)
-
-        return neitherNan and (bothZero or (neitherZero and (mkFpIsInfiniteExpr(left) eq mkFpIsInfiniteExpr(right) and bitEq)))
+        return neitherNan and (bothZero or (neitherZero and (left.isInfinite eq right.isInfinite and bitEq)))
     }
 }
