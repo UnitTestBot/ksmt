@@ -405,10 +405,11 @@ fun <T : KBvSort> KContext.simplifyBvRotateRightIndexedExpr(rotation: Int, value
 // (repeat a x) ==> (concat a a ..[x].. a)
 fun <T : KBvSort> KContext.simplifyBvRepeatExpr(repeatNumber: Int, value: KExpr<T>): KExpr<KBvSort> {
     if (value is KBitVecValue<T> && repeatNumber > 0) {
-        var result = value
+        var result: KBitVecValue<*> = value
         repeat(repeatNumber - 1) {
-            result = concatBv(result.uncheckedCast(), value).uncheckedCast()
+            result = concatBv(result, value)
         }
+        return result.uncheckedCast()
     }
     return mkBvRepeatExprNoSimplify(repeatNumber, value)
 }
