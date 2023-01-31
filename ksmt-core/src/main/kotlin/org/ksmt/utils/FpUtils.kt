@@ -13,6 +13,7 @@ import org.ksmt.expr.KIntNumExpr
 import org.ksmt.expr.KRealNumExpr
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
+import org.ksmt.utils.ArithUtils.RealValue
 import org.ksmt.utils.BvUtils.bigIntValue
 import org.ksmt.utils.BvUtils.bvMaxValueSigned
 import org.ksmt.utils.BvUtils.bvMaxValueUnsigned
@@ -1355,82 +1356,6 @@ object FpUtils {
             } else {
                 upper = mid
             }
-        }
-    }
-
-    private class RealValue private constructor(
-        numerator: BigInteger,
-        denominator: BigInteger
-    ) : Comparable<RealValue> {
-        val numerator: BigInteger
-        val denominator: BigInteger
-
-        init {
-            if (denominator.signum() < 0) {
-                this.numerator = -numerator
-                this.denominator = -denominator
-            } else {
-                this.numerator = numerator
-                this.denominator = denominator
-            }
-        }
-
-        fun isNegative(): Boolean = numerator.signum() < 0
-
-        fun isZero(): Boolean = numerator.isZero()
-
-        fun abs() = RealValue(numerator.abs(), denominator)
-
-        fun inverse() = RealValue(denominator, numerator)
-
-        fun floor(): BigInteger {
-            if (denominator == BigInteger.ONE) {
-                return numerator
-            }
-
-            var result = numerator.divide(denominator)
-            if (isNegative()) {
-                result--
-            }
-            return result
-        }
-
-        fun div(value: BigInteger) = RealValue(numerator, denominator * value).normalize()
-
-        fun mul(value: BigInteger) = RealValue(numerator * value, denominator).normalize()
-
-        fun sub(other: RealValue): RealValue {
-            val resultNumerator = numerator * other.denominator - other.numerator * denominator
-            val resultDenominator = denominator * other.denominator
-            return RealValue(resultNumerator, resultDenominator).normalize()
-        }
-
-        override fun compareTo(other: RealValue): Int = when {
-            this.eq(other) -> 0
-            this.lt(other) -> -1
-            else -> 1
-        }
-
-        private fun eq(other: RealValue): Boolean =
-            numerator == other.numerator && denominator == other.denominator
-
-        private fun lt(b: RealValue): Boolean = when {
-            numerator.signum() < 0 && b.numerator.signum() >= 0 -> true
-            numerator.signum() > 0 && b.numerator.signum() <= 0 -> false
-            numerator.signum() == 0 -> b.numerator.signum() > 0
-            else -> numerator * b.denominator < b.numerator * denominator
-        }
-
-        private fun normalize(): RealValue {
-            val gcd = numerator.gcd(denominator)
-            val normalizedNumerator = numerator.divide(gcd)
-            val normalizedDenominator = denominator.divide(gcd)
-            return RealValue(normalizedNumerator, normalizedDenominator)
-        }
-
-        companion object{
-            fun create(numerator: BigInteger, denominator: BigInteger = BigInteger.ONE) =
-                RealValue(numerator, denominator).normalize()
         }
     }
 }
