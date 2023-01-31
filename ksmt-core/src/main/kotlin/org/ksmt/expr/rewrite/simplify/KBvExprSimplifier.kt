@@ -128,12 +128,12 @@ interface KBvExprSimplifier : KExprSimplifierBase {
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedLessOrEqualExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (lhs, rhs) ->
-            bvLessOrEqual(lhs, rhs, signed = false)
+            simplifyBvUnsignedLessOrEqualExpr(lhs, rhs)
         }
 
     override fun <T : KBvSort> transform(expr: KBvSignedLessOrEqualExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (lhs, rhs) ->
-            bvLessOrEqual(lhs, rhs, signed = true)
+            simplifyBvSignedLessOrEqualExpr(lhs, rhs)
         }
 
     // (uge a b) ==> (ule b a)
@@ -190,64 +190,6 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             error("Always preprocessed")
         }
 
-    @Suppress("NestedBlockDepth")
-    private fun <T : KBvSort> bvLessOrEqual(lhs: KExpr<T>, rhs: KExpr<T>, signed: Boolean): KExpr<KBoolSort> =
-        with(ctx) {
-            if (lhs == rhs) return trueExpr
-
-            val lhsValue = lhs as? KBitVecValue<T>
-            val rhsValue = rhs as? KBitVecValue<T>
-
-            if (lhsValue != null && rhsValue != null) {
-                val result = if (signed) {
-                    lhsValue.signedLessOrEqual(rhsValue)
-                } else {
-                    lhsValue.unsignedLessOrEqual(rhsValue)
-                }
-                return result.expr
-            }
-
-            if (lhsValue != null || rhsValue != null) {
-                val size = lhs.sort.sizeBits
-                val (lower, upper) = if (signed) {
-                    bvMinValueSigned(size) to bvMaxValueSigned(size)
-                } else {
-                    bvZero(size) to bvMaxValueUnsigned(size)
-                }
-
-                if (rhsValue != null) {
-                    // a <= b, b == MIN_VALUE ==> a == b
-                    if (rhsValue == lower) {
-                        return rewrite(
-                            auxExpr { KEqExpr(ctx, lhs, rhs) }
-                        )
-                    }
-                    // a <= b, b == MAX_VALUE ==> true
-                    if (rhsValue == upper) {
-                        return trueExpr
-                    }
-                }
-
-                if (lhsValue != null) {
-                    // a <= b, a == MIN_VALUE ==> true
-                    if (lhsValue == lower) {
-                        return trueExpr
-                    }
-                    // a <= b, a == MAX_VALUE ==> a == b
-                    if (lhsValue == upper) {
-                        return rewrite(
-                            auxExpr { KEqExpr(ctx, lhs, rhs) }
-                        )
-                    }
-                }
-            }
-
-            if (signed) {
-                mkBvSignedLessOrEqualExpr(lhs, rhs)
-            } else {
-                mkBvUnsignedLessOrEqualExpr(lhs, rhs)
-            }
-        }
 
     override fun <T : KBvSort> transform(expr: KBvAddExpr<T>): KExpr<T> =
         simplifyApp(expr = expr, preprocess = { flatBvAdd(expr) }) {

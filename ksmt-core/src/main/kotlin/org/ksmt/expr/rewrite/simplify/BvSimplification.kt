@@ -1,11 +1,18 @@
 package org.ksmt.expr.rewrite.simplify
 
 import org.ksmt.KContext
+import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KIntSort
+import org.ksmt.utils.BvUtils.isBvMaxValueSigned
+import org.ksmt.utils.BvUtils.isBvMaxValueUnsigned
+import org.ksmt.utils.BvUtils.isBvMinValueSigned
+import org.ksmt.utils.BvUtils.isBvZero
+import org.ksmt.utils.BvUtils.signedLessOrEqual
+import org.ksmt.utils.BvUtils.unsignedLessOrEqual
 
 
 fun <T : KBvSort> KContext.simplifyBvNotExpr(arg: KExpr<T>): KExpr<T> = mkBvNotExprNoSimplify(arg)
@@ -92,29 +99,35 @@ fun <T : KBvSort, S : KBvSort> KContext.simplifyBvConcatExpr(lhs: KExpr<T>, rhs:
     mkBvConcatExprNoSimplify(lhs, rhs)
 
 
+// (sgt a b) ==> (not (sle a b))
 fun <T : KBvSort> KContext.simplifyBvSignedGreaterExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
-    mkBvSignedGreaterExprNoSimplify(lhs, rhs)
+    simplifyNot(simplifyBvSignedLessOrEqualExpr(lhs, rhs))
 
+// (sge a b) ==> (sle b a)
 fun <T : KBvSort> KContext.simplifyBvSignedGreaterOrEqualExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
-    mkBvSignedGreaterOrEqualExprNoSimplify(lhs, rhs)
+    simplifyBvSignedLessOrEqualExpr(rhs, lhs)
 
+// (slt a b) ==> (not (sle b a))
 fun <T : KBvSort> KContext.simplifyBvSignedLessExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
-    mkBvSignedLessExprNoSimplify(lhs, rhs)
+    simplifyNot(simplifyBvSignedLessOrEqualExpr(rhs, lhs))
 
 fun <T : KBvSort> KContext.simplifyBvSignedLessOrEqualExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
-    mkBvSignedLessOrEqualExprNoSimplify(lhs, rhs)
+    bvLessOrEqual(lhs, rhs, signed = true)
 
+// (ugt a b) ==> (not (ule a b))
 fun <T : KBvSort> KContext.simplifyBvUnsignedGreaterExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
-    mkBvUnsignedGreaterExprNoSimplify(lhs, rhs)
+    simplifyNot(simplifyBvUnsignedLessOrEqualExpr(lhs, rhs))
 
+// (uge a b) ==> (ule b a)
 fun <T : KBvSort> KContext.simplifyBvUnsignedGreaterOrEqualExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
-    mkBvUnsignedGreaterOrEqualExprNoSimplify(lhs, rhs)
+    simplifyBvUnsignedLessOrEqualExpr(rhs, lhs)
 
+// (ult a b) ==> (not (ule b a))
 fun <T : KBvSort> KContext.simplifyBvUnsignedLessExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
-    mkBvUnsignedLessExprNoSimplify(lhs, rhs)
+    simplifyNot(simplifyBvUnsignedLessOrEqualExpr(rhs, lhs))
 
 fun <T : KBvSort> KContext.simplifyBvUnsignedLessOrEqualExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
-    mkBvUnsignedLessOrEqualExprNoSimplify(lhs, rhs)
+    bvLessOrEqual(lhs, rhs, signed = false)
 
 
 fun <T : KBvSort> KContext.simplifyBvAddNoOverflowExpr(
@@ -153,3 +166,57 @@ fun <T : KBvSort> KContext.simplifyBvSubNoUnderflowExpr(
 
 fun <T : KBvSort> KContext.simplifyBv2IntExpr(value: KExpr<T>, isSigned: Boolean): KExpr<KIntSort> =
     mkBv2IntExprNoSimplify(value, isSigned)
+
+
+private fun <T : KBvSort> KContext.bvLessOrEqual(lhs: KExpr<T>, rhs: KExpr<T>, signed: Boolean): KExpr<KBoolSort> {
+    if (lhs == rhs) return trueExpr
+
+    val lhsValue = lhs as? KBitVecValue<T>
+    val rhsValue = rhs as? KBitVecValue<T>
+
+    if (lhsValue != null && rhsValue != null) {
+        val result = if (signed) {
+            lhsValue.signedLessOrEqual(rhsValue)
+        } else {
+            lhsValue.unsignedLessOrEqual(rhsValue)
+        }
+        return result.expr
+    }
+
+    if (lhsValue != null || rhsValue != null) {
+
+        if (rhsValue != null) {
+            // a <= b, b == MIN_VALUE ==> a == b
+            if (rhsValue.isMinValue(signed)) {
+                return simplifyEq(lhs, rhs)
+            }
+            // a <= b, b == MAX_VALUE ==> true
+            if (rhsValue.isMaxValue(signed)) {
+                return trueExpr
+            }
+        }
+
+        if (lhsValue != null) {
+            // a <= b, a == MIN_VALUE ==> true
+            if (lhsValue.isMinValue(signed)) {
+                return trueExpr
+            }
+            // a <= b, a == MAX_VALUE ==> a == b
+            if (lhsValue.isMaxValue(signed)) {
+                return simplifyEq(lhs, rhs)
+            }
+        }
+    }
+
+    return if (signed) {
+        mkBvSignedLessOrEqualExprNoSimplify(lhs, rhs)
+    } else {
+        mkBvUnsignedLessOrEqualExprNoSimplify(lhs, rhs)
+    }
+}
+
+private fun KBitVecValue<*>.isMinValue(signed: Boolean) =
+    if (signed) isBvMinValueSigned() else isBvZero()
+
+private fun KBitVecValue<*>.isMaxValue(signed: Boolean) =
+    if (signed) isBvMaxValueSigned() else isBvMaxValueUnsigned()

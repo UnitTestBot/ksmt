@@ -4,7 +4,6 @@ import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KApp
-import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KImpliesExpr
 import org.ksmt.expr.KIteExpr
@@ -14,7 +13,6 @@ import org.ksmt.expr.KXorExpr
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
-import org.ksmt.utils.uncheckedCast
 
 interface KBoolExprSimplifier : KExprSimplifierBase {
 
