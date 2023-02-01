@@ -1,6 +1,5 @@
 package org.ksmt.solver.yices
 
-import com.sri.yices.Terms
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAddArithExpr
@@ -187,7 +186,7 @@ open class KYicesExprInternalizer(
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = with(expr) {
         transformList(args) { args: Array<YicesTerm> ->
             if (args.isNotEmpty())
-                Terms.funApplication(decl.internalizeDecl(), args.toList())
+                yicesCtx.funApplication(decl.internalizeDecl(), args.toList())
             else
                 decl.internalizeDecl()
         }
@@ -199,235 +198,235 @@ open class KYicesExprInternalizer(
 
     override fun transform(expr: KAndExpr): KExpr<KBoolSort> = with(expr) {
         transformList(args) { args: Array<YicesTerm> ->
-            Terms.and(args.toList())
+            yicesCtx.and(args.toList())
         }
     }
 
     override fun transform(expr: KOrExpr): KExpr<KBoolSort> = with(expr) {
-        transformList(args) { args: Array<YicesTerm> -> Terms.or(args.toList()) }
+        transformList(args) { args: Array<YicesTerm> -> yicesCtx.or(args.toList()) }
     }
 
     override fun transform(expr: KNotExpr): KExpr<KBoolSort> = with(expr) {
-        transform(arg, Terms::not)
+        transform(arg, yicesCtx::not)
     }
 
     override fun transform(expr: KImpliesExpr): KExpr<KBoolSort> = with(expr) {
-        transform(p, q, Terms::implies)
+        transform(p, q, yicesCtx::implies)
     }
 
     override fun transform(expr: KXorExpr): KExpr<KBoolSort> = with(expr) {
-        transform(a, b) { a: YicesTerm, b: YicesTerm -> Terms.xor(a, b) }
+        transform(a, b) { a: YicesTerm, b: YicesTerm -> yicesCtx.xor(a, b) }
     }
 
-    override fun transform(expr: KTrue): KExpr<KBoolSort> = expr.transform(Terms::mkTrue)
+    override fun transform(expr: KTrue): KExpr<KBoolSort> = expr.transform(yicesCtx::mkTrue)
 
-    override fun transform(expr: KFalse): KExpr<KBoolSort> = expr.transform(Terms::mkFalse)
+    override fun transform(expr: KFalse): KExpr<KBoolSort> = expr.transform(yicesCtx::mkFalse)
 
     override fun <T : KSort> transform(expr: KEqExpr<T>): KExpr<KBoolSort> = with(expr) {
-        transform(lhs, rhs, Terms::eq)
+        transform(lhs, rhs, yicesCtx::eq)
     }
 
     override fun <T : KSort> transform(expr: KDistinctExpr<T>): KExpr<KBoolSort> = with(expr) {
-        transformList(args) { args: Array<YicesTerm> -> Terms.distinct(args.toList()) }
+        transformList(args) { args: Array<YicesTerm> -> yicesCtx.distinct(args.toList()) }
     }
 
     override fun <T : KSort> transform(expr: KIteExpr<T>): KExpr<T> = with(expr) {
-        transform(condition, trueBranch, falseBranch, Terms::ifThenElse)
+        transform(condition, trueBranch, falseBranch, yicesCtx::ifThenElse)
     }
 
     override fun transform(expr: KBitVec1Value): KExpr<KBv1Sort> = with(expr) {
-        transform { Terms.bvConst(sort.sizeBits.toInt(), if (value) 1L else 0L) }
+        transform { yicesCtx.bvConst(sort.sizeBits, if (value) 1L else 0L) }
     }
 
     override fun transform(expr: KBitVec8Value): KExpr<KBv8Sort> = with(expr) {
-        transform { Terms.bvConst(sort.sizeBits.toInt(), numberValue.toLong()) }
+        transform { yicesCtx.bvConst(sort.sizeBits, numberValue.toLong()) }
     }
 
     override fun transform(expr: KBitVec16Value): KExpr<KBv16Sort> = with(expr) {
-        transform { Terms.bvConst(sort.sizeBits.toInt(), numberValue.toLong()) }
+        transform { yicesCtx.bvConst(sort.sizeBits, numberValue.toLong()) }
     }
 
     override fun transform(expr: KBitVec32Value): KExpr<KBv32Sort> = with(expr) {
-        transform { Terms.bvConst(sort.sizeBits.toInt(), numberValue.toLong()) }
+        transform { yicesCtx.bvConst(sort.sizeBits, numberValue.toLong()) }
     }
 
     override fun transform(expr: KBitVec64Value): KExpr<KBv64Sort> = with(expr) {
-        transform { Terms.bvConst(sort.sizeBits.toInt(), numberValue) }
+        transform { yicesCtx.bvConst(sort.sizeBits, numberValue) }
     }
 
     override fun transform(expr: KBitVecCustomValue): KExpr<KBvSort> = with(expr) {
-        transform { Terms.parseBvBin(stringValue) }
+        transform { yicesCtx.parseBvBin(stringValue) }
     }
 
     override fun <T : KBvSort> transform(expr: KBvNotExpr<T>): KExpr<T> = with(expr) {
-        transform(value, Terms::bvNot)
+        transform(value, yicesCtx::bvNot)
     }
 
     override fun <T : KBvSort> transform(expr: KBvReductionAndExpr<T>): KExpr<KBv1Sort> = with(expr) {
-        transform(value, Terms::bvRedAnd)
+        transform(value, yicesCtx::bvRedAnd)
     }
 
     override fun <T : KBvSort> transform(expr: KBvReductionOrExpr<T>): KExpr<KBv1Sort> = with(expr) {
-        transform(value, Terms::bvRedOr)
+        transform(value, yicesCtx::bvRedOr)
     }
 
     override fun <T : KBvSort> transform(expr: KBvAndExpr<T>): KExpr<T> = with(expr) {
-        transform(arg0, arg1, Terms::bvAnd)
+        transform(arg0, arg1, yicesCtx::bvAnd)
     }
 
     override fun <T : KBvSort> transform(expr: KBvOrExpr<T>): KExpr<T> = with(expr) {
-        transform(arg0, arg1, Terms::bvOr)
+        transform(arg0, arg1, yicesCtx::bvOr)
     }
 
     override fun <T : KBvSort> transform(expr: KBvXorExpr<T>): KExpr<T> = with(expr) {
-        transform(arg0, arg1, Terms::bvXor)
+        transform(arg0, arg1, yicesCtx::bvXor)
     }
 
     override fun <T : KBvSort> transform(expr: KBvNAndExpr<T>): KExpr<T> = with(expr) {
-        transform(arg0, arg1, Terms::bvNand)
+        transform(arg0, arg1, yicesCtx::bvNand)
     }
 
     override fun <T : KBvSort> transform(expr: KBvNorExpr<T>): KExpr<T> = with(expr) {
-        transform(arg0, arg1, Terms::bvNor)
+        transform(arg0, arg1, yicesCtx::bvNor)
     }
 
     override fun <T : KBvSort> transform(expr: KBvXNorExpr<T>): KExpr<T> = with(expr) {
-        transform(arg0, arg1, Terms::bvXNor)
+        transform(arg0, arg1, yicesCtx::bvXNor)
     }
 
     override fun <T : KBvSort> transform(expr: KBvNegationExpr<T>): KExpr<T> = with(expr) {
-        transform(value, Terms::bvNeg)
+        transform(value, yicesCtx::bvNeg)
     }
 
     override fun <T : KBvSort> transform(expr: KBvAddExpr<T>): KExpr<T> = with(expr) {
-        transform(arg0, arg1, Terms::bvAdd)
+        transform(arg0, arg1, yicesCtx::bvAdd)
     }
 
     override fun <T : KBvSort> transform(expr: KBvSubExpr<T>): KExpr<T> = with(expr) {
-        transform(arg0, arg1, Terms::bvSub)
+        transform(arg0, arg1, yicesCtx::bvSub)
     }
 
     override fun <T : KBvSort> transform(expr: KBvMulExpr<T>): KExpr<T> = with(expr) {
-        transform(arg0, arg1, Terms::bvMul)
+        transform(arg0, arg1, yicesCtx::bvMul)
     }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedDivExpr<T>): KExpr<T> = with(expr) {
-        transform(arg0, arg1, Terms::bvDiv)
+        transform(arg0, arg1, yicesCtx::bvDiv)
     }
 
     override fun <T : KBvSort> transform(expr: KBvSignedDivExpr<T>): KExpr<T> = with(expr) {
-        transform(arg0, arg1, Terms::bvSDiv)
+        transform(arg0, arg1, yicesCtx::bvSDiv)
     }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedRemExpr<T>): KExpr<T> = with(expr) {
-        transform(arg0, arg1, Terms::bvRem)
+        transform(arg0, arg1, yicesCtx::bvRem)
     }
 
     override fun <T : KBvSort> transform(expr: KBvSignedRemExpr<T>): KExpr<T> = with(expr) {
-        transform(arg0, arg1, Terms::bvSRem)
+        transform(arg0, arg1, yicesCtx::bvSRem)
     }
 
     override fun <T : KBvSort> transform(expr: KBvSignedModExpr<T>): KExpr<T> = with(expr) {
-        transform(arg0, arg1, Terms::bvSMod)
+        transform(arg0, arg1, yicesCtx::bvSMod)
     }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedLessExpr<T>): KExpr<KBoolSort> = with(expr) {
-        transform(arg0, arg1, Terms::bvLt)
+        transform(arg0, arg1, yicesCtx::bvLt)
     }
 
     override fun <T : KBvSort> transform(expr: KBvSignedLessExpr<T>): KExpr<KBoolSort> = with(expr) {
-        transform(arg0, arg1, Terms::bvSLt)
+        transform(arg0, arg1, yicesCtx::bvSLt)
     }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedLessOrEqualExpr<T>): KExpr<KBoolSort> = with(expr) {
-        transform(arg0, arg1, Terms::bvLe)
+        transform(arg0, arg1, yicesCtx::bvLe)
     }
 
     override fun <T : KBvSort> transform(expr: KBvSignedLessOrEqualExpr<T>): KExpr<KBoolSort> = with(expr) {
-        transform(arg0, arg1, Terms::bvSLe)
+        transform(arg0, arg1, yicesCtx::bvSLe)
     }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterOrEqualExpr<T>): KExpr<KBoolSort> = with(expr) {
-        transform(arg0, arg1, Terms::bvGe)
+        transform(arg0, arg1, yicesCtx::bvGe)
     }
 
     override fun <T : KBvSort> transform(expr: KBvSignedGreaterOrEqualExpr<T>): KExpr<KBoolSort> = with(expr) {
-        transform(arg0, arg1, Terms::bvSGe)
+        transform(arg0, arg1, yicesCtx::bvSGe)
     }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterExpr<T>): KExpr<KBoolSort> = with(expr) {
-        transform(arg0, arg1, Terms::bvGt)
+        transform(arg0, arg1, yicesCtx::bvGt)
     }
 
     override fun <T : KBvSort> transform(expr: KBvSignedGreaterExpr<T>): KExpr<KBoolSort> = with(expr) {
-        transform(arg0, arg1, Terms::bvSGt)
+        transform(arg0, arg1, yicesCtx::bvSGt)
     }
 
     override fun transform(expr: KBvConcatExpr): KExpr<KBvSort> = with(expr) {
-        transform(arg0, arg1, Terms::bvConcat)
+        transform(arg0, arg1, yicesCtx::bvConcat)
     }
 
     override fun transform(expr: KBvExtractExpr): KExpr<KBvSort> = with(expr) {
-        transform(value) { value: YicesTerm -> Terms.bvExtract(value, low, high) }
+        transform(value) { value: YicesTerm -> yicesCtx.bvExtract(value, low, high) }
     }
 
     override fun transform(expr: KBvSignExtensionExpr): KExpr<KBvSort> = with(expr) {
-        transform(value) { value: YicesTerm -> Terms.bvSignExtend(value, extensionSize) }
+        transform(value) { value: YicesTerm -> yicesCtx.bvSignExtend(value, extensionSize) }
     }
 
     override fun transform(expr: KBvZeroExtensionExpr): KExpr<KBvSort> = with(expr) {
-        transform(value) { value: YicesTerm -> Terms.bvZeroExtend(value, extensionSize) }
+        transform(value) { value: YicesTerm -> yicesCtx.bvZeroExtend(value, extensionSize) }
     }
 
     override fun transform(expr: KBvRepeatExpr): KExpr<KBvSort> = with(expr) {
-        transform(value) { value: YicesTerm -> Terms.bvRepeat(value, repeatNumber) }
+        transform(value) { value: YicesTerm -> yicesCtx.bvRepeat(value, repeatNumber) }
     }
 
     override fun <T : KBvSort> transform(expr: KBvShiftLeftExpr<T>): KExpr<T> = with(expr) {
-        transform(arg, shift, Terms::bvShl)
+        transform(arg, shift, yicesCtx::bvShl)
     }
 
     override fun <T : KBvSort> transform(expr: KBvLogicalShiftRightExpr<T>): KExpr<T> = with(expr) {
-        transform(arg, shift, Terms::bvLshr)
+        transform(arg, shift, yicesCtx::bvLshr)
     }
 
     override fun <T : KBvSort> transform(expr: KBvArithShiftRightExpr<T>): KExpr<T> = with(expr) {
-        transform(arg, shift, Terms::bvAshr)
+        transform(arg, shift, yicesCtx::bvAshr)
     }
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>): KExpr<T> = with(expr) {
         transform(arg, rotation) { arg0: YicesTerm, arg1: YicesTerm ->
             val size = expr.sort.sizeBits
-            val bvSize = Terms.bvConst(size.toInt(), size.toLong())
-            val rotationNumber = Terms.bvRem(arg1, bvSize)
+            val bvSize = yicesCtx.bvConst(size, size.toLong())
+            val rotationNumber = yicesCtx.bvRem(arg1, bvSize)
 
-            val left = Terms.bvShl(arg0, rotationNumber)
-            val right = Terms.bvLshr(arg0, Terms.bvSub(bvSize, rotationNumber))
+            val left = yicesCtx.bvShl(arg0, rotationNumber)
+            val right = yicesCtx.bvLshr(arg0, yicesCtx.bvSub(bvSize, rotationNumber))
 
-            Terms.bvOr(left, right)
+            yicesCtx.bvOr(left, right)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftIndexedExpr<T>): KExpr<T> = with(expr) {
-        transform(value) { value: YicesTerm -> Terms.bvRotateLeft(value, rotationNumber) }
+        transform(value) { value: YicesTerm -> yicesCtx.bvRotateLeft(value, rotationNumber) }
     }
 
     override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>): KExpr<T> = with(expr) {
         transform(arg, rotation) { arg0: YicesTerm, arg1: YicesTerm ->
             val size = expr.sort.sizeBits
-            val bvSize = Terms.bvConst(size.toInt(), size.toLong())
-            val rotationNumber = Terms.bvRem(arg1, bvSize)
+            val bvSize = yicesCtx.bvConst(size, size.toLong())
+            val rotationNumber = yicesCtx.bvRem(arg1, bvSize)
 
-            val left = Terms.bvShl(arg0, Terms.bvSub(bvSize, rotationNumber))
-            val right = Terms.bvLshr(arg0, rotationNumber)
+            val left = yicesCtx.bvShl(arg0, yicesCtx.bvSub(bvSize, rotationNumber))
+            val right = yicesCtx.bvLshr(arg0, rotationNumber)
 
-            Terms.bvOr(left, right)
+            yicesCtx.bvOr(left, right)
         }
     }
 
 
     override fun <T : KBvSort> transform(expr: KBvRotateRightIndexedExpr<T>): KExpr<T> = with(expr) {
-        transform(value) { value: YicesTerm -> Terms.bvRotateRight(value, rotationNumber) }
+        transform(value) { value: YicesTerm -> yicesCtx.bvRotateRight(value, rotationNumber) }
     }
 
     override fun transform(expr: KBv2IntExpr): KExpr<KIntSort> = with(expr) {
@@ -435,23 +434,23 @@ open class KYicesExprInternalizer(
             val size = expr.value.sort.sizeBits.toInt()
 
             val args = (0 until size - 1).map {
-                Terms.ifThenElse(
-                    Terms.bvExtractBit(value, it),
-                    Terms.intConst(BigInteger.valueOf(2).pow(it)),
-                    Terms.ZERO
+                yicesCtx.ifThenElse(
+                    yicesCtx.bvExtractBit(value, it),
+                    yicesCtx.intConst(BigInteger.valueOf(2).pow(it)),
+                    yicesCtx.zero
                 )
             }
 
-            var sign = Terms.ifThenElse(
-                Terms.bvExtractBit(value, size - 1),
-                Terms.intConst(BigInteger.valueOf(2).pow(size - 1)),
-                Terms.ZERO
+            var sign = yicesCtx.ifThenElse(
+                yicesCtx.bvExtractBit(value, size - 1),
+                yicesCtx.intConst(BigInteger.valueOf(2).pow(size - 1)),
+                yicesCtx.zero
             )
 
             if (isSigned)
-                sign = Terms.neg(sign)
+                sign = yicesCtx.neg(sign)
 
-            Terms.add(args + sign)
+            yicesCtx.add(args + sign)
         }
     }
 
@@ -636,18 +635,18 @@ open class KYicesExprInternalizer(
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> = with(expr) {
-        transform(array, index, value, Terms::functionUpdate1)
+        transform(array, index, value, yicesCtx::functionUpdate1)
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> = with(expr) {
         transform(array, index) { array: YicesTerm, index: YicesTerm ->
-            Terms.funApplication(array, index)
+            yicesCtx.funApplication(array, index)
         }
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>): KExpr<KArraySort<D, R>> = with(expr) {
         transform(value) { value: YicesTerm ->
-            Terms.lambda(listOf(Terms.newVariable(sort.internalizeSort())), value)
+            yicesCtx.lambda(listOf(yicesCtx.newVariable(sort.internalizeSort())), value)
         }
     }
 
@@ -670,17 +669,17 @@ open class KYicesExprInternalizer(
             val variable = indexVarDecl.internalizeVariable()
 
             expr.transform(body) { body: YicesTerm ->
-                Terms.lambda(listOf(variable), body)
+                yicesCtx.lambda(listOf(variable), body)
             }
         }
     }
 
     override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> = with(expr) {
-        transformList(args) { args: Array<YicesTerm> -> Terms.add(args.toList()) }
+        transformList(args) { args: Array<YicesTerm> -> yicesCtx.add(args.toList()) }
     }
 
     override fun <T : KArithSort> transform(expr: KMulArithExpr<T>): KExpr<T> = with(expr) {
-        transformList(args) { args: Array<YicesTerm> -> Terms.mul(args.toList()) }
+        transformList(args) { args: Array<YicesTerm> -> yicesCtx.mul(args.toList()) }
     }
 
     override fun <T : KArithSort> transform(expr: KSubArithExpr<T>): KExpr<T> = with(expr) {
@@ -688,53 +687,53 @@ open class KYicesExprInternalizer(
             if (args.size == 1)
                 args.first()
             else
-                Terms.sub(args[0], Terms.add(args.drop(1)))
+                yicesCtx.sub(args[0], yicesCtx.add(args.drop(1)))
         }
     }
 
     override fun <T : KArithSort> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> = with(expr) {
-        transform(arg, Terms::neg)
+        transform(arg, yicesCtx::neg)
     }
 
     override fun <T : KArithSort> transform(expr: KDivArithExpr<T>): KExpr<T> = with(expr) {
         transform(lhs, rhs) { lhs: YicesTerm, rhs: YicesTerm ->
             when (sort) {
-                is KIntSort -> Terms.idiv(lhs, rhs)
-                else -> Terms.div(lhs, rhs)
+                is KIntSort -> yicesCtx.idiv(lhs, rhs)
+                else -> yicesCtx.div(lhs, rhs)
             }
         }
     }
 
     override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>): KExpr<T> = with(expr) {
-        transform(lhs, rhs, Terms::power)
+        transform(lhs, rhs, yicesCtx::power)
     }
 
     override fun <T : KArithSort> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> = with(expr) {
-        transform(lhs, rhs, Terms::arithLt)
+        transform(lhs, rhs, yicesCtx::arithLt)
     }
 
     override fun <T : KArithSort> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> = with(expr) {
-        transform(lhs, rhs, Terms::arithLeq)
+        transform(lhs, rhs, yicesCtx::arithLeq)
     }
 
     override fun <T : KArithSort> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> = with(expr) {
-        transform(lhs, rhs, Terms::arithGt)
+        transform(lhs, rhs, yicesCtx::arithGt)
     }
 
     override fun <T : KArithSort> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> = with(expr) {
-        transform(lhs, rhs, Terms::arithGeq)
+        transform(lhs, rhs, yicesCtx::arithGeq)
     }
 
     override fun transform(expr: KModIntExpr): KExpr<KIntSort> = with(expr) {
-        transform(lhs, rhs, Terms::imod)
+        transform(lhs, rhs, yicesCtx::imod)
     }
 
     override fun transform(expr: KRemIntExpr): KExpr<KIntSort> = with(expr) {
         transform(lhs, rhs) { lhs: YicesTerm, rhs: YicesTerm ->
-            val sign = Terms.ifThenElse(Terms.arithLeq0(rhs), Terms.MINUS_ONE, Terms.ONE)
-            val mod = Terms.imod(lhs, rhs)
+            val sign = yicesCtx.ifThenElse(yicesCtx.arithLeq0(rhs), yicesCtx.minusOne, yicesCtx.one)
+            val mod = yicesCtx.imod(lhs, rhs)
 
-            Terms.mul(mod, sign)
+            yicesCtx.mul(mod, sign)
         }
     }
 
@@ -748,40 +747,40 @@ open class KYicesExprInternalizer(
     }
 
     override fun transform(expr: KInt32NumExpr): KExpr<KIntSort> = with(expr) {
-        transform { Terms.intConst(value.toLong()) }
+        transform { yicesCtx.intConst(value.toLong()) }
     }
 
     override fun transform(expr: KInt64NumExpr): KExpr<KIntSort> = with(expr) {
-        transform { Terms.intConst(value) }
+        transform { yicesCtx.intConst(value) }
     }
 
     override fun transform(expr: KIntBigNumExpr): KExpr<KIntSort> = with(expr) {
-        transform { Terms.intConst(value) }
+        transform { yicesCtx.intConst(value) }
     }
 
     override fun transform(expr: KToIntRealExpr): KExpr<KIntSort> = with(expr) {
-        transform(arg, Terms::floor)
+        transform(arg, yicesCtx::floor)
     }
 
     override fun transform(expr: KIsIntRealExpr): KExpr<KBoolSort> = with(expr) {
-        transform(arg, Terms::isInt)
+        transform(arg, yicesCtx::isInt)
     }
 
     override fun transform(expr: KRealNumExpr): KExpr<KRealSort> = with(expr) {
         transform(numerator, denominator) { numerator: YicesTerm, denominator: YicesTerm ->
-            Terms.div(numerator, denominator)
+            yicesCtx.div(numerator, denominator)
         }
     }
 
     override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> = with(ctx) {
         internalizeQuantifier(expr, ::mkExistentialQuantifier) { body, variables ->
-            Terms.exists(variables, body)
+            yicesCtx.exists(variables, body)
         }
     }
 
     override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> = with(ctx) {
         internalizeQuantifier(expr, ::mkUniversalQuantifier) { body, variables ->
-            Terms.forall(variables, body)
+            yicesCtx.forall(variables, body)
         }
     }
 

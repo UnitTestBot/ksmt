@@ -98,7 +98,7 @@ open class KYicesExprConverter(
     }
 
     private fun setArithArgTypes(yicesArgs: Array<YicesTerm>) = with(ctx) {
-        val argType = if (yicesArgs.any { Terms.typeOf(it) == Types.REAL }) realSort else intSort
+        val argType = if (yicesArgs.any { Terms.typeOf(it) == yicesCtx.real }) realSort else intSort
 
         argTypes.addAll(List(yicesArgs.size) { argType })
     }
@@ -141,9 +141,9 @@ open class KYicesExprConverter(
     open fun convertSort(sort: YicesSort): KSort = yicesCtx.convertSort(sort) {
         with(ctx) {
             when (sort) {
-                Types.INT -> intSort
-                Types.REAL -> realSort
-                Types.BOOL -> boolSort
+                yicesCtx.int -> intSort
+                yicesCtx.real -> realSort
+                yicesCtx.bool -> boolSort
                 else -> {
                     if (Types.isBitvector(sort))
                         mkBvSort(Types.bvSize(sort).toUInt())
@@ -210,8 +210,8 @@ open class KYicesExprConverter(
     private fun convertSum(expr: YicesTerm) = with(ctx) {
         val (consts, children) = List(Terms.numChildren(expr)) { index ->
             val component = Terms.sumComponent(expr, index).apply {
-                if (term == Terms.NULL_TERM)
-                    term = Terms.ONE
+                if (term == yicesCtx.nullTerm)
+                    term = yicesCtx.one
             }
 
             Pair(
@@ -235,8 +235,8 @@ open class KYicesExprConverter(
         val bvSize = Terms.bitSize(expr).toUInt()
         val (consts, children) = List(Terms.numChildren(expr)) { index ->
             val component = Terms.sumbvComponent(expr, index).apply {
-                if (term == Terms.NULL_TERM)
-                    term = Terms.bvConst(bvSize.toInt(), 1L)
+                if (term == yicesCtx.nullTerm)
+                    term = yicesCtx.bvConst(bvSize, 1L)
             }
 
             Pair(
@@ -570,10 +570,10 @@ open class KYicesExprConverter(
 
                 val children = when {
                     Terms.isSum(expr) -> (0 until numChildren).mapNotNull { idx ->
-                        Terms.sumComponent(expr, idx).term.takeIf { it != Terms.NULL_TERM }
+                        Terms.sumComponent(expr, idx).term.takeIf { it != yicesCtx.nullTerm }
                     }
                     Terms.isBvSum(expr) -> (0 until numChildren).mapNotNull { idx ->
-                        Terms.sumbvComponent(expr, idx).term.takeIf { it != Terms.NULL_TERM }
+                        Terms.sumbvComponent(expr, idx).term.takeIf { it != yicesCtx.nullTerm }
                     }
                     Terms.isProduct(expr) -> List(numChildren) { idx -> Terms.productComponent(expr, idx).term }
                     Terms.isProjection(expr) -> listOf(Terms.projArg(expr))

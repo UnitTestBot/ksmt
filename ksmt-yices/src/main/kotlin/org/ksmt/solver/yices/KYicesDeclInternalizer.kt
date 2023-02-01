@@ -1,6 +1,5 @@
 package org.ksmt.solver.yices
 
-import com.sri.yices.Terms
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDeclVisitor
 import org.ksmt.decl.KFuncDecl
@@ -13,12 +12,13 @@ open class KYicesDeclInternalizer (
     override fun <S : KSort> visit(decl: KFuncDecl<S>): YicesTerm =
         yicesCtx.internalizeDecl(decl) {
             val argSorts = decl.argSorts.map { it.accept(sortInternalizer) }
+            val sort = yicesCtx.functionType(argSorts + decl.sort.accept(sortInternalizer))
 
-            Terms.newUninterpretedFunction(decl.name, argSorts + decl.sort.accept(sortInternalizer))
+            yicesCtx.newUninterpretedTerm(decl.name, sort)
         }
 
     override fun <S : KSort> visit(decl: KConstDecl<S>): YicesTerm =
         yicesCtx.internalizeDecl(decl) {
-            Terms.newUninterpretedTerm(decl.name, decl.sort.accept(sortInternalizer))
+            yicesCtx.newUninterpretedTerm(decl.name, decl.sort.accept(sortInternalizer))
         }
 }

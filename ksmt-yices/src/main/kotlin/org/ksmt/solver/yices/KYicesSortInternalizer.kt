@@ -1,6 +1,5 @@
 package org.ksmt.solver.yices
 
-import com.sri.yices.Types
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
@@ -17,34 +16,28 @@ open class KYicesSortInternalizer(
     private val yicesCtx: KYicesContext
 ) : KSortVisitor<YicesSort> {
     override fun visit(sort: KBoolSort): YicesSort = yicesCtx.internalizeSort(sort) {
-        Types.BOOL
+        yicesCtx.bool
     }
 
     override fun visit(sort: KIntSort): YicesSort = yicesCtx.internalizeSort(sort) {
-        Types.INT
+        yicesCtx.int
     }
 
     override fun visit(sort: KRealSort): YicesSort = yicesCtx.internalizeSort(sort) {
-        Types.REAL
+        yicesCtx.real
     }
 
     override fun <S : KBvSort> visit(sort: S): YicesSort = yicesCtx.internalizeSort(sort) {
-        when (sort.sizeBits) {
-            8u -> Types.BV8
-            16u -> Types.BV16
-            32u -> Types.BV32
-            64u -> Types.BV64
-            else -> Types.bvType(sort.sizeBits.toInt())
-        }
+        yicesCtx.bvType(sort.sizeBits)
     }
 
     override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): YicesSort =
         yicesCtx.internalizeSort(sort) {
-            Types.functionType(sort.domain.internalizeYicesSort(), sort.range.internalizeYicesSort())
+            yicesCtx.functionType(sort.domain.internalizeYicesSort(), sort.range.internalizeYicesSort())
         }
 
     override fun visit(sort: KUninterpretedSort): YicesSort = yicesCtx.internalizeSort(sort) {
-        Types.newUninterpretedType(sort.name)
+        yicesCtx.newUninterpretedType(sort.name)
     }
 
     override fun <S : KFpSort> visit(sort: S): YicesSort {
@@ -55,5 +48,5 @@ open class KYicesSortInternalizer(
         throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
     }
 
-    private fun <T : KSort> T.internalizeYicesSort() = accept(this@KYicesSortInternalizer)
+    private fun KSort.internalizeYicesSort() = accept(this@KYicesSortInternalizer)
 }
