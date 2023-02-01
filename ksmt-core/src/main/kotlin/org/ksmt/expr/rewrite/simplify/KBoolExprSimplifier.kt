@@ -4,6 +4,7 @@ import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KImpliesExpr
 import org.ksmt.expr.KIteExpr
@@ -22,7 +23,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
             // (and a (and b c)) ==> (and a b c)
             val flatArgs = flatAnd(expr)
             if (flatArgs.size != expr.args.size) {
-                mkAnd(flatArgs)
+                KAndExpr(this, flatArgs)
             } else {
                 expr
             }
@@ -35,7 +36,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
             // (or a (or b c)) ==> (or a b c)
             val flatArgs = flatOr(expr)
             if (flatArgs.size != expr.args.size) {
-                mkOr(flatArgs)
+                KOrExpr(this, flatArgs)
             } else {
                 expr
             }
@@ -43,7 +44,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
     ) { args -> simplifyOr(args) }
 
     override fun transform(expr: KNotExpr) = simplifyApp(expr) { (arg) ->
-        ctx.simplifyNot(arg)
+        simplifyNot(arg)
     }
 
     /**
@@ -96,14 +97,14 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
 
     override fun transform(expr: KImpliesExpr): KExpr<KBoolSort> = simplifyApp(
         expr = expr,
-        preprocess = { !expr.p or expr.q }
+        preprocess = { KOrExpr(this, listOf(KNotExpr(this, expr.p), expr.q)) }
     ) {
         error("Always preprocessed")
     }
 
     override fun transform(expr: KXorExpr): KExpr<KBoolSort> = simplifyApp(
         expr = expr,
-        preprocess = { !expr.a eq expr.b }
+        preprocess = { KEqExpr(this, KNotExpr(this, expr.a), expr.b) }
     ) {
         error("Always preprocessed")
     }

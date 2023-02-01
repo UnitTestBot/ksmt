@@ -58,7 +58,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
             return fpStructurallyEqual(lhs, rhs).expr
         }
 
-        return mkEq(lhs, rhs)
+        return mkEqNoSimplify(lhs, rhs)
     }
 
     fun <T : KFpSort> areDefinitelyDistinctFp(lhs: KExpr<T>, rhs: KExpr<T>): Boolean {
@@ -84,7 +84,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     override fun <T : KFpSort> transform(expr: KFpSubExpr<T>): KExpr<T> =
         simplifyApp(
             expr = expr,
-            preprocess = { mkFpAddExpr(expr.roundingMode, expr.arg0, mkFpNegationExpr(expr.arg1)) }
+            preprocess = { KFpAddExpr(this, expr.roundingMode, expr.arg0, KFpNegationExpr(this, expr.arg1)) }
         ) {
             error("Always preprocessed")
         }
@@ -137,7 +137,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     override fun <T : KFpSort> transform(expr: KFpGreaterOrEqualExpr<T>): KExpr<KBoolSort> =
         simplifyApp(
             expr = expr,
-            preprocess = { mkFpLessOrEqualExpr(expr.arg1, expr.arg0) }
+            preprocess = { KFpLessOrEqualExpr(this, expr.arg1, expr.arg0) }
         ) {
             error("Always preprocessed")
         }
@@ -145,7 +145,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     override fun <T : KFpSort> transform(expr: KFpGreaterExpr<T>): KExpr<KBoolSort> =
         simplifyApp(
             expr = expr,
-            preprocess = { mkFpLessExpr(expr.arg1, expr.arg0) }
+            preprocess = { KFpLessExpr(this, expr.arg1, expr.arg0) }
         ) {
             error("Always preprocessed")
         }

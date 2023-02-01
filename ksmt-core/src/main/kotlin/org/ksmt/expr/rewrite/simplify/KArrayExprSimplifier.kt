@@ -44,7 +44,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             return rewrite(simplifiedExpr)
         }
 
-        return mkEq(lhs, rhs)
+        return mkEqNoSimplify(lhs, rhs)
     }
 
     /**
@@ -267,7 +267,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             for (i in simplifiedIndices.indices) {
                 val index = simplifiedIndices[i]
                 val value = simplifiedValues[i]
-                result = result.store(index, value)
+                result = mkArrayStoreNoSimplify(result, index, value)
             }
 
             return@simplifyApp result
@@ -374,7 +374,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
                     rewrite(resolvedBody)
                 }
                 else -> {
-                    mkArraySelect(array, index)
+                    mkArraySelectNoSimplify(array, index)
                 }
             }
         }

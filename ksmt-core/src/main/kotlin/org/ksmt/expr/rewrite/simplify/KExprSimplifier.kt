@@ -41,7 +41,7 @@ open class KExprSimplifier(ctx: KContext) :
             is KFpSort -> simplifyEqFp(lhs as KExpr<KFpSort>, rhs.uncheckedCast() )
             is KArraySort<*, *> -> simplifyEqArray(lhs as KExpr<KArraySort<KSort, KSort>>, rhs.uncheckedCast())
             is KUninterpretedSort -> simplifyEqUninterpreted(lhs.uncheckedCast(), rhs.uncheckedCast())
-            else -> mkEq(lhs, rhs)
+            else -> mkEqNoSimplify(lhs, rhs)
         }
     }
 
@@ -56,7 +56,7 @@ open class KExprSimplifier(ctx: KContext) :
         }
     ) { args ->
         val distinct = checkAllExpressionsAreDistinct(args)
-        distinct?.expr ?: mkDistinct(args)
+        distinct?.expr ?: mkDistinctNoSimplify(args)
     }
 
     private fun <T : KSort> checkAllExpressionsAreDistinct(expressions: List<KExpr<T>>): Boolean? {
@@ -102,7 +102,7 @@ open class KExprSimplifier(ctx: KContext) :
     open fun simplifyEqUninterpreted(
         lhs: KExpr<KUninterpretedSort>,
         rhs: KExpr<KUninterpretedSort>
-    ): KExpr<KBoolSort> = ctx.mkEq(lhs, rhs)
+    ): KExpr<KBoolSort> = ctx.mkEqNoSimplify(lhs, rhs)
 
     open fun areDefinitelyDistinctUninterpreted(
         lhs: KExpr<KUninterpretedSort>,

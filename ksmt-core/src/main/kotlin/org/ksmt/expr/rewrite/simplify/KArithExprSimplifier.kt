@@ -34,7 +34,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
             return (lhs.compareTo(rhs) == 0).expr
         }
 
-        return mkEq(lhs, rhs)
+        return mkEqNoSimplify(lhs, rhs)
     }
 
     fun areDefinitelyDistinctInt(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): Boolean {
@@ -51,7 +51,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
             return (lhs.toRealValue().compareTo(rhs.toRealValue()) == 0).expr
         }
 
-        return mkEq(lhs, rhs)
+        return mkEqNoSimplify(lhs, rhs)
     }
 
     fun areDefinitelyDistinctReal(lhs: KExpr<KRealSort>, rhs: KExpr<KRealSort>): Boolean {
@@ -99,9 +99,9 @@ interface KArithExprSimplifier : KExprSimplifierBase {
                 } else {
                     val simplifiedArgs = arrayListOf(args.first())
                     for (arg in args.drop(1)) {
-                        simplifiedArgs += mkArithUnaryMinus(arg)
+                        simplifiedArgs += KUnaryMinusArithExpr(this, arg)
                     }
-                    mkArithAdd(simplifiedArgs)
+                    KAddArithExpr(this, simplifiedArgs)
                 }
             }
         ) {
