@@ -343,7 +343,6 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             error("Always preprocessed")
         }
 
-    @Suppress("LoopWithTooManyJumpStatements")
     private fun <T : KBvSort> transform(expr: SimplifierFlatBvOrExpr<T>): KExpr<T> = simplifyApp(expr) { flatten ->
         simplifyBvAndOr(
             args = flatten,
@@ -1355,6 +1354,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         return auxExpr { KBvExtractExpr(ctx, lhs.high, rhs.low, lhs.value) }
     }
 
+    @Suppress("LoopWithTooManyJumpStatements")
     private inline fun <T : KBvSort> simplifyBvAndOr(
         args: List<KExpr<T>>,
         neutralElement: KBitVecValue<T>,
