@@ -35,13 +35,13 @@ class FpToBvTransformerTest {
 
             // both zero
             val zero = mkFpZero(false, KFp32Sort(this))
-            val zero2 = mkFpZero(true, KFp32Sort(this))
+            val negativeZero = mkFpZero(true, KFp32Sort(this))
             val exprToTransform = mkFpMinExpr(a, b)
 
 
             val transformedExpr = transformer.apply(exprToTransform)
-            solver.assert((transformedExpr eq zero and (exprToTransform eq zero2)).not())
-            solver.assert((transformedExpr eq zero2 and (exprToTransform eq zero)).not())
+            solver.assert((transformedExpr eq zero and (exprToTransform eq negativeZero)).not()) // min(-0, +0) = ±0
+            solver.assert((transformedExpr eq negativeZero and (exprToTransform eq zero)).not())
             solver.assert(transformedExpr neq exprToTransform)
 
 
