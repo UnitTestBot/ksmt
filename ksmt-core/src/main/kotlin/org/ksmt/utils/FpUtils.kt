@@ -678,9 +678,15 @@ object FpUtils {
         }
     }
 
+    /**
+     * Floating point addition algorithm described in
+     * Knuth, The Art of Computer Programming, Vol. 2: Seminumerical Algorithms
+     * Section 4.2.1 (Single-Precision Calculations)
+     * Algorithm A (Floating point addition)
+     * */
     private fun KContext.fpAddUnpacked(rm: KFpRoundingMode, lhs: UnpackedFp, rhs: UnpackedFp): KFpValue<*> {
         // lhs.exponent >= rhs.exponent => expDelta >= 0
-        var expDelta = (lhs.unbiasedExponent - rhs.unbiasedExponent)
+        var expDelta = lhs.unbiasedExponent - rhs.unbiasedExponent
         val significandSizePlusTwo = (lhs.significandSize.toInt() + 2).toBigInteger()
         if (expDelta > significandSizePlusTwo) {
             expDelta = significandSizePlusTwo
@@ -696,11 +702,12 @@ object FpUtils {
         val resIsNeg = resultSignificand.signum() < 0
         val resSignificandValue = resultSignificand.abs()
 
-        val sign = ((!lhs.sign && rhs.sign && resIsNeg)
+        val resultSign = ((!lhs.sign && rhs.sign && resIsNeg)
                 || (lhs.sign && !rhs.sign && !resIsNeg)
                 || (lhs.sign && rhs.sign))
+
         val unpackedResult = UnpackedFp(
-            lhs.exponentSize, lhs.significandSize, sign, lhs.unbiasedExponent, resSignificandValue
+            lhs.exponentSize, lhs.significandSize, resultSign, lhs.unbiasedExponent, resSignificandValue
         )
 
         return fpRound(rm, unpackedResult)
@@ -740,15 +747,24 @@ object FpUtils {
         val resultSign = lhs.sign xor rhs.sign
         val resultExponent = lhs.unbiasedExponent + rhs.unbiasedExponent
 
+        /**
+         * Since significands are normalized (both have MSB 1),
+         * the multiplication result will have 2 * significandSize bits
+         * */
         val multipliedSignificand = lhs.significand * rhs.significand
 
-        // Remove the extra bits, keeping a sticky bit.
-        var (normalizedSignificand, stickyRem) = if (lhs.significandSize >= 4u){
+        /**
+         *  Remove the extra bits, keeping a sticky bit.
+         *  Multiplication result is of the form:
+         *  [significandSize result bits][4 special bits][significandSize-4 extra bits]
+         *  */
+        var (normalizedSignificand, stickyRem) = if (lhs.significandSize >= 4u) {
             val resultWithReminder = multipliedSignificand.divideAndRemainder(
                 powerOfTwo(lhs.significandSize - 4u)
             )
             resultWithReminder[0] to resultWithReminder[1]
         } else {
+            // Ensure significand has at least 4 bits (required for rounding)
             val correctedSignificand = multipliedSignificand.mul2k(4u - lhs.significandSize)
             correctedSignificand to BigInteger.ZERO
         }
@@ -770,11 +786,19 @@ object FpUtils {
 
         val extraBits = lhs.significandSize + 2u
         val lhsSignificandWithExtraBits = lhs.significand.mul2k(lhs.significandSize + extraBits)
+
+        /**
+         * Since significands are normalized (both have MSB 1),
+         * the division result will have at least [extraBits] bits.
+         * */
         val divisionResultSignificand = lhsSignificandWithExtraBits.divide(rhs.significand)
 
-        // Remove the extra bits, keeping a sticky bit.
+        /**
+         *  Remove the extra bits, keeping a sticky bit.
+         *  [normalizedResultSignificand] will have at least 4 bits as required for rounding.
+         *  */
         var (normalizedResultSignificand, stickyRem) = divisionResultSignificand.divideAndRemainder(
-            powerOfTwo(extraBits - 2u)
+            powerOfTwo(lhs.significandSize)
         )
         if (!stickyRem.isZero() && normalizedResultSignificand.isEven()) {
             normalizedResultSignificand++
@@ -788,8 +812,21 @@ object FpUtils {
     }
 
     private fun KContext.fpSqrtUnpacked(rm: KFpRoundingMode, value: UnpackedFp): KFpValue<*> {
+        /**
+         * Add significandSize + 6 bits, to ensure that sqrt
+         * will have at least significandSize + 3 bits.
+         *
+         * Add one more (7) bits in case of even exponent to get more precise result.
+         * This extra bit is handled by decrementing the [resultExponent] by one.
+         * */
         val extraBits = if (value.unbiasedExponent.isEven()) 7u else 6u
         val extendedSignificand = value.significand.mul2k(value.significandSize + extraBits)
+
+        var resultExponent = value.unbiasedExponent.shiftRight(1)
+        if (value.unbiasedExponent.isEven()) {
+            resultExponent--
+        }
+
         val (rootIsPrecise, rootValue) = extendedSignificand.impreciseSqrt()
 
         val resultSignificand = if (!rootIsPrecise) {
@@ -804,11 +841,6 @@ object FpUtils {
             fixedValue
         } else {
             rootValue
-        }
-
-        var resultExponent = value.unbiasedExponent.shiftRight(1)
-        if (value.unbiasedExponent.isEven()) {
-            resultExponent--
         }
 
         val unpackedResult = UnpackedFp(
@@ -1018,29 +1050,40 @@ object FpUtils {
     private fun fpRoundExponent(value: UnpackedFp): Pair<BigInteger, BigInteger> {
         val eMin = fpMinExponentValue(value.exponentSize)
 
-        // Significand is of the form f[-1:0] . f[1:sbits-1] [round,extra,sticky],
-        // i.e., it has 2 + (sbits-1) + 3 = sbits + 4 bits.
+        // Actual significand width.
         val sigWidth = value.significand.log2() + 1
-        val lz = value.significandSize.toInt() + 4 - sigWidth
-        val beta = value.unbiasedExponent - lz.toBigInteger() + BigInteger.ONE
 
-        var sigma: BigInteger
+        /**
+         *  Significand bits to add or remove.
+         *
+         *  Significand is of the form f[-1:0] . f[1:sbits-1] [round,extra,sticky].
+         *  We add +3 for [round, extra, sticky]
+         *  Special bits be removed from significand explicitly in [roundSignificand].
+         *  */
+        val significandExtraBits = value.significandSize.toInt() - sigWidth + 3
+
+
+        //  Exponent value after significand correction.
+        val beta = value.unbiasedExponent - significandExtraBits.toBigInteger()
+
+        var significandNormalizationShift: BigInteger
         val exponent: BigInteger
         if (beta < eMin) {
             // denormal significand/TINY
-            sigma = value.unbiasedExponent - eMin
+            significandNormalizationShift = value.unbiasedExponent - eMin
             exponent = eMin
         } else {
-            sigma = (lz - 1).toBigInteger()
+            significandNormalizationShift = significandExtraBits.toBigInteger()
             exponent = beta
         }
 
-        val sigmaCap = (-(value.significandSize.toInt() + 2)).toBigInteger()
-        if (sigma < sigmaCap) {
-            sigma = sigmaCap
+        // No need to shift more than precision
+        val significandRightShiftCap = (-(value.significandSize.toInt() + 2)).toBigInteger()
+        if (significandNormalizationShift < significandRightShiftCap) {
+            significandNormalizationShift = significandRightShiftCap
         }
 
-        return exponent to sigma
+        return exponent to significandNormalizationShift
     }
 
     @Suppress("LongParameterList")
