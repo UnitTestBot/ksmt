@@ -4,6 +4,7 @@ import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpEqualExpr
 import org.ksmt.expr.KFpLessExpr
+import org.ksmt.expr.KFpMinExpr
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KFpSort
@@ -32,7 +33,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         val neitherNan = left.isNaN.not() and right.isNaN.not()
 
 
-        // Infinities are bigger than everything but themself
+        // Infinities are bigger than everything but themselves
         val eitherInf = left.isInfinite or right.isInfinite
         val infCase = (left.isNegativeInfinity and right.isNegativeInfinity.not()) or
                 (left.isPositiveInfinity.not() and right.isPositiveInfinity)
@@ -68,4 +69,16 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
                     )
                 )
     }
+
+    override fun <Fp : KFpSort> transform(expr: KFpMinExpr<Fp>): KExpr<Fp> = with(ctx) {
+        val right = unpackedFp(expr.arg1)
+
+        return mkIte(
+            right.isNaN or
+                    transform(mkFpLessExpr(expr.arg0, expr.arg1)),
+            expr.arg0,
+            expr.arg1
+        )
+    }
+
 }
