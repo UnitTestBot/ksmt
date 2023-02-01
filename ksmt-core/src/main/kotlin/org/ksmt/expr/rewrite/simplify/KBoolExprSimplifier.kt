@@ -97,14 +97,20 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
 
     override fun transform(expr: KImpliesExpr): KExpr<KBoolSort> = simplifyApp(
         expr = expr,
-        preprocess = { KOrExpr(this, listOf(KNotExpr(this, expr.p), expr.q)) }
+        preprocess = {
+            val notP = KNotExpr(this, expr.p)
+            KOrExpr(this, listOf(notP, expr.q))
+        }
     ) {
         error("Always preprocessed")
     }
 
     override fun transform(expr: KXorExpr): KExpr<KBoolSort> = simplifyApp(
         expr = expr,
-        preprocess = { KEqExpr(this, KNotExpr(this, expr.a), expr.b) }
+        preprocess = {
+            val notA = KNotExpr(this, expr.a)
+            KEqExpr(this, notA, expr.b)
+        }
     ) {
         error("Always preprocessed")
     }

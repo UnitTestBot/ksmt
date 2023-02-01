@@ -84,7 +84,9 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     override fun <T : KFpSort> transform(expr: KFpSubExpr<T>): KExpr<T> =
         simplifyApp(
             expr = expr,
-            preprocess = { KFpAddExpr(this, expr.roundingMode, expr.arg0, KFpNegationExpr(this, expr.arg1)) }
+            preprocess = {
+                KFpAddExpr(this, expr.roundingMode, expr.arg0, KFpNegationExpr(this, expr.arg1))
+            }
         ) {
             error("Always preprocessed")
         }
