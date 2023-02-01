@@ -24,17 +24,8 @@ abstract class KDecl<T : KSort>(
             append(parameters.joinToString(separator = " ", prefix = " [", postfix = "]"))
         }
 
-        append(" (")
+        argSorts.joinTo(this, separator = " ", prefix = " (", postfix = ") ")
 
-        for ((i, sort) in argSorts.withIndex()) {
-            if (i > 0) {
-                append(" ")
-            }
-
-            sort.print(this)
-        }
-
-        append(") ")
         sort.print(this)
         append(')')
     }
