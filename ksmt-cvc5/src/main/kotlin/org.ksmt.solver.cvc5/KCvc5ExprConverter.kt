@@ -1,12 +1,35 @@
 package org.ksmt.solver.cvc5
 
-import io.github.cvc5.*
+import io.github.cvc5.Kind
+import io.github.cvc5.RoundingMode
+import io.github.cvc5.Sort
+import io.github.cvc5.Term
+import io.github.cvc5.bvLowerExtractionBitIndex
+import io.github.cvc5.bvRepeatTimes
+import io.github.cvc5.bvRotateBitsCount
+import io.github.cvc5.bvSignExtensionSize
+import io.github.cvc5.bvUpperExtractionBitIndex
+import io.github.cvc5.bvZeroExtensionSize
+import io.github.cvc5.intDivisibleArg
+import io.github.cvc5.toFpExponentSize
+import io.github.cvc5.toFpSignificandSize
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
-import org.ksmt.expr.*
+import org.ksmt.expr.KBitVecValue
+import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.util.KExprConverterBase
-import org.ksmt.sort.*
+import org.ksmt.sort.KArithSort
+import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KBv1Sort
+import org.ksmt.sort.KBvSort
+import org.ksmt.sort.KFpRoundingModeSort
+import org.ksmt.sort.KFpSort
+import org.ksmt.sort.KIntSort
+import org.ksmt.sort.KRealSort
+import org.ksmt.sort.KSort
 import org.ksmt.utils.asExpr
 import java.util.*
 
@@ -23,6 +46,7 @@ open class KCvc5ExprConverter(
         cvc5Ctx.saveConvertedExpr(native, converted)
     }
 
+    @Suppress("LongMethod", "ComplexMethod")
     override fun convertNativeExpr(expr: Term): ExprConversionResult = with(ctx) {
         when (expr.kind) {
             // const
@@ -40,10 +64,10 @@ open class KCvc5ExprConverter(
             Kind.EQUAL -> expr.convert(::mkEq)
             Kind.DISTINCT -> expr.convertList(::mkDistinct)
             Kind.ITE -> expr.convert(::mkIte)
-            Kind.LEQ -> expr.convertChainable<KArithSort>(::mkArithLe, ::mkAnd)
-            Kind.GEQ -> expr.convertChainable<KArithSort>(::mkArithGe, ::mkAnd)
-            Kind.LT -> expr.convertChainable<KArithSort>(::mkArithLt, ::mkAnd)
-            Kind.GT -> expr.convertChainable<KArithSort>(::mkArithGt, ::mkAnd)
+            Kind.LEQ -> expr.convertChainable(::mkArithLe, ::mkAnd)
+            Kind.GEQ -> expr.convertChainable(::mkArithGe, ::mkAnd)
+            Kind.LT -> expr.convertChainable(::mkArithLt, ::mkAnd)
+            Kind.GT -> expr.convertChainable(::mkArithGt, ::mkAnd)
 
             // bool
             Kind.NOT -> expr.convert(::mkNot)
@@ -61,13 +85,20 @@ open class KCvc5ExprConverter(
             Kind.INST_PATTERN,
             Kind.INST_PATTERN_LIST,
             Kind.INST_NO_PATTERN -> throw KSolverUnsupportedFeatureException("ksmt has no impl of patterns")
+
             Kind.INST_POOL,
             Kind.INST_ADD_TO_POOL,
-            Kind.SKOLEM_ADD_TO_POOL -> throw KSolverUnsupportedFeatureException("annotations of instantiations are not supported in ksmt now")
-            Kind.INST_ATTRIBUTE -> throw KSolverUnsupportedFeatureException("attributes for a quantifier are not supported in ksmt now")
+            Kind.SKOLEM_ADD_TO_POOL -> throw KSolverUnsupportedFeatureException(
+                "annotations of instantiations are not supported in ksmt now"
+            )
+            Kind.INST_ATTRIBUTE -> throw KSolverUnsupportedFeatureException(
+                "attributes for a quantifier are not supported in ksmt now"
+            )
 
             Kind.HO_APPLY -> throw KSolverUnsupportedFeatureException("no direct mapping in ksmt")
-            Kind.CARDINALITY_CONSTRAINT -> throw KSolverUnsupportedFeatureException("Operation is not supported in ksmt now")
+            Kind.CARDINALITY_CONSTRAINT -> throw KSolverUnsupportedFeatureException(
+                "Operation is not supported in ksmt now"
+            )
             Kind.APPLY_UF -> expr.getChildren().let { children ->
                 expr.convertList(children.copyOfRange(1, children.size)) { args: List<KExpr<KSort>> ->
                     val fTerm = children.first().convertDecl<KSort>()
@@ -108,11 +139,17 @@ open class KCvc5ExprConverter(
             Kind.SINE,
             Kind.PI,
             Kind.EXPONENTIAL -> throw KSolverUnsupportedFeatureException("No direct mapping in ksmt")
+
             Kind.TO_REAL -> expr.convert(::mkIntToReal)
             Kind.TO_INTEGER -> expr.convert(::mkRealToInt)
             Kind.IS_INTEGER -> expr.convert(::mkRealIsInt)
-            Kind.DIVISIBLE -> expr.convert { arExpr: KExpr<KIntSort> -> mkIntMod(arExpr, expr.intDivisibleArg.expr) eq 0.expr }
-            Kind.IAND -> throw KSolverUnsupportedFeatureException("No direct mapping in ksmt. btw int to bv is not supported in ksmt")
+            Kind.DIVISIBLE -> expr.convert { arExpr: KExpr<KIntSort> ->
+                mkIntMod(arExpr, expr.intDivisibleArg.expr) eq 0.expr
+            }
+            Kind.IAND -> throw KSolverUnsupportedFeatureException(
+                "No direct mapping in ksmt. btw int to bv is not supported in ksmt"
+            )
+
             // bitvectors
             Kind.BITVECTOR_NOT -> expr.convert(::mkBvNotExpr)
             Kind.BITVECTOR_AND -> expr.convertCascadeBinaryArityOpOrArg(::mkBvAndExpr)
@@ -134,9 +171,17 @@ open class KCvc5ExprConverter(
             Kind.BITVECTOR_SLE -> expr.convert(::mkBvSignedLessOrEqualExpr)
             Kind.BITVECTOR_SGT -> expr.convert(::mkBvSignedGreaterExpr)
             Kind.BITVECTOR_SGE -> expr.convert(::mkBvSignedGreaterOrEqualExpr)
-            Kind.BITVECTOR_ULTBV -> throw KSolverUnsupportedFeatureException("No direct mapping of ${Kind.BITVECTOR_ULTBV} in ksmt")
-            Kind.BITVECTOR_SLTBV -> throw KSolverUnsupportedFeatureException("No direct mapping of ${Kind.BITVECTOR_SLTBV} in ksmt")
-            Kind.BITVECTOR_ITE -> throw KSolverUnsupportedFeatureException("No direct mapping of ${Kind.BITVECTOR_ITE} in ksmt")
+            Kind.BITVECTOR_ULTBV -> throw KSolverUnsupportedFeatureException(
+                "No direct mapping of ${Kind.BITVECTOR_ULTBV} in ksmt"
+            )
+
+            Kind.BITVECTOR_SLTBV -> throw KSolverUnsupportedFeatureException(
+                "No direct mapping of ${Kind.BITVECTOR_SLTBV} in ksmt"
+            )
+
+            Kind.BITVECTOR_ITE -> throw KSolverUnsupportedFeatureException(
+                "No direct mapping of ${Kind.BITVECTOR_ITE} in ksmt"
+            )
 
             Kind.BITVECTOR_REDOR -> expr.convert(::mkBvReductionOrExpr)
             Kind.BITVECTOR_REDAND -> expr.convert(::mkBvReductionAndExpr)
@@ -171,28 +216,31 @@ open class KCvc5ExprConverter(
             Kind.BITVECTOR_SMOD -> expr.convert(::mkBvSignedModExpr)
             Kind.BITVECTOR_CONCAT -> expr.convertReduced(::mkBvConcatExpr)
 
-
-            Kind.INT_TO_BITVECTOR -> throw KSolverUnsupportedFeatureException("No direct mapping of ${Kind.INT_TO_BITVECTOR} in ksmt")
+            Kind.INT_TO_BITVECTOR -> throw KSolverUnsupportedFeatureException(
+                "No direct mapping of ${Kind.INT_TO_BITVECTOR} in ksmt"
+            )
             // bitvector -> non-negative integer
             Kind.BITVECTOR_TO_NAT -> expr.convert { bvExpr: KExpr<KBvSort> ->
                 mkBv2IntExpr(bvExpr, false)
             }
-            Kind.BITVECTOR_COMP -> throw KSolverUnsupportedFeatureException("No direct mapping of ${Kind.BITVECTOR_COMP} in ksmt")
-
+            Kind.BITVECTOR_COMP -> throw KSolverUnsupportedFeatureException(
+                "No direct mapping of ${Kind.BITVECTOR_COMP} in ksmt"
+            )
 
             // fp
-            Kind.FLOATINGPOINT_FP -> expr.convert { bvSign: KExpr<KBv1Sort>, bvExponent: KExpr<KBvSort>, bvSignificand: KExpr<KBvSort> ->
-                // Kind.FLOATINGPOINT_FP contains: significand term of bit-vector Sort of significand size - 1 (significand without hidden bit)
-                bvSign as KBitVecValue<KBv1Sort>
-                bvExponent as KBitVecValue<*>
-                bvSignificand as KBitVecValue<*>
-                mkFpCustomSizeBiased(
-                    bvSignificand.sort.sizeBits,
-                    bvExponent.sort.sizeBits,
-                    bvSignificand,
-                    bvExponent,
-                    bvSign.stringValue[0] == '1'
-                )
+            Kind.FLOATINGPOINT_FP -> {
+                expr.convert { bvSign: KExpr<KBv1Sort>, bvExponent: KExpr<KBvSort>, bvSignificand: KExpr<KBvSort> ->
+                    bvSign as KBitVecValue<KBv1Sort>
+                    bvExponent as KBitVecValue<*>
+                    bvSignificand as KBitVecValue<*>
+                    mkFpCustomSizeBiased(
+                        bvSignificand.sort.sizeBits,
+                        bvExponent.sort.sizeBits,
+                        bvSignificand,
+                        bvExponent,
+                        bvSign.stringValue[0] == '1'
+                    )
+                }
             }
             Kind.FLOATINGPOINT_EQ -> expr.convert(::mkFpEqualExpr)
             Kind.FLOATINGPOINT_ABS -> expr.convert(::mkFpAbsExpr)
@@ -231,25 +279,27 @@ open class KCvc5ExprConverter(
 
                 mkFpFromBvExpr(bvSign, bvExp, bvSignificand)
             }
-            Kind.FLOATINGPOINT_TO_FP_FROM_FP -> expr.convert { roundingMode: KExpr<KFpRoundingModeSort>, fpExpr: KExpr<KFpSort> ->
+            Kind.FLOATINGPOINT_TO_FP_FROM_FP -> expr.convert { rm: KExpr<KFpRoundingModeSort>, fpExpr: KExpr<KFpSort> ->
                 mkFpToFpExpr(
                     mkFpSort(expr.toFpExponentSize.toUInt(), expr.toFpSignificandSize.toUInt()),
-                    roundingMode,
+                    rm,
                     fpExpr
                 )
             }
-            Kind.FLOATINGPOINT_TO_FP_FROM_REAL -> expr.convert { roundingMode: KExpr<KFpRoundingModeSort>, realExpr: KExpr<KRealSort> ->
-                mkRealToFpExpr(
-                    mkFpSort(expr.toFpExponentSize.toUInt(), expr.toFpSignificandSize.toUInt()),
-                    roundingMode,
-                    realExpr
-                )
+            Kind.FLOATINGPOINT_TO_FP_FROM_REAL -> {
+                expr.convert { roundingMode: KExpr<KFpRoundingModeSort>, realExpr: KExpr<KRealSort> ->
+                    mkRealToFpExpr(
+                        mkFpSort(expr.toFpExponentSize.toUInt(), expr.toFpSignificandSize.toUInt()),
+                        roundingMode,
+                        realExpr
+                    )
+                }
             }
             Kind.FLOATINGPOINT_TO_FP_FROM_SBV -> convertNativeBvToFpExpr(expr, true)
             Kind.FLOATINGPOINT_TO_FP_FROM_UBV -> convertNativeBvToFpExpr(expr, false)
             Kind.FLOATINGPOINT_TO_UBV -> convertNativeFpToBvExpr(expr, false)
             Kind.FLOATINGPOINT_TO_SBV -> convertNativeFpToBvExpr(expr, true)
-            Kind.FLOATINGPOINT_TO_REAL -> expr.convert { fpExpr: KExpr<KFpSort> ->  mkFpToRealExpr(fpExpr) }
+            Kind.FLOATINGPOINT_TO_REAL -> expr.convert { fpExpr: KExpr<KFpSort> -> mkFpToRealExpr(fpExpr) }
 
             // array
             Kind.SELECT -> expr.convert(::mkArraySelect)
@@ -265,13 +315,15 @@ open class KCvc5ExprConverter(
             Kind.MATCH,
             Kind.MATCH_CASE,
             Kind.MATCH_BIND_CASE,
-            Kind.TUPLE_PROJECT, -> throw KSolverUnsupportedFeatureException("currently ksmt does not support tuples")
+            Kind.TUPLE_PROJECT -> throw KSolverUnsupportedFeatureException("currently ksmt does not support tuples")
 
             Kind.SEP_NIL,
             Kind.SEP_EMP,
             Kind.SEP_PTO,
             Kind.SEP_STAR,
-            Kind.SEP_WAND -> throw KSolverUnsupportedFeatureException("currently ksmt does not support separation logic")
+            Kind.SEP_WAND -> throw KSolverUnsupportedFeatureException(
+                "currently ksmt does not support separation logic"
+            )
 
             Kind.SET_EMPTY,
             Kind.SET_UNION,
@@ -299,7 +351,9 @@ open class KCvc5ExprConverter(
             Kind.RELATION_IDEN,
             Kind.RELATION_GROUP,
             Kind.RELATION_AGGREGATE,
-            Kind.RELATION_PROJECT -> throw KSolverUnsupportedFeatureException("currently ksmt does not support relations")
+            Kind.RELATION_PROJECT -> throw KSolverUnsupportedFeatureException(
+                "currently ksmt does not support relations"
+            )
 
             Kind.BAG_EMPTY,
             Kind.BAG_UNION_MAX,
@@ -369,7 +423,9 @@ open class KCvc5ExprConverter(
             Kind.REGEXP_NONE,
             Kind.REGEXP_ALL,
             Kind.REGEXP_ALLCHAR,
-            Kind.REGEXP_COMPLEMENT -> throw KSolverUnsupportedFeatureException("currently ksmt does not support regular expressions")
+            Kind.REGEXP_COMPLEMENT -> throw KSolverUnsupportedFeatureException(
+                "currently ksmt does not support regular expressions"
+            )
 
             Kind.SEQ_CONCAT,
             Kind.SEQ_LENGTH,
@@ -449,7 +505,7 @@ open class KCvc5ExprConverter(
         ExprConversionResult(mkQf(body, bounds))
     }
 
-    private fun <D: KSort, R: KSort> convertNativeConstArrayExpr(expr: Term): ExprConversionResult = with(ctx) {
+    private fun <D : KSort, R : KSort> convertNativeConstArrayExpr(expr: Term): ExprConversionResult = with(ctx) {
         expr.convert(arrayOf(expr.constArrayBase)) { arrayBase: KExpr<R> ->
             mkArrayConst(expr.sort.convertSort() as KArraySort<D, R>, arrayBase)
         }
@@ -474,7 +530,7 @@ open class KCvc5ExprConverter(
         convert { mkFpRoundingModeExpr(expr.roundingModeValue.convert()) }
     }
 
-    fun RoundingMode.convert(): KFpRoundingMode = when(this) {
+    fun RoundingMode.convert(): KFpRoundingMode = when (this) {
         RoundingMode.ROUND_TOWARD_ZERO -> KFpRoundingMode.RoundTowardZero
         RoundingMode.ROUND_TOWARD_NEGATIVE -> KFpRoundingMode.RoundTowardNegative
         RoundingMode.ROUND_TOWARD_POSITIVE -> KFpRoundingMode.RoundTowardPositive
@@ -573,7 +629,10 @@ open class KCvc5ExprConverter(
             sort.isInteger -> intSort
             sort.isReal -> realSort
             sort.isArray -> mkArraySort(sort.arrayIndexSort.convertSort(), sort.arrayElementSort.convertSort())
-            sort.isFloatingPoint -> mkFpSort(sort.floatingPointExponentSize.toUInt(), sort.floatingPointSignificandSize.toUInt())
+            sort.isFloatingPoint -> mkFpSort(
+                sort.floatingPointExponentSize.toUInt(),
+                sort.floatingPointSignificandSize.toUInt()
+            )
             sort.isUninterpretedSort -> mkUninterpretedSort(sort.symbol)
             sort.isRoundingMode -> mkFpRoundingModeSort()
 
@@ -582,28 +641,30 @@ open class KCvc5ExprConverter(
     }
 
     @Suppress("UNCHECKED_CAST")
-    inline fun <T : KSort> Term.convertCascadeBinaryArityOpOrArg(crossinline op: (KExpr<T>, KExpr<T>) -> KExpr<T>) = getChildren().let { children ->
-        when {
-            children.isEmpty() -> error("Arguments of term [this] must not be empty, but was")
-            children.size == 1 -> children.first().convert<T, T> { it }
-            children.size == 2 -> convert(children, op)
-            else -> {
-                val accumulate = { a: KExpr<*>, b: KExpr<*> -> op(a as KExpr<T>, b as KExpr<T>) }
+    inline fun <T : KSort> Term.convertCascadeBinaryArityOpOrArg(crossinline op: (KExpr<T>, KExpr<T>) -> KExpr<T>) =
+        getChildren().let { children ->
+            when {
+                children.isEmpty() -> error("Arguments of term [this] must not be empty, but was")
+                children.size == 1 -> children.first().convert<T, T> { it }
+                children.size == 2 -> convert(children, op)
+                else -> {
+                    val accumulate = { a: KExpr<*>, b: KExpr<*> -> op(a as KExpr<T>, b as KExpr<T>) }
 
-                ensureArgsConvertedAndConvert(this, children, expectedSize = children.size) { convertedArgs ->
-                    convertedArgs.subList(2, convertedArgs.size).fold(
-                        initial = accumulate(convertedArgs[0], convertedArgs[1])) { acc, curr ->
+                    ensureArgsConvertedAndConvert(this, children, expectedSize = children.size) { convertedArgs ->
+                        convertedArgs.subList(2, convertedArgs.size).fold(
+                            initial = accumulate(convertedArgs[0], convertedArgs[1])
+                        ) { acc, curr ->
                             accumulate(acc, curr)
                         }
+                    }
                 }
             }
         }
-    }
 
     inline fun <T : KSort, A0 : KSort> Term.convert(op: (KExpr<A0>) -> KExpr<T>) =
         convert(getChildren(), op)
 
-    inline fun <T : KSort, A0 : KSort, A1: KSort> Term.convert(op: (KExpr<A0>, KExpr<A1>) -> KExpr<T>) =
+    inline fun <T : KSort, A0 : KSort, A1 : KSort> Term.convert(op: (KExpr<A0>, KExpr<A1>) -> KExpr<T>) =
         convert(getChildren(), op)
 
     inline fun <S : KSort> Term.convertReduced(op: (KExpr<S>, KExpr<S>) -> KExpr<S>) =
@@ -620,10 +681,12 @@ open class KCvc5ExprConverter(
         else -> error("Children count must me >= 2, but was $numChildren")
     }
 
-    inline fun <T : KSort, A0 : KSort, A1: KSort, A2: KSort> Term.convert(op: (KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<T>) =
+    @Suppress("MaxLineLength")
+    inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> Term.convert(op: (KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<T>) =
         convert(getChildren(), op)
 
-    inline fun <T : KSort, A0 : KSort, A1: KSort, A2: KSort, A3: KSort> Term.convert(op: (KExpr<A0>, KExpr<A1>, KExpr<A2>, KExpr<A3>) -> KExpr<T>) =
+    @Suppress("MaxLineLength")
+    inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort> Term.convert(op: (KExpr<A0>, KExpr<A1>, KExpr<A2>, KExpr<A3>) -> KExpr<T>) =
         convert(getChildren(), op)
 
     inline fun <T : KSort, A0 : KSort> Term.convertList(op: (List<KExpr<A0>>) -> KExpr<T>) =

@@ -1,9 +1,17 @@
 package org.ksmt.solver.cvc5
 
-import io.github.cvc5.*
+import io.github.cvc5.CVC5ApiException
+import io.github.cvc5.Solver
+import io.github.cvc5.UnknownExplanation
+import io.github.cvc5.Result
+import io.github.cvc5.Term
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
-import org.ksmt.solver.*
+import org.ksmt.solver.KModel
+import org.ksmt.solver.KSolver
+import org.ksmt.solver.KSolverException
+import org.ksmt.solver.KSolverStatus
+import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.sort.KBoolSort
 import org.ksmt.utils.NativeLibraryLoader
 import org.ksmt.utils.mkFreshConst
@@ -35,7 +43,11 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     init {
         solver.setOption("produce-models", "true")
         solver.setOption("produce-unsat-cores", "true")
-        solver.setOption("fp-exp", "true") // Allow floating-point sorts of all sizes, rather than only Float32 (8/24) or Float64 (11/53) (experimental in cvc5 1.0.2)
+        /**
+         * Allow floating-point sorts of all sizes, rather than
+         * only Float32 (8/24) or Float64 (11/53) (experimental in cvc5 1.0.2)
+         */
+        solver.setOption("fp-exp", "true")
     }
 
     open fun createExprInternalizer(cvc5Ctx: KCvc5Context): KCvc5ExprInternalizer = KCvc5ExprInternalizer(cvc5Ctx)
@@ -119,7 +131,8 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = cvc5Try {
         require(lastCheckStatus == KSolverStatus.UNSAT) { "Unsat cores are only available after UNSAT checks" }
-        val cvc5TrackedVars = cvc5TrackedAssertions.flatten().toSortedSet() // we need TreeSet here (hashcode not implemented in Term)
+        // we need TreeSet here (hashcode not implemented in Term)
+        val cvc5TrackedVars = cvc5TrackedAssertions.flatten().toSortedSet()
         val cvc5FullCore = solver.unsatCore
         val cvc5UnsatCore = cvc5FullCore.filter { it in cvc5TrackedVars || it in cvc5LastAssumptions }
 
@@ -163,9 +176,21 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
             System.setProperty("cvc5.skipLibraryLoad", "true")
             NativeLibraryLoader.load { os ->
                 when (os) {
-                    NativeLibraryLoader.OS.LINUX -> listOf("libgmp", "libpoly", "libpolyxx", "libcvc5", "libcvc5jni")
+                    NativeLibraryLoader.OS.LINUX -> listOf(
+                        "libgmp",
+                        "libpoly",
+                        "libpolyxx",
+                        "libcvc5",
+                        "libcvc5jni"
+                    )
+                    NativeLibraryLoader.OS.WINDOWS -> listOf(
+                        "libgmp-10",
+                        "libpoly",
+                        "libpolyxx",
+                        "libcvc5",
+                        "libcvc5jni"
+                    )
                     NativeLibraryLoader.OS.MACOS -> throw KSolverUnsupportedFeatureException("add macOS cvc5 libs")
-                    NativeLibraryLoader.OS.WINDOWS -> listOf("libgmp-10", "libpoly", "libpolyxx", "libcvc5", "libcvc5jni")
                 }
             }
         }

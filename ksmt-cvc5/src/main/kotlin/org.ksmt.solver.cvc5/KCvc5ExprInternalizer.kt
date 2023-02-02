@@ -1,13 +1,164 @@
 package org.ksmt.solver.cvc5
 
-import io.github.cvc5.*
+import io.github.cvc5.Kind
+import io.github.cvc5.Op
+import io.github.cvc5.RoundingMode
+import io.github.cvc5.Solver
+import io.github.cvc5.Sort
+import io.github.cvc5.Term
+import io.github.cvc5.mkQuantifier
 import org.ksmt.decl.KDecl
-import org.ksmt.expr.*
+import org.ksmt.expr.KAddArithExpr
+import org.ksmt.expr.KAndExpr
+import org.ksmt.expr.KArrayConst
+import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArraySelect
+import org.ksmt.expr.KArrayStore
+import org.ksmt.expr.KBitVecValue
+import org.ksmt.expr.KBitVec16Value
+import org.ksmt.expr.KBitVec1Value
+import org.ksmt.expr.KBitVec32Value
+import org.ksmt.expr.KBitVec64Value
+import org.ksmt.expr.KBitVec8Value
+import org.ksmt.expr.KBitVecCustomValue
+import org.ksmt.expr.KBitVecNumberValue
+import org.ksmt.expr.KBv2IntExpr
+import org.ksmt.expr.KBvAddExpr
+import org.ksmt.expr.KBvAddNoOverflowExpr
+import org.ksmt.expr.KBvAddNoUnderflowExpr
+import org.ksmt.expr.KBvAndExpr
+import org.ksmt.expr.KBvArithShiftRightExpr
+import org.ksmt.expr.KBvConcatExpr
+import org.ksmt.expr.KBvDivNoOverflowExpr
+import org.ksmt.expr.KBvExtractExpr
+import org.ksmt.expr.KBvLogicalShiftRightExpr
+import org.ksmt.expr.KBvMulExpr
+import org.ksmt.expr.KBvMulNoOverflowExpr
+import org.ksmt.expr.KBvMulNoUnderflowExpr
+import org.ksmt.expr.KBvNAndExpr
+import org.ksmt.expr.KBvNegNoOverflowExpr
+import org.ksmt.expr.KBvNegationExpr
+import org.ksmt.expr.KBvNorExpr
+import org.ksmt.expr.KBvNotExpr
+import org.ksmt.expr.KBvOrExpr
+import org.ksmt.expr.KBvReductionAndExpr
+import org.ksmt.expr.KBvReductionOrExpr
+import org.ksmt.expr.KBvRepeatExpr
+import org.ksmt.expr.KBvRotateLeftExpr
+import org.ksmt.expr.KBvRotateLeftIndexedExpr
+import org.ksmt.expr.KBvRotateRightExpr
+import org.ksmt.expr.KBvRotateRightIndexedExpr
+import org.ksmt.expr.KBvShiftLeftExpr
+import org.ksmt.expr.KBvSignExtensionExpr
+import org.ksmt.expr.KBvSignedDivExpr
+import org.ksmt.expr.KBvSignedGreaterExpr
+import org.ksmt.expr.KBvSignedGreaterOrEqualExpr
+import org.ksmt.expr.KBvSignedLessExpr
+import org.ksmt.expr.KBvSignedLessOrEqualExpr
+import org.ksmt.expr.KBvSignedModExpr
+import org.ksmt.expr.KBvSignedRemExpr
+import org.ksmt.expr.KBvSubExpr
+import org.ksmt.expr.KBvSubNoOverflowExpr
+import org.ksmt.expr.KBvSubNoUnderflowExpr
+import org.ksmt.expr.KBvToFpExpr
+import org.ksmt.expr.KBvUnsignedDivExpr
+import org.ksmt.expr.KBvUnsignedGreaterExpr
+import org.ksmt.expr.KBvUnsignedGreaterOrEqualExpr
+import org.ksmt.expr.KBvUnsignedLessExpr
+import org.ksmt.expr.KBvUnsignedLessOrEqualExpr
+import org.ksmt.expr.KBvUnsignedRemExpr
+import org.ksmt.expr.KBvXNorExpr
+import org.ksmt.expr.KBvXorExpr
+import org.ksmt.expr.KBvZeroExtensionExpr
+import org.ksmt.expr.KConst
+import org.ksmt.expr.KDistinctExpr
+import org.ksmt.expr.KDivArithExpr
+import org.ksmt.expr.KEqExpr
+import org.ksmt.expr.KExistentialQuantifier
+import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFalse
+import org.ksmt.expr.KFp128Value
+import org.ksmt.expr.KFp16Value
+import org.ksmt.expr.KFp32Value
+import org.ksmt.expr.KFp64Value
+import org.ksmt.expr.KFpAbsExpr
+import org.ksmt.expr.KFpAddExpr
+import org.ksmt.expr.KFpCustomSizeValue
+import org.ksmt.expr.KFpDivExpr
+import org.ksmt.expr.KFpEqualExpr
+import org.ksmt.expr.KFpFromBvExpr
+import org.ksmt.expr.KFpFusedMulAddExpr
+import org.ksmt.expr.KFpGreaterExpr
+import org.ksmt.expr.KFpGreaterOrEqualExpr
+import org.ksmt.expr.KFpIsInfiniteExpr
+import org.ksmt.expr.KFpIsNaNExpr
+import org.ksmt.expr.KFpIsNegativeExpr
+import org.ksmt.expr.KFpIsNormalExpr
+import org.ksmt.expr.KFpIsPositiveExpr
+import org.ksmt.expr.KFpIsSubnormalExpr
+import org.ksmt.expr.KFpIsZeroExpr
+import org.ksmt.expr.KFpLessExpr
+import org.ksmt.expr.KFpLessOrEqualExpr
+import org.ksmt.expr.KFpMaxExpr
+import org.ksmt.expr.KFpMinExpr
+import org.ksmt.expr.KFpMulExpr
+import org.ksmt.expr.KFpNegationExpr
+import org.ksmt.expr.KFpRemExpr
+import org.ksmt.expr.KFpRoundToIntegralExpr
+import org.ksmt.expr.KFpRoundingMode
+import org.ksmt.expr.KFpRoundingModeExpr
+import org.ksmt.expr.KFpSqrtExpr
+import org.ksmt.expr.KFpSubExpr
+import org.ksmt.expr.KFpToBvExpr
+import org.ksmt.expr.KFpToFpExpr
+import org.ksmt.expr.KFpToIEEEBvExpr
+import org.ksmt.expr.KFpToRealExpr
+import org.ksmt.expr.KFpValue
+import org.ksmt.expr.KFunctionApp
+import org.ksmt.expr.KFunctionAsArray
+import org.ksmt.expr.KGeArithExpr
+import org.ksmt.expr.KGtArithExpr
+import org.ksmt.expr.KImpliesExpr
+import org.ksmt.expr.KInt32NumExpr
+import org.ksmt.expr.KInt64NumExpr
+import org.ksmt.expr.KIntBigNumExpr
+import org.ksmt.expr.KIsIntRealExpr
+import org.ksmt.expr.KIteExpr
+import org.ksmt.expr.KLeArithExpr
+import org.ksmt.expr.KLtArithExpr
+import org.ksmt.expr.KModIntExpr
+import org.ksmt.expr.KMulArithExpr
+import org.ksmt.expr.KNotExpr
+import org.ksmt.expr.KOrExpr
+import org.ksmt.expr.KPowerArithExpr
+import org.ksmt.expr.KQuantifier
+import org.ksmt.expr.KRealNumExpr
+import org.ksmt.expr.KRealToFpExpr
+import org.ksmt.expr.KRemIntExpr
+import org.ksmt.expr.KSubArithExpr
+import org.ksmt.expr.KToIntRealExpr
+import org.ksmt.expr.KToRealIntExpr
+import org.ksmt.expr.KTrue
+import org.ksmt.expr.KUnaryMinusArithExpr
+import org.ksmt.expr.KUniversalQuantifier
+import org.ksmt.expr.KXorExpr
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.util.KExprInternalizerBase
-import org.ksmt.sort.*
+import org.ksmt.sort.KArithSort
+import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KBvSort
+import org.ksmt.sort.KFp128Sort
+import org.ksmt.sort.KFp16Sort
+import org.ksmt.sort.KFp32Sort
+import org.ksmt.sort.KFp64Sort
+import org.ksmt.sort.KFpRoundingModeSort
+import org.ksmt.sort.KFpSort
+import org.ksmt.sort.KRealSort
+import org.ksmt.sort.KSort
 import java.math.BigInteger
 
+@Suppress("LargeClass")
 class KCvc5ExprInternalizer(
     private val cvc5Ctx: KCvc5Context
 ) : KExprInternalizerBase<Term>() {
@@ -38,7 +189,7 @@ class KCvc5ExprInternalizer(
             if (decl.hasOp()) {
                 nsolver.mkTerm(decl.op, args)
             } else {
-                nsolver.mkTerm(Kind.APPLY_UF, arrayOf(decl, *args))
+                nsolver.mkTerm(Kind.APPLY_UF, arrayOf(decl) + args)
             }
         }
     }
@@ -342,7 +493,9 @@ class KCvc5ExprInternalizer(
                 (rotation as KBitVecValue<*>).stringValue
             )
 
-            else -> throw KSolverUnsupportedFeatureException("Rotate expr with expression argument is not supported by cvc5")
+            else -> throw KSolverUnsupportedFeatureException(
+                "Rotate expr with expression argument is not supported by cvc5"
+            )
         }
         transform(arg) { bvArg: Term ->
             nsolver.mkTerm(rotationOp, bvArg)
@@ -368,6 +521,7 @@ class KCvc5ExprInternalizer(
     }
 
     // custom implementation
+    @Suppress("MagicNumber")
     override fun transform(expr: KBv2IntExpr) = with(expr) {
         transform(value) { value: Term ->
             // by default, it is unsigned in cvc5
@@ -411,19 +565,26 @@ class KCvc5ExprInternalizer(
         }
     }
 
-    override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>) = throw KSolverUnsupportedFeatureException("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>) =
+        throw KSolverUnsupportedFeatureException("no direct support for $expr")
 
-    override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>) = throw KSolverUnsupportedFeatureException("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>) =
+        throw KSolverUnsupportedFeatureException("no direct support for $expr")
 
-    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>) = throw KSolverUnsupportedFeatureException("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>) =
+        throw KSolverUnsupportedFeatureException("no direct support for $expr")
 
-    override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>) = throw KSolverUnsupportedFeatureException("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>) =
+        throw KSolverUnsupportedFeatureException("no direct support for $expr")
 
-    override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>) = throw KSolverUnsupportedFeatureException("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>) =
+        throw KSolverUnsupportedFeatureException("no direct support for $expr")
 
-    override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>) = throw KSolverUnsupportedFeatureException("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>) =
+        throw KSolverUnsupportedFeatureException("no direct support for $expr")
 
-    override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) = throw KSolverUnsupportedFeatureException("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) =
+        throw KSolverUnsupportedFeatureException("no direct support for $expr")
 
     private fun fpToBvTerm(signBit: Boolean, biasedExp: KBitVecValue<*>, significand: KBitVecValue<*>): Term {
         val signString = if (signBit) "1" else "0"
@@ -652,7 +813,8 @@ class KCvc5ExprInternalizer(
         }
     }
 
-    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> = throw KSolverUnsupportedFeatureException("no direct support for $expr")
+    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> =
+        throw KSolverUnsupportedFeatureException("no direct support for $expr")
 
     override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> = with(expr) {
         transform(sign, biasedExponent, significand) { sign: Term, biasedExp: Term, significand: Term ->
@@ -723,11 +885,12 @@ class KCvc5ExprInternalizer(
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>) = with(expr) {
         transform(value) { value: Term ->
-            nsolver.mkConstArray(sort.domain.internalizeSort(), value)
+            nsolver.mkConstArray(sort.internalizeSort(), value)
         }
     }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) = throw KSolverUnsupportedFeatureException("no direct support for $expr")
+    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) =
+        throw KSolverUnsupportedFeatureException("no direct support for $expr")
 
     override fun <T : KArithSort> transform(expr: KAddArithExpr<T>) = with(expr) {
         transformArray(args) { args -> nsolver.mkTerm(Kind.ADD, args) }
@@ -851,7 +1014,9 @@ class KCvc5ExprInternalizer(
     override fun transform(expr: KUniversalQuantifier) = transformQuantifier(expr, isUniversal = true)
 
     override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
-        throw KSolverUnsupportedFeatureException("No direct impl in cvc5 (as-array is CONST_ARRAY term with base array element)")
+        throw KSolverUnsupportedFeatureException(
+            "No direct impl in cvc5 (as-array is CONST_ARRAY term with base array element)"
+        )
     }
 
     @Suppress("ArrayPrimitive")
@@ -859,5 +1024,4 @@ class KCvc5ExprInternalizer(
         args: List<KExpr<*>>,
         operation: (Array<Term>) -> Term
     ): S = transformList(args) { a: Array<Term> -> operation(a) }
-
 }

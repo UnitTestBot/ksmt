@@ -1,6 +1,6 @@
 package org.ksmt.solver.cvc5
 
-import io.github.cvc5.*
+import io.github.cvc5.Term
 import org.ksmt.KContext
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl

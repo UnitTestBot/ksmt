@@ -2,7 +2,16 @@ package org.ksmt.solver.cvc5
 
 import io.github.cvc5.Solver
 import io.github.cvc5.Sort
-import org.ksmt.sort.*
+import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KBvSort
+import org.ksmt.sort.KFpRoundingModeSort
+import org.ksmt.sort.KFpSort
+import org.ksmt.sort.KIntSort
+import org.ksmt.sort.KRealSort
+import org.ksmt.sort.KSort
+import org.ksmt.sort.KSortVisitor
+import org.ksmt.sort.KUninterpretedSort
 
 
 open class KCvc5SortInternalizer(
