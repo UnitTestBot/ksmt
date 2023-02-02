@@ -38,6 +38,32 @@ class FpToBvTransformerTest {
             val negativeZero = mkFpZero(true, KFp32Sort(this))
             val exprToTransform = mkFpMinExpr(a, b)
 
+            val transformedExpr = transformer.apply(exprToTransform)
+            solver.assert((transformedExpr eq zero and (exprToTransform eq negativeZero)).not()) // min(-0, +0) = ±0
+            solver.assert((transformedExpr eq negativeZero and (exprToTransform eq zero)).not())
+            solver.assert(transformedExpr neq exprToTransform)
+
+
+            // check assertions satisfiability with timeout
+            val status = solver.check(timeout = 3.seconds)
+
+            assertEquals(KSolverStatus.UNSAT, status)
+        }
+    }
+
+    @Test
+    fun testFpToBvRecursiveMinExpr() = with(KContext()) {
+        val transformer = FpToBvTransformer(this)
+
+        KZ3Solver(this).use { solver ->
+            val (a, b) = createTwoFpVariables()
+
+            // both zero
+            val zero = mkFpZero(false, KFp32Sort(this))
+            val negativeZero = mkFpZero(true, KFp32Sort(this))
+            val exprToTransform1 = mkFpMinExpr(a, mkFpMinExpr(a, b))
+            val exprToTransform2 = mkFpMinExpr(a, exprToTransform1)
+            val exprToTransform = mkFpMinExpr(exprToTransform1, exprToTransform2)
 
             val transformedExpr = transformer.apply(exprToTransform)
             solver.assert((transformedExpr eq zero and (exprToTransform eq negativeZero)).not()) // min(-0, +0) = ±0

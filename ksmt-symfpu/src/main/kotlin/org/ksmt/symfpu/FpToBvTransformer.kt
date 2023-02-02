@@ -26,59 +26,67 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         }
     }
 
-    override fun <Fp : KFpSort> transform(expr: KFpLessExpr<Fp>): KExpr<KBoolSort> = with(ctx) {
+    override fun <Fp : KFpSort> transform(expr: KFpLessExpr<Fp>): KExpr<KBoolSort> =
         transformExprAfterTransformed(expr, expr.args) { args ->
-            val left = args[0] as UnpackedFp<Fp>
-            val right = args[1] as UnpackedFp<Fp>
-
-            // All comparison with NaN are false
-            val neitherNan = left.isNaN.not() and right.isNaN.not()
-
-
-            // Infinities are bigger than everything but themselves
-            val eitherInf = left.isInfinite or right.isInfinite
-            val infCase =
-                (left.isNegativeInfinity and right.isNegativeInfinity.not()) or (left.isPositiveInfinity.not() and right.isPositiveInfinity)
-
-
-            // Both zero are equal
-            val eitherZero = left.isZero or right.isZero
-
-
-            val zeroCase =
-                (left.isZero and right.isZero.not() and right.isNegative.not()) or (left.isZero.not() and left.isNegative and right.isZero)
-
-
-            // Normal and subnormal
-            val negativeLessThanPositive = left.isNegative and right.isNegative.not()
-
-            val positiveCase = left.isNegative.not() and right.isNegative.not() and (mkBvUnsignedLessExpr(
-                left.exponent,
-                right.exponent
-            ) or (left.exponent eq right.exponent and mkBvUnsignedLessExpr(left.significand, right.significand)))
-
-
-            val negativeCase = left.isNegative and right.isNegative and (mkBvUnsignedLessExpr(
-                right.exponent,
-                left.exponent
-            ) or (left.exponent eq right.exponent and mkBvUnsignedLessExpr(right.significand, left.significand)))
-
-
-            return neitherNan and mkIte(
-                eitherInf, infCase, mkIte(
-                    eitherZero, zeroCase, negativeLessThanPositive or positiveCase or negativeCase
-                )
-            )
+            val (left, right) = argsToTypedPair(args)
+            less(left, right)
         }
+
+
+    private fun <Fp : KFpSort> less(
+        left: UnpackedFp<Fp>,
+        right: UnpackedFp<Fp>
+    ): KAndExpr = with(ctx) {
+        // All comparison with NaN are false
+        val neitherNan = left.isNaN.not() and right.isNaN.not()
+
+
+        // Infinities are bigger than everything but themselves
+        val eitherInf = left.isInfinite or right.isInfinite
+        val infCase =
+            (left.isNegativeInfinity and right.isNegativeInfinity.not()) or (left.isPositiveInfinity.not() and right.isPositiveInfinity)
+
+
+        // Both zero are equal
+        val eitherZero = left.isZero or right.isZero
+
+
+        val zeroCase =
+            (left.isZero and right.isZero.not() and right.isNegative.not()) or (left.isZero.not() and left.isNegative and right.isZero)
+
+
+        // Normal and subnormal
+        val negativeLessThanPositive = left.isNegative and right.isNegative.not()
+
+        val positiveCase = left.isNegative.not() and right.isNegative.not() and (mkBvUnsignedLessExpr(
+            left.exponent,
+            right.exponent
+        ) or (left.exponent eq right.exponent and mkBvUnsignedLessExpr(left.significand, right.significand)))
+
+
+        val negativeCase = left.isNegative and right.isNegative and (mkBvUnsignedLessExpr(
+            right.exponent,
+            left.exponent
+        ) or (left.exponent eq right.exponent and mkBvUnsignedLessExpr(right.significand, left.significand)))
+
+
+        return neitherNan and mkIte(
+            eitherInf, infCase, mkIte(
+                eitherZero, zeroCase, negativeLessThanPositive or positiveCase or negativeCase
+            )
+        )
+    }
+
+    private fun <Fp : KFpSort> argsToTypedPair(args: List<KExpr<Fp>>): Pair<UnpackedFp<Fp>, UnpackedFp<Fp>> {
+        val left = args[0] as UnpackedFp<Fp>
+        val right = args[1] as UnpackedFp<Fp>
+        return Pair(left, right)
     }
 
     override fun <Fp : KFpSort> transform(expr: KFpMinExpr<Fp>): KExpr<Fp> = with(ctx) {
         transformExprAfterTransformed(expr, expr.args) { args ->
-            val right = args[1] as UnpackedFp<Fp>
-
-            return mkIte(
-                right.isNaN or transform(mkFpLessExpr(expr.arg0, expr.arg1)), expr.arg0, expr.arg1
-            )
+            val (left, right) = argsToTypedPair(args)
+            unpackedFp(mkIte(right.isNaN or less(left, right), left, right))
         }
     }
 

@@ -1,25 +1,33 @@
 package org.ksmt.symfpu
 
 import org.ksmt.KContext
-import org.ksmt.expr.KExpr
-import org.ksmt.expr.KFpToIEEEBvExpr
-import org.ksmt.expr.KOrExpr
+import org.ksmt.expr.*
 import org.ksmt.expr.printer.ExpressionPrinter
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KFpSort
+import org.ksmt.utils.cast
 import org.ksmt.utils.uncheckedCast
 
 class UnpackedFp<Fp : KFpSort> private constructor(
     ctx: KContext, override val sort: Fp,
     val bv: KFpToIEEEBvExpr<Fp>,
+    private val fp: KExpr<Fp>,
 ) : KExpr<Fp>(ctx) {
 
-    override fun accept(transformer: KTransformerBase): KExpr<Fp> {
-        return ctx.mkFpFromBvExpr(sign.uncheckedCast(), exponent, significand)
-    }
+    override fun accept(transformer: KTransformerBase): KExpr<Fp> =
+        when (fp) {
+            is KFp16Value -> transformer.transform(fp)
+            is KFp32Value -> transformer.transform(fp)
+            is KFp64Value -> transformer.transform(fp)
+            is KFp128Value -> transformer.transform(fp)
+            is KConst<Fp> -> transformer.transform(fp)
+            is UnpackedFp<Fp> -> fp.accept(transformer)
+            is KIteExpr<Fp> -> transformer.transform(fp)
+            else -> throw IllegalArgumentException("Unknown fp type: $fp")
+        }.cast()
 
     override fun print(printer: ExpressionPrinter) = with(printer) {
-        append("(unpackedFp")
+        append("(unpackedFp ")
         append(ctx.mkFpFromBvExpr<Fp>(sign.uncheckedCast(), exponent, significand))
         append(")")
     }
@@ -71,7 +79,7 @@ class UnpackedFp<Fp : KFpSort> private constructor(
         }
 
     companion object {
-        fun <Fp : KFpSort> KContext.unpackedFp(fp: KExpr<Fp>) = UnpackedFp(this, fp.sort, mkFpToIEEEBvExpr(fp))
+        fun <Fp : KFpSort> KContext.unpackedFp(fp: KExpr<Fp>) = UnpackedFp(this, fp.sort, mkFpToIEEEBvExpr(fp), fp)
     }
 
 
