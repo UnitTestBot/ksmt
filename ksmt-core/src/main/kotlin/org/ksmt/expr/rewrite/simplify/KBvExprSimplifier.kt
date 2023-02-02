@@ -346,7 +346,9 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     private fun <T : KBvSort> transform(expr: SimplifierFlatBvOrExpr<T>): KExpr<T> = simplifyApp(expr) { flatten ->
         simplifyBvAndOr(
             args = flatten,
+            // (bvor a b 0x0000...) ==> (bvor a b)
             neutralElement = bvZero(expr.sort.sizeBits).uncheckedCast(),
+            // (bvor a b 0xFFFF...) ==> 0xFFFF...
             zeroElement = bvMaxValueUnsigned(expr.sort.sizeBits).uncheckedCast(),
             operation = { a, b -> a.bitwiseOr(b).uncheckedCast() }
         ) { resultParts ->
@@ -465,7 +467,9 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     private fun <T : KBvSort> transform(expr: SimplifierFlatBvAndExpr<T>): KExpr<T> = simplifyApp(expr) { flatten ->
         simplifyBvAndOr(
             args = flatten,
+            // (bvand a b 0xFFFF...) ==> (bvand a b)
             neutralElement = bvMaxValueUnsigned(expr.sort.sizeBits).uncheckedCast(),
+            // (bvand a b 0x0000...) ==> 0x0000...
             zeroElement = bvZero(expr.sort.sizeBits).uncheckedCast(),
             operation = { a, b -> a.bitwiseAnd(b).uncheckedCast() }
         ) { resultParts ->

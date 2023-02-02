@@ -144,12 +144,14 @@ jobs:
             --no-daemon
             -PtestDataRevision=${{ env.TEST_DATA_REVISION }}
 
-#      - name: Build project
-#        uses: gradle/gradle-build-action@v2
-#        with:
-#          arguments: |
-#            build
-#            --no-daemon
+      # We don't want to run basic KSMT tests on each chunk
+      - name: Build project
+        uses: gradle/gradle-build-action@v2
+        if: ${{ matrix.chunk == '0' }}
+        with:
+          arguments: |
+            build
+            --no-daemon
 
       - name: Run ${{ matrix.test }}
         uses: gradle/gradle-build-action@v2
