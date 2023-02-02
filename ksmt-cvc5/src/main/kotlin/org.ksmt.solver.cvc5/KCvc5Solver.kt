@@ -7,6 +7,7 @@ import org.ksmt.solver.*
 import org.ksmt.sort.KBoolSort
 import org.ksmt.utils.NativeLibraryLoader
 import org.ksmt.utils.mkFreshConst
+import java.util.TreeSet
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 
@@ -28,6 +29,8 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
 
     private var currentLevelAssertions = mutableListOf<KExpr<KBoolSort>>()
     private val assertions = mutableListOf(currentLevelAssertions)
+
+    private var cvc5LastAssumptions = TreeSet<Term>()
 
     init {
         solver.setOption("produce-models", "true")
@@ -92,6 +95,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     }
 
     override fun check(timeout: Duration): KSolverStatus = cvc5Try {
+        cvc5LastAssumptions = TreeSet()
         solver.updateTimeout(timeout)
         solver.checkSat().processCheckResult()
     }
@@ -103,6 +107,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
 
     override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus = cvc5Try {
         val cvc5Assumptions = with(exprInternalizer) { assumptions.map { it.internalizeExpr() } }.toTypedArray()
+        cvc5LastAssumptions = cvc5Assumptions.toCollection(TreeSet())
         solver.updateTimeout(timeout)
         solver.checkSatAssuming(cvc5Assumptions).processCheckResult()
     }
@@ -116,10 +121,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         require(lastCheckStatus == KSolverStatus.UNSAT) { "Unsat cores are only available after UNSAT checks" }
         val cvc5TrackedVars = cvc5TrackedAssertions.flatten().toSortedSet() // we need TreeSet here (hashcode not implemented in Term)
         val cvc5FullCore = solver.unsatCore
-        val cvc5OnlyTrackedAssertions = cvc5FullCore.filter { it in cvc5TrackedVars }
-        val cvc5UnsatAssumptions = solver.unsatAssumptions
-
-        val cvc5UnsatCore = cvc5OnlyTrackedAssertions + cvc5UnsatAssumptions
+        val cvc5UnsatCore = cvc5FullCore.filter { it in cvc5TrackedVars || it in cvc5LastAssumptions }
 
         with(exprConverter) { cvc5UnsatCore.map { it.convertExpr() } }
     }
