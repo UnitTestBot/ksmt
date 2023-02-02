@@ -51,7 +51,21 @@ fun <T : KSort> KContext.simplifyEq(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSo
     else -> mkEqNoSimplify(lhs, rhs)
 }
 
-fun <T : KSort> KContext.simplifyDistinct(args: List<KExpr<T>>): KExpr<KBoolSort> = mkDistinctNoSimplify(args)
+fun <T : KSort> KContext.simplifyDistinct(args: List<KExpr<T>>): KExpr<KBoolSort> {
+    if (args.isEmpty() || args.size == 1) return trueExpr
+
+    // (distinct a b) ==> (not (= a b))
+    if (args.size == 2) return simplifyNot(simplifyEq(args[0], args[1]))
+
+    // (distinct a b a) ==> false
+    val distinctArgs = args.toSet()
+    if (distinctArgs.size < args.size) return falseExpr
+
+    // All arguments are not equal and all are interpreted values ==> all are distinct
+    if (args.all { it is KInterpretedValue<*> }) return trueExpr
+
+    return mkDistinctNoSimplify(args)
+}
 
 fun <T : KSort> KContext.simplifyIte(
     condition: KExpr<KBoolSort>,
