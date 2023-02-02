@@ -2,29 +2,30 @@ package org.ksmt.symfpu
 
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFpToIEEEBvExpr
 import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.printer.ExpressionPrinter
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KFpSort
+import org.ksmt.utils.uncheckedCast
 
-class UnpackedFp<Fp : KFpSort>(
-    private val fp: KExpr<Fp>, ctx: KContext
+class UnpackedFp<Fp : KFpSort> private constructor(
+    ctx: KContext, override val sort: Fp,
+    val bv: KFpToIEEEBvExpr<Fp>,
 ) : KExpr<Fp>(ctx) {
-    override val sort: Fp = fp.sort
 
     override fun accept(transformer: KTransformerBase): KExpr<Fp> {
-        return fp
+        return ctx.mkFpFromBvExpr(sign.uncheckedCast(), exponent, significand)
     }
 
     override fun print(printer: ExpressionPrinter) = with(printer) {
         append("(unpackedFp")
-        append(fp)
+        append(ctx.mkFpFromBvExpr<Fp>(sign.uncheckedCast(), exponent, significand))
         append(")")
     }
 
 
     private val exponentSize = sort.exponentBits.toInt()
-    val bv = ctx.mkFpToIEEEBvExpr(fp)
 
     private val size = bv.sort.sizeBits.toInt()
 
@@ -70,7 +71,7 @@ class UnpackedFp<Fp : KFpSort>(
         }
 
     companion object {
-        fun <Fp : KFpSort> KContext.unpackedFp(fp: KExpr<Fp>) = UnpackedFp(fp, this)
+        fun <Fp : KFpSort> KContext.unpackedFp(fp: KExpr<Fp>) = UnpackedFp(this, fp.sort, mkFpToIEEEBvExpr(fp))
     }
 
 
