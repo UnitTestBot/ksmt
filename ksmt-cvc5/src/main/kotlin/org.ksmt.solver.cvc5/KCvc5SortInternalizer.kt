@@ -26,10 +26,6 @@ open class KCvc5SortInternalizer(
         cvc5Ctx.internalizeSort(sort) {
             val domain = sort.domain.internalizeCvc5Sort()
             val range = sort.range.internalizeCvc5Sort()
-            // domain - indices?
-            // range - values?
-
-            // indices sort, elements sort
             nSolver.mkArraySort(domain, range)
         }
 
@@ -43,19 +39,9 @@ open class KCvc5SortInternalizer(
     }
 
     override fun <S : KFpSort> visit(sort: S): Sort = cvc5Ctx.internalizeSort(sort) {
-        when (sort) {
-            is KFp16Sort -> nSolver.mkFloatingPointSort(5, 11)
-            is KFp32Sort -> nSolver.mkFloatingPointSort(8, 24)
-            is KFp64Sort -> nSolver.mkFloatingPointSort(11, 53)
-            is KFp128Sort -> nSolver.mkFloatingPointSort(15, 113)
-            is KFpCustomSizeSort -> {
-                val exp = sort.exponentBits.toInt()
-                val significand = sort.significandBits.toInt()
-                nSolver.mkFloatingPointSort(exp, significand)
-            }
-
-            else -> error("Unsupported sort: $sort")
-        }
+        val exp = sort.exponentBits.toInt()
+        val significand = sort.significandBits.toInt()
+        nSolver.mkFloatingPointSort(exp, significand)
     }
 
     override fun visit(sort: KUninterpretedSort): Sort = cvc5Ctx.internalizeSort(sort) {

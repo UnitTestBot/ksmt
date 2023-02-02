@@ -3,6 +3,7 @@ package org.ksmt.solver.cvc5
 import io.github.cvc5.*
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.*
+import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.util.KExprInternalizerBase
 import org.ksmt.sort.*
 import java.math.BigInteger
@@ -91,14 +92,16 @@ class KCvc5ExprInternalizer(
         }
     }
 
-    // TODO: maybe for 1/8/16/32/64 int/long value set would be more effective than toString() conversion
     fun <T : KBvSort> transformBitVecValue(expr: KBitVecValue<T>) = expr.transform {
-        when (expr) {
-            is KBitVec1Value, is KBitVec8Value, is KBitVec16Value, is KBitVec32Value, is KBitVec64Value, is KBitVecCustomValue -> {
-                nsolver.mkBitVector(expr.decl.sort.sizeBits.toInt(), expr.stringValue, 2)
+        val size = expr.decl.sort.sizeBits.toInt()
+        when {
+            expr is KBitVec1Value -> nsolver.mkBitVector(size, if (expr.value) 1L else 0L)
+            // cvc5 can't create bitvector from negatives
+            expr is KBitVecNumberValue<*, *> && expr.numberValue.toLong() >= 0 -> {
+                nsolver.mkBitVector(size, expr.numberValue.toLong())
             }
 
-            else -> error("Unknown bv expression class ${expr::class} in transformation method: $expr")
+            else -> nsolver.mkBitVector(size, expr.stringValue, 2)
         }
     }
 
@@ -317,8 +320,36 @@ class KCvc5ExprInternalizer(
     }
 
 
-    // we can check that expr.rotation is KBitvecValue and translate to KBvRotateLeftIndexedExpr
-    override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>) = TODO("No direct support for cvc5")
+    private fun <T : KBvSort> transformKBvRotateExpr(expr: KExpr<T>) = with(expr) {
+        val rotation: KExpr<T>
+        val arg: KExpr<T>
+
+        val rotationKind = when (this) {
+            is KBvRotateLeftExpr<T> -> Kind.BITVECTOR_ROTATE_LEFT.also { rotation = this.rotation; arg = this.arg }
+            is KBvRotateRightExpr<T> -> Kind.BITVECTOR_ROTATE_RIGHT.also { rotation = this.rotation; arg = this.arg }
+            else -> error("unexpected expr $this, but was expected KBvRotate expr")
+        }
+
+        val rotationOp: Op = when (rotation) {
+            is KBitVec1Value -> nsolver.mkOp(rotationKind, if (rotation.value) 1 else 0)
+            is KBitVec8Value, is KBitVec16Value, is KBitVec32Value -> nsolver.mkOp(
+                rotationKind,
+                (rotation as KBitVecNumberValue<*, *>).numberValue.toInt()
+            )
+
+            is KBitVec64Value, is KBitVecCustomValue -> nsolver.mkOp(
+                rotationKind,
+                (rotation as KBitVecValue<*>).stringValue
+            )
+
+            else -> throw KSolverUnsupportedFeatureException("Rotate expr with expression argument is not supported by cvc5")
+        }
+        transform(arg) { bvArg: Term ->
+            nsolver.mkTerm(rotationOp, bvArg)
+        }
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>) = transformKBvRotateExpr(expr)
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftIndexedExpr<T>) = with(expr) {
         transform(value) { value: Term ->
@@ -327,8 +358,7 @@ class KCvc5ExprInternalizer(
         }
     }
 
-    // the same with KBvRotateLeftExpr
-    override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>) = TODO("No direct support for cvc5")
+    override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>) = transformKBvRotateExpr(expr)
 
     override fun <T : KBvSort> transform(expr: KBvRotateRightIndexedExpr<T>) = with(expr) {
         transform(value) { value: Term ->
@@ -381,19 +411,19 @@ class KCvc5ExprInternalizer(
         }
     }
 
-    override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>) = TODO("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>) = throw KSolverUnsupportedFeatureException("no direct support for $expr")
 
-    override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>) = TODO("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>) = throw KSolverUnsupportedFeatureException("no direct support for $expr")
 
-    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>) = TODO("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>) = throw KSolverUnsupportedFeatureException("no direct support for $expr")
 
-    override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>) = TODO("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>) = throw KSolverUnsupportedFeatureException("no direct support for $expr")
 
-    override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>) = TODO("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>) = throw KSolverUnsupportedFeatureException("no direct support for $expr")
 
-    override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>) = TODO("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>) = throw KSolverUnsupportedFeatureException("no direct support for $expr")
 
-    override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) = TODO("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) = throw KSolverUnsupportedFeatureException("no direct support for $expr")
 
     private fun fpToBvTerm(signBit: Boolean, biasedExp: KBitVecValue<*>, significand: KBitVecValue<*>): Term {
         val signString = if (signBit) "1" else "0"
@@ -607,7 +637,6 @@ class KCvc5ExprInternalizer(
         }
     }
 
-
     override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>): KExpr<KBvSort> =
         with(expr) {
             transform(roundingMode, value) { rm: Term, value: Term ->
@@ -623,12 +652,10 @@ class KCvc5ExprInternalizer(
         }
     }
 
-    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> = TODO("no direct support for $expr")
-
+    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> = throw KSolverUnsupportedFeatureException("no direct support for $expr")
 
     override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> = with(expr) {
         transform(sign, biasedExponent, significand) { sign: Term, biasedExp: Term, significand: Term ->
-
             val bvTerm = nsolver.mkTerm(
                 Kind.BITVECTOR_CONCAT,
                 nsolver.mkTerm(Kind.BITVECTOR_CONCAT, sign, biasedExp),
@@ -647,7 +674,6 @@ class KCvc5ExprInternalizer(
 
     override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> = with(expr) {
         transform(roundingMode, value) { rm: Term, value: Term ->
-
             val op = nsolver.mkOp(
                 Kind.FLOATINGPOINT_TO_FP_FROM_FP,
                 sort.exponentBits.toInt(),
@@ -701,7 +727,7 @@ class KCvc5ExprInternalizer(
         }
     }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) = TODO("no direct impl for $expr")
+    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) = throw KSolverUnsupportedFeatureException("no direct support for $expr")
 
     override fun <T : KArithSort> transform(expr: KAddArithExpr<T>) = with(expr) {
         transformArray(args) { args -> nsolver.mkTerm(Kind.ADD, args) }
@@ -758,20 +784,22 @@ class KCvc5ExprInternalizer(
     }
 
     // custom implementation
-    override fun transform(expr: KRemIntExpr) = with(expr) { transform(lhs, rhs) { lhs: Term, rhs: Term ->
-        // there is no ints remainder in cvc5
-        val remSign = nsolver.mkTerm(Kind.GEQ, lhs, zeroIntValueTerm)
-            .xorTerm(
-                nsolver.mkTerm(Kind.GEQ, rhs, zeroIntValueTerm)
-            )
-        val modTerm = nsolver.mkTerm(Kind.INTS_MODULUS, lhs, rhs)
+    override fun transform(expr: KRemIntExpr) = with(expr) {
+        transform(lhs, rhs) { lhs: Term, rhs: Term ->
+            // there is no ints remainder in cvc5
+            val remSign = nsolver.mkTerm(Kind.GEQ, lhs, zeroIntValueTerm)
+                .xorTerm(nsolver.mkTerm(Kind.GEQ, rhs, zeroIntValueTerm))
+            val modTerm = nsolver.mkTerm(Kind.INTS_MODULUS, lhs, rhs)
 
-        remSign.iteTerm(nsolver.mkTerm(Kind.NEG, modTerm), modTerm)
-    } }
+            remSign.iteTerm(nsolver.mkTerm(Kind.NEG, modTerm), modTerm)
+        }
+    }
 
-    override fun transform(expr: KToRealIntExpr) = with(expr) { transform(arg) { arg: Term ->
-        nsolver.mkTerm(Kind.TO_REAL, arg)
-    } }
+    override fun transform(expr: KToRealIntExpr) = with(expr) {
+        transform(arg) { arg: Term ->
+            nsolver.mkTerm(Kind.TO_REAL, arg)
+        }
+    }
 
     override fun transform(expr: KInt32NumExpr) = with(expr) {
         transform { nsolver.mkInteger(expr.value.toLong()) }
@@ -785,17 +813,24 @@ class KCvc5ExprInternalizer(
         transform { nsolver.mkInteger(expr.value.toString()) }
     }
 
-    override fun transform(expr: KToIntRealExpr) = with(expr) { transform(arg) { arg: Term ->
-        nsolver.mkTerm(Kind.TO_INTEGER, arg)
-    } }
+    override fun transform(expr: KToIntRealExpr) = with(expr) {
+        transform(arg) { arg: Term ->
+            nsolver.mkTerm(Kind.TO_INTEGER, arg)
+        }
+    }
 
-    override fun transform(expr: KIsIntRealExpr) = with(expr) { transform(arg) { arg: Term ->
-        nsolver.mkTerm(Kind.IS_INTEGER, arg)
-    } }
+    override fun transform(expr: KIsIntRealExpr) = with(expr) {
+        transform(arg) { arg: Term ->
+            nsolver.mkTerm(Kind.IS_INTEGER, arg)
+        }
+    }
 
     override fun transform(expr: KRealNumExpr) = with(expr) {
-        transform(ctx.mkIntToReal(numerator), ctx.mkIntToReal(denominator)) { num: Term, denum: Term ->
-            nsolver.mkTerm(Kind.DIVISION, num, denum)
+        transform(numerator, denominator) { num: Term, denom: Term ->
+            val numAsReal = nsolver.mkTerm(Kind.TO_REAL, num)
+            val denomAsReal = nsolver.mkTerm(Kind.TO_REAL, denom)
+
+            nsolver.mkTerm(Kind.DIVISION, numAsReal, denomAsReal)
         }
     }
 
@@ -816,7 +851,7 @@ class KCvc5ExprInternalizer(
     override fun transform(expr: KUniversalQuantifier) = transformQuantifier(expr, isUniversal = true)
 
     override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
-        TODO("No direct impl in cvc5 (as-array is CONST_ARRAY term with base array element)")
+        throw KSolverUnsupportedFeatureException("No direct impl in cvc5 (as-array is CONST_ARRAY term with base array element)")
     }
 
     @Suppress("ArrayPrimitive")

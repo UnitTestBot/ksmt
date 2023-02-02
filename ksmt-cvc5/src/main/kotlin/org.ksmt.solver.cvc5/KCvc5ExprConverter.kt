@@ -4,6 +4,7 @@ import io.github.cvc5.*
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.*
+import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.util.KExprConverterBase
 import org.ksmt.sort.*
 import org.ksmt.utils.asExpr
@@ -55,18 +56,18 @@ open class KCvc5ExprConverter(
             Kind.FORALL -> convertNativeQuantifierExpr(expr)
             Kind.EXISTS -> convertNativeQuantifierExpr(expr)
 
-            Kind.VARIABLE_LIST -> error("cvc5 Variable list should not be handled here. It maps to List<KDecl<*>>")
-            Kind.VARIABLE -> error("cvc5 Variable should not be handled here. It maps to KDecl<*>")
-            Kind.INST_PATTERN -> TODO("patterns should not be handled here. ksmt has no impl of patterns")
-            Kind.INST_PATTERN_LIST -> TODO("patterns should not be handled here. ksmt has no impl of patterns")
-            Kind.INST_NO_PATTERN -> TODO("patterns should not be handled here. ksmt has no impl of patterns")
-            Kind.INST_POOL -> TODO("annotations of instantiations are not supported in ksmt now (experimental in cvc5 1.0.2)")
-            Kind.INST_ADD_TO_POOL -> TODO("annotations of instantiations are not supported in ksmt now (experimental in cvc5 1.0.2)")
-            Kind.SKOLEM_ADD_TO_POOL -> TODO("annotations of instantiations are not supported in ksmt now (experimental in cvc5 1.0.2)")
-            Kind.INST_ATTRIBUTE -> TODO("attributes for a quantifier are not supported in ksmt now")
+            Kind.VARIABLE_LIST -> error("variable list should not be handled here")
+            Kind.VARIABLE -> error("variable should not be handled here")
+            Kind.INST_PATTERN,
+            Kind.INST_PATTERN_LIST,
+            Kind.INST_NO_PATTERN -> throw KSolverUnsupportedFeatureException("ksmt has no impl of patterns")
+            Kind.INST_POOL,
+            Kind.INST_ADD_TO_POOL,
+            Kind.SKOLEM_ADD_TO_POOL -> throw KSolverUnsupportedFeatureException("annotations of instantiations are not supported in ksmt now")
+            Kind.INST_ATTRIBUTE -> throw KSolverUnsupportedFeatureException("attributes for a quantifier are not supported in ksmt now")
 
-            Kind.HO_APPLY -> TODO("no direct mapping in ksmt")
-            Kind.CARDINALITY_CONSTRAINT -> TODO("experimental in cvc5 1.0.2")
+            Kind.HO_APPLY -> throw KSolverUnsupportedFeatureException("no direct mapping in ksmt")
+            Kind.CARDINALITY_CONSTRAINT -> throw KSolverUnsupportedFeatureException("Operation is not supported in ksmt now")
             Kind.APPLY_UF -> expr.getChildren().let { children ->
                 expr.convertList(children.copyOfRange(1, children.size)) { args: List<KExpr<KSort>> ->
                     val fTerm = children.first().convertDecl<KSort>()
@@ -75,7 +76,7 @@ open class KCvc5ExprConverter(
             }
 
             Kind.LAMBDA -> error("lambdas used only in interpretations, and they handled separately")
-            Kind.SEXPR -> TODO("no direct impl in ksmt now (experimental in cvc5 1.0.2)")
+            Kind.SEXPR -> throw KSolverUnsupportedFeatureException("Operation is not supported in ksmt now")
 
             // arith
             Kind.ABS -> expr.convert { arithExpr: KExpr<KArithSort> ->
@@ -83,36 +84,35 @@ open class KCvc5ExprConverter(
                 else arithExpr.asExpr(realSort) ge mkRealNum(0)
                 mkIte(geExpr, arithExpr, -arithExpr)
             }
-            Kind.ADD -> expr.convertList<KArithSort, KArithSort>(::mkArithAdd)
-            Kind.SUB -> expr.convertList<KArithSort, KArithSort>(::mkArithSub)
-            Kind.MULT -> expr.convertList<KArithSort, KArithSort>(::mkArithMul)
-            Kind.NEG -> expr.convert<KArithSort, KArithSort>(::mkArithUnaryMinus)
-            Kind.SQRT -> TODO("No direct mapping of sqrt on real in ksmt")
+            Kind.ADD -> expr.convertList(::mkArithAdd)
+            Kind.SUB -> expr.convertList(::mkArithSub)
+            Kind.MULT -> expr.convertList(::mkArithMul)
+            Kind.NEG -> expr.convert(::mkArithUnaryMinus)
+            Kind.SQRT -> throw KSolverUnsupportedFeatureException("No direct mapping of sqrt on real in ksmt")
             Kind.POW -> convertNativePowExpr(expr)
             Kind.POW2 -> convertNativePowExpr(expr)
             Kind.INTS_MODULUS -> expr.convert(::mkIntMod)
             Kind.INTS_DIVISION -> expr.convert<KArithSort, KArithSort, KArithSort>(::mkArithDiv)
             Kind.DIVISION -> expr.convert<KArithSort, KArithSort, KArithSort>(::mkArithDiv)
-            Kind.ARCCOTANGENT -> TODO("No direct mapping in ksmt")
-            Kind.ARCSECANT -> TODO("No direct mapping in ksmt")
-            Kind.ARCCOSECANT -> TODO("No direct mapping in ksmt")
-            Kind.ARCTANGENT -> TODO("No direct mapping in ksmt")
-            Kind.ARCCOSINE -> TODO("No direct mapping in ksmt")
-            Kind.ARCSINE -> TODO("No direct mapping in ksmt")
-            Kind.COTANGENT -> TODO("No direct mapping in ksmt")
-            Kind.SECANT -> TODO("No direct mapping in ksmt")
-            Kind.COSECANT -> TODO("No direct mapping in ksmt")
-            Kind.TANGENT -> TODO("No direct mapping in ksmt")
-            Kind.COSINE -> TODO("No direct mapping in ksmt")
-            Kind.SINE -> TODO("No direct mapping in ksmt")
-            Kind.EXPONENTIAL -> TODO("No direct mapping in ksmt")
-
+            Kind.ARCCOTANGENT,
+            Kind.ARCSECANT,
+            Kind.ARCCOSECANT,
+            Kind.ARCTANGENT,
+            Kind.ARCCOSINE,
+            Kind.ARCSINE,
+            Kind.COTANGENT,
+            Kind.SECANT,
+            Kind.COSECANT,
+            Kind.TANGENT,
+            Kind.COSINE,
+            Kind.SINE,
+            Kind.PI,
+            Kind.EXPONENTIAL -> throw KSolverUnsupportedFeatureException("No direct mapping in ksmt")
             Kind.TO_REAL -> expr.convert(::mkIntToReal)
             Kind.TO_INTEGER -> expr.convert(::mkRealToInt)
             Kind.IS_INTEGER -> expr.convert(::mkRealIsInt)
-            Kind.PI -> TODO("PI real const has no mapping in ksmt")
             Kind.DIVISIBLE -> expr.convert { arExpr: KExpr<KIntSort> -> mkIntMod(arExpr, expr.intDivisibleArg.expr) eq 0.expr }
-            Kind.IAND -> TODO("No direct mapping in ksmt. btw int to bv is not supported in ksmt")
+            Kind.IAND -> throw KSolverUnsupportedFeatureException("No direct mapping in ksmt. btw int to bv is not supported in ksmt")
             // bitvectors
             Kind.BITVECTOR_NOT -> expr.convert(::mkBvNotExpr)
             Kind.BITVECTOR_AND -> expr.convertCascadeBinaryArityOpOrArg(::mkBvAndExpr)
@@ -134,9 +134,9 @@ open class KCvc5ExprConverter(
             Kind.BITVECTOR_SLE -> expr.convert(::mkBvSignedLessOrEqualExpr)
             Kind.BITVECTOR_SGT -> expr.convert(::mkBvSignedGreaterExpr)
             Kind.BITVECTOR_SGE -> expr.convert(::mkBvSignedGreaterOrEqualExpr)
-            Kind.BITVECTOR_ULTBV -> TODO("No direct mapping of ${Kind.BITVECTOR_ULTBV} in ksmt")
-            Kind.BITVECTOR_SLTBV -> TODO("No direct mapping of ${Kind.BITVECTOR_SLTBV} in ksmt")
-            Kind.BITVECTOR_ITE -> TODO("No direct mapping of ${Kind.BITVECTOR_ITE} in ksmt")
+            Kind.BITVECTOR_ULTBV -> throw KSolverUnsupportedFeatureException("No direct mapping of ${Kind.BITVECTOR_ULTBV} in ksmt")
+            Kind.BITVECTOR_SLTBV -> throw KSolverUnsupportedFeatureException("No direct mapping of ${Kind.BITVECTOR_SLTBV} in ksmt")
+            Kind.BITVECTOR_ITE -> throw KSolverUnsupportedFeatureException("No direct mapping of ${Kind.BITVECTOR_ITE} in ksmt")
 
             Kind.BITVECTOR_REDOR -> expr.convert(::mkBvReductionOrExpr)
             Kind.BITVECTOR_REDAND -> expr.convert(::mkBvReductionAndExpr)
@@ -172,12 +172,12 @@ open class KCvc5ExprConverter(
             Kind.BITVECTOR_CONCAT -> expr.convertReduced(::mkBvConcatExpr)
 
 
-            Kind.INT_TO_BITVECTOR -> TODO("No direct mapping of ${Kind.INT_TO_BITVECTOR} in ksmt")
+            Kind.INT_TO_BITVECTOR -> throw KSolverUnsupportedFeatureException("No direct mapping of ${Kind.INT_TO_BITVECTOR} in ksmt")
             // bitvector -> non-negative integer
             Kind.BITVECTOR_TO_NAT -> expr.convert { bvExpr: KExpr<KBvSort> ->
                 mkBv2IntExpr(bvExpr, false)
             }
-            Kind.BITVECTOR_COMP -> TODO("No direct mapping of ${Kind.BITVECTOR_COMP} in ksmt")
+            Kind.BITVECTOR_COMP -> throw KSolverUnsupportedFeatureException("No direct mapping of ${Kind.BITVECTOR_COMP} in ksmt")
 
 
             // fp
@@ -255,143 +255,143 @@ open class KCvc5ExprConverter(
             Kind.SELECT -> expr.convert(::mkArraySelect)
             Kind.STORE -> expr.convert(::mkArrayStore)
 
-            Kind.EQ_RANGE -> TODO("experimental feature in cvc5 1.0.2")
+            Kind.EQ_RANGE -> throw KSolverUnsupportedFeatureException("EQ_RANGE is not supported")
 
-            Kind.APPLY_CONSTRUCTOR -> TODO("currently ksmt does not support datatypes")
-            Kind.APPLY_SELECTOR -> TODO("currently ksmt does not support datatypes")
-            Kind.APPLY_TESTER -> TODO("currently ksmt does not support datatypes")
-            Kind.APPLY_UPDATER -> TODO("currently ksmt does not support datatypes")
+            Kind.APPLY_CONSTRUCTOR,
+            Kind.APPLY_SELECTOR,
+            Kind.APPLY_TESTER,
+            Kind.APPLY_UPDATER -> throw KSolverUnsupportedFeatureException("currently ksmt does not support datatypes")
 
-            Kind.MATCH -> TODO("currently ksmt does not support grammars")
-            Kind.MATCH_CASE -> TODO("currently ksmt does not support grammars")
-            Kind.MATCH_BIND_CASE -> TODO("currently ksmt does not support grammars")
-            Kind.TUPLE_PROJECT -> TODO("currently ksmt does not support tuples")
+            Kind.MATCH,
+            Kind.MATCH_CASE,
+            Kind.MATCH_BIND_CASE,
+            Kind.TUPLE_PROJECT, -> throw KSolverUnsupportedFeatureException("currently ksmt does not support tuples")
 
-            Kind.SEP_NIL -> TODO("currently ksmt does not support separation logic")
-            Kind.SEP_EMP -> TODO("currently ksmt does not support separation logic")
-            Kind.SEP_PTO -> TODO("currently ksmt does not support separation logic")
-            Kind.SEP_STAR -> TODO("currently ksmt does not support separation logic")
-            Kind.SEP_WAND -> TODO("currently ksmt does not support separation logic")
+            Kind.SEP_NIL,
+            Kind.SEP_EMP,
+            Kind.SEP_PTO,
+            Kind.SEP_STAR,
+            Kind.SEP_WAND -> throw KSolverUnsupportedFeatureException("currently ksmt does not support separation logic")
 
-            Kind.SET_EMPTY -> TODO("currently ksmt does not support sets")
-            Kind.SET_UNION -> TODO("currently ksmt does not support sets")
-            Kind.SET_INTER -> TODO("currently ksmt does not support sets")
-            Kind.SET_MINUS -> TODO("currently ksmt does not support sets")
-            Kind.SET_SUBSET -> TODO("currently ksmt does not support sets")
-            Kind.SET_MEMBER -> TODO("currently ksmt does not support sets")
-            Kind.SET_SINGLETON -> TODO("currently ksmt does not support sets")
-            Kind.SET_INSERT -> TODO("currently ksmt does not support sets")
-            Kind.SET_CARD -> TODO("currently ksmt does not support sets")
-            Kind.SET_COMPLEMENT -> TODO("currently ksmt does not support sets")
-            Kind.SET_UNIVERSE -> TODO("currently ksmt does not support sets")
-            Kind.SET_COMPREHENSION -> TODO("currently ksmt does not support sets")
-            Kind.SET_CHOOSE -> TODO("currently ksmt does not support sets")
-            Kind.SET_IS_SINGLETON -> TODO("currently ksmt does not support sets")
-            Kind.SET_MAP -> TODO("currently ksmt does not support sets")
-            Kind.SET_FILTER -> TODO("currently ksmt does not support sets")
-            Kind.SET_FOLD -> TODO("currently ksmt does not support sets")
+            Kind.SET_EMPTY,
+            Kind.SET_UNION,
+            Kind.SET_INTER,
+            Kind.SET_MINUS,
+            Kind.SET_SUBSET,
+            Kind.SET_MEMBER,
+            Kind.SET_SINGLETON,
+            Kind.SET_INSERT,
+            Kind.SET_CARD,
+            Kind.SET_COMPLEMENT,
+            Kind.SET_UNIVERSE,
+            Kind.SET_COMPREHENSION,
+            Kind.SET_CHOOSE,
+            Kind.SET_IS_SINGLETON,
+            Kind.SET_MAP,
+            Kind.SET_FILTER,
+            Kind.SET_FOLD -> throw KSolverUnsupportedFeatureException("currently ksmt does not support sets")
 
-            Kind.RELATION_JOIN -> TODO("currently ksmt does not support relations")
-            Kind.RELATION_PRODUCT -> TODO("currently ksmt does not support relations")
-            Kind.RELATION_TRANSPOSE -> TODO("currently ksmt does not support relations")
-            Kind.RELATION_TCLOSURE -> TODO("currently ksmt does not support relations")
-            Kind.RELATION_JOIN_IMAGE -> TODO("currently ksmt does not support relations")
-            Kind.RELATION_IDEN -> TODO("currently ksmt does not support relations")
-            Kind.RELATION_GROUP -> TODO("currently ksmt does not support relations")
-            Kind.RELATION_AGGREGATE -> TODO("currently ksmt does not support relations")
-            Kind.RELATION_PROJECT -> TODO("currently ksmt does not support relations")
+            Kind.RELATION_JOIN,
+            Kind.RELATION_PRODUCT,
+            Kind.RELATION_TRANSPOSE,
+            Kind.RELATION_TCLOSURE,
+            Kind.RELATION_JOIN_IMAGE,
+            Kind.RELATION_IDEN,
+            Kind.RELATION_GROUP,
+            Kind.RELATION_AGGREGATE,
+            Kind.RELATION_PROJECT -> throw KSolverUnsupportedFeatureException("currently ksmt does not support relations")
 
-            Kind.BAG_EMPTY -> TODO("currently ksmt does not support bags")
-            Kind.BAG_UNION_MAX -> TODO("currently ksmt does not support bags")
-            Kind.BAG_UNION_DISJOINT -> TODO("currently ksmt does not support bags")
-            Kind.BAG_INTER_MIN -> TODO("currently ksmt does not support bags")
-            Kind.BAG_DIFFERENCE_SUBTRACT -> TODO("currently ksmt does not support bags")
-            Kind.BAG_DIFFERENCE_REMOVE -> TODO("currently ksmt does not support bags")
-            Kind.BAG_SUBBAG -> TODO("currently ksmt does not support bags")
-            Kind.BAG_COUNT -> TODO("currently ksmt does not support bags")
-            Kind.BAG_MEMBER -> TODO("currently ksmt does not support bags")
-            Kind.BAG_DUPLICATE_REMOVAL -> TODO("currently ksmt does not support bags")
-            Kind.BAG_MAKE -> TODO("currently ksmt does not support bags")
-            Kind.BAG_CARD -> TODO("currently ksmt does not support bags")
-            Kind.BAG_CHOOSE -> TODO("currently ksmt does not support bags")
-            Kind.BAG_IS_SINGLETON -> TODO("currently ksmt does not support bags")
-            Kind.BAG_FROM_SET -> TODO("currently ksmt does not support bags")
-            Kind.BAG_TO_SET -> TODO("currently ksmt does not support bags")
-            Kind.BAG_MAP -> TODO("currently ksmt does not support bags")
-            Kind.BAG_FILTER -> TODO("currently ksmt does not support bags")
-            Kind.BAG_FOLD -> TODO("currently ksmt does not support bags")
-            Kind.BAG_PARTITION -> TODO("currently ksmt does not support bags")
+            Kind.BAG_EMPTY,
+            Kind.BAG_UNION_MAX,
+            Kind.BAG_UNION_DISJOINT,
+            Kind.BAG_INTER_MIN,
+            Kind.BAG_DIFFERENCE_SUBTRACT,
+            Kind.BAG_DIFFERENCE_REMOVE,
+            Kind.BAG_SUBBAG,
+            Kind.BAG_COUNT,
+            Kind.BAG_MEMBER,
+            Kind.BAG_DUPLICATE_REMOVAL,
+            Kind.BAG_MAKE,
+            Kind.BAG_CARD,
+            Kind.BAG_CHOOSE,
+            Kind.BAG_IS_SINGLETON,
+            Kind.BAG_FROM_SET,
+            Kind.BAG_TO_SET,
+            Kind.BAG_MAP,
+            Kind.BAG_FILTER,
+            Kind.BAG_FOLD,
+            Kind.BAG_PARTITION -> throw KSolverUnsupportedFeatureException("currently ksmt does not support bags")
 
-            Kind.TABLE_PRODUCT -> TODO("currently ksmt does not support tables")
-            Kind.TABLE_PROJECT -> TODO("currently ksmt does not support tables")
-            Kind.TABLE_AGGREGATE -> TODO("currently ksmt does not support tables")
-            Kind.TABLE_JOIN -> TODO("currently ksmt does not support tables")
-            Kind.TABLE_GROUP -> TODO("currently ksmt does not support tables")
+            Kind.TABLE_PRODUCT,
+            Kind.TABLE_PROJECT,
+            Kind.TABLE_AGGREGATE,
+            Kind.TABLE_JOIN,
+            Kind.TABLE_GROUP -> throw KSolverUnsupportedFeatureException("currently ksmt does not support tables")
 
-            Kind.STRING_CONCAT -> TODO("currently ksmt does not support strings")
-            Kind.STRING_IN_REGEXP -> TODO("currently ksmt does not support strings")
-            Kind.STRING_LENGTH -> TODO("currently ksmt does not support strings")
-            Kind.STRING_SUBSTR -> TODO("currently ksmt does not support strings")
-            Kind.STRING_UPDATE -> TODO("currently ksmt does not support strings")
-            Kind.STRING_CHARAT -> TODO("currently ksmt does not support strings")
-            Kind.STRING_CONTAINS -> TODO("currently ksmt does not support strings")
-            Kind.STRING_INDEXOF -> TODO("currently ksmt does not support strings")
-            Kind.STRING_INDEXOF_RE -> TODO("currently ksmt does not support strings")
-            Kind.STRING_REPLACE -> TODO("currently ksmt does not support strings")
-            Kind.STRING_REPLACE_ALL -> TODO("currently ksmt does not support strings")
-            Kind.STRING_REPLACE_RE -> TODO("currently ksmt does not support strings")
-            Kind.STRING_REPLACE_RE_ALL -> TODO("currently ksmt does not support strings")
-            Kind.STRING_TO_LOWER -> TODO("currently ksmt does not support strings")
-            Kind.STRING_TO_UPPER -> TODO("currently ksmt does not support strings")
-            Kind.STRING_REV -> TODO("currently ksmt does not support strings")
-            Kind.STRING_TO_CODE -> TODO("currently ksmt does not support strings")
-            Kind.STRING_FROM_CODE -> TODO("currently ksmt does not support strings")
-            Kind.STRING_LT -> TODO("currently ksmt does not support strings")
-            Kind.STRING_LEQ -> TODO("currently ksmt does not support strings")
-            Kind.STRING_PREFIX -> TODO("currently ksmt does not support strings")
-            Kind.STRING_SUFFIX -> TODO("currently ksmt does not support strings")
-            Kind.STRING_IS_DIGIT -> TODO("currently ksmt does not support strings")
-            Kind.STRING_FROM_INT -> TODO("currently ksmt does not support strings")
-            Kind.STRING_TO_INT -> TODO("currently ksmt does not support strings")
-            Kind.CONST_STRING -> TODO("currently ksmt does not support strings")
-            Kind.STRING_TO_REGEXP -> TODO("currently ksmt does not support strings")
+            Kind.STRING_CONCAT,
+            Kind.STRING_IN_REGEXP,
+            Kind.STRING_LENGTH,
+            Kind.STRING_SUBSTR,
+            Kind.STRING_UPDATE,
+            Kind.STRING_CHARAT,
+            Kind.STRING_CONTAINS,
+            Kind.STRING_INDEXOF,
+            Kind.STRING_INDEXOF_RE,
+            Kind.STRING_REPLACE,
+            Kind.STRING_REPLACE_ALL,
+            Kind.STRING_REPLACE_RE,
+            Kind.STRING_REPLACE_RE_ALL,
+            Kind.STRING_TO_LOWER,
+            Kind.STRING_TO_UPPER,
+            Kind.STRING_REV,
+            Kind.STRING_TO_CODE,
+            Kind.STRING_FROM_CODE,
+            Kind.STRING_LT,
+            Kind.STRING_LEQ,
+            Kind.STRING_PREFIX,
+            Kind.STRING_SUFFIX,
+            Kind.STRING_IS_DIGIT,
+            Kind.STRING_FROM_INT,
+            Kind.STRING_TO_INT,
+            Kind.CONST_STRING,
+            Kind.STRING_TO_REGEXP -> throw KSolverUnsupportedFeatureException("currently ksmt does not support strings")
 
-            Kind.REGEXP_CONCAT -> TODO("currently ksmt does not support regular expressions")
-            Kind.REGEXP_UNION -> TODO("currently ksmt does not support regular expressions")
-            Kind.REGEXP_INTER -> TODO("currently ksmt does not support regular expressions")
-            Kind.REGEXP_DIFF -> TODO("currently ksmt does not support regular expressions")
-            Kind.REGEXP_STAR -> TODO("currently ksmt does not support regular expressions")
-            Kind.REGEXP_PLUS -> TODO("currently ksmt does not support regular expressions")
-            Kind.REGEXP_OPT -> TODO("currently ksmt does not support regular expressions")
-            Kind.REGEXP_RANGE -> TODO("currently ksmt does not support regular expressions")
-            Kind.REGEXP_REPEAT -> TODO("currently ksmt does not support regular expressions")
-            Kind.REGEXP_LOOP -> TODO("currently ksmt does not support regular expressions")
-            Kind.REGEXP_NONE -> TODO("currently ksmt does not support regular expressions")
-            Kind.REGEXP_ALL -> TODO("currently ksmt does not support regular expressions")
-            Kind.REGEXP_ALLCHAR -> TODO("currently ksmt does not support regular expressions")
-            Kind.REGEXP_COMPLEMENT -> TODO("currently ksmt does not support regular expressions")
+            Kind.REGEXP_CONCAT,
+            Kind.REGEXP_UNION,
+            Kind.REGEXP_INTER,
+            Kind.REGEXP_DIFF,
+            Kind.REGEXP_STAR,
+            Kind.REGEXP_PLUS,
+            Kind.REGEXP_OPT,
+            Kind.REGEXP_RANGE,
+            Kind.REGEXP_REPEAT,
+            Kind.REGEXP_LOOP,
+            Kind.REGEXP_NONE,
+            Kind.REGEXP_ALL,
+            Kind.REGEXP_ALLCHAR,
+            Kind.REGEXP_COMPLEMENT -> throw KSolverUnsupportedFeatureException("currently ksmt does not support regular expressions")
 
-            Kind.SEQ_CONCAT -> TODO("currently ksmt does not support sequences")
-            Kind.SEQ_LENGTH -> TODO("currently ksmt does not support sequences")
-            Kind.SEQ_EXTRACT -> TODO("currently ksmt does not support sequences")
-            Kind.SEQ_UPDATE -> TODO("currently ksmt does not support sequences")
-            Kind.SEQ_AT -> TODO("currently ksmt does not support sequences")
-            Kind.SEQ_CONTAINS -> TODO("currently ksmt does not support sequences")
-            Kind.SEQ_INDEXOF -> TODO("currently ksmt does not support sequences")
-            Kind.SEQ_REPLACE -> TODO("currently ksmt does not support sequences")
-            Kind.SEQ_REPLACE_ALL -> TODO("currently ksmt does not support sequences")
-            Kind.SEQ_REV -> TODO("currently ksmt does not support sequences")
-            Kind.SEQ_PREFIX -> TODO("currently ksmt does not support sequences")
-            Kind.SEQ_SUFFIX -> TODO("currently ksmt does not support sequences")
-            Kind.CONST_SEQUENCE -> TODO("currently ksmt does not support sequences")
-            Kind.SEQ_UNIT -> TODO("currently ksmt does not support sequences")
-            Kind.SEQ_NTH -> TODO("currently ksmt does not support sequences")
+            Kind.SEQ_CONCAT,
+            Kind.SEQ_LENGTH,
+            Kind.SEQ_EXTRACT,
+            Kind.SEQ_UPDATE,
+            Kind.SEQ_AT,
+            Kind.SEQ_CONTAINS,
+            Kind.SEQ_INDEXOF,
+            Kind.SEQ_REPLACE,
+            Kind.SEQ_REPLACE_ALL,
+            Kind.SEQ_REV,
+            Kind.SEQ_PREFIX,
+            Kind.SEQ_SUFFIX,
+            Kind.CONST_SEQUENCE,
+            Kind.SEQ_UNIT,
+            Kind.SEQ_NTH -> throw KSolverUnsupportedFeatureException("currently ksmt does not support sequences")
 
             Kind.WITNESS -> error("no direct mapping in ksmt")
-            Kind.LAST_KIND -> error("Marks the upper-bound of this enumeration, not op kind")
-            Kind.INTERNAL_KIND -> TODO()
-            Kind.UNDEFINED_KIND -> TODO()
-            Kind.NULL_TERM -> TODO()
+            Kind.LAST_KIND -> error("should not be here. Marks the upper-bound of this enumeration, not op kind")
+            Kind.INTERNAL_KIND -> error("should not be here. Not exposed via the API")
+            Kind.UNDEFINED_KIND -> error("should not be here. Not exposed via the API")
+            Kind.NULL_TERM -> error("no support in ksmt")
             null -> error("kind can't be null")
         }
 
@@ -482,12 +482,11 @@ open class KCvc5ExprConverter(
         RoundingMode.ROUND_NEAREST_TIES_TO_EVEN -> KFpRoundingMode.RoundNearestTiesToEven
     }
 
-
-    @Suppress("UNUSED_PARAMETER")
-    private fun convertNativeFpToBvExpr(expr: Term, signedBv: Boolean): ExprConversionResult = with(ctx) {
-        TODO("ksmt mkFpToBvExpr requires rounding mode, but cvc5 does not provide it")
+    private fun convertNativeFpToBvExpr(expr: Term, signed: Boolean): ExprConversionResult = with(ctx) {
+        expr.convert { roundingMode: KExpr<KFpRoundingModeSort>, fpExpr: KExpr<KFpSort> ->
+            mkFpToBvExpr(roundingMode, fpExpr, (fpExpr.sort.significandBits + fpExpr.sort.exponentBits).toInt(), signed)
         }
-
+    }
 
     private fun convertNativeBvToFpExpr(expr: Term, signed: Boolean) = with(ctx) {
         expr.convert { roundingMode: KExpr<KFpRoundingModeSort>, bvExpr: KExpr<KBvSort> ->
@@ -502,7 +501,7 @@ open class KCvc5ExprConverter(
 
     private fun convertNativeFloatingPointConstExpr(expr: Term): ExprConversionResult = with(ctx) {
         // Kind.CONST_FLOATINGPOINT - created from IEEE-754 bit-vector representation
-        val fpTriplet = expr.floatingPointValue // (Exponent, Significand, BvValue)
+        val fpTriplet = expr.floatingPointValue // (exponent, significand, bvValue)
         val significandSize = fpTriplet.second.toInt()
         val exponentSize = fpTriplet.first.toInt()
         val bvValue = fpTriplet.third.bitVectorValue
@@ -578,7 +577,7 @@ open class KCvc5ExprConverter(
             sort.isUninterpretedSort -> mkUninterpretedSort(sort.symbol)
             sort.isRoundingMode -> mkFpRoundingModeSort()
 
-            else -> TODO("Sort $sort is not supported now")
+            else -> throw KSolverUnsupportedFeatureException("Sort $sort is not supported now")
         }
     }
 

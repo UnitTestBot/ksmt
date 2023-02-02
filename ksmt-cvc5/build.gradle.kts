@@ -1,5 +1,6 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
+
 plugins {
     id("org.ksmt.ksmt-base")
     id("com.github.johnrengelman.shadow") version "7.1.2"
@@ -11,7 +12,7 @@ repositories {
 }
 
 val cvc5Version = "1.0.2"
-val cvc5Jar = File(projectDir, "dist/cvc5-$cvc5Version.jar")
+val cvc5Jar = projectDir.resolve("dist/cvc5-$cvc5Version.jar")
 
 val cvc5NativeLib by configurations.creating
 val cvc5NativeDependency by configurations.creating
@@ -24,9 +25,7 @@ dependencies {
     cvc5NativeLib("cvc5", "cvc5-native-win32-x86-64", cvc5Version, ext = "zip")
     cvc5NativeDependency("cvc5", "cvc5-native-dependency-win32-x86-64", cvc5Version, ext = "zip")
 
-    api(fileTree(File(project.projectDir, "dist")) {
-        include(cvc5Jar.name)
-    })
+    api(files(cvc5Jar))
 }
 
 tasks.withType<ProcessResources> {
