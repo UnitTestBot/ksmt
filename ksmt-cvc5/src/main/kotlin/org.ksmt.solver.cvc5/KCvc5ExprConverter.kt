@@ -92,8 +92,8 @@ open class KCvc5ExprConverter(
             Kind.POW -> convertNativePowExpr(expr)
             Kind.POW2 -> convertNativePowExpr(expr)
             Kind.INTS_MODULUS -> expr.convert(::mkIntMod)
-            Kind.INTS_DIVISION -> expr.convert<KArithSort, KArithSort, KArithSort>(::mkArithDiv)
-            Kind.DIVISION -> expr.convert<KArithSort, KArithSort, KArithSort>(::mkArithDiv)
+            Kind.INTS_DIVISION -> expr.convert(::mkArithDiv)
+            Kind.DIVISION -> expr.convert(::mkArithDiv)
             Kind.ARCCOTANGENT,
             Kind.ARCSECANT,
             Kind.ARCCOSECANT,
@@ -528,7 +528,7 @@ open class KCvc5ExprConverter(
 
     private fun convertNativePowExpr(expr: Term): ExprConversionResult = with(ctx) {
         when (expr.kind) {
-            Kind.POW -> expr.convert<KArithSort, KArithSort, KArithSort>(::mkArithPower)
+            Kind.POW -> expr.convert(::mkArithPower)
             Kind.POW2 -> expr.convert { baseExpr: KExpr<KArithSort> ->
                 mkArithMul(baseExpr, baseExpr)
             }
