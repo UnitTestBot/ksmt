@@ -357,11 +357,10 @@ open class KContext(
     /*
     * sorts
     * */
-    private val boolSortCache by lazy {
-        ensureContextActive { KBoolSort(this) }
-    }
 
-    fun mkBoolSort(): KBoolSort = boolSortCache
+    val boolSort: KBoolSort = KBoolSort(this)
+
+    fun mkBoolSort(): KBoolSort = boolSort
 
     fun <D : KSort, R : KSort> mkArraySort(domain: D, range: R): KArraySort<D, R> =
         ensureContextActive {
@@ -382,22 +381,11 @@ open class KContext(
     fun mkRealSort(): KRealSort = realSortCache
 
     // bit-vec
-    private val bv1SortCache: KBv1Sort by lazy { mkBvSort(sizeBits = 1u).cast() }
-    private val bv8SortCache: KBv8Sort by lazy { mkBvSort(Byte.SIZE_BITS.toUInt()).cast() }
-    private val bv16SortCache: KBv16Sort by lazy { mkBvSort(Short.SIZE_BITS.toUInt()).cast() }
-    private val bv32SortCache: KBv32Sort by lazy { mkBvSort(Int.SIZE_BITS.toUInt()).cast() }
-    private val bv64SortCache: KBv64Sort by lazy { mkBvSort(Long.SIZE_BITS.toUInt()).cast() }
-
-    fun mkBvSort(sizeBits: UInt): KBvSort = ensureContextActive {
-        when (sizeBits.toInt()) {
-            1 -> KBv1Sort(this)
-            Byte.SIZE_BITS -> KBv8Sort(this)
-            Short.SIZE_BITS -> KBv16Sort(this)
-            Int.SIZE_BITS -> KBv32Sort(this)
-            Long.SIZE_BITS -> KBv64Sort(this)
-            else -> KBvCustomSizeSort(this, sizeBits)
-        }
-    }
+    private val bv1SortCache: KBv1Sort by lazy { KBv1Sort(this) }
+    private val bv8SortCache: KBv8Sort by lazy { KBv8Sort(this) }
+    private val bv16SortCache: KBv16Sort by lazy { KBv16Sort(this) }
+    private val bv32SortCache: KBv32Sort by lazy { KBv32Sort(this) }
+    private val bv64SortCache: KBv64Sort by lazy { KBv64Sort(this) }
 
     fun mkBv1Sort(): KBv1Sort = bv1SortCache
     fun mkBv8Sort(): KBv8Sort = bv8SortCache
@@ -405,27 +393,27 @@ open class KContext(
     fun mkBv32Sort(): KBv32Sort = bv32SortCache
     fun mkBv64Sort(): KBv64Sort = bv64SortCache
 
+    fun mkBvSort(sizeBits: UInt): KBvSort = ensureContextActive {
+        when (sizeBits.toInt()) {
+            1 -> mkBv1Sort()
+            Byte.SIZE_BITS -> mkBv8Sort()
+            Short.SIZE_BITS -> mkBv16Sort()
+            Int.SIZE_BITS -> mkBv32Sort()
+            Long.SIZE_BITS -> mkBv64Sort()
+            else -> KBvCustomSizeSort(this, sizeBits)
+        }
+    }
+
     fun mkUninterpretedSort(name: String): KUninterpretedSort =
         ensureContextActive {
             KUninterpretedSort(name, this)
         }
 
     // floating point
-    private val fp16SortCache: KFp16Sort by lazy {
-        mkFpSort(KFp16Sort.exponentBits, KFp16Sort.significandBits).cast()
-    }
-
-    private val fp32SortCache: KFp32Sort by lazy {
-        mkFpSort(KFp32Sort.exponentBits, KFp32Sort.significandBits).cast()
-    }
-
-    private val fp64SortCache: KFp64Sort by lazy {
-        mkFpSort(KFp64Sort.exponentBits, KFp64Sort.significandBits).cast()
-    }
-
-    private val fp128SortCache: KFp128Sort by lazy {
-        mkFpSort(KFp128Sort.exponentBits, KFp128Sort.significandBits).cast()
-    }
+    private val fp16SortCache: KFp16Sort by lazy { KFp16Sort(this) }
+    private val fp32SortCache: KFp32Sort by lazy { KFp32Sort(this) }
+    private val fp64SortCache: KFp64Sort by lazy { KFp64Sort(this) }
+    private val fp128SortCache: KFp128Sort by lazy { KFp128Sort(this) }
 
     fun mkFp16Sort(): KFp16Sort = fp16SortCache
     fun mkFp32Sort(): KFp32Sort = fp32SortCache
@@ -437,10 +425,10 @@ open class KContext(
             val eb = exponentBits
             val sb = significandBits
             when {
-                eb == KFp16Sort.exponentBits && sb == KFp16Sort.significandBits -> KFp16Sort(this)
-                eb == KFp32Sort.exponentBits && sb == KFp32Sort.significandBits -> KFp32Sort(this)
-                eb == KFp64Sort.exponentBits && sb == KFp64Sort.significandBits -> KFp64Sort(this)
-                eb == KFp128Sort.exponentBits && sb == KFp128Sort.significandBits -> KFp128Sort(this)
+                eb == KFp16Sort.exponentBits && sb == KFp16Sort.significandBits -> mkFp16Sort()
+                eb == KFp32Sort.exponentBits && sb == KFp32Sort.significandBits -> mkFp32Sort()
+                eb == KFp64Sort.exponentBits && sb == KFp64Sort.significandBits -> mkFp64Sort()
+                eb == KFp128Sort.exponentBits && sb == KFp128Sort.significandBits -> mkFp128Sort()
                 else -> KFpCustomSizeSort(this, eb, sb)
             }
         }
@@ -452,9 +440,6 @@ open class KContext(
     fun mkFpRoundingModeSort(): KFpRoundingModeSort = roundingModeSortCache
 
     // utils
-    val boolSort: KBoolSort
-        get() = mkBoolSort()
-
     val intSort: KIntSort
         get() = mkIntSort()
 
@@ -534,16 +519,11 @@ open class KContext(
             KXorExpr(this, a, b)
         }
 
-    private val trueCache by lazy {
-        ensureContextActive { KTrue(this) }
-    }
+    val trueExpr: KTrue = KTrue(this)
+    val falseExpr: KFalse = KFalse(this)
 
-    private val falseCache by lazy {
-        ensureContextActive { KFalse(this) }
-    }
-
-    fun mkTrue(): KTrue = trueCache
-    fun mkFalse(): KFalse = falseCache
+    fun mkTrue(): KTrue = trueExpr
+    fun mkFalse(): KFalse = falseExpr
 
     private val eqCache = mkAstInterner<KEqExpr<out KSort>>()
 
@@ -579,12 +559,6 @@ open class KContext(
     infix fun KExpr<KBoolSort>.xor(other: KExpr<KBoolSort>) = mkXor(this, other)
     infix fun KExpr<KBoolSort>.implies(other: KExpr<KBoolSort>) = mkImplies(this, other)
     infix fun <T : KSort> KExpr<T>.neq(other: KExpr<T>) = !(this eq other)
-
-    val trueExpr: KTrue
-        get() = mkTrue()
-
-    val falseExpr: KFalse
-        get() = mkFalse()
 
     fun mkBool(value: Boolean): KExpr<KBoolSort> =
         if (value) trueExpr else falseExpr
