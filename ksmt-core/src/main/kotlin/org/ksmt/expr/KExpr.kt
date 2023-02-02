@@ -2,12 +2,13 @@ package org.ksmt.expr
 
 import org.ksmt.KAst
 import org.ksmt.KContext
+import org.ksmt.cache.KInternedObject
 import org.ksmt.expr.printer.ExpressionPrinter
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KSort
 import org.ksmt.expr.printer.ExpressionPrinterWithLetBindings
 
-abstract class KExpr<T : KSort>(ctx: KContext) : KAst(ctx) {
+abstract class KExpr<T : KSort>(ctx: KContext) : KAst(ctx), KInternedObject {
 
     abstract val sort: T
 

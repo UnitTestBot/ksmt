@@ -1,6 +1,8 @@
 package org.ksmt.expr
 
 import org.ksmt.KContext
+import org.ksmt.cache.hash
+import org.ksmt.cache.structurallyEqual
 import org.ksmt.decl.KRealIsIntDecl
 import org.ksmt.decl.KRealNumDecl
 import org.ksmt.decl.KRealToIntDecl
@@ -23,6 +25,9 @@ class KToIntRealExpr internal constructor(
         get() = listOf(arg)
 
     override fun accept(transformer: KTransformerBase): KExpr<KIntSort> = transformer.transform(this)
+
+    override fun internHashCode(): Int = hash(arg)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
 }
 
 class KIsIntRealExpr internal constructor(
@@ -39,6 +44,9 @@ class KIsIntRealExpr internal constructor(
         get() = listOf(arg)
 
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
+
+    override fun internHashCode(): Int = hash(arg)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
 }
 
 class KRealNumExpr internal constructor(
@@ -53,4 +61,7 @@ class KRealNumExpr internal constructor(
         get() = ctx.mkRealNumDecl("$numerator/$denominator")
 
     override fun accept(transformer: KTransformerBase): KExpr<KRealSort> = transformer.transform(this)
+
+    override fun internHashCode(): Int = hash(numerator, denominator)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { numerator }, { denominator })
 }

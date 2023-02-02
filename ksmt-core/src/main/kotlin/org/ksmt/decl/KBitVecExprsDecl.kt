@@ -891,5 +891,5 @@ class KBvMulNoUnderflowDecl<T : KBvSort> internal constructor(
 private fun checkSortsAreTheSame(vararg sorts: KBvSort) {
     val sort = sorts.firstOrNull() ?: error("An empty array of sorts given for check")
 
-    require(sorts.all { it === sort }) { "Given sorts are different: $sorts" }
+    require(sorts.all { it == sort }) { "Given sorts are different: $sorts" }
 }
