@@ -1600,7 +1600,7 @@ open class KContext(
         /**
          * Transform fp16 exponent into fp32 exponent.
          * Transform fp16 top and bot exponent to fp32 top and bot exponent to
-         * preserve representation of special values (NaN, Infm Zero)
+         * preserve representation of special values (NaN, Inf, Zero)
          */
         val unbiasedFp16Exponent = exponent.toInt()
         val unbiasedFp32Exponent = when {
