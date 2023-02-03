@@ -35,7 +35,7 @@ import org.ksmt.utils.FpUtils.fpToFp
 import org.ksmt.utils.FpUtils.fpValueFromBv
 import org.ksmt.utils.FpUtils.fpValueFromReal
 import org.ksmt.utils.FpUtils.isInfinity
-import org.ksmt.utils.FpUtils.isNan
+import org.ksmt.utils.FpUtils.isNaN
 import org.ksmt.utils.FpUtils.isNegative
 import org.ksmt.utils.FpUtils.isNormal
 import org.ksmt.utils.FpUtils.isPositive
@@ -46,8 +46,8 @@ import kotlin.math.IEEErem
 
 fun <T : KFpSort> KContext.simplifyFpAbsExpr(value: KExpr<T>): KExpr<T> {
     if (value is KFpValue<T>) {
-        // (abs NaN) ==> Nan
-        if (value.isNan()) {
+        // (abs NaN) ==> NaN
+        if (value.isNaN()) {
             return value
         }
 
@@ -172,8 +172,8 @@ fun <T : KFpSort> KContext.simplifyFpFromBvExpr(
 fun <T : KFpSort> KContext.simplifyFpToIEEEBvExpr(arg: KExpr<T>): KExpr<KBvSort> {
     if (arg is KFpValue<T>) {
         // ensure NaN bits are always same
-        val normalizedValue = if (arg.isNan()) {
-            mkFpNan(arg.sort)
+        val normalizedValue = if (arg.isNaN()) {
+            mkFpNaN(arg.sort)
         } else {
             arg
         }
@@ -255,8 +255,8 @@ fun <T : KFpSort> KContext.simplifyFpEqualExpr(lhs: KExpr<T>, rhs: KExpr<T>): KE
 
 fun <T : KFpSort> KContext.simplifyFpLessExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> = when {
     lhs is KFpValue<T> && rhs is KFpValue<T> -> fpLt(lhs, rhs).expr
-    lhs is KFpValue<T> && lhs.isNan() -> falseExpr
-    rhs is KFpValue<T> && rhs.isNan() -> falseExpr
+    lhs is KFpValue<T> && lhs.isNaN() -> falseExpr
+    rhs is KFpValue<T> && rhs.isNaN() -> falseExpr
     lhs is KFpValue<T> && lhs.isInfinity() && lhs.isPositive() -> falseExpr
     rhs is KFpValue<T> && rhs.isInfinity() && rhs.isNegative() -> falseExpr
     else -> mkFpLessExprNoSimplify(lhs, rhs)
@@ -264,8 +264,8 @@ fun <T : KFpSort> KContext.simplifyFpLessExpr(lhs: KExpr<T>, rhs: KExpr<T>): KEx
 
 fun <T : KFpSort> KContext.simplifyFpLessOrEqualExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> = when {
     lhs is KFpValue<T> && rhs is KFpValue<T> -> fpLeq(lhs, rhs).expr
-    lhs is KFpValue<T> && lhs.isNan() -> falseExpr
-    rhs is KFpValue<T> && rhs.isNan() -> falseExpr
+    lhs is KFpValue<T> && lhs.isNaN() -> falseExpr
+    rhs is KFpValue<T> && rhs.isNaN() -> falseExpr
     else -> mkFpLessOrEqualExprNoSimplify(lhs, rhs)
 }
 
@@ -276,11 +276,11 @@ fun <T : KFpSort> KContext.simplifyFpGreaterOrEqualExpr(lhs: KExpr<T>, rhs: KExp
     simplifyFpLessOrEqualExpr(rhs, lhs)
 
 fun <T : KFpSort> KContext.simplifyFpMaxExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> {
-    if (lhs is KFpValue<T> && lhs.isNan()) {
+    if (lhs is KFpValue<T> && lhs.isNaN()) {
         return rhs
     }
 
-    if (rhs is KFpValue<T> && rhs.isNan()) {
+    if (rhs is KFpValue<T> && rhs.isNaN()) {
         return lhs
     }
 
@@ -294,11 +294,11 @@ fun <T : KFpSort> KContext.simplifyFpMaxExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExp
 }
 
 fun <T : KFpSort> KContext.simplifyFpMinExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> {
-    if (lhs is KFpValue<T> && lhs.isNan()) {
+    if (lhs is KFpValue<T> && lhs.isNaN()) {
         return rhs
     }
 
-    if (rhs is KFpValue<T> && rhs.isNan()) {
+    if (rhs is KFpValue<T> && rhs.isNaN()) {
         return lhs
     }
 
@@ -316,16 +316,16 @@ fun <T : KFpSort> KContext.simplifyFpIsInfiniteExpr(arg: KExpr<T>): KExpr<KBoolS
     evalFpPredicateOr(arg, { it.isInfinity() }) { mkFpIsInfiniteExprNoSimplify(arg) }
 
 fun <T : KFpSort> KContext.simplifyFpIsNaNExpr(arg: KExpr<T>): KExpr<KBoolSort> =
-    evalFpPredicateOr(arg, { it.isNan() }) { mkFpIsNaNExprNoSimplify(arg) }
+    evalFpPredicateOr(arg, { it.isNaN() }) { mkFpIsNaNExprNoSimplify(arg) }
 
 fun <T : KFpSort> KContext.simplifyFpIsNegativeExpr(arg: KExpr<T>): KExpr<KBoolSort> =
-    evalFpPredicateOr(arg, { !it.isNan() && it.isNegative() }) { mkFpIsNegativeExprNoSimplify(arg) }
+    evalFpPredicateOr(arg, { !it.isNaN() && it.isNegative() }) { mkFpIsNegativeExprNoSimplify(arg) }
 
 fun <T : KFpSort> KContext.simplifyFpIsNormalExpr(arg: KExpr<T>): KExpr<KBoolSort> =
     evalFpPredicateOr(arg, { it.isNormal() }) { mkFpIsNormalExprNoSimplify(arg) }
 
 fun <T : KFpSort> KContext.simplifyFpIsPositiveExpr(arg: KExpr<T>): KExpr<KBoolSort> =
-    evalFpPredicateOr(arg, { !it.isNan() && it.isPositive() }) { mkFpIsPositiveExprNoSimplify(arg) }
+    evalFpPredicateOr(arg, { !it.isNaN() && it.isPositive() }) { mkFpIsPositiveExprNoSimplify(arg) }
 
 fun <T : KFpSort> KContext.simplifyFpIsSubnormalExpr(arg: KExpr<T>): KExpr<KBoolSort> =
     evalFpPredicateOr(arg, { it.isSubnormal() }) { mkFpIsSubnormalExprNoSimplify(arg) }
@@ -342,29 +342,29 @@ private fun KContext.tryEvalFpFma(
     y: KFpValue<*>,
     z: KFpValue<*>
 ): KFpValue<*>? = when {
-    x.isNan() || y.isNan() || z.isNan() -> mkFpNan(x.sort)
+    x.isNaN() || y.isNaN() || z.isNaN() -> mkFpNaN(x.sort)
 
     x.isInfinity() && x.isPositive() -> when {
-        y.isZero() -> mkFpNan(x.sort)
-        z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNan(x.sort)
+        y.isZero() -> mkFpNaN(x.sort)
+        z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
         else -> mkFpInf(y.signBit, x.sort)
     }
 
     y.isInfinity() && y.isPositive() -> when {
-        x.isZero() -> mkFpNan(x.sort)
-        z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNan(x.sort)
+        x.isZero() -> mkFpNaN(x.sort)
+        z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
         else -> mkFpInf(x.signBit, x.sort)
     }
 
     x.isInfinity() && x.isNegative() -> when {
-        y.isZero() -> mkFpNan(x.sort)
-        z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNan(x.sort)
+        y.isZero() -> mkFpNaN(x.sort)
+        z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
         else -> mkFpInf(!y.signBit, x.sort)
     }
 
     y.isInfinity() && y.isNegative() -> when {
-        x.isZero() -> mkFpNan(x.sort)
-        z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNan(x.sort)
+        x.isZero() -> mkFpNaN(x.sort)
+        z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
         else -> mkFpInf(!x.signBit, x.sort)
     }
 
@@ -384,10 +384,10 @@ private fun KContext.tryEvalFpFma(
 private fun KContext.tryEvalFpRem(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*>? = when {
     lhs is KFp32Value -> mkFp(lhs.value.IEEErem((rhs as KFp32Value).value), lhs.sort)
     lhs is KFp64Value -> mkFp(lhs.value.IEEErem((rhs as KFp64Value).value), lhs.sort)
-    lhs.isNan() || rhs.isNan() -> mkFpNan(lhs.sort)
-    lhs.isInfinity() -> mkFpNan(lhs.sort)
+    lhs.isNaN() || rhs.isNaN() -> mkFpNaN(lhs.sort)
+    lhs.isInfinity() -> mkFpNaN(lhs.sort)
     rhs.isInfinity() -> lhs
-    rhs.isZero() -> mkFpNan(lhs.sort)
+    rhs.isZero() -> mkFpNaN(lhs.sort)
     lhs.isZero() -> lhs
     // todo: eval fp rem
     else -> null

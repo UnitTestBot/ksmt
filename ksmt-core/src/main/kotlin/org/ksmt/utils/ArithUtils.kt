@@ -1,6 +1,7 @@
 package org.ksmt.utils
 
 import org.ksmt.KContext
+import org.ksmt.cache.hash
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KInt32NumExpr
 import org.ksmt.expr.KInt64NumExpr
@@ -109,6 +110,8 @@ object ArithUtils {
         }
 
         override fun equals(other: Any?): Boolean = this === other || other is RealValue && eq(other)
+
+        override fun hashCode(): Int = hash(numerator, denominator)
 
         private fun eq(other: RealValue): Boolean =
             numerator == other.numerator && denominator == other.denominator

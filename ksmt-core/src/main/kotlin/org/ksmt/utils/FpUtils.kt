@@ -672,7 +672,7 @@ object FpUtils {
 
             // We need only 3 last bits for rounding
             var exponentValue = e.abs()
-            val three = BigInteger.valueOf(3)
+            val three = 3.toBigInteger()
             if (exponentValue > three) {
                 val bitsToDrop = (exponentValue - three).ensureSuitablePowerOfTwo()
                 sticky = value.anyOfLastKBitsSet(bitsToDrop)
