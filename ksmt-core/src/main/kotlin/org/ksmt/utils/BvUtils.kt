@@ -10,6 +10,7 @@ import org.ksmt.expr.KBitVecCustomValue
 import org.ksmt.expr.KBitVecNumberValue
 import org.ksmt.expr.KBitVecValue
 import java.math.BigInteger
+import kotlin.experimental.and
 import kotlin.experimental.inv
 import kotlin.experimental.or
 import kotlin.experimental.xor
@@ -311,8 +312,15 @@ object BvUtils {
         bvDefault = { a, b -> a xor b },
     )
 
-    fun KBitVecValue<*>.bitwiseAnd(other: KBitVecValue<*>): KBitVecValue<*> =
-        (this.bitwiseNot().bitwiseOr(other.bitwiseNot())).bitwiseNot()
+    fun KBitVecValue<*>.bitwiseAnd(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+        other = other,
+        bv1 = { a, b -> a && b },
+        bv8 = { a, b -> a and b },
+        bv16 = { a, b -> a and b },
+        bv32 = { a, b -> a and b },
+        bv64 = { a, b -> a and b },
+        bvDefault = { a, b -> a and b },
+    )
 
     private val bv8PossibleShift = 0 until Byte.SIZE_BITS
     private val bv16PossibleShift = 0 until Short.SIZE_BITS
