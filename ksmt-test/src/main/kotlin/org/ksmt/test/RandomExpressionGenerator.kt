@@ -276,7 +276,7 @@ class RandomExpressionGenerator {
                      * Bv repeat operation can enormously increase the size of bv.
                      * To avoid extremely large bvs, we move the repetitions count to the range 1..3.
                      * */
-                    "mkBvRepeatExpr" -> listOf(
+                    "mkBvRepeatExpr", "mkBvRepeatExprNoSimplify" -> listOf(
                         SimpleArgument(((args[0] as SimpleArgument).value as Int) % 3 + 1),
                         args[1]
                     )
