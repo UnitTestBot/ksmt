@@ -740,7 +740,7 @@ object FpUtils {
         val rhsSignificand = rSignificand.mul2k(3u)
 
         // Alignment shift with sticky bit computation.
-        val (shiftedRhs, stickyRem) = rhsSignificand.divideAndRemainder(powerOfTwo(expDelta))
+        val (shiftedRhs, stickyRem) = rhsSignificand.divAndRem2k(expDelta)
 
         // Significand addition
         return if (lSign != rSign) {
@@ -774,10 +774,7 @@ object FpUtils {
          *  [significandSize result bits][4 special bits][significandSize-4 extra bits]
          *  */
         var (normalizedSignificand, stickyRem) = if (lhs.significandSize >= 4u) {
-            val resultWithReminder = multipliedSignificand.divideAndRemainder(
-                powerOfTwo(lhs.significandSize - 4u)
-            )
-            resultWithReminder[0] to resultWithReminder[1]
+            multipliedSignificand.divAndRem2k(lhs.significandSize - 4u)
         } else {
             // Ensure significand has at least 4 bits (required for rounding)
             val correctedSignificand = multipliedSignificand.mul2k(4u - lhs.significandSize)
@@ -812,9 +809,7 @@ object FpUtils {
          *  Remove the extra bits, keeping a sticky bit.
          *  [normalizedResultSignificand] will have at least 4 bits as required for rounding.
          *  */
-        var (normalizedResultSignificand, stickyRem) = divisionResultSignificand.divideAndRemainder(
-            powerOfTwo(lhs.significandSize)
-        )
+        var (normalizedResultSignificand, stickyRem) = divisionResultSignificand.divAndRem2k(lhs.significandSize)
         if (!stickyRem.isZero() && normalizedResultSignificand.isEven()) {
             normalizedResultSignificand++
         }
@@ -892,7 +887,7 @@ object FpUtils {
         shift: BigInteger,
         rm: KFpRoundingMode
     ): BigInteger {
-        var (div, rem) = value.significand.divideAndRemainder(powerOfTwo(shift))
+        var (div, rem) = value.significand.divAndRem2k(shift)
 
         when (rm) {
             KFpRoundingMode.RoundNearestTiesToEven,
@@ -1152,7 +1147,7 @@ object FpUtils {
     ): BigInteger {
         return if (normalizationShiftSize < BigInteger.ZERO) {
             // Right shift
-            var (res, stickyRem) = significand.divideAndRemainder(powerOfTwo(-normalizationShiftSize))
+            var (res, stickyRem) = significand.divAndRem2k(-normalizationShiftSize)
             if (!stickyRem.isZero() && res.isEven()) {
                 res++
             }
@@ -1296,34 +1291,36 @@ object FpUtils {
         return powerOfTwo(exponent - 1u) - BigInteger.ONE
     }
 
-    private fun powerOfTwo(power: BigInteger): BigInteger {
-        check(power.signum() >= 0) { "Negative power" }
-        val intPower = power.longValueExact()
-        if (intPower <= Int.MAX_VALUE) {
-            return BigInteger.ONE.shiftLeft(intPower.toInt())
-        } else {
-            error("Number 2^$intPower is too big to be represented as a BigInteger")
+    private fun BigInteger.ensureSuitablePowerOfTwo(): UInt {
+        check(signum() >= 0) { "Negative power" }
+        check(bitLength() < Int.SIZE_BITS) {
+            "Number 2^$this is too big to be represented as a BigInteger"
         }
+        return intValueExact().toUInt()
     }
+
+    private fun powerOfTwo(power: BigInteger): BigInteger = powerOfTwo(power.ensureSuitablePowerOfTwo())
 
     private fun BigInteger.isEven(): Boolean = toInt() % 2 == 0
     private fun BigInteger.isZero(): Boolean = signum() == 0
     private fun BigInteger.log2(): Int = bitLength() - 1
-    private fun BigInteger.mul2k(k: BigInteger): BigInteger = this * powerOfTwo(k)
 
+    private fun BigInteger.mul2k(k: BigInteger): BigInteger = mul2k(k.ensureSuitablePowerOfTwo())
     private fun BigInteger.mul2k(k: UInt): BigInteger = shiftLeft(k.toInt())
-    private fun BigInteger.div2k(k: UInt): BigInteger {
-        val result = shiftRight(k.toInt())
-        if (signum() >= 0 || isEven()) {
-            return result
-        }
 
-        /**
-         * In case of odd numbers, the result of arithmetic shift is one lower
-         * than the result of division by a power of two.
-         * For example, -15 / 2^2 == -3, but -15 >> 2 == -4.
-         * */
-        return result.inc()
+    private fun BigInteger.div2k(k: UInt): BigInteger {
+        val result = abs().shiftRight(k.toInt())
+        return if (signum() >= 0) result else result.negate()
+    }
+
+    private fun BigInteger.divAndRem2k(power: BigInteger): Pair<BigInteger, BigInteger> =
+        divAndRem2k(power.ensureSuitablePowerOfTwo())
+
+    private fun BigInteger.divAndRem2k(power: UInt): Pair<BigInteger, BigInteger> {
+        val quotient = div2k(power)
+        val remainderMask = powerOfTwo(power) - BigInteger.ONE
+        val remainder = abs().and(remainderMask)
+        return quotient to remainder
     }
 
     private fun UInt.ceilDiv(other: UInt): UInt =
