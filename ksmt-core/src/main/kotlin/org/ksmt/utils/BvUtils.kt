@@ -187,8 +187,15 @@ object BvUtils {
     fun KBitVecValue<*>.unsignedGreater(other: KBitVecValue<*>): Boolean =
         other.unsignedLess(this)
 
-    operator fun KBitVecValue<*>.unaryMinus(): KBitVecValue<*> =
-        ctx.bvZero(sort.sizeBits) - this
+    operator fun KBitVecValue<*>.unaryMinus(): KBitVecValue<*> = bvOperation(
+        other = this,
+        bv1 = { a, _ -> a xor false },
+        bv8 = { a, _ -> (-a).toByte() },
+        bv16 = { a, _ -> (-a).toShort() },
+        bv32 = { a, _ -> -a },
+        bv64 = { a, _ -> -a },
+        bvDefault = { a, _ -> -a },
+    )
 
     operator fun KBitVecValue<*>.plus(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
         other = other,
@@ -222,6 +229,7 @@ object BvUtils {
 
     fun KBitVecValue<*>.signedDivide(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
         other = other,
+        signIsImportant = true,
         bv1 = { a, _ -> a },
         bv8 = { a, b -> (a / b).toByte() },
         bv16 = { a, b -> (a / b).toShort() },
@@ -242,6 +250,7 @@ object BvUtils {
 
     fun KBitVecValue<*>.signedRem(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
         other = other,
+        signIsImportant = true,
         bv1 = { _, _ -> false },
         bv8 = { a, b -> (a.rem(b)).toByte() },
         bv16 = { a, b -> (a.rem(b)).toShort() },
@@ -262,6 +271,7 @@ object BvUtils {
 
     fun KBitVecValue<*>.signedMod(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
         other = other,
+        signIsImportant = true,
         bv1 = { _, _ -> false },
         bv8 = { a, b -> a.mod(b) },
         bv16 = { a, b -> a.mod(b) },
@@ -283,7 +293,7 @@ object BvUtils {
     )
 
     fun KBitVecValue<*>.bitwiseNot(): KBitVecValue<*> = bvOperation(
-        other = ctx.bvZero(sort.sizeBits),
+        other = this,
         bv1 = { a, _ -> a.not() },
         bv8 = { a, _ -> a.inv() },
         bv16 = { a, _ -> a.inv() },
@@ -361,6 +371,7 @@ object BvUtils {
 
     fun KBitVecValue<*>.shiftRightArith(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
         other = other,
+        signIsImportant = true,
         bv1 = { a, _ -> a },
         bv8 = { a, b -> if (b !in bv8PossibleShift) (if (a < 0) -1 else 0) else (a.toInt() shr b.toInt()).toByte() },
         bv16 = { a, b -> if (b !in bv16PossibleShift) (if (a < 0) -1 else 0) else (a.toInt() shr b.toInt()).toShort() },
@@ -446,6 +457,28 @@ object BvUtils {
         mkBv(bigIntValue().normalizeValue(sort.sizeBits), sort.sizeBits + extensionSize)
     }
 
+    // Add max value without creation of Bv expr
+    fun KBitVecValue<*>.addMaxValueSigned(): KBitVecValue<*> = bvOperation(
+        other = this,
+        bv1 = { a, _ -> a xor bvMaxValueSigned.bv1 },
+        bv8 = { a, _ -> (a + bvMaxValueSigned.bv8).toByte() },
+        bv16 = { a, _ -> (a + bvMaxValueSigned.bv16).toShort() },
+        bv32 = { a, _ -> a + bvMaxValueSigned.bv32 },
+        bv64 = { a, _ -> a + bvMaxValueSigned.bv64 },
+        bvDefault = { a, _ -> a + bvMaxValueSigned.bvDefault(sort.sizeBits) },
+    )
+
+    // Subtract max value without creation of Bv expr
+    fun KBitVecValue<*>.subMaxValueSigned(): KBitVecValue<*> = bvOperation(
+        other = this,
+        bv1 = { a, _ -> a xor bvMaxValueSigned.bv1 },
+        bv8 = { a, _ -> (a - bvMaxValueSigned.bv8).toByte() },
+        bv16 = { a, _ -> (a - bvMaxValueSigned.bv16).toShort() },
+        bv32 = { a, _ -> a - bvMaxValueSigned.bv32 },
+        bv64 = { a, _ -> a - bvMaxValueSigned.bv64 },
+        bvDefault = { a, _ -> a - bvMaxValueSigned.bvDefault(sort.sizeBits) },
+    )
+
     private fun binaryOnes(onesCount: UInt): BigInteger = powerOfTwo(onesCount) - BigInteger.ONE
 
     private fun concatValues(lhs: BigInteger, rhs: BigInteger, rhsSize: UInt): BigInteger =
@@ -473,6 +506,7 @@ object BvUtils {
     @Suppress("LongParameterList")
     private inline fun KBitVecValue<*>.bvOperation(
         other: KBitVecValue<*>,
+        signIsImportant: Boolean = false,
         crossinline bv1: (Boolean, Boolean) -> Boolean,
         crossinline bv8: (Byte, Byte) -> Byte,
         crossinline bv16: (Short, Short) -> Short,
@@ -485,8 +519,8 @@ object BvUtils {
         is KBitVec16Value -> bv16Operation(other, op = bv16)
         is KBitVec32Value -> bv32Operation(other, op = bv32)
         is KBitVec64Value -> bv64Operation(other, op = bv64)
-        is KBitVecCustomValue -> bvCustomOperation(other, signed = true, operation = bvDefault)
-        else -> bvOperationDefault(other, signed = true, operation = bvDefault)
+        is KBitVecCustomValue -> bvCustomOperation(other, signed = signIsImportant, operation = bvDefault)
+        else -> bvOperationDefault(other, signed = signIsImportant, operation = bvDefault)
     }
 
     private inline fun KBitVec1Value.bv1Operation(

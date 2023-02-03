@@ -50,7 +50,7 @@ open class ExpressionEvalTest {
         }
 
         // random values
-        repeat(30) {
+        repeat(50) {
             val binaryValue = String(CharArray(sort.sizeBits.toInt()) {
                 if (random.nextBoolean()) '1' else '0'
             })

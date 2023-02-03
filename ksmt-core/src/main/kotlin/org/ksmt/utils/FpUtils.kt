@@ -14,15 +14,15 @@ import org.ksmt.expr.KRealNumExpr
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.utils.ArithUtils.RealValue
+import org.ksmt.utils.BvUtils.addMaxValueSigned
 import org.ksmt.utils.BvUtils.bigIntValue
-import org.ksmt.utils.BvUtils.bvMaxValueSigned
 import org.ksmt.utils.BvUtils.bvMaxValueUnsigned
 import org.ksmt.utils.BvUtils.bvOne
 import org.ksmt.utils.BvUtils.bvZero
 import org.ksmt.utils.BvUtils.isBvMaxValueUnsigned
 import org.ksmt.utils.BvUtils.isBvZero
 import org.ksmt.utils.BvUtils.minus
-import org.ksmt.utils.BvUtils.plus
+import org.ksmt.utils.BvUtils.subMaxValueSigned
 import org.ksmt.utils.BvUtils.unsignedLessOrEqual
 import java.math.BigInteger
 import kotlin.math.round
@@ -227,11 +227,19 @@ object FpUtils {
         sort = sort
     )
 
-    fun KContext.biasFpExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> =
-        exponent + bvMaxValueSigned(exponentSize)
+    fun biasFpExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> {
+        check(exponent.sort.sizeBits == exponentSize) {
+            "Incorrect exponent size: expected $exponentSize but ${exponent.sort.sizeBits} provided"
+        }
+        return exponent.addMaxValueSigned()
+    }
 
-    fun KContext.unbiasFpExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> =
-        exponent - bvMaxValueSigned(exponentSize)
+    fun unbiasFpExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> {
+        check(exponent.sort.sizeBits == exponentSize) {
+            "Incorrect exponent size: expected $exponentSize but ${exponent.sort.sizeBits} provided"
+        }
+        return exponent.subMaxValueSigned()
+    }
 
     // All 1 bits
     private fun KContext.fpTopExponentBiased(size: UInt): KBitVecValue<*> =
