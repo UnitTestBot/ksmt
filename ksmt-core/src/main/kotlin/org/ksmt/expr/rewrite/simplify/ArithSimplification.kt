@@ -34,7 +34,7 @@ fun <T : KArithSort> KContext.simplifyArithUnaryMinus(arg: KExpr<T>): KExpr<T> {
 
 fun <T : KArithSort> KContext.simplifyArithAdd(args: List<KExpr<T>>): KExpr<T> {
     val simplifiedArgs = ArrayList<KExpr<T>>(args.size)
-    var constantTerm = RealValue.create(BigInteger.ZERO)
+    var constantTerm = RealValue.zero
 
     for (arg in args) {
         // flat one level
@@ -78,7 +78,7 @@ fun <T : KArithSort> KContext.simplifyArithSub(args: List<KExpr<T>>): KExpr<T> =
 
 fun <T : KArithSort> KContext.simplifyArithMul(args: List<KExpr<T>>): KExpr<T> {
     val simplifiedArgs = ArrayList<KExpr<T>>(args.size)
-    var constantTerm = RealValue.create(BigInteger.ONE)
+    var constantTerm = RealValue.one
 
     for (arg in args) {
         // flat one level
@@ -95,7 +95,7 @@ fun <T : KArithSort> KContext.simplifyArithMul(args: List<KExpr<T>>): KExpr<T> {
         return numericValue(constantTerm, args.first().sort)
     }
 
-    if (constantTerm != RealValue.create(BigInteger.ONE)) {
+    if (constantTerm != RealValue.one) {
         // prefer constant to be the first argument
         val firstArg = simplifiedArgs.first()
         simplifiedArgs[0] = numericValue(constantTerm, firstArg.sort)
@@ -117,13 +117,11 @@ fun <T : KArithSort> KContext.simplifyArithDiv(lhs: KExpr<T>, rhs: KExpr<T>): KE
     }
 
     if (rValue != null && !rValue.isZero()) {
-        val one = RealValue.create(BigInteger.ONE)
-        if (rValue == one) {
+        if (rValue == RealValue.one) {
             return lhs
         }
 
-        val minusOne = RealValue.create(-BigInteger.ONE)
-        if (rValue == minusOne) {
+        if (rValue == RealValue.minusOne) {
             return simplifyArithUnaryMinus(lhs)
         }
 

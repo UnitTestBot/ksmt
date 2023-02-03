@@ -108,6 +108,8 @@ object ArithUtils {
             else -> 1
         }
 
+        override fun equals(other: Any?): Boolean = this === other || other is RealValue && eq(other)
+
         private fun eq(other: RealValue): Boolean =
             numerator == other.numerator && denominator == other.denominator
 
@@ -119,15 +121,28 @@ object ArithUtils {
         }
 
         private fun normalize(): RealValue {
+            if (denominator == BigInteger.ONE || numerator == BigInteger.ONE) {
+                return this
+            }
+
             val gcd = numerator.gcd(denominator)
+            if (gcd == BigInteger.ONE) {
+                return this
+            }
+
             val normalizedNumerator = numerator.divide(gcd)
             val normalizedDenominator = denominator.divide(gcd)
             return RealValue(normalizedNumerator, normalizedDenominator)
         }
 
-        companion object{
+        companion object {
             fun create(numerator: BigInteger, denominator: BigInteger = BigInteger.ONE) =
                 RealValue(numerator, denominator).normalize()
+
+            val zero by lazy { create(BigInteger.ZERO) }
+            val one by lazy { create(BigInteger.ONE) }
+            val two by lazy { create(2.toBigInteger()) }
+            val minusOne by lazy { create(-BigInteger.ONE) }
         }
     }
 

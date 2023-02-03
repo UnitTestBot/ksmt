@@ -984,7 +984,7 @@ object FpUtils {
         // Normalize such that 1.0 <= sig < 2.0
         val denormalizedSignificand = value.abs()
         val (resultExponent, normalizedSignificand) = when {
-            denormalizedSignificand < RealValue.create(BigInteger.ONE) -> {
+            denormalizedSignificand < RealValue.one -> {
                 val nearestInteger = denormalizedSignificand.inverse().floor()
 
                 var nearestPowerOfTwo = nearestInteger.log2()
@@ -997,7 +997,8 @@ object FpUtils {
 
                 -nearestPowerOfTwo.toBigInteger() to significand
             }
-            denormalizedSignificand >= RealValue.create(2.toBigInteger()) -> {
+
+            denormalizedSignificand >= RealValue.two -> {
                 val nearestInteger = denormalizedSignificand.floor()
                 val nearestPowerOfTwo = nearestInteger.log2()
 
@@ -1006,6 +1007,7 @@ object FpUtils {
 
                 nearestPowerOfTwo.toBigInteger() to significand
             }
+
             else -> {
                 BigInteger.ZERO to denormalizedSignificand
             }
