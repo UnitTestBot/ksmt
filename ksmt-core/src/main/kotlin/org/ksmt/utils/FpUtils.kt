@@ -1307,11 +1307,25 @@ object FpUtils {
     }
 
     private fun BigInteger.isEven(): Boolean = toInt() % 2 == 0
-    private fun BigInteger.isZero(): Boolean = this == BigInteger.ZERO
+    private fun BigInteger.isZero(): Boolean = signum() == 0
     private fun BigInteger.log2(): Int = bitLength() - 1
-    private fun BigInteger.mul2k(k: UInt): BigInteger = this * powerOfTwo(k)
     private fun BigInteger.mul2k(k: BigInteger): BigInteger = this * powerOfTwo(k)
-    private fun BigInteger.div2k(k: UInt): BigInteger = this / powerOfTwo(k)
+
+    private fun BigInteger.mul2k(k: UInt): BigInteger = shiftLeft(k.toInt())
+    private fun BigInteger.div2k(k: UInt): BigInteger {
+        val result = shiftRight(k.toInt())
+        if (signum() >= 0 || isEven()) {
+            return result
+        }
+
+        /**
+         * In case of odd numbers, the result of arithmetic shift is one lower
+         * than the result of division by a power of two.
+         * For example, -15 / 2^2 == -3, but -15 >> 2 == -4.
+         * */
+        return result.inc()
+    }
+
     private fun UInt.ceilDiv(other: UInt): UInt =
         if (this % other == 0u) {
             this / other
@@ -1343,9 +1357,8 @@ object FpUtils {
         }
 
         // Refine using bisection.
-        val two = 2.toBigInteger()
         while (true) {
-            val mid = (upper + lower).divide(two)
+            val mid = (upper + lower).div2k(1u)
             val midSquared = mid.pow(2)
 
             // We have a precise square root
