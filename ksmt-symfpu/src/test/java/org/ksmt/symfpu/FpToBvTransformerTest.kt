@@ -8,6 +8,7 @@ import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.sort.KFp32Sort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.cast
 import org.ksmt.utils.getValue
 import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.seconds
@@ -38,7 +39,7 @@ class FpToBvTransformerTest {
             val negativeZero = mkFpZero(true, KFp32Sort(this))
             val exprToTransform = mkFpMinExpr(a, b)
 
-            val transformedExpr = transformer.apply(exprToTransform)
+            val transformedExpr = (transformer.apply(exprToTransform) as UnpackedFp<KFp32Sort>).toFp()
             solver.assert((transformedExpr eq zero and (exprToTransform eq negativeZero)).not()) // min(-0, +0) = ±0
             solver.assert((transformedExpr eq negativeZero and (exprToTransform eq zero)).not())
             solver.assert(transformedExpr neq exprToTransform)
@@ -65,7 +66,8 @@ class FpToBvTransformerTest {
             val exprToTransform2 = mkFpMinExpr(a, exprToTransform1)
             val exprToTransform = mkFpMinExpr(exprToTransform1, exprToTransform2)
 
-            val transformedExpr = transformer.apply(exprToTransform)
+            val transformedExpr = (transformer.apply(exprToTransform) as UnpackedFp<KFp32Sort>).toFp()
+
             solver.assert((transformedExpr eq zero and (exprToTransform eq negativeZero)).not()) // min(-0, +0) = ±0
             solver.assert((transformedExpr eq negativeZero and (exprToTransform eq zero)).not())
             solver.assert(transformedExpr neq exprToTransform)
@@ -98,8 +100,9 @@ class FpToBvTransformerTest {
         solver: KZ3Solver,
         exprToTransform: KExpr<T>
     ) {
-        val transformedExpr = transformer.apply(exprToTransform)
-        solver.assert(transformedExpr neq exprToTransform)
+
+        val transformedExpr = transformer.applyAndGetBvExpr(exprToTransform)
+        solver.assert(transformedExpr neq exprToTransform.cast())
 
         // check assertions satisfiability with timeout
         val status = solver.check(timeout = 3.seconds)

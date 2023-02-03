@@ -4,12 +4,20 @@ import org.ksmt.KContext
 import org.ksmt.expr.*
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
 import org.ksmt.symfpu.UnpackedFp.Companion.unpackedFp
 import org.ksmt.utils.cast
 
 class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
+    // apply may return UnpackedFp
+    fun <T : KSort> applyAndGetBvExpr(expr: KExpr<T>): KExpr<KBvSort> {
+        val transformed = apply(expr)
+        val unpacked = (transformed as? UnpackedFp)?.bv
+        return unpacked ?: transformed.cast()
+    }
+
     override fun <Fp : KFpSort> transform(expr: KFpEqualExpr<Fp>): KExpr<KBoolSort> = with(ctx) {
         transformExprAfterTransformed(expr, expr.args) { args ->
             val left = args[0] as UnpackedFp<Fp>
@@ -86,7 +94,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     override fun <Fp : KFpSort> transform(expr: KFpMinExpr<Fp>): KExpr<Fp> = with(ctx) {
         transformExprAfterTransformed(expr, expr.args) { args ->
             val (left, right) = argsToTypedPair(args)
-            unpackedFp(mkIte(right.isNaN or less(left, right), left, right))
+            unpackedFp(expr.sort, mkIte(right.isNaN or less(left, right), left.bv, right.bv))
         }
     }
 
@@ -94,12 +102,12 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = with(ctx) {
         if (expr.sort is KFpSort) {
             val asFp: KExpr<KFpSort> = expr.cast()
-            return unpackedFp(asFp).cast()
+            return unpackedFp(asFp.sort, mkFpToIEEEBvExpr(asFp)).cast()
         }
         return expr
     }
 
     override fun <Fp : KFpSort> transformFpValue(expr: KFpValue<Fp>): KExpr<Fp> = with(ctx) {
-        return unpackedFp(expr)
+        return unpackedFp(expr.sort, mkFpToIEEEBvExpr(expr))
     }
 }
