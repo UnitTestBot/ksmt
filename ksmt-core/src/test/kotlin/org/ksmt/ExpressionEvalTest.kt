@@ -71,7 +71,7 @@ open class ExpressionEvalTest {
         yield(mkFpZero(sort = sort, signBit = false))
         yield(mkFpInf(sort = sort, signBit = true))
         yield(mkFpInf(sort = sort, signBit = false))
-        yield(mkFpNan(sort))
+        yield(mkFpNaN(sort))
         yield(mkFpMaxValue(sort = sort, signBit = false))
         yield(mkFpMaxValue(sort = sort, signBit = true))
 

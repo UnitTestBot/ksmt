@@ -32,8 +32,8 @@ object FpUtils {
 
     @Suppress("MagicNumber")
     fun KFpValue<*>.isZero(): Boolean = when (this) {
-        is KFp32Value -> value == 0.0f || value == -0.0f
-        is KFp64Value -> value == 0.0 || value == -0.0
+        is KFp32Value -> value == 0.0f
+        is KFp64Value -> value == 0.0
         else -> biasedExponent.isBvZero() && significand.isBvZero()
     }
 
@@ -43,7 +43,7 @@ object FpUtils {
         else -> biasedExponent.isTopExponent() && significand.isBvZero()
     }
 
-    fun KFpValue<*>.isNan(): Boolean = when (this) {
+    fun KFpValue<*>.isNaN(): Boolean = when (this) {
         is KFp32Value -> value.isNaN()
         is KFp64Value -> value.isNaN()
         else -> biasedExponent.isTopExponent() && !significand.isBvZero()
@@ -61,7 +61,7 @@ object FpUtils {
         !isZero() && !isSubnormal() && !biasedExponent.isTopExponent()
 
     fun fpStructurallyEqual(lhs: KFpValue<*>, rhs: KFpValue<*>): Boolean = when {
-        lhs.isNan() && rhs.isNan() -> true
+        lhs.isNaN() && rhs.isNaN() -> true
         lhs.isZero() && rhs.isZero() -> lhs.signBit == rhs.signBit
         else -> fpEq(lhs, rhs)
     }
@@ -72,7 +72,7 @@ object FpUtils {
         fp64 = { a, b -> a == b },
         default = { a, b ->
             when {
-                a.isNan() || b.isNan() -> false
+                a.isNaN() || b.isNaN() -> false
                 a.isZero() && b.isZero() -> true
                 else -> a.signBit == b.signBit
                         && a.biasedExponent == b.biasedExponent
@@ -87,7 +87,7 @@ object FpUtils {
         fp64 = { a, b -> a <= b },
         default = { a, b ->
             when {
-                a.isNan() || b.isNan() -> false
+                a.isNaN() || b.isNaN() -> false
                 a.isZero() && b.isZero() -> true
                 else -> if (a.signBit == b.signBit) {
                     if (a.isPositive()) {
@@ -118,14 +118,11 @@ object FpUtils {
     fun fpGeq(lhs: KFpValue<*>, rhs: KFpValue<*>): Boolean = fpLeq(rhs, lhs)
 
     fun fpNegate(expr: KFpValue<*>): KFpValue<*> = with(expr) {
-        when (this) {
-            is KFp32Value -> ctx.mkFp(-value, sort)
-            is KFp64Value -> ctx.mkFp(-value, sort)
-            else -> if (isNan()) {
-                this
-            } else {
-                ctx.mkFpBiased(significand, biasedExponent, !signBit, sort)
-            }
+        when {
+            this.isNaN() -> this
+            this is KFp32Value -> ctx.mkFp(-value, sort)
+            this is KFp64Value -> ctx.mkFp(-value, sort)
+            else -> ctx.mkFpBiased(significand, biasedExponent, !signBit, sort)
         }
     }
 
@@ -148,24 +145,26 @@ object FpUtils {
         value.ctx.fpToFp(rm, value, toFpSort)
 
     fun fpMax(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> = when {
-        lhs.isNan() -> rhs
-        rhs.isNan() -> lhs
-        lhs.isZero() && rhs.isZero() && lhs.signBit != rhs.signBit -> {
-            error("Unspecified: IEEE-754 says that max(+0,-0) = +/-0")
-        }
+        lhs.isNaN() -> rhs
+        rhs.isNaN() -> lhs
 
+        /**
+         * IEEE-754 says that max(+0,-0) = +/-0 (unspecified).
+         * Therefore, in the case of a different sign, we can return any of [rhs], [lhs].
+         * */
         lhs.isZero() && rhs.isZero() -> rhs
         fpGt(lhs, rhs) -> lhs
         else -> rhs
     }
 
     fun fpMin(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> = when {
-        lhs.isNan() -> rhs
-        rhs.isNan() -> lhs
-        lhs.isZero() && rhs.isZero() && lhs.signBit != rhs.signBit -> {
-            error("Unspecified: IEEE-754 says that min(+0,-0) = +/-0")
-        }
+        lhs.isNaN() -> rhs
+        rhs.isNaN() -> lhs
 
+        /**
+         * IEEE-754 says that min(+0,-0) = +/-0 (unspecified).
+         * Therefore, in the case of a different sign, we can return any of [rhs], [lhs].
+         * */
         lhs.isZero() && rhs.isZero() -> rhs
         fpLt(lhs, rhs) -> lhs
         else -> rhs
@@ -197,7 +196,7 @@ object FpUtils {
     fun KContext.fpInfExponentBiased(sort: KFpSort): KBitVecValue<*> =
         fpTopExponentBiased(sort.exponentBits)
 
-    fun KContext.fpNanExponentBiased(sort: KFpSort): KBitVecValue<*> =
+    fun KContext.fpNaNExponentBiased(sort: KFpSort): KBitVecValue<*> =
         fpTopExponentBiased(sort.exponentBits)
 
     fun KContext.fpZeroSignificand(sort: KFpSort): KBitVecValue<*> =
@@ -206,7 +205,7 @@ object FpUtils {
     fun KContext.fpInfSignificand(sort: KFpSort): KBitVecValue<*> =
         bvZero(sort.significandBits - 1u)
 
-    fun KContext.fpNanSignificand(sort: KFpSort): KBitVecValue<*> =
+    fun KContext.fpNaNSignificand(sort: KFpSort): KBitVecValue<*> =
         bvOne(sort.significandBits - 1u)
 
     fun <T : KFpSort> KContext.mkFpMaxValue(sort: T, signBit: Boolean): KFpValue<T> {
@@ -263,16 +262,16 @@ object FpUtils {
             mkFp(lhs.value + (rhs as KFp64Value).value, lhs.sort)
         }
 
-        lhs.isNan() || rhs.isNan() -> mkFpNan(lhs.sort)
+        lhs.isNaN() || rhs.isNaN() -> mkFpNaN(lhs.sort)
 
         lhs.isInfinity() -> if (rhs.isInfinity() && lhs.signBit != rhs.signBit) {
-            mkFpNan(lhs.sort)
+            mkFpNaN(lhs.sort)
         } else {
             lhs
         }
 
         rhs.isInfinity() -> if (lhs.isInfinity() && lhs.signBit != rhs.signBit) {
-            mkFpNan(lhs.sort)
+            mkFpNaN(lhs.sort)
         } else {
             rhs
         }
@@ -304,28 +303,28 @@ object FpUtils {
             mkFp(lhs.value * (rhs as KFp64Value).value, lhs.sort)
         }
 
-        lhs.isNan() || rhs.isNan() -> mkFpNan(lhs.sort)
+        lhs.isNaN() || rhs.isNaN() -> mkFpNaN(lhs.sort)
 
         lhs.isInfinity() && lhs.isPositive() -> if (rhs.isZero()) {
-            mkFpNan(lhs.sort)
+            mkFpNaN(lhs.sort)
         } else {
             mkFpInf(rhs.signBit, lhs.sort)
         }
 
         rhs.isInfinity() && rhs.isPositive() -> if (lhs.isZero()) {
-            mkFpNan(lhs.sort)
+            mkFpNaN(lhs.sort)
         } else {
             mkFpInf(lhs.signBit, lhs.sort)
         }
 
         lhs.isInfinity() && lhs.isNegative() -> if (rhs.isZero()) {
-            mkFpNan(lhs.sort)
+            mkFpNaN(lhs.sort)
         } else {
             mkFpInf(!rhs.signBit, lhs.sort)
         }
 
         rhs.isInfinity() && rhs.isNegative() -> if (lhs.isZero()) {
-            mkFpNan(lhs.sort)
+            mkFpNaN(lhs.sort)
         } else {
             mkFpInf(!lhs.signBit, lhs.sort)
         }
@@ -349,34 +348,34 @@ object FpUtils {
             mkFp(lhs.value / (rhs as KFp64Value).value, lhs.sort)
         }
 
-        lhs.isNan() || rhs.isNan() -> mkFpNan(lhs.sort)
+        lhs.isNaN() || rhs.isNaN() -> mkFpNaN(lhs.sort)
 
         lhs.isInfinity() && lhs.isPositive() -> if (rhs.isInfinity()) {
-            mkFpNan(lhs.sort)
+            mkFpNaN(lhs.sort)
         } else {
             mkFpInf(signBit = rhs.signBit, sort = lhs.sort)
         }
 
         rhs.isInfinity() && rhs.isPositive() -> if (lhs.isInfinity()) {
-            mkFpNan(lhs.sort)
+            mkFpNaN(lhs.sort)
         } else {
             mkFpZero(signBit = lhs.signBit, sort = lhs.sort)
         }
 
         lhs.isInfinity() && lhs.isNegative() -> if (rhs.isInfinity()) {
-            mkFpNan(lhs.sort)
+            mkFpNaN(lhs.sort)
         } else {
             mkFpInf(signBit = !rhs.signBit, lhs.sort)
         }
 
         rhs.isInfinity() && rhs.isNegative() -> if (lhs.isInfinity()) {
-            mkFpNan(lhs.sort)
+            mkFpNaN(lhs.sort)
         } else {
             mkFpZero(signBit = !lhs.signBit, sort = lhs.sort)
         }
 
         rhs.isZero() -> if (lhs.isZero()) {
-            mkFpNan(lhs.sort)
+            mkFpNaN(lhs.sort)
         } else {
             mkFpInf(signBit = lhs.signBit != rhs.signBit, sort = lhs.sort)
         }
@@ -397,10 +396,10 @@ object FpUtils {
             mkFp(sqrt(value.value), value.sort)
         }
 
-        value.isNan() -> value
+        value.isNaN() -> value
         value.isInfinity() && value.isPositive() -> value
         value.isZero() -> value
-        value.isNegative() -> mkFpNan(value.sort)
+        value.isNegative() -> mkFpNaN(value.sort)
         else -> fpUnpackAndSqrt(rm, value)
     }
 
@@ -415,7 +414,7 @@ object FpUtils {
             mkFp(round(value.value), value.sort)
         }
 
-        value.isNan() -> value
+        value.isNaN() -> value
         value.isInfinity() -> value
         value.isZero() -> value
         else -> {
@@ -462,7 +461,7 @@ object FpUtils {
 
     private fun <T : KFpSort> KContext.fpToFp(rm: KFpRoundingMode, value: KFpValue<*>, toFpSort: T): KFpValue<T> =
         when {
-            value.isNan() -> mkFpNan(toFpSort)
+            value.isNaN() -> mkFpNaN(toFpSort)
             value.isInfinity() -> mkFpInf(value.signBit, toFpSort)
             value.isZero() -> mkFpZero(value.signBit, toFpSort)
             value.sort == toFpSort -> value.uncheckedCast()
@@ -470,7 +469,7 @@ object FpUtils {
         }
 
     private fun KContext.fpRealValueOrNull(value: KFpValue<*>): KRealNumExpr? = when {
-        value.isNan() || value.isInfinity() -> null // Real value is unspecified for NaN and Inf
+        value.isNaN() || value.isInfinity() -> null // Real value is unspecified for NaN and Inf
         else -> fpUnpackAndGetRealValueOrNull(value)
     }
 
@@ -480,7 +479,7 @@ object FpUtils {
         bvSort: T,
         signed: Boolean
     ): KBitVecValue<T>? = when {
-        value.isNan() || value.isInfinity() -> null // Bv value is unspecified for NaN and Inf
+        value.isNaN() || value.isInfinity() -> null // Bv value is unspecified for NaN and Inf
         else -> fpUnpackAndGetBvValueOrNull(value, rm, bvSort.sizeBits, signed)?.uncheckedCast()
     }
 

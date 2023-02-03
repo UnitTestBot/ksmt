@@ -67,7 +67,7 @@ import org.ksmt.utils.FpUtils.fpValueFromBv
 import org.ksmt.utils.FpUtils.fpValueFromReal
 import org.ksmt.utils.FpUtils.isSubnormal
 import org.ksmt.utils.FpUtils.isInfinity
-import org.ksmt.utils.FpUtils.isNan
+import org.ksmt.utils.FpUtils.isNaN
 import org.ksmt.utils.FpUtils.isNegative
 import org.ksmt.utils.FpUtils.isNormal
 import org.ksmt.utils.FpUtils.isPositive
@@ -101,8 +101,8 @@ interface KFpExprSimplifier : KExprSimplifierBase {
 
     override fun <T : KFpSort> transform(expr: KFpAbsExpr<T>): KExpr<T> = simplifyApp(expr) { (arg) ->
         if (arg is KFpValue<T>) {
-            // (abs NaN) ==> Nan
-            if (arg.isNan()) {
+            // (abs NaN) ==> NaN
+            if (arg.isNaN()) {
                 return@simplifyApp arg
             }
 
@@ -210,11 +210,11 @@ interface KFpExprSimplifier : KExprSimplifierBase {
         val lhsValue = lhs as? KFpValue<T>
         val rhsValue = rhs as? KFpValue<T>
 
-        if (lhsValue != null && lhsValue.isNan()) {
+        if (lhsValue != null && lhsValue.isNaN()) {
             return@simplifyApp rhs
         }
 
-        if (rhsValue != null && rhsValue.isNan()) {
+        if (rhsValue != null && rhsValue.isNaN()) {
             return@simplifyApp lhs
         }
 
@@ -234,11 +234,11 @@ interface KFpExprSimplifier : KExprSimplifierBase {
         val lhsValue = lhs as? KFpValue<T>
         val rhsValue = rhs as? KFpValue<T>
 
-        if (lhsValue != null && lhsValue.isNan()) {
+        if (lhsValue != null && lhsValue.isNaN()) {
             return@simplifyApp rhs
         }
 
-        if (rhsValue != null && rhsValue.isNan()) {
+        if (rhsValue != null && rhsValue.isNaN()) {
             return@simplifyApp lhs
         }
 
@@ -260,7 +260,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
             val lhsValue = lhs as? KFpValue<T>
             val rhsValue = rhs as? KFpValue<T>
 
-            if (lhsValue != null && lhsValue.isNan() || rhsValue != null && rhsValue.isNan()) {
+            if (lhsValue != null && lhsValue.isNaN() || rhsValue != null && rhsValue.isNaN()) {
                 return@simplifyApp falseExpr
             }
 
@@ -277,7 +277,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
             val lhsValue = lhs as? KFpValue<T>
             val rhsValue = rhs as? KFpValue<T>
 
-            if (lhsValue != null && lhsValue.isNan() || rhsValue != null && rhsValue.isNan()) {
+            if (lhsValue != null && lhsValue.isNaN() || rhsValue != null && rhsValue.isNaN()) {
                 return@simplifyApp falseExpr
             }
 
@@ -359,7 +359,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     override fun <T : KFpSort> transform(expr: KFpIsNaNExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (arg) ->
             if (arg is KFpValue<T>) {
-                return@simplifyApp arg.isNan().expr
+                return@simplifyApp arg.isNaN().expr
             }
             mkFpIsNaNExpr(arg)
         }
@@ -367,7 +367,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     override fun <T : KFpSort> transform(expr: KFpIsNegativeExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (arg) ->
             if (arg is KFpValue<T>) {
-                return@simplifyApp (!arg.isNan() && arg.isNegative()).expr
+                return@simplifyApp (!arg.isNaN() && arg.isNegative()).expr
             }
             mkFpIsNegativeExpr(arg)
         }
@@ -375,7 +375,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     override fun <T : KFpSort> transform(expr: KFpIsPositiveExpr<T>): KExpr<KBoolSort> =
         simplifyApp(expr) { (arg) ->
             if (arg is KFpValue<T>) {
-                return@simplifyApp (!arg.isNan() && arg.isPositive()).expr
+                return@simplifyApp (!arg.isNaN() && arg.isPositive()).expr
             }
             mkFpIsPositiveExpr(arg)
         }
@@ -395,9 +395,9 @@ interface KFpExprSimplifier : KExprSimplifierBase {
 
     override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> = simplifyApp(expr) { (arg) ->
         if (arg is KFpValue<T>) {
-            if (arg.isNan()) {
+            if (arg.isNaN()) {
                 // ensure NaN bits are the same, as in KContext
-                val nan = ctx.mkFpNan(arg.sort) as KFpValue<*>
+                val nan = ctx.mkFpNaN(arg.sort) as KFpValue<*>
                 return@simplifyApp rewrite(
                     mkBvConcatExpr(
                         mkBv(nan.signBit),
@@ -499,29 +499,29 @@ interface KFpExprSimplifier : KExprSimplifierBase {
     private fun tryEvalFpFma(rm: KFpRoundingMode, x: KFpValue<*>, y: KFpValue<*>, z: KFpValue<*>): KFpValue<*>? =
         with(ctx) {
             when {
-                x.isNan() || y.isNan() || z.isNan() -> mkFpNan(x.sort)
+                x.isNaN() || y.isNaN() || z.isNaN() -> mkFpNaN(x.sort)
 
                 x.isInfinity() && x.isPositive() -> when {
-                    y.isZero() -> mkFpNan(x.sort)
-                    z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNan(x.sort)
+                    y.isZero() -> mkFpNaN(x.sort)
+                    z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
                     else -> mkFpInf(y.signBit, x.sort)
                 }
 
                 y.isInfinity() && y.isPositive() -> when {
-                    x.isZero() -> mkFpNan(x.sort)
-                    z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNan(x.sort)
+                    x.isZero() -> mkFpNaN(x.sort)
+                    z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
                     else -> mkFpInf(x.signBit, x.sort)
                 }
 
                 x.isInfinity() && x.isNegative() -> when {
-                    y.isZero() -> mkFpNan(x.sort)
-                    z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNan(x.sort)
+                    y.isZero() -> mkFpNaN(x.sort)
+                    z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
                     else -> mkFpInf(!y.signBit, x.sort)
                 }
 
                 y.isInfinity() && y.isNegative() -> when {
-                    x.isZero() -> mkFpNan(x.sort)
-                    z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNan(x.sort)
+                    x.isZero() -> mkFpNaN(x.sort)
+                    z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
                     else -> mkFpInf(!x.signBit, x.sort)
                 }
 
@@ -542,10 +542,10 @@ interface KFpExprSimplifier : KExprSimplifierBase {
         when {
             lhs is KFp32Value -> mkFp(lhs.value.IEEErem((rhs as KFp32Value).value), lhs.sort)
             lhs is KFp64Value -> mkFp(lhs.value.IEEErem((rhs as KFp64Value).value), lhs.sort)
-            lhs.isNan() || rhs.isNan() -> mkFpNan(lhs.sort)
-            lhs.isInfinity() -> mkFpNan(lhs.sort)
+            lhs.isNaN() || rhs.isNaN() -> mkFpNaN(lhs.sort)
+            lhs.isInfinity() -> mkFpNaN(lhs.sort)
             rhs.isInfinity() -> lhs
-            rhs.isZero() -> mkFpNan(lhs.sort)
+            rhs.isZero() -> mkFpNaN(lhs.sort)
             lhs.isZero() -> lhs
             // todo: eval fp rem
             else -> null

@@ -232,10 +232,10 @@ abstract class BenchmarksBasedTest {
             super.transform(expr).also { checkZeroToZeroPower(expr.lhs, expr.rhs) }
 
         override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>): KExpr<KBvSort> =
-            super.transform(expr).also { checkFpNanOrInf(expr.value) }
+            super.transform(expr).also { checkFpNaNOrInf(expr.value) }
 
         override fun <T : KFpSort> transform(expr: KFpToRealExpr<T>): KExpr<KRealSort>  =
-            super.transform(expr).also { checkFpNanOrInf(expr.value) }
+            super.transform(expr).also { checkFpNaNOrInf(expr.value) }
 
         private fun checkDivisionByZero(divisor: KExpr<*>) = with(ctx) {
             if (divisor == 0.expr) {
@@ -249,9 +249,9 @@ abstract class BenchmarksBasedTest {
             }
         }
 
-        private fun <T: KFpSort> checkFpNanOrInf(value: KExpr<T>) = with(ctx) {
+        private fun <T: KFpSort> checkFpNaNOrInf(value: KExpr<T>) = with(ctx) {
             val underspecifiedValues = setOf(
-                mkFpNan(value.sort),
+                mkFpNaN(value.sort),
                 mkFpInf(signBit = true, value.sort),
                 mkFpInf(signBit = false, value.sort),
             )

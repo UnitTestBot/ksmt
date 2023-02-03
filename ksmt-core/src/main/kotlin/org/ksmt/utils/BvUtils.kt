@@ -85,7 +85,7 @@ object BvUtils {
     fun KBitVecValue<*>.isBvOne(): Boolean = isBvSpecialValue(bvOneValue)
 
     private class BvIntValue(val value: Int) : BvSpecialValueSource {
-        override val bv1: Boolean = value == 1
+        override val bv1: Boolean = value != 0
         override val bv8: Byte = value.toByte()
         override val bv16: Short = value.toShort()
         override val bv32: Int = value

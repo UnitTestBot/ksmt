@@ -294,11 +294,11 @@ import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.FpUtils.biasFpExponent
 import org.ksmt.utils.FpUtils.fpInfExponentBiased
 import org.ksmt.utils.FpUtils.fpInfSignificand
-import org.ksmt.utils.FpUtils.fpNanExponentBiased
-import org.ksmt.utils.FpUtils.fpNanSignificand
+import org.ksmt.utils.FpUtils.fpNaNExponentBiased
+import org.ksmt.utils.FpUtils.fpNaNSignificand
 import org.ksmt.utils.FpUtils.fpZeroExponentBiased
 import org.ksmt.utils.FpUtils.fpZeroSignificand
-import org.ksmt.utils.FpUtils.isNan
+import org.ksmt.utils.FpUtils.isNaN
 import org.ksmt.utils.FpUtils.unbiasFpExponent
 import org.ksmt.utils.booleanSignBit
 import org.ksmt.utils.cast
@@ -1395,7 +1395,7 @@ open class KContext(
         val exponent = value.getHalfPrecisionExponent(isBiased = false)
         val significand = value.halfPrecisionSignificand
         val normalizedValue = constructFp16Number(exponent.toLong(), significand.toLong(), value.signBit)
-        return if (KFp16Value(this, normalizedValue).isNan()) {
+        return if (KFp16Value(this, normalizedValue).isNaN()) {
             mkFp16NaN()
         } else {
             mkFp16WithoutNaNCheck(normalizedValue)
@@ -1408,20 +1408,21 @@ open class KContext(
     fun mkFp32(value: Float): KFp32Value = if (value.isNaN()) mkFp32NaN() else mkFp32WithoutNaNCheck(value)
     fun mkFp32NaN(): KFp32Value = mkFp32WithoutNaNCheck(Float.NaN)
     private fun mkFp32WithoutNaNCheck(value: Float): KFp32Value =
-        fp32Cache.createIfContextActive{ KFp32Value(this, value) }
+        fp32Cache.createIfContextActive { KFp32Value(this, value) }
 
     fun mkFp64(value: Double): KFp64Value = if (value.isNaN()) mkFp64NaN() else mkFp64WithoutNaNCheck(value)
     fun mkFp64NaN(): KFp64Value = mkFp64WithoutNaNCheck(Double.NaN)
     private fun mkFp64WithoutNaNCheck(value: Double): KFp64Value =
-        fp64Cache.createIfContextActive{ KFp64Value(this,value)
-}
+        fp64Cache.createIfContextActive { KFp64Value(this, value) }
+
     fun mkFp128Biased(significand: KBitVecValue<*>, biasedExponent: KBitVecValue<*>, signBit: Boolean): KFp128Value =
-        if (KFp128Value(this, significand, biasedExponent, signBit).isNan()) {
+        if (KFp128Value(this, significand, biasedExponent, signBit).isNaN()) {
             mkFp128NaN()
         } else {
             mkFp128BiasedWithoutNaNCheck(significand, biasedExponent, signBit)
         }
-    fun mkFp128NaN(): KFp128Value = mkFpNan(mkFp128Sort()).cast()
+
+    fun mkFp128NaN(): KFp128Value = mkFpNaN(mkFp128Sort()).cast()
     private fun mkFp128BiasedWithoutNaNCheck(
         significand: KBitVecValue<*>,
         biasedExponent: KBitVecValue<*>,
@@ -1525,11 +1526,11 @@ open class KContext(
 
             is KFp128Sort -> mkFp128Biased(significand, biasedExponent, signBit).cast()
             else -> {
-                val valueForNaNCheck = KFpCustomSizeValue(this,
-                    significandSize, exponentSize, significand, biasedExponent, signBit
+                val valueForNaNCheck = KFpCustomSizeValue(
+                    this, significandSize, exponentSize, significand, biasedExponent, signBit
                 )
-                if (valueForNaNCheck.isNan()) {
-                    mkFpNan(sort)
+                if (valueForNaNCheck.isNaN()) {
+                    mkFpNaN(sort)
                 } else {
                     mkFpCustomSizeBiasedWithoutNaNCheck(sort, significand, biasedExponent, signBit)
                 }.cast()
@@ -1802,14 +1803,14 @@ open class KContext(
         )
     }
 
-    fun <T : KFpSort> mkFpNan(sort: T): KFpValue<T> = when (sort) {
+    fun <T : KFpSort> mkFpNaN(sort: T): KFpValue<T> = when (sort) {
         is KFp16Sort -> mkFp16NaN().cast()
         is KFp32Sort -> mkFp32NaN().cast()
         is KFp64Sort -> mkFp64NaN().cast()
         else -> mkFpCustomSizeBiasedWithoutNaNCheck(
             sort = sort,
-            biasedExponent = fpNanExponentBiased(sort),
-            significand = fpNanSignificand(sort),
+            biasedExponent = fpNaNExponentBiased(sort),
+            significand = fpNaNSignificand(sort),
             signBit = false
         )
     }

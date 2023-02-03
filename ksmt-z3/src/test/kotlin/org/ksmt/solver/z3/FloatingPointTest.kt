@@ -497,8 +497,8 @@ class FloatingPointTest {
     )
 
     @Test
-    fun testDoubleNanValue() = testDoubleConstant(
-        symbolicOperation = { context.mkFpNan(context.mkFp64Sort()) },
+    fun testDoubleNaNValue() = testDoubleConstant(
+        symbolicOperation = { context.mkFpNaN(context.mkFp64Sort()) },
         concreteOperation = { Double.NaN }
     )
 
@@ -527,8 +527,8 @@ class FloatingPointTest {
     )
 
     @Test
-    fun testFloatNanValue() = testFloatConstant(
-        symbolicOperation = { context.mkFpNan(context.mkFp32Sort()) },
+    fun testFloatNaNValue() = testFloatConstant(
+        symbolicOperation = { context.mkFpNaN(context.mkFp32Sort()) },
         concreteOperation = { Float.NaN }
     )
 
@@ -557,8 +557,8 @@ class FloatingPointTest {
     )
 
     @Test
-    fun testHalfNanValue() = testHalfConstant(
-        symbolicOperation = { context.mkFpNan(context.mkFp16Sort()) },
+    fun testHalfNaNValue() = testHalfConstant(
+        symbolicOperation = { context.mkFpNaN(context.mkFp16Sort()) },
         concreteOperation = { Float.NaN }
     )
 
@@ -587,7 +587,7 @@ class FloatingPointTest {
     )
 
     @Test
-    fun testMatchSolverInternalNan() = compareWithSolverInternal(::compareNaNWithSolverInternal)
+    fun testMatchSolverInternalNaN() = compareWithSolverInternal(::compareNaNWithSolverInternal)
 
     @Test
     fun testMatchSolverInternalPosInf() = compareWithSolverInternal(::comparePosInfWithSolverInternal)
@@ -655,7 +655,7 @@ class FloatingPointTest {
 
     private fun <S : KFpSort> compareNaNWithSolverInternal(sort: S) = compareWithSolverInternal(
         sort = sort,
-        operation = context::mkFpNan,
+        operation = context::mkFpNaN,
         solverInternal = { mkFPNaN(it) }
     )
 

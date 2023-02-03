@@ -15,7 +15,7 @@ import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.FpUtils.isInfinity
-import org.ksmt.utils.FpUtils.isNan
+import org.ksmt.utils.FpUtils.isNaN
 import org.ksmt.utils.FpUtils.isNegative
 import org.ksmt.utils.FpUtils.isPositive
 import org.ksmt.utils.FpUtils.isZero
@@ -139,7 +139,7 @@ class FpEvalTest : ExpressionEvalTest() {
     @ParameterizedTest
     @MethodSource("fpSizes")
     fun testFpToIEEEBv(exponent: Int, significand: Int) =
-        testOperationNoNan(exponent, significand, KContext::mkFpToIEEEBvExpr)
+        testOperationNoNaN(exponent, significand, KContext::mkFpToIEEEBvExpr)
 
     @ParameterizedTest
     @MethodSource("fpSizes")
@@ -148,7 +148,7 @@ class FpEvalTest : ExpressionEvalTest() {
             "Exponent may contain values witch are too large to be represented as Real"
         }
         runTest(exponent, significand) { sort: KFpSort, checker ->
-            randomFpValues(sort).filterNot { it.isNan() || it.isInfinity() }.take(100).forEach { value ->
+            randomFpValues(sort).filterNot { it.isNaN() || it.isInfinity() }.take(100).forEach { value ->
                 val expr = mkFpToRealExpr(value)
                 checker.check(expr) { "$value" }
             }
@@ -194,7 +194,7 @@ class FpEvalTest : ExpressionEvalTest() {
         val bvSize = (1 shl exponent) + significand + 1
 
         roundingModeValues().forEach { rm ->
-            randomFpValues(sort).filterNot { it.isNan() || it.isInfinity() }.take(100).forEach { value ->
+            randomFpValues(sort).filterNot { it.isNaN() || it.isInfinity() }.take(100).forEach { value ->
                 val signed = mkFpToBvExpr(rm, value, bvSize, isSigned = true)
                 checker.check(signed) { "Signed: $rm, $value, $bvSize" }
 
@@ -276,7 +276,7 @@ class FpEvalTest : ExpressionEvalTest() {
                     significand = significandBv
                 )
                 assertEquals(exponentBv, value.biasedExponent)
-                if (!value.isNan()) {
+                if (!value.isNaN()) {
                     assertEquals(significandBv, value.significand)
                 }
             }
@@ -295,13 +295,13 @@ class FpEvalTest : ExpressionEvalTest() {
         }
     }
 
-    @JvmName("testOperationUnaryNoNan")
-    private fun <S : KFpSort, T : KSort> testOperationNoNan(
+    @JvmName("testOperationUnaryNoNaN")
+    private fun <S : KFpSort, T : KSort> testOperationNoNaN(
         exponent: Int,
         significand: Int,
         operation: KContext.(KExpr<S>) -> KExpr<T>
     ) = runTest(exponent, significand) { sort: S, checker ->
-        randomFpValues(sort).filterNot { it.isNan() }.take(100).forEach { value ->
+        randomFpValues(sort).filterNot { it.isNaN() }.take(100).forEach { value ->
             val expr = operation(value)
             checker.check(expr) { "$value" }
         }
