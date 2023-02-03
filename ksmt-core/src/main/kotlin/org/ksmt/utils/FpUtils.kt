@@ -25,6 +25,7 @@ import org.ksmt.utils.BvUtils.minus
 import org.ksmt.utils.BvUtils.subMaxValueSigned
 import org.ksmt.utils.BvUtils.unsignedLessOrEqual
 import java.math.BigInteger
+import kotlin.math.absoluteValue
 import kotlin.math.round
 import kotlin.math.sqrt
 
@@ -663,21 +664,31 @@ object FpUtils {
     }
 
     private fun UnpackedFp.fpBvValueUnpacked(rm: KFpRoundingMode): BigInteger {
-        var e = unbiasedExponent - significandSize.toInt().toBigInteger() + BigInteger.ONE
+        val e = unbiasedExponent - significandSize.toInt().toBigInteger() + BigInteger.ONE
 
         val roundedSignificandBvValue = if (e < BigInteger.ZERO) {
             var value = significand
-
-            var lastBit = !value.isEven()
-            var round = false
             var sticky = false
 
-            while (e != BigInteger.ZERO) {
+            // We need only 3 last bits for rounding
+            var exponentValue = e.abs()
+            val three = BigInteger.valueOf(3)
+            if (exponentValue > three) {
+                val bitsToDrop = (exponentValue - three).ensureSuitablePowerOfTwo()
+                sticky = value.anyOfLastKBitsSet(bitsToDrop)
+                value = value.div2k(bitsToDrop)
+                exponentValue = three
+            }
+
+            var round = false
+            var lastBit = !value.isEven()
+
+            while (!exponentValue.isZero()) {
                 value = value.div2k(1u)
                 sticky = sticky || round
                 round = lastBit
                 lastBit = !value.isEven()
-                e++
+                exponentValue--
             }
 
             value.roundSignificandIfNeeded(rm, sign, lastBit, round, sticky)
@@ -871,10 +882,10 @@ object FpUtils {
         var resultExponent = value.unbiasedExponent
 
         // re-normalize
-        val maxValue = powerOfTwo(value.significandSize)
-        while (resultSignificand >= maxValue) {
-            resultSignificand = resultSignificand.div2k(1u)
-            resultExponent++
+        val powerToNormalize = resultSignificand.log2() - value.significandSize.toInt() + 1
+        if (powerToNormalize > 0) {
+            resultExponent += powerToNormalize.toBigInteger()
+            resultSignificand = resultSignificand.div2k(powerToNormalize.toUInt())
         }
 
         return mkRoundedValue(
@@ -933,20 +944,15 @@ object FpUtils {
         toSignificandSize: UInt
     ): KFpValue<*> {
 
-        var significandSizeDelta = toSignificandSize.toInt() - value.significandSize.toInt() + 3 // plus rounding bits
+        val significandSizeDelta = toSignificandSize.toInt() - value.significandSize.toInt() + 3 // plus rounding bits
 
         val resultSignificand = when {
             significandSizeDelta > 0 -> value.significand.mul2k(significandSizeDelta.toUInt())
 
             significandSizeDelta < 0 -> {
-                var sticky = false
-                var significand = value.significand
-
-                while (significandSizeDelta < 0) {
-                    sticky = sticky || !significand.isEven()
-                    significand = significand.div2k(1u)
-                    significandSizeDelta++
-                }
+                val bitsToDrop = significandSizeDelta.absoluteValue.toUInt()
+                val sticky = value.significand.anyOfLastKBitsSet(bitsToDrop)
+                var significand = value.significand.div2k(bitsToDrop)
 
                 if (sticky && significand.isEven()) {
                     significand++
@@ -1265,16 +1271,13 @@ object FpUtils {
     private fun KFpValue<*>.unpackSubnormalValueAndNormalizeSignificand(): UnpackedFp {
         var normalizedExponent = fpMinExponentValue(sort.exponentBits)
 
-        var significandValue = significand.bigIntValue().normalizeValue(sort.significandBits - 1u)
+        val significandValue = significand.bigIntValue().normalizeValue(sort.significandBits - 1u)
         val normalizedSignificand = if (significandValue.isZero()) {
             significandValue
         } else {
-            val p = powerOfTwo(sort.significandBits - 1u)
-            while (p > significandValue) {
-                normalizedExponent--
-                significandValue = significandValue.mul2k(1u)
-            }
-            significandValue
+            val powerToNormalize = maxOf(0, sort.significandBits.toInt() - significandValue.log2() - 1)
+            normalizedExponent -= powerToNormalize.toBigInteger()
+            significandValue.mul2k(powerToNormalize.toUInt())
         }
 
         return UnpackedFp(
@@ -1304,6 +1307,8 @@ object FpUtils {
     private fun BigInteger.isEven(): Boolean = toInt() % 2 == 0
     private fun BigInteger.isZero(): Boolean = signum() == 0
     private fun BigInteger.log2(): Int = bitLength() - 1
+    private fun BigInteger.anyOfLastKBitsSet(k: UInt): Boolean =
+        lowestSetBit.let { it != -1 && it <= k.toInt() }
 
     private fun BigInteger.mul2k(k: BigInteger): BigInteger = mul2k(k.ensureSuitablePowerOfTwo())
     private fun BigInteger.mul2k(k: UInt): BigInteger = shiftLeft(k.toInt())
