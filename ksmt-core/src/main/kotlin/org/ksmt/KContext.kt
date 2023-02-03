@@ -2672,17 +2672,17 @@ open class KContext(
         }
     }
 
-    private inline fun <T> ensureContextActive(block: () -> T): T {
+    protected inline fun <T> ensureContextActive(block: () -> T): T {
         check(isActive) { "Context is not active" }
         return block()
     }
 
-    private inline fun <T> AstInterner<T>.createIfContextActive(
+    protected inline fun <T> AstInterner<T>.createIfContextActive(
         builder: () -> T
     ): T where T : KAst, T : KInternedObject = ensureContextActive {
         intern(builder())
     }
 
-    private fun <T> mkAstInterner(): AstInterner<T> where T : KAst, T : KInternedObject =
+    protected fun <T> mkAstInterner(): AstInterner<T> where T : KAst, T : KInternedObject =
         mkAstInterner(operationMode, astManagementMode)
 }
