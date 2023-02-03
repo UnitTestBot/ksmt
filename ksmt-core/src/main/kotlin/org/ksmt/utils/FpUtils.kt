@@ -450,11 +450,18 @@ object FpUtils {
         KFpRoundingMode.RoundNearestTiesToEven,
         KFpRoundingMode.RoundNearestTiesToAway -> {
             val tie = value.significand.isBvZero() && exponent == (-BigInteger.ONE)
-            when {
-                tie && rm == KFpRoundingMode.RoundNearestTiesToEven -> mkFpZero(value.signBit, value.sort)
-                tie && rm == KFpRoundingMode.RoundNearestTiesToAway -> mkFpOne(value.sort, value.signBit)
-                exponent < (-BigInteger.ONE) -> mkFpZero(value.signBit, value.sort)
-                else -> mkFpOne(value.sort, value.signBit)
+            if (tie) {
+                if (rm == KFpRoundingMode.RoundNearestTiesToEven) {
+                    mkFpZero(value.signBit, value.sort)
+                } else {
+                    mkFpOne(value.sort, value.signBit)
+                }
+            } else {
+                if (exponent < -BigInteger.ONE) {
+                    mkFpZero(value.signBit, value.sort)
+                } else {
+                    mkFpOne(value.sort, value.signBit)
+                }
             }
         }
     }
