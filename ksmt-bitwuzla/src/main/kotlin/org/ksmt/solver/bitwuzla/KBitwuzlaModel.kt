@@ -101,8 +101,8 @@ open class KBitwuzlaModel(
         val vars = decl.argSorts.map { it.mkFreshConstDecl("x") }
         for (i in 0 until interp.size) {
             // Don't substitute vars since arguments in Bitwuzla model are always constants
-            val args = interp.args[i].zip(decl.argSorts) { arg, sort -> arg.convertExpr(sort) }
-            val value = interp.values[i].convertExpr(decl.sort)
+            val args = interp.args!![i].zip(decl.argSorts) { arg, sort -> arg.convertExpr(sort) }
+            val value = interp.values!![i].convertExpr(decl.sort)
             entries += KModel.KFuncInterpEntry(args, value)
         }
 
@@ -123,8 +123,8 @@ open class KBitwuzlaModel(
         val interp = Native.bitwuzlaGetArrayValue(bitwuzlaCtx.bitwuzla, term)
 
         for (i in 0 until interp.size) {
-            val index = interp.indices[i].convertExpr(sort.domain)
-            val value = interp.values[i].convertExpr(sort.range)
+            val index = interp.indices!![i].convertExpr(sort.domain)
+            val value = interp.values!![i].convertExpr(sort.range)
             entries += KModel.KFuncInterpEntry(listOf(index), value)
         }
 
