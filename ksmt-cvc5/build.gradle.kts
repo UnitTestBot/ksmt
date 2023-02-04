@@ -22,8 +22,7 @@ dependencies {
 
     cvc5NativeLib("cvc5", "cvc5-native-linux-x86-64", cvc5Version, ext = "zip")
     cvc5NativeDependency("cvc5", "cvc5-native-dependency-linux-x86-64", cvc5Version, ext = "zip")
-    cvc5NativeLib("cvc5", "cvc5-native-win32-x86-64", cvc5Version, ext = "zip")
-    cvc5NativeDependency("cvc5", "cvc5-native-dependency-win32-x86-64", cvc5Version, ext = "zip")
+    cvc5NativeLib("cvc5", "cvc5-native-win-x86-64", cvc5Version, ext = "zip")
 
     api(files(cvc5Jar))
 }

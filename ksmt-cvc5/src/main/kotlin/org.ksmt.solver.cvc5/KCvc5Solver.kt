@@ -184,9 +184,6 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
                         "libcvc5jni"
                     )
                     NativeLibraryLoader.OS.WINDOWS -> listOf(
-                        "libgmp-10",
-                        "libpoly",
-                        "libpolyxx",
                         "libcvc5",
                         "libcvc5jni"
                     )
