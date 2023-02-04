@@ -105,26 +105,27 @@ class SolverTest {
         assertEquals(KSolverStatus.SAT, status)
     }
 
-    @Ignore
     @Test
     fun testTimeout(): Unit = with(ctx) {
         val solver = KYicesSolver(ctx)
-        val arrayBase by mkArraySort(mkBv32Sort(), mkBv8Sort())
-        val x by mkBv8Sort()
+        val arrayBase by mkArraySort(mkBv32Sort(), mkBv32Sort())
+        val x by mkBv32Sort()
 
         var array = arrayBase
         for (i in 0..1024) {
-            val v = mkBv((i xor 1024).toByte())
+            val v = mkBv((i xor 1024))
             array = array.store(mkBv(4198400 + i), v)
         }
 
         var xoredX = x
-        for (i in 0..3000) {
+        for (i in 0..1000) {
             val selectedValue = array.select(mkBv(4198500 + i))
             xoredX = mkBvXorExpr(xoredX, selectedValue)
+            xoredX = mkBvOrExpr(mkBvUnsignedDivExpr(xoredX, mkBv(3)), mkBvUnsignedRemExpr(xoredX, mkBv(3)))
         }
-        val someRandomValue = mkBv(42.toByte())
+        val someRandomValue = mkBv(42)
         val assertion = xoredX eq someRandomValue
+
         solver.assert(assertion)
 
         val status = solver.check(timeout = 1.milliseconds)

@@ -4,7 +4,9 @@ import com.sri.yices.Terms
 import com.sri.yices.Types
 import com.sri.yices.Yices
 import org.ksmt.decl.KDecl
+import org.ksmt.expr.KConst
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KInterpretedValue
 import org.ksmt.sort.KSort
 import org.ksmt.utils.NativeLibraryLoader
 import org.ksmt.utils.uncheckedCast
@@ -33,11 +35,17 @@ open class KYicesContext : AutoCloseable {
 
     fun findConvertedDecl(decl: YicesTerm): KDecl<*>? = yicesDecls[decl]
 
-    fun <K: KExpr<*>> substituteDecls(expr: K, transform: (K) -> K): K =
+    fun <K : KExpr<*>> substituteDecls(expr: K, transform: (K) -> K): K =
         transformed.getOrPut(expr) { transform(expr) }.uncheckedCast()
 
     open fun internalizeExpr(expr: KExpr<*>, internalizer: (KExpr<*>) -> YicesTerm): YicesTerm =
-        internalize(expressions, yicesExpressions, expr, internalizer)
+        expressions.getOrPut(expr) {
+            internalizer(expr).also {
+                if (expr is KInterpretedValue<*> || expr is KConst<*>)
+                    yicesExpressions[it] = expr
+            }
+        }
+
 
     open fun internalizeSort(sort: KSort, internalizer: (KSort) -> YicesSort): YicesSort =
         internalize(sorts, yicesSorts, sort, internalizer)
@@ -227,13 +235,13 @@ open class KYicesContext : AutoCloseable {
             if (!Yices.isReady()) {
                 NativeLibraryLoader.load { os ->
                     when (os) {
-                        NativeLibraryLoader.OS.LINUX -> listOf("libyices", "libyices2java")
+                        NativeLibraryLoader.OS.LINUX -> listOf("libgmp-10", "libyices", "libyices2java")
                         NativeLibraryLoader.OS.WINDOWS -> listOf(
                             "libwinpthread-1", "libgcc_s_seh-1", "libstdc++-6",
                             "libgmp-10", "libyices", "libyices2java"
                         )
 
-                        else -> emptyList()
+                        NativeLibraryLoader.OS.MACOS -> TODO("Mac os platform is not supported")
                     }
                 }
                 Yices.init()
