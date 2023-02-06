@@ -128,7 +128,7 @@ class BitwuzlaDummyJNITest {
         assertTrue(Native.bitwuzlaTermIsBvValue(one));
         assertFalse(Native.bitwuzlaTermIsFpValue(one));
         assertFalse(Native.bitwuzlaTermIsRmValue(one));
-        assertFalse(Native.bitwuzlaTermIsBv(ones));
+        assertTrue(Native.bitwuzlaTermIsBv(ones));
         assertFalse(Native.bitwuzlaTermIsFp(ones));
         assertFalse(Native.bitwuzlaTermIsRm(ones));
         assertTrue(Native.bitwuzlaTermIsBvValueZero(zero));
