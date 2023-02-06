@@ -18,7 +18,12 @@ object Native {
 //                NativeLibraryLoader.OS.MACOS -> TODO()
 //            }
 //        }
+
+        bitwuzlaInit()
     }
+
+    @JvmStatic
+    external fun bitwuzlaInit(): Bitwuzla
 
     /**
      * Create a new Bitwuzla instance.
@@ -83,45 +88,6 @@ object Native {
      */
     @JvmStatic
     external fun bitwuzlaGitId(bitwuzla: Bitwuzla): String
-
-    /**
-     * If termination callback function has been configured via
-     * [bitwuzlaSetTerminationCallback], call this termination function.
-     *
-     * @param bitwuzla The Bitwuzla instance.
-     *
-     * @return True if `bitwuzla` has been terminated.
-     *
-     * @see bitwuzlaSetTerminationCallback
-     * @see bitwuzlaGetTerminationCallbackState
-     */
-    @JvmStatic
-    external fun bitwuzlaTerminate(bitwuzla: Bitwuzla): Boolean
-
-    /**
-     * Reset a termination callback function.
-     * @param bitwuzla The Bitwuzla instance.
-     * @see bitwuzlaSetTerminationCallback
-     */
-    @JvmStatic
-    external fun bitwuzlaResetTerminationCallback(bitwuzla: Bitwuzla)
-
-    /**
-     * Configure a termination callback function.
-     *
-     * The `state` of the callback can be retrieved via
-     * [bitwuzlaGetTerminationCallbackState].
-     *
-     * @param bitwuzla The Bitwuzla instance.
-     * @param `fun` The callback function, returns a value != 0 if `bitwuzla` has
-     * been terminated.
-     * @param state The argument to the callback function.
-     *
-     * @see bitwuzla_terminate
-     * @see bitwuzlaGetTerminationCallbackState
-     */
-    @JvmStatic
-    external fun bitwuzlaSetTerminationCallback(bitwuzla: Bitwuzla)
 
     /**
      * Set option.
@@ -927,6 +893,11 @@ object Native {
     @JvmStatic
     external fun bitwuzlaCheckSat(bitwuzla: Bitwuzla): Int
 
+    @JvmStatic
+    external fun bitwuzlaCheckSatTimeout(bitwuzla: Bitwuzla, timeout: Long): Int
+
+    @JvmStatic
+    external fun bitwuzlaForceTerminate(bitwuzla: Bitwuzla): Unit
 
     /**
      * Get a term representing the model value of a given term.

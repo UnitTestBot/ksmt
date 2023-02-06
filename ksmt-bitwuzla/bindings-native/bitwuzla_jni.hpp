@@ -6,6 +6,10 @@
 extern "C" {
 #endif
 
+JNIEXPORT void JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaInit
+        (JNIEnv* env, jobject native_class);
+
 JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaNew
         (JNIEnv* env, jobject native_class);
 
@@ -22,15 +26,6 @@ JNIEXPORT jstring JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzla
         (JNIEnv* env, jobject native_class, jlong bitwuzla);
 
 JNIEXPORT jstring JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGitId
-        (JNIEnv* env, jobject native_class, jlong bitwuzla);
-
-JNIEXPORT jboolean JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTerminate
-        (JNIEnv* env, jobject native_class, jlong bitwuzla);
-
-JNIEXPORT void JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSetTerminationCallback
-        (JNIEnv* env, jobject native_class, jlong bitwuzla);
-
-JNIEXPORT void JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaResetTerminationCallback
         (JNIEnv* env, jobject native_class, jlong bitwuzla);
 
 JNIEXPORT void JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSetOption
@@ -99,9 +94,6 @@ JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMk
 JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkFpNan
         (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_sort);
 
-JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkFpNan
-        (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_sort);
-
 JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkBvValue
         (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_sort, jstring value, jint base);
 
@@ -120,9 +112,6 @@ JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMk
 
 JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkTerm2
         (JNIEnv* env, jobject native_class, jlong bitwuzla, jint kind, jlong arg0, jlong arg1);
-
-JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkTerm3
-        (JNIEnv* env, jobject native_class, jlong bitwuzla, jint kind, jlong arg0, jlong arg1, jlong arg2);
 
 JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkTerm3
         (JNIEnv* env, jobject native_class, jlong bitwuzla, jint kind, jlong arg0, jlong arg1, jlong arg2);
@@ -176,6 +165,14 @@ JNIEXPORT void JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaRes
         (JNIEnv* env, jobject native_class, jlong bitwuzla);
 
 JNIEXPORT jint JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaCheckSat
+        (JNIEnv* env, jobject native_class, jlong bitwuzla);
+
+JNIEXPORT jint JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaCheckSatTimeout
+        (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong timeout);
+
+JNIEXPORT void JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaForceTerminate
         (JNIEnv* env, jobject native_class, jlong bitwuzla);
 
 JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetValue

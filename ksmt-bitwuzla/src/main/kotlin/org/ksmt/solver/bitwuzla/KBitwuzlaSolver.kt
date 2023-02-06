@@ -80,9 +80,12 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
     }
 
     override fun check(timeout: Duration): KSolverStatus = bitwuzlaCtx.bitwuzlaTry {
-        bitwuzlaCtx.withTimeout(timeout) {
-            BitwuzlaResult.fromValue(Native.bitwuzlaCheckSat(bitwuzlaCtx.bitwuzla)).processCheckResult()
+        val status = if (timeout == Duration.INFINITE) {
+            Native.bitwuzlaCheckSat(bitwuzlaCtx.bitwuzla)
+        } else {
+            Native.bitwuzlaCheckSatTimeout(bitwuzlaCtx.bitwuzla, timeout.inWholeMilliseconds)
         }
+        BitwuzlaResult.fromValue(status).processCheckResult()
     }
 
     override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus =
@@ -95,9 +98,13 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
             bitwuzlaAssumptions.forEach {
                 Native.bitwuzlaAssume(bitwuzlaCtx.bitwuzla, it)
             }
-            bitwuzlaCtx.withTimeout(timeout) {
-                BitwuzlaResult.fromValue(Native.bitwuzlaCheckSat(bitwuzlaCtx.bitwuzla)).processCheckResult()
+
+            val status = if (timeout == Duration.INFINITE) {
+                Native.bitwuzlaCheckSat(bitwuzlaCtx.bitwuzla)
+            } else {
+                Native.bitwuzlaCheckSatTimeout(bitwuzlaCtx.bitwuzla, timeout.inWholeMilliseconds)
             }
+            BitwuzlaResult.fromValue(status).processCheckResult()
         }
 
     override fun model(): KModel = bitwuzlaCtx.bitwuzlaTry {

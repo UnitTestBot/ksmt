@@ -4,6 +4,7 @@
 #include <memory>
 #include <unistd.h>
 #include <vector>
+#include <chrono>
 #include "bitwuzla_jni.hpp"
 #include "bitwuzla_extension.h"
 
@@ -97,9 +98,76 @@ void abort_callback(const char* msg) {
     throw std::runtime_error(msg);
 }
 
+enum TerminationState {
+    NOT_ACTIVE, ACTIVE, TERMINATED
+};
+
+struct BitwuzlaTerminationCallbackState {
+    std::chrono::milliseconds time_mark;
+    std::atomic_int termination_state;
+
+    void reset() {
+        termination_state = TerminationState::NOT_ACTIVE;
+    }
+
+    void terminate() {
+        int expected_state = TerminationState::ACTIVE;
+        int new_state = TerminationState::TERMINATED;
+        termination_state.compare_exchange_strong(expected_state, new_state);
+    }
+
+    void setup_timeout(uint64_t timeout) {
+        termination_state = TerminationState::ACTIVE;
+        auto current_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()
+        );
+        time_mark = current_time + std::chrono::milliseconds(timeout);
+    }
+
+    bool terminated() {
+        int current_state = termination_state;
+        if (current_state == TerminationState::TERMINATED) {
+            return true;
+        }
+        if (current_state != TerminationState::ACTIVE) {
+            return false;
+        }
+        std::chrono::milliseconds current_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()
+        );
+        if (current_time > time_mark) {
+            int expected_state = TerminationState::ACTIVE;
+            int new_state = TerminationState::TERMINATED;
+            return !termination_state.compare_exchange_strong(expected_state, new_state);
+        }
+        return false;
+    }
+};
+
 int32_t termination_callback(void* state) {
+    auto termination_state = reinterpret_cast<BitwuzlaTerminationCallbackState*>(state);
+    if (termination_state != nullptr && termination_state->terminated()) {
+        return 1;
+    }
     return 0;
 }
+
+BitwuzlaTerminationCallbackState* get_termination_state(Bitwuzla* bitwuzla) {
+    auto state = bitwuzla_get_termination_callback_state(bitwuzla);
+    return reinterpret_cast<BitwuzlaTerminationCallbackState*>(state);
+}
+
+struct ScopedTimeout {
+    BitwuzlaTerminationCallbackState* state;
+
+    ScopedTimeout(BitwuzlaTerminationCallbackState* state, uint64_t timeout) : state(state) {
+        state->setup_timeout(timeout);
+    }
+
+    ~ScopedTimeout() {
+        state->reset();
+    }
+};
 
 void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaInit(JNIEnv* env, jobject native_class) {
     bitwuzla_set_abort_callback(abort_callback);
@@ -107,19 +175,36 @@ void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaInit(JNIEnv* env, job
 
 jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaNew(JNIEnv* env, jobject native_class) {
     BZLA_TRY_OR_ZERO({
-                         return (jlong) bitwuzla_new();
+                         Bitwuzla* bzla = bitwuzla_new();
+                         
+                         auto termination_state = new BitwuzlaTerminationCallbackState();
+                         termination_state->reset();
+                         bitwuzla_set_termination_callback(bzla, termination_callback, termination_state);
+                         
+                         return (jlong) bzla;
                      })
 }
 
 void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaDelete(JNIEnv* env, jobject native_class, jlong bitwuzla) {
     BZLA_TRY_VOID({
+
+                      auto termination_state = get_termination_state(BZLA);
+                      delete termination_state;
+                      
                       bitwuzla_delete(BZLA);
                   })
 }
 
 void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaReset(JNIEnv* env, jobject native_class, jlong bitwuzla) {
     BZLA_TRY_VOID({
+                      auto termination_state = get_termination_state(BZLA);
+                      delete termination_state;
+        
                       bitwuzla_reset(BZLA);
+
+                      auto new_termination_state = new BitwuzlaTerminationCallbackState();
+                      new_termination_state->reset();
+                      bitwuzla_set_termination_callback(BZLA, termination_callback, new_termination_state);
                   })
 }
 
@@ -147,27 +232,6 @@ jstring Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGitId(JNIEnv* env,
                          jstring result = env->NewStringUTF(c);
                          return result;
                      })
-}
-
-jboolean
-Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTerminate(JNIEnv* env, jobject native_class, jlong bitwuzla) {
-    BZLA_TRY_OR_ZERO({
-                         return static_cast<jboolean>(bitwuzla_terminate(BZLA));
-                     })
-}
-
-void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSetTerminationCallback(JNIEnv* env, jobject native_class,
-                                                                                  jlong bitwuzla) {
-    BZLA_TRY_VOID({
-                      bitwuzla_set_termination_callback(BZLA, termination_callback, nullptr);
-                  })
-}
-
-void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaResetTerminationCallback(JNIEnv* env, jobject native_class,
-                                                                                    jlong bitwuzla) {
-    BZLA_TRY_VOID({
-                      bitwuzla_set_termination_callback(BZLA, termination_callback, nullptr);
-                  })
 }
 
 void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSetOption(JNIEnv* env, jobject native_class, jlong bitwuzla,
@@ -542,6 +606,26 @@ jint Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaCheckSat(JNIEnv* env,
                          BitwuzlaResult result = bitwuzla_check_sat(BZLA);
                          return result;
                      })
+}
+
+jint
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaCheckSatTimeout(JNIEnv* env, jobject native_class, jlong bitwuzla,
+                                                                      jlong timeout) {
+    BZLA_TRY_OR_ZERO({
+                         auto termination_state = get_termination_state(BZLA);
+                         ScopedTimeout _timeout(termination_state, timeout);
+
+                         BitwuzlaResult result = bitwuzla_check_sat(BZLA);
+                         return result;
+                     })
+}
+
+void
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaForceTerminate(JNIEnv* env, jobject native_class, jlong bitwuzla) {
+    BZLA_TRY_VOID({
+                      auto termination_state = get_termination_state(BZLA);
+                      termination_state->terminate();
+                  })
 }
 
 jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetValue(JNIEnv* env, jobject native_class, jlong bitwuzla,
