@@ -27,8 +27,7 @@ class BitwuzlaDummyJNITest {
         val gitid = Native.bitwuzlaGitId(bitwuzla);
         println(version);
         println(gitid);
-        val termination = Native.bitwuzlaTerminate(bitwuzla);
-        println(termination);
+
         val bitwuzla2 = Native.bitwuzlaNew();
         Native.bitwuzlaSetOption(bitwuzla, BitwuzlaOption.BITWUZLA_OPT_PRODUCE_MODELS.value, 0);
         Native.bitwuzlaSetOptionStr(bitwuzla, BitwuzlaOption.BITWUZLA_OPT_ENGINE.value, "aigprop");
