@@ -4,8 +4,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import org.ksmt.expr.KExpr
-import org.ksmt.solver.KSolverStatus
-import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.BvUtils.bvMaxValueUnsigned
@@ -13,12 +11,10 @@ import org.ksmt.utils.BvUtils.bvOne
 import org.ksmt.utils.BvUtils.bvValue
 import org.ksmt.utils.BvUtils.bvZero
 import org.ksmt.utils.uncheckedCast
-import kotlin.random.Random
 import kotlin.random.nextInt
-import kotlin.test.assertEquals
 
 @Execution(ExecutionMode.CONCURRENT)
-class BvSimplifyTest {
+class BvSimplifyTest: ExpressionSimplifyTest() {
 
     @Test
     fun testBvAdd() = testOperation(
@@ -504,29 +500,12 @@ class BvSimplifyTest {
         }
     }
 
-    private fun <S : KBvSort> runTest(test: KContext.(S, TestRunner) -> Unit) {
-        val ctx = KContext(simplificationMode = KContext.SimplificationMode.SIMPLIFY)
-        val sort: S = ctx.mkBvSort(BV_SIZE).uncheckedCast()
-        val checker = TestRunner(ctx)
-        ctx.test(sort, checker)
-    }
-
-    internal class TestRunner(private val ctx: KContext) {
-        fun <T : KSort> check(
-            unsimplifiedExpr: KExpr<T>,
-            simplifiedExpr: KExpr<T>,
-            printArgs: () -> String
-        ) = KZ3Solver(ctx).use { solver ->
-            val equivalenceCheck = ctx.mkEq(simplifiedExpr, unsimplifiedExpr)
-            solver.assert(ctx.mkNot(equivalenceCheck))
-
-            val status = solver.check()
-            assertEquals(KSolverStatus.UNSAT, status, printArgs())
-        }
-    }
+    private fun <S : KBvSort> runTest(test: KContext.(S, TestRunner) -> Unit) = runTest(
+        mkSort = { mkBvSort(BV_SIZE).uncheckedCast() },
+        test = test
+    )
 
     companion object {
-        val random = Random(42)
         val BV_SIZE = 77u
     }
 }
