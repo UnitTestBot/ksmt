@@ -7,6 +7,7 @@ import org.ksmt.expr.KBvAndExpr
 import org.ksmt.expr.KBvConcatExpr
 import org.ksmt.expr.KBvExtractExpr
 import org.ksmt.expr.KBvMulExpr
+import org.ksmt.expr.KBvNegationExpr
 import org.ksmt.expr.KBvNotExpr
 import org.ksmt.expr.KBvOrExpr
 import org.ksmt.expr.KBvXorExpr
@@ -154,8 +155,22 @@ fun <T : KBvSort> KContext.simplifyBvXNorExpr(lhs: KExpr<T>, rhs: KExpr<T>): KEx
     simplifyBvNotExpr(simplifyBvXorExpr(lhs, rhs))
 
 
-fun <T : KBvSort> KContext.simplifyBvNegationExpr(arg: KExpr<T>): KExpr<T> =
-    if (arg is KBitVecValue<T>) (-arg).uncheckedCast() else mkBvNegationExprNoSimplify(arg)
+fun <T : KBvSort> KContext.simplifyBvNegationExpr(arg: KExpr<T>): KExpr<T> {
+    if (arg is KBitVecValue<T>) return (-arg).uncheckedCast()
+
+    if (arg is KBvNegationExpr<T>) return arg.value
+
+    if (arg is KBvAddExpr<T>) {
+        // (bvneg (bvadd a b)) ==> (bvadd (bvneg a) (bvneg b))
+        val lhsIsSuitableFoRewrite = arg.arg0 is KBitVecValue<T> || arg.arg0 is KBvNegationExpr<T>
+        val rhsIsSuitableFoRewrite = arg.arg1 is KBitVecValue<T> || arg.arg1 is KBvNegationExpr<T>
+        if (lhsIsSuitableFoRewrite || rhsIsSuitableFoRewrite) {
+            return simplifyBvAddExpr(simplifyBvNegationExpr(arg.arg0), simplifyBvNegationExpr(arg.arg1))
+        }
+    }
+
+    return mkBvNegationExprNoSimplify(arg)
+}
 
 fun <T : KBvSort> KContext.simplifyBvAddExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
     evalBvOperationOr(lhs, rhs, { a, b -> a + b }) {
