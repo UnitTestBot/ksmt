@@ -7,6 +7,7 @@ import org.ksmt.expr.KIntNumExpr
 import org.ksmt.expr.KMulArithExpr
 import org.ksmt.expr.KRealNumExpr
 import org.ksmt.expr.KToRealIntExpr
+import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KIntSort
@@ -23,12 +24,18 @@ fun <T : KArithSort> KContext.simplifyArithUnaryMinus(arg: KExpr<T>): KExpr<T> {
     if (arg is KIntNumExpr) {
         return mkIntNum(-arg.bigIntegerValue).uncheckedCast()
     }
+
     if (arg is KRealNumExpr) {
         return mkRealNum(
             mkIntNum(-arg.numerator.bigIntegerValue),
             arg.denominator
         ).uncheckedCast()
     }
+
+    if (arg is KUnaryMinusArithExpr<T>) {
+        return arg.arg
+    }
+
     return mkArithUnaryMinusNoSimplify(arg)
 }
 
