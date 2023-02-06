@@ -37,7 +37,7 @@ class YicesBenchmarksBasedTest : BenchmarksBasedTest() {
             .ensureNotEmpty()
 
         private fun List<BenchmarkTestArguments>.skipUnsupportedTheories() =
-            filterNot { "FP" in it.name || "QF" !in it.name }
+            filterNot { "QF" !in it.name || "FP" in it.name || "N" in it.name }
 
         private fun List<BenchmarkTestArguments>.skipBadTestCases(): List<BenchmarkTestArguments> =
             /**

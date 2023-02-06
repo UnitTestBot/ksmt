@@ -236,11 +236,7 @@ open class KYicesContext : AutoCloseable {
                 NativeLibraryLoader.load { os ->
                     when (os) {
                         NativeLibraryLoader.OS.LINUX -> listOf("libgmp-10", "libyices", "libyices2java")
-                        NativeLibraryLoader.OS.WINDOWS -> listOf(
-                            "libwinpthread-1", "libgcc_s_seh-1", "libstdc++-6",
-                            "libgmp-10", "libyices", "libyices2java"
-                        )
-
+                        NativeLibraryLoader.OS.WINDOWS -> listOf("libgmp-10", "libyices", "libyices2java")
                         NativeLibraryLoader.OS.MACOS -> TODO("Mac os platform is not supported")
                     }
                 }
