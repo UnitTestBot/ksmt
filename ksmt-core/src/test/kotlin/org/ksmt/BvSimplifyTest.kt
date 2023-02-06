@@ -1,23 +1,36 @@
 package org.ksmt
 
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.parallel.Execution
+import org.junit.jupiter.api.parallel.ExecutionMode
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.z3.KZ3Solver
-import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.BvUtils.bvMaxValueUnsigned
+import org.ksmt.utils.BvUtils.bvOne
+import org.ksmt.utils.BvUtils.bvValue
 import org.ksmt.utils.BvUtils.bvZero
 import org.ksmt.utils.uncheckedCast
 import kotlin.random.Random
 import kotlin.random.nextInt
 import kotlin.test.assertEquals
 
+@Execution(ExecutionMode.CONCURRENT)
 class BvSimplifyTest {
 
     @Test
-    fun testBvAdd() =
-        testOperation(KContext::mkBvAddExpr, KContext::mkBvAddExprNoSimplify)
+    fun testBvAdd() = testOperation(
+        KContext::mkBvAddExpr,
+        KContext::mkBvAddExprNoSimplify,
+        mkSpecialValues = {
+            listOf(
+                bvZero(it.sizeBits).uncheckedCast(),
+                bvOne(it.sizeBits).uncheckedCast()
+            )
+        }
+    )
 
     @Test
     fun testBvAddNoOverflow() =
@@ -28,16 +41,51 @@ class BvSimplifyTest {
         testOperation(KContext::mkBvAddNoUnderflowExpr, KContext::mkBvAddNoUnderflowExprNoSimplify)
 
     @Test
-    fun testBvAnd() =
-        testOperation(KContext::mkBvAndExpr, KContext::mkBvAndExprNoSimplify)
+    fun testBvAnd() = testOperation(
+        KContext::mkBvAndExpr,
+        KContext::mkBvAndExprNoSimplify,
+        mkSpecialValues = {
+            listOf(
+                bvZero(it.sizeBits).uncheckedCast(),
+                bvMaxValueUnsigned(it.sizeBits).uncheckedCast(),
+                bvOne(it.sizeBits).uncheckedCast()
+            )
+        }
+    )
 
     @Test
-    fun testBvArithShiftRight() =
-        testOperation(KContext::mkBvArithShiftRightExpr, KContext::mkBvArithShiftRightExprNoSimplify)
+    fun testBvArithShiftRight() = testOperation(
+        KContext::mkBvArithShiftRightExpr,
+        KContext::mkBvArithShiftRightExprNoSimplify,
+        mkSpecialValues = {
+            listOf(
+                bvValue(it.sizeBits, 3).uncheckedCast(),
+                bvValue(it.sizeBits, BV_SIZE.toInt() + 5).uncheckedCast(),
+                bvZero(it.sizeBits).uncheckedCast(),
+                mkConst("a", it)  // same as lhs
+            )
+        }
+    )
 
     @Test
-    fun testBvConcat() =
-        testOperation(KContext::mkBvConcatExpr, KContext::mkBvConcatExprNoSimplify)
+    @Suppress("UNCHECKED_CAST")
+    fun testBvConcat() = testOperation(
+        KContext::mkBvConcatExpr,
+        KContext::mkBvConcatExprNoSimplify,
+        mkSpecialValues = {
+            listOf(
+                bvZero(BV_SIZE / 2u) as KExpr<KBvSort>,
+                mkBvConcatExprNoSimplify(
+                    bvZero(BV_SIZE / 2u),
+                    mkConst("c", mkBvSort(BV_SIZE / 2u))
+                ),
+                mkBvConcatExprNoSimplify(
+                    mkConst("d", mkBvSort(BV_SIZE / 2u)),
+                    bvZero(BV_SIZE / 2u)
+                )
+            )
+        }
+    )
 
     @Test
     fun testBvDivNoOverflow() =
@@ -51,18 +99,48 @@ class BvSimplifyTest {
                 val low = random.nextInt(0..high)
                 testOperation(
                     { value: KExpr<KBvSort> -> mkBvExtractExpr(high, low, value) },
-                    { value: KExpr<KBvSort> -> mkBvExtractExprNoSimplify(high, low, value) }
+                    { value: KExpr<KBvSort> -> mkBvExtractExprNoSimplify(high, low, value) },
+                    mkSpecialValues = {
+                        listOf(
+                            mkBvExtractExprNoSimplify(
+                                high = BV_SIZE.toInt() + 5,
+                                low = 5,
+                                mkConst("y", mkBvSort(BV_SIZE * 2u))
+                            )
+                        )
+                    }
                 )
             }
         }
     }
 
     @Test
-    fun testBvLogicalShiftRight() =
-        testOperation(KContext::mkBvLogicalShiftRightExpr, KContext::mkBvLogicalShiftRightExprNoSimplify)
+    fun testBvLogicalShiftRight() = testOperation(
+        KContext::mkBvLogicalShiftRightExpr,
+        KContext::mkBvLogicalShiftRightExprNoSimplify,
+        mkSpecialValues = {
+            listOf(
+                bvValue(it.sizeBits, 3).uncheckedCast(),
+                bvValue(it.sizeBits, BV_SIZE.toInt() + 5).uncheckedCast(),
+                bvZero(it.sizeBits).uncheckedCast(),
+                mkConst("a", it)  // same as lhs
+            )
+        }
+    )
 
     @Test
-    fun testBvMul() = testOperation(KContext::mkBvMulExpr, KContext::mkBvMulExprNoSimplify)
+    fun testBvMul() = testOperation(
+        KContext::mkBvMulExpr,
+        KContext::mkBvMulExprNoSimplify,
+        mkSpecialValues = {
+            listOf(
+                bvZero(it.sizeBits).uncheckedCast(),
+                bvOne(it.sizeBits).uncheckedCast(),
+                bvValue(it.sizeBits, 2).uncheckedCast(),
+                bvValue(it.sizeBits, -1).uncheckedCast(),
+            )
+        }
+    )
 
     @Test
     fun testBvMulNoOverflow() =
@@ -77,8 +155,22 @@ class BvSimplifyTest {
         testOperation(KContext::mkBvNAndExpr, KContext::mkBvNAndExprNoSimplify)
 
     @Test
-    fun testBvNegation() =
-        testOperation(KContext::mkBvNegationExpr, KContext::mkBvNegationExprNoSimplify)
+    fun testBvNegation() = testOperation(
+        KContext::mkBvNegationExpr,
+        KContext::mkBvNegationExprNoSimplify,
+        mkSpecialValues = {
+            listOf(
+                mkBvAddExprNoSimplify(
+                    mkConst("y", it),
+                    bvOne(it.sizeBits).uncheckedCast()
+                ),
+                mkBvAddExprNoSimplify(
+                    mkBvNegationExprNoSimplify(mkConst("y", it)),
+                    mkConst("z", it),
+                )
+            )
+        }
+    )
 
     @Test
     fun testBvNegationNoOverflow() =
@@ -93,8 +185,17 @@ class BvSimplifyTest {
         testOperation(KContext::mkBvNotExpr, KContext::mkBvNotExprNoSimplify)
 
     @Test
-    fun testBvOr() =
-        testOperation(KContext::mkBvOrExpr, KContext::mkBvOrExprNoSimplify)
+    fun testBvOr() = testOperation(
+        KContext::mkBvOrExpr,
+        KContext::mkBvOrExprNoSimplify,
+        mkSpecialValues = {
+            listOf(
+                bvZero(it.sizeBits).uncheckedCast(),
+                bvMaxValueUnsigned(it.sizeBits).uncheckedCast(),
+                bvOne(it.sizeBits).uncheckedCast()
+            )
+        }
+    )
 
     @Test
     fun testBvReductionAnd() =
@@ -146,12 +247,32 @@ class BvSimplifyTest {
     }
 
     @Test
-    fun testBvShiftLeft() =
-        testOperation(KContext::mkBvShiftLeftExpr, KContext::mkBvShiftLeftExprNoSimplify)
+    fun testBvShiftLeft() = testOperation(
+        KContext::mkBvShiftLeftExpr,
+        KContext::mkBvShiftLeftExprNoSimplify,
+        mkSpecialValues = {
+            listOf(
+                bvValue(it.sizeBits, 3).uncheckedCast(),
+                bvValue(it.sizeBits, BV_SIZE.toInt() + 5).uncheckedCast(),
+                bvZero(it.sizeBits).uncheckedCast(),
+                mkConst("a", it)  // same as lhs
+            )
+        }
+    )
 
     @Test
-    fun testBvSignedDiv() =
-        testOperationNonZeroSecondArg(KContext::mkBvSignedDivExpr, KContext::mkBvSignedDivExprNoSimplify)
+    fun testBvSignedDiv() = testOperation(
+        KContext::mkBvSignedDivExpr,
+        KContext::mkBvSignedDivExprNoSimplify,
+        mkSpecialValues = {
+            listOf(
+                bvZero(it.sizeBits).uncheckedCast(),
+                bvOne(it.sizeBits).uncheckedCast(),
+                bvValue(it.sizeBits, -1).uncheckedCast(),
+                bvValue(it.sizeBits, 1024).uncheckedCast(),
+            )
+        }
+    )
 
     @Test
     fun testBvSignedGreater() =
@@ -173,12 +294,32 @@ class BvSimplifyTest {
         testOperation(KContext::mkBvSignedLessOrEqualExpr, KContext::mkBvSignedLessOrEqualExprNoSimplify)
 
     @Test
-    fun testBvSignedMod() =
-        testOperationNonZeroSecondArg(KContext::mkBvSignedModExpr, KContext::mkBvSignedModExprNoSimplify)
+    fun testBvSignedMod() = testOperation(
+        KContext::mkBvSignedModExpr,
+        KContext::mkBvSignedModExprNoSimplify,
+        mkSpecialValues = {
+            listOf(
+                bvZero(it.sizeBits).uncheckedCast(),
+                bvOne(it.sizeBits).uncheckedCast(),
+                bvValue(it.sizeBits, -1).uncheckedCast(),
+                bvValue(it.sizeBits, 1024).uncheckedCast(),
+            )
+        }
+    )
 
     @Test
-    fun testBvSignedRem() =
-        testOperationNonZeroSecondArg(KContext::mkBvSignedRemExpr, KContext::mkBvSignedRemExprNoSimplify)
+    fun testBvSignedRem() = testOperation(
+        KContext::mkBvSignedRemExpr,
+        KContext::mkBvSignedRemExprNoSimplify,
+        mkSpecialValues = {
+            listOf(
+                bvZero(it.sizeBits).uncheckedCast(),
+                bvOne(it.sizeBits).uncheckedCast(),
+                bvValue(it.sizeBits, -1).uncheckedCast(),
+                bvValue(it.sizeBits, 1024).uncheckedCast(),
+            )
+        }
+    )
 
     @Test
     fun testBvSignExtension() {
@@ -204,8 +345,18 @@ class BvSimplifyTest {
         testOperation(KContext::mkBvSubNoUnderflowExpr, KContext::mkBvSubNoUnderflowExprNoSimplify)
 
     @Test
-    fun testBvUnsignedDiv() =
-        testOperationNonZeroSecondArg(KContext::mkBvUnsignedDivExpr, KContext::mkBvUnsignedDivExprNoSimplify)
+    fun testBvUnsignedDiv() = testOperation(
+        KContext::mkBvUnsignedDivExpr,
+        KContext::mkBvUnsignedDivExprNoSimplify,
+        mkSpecialValues = {
+            listOf(
+                bvZero(it.sizeBits).uncheckedCast(),
+                bvOne(it.sizeBits).uncheckedCast(),
+                bvValue(it.sizeBits, -1).uncheckedCast(),
+                bvValue(it.sizeBits, 1024).uncheckedCast(),
+            )
+        }
+    )
 
     @Test
     fun testBvUnsignedGreater() =
@@ -227,16 +378,35 @@ class BvSimplifyTest {
         testOperation(KContext::mkBvUnsignedLessOrEqualExpr, KContext::mkBvUnsignedLessOrEqualExprNoSimplify)
 
     @Test
-    fun testBvUnsignedRem() =
-        testOperationNonZeroSecondArg(KContext::mkBvUnsignedRemExpr, KContext::mkBvUnsignedRemExprNoSimplify)
+    fun testBvUnsignedRem() = testOperation(
+        KContext::mkBvUnsignedRemExpr,
+        KContext::mkBvUnsignedRemExprNoSimplify,
+        mkSpecialValues = {
+            listOf(
+                bvZero(it.sizeBits).uncheckedCast(),
+                bvOne(it.sizeBits).uncheckedCast(),
+                bvValue(it.sizeBits, -1).uncheckedCast(),
+                bvValue(it.sizeBits, 1024).uncheckedCast(),
+            )
+        }
+    )
 
     @Test
     fun testBvXNor() =
         testOperation(KContext::mkBvXNorExpr, KContext::mkBvXNorExprNoSimplify)
 
     @Test
-    fun testBvXor() =
-        testOperation(KContext::mkBvXorExpr, KContext::mkBvXorExprNoSimplify)
+    fun testBvXor() = testOperation(
+        KContext::mkBvXorExpr,
+        KContext::mkBvXorExprNoSimplify,
+        mkSpecialValues = {
+            listOf(
+                bvZero(it.sizeBits).uncheckedCast(),
+                bvMaxValueUnsigned(it.sizeBits).uncheckedCast(),
+                bvOne(it.sizeBits).uncheckedCast()
+            )
+        }
+    )
 
     @Test
     fun testBvZeroExtension() {
@@ -249,53 +419,82 @@ class BvSimplifyTest {
         }
     }
 
+    @JvmName("testUnary")
     private fun <S : KBvSort, T : KSort> testOperation(
         operation: KContext.(KExpr<S>) -> KExpr<T>,
         operationNoSimplify: KContext.(KExpr<S>) -> KExpr<T>,
-        mkValue: KContext.(S) -> KExpr<S> = { mkConst("x", it) }
+        mkSpecialValues: KContext.(S) -> List<KExpr<S>> = { emptyList() },
     ) = runTest { sort: S, checker ->
-        val value = mkValue(sort)
-        val unsimplifiedExpr = operationNoSimplify(value)
-        val simplifiedExpr = operation(value)
-        checker.check(unsimplifiedExpr = unsimplifiedExpr, simplifiedExpr = simplifiedExpr) { "$value" }
+        val x = mkConst("x", sort)
+        val specialValues = mkSpecialValues(sort)
+
+        (listOf(x) + specialValues).forEach { value ->
+            val unsimplifiedExpr = operationNoSimplify(value)
+            val simplifiedExpr = operation(value)
+            checker.check(unsimplifiedExpr = unsimplifiedExpr, simplifiedExpr = simplifiedExpr) { "$value" }
+        }
     }
 
+    @JvmName("testBinaryNested")
+    private fun <S : KBvSort> testOperation(
+        operation: KContext.(KExpr<S>, KExpr<S>) -> KExpr<S>,
+        operationNoSimplify: KContext.(KExpr<S>, KExpr<S>) -> KExpr<S>,
+        mkSpecialValues: KContext.(S) -> List<KExpr<S>> = { emptyList() }
+    ) = runTest { sort: S, checker ->
+        val a = mkConst("a", sort)
+        val b = mkConst("b", sort)
+        val specialValues = mkSpecialValues(sort)
+
+        (listOf(a) + specialValues).forEach { lhs ->
+            (listOf(b) + specialValues).forEach { rhs ->
+                run {
+                    val unsimplifiedExpr = operationNoSimplify(lhs, rhs)
+                    val simplifiedExpr = operation(lhs, rhs)
+                    checker.check(unsimplifiedExpr = unsimplifiedExpr, simplifiedExpr = simplifiedExpr) {
+                        "$lhs, $rhs"
+                    }
+                }
+                run {
+                    val someValue: KExpr<S> = bvValue(sort.sizeBits, 17).uncheckedCast()
+                    val nestedOperation = operationNoSimplify(someValue, rhs)
+                    val unsimplifiedExpr = operationNoSimplify(lhs, nestedOperation)
+                    val simplifiedExpr = operation(lhs, nestedOperation)
+                    checker.check(unsimplifiedExpr = unsimplifiedExpr, simplifiedExpr = simplifiedExpr) {
+                        "$lhs, $nestedOperation"
+                    }
+                }
+            }
+        }
+    }
+
+    @JvmName("testBinaryNotNested")
     private fun <S : KBvSort, T : KSort> testOperation(
         operation: KContext.(KExpr<S>, KExpr<S>) -> KExpr<T>,
         operationNoSimplify: KContext.(KExpr<S>, KExpr<S>) -> KExpr<T>,
-        mkLhs: KContext.(S) -> KExpr<S> = { mkConst("a", it) },
-        mkRhs: KContext.(S) -> KExpr<S> = { mkConst("b", it) },
+        mkSpecialValues: KContext.(S) -> List<KExpr<S>> = { emptyList() }
     ) = runTest { sort: S, checker ->
-        val a = mkLhs(sort)
-        val b = mkRhs(sort)
-        val unsimplifiedExpr = operationNoSimplify(a, b)
-        val simplifiedExpr = operation(a, b)
-        checker.check(unsimplifiedExpr = unsimplifiedExpr, simplifiedExpr = simplifiedExpr) { "$a, $b" }
+        val a = mkConst("a", sort)
+        val b = mkConst("b", sort)
+        val specialValues = mkSpecialValues(sort)
+
+        (listOf(a) + specialValues).forEach { lhs ->
+            (listOf(b) + specialValues).forEach { rhs ->
+                val unsimplifiedExpr = operationNoSimplify(lhs, rhs)
+                val simplifiedExpr = operation(lhs, rhs)
+                checker.check(unsimplifiedExpr = unsimplifiedExpr, simplifiedExpr = simplifiedExpr) {
+                    "$lhs, $rhs"
+                }
+            }
+        }
     }
 
-    private fun <S : KBvSort, T : KSort> testOperationNonZeroSecondArg(
-        operation: KContext.(KExpr<S>, KExpr<S>) -> KExpr<T>,
-        operationNoSimplify: KContext.(KExpr<S>, KExpr<S>) -> KExpr<T>,
-        mkLhs: KContext.(S) -> KExpr<S> = { mkConst("a", it) },
-        mkRhs: KContext.(S) -> KExpr<S> = { mkConst("b", it) },
-    ) = runTest { sort: S, checker ->
-        val a = mkLhs(sort)
-        val b = mkRhs(sort)
-        val unsimplifiedExpr = operationNoSimplify(a, b)
-        val simplifiedExpr = operation(a, b)
-        val zero: KExpr<S> = bvZero(sort.sizeBits).uncheckedCast()
-        val assumptions = listOf(!(b eq zero))
-        checker.check(unsimplifiedExpr = unsimplifiedExpr, simplifiedExpr = simplifiedExpr, assumptions) { "$a, $b" }
-    }
-
+    @JvmName("testTernary")
     private fun <S : KBvSort, T : KSort> testOperation(
         operation: KContext.(KExpr<S>, KExpr<S>, Boolean) -> KExpr<T>,
-        operationNoSimplify: KContext.(KExpr<S>, KExpr<S>, Boolean) -> KExpr<T>,
-        mkLhs: KContext.(S) -> KExpr<S> = { mkConst("a", it) },
-        mkRhs: KContext.(S) -> KExpr<S> = { mkConst("b", it) },
+        operationNoSimplify: KContext.(KExpr<S>, KExpr<S>, Boolean) -> KExpr<T>
     ) = runTest { sort: S, checker ->
-        val a = mkLhs(sort)
-        val b = mkRhs(sort)
+        val a = mkConst("a", sort)
+        val b = mkConst("b", sort)
         listOf(true, false).forEach { c ->
             val unsimplifiedExpr = operationNoSimplify(a, b, c)
             val simplifiedExpr = operation(a, b, c)
@@ -316,11 +515,8 @@ class BvSimplifyTest {
         fun <T : KSort> check(
             unsimplifiedExpr: KExpr<T>,
             simplifiedExpr: KExpr<T>,
-            assumptions: List<KExpr<KBoolSort>> = emptyList(),
             printArgs: () -> String
         ) = KZ3Solver(ctx).use { solver ->
-            assumptions.forEach { solver.assert(it) }
-
             val equivalenceCheck = ctx.mkEq(simplifiedExpr, unsimplifiedExpr)
             solver.assert(ctx.mkNot(equivalenceCheck))
 
