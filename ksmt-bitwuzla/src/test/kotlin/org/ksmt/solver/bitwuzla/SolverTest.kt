@@ -144,12 +144,12 @@ class SolverTest {
             val selectedValue = array.select(mkBv(4198500 + i))
             val selectedValueTerm = with(solver.exprInternalizer) { selectedValue.internalize() }
             xoredX = Native.bitwuzlaMkTerm2(
-                solver.bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_XOR, xoredX, selectedValueTerm
+                solver.bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_XOR.value, xoredX, selectedValueTerm
             )
         }
         val someRandomValue = with(solver.exprInternalizer) { mkBv(42.toByte()).internalize() }
         val assertion = Native.bitwuzlaMkTerm2(
-            solver.bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, xoredX, someRandomValue
+            solver.bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL.value, xoredX, someRandomValue
         )
         Native.bitwuzlaAssert(solver.bitwuzlaCtx.bitwuzla, assertion)
 
