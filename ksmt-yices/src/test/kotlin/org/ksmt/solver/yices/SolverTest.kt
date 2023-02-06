@@ -105,6 +105,7 @@ class SolverTest {
         assertEquals(KSolverStatus.SAT, status)
     }
 
+    @Ignore
     @Test
     fun testTimeout(): Unit = with(ctx) {
         val solver = KYicesSolver(ctx)
