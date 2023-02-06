@@ -1,5 +1,6 @@
 package org.ksmt.solver.bitwuzla.bindings
 
+
 typealias Bitwuzla = Long
 typealias BitwuzlaTerm = Long
 typealias BitwuzlaSort = Long
@@ -7,7 +8,16 @@ typealias BitwuzlaBitVector = Long
 
 object Native {
     init {
-        System.loadLibrary("bitwuzla_jni");
+        System.load("/home/sobol/IdeaProjects/ksmt/ksmt-bitwuzla/dist/libgmp-10.so")
+        System.load("/home/sobol/IdeaProjects/ksmt/ksmt-bitwuzla/dist/libbitwuzla.so")
+        System.load("/home/sobol/IdeaProjects/ksmt/ksmt-bitwuzla/bindings-native/cmake-build-release/libbitwuzla_jni.so")
+//        NativeLibraryLoader.load { os ->
+//            when (os) {
+//                NativeLibraryLoader.OS.LINUX -> listOf()
+//                NativeLibraryLoader.OS.WINDOWS -> TODO()
+//                NativeLibraryLoader.OS.MACOS -> TODO()
+//            }
+//        }
     }
 
     /**
