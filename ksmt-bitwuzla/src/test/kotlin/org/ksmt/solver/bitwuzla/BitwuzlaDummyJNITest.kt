@@ -4,6 +4,7 @@ package org.ksmt.solver.bitwuzla;
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.ksmt.KContext
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaOption
@@ -24,8 +25,15 @@ class BitwuzlaDummyJNITest {
         val copyRight = Native.bitwuzlaCopyright(bitwuzla);
         val true_val = Native.bitwuzlaMkTrue(bitwuzla);
         val version = Native.bitwuzlaVersion(bitwuzla);
-        val gitid = Native.bitwuzlaGitId(bitwuzla);
         println(version);
+
+        try {
+            Native.bitwuzlaMkBvZero(0, 0);
+        } catch (ex: BitwuzlaNativeException) {
+            println("catched: $ex")
+        }
+
+        val gitid = Native.bitwuzlaGitId(bitwuzla);
         println(gitid);
 
         val bitwuzla2 = Native.bitwuzlaNew();
