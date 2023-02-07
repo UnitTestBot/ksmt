@@ -623,7 +623,10 @@ open class KBitwuzlaExprConverter(
             ctx.mkFreshConstDecl(name ?: "var", sort.convertSort())
         }
 
-        val bodyConverter = KBitwuzlaExprConverter(ctx, bitwuzlaCtx, scope)
+        val nestedScope = scopedVars?.toMutableMap() ?: hashMapOf()
+        nestedScope.putAll(scope)
+
+        val bodyConverter = KBitwuzlaExprConverter(ctx, bitwuzlaCtx, nestedScope)
         val convertedBody = with(bodyConverter) { body.convertExpr(ctx.boolSort) }
 
         val convertedBounds = scope.values.toList()
