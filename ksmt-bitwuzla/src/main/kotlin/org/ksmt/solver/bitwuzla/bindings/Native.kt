@@ -100,6 +100,9 @@ object Native {
      *
      * @see BitwuzlaOption
      */
+    fun bitwuzlaSetOption(bitwuzla: Bitwuzla, option: BitwuzlaOption, value: Int) =
+        bitwuzlaSetOption(bitwuzla, option.value, value)
+
     @JvmStatic
     external fun bitwuzlaSetOption(bitwuzla: Bitwuzla, option: Int, value: Int)
 
@@ -112,6 +115,9 @@ object Native {
      *
      * @see BitwuzlaOption
      */
+    fun bitwuzlaSetOptionStr(bitwuzla: Bitwuzla, option: BitwuzlaOption, value: String) =
+        bitwuzlaSetOptionStr(bitwuzla, option.value, value)
+
     @JvmStatic
     external fun bitwuzlaSetOptionStr(bitwuzla: Bitwuzla, option: Int, value: String)
 
@@ -125,6 +131,9 @@ object Native {
      *
      * @see BitwuzlaOption
      */
+    fun bitwuzlaGetOption(bitwuzla: Bitwuzla, option: BitwuzlaOption): Int =
+        bitwuzlaGetOption(bitwuzla, option.value)
+
     @JvmStatic
     external fun bitwuzlaGetOption(bitwuzla: Bitwuzla, option: Int): Int
 
@@ -140,6 +149,9 @@ object Native {
      * @see BitwuzlaOption
      * @see bitwuzlaSetOptionStr
      */
+    fun bitwuzlaGetOptionStr(bitwuzla: Bitwuzla, option: BitwuzlaOption): String =
+        bitwuzlaGetOptionStr(bitwuzla, option.value)
+
     @JvmStatic
     external fun bitwuzlaGetOptionStr(bitwuzla: Bitwuzla, option: Int): String
 
@@ -231,7 +243,12 @@ object Native {
      * @see bitwuzlaTermFunGetCodomainSort
      */
     @JvmStatic
-    external fun bitwuzlaMkFunSort(bitwuzla: Bitwuzla, arity: Int, domain: LongArray, codomain: BitwuzlaSort): BitwuzlaSort
+    external fun bitwuzlaMkFunSort(
+        bitwuzla: Bitwuzla,
+        arity: Int,
+        domain: LongArray,
+        codomain: BitwuzlaSort
+    ): BitwuzlaSort
 
     /**
      * Create a Roundingmode sort.
@@ -473,10 +490,8 @@ object Native {
      *
      * @see bitwuzlaMkBvSort
      */
-    @JvmStatic
-    fun bitwuzlaMkBvValueUint32(bitwuzla: Bitwuzla, sort: BitwuzlaSort, value: Int): BitwuzlaTerm {
-        return bitwuzlaMkBvValueUint64(bitwuzla, sort, value.toLong())
-    }
+    fun bitwuzlaMkBvValueUint32(bitwuzla: Bitwuzla, sort: BitwuzlaSort, value: Int): BitwuzlaTerm =
+        bitwuzlaMkBvValueUint64(bitwuzla, sort, value.toLong())
 
     /**
      * Create a floating-point value from its IEEE 754 standard representation
@@ -510,6 +525,9 @@ object Native {
      *
      * @see BitwuzlaRoundingMode
      */
+    fun bitwuzlaMkRmValue(bitwuzla: Bitwuzla, rm: BitwuzlaRoundingMode): BitwuzlaTerm  =
+        bitwuzlaMkRmValue(bitwuzla, rm.value)
+
     @JvmStatic
     external fun bitwuzlaMkRmValue(bitwuzla: Bitwuzla, rm: Int): BitwuzlaTerm
 
@@ -524,6 +542,9 @@ object Native {
      *
      * @see  BitwuzlaKind
      */
+    fun bitwuzlaMkTerm1(bitwuzla: Bitwuzla, kind: BitwuzlaKind, arg: BitwuzlaTerm): BitwuzlaTerm =
+        bitwuzlaMkTerm1(bitwuzla, kind.value, arg)
+
     @JvmStatic
     external fun bitwuzlaMkTerm1(bitwuzla: Bitwuzla, kind: Int, arg: BitwuzlaTerm): BitwuzlaTerm
 
@@ -539,6 +560,13 @@ object Native {
      *
      * @see  BitwuzlaKind
      */
+    fun bitwuzlaMkTerm2(
+        bitwuzla: Bitwuzla,
+        kind: BitwuzlaKind,
+        arg0: BitwuzlaTerm,
+        arg1: BitwuzlaTerm
+    ): BitwuzlaTerm = bitwuzlaMkTerm2(bitwuzla, kind.value, arg0, arg1)
+
     @JvmStatic
     external fun bitwuzlaMkTerm2(
         bitwuzla: Bitwuzla,
@@ -560,6 +588,14 @@ object Native {
      *
      * @see  BitwuzlaKind
      */
+    fun bitwuzlaMkTerm3(
+        bitwuzla: Bitwuzla,
+        kind: BitwuzlaKind,
+        arg0: BitwuzlaTerm,
+        arg1: BitwuzlaTerm,
+        arg2: BitwuzlaTerm
+    ): BitwuzlaTerm = bitwuzlaMkTerm3(bitwuzla, kind.value, arg0, arg1, arg2)
+
     @JvmStatic
     external fun bitwuzlaMkTerm3(
             bitwuzla: Bitwuzla,
@@ -580,6 +616,9 @@ object Native {
      *
      * @see  BitwuzlaKind
      */
+    fun bitwuzlaMkTerm(bitwuzla: Bitwuzla, kind: BitwuzlaKind, args: LongArray): BitwuzlaTerm =
+        bitwuzlaMkTerm(bitwuzla, kind.value, args)
+
     @JvmStatic
     external fun bitwuzlaMkTerm(bitwuzla: Bitwuzla, kind: Int, args: LongArray): BitwuzlaTerm
 
@@ -595,6 +634,13 @@ object Native {
      *
      * @see  BitwuzlaKind
      */
+    fun bitwuzlaMkTerm1Indexed1(
+        bitwuzla: Bitwuzla,
+        kind: BitwuzlaKind,
+        arg: BitwuzlaTerm,
+        idx: Int
+    ): BitwuzlaTerm = bitwuzlaMkTerm1Indexed1(bitwuzla, kind.value, arg, idx)
+
     @JvmStatic
     external fun bitwuzlaMkTerm1Indexed1(
             bitwuzla: Bitwuzla,
@@ -617,6 +663,14 @@ object Native {
      *
      * @see  BitwuzlaKind
      */
+    fun bitwuzlaMkTerm1Indexed2(
+        bitwuzla: Bitwuzla,
+        kind: BitwuzlaKind,
+        arg: BitwuzlaTerm,
+        idx0: Int,
+        idx1: Int
+    ): BitwuzlaTerm = bitwuzlaMkTerm1Indexed2(bitwuzla, kind.value, arg, idx0, idx1)
+
     @JvmStatic
     external fun bitwuzlaMkTerm1Indexed2(
         bitwuzla: Bitwuzla,
@@ -640,6 +694,14 @@ object Native {
      *
      * @see  BitwuzlaKind
      */
+    fun bitwuzlaMkTerm2Indexed1(
+        bitwuzla: Bitwuzla,
+        kind: BitwuzlaKind,
+        arg0: BitwuzlaTerm,
+        arg1: BitwuzlaTerm,
+        idx: Int
+    ): BitwuzlaTerm = bitwuzlaMkTerm2Indexed1(bitwuzla, kind.value, arg0, arg1, idx)
+
     @JvmStatic
     external fun bitwuzlaMkTerm2Indexed1(
             bitwuzla: Bitwuzla,
@@ -664,6 +726,15 @@ object Native {
      *
      * @see  BitwuzlaKind
      */
+    fun bitwuzlaMkTerm2Indexed2(
+        bitwuzla: Bitwuzla,
+        kind: BitwuzlaKind,
+        arg0: BitwuzlaTerm,
+        arg1: BitwuzlaTerm,
+        idx0: Int,
+        idx1: Int
+    ): BitwuzlaTerm = bitwuzlaMkTerm2Indexed2(bitwuzla, kind.value, arg0, arg1, idx0, idx1)
+
     @JvmStatic
     external fun bitwuzlaMkTerm2Indexed2(
             bitwuzla: Bitwuzla,
@@ -892,6 +963,9 @@ object Native {
      * @see BitwuzlaOption.BITWUZLA_OPT_INCREMENTAL
      * @see BitwuzlaResult
      */
+    fun bitwuzlaCheckSatResult(bitwuzla: Bitwuzla): BitwuzlaResult =
+        bitwuzlaCheckSat(bitwuzla).let { BitwuzlaResult.fromValue(it) }
+
     @JvmStatic
     external fun bitwuzlaCheckSat(bitwuzla: Bitwuzla): Int
 
@@ -902,6 +976,9 @@ object Native {
      *
      * @see bitwuzlaCheckSat
      * */
+    fun bitwuzlaCheckSatTimeoutResult(bitwuzla: Bitwuzla, timeout: Long): BitwuzlaResult =
+        bitwuzlaCheckSatTimeout(bitwuzla, timeout).let { BitwuzlaResult.fromValue(it) }
+
     @JvmStatic
     external fun bitwuzlaCheckSatTimeout(bitwuzla: Bitwuzla, timeout: Long): Int
 
@@ -1005,6 +1082,9 @@ object Native {
      *
      * @see BitwuzlaKind
      */
+    fun bitwuzlaTermGetBitwuzlaKind(term: BitwuzlaTerm): BitwuzlaKind =
+        bitwuzlaTermGetKind(term).let { BitwuzlaKind.fromValue(it) }
+
     @JvmStatic
     external fun bitwuzlaTermGetKind(term: BitwuzlaTerm): Int
 
@@ -1648,7 +1728,6 @@ object Native {
     @JvmStatic
     external fun bitwuzlaFpConstNodeGetBits(bitwuzla: Bitwuzla, term: BitwuzlaTerm): BitwuzlaBitVector
 
-
     /**
      * Print a model for the current input formula.
      *
@@ -1664,7 +1743,6 @@ object Native {
      */
     @JvmStatic
     external fun bitwuzlaPrintModel(bitwuzla: Bitwuzla, format: String, outputFilePath: String)
-
 
     /**
      * Print the current input formula.
