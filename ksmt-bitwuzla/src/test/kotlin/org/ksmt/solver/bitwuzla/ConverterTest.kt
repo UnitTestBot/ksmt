@@ -188,15 +188,19 @@ class ConverterTest {
 
         val ones64 = ctx.mkBvConcatExpr(ctx.mkBv(-1), ctx.mkBv(-1))
         val ones128 = ctx.mkBvConcatExpr(ctx.mkBv(-1L), ctx.mkBv(-1L))
+        val ones125 = ctx.mkBv("1".repeat(125), 125u)
 
         val bzlaOnes64 = with(internalizer) { ones64.internalize() }
         val bzlaOnes128 = with(internalizer) { ones128.internalize() }
+        val bzlaOnes125 = with(internalizer) { ones125.internalize() }
 
         val ksmtOnes64 = with(converter) { bzlaOnes64.convertExpr(ones64.sort) }
         val ksmtOnes128 = with(converter) { bzlaOnes128.convertExpr(ones128.sort) }
+        val ksmtOnes125 = with(converter) { bzlaOnes125.convertExpr(ones125.sort) }
 
         assertEquals(64, (ksmtOnes64 as KBitVecValue<*>).stringValue.count { it == '1' })
         assertEquals(128, (ksmtOnes128 as KBitVecValue<*>).stringValue.count { it == '1' })
+        assertEquals(125, (ksmtOnes125 as KBitVecValue<*>).stringValue.count { it == '1' })
     }
 
     @Test

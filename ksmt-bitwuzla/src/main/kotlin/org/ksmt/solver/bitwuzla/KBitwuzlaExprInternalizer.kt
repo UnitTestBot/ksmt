@@ -168,6 +168,7 @@ import org.ksmt.sort.KSort
 import org.ksmt.sort.KSortVisitor
 import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.uncheckedCast
+import java.math.BigInteger
 
 @Suppress("LargeClass")
 open class KBitwuzlaExprInternalizer(
@@ -308,73 +309,40 @@ open class KBitwuzlaExprInternalizer(
 
     fun <T : KBitVecNumberValue<S, *>, S : KBvSort> transformBv32Number(expr: T): T = with(expr) {
         transform {
-            transformBvIntNumber(numberValue.toInt(), sort)
-                .also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
+            Native.bitwuzlaMkBvValueUint32(
+                bitwuzlaCtx.bitwuzla,
+                sort.internalizeSort(),
+                numberValue.toInt()
+            ).also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
         }
     }
 
     fun <T : KBitVecNumberValue<S, *>, S : KBvSort> transformBv64Number(expr: T): T = with(expr) {
         transform {
-            ctx.transformBvLongNumber(numberValue.toLong(), sort)
+            transformBvLongNumber(numberValue.toLong(), sort.sizeBits.toInt())
                 .also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
         }
     }
 
     override fun transform(expr: KBitVecCustomValue) = with(expr) {
         transform {
-            transformCustomBvNumber(expr.sizeBits.toInt())
+            transformCustomBvNumber(value, expr.sizeBits.toInt())
                 .also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
         }
     }
 
-    private fun transformBvIntNumber(value: Int, sort: KBvSort): BitwuzlaTerm =
-        Native.bitwuzlaMkBvValueUint32(
-            bitwuzlaCtx.bitwuzla,
-            sort.internalizeSort(),
-            value
-        )
-
-    private fun KContext.transformBvLongNumber(value: Long, sort: KBvSort): BitwuzlaTerm {
-        val lowerBitsSort = mkBvSort(sort.sizeBits.coerceAtMost(Int.SIZE_BITS.toUInt()))
-        val lowerBits = transformBvIntNumber(value.toInt(), lowerBitsSort)
-
-        if (sort.sizeBits <= Int.SIZE_BITS.toUInt()) {
-            return lowerBits
-        }
-
-        val higherBitsSort = mkBvSort(sort.sizeBits - Int.SIZE_BITS.toUInt())
-        val higherBitsValue = (value ushr Int.SIZE_BITS).toInt()
-        val higherBits = transformBvIntNumber(higherBitsValue, higherBitsSort)
-
-        return concatBvValues(higherBits, lowerBits)
+    private fun transformBvLongNumber(value: Long, size: Int): BitwuzlaTerm {
+        val intParts = intArrayOf((value shr Int.SIZE_BITS).toInt(), value.toInt())
+        return Native.bitwuzlaMkBvValueUint32Array(bitwuzlaCtx.bitwuzla, size, intParts)
     }
 
-    private fun KBitVecCustomValue.transformCustomBvNumber(size: Int): BitwuzlaTerm = when {
-        size <= Int.SIZE_BITS -> transformBvIntNumber(value.toInt(), sort)
-        size <= Long.SIZE_BITS -> ctx.transformBvLongNumber(value.toLong(), sort)
-        size <= Long.SIZE_BITS * 2 -> {
-            val lowerBitsValue = value.toLong()
-            val higherBitsValue = value.shiftRight(Long.SIZE_BITS).toLong()
-            val higherBitsSort = ctx.mkBvSort(sizeBits - Long.SIZE_BITS.toUInt())
-
-            val lowerBits = ctx.transformBvLongNumber(lowerBitsValue, ctx.bv64Sort)
-            val higherBits = ctx.transformBvLongNumber(higherBitsValue, higherBitsSort)
-            concatBvValues(higherBits, lowerBits)
+    private fun transformCustomBvNumber(value: BigInteger, size: Int): BitwuzlaTerm =
+        if (size <= Long.SIZE_BITS) {
+            transformBvLongNumber(value.toLong(), size)
+        } else {
+            val intParts = bigIntegerToBvBits(value)
+            Native.bitwuzlaMkBvValueUint32Array(bitwuzlaCtx.bitwuzla, size, intParts)
         }
-
-        else -> Native.bitwuzlaMkBvValue(
-            bitwuzlaCtx.bitwuzla,
-            sort.internalizeSort(),
-            stringValue,
-            BitwuzlaBVBase.BITWUZLA_BV_BASE_BIN
-        )
-    }
-
-    private fun concatBvValues(higherBits: BitwuzlaTerm, lowerBits: BitwuzlaTerm) =
-        Native.bitwuzlaMkTerm2(
-            bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_CONCAT,
-            higherBits, lowerBits
-        )
 
     override fun <T : KBvSort> transform(expr: KBvNotExpr<T>) = with(expr) {
         transform(value, BitwuzlaKind.BITWUZLA_KIND_BV_NOT)

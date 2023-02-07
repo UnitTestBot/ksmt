@@ -314,17 +314,6 @@ open class KBitwuzlaExprConverter(
         mkConstApp(decl)
     }
 
-    private fun bvBitsToBigInteger(bvBits: IntArray): BigInteger {
-        val valueByteArray = ByteArray(bvBits.size * Int.SIZE_BYTES) {
-            val arrayIdx = bvBits.lastIndex - it / Int.SIZE_BYTES
-            val byteIdx = Int.SIZE_BYTES - 1 - it % Int.SIZE_BYTES
-
-            val bytes = bvBits[arrayIdx]
-            (bytes ushr (byteIdx * Byte.SIZE_BITS) and 0xff).toByte()
-        }
-        return BigInteger(1, valueByteArray)
-    }
-
     private fun KContext.convertBvValue(expr: BitwuzlaTerm): KBitVecValue<KBvSort> {
         val size = Native.bitwuzlaTermBvGetSize(expr)
 
