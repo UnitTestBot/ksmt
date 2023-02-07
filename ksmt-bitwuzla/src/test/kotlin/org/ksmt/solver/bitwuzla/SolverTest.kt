@@ -2,13 +2,14 @@ package org.ksmt.solver.bitwuzla
 
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
-import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
+import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBv32Sort
 import org.ksmt.sort.KBv8Sort
 import org.ksmt.utils.getValue
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -19,16 +20,11 @@ class SolverTest {
     private val ctx = KContext()
     private val solver = KBitwuzlaSolver(ctx)
 
-    @Ignore
     @Test
-    fun testAbortHandling(): Unit = with(ctx) {
-        val x by mkBv32Sort()
-        val array by mkArraySort(mkBv32Sort(), mkBv32Sort())
-        val body = array.select(x) eq x
-        val quantifier = mkUniversalQuantifier(body, listOf(x.decl))
-        solver.assert(quantifier)
-        assertFailsWith(KSolverException::class) {
-            solver.check()
+    fun testAbortHandling() {
+        assertFailsWith(BitwuzlaNativeException::class) {
+            // Incorrect native expression with invalid term (0)
+            Native.bitwuzlaMkTerm1(solver.bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_AND, 0)
         }
     }
 

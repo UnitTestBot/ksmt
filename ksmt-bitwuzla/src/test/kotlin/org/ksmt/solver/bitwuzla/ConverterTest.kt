@@ -72,7 +72,7 @@ class ConverterTest {
         val b by mkArraySort(boolSort, boolSort)
         val aTerm = with(internalizer) { a.internalize() }
         val bTerm = with(internalizer) { b.internalize() }
-        val term = Native.bitwuzlaMkTerm2(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL.value, aTerm, bTerm)
+        val term = Native.bitwuzlaMkTerm2(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, aTerm, bTerm)
         val converted = with(converter) { term.convertExpr(boolSort) }
         converted.accept(sortChecker)
         val convertedTerm = with(internalizer) { converted.internalize() }
@@ -120,11 +120,11 @@ class ConverterTest {
             val boolTerm = bool.internalize()
             val bv1Term = bv1.internalize()
             val fAppTermInversed = Native.bitwuzlaMkTerm3(
-                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY.value, fTerm, bv1Term, boolTerm
+                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, fTerm, bv1Term, boolTerm
             )
             val term = Native.bitwuzlaMkTerm2(
                 bitwuzlaCtx.bitwuzla,
-                BitwuzlaKind.BITWUZLA_KIND_EQUAL.value,
+                BitwuzlaKind.BITWUZLA_KIND_EQUAL,
                 fAppTerm,
                 fAppTermInversed
             )
@@ -155,17 +155,14 @@ class ConverterTest {
     private fun checkEquivalent(lhs: BitwuzlaTerm, rhs: BitwuzlaTerm): Boolean = with(bitwuzlaCtx) {
         val checkExpr = Native.bitwuzlaMkTerm1(
             bitwuzla,
-            BitwuzlaKind.BITWUZLA_KIND_NOT.value,
-            Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL.value, lhs, rhs)
+            BitwuzlaKind.BITWUZLA_KIND_NOT,
+            Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lhs, rhs)
         )
         Native.bitwuzlaPush(bitwuzla, 1)
         Native.bitwuzlaAssert(bitwuzla, checkExpr)
-        val status = Native.bitwuzlaCheckSat(bitwuzla)
-        if (status == BitwuzlaResult.BITWUZLA_SAT.value) {
-            //Native.bitwuzlaPrintModel(bitwuzla, "smt2", FilePtrUtils.stdout())
-        }
+        val status = Native.bitwuzlaCheckSatResult(bitwuzla)
         Native.bitwuzlaPop(bitwuzla, 1)
-        status == BitwuzlaResult.BITWUZLA_UNSAT.value
+        status == BitwuzlaResult.BITWUZLA_UNSAT
     }
 
     @Test
