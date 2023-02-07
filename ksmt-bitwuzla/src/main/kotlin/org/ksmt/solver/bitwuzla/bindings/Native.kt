@@ -21,17 +21,20 @@ object Native {
         bitwuzlaInit()
     }
 
+    /**
+     * Initialize Bitwuzla native library.
+     * */
     @JvmStatic
-    external fun bitwuzlaInit(): Bitwuzla
+    private external fun bitwuzlaInit(): Bitwuzla
 
     /**
      * Create a new Bitwuzla instance.
      *
-     * The returned instance must be deleted via [bitwuzla_delete].
+     * The returned instance must be deleted via [bitwuzlaDelete].
      *
      * @return A pointer to the created Bitwuzla instance.
      *
-     * @see bitwuzla_delete
+     * @see bitwuzlaDelete
      */
     @JvmStatic
     external fun bitwuzlaNew(): Bitwuzla
@@ -39,11 +42,11 @@ object Native {
     /**
      * Delete a Bitwuzla instance.
      *
-     * The given instance must have been created via [bitwuzla_new].
+     * The given instance must have been created via [bitwuzlaNew].
      *
      * @param bitwuzla The Bitwuzla instance to delete.
      *
-     * @see bitwuzla_new
+     * @see bitwuzlaNew
      */
     @JvmStatic
     external fun bitwuzlaDelete(bitwuzla: Bitwuzla)
@@ -52,17 +55,17 @@ object Native {
      * Reset a Bitwuzla instance.
      *
      * This deletes the given instance and creates a new instance in place.
-     * The given instance must have been created via [bitwuzla_new].
+     * The given instance must have been created via [bitwuzlaNew].
      *
      * Note: All sorts and terms associated with the given instance are released
      * and thus invalidated.
      *
      * @param bitwuzla The Bitwuzla instance to reset.
      *
-     * @see bitwuzla_new
+     * @see bitwuzlaNew
      */
     @JvmStatic
-    external fun bitwuzlaReset(bitwuzla: Bitwuzla);
+    external fun bitwuzlaReset(bitwuzla: Bitwuzla)
 
     /**
      * Get copyright information.
@@ -135,7 +138,7 @@ object Native {
      * @return The option value.
      *
      * @see BitwuzlaOption
-     * @see bitwuzla_set_option_str
+     * @see bitwuzlaSetOptionStr
      */
     @JvmStatic
     external fun bitwuzlaGetOptionStr(bitwuzla: Bitwuzla, option: Int): String
@@ -149,15 +152,15 @@ object Native {
      *
      * @return An array sort which maps sort `index` to sort `element`.
      *
-     * @see bitwuzla_sort_is_array
-     * @see bitwuzla_sort_array_get_index
-     * @see bitwuzla_sort_array_get_element
-     * @see bitwuzla_term_is_array
-     * @see bitwuzla_term_array_get_index_sort
-     * @see bitwuzla_term_array_get_element_sort
+     * @see bitwuzlaSortIsArray
+     * @see bitwuzlaSortArrayGetIndex
+     * @see bitwuzlaSortArrayGetElement
+     * @see bitwuzlaTermIsArray
+     * @see bitwuzlaTermArrayGetIndexSort
+     * @see bitwuzlaTermArrayGetElementSort
      */
     @JvmStatic
-    external fun bitwuzlaMkArraySort(bitwuzla: Bitwuzla, index: BitwuzlaSort, element: BitwuzlaSort): BitwuzlaSort;
+    external fun bitwuzlaMkArraySort(bitwuzla: Bitwuzla, index: BitwuzlaSort, element: BitwuzlaSort): BitwuzlaSort
 
 
     /**
@@ -170,7 +173,7 @@ object Native {
      * @return A Boolean sort.
      */
     @JvmStatic
-    external fun bitwuzlaMkBoolSort(bitwuzla: Bitwuzla): BitwuzlaSort;
+    external fun bitwuzlaMkBoolSort(bitwuzla: Bitwuzla): BitwuzlaSort
 
     /**
      * Create a bit-vector sort of given size.
@@ -180,13 +183,13 @@ object Native {
      *
      * @return A bit-vector sort of given size.
      *
-     * @see bitwuzla_sort_is_bv
-     * @see bitwuzla_sort_bv_get_size
-     * @see bitwuzla_term_is_bv
-     * @see bitwuzla_term_bv_get_size
+     * @see bitwuzlaSortIsBv
+     * @see bitwuzlaSortBvGetSize
+     * @see bitwuzlaTermIsBv
+     * @see bitwuzlaTermBvGetSize
      */
     @JvmStatic
-    external fun bitwuzlaMkBvSort(bitwuzla: Bitwuzla, size: Int): BitwuzlaSort;
+    external fun bitwuzlaMkBvSort(bitwuzla: Bitwuzla, size: Int): BitwuzlaSort
 
     /**
      * Create a floating-point sort of given exponent and significand size.
@@ -197,12 +200,12 @@ object Native {
      *
      * @return A floating-point sort of given format.
      *
-     * @see bitwuzla_sort_is_fp
-     * @see bitwuzla_sort_fp_get_exp_size
-     * @see bitwuzla_sort_fp_get_sig_size
-     * @see bitwuzla_term_is_fp
-     * @see bitwuzla_term_fp_get_exp_size
-     * @see bitwuzla_term_fp_get_sig_size
+     * @see bitwuzlaSortIsFp
+     * @see bitwuzlaSortFpGetExpSize
+     * @see bitwuzlaSortFpGetSigSize
+     * @see bitwuzlaTermIsFp
+     * @see bitwuzlaTermFpGetExpSize
+     * @see bitwuzlaTermFpGetSigSize
      */
     @JvmStatic
     external fun bitwuzlaMkFpSort(bitwuzla: Bitwuzla, expSize: Int, sigSize: Int): BitwuzlaSort
@@ -218,14 +221,14 @@ object Native {
      *
      * @return A function sort of given domain and codomain sorts.
      *
-     * @see bitwuzla_sort_is_fun
-     * @see bitwuzla_sort_fun_get_arity
-     * @see bitwuzla_sort_fun_get_domain_sorts
-     * @see bitwuzla_sort_fun_get_codomain
-     * @see bitwuzla_term_is_fun
-     * @see bitwuzla_term_fun_get_arity
-     * @see bitwuzla_term_fun_get_domain_sorts
-     * @see bitwuzla_term_fun_get_codomain_sort
+     * @see bitwuzlaSortIsFun
+     * @see bitwuzlaSortFunGetArity
+     * @see bitwuzlaSortFunGetDomainSorts
+     * @see bitwuzlaSortFunGetCodomain
+     * @see bitwuzlaTermIsFun
+     * @see bitwuzlaTermFunGetArity
+     * @see bitwuzlaTermFunGetDomainSorts
+     * @see bitwuzlaTermFunGetCodomainSort
      */
     @JvmStatic
     external fun bitwuzlaMkFunSort(bitwuzla: Bitwuzla, arity: Int, domain: LongArray, codomain: BitwuzlaSort): BitwuzlaSort
@@ -237,11 +240,11 @@ object Native {
      *
      * @return A Roundingmode sort.
      *
-     * @see bitwuzla_sort_is_rm
-     * @see bitwuzla_term_is_rm
+     * @see bitwuzlaSortIsRm
+     * @see bitwuzlaTermIsRm
      */
     @JvmStatic
-    external fun bitwuzlaMkRmSort(bitwuzla: Bitwuzla): BitwuzlaSort;
+    external fun bitwuzlaMkRmSort(bitwuzla: Bitwuzla): BitwuzlaSort
 
     /**
      * Create a true value.
@@ -253,7 +256,7 @@ object Native {
      * @return A term representing the bit-vector value 1 of size 1.
      */
     @JvmStatic
-    external fun bitwuzlaMkTrue(bitwuzla: Bitwuzla): BitwuzlaTerm;
+    external fun bitwuzlaMkTrue(bitwuzla: Bitwuzla): BitwuzlaTerm
 
     /**
      * Create a false value.
@@ -265,7 +268,7 @@ object Native {
      * @return A term representing the bit-vector value 0 of size 1.
      */
     @JvmStatic
-    external fun bitwuzlaMkFalse(bitwuzla: Bitwuzla): BitwuzlaTerm;
+    external fun bitwuzlaMkFalse(bitwuzla: Bitwuzla): BitwuzlaTerm
 
     /**
      * Create a bit-vector value zero.
@@ -275,10 +278,10 @@ object Native {
      *
      * @return A term representing the bit-vector value 0 of given sort.
      *
-     * @see bitwuzla_mk_bv_sort
+     * @see bitwuzlaMkBvSort
      */
     @JvmStatic
-    external fun bitwuzlaMkBvZero(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm;
+    external fun bitwuzlaMkBvZero(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
     /**
      * Create a bit-vector value one.
@@ -288,10 +291,10 @@ object Native {
      *
      * @return A term representing the bit-vector value 1 of given sort.
      *
-     * @see bitwuzla_mk_bv_sort
+     * @see bitwuzlaMkBvSort
      */
     @JvmStatic
-    external fun bitwuzlaMkBvOne(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm;
+    external fun bitwuzlaMkBvOne(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
     /**
      * Create a bit-vector value where all bits are set to 1.
@@ -302,10 +305,10 @@ object Native {
      * @return A term representing the bit-vector value of given sort
      * where all bits are set to 1.
      *
-     * @see bitwuzla_mk_bv_sort
+     * @see bitwuzlaMkBvSort
      */
     @JvmStatic
-    external fun bitwuzlaMkBvOnes(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm;
+    external fun bitwuzlaMkBvOnes(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
 
     /**
@@ -317,10 +320,10 @@ object Native {
      * @return A term representing the bit-vector value of given sort where the MSB
      * is set to 1 and all remaining bits are set to 0.
      *
-     * @see bitwuzla_mk_bv_sort
+     * @see bitwuzlaMkBvSort
      */
     @JvmStatic
-    external fun bitwuzlaMkBvMinSigned(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm;
+    external fun bitwuzlaMkBvMinSigned(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
 
     /**
@@ -332,10 +335,10 @@ object Native {
      * @return A term representing the bit-vector value of given sort where the MSB
      * is set to 0 and all remaining bits are set to 1.
      *
-     * @see bitwuzla_mk_bv_sort
+     * @see bitwuzlaMkBvSort
      */
     @JvmStatic
-    external fun bitwuzlaMkBvMaxSigned(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm;
+    external fun bitwuzlaMkBvMaxSigned(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
 
     /**
@@ -347,7 +350,7 @@ object Native {
      * @return A term representing the floating-point positive zero value of given
      * floating-point sort.
      *
-     * @see bitwuzla_mk_fp_sort
+     * @see bitwuzlaMkFpSort
      */
     @JvmStatic
     external fun bitwuzlaMkFpPosZero(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
@@ -362,10 +365,10 @@ object Native {
      * @return A term representing the floating-point negative zero value of given
      * floating-point sort.
      *
-     * @see bitwuzla_mk_fp_sort
+     * @see bitwuzlaMkFpSort
      */
     @JvmStatic
-    external fun bitwuzlaMkFpNegZero(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm;
+    external fun bitwuzlaMkFpNegZero(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
 
     /**
@@ -377,10 +380,10 @@ object Native {
      * @return A term representing the floating-point positive infinity value of
      * given floating-point sort.
      *
-     * @see bitwuzla_mk_fp_sort
+     * @see bitwuzlaMkFpSort
      */
     @JvmStatic
-    external fun bitwuzlaMkFpPosInf(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm;
+    external fun bitwuzlaMkFpPosInf(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
 
     /**
@@ -392,10 +395,10 @@ object Native {
      * @return A term representing the floating-point negative infinity value of
      * given floating-point sort.
      *
-     * @see bitwuzla_mk_fp_sort
+     * @see bitwuzlaMkFpSort
      */
     @JvmStatic
-    external fun bitwuzlaMkFpNegInf(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm;
+    external fun bitwuzlaMkFpNegInf(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
     /**
      * Create a floating-point NaN value.
@@ -406,10 +409,10 @@ object Native {
      * @return A term representing the floating-point NaN value of given
      * floating-point sort.
      *
-     * @see bitwuzla_mk_fp_sort
+     * @see bitwuzlaMkFpSort
      */
     @JvmStatic
-    external fun bitwuzlaMkFpNan(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm;
+    external fun bitwuzlaMkFpNan(bitwuzla: Bitwuzla, sort: BitwuzlaSort): BitwuzlaTerm
 
     /**
      * Create a bit-vector value from its string representation.
@@ -426,7 +429,7 @@ object Native {
      * @return A term of kind [BitwuzlaKind.BITWUZLA_KIND_VAL], representing the bit-vector value
      * of given sort.
      *
-     * @see bitwuzla_mk_bv_sort
+     * @see bitwuzlaMkBvSort
      * @see BitwuzlaBVBase
      */
     @JvmStatic
@@ -450,7 +453,7 @@ object Native {
      * @return A term of kind [BitwuzlaKind.BITWUZLA_KIND_VAL], representing the bit-vector value
      * of given sort.
      *
-     * @see bitwuzla_mk_bv_sort
+     * @see bitwuzlaMkBvSort
      */
     @JvmStatic
     external fun bitwuzlaMkBvValueUint64(bitwuzla: Bitwuzla, sort: BitwuzlaSort, value: Long): BitwuzlaTerm
@@ -468,7 +471,7 @@ object Native {
      * @return A term of kind [BitwuzlaKind.BITWUZLA_KIND_VAL], representing the bit-vector value
      * of given sort.
      *
-     * @see bitwuzla_mk_bv_sort
+     * @see bitwuzlaMkBvSort
      */
     @JvmStatic
     fun bitwuzlaMkBvValueUint32(bitwuzla: Bitwuzla, sort: BitwuzlaSort, value: Int): BitwuzlaTerm {
@@ -538,11 +541,11 @@ object Native {
      */
     @JvmStatic
     external fun bitwuzlaMkTerm2(
-            bitwuzla: Bitwuzla,
-            kind: Int,
-            arg0: BitwuzlaTerm,
-            arg1: BitwuzlaTerm
-    ): BitwuzlaTerm;
+        bitwuzla: Bitwuzla,
+        kind: Int,
+        arg0: BitwuzlaTerm,
+        arg1: BitwuzlaTerm
+    ): BitwuzlaTerm
 
     /**
      * Create a term of given kind with three argument terms.
@@ -578,7 +581,7 @@ object Native {
      * @see  BitwuzlaKind
      */
     @JvmStatic
-    external fun bitwuzlaMkTerm(bitwuzla: Bitwuzla, kind: Int, args: LongArray/*Array<BitwuzlaTerm>*/): BitwuzlaTerm
+    external fun bitwuzlaMkTerm(bitwuzla: Bitwuzla, kind: Int, args: LongArray): BitwuzlaTerm
 
     /**
      * Create an indexed term of given kind with one argument term and one index.
@@ -616,12 +619,12 @@ object Native {
      */
     @JvmStatic
     external fun bitwuzlaMkTerm1Indexed2(
-            bitwuzla: Bitwuzla,
-            kind: Int,
-            arg: BitwuzlaTerm,
-            idx0: Int,
-            idx1: Int
-    ): BitwuzlaTerm;
+        bitwuzla: Bitwuzla,
+        kind: Int,
+        arg: BitwuzlaTerm,
+        idx0: Int,
+        idx1: Int
+    ): BitwuzlaTerm
 
 
     /**
@@ -680,12 +683,12 @@ object Native {
      *
      * @return A term of kind [BitwuzlaKind.BITWUZLA_KIND_CONST], representing the constant.
      *
-     * @see bitwuzla_mk_array_sort
-     * @see bitwuzla_mk_bool_sort
-     * @see bitwuzla_mk_bv_sort
-     * @see bitwuzla_mk_fp_sort
+     * @see bitwuzlaMkArraySort
+     * @see bitwuzlaMkBoolSort
+     * @see bitwuzlaMkBvSort
+     * @see bitwuzlaMkFpSort
      * @see bitwuzlaMkFunSort
-     * @see bitwuzla_mk_rm_sort
+     * @see bitwuzlaMkRmSort
      */
     @JvmStatic
     external fun bitwuzlaMkConst(bitwuzla: Bitwuzla, sort: BitwuzlaSort, symbol: String): BitwuzlaTerm
@@ -701,7 +704,7 @@ object Native {
      * @return A term of kind [BitwuzlaKind.BITWUZLA_KIND_CONST_ARRAY], representing a constant
      * array of given sort.
      *
-     * @see bitwuzla_mk_array_sort
+     * @see bitwuzlaMkArraySort
      */
     @JvmStatic
     external fun bitwuzlaMkConstArray(bitwuzla: Bitwuzla, sort: BitwuzlaSort, value: BitwuzlaTerm): BitwuzlaTerm
@@ -717,50 +720,50 @@ object Native {
      *
      * @return A term of kind [BitwuzlaKind.BITWUZLA_KIND_VAR], representing the variable.
      *
-     * @see bitwuzla_mk_bool_sort
-     * @see bitwuzla_mk_bv_sort
-     * @see bitwuzla_mk_fp_sort
+     * @see bitwuzlaMkBoolSort
+     * @see bitwuzlaMkBvSort
+     * @see bitwuzlaMkFpSort
      * @see bitwuzlaMkFunSort
-     * @see bitwuzla_mk_rm_sort
+     * @see bitwuzlaMkRmSort
      */
     @JvmStatic
-    external fun bitwuzlaMkVar(bitwuzla: Bitwuzla, sort: BitwuzlaSort, symbol: String): BitwuzlaTerm;
+    external fun bitwuzlaMkVar(bitwuzla: Bitwuzla, sort: BitwuzlaSort, symbol: String): BitwuzlaTerm
 
     /**
      * Push context levels.
      *
      * Requires that incremental solving has been enabled via
-     * [bitwuzla_set_option].
+     * [bitwuzlaSetOption].
      *
-     * Note: Assumptions added via this [bitwuzla_assume] are not affected by
+     * Note: Assumptions added via this [bitwuzlaAssume] are not affected by
      * context level changes and are only valid until the next
-     * [bitwuzla_check_sat] call, no matter at which level they were
+     * [bitwuzlaCheckSat] call, no matter at which level they were
      * assumed.
      *
      * @param bitwuzla The Bitwuzla instance.
      * @param nlevels The number of context levels to push.
      *
-     * @see bitwuzla_set_option
+     * @see bitwuzlaSetOption
      * @see BitwuzlaOption.BITWUZLA_OPT_INCREMENTAL
      */
     @JvmStatic
-    external fun bitwuzlaPush(bitwuzla: Bitwuzla, nlevels: Int);
+    external fun bitwuzlaPush(bitwuzla: Bitwuzla, nlevels: Int)
 
     /**
      * Pop context levels.
      *
      * Requires that incremental solving has been enabled via
-     * [bitwuzla_set_option].
+     * [bitwuzlaSetOption].
      *
-     * Note: Assumptions added via this [bitwuzla_assume] are not affected by
+     * Note: Assumptions added via this [bitwuzlaAssume] are not affected by
      * context level changes and are only valid until the next
-     * [bitwuzla_check_sat] call, no matter at which level they were
+     * [bitwuzlaCheckSat] call, no matter at which level they were
      * assumed.
      *
      * @param bitwuzla The Bitwuzla instance.
      * @param nlevels The number of context levels to pop.
      *
-     * @see bitwuzla_set_option
+     * @see bitwuzlaSetOption
      * @see BitwuzlaOption.BITWUZLA_OPT_INCREMENTAL
      */
     @JvmStatic
@@ -773,24 +776,24 @@ object Native {
      * @param term The formula to assert.
      */
     @JvmStatic
-    external fun bitwuzlaAssert(bitwuzla: Bitwuzla, term: BitwuzlaTerm);
+    external fun bitwuzlaAssert(bitwuzla: Bitwuzla, term: BitwuzlaTerm)
 
     /**
      * Assume formula.
      *
      * Requires that incremental solving has been enabled via
-     * [bitwuzla_set_option].
+     * [bitwuzlaSetOption].
      *
      * Note: Assumptions added via this function are not affected by context level
-     * changes and are only valid until the next [bitwuzla_check_sat] call,
+     * changes and are only valid until the next [bitwuzlaCheckSat] call,
      * no matter at which level they were assumed.
      *
      * @param bitwuzla The Bitwuzla instance.
      * @param term The formula to assume.
      *
-     * @see bitwuzla_set_option
-     * @see bitwuzla_is_unsat_assumption
-     * @see bitwuzla_get_unsat_assumptions
+     * @see bitwuzlaSetOption
+     * @see bitwuzlaIsUnsatAssumption
+     * @see bitwuzlaGetUnsatAssumptions
      * @see BitwuzlaOption.BITWUZLA_OPT_INCREMENTAL
      */
     @JvmStatic
@@ -805,18 +808,18 @@ object Native {
      * failed assumptions in MiniSAT.
      *
      * Requires that incremental solving has been enabled via
-     * [bitwuzla_set_option].
+     * [bitwuzlaSetOption].
      *
-     * Requires that the last [bitwuzla_check_sat] query returned
+     * Requires that the last [bitwuzlaCheckSat] query returned
      * [BitwuzlaResult.BITWUZLA_UNSAT].
      *
      * @param bitwuzla The Bitwuzla instance.
      *
      * @return An array with unsat assumptions.
      *
-     * @see bitwuzla_set_option
-     * @see bitwuzla_assume
-     * @see bitwuzla_check_sat
+     * @see bitwuzlaSetOption
+     * @see bitwuzlaAssume
+     * @see bitwuzlaCheckSat
      * @see BitwuzlaOption.BITWUZLA_OPT_INCREMENTAL
      */
     @JvmStatic
@@ -829,15 +832,15 @@ object Native {
      * The unsat core consists of the set of assertions that force an input formula
      * to become unsatisfiable.
      *
-     * Requires that the last [bitwuzla_check_sat] query returned
+     * Requires that the last [bitwuzlaCheckSat] query returned
      * [BitwuzlaResult.BITWUZLA_UNSAT].
      *
      * @param bitwuzla The Bitwuzla instance.
      *
      * @return An array with unsat assertions.
      *
-     * @see bitwuzla_assert
-     * @see bitwuzla_check_sat
+     * @see bitwuzlaAssert
+     * @see bitwuzlaCheckSat
      */
     @JvmStatic
     external fun bitwuzlaGetUnsatCore(bitwuzla: Bitwuzla): LongArray
@@ -848,17 +851,17 @@ object Native {
      *
      * @param bitwuzla The Bitwuzla instance.
      *
-     * @see bitwuzla_assume
+     * @see bitwuzlaAssume
      */
     @JvmStatic
-    external fun bitwuzlaFixateAssumptions(bitwuzla: Bitwuzla);
+    external fun bitwuzlaFixateAssumptions(bitwuzla: Bitwuzla)
 
     /**
      * Reset all added assumptions.
      *
      * @param bitwuzla The Bitwuzla instance.
      *
-     * @see bitwuzla_assume
+     * @see bitwuzlaAssume
      */
     @JvmStatic
     external fun bitwuzlaResetAssumptions(bitwuzla: Bitwuzla)
@@ -867,13 +870,13 @@ object Native {
     /**
      * Check satisfiability of current input formula.
      *
-     * An input formula consists of assertions added via [bitwuzla_assert].
+     * An input formula consists of assertions added via [bitwuzlaAssert].
      * The search for a solution can by guided by making assumptions via
-     * [bitwuzla_assume].
+     * [bitwuzlaAssume].
      *
      * Note: Assertions and assumptions are combined via Boolean and.  Multiple
      * calls to this function require enabling incremental solving via
-     * [bitwuzla_set_option].
+     * [bitwuzlaSetOption].
      *
      * @param bitwuzla The Bitwuzla instance.
      *
@@ -883,25 +886,38 @@ object Native {
      * This can happen when `bitwuzla` was terminated via a termination
      * callback.
      *
-     * @see bitwuzla_assert
-     * @see bitwuzla_assume
-     * @see bitwuzla_set_option
+     * @see bitwuzlaAssert
+     * @see bitwuzlaAssume
+     * @see bitwuzlaSetOption
      * @see BitwuzlaOption.BITWUZLA_OPT_INCREMENTAL
      * @see BitwuzlaResult
      */
     @JvmStatic
     external fun bitwuzlaCheckSat(bitwuzla: Bitwuzla): Int
 
+    /**
+     * Check formula satisfiability with timeout.
+     *
+     * @param timeout Timeout in milliseconds.
+     *
+     * @see bitwuzlaCheckSat
+     * */
     @JvmStatic
     external fun bitwuzlaCheckSatTimeout(bitwuzla: Bitwuzla, timeout: Long): Int
 
+    /**
+     * Cancel currently performing check.
+     *
+     * Note: in current implementation check is cancelable only
+     * if it was a check with timeout [bitwuzlaCheckSatTimeout].
+     * */
     @JvmStatic
-    external fun bitwuzlaForceTerminate(bitwuzla: Bitwuzla): Unit
+    external fun bitwuzlaForceTerminate(bitwuzla: Bitwuzla)
 
     /**
      * Get a term representing the model value of a given term.
      *
-     * Requires that the last [bitwuzla_check_sat] query returned
+     * Requires that the last [bitwuzlaCheckSat] query returned
      * [BitwuzlaResult.BITWUZLA_SAT].
      *
      * @param bitwuzla The Bitwuzla instance.
@@ -909,7 +925,7 @@ object Native {
      *
      * @return A term representing the model value of term `term`.
      *
-     * @see bitwuzla_check_sat
+     * @see bitwuzlaCheckSat
      */
     @JvmStatic
     external fun bitwuzlaGetValue(bitwuzla: Bitwuzla, term: BitwuzlaTerm): BitwuzlaTerm
@@ -978,7 +994,7 @@ object Native {
      * @return The hash value of the sort.
      */
     @JvmStatic
-    external fun bitwuzlaSortHash(sort: BitwuzlaSort): Long;
+    external fun bitwuzlaSortHash(sort: BitwuzlaSort): Long
 
     /**
      * Get the kind of a term.
@@ -1002,7 +1018,7 @@ object Native {
      * @return The children of `term` as an array of terms.
      */
     @JvmStatic
-    external fun bitwuzlaTermGetChildren(term: BitwuzlaTerm): LongArray;
+    external fun bitwuzlaTermGetChildren(term: BitwuzlaTerm): LongArray
 
     /**
      * Get the indices of an indexed term.
@@ -1227,7 +1243,7 @@ object Native {
      * @return The codomain sort of the function term.
      */
     @JvmStatic
-    external fun bitwuzlaTermFunGetCodomainSort(term: BitwuzlaTerm): BitwuzlaSort;
+    external fun bitwuzlaTermFunGetCodomainSort(term: BitwuzlaTerm): BitwuzlaSort
 
     /**
      * Get the bit-width of a bit-vector term.
@@ -1239,7 +1255,7 @@ object Native {
      * @return The bit-width of the bit-vector term.
      */
     @JvmStatic
-    external fun bitwuzlaTermBvGetSize(term: BitwuzlaTerm): Int;
+    external fun bitwuzlaTermBvGetSize(term: BitwuzlaTerm): Int
 
     /**
      * Get the bit-width of the exponent of a floating-point term.
@@ -1251,7 +1267,7 @@ object Native {
      * @return The bit-width of the exponent of the floating-point term.
      */
     @JvmStatic
-    external fun bitwuzlaTermFpGetExpSize(term: BitwuzlaTerm): Int;
+    external fun bitwuzlaTermFpGetExpSize(term: BitwuzlaTerm): Int
 
     /**
      * Get the bit-width of the significand of a floating-point term.
@@ -1263,7 +1279,7 @@ object Native {
      * @return The bit-width of the significand of the floating-point term.
      */
     @JvmStatic
-    external fun bitwuzlaTermFpGetSigSize(term: BitwuzlaTerm): Int;
+    external fun bitwuzlaTermFpGetSigSize(term: BitwuzlaTerm): Int
 
     /**
      * Get the arity of a function term.
@@ -1275,7 +1291,7 @@ object Native {
      * @return The arity of the function term.
      */
     @JvmStatic
-    external fun bitwuzlaTermFunGetArity(term: BitwuzlaTerm): Int;
+    external fun bitwuzlaTermFunGetArity(term: BitwuzlaTerm): Int
 
     /**
      * Get the symbol of a term.
@@ -1285,7 +1301,7 @@ object Native {
      * @return The symbol of `term`. `null` if no symbol is defined.
      */
     @JvmStatic
-    external fun bitwuzlaTermGetSymbol(term: BitwuzlaTerm): String?;
+    external fun bitwuzlaTermGetSymbol(term: BitwuzlaTerm): String?
 
     /**
      * Set the symbol of a term.
@@ -1294,7 +1310,7 @@ object Native {
      * @param symbol The symbol.
      */
     @JvmStatic
-    external fun bitwuzlaTermSetSymbol(term: BitwuzlaTerm, symbol: String);
+    external fun bitwuzlaTermSetSymbol(term: BitwuzlaTerm, symbol: String)
 
     /**
      * Determine if the sorts of two terms are equal.
@@ -1305,7 +1321,7 @@ object Native {
      * @return True if the sorts of `term0` and `term1` are equal.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsEqualSort(term0: BitwuzlaTerm, term1: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsEqualSort(term0: BitwuzlaTerm, term1: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is an array term.
@@ -1315,7 +1331,7 @@ object Native {
      * @return True if `term` is an array term.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsArray(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsArray(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a constant.
@@ -1325,7 +1341,7 @@ object Native {
      * @return True if `term` is a constant.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsConst(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsConst(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a function.
@@ -1335,7 +1351,7 @@ object Native {
      * @return True if `term` is a function.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsFun(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsFun(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a variable.
@@ -1345,7 +1361,7 @@ object Native {
      * @return True if `term` is a variable.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsVar(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsVar(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a bound variable.
@@ -1355,7 +1371,7 @@ object Native {
      * @return True if `term` is a variable and bound.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsBoundVar(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsBoundVar(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a value.
@@ -1365,7 +1381,7 @@ object Native {
      * @return True if `term` is a value.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsValue(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsValue(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a bit-vector value.
@@ -1375,7 +1391,7 @@ object Native {
      * @return True if `term` is a bit-vector value.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsBvValue(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsBvValue(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a floating-point value.
@@ -1405,7 +1421,7 @@ object Native {
      * @return True if `term` is a bit-vector term.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsBv(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsBv(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a floating-point term.
@@ -1415,7 +1431,7 @@ object Native {
      * @return True if `term` is a floating-point term.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsFp(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsFp(term: BitwuzlaTerm): Boolean
 
 
     /**
@@ -1426,7 +1442,7 @@ object Native {
      * @return True if `term` is a rounding mode term.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsRm(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsRm(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a bit-vector value representing zero.
@@ -1436,7 +1452,7 @@ object Native {
      * @return True if `term` is a bit-vector zero value.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsBvValueZero(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsBvValueZero(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a bit-vector value representing one.
@@ -1446,7 +1462,7 @@ object Native {
      * @return True if `term` is a bit-vector one value.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsBvValueOne(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsBvValueOne(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a bit-vector value with all bits set to one.
@@ -1456,7 +1472,7 @@ object Native {
      * @return True if `term` is a bit-vector value with all bits set to one.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsBvValueOnes(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsBvValueOnes(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a bit-vector minimum signed value.
@@ -1467,7 +1483,7 @@ object Native {
      * set to 1 and all other bits set to 0.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsBvValueMinSigned(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsBvValueMinSigned(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a bit-vector maximum signed value.
@@ -1478,7 +1494,7 @@ object Native {
      * set to 0 and all other bits set to 1.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsBvValueMaxSigned(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsBvValueMaxSigned(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a floating-point positive zero (+zero) value.
@@ -1488,7 +1504,7 @@ object Native {
      * @return True if `term` is a floating-point +zero value.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsFpValuePosZero(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsFpValuePosZero(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a floating-point value negative zero (-zero).
@@ -1498,7 +1514,7 @@ object Native {
      * @return True if `term` is a floating-point value negative zero.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsFpValueNegZero(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsFpValueNegZero(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a floating-point positive infinity (+oo) value.
@@ -1508,7 +1524,7 @@ object Native {
      * @return True if `term` is a floating-point +oo value.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsFpValuePosInf(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsFpValuePosInf(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a floating-point negative infinity (-oo) value.
@@ -1518,7 +1534,7 @@ object Native {
      * @return True if `term` is a floating-point -oo value.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsFpValueNegInf(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsFpValueNegInf(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a floating-point NaN value.
@@ -1528,7 +1544,7 @@ object Native {
      * @return True if `term` is a floating-point NaN value.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsFpValueNan(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsFpValueNan(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a rounding mode RNA value.
@@ -1538,7 +1554,7 @@ object Native {
      * @return True if `term` is a roundindg mode RNA value.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsRmValueRna(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsRmValueRna(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a rounding mode RNE value.
@@ -1548,7 +1564,7 @@ object Native {
      * @return True if `term` is a rounding mode RNE value.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsRmValueRne(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsRmValueRne(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a rounding mode RTN value.
@@ -1558,7 +1574,7 @@ object Native {
      * @return True if `term` is a rounding mode RTN value.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsRmValueRtn(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsRmValueRtn(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a rounding mode RTP value.
@@ -1568,7 +1584,7 @@ object Native {
      * @return True if `term` is a rounding mode RTP value.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsRmValueRtp(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsRmValueRtp(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a rounding mode RTZ value.
@@ -1578,7 +1594,7 @@ object Native {
      * @return True if `term` is a rounding mode RTZ value.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsRmValueRtz(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsRmValueRtz(term: BitwuzlaTerm): Boolean
 
     /**
      * Determine if a term is a constant array.
@@ -1588,7 +1604,7 @@ object Native {
      * @return True if `term` is a constant array.
      */
     @JvmStatic
-    external fun bitwuzlaTermIsConstArray(term: BitwuzlaTerm): Boolean;
+    external fun bitwuzlaTermIsConstArray(term: BitwuzlaTerm): Boolean
 
     /**
      * Get bv const bits. Only safe if [bitwuzlaTermIsBvValue] is true for [term]
@@ -1616,9 +1632,8 @@ object Native {
      * Only safe if [bitwuzlaBvBitsGetWidth] <= 32.
      * */
     @JvmStatic
-    fun bitwuzlaBvBitsToUInt32(bv: BitwuzlaBitVector): Int {
-        return bitwuzlaBvBitsToUInt64(bv).toInt();
-    }
+    fun bitwuzlaBvBitsToUInt32(bv: BitwuzlaBitVector): Int =
+        bitwuzlaBvBitsToUInt64(bv).toInt()
 
     /**
      * Get a single bit (0 or 1) from bv const bits.
@@ -1634,15 +1649,58 @@ object Native {
     external fun bitwuzlaFpConstNodeGetBits(bitwuzla: Bitwuzla, term: BitwuzlaTerm): BitwuzlaBitVector
 
 
+    /**
+     * Print a model for the current input formula.
+     *
+     * Requires that the last [bitwuzlaCheckSat] query returned
+     * [BitwuzlaResult.BITWUZLA_SAT].
+     *
+     * @param bitwuzla The Bitwuzla instance.
+     * @param format The output format for printing the model. Either `"btor"` for
+     * the BTOR format, or `"smt2"` for the SMT-LIB v2 format.
+     * @param outputFilePath The file to print the model to.
+     *
+     * @see bitwuzlaCheckSat
+     */
     @JvmStatic
     external fun bitwuzlaPrintModel(bitwuzla: Bitwuzla, format: String, outputFilePath: String)
 
+
+    /**
+     * Print the current input formula.
+     *
+     * Requires that incremental solving is not enabled.
+     *
+     * @param bitwuzla The Bitwuzla instance.
+     * @param format The output format for printing the formula. Either
+     * `"aiger_ascii"` for the AIGER ascii format, `"aiger_binary"`
+     * for the binary AIGER format, `"btor"` for the BTOR format, or
+     * `"smt2"` for the SMT-LIB v2 format.
+     * @param outputFilePath The file to print the formula to.
+     */
     @JvmStatic
     external fun bitwuzlaDumpFormula(bitwuzla: Bitwuzla, format: String, outputFilePath: String)
 
+    /**
+     * Print sort.
+     *
+     * @param sort The sort.
+     * @param format The output format for printing the term. Either `"btor"` for
+     * the BTOR format, or `"smt2"` for the SMT-LIB v2 format. Note
+     * for the `"btor"` this function won't do anything since BTOR
+     * sorts are printed when printing the term via
+     * bitwuzla_term_dump.
+     */
     @JvmStatic
     external fun bitwuzlaSortDump(sort: BitwuzlaSort, format: String): String
 
+    /**
+     * Print term .
+     *
+     * @param term The term.
+     * @param format The output format for printing the term. Either `"btor"` for the
+     * BTOR format, or `"smt2"` for the SMT-LIB v2 format.
+     */
     @JvmStatic
     external fun bitwuzlaTermDump(term: BitwuzlaTerm, format: String): String
 }

@@ -29,7 +29,7 @@ tasks.withType<KotlinCompile> {
 }
 
 tasks.getByName<KotlinCompile>("compileKotlin") {
-    kotlinOptions.allWarningsAsErrors = false
+    kotlinOptions.allWarningsAsErrors = true
 }
 
 tasks.withType<Test> {
