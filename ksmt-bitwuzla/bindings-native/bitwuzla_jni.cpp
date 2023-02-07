@@ -117,11 +117,11 @@ struct BitwuzlaTerminationCallbackState {
     }
 
     void setup_timeout(uint64_t timeout) {
-        termination_state = TerminationState::ACTIVE;
         auto current_time = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::system_clock::now().time_since_epoch()
         );
         time_mark = current_time + std::chrono::milliseconds(timeout);
+        termination_state = TerminationState::ACTIVE;
     }
 
     bool terminated() {
@@ -132,15 +132,18 @@ struct BitwuzlaTerminationCallbackState {
         if (current_state != TerminationState::ACTIVE) {
             return false;
         }
+
         std::chrono::milliseconds current_time = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::system_clock::now().time_since_epoch()
         );
         if (current_time > time_mark) {
             int expected_state = TerminationState::ACTIVE;
             int new_state = TerminationState::TERMINATED;
-            return !termination_state.compare_exchange_strong(expected_state, new_state);
+            termination_state.compare_exchange_strong(expected_state, new_state);
         }
-        return false;
+
+        int final_state = termination_state;
+        return final_state == TerminationState::TERMINATED;
     }
 };
 
