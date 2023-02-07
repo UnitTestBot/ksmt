@@ -8,7 +8,6 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KSort
-import java.util.Collections
 
 open class KBitwuzlaContext : AutoCloseable {
     private var isClosed = false
@@ -24,8 +23,12 @@ open class KBitwuzlaContext : AutoCloseable {
     private val sorts = hashMapOf<KSort, BitwuzlaSort>()
     private val bitwuzlaSorts = hashMapOf<BitwuzlaSort, KSort>()
     private val declSorts = hashMapOf<KDecl<*>, BitwuzlaSort>()
-    private val bitwuzlaConstants = hashMapOf<BitwuzlaTerm, KDecl<*>>()
+
     private val bitwuzlaValues = hashMapOf<BitwuzlaTerm, KExpr<*>>()
+
+    private val normalConstantsOnly = hashMapOf<KDecl<*>, BitwuzlaTerm>()
+    private val constantsAndVars = hashMapOf<KDecl<*>, BitwuzlaTerm>()
+    private val bitwuzlaNormalConstants = hashMapOf<BitwuzlaTerm, KDecl<*>>()
 
     operator fun get(expr: KExpr<*>): BitwuzlaTerm? = expressions[expr]
     operator fun get(sort: KSort): BitwuzlaSort? = sorts[sort]
@@ -76,41 +79,34 @@ open class KBitwuzlaContext : AutoCloseable {
     fun convertValue(value: BitwuzlaTerm): KExpr<*>? = bitwuzlaValues[value]
 
     // Constant is known only if it was previously internalized
-    fun convertConstantIfKnown(term: BitwuzlaTerm): KDecl<*>? = bitwuzlaConstants[term]
+    fun convertConstantIfKnown(term: BitwuzlaTerm): KDecl<*>? = bitwuzlaNormalConstants[term]
 
-    private val normalConstantScope: NormalConstantScope = NormalConstantScope()
-    var currentConstantScope: ConstantScope = normalConstantScope
+    fun declaredConstants(): Set<KDecl<*>> = normalConstantsOnly.keys
 
-    fun declaredConstants(): Set<KDecl<*>> = Collections.unmodifiableSet(normalConstantScope.constants)
 
     /**
      * Internalize constant.
      *  1. Since [Native.bitwuzlaMkConst] creates fresh constant on each invocation caches are used
-     *  to guarantee that if two constants are equal in ksmt they are also equal in Bitwuzla;
-     *  2. Scoping is used to support quantifier bound variables (see [withConstantScope]).
+     *  to guarantee that if two constants are equal in ksmt they are also equal in Bitwuzla.
+     *  2. Returns [Native.bitwuzlaMkVar] for previously registered quantified variables (see [registerVar]).
      * */
-    fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = currentConstantScope.mkConstant(decl, sort)
-
-    /**
-     * Constant scope for quantifiers.
-     *
-     * Quantifier bound variables:
-     * 1. may clash with constants from outer scope;
-     * 2. must be replaced with vars in quantifier body.
-     *
-     * @see QuantifiedConstantScope
-     * */
-    inline fun <reified T> withConstantScope(body: QuantifiedConstantScope.() -> T): T {
-        val oldScope = currentConstantScope
-        val newScope = QuantifiedConstantScope(currentConstantScope)
-
-        currentConstantScope = newScope
-        val result = newScope.body()
-        currentConstantScope = oldScope
-
-        return result
+    fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = constantsAndVars.getOrPut(decl) {
+        Native.bitwuzlaMkConst(bitwuzla, sort, decl.name).also {
+            normalConstantsOnly[decl] = it
+            bitwuzlaNormalConstants[it] = decl
+        }
     }
 
+    /**
+     * Register quantified variable. Provided [decl] must be unique (e.g. fresh)
+     * and shouldn't overlap with any other variable.
+     * */
+    fun registerVar(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm {
+        check(decl !in constantsAndVars) { "Vars must be unique" }
+        val bitwuzlaVar = Native.bitwuzlaMkVar(bitwuzla, sort, decl.name)
+        constantsAndVars[decl] = bitwuzlaVar
+        return bitwuzlaVar
+    }
 
     inline fun <reified T> bitwuzlaTry(body: () -> T): T = try {
         ensureActive()
@@ -125,8 +121,10 @@ open class KBitwuzlaContext : AutoCloseable {
         bitwuzlaSorts.clear()
         expressions.clear()
         bitwuzlaExpressions.clear()
+        constantsAndVars.clear()
+        normalConstantsOnly.clear()
         declSorts.clear()
-        bitwuzlaConstants.clear()
+        bitwuzlaNormalConstants.clear()
         Native.bitwuzlaDelete(bitwuzla)
     }
 
@@ -149,46 +147,5 @@ open class KBitwuzlaContext : AutoCloseable {
         reverseCache[key] = converted
 
         return converted
-    }
-
-    sealed interface ConstantScope {
-        fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm
-    }
-
-
-    /**
-     * Produce normal constants for KSMT declarations.
-     *
-     * Guarantee that if two declarations are equal
-     * then the same Bitwuzla native pointer is returned.
-     * */
-    inner class NormalConstantScope : ConstantScope {
-        val constants = hashSetOf<KDecl<*>>()
-        private val constantCache = hashMapOf<Pair<KDecl<*>, BitwuzlaSort>, BitwuzlaTerm>()
-
-        override fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm =
-            constantCache.getOrPut(decl to sort) {
-                Native.bitwuzlaMkConst(bitwuzla, sort, decl.name).also {
-                    constants += decl
-                    bitwuzlaConstants[it] = decl
-                }
-            }
-    }
-
-    /**
-     * Constant quantification.
-     *
-     * If constant declaration is registered as quantified variable,
-     * then the corresponding var is returned instead of constant.
-     * */
-    inner class QuantifiedConstantScope(private val parent: ConstantScope) : ConstantScope {
-        private val constants = hashMapOf<Pair<KDecl<*>, BitwuzlaSort>, BitwuzlaTerm>()
-        fun mkVar(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm =
-            constants.getOrPut(decl to sort) {
-                Native.bitwuzlaMkVar(bitwuzla, sort, decl.name)
-            }
-
-        override fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm =
-            constants[decl to sort] ?: parent.mkConstant(decl, sort)
     }
 }

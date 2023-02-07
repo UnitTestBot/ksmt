@@ -30,7 +30,8 @@ import org.ksmt.utils.uncheckedCast
 @Suppress("LargeClass")
 open class KBitwuzlaExprConverter(
     private val ctx: KContext,
-    val bitwuzlaCtx: KBitwuzlaContext
+    val bitwuzlaCtx: KBitwuzlaContext,
+    private val scopedVars: Map<BitwuzlaTerm, KDecl<*>>? = null
 ) : KExprConverterBase<BitwuzlaTerm>() {
 
     private val adapterTermRewriter = AdapterTermRewriter(ctx)
@@ -108,7 +109,7 @@ open class KBitwuzlaExprConverter(
             BitwuzlaKind.BITWUZLA_KIND_CONST -> convertConst(expr)
             BitwuzlaKind.BITWUZLA_KIND_APPLY -> convertFunctionApp(expr)
             BitwuzlaKind.BITWUZLA_KIND_VAL -> convertValue(expr)
-            BitwuzlaKind.BITWUZLA_KIND_VAR -> TODO("var conversion is not implemented")
+            BitwuzlaKind.BITWUZLA_KIND_VAR -> convertVar(expr)
 
             // bool
             BitwuzlaKind.BITWUZLA_KIND_IFF,
@@ -127,7 +128,7 @@ open class KBitwuzlaExprConverter(
 
             // quantifiers
             BitwuzlaKind.BITWUZLA_KIND_EXISTS,
-            BitwuzlaKind.BITWUZLA_KIND_FORALL -> TODO("quantifier conversion is not implemented")
+            BitwuzlaKind.BITWUZLA_KIND_FORALL -> convertQuantifier(expr, kind)
 
             // bit-vec or bool
             BitwuzlaKind.BITWUZLA_KIND_AND,
@@ -304,6 +305,12 @@ open class KBitwuzlaExprConverter(
             }
             else -> TODO("unsupported value $expr")
         }
+    }
+
+    private fun KContext.convertVar(expr: BitwuzlaTerm): ExprConversionResult = convert {
+        val varsScope = scopedVars ?: error("Unexpected var without scope")
+        val decl = varsScope[expr] ?: error("Unregistered var")
+        mkConstApp(decl)
     }
 
     private fun BitwuzlaBitVector.getBit(idx: Int): Boolean =
@@ -603,6 +610,29 @@ open class KBitwuzlaExprConverter(
                 ctx.mkFpToFpExpr(sort, rm, value)
             }
         else -> error("unexpected Fp kind $kind")
+    }
+
+    fun convertQuantifier(expr: BitwuzlaTerm, kind: BitwuzlaKind): ExprConversionResult = convert {
+        val children = Native.bitwuzlaTermGetChildren(expr)
+        val boundVars = children.dropLast(1)
+        val body = children.last()
+
+        val scope = boundVars.associateWith {
+            val sort = Native.bitwuzlaTermGetSort(it)
+            val name = Native.bitwuzlaTermGetSymbol(it)
+            ctx.mkFreshConstDecl(name ?: "var", sort.convertSort())
+        }
+
+        val bodyConverter = KBitwuzlaExprConverter(ctx, bitwuzlaCtx, scope)
+        val convertedBody = with(bodyConverter) { body.convertExpr(ctx.boolSort) }
+
+        val convertedBounds = scope.values.toList()
+
+        when (kind) {
+            BitwuzlaKind.BITWUZLA_KIND_FORALL -> ctx.mkUniversalQuantifier(convertedBody, convertedBounds)
+            BitwuzlaKind.BITWUZLA_KIND_EXISTS -> ctx.mkExistentialQuantifier(convertedBody, convertedBounds)
+            else -> error("Unexpected quantifier: $kind")
+        }
     }
 
     private fun <T : KDecl<*>> generateDecl(term: BitwuzlaTerm, generator: (String) -> T): T {

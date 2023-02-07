@@ -1,5 +1,7 @@
 package org.ksmt.solver.bitwuzla
 
+import org.ksmt.KContext
+import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KDeclVisitor
 import org.ksmt.decl.KFuncDecl
@@ -137,6 +139,7 @@ import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
+import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBVBase
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
@@ -164,6 +167,7 @@ import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KSortVisitor
 import org.ksmt.sort.KUninterpretedSort
+import org.ksmt.utils.uncheckedCast
 
 @Suppress("LargeClass")
 open class KBitwuzlaExprInternalizer(
@@ -591,34 +595,8 @@ open class KBitwuzlaExprInternalizer(
         }
     }
 
-    @Suppress("LABEL_NAME_CLASH")
-    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) = with(expr) {
-        transform {
-            bitwuzlaCtx.withConstantScope {
-                val indexVar = mkVar(indexVarDecl, indexVarDecl.sort.internalizeSort())
-                val bodyInternalizer = KBitwuzlaExprInternalizer(bitwuzlaCtx)
-                val body = with(bodyInternalizer) {
-                    body.internalize()
-                }
-                val bodyKind = Native.bitwuzlaTermGetBitwuzlaKind(body)
-
-                if (bodyKind == BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT) {
-                    val selectArgs = Native.bitwuzlaTermGetChildren(body)
-                    if (selectArgs[1] == indexVar) {
-                        /*
-                         Recognize and support special case of lambda expressions
-                         which can be produced by [KBitwuzlaExprConverter].
-
-                         (lambda (i) (select array i)) -> array
-                         */
-                        return@transform selectArgs[0]
-                    }
-                }
-
-                throw KSolverUnsupportedFeatureException("array lambda expressions are not supported in Bitwuzla")
-            }
-        }
-    }
+    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) =
+        expr.internalizeArrayLambdaQuantifier()
 
     override fun transform(
         expr: KExistentialQuantifier
@@ -901,22 +879,61 @@ open class KBitwuzlaExprInternalizer(
 
     inline fun <T : KQuantifier> T.internalizeQuantifier(
         crossinline internalizer: T.(Array<BitwuzlaTerm>) -> BitwuzlaTerm
-    ) = transform {
-        bitwuzlaCtx.withConstantScope {
-            val boundVars = bounds.map {
-                mkVar(it, it.sort.internalizeSort())
-            }
-            val bodyInternalizer = KBitwuzlaExprInternalizer(bitwuzlaCtx)
-            val body = with(bodyInternalizer) {
-                body.internalize()
-            }
+    ): T = transform {
+        val (_, internalizedBounds, internalizedBody) = ctx.internalizeQuantifierBody(bounds, body)
 
-            if (bounds.isEmpty()) return@transform body
-
-            val args = (boundVars + body).toTypedArray()
-
-            internalizer(args)
+        if (internalizedBounds.isEmpty()) {
+            return@transform internalizedBody
         }
+
+        val args = (internalizedBounds + internalizedBody).toTypedArray()
+        internalizer(args)
+    }
+
+    fun <T : KArrayLambda<*, *>> T.internalizeArrayLambdaQuantifier(): T = transform {
+        val (_, internalizedBounds, internalizedBody) = ctx.internalizeQuantifierBody(listOf(indexVarDecl), body)
+
+        val bodyKind = Native.bitwuzlaTermGetBitwuzlaKind(internalizedBody)
+        if (bodyKind == BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT) {
+            val selectArgs = Native.bitwuzlaTermGetChildren(internalizedBody)
+            if (selectArgs[1] == internalizedBounds.single()) {
+                /*
+                 Recognize and support special case of lambda expressions
+                 which can be produced by [KBitwuzlaExprConverter].
+
+                 (lambda (i) (select array i)) -> array
+                 */
+                return@transform selectArgs[0]
+            }
+        }
+
+        throw KSolverUnsupportedFeatureException("array lambda expressions are not supported in Bitwuzla")
+    }
+
+    fun KContext.internalizeQuantifierBody(
+        bounds: List<KDecl<*>>,
+        body: KExpr<*>
+    ): Triple<List<KConstDecl<KSort>>, List<BitwuzlaTerm>, BitwuzlaTerm> {
+        // Replace all bound vars since they can overlap with constants from outer scope
+        val uniqueBounds = bounds.map { mkFreshConstDecl(it.name, it.sort) }
+        val shadowingResolver = KExprSubstitutor(this).apply {
+            bounds.zip(uniqueBounds).forEach { (old, new) ->
+                substitute(old.uncheckedCast(), new)
+            }
+        }
+        val bodyWithoutShadowing = shadowingResolver.apply(body)
+
+        // Since all bound variable are unique now we can create variables
+        val internalizedBounds = uniqueBounds.map { bitwuzlaCtx.registerVar(it, it.bitwuzlaFunctionSort()) }
+
+        /**
+         * Internalizer will produce var instead of normal constants
+         * for all bound variables, since we previously register them.
+         * */
+        val bodyInternalizer = KBitwuzlaExprInternalizer(bitwuzlaCtx)
+        val internalizedBody = with(bodyInternalizer) { bodyWithoutShadowing.internalize() }
+
+        return Triple(uniqueBounds, internalizedBounds, internalizedBody)
     }
 
     open class SortInternalizer(private val bitwuzlaCtx: KBitwuzlaContext) : KSortVisitor<BitwuzlaSort> {
