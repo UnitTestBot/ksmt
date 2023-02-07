@@ -733,6 +733,7 @@ object Native {
      *
      * @see  BitwuzlaKind
      */
+    @Suppress("LongParameterList")
     fun bitwuzlaMkTerm2Indexed2(
         bitwuzla: Bitwuzla,
         kind: BitwuzlaKind,
@@ -742,6 +743,7 @@ object Native {
         idx1: Int
     ): BitwuzlaTerm = bitwuzlaMkTerm2Indexed2(bitwuzla, kind.value, arg0, arg1, idx0, idx1)
 
+    @Suppress("LongParameterList")
     @JvmStatic
     external fun bitwuzlaMkTerm2Indexed2(
             bitwuzla: Bitwuzla,
