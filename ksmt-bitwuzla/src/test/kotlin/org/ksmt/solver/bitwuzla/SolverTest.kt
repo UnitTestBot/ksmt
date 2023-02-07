@@ -4,8 +4,6 @@ import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
-import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBv32Sort
 import org.ksmt.sort.KBv8Sort
@@ -128,30 +126,26 @@ class SolverTest {
     }
 
     @Test
-    @Suppress("ForbiddenComment") // todo: don't use native api
     fun testTimeout(): Unit = with(ctx) {
-        val arrayBase by mkArraySort(mkBv32Sort(), mkBv8Sort())
-        val x by mkBv8Sort()
+        val arrayBase by mkArraySort(mkBv32Sort(), mkBv32Sort())
+        val x by mkBv32Sort()
 
         var array: KExpr<KArraySort<KBv32Sort, KBv8Sort>> = arrayBase
         for (i in 0..1024) {
-            val v = mkBv((i xor 1024).toByte())
+            val v = mkBv((i xor 1024))
             array = array.store(mkBv(4198400 + i), v)
         }
 
-        var xoredX = with(solver.exprInternalizer) { x.internalize() }
-        for (i in 0..3000) {
+        var xoredX = x
+        for (i in 0..1000) {
             val selectedValue = array.select(mkBv(4198500 + i))
-            val selectedValueTerm = with(solver.exprInternalizer) { selectedValue.internalize() }
-            xoredX = Native.bitwuzlaMkTerm2(
-                solver.bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_XOR.value, xoredX, selectedValueTerm
-            )
+            xoredX = mkBvXorExpr(xoredX, selectedValue)
+            xoredX = mkBvOrExpr(mkBvUnsignedDivExpr(xoredX, mkBv(3)), mkBvUnsignedRemExpr(xoredX, mkBv(3)))
         }
-        val someRandomValue = with(solver.exprInternalizer) { mkBv(42.toByte()).internalize() }
-        val assertion = Native.bitwuzlaMkTerm2(
-            solver.bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL.value, xoredX, someRandomValue
-        )
-        Native.bitwuzlaAssert(solver.bitwuzlaCtx.bitwuzla, assertion)
+        val someRandomValue = mkBv(42)
+        val assertion = xoredX eq someRandomValue
+
+        solver.assert(assertion)
 
         val status = solver.check(timeout = 1.milliseconds)
 
