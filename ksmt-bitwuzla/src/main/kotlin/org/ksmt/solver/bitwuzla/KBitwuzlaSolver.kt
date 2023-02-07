@@ -80,12 +80,7 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
     }
 
     override fun check(timeout: Duration): KSolverStatus = bitwuzlaCtx.bitwuzlaTry {
-        val status = if (timeout == Duration.INFINITE) {
-            Native.bitwuzlaCheckSat(bitwuzlaCtx.bitwuzla)
-        } else {
-            Native.bitwuzlaCheckSatTimeout(bitwuzlaCtx.bitwuzla, timeout.inWholeMilliseconds)
-        }
-        BitwuzlaResult.fromValue(status).processCheckResult()
+        checkWithTimeout(timeout).processCheckResult()
     }
 
     override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus =
@@ -99,13 +94,14 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
                 Native.bitwuzlaAssume(bitwuzlaCtx.bitwuzla, it)
             }
 
-            val status = if (timeout == Duration.INFINITE) {
-                Native.bitwuzlaCheckSat(bitwuzlaCtx.bitwuzla)
-            } else {
-                Native.bitwuzlaCheckSatTimeout(bitwuzlaCtx.bitwuzla, timeout.inWholeMilliseconds)
-            }
-            BitwuzlaResult.fromValue(status).processCheckResult()
+            checkWithTimeout(timeout).processCheckResult()
         }
+
+    private fun checkWithTimeout(timeout: Duration): BitwuzlaResult = if (timeout.isInfinite()) {
+        Native.bitwuzlaCheckSatResult(bitwuzlaCtx.bitwuzla)
+    } else {
+        Native.bitwuzlaCheckSatTimeoutResult(bitwuzlaCtx.bitwuzla, timeout.inWholeMilliseconds)
+    }
 
     override fun model(): KModel = bitwuzlaCtx.bitwuzlaTry {
         require(lastCheckStatus == KSolverStatus.SAT) { "Model are only available after SAT checks" }
@@ -115,13 +111,11 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
     override fun unsatCore(): List<KExpr<KBoolSort>> = bitwuzlaCtx.bitwuzlaTry {
         require(lastCheckStatus == KSolverStatus.UNSAT) { "Unsat cores are only available after UNSAT checks" }
 
-        val fullCorePrimitive = Native.bitwuzlaGetUnsatCore(bitwuzlaCtx.bitwuzla)
-        val fullCore = Array(fullCorePrimitive.size) { fullCorePrimitive[it] }
+        val fullCore = Native.bitwuzlaGetUnsatCore(bitwuzlaCtx.bitwuzla)
         val trackVars = trackedAssertions.flatten().toSet()
         val onlyTrackedAssertions = fullCore.filter { it in trackVars }
-        val unsatAssumptionsPrimitive = Native.bitwuzlaGetUnsatAssumptions(bitwuzlaCtx.bitwuzla)
-        val unsatAssumptions = Array(unsatAssumptionsPrimitive.size) { unsatAssumptionsPrimitive[it]}
-        val unsatCore = onlyTrackedAssertions + unsatAssumptions
+        val unsatAssumptions = Native.bitwuzlaGetUnsatAssumptions(bitwuzlaCtx.bitwuzla)
+        val unsatCore = onlyTrackedAssertions + unsatAssumptions.toList()
 
         return with(exprConverter) { unsatCore.map { it.convertExpr(ctx.boolSort) } }
     }

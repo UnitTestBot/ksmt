@@ -103,7 +103,7 @@ open class KBitwuzlaExprConverter(
 
     @Suppress("LongMethod", "ComplexMethod")
     override fun convertNativeExpr(expr: BitwuzlaTerm): ExprConversionResult = with(ctx) {
-        when (val kind = BitwuzlaKind.fromValue(Native.bitwuzlaTermGetKind(expr))) {
+        when (val kind = Native.bitwuzlaTermGetBitwuzlaKind(expr)) {
             // constants, functions, values
             BitwuzlaKind.BITWUZLA_KIND_CONST -> convertConst(expr)
             BitwuzlaKind.BITWUZLA_KIND_APPLY -> convertFunctionApp(expr)
@@ -925,36 +925,24 @@ open class KBitwuzlaExprConverter(
 
     inline fun <T : KSort, A0 : KSort> BitwuzlaTerm.convert(
         op: (KExpr<A0>) -> KExpr<T>
-    ): ExprConversionResult {
-        val args = Native.bitwuzlaTermGetChildren(this)
-        return convert(Array(args.size) { args[it] }, op)
-    }
+    ): ExprConversionResult = convert(getTermChildren(this), op)
 
     inline fun <T : KSort, A0 : KSort, A1 : KSort> BitwuzlaTerm.convert(
         op: (KExpr<A0>, KExpr<A1>) -> KExpr<T>
-    ): ExprConversionResult {
-        val args = Native.bitwuzlaTermGetChildren(this)
-        return convert(Array(args.size) { args[it] }, op)
-    }
+    ): ExprConversionResult = convert(getTermChildren(this), op)
 
     inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> BitwuzlaTerm.convert(
         op: (KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<T>
-    ): ExprConversionResult {
-        val args = Native.bitwuzlaTermGetChildren(this)
-        return convert(Array(args.size) { args[it] }, op)
-    }
+    ): ExprConversionResult = convert(getTermChildren(this), op)
 
     inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort> BitwuzlaTerm.convert(
         op: (KExpr<A0>, KExpr<A1>, KExpr<A2>, KExpr<A3>) -> KExpr<T>
-    ): ExprConversionResult {
-        val args = Native.bitwuzlaTermGetChildren(this)
-        return convert(Array(args.size) { args[it] }, op)
-    }
+    ): ExprConversionResult = convert(getTermChildren(this), op)
 
     inline fun <T : KSort, A : KSort> BitwuzlaTerm.convertList(
         op: (List<KExpr<A>>) -> KExpr<T>
-    ): ExprConversionResult {
-        val args = Native.bitwuzlaTermGetChildren(this)
-        return convertList(Array(args.size) { args[it] }, op)
-    }
+    ): ExprConversionResult = convertList(getTermChildren(this), op)
+
+    fun getTermChildren(term: BitwuzlaTerm): Array<BitwuzlaTerm> =
+        Native.bitwuzlaTermGetChildren(term).toTypedArray()
 }

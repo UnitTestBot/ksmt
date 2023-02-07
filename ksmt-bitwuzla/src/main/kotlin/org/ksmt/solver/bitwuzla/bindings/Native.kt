@@ -449,6 +449,13 @@ object Native {
      * @see bitwuzlaMkBvSort
      * @see BitwuzlaBVBase
      */
+    fun bitwuzlaMkBvValue(
+        bitwuzla: Bitwuzla,
+        sort: BitwuzlaSort,
+        value: String,
+        base: BitwuzlaBVBase
+    ): BitwuzlaTerm = bitwuzlaMkBvValue(bitwuzla, sort, value, base.value)
+
     @JvmStatic
     external fun bitwuzlaMkBvValue(
             bitwuzla: Bitwuzla,
