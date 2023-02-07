@@ -97,8 +97,8 @@ JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMk
 JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkBvValue
         (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_sort, jstring value, jint base);
 
-JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkBvValueUint64
-        (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_sort, jlong value);
+JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkBvValueUint32
+        (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_sort, jint value);
 
 JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkFpValue
         (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_bvSign, jlong bitwuzla_bvExponent,
@@ -361,21 +361,6 @@ JNIEXPORT jboolean JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzl
 JNIEXPORT jboolean JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermIsConstArray
         (JNIEnv* env, jobject native_class, jlong bitwuzla_term);
 
-JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaBvConstNodeGetBits
-        (JNIEnv* env, jobject native_class, jlong bitwuzla_term);
-
-JNIEXPORT jint JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaBvBitsGetWidth
-        (JNIEnv* env, jobject native_class, jlong bitwuzla_bit_vector);
-
-JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaBvBitsToUInt64
-        (JNIEnv* env, jobject native_class, jlong bitwuzla_bit_vector);
-
-JNIEXPORT jint JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaBvBitsGetBit
-        (JNIEnv* env, jobject native_class, jlong bitwuzla_bit_vector, jint pos);
-
-JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaFpConstNodeGetBits
-        (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_term);
-
 JNIEXPORT void JNICALL
 Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaPrintModel
         (JNIEnv* env, jobject native_class, jlong bitwuzla, jstring format, jstring file_path);
@@ -391,6 +376,26 @@ Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermDump
 JNIEXPORT void JNICALL
 Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaDumpFormula
         (JNIEnv* env, jobject native_class, jlong bitwuzla, jstring format, jstring file_path);
+
+JNIEXPORT jlong JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkBvValueUint32Array
+        (JNIEnv* env, jobject native_class, jlong bitwuzla, jint bv_width, jintArray value);
+
+JNIEXPORT jint JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaBvConstNodeGetBitsUInt32
+        (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_term);
+
+JNIEXPORT jintArray JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaBvConstNodeGetBitsUIntArray
+        (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_term);
+
+JNIEXPORT jint  JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaFpConstNodeGetBitsUInt32
+        (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_term);
+
+JNIEXPORT jintArray JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaFpConstNodeGetBitsUIntArray
+        (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_term);
 
 #ifdef __cplusplus
 }

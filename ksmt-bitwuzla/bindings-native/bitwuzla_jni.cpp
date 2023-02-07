@@ -61,6 +61,20 @@ struct JniString {
     }
 };
 
+struct JniIntArray {
+    JNIEnv* env;
+    jintArray jni_array;
+    jint* elements;
+
+    JniIntArray(JNIEnv* env, jintArray jni_array) : env(env), jni_array(jni_array) {
+        elements = env->GetIntArrayElements(jni_array, nullptr);
+    }
+
+    ~JniIntArray() {
+        env->ReleaseIntArrayElements(jni_array, elements, JNI_ABORT);
+    }
+};
+
 #define PPCAT_NX(A, B) A ## B
 #define PPCAT(A, B) PPCAT_NX(A, B)
 
@@ -179,11 +193,11 @@ void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaInit(JNIEnv* env, job
 jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaNew(JNIEnv* env, jobject native_class) {
     BZLA_TRY_OR_ZERO({
                          Bitwuzla* bzla = bitwuzla_new();
-                         
+
                          auto termination_state = new BitwuzlaTerminationCallbackState();
                          termination_state->reset();
                          bitwuzla_set_termination_callback(bzla, termination_callback, termination_state);
-                         
+
                          return (jlong) bzla;
                      })
 }
@@ -193,7 +207,7 @@ void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaDelete(JNIEnv* env, j
 
                       auto termination_state = get_termination_state(BZLA);
                       delete termination_state;
-                      
+
                       bitwuzla_delete(BZLA);
                   })
 }
@@ -202,7 +216,7 @@ void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaReset(JNIEnv* env, jo
     BZLA_TRY_VOID({
                       auto termination_state = get_termination_state(BZLA);
                       delete termination_state;
-        
+
                       bitwuzla_reset(BZLA);
 
                       auto new_termination_state = new BitwuzlaTerminationCallbackState();
@@ -422,9 +436,10 @@ jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkBvValue(JNIEnv* en
 }
 
 jlong
-Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkBvValueUint64(JNIEnv* env, jobject native_class, jlong bitwuzla,
-                                                                      jlong bitwuzla_sort, jlong value) {
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkBvValueUint32(JNIEnv* env, jobject native_class, jlong bitwuzla,
+                                                                      jlong bitwuzla_sort, jint value) {
     BZLA_TRY_OR_ZERO({
+                         // We can't use all 64 bits because of some problems on Windows
                          const BitwuzlaTerm* result = bitwuzla_mk_bv_value_uint64(BZLA, SORT(bitwuzla_sort), value);
                          return (jlong) result;
                      })
@@ -624,7 +639,8 @@ Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaCheckSatTimeout(JNIEnv* en
 }
 
 void
-Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaForceTerminate(JNIEnv* env, jobject native_class, jlong bitwuzla) {
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaForceTerminate(JNIEnv* env, jobject native_class,
+                                                                     jlong bitwuzla) {
     BZLA_TRY_VOID({
                       auto termination_state = get_termination_state(BZLA);
                       termination_state->terminate();
@@ -1205,33 +1221,6 @@ jboolean Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermIsConstArray(
                      })
 }
 
-jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaBvConstNodeGetBits(JNIEnv* env, jobject native_class,
-                                                                               jlong bitwuzla_term) {
-    BZLA_TRY_OR_ZERO({
-                         const BzlaBitVector* bw_vector = bitwuzla_extension_node_bv_const_get_bits(
-                                 TERM(bitwuzla_term));
-                         return (jlong) bw_vector;
-                     })
-}
-
-jint Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaBvBitsGetWidth(JNIEnv* env, jobject native_class,
-                                                                          jlong bitwuzla_bit_vector) {
-    BZLA_TRY_OR_ZERO({
-                         const BzlaBitVector* bw_vector = (BzlaBitVector*) bitwuzla_bit_vector;
-                         uint32_t i = bitwuzla_extension_bv_get_width(bw_vector);
-                         return i;
-                     })
-}
-
-jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaBvBitsToUInt64(JNIEnv* env, jobject native_class,
-                                                                           jlong bitwuzla_bit_vector) {
-    BZLA_TRY_OR_ZERO({
-                         const BzlaBitVector* bw_vector = (BzlaBitVector*) bitwuzla_bit_vector;
-                         uint64_t i = bitwuzla_extension_bv_to_uint64(bw_vector);
-                         return i;
-                     })
-}
-
 jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkFpValue(JNIEnv* env, jobject native_class, jlong bitwuzla,
                                                                       jlong bitwuzla_bvSign, jlong bitwuzla_bvExponent,
                                                                       jlong bitwuzla_bvSignificand) {
@@ -1247,25 +1236,6 @@ jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkRmValue(JNIEnv* en
                                                                       jint rm) {
     BZLA_TRY_OR_ZERO({
                          return (jlong) bitwuzla_mk_rm_value(BZLA, (BitwuzlaRoundingMode) rm);
-                     })
-}
-
-jint Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaBvBitsGetBit(JNIEnv* env, jobject native_class,
-                                                                        jlong bitwuzla_bit_vector, jint pos) {
-    BZLA_TRY_OR_ZERO({
-                         const BzlaBitVector* bw_vector = (BzlaBitVector*) bitwuzla_bit_vector;
-                         uint32_t i = bitwuzla_extension_bv_get_bit(bw_vector, pos);
-                         return i;
-                     })
-}
-
-jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaFpConstNodeGetBits(JNIEnv* env, jobject native_class,
-                                                                               jlong bitwuzla, jlong bitwuzla_term) {
-    BZLA_TRY_OR_ZERO({
-                         auto bzla = bitwuzla_extension_get_bzla(BZLA);
-                         auto fp = bitwuzla_extension_node_fp_const_get_fp(TERM(bitwuzla_term));
-                         const BzlaBitVector* bw_vector = bitwuzla_extension_fp_as_bv(bzla, fp);
-                         return (jlong) bw_vector;
                      })
 }
 
@@ -1329,3 +1299,128 @@ jstring Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermDump(JNIEnv* e
                          return read_file_to_java_str(env, f.get());
                      })
 }
+
+// Bv bits utils
+
+jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkBvValueUint32Array(JNIEnv* env, jobject native_class,
+                                                                                 jlong bitwuzla, jint bv_width,
+                                                                                 jintArray value) {
+    BZLA_TRY_OR_ZERO({
+                         JniIntArray value_array(env, value);
+                         unsigned int value_length = env->GetArrayLength(value);
+
+                         auto bzla_core = bitwuzla_extension_get_bzla(BZLA);
+                         auto bzla_memory = bitwuzla_extension_get_bzla_memory(bzla_core);
+
+                         auto remaining_width = (int32_t) bv_width;
+                         BzlaBitVector* bv = nullptr;
+
+                         unsigned int idx = 0;
+                         while (remaining_width > 0) {
+                             idx++;
+                             uint32_t chunk_value = value_array.elements[value_length - idx];
+                             uint32_t chunk_width = remaining_width > 32 ? 32 : remaining_width;
+                             remaining_width -= 32;
+
+                             auto chunk_bv = bitwuzla_extension_bzla_bv_uint64_to_bv(
+                                     bzla_memory, chunk_value, chunk_width
+                             );
+
+                             if (bv != nullptr) {
+                                 auto previous_chunk = bv;
+                                 bv = bitwuzla_extension_bzla_bv_concat(bzla_memory, chunk_bv, previous_chunk);
+
+                                 bitwuzla_extension_bzla_bv_free(bzla_memory, previous_chunk);
+                                 bitwuzla_extension_bzla_bv_free(bzla_memory, chunk_bv);
+                             } else {
+                                 bv = chunk_bv;
+                             }
+                         }
+
+                         BzlaNode* res = bitwuzla_extension_bzla_exp_bv_const(bzla_core, bv);
+                         bitwuzla_extension_bzla_bv_free(bzla_memory, bv);
+
+                         bitwuzla_extension_bzla_node_inc_ext_ref_counter(bzla_core, res);
+
+                         return (jlong) res;
+                     })
+}
+
+jint Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaBvConstNodeGetBitsUInt32(JNIEnv* env, jobject native_class,
+                                                                                    jlong bitwuzla, jlong bitwuzla_term) {
+    BZLA_TRY_OR_ZERO({
+                         const BzlaBitVector* bw_vector = bitwuzla_extension_node_bv_const_get_bits(
+                                 TERM(bitwuzla_term));
+                         uint64_t bits = bitwuzla_extension_bv_to_uint64(bw_vector);
+
+                         return (jint) bits;
+                     })
+}
+
+jintArray get_bv_bits_as_jint_array(JNIEnv* env, jlong bitwuzla, const BzlaBitVector* bw_vector) {
+    auto bzla_core = bitwuzla_extension_get_bzla(BZLA);
+    auto bzla_memory = bitwuzla_extension_get_bzla_memory(bzla_core);
+
+    uint32_t width = bitwuzla_extension_bv_get_width(bw_vector);
+
+    uint32_t idx = 0;
+    int32_t remaining_width = width;
+    std::vector<uint32_t> chunks;
+
+    while (remaining_width > 0) {
+        uint32_t lower = idx * 32;
+        uint32_t upper = std::min(lower + 32, width);
+        idx++;
+        remaining_width -= 32;
+
+        auto chunk_bv = bitwuzla_extension_bzla_bv_slice(bzla_memory, bw_vector, upper, lower);
+        uint64_t bits = bitwuzla_extension_bv_to_uint64(chunk_bv);
+        chunks.push_back(bits);
+
+        bitwuzla_extension_bzla_bv_free(bzla_memory, chunk_bv);
+    }
+
+    jintArray result = env->NewIntArray(chunks.size());
+    env->SetIntArrayRegion(result, 0, chunks.size(), (jint*) chunks.data());
+
+    return result;
+}
+
+jintArray
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaBvConstNodeGetBitsUIntArray(JNIEnv* env, jobject native_class,
+                                                                                  jlong bitwuzla, jlong bitwuzla_term) {
+    BZLA_TRY_OR_NULL({
+                         auto bzla_core = bitwuzla_extension_get_bzla(BZLA);
+                         auto bzla_memory = bitwuzla_extension_get_bzla_memory(bzla_core);
+
+                         const BzlaBitVector* bw_vector = bitwuzla_extension_node_bv_const_get_bits(
+                                 TERM(bitwuzla_term));
+
+                         return get_bv_bits_as_jint_array(env, bitwuzla, bw_vector);
+                     })
+}
+
+jint Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaFpConstNodeGetBitsUInt32(JNIEnv* env, jobject native_class,
+                                                                                    jlong bitwuzla, jlong bitwuzla_term) {
+    BZLA_TRY_OR_ZERO({
+                         auto bzla = bitwuzla_extension_get_bzla(BZLA);
+                         auto fp = bitwuzla_extension_node_fp_const_get_fp(TERM(bitwuzla_term));
+                         const BzlaBitVector* bw_vector = bitwuzla_extension_fp_bits_as_bv_bits(bzla, fp);
+
+                         uint64_t bits = bitwuzla_extension_bv_to_uint64(bw_vector);
+                         return (jint) bits;
+                     })
+}
+
+jintArray
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaFpConstNodeGetBitsUIntArray(JNIEnv* env, jobject native_class,
+                                                                                  jlong bitwuzla, jlong bitwuzla_term) {
+    BZLA_TRY_OR_NULL({
+                         auto bzla = bitwuzla_extension_get_bzla(BZLA);
+                         auto fp = bitwuzla_extension_node_fp_const_get_fp(TERM(bitwuzla_term));
+                         const BzlaBitVector* bw_vector = bitwuzla_extension_fp_bits_as_bv_bits(bzla, fp);
+
+                         return get_bv_bits_as_jint_array(env, bitwuzla, bw_vector);
+                     })
+}
+

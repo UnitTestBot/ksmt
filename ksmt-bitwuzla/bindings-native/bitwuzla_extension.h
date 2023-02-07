@@ -1,68 +1,50 @@
 #pragma once
 
 #include <bitwuzla.h>
+#include <bzlacore.h>
 #include <stdint.h>
 
-/**
- * Various useful functions from bzlanode.h.
- * */
-
-typedef struct BzlaBitVector BzlaBitVector;
-
-/**
- * 
- * Get the bit-vector representation of a bit-vector constant node.
- *
- * Bit-vector constants are normalized to LSB = 0. As a consequence, bit-vector
- * constant nodes can be inverted. This function returns the *real* bit-vector
- * representation of a bit-vector constant node, i.e., if it is inverted, it
- * returns the correctly inverted bit-vector representation. For example,
- * bit-vector constant '001' is represented as an inverted node 'n' that
- * represents '110', i.e., bzla_node_is_inverted(n) = true and n->bits = '110'.
- * This function will return '001' for 'n'.
- *
- * Note: The returned BzlaBitVector does not have to be freed.
- */
-BzlaBitVector* bzla_node_bv_const_get_bits(BitwuzlaTerm* exp);
-
-/** Get the bit-width of given bit-vector. */
-uint32_t bzla_bv_get_width(const BzlaBitVector* bv);
-
-/** Convert given bit-vector to an unsigned 64 bit integer. */
-uint64_t bzla_bv_to_uint64(const BzlaBitVector* bv);
-
-/** Get value of bit at given index (index 0 is LSB, width - 1 is MSB). */
-uint32_t bzla_bv_get_bit(const BzlaBitVector* bv, uint32_t pos);
-
 /** Get Bitwuzla core. */
-void* bitwuzla_get_bzla(Bitwuzla* bitwuzla);
+Bzla* bitwuzla_get_bzla(Bitwuzla* bitwuzla);
 
-/**
- * Get the floating-point representation of a floating-point constant node.
- * Note: The returned BzlaFloatingPoint does not have to be freed.
- */
-void* bzla_node_fp_const_get_fp(BitwuzlaTerm* exp);
-
-/** Get the bit-vector representing a given floating-point.  */
-BzlaBitVector* bzla_fp_as_bv(void* bzla, void* fp);
+BzlaNode *bzla_exp_bv_const(Bzla *bzla, const BzlaBitVector *bits);
 
 #if __cplusplus
 extern "C" {
 #endif
 
-BzlaBitVector* bitwuzla_extension_node_bv_const_get_bits(BitwuzlaTerm* exp);
+Bzla* bitwuzla_extension_get_bzla(Bitwuzla* bitwuzla);
+
+BzlaMemMgr* bitwuzla_extension_get_bzla_memory(Bzla* bitwuzla);
+
+void bitwuzla_extension_bzla_node_inc_ext_ref_counter(Bzla *bzla, BzlaNode *e);
+
+void bitwuzla_extension_bzla_bv_free(BzlaMemMgr *mm, BzlaBitVector *bv);
+
+BzlaNode * bitwuzla_extension_bzla_exp_bv_const(Bzla *bzla, const BzlaBitVector *bits);
+
+BzlaBitVector *
+bitwuzla_extension_bzla_bv_concat(BzlaMemMgr *mm, const BzlaBitVector *a, const BzlaBitVector *b);
+
+BzlaBitVector *
+bitwuzla_extension_bzla_bv_slice(BzlaMemMgr *mm,
+              const BzlaBitVector *bv,
+              uint32_t upper,
+              uint32_t lower);
+
+BzlaBitVector *
+bitwuzla_extension_bzla_bv_uint64_to_bv(BzlaMemMgr *mm, uint64_t value, uint32_t bw);
 
 uint32_t bitwuzla_extension_bv_get_width(const BzlaBitVector* bv);
 
 uint64_t bitwuzla_extension_bv_to_uint64(const BzlaBitVector* bv);
 
-uint32_t bitwuzla_extension_bv_get_bit(const BzlaBitVector* bv, uint32_t pos);
 
-void* bitwuzla_extension_get_bzla(Bitwuzla* bitwuzla);
+BzlaBitVector* bitwuzla_extension_node_bv_const_get_bits(BitwuzlaTerm* exp);
 
-void* bitwuzla_extension_node_fp_const_get_fp(BitwuzlaTerm* exp);
+BzlaFloatingPoint * bitwuzla_extension_node_fp_const_get_fp(BitwuzlaTerm* exp);
 
-BzlaBitVector* bitwuzla_extension_fp_as_bv(void* bzla, void* fp);
+BzlaBitVector* bitwuzla_extension_fp_bits_as_bv_bits(Bzla* bzla, BzlaFloatingPoint * fp);
 
 #if __cplusplus
 }

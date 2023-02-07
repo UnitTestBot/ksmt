@@ -6,7 +6,6 @@ import org.ksmt.utils.NativeLibraryLoader
 typealias Bitwuzla = Long
 typealias BitwuzlaTerm = Long
 typealias BitwuzlaSort = Long
-typealias BitwuzlaBitVector = Long
 
 object Native {
     init {
@@ -480,25 +479,7 @@ object Native {
      * @see bitwuzlaMkBvSort
      */
     @JvmStatic
-    external fun bitwuzlaMkBvValueUint64(bitwuzla: Bitwuzla, sort: BitwuzlaSort, value: Long): BitwuzlaTerm
-
-    /**
-     * Create a bit-vector value from its unsigned integer representation.
-     *
-     * Note: If given value does not fit into a bit-vector of given size (sort),
-     * the value is truncated to fit.
-     *
-     * @param bitwuzla The Bitwuzla instance.
-     * @param sort The sort of the value.
-     * @param value The unsigned integer representation of the bit-vector value.
-     *
-     * @return A term of kind [BitwuzlaKind.BITWUZLA_KIND_VAL], representing the bit-vector value
-     * of given sort.
-     *
-     * @see bitwuzlaMkBvSort
-     */
-    fun bitwuzlaMkBvValueUint32(bitwuzla: Bitwuzla, sort: BitwuzlaSort, value: Int): BitwuzlaTerm =
-        bitwuzlaMkBvValueUint64(bitwuzla, sort, value.toLong())
+    external fun bitwuzlaMkBvValueUint32(bitwuzla: Bitwuzla, sort: BitwuzlaSort, value: Int): BitwuzlaTerm
 
     /**
      * Create a floating-point value from its IEEE 754 standard representation
@@ -1695,47 +1676,28 @@ object Native {
     @JvmStatic
     external fun bitwuzlaTermIsConstArray(term: BitwuzlaTerm): Boolean
 
-    /**
-     * Get bv const bits. Only safe if [bitwuzlaTermIsBvValue] is true for [term]
-     * */
     @JvmStatic
-    external fun bitwuzlaBvConstNodeGetBits(term: BitwuzlaTerm): BitwuzlaBitVector
+    external fun bitwuzlaMkBvValueUint32Array(bitwuzla: Bitwuzla, bvWidth: Int, value: IntArray): BitwuzlaTerm
 
     /**
-     * Get width (bv size) of bv const bits.
+     * Get bv const bits. Only safe if [bitwuzlaTermIsBvValue] is true for [term] and
+     * bv width <= 32.
      * */
     @JvmStatic
-    external fun bitwuzlaBvBitsGetWidth(bv: BitwuzlaBitVector): Int
+    external fun bitwuzlaBvConstNodeGetBitsUInt32(bitwuzla: Bitwuzla, term: BitwuzlaTerm): Int
+
+    @JvmStatic
+    external fun bitwuzlaBvConstNodeGetBitsUIntArray(bitwuzla: Bitwuzla, term: BitwuzlaTerm): IntArray
 
     /**
-     * Convert bv const bits to uint64.
-     * Only safe if [bitwuzlaBvBitsGetWidth] <= 64.
-     *
-     * Note: doesn't work on Windows because JNA truncates Long to uint32.
+     * Get fp const bits. Only safe if [bitwuzlaTermIsFpValue] is true for [term] and
+     * bits count <= 32.
      * */
     @JvmStatic
-    external fun bitwuzlaBvBitsToUInt64(bv: BitwuzlaBitVector): Long
+    external fun bitwuzlaFpConstNodeGetBitsUInt32(bitwuzla: Bitwuzla, term: BitwuzlaTerm): Int
 
-    /**
-     * Convert bv const bits to uint32.
-     * Only safe if [bitwuzlaBvBitsGetWidth] <= 32.
-     * */
     @JvmStatic
-    fun bitwuzlaBvBitsToUInt32(bv: BitwuzlaBitVector): Int =
-        bitwuzlaBvBitsToUInt64(bv).toInt()
-
-    /**
-     * Get a single bit (0 or 1) from bv const bits.
-     * Only safe if 0 <= [pos] < [bitwuzlaBvBitsGetWidth].
-     * */
-    @JvmStatic
-    external fun bitwuzlaBvBitsGetBit(bv: BitwuzlaBitVector, pos: Int): Int
-
-    /**
-     * Get fp const bits. Only safe if [bitwuzlaTermIsFpValue] is true for [term]
-     * */
-    @JvmStatic
-    external fun bitwuzlaFpConstNodeGetBits(bitwuzla: Bitwuzla, term: BitwuzlaTerm): BitwuzlaBitVector
+    external fun bitwuzlaFpConstNodeGetBitsUIntArray(bitwuzla: Bitwuzla, term: BitwuzlaTerm): IntArray
 
     /**
      * Print a model for the current input formula.

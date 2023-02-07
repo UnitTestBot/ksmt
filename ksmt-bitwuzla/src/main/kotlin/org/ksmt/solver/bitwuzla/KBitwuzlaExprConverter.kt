@@ -8,10 +8,10 @@ import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpRoundingMode
+import org.ksmt.expr.KFpValue
 import org.ksmt.expr.printer.ExpressionPrinter
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.expr.transformer.KTransformerBase
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBitVector
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
@@ -26,6 +26,7 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.mkFreshConst
 import org.ksmt.utils.uncheckedCast
+import java.math.BigInteger
 
 @Suppress("LargeClass")
 open class KBitwuzlaExprConverter(
@@ -313,9 +314,6 @@ open class KBitwuzlaExprConverter(
         mkConstApp(decl)
     }
 
-    private fun BitwuzlaBitVector.getBit(idx: Int): Boolean =
-        Native.bitwuzlaBvBitsGetBit(this, idx) != 0
-
     private fun BooleanArray.toReversedBinaryString() = String(CharArray(size) { charIdx ->
         val bitIdx = size - 1 - charIdx
         if (this[bitIdx]) '1' else '0'
@@ -326,31 +324,24 @@ open class KBitwuzlaExprConverter(
 
         val convertedValue = if (Native.bitwuzlaTermIsBvValue(expr)) {
             // convert Bv value from native representation
-            val nativeBits = Native.bitwuzlaBvConstNodeGetBits(expr)
-            val nativeBitsSize = Native.bitwuzlaBvBitsGetWidth(nativeBits)
-
-            check(size == nativeBitsSize) { "Bv size mismatch, expr size $size, native size $nativeBitsSize " }
-
-            val bits = when {
+            when {
                 size <= Int.SIZE_BITS -> {
-                    val numericValue = Native.bitwuzlaBvBitsToUInt32(nativeBits).toUInt()
-                    numericValue.toString(radix = 2).padStart(size, '0')
+                    val bits = Native.bitwuzlaBvConstNodeGetBitsUInt32(bitwuzlaCtx.bitwuzla, expr)
+                    mkBv(bits, size.toUInt())
                 }
-                /**
-                Disabled until [Native.bitwuzlaBvBitsToUInt64] will be fixed
-
-                size <= Long.SIZE_BITS -> {
-                val numericValue = Native.bitwuzlaBvBitsToUInt64(nativeBits).toULong()
-                numericValue.toString(radix = 2).padStart(size, '0')
-                }
-                 */
                 else -> {
-                    val bits = BooleanArray(size) { nativeBits.getBit(it) }
-                    bits.toReversedBinaryString()
+                    val valueIntArray = Native.bitwuzlaBvConstNodeGetBitsUIntArray(bitwuzlaCtx.bitwuzla, expr)
+                    val valueByteArray = ByteArray(valueIntArray.size * Int.SIZE_BYTES) {
+                        val arrayIdx = valueIntArray.lastIndex - it / Int.SIZE_BYTES
+                        val byteIdx = Int.SIZE_BYTES - 1 - it % Int.SIZE_BYTES
+
+                        val bytes = valueIntArray[arrayIdx]
+                        (bytes ushr (byteIdx * Byte.SIZE_BITS) and 0xff).toByte()
+                    }
+                    val bits = BigInteger(1, valueByteArray)
+                    mkBv(bits, size.toUInt())
                 }
             }
-
-            mkBv(bits, size.toUInt())
         } else {
             val value = Native.bitwuzlaGetBvValue(bitwuzlaCtx.bitwuzla, expr)
             mkBv(value, size.toUInt())
@@ -364,48 +355,49 @@ open class KBitwuzlaExprConverter(
     private fun KContext.convertFpValue(expr: BitwuzlaTerm): KExpr<KFpSort> {
         val sort = Native.bitwuzlaTermGetSort(expr).convertSort() as KFpSort
 
-        val convertedValue = if (Native.bitwuzlaTermIsFpValue(expr)) {
+        val convertedValue: KExpr<KFpSort> = if (Native.bitwuzlaTermIsFpValue(expr)) {
+            TODO("$sort")
             // convert Fp value from native representation
-            val nativeBits = Native.bitwuzlaFpConstNodeGetBits(bitwuzlaCtx.bitwuzla, expr)
-            val nativeBitsSize = Native.bitwuzlaBvBitsGetWidth(nativeBits)
-            val size = (sort.exponentBits + sort.significandBits).toInt()
-            check(size == nativeBitsSize) {
-                "Fp size mismatch, expr size $size, native size $nativeBitsSize "
-            }
-
-            when (size) {
-                /**
-                Disabled until [Native.bitwuzlaBvBitsToUInt64] will be fixed
-
-                Double.SIZE_BITS -> {
-                val numericValue = Native.bitwuzlaBvBitsToUInt64(nativeBits)
-                mkFp(Double.fromBits(numericValue), sort)
-                }
-                 */
-                Float.SIZE_BITS -> {
-                    val numericValue = Native.bitwuzlaBvBitsToUInt32(nativeBits)
-                    mkFp(Float.fromBits(numericValue), sort)
-                }
-                else -> {
-                    val exponentSize = sort.exponentBits
-                    val significandSize = sort.significandBits
-
-                    val signBit = nativeBits.getBit(size - 1)
-                    val exponentBits = BooleanArray(exponentSize.toInt()) {
-                        val lowestBit = size - 1 - exponentSize.toInt()
-                        nativeBits.getBit(lowestBit + it)
-                    }
-                    val significandBits = BooleanArray(significandSize.toInt() - 1) {
-                        nativeBits.getBit(it)
-                    }
-
-                    mkFpFromBvExpr(
-                        sign = mkBv(signBit),
-                        biasedExponent = mkBv(exponentBits.toReversedBinaryString(), exponentSize),
-                        significand = mkBv(significandBits.toReversedBinaryString(), significandSize - 1u)
-                    )
-                }
-            }
+//            val nativeBits = Native.bitwuzlaFpConstNodeGetBits(bitwuzlaCtx.bitwuzla, expr)
+//            val nativeBitsSize = Native.bitwuzlaBvBitsGetWidth(nativeBits)
+//            val size = (sort.exponentBits + sort.significandBits).toInt()
+//            check(size == nativeBitsSize) {
+//                "Fp size mismatch, expr size $size, native size $nativeBitsSize "
+//            }
+//
+//            when (size) {
+//                /**
+//                Disabled until [Native.bitwuzlaBvBitsToUInt64] will be fixed
+//
+//                Double.SIZE_BITS -> {
+//                val numericValue = Native.bitwuzlaBvBitsToUInt64(nativeBits)
+//                mkFp(Double.fromBits(numericValue), sort)
+//                }
+//                 */
+//                Float.SIZE_BITS -> {
+//                    val numericValue = Native.bitwuzlaBvBitsToUInt32(nativeBits)
+//                    mkFp(Float.fromBits(numericValue), sort)
+//                }
+//                else -> {
+//                    val exponentSize = sort.exponentBits
+//                    val significandSize = sort.significandBits
+//
+//                    val signBit = nativeBits.getBit(size - 1)
+//                    val exponentBits = BooleanArray(exponentSize.toInt()) {
+//                        val lowestBit = size - 1 - exponentSize.toInt()
+//                        nativeBits.getBit(lowestBit + it)
+//                    }
+//                    val significandBits = BooleanArray(significandSize.toInt() - 1) {
+//                        nativeBits.getBit(it)
+//                    }
+//
+//                    mkFpFromBvExpr(
+//                        sign = mkBv(signBit),
+//                        biasedExponent = mkBv(exponentBits.toReversedBinaryString(), exponentSize),
+//                        significand = mkBv(significandBits.toReversedBinaryString(), significandSize - 1u)
+//                    )
+//                }
+//            }
 
         } else {
             val value = Native.bitwuzlaGetFpValue(bitwuzlaCtx.bitwuzla, expr)
