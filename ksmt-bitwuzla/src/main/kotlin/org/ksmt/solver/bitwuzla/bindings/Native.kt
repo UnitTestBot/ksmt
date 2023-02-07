@@ -1676,6 +1676,10 @@ object Native {
     @JvmStatic
     external fun bitwuzlaTermIsConstArray(term: BitwuzlaTerm): Boolean
 
+    /**
+     * Create Bv value of width [bvWidth] using bits from [value] array.
+     * Array should match Bv bits representation. array[0] = bv[0:31], array[1] = bv[32:64], ...
+     * */
     @JvmStatic
     external fun bitwuzlaMkBvValueUint32Array(bitwuzla: Bitwuzla, bvWidth: Int, value: IntArray): BitwuzlaTerm
 
@@ -1686,6 +1690,10 @@ object Native {
     @JvmStatic
     external fun bitwuzlaBvConstNodeGetBitsUInt32(bitwuzla: Bitwuzla, term: BitwuzlaTerm): Int
 
+    /**
+     * Get bv const bits. Only safe if [bitwuzlaTermIsBvValue] is true for [term].
+     * Returned array matches Bv bits representation. array[0] = bv[0:31], array[1] = bv[32:64], ...
+     * */
     @JvmStatic
     external fun bitwuzlaBvConstNodeGetBitsUIntArray(bitwuzla: Bitwuzla, term: BitwuzlaTerm): IntArray
 
@@ -1696,6 +1704,10 @@ object Native {
     @JvmStatic
     external fun bitwuzlaFpConstNodeGetBitsUInt32(bitwuzla: Bitwuzla, term: BitwuzlaTerm): Int
 
+    /**
+     * Get fp const bits. Only safe if [bitwuzlaTermIsFpValue] is true for [term].
+     * Returned array matches Fp bits representation. array[0] = fp[0:31], array[1] = fp[32:64], ...
+     * */
     @JvmStatic
     external fun bitwuzlaFpConstNodeGetBitsUIntArray(bitwuzla: Bitwuzla, term: BitwuzlaTerm): IntArray
 
