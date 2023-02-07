@@ -11,6 +11,7 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaResult
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KBv1Sort
+import org.ksmt.sort.KFp32Sort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.getValue
 import kotlin.test.Test
@@ -196,6 +197,30 @@ class ConverterTest {
 
         assertEquals(64, (ksmtOnes64 as KBitVecValue<*>).stringValue.count { it == '1' })
         assertEquals(128, (ksmtOnes128 as KBitVecValue<*>).stringValue.count { it == '1' })
+    }
+
+    @Test
+    fun testFpValueConversion() = with(bitwuzlaCtx) {
+        val ctx = KContext()
+        val fpCustom = ctx.mkFpSort(9u, 11u)
+
+        val internalizer = KBitwuzlaExprInternalizer(this)
+        val fp32sort = with(internalizer) { ctx.fp32Sort.internalizeSort() }
+        val fp64sort = with(internalizer) { ctx.fp64Sort.internalizeSort() }
+        val fpCustomSort = with(internalizer) { fpCustom.internalizeSort() }
+
+        val fp32NegInf = Native.bitwuzlaMkFpNegInf(bitwuzla, fp32sort)
+        val fp64NegInf = Native.bitwuzlaMkFpNegInf(bitwuzla, fp64sort)
+        val fpCustomNegInf = Native.bitwuzlaMkFpNegInf(bitwuzla, fpCustomSort)
+
+        val converter = KBitwuzlaExprConverter(ctx, this)
+        val ksmt32NegInf = with(converter) { fp32NegInf.convertExpr(ctx.fp32Sort) }
+        val ksmt64NegInf = with(converter) { fp64NegInf.convertExpr(ctx.fp64Sort) }
+        val ksmtCustomNegInf = with(converter) { fpCustomNegInf.convertExpr(fpCustom) }
+
+        assertEquals(ctx.mkFpInf(sort = ctx.fp32Sort, signBit = true), ksmt32NegInf)
+        assertEquals(ctx.mkFpInf(sort = ctx.fp64Sort, signBit = true), ksmt64NegInf)
+        assertEquals(ctx.mkFpInf(sort = fpCustom, signBit = true), ksmtCustomNegInf)
     }
 
 }
