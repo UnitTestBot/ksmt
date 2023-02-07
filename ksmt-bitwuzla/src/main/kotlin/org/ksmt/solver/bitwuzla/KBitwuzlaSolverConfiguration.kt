@@ -12,10 +12,10 @@ interface KBitwuzlaSolverConfiguration : KSolverConfiguration {
 
 class KBitwuzlaSolverConfigurationImpl(private val bitwuzla: Bitwuzla) : KBitwuzlaSolverConfiguration {
     override fun setBitwuzlaOption(option: BitwuzlaOption, value: Int) {
-        Native.bitwuzlaSetOption(bitwuzla, option.value, value)
+        Native.bitwuzlaSetOption(bitwuzla, option, value)
     }
 
     override fun setBitwuzlaOption(option: BitwuzlaOption, value: String) {
-        Native.bitwuzlaSetOptionStr(bitwuzla, option.value, value)
+        Native.bitwuzlaSetOptionStr(bitwuzla, option, value)
     }
 }
