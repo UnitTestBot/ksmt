@@ -191,9 +191,52 @@ open class KBitwuzlaExprInternalizer(
     /**
     * Create Bitwuzla term from KSMT expression
     * */
-    fun <T : KSort> KExpr<T>.internalize(): BitwuzlaTerm {
+    fun <T : KSort> KExpr<T>.internalize(): BitwuzlaTerm = try {
         bitwuzlaCtx.ensureActive()
-        return internalizeExpr()
+        internalizeExpr()
+    } catch (ex: TryRewriteExpressionUsingAxioms) {
+        // Expression axioms are not supported here
+        throw KSolverUnsupportedFeatureException(ex.message)
+    }
+
+
+    class AssertionWithAxioms(
+        val assertion: BitwuzlaTerm,
+        val axioms: List<BitwuzlaTerm>
+    )
+
+    /**
+     * Some expressions are not representable in Bitwuzla, but in some cases
+     * we can rewrite them using axioms preserving formula satisfiability.
+     *
+     * For example, there is no way to create [KFpToIEEEBvExpr] but we can create
+     * a corresponding inverse function [KFpFromBvExpr]. We can replace an expression
+     * of the form (fpToIEEEBv x) with a fresh variable y and add an axiom that
+     * (= x (fpFromBv y)).
+     * */
+    fun KExpr<KBoolSort>.internalizeAssertion(): AssertionWithAxioms = try {
+        bitwuzlaCtx.ensureActive()
+
+        // Try to internalize without axioms first, since it is the most common case.
+        AssertionWithAxioms(
+            assertion = internalizeExpr(),
+            axioms = emptyList()
+        )
+    } catch (ex: TryRewriteExpressionUsingAxioms) {
+        // We have an expression that can be rewritten using axioms
+
+        // Reset internalizer
+        exprStack.clear()
+
+        // Rewrite whole assertion using axioms
+        val rewriterWithAxioms = KBitwuzlaInternalizationAxioms(ctx)
+        val exprWithAxioms = rewriterWithAxioms.rewriteWithAxioms(this)
+
+        // Rerun internalizer
+        AssertionWithAxioms(
+            assertion = exprWithAxioms.expr.internalizeExpr(),
+            axioms = exprWithAxioms.axioms.map { it.internalizeExpr() }
+        )
     }
 
     /**
@@ -821,8 +864,8 @@ open class KBitwuzlaExprInternalizer(
         }
     }
 
-    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> = with(expr) {
-        TODO("KFpToIEEEBvExpr is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> {
+        throw TryRewriteExpressionUsingAxioms("KFpToIEEEBvExpr is not supported in bitwuzla")
     }
 
     override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> = with(expr) {
@@ -897,7 +940,7 @@ open class KBitwuzlaExprInternalizer(
             }
         }
 
-        throw KSolverUnsupportedFeatureException("array lambda expressions are not supported in Bitwuzla")
+        throw TryRewriteExpressionUsingAxioms("Array lambda expressions are not supported in Bitwuzla")
     }
 
     fun KContext.internalizeQuantifierBody(
@@ -1035,5 +1078,9 @@ open class KBitwuzlaExprInternalizer(
     ): S = transform(arg0, arg1, arg2, arg3) { a0: BitwuzlaTerm, a1: BitwuzlaTerm, a2: BitwuzlaTerm, a3: BitwuzlaTerm ->
         val args = arrayOf(a0, a1, a2, a3)
         Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, kind, args.toLongArray())
+    }
+
+    class TryRewriteExpressionUsingAxioms(override val message: String) : Exception(message) {
+        override fun fillInStackTrace(): Throwable = this
     }
 }

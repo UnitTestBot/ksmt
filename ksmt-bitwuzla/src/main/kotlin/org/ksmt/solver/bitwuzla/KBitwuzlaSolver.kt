@@ -38,8 +38,11 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
     override fun assert(expr: KExpr<KBoolSort>) = bitwuzlaCtx.bitwuzlaTry {
         ctx.ensureContextMatch(expr)
 
-        val term = with(exprInternalizer) { expr.internalize() }
-        Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, term)
+        val assertionWithAxioms = with(exprInternalizer) { expr.internalizeAssertion() }
+        assertionWithAxioms.axioms.forEach {
+            Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, it)
+        }
+        Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, assertionWithAxioms.assertion)
     }
 
     override fun assertAndTrack(expr: KExpr<KBoolSort>): KExpr<KBoolSort> = bitwuzlaCtx.bitwuzlaTry {
@@ -47,12 +50,15 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
 
         val trackVar = with(ctx) { boolSort.mkFreshConst("track") }
         val trackedExpr = with(ctx) { !trackVar or expr }
-        val exprTerm = with(exprInternalizer) { trackedExpr.internalize() }
+        val assertionWithAxioms = with(exprInternalizer) { trackedExpr.internalizeAssertion() }
         val trackVarTerm = with(exprInternalizer) { trackVar.internalize() }
 
         currentLevelTrackedAssertions += trackVarTerm
 
-        Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, exprTerm)
+        assertionWithAxioms.axioms.forEach {
+            Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, it)
+        }
+        Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, assertionWithAxioms.assertion)
         Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, trackVarTerm)
 
         trackVar
