@@ -38,8 +38,7 @@ class BitwuzlaBenchmarksBasedTest : BenchmarksBasedTest() {
             .ensureNotEmpty()
 
         private fun List<BenchmarkTestArguments>.skipUnsupportedTheories() =
-            filter { "QF_" in it.name }
-                .filterNot { "LIA" in it.name || "LRA" in it.name }
-                .filterNot { "NIA" in it.name || "NRA" in it.name }
+            filterNot { "LIA" in it.name || "LRA" in it.name || "LIRA" in it.name }
+                .filterNot { "NIA" in it.name || "NRA" in it.name || "NIRA" in it.name }
     }
 }
