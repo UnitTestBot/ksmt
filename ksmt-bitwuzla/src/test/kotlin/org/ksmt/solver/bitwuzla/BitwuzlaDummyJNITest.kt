@@ -156,6 +156,7 @@ class BitwuzlaDummyJNITest {
         assertFalse(Native.bitwuzlaTermIsConstArray(zero));
 
         val r = Native.bitwuzlaBvConstNodeGetBits(t);
+        println(Native.bitwuzlaTermDump(t, "smt2"))
         println(r);
         val w = Native.bitwuzlaBvBitsGetWidth(r);
         println(w);

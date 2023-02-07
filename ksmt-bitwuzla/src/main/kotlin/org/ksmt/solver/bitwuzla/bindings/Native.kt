@@ -1,5 +1,7 @@
 package org.ksmt.solver.bitwuzla.bindings
 
+import org.ksmt.utils.NativeLibraryLoader
+
 
 typealias Bitwuzla = Long
 typealias BitwuzlaTerm = Long
@@ -8,17 +10,13 @@ typealias BitwuzlaBitVector = Long
 
 object Native {
     init {
-        System.load("/home/sobol/IdeaProjects/ksmt/ksmt-bitwuzla/dist/libbitwuzla.so")
-        System.load("/home/sobol/IdeaProjects/ksmt/ksmt-bitwuzla/dist/libbitwuzla_jni.so")
-//        System.load("Z:\\IdeaProjects\\ksmt\\ksmt-bitwuzla\\dist\\libbitwuzla.dll")
-//        System.load("Z:\\IdeaProjects\\ksmt\\ksmt-bitwuzla\\dist\\libbitwuzla_jni.dll")
-//        NativeLibraryLoader.load { os ->
-//            when (os) {
-//                NativeLibraryLoader.OS.LINUX -> listOf()
-//                NativeLibraryLoader.OS.WINDOWS -> TODO()
-//                NativeLibraryLoader.OS.MACOS -> TODO()
-//            }
-//        }
+        NativeLibraryLoader.load { os ->
+            when (os) {
+                NativeLibraryLoader.OS.LINUX -> listOf("libbitwuzla", "libbitwuzla_jni")
+                NativeLibraryLoader.OS.WINDOWS -> listOf("libbitwuzla", "libbitwuzla_jni")
+                NativeLibraryLoader.OS.MACOS -> error("Unsupported platform: MACOS")
+            }
+        }
 
         bitwuzlaInit()
     }
@@ -1636,5 +1634,15 @@ object Native {
     external fun bitwuzlaFpConstNodeGetBits(bitwuzla: Bitwuzla, term: BitwuzlaTerm): BitwuzlaBitVector
 
 
+    @JvmStatic
+    external fun bitwuzlaPrintModel(bitwuzla: Bitwuzla, format: String, outputFilePath: String)
 
+    @JvmStatic
+    external fun bitwuzlaDumpFormula(bitwuzla: Bitwuzla, format: String, outputFilePath: String)
+
+    @JvmStatic
+    external fun bitwuzlaSortDump(sort: BitwuzlaSort, format: String): String
+
+    @JvmStatic
+    external fun bitwuzlaTermDump(term: BitwuzlaTerm, format: String): String
 }
