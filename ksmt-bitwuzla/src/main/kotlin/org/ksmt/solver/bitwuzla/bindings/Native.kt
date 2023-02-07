@@ -8,9 +8,10 @@ typealias BitwuzlaBitVector = Long
 
 object Native {
     init {
-        System.load("/home/sobol/IdeaProjects/ksmt/ksmt-bitwuzla/dist/libgmp-10.so")
         System.load("/home/sobol/IdeaProjects/ksmt/ksmt-bitwuzla/dist/libbitwuzla.so")
-        System.load("/home/sobol/IdeaProjects/ksmt/ksmt-bitwuzla/bindings-native/cmake-build-release/libbitwuzla_jni.so")
+        System.load("/home/sobol/IdeaProjects/ksmt/ksmt-bitwuzla/dist/libbitwuzla_jni.so")
+//        System.load("Z:\\IdeaProjects\\ksmt\\ksmt-bitwuzla\\dist\\libbitwuzla.dll")
+//        System.load("Z:\\IdeaProjects\\ksmt\\ksmt-bitwuzla\\dist\\libbitwuzla_jni.dll")
 //        NativeLibraryLoader.load { os ->
 //            when (os) {
 //                NativeLibraryLoader.OS.LINUX -> listOf()

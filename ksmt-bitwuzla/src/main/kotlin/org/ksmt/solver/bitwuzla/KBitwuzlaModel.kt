@@ -128,7 +128,7 @@ open class KBitwuzlaModel(
             entries += KModel.KFuncInterpEntry(listOf(index), value)
         }
 
-        val default = interp.defaultValue?.convertExpr(sort.range)
+        val default = interp.defaultValue.takeIf { it != 0L }?.convertExpr(sort.range)
         val arrayInterpDecl = mkFreshFuncDecl("array", sort.range, listOf(sort.domain))
         val arrayInterpIndexDecl = mkFreshConstDecl("idx", sort.domain)
 
