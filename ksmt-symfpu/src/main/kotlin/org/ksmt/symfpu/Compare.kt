@@ -6,7 +6,7 @@ import org.ksmt.expr.KExpr
 import org.ksmt.expr.KOrExpr
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KFpSort
-import org.ksmt.symfpu.UnpackedFp.Companion.unpackedFp
+import org.ksmt.symfpu.UnpackedFp.Companion.iteOp
 
 internal fun <Fp : KFpSort> KContext.less(
     left: UnpackedFp<Fp>, right: UnpackedFp<Fp>
@@ -23,7 +23,7 @@ internal fun <Fp : KFpSort> KContext.less(
 internal fun <Fp : KFpSort> KContext.lessOrEqual(
     left: UnpackedFp<Fp>, right: UnpackedFp<Fp>
 ): KExpr<KBoolSort> {
-    val infCase = (left.isInfinite and right.isInfinite and (left.isNegative eq right.isNegative)) or
+    val infCase = (left.isInf and right.isInf and (left.isNegative eq right.isNegative)) or
             left.isNegativeInfinity or right.isPositiveInfinity
 
 
@@ -49,19 +49,19 @@ private fun <Fp : KFpSort> KContext.lessHelper(
     val neitherNan = left.isNaN.not() and right.isNaN.not()
 
     // Infinities are bigger than everything but themselves
-    val eitherInf = left.isInfinite or right.isInfinite
+    val eitherInf = left.isInf or right.isInf
 
     // Both zero are equal
     val eitherZero = left.isZero or right.isZero
 
     // Normal and subnormal
     val negativeLessThanPositive = left.isNegative and right.isNegative.not()
-    val positiveCase = left.isNegative.not() and right.isNegative.not() and (mkBvUnsignedLessExpr(
+    val positiveCase = left.isNegative.not() and right.isNegative.not() and (mkBvSignedLessExpr(
         left.exponent, right.exponent
     ) or (left.exponent eq right.exponent and positiveCaseSignificandComparison))
 
 
-    val negativeCase = left.isNegative and right.isNegative and (mkBvUnsignedLessExpr(
+    val negativeCase = left.isNegative and right.isNegative and (mkBvSignedLessExpr(
         right.exponent, left.exponent
     ) or (left.exponent eq right.exponent and negativeCaseSignificandComparison))
 
@@ -90,16 +90,20 @@ internal fun <Fp : KFpSort> KContext.equal(
 
     val bothZero = left.isZero and right.isZero
     val neitherZero = left.isZero.not() and right.isZero.not()
-    val bitEq = left.bv eq right.bv
+    val bitEq = mkBvConcatExpr(left.signBv(), left.exponent, left.significand) eq mkBvConcatExpr(
+        right.signBv(), right.exponent, right.significand
+    )
 
-    return neitherNan and (bothZero or (neitherZero and (left.isInfinite eq right.isInfinite and bitEq)))
+    return neitherNan and (bothZero or (neitherZero and (left.isInf eq right.isInf and bitEq)))
 }
 
 internal fun <Fp : KFpSort> KContext.min(
     left: UnpackedFp<Fp>, right: UnpackedFp<Fp>
-): KExpr<Fp> = unpackedFp(left.sort, mkIte(right.isNaN or less(left, right), left.bv, right.bv))
+): KExpr<Fp> {
+    return iteOp(right.isNaN or less(left, right), left, right)
+}
 
 
 internal fun <Fp : KFpSort> KContext.max(
     left: UnpackedFp<Fp>, right: UnpackedFp<Fp>
-): KExpr<Fp> = unpackedFp(left.sort, mkIte(right.isNaN or greater(left, right), left.bv, right.bv))
+): KExpr<Fp> = iteOp(right.isNaN or greater(left, right), left, right)

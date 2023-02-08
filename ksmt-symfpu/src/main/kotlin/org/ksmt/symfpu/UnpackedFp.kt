@@ -2,17 +2,44 @@ package org.ksmt.symfpu
 
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.printer.ExpressionPrinter
 import org.ksmt.expr.transformer.KTransformerBase
+import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
-import org.ksmt.utils.uncheckedCast
+
+private fun KExpr<KBvSort>.resize(newSize: UInt, ctx: KContext): KExpr<KBvSort> {
+    val width = sort.sizeBits
+    return if (newSize > width) {
+        ctx.mkBvZeroExtensionExpr((newSize - width).toInt(), this)
+    } else {
+        this
+    }
+}
 
 class UnpackedFp<Fp : KFpSort> private constructor(
     ctx: KContext, override val sort: Fp,
-    val bv: KExpr<KBvSort>,
+    val sign: KExpr<KBoolSort>, // negative
+    val exponent: KExpr<KBvSort>,
+    val significand: KExpr<KBvSort>,
+    val isNaN: KExpr<KBoolSort> = ctx.mkFalse(),
+    val isInf: KExpr<KBoolSort> = ctx.mkFalse(),
+    val isZero: KExpr<KBoolSort> = ctx.mkFalse(),
 ) : KExpr<Fp>(ctx) {
+    constructor(
+        ctx: KContext, sort: Fp, sign: KExpr<KBoolSort>, exponent: KExpr<KBvSort>, significand: KExpr<KBvSort>
+    ) : this(
+        ctx,
+        sort,
+        sign,
+        exponent.matchWidthSigned(ctx, ctx.defaultExponent(sort)),
+        significand,
+        ctx.mkFalse(),
+        ctx.mkFalse(),
+        ctx.mkFalse()
+    )
+
+    fun signBv() = ctx.boolToBv(sign)
 
     override fun accept(transformer: KTransformerBase): KExpr<Fp> =
         throw IllegalArgumentException("Leaked unpackedFp: $this")
@@ -23,58 +50,75 @@ class UnpackedFp<Fp : KFpSort> private constructor(
         append(")")
     }
 
-    private val exponentSize = sort.exponentBits.toInt()
-
-    private val size = bv.sort.sizeBits.toInt()
-
-    private val sign by lazy { ctx.mkBvExtractExpr(size - 1, size - 1, bv) }
-
-    val exponent by lazy { ctx.mkBvExtractExpr(size - 2, size - exponentSize - 1, bv) }
-    val significand by lazy { ctx.mkBvExtractExpr(size - exponentSize - 2, 0, bv) }
-    val isNaN by lazy {
-        with(ctx) {
-            val nanBv = mkFpToIEEEBvExpr(mkFpNan(sort))
-            nanBv eq bv
-        }
-    }
-
-    val isZero by lazy {
-        with(ctx) {
-            val zeroBv = mkFpToIEEEBvExpr(mkFpZero(false, sort))
-            val negativeZeroBv = mkFpToIEEEBvExpr(mkFpZero(true, sort))
-            zeroBv eq bv or (negativeZeroBv eq bv)
-        }
-    }
-    val isNegative by lazy {
-        with(ctx) {
-            sign eq mkBv(1, 1u)
-        }
-    }
+    val isNegative = sign
     val isNegativeInfinity by lazy {
         with(ctx) {
-            val infBv = mkFpToIEEEBvExpr(mkFpInf(true, sort)) // negative
-            infBv eq bv
+            isNegative and isInf
         }
     }
     val isPositiveInfinity by lazy {
         with(ctx) {
-            val infBv = mkFpToIEEEBvExpr(mkFpInf(false, sort)) // positive
-            infBv eq bv
+            !isNegative and isInf
         }
     }
-    val isInfinite: KOrExpr
-        get() {
-            return with(ctx) {
-                isNegativeInfinity or isPositiveInfinity
-            }
-        }
 
     // for tests
-    internal fun toFp() = ctx.mkFpFromBvExpr<Fp>(sign.uncheckedCast(), exponent, significand)
+    internal fun toFp() = ctx.pack(this)
+
+    // Moves the leading 1 up to the correct position, adjusting the
+    // exponent as required.
+    fun normaliseUp(): UnpackedFp<Fp> = with(ctx) {
+        val normal = normaliseShift(significand)
+
+        val exponentWidth = exponent.sort.sizeBits
+        check(
+            normal.shiftAmount.sort.sizeBits < exponentWidth
+        ) // May lose data / be incorrect for very small exponents and very large significands
+
+        val signedAlignAmount = normal.shiftAmount.resize(exponentWidth, ctx)
+        val correctedExponent = mkBvSubExpr(exponent, signedAlignAmount)
+
+        // Optimisation : could move the zero detect version in if used in all cases
+        //  catch - it zero detection in unpacking is different.
+        return UnpackedFp(ctx, sort, sign, correctedExponent, normal.normalised)
+    }
+
+    fun inNormalRange() = ctx.mkBvSignedLessOrEqualExpr(ctx.minNormalExponent(sort), exponent)
 
     companion object {
-        fun <Fp : KFpSort> KContext.unpackedFp(sort: Fp, bv: KExpr<KBvSort>): UnpackedFp<Fp> {
-            return UnpackedFp(this, sort, bv)
+
+
+        fun <Fp : KFpSort> KContext.makeNaN(sort: Fp) = UnpackedFp(
+            this, sort, sign = falseExpr, exponent = defaultExponent(sort),
+            significand = defaultSignificand(sort), isNaN = trueExpr,
+        )
+
+        fun <Fp : KFpSort> KContext.makeInf(
+            sort: Fp, sign: KExpr<KBoolSort>
+        ) = UnpackedFp(
+            this, sort, sign, exponent = defaultExponent(sort),
+            significand = defaultSignificand(sort), isInf = trueExpr,
+        )
+
+        fun <Fp : KFpSort> KContext.makeZero(sort: Fp, sign: KExpr<KBoolSort>) = UnpackedFp(
+            this, sort, sign, exponent = defaultExponent(sort),
+            significand = defaultSignificand(sort), isZero = trueExpr,
+        )
+
+        fun <T : KFpSort> KContext.iteOp(
+            cond: KExpr<KBoolSort>, l: UnpackedFp<T>, r: UnpackedFp<T>
+        ): UnpackedFp<T> {
+            return UnpackedFp(
+                this,
+                l.sort,
+                sign = mkIte(cond, l.sign, r.sign),
+                exponent = mkIte(cond, l.exponent, r.exponent),
+                significand = mkIte(cond, l.significand, r.significand),
+                isNaN = mkIte(cond, l.isNaN, r.isNaN),
+                isInf = mkIte(cond, l.isInf, r.isInf),
+                isZero = mkIte(cond, l.isZero, r.isZero)
+            )
         }
     }
+
 }

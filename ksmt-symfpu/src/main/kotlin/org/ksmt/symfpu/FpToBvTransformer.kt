@@ -4,28 +4,39 @@ import org.ksmt.KContext
 import org.ksmt.expr.*
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.sort.KBoolSort
-import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
-import org.ksmt.symfpu.UnpackedFp.Companion.unpackedFp
+import org.ksmt.utils.asExpr
 import org.ksmt.utils.cast
 
 class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     // use this function instead of apply as it may return UnpackedFp wrapper
-    fun <T : KSort> applyAndGetBvExpr(expr: KExpr<T>): KExpr<KBvSort> {
-        val transformed = apply(expr)
-        val unpacked = (transformed as? UnpackedFp)?.bv
-        return unpacked ?: transformed.cast()
-    }
+
+//    fun <T : KSort> applyAndGetBvExpr(expr: KExpr<T>): KExpr<KBvSort> {
+//        val transformed = apply(expr)
+//        val unpacked = (transformed as? UnpackedFp)
+//        return unpacked ?: transformed.cast()
+//    }
 
     override fun <Fp : KFpSort> transform(expr: KFpEqualExpr<Fp>): KExpr<KBoolSort> = with(ctx) {
-        transformHelper(expr, ::equal)
+        println("in transform for KFpEqualExpr")
+        transformHelper(expr, ::equal).apply {
+            println("transform for KFpEqualExpr done")
+        }
     }
 
     override fun <Fp : KFpSort> transform(expr: KFpLessExpr<Fp>): KExpr<KBoolSort> = with(ctx) {
         transformHelper(expr, ::less)
     }
 
+    override fun <Fp : KFpSort> transform(expr: KFpMulExpr<Fp>): KExpr<Fp> = with(ctx) {
+//        transformHelper(expr, ::multiply)
+        val args1: List<KExpr<Fp>> = expr.args.cast()
+        transformExprAfterTransformed(expr, args1) { args ->
+            val (left, right) = argsToTypedPair(args.drop(1))
+            multiply(left, right, expr.roundingMode)
+        }
+    }
 
     override fun <Fp : KFpSort> transform(expr: KFpLessOrEqualExpr<Fp>): KExpr<KBoolSort> = with(ctx) {
         transformHelper(expr, ::lessOrEqual)
@@ -49,13 +60,18 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
 
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = with(ctx) {
         return if (expr.sort is KFpSort) {
-            val asFp: KExpr<KFpSort> = expr.cast()
-            unpackedFp(asFp.sort, mkFpToIEEEBvExpr(asFp)).cast()
+            val asFp: KConst<KFpSort> = expr.cast()
+            unpack(asFp.sort, mkFpToIEEEBvExpr(asFp)).cast()
         } else expr
     }
 
     override fun <Fp : KFpSort> transformFpValue(expr: KFpValue<Fp>): KExpr<Fp> = with(ctx) {
-        return unpackedFp(expr.sort, mkFpToIEEEBvExpr(expr))
+        return unpack(
+            expr.sort,
+            expr.signBit.expr,
+            expr.biasedExponent.asExpr(mkBvSort(expr.sort.exponentBits)),
+            expr.significand.asExpr(mkBvSort(expr.sort.significandBits - 1u))
+        )
     }
 
 
