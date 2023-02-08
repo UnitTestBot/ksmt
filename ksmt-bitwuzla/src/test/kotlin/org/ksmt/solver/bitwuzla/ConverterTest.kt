@@ -11,7 +11,6 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaResult
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KBv1Sort
-import org.ksmt.sort.KFp32Sort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.getValue
 import kotlin.test.Test
