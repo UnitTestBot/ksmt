@@ -181,16 +181,26 @@ class ConverterTest {
         val ksmtOnes32 = with(converter) { ones32.convertExpr(ctx.bv32Sort) }
         assertEquals(32, (ksmtOnes32 as KBitVecValue<*>).stringValue.count { it == '1' })
 
-        val sort = ctx.mkBvSort(517u)
-        val randomBits = randomBits(sort.sizeBits)
-
-        val nativeSort = with(internalizer) { sort.internalizeSort() }
-        val randomBitsTerm = Native.bitwuzlaMkBvValue(
-            bitwuzla, nativeSort, randomBits, BitwuzlaBVBase.BITWUZLA_BV_BASE_BIN
+        val someBvSorts = listOf(
+            ctx.bv32Sort,
+            ctx.bv64Sort,
+            ctx.mkBvSort(17u),
+            ctx.mkBvSort(517u),
+            ctx.mkBvSort(1024u),
+            ctx.mkBvSort(2048u),
         )
-        val randomBitsConverted = with(converter) { randomBitsTerm.convertExpr(sort) }
-        val randomBitsKsmt = ctx.mkBv(randomBits, sort.sizeBits)
-        assertEquals(randomBitsKsmt, randomBitsConverted)
+
+        for (sort in someBvSorts) {
+            val randomBits = randomBits(sort.sizeBits)
+
+            val nativeSort = with(internalizer) { sort.internalizeSort() }
+            val randomBitsTerm = Native.bitwuzlaMkBvValue(
+                bitwuzla, nativeSort, randomBits, BitwuzlaBVBase.BITWUZLA_BV_BASE_BIN
+            )
+            val randomBitsConverted = with(converter) { randomBitsTerm.convertExpr(sort) }
+            val randomBitsKsmt = ctx.mkBv(randomBits, sort.sizeBits)
+            assertEquals(randomBitsKsmt, randomBitsConverted)
+        }
     }
 
     @Test
@@ -215,16 +225,26 @@ class ConverterTest {
         assertEquals(128, (ksmtOnes128 as KBitVecValue<*>).stringValue.count { it == '1' })
         assertEquals(125, (ksmtOnes125 as KBitVecValue<*>).stringValue.count { it == '1' })
 
-        val sort = ctx.mkBvSort(517u)
-        val randomBits = randomBits(sort.sizeBits)
+        val someBvSorts = listOf(
+            ctx.bv32Sort,
+            ctx.bv64Sort,
+            ctx.mkBvSort(17u),
+            ctx.mkBvSort(517u),
+            ctx.mkBvSort(1024u),
+            ctx.mkBvSort(2048u),
+        )
 
-        val randomBitsKsmt = ctx.mkBv(randomBits, sort.sizeBits)
-        val randomBitsInternalized = with(internalizer) { randomBitsKsmt.internalize() }
+        for (sort in someBvSorts) {
+            val randomBits = randomBits(sort.sizeBits)
 
-        Native.bitwuzlaCheckSat(bitwuzla) // Get value is not available before check-sat
-        val internalizedBits = Native.bitwuzlaGetBvValue(bitwuzla, randomBitsInternalized)
+            val randomBitsKsmt = ctx.mkBv(randomBits, sort.sizeBits)
+            val randomBitsInternalized = with(internalizer) { randomBitsKsmt.internalize() }
 
-        assertEquals(randomBits, internalizedBits)
+            Native.bitwuzlaCheckSat(bitwuzla) // Get value is not available before check-sat
+            val internalizedBits = Native.bitwuzlaGetBvValue(bitwuzla, randomBitsInternalized)
+
+            assertEquals(randomBits, internalizedBits)
+        }
     }
 
     @Test

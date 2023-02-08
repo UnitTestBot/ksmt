@@ -15,10 +15,16 @@ fun bvBitsToBigInteger(bvBits: IntArray): BigInteger {
 
 fun bigIntegerToBvBits(value: BigInteger, sizeBits: Int): IntArray {
     val valueByteArray = value.toByteArray()
-    val intArraySize = sizeBits / Int.SIZE_BITS + if (sizeBits % Int.SIZE_BITS != 0) 1 else 0
 
+    // Trim leading zeroes
+    var firstByteIdx = 0
+    while (valueByteArray[firstByteIdx] == 0.toByte()) {
+        firstByteIdx++
+    }
+
+    val intArraySize = sizeBits / Int.SIZE_BITS + if (sizeBits % Int.SIZE_BITS != 0) 1 else 0
     val valueIntArray = IntArray(intArraySize)
-    for (byteIdx in valueByteArray.lastIndex downTo 0) {
+    for (byteIdx in valueByteArray.lastIndex downTo firstByteIdx) {
         val reversedIdx = valueByteArray.lastIndex - byteIdx
         val arrayIdx = valueIntArray.lastIndex - reversedIdx / Int.SIZE_BYTES
         val shift = reversedIdx % Int.SIZE_BYTES
