@@ -141,7 +141,6 @@ import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.solver.KSolverUnsupportedFeatureException
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBVBase
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaRoundingMode
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
@@ -191,13 +190,13 @@ open class KBitwuzlaExprInternalizer(
     /**
     * Create Bitwuzla term from KSMT expression
     * */
-    fun <T : KSort> KExpr<T>.internalize(): BitwuzlaTerm = try {
+    fun <T : KSort> KExpr<T>.internalize(): BitwuzlaTerm = tryInternalize({
         bitwuzlaCtx.ensureActive()
         internalizeExpr()
-    } catch (ex: TryRewriteExpressionUsingAxioms) {
+    }, rewriteWithAxiomsRequired = {
         // Expression axioms are not supported here
-        throw KSolverUnsupportedFeatureException(ex.message)
-    }
+        throw KSolverUnsupportedFeatureException(it)
+    })
 
 
     class AssertionWithAxioms(
@@ -214,7 +213,7 @@ open class KBitwuzlaExprInternalizer(
      * of the form (fpToIEEEBv x) with a fresh variable y and add an axiom that
      * (= x (fpFromBv y)).
      * */
-    fun KExpr<KBoolSort>.internalizeAssertion(): AssertionWithAxioms = try {
+    fun KExpr<KBoolSort>.internalizeAssertion(): AssertionWithAxioms = tryInternalize({
         bitwuzlaCtx.ensureActive()
 
         // Try to internalize without axioms first, since it is the most common case.
@@ -222,7 +221,7 @@ open class KBitwuzlaExprInternalizer(
             assertion = internalizeExpr(),
             axioms = emptyList()
         )
-    } catch (ex: TryRewriteExpressionUsingAxioms) {
+    }, rewriteWithAxiomsRequired = {
         // We have an expression that can be rewritten using axioms
 
         // Reset internalizer
@@ -237,7 +236,7 @@ open class KBitwuzlaExprInternalizer(
             assertion = exprWithAxioms.expr.internalizeExpr(),
             axioms = exprWithAxioms.axioms.map { it.internalizeExpr() }
         )
-    }
+    })
 
     /**
     * Create Bitwuzla sort from KSMT sort
@@ -1082,5 +1081,14 @@ open class KBitwuzlaExprInternalizer(
 
     class TryRewriteExpressionUsingAxioms(override val message: String) : Exception(message) {
         override fun fillInStackTrace(): Throwable = this
+    }
+
+    private inline fun <T> tryInternalize(
+        body: () -> T,
+        rewriteWithAxiomsRequired: (String) -> T
+    ): T = try {
+        body()
+    } catch (ex: TryRewriteExpressionUsingAxioms) {
+        rewriteWithAxiomsRequired(ex.message)
     }
 }
