@@ -27,8 +27,12 @@ open class KBitwuzlaModel(
 
     private val interpretations: MutableMap<KDecl<*>, KModel.KFuncInterp<*>> = hashMapOf()
 
-    override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> =
-        KModelEvaluator(ctx, this, isComplete).apply(expr)
+    override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
+        ctx.ensureContextMatch(expr)
+        bitwuzlaCtx.ensureActive()
+
+        return KModelEvaluator(ctx, this, isComplete).apply(expr)
+    }
 
     // Uninterpreted sorts are not supported in bitwuzla
     override val uninterpretedSorts: Set<KUninterpretedSort>
@@ -38,6 +42,7 @@ open class KBitwuzlaModel(
 
     override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? {
         ctx.ensureContextMatch(decl)
+        bitwuzlaCtx.ensureActive()
 
         // Constant was not internalized --> constant is unknown to solver --> constant is not present in model
         val bitwuzlaConstant = bitwuzlaCtx.findNormalConstant(decl)
