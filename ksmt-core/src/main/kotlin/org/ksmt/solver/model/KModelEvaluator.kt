@@ -3,6 +3,9 @@ package org.ksmt.solver.model
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArraySelect
+import org.ksmt.expr.KArrayStore
+import org.ksmt.expr.KConst
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFunctionApp
@@ -43,6 +46,11 @@ open class KModelEvaluator(
 
             evalFunction(expr.decl, args).also { rewrite(it) }
         }
+
+    override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> {
+        val rewrittenSelect = ctx.tryEliminateFunctionAsArray(expr) ?: expr
+        return super.transform(rewrittenSelect)
+    }
 
     override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
         // No way to evaluate f when it is quantified in (as-array f)
@@ -245,8 +253,8 @@ open class KModelEvaluator(
             val entryArgs = entry.args.map { varSubstitution.apply(it) }
             val entryValue = varSubstitution.apply(entry.value)
 
-            if (entryArgs == args) {
-                // We found a matched entry
+            if (resolvedEntries.isEmpty() && entryArgs == args) {
+                // We have no possibly matching entries and we found a matched entry
                 return KModel.KFuncInterp(
                     decl = interpretation.decl,
                     vars = interpretation.vars,
@@ -272,6 +280,47 @@ open class KModelEvaluator(
             entries = resolvedEntries,
             default = resolvedDefault
         )
+    }
+
+    /**
+     * Usually, [KFunctionAsArray] will be expanded into large array store chain.
+     * In case of array select, we can avoid such expansion and replace
+     * (select (as-array f) i) with (f i).
+     * */
+    private fun <D : KSort, R : KSort> KContext.tryEliminateFunctionAsArray(
+        expr: KArraySelect<D, R>
+    ): KArraySelect<D, R>? {
+        // Unroll stores until we finf some base array
+        val parentStores = arrayListOf<KArrayStore<D, R>>()
+        var base = expr.array
+        while (base is KArrayStore<D, R>) {
+            parentStores += base
+            base = base.array
+        }
+
+        // If base array in uninterpreted, try to replace it with model value
+        if (base is KConst<KArraySort<D, R>>) {
+            val interpretation = model.interpretation(base.decl) ?: return null
+            if (interpretation.entries.isNotEmpty()) return null
+            base = interpretation.default ?: return null
+        }
+
+        if (base !is KFunctionAsArray<D, R>) return null
+
+        /**
+         * Replace as-array with (const (f i)) since:
+         * 1. we may have parent stores here and we need an array expression
+         * 2. (select (const (f i)) i) ==> (f i)
+         * */
+        val defaultSelectValue = base.function.apply(listOf(expr.index))
+        var newArrayBase: KExpr<KArraySort<D, R>> = mkArrayConst(base.sort, defaultSelectValue)
+
+        // Rebuild array
+        for (store in parentStores.asReversed()) {
+            newArrayBase = newArrayBase.store(store.index, store.value)
+        }
+
+        return newArrayBase.select(expr.index)
     }
 
     private fun <T : KSort> completeModelValue(sort: T): KExpr<T> {
