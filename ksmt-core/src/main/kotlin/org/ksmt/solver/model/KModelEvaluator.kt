@@ -47,9 +47,19 @@ open class KModelEvaluator(
             evalFunction(expr.decl, args).also { rewrite(it) }
         }
 
+    private val rewrittenArraySelects = hashMapOf<KArraySelect<*, *>, KArraySelect<*, *>?>()
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> {
-        val rewrittenSelect = ctx.tryEliminateFunctionAsArray(expr) ?: expr
-        return super.transform(rewrittenSelect)
+        val rewrittenSelect: KArraySelect<D, R>? = rewrittenArraySelects.getOrPut(expr) {
+            ctx.tryEliminateFunctionAsArray(expr)
+        }?.uncheckedCast()
+
+        return if (rewrittenSelect == null) {
+            super.transform(expr)
+        } else {
+            simplifyApp(expr, preprocess = { rewrittenSelect }) {
+                error("Always preprocessed")
+            }
+        }
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
