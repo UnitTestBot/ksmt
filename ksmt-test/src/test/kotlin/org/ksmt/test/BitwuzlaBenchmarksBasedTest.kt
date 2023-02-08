@@ -20,7 +20,7 @@ class BitwuzlaBenchmarksBasedTest : BenchmarksBasedTest() {
 
     @Execution(ExecutionMode.CONCURRENT)
     @ParameterizedTest(name = "{0}")
-    @MethodSource("bitwuzlaTestData")
+    @MethodSource("bitwuzlaModelConversionTestData")
     fun testModelConversion(name: String, samplePath: Path) =
         testModelConversion(name, samplePath, KBitwuzlaSolver::class)
 
@@ -36,6 +36,13 @@ class BitwuzlaBenchmarksBasedTest : BenchmarksBasedTest() {
         fun bitwuzlaTestData() = testData
             .skipUnsupportedTheories()
             .ensureNotEmpty()
+
+        // Bitwuzla doesn't support models for quantified formulas
+        @JvmStatic
+        fun bitwuzlaModelConversionTestData() =
+            bitwuzlaTestData()
+                .filter { it.name.startsWith("QF_") }
+                .ensureNotEmpty()
 
         private fun List<BenchmarkTestArguments>.skipUnsupportedTheories() =
             filterNot { "LIA" in it.name || "LRA" in it.name || "LIRA" in it.name }
