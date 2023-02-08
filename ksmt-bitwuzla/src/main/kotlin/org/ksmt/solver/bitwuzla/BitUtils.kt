@@ -2,6 +2,10 @@ package org.ksmt.solver.bitwuzla
 
 import java.math.BigInteger
 
+/**
+ * Construct BigInteger value from bits array of the form:
+ * array[0] = array[0] = bits[31:0], array[1] = bits[64:32], ...
+ * */
 fun bvBitsToBigInteger(bvBits: IntArray): BigInteger {
     val valueByteArray = ByteArray(bvBits.size * Int.SIZE_BYTES) {
         val arrayIdx = bvBits.lastIndex - it / Int.SIZE_BYTES
@@ -13,7 +17,12 @@ fun bvBitsToBigInteger(bvBits: IntArray): BigInteger {
     return BigInteger(1, valueByteArray)
 }
 
+/**
+ * Convert BigInteger [value] with [sizeBits] bits into
+ * array of the form: array[0] = bits[31:0], array[1] = bits[64:32], ...
+ * */
 fun bigIntegerToBvBits(value: BigInteger, sizeBits: Int): IntArray {
+    // array of the form: array[0] = bits[sizeBits:sizeBits-8], ..., array[n] = bits[8:0]
     val valueByteArray = value.toByteArray()
 
     // Trim leading zeroes
