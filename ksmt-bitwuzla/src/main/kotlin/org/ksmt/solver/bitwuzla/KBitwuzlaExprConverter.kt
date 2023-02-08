@@ -351,7 +351,9 @@ open class KBitwuzlaExprConverter(
                 }
                 fp64Sort -> {
                     val fpBitsArray = Native.bitwuzlaFpConstNodeGetBitsUIntArray(bitwuzlaCtx.bitwuzla, expr)
-                    val fpBits = (fpBitsArray[1].toLong() shl Int.SIZE_BITS) or fpBitsArray[0].toLong()
+                    val higherBits = fpBitsArray[1].toLong() shl Int.SIZE_BITS
+                    val lowerBits = fpBitsArray[0].toLong() and 0xffffffff
+                    val fpBits = higherBits or lowerBits
                     mkFp(Double.fromBits(fpBits), sort)
                 }
                 else -> {
