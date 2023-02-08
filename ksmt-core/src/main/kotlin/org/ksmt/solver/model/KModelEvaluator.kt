@@ -7,6 +7,7 @@ import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KFunctionAsArray
+import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector.Companion.collectUninterpretedDeclarations
@@ -196,38 +197,81 @@ open class KModelEvaluator(
                 "${interpretation.vars.size} arguments expected but ${args.size} provided"
             }
 
-            evalFuncInterp(interpretation, args)
+            val resolvedInterpretation = ctx.resolveFunctionInterpretationComplete(interpretation, args)
+
+            // Interpretation was fully resolved
+            if (resolvedInterpretation.entries.isEmpty() && resolvedInterpretation.default != null) {
+                return@getOrPut resolvedInterpretation.default
+            }
+
+            // Interpretation was not fully resolved --> generate ITE chain
+            evalResolvedFunctionInterpretation(resolvedInterpretation, args)
         }
         return evaluated.asExpr(decl.sort)
     }
 
-    @Suppress("UNCHECKED_CAST")
-    open fun <T : KSort> evalFuncInterp(
-        interpretation: KModel.KFuncInterp<T>,
+    private fun <T : KSort> evalResolvedFunctionInterpretation(
+        resolvedInterpretation: KModel.KFuncInterp<T>,
         args: List<KExpr<*>>
     ): KExpr<T> = with(ctx) {
+        // in case of partial interpretation we can generate any default expr to preserve expression correctness
+        val defaultExpr = resolvedInterpretation.default ?: completeModelValue(resolvedInterpretation.sort)
+        return resolvedInterpretation.entries.foldRight(defaultExpr) { entry, acc ->
+            val argBinding = entry.args.zip(args) { ea, a ->
+                val entryArg: KExpr<KSort> = ea.uncheckedCast()
+                val actualArg: KExpr<KSort> = a.uncheckedCast()
+                mkEq(entryArg, actualArg)
+            }
+            mkIte(mkAnd(argBinding), entry.value, acc)
+        }
+    }
+
+    private fun <T : KSort> KContext.resolveFunctionInterpretationComplete(
+        interpretation: KModel.KFuncInterp<T>,
+        args: List<KExpr<*>>
+    ): KModel.KFuncInterp<T> {
+        // Replace function parameters vars with actual arguments
         val varSubstitution = KExprSubstitutor(ctx).apply {
             interpretation.vars.zip(args).forEach { (v, a) ->
-                val app = mkApp(v, emptyList())
-                substitute(app as KExpr<KSort>, a as KExpr<KSort>)
+                val app: KExpr<KSort> = mkConstApp(v).uncheckedCast()
+                substitute(app, a.uncheckedCast())
             }
         }
 
-        val entries = interpretation.entries.map { entry ->
-            KModel.KFuncInterpEntry(
-                entry.args.map { varSubstitution.apply(it) },
-                varSubstitution.apply(entry.value)
-            )
+        val argsAreConstants = args.all { it is KInterpretedValue<*> }
+
+        val resolvedEntries = arrayListOf<KModel.KFuncInterpEntry<T>>()
+        for (entry in interpretation.entries) {
+            val entryArgs = entry.args.map { varSubstitution.apply(it) }
+            val entryValue = varSubstitution.apply(entry.value)
+
+            if (entryArgs == args) {
+                // We found a matched entry
+                return KModel.KFuncInterp(
+                    decl = interpretation.decl,
+                    vars = interpretation.vars,
+                    entries = emptyList(),
+                    default = entryValue
+                )
+            }
+
+            val definitelyDontMatch = argsAreConstants && entryArgs.all { it is KInterpretedValue<*> }
+            if (definitelyDontMatch) {
+                // No need to keep entry, since it doesn't match arguments
+                continue
+            }
+
+            resolvedEntries += KModel.KFuncInterpEntry(entryArgs, entryValue)
         }
 
-        // in case of partial interpretation we can generate any default expr to preserve expression correctness
-        val defaultExpr = interpretation.default ?: completeModelValue(interpretation.sort)
-        val default = varSubstitution.apply(defaultExpr)
+        val resolvedDefault = interpretation.default?.let { varSubstitution.apply(it) }
 
-        return entries.foldRight(default) { entry, acc ->
-            val argBinding = mkAnd(entry.args.zip(args) { ea, a -> mkEq(ea as KExpr<KSort>, a as KExpr<KSort>) })
-            mkIte(argBinding, entry.value, acc)
-        }
+        return KModel.KFuncInterp(
+            decl = interpretation.decl,
+            vars = interpretation.vars,
+            entries = resolvedEntries,
+            default = resolvedDefault
+        )
     }
 
     private fun <T : KSort> completeModelValue(sort: T): KExpr<T> {
