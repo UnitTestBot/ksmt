@@ -1,20 +1,5 @@
 package io.github.cvc5
 
-@Suppress("unused")
-fun Solver.mkQuantifier(
-    isUniversal: Boolean,
-    boundVars: Array<Term>,
-    body: Term,
-    patterns: Array<Term>
-): Term {
-    val kind = if (isUniversal) Kind.FORALL else Kind.EXISTS
-
-    val quantifiedVars = mkTerm(Kind.VARIABLE_LIST, boundVars)
-    val pattern = mkTerm(Kind.INST_PATTERN, patterns)
-
-    return mkTerm(kind, quantifiedVars, body, pattern)
-}
-
 fun Solver.mkQuantifier(
     isUniversal: Boolean,
     boundVars: Array<Term>,
@@ -68,9 +53,14 @@ val Term.bvRepeatTimes: Int
         return op[0].integerValue.toInt()
     }
 
+private val toBvAllowedOps = listOf(
+    Kind.INT_TO_BITVECTOR,
+    Kind.FLOATINGPOINT_TO_SBV,
+    Kind.FLOATINGPOINT_TO_UBV
+)
 val Term.bvSizeToConvertTo: Int
     get() {
-        require(kind == Kind.INT_TO_BITVECTOR) { "Required op is ${Kind.INT_TO_BITVECTOR}, but was $kind" }
+        require(kind in toBvAllowedOps) { "Required op are $toBvAllowedOps, but was $kind" }
         return op[0].integerValue.toInt()
     }
 
@@ -98,11 +88,5 @@ val Term.toFpSignificandSize: Int
 val Term.intDivisibleArg: Int
     get() {
         require(kind == Kind.DIVISIBLE) { "Required op is ${Kind.DIVISIBLE}, but was $kind" }
-        return op[0].integerValue.toInt()
-    }
-
-val Term.integerAndBitWidth: Int
-    get() {
-        require(kind == Kind.IAND) { "Required op is ${Kind.IAND}, but was $kind" }
         return op[0].integerValue.toInt()
     }

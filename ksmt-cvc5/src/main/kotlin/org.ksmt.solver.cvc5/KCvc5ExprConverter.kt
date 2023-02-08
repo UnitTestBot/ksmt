@@ -8,6 +8,7 @@ import io.github.cvc5.bvLowerExtractionBitIndex
 import io.github.cvc5.bvRepeatTimes
 import io.github.cvc5.bvRotateBitsCount
 import io.github.cvc5.bvSignExtensionSize
+import io.github.cvc5.bvSizeToConvertTo
 import io.github.cvc5.bvUpperExtractionBitIndex
 import io.github.cvc5.bvZeroExtensionSize
 import io.github.cvc5.intDivisibleArg
@@ -540,7 +541,7 @@ open class KCvc5ExprConverter(
 
     private fun convertNativeFpToBvExpr(expr: Term, signed: Boolean): ExprConversionResult = with(ctx) {
         expr.convert { roundingMode: KExpr<KFpRoundingModeSort>, fpExpr: KExpr<KFpSort> ->
-            mkFpToBvExpr(roundingMode, fpExpr, (fpExpr.sort.significandBits + fpExpr.sort.exponentBits).toInt(), signed)
+            mkFpToBvExpr(roundingMode, fpExpr, expr.bvSizeToConvertTo , signed)
         }
     }
 
