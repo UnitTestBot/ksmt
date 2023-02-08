@@ -383,7 +383,7 @@ open class KBitwuzlaExprInternalizer(
         if (size <= Long.SIZE_BITS) {
             transformBvLongNumber(value.toLong(), size)
         } else {
-            val intParts = bigIntegerToBvBits(value)
+            val intParts = bigIntegerToBvBits(value, size)
             Native.bitwuzlaMkBvValueUint32Array(bitwuzlaCtx.bitwuzla, size, intParts)
         }
 

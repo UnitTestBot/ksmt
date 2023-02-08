@@ -13,11 +13,11 @@ fun bvBitsToBigInteger(bvBits: IntArray): BigInteger {
     return BigInteger(1, valueByteArray)
 }
 
-fun bigIntegerToBvBits(value: BigInteger): IntArray {
+fun bigIntegerToBvBits(value: BigInteger, sizeBits: Int): IntArray {
     val valueByteArray = value.toByteArray()
-    val size = valueByteArray.size / Int.SIZE_BYTES + if (valueByteArray.size % Int.SIZE_BYTES != 0) 1 else 0
-    return IntArray(size) {
-        val firstByteIdx = valueByteArray.size - Int.SIZE_BYTES - it * Int.SIZE_BYTES
+    val intArraySize = sizeBits / Int.SIZE_BITS + if (sizeBits % Int.SIZE_BITS != 0) 1 else 0
+    return IntArray(intArraySize) { intIdx ->
+        val firstByteIdx = valueByteArray.size - Int.SIZE_BYTES - intIdx * Int.SIZE_BYTES
         var intValue = 0
         for (byteIdx in 0 until Int.SIZE_BYTES) {
             val resolvedByteIdx = firstByteIdx + byteIdx
