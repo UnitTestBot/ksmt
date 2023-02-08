@@ -290,7 +290,7 @@ open class KModelEvaluator(
     private fun <D : KSort, R : KSort> KContext.tryEliminateFunctionAsArray(
         expr: KArraySelect<D, R>
     ): KArraySelect<D, R>? {
-        // Unroll stores until we finf some base array
+        // Unroll stores until we find some base array
         val parentStores = arrayListOf<KArrayStore<D, R>>()
         var base = expr.array
         while (base is KArrayStore<D, R>) {
