@@ -111,7 +111,7 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
 
     override fun model(): KModel = bitwuzlaCtx.bitwuzlaTry {
         require(lastCheckStatus == KSolverStatus.SAT) { "Model are only available after SAT checks" }
-        return KBitwuzlaModel(ctx, bitwuzlaCtx, exprInternalizer, exprConverter)
+        return KBitwuzlaModel(ctx, bitwuzlaCtx, exprConverter)
     }
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = bitwuzlaCtx.bitwuzlaTry {

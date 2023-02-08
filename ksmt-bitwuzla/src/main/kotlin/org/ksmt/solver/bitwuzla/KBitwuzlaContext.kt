@@ -81,8 +81,10 @@ open class KBitwuzlaContext : AutoCloseable {
     // Constant is known only if it was previously internalized
     fun convertConstantIfKnown(term: BitwuzlaTerm): KDecl<*>? = bitwuzlaNormalConstants[term]
 
-    fun declaredConstants(): Set<KDecl<*>> = normalConstantsOnly.keys
+    // Find normal constant if it was previously internalized
+    fun findNormalConstant(decl: KDecl<*>): BitwuzlaTerm? = normalConstantsOnly[decl]
 
+    fun declaredConstants(): Set<KDecl<*>> = normalConstantsOnly.keys
 
     /**
      * Internalize constant.
