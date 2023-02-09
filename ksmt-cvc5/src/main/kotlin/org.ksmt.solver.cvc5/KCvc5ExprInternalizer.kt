@@ -969,7 +969,8 @@ class KCvc5ExprInternalizer(
     }
 
     override fun transform(expr: KInt64NumExpr) = with(expr) {
-        transform { nsolver.mkInteger(expr.value) }
+        // We need to pass String value here because on Windows it might be cut to 32 bit int value
+        transform { nsolver.mkInteger(expr.value.toString()) }
     }
 
     override fun transform(expr: KIntBigNumExpr) = with(expr) {
