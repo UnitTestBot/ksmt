@@ -1,11 +1,13 @@
 package org.ksmt
 
+import org.ksmt.KContext.AstManagementMode.GC
+import org.ksmt.KContext.AstManagementMode.NO_GC
+import org.ksmt.KContext.OperationMode.CONCURRENT
+import org.ksmt.KContext.OperationMode.SINGLE_THREAD
 import org.ksmt.cache.AstInterner
 import org.ksmt.cache.KInternedObject
-import java.lang.Double.longBitsToDouble
-import java.lang.Float.intBitsToFloat
-import org.ksmt.cache.mkAstInterner
 import org.ksmt.cache.mkAstCache
+import org.ksmt.cache.mkAstInterner
 import org.ksmt.cache.mkCache
 import org.ksmt.decl.KAndDecl
 import org.ksmt.decl.KArithAddDecl
@@ -21,185 +23,63 @@ import org.ksmt.decl.KArithUnaryMinusDecl
 import org.ksmt.decl.KArrayConstDecl
 import org.ksmt.decl.KArraySelectDecl
 import org.ksmt.decl.KArrayStoreDecl
-import org.ksmt.decl.KBvAddDecl
-import org.ksmt.decl.KBvAndDecl
-import org.ksmt.decl.KBvMulDecl
-import org.ksmt.decl.KBvNAndDecl
-import org.ksmt.decl.KBvNorDecl
-import org.ksmt.decl.KBvNotDecl
-import org.ksmt.decl.KBvOrDecl
-import org.ksmt.decl.KBvReductionAndDecl
-import org.ksmt.decl.KBvReductionOrDecl
-import org.ksmt.decl.KBvSignedDivDecl
-import org.ksmt.decl.KBvSubDecl
-import org.ksmt.decl.KBvUnsignedDivDecl
-import org.ksmt.decl.KBvXNorDecl
-import org.ksmt.decl.KBvXorDecl
 import org.ksmt.decl.KBitVec16ValueDecl
+import org.ksmt.decl.KBitVec1ValueDecl
 import org.ksmt.decl.KBitVec32ValueDecl
 import org.ksmt.decl.KBitVec64ValueDecl
 import org.ksmt.decl.KBitVec8ValueDecl
 import org.ksmt.decl.KBitVecCustomSizeValueDecl
 import org.ksmt.decl.KBv2IntDecl
-import org.ksmt.decl.KBvArithShiftRightDecl
+import org.ksmt.decl.KBvAddDecl
 import org.ksmt.decl.KBvAddNoOverflowDecl
 import org.ksmt.decl.KBvAddNoUnderflowDecl
+import org.ksmt.decl.KBvAndDecl
+import org.ksmt.decl.KBvArithShiftRightDecl
+import org.ksmt.decl.KBvConcatDecl
 import org.ksmt.decl.KBvDivNoOverflowDecl
+import org.ksmt.decl.KBvExtractDecl
 import org.ksmt.decl.KBvLogicalShiftRightDecl
+import org.ksmt.decl.KBvMulDecl
 import org.ksmt.decl.KBvMulNoOverflowDecl
 import org.ksmt.decl.KBvMulNoUnderflowDecl
-import org.ksmt.decl.KBvNegationDecl
+import org.ksmt.decl.KBvNAndDecl
 import org.ksmt.decl.KBvNegNoOverflowDecl
+import org.ksmt.decl.KBvNegationDecl
+import org.ksmt.decl.KBvNorDecl
+import org.ksmt.decl.KBvNotDecl
+import org.ksmt.decl.KBvOrDecl
+import org.ksmt.decl.KBvReductionAndDecl
+import org.ksmt.decl.KBvReductionOrDecl
+import org.ksmt.decl.KBvRepeatDecl
 import org.ksmt.decl.KBvRotateLeftDecl
+import org.ksmt.decl.KBvRotateLeftIndexedDecl
 import org.ksmt.decl.KBvRotateRightDecl
-import org.ksmt.decl.KBvSignedGreaterOrEqualDecl
-import org.ksmt.decl.KBvSignedGreaterDecl
+import org.ksmt.decl.KBvRotateRightIndexedDecl
 import org.ksmt.decl.KBvShiftLeftDecl
-import org.ksmt.decl.KBvSignedLessOrEqualDecl
+import org.ksmt.decl.KBvSignedDivDecl
+import org.ksmt.decl.KBvSignedGreaterDecl
+import org.ksmt.decl.KBvSignedGreaterOrEqualDecl
 import org.ksmt.decl.KBvSignedLessDecl
-import org.ksmt.decl.KBitVec1ValueDecl
+import org.ksmt.decl.KBvSignedLessOrEqualDecl
 import org.ksmt.decl.KBvSignedModDecl
 import org.ksmt.decl.KBvSignedRemDecl
+import org.ksmt.decl.KBvSubDecl
 import org.ksmt.decl.KBvSubNoOverflowDecl
-import org.ksmt.decl.KBvUnsignedGreaterOrEqualDecl
+import org.ksmt.decl.KBvSubNoUnderflowDecl
+import org.ksmt.decl.KBvToFpDecl
+import org.ksmt.decl.KBvUnsignedDivDecl
 import org.ksmt.decl.KBvUnsignedGreaterDecl
-import org.ksmt.decl.KBvUnsignedLessOrEqualDecl
+import org.ksmt.decl.KBvUnsignedGreaterOrEqualDecl
 import org.ksmt.decl.KBvUnsignedLessDecl
+import org.ksmt.decl.KBvUnsignedLessOrEqualDecl
 import org.ksmt.decl.KBvUnsignedRemDecl
-import org.ksmt.decl.KBvConcatDecl
+import org.ksmt.decl.KBvXNorDecl
+import org.ksmt.decl.KBvXorDecl
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KDistinctDecl
 import org.ksmt.decl.KEqDecl
-import org.ksmt.decl.KBvExtractDecl
 import org.ksmt.decl.KFalseDecl
-import org.ksmt.decl.KFuncDecl
-import org.ksmt.decl.KImpliesDecl
-import org.ksmt.decl.KIntModDecl
-import org.ksmt.decl.KIntNumDecl
-import org.ksmt.decl.KIntRemDecl
-import org.ksmt.decl.KIntToRealDecl
-import org.ksmt.decl.KIteDecl
-import org.ksmt.decl.KNotDecl
-import org.ksmt.decl.KOrDecl
-import org.ksmt.decl.KRealIsIntDecl
-import org.ksmt.decl.KRealNumDecl
-import org.ksmt.decl.KRealToIntDecl
-import org.ksmt.decl.KBvRepeatDecl
-import org.ksmt.decl.KSignExtDecl
-import org.ksmt.decl.KTrueDecl
-import org.ksmt.decl.KZeroExtDecl
-import org.ksmt.decl.KXorDecl
-import org.ksmt.expr.KAddArithExpr
-import org.ksmt.expr.KAndExpr
-import org.ksmt.expr.KApp
-import org.ksmt.expr.KArrayConst
-import org.ksmt.expr.KArrayLambda
-import org.ksmt.expr.KArraySelect
-import org.ksmt.expr.KArrayStore
-import org.ksmt.expr.KBitVecValue
-import org.ksmt.expr.KBv2IntExpr
-import org.ksmt.expr.KBvArithShiftRightExpr
-import org.ksmt.expr.KBvAddExpr
-import org.ksmt.expr.KBvAddNoOverflowExpr
-import org.ksmt.expr.KBvAddNoUnderflowExpr
-import org.ksmt.expr.KBvAndExpr
-import org.ksmt.expr.KBvDivNoOverflowExpr
-import org.ksmt.expr.KBvLogicalShiftRightExpr
-import org.ksmt.expr.KBvMulExpr
-import org.ksmt.expr.KBvMulNoOverflowExpr
-import org.ksmt.expr.KBvMulNoUnderflowExpr
-import org.ksmt.expr.KBvNAndExpr
-import org.ksmt.expr.KBvNegNoOverflowExpr
-import org.ksmt.expr.KBvNegationExpr
-import org.ksmt.expr.KBvNorExpr
-import org.ksmt.expr.KBvNotExpr
-import org.ksmt.expr.KBvOrExpr
-import org.ksmt.expr.KBvReductionAndExpr
-import org.ksmt.expr.KBvReductionOrExpr
-import org.ksmt.expr.KBvRotateLeftExpr
-import org.ksmt.expr.KBvRotateRightExpr
-import org.ksmt.expr.KBvSignedDivExpr
-import org.ksmt.expr.KBvSignedGreaterOrEqualExpr
-import org.ksmt.expr.KBvSignedGreaterExpr
-import org.ksmt.expr.KBvShiftLeftExpr
-import org.ksmt.expr.KBvSignedLessOrEqualExpr
-import org.ksmt.expr.KBvSignedLessExpr
-import org.ksmt.expr.KBvSignedModExpr
-import org.ksmt.expr.KBvSignedRemExpr
-import org.ksmt.expr.KBvSubExpr
-import org.ksmt.expr.KBvSubNoOverflowExpr
-import org.ksmt.expr.KBvUnsignedDivExpr
-import org.ksmt.expr.KBvUnsignedGreaterOrEqualExpr
-import org.ksmt.expr.KBvUnsignedGreaterExpr
-import org.ksmt.expr.KBvUnsignedLessOrEqualExpr
-import org.ksmt.expr.KBvUnsignedLessExpr
-import org.ksmt.expr.KBvUnsignedRemExpr
-import org.ksmt.expr.KBvXNorExpr
-import org.ksmt.expr.KBvXorExpr
-import org.ksmt.expr.KBvConcatExpr
-import org.ksmt.expr.KConst
-import org.ksmt.expr.KDistinctExpr
-import org.ksmt.expr.KDivArithExpr
-import org.ksmt.expr.KEqExpr
-import org.ksmt.expr.KExistentialQuantifier
-import org.ksmt.expr.KExpr
-import org.ksmt.expr.KBvExtractExpr
-import org.ksmt.expr.KFalse
-import org.ksmt.expr.KFunctionApp
-import org.ksmt.expr.KGeArithExpr
-import org.ksmt.expr.KGtArithExpr
-import org.ksmt.expr.KImpliesExpr
-import org.ksmt.expr.KInt32NumExpr
-import org.ksmt.expr.KInt64NumExpr
-import org.ksmt.expr.KIntBigNumExpr
-import org.ksmt.expr.KIntNumExpr
-import org.ksmt.expr.KIsIntRealExpr
-import org.ksmt.expr.KIteExpr
-import org.ksmt.expr.KLeArithExpr
-import org.ksmt.expr.KLtArithExpr
-import org.ksmt.expr.KModIntExpr
-import org.ksmt.expr.KMulArithExpr
-import org.ksmt.expr.KNotExpr
-import org.ksmt.expr.KOrExpr
-import org.ksmt.expr.KPowerArithExpr
-import org.ksmt.expr.KRealNumExpr
-import org.ksmt.expr.KRemIntExpr
-import org.ksmt.expr.KBvRepeatExpr
-import org.ksmt.expr.KBvSignExtensionExpr
-import org.ksmt.expr.KSubArithExpr
-import org.ksmt.expr.KToIntRealExpr
-import org.ksmt.expr.KToRealIntExpr
-import org.ksmt.expr.KTrue
-import org.ksmt.expr.KUnaryMinusArithExpr
-import org.ksmt.expr.KUniversalQuantifier
-import org.ksmt.expr.KXorExpr
-import org.ksmt.expr.KBvZeroExtensionExpr
-import org.ksmt.sort.KArithSort
-import org.ksmt.sort.KArraySort
-import org.ksmt.sort.KBv16Sort
-import org.ksmt.sort.KBv1Sort
-import org.ksmt.sort.KBv32Sort
-import org.ksmt.sort.KBv64Sort
-import org.ksmt.sort.KBv8Sort
-import org.ksmt.sort.KBvCustomSizeSort
-import org.ksmt.sort.KBvSort
-import org.ksmt.sort.KBoolSort
-import org.ksmt.sort.KFp128Sort
-import org.ksmt.sort.KFp16Sort
-import org.ksmt.sort.KFp32Sort
-import org.ksmt.sort.KFp64Sort
-import org.ksmt.sort.KFpCustomSizeSort
-import org.ksmt.sort.KFpSort
-import org.ksmt.sort.KIntSort
-import org.ksmt.sort.KRealSort
-import org.ksmt.sort.KSort
-import org.ksmt.sort.KUninterpretedSort
-import java.math.BigInteger
-import org.ksmt.decl.KBvRotateLeftIndexedDecl
-import org.ksmt.decl.KBvRotateRightIndexedDecl
-import org.ksmt.decl.KBvSubNoUnderflowDecl
-import org.ksmt.decl.KBvToFpDecl
 import org.ksmt.decl.KFp128Decl
 import org.ksmt.decl.KFp16Decl
 import org.ksmt.decl.KFp32Decl
@@ -236,9 +116,32 @@ import org.ksmt.decl.KFpToBvDecl
 import org.ksmt.decl.KFpToFpDecl
 import org.ksmt.decl.KFpToIEEEBvDecl
 import org.ksmt.decl.KFpToRealDecl
+import org.ksmt.decl.KFuncDecl
+import org.ksmt.decl.KImpliesDecl
+import org.ksmt.decl.KIntModDecl
+import org.ksmt.decl.KIntNumDecl
+import org.ksmt.decl.KIntRemDecl
+import org.ksmt.decl.KIntToRealDecl
+import org.ksmt.decl.KIteDecl
+import org.ksmt.decl.KNotDecl
+import org.ksmt.decl.KOrDecl
+import org.ksmt.decl.KRealIsIntDecl
+import org.ksmt.decl.KRealNumDecl
 import org.ksmt.decl.KRealToFpDecl
+import org.ksmt.decl.KRealToIntDecl
+import org.ksmt.decl.KSignExtDecl
+import org.ksmt.decl.KTrueDecl
 import org.ksmt.decl.KUninterpretedConstDecl
 import org.ksmt.decl.KUninterpretedFuncDecl
+import org.ksmt.decl.KXorDecl
+import org.ksmt.decl.KZeroExtDecl
+import org.ksmt.expr.KAddArithExpr
+import org.ksmt.expr.KAndExpr
+import org.ksmt.expr.KApp
+import org.ksmt.expr.KArrayConst
+import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArraySelect
+import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KBitVec16Value
 import org.ksmt.expr.KBitVec1Value
 import org.ksmt.expr.KBitVec32Value
@@ -246,10 +149,62 @@ import org.ksmt.expr.KBitVec64Value
 import org.ksmt.expr.KBitVec8Value
 import org.ksmt.expr.KBitVecCustomValue
 import org.ksmt.expr.KBitVecNumberValue
+import org.ksmt.expr.KBitVecValue
+import org.ksmt.expr.KBv2IntExpr
+import org.ksmt.expr.KBvAddExpr
+import org.ksmt.expr.KBvAddNoOverflowExpr
+import org.ksmt.expr.KBvAddNoUnderflowExpr
+import org.ksmt.expr.KBvAndExpr
+import org.ksmt.expr.KBvArithShiftRightExpr
+import org.ksmt.expr.KBvConcatExpr
+import org.ksmt.expr.KBvDivNoOverflowExpr
+import org.ksmt.expr.KBvExtractExpr
+import org.ksmt.expr.KBvLogicalShiftRightExpr
+import org.ksmt.expr.KBvMulExpr
+import org.ksmt.expr.KBvMulNoOverflowExpr
+import org.ksmt.expr.KBvMulNoUnderflowExpr
+import org.ksmt.expr.KBvNAndExpr
+import org.ksmt.expr.KBvNegNoOverflowExpr
+import org.ksmt.expr.KBvNegationExpr
+import org.ksmt.expr.KBvNorExpr
+import org.ksmt.expr.KBvNotExpr
+import org.ksmt.expr.KBvOrExpr
+import org.ksmt.expr.KBvReductionAndExpr
+import org.ksmt.expr.KBvReductionOrExpr
+import org.ksmt.expr.KBvRepeatExpr
+import org.ksmt.expr.KBvRotateLeftExpr
 import org.ksmt.expr.KBvRotateLeftIndexedExpr
+import org.ksmt.expr.KBvRotateRightExpr
 import org.ksmt.expr.KBvRotateRightIndexedExpr
+import org.ksmt.expr.KBvShiftLeftExpr
+import org.ksmt.expr.KBvSignExtensionExpr
+import org.ksmt.expr.KBvSignedDivExpr
+import org.ksmt.expr.KBvSignedGreaterExpr
+import org.ksmt.expr.KBvSignedGreaterOrEqualExpr
+import org.ksmt.expr.KBvSignedLessExpr
+import org.ksmt.expr.KBvSignedLessOrEqualExpr
+import org.ksmt.expr.KBvSignedModExpr
+import org.ksmt.expr.KBvSignedRemExpr
+import org.ksmt.expr.KBvSubExpr
+import org.ksmt.expr.KBvSubNoOverflowExpr
 import org.ksmt.expr.KBvSubNoUnderflowExpr
 import org.ksmt.expr.KBvToFpExpr
+import org.ksmt.expr.KBvUnsignedDivExpr
+import org.ksmt.expr.KBvUnsignedGreaterExpr
+import org.ksmt.expr.KBvUnsignedGreaterOrEqualExpr
+import org.ksmt.expr.KBvUnsignedLessExpr
+import org.ksmt.expr.KBvUnsignedLessOrEqualExpr
+import org.ksmt.expr.KBvUnsignedRemExpr
+import org.ksmt.expr.KBvXNorExpr
+import org.ksmt.expr.KBvXorExpr
+import org.ksmt.expr.KBvZeroExtensionExpr
+import org.ksmt.expr.KConst
+import org.ksmt.expr.KDistinctExpr
+import org.ksmt.expr.KDivArithExpr
+import org.ksmt.expr.KEqExpr
+import org.ksmt.expr.KExistentialQuantifier
+import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFalse
 import org.ksmt.expr.KFp128Value
 import org.ksmt.expr.KFp16Value
 import org.ksmt.expr.KFp32Value
@@ -287,12 +242,64 @@ import org.ksmt.expr.KFpToFpExpr
 import org.ksmt.expr.KFpToIEEEBvExpr
 import org.ksmt.expr.KFpToRealExpr
 import org.ksmt.expr.KFpValue
+import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KFunctionAsArray
+import org.ksmt.expr.KGeArithExpr
+import org.ksmt.expr.KGtArithExpr
+import org.ksmt.expr.KImpliesExpr
+import org.ksmt.expr.KInt32NumExpr
+import org.ksmt.expr.KInt64NumExpr
+import org.ksmt.expr.KIntBigNumExpr
+import org.ksmt.expr.KIntNumExpr
+import org.ksmt.expr.KIsIntRealExpr
+import org.ksmt.expr.KIteExpr
+import org.ksmt.expr.KLeArithExpr
+import org.ksmt.expr.KLtArithExpr
+import org.ksmt.expr.KModIntExpr
+import org.ksmt.expr.KMulArithExpr
+import org.ksmt.expr.KNotExpr
+import org.ksmt.expr.KOrExpr
+import org.ksmt.expr.KPowerArithExpr
+import org.ksmt.expr.KRealNumExpr
 import org.ksmt.expr.KRealToFpExpr
+import org.ksmt.expr.KRemIntExpr
+import org.ksmt.expr.KSubArithExpr
+import org.ksmt.expr.KToIntRealExpr
+import org.ksmt.expr.KToRealIntExpr
+import org.ksmt.expr.KTrue
+import org.ksmt.expr.KUnaryMinusArithExpr
+import org.ksmt.expr.KUniversalQuantifier
+import org.ksmt.expr.KXorExpr
+import org.ksmt.sort.KArithSort
+import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KBv16Sort
+import org.ksmt.sort.KBv1Sort
+import org.ksmt.sort.KBv32Sort
+import org.ksmt.sort.KBv64Sort
+import org.ksmt.sort.KBv8Sort
+import org.ksmt.sort.KBvCustomSizeSort
+import org.ksmt.sort.KBvSort
+import org.ksmt.sort.KFp128Sort
+import org.ksmt.sort.KFp16Sort
+import org.ksmt.sort.KFp32Sort
+import org.ksmt.sort.KFp64Sort
+import org.ksmt.sort.KFpCustomSizeSort
 import org.ksmt.sort.KFpRoundingModeSort
-import org.ksmt.utils.BvUtils.bvMaxValueSigned
-import org.ksmt.utils.BvUtils.minus
-import org.ksmt.utils.BvUtils.plus
+import org.ksmt.sort.KFpSort
+import org.ksmt.sort.KIntSort
+import org.ksmt.sort.KRealSort
+import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
+import org.ksmt.utils.FpUtils.biasFpExponent
+import org.ksmt.utils.FpUtils.fpInfExponentBiased
+import org.ksmt.utils.FpUtils.fpInfSignificand
+import org.ksmt.utils.FpUtils.fpNaNExponentBiased
+import org.ksmt.utils.FpUtils.fpNaNSignificand
+import org.ksmt.utils.FpUtils.fpZeroExponentBiased
+import org.ksmt.utils.FpUtils.fpZeroSignificand
+import org.ksmt.utils.FpUtils.isNaN
+import org.ksmt.utils.FpUtils.unbiasFpExponent
 import org.ksmt.utils.booleanSignBit
 import org.ksmt.utils.cast
 import org.ksmt.utils.extractExponent
@@ -300,12 +307,14 @@ import org.ksmt.utils.extractSignificand
 import org.ksmt.utils.getHalfPrecisionExponent
 import org.ksmt.utils.halfPrecisionSignificand
 import org.ksmt.utils.normalizeValue
-import org.ksmt.utils.powerOfTwo
 import org.ksmt.utils.signBit
 import org.ksmt.utils.toBigInteger
 import org.ksmt.utils.toULongValue
 import org.ksmt.utils.toUnsignedBigInteger
 import org.ksmt.utils.uncheckedCast
+import java.lang.Double.longBitsToDouble
+import java.lang.Float.intBitsToFloat
+import java.math.BigInteger
 
 @Suppress("TooManyFunctions", "LargeClass", "unused")
 open class KContext(
@@ -1386,14 +1395,39 @@ open class KContext(
         val exponent = value.getHalfPrecisionExponent(isBiased = false)
         val significand = value.halfPrecisionSignificand
         val normalizedValue = constructFp16Number(exponent.toLong(), significand.toLong(), value.signBit)
-        return fp16Cache.createIfContextActive { KFp16Value(this, normalizedValue) }
+        return if (KFp16Value(this, normalizedValue).isNaN()) {
+            mkFp16NaN()
+        } else {
+            mkFp16WithoutNaNCheck(normalizedValue)
+        }
     }
+    fun mkFp16NaN(): KFp16Value = mkFp16WithoutNaNCheck(Float.NaN)
+    private fun mkFp16WithoutNaNCheck(value: Float): KFp16Value =
+        fp16Cache.createIfContextActive { KFp16Value(this, value) }
 
-    fun mkFp32(value: Float): KFp32Value = fp32Cache.createIfContextActive { KFp32Value(this, value) }
-    fun mkFp64(value: Double): KFp64Value = fp64Cache.createIfContextActive { KFp64Value(this, value) }
+    fun mkFp32(value: Float): KFp32Value = if (value.isNaN()) mkFp32NaN() else mkFp32WithoutNaNCheck(value)
+    fun mkFp32NaN(): KFp32Value = mkFp32WithoutNaNCheck(Float.NaN)
+    private fun mkFp32WithoutNaNCheck(value: Float): KFp32Value =
+        fp32Cache.createIfContextActive { KFp32Value(this, value) }
+
+    fun mkFp64(value: Double): KFp64Value = if (value.isNaN()) mkFp64NaN() else mkFp64WithoutNaNCheck(value)
+    fun mkFp64NaN(): KFp64Value = mkFp64WithoutNaNCheck(Double.NaN)
+    private fun mkFp64WithoutNaNCheck(value: Double): KFp64Value =
+        fp64Cache.createIfContextActive { KFp64Value(this, value) }
 
     fun mkFp128Biased(significand: KBitVecValue<*>, biasedExponent: KBitVecValue<*>, signBit: Boolean): KFp128Value =
-        fp128Cache.createIfContextActive {
+        if (KFp128Value(this, significand, biasedExponent, signBit).isNaN()) {
+            mkFp128NaN()
+        } else {
+            mkFp128BiasedWithoutNaNCheck(significand, biasedExponent, signBit)
+        }
+
+    fun mkFp128NaN(): KFp128Value = mkFpNaN(mkFp128Sort()).cast()
+    private fun mkFp128BiasedWithoutNaNCheck(
+        significand: KBitVecValue<*>,
+        biasedExponent: KBitVecValue<*>,
+        signBit: Boolean
+    ): KFp128Value = fp128Cache.createIfContextActive {
             ensureContextMatch(significand, biasedExponent)
             KFp128Value(this, significand, biasedExponent, signBit)
         }
@@ -1471,7 +1505,7 @@ open class KContext(
     ): KFpValue<T> {
         val intSignBit = if (signBit) 1 else 0
 
-        return when (mkFpSort(exponentSize, significandSize)) {
+        return when (val sort = mkFpSort(exponentSize, significandSize)) {
             is KFp16Sort -> {
                 val number = constructFp16NumberBiased(biasedExponent.longValue(), significand.longValue(), intSignBit)
 
@@ -1492,9 +1526,52 @@ open class KContext(
 
             is KFp128Sort -> mkFp128Biased(significand, biasedExponent, signBit).cast()
             else -> {
+                val valueForNaNCheck = KFpCustomSizeValue(
+                    this, significandSize, exponentSize, significand, biasedExponent, signBit
+                )
+                if (valueForNaNCheck.isNaN()) {
+                    mkFpNaN(sort)
+                } else {
+                    mkFpCustomSizeBiasedWithoutNaNCheck(sort, significand, biasedExponent, signBit)
+                }.cast()
+            }
+        }
+    }
+
+    private fun <T : KFpSort> mkFpCustomSizeBiasedWithoutNaNCheck(
+        sort: T,
+        significand: KBitVecValue<*>,
+        biasedExponent: KBitVecValue<*>,
+        signBit: Boolean
+    ): KFpValue<T>  {
+        val intSignBit = if (signBit) 1 else 0
+
+        return when (sort) {
+            is KFp16Sort -> {
+                val number = constructFp16NumberBiased(biasedExponent.longValue(), significand.longValue(), intSignBit)
+
+                mkFp16WithoutNaNCheck(number).cast()
+            }
+
+            is KFp32Sort -> {
+                val number = constructFp32NumberBiased(biasedExponent.longValue(), significand.longValue(), intSignBit)
+
+                mkFp32WithoutNaNCheck(number).cast()
+            }
+
+            is KFp64Sort -> {
+                val number = constructFp64NumberBiased(biasedExponent.longValue(), significand.longValue(), intSignBit)
+
+                mkFp64WithoutNaNCheck(number).cast()
+            }
+
+            is KFp128Sort -> mkFp128BiasedWithoutNaNCheck(significand, biasedExponent, signBit).cast()
+            else -> {
                 fpCustomSizeCache.createIfContextActive {
                     ensureContextMatch(significand, biasedExponent)
-                    KFpCustomSizeValue(this, significandSize, exponentSize, significand, biasedExponent, signBit)
+                    KFpCustomSizeValue(
+                        this, sort.significandBits, sort.exponentBits, significand, biasedExponent, signBit
+                    )
                 }.cast()
             }
         }
@@ -1521,16 +1598,23 @@ open class KContext(
 
     @Suppress("MagicNumber")
     private fun constructFp16Number(exponent: Long, significand: Long, intSignBit: Int): Float {
-        // get sign and `body` of the unbiased exponent
-        val exponentSign = (exponent.toInt() shr 4) and 1
-        val otherExponent = exponent.toInt() and 0b1111
+        /**
+         * Transform fp16 exponent into fp32 exponent.
+         * Transform fp16 top and bot exponent to fp32 top and bot exponent to
+         * preserve representation of special values (NaN, Inf, Zero)
+         */
+        val unbiasedFp16Exponent = exponent.toInt()
+        val unbiasedFp32Exponent = when {
+            unbiasedFp16Exponent <= -KFp16Sort.exponentShiftSize -> -KFp32Sort.exponentShiftSize
+            unbiasedFp16Exponent >= KFp16Sort.exponentShiftSize + 1 -> KFp32Sort.exponentShiftSize + 1
+            else -> unbiasedFp16Exponent
+        }
 
         // get fp16 significand part -- last teb bits (eleventh stored implicitly)
         val significandBits = significand.toInt() and 0b1111_1111_11
 
-        // Transform fp16 exponent into fp32 exponent adding three zeroes between the sign and the body
-        // Then add the bias for fp32 and apply the mask to avoid overflow of the eight bits
-        val biasedFloatExponent = (((exponentSign shl 7) or otherExponent) + KFp32Sort.exponentShiftSize) and 0xff
+        // Add the bias for fp32 and apply the mask to avoid overflow of the eight bits
+        val biasedFloatExponent = (unbiasedFp32Exponent + KFp32Sort.exponentShiftSize) and 0xff
 
         val bits = (intSignBit shl 31) or (biasedFloatExponent shl 23) or (significandBits shl 13)
 
@@ -1539,20 +1623,8 @@ open class KContext(
 
     @Suppress("MagicNumber")
     private fun constructFp16NumberBiased(biasedExponent: Long, significand: Long, intSignBit: Int): Float {
-        // get sign and `body` of the biased exponent
-        val exponentSign = (biasedExponent.toInt() shr 4) and 1
-        val otherExponent = biasedExponent.toInt() and 0b1111
-
-        // Transform fp16 exponent into fp32 exponent adding three zeroes between the sign and the body
-        // Then normalize exponent with 0xff
-        val biasedFloatExponent = ((exponentSign shl 7) or otherExponent) and 0xff
-
-        // get fp16 significand part -- last 10 bits
-        val significandBits = significand.toInt() and 0b1111_1111_11
-
-        val bits = (intSignBit shl 31) or (biasedFloatExponent shl 23) or (significandBits shl 13)
-
-        return intBitsToFloat(bits)
+        val unbiasedExponent = biasedExponent - KFp16Sort.exponentShiftSize
+        return constructFp16Number(unbiasedExponent, significand, intSignBit)
     }
 
     @Suppress("MagicNumber")
@@ -1594,18 +1666,18 @@ open class KContext(
     }
 
     private fun biasFp128Exponent(exponent: KBitVecValue<*>): KBitVecValue<*> =
-        exponent + bvMaxValueSigned(KFp128Sort.exponentBits)
+        biasFpExponent(exponent, KFp128Sort.exponentBits)
 
     private fun unbiasFp128Exponent(exponent: KBitVecValue<*>): KBitVecValue<*> =
-        exponent - bvMaxValueSigned(KFp128Sort.exponentBits)
+        unbiasFpExponent(exponent, KFp128Sort.exponentBits)
 
     private fun biasFpCustomSizeExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> =
-        exponent + bvMaxValueSigned(exponentSize)
+        biasFpExponent(exponent, exponentSize)
 
     private fun unbiasFpCustomSizeExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> =
-        exponent - bvMaxValueSigned(exponentSize)
+        unbiasFpExponent(exponent, exponentSize)
 
-    fun <T : KFpSort> mkFp(value: Float, sort: T): KExpr<T> {
+    fun <T : KFpSort> mkFp(value: Float, sort: T): KFpValue<T> {
         if (sort == mkFp32Sort()) {
             return mkFp32(value).cast()
         }
@@ -1623,7 +1695,7 @@ open class KContext(
         )
     }
 
-    fun <T : KFpSort> mkFp(value: Double, sort: T): KExpr<T> {
+    fun <T : KFpSort> mkFp(value: Double, sort: T): KFpValue<T> {
         if (sort == mkFp64Sort()) {
             return mkFp64(value).cast()
         }
@@ -1635,11 +1707,11 @@ open class KContext(
         return mkFpCustomSize(sort.exponentBits, sort.significandBits, exponent, significand, sign)
     }
 
-    fun Double.toFp(sort: KFpSort = mkFp64Sort()): KExpr<KFpSort> = mkFp(this, sort)
+    fun Double.toFp(sort: KFpSort = mkFp64Sort()): KFpValue<KFpSort> = mkFp(this, sort)
 
-    fun Float.toFp(sort: KFpSort = mkFp32Sort()): KExpr<KFpSort> = mkFp(this, sort)
+    fun Float.toFp(sort: KFpSort = mkFp32Sort()): KFpValue<KFpSort> = mkFp(this, sort)
 
-    fun <T : KFpSort> mkFp(significand: Int, unbiasedExponent: Int, signBit: Boolean, sort: T): KExpr<T> =
+    fun <T : KFpSort> mkFp(significand: Int, unbiasedExponent: Int, signBit: Boolean, sort: T): KFpValue<T> =
         mkFpCustomSize(
             exponentSize = sort.exponentBits,
             significandSize = sort.significandBits,
@@ -1648,7 +1720,7 @@ open class KContext(
             signBit = signBit
         )
 
-    fun <T : KFpSort> mkFp(significand: Long, unbiasedExponent: Long, signBit: Boolean, sort: T): KExpr<T> =
+    fun <T : KFpSort> mkFp(significand: Long, unbiasedExponent: Long, signBit: Boolean, sort: T): KFpValue<T> =
         mkFpCustomSize(
             exponentSize = sort.exponentBits,
             significandSize = sort.significandBits,
@@ -1662,7 +1734,7 @@ open class KContext(
         unbiasedExponent: KBitVecValue<*>,
         signBit: Boolean,
         sort: T
-    ): KExpr<T> = mkFpCustomSize(
+    ): KFpValue<T> = mkFpCustomSize(
         exponentSize = sort.exponentBits,
         significandSize = sort.significandBits,
         unbiasedExponent = unbiasedExponent,
@@ -1670,7 +1742,7 @@ open class KContext(
         signBit = signBit
     )
 
-    fun <T : KFpSort> mkFpBiased(significand: Int, biasedExponent: Int, signBit: Boolean, sort: T): KExpr<T> =
+    fun <T : KFpSort> mkFpBiased(significand: Int, biasedExponent: Int, signBit: Boolean, sort: T): KFpValue<T> =
         mkFpCustomSizeBiased(
             exponentSize = sort.exponentBits,
             significandSize = sort.significandBits,
@@ -1679,7 +1751,7 @@ open class KContext(
             signBit = signBit
         )
 
-    fun <T : KFpSort> mkFpBiased(significand: Long, biasedExponent: Long, signBit: Boolean, sort: T): KExpr<T> =
+    fun <T : KFpSort> mkFpBiased(significand: Long, biasedExponent: Long, signBit: Boolean, sort: T): KFpValue<T> =
         mkFpCustomSizeBiased(
             exponentSize = sort.exponentBits,
             significandSize = sort.significandBits,
@@ -1693,7 +1765,7 @@ open class KContext(
         biasedExponent: KBitVecValue<*>,
         signBit: Boolean,
         sort: T
-    ): KExpr<T> = mkFpCustomSizeBiased(
+    ): KFpValue<T> = mkFpCustomSizeBiased(
         exponentSize = sort.exponentBits,
         significandSize = sort.significandBits,
         biasedExponent = biasedExponent,
@@ -1705,50 +1777,43 @@ open class KContext(
      * Special Fp values
      * */
     @Suppress("MagicNumber")
-    fun <T : KFpSort> mkFpZero(signBit: Boolean, sort: T): KExpr<T> = when (sort) {
+    fun <T : KFpSort> mkFpZero(signBit: Boolean, sort: T): KFpValue<T> = when (sort) {
         is KFp16Sort -> mkFp16(if (signBit) -0.0f else 0.0f).cast()
         is KFp32Sort -> mkFp32(if (signBit) -0.0f else 0.0f).cast()
         is KFp64Sort -> mkFp64(if (signBit) -0.0 else 0.0).cast()
-        else -> mkFpCustomSize(
-            sort.exponentBits,
-            sort.significandBits,
-            unbiasedExponent = fpZeroExponentUnbiased(sort),
-            significand = mkBvUnsigned(0, sort.significandBits - 1u),
+        else -> mkFpCustomSizeBiased(
+            exponentSize = sort.exponentBits,
+            significandSize = sort.significandBits,
+            biasedExponent = fpZeroExponentBiased(sort),
+            significand = fpZeroSignificand(sort),
             signBit = signBit
         )
     }
 
-    fun <T : KFpSort> mkFpInf(signBit: Boolean, sort: T): KExpr<T> = when (sort) {
+    fun <T : KFpSort> mkFpInf(signBit: Boolean, sort: T): KFpValue<T> = when (sort) {
         is KFp16Sort -> mkFp16(if (signBit) Float.NEGATIVE_INFINITY else Float.POSITIVE_INFINITY).cast()
         is KFp32Sort -> mkFp32(if (signBit) Float.NEGATIVE_INFINITY else Float.POSITIVE_INFINITY).cast()
         is KFp64Sort -> mkFp64(if (signBit) Double.NEGATIVE_INFINITY else Double.POSITIVE_INFINITY).cast()
-        else -> mkFpCustomSize(
-            sort.exponentBits,
-            sort.significandBits,
-            unbiasedExponent = fpTopExponentUnbiased(sort),
-            significand = mkBvUnsigned(0, sort.significandBits - 1u),
-            signBit
+        else -> mkFpCustomSizeBiased(
+            exponentSize = sort.exponentBits,
+            significandSize = sort.significandBits,
+            biasedExponent = fpInfExponentBiased(sort),
+            significand = fpInfSignificand(sort),
+            signBit = signBit
         )
     }
 
-    fun <T : KFpSort> mkFpNan(sort: T): KExpr<T> = when (sort) {
-        is KFp16Sort -> mkFp16(Float.NaN).cast()
-        is KFp32Sort -> mkFp32(Float.NaN).cast()
-        is KFp64Sort -> mkFp64(Double.NaN).cast()
-        else -> mkFpCustomSize(
-            sort.exponentBits,
-            sort.significandBits,
-            unbiasedExponent = fpTopExponentUnbiased(sort),
-            significand = mkBvUnsigned(1, sort.significandBits - 1u),
+    fun <T : KFpSort> mkFpNaN(sort: T): KFpValue<T> = when (sort) {
+        is KFp16Sort -> mkFp16NaN().cast()
+        is KFp32Sort -> mkFp32NaN().cast()
+        is KFp64Sort -> mkFp64NaN().cast()
+        else -> mkFpCustomSizeBiasedWithoutNaNCheck(
+            sort = sort,
+            biasedExponent = fpNaNExponentBiased(sort),
+            significand = fpNaNSignificand(sort),
             signBit = false
         )
     }
-
-    private fun fpTopExponentUnbiased(sort: KFpSort): KBitVecValue<*> =
-        mkBv(powerOfTwo(sort.exponentBits - 1u), sort.exponentBits)
-
-    private fun fpZeroExponentUnbiased(sort: KFpSort): KBitVecValue<*> =
-        mkBv(powerOfTwo(sort.exponentBits - 1u) + BigInteger.ONE, sort.exponentBits)
 
     private val roundingModeCache = mkAstInterner<KFpRoundingModeExpr>()
 

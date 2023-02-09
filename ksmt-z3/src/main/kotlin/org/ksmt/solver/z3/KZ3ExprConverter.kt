@@ -332,7 +332,7 @@ open class KZ3ExprConverter(
 
             Z3_decl_kind.Z3_OP_FPA_NAN -> convert {
                 val sort = Native.getSort(nCtx, expr).convertSort<KFpSort>()
-                mkFpNan(sort)
+                mkFpNaN(sort)
             }
 
             Z3_decl_kind.Z3_OP_FPA_PLUS_ZERO -> convert {
