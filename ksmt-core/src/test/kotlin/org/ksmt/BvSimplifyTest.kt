@@ -506,6 +506,6 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
     )
 
     companion object {
-        val BV_SIZE = 77u
+        const val BV_SIZE = 77u
     }
 }
