@@ -11,8 +11,11 @@ import org.ksmt.KContext
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KDivArithExpr
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFpMaxExpr
+import org.ksmt.expr.KFpMinExpr
 import org.ksmt.expr.KFpToBvExpr
 import org.ksmt.expr.KFpToRealExpr
+import org.ksmt.expr.KFpValue
 import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KModIntExpr
 import org.ksmt.expr.KPowerArithExpr
@@ -40,6 +43,7 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.FpUtils.isZero
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.Path
@@ -217,6 +221,7 @@ abstract class BenchmarksBasedTest {
      * 2. integer mod/rem with zero divisor
      * 3. zero to the zero power
      * 4. Fp to number conversions with NaN and Inf
+     * 5. Fp max/min with +/- zero
      * */
     private fun hasUnderspecifiedOperations(expr: KExpr<*>): Boolean {
         val detector = UnderspecifiedOperationDetector(expr.ctx)
@@ -245,6 +250,12 @@ abstract class BenchmarksBasedTest {
         override fun <T : KFpSort> transform(expr: KFpToRealExpr<T>): KExpr<KRealSort>  =
             super.transform(expr).also { checkFpNaNOrInf(expr.value) }
 
+        override fun <T : KFpSort> transform(expr: KFpMinExpr<T>): KExpr<T> =
+            super.transform(expr).also { checkFpZeroWithDifferentSign(expr.arg0, expr.arg1) }
+
+        override fun <T : KFpSort> transform(expr: KFpMaxExpr<T>): KExpr<T> =
+            super.transform(expr).also { checkFpZeroWithDifferentSign(expr.arg0, expr.arg1) }
+
         private fun checkDivisionByZero(divisor: KExpr<*>) = with(ctx) {
             if (divisor == 0.expr) {
                 hasUnderspecifiedOperation = true
@@ -264,6 +275,13 @@ abstract class BenchmarksBasedTest {
                 mkFpInf(signBit = false, value.sort),
             )
             if (value in underspecifiedValues) {
+                hasUnderspecifiedOperation = true
+            }
+        }
+
+        private fun <T : KFpSort> checkFpZeroWithDifferentSign(lhs: KExpr<T>, rhs: KExpr<T>) {
+            if (lhs !is KFpValue<T> || rhs !is KFpValue<T>) return
+            if (lhs.isZero() && rhs.isZero() && lhs.signBit != rhs.signBit) {
                 hasUnderspecifiedOperation = true
             }
         }
