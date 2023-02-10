@@ -8,7 +8,6 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBv32Sort
-import org.ksmt.sort.KBv8Sort
 import org.ksmt.utils.getValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -126,14 +125,14 @@ class SolverTest {
         val arrayBase by mkArraySort(mkBv32Sort(), mkBv32Sort())
         val x by mkBv32Sort()
 
-        var array: KExpr<KArraySort<KBv32Sort, KBv8Sort>> = arrayBase
+        var array: KExpr<KArraySort<KBv32Sort, KBv32Sort>> = arrayBase
         for (i in 0..1024) {
             val v = mkBv((i xor 1024))
             array = array.store(mkBv(4198400 + i), v)
         }
 
-        var xoredX = x
-        for (i in 0..1000) {
+        var xoredX: KExpr<KBv32Sort> = x
+        for (i in 0..10000) {
             val selectedValue = array.select(mkBv(4198500 + i))
             xoredX = mkBvXorExpr(xoredX, selectedValue)
             xoredX = mkBvOrExpr(mkBvUnsignedDivExpr(xoredX, mkBv(3)), mkBvUnsignedRemExpr(xoredX, mkBv(3)))

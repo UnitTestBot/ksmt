@@ -330,7 +330,7 @@ open class KModelEvaluator(
             newArrayBase = newArrayBase.store(store.index, store.value)
         }
 
-        return newArrayBase.select(expr.index)
+        return mkArraySelectNoSimplify(newArrayBase, expr.index)
     }
 
     private fun <T : KSort> completeModelValue(sort: T): KExpr<T> {
