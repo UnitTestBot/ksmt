@@ -26,9 +26,8 @@ open class KBitwuzlaContext : AutoCloseable {
 
     private val bitwuzlaValues = hashMapOf<BitwuzlaTerm, KExpr<*>>()
 
-    private val normalConstantsOnly = hashMapOf<KDecl<*>, BitwuzlaTerm>()
-    private val constantsAndVars = hashMapOf<KDecl<*>, BitwuzlaTerm>()
-    private val bitwuzlaNormalConstants = hashMapOf<BitwuzlaTerm, KDecl<*>>()
+    private val constants = hashMapOf<KDecl<*>, BitwuzlaTerm>()
+    private val bitwuzlaConstants = hashMapOf<BitwuzlaTerm, KDecl<*>>()
 
     operator fun get(expr: KExpr<*>): BitwuzlaTerm? = expressions[expr]
     operator fun get(sort: KSort): BitwuzlaSort? = sorts[sort]
@@ -79,35 +78,22 @@ open class KBitwuzlaContext : AutoCloseable {
     fun convertValue(value: BitwuzlaTerm): KExpr<*>? = bitwuzlaValues[value]
 
     // Constant is known only if it was previously internalized
-    fun convertConstantIfKnown(term: BitwuzlaTerm): KDecl<*>? = bitwuzlaNormalConstants[term]
+    fun convertConstantIfKnown(term: BitwuzlaTerm): KDecl<*>? = bitwuzlaConstants[term]
 
     // Find normal constant if it was previously internalized
-    fun findNormalConstant(decl: KDecl<*>): BitwuzlaTerm? = normalConstantsOnly[decl]
+    fun findConstant(decl: KDecl<*>): BitwuzlaTerm? = constants[decl]
 
-    fun declaredConstants(): Set<KDecl<*>> = normalConstantsOnly.keys
+    fun declaredConstants(): Set<KDecl<*>> = constants.keys
 
     /**
      * Internalize constant.
-     *  1. Since [Native.bitwuzlaMkConst] creates fresh constant on each invocation caches are used
+     *  Since [Native.bitwuzlaMkConst] creates fresh constant on each invocation caches are used
      *  to guarantee that if two constants are equal in ksmt they are also equal in Bitwuzla.
-     *  2. Returns [Native.bitwuzlaMkVar] for previously registered quantified variables (see [registerVar]).
      * */
-    fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = constantsAndVars.getOrPut(decl) {
+    fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = constants.getOrPut(decl) {
         Native.bitwuzlaMkConst(bitwuzla, sort, decl.name).also {
-            normalConstantsOnly[decl] = it
-            bitwuzlaNormalConstants[it] = decl
+            bitwuzlaConstants[it] = decl
         }
-    }
-
-    /**
-     * Register quantified variable. Provided [decl] must be unique (e.g. fresh)
-     * and shouldn't overlap with any other variable.
-     * */
-    fun registerVar(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm {
-        check(decl !in constantsAndVars) { "Vars must be unique" }
-        val bitwuzlaVar = Native.bitwuzlaMkVar(bitwuzla, sort, decl.name)
-        constantsAndVars[decl] = bitwuzlaVar
-        return bitwuzlaVar
     }
 
     inline fun <reified T> bitwuzlaTry(body: () -> T): T = try {
@@ -123,10 +109,9 @@ open class KBitwuzlaContext : AutoCloseable {
         bitwuzlaSorts.clear()
         expressions.clear()
         bitwuzlaExpressions.clear()
-        constantsAndVars.clear()
-        normalConstantsOnly.clear()
+        constants.clear()
         declSorts.clear()
-        bitwuzlaNormalConstants.clear()
+        bitwuzlaConstants.clear()
         Native.bitwuzlaDelete(bitwuzla)
     }
 

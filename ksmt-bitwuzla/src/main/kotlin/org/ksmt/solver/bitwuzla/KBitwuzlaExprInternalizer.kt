@@ -171,7 +171,8 @@ import java.math.BigInteger
 
 @Suppress("LargeClass")
 open class KBitwuzlaExprInternalizer(
-    val bitwuzlaCtx: KBitwuzlaContext
+    val bitwuzlaCtx: KBitwuzlaContext,
+    private val scopedVars: Map<KDecl<*>, BitwuzlaTerm> = emptyMap()
 ) : KExprInternalizerBase<BitwuzlaTerm>() {
 
     open val sortInternalizer: SortInternalizer by lazy { SortInternalizer(bitwuzlaCtx) }
@@ -271,9 +272,12 @@ open class KBitwuzlaExprInternalizer(
         }
     }
 
+    private inline fun mkConstant(decl: KDecl<*>, sort: () -> BitwuzlaSort): BitwuzlaTerm =
+        scopedVars[decl] ?: bitwuzlaCtx.mkConstant(decl, sort())
+
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = with(expr) {
         transformList(args) { args: Array<BitwuzlaTerm> ->
-            val const = bitwuzlaCtx.mkConstant(decl, decl.bitwuzlaFunctionSort())
+            val const = mkConstant(decl) { decl.bitwuzlaFunctionSort() }
             val termArgs = (listOf(const) + args).toTypedArray()
 
             Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, termArgs.toLongArray())
@@ -281,7 +285,7 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun <T : KSort> transform(expr: KConst<T>) = expr.transform {
-        bitwuzlaCtx.mkConstant(expr.decl, expr.sort.internalizeSort())
+        mkConstant(expr.decl) { expr.sort.internalizeSort() }
     }
 
     override fun transform(expr: KAndExpr) = with(expr) {
@@ -374,7 +378,7 @@ open class KBitwuzlaExprInternalizer(
     }
 
     private fun transformBvLongNumber(value: Long, size: Int): BitwuzlaTerm {
-        val intParts = intArrayOf((value shr Int.SIZE_BITS).toInt(), value.toInt())
+        val intParts = intArrayOf((value ushr Int.SIZE_BITS).toInt(), value.toInt())
         return Native.bitwuzlaMkBvValueUint32Array(bitwuzlaCtx.bitwuzla, size, intParts)
     }
 
@@ -956,13 +960,21 @@ open class KBitwuzlaExprInternalizer(
         val bodyWithoutShadowing = shadowingResolver.apply(body)
 
         // Since all bound variable are unique now we can create variables
-        val internalizedBounds = uniqueBounds.map { bitwuzlaCtx.registerVar(it, it.bitwuzlaFunctionSort()) }
+        val internalizedBounds = uniqueBounds.map {
+            Native.bitwuzlaMkVar(bitwuzlaCtx.bitwuzla, it.sort.internalizeSort(), it.name)
+        }
 
         /**
          * Internalizer will produce var instead of normal constants
-         * for all bound variables, since we previously register them.
+         * for all bound variables.
          * */
-        val bodyInternalizer = KBitwuzlaExprInternalizer(bitwuzlaCtx)
+        val nestedVarScope = scopedVars.toMutableMap().apply {
+            uniqueBounds.zip(internalizedBounds).forEach { (decl, variable) ->
+                put(decl, variable)
+            }
+        }
+
+        val bodyInternalizer = KBitwuzlaExprInternalizer(bitwuzlaCtx, nestedVarScope)
         val internalizedBody = with(bodyInternalizer) { bodyWithoutShadowing.internalize() }
 
         return Triple(uniqueBounds, internalizedBounds, internalizedBody)
