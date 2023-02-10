@@ -35,7 +35,7 @@ class Z3BenchmarksBasedTest : BenchmarksBasedTest() {
         fun z3TestData() = testData
 
         @JvmStatic
-        fun z3SolverTestData() = testData
+        fun z3SolverTestData() = z3TestData()
             .filter { it.name !in KnownZ3Issues.z3FpFmaFalseSatSamples }
             .filter { it.name !in KnownZ3Issues.z3FpFmaFalseUnsatSamples }
             .ensureNotEmpty()
