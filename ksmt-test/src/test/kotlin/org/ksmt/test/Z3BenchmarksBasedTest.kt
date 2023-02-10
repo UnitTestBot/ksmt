@@ -25,7 +25,7 @@ class Z3BenchmarksBasedTest : BenchmarksBasedTest() {
 
     @Execution(ExecutionMode.CONCURRENT)
     @ParameterizedTest(name = "{0}")
-    @MethodSource("z3TestData")
+    @MethodSource("z3SolverTestData")
     fun testSolver(name: String, samplePath: Path) =
         testSolver(name, samplePath, KZ3Solver::class)
 
@@ -33,5 +33,11 @@ class Z3BenchmarksBasedTest : BenchmarksBasedTest() {
     companion object {
         @JvmStatic
         fun z3TestData() = testData
+
+        @JvmStatic
+        fun z3SolverTestData() = testData
+            .filter { it.name !in KnownZ3Issues.z3FpFmaFalseSatSamples }
+            .filter { it.name !in KnownZ3Issues.z3FpFmaFalseUnsatSamples }
+            .ensureNotEmpty()
     }
 }
