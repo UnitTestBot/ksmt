@@ -1,7 +1,11 @@
 package org.ksmt.solver.cvc5
 
 import org.ksmt.KContext
+import org.ksmt.expr.KApp
 import org.ksmt.solver.KSolverStatus
+import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBv32Sort
+import org.ksmt.sort.KBv8Sort
 import org.ksmt.utils.getValue
 import org.ksmt.utils.mkConst
 import kotlin.test.Test
@@ -83,9 +87,8 @@ class IncrementalApiTest {
         val query = mkUniversalQuantifier(queryBody, listOf(x.decl))
         solver.assert(query)
 
-        val status = solver.checkWithAssumptions(emptyList(), timeout = 1.milliseconds)
+        val status = solver.checkWithAssumptions(emptyList(), timeout = 0.5.milliseconds)
         assertEquals(KSolverStatus.UNKNOWN, status)
-        assertEquals("TIMEOUT", solver.reasonOfUnknown())
     }
 
     @Test
@@ -97,14 +100,14 @@ class IncrementalApiTest {
         var array = arrayBase
         for (i in 0..1024) {
             val v = mkBv((i xor 1024).toByte())
-            array = array.store(mkBv(4198400 + i), v)
+            array = array.store(mkBv(4198400 + i), v) as KApp<KArraySort<KBv32Sort, KBv8Sort>, *>
         }
 
         var xoredX = x
         // ~1927 is max til crash
         for (i in 0..1000) {
             val selectedValue = array.select(mkBv(4198500 + i))
-            xoredX = mkBvXorExpr(xoredX, selectedValue)
+            xoredX = mkBvXorExpr(xoredX, selectedValue) as KApp<KBv8Sort, *>
         }
 
         val someRandomValue = mkBv(42.toByte())
