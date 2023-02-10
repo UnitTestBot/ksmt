@@ -132,6 +132,7 @@ import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
+import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.solver.util.KExprInternalizerBase
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
@@ -658,7 +659,7 @@ open class KYicesExprInternalizer(
         val transformedExpr = yicesCtx.substituteDecls(expr) { term ->
             with(term) {
                 val newIndex = indexVarDecl.sort.mkFreshConstDecl(indexVarDecl.name)
-                val transformer = KDeclSubstitutor(ctx).apply {
+                val transformer = KExprSubstitutor(ctx).apply {
                     substitute(indexVarDecl, newIndex)
                 }
                 ctx.mkArrayLambda(newIndex, transformer.apply(body))
@@ -793,7 +794,7 @@ open class KYicesExprInternalizer(
         val transformedExpr = yicesCtx.substituteDecls(expr) { term: T ->
             with(term) {
                 val newBounds = bounds.map { it.sort.mkFreshConstDecl(it.name) }
-                val transformer = KDeclSubstitutor(ctx).apply {
+                val transformer = KExprSubstitutor(ctx).apply {
                     bounds.zip(newBounds).forEach { (bound, newBound) ->
                         substitute(bound.uncheckedCast(), newBound)
                     }

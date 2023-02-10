@@ -111,7 +111,7 @@ open class KYicesContext : AutoCloseable {
     val one = mkTerm { Terms.intConst(1L) }
     val minusOne = mkTerm { Terms.intConst(-1L) }
 
-    private inline fun mkTerm(mk: () -> YicesSort): YicesSort {
+    private inline fun mkTerm(mk: () -> YicesTerm): YicesTerm {
         val term = mk()
 
         if (yicesTerms.add(term))

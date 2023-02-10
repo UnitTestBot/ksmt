@@ -5,14 +5,28 @@ import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KRealSort
+import java.math.BigInteger
 
 typealias YicesTerm = Int
 typealias YicesSort = Int
 
-fun KContext.mkBv(bits: BooleanArray, sizeBits: UInt): KExpr<KBvSort> {
-    val value = bits.map { if (it) 1 else 0 }.reversed().joinToString(separator = "")
+private fun BooleanArray.extractByte(start: Int): Byte {
+    val end = Integer.min(start + Byte.SIZE_BITS, size)
 
-    return mkBv(value, sizeBits)
+    return copyOfRange(start, end).mapIndexed { index, b ->
+        val bit = if (b) 1 else 0
+
+        bit * (1 shl index)
+    }.sum().toByte()
+}
+
+fun KContext.mkBv(bits: BooleanArray, sizeBits: UInt): KExpr<KBvSort> {
+    val length = (bits.size + Byte.SIZE_BITS - 1) / Byte.SIZE_BITS
+    val byteArray = ByteArray(length) {
+        bits.extractByte((length - it - 1) * Byte.SIZE_BITS)
+    }
+
+    return mkBv(BigInteger(1, byteArray), sizeBits)
 }
 
 fun KContext.mkRealNum(value: BigRational): KExpr<KRealSort> =
