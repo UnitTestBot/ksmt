@@ -20,10 +20,9 @@ import org.ksmt.utils.uncheckedCast
 open class KBitwuzlaModel(
     private val ctx: KContext,
     private val bitwuzlaCtx: KBitwuzlaContext,
-    private val converter: KBitwuzlaExprConverter
-) : KModel {
+    private val converter: KBitwuzlaExprConverter,
     override val declarations: Set<KDecl<*>>
-        get() = bitwuzlaCtx.declaredConstants()
+) : KModel {
 
     private val interpretations: MutableMap<KDecl<*>, KModel.KFuncInterp<*>> = hashMapOf()
 
