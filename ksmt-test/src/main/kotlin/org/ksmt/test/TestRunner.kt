@@ -14,10 +14,12 @@ import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.sort.KBoolSort
 import java.nio.file.Path
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration
+import kotlin.time.DurationUnit
 
 class TestRunner(
     val ctx: KContext,
+    private val hardTimeout: Duration,
     private val worker: KsmtWorkerSession<TestProtocolModel>,
 ) {
     suspend fun init() = withTimeoutAndExceptionHandling {
@@ -62,8 +64,9 @@ class TestRunner(
             }
         }
 
-    suspend fun createSolver(): Int = withTimeoutAndExceptionHandling {
-        worker.protocolModel.createSolver.startSuspending(worker.lifetime, Unit)
+    suspend fun createSolver(timeout: Duration): Int = withTimeoutAndExceptionHandling {
+        val timeoutValue = timeout.toInt(DurationUnit.MILLISECONDS)
+        worker.protocolModel.createSolver.startSuspending(worker.lifetime, timeoutValue)
     }
 
     suspend fun assert(solver: Int, expr: Long) = withTimeoutAndExceptionHandling {
@@ -108,7 +111,7 @@ class TestRunner(
     @Suppress("TooGenericExceptionCaught", "SwallowedException", "ThrowsCount")
     private suspend inline fun <T> withTimeoutAndExceptionHandling(crossinline body: suspend () -> T): T {
         try {
-            return withTimeout(10.seconds) {
+            return withTimeout(hardTimeout) {
                 body()
             }
         } catch (ex: RdFault) {

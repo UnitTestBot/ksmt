@@ -53,6 +53,7 @@ import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 @Suppress("UnnecessaryAbstractClass")
@@ -99,7 +100,7 @@ abstract class BenchmarksBasedTest {
                 val model = solverManager.createSolver(ctx, solverType).use { testSolver ->
                     ksmtAssertions.forEach { testSolver.assertAsync(it) }
 
-                    val status = testSolver.checkAsync(timeout = 1.seconds)
+                    val status = testSolver.checkAsync(SOLVER_CHECK_SAT_TIMEOUT)
                     if (status != KSolverStatus.SAT) {
                         ignoreTest { "No model to check" }
                     }
@@ -155,7 +156,7 @@ abstract class BenchmarksBasedTest {
         testWorkers.withWorker(ctx) { worker ->
             worker.skipBadTestCases {
                 val assertions = worker.parseFile(samplePath)
-                val solver = worker.createSolver()
+                val solver = worker.createSolver(TEST_WORKER_CHECK_SAT_TIMEOUT)
                 assertions.forEach {
                     worker.assert(solver, it)
                 }
@@ -180,7 +181,7 @@ abstract class BenchmarksBasedTest {
                     ksmtAssertions.forEach { ksmtSolver.assertAsync(it) }
 
                     // use greater timeout to reduce false-positive unknowns
-                    val status = ksmtSolver.check(timeout = 2.seconds)
+                    val status = ksmtSolver.check(SOLVER_CHECK_SAT_TIMEOUT)
                     if (status == KSolverStatus.UNKNOWN) {
                         ignoreTest { "Actual status is unknown: ${ksmtSolver.reasonOfUnknown()}" }
                     }
@@ -206,7 +207,7 @@ abstract class BenchmarksBasedTest {
             worker.astSerializationCtx.resetCtx()
         }
         try {
-            TestRunner(ctx, worker).let {
+            TestRunner(ctx, TEST_WORKER_SINGLE_OPERATION_TIMEOUT, worker).let {
                 try {
                     it.init()
                     body(it)
@@ -294,6 +295,13 @@ abstract class BenchmarksBasedTest {
     }
 
     companion object {
+        val TEST_WORKER_SINGLE_OPERATION_TIMEOUT = 10.seconds
+        val TEST_WORKER_EQUALITY_CHECK_TIMEOUT = 3.seconds
+        val TEST_WORKER_CHECK_SAT_TIMEOUT = 1.seconds
+
+        val SOLVER_SINGLE_OPERATION_TIMEOUT = 10.seconds
+        val SOLVER_CHECK_SAT_TIMEOUT = 3.seconds
+
         internal lateinit var solverManager: KSolverRunnerManager
         internal lateinit var testWorkers: KsmtWorkerPool<TestProtocolModel>
 
@@ -352,12 +360,12 @@ abstract class BenchmarksBasedTest {
         fun initWorkerPools() {
             solverManager = KSolverRunnerManager(
                 workerPoolSize = 4,
-                hardTimeout = 3.seconds,
-                workerProcessIdleTimeout = 50.seconds
+                hardTimeout = SOLVER_SINGLE_OPERATION_TIMEOUT,
+                workerProcessIdleTimeout = 10.minutes
             )
             testWorkers = KsmtWorkerPool(
                 maxWorkerPoolSize = 4,
-                workerProcessIdleTimeout = 300.seconds,
+                workerProcessIdleTimeout = 10.minutes,
                 workerFactory = object : KsmtWorkerFactory<TestProtocolModel> {
                     override val childProcessEntrypoint = TestWorkerProcess::class
                     override fun updateArgs(args: KsmtWorkerArgs): KsmtWorkerArgs = args
@@ -414,7 +422,7 @@ abstract class BenchmarksBasedTest {
     }
 
     suspend fun TestRunner.performEqualityChecks(checks: suspend EqualityChecker.() -> Unit) {
-        val solver = createSolver()
+        val solver = createSolver(TEST_WORKER_EQUALITY_CHECK_TIMEOUT)
         val checker = EqualityChecker(this, solver)
         checker.checks()
     }
