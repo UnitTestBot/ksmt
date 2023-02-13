@@ -950,6 +950,10 @@ open class KBitwuzlaExprInternalizer(
         bounds: List<KDecl<*>>,
         body: KExpr<*>
     ): Triple<List<KConstDecl<KSort>>, List<BitwuzlaTerm>, BitwuzlaTerm> {
+        if (bounds.any { it.hasUninterpretedSorts() }) {
+            throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support quantifiers with uninterpreted sorts")
+        }
+
         // Replace all bound vars since they can overlap with constants from outer scope
         val uniqueBounds = bounds.map { mkFreshConstDecl(it.name, it.sort) }
         val shadowingResolver = KExprSubstitutor(this).apply {
@@ -1017,8 +1021,13 @@ open class KBitwuzlaExprInternalizer(
         override fun visit(sort: KRealSort): BitwuzlaSort =
             throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
 
-        override fun visit(sort: KUninterpretedSort): BitwuzlaSort =
-            throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
+        /**
+         * Replace Uninterpreted sorts with Bv32.
+         * The sort universe size is limited by 2^32 values which should be enough.
+         * */
+        override fun visit(sort: KUninterpretedSort): BitwuzlaSort = bitwuzlaCtx.internalizeSort(sort) {
+            Native.bitwuzlaMkBvSort(bitwuzlaCtx.bitwuzla, 32)
+        }
 
         override fun <S : KFpSort> visit(sort: S): BitwuzlaSort =
             bitwuzlaCtx.internalizeSort(sort) {
@@ -1103,4 +1112,21 @@ open class KBitwuzlaExprInternalizer(
     } catch (ex: TryRewriteExpressionUsingAxioms) {
         rewriteWithAxiomsRequired(ex.message)
     }
+
+    private val uninterpretedSortsDetector = object : KSortVisitor<Boolean> {
+        override fun visit(sort: KUninterpretedSort): Boolean = true
+
+        override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): Boolean =
+            sort.domain.accept(this) || sort.range.accept(this)
+
+        override fun visit(sort: KBoolSort): Boolean = false
+        override fun visit(sort: KIntSort): Boolean = false
+        override fun visit(sort: KRealSort): Boolean = false
+        override fun <S : KBvSort> visit(sort: S): Boolean = false
+        override fun <S : KFpSort> visit(sort: S): Boolean = false
+        override fun visit(sort: KFpRoundingModeSort): Boolean = false
+    }
+
+    private fun KDecl<*>.hasUninterpretedSorts(): Boolean =
+        sort.accept(uninterpretedSortsDetector)
 }

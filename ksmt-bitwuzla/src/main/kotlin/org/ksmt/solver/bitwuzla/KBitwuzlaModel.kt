@@ -12,7 +12,14 @@ import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.solver.model.KModelEvaluator
 import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KBvSort
+import org.ksmt.sort.KFpRoundingModeSort
+import org.ksmt.sort.KFpSort
+import org.ksmt.sort.KIntSort
+import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KSortVisitor
 import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.mkFreshConstDecl
 import org.ksmt.utils.uncheckedCast
@@ -24,8 +31,6 @@ open class KBitwuzlaModel(
     override val declarations: Set<KDecl<*>>
 ) : KModel {
 
-    private val interpretations: MutableMap<KDecl<*>, KModel.KFuncInterp<*>> = hashMapOf()
-
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
         ctx.ensureContextMatch(expr)
         bitwuzlaCtx.ensureActive()
@@ -33,11 +38,44 @@ open class KBitwuzlaModel(
         return KModelEvaluator(ctx, this, isComplete).apply(expr)
     }
 
-    // Uninterpreted sorts are not supported in bitwuzla
-    override val uninterpretedSorts: Set<KUninterpretedSort>
-        get() = emptySet()
+    private val uninterpretedSortValueContext = KBitwuzlaUninterpretedSortValueContext(ctx)
 
-    override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KExpr<KUninterpretedSort>>? = null
+    private val uninterpretedSortDependency by lazy {
+        val dependencies = hashMapOf<KUninterpretedSort, MutableSet<KDecl<*>>>()
+
+        // Collect relevant declarations for each uninterpreted sort
+        val uninterpretedSortDependencyRegisterer = UninterpretedSortRegisterer(dependencies)
+        declarations.forEach {
+            uninterpretedSortDependencyRegisterer.element = it
+            it.sort.accept(uninterpretedSortDependencyRegisterer)
+        }
+
+        dependencies
+    }
+
+    override val uninterpretedSorts: Set<KUninterpretedSort>
+        get() = uninterpretedSortDependency.keys
+
+    private val uninterpretedSortsUniverses = hashMapOf<KUninterpretedSort, Set<KExpr<KUninterpretedSort>>>()
+
+    override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KExpr<KUninterpretedSort>>? =
+        uninterpretedSortsUniverses.getOrPut(sort) {
+            ctx.ensureContextMatch(sort)
+
+            val sortDependency = uninterpretedSortDependency[sort]
+                ?: return@uninterpretedSortUniverse null
+
+            /**
+             * Resolve interpretation for all relevant declarations
+             * to ensure that [uninterpretedSortValueContext] contains
+             * all possible values for the given sort.
+             * */
+            sortDependency.forEach { interpretation(it) }
+
+            uninterpretedSortValueContext.currentSortUniverse(sort)
+        }
+
+    private val interpretations: MutableMap<KDecl<*>, KModel.KFuncInterp<*>> = hashMapOf()
 
     override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? {
         ctx.ensureContextMatch(decl)
@@ -66,18 +104,20 @@ open class KBitwuzlaModel(
     private fun <T : KSort> getInterpretation(
         decl: KDecl<T>,
         term: BitwuzlaTerm
-    ): KModel.KFuncInterp<T> = when {
-        Native.bitwuzlaTermIsArray(term) -> ctx.arrayInterpretation(decl, term)
-        Native.bitwuzlaTermIsFun(term) -> functionInterpretation(decl, term)
-        else -> {
-            val value = Native.bitwuzlaGetValue(bitwuzlaCtx.bitwuzla, term)
-            val convertedValue = with(converter) { value.convertExpr(decl.sort) }
-            KModel.KFuncInterp(
-                decl = decl,
-                vars = emptyList(),
-                entries = emptyList(),
-                default = convertedValue
-            )
+    ): KModel.KFuncInterp<T> = converter.withUninterpretedSortValueContext(uninterpretedSortValueContext) {
+        when {
+            Native.bitwuzlaTermIsArray(term) -> ctx.arrayInterpretation(decl, term)
+            Native.bitwuzlaTermIsFun(term) -> functionInterpretation(decl, term)
+            else -> {
+                val value = Native.bitwuzlaGetValue(bitwuzlaCtx.bitwuzla, term)
+                val convertedValue = with(converter) { value.convertExpr(decl.sort) }
+                KModel.KFuncInterp(
+                    decl = decl,
+                    vars = emptyList(),
+                    entries = emptyList(),
+                    default = convertedValue
+                )
+            }
         }
     }
 
@@ -144,8 +184,15 @@ open class KBitwuzlaModel(
     }
 
     override fun detach(): KModel {
-        declarations.forEach { interpretation(it) }
-        return KModelImpl(ctx, interpretations.toMutableMap(), uninterpretedSortsUniverses = emptyMap())
+        val interpretations = declarations.associateWith {
+            interpretation(it) ?: error("missed interpretation for $it")
+        }
+
+        val uninterpretedSortsUniverses = uninterpretedSorts.associateWith {
+            uninterpretedSortUniverse(it) ?: error("missed sort universe for $it")
+        }
+
+        return KModelImpl(ctx, interpretations, uninterpretedSortsUniverses)
     }
 
     override fun toString(): String = detach().toString()
@@ -168,5 +215,39 @@ open class KBitwuzlaModel(
             throw KSolverUnsupportedFeatureException(modelUnsupportedMessage)
         }
         throw ex
+    }
+
+    private class UninterpretedSortRegisterer<T : Any>(
+        private val register: MutableMap<KUninterpretedSort, MutableSet<T>>
+    ) : KSortVisitor<Unit> {
+        lateinit var element: T
+
+        override fun visit(sort: KUninterpretedSort) {
+            val sortElements = register.getOrPut(sort) { hashSetOf() }
+            sortElements += element
+        }
+
+        override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>) {
+            sort.domain.accept(this)
+            sort.range.accept(this)
+        }
+
+        override fun visit(sort: KBoolSort) {
+        }
+
+        override fun visit(sort: KIntSort) {
+        }
+
+        override fun visit(sort: KRealSort) {
+        }
+
+        override fun <S : KBvSort> visit(sort: S) {
+        }
+
+        override fun <S : KFpSort> visit(sort: S) {
+        }
+
+        override fun visit(sort: KFpRoundingModeSort) {
+        }
     }
 }
