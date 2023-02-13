@@ -21,9 +21,14 @@ open class KBitwuzlaModel(
     private val ctx: KContext,
     private val bitwuzlaCtx: KBitwuzlaContext,
     private val converter: KBitwuzlaExprConverter,
-    override val declarations: Set<KDecl<*>>,
+    assertedDeclarations: Set<KDecl<*>>,
     private val uninterpretedSortDependency: Map<KUninterpretedSort, Set<KDecl<*>>>
 ) : KModel {
+
+    private val modelDeclarations = assertedDeclarations.toHashSet()
+
+    override val declarations: Set<KDecl<*>>
+        get() = modelDeclarations
 
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
         ctx.ensureContextMatch(expr)
@@ -62,11 +67,11 @@ open class KBitwuzlaModel(
         ctx.ensureContextMatch(decl)
         bitwuzlaCtx.ensureActive()
 
-        // Constant was not internalized --> constant is unknown to solver --> constant is not present in model
-        val bitwuzlaConstant = bitwuzlaCtx.findConstant(decl)
-            ?: return null
-
         val interpretation = interpretations.getOrPut(decl) {
+            // Constant was not internalized --> constant is unknown to solver --> constant is not present in model
+            val bitwuzlaConstant = bitwuzlaCtx.findConstant(decl)
+                ?: return@interpretation null
+
             getInterpretationSafe(decl, bitwuzlaConstant)
         }
 
@@ -149,6 +154,7 @@ open class KBitwuzlaModel(
         val arrayInterpDecl = mkFreshFuncDecl("array", sort.range, listOf(sort.domain))
         val arrayInterpIndexDecl = mkFreshConstDecl("idx", sort.domain)
 
+        modelDeclarations += arrayInterpDecl
         interpretations[arrayInterpDecl] = KModel.KFuncInterp(
             decl = arrayInterpDecl,
             vars = listOf(arrayInterpIndexDecl),
@@ -165,12 +171,12 @@ open class KBitwuzlaModel(
     }
 
     override fun detach(): KModel {
-        val interpretations = declarations.associateWith {
-            interpretation(it) ?: error("missed interpretation for $it")
+        uninterpretedSorts.forEach {
+            uninterpretedSortUniverse(it) ?: error("missed sort universe for $it")
         }
 
-        val uninterpretedSortsUniverses = uninterpretedSorts.associateWith {
-            uninterpretedSortUniverse(it) ?: error("missed sort universe for $it")
+        declarations.toSet().forEach {
+            interpretation(it) ?: error("missed interpretation for $it")
         }
 
         return KModelImpl(ctx, interpretations, uninterpretedSortsUniverses)
