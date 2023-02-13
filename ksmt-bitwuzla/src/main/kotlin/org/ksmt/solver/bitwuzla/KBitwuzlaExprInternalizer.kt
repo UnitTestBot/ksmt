@@ -1022,11 +1022,11 @@ open class KBitwuzlaExprInternalizer(
             throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
 
         /**
-         * Replace Uninterpreted sorts with Bv32.
+         * Replace Uninterpreted sorts with (BitVec 32).
          * The sort universe size is limited by 2^32 values which should be enough.
          * */
         override fun visit(sort: KUninterpretedSort): BitwuzlaSort = bitwuzlaCtx.internalizeSort(sort) {
-            Native.bitwuzlaMkBvSort(bitwuzlaCtx.bitwuzla, 32)
+            Native.bitwuzlaMkBvSort(bitwuzlaCtx.bitwuzla, UNINTERPRETED_SORT_REPLACEMENT_BV_SIZE)
         }
 
         override fun <S : KFpSort> visit(sort: S): BitwuzlaSort =
@@ -1042,6 +1042,10 @@ open class KBitwuzlaExprInternalizer(
             bitwuzlaCtx.internalizeSort(sort) {
                 Native.bitwuzlaMkRmSort(bitwuzlaCtx.bitwuzla)
             }
+
+        companion object {
+            const val UNINTERPRETED_SORT_REPLACEMENT_BV_SIZE = 32
+        }
     }
 
     open class FunctionSortInternalizer(
