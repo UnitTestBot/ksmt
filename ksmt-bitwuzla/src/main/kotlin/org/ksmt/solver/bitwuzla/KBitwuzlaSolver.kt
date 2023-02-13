@@ -1,7 +1,6 @@
 package org.ksmt.solver.bitwuzla
 
 import org.ksmt.KContext
-import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
@@ -29,18 +28,8 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
         Native.bitwuzlaSetOption(bitwuzlaCtx.bitwuzla, BitwuzlaOption.BITWUZLA_OPT_PRODUCE_MODELS, value = 1)
     }
 
-    private class AssertionFrame(
-        val trackVars: MutableList<Pair<KExpr<KBoolSort>, BitwuzlaTerm>>,
-        val declarations: MutableSet<KDecl<*>>
-    ) {
-        fun copyFrame() = AssertionFrame(
-            trackVars.toMutableList(),
-            declarations.toMutableSet()
-        )
-    }
-
-    private var currentFrame = AssertionFrame(arrayListOf(), hashSetOf())
-    private val frames = mutableListOf(currentFrame)
+    private var trackVars = mutableListOf<Pair<KExpr<KBoolSort>, BitwuzlaTerm>>()
+    private val trackVarsAssertionFrames = arrayListOf(trackVars)
 
     override fun configure(configurator: KBitwuzlaSolverConfiguration.() -> Unit) {
         KBitwuzlaSolverConfigurationImpl(bitwuzlaCtx.bitwuzla).configurator()
@@ -49,9 +38,7 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
     override fun assert(expr: KExpr<KBoolSort>) = bitwuzlaCtx.bitwuzlaTry {
         ctx.ensureContextMatch(expr)
 
-        val assertionWithAxioms = trackDeclarations {
-            with(exprInternalizer) { expr.internalizeAssertion() }
-        }
+        val assertionWithAxioms = with(exprInternalizer) { expr.internalizeAssertion() }
 
         assertionWithAxioms.axioms.forEach {
             Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, it)
@@ -68,7 +55,7 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
         assert(trackedExpr)
 
         val trackVarTerm = with(exprInternalizer) { trackVar.internalize() }
-        currentFrame.trackVars += trackVar to trackVarTerm
+        trackVars += trackVar to trackVarTerm
 
         trackVar
     }
@@ -76,20 +63,26 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
     override fun push(): Unit = bitwuzlaCtx.bitwuzlaTry {
         Native.bitwuzlaPush(bitwuzlaCtx.bitwuzla, nlevels = 1)
 
-        currentFrame = currentFrame.copyFrame()
-        frames += currentFrame
+        trackVars = trackVars.toMutableList()
+        trackVarsAssertionFrames.add(trackVars)
+
+        bitwuzlaCtx.createNestedDeclarationScope()
     }
 
     override fun pop(n: UInt): Unit = bitwuzlaCtx.bitwuzlaTry {
-        val currentLevel = frames.lastIndex.toUInt()
+        val currentLevel = trackVarsAssertionFrames.lastIndex.toUInt()
         require(n <= currentLevel) {
             "Cannot pop $n scope levels because current scope level is $currentLevel"
         }
 
         if (n == 0u) return
 
-        repeat(n.toInt()) { frames.removeLast() }
-        currentFrame = frames.last()
+        repeat(n.toInt()) {
+            trackVarsAssertionFrames.removeLast()
+            bitwuzlaCtx.popDeclarationScope()
+        }
+
+        trackVars = trackVarsAssertionFrames.last()
 
         Native.bitwuzlaPop(bitwuzlaCtx.bitwuzla, n.toInt())
     }
@@ -110,7 +103,7 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
 
             lastAssumptions.clear()
 
-            currentFrame.trackVars.forEach {
+            trackVars.forEach {
                 assumeExpr(it.first, it.second)
             }
 
@@ -130,7 +123,11 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
 
     override fun model(): KModel = bitwuzlaCtx.bitwuzlaTry {
         require(lastCheckStatus == KSolverStatus.SAT) { "Model are only available after SAT checks" }
-        return KBitwuzlaModel(ctx, bitwuzlaCtx, exprConverter, currentFrame.declarations)
+        return KBitwuzlaModel(
+            ctx, bitwuzlaCtx, exprConverter,
+            bitwuzlaCtx.declarations(),
+            bitwuzlaCtx.uninterpretedSortsWithRelevantDecls()
+        )
     }
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = bitwuzlaCtx.bitwuzlaTry {
@@ -158,12 +155,4 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
         BitwuzlaResult.BITWUZLA_UNSAT -> KSolverStatus.UNSAT
         BitwuzlaResult.BITWUZLA_UNKNOWN -> KSolverStatus.UNKNOWN
     }.also { lastCheckStatus = it }
-
-    private inline fun <T> trackDeclarations(body: () -> T): T {
-        val declarationsBefore = bitwuzlaCtx.declaredConstants().toSet()
-        return body().also {
-            val declarationsAfter = bitwuzlaCtx.declaredConstants()
-            currentFrame.declarations += (declarationsAfter - declarationsBefore)
-        }
-    }
 }

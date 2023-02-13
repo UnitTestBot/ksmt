@@ -12,14 +12,7 @@ import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.solver.model.KModelEvaluator
 import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KArraySort
-import org.ksmt.sort.KBoolSort
-import org.ksmt.sort.KBvSort
-import org.ksmt.sort.KFpRoundingModeSort
-import org.ksmt.sort.KFpSort
-import org.ksmt.sort.KIntSort
-import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
-import org.ksmt.sort.KSortVisitor
 import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.mkFreshConstDecl
 import org.ksmt.utils.uncheckedCast
@@ -28,7 +21,8 @@ open class KBitwuzlaModel(
     private val ctx: KContext,
     private val bitwuzlaCtx: KBitwuzlaContext,
     private val converter: KBitwuzlaExprConverter,
-    override val declarations: Set<KDecl<*>>
+    override val declarations: Set<KDecl<*>>,
+    private val uninterpretedSortDependency: Map<KUninterpretedSort, Set<KDecl<*>>>
 ) : KModel {
 
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
@@ -39,19 +33,6 @@ open class KBitwuzlaModel(
     }
 
     private val uninterpretedSortValueContext = KBitwuzlaUninterpretedSortValueContext(ctx)
-
-    private val uninterpretedSortDependency by lazy {
-        val dependencies = hashMapOf<KUninterpretedSort, MutableSet<KDecl<*>>>()
-
-        // Collect relevant declarations for each uninterpreted sort
-        val uninterpretedSortDependencyRegisterer = UninterpretedSortRegisterer(dependencies)
-        declarations.forEach {
-            uninterpretedSortDependencyRegisterer.element = it
-            it.sort.accept(uninterpretedSortDependencyRegisterer)
-        }
-
-        dependencies
-    }
 
     override val uninterpretedSorts: Set<KUninterpretedSort>
         get() = uninterpretedSortDependency.keys
@@ -215,39 +196,5 @@ open class KBitwuzlaModel(
             throw KSolverUnsupportedFeatureException(modelUnsupportedMessage)
         }
         throw ex
-    }
-
-    private class UninterpretedSortRegisterer<T : Any>(
-        private val register: MutableMap<KUninterpretedSort, MutableSet<T>>
-    ) : KSortVisitor<Unit> {
-        lateinit var element: T
-
-        override fun visit(sort: KUninterpretedSort) {
-            val sortElements = register.getOrPut(sort) { hashSetOf() }
-            sortElements += element
-        }
-
-        override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>) {
-            sort.domain.accept(this)
-            sort.range.accept(this)
-        }
-
-        override fun visit(sort: KBoolSort) {
-        }
-
-        override fun visit(sort: KIntSort) {
-        }
-
-        override fun visit(sort: KRealSort) {
-        }
-
-        override fun <S : KBvSort> visit(sort: S) {
-        }
-
-        override fun <S : KFpSort> visit(sort: S) {
-        }
-
-        override fun visit(sort: KFpRoundingModeSort) {
-        }
     }
 }

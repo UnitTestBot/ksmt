@@ -38,6 +38,8 @@ open class KBitwuzlaExprConverter(
     private val scopedVars: Map<BitwuzlaTerm, KDecl<*>>? = null
 ) : KExprConverterBase<BitwuzlaTerm>() {
 
+    private val adapterTermRewriter = AdapterTermRewriter(ctx)
+
     /**
      * Create KSMT expression from Bitwuzla term.
      *
@@ -47,25 +49,9 @@ open class KBitwuzlaExprConverter(
      * @see convertToBoolIfNeeded
      * */
     fun <T : KSort> BitwuzlaTerm.convertExpr(expectedSort: T): KExpr<T> =
-        convertWithAdapterTerms {
-            convertFromNative<KSort>()
-                .convertToExpectedIfNeeded(expectedSort)
-        }
-
-    private var hasAdapterTerms = false
-    private val adapterTermRewriter = AdapterTermRewriter(ctx)
-
-    private inline fun <T : KSort> convertWithAdapterTerms(body: () -> KExpr<T>): KExpr<T> {
-        hasAdapterTerms = false
-
-        val result = body()
-
-        if (!hasAdapterTerms) {
-            return result
-        }
-
-        return adapterTermRewriter.apply(result)
-    }
+        convertFromNative<KSort>()
+            .convertToExpectedIfNeeded(expectedSort)
+            .let { adapterTermRewriter.apply(it) }
 
     private var uninterpretedSortValueContext: KBitwuzlaUninterpretedSortValueContext? = null
 
@@ -809,7 +795,7 @@ open class KBitwuzlaExprConverter(
                 check(expectedDomain !is KArraySort<*, *> && expectedRange !is KArraySort<*, *>) {
                     "Bitwuzla doesn't support nested arrays"
                 }
-                mkAdapterTerm { ArrayAdapterExpr(this@ensureArrayExprSortMatch, expectedDomain, expectedRange) }
+                ArrayAdapterExpr(this@ensureArrayExprSortMatch, expectedDomain, expectedRange)
             }
         }
     }
@@ -823,7 +809,7 @@ open class KBitwuzlaExprConverter(
             this@ensureBoolExpr is BoolToBv1AdapterExpr -> arg
             this@ensureBoolExpr == bv1One -> trueExpr
             this@ensureBoolExpr == bv1Zero -> falseExpr
-            else -> mkAdapterTerm { Bv1ToBoolAdapterExpr(this@ensureBoolExpr.uncheckedCast()) }
+            else -> Bv1ToBoolAdapterExpr(this@ensureBoolExpr.uncheckedCast())
         }
     }
 
@@ -836,7 +822,7 @@ open class KBitwuzlaExprConverter(
             this@ensureBv1Expr is Bv1ToBoolAdapterExpr -> arg
             this@ensureBv1Expr == trueExpr -> bv1One
             this@ensureBv1Expr == falseExpr -> bv1Zero
-            else -> mkAdapterTerm { BoolToBv1AdapterExpr(this@ensureBv1Expr.uncheckedCast()) }
+            else -> BoolToBv1AdapterExpr(this@ensureBv1Expr.uncheckedCast())
         }
     }
 
@@ -856,11 +842,6 @@ open class KBitwuzlaExprConverter(
         throw KSolverUnsupportedFeatureException(
             "Expression $this it too complex for conversion to $expected sort"
         )
-    }
-
-    private inline fun <T> mkAdapterTerm(builder: () -> T): T {
-        hasAdapterTerms = true
-        return builder()
     }
 
     private inner class BoolToBv1AdapterExpr(val arg: KExpr<KBoolSort>) : KExpr<KBv1Sort>(ctx) {
