@@ -37,10 +37,10 @@ class BitwuzlaBenchmarksBasedTest : BenchmarksBasedTest() {
             .skipUnsupportedTheories()
             .ensureNotEmpty()
 
-        // Bitwuzla doesn't support models for quantified formulas
         @JvmStatic
         fun bitwuzlaModelConversionTestData() =
             bitwuzlaTestData()
+                // Bitwuzla doesn't support models for quantified formulas
                 .filter { it.name.startsWith("QF_") }
                 .ensureNotEmpty()
 
