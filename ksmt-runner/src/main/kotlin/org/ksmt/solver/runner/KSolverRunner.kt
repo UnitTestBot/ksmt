@@ -12,6 +12,7 @@ import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
+import org.ksmt.solver.KSolverUniversalConfigurationBuilder
 import org.ksmt.solver.async.KAsyncSolver
 import org.ksmt.sort.KBoolSort
 import java.util.concurrent.atomic.AtomicBoolean
@@ -26,7 +27,7 @@ import kotlin.time.Duration
 class KSolverRunner<Config : KSolverConfiguration>(
     private val manager: KSolverRunnerManager,
     private val ctx: KContext,
-    private val configurationBuilder: KSolverUniversalConfigurationBuilder<Config>,
+    private val configurationBuilder: (KSolverUniversalConfigurationBuilder) -> Config,
     private val solverType: SolverType,
 ) : KAsyncSolver<Config> {
     private val isActive = AtomicBoolean(true)
@@ -46,7 +47,9 @@ class KSolverRunner<Config : KSolverConfiguration>(
     }
 
     override suspend fun configureAsync(configurator: Config.() -> Unit) {
-        val config = configurationBuilder.build { configurator() }
+        val univesalConfigurator = KSolverRunnerUniversalConfigurator()
+        configurationBuilder(univesalConfigurator).configurator()
+        val config = univesalConfigurator.config
 
         try {
             ensureInitializedAndExecute(onException = {}) {

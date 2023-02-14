@@ -5,6 +5,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.ksmt.KContext
+import org.ksmt.runner.models.generated.SolverType
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.z3.KZ3Solver
@@ -149,5 +150,12 @@ class SolverRunnerTest {
 
         assertNotEquals(model1, model2)
         assertEquals(model1, model3)
+    }
+
+    @Test
+    fun testSolverInstanceCreation(): Unit = with(context){
+        SolverType.Z3.createInstance(this)
+        SolverType.Bitwuzla.createInstance(this)
+        SolverType.Yices.createInstance(this)
     }
 }

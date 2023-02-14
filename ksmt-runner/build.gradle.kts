@@ -23,9 +23,6 @@ kotlin {
 
 dependencies {
     implementation(project(":ksmt-core"))
-    implementation(project(":ksmt-z3"))
-    implementation(project(":ksmt-bitwuzla"))
-    implementation(project(":ksmt-yices"))
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
 
@@ -35,6 +32,10 @@ dependencies {
     rdgenModelsCompileClasspath("com.jetbrains.rd:rd-gen:2022.3.2")
 
     testImplementation(kotlin("test"))
+
+    testImplementation(project(":ksmt-z3"))
+    testImplementation(project(":ksmt-bitwuzla"))
+    testImplementation(project(":ksmt-yices"))
 }
 
 val generateModels = tasks.register<RdGenTask>("generateProtocolModels") {

@@ -13,17 +13,10 @@ import org.ksmt.runner.models.generated.ModelResult
 import org.ksmt.runner.models.generated.ModelUninterpretedSortUniverse
 import org.ksmt.runner.models.generated.ReasonUnknownResult
 import org.ksmt.runner.models.generated.SolverProtocolModel
-import org.ksmt.runner.models.generated.SolverType
 import org.ksmt.runner.models.generated.UnsatCoreResult
 import org.ksmt.runner.models.generated.solverProtocolModel
 import org.ksmt.runner.serializer.AstSerializationCtx
 import org.ksmt.solver.KSolver
-import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
-import org.ksmt.solver.bitwuzla.KBitwuzlaSolverConfiguration
-import org.ksmt.solver.yices.KYicesSolver
-import org.ksmt.solver.yices.KYicesSolverConfiguration
-import org.ksmt.solver.z3.KZ3Solver
-import org.ksmt.solver.z3.KZ3SolverConfiguration
 import org.ksmt.sort.KBoolSort
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -48,11 +41,7 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
             check(workerCtx == null) { "Solver is initialized" }
             workerCtx = KContext()
             astSerializationCtx.initCtx(ctx)
-            workerSolver = when (params.type) {
-                SolverType.Z3 -> KZ3Solver(ctx)
-                SolverType.Bitwuzla -> KBitwuzlaSolver(ctx)
-                SolverType.Yices -> KYicesSolver(ctx)
-            }
+            workerSolver = params.type.createInstance(ctx)
         }
         deleteSolver.measureExecutionForTermination {
             solver.close()
@@ -63,12 +52,7 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
         }
         configure.measureExecutionForTermination { config ->
             solver.configure {
-                when (this) {
-                    is KZ3SolverConfiguration -> config.forEach { addUniversalParam(it) }
-                    is KBitwuzlaSolverConfiguration -> config.forEach { addUniversalParam(it) }
-                    is KYicesSolverConfiguration -> config.forEach { addUniversalParam(it) }
-                    else -> error("Unexpected configuration: ${this::class}")
-                }
+                config.forEach { addUniversalParam(it) }
             }
         }
         assert.measureExecutionForTermination { params ->
