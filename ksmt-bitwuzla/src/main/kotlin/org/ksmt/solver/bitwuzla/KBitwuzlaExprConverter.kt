@@ -6,6 +6,7 @@ import org.ksmt.cache.structurallyEqual
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KArrayConst
+import org.ksmt.expr.KBitVec32Value
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpRoundingMode
@@ -832,16 +833,14 @@ open class KBitwuzlaExprConverter(
     private fun KExpr<*>.ensureUninterpretedSortExpr(expected: KUninterpretedSort): KExpr<*> {
         if (sort == expected) return this
 
-        val valueContext = uninterpretedSortValueContext
-            ?: error("Uninterpreted sort value context is required to convert expr with $expected sort")
-
-        if (this is KBitVecValue<*>) {
-            return valueContext.mkValue(expected, this)
+        if (this !is KBitVec32Value) {
+            throw KSolverUnsupportedFeatureException(
+                "Expression $this it too complex for conversion to $expected sort"
+            )
         }
 
-        throw KSolverUnsupportedFeatureException(
-            "Expression $this it too complex for conversion to $expected sort"
-        )
+        // Use adapter term to keep caches consistent
+        return Bv32ToUninterpretedSortAdapterExpr(this, expected)
     }
 
     private inner class BoolToBv1AdapterExpr(val arg: KExpr<KBoolSort>) : KExpr<KBv1Sort>(ctx) {
@@ -878,6 +877,25 @@ open class KBitwuzlaExprConverter(
 
         override fun internHashCode(): Int = hash(arg)
         override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg })
+    }
+
+    private inner class Bv32ToUninterpretedSortAdapterExpr(
+        val arg: KBitVec32Value,
+        override val sort: KUninterpretedSort
+    ) : KExpr<KUninterpretedSort>(ctx) {
+        override fun print(printer: ExpressionPrinter) = with(printer) {
+            append("(to $sort ")
+            append(arg)
+            append(")")
+        }
+
+        override fun internHashCode(): Int = hash(arg, sort)
+        override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg }, { sort })
+
+        override fun accept(transformer: KTransformerBase): KExpr<KUninterpretedSort> {
+            check(transformer is AdapterTermRewriter) { "leaked adapter term" }
+            return transformer.transform(this)
+        }
     }
 
     private inner class ArrayAdapterExpr<FromDomain : KSort, FromRange : KSort, ToDomain : KSort, ToRange : KSort>(
@@ -935,6 +953,15 @@ open class KBitwuzlaExprConverter(
                     else -> mkIte(transformedArg eq bv1Sort.trueValue(), trueExpr, falseExpr)
                 }
             }
+        }
+
+        /**
+         * Replace (BitVec 32) value with an uninterpreted constant.
+         * */
+        fun transform(expr: Bv32ToUninterpretedSortAdapterExpr): KExpr<KUninterpretedSort> {
+            val valueContext = uninterpretedSortValueContext
+                ?: error("Uninterpreted sort value context is required to convert expr with ${expr.sort} sort")
+            return valueContext.mkValue(expr.sort, expr.arg)
         }
 
         /**

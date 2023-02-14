@@ -155,4 +155,30 @@ class SolverTest {
         assertEquals(KSolverStatus.SAT, status)
     }
 
+    @Test
+    fun testUninterpretedSortSupport(): Unit = with(ctx) {
+        val aSort = mkUninterpretedSort("a")
+        val bSort = mkUninterpretedSort("b")
+        val aaArraySort = mkArraySort(aSort, aSort)
+        val abArraySort = mkArraySort(aSort, bSort)
+
+        val ax by aSort
+        val ay by aSort
+
+        val bx by bSort
+        val by by bSort
+
+        val aaArray by aaArraySort
+        val abArray by abArraySort
+
+        solver.assert(aaArray.select(ax) eq ay)
+        solver.assert(aaArray.select(ay) eq ax)
+
+        solver.assert(abArray.select(ax) eq bx)
+        solver.assert(abArray.select(ay) eq by)
+        solver.assert(bx neq by)
+
+        val status = solver.check()
+        assertEquals(KSolverStatus.SAT, status)
+    }
 }
