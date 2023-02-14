@@ -7,6 +7,8 @@ import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.KSolverUniversalConfigurationBuilder
 import kotlin.reflect.KClass
 
+typealias ConfigurationBuilder<C> = (KSolverUniversalConfigurationBuilder) -> C
+
 private const val KSMT_SOLVER_PACKAGE = "org.ksmt.solver"
 
 private const val Z3_SOLVER_CLASS_NAME = "$KSMT_SOLVER_PACKAGE.z3.KZ3Solver"
@@ -70,7 +72,7 @@ fun SolverType.createInstance(ctx: KContext): KSolver<*> = when (this) {
 }
 
 @Suppress("UNCHECKED_CAST")
-fun <C : KSolverConfiguration> KClass<out KSolver<C>>.createConfigurationBuilder(): (KSolverUniversalConfigurationBuilder) -> C =
+fun <C : KSolverConfiguration> KClass<out KSolver<C>>.createConfigurationBuilder(): ConfigurationBuilder<C> =
     when (solverType) {
         SolverType.Z3 -> { builder -> z3ConfigurationConstructor(builder) as C }
         SolverType.Bitwuzla -> { builder -> bitwuzlaConfigurationConstructor(builder) as C }

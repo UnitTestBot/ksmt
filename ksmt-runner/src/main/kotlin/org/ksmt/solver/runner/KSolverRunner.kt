@@ -27,7 +27,7 @@ import kotlin.time.Duration
 class KSolverRunner<Config : KSolverConfiguration>(
     private val manager: KSolverRunnerManager,
     private val ctx: KContext,
-    private val configurationBuilder: (KSolverUniversalConfigurationBuilder) -> Config,
+    private val configurationBuilder: ConfigurationBuilder<Config>,
     private val solverType: SolverType,
 ) : KAsyncSolver<Config> {
     private val isActive = AtomicBoolean(true)
