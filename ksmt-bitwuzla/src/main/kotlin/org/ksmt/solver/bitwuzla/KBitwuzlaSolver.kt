@@ -1,6 +1,7 @@
 package org.ksmt.solver.bitwuzla
 
 import org.ksmt.KContext
+import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
@@ -44,6 +45,18 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
             Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, it)
         }
         Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, assertionWithAxioms.assertion)
+    }
+
+    override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) = bitwuzlaCtx.bitwuzlaTry {
+        ctx.ensureContextMatch(expr, trackVar)
+
+        val trackVarExpr = ctx.mkConstApp(trackVar)
+        val trackedExpr = with(ctx) { !trackVarExpr or expr }
+
+        assert(trackedExpr)
+
+        val trackVarTerm = with(exprInternalizer) { trackVarExpr.internalize() }
+        trackVars += trackVarExpr to trackVarTerm
     }
 
     override fun assertAndTrack(expr: KExpr<KBoolSort>): KExpr<KBoolSort> = bitwuzlaCtx.bitwuzlaTry {
@@ -147,7 +160,7 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
     }
 
     override fun interrupt() = bitwuzlaCtx.bitwuzlaTry {
-        bitwuzlaCtx.interrupt()
+        Native.bitwuzlaForceTerminate(bitwuzlaCtx.bitwuzla)
     }
 
     override fun close() = bitwuzlaCtx.bitwuzlaTry {

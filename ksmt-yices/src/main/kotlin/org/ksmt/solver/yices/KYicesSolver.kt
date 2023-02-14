@@ -5,6 +5,7 @@ import com.sri.yices.Context
 import com.sri.yices.Status
 import com.sri.yices.YicesException
 import org.ksmt.KContext
+import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
@@ -54,19 +55,17 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
         nativeContext.assertFormula(yicesExpr)
     }
 
-    override fun assertAndTrack(expr: KExpr<KBoolSort>): KExpr<KBoolSort> = yicesTry {
+    override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) = yicesTry {
         ctx.ensureContextMatch(expr)
 
-        val trackVar = with(ctx) { boolSort.mkFreshConst("track") }
-        val trackedExpr = with(ctx) { !trackVar or expr }
-        val yicesTrackVar = with(exprInternalizer) { trackVar.internalize() }
+        val trackVarExpr = ctx.mkConstApp(trackVar)
+        val trackedExpr = with(ctx) { !trackVarExpr or expr }
+        val yicesTrackVar = with(exprInternalizer) { trackVarExpr.internalize() }
         val yicesTrackedExpr = with(exprInternalizer) { trackedExpr.internalize() }
 
         currentLevelTrackedAssertions += yicesTrackVar
 
         nativeContext.assertFormula(yicesTrackedExpr)
-
-        trackVar
     }
 
     override fun push(): Unit = yicesTry {
@@ -144,6 +143,10 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
 
         // There is no way to retrieve reason of unknown from Yices in general case.
         return "unknown"
+    }
+
+    override fun interrupt() = yicesTry {
+        nativeContext.stopSearch()
     }
 
     private inline fun <T> withTimer(timeout: Duration, body: () -> T): T {
