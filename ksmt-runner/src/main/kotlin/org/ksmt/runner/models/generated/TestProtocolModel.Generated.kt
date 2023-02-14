@@ -23,6 +23,7 @@ class TestProtocolModel private constructor(
     private val _parseFile: RdCall<String, List<Long>>,
     private val _convertAssertions: RdCall<List<Long>, TestConversionResult>,
     private val _internalizeAndConvertBitwuzla: RdCall<TestInternalizeAndConvertParams, TestConversionResult>,
+    private val _internalizeAndConvertYices: RdCall<TestInternalizeAndConvertParams, TestConversionResult>,
     private val _createSolver: RdCall<Unit, Int>,
     private val _assert: RdCall<TestAssertParams, Unit>,
     private val _check: RdCall<Int, TestCheckResult>,
@@ -70,7 +71,7 @@ class TestProtocolModel private constructor(
         private val __LongListSerializer = FrameworkMarshallers.Long.list()
         private val __IntNullableSerializer = FrameworkMarshallers.Int.nullable()
         
-        const val serializationHash = 7382766109533773681L
+        const val serializationHash = -5618680705340996311L
         
     }
     override val serializersOwner: ISerializersOwner get() = TestProtocolModel
@@ -102,6 +103,11 @@ class TestProtocolModel private constructor(
      * Internalize and convert expressions using Bitwuzla converter/internalizer
      */
     val internalizeAndConvertBitwuzla: RdCall<TestInternalizeAndConvertParams, TestConversionResult> get() = _internalizeAndConvertBitwuzla
+    
+    /**
+     * Internalize and convert expressions using Yices converter/internalizer
+     */
+    val internalizeAndConvertYices: RdCall<TestInternalizeAndConvertParams, TestConversionResult> get() = _internalizeAndConvertYices
     
     /**
      * Create solver
@@ -160,6 +166,7 @@ class TestProtocolModel private constructor(
         _parseFile.async = true
         _convertAssertions.async = true
         _internalizeAndConvertBitwuzla.async = true
+        _internalizeAndConvertYices.async = true
         _createSolver.async = true
         _assert.async = true
         _check.async = true
@@ -178,6 +185,7 @@ class TestProtocolModel private constructor(
         bindableChildren.add("parseFile" to _parseFile)
         bindableChildren.add("convertAssertions" to _convertAssertions)
         bindableChildren.add("internalizeAndConvertBitwuzla" to _internalizeAndConvertBitwuzla)
+        bindableChildren.add("internalizeAndConvertYices" to _internalizeAndConvertYices)
         bindableChildren.add("createSolver" to _createSolver)
         bindableChildren.add("assert" to _assert)
         bindableChildren.add("check" to _check)
@@ -197,6 +205,7 @@ class TestProtocolModel private constructor(
         RdCall<Unit, Unit>(FrameworkMarshallers.Void, FrameworkMarshallers.Void),
         RdCall<String, List<Long>>(FrameworkMarshallers.String, __LongListSerializer),
         RdCall<List<Long>, TestConversionResult>(__LongListSerializer, TestConversionResult),
+        RdCall<TestInternalizeAndConvertParams, TestConversionResult>(TestInternalizeAndConvertParams, TestConversionResult),
         RdCall<TestInternalizeAndConvertParams, TestConversionResult>(TestInternalizeAndConvertParams, TestConversionResult),
         RdCall<Unit, Int>(FrameworkMarshallers.Void, FrameworkMarshallers.Int),
         RdCall<TestAssertParams, Unit>(TestAssertParams, FrameworkMarshallers.Void),
@@ -221,6 +230,7 @@ class TestProtocolModel private constructor(
             print("parseFile = "); _parseFile.print(printer); println()
             print("convertAssertions = "); _convertAssertions.print(printer); println()
             print("internalizeAndConvertBitwuzla = "); _internalizeAndConvertBitwuzla.print(printer); println()
+            print("internalizeAndConvertYices = "); _internalizeAndConvertYices.print(printer); println()
             print("createSolver = "); _createSolver.print(printer); println()
             print("assert = "); _assert.print(printer); println()
             print("check = "); _check.print(printer); println()
@@ -242,6 +252,7 @@ class TestProtocolModel private constructor(
             _parseFile.deepClonePolymorphic(),
             _convertAssertions.deepClonePolymorphic(),
             _internalizeAndConvertBitwuzla.deepClonePolymorphic(),
+            _internalizeAndConvertYices.deepClonePolymorphic(),
             _createSolver.deepClonePolymorphic(),
             _assert.deepClonePolymorphic(),
             _check.deepClonePolymorphic(),

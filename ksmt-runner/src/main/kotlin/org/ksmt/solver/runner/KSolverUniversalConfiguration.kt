@@ -5,6 +5,7 @@ import org.ksmt.runner.models.generated.SolverConfigurationParam
 import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolverConfiguration
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaOption
+import org.ksmt.solver.yices.KYicesSolverConfiguration
 import org.ksmt.solver.z3.KZ3SolverConfiguration
 
 interface KSolverUniversalConfigurationBuilder<Config : KSolverConfiguration> {
@@ -20,6 +21,12 @@ class KBitwuzlaSolverUniversalConfigurationBuilder :
     KSolverUniversalConfigurationBuilder<KBitwuzlaSolverConfiguration> {
     override fun build(body: KBitwuzlaSolverConfiguration.() -> Unit): List<SolverConfigurationParam> =
         buildList { KBitwuzlaSolverUniversalConfiguration(this).body() }
+}
+
+class KYicesSolverUniversalConfigurationBuilder :
+    KSolverUniversalConfigurationBuilder<KYicesSolverConfiguration> {
+    override fun build(body: KYicesSolverConfiguration.() -> Unit): List<SolverConfigurationParam> =
+        buildList { KYicesSolverUniversalConfiguration(this).body() }
 }
 
 private class KZ3SolverUniversalConfiguration(
@@ -54,6 +61,14 @@ private class KBitwuzlaSolverUniversalConfiguration(
     }
 }
 
+private class KYicesSolverUniversalConfiguration(
+    private val config: MutableList<SolverConfigurationParam>
+) : KYicesSolverConfiguration {
+    override fun setYicesOption(option: String, value: String) {
+        config += SolverConfigurationParam(ConfigurationParamKind.String, option, value)
+    }
+}
+
 fun KZ3SolverConfiguration.addUniversalParam(param: SolverConfigurationParam): Unit = with(param) {
     when (kind) {
         ConfigurationParamKind.String -> setZ3Option(name, value)
@@ -68,6 +83,13 @@ fun KBitwuzlaSolverConfiguration.addUniversalParam(param: SolverConfigurationPar
     when (kind) {
         ConfigurationParamKind.String -> setBitwuzlaOption(option, value)
         ConfigurationParamKind.Int -> setBitwuzlaOption(option, value.toInt())
+        else -> error("Unsupported option kind: $kind")
+    }
+}
+
+fun KYicesSolverConfiguration.addUniversalParam(param: SolverConfigurationParam): Unit = with(param) {
+    when (kind) {
+        ConfigurationParamKind.String -> setYicesOption(name, value)
         else -> error("Unsupported option kind: $kind")
     }
 }

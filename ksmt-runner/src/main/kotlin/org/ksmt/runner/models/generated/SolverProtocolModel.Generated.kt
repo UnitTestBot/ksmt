@@ -76,7 +76,7 @@ class SolverProtocolModel private constructor(
         
         private val __SolverConfigurationParamListSerializer = SolverConfigurationParam.list()
         
-        const val serializationHash = -2649282789874977820L
+        const val serializationHash = -5955182643545389831L
         
     }
     override val serializersOwner: ISerializersOwner get() = SolverProtocolModel
@@ -237,7 +237,7 @@ val IProtocol.solverProtocolModel get() = getOrCreateExtension(SolverProtocolMod
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:42]
+ * #### Generated from [SolverProtocolModel.kt:43]
  */
 data class AssertAndTrackResult (
     val expression: org.ksmt.KAst
@@ -294,7 +294,7 @@ data class AssertAndTrackResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:38]
+ * #### Generated from [SolverProtocolModel.kt:39]
  */
 data class AssertParams (
     val expression: org.ksmt.KAst
@@ -351,7 +351,7 @@ data class AssertParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:50]
+ * #### Generated from [SolverProtocolModel.kt:51]
  */
 data class CheckParams (
     val timeout: Long
@@ -408,7 +408,7 @@ data class CheckParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:54]
+ * #### Generated from [SolverProtocolModel.kt:55]
  */
 data class CheckResult (
     val status: org.ksmt.solver.KSolverStatus
@@ -465,7 +465,7 @@ data class CheckResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:58]
+ * #### Generated from [SolverProtocolModel.kt:59]
  */
 data class CheckWithAssumptionsParams (
     val assumptions: List<org.ksmt.KAst>,
@@ -528,7 +528,7 @@ data class CheckWithAssumptionsParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:28]
+ * #### Generated from [SolverProtocolModel.kt:29]
  */
 enum class ConfigurationParamKind {
     String, 
@@ -601,7 +601,7 @@ data class CreateSolverParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:76]
+ * #### Generated from [SolverProtocolModel.kt:77]
  */
 data class ModelEntry (
     val decl: org.ksmt.KAst,
@@ -676,7 +676,7 @@ data class ModelEntry (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:71]
+ * #### Generated from [SolverProtocolModel.kt:72]
  */
 data class ModelFuncInterpEntry (
     val args: List<org.ksmt.KAst>,
@@ -739,7 +739,7 @@ data class ModelFuncInterpEntry (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:88]
+ * #### Generated from [SolverProtocolModel.kt:89]
  */
 data class ModelResult (
     val declarations: List<org.ksmt.KAst>,
@@ -808,7 +808,7 @@ data class ModelResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:83]
+ * #### Generated from [SolverProtocolModel.kt:84]
  */
 data class ModelUninterpretedSortUniverse (
     val sort: org.ksmt.KAst,
@@ -871,7 +871,7 @@ data class ModelUninterpretedSortUniverse (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:46]
+ * #### Generated from [SolverProtocolModel.kt:47]
  */
 data class PopParams (
     val levels: UInt
@@ -928,7 +928,7 @@ data class PopParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:67]
+ * #### Generated from [SolverProtocolModel.kt:68]
  */
 data class ReasonUnknownResult (
     val reasonUnknown: String
@@ -985,7 +985,7 @@ data class ReasonUnknownResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:27]
+ * #### Generated from [SolverProtocolModel.kt:28]
  */
 data class SolverConfigurationParam (
     val kind: ConfigurationParamKind,
@@ -1058,7 +1058,8 @@ data class SolverConfigurationParam (
  */
 enum class SolverType {
     Z3, 
-    Bitwuzla;
+    Bitwuzla, 
+    Yices;
     
     companion object {
         val marshaller = FrameworkMarshallers.enum<SolverType>()
@@ -1068,7 +1069,7 @@ enum class SolverType {
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:63]
+ * #### Generated from [SolverProtocolModel.kt:64]
  */
 data class UnsatCoreResult (
     val core: List<org.ksmt.KAst>

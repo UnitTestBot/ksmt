@@ -65,6 +65,10 @@ object TestProtocolModel : Ext(TestProtocolRoot) {
             async
             documentation = "Internalize and convert expressions using Bitwuzla converter/internalizer"
         }
+        call("internalizeAndConvertYices", testInternalizeAndConvertParams, testConversionResult).apply {
+            async
+            documentation = "Internalize and convert expressions using Yices converter/internalizer"
+        }
         call("createSolver", PredefinedType.void, PredefinedType.int).apply {
             async
             documentation = "Create solver"

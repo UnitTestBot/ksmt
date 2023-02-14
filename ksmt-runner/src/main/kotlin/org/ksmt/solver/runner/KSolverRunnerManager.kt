@@ -13,6 +13,7 @@ import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
+import org.ksmt.solver.yices.KYicesSolver
 import org.ksmt.solver.z3.KZ3Solver
 import kotlin.reflect.KClass
 import kotlin.time.Duration
@@ -63,7 +64,8 @@ class KSolverRunnerManager(
     companion object {
         private val solverTypes = mapOf(
             KZ3Solver::class to SolverType.Z3,
-            KBitwuzlaSolver::class to SolverType.Bitwuzla
+            KBitwuzlaSolver::class to SolverType.Bitwuzla,
+            KYicesSolver::class to SolverType.Yices
         )
 
         @Suppress("UNCHECKED_CAST")
@@ -75,6 +77,8 @@ class KSolverRunnerManager(
                     KZ3SolverUniversalConfigurationBuilder() as KSolverUniversalConfigurationBuilder<C>
                 KBitwuzlaSolver::class ->
                     KBitwuzlaSolverUniversalConfigurationBuilder() as KSolverUniversalConfigurationBuilder<C>
+                KYicesSolver::class ->
+                    KYicesSolverUniversalConfigurationBuilder() as KSolverUniversalConfigurationBuilder<C>
                 else -> error("Unknown solver type: $solver")
             }
     }

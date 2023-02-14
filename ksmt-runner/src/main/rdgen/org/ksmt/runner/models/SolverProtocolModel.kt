@@ -21,6 +21,7 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
         field("type", enum("SolverType") {
             +"Z3"
             +"Bitwuzla"
+            +"Yices"
         })
     }
 

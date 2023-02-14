@@ -52,6 +52,16 @@ class TestRunner(
             }
         }
 
+    suspend fun internalizeAndConvertYices(assertions: List<KExpr<KBoolSort>>): List<KExpr<KBoolSort>> =
+        withTimeoutAndExceptionHandling {
+            val params = TestInternalizeAndConvertParams(assertions)
+            val result = worker.protocolModel.internalizeAndConvertYices.startSuspending(worker.lifetime, params)
+            result.expressions.map {
+                @Suppress("UNCHECKED_CAST")
+                it as KExpr<KBoolSort>
+            }
+        }
+
     suspend fun createSolver(): Int = withTimeoutAndExceptionHandling {
         worker.protocolModel.createSolver.startSuspending(worker.lifetime, Unit)
     }

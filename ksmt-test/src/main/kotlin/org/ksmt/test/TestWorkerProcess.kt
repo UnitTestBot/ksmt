@@ -8,6 +8,7 @@ import com.microsoft.z3.Expr
 import com.microsoft.z3.Native
 import com.microsoft.z3.Solver
 import com.microsoft.z3.Status
+import org.ksmt.solver.fixtures.yices.KTestYicesContext
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.runner.core.ChildProcessBase
@@ -22,6 +23,7 @@ import org.ksmt.solver.bitwuzla.KBitwuzlaContext
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprConverter
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprInternalizer
 import org.ksmt.solver.z3.KZ3Context
+import org.ksmt.solver.yices.*
 import org.ksmt.solver.z3.KZ3ExprConverter
 import org.ksmt.solver.z3.KZ3ExprInternalizer
 import org.ksmt.solver.z3.KZ3Solver
@@ -96,6 +98,22 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
                 bitwuzlaAssertions.map { it.convertExpr(ctx.boolSort) }
             }
         }
+
+    private fun internalizeAndConvertYices(assertions: List<KExpr<KBoolSort>>): List<KExpr<KBoolSort>> {
+        KTestYicesContext().use { internContext ->
+            val internalizer = KYicesExprInternalizer(ctx, internContext)
+
+            val yicesAssertions = with(internalizer) {
+                assertions.map { it.internalize() }
+            }
+
+            val converter = KYicesExprConverter(ctx, internContext)
+
+            return with(converter) {
+                yicesAssertions.map { it.convert() }
+            }
+        }
+    }
 
     private fun createSolver(): Int {
         val solver = with(z3Ctx) {
@@ -223,6 +241,11 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         internalizeAndConvertBitwuzla.measureExecutionForTermination { params ->
             @Suppress("UNCHECKED_CAST")
             val converted = internalizeAndConvertBitwuzla(params.expressions as List<KExpr<KBoolSort>>)
+            TestConversionResult(converted)
+        }
+        internalizeAndConvertYices.measureExecutionForTermination { params ->
+            @Suppress("UNCHECKED_CAST")
+            val converted = internalizeAndConvertYices(params.expressions as List<KExpr<KBoolSort>>)
             TestConversionResult(converted)
         }
         createSolver.measureExecutionForTermination {
