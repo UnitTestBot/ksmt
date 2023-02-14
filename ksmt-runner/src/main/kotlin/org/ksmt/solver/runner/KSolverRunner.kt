@@ -7,7 +7,7 @@ import kotlinx.coroutines.sync.withLock
 import org.ksmt.KContext
 import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
-import org.ksmt.runner.models.generated.SolverType
+import org.ksmt.runner.generated.models.SolverType
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.KSolverException

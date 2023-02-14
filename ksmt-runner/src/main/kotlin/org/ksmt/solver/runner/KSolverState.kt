@@ -2,7 +2,7 @@ package org.ksmt.solver.runner
 
 import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
-import org.ksmt.runner.models.generated.SolverConfigurationParam
+import org.ksmt.runner.generated.models.SolverConfigurationParam
 import org.ksmt.sort.KBoolSort
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.ConcurrentLinkedQueue

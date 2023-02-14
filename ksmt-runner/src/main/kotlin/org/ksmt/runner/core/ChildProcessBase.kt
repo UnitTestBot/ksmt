@@ -15,7 +15,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
-import org.ksmt.runner.models.generated.syncProtocolModel
+import org.ksmt.runner.generated.models.syncProtocolModel
 import org.ksmt.runner.serializer.AstSerializationCtx
 import kotlin.time.Duration
 

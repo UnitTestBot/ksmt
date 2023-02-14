@@ -1,7 +1,7 @@
 package org.ksmt.solver.runner
 
 import org.ksmt.KContext
-import org.ksmt.runner.models.generated.SolverType
+import org.ksmt.runner.generated.models.SolverType
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.KSolverUniversalConfigurationBuilder

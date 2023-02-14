@@ -2,7 +2,7 @@ package org.ksmt.runner.core
 
 import com.jetbrains.rd.framework.IProtocol
 import kotlinx.coroutines.delay
-import org.ksmt.runner.models.generated.syncProtocolModel
+import org.ksmt.runner.generated.models.syncProtocolModel
 import kotlin.time.Duration.Companion.milliseconds
 
 abstract class KsmtWorkerBase<Model>(

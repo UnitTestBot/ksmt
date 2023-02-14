@@ -7,9 +7,9 @@ import org.ksmt.runner.core.KsmtWorkerArgs
 import org.ksmt.runner.core.KsmtWorkerFactory
 import org.ksmt.runner.core.KsmtWorkerPool
 import org.ksmt.runner.core.RdServer
-import org.ksmt.runner.models.generated.CreateSolverParams
-import org.ksmt.runner.models.generated.SolverProtocolModel
-import org.ksmt.runner.models.generated.SolverType
+import org.ksmt.runner.generated.models.CreateSolverParams
+import org.ksmt.runner.generated.models.SolverProtocolModel
+import org.ksmt.runner.generated.models.SolverType
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.time.Duration.Companion.seconds

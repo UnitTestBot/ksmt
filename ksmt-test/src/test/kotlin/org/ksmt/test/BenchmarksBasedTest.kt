@@ -27,7 +27,7 @@ import org.ksmt.runner.core.KsmtWorkerFactory
 import org.ksmt.runner.core.KsmtWorkerPool
 import org.ksmt.runner.core.RdServer
 import org.ksmt.runner.core.WorkerInitializationFailedException
-import org.ksmt.runner.models.generated.TestProtocolModel
+import org.ksmt.runner.generated.models.TestProtocolModel
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverConfiguration

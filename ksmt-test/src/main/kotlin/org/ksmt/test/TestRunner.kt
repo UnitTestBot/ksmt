@@ -5,11 +5,11 @@ import kotlinx.coroutines.withTimeout
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.runner.core.KsmtWorkerSession
-import org.ksmt.runner.models.generated.EqualityCheckAssumptionsParams
-import org.ksmt.runner.models.generated.EqualityCheckParams
-import org.ksmt.runner.models.generated.TestAssertParams
-import org.ksmt.runner.models.generated.TestInternalizeAndConvertParams
-import org.ksmt.runner.models.generated.TestProtocolModel
+import org.ksmt.runner.generated.models.EqualityCheckAssumptionsParams
+import org.ksmt.runner.generated.models.EqualityCheckParams
+import org.ksmt.runner.generated.models.TestAssertParams
+import org.ksmt.runner.generated.models.TestInternalizeAndConvertParams
+import org.ksmt.runner.generated.models.TestProtocolModel
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.sort.KBoolSort
