@@ -59,20 +59,6 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
         trackVars += trackVarExpr to trackVarTerm
     }
 
-    override fun assertAndTrack(expr: KExpr<KBoolSort>): KExpr<KBoolSort> = bitwuzlaCtx.bitwuzlaTry {
-        ctx.ensureContextMatch(expr)
-
-        val trackVar = with(ctx) { boolSort.mkFreshConst("track") }
-        val trackedExpr = with(ctx) { !trackVar or expr }
-
-        assert(trackedExpr)
-
-        val trackVarTerm = with(exprInternalizer) { trackVar.internalize() }
-        trackVars += trackVar to trackVarTerm
-
-        trackVar
-    }
-
     override fun push(): Unit = bitwuzlaCtx.bitwuzlaTry {
         Native.bitwuzlaPush(bitwuzlaCtx.bitwuzla, nlevels = 1)
 
