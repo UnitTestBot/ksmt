@@ -28,7 +28,7 @@ open class KBitwuzlaModel(
     private val modelDeclarations = assertedDeclarations.toHashSet()
 
     override val declarations: Set<KDecl<*>>
-        get() = modelDeclarations
+        get() = modelDeclarations.toSet()
 
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
         ctx.ensureContextMatch(expr)
@@ -175,7 +175,7 @@ open class KBitwuzlaModel(
             uninterpretedSortUniverse(it) ?: error("missed sort universe for $it")
         }
 
-        declarations.toSet().forEach {
+        declarations.forEach {
             interpretation(it) ?: error("missed interpretation for $it")
         }
 
