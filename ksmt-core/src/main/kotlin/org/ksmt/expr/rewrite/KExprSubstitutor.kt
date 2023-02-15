@@ -91,7 +91,7 @@ open class KExprSubstitutor(ctx: KContext) : KNonRecursiveTransformer(ctx) {
             resolveQuantifierShadowedVars(quantifiedVars, body)
         }
         @Suppress("UNCHECKED_CAST")
-        return transformExprAfterTransformed(quantifiedExpr, listOf(unshadowedBody as KExpr<B>)) { (transformedBody) ->
+        return transformExprAfterTransformed(quantifiedExpr, unshadowedBody as KExpr<B>) { transformedBody ->
             unprocessedQuantifiers.remove(quantifiedExpr)
             quantifierBuilder(transformedBody, unshadowedBounds)
         }
