@@ -144,7 +144,7 @@ class SolverProtocolModel private constructor(
      * Get reason of unknown
      */
     val reasonOfUnknown: RdCall<Unit, ReasonUnknownResult> get() = _reasonOfUnknown
-    
+
     /**
      * Interrupt current check SAT
      */
@@ -286,7 +286,7 @@ data class AssertAndTrackParams (
         
         if (expression != other.expression) return false
         if (trackVar != other.trackVar) return false
-        
+
         return true
     }
     //hash code trait
