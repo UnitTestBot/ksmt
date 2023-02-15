@@ -1,17 +1,11 @@
 package org.ksmt.expr.transformer
 
-import org.ksmt.KContext
 import org.ksmt.expr.KApp
-import org.ksmt.expr.KArrayLambda
-import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.KUniversalQuantifier
-import org.ksmt.sort.KArraySort
-import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import java.util.IdentityHashMap
 
-abstract class KNonRecursiveTransformer(override val ctx: KContext) : KTransformer {
+abstract class KNonRecursiveTransformerUtil: KTransformerBase {
     private val transformed = IdentityHashMap<KExpr<*>, KExpr<*>>()
     private val exprStack = ArrayList<KExpr<*>>()
     private var exprWasTransformed = false
@@ -61,8 +55,10 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KTransform
         exprStack += expr
     }
 
-    fun addExprDependency(dependency: KExpr<*>) {
-        exprStack += dependency
+    fun transformExprDependencyIfNeeded(dependency: KExpr<*>, transformedDependency: KExpr<*>?) {
+        if (transformedDependency == null) {
+            exprStack += dependency
+        }
     }
 
     /**
@@ -71,27 +67,6 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KTransform
     fun markExpressionAsNotTransformed() {
         exprWasTransformed = false
     }
-
-    override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> =
-        transformExprAfterTransformedDefault(expr, expr.args) { transformedArgs ->
-            expr.decl.apply(transformedArgs)
-        }
-
-    override fun <D : KSort, R : KSort> transform(
-        expr: KArrayLambda<D, R>
-    ): KExpr<KArraySort<D, R>> = transformExprAfterTransformedDefault(expr, expr.body) { body ->
-        mkArrayLambda(expr.indexVarDecl, body)
-    }
-
-    override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.body) { body ->
-            mkExistentialQuantifier(body, expr.bounds)
-        }
-
-    override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.body) { body ->
-            mkUniversalQuantifier(body, expr.bounds)
-        }
 
     /**
      * [KApp] non-recursive transformation helper.
@@ -167,13 +142,8 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KTransform
         if (transformedDependency0 == null || transformedDependency1 == null) {
             retryExprTransformation(expr)
 
-            if (transformedDependency0 == null) {
-                addExprDependency(dependency0)
-            }
-
-            if (transformedDependency1 == null) {
-                addExprDependency(dependency1)
-            }
+            transformExprDependencyIfNeeded(dependency0, transformedDependency0)
+            transformExprDependencyIfNeeded(dependency1, transformedDependency1)
 
             markExpressionAsNotTransformed()
 
@@ -197,17 +167,9 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KTransform
         if (transformedDependency0 == null || transformedDependency1 == null || transformedDependency2 == null) {
             retryExprTransformation(expr)
 
-            if (transformedDependency0 == null) {
-                addExprDependency(dependency0)
-            }
-
-            if (transformedDependency1 == null) {
-                addExprDependency(dependency1)
-            }
-
-            if (transformedDependency2 == null) {
-                addExprDependency(dependency2)
-            }
+            transformExprDependencyIfNeeded(dependency0, transformedDependency0)
+            transformExprDependencyIfNeeded(dependency1, transformedDependency1)
+            transformExprDependencyIfNeeded(dependency2, transformedDependency2)
 
             markExpressionAsNotTransformed()
 
@@ -217,54 +179,32 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KTransform
         return transformer(transformedDependency0, transformedDependency1, transformedDependency2)
     }
 
-    inline fun <T : KSort, A : KSort> transformExprAfterTransformedDefault(
-        expr: KExpr<T>,
-        dependencies: List<KExpr<A>>,
-        transformer: KContext.(List<KExpr<A>>) -> KExpr<T>
-    ): KExpr<T> = transformExprAfterTransformed(expr, dependencies) { transformedDependencies ->
-        if (transformedDependencies == dependencies) return transformExpr(expr)
-
-        val transformedExpr = ctx.transformer(transformedDependencies)
-
-        return transformExpr(transformedExpr)
-    }
-
-    inline fun <T : KSort, A : KSort> transformExprAfterTransformedDefault(
-        expr: KExpr<T>,
-        dependency: KExpr<A>,
-        transformer: KContext.(KExpr<A>) -> KExpr<T>
-    ): KExpr<T> = transformExprAfterTransformed(expr, dependency) { td ->
-        if (td == dependency) return transformExpr(expr)
-
-        val transformedExpr = ctx.transformer(td)
-
-        return transformExpr(transformedExpr)
-    }
-
-    inline fun <T : KSort, A0 : KSort, A1 : KSort> transformExprAfterTransformedDefault(
-        expr: KExpr<T>,
-        dependency0: KExpr<A0>,
-        dependency1: KExpr<A1>,
-        transformer: KContext.(KExpr<A0>, KExpr<A1>) -> KExpr<T>
-    ): KExpr<T> = transformExprAfterTransformed(expr, dependency0, dependency1) { td0, td1 ->
-        if (td0 == dependency0 && td1 == dependency1) return transformExpr(expr)
-
-        val transformedExpr = ctx.transformer(td0, td1)
-
-        return transformExpr(transformedExpr)
-    }
-
-    inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> transformExprAfterTransformedDefault(
+    inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3: KSort> transformExprAfterTransformed(
         expr: KExpr<T>,
         dependency0: KExpr<A0>,
         dependency1: KExpr<A1>,
         dependency2: KExpr<A2>,
-        transformer: KContext.(KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<T>
-    ): KExpr<T> = transformExprAfterTransformed(expr, dependency0, dependency1, dependency2) { td0, td1, td2 ->
-        if (td0 == dependency0 && td1 == dependency1 && td2 == dependency2) return transformExpr(expr)
+        dependency3: KExpr<A3>,
+        transformer: (KExpr<A0>, KExpr<A1>, KExpr<A2>, KExpr<A3>) -> KExpr<T>
+    ): KExpr<T> {
+        val td0 = transformedExpr(dependency0)
+        val td1 = transformedExpr(dependency1)
+        val td2 = transformedExpr(dependency2)
+        val td3 = transformedExpr(dependency3)
 
-        val transformedExpr = ctx.transformer(td0, td1, td2)
+        if (td0 == null || td1 == null || td2 == null || td3 == null) {
+            retryExprTransformation(expr)
 
-        return transformExpr(transformedExpr)
+            transformExprDependencyIfNeeded(dependency0, td0)
+            transformExprDependencyIfNeeded(dependency1, td1)
+            transformExprDependencyIfNeeded(dependency2, td2)
+            transformExprDependencyIfNeeded(dependency3, td3)
+
+            markExpressionAsNotTransformed()
+
+            return expr
+        }
+
+        return transformer(td0, td1, td2, td3)
     }
 }
