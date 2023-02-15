@@ -8,7 +8,6 @@ import org.ksmt.KContext.SimplificationMode.NO_SIMPLIFY
 import org.ksmt.KContext.SimplificationMode.SIMPLIFY
 import org.ksmt.cache.AstInterner
 import org.ksmt.cache.KInternedObject
-import org.ksmt.cache.mkAstCache
 import org.ksmt.cache.mkAstInterner
 import org.ksmt.cache.mkCache
 import org.ksmt.decl.KAndDecl
@@ -2626,49 +2625,6 @@ open class KContext(
             ensureContextMatch(it)
             mkFreshConst("${it.name}_default_value", it)
         }
-
-    // utils
-    private val exprSortCache = mkAstCache<KExpr<*>, KSort>(operationMode, astManagementMode)
-    private fun computeExprSort(expr: KExpr<*>): KSort {
-        val exprsToComputeSorts = arrayListOf<KExpr<*>>()
-        val dependency = arrayListOf<KExpr<*>>()
-
-        expr.sortComputationExprDependency(dependency)
-
-        while (dependency.isNotEmpty()) {
-            val e = dependency.removeLast()
-
-            if (exprSortCache.get(e) != null) continue
-
-            val sizeBeforeExpand = dependency.size
-            e.sortComputationExprDependency(dependency)
-
-            if (sizeBeforeExpand != dependency.size) {
-                exprsToComputeSorts += e
-            }
-        }
-
-        exprsToComputeSorts.asReversed().forEach {
-            it.sort
-        }
-
-        return expr.computeExprSort()
-    }
-
-    /**
-     * Compute expression sort using cache.
-     * Useful for non-recursive sort computation of deeply nested expressions.
-     * See [KExpr.computeExprSort].
-     * */
-    fun <T : KSort> getExprSort(expr: KExpr<T>): T = ensureContextActive {
-        val current = exprSortCache.get(expr)
-        if (current != null) return current.uncheckedCast()
-
-        val exprSort = computeExprSort(expr)
-        exprSortCache.putIfAbsent(expr, exprSort)
-
-        exprSort.uncheckedCast()
-    }
 
     /*
     * declarations

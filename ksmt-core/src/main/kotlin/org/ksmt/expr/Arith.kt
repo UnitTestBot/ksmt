@@ -30,14 +30,7 @@ class KAddArithExpr<T : KArithSort> internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<T> = transformer.transform(this)
 
-    override val sort: T
-        get() = ctx.getExprSort(this)
-
-    override fun computeExprSort(): T = args.first().sort
-
-    override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
-        dependency += args.first()
-    }
+    override val sort: T = args.first().sort
 
     override fun internHashCode(): Int = hash(args)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { args }
@@ -56,14 +49,7 @@ class KMulArithExpr<T : KArithSort> internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<T> = transformer.transform(this)
 
-    override val sort: T
-        get() = ctx.getExprSort(this)
-
-    override fun computeExprSort(): T = args.first().sort
-
-    override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
-        dependency += args.first()
-    }
+    override val sort: T = args.first().sort
 
     override fun internHashCode(): Int = hash(args)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { args }
@@ -82,14 +68,7 @@ class KSubArithExpr<T : KArithSort> internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<T> = transformer.transform(this)
 
-    override val sort: T
-        get() = ctx.getExprSort(this)
-
-    override fun computeExprSort(): T = args.first().sort
-
-    override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
-        dependency += args.first()
-    }
+    override val sort: T = args.first().sort
 
     override fun internHashCode(): Int = hash(args)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { args }
@@ -108,14 +87,7 @@ class KUnaryMinusArithExpr<T : KArithSort> internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<T> = transformer.transform(this)
 
-    override val sort: T
-        get() = ctx.getExprSort(this)
-
-    override fun computeExprSort(): T = arg.sort
-
-    override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
-        dependency += arg
-    }
+    override val sort: T = arg.sort
 
     override fun internHashCode(): Int = hash(arg)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
@@ -135,14 +107,7 @@ class KDivArithExpr<T : KArithSort> internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<T> = transformer.transform(this)
 
-    override val sort: T
-        get() = ctx.getExprSort(this)
-
-    override fun computeExprSort(): T = lhs.sort
-
-    override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
-        dependency += lhs
-    }
+    override val sort: T = lhs.sort
 
     override fun internHashCode(): Int = hash(lhs, rhs)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
@@ -162,14 +127,7 @@ class KPowerArithExpr<T : KArithSort> internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<T> = transformer.transform(this)
 
-    override val sort: T
-        get() = ctx.getExprSort(this)
-
-    override fun computeExprSort(): T = lhs.sort
-
-    override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
-        dependency += lhs
-    }
+    override val sort: T = lhs.sort
 
     override fun internHashCode(): Int = hash(lhs, rhs)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
@@ -180,8 +138,7 @@ class KLtArithExpr<T : KArithSort> internal constructor(
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
 ) : KApp<KBoolSort, T>(ctx) {
-    override val sort: KBoolSort
-        get() = ctx.boolSort
+    override val sort: KBoolSort = ctx.boolSort
 
     override val decl: KArithLtDecl<T>
         get() = ctx.mkArithLtDecl(lhs.sort)
@@ -200,8 +157,7 @@ class KLeArithExpr<T : KArithSort> internal constructor(
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
 ) : KApp<KBoolSort, T>(ctx) {
-    override val sort: KBoolSort
-        get() = ctx.boolSort
+    override val sort: KBoolSort = ctx.boolSort
 
     override val decl: KArithLeDecl<T>
         get() = ctx.mkArithLeDecl(lhs.sort)
@@ -220,8 +176,7 @@ class KGtArithExpr<T : KArithSort> internal constructor(
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
 ) : KApp<KBoolSort, T>(ctx) {
-    override val sort: KBoolSort
-        get() = ctx.boolSort
+    override val sort: KBoolSort = ctx.boolSort
 
     override val decl: KArithGtDecl<T>
         get() = ctx.mkArithGtDecl(lhs.sort)
@@ -240,8 +195,7 @@ class KGeArithExpr<T : KArithSort> internal constructor(
     val lhs: KExpr<T>,
     val rhs: KExpr<T>
 ) : KApp<KBoolSort, T>(ctx) {
-    override val sort: KBoolSort
-        get() = ctx.boolSort
+    override val sort: KBoolSort = ctx.boolSort
 
     override val decl: KArithGeDecl<T>
         get() = ctx.mkArithGeDecl(lhs.sort)
