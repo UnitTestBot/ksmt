@@ -6,7 +6,7 @@ import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KInterpretedValue
-import org.ksmt.expr.transformer.KNonRecursiveTransformer
+import org.ksmt.expr.transformer.KNonRecursiveTransformerBase
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
@@ -15,8 +15,8 @@ import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.uncheckedCast
 
-open class KExprSimplifier(ctx: KContext) :
-    KNonRecursiveTransformer(ctx),
+open class KExprSimplifier(override val ctx: KContext) :
+    KNonRecursiveTransformerBase(),
     KExprSimplifierBase,
     KBoolExprSimplifier,
     KArithExprSimplifier,

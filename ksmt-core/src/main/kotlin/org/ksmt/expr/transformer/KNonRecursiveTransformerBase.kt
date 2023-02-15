@@ -5,28 +5,28 @@ import org.ksmt.expr.KExpr
 import org.ksmt.sort.KSort
 import java.util.IdentityHashMap
 
-abstract class KNonRecursiveTransformerUtil: KTransformerBase {
+abstract class KNonRecursiveTransformerBase: KTransformer {
     private val transformed = IdentityHashMap<KExpr<*>, KExpr<*>>()
     private val exprStack = ArrayList<KExpr<*>>()
     private var exprWasTransformed = false
 
     /**
-     * Transform [rootExpr] and all it sub-expressions non-recursively.
+     * Transform [expr] and all it sub-expressions non-recursively.
      * */
-    fun <T : KSort> apply(rootExpr: KExpr<T>): KExpr<T> {
-        transformedExpr(rootExpr) ?: exprStack.add(rootExpr)
+    override fun <T : KSort> apply(expr: KExpr<T>): KExpr<T> {
+        transformedExpr(expr) ?: exprStack.add(expr)
 
         while (exprStack.isNotEmpty()) {
-            val expr = exprStack.removeLast()
+            val e = exprStack.removeLast()
             exprWasTransformed = true
-            val transformedExpr = expr.accept(this)
+            val transformedExpr = e.accept(this)
 
             if (exprWasTransformed) {
-                transformed[expr] = transformedExpr
+                transformed[e] = transformedExpr
             }
         }
 
-        return transformedExpr(rootExpr) ?: error("expr was not properly transformed: $rootExpr")
+        return transformedExpr(expr) ?: error("expr was not properly transformed: $expr")
     }
 
     /**
