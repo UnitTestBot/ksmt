@@ -9,17 +9,18 @@ import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
+import java.util.IdentityHashMap
 
 abstract class KNonRecursiveTransformer(override val ctx: KContext) : KTransformer {
-    private val transformed = hashMapOf<KExpr<*>, KExpr<*>>()
-    private val exprStack = arrayListOf<KExpr<*>>()
+    private val transformed = IdentityHashMap<KExpr<*>, KExpr<*>>()
+    private val exprStack = ArrayList<KExpr<*>>()
     private var exprWasTransformed = false
 
     /**
      * Transform [rootExpr] and all it sub-expressions non-recursively.
      * */
     fun <T : KSort> apply(rootExpr: KExpr<T>): KExpr<T> {
-        exprStack.add(rootExpr)
+        transformedExpr(rootExpr) ?: exprStack.add(rootExpr)
 
         while (exprStack.isNotEmpty()) {
             val expr = exprStack.removeLast()
