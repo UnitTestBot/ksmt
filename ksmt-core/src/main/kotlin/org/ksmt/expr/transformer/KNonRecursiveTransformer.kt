@@ -123,6 +123,10 @@ import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 
+/**
+ * Apply specialized non-recursive transformations for all KSMT expressions.
+ * See [KNonRecursiveTransformerBase] for details.
+ * */
 abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecursiveTransformerBase(), KTransformer {
 
     override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> = transformExpr(expr)
