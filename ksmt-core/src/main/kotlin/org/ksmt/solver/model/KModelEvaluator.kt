@@ -11,7 +11,7 @@ import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector.Companion.collectUninterpretedDeclarations
 import org.ksmt.expr.rewrite.simplify.KExprSimplifier
-import org.ksmt.expr.rewrite.simplify.simplifyApp
+import org.ksmt.expr.rewrite.simplify.simplifyExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.DefaultValueSampler.Companion.sampleValue
 import org.ksmt.sort.KArraySort
@@ -31,13 +31,13 @@ open class KModelEvaluator(
     private val evaluatedFunctionArray: MutableMap<KDecl<*>, KExpr<*>> = hashMapOf()
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> =
-        simplifyApp(expr) { args ->
+        simplifyExpr(expr, expr.args) { args ->
             /**
              * Don't evaluate expr when it is quantified since
              * it is definitely not present in the model.
              * */
             if (expr.decl in quantifiedVars) {
-                return@simplifyApp expr.decl.apply(args)
+                return@simplifyExpr expr.decl.apply(args)
             }
 
             evalFunction(expr.decl, args).also { rewrite(it) }

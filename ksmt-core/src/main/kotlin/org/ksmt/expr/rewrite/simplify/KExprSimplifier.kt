@@ -25,25 +25,25 @@ open class KExprSimplifier(override val ctx: KContext) :
     KArrayExprSimplifier {
 
     @Suppress("UNCHECKED_CAST")
-    override fun <T : KSort> transform(expr: KEqExpr<T>) = simplifyApp(
-        expr = expr,
+    override fun <T : KSort> transform(expr: KEqExpr<T>) = simplifyExpr(
+        expr, expr.lhs, expr.rhs,
         preprocess = { if (expr.lhs == expr.rhs) trueExpr else expr }
-    ) { (lhs, rhs) ->
-        if (lhs == rhs) return@simplifyApp trueExpr
+    ) { lhs, rhs ->
+        if (lhs == rhs) return@simplifyExpr trueExpr
         when (lhs.sort) {
             boolSort -> simplifyEqBool(lhs.uncheckedCast(), rhs.uncheckedCast())
             intSort -> simplifyEqInt(lhs.uncheckedCast(), rhs.uncheckedCast())
-            realSort -> simplifyEqReal(lhs.uncheckedCast(), rhs .uncheckedCast())
-            is KBvSort -> simplifyEqBv(lhs as KExpr<KBvSort>, rhs.uncheckedCast() )
-            is KFpSort -> simplifyEqFp(lhs as KExpr<KFpSort>, rhs.uncheckedCast() )
+            realSort -> simplifyEqReal(lhs.uncheckedCast(), rhs.uncheckedCast())
+            is KBvSort -> simplifyEqBv(lhs as KExpr<KBvSort>, rhs.uncheckedCast())
+            is KFpSort -> simplifyEqFp(lhs as KExpr<KFpSort>, rhs.uncheckedCast())
             is KArraySort<*, *> -> simplifyEqArray(lhs as KExpr<KArraySort<KSort, KSort>>, rhs.uncheckedCast())
             is KUninterpretedSort -> simplifyEqUninterpreted(lhs.uncheckedCast(), rhs.uncheckedCast())
             else -> mkEqNoSimplify(lhs, rhs)
         }
     }
 
-    override fun <T : KSort> transform(expr: KDistinctExpr<T>) = simplifyApp(
-        expr = expr,
+    override fun <T : KSort> transform(expr: KDistinctExpr<T>) = simplifyExpr(
+        expr, expr.args,
         preprocess = {
             when (expr.args.size) {
                 0, 1 -> trueExpr
@@ -173,16 +173,95 @@ open class KExprSimplifier(override val ctx: KContext) :
     }
 }
 
+@Deprecated("use specialized simplifiers", ReplaceWith("simplifyExpr"), DeprecationLevel.ERROR)
+inline fun <T : KSort, A : KSort> KExprSimplifierBase.simplifyApp(
+    expr: KApp<T, A>,
+    preprocess: KContext.() -> KExpr<T> = { expr },
+    crossinline simplifier: KContext.(List<KExpr<A>>) -> KExpr<T>
+): KExpr<T> = simplifyExprBase(expr, { ctx.preprocess() }, {
+    transformAppAfterArgsTransformed(expr) { args -> ctx.simplifier(args) }
+})
+
+inline fun <T : KSort> KExprSimplifierBase.simplifyExpr(
+    expr: KExpr<T>,
+    preprocess: KContext.() -> KExpr<T>,
+): KExpr<T> = simplifyExprBase(
+    expr,
+    { ctx.preprocess() },
+    { error("Always preprocessed") }
+)
+
+inline fun <T : KSort, A : KSort> KExprSimplifierBase.simplifyExpr(
+    expr: KExpr<T>,
+    args: List<KExpr<A>>,
+    preprocess: KContext.() -> KExpr<T> = { expr },
+    crossinline simplifier: KContext.(List<KExpr<A>>) -> KExpr<T>
+): KExpr<T> = simplifyExprBase(
+    expr,
+    { ctx.preprocess() },
+    { transformExprAfterTransformed(expr, args) { tArgs -> ctx.simplifier(tArgs) } }
+)
+
+inline fun <T : KSort, A0 : KSort> KExprSimplifierBase.simplifyExpr(
+    expr: KExpr<T>,
+    a0: KExpr<A0>,
+    preprocess: KContext.() -> KExpr<T> = { expr },
+    crossinline simplifier: KContext.(KExpr<A0>) -> KExpr<T>
+): KExpr<T> = simplifyExprBase(
+    expr,
+    { ctx.preprocess() },
+    { transformExprAfterTransformed(expr, a0) { ta0 -> ctx.simplifier(ta0) } }
+)
+
+inline fun <T : KSort, A0 : KSort, A1 : KSort> KExprSimplifierBase.simplifyExpr(
+    expr: KExpr<T>,
+    a0: KExpr<A0>,
+    a1: KExpr<A1>,
+    preprocess: KContext.() -> KExpr<T> = { expr },
+    crossinline simplifier: KContext.(KExpr<A0>, KExpr<A1>) -> KExpr<T>
+): KExpr<T> = simplifyExprBase(
+    expr,
+    { ctx.preprocess() },
+    { transformExprAfterTransformed(expr, a0, a1) { ta0, ta1 -> ctx.simplifier(ta0, ta1) } }
+)
+
+inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> KExprSimplifierBase.simplifyExpr(
+    expr: KExpr<T>,
+    a0: KExpr<A0>,
+    a1: KExpr<A1>,
+    a2: KExpr<A2>,
+    preprocess: KContext.() -> KExpr<T> = { expr },
+    crossinline simplifier: KContext.(KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<T>
+): KExpr<T> = simplifyExprBase(
+    expr,
+    { ctx.preprocess() },
+    { transformExprAfterTransformed(expr, a0, a1, a2) { ta0, ta1, ta2 -> ctx.simplifier(ta0, ta1, ta2) } }
+)
+
+inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort> KExprSimplifierBase.simplifyExpr(
+    expr: KExpr<T>,
+    a0: KExpr<A0>,
+    a1: KExpr<A1>,
+    a2: KExpr<A2>,
+    a3: KExpr<A3>,
+    preprocess: KContext.() -> KExpr<T> = { expr },
+    crossinline simplifier: KContext.(KExpr<A0>, KExpr<A1>, KExpr<A2>, KExpr<A3>) -> KExpr<T>
+): KExpr<T> = simplifyExprBase(
+    expr,
+    { ctx.preprocess() },
+    { transformExprAfterTransformed(expr, a0, a1, a2, a3) { ta0, ta1, ta2, ta3 -> ctx.simplifier(ta0, ta1, ta2, ta3) } }
+)
+
 /**
  * Simplify an expression.
  * 1. Preprocess. Rewrite an expression before simplification of an arguments (top-down).
  * 2. Simplify. Rewrite an expression after arguments simplification (bottom-up).
  * 3. Post rewrite. Perform a simplification of a simplification result.
  * */
-inline fun <T : KSort, A : KSort> KExprSimplifierBase.simplifyApp(
-    expr: KApp<T, A>,
-    preprocess: KContext.() -> KExpr<T> = { expr },
-    crossinline simplifier: KContext.(List<KExpr<A>>) -> KExpr<T>
+inline fun <T : KSort> KExprSimplifierBase.simplifyExprBase(
+    expr: KExpr<T>,
+    preprocess: KExprSimplifier.() -> KExpr<T>,
+    simplify: KExprSimplifier.() -> KExpr<T>
 ): KExpr<T> {
     this as KExprSimplifier
 
@@ -198,7 +277,7 @@ inline fun <T : KSort, A : KSort> KExprSimplifierBase.simplifyApp(
 
     enablePostRewrite()
 
-    val preprocessed = ctx.preprocess()
+    val preprocessed = preprocess()
     if (preprocessed != expr) {
         /**
          * Expression has been rewritten to another expression [preprocessed].
@@ -211,7 +290,7 @@ inline fun <T : KSort, A : KSort> KExprSimplifierBase.simplifyApp(
     disablePostRewrite()
 
     // Simplify
-    val transformed = transformAppAfterArgsTransformed(expr) { args -> ctx.simplifier(args) }
+    val transformed = simplify()
 
     if (transformed != expr && postRewriteEnabled()) {
         /**

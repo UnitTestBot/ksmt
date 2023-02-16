@@ -1,7 +1,5 @@
 package org.ksmt.expr.rewrite.simplify
 
-import org.ksmt.KContext
-import org.ksmt.expr.KApp
 import org.ksmt.expr.KBvToFpExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpAbsExpr
@@ -37,12 +35,9 @@ import org.ksmt.expr.KFpValue
 import org.ksmt.expr.KRealToFpExpr
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
-import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
-import org.ksmt.sort.KSort
 import org.ksmt.utils.FpUtils.fpStructurallyEqual
-import org.ksmt.utils.uncheckedCast
 
 @Suppress("ForbiddenComment")
 interface KFpExprSimplifier : KExprSimplifierBase {
@@ -68,190 +63,162 @@ interface KFpExprSimplifier : KExprSimplifierBase {
         return false
     }
 
-    override fun <T : KFpSort> transform(expr: KFpAbsExpr<T>): KExpr<T> = simplifyApp(expr) { (arg) ->
+    override fun <T : KFpSort> transform(expr: KFpAbsExpr<T>): KExpr<T> = simplifyExpr(expr, expr.value) { arg ->
         simplifyFpAbsExpr(arg)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpNegationExpr<T>): KExpr<T> = simplifyApp(expr) { (arg) ->
+    override fun <T : KFpSort> transform(expr: KFpNegationExpr<T>): KExpr<T> = simplifyExpr(expr, expr.value) { arg ->
         simplifyFpNegationExpr(arg)
     }
 
-    override fun <T : KFpSort> transform(expr: KFpAddExpr<T>): KExpr<T> = expr.simplifyFpBinaryOp { rm, lhs, rhs ->
-        simplifyFpAddExpr(rm, lhs, rhs)
-    }
+    override fun <T : KFpSort> transform(expr: KFpAddExpr<T>): KExpr<T> =
+        simplifyExpr(expr, expr.roundingMode, expr.arg0, expr.arg1) { rm, lhs, rhs ->
+            simplifyFpAddExpr(rm, lhs, rhs)
+        }
 
     // a - b ==> a + (-b)
     override fun <T : KFpSort> transform(expr: KFpSubExpr<T>): KExpr<T> =
-        simplifyApp(
+        simplifyExpr(
             expr = expr,
             preprocess = {
                 KFpAddExpr(this, expr.roundingMode, expr.arg0, KFpNegationExpr(this, expr.arg1))
             }
-        ) {
-            error("Always preprocessed")
+        )
+
+    override fun <T : KFpSort> transform(expr: KFpMulExpr<T>): KExpr<T> =
+        simplifyExpr(expr, expr.roundingMode, expr.arg0, expr.arg1) { rm, lhs, rhs ->
+            simplifyFpMulExpr(rm, lhs, rhs)
         }
 
-    override fun <T : KFpSort> transform(expr: KFpMulExpr<T>): KExpr<T> = expr.simplifyFpBinaryOp { rm, lhs, rhs ->
-        simplifyFpMulExpr(rm, lhs, rhs)
-    }
-
-    override fun <T : KFpSort> transform(expr: KFpDivExpr<T>): KExpr<T> = expr.simplifyFpBinaryOp { rm, lhs, rhs ->
-        simplifyFpDivExpr(rm, lhs, rhs)
-    }
+    override fun <T : KFpSort> transform(expr: KFpDivExpr<T>): KExpr<T> =
+        simplifyExpr(expr, expr.roundingMode, expr.arg0, expr.arg1) { rm, lhs, rhs ->
+            simplifyFpDivExpr(rm, lhs, rhs)
+        }
 
     override fun <T : KFpSort> transform(expr: KFpFusedMulAddExpr<T>): KExpr<T> =
-        expr.simplifyFpTernaryOp { rm, a0, a1, a2 ->
+        simplifyExpr(expr, expr.roundingMode, expr.arg0, expr.arg1, expr.arg2) { rm, a0, a1, a2 ->
             simplifyFpFusedMulAddExpr(rm, a0, a1, a2)
         }
 
     override fun <T : KFpSort> transform(expr: KFpSqrtExpr<T>): KExpr<T> =
-        expr.simplifyFpUnaryOp { rm, arg ->
-            simplifyFpSqrtExpr(rm, arg)
+        simplifyExpr(expr, expr.roundingMode, expr.value) { rm, value ->
+            simplifyFpSqrtExpr(rm, value)
         }
 
     override fun <T : KFpSort> transform(expr: KFpRoundToIntegralExpr<T>): KExpr<T> =
-        expr.simplifyFpUnaryOp { rm, arg ->
-            simplifyFpRoundToIntegralExpr(rm, arg)
+        simplifyExpr(expr, expr.roundingMode, expr.value) { rm, value ->
+            simplifyFpRoundToIntegralExpr(rm, value)
         }
 
-    override fun <T : KFpSort> transform(expr: KFpRemExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
-        simplifyFpRemExpr(lhs, rhs)
-    }
+    override fun <T : KFpSort> transform(expr: KFpRemExpr<T>): KExpr<T> =
+        simplifyExpr(expr, expr.arg0, expr.arg1) { lhs, rhs ->
+            simplifyFpRemExpr(lhs, rhs)
+        }
 
-    override fun <T : KFpSort> transform(expr: KFpMinExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
-        simplifyFpMinExpr(lhs, rhs)
-    }
+    override fun <T : KFpSort> transform(expr: KFpMinExpr<T>): KExpr<T> =
+        simplifyExpr(expr, expr.arg0, expr.arg1) { lhs, rhs ->
+            simplifyFpMinExpr(lhs, rhs)
+        }
 
-    override fun <T : KFpSort> transform(expr: KFpMaxExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
-        simplifyFpMaxExpr(lhs, rhs)
-    }
+    override fun <T : KFpSort> transform(expr: KFpMaxExpr<T>): KExpr<T> =
+        simplifyExpr(expr, expr.arg0, expr.arg1) { lhs, rhs ->
+            simplifyFpMaxExpr(lhs, rhs)
+        }
 
     override fun <T : KFpSort> transform(expr: KFpLessOrEqualExpr<T>): KExpr<KBoolSort> =
-        simplifyApp(expr) { (lhs, rhs) ->
+        simplifyExpr(expr, expr.arg0, expr.arg1) { lhs, rhs ->
             simplifyFpLessOrEqualExpr(lhs, rhs)
         }
 
     override fun <T : KFpSort> transform(expr: KFpLessExpr<T>): KExpr<KBoolSort> =
-        simplifyApp(expr) { (lhs, rhs) ->
+        simplifyExpr(expr, expr.arg0, expr.arg1) { lhs, rhs ->
             simplifyFpLessExpr(lhs, rhs)
         }
 
     override fun <T : KFpSort> transform(expr: KFpGreaterOrEqualExpr<T>): KExpr<KBoolSort> =
-        simplifyApp(
+        simplifyExpr(
             expr = expr,
             preprocess = { KFpLessOrEqualExpr(this, expr.arg1, expr.arg0) }
-        ) {
-            error("Always preprocessed")
-        }
+        )
 
     override fun <T : KFpSort> transform(expr: KFpGreaterExpr<T>): KExpr<KBoolSort> =
-        simplifyApp(
+        simplifyExpr(
             expr = expr,
             preprocess = { KFpLessExpr(this, expr.arg1, expr.arg0) }
-        ) {
-            error("Always preprocessed")
-        }
+        )
 
     override fun <T : KFpSort> transform(expr: KFpEqualExpr<T>): KExpr<KBoolSort> =
-        simplifyApp(expr) { (lhs, rhs) ->
+        simplifyExpr(expr, expr.arg0, expr.arg1) { lhs, rhs ->
             simplifyFpEqualExpr(lhs, rhs)
         }
 
     override fun <T : KFpSort> transform(expr: KFpIsNormalExpr<T>): KExpr<KBoolSort> =
-        simplifyApp(expr) { (arg) ->
+        simplifyExpr(expr, expr.value) { arg ->
             simplifyFpIsNormalExpr(arg)
         }
 
     override fun <T : KFpSort> transform(expr: KFpIsSubnormalExpr<T>): KExpr<KBoolSort> =
-        simplifyApp(expr) { (arg) ->
+        simplifyExpr(expr, expr.value) { arg ->
             simplifyFpIsSubnormalExpr(arg)
         }
 
     override fun <T : KFpSort> transform(expr: KFpIsZeroExpr<T>): KExpr<KBoolSort> =
-        simplifyApp(expr) { (arg) ->
+        simplifyExpr(expr, expr.value) { arg ->
             simplifyFpIsZeroExpr(arg)
         }
 
     override fun <T : KFpSort> transform(expr: KFpIsInfiniteExpr<T>): KExpr<KBoolSort> =
-        simplifyApp(expr) { (arg) ->
+        simplifyExpr(expr, expr.value) { arg ->
             simplifyFpIsInfiniteExpr(arg)
         }
 
     override fun <T : KFpSort> transform(expr: KFpIsNaNExpr<T>): KExpr<KBoolSort> =
-        simplifyApp(expr) { (arg) ->
+        simplifyExpr(expr, expr.value) { arg ->
             simplifyFpIsNaNExpr(arg)
         }
 
     override fun <T : KFpSort> transform(expr: KFpIsNegativeExpr<T>): KExpr<KBoolSort> =
-        simplifyApp(expr) { (arg) ->
+        simplifyExpr(expr, expr.value) { arg ->
             simplifyFpIsNegativeExpr(arg)
         }
 
     override fun <T : KFpSort> transform(expr: KFpIsPositiveExpr<T>): KExpr<KBoolSort> =
-        simplifyApp(expr) { (arg) ->
+        simplifyExpr(expr, expr.value) { arg ->
             simplifyFpIsPositiveExpr(arg)
         }
 
     override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> =
-        simplifyApp(expr) { (sign, exp, significand) ->
-            simplifyFpFromBvExpr(sign.uncheckedCast(), exp, significand)
+        simplifyExpr(expr, expr.sign, expr.biasedExponent, expr.significand) { sign, exp, significand ->
+            simplifyFpFromBvExpr(sign, exp, significand)
         }
 
-    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> = simplifyApp(expr) { (arg) ->
-        simplifyFpToIEEEBvExpr(arg)
-    }
+    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> =
+        simplifyExpr(expr, expr.value) { arg ->
+            simplifyFpToIEEEBvExpr(arg)
+        }
 
     override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> =
-        simplifyApp(expr) { (rmArg, valueArg) ->
-            val rm: KExpr<KFpRoundingModeSort> = rmArg.uncheckedCast()
-            val value: KExpr<KFpSort> = valueArg.uncheckedCast()
-
+        simplifyExpr(expr, expr.roundingMode, expr.value) { rm, value ->
             simplifyFpToFpExpr(expr.sort, rm, value)
         }
 
     override fun <T : KFpSort> transform(expr: KRealToFpExpr<T>): KExpr<T> =
-        simplifyApp(expr) { (rmArg, valueArg) ->
-            val rm: KExpr<KFpRoundingModeSort> = rmArg.uncheckedCast()
-            val value: KExpr<KRealSort> = valueArg.uncheckedCast()
-
+        simplifyExpr(expr, expr.roundingMode, expr.value) { rm, value ->
             simplifyRealToFpExpr(expr.sort, rm, value)
         }
 
-    override fun <T : KFpSort> transform(expr: KFpToRealExpr<T>): KExpr<KRealSort> = simplifyApp(expr) { (arg) ->
-        simplifyFpToRealExpr(arg)
-    }
+    override fun <T : KFpSort> transform(expr: KFpToRealExpr<T>): KExpr<KRealSort> =
+        simplifyExpr(expr, expr.value) { arg ->
+            simplifyFpToRealExpr(arg)
+        }
 
     override fun <T : KFpSort> transform(expr: KBvToFpExpr<T>): KExpr<T> =
-        simplifyApp(expr) { (rmArg, bvValueArg) ->
-            val rm: KExpr<KFpRoundingModeSort> = rmArg.uncheckedCast()
-            val value: KExpr<KBvSort> = bvValueArg.uncheckedCast()
-
+        simplifyExpr(expr, expr.roundingMode, expr.value) { rm, value ->
             simplifyBvToFpExpr(expr.sort, rm, value, expr.signed)
         }
 
     override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>): KExpr<KBvSort> =
-        simplifyApp(expr) { (rmArg, valueArg) ->
-            val rm: KExpr<KFpRoundingModeSort> = rmArg.uncheckedCast()
-            val value: KExpr<T> = valueArg.uncheckedCast()
-
+        simplifyExpr(expr, expr.roundingMode, expr.value) { rm, value ->
             simplifyFpToBvExpr(rm, value, expr.bvSize, expr.isSigned)
         }
-
-    private inline fun <T : KFpSort> KApp<T, KSort>.simplifyFpUnaryOp(
-        crossinline simplifier: KContext.(KExpr<KFpRoundingModeSort>, KExpr<T>) -> KExpr<T>
-    ): KExpr<T> = simplifyApp(this) { (rm, value) ->
-        simplifier(ctx, rm.uncheckedCast(), value.uncheckedCast())
-    }
-
-    private inline fun <T : KFpSort> KApp<T, KSort>.simplifyFpBinaryOp(
-        crossinline simplifier: KContext.(KExpr<KFpRoundingModeSort>, KExpr<T>, KExpr<T>) -> KExpr<T>
-    ): KExpr<T> = simplifyApp(this) { (rm, lhs, rhs) ->
-        simplifier(ctx, rm.uncheckedCast(), lhs.uncheckedCast(), rhs.uncheckedCast())
-    }
-
-    private inline fun <T : KFpSort> KApp<T, KSort>.simplifyFpTernaryOp(
-        crossinline simplifier: KContext.(KExpr<KFpRoundingModeSort>, KExpr<T>, KExpr<T>, KExpr<T>) -> KExpr<T>
-    ): KExpr<T> = simplifyApp(this) { (rm, a0, a1, a2) ->
-        simplifier(ctx, rm.uncheckedCast(), a0.uncheckedCast(), a1.uncheckedCast(), a2.uncheckedCast())
-    }
 }

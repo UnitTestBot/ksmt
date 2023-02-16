@@ -62,35 +62,35 @@ interface KArithExprSimplifier : KExprSimplifierBase {
     }
 
     override fun <T : KArithSort> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> =
-        simplifyApp(expr) { (lhs, rhs) ->
+        simplifyExpr(expr, expr.lhs, expr.rhs) { lhs, rhs ->
             simplifyArithLt(lhs, rhs)
         }
 
     override fun <T : KArithSort> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> =
-        simplifyApp(expr) { (lhs, rhs) ->
+        simplifyExpr(expr, expr.lhs, expr.rhs) { lhs, rhs ->
             simplifyArithLe(lhs, rhs)
         }
 
     override fun <T : KArithSort> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> =
-        simplifyApp(expr) { (lhs, rhs) ->
+        simplifyExpr(expr, expr.lhs, expr.rhs) { lhs, rhs ->
             simplifyArithGt(lhs, rhs)
         }
 
     override fun <T : KArithSort> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> =
-        simplifyApp(expr) { (lhs, rhs) ->
+        simplifyExpr(expr, expr.lhs, expr.rhs) { lhs, rhs ->
             simplifyArithGe(lhs, rhs)
         }
 
-    override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> = simplifyApp(expr) { args ->
+    override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> = simplifyExpr(expr, expr.args) { args ->
         simplifyArithAdd(args)
     }
 
-    override fun <T : KArithSort> transform(expr: KMulArithExpr<T>): KExpr<T> = simplifyApp(expr) { args ->
+    override fun <T : KArithSort> transform(expr: KMulArithExpr<T>): KExpr<T> = simplifyExpr(expr, expr.args) { args ->
         simplifyArithMul(args)
     }
 
     override fun <T : KArithSort> transform(expr: KSubArithExpr<T>): KExpr<T> =
-        simplifyApp(
+        simplifyExpr(
             expr = expr,
             preprocess = {
                 val args = expr.args
@@ -104,40 +104,40 @@ interface KArithExprSimplifier : KExprSimplifierBase {
                     KAddArithExpr(this, simplifiedArgs)
                 }
             }
-        ) {
-            error("Always preprocessed")
+        )
+
+    override fun <T : KArithSort> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> =
+        simplifyExpr(expr, expr.arg) { arg ->
+            simplifyArithUnaryMinus(arg)
         }
 
-    override fun <T : KArithSort> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> = simplifyApp(expr) { (arg) ->
-        simplifyArithUnaryMinus(arg)
-    }
-
-    override fun <T : KArithSort> transform(expr: KDivArithExpr<T>): KExpr<T> = simplifyApp(expr) { (lhs, rhs) ->
-        simplifyArithDiv(lhs, rhs)
-    }
+    override fun <T : KArithSort> transform(expr: KDivArithExpr<T>): KExpr<T> =
+        simplifyExpr(expr, expr.lhs, expr.rhs) { lhs, rhs ->
+            simplifyArithDiv(lhs, rhs)
+        }
 
     override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>): KExpr<T> =
-        simplifyApp(expr) { (base, power) ->
+        simplifyExpr(expr, expr.lhs, expr.rhs) { base, power ->
             simplifyArithPower(base, power)
         }
 
-    override fun transform(expr: KModIntExpr): KExpr<KIntSort> = simplifyApp(expr) { (lhs, rhs) ->
+    override fun transform(expr: KModIntExpr): KExpr<KIntSort> = simplifyExpr(expr, expr.lhs, expr.rhs) { lhs, rhs ->
         simplifyIntMod(lhs, rhs)
     }
 
-    override fun transform(expr: KRemIntExpr): KExpr<KIntSort> = simplifyApp(expr) { (lhs, rhs) ->
+    override fun transform(expr: KRemIntExpr): KExpr<KIntSort> = simplifyExpr(expr, expr.lhs, expr.rhs) { lhs, rhs ->
         simplifyIntRem(lhs, rhs)
     }
 
-    override fun transform(expr: KToIntRealExpr): KExpr<KIntSort> = simplifyApp(expr) { (arg) ->
+    override fun transform(expr: KToIntRealExpr): KExpr<KIntSort> = simplifyExpr(expr, expr.arg) { arg ->
         simplifyRealToInt(arg)
     }
 
-    override fun transform(expr: KIsIntRealExpr): KExpr<KBoolSort> = simplifyApp(expr) { (arg) ->
+    override fun transform(expr: KIsIntRealExpr): KExpr<KBoolSort> = simplifyExpr(expr, expr.arg) { arg ->
         simplifyRealIsInt(arg)
     }
 
-    override fun transform(expr: KToRealIntExpr): KExpr<KRealSort> = simplifyApp(expr) { (arg) ->
+    override fun transform(expr: KToRealIntExpr): KExpr<KRealSort> = simplifyExpr(expr, expr.arg) { arg ->
         simplifyIntToReal(arg)
     }
 }
