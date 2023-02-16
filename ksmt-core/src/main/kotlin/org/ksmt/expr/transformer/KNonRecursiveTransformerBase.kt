@@ -14,8 +14,12 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
      * Transform [expr] and all it sub-expressions non-recursively.
      * */
     override fun <T : KSort> apply(expr: KExpr<T>): KExpr<T> {
-        transformedExpr(expr) ?: exprStack.add(expr)
+        val cachedExpr = transformedExpr(expr)
+        if (cachedExpr != null) {
+            return cachedExpr
+        }
 
+        exprStack.add(expr)
         while (exprStack.isNotEmpty()) {
             val e = exprStack.removeLast()
             exprWasTransformed = true
