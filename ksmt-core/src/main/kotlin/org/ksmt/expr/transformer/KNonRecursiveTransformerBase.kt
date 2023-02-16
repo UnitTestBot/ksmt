@@ -89,8 +89,8 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
         dependencies: List<KExpr<A>>,
         transformer: (List<KExpr<A>>) -> KExpr<T>
     ): KExpr<T> {
-        val transformedDependencies = mutableListOf<KExpr<A>>()
-        val notTransformedDependencies = mutableListOf<KExpr<A>>()
+        val transformedDependencies = ArrayList<KExpr<A>>(dependencies.size)
+        val notTransformedDependencies = ArrayList<KExpr<A>>(dependencies.size)
 
         for (dependency in dependencies) {
             val transformedDependency = transformedExpr(dependency)
