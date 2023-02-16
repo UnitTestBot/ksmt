@@ -34,6 +34,12 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
     }
 
     /**
+     * Disable [KTransformer] transformApp implementation since it is incorrect
+     * for non-recursive usage.
+     * */
+    abstract override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T>
+
+    /**
      *  Get [expr] transformation result or
      *  null if expression was not transformed yet
      * */

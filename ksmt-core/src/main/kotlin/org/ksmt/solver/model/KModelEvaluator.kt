@@ -77,17 +77,17 @@ open class KModelEvaluator(
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> =
         transformQuantifiedExpression(setOf(expr.indexVarDecl), expr.body) { body ->
-            ctx.mkArrayLambda(expr.indexVarDecl, body)
+            ctx.simplifyArrayLambda(expr.indexVarDecl, body)
         }
 
     override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> =
         transformQuantifiedExpression(expr.bounds.toSet(), expr.body) { body ->
-            ctx.mkExistentialQuantifier(body, expr.bounds)
+            ctx.simplifyExistentialQuantifier(expr.bounds, body)
         }
 
     override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> =
         transformQuantifiedExpression(expr.bounds.toSet(), expr.body) { body ->
-            ctx.mkUniversalQuantifier(body, expr.bounds)
+            ctx.simplifyUniversalQuantifier(expr.bounds, body)
         }
 
     private inline fun <B : KSort, T: KSort> transformQuantifiedExpression(

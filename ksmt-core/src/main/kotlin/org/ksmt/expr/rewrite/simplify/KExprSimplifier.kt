@@ -1,11 +1,16 @@
 package org.ksmt.expr.rewrite.simplify
 
 import org.ksmt.KContext
+import org.ksmt.decl.KDecl
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KArrayLambda
 import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KEqExpr
+import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KInterpretedValue
+import org.ksmt.expr.KUniversalQuantifier
+import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector
 import org.ksmt.expr.transformer.KNonRecursiveTransformerBase
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
@@ -94,6 +99,86 @@ open class KExprSimplifier(override val ctx: KContext) :
             is KUninterpretedSort -> areDefinitelyDistinctUninterpreted(lhs.uncheckedCast(), rhs.uncheckedCast())
             else -> false
         }
+    }
+
+    // Interpreted values can't be simplified.
+    override fun <T : KSort> transformValue(expr: KInterpretedValue<T>): KExpr<T> = expr
+
+    override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> =
+        simplifyExpr(expr, expr.args) { args ->
+            expr.decl.apply(args)
+        }
+
+    // quantified expressions
+    override fun <D : KSort, R : KSort> transform(
+        expr: KArrayLambda<D, R>
+    ): KExpr<KArraySort<D, R>> = simplifyExpr(expr, expr.body) { body ->
+        simplifyArrayLambda(expr.indexVarDecl, body)
+    }
+
+    override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> =
+        simplifyExpr(expr, expr.body) { body ->
+            simplifyExistentialQuantifier(expr.bounds, body)
+        }
+
+    override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> =
+        simplifyExpr(expr, expr.body) { body ->
+            simplifyUniversalQuantifier(expr.bounds, body)
+        }
+
+    fun <D : KSort, R : KSort> KContext.simplifyArrayLambda(
+        bound: KDecl<D>,
+        simplifiedBody: KExpr<R>
+    ): KExpr<KArraySort<D, R>> = simplifyQuantifier(
+        bounds = listOf(element = bound),
+        simplifiedBody = simplifiedBody,
+        eliminateQuantifier = { body ->
+            val sort = mkArraySort(bound.sort, body.sort)
+            mkArrayConst(sort, body)
+        },
+        buildQuantifier = { _, body -> mkArrayLambda(bound, body) }
+    )
+
+    fun KContext.simplifyExistentialQuantifier(
+        bounds: List<KDecl<*>>,
+        simplifiedBody: KExpr<KBoolSort>
+    ): KExpr<KBoolSort> = simplifyQuantifier(
+        bounds = bounds,
+        simplifiedBody = simplifiedBody,
+        eliminateQuantifier = { body -> body },
+        buildQuantifier = { simplifiedBounds, body -> mkExistentialQuantifier(body, simplifiedBounds) }
+    )
+
+    fun KContext.simplifyUniversalQuantifier(
+        bounds: List<KDecl<*>>,
+        simplifiedBody: KExpr<KBoolSort>
+    ): KExpr<KBoolSort> = simplifyQuantifier(
+        bounds = bounds,
+        simplifiedBody = simplifiedBody,
+        eliminateQuantifier = { body -> body },
+        buildQuantifier = { simplifiedBounds, body -> mkUniversalQuantifier(body, simplifiedBounds) }
+    )
+
+    inline fun <B : KSort, Q : KSort> simplifyQuantifier(
+        bounds: List<KDecl<*>>,
+        simplifiedBody: KExpr<B>,
+        eliminateQuantifier: (KExpr<B>) -> KExpr<Q>,
+        buildQuantifier: (List<KDecl<*>>, KExpr<B>) -> KExpr<Q>
+    ): KExpr<Q> {
+        // Value definitely doesn't contains bound vars
+        if (simplifiedBody is KInterpretedValue<B>) {
+            return eliminateQuantifier(simplifiedBody)
+        }
+
+        val usedVars = KExprUninterpretedDeclCollector.collectUninterpretedDeclarations(simplifiedBody)
+        val usedBounds = bounds.intersect(usedVars)
+
+        // Body doesn't depends on bound vars
+        if (usedBounds.isEmpty()) {
+            return eliminateQuantifier(simplifiedBody)
+        }
+
+        return buildQuantifier(usedBounds.toList(), simplifiedBody)
     }
 
     open fun simplifyEqUninterpreted(
