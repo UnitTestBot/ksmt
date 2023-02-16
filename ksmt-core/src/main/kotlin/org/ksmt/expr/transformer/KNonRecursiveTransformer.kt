@@ -229,22 +229,34 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         transformExprAfterTransformedDefault(expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvSignedLessExpr)
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedLessOrEqualExpr<T>): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvUnsignedLessOrEqualExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvUnsignedLessOrEqualExpr
+        )
 
     override fun <T : KBvSort> transform(expr: KBvSignedLessOrEqualExpr<T>): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvSignedLessOrEqualExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvSignedLessOrEqualExpr
+        )
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterOrEqualExpr<T>): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvUnsignedGreaterOrEqualExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvUnsignedGreaterOrEqualExpr
+        )
 
     override fun <T : KBvSort> transform(expr: KBvSignedGreaterOrEqualExpr<T>): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvSignedGreaterOrEqualExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvSignedGreaterOrEqualExpr
+        )
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterExpr<T>): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvUnsignedGreaterExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvUnsignedGreaterExpr
+        )
 
     override fun <T : KBvSort> transform(expr: KBvSignedGreaterExpr<T>): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvSignedGreaterExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvSignedGreaterExpr
+        )
 
     override fun transform(expr: KBvConcatExpr): KExpr<KBvSort> =
         transformExprAfterTransformedDefault(expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvConcatExpr)
@@ -273,13 +285,19 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         transformExprAfterTransformedDefault(expr, expr.arg, expr.shift, ::transformApp, KContext::mkBvShiftLeftExpr)
 
     override fun <T : KBvSort> transform(expr: KBvLogicalShiftRightExpr<T>): KExpr<T> =
-        transformExprAfterTransformedDefault(expr, expr.arg, expr.shift, ::transformApp, KContext::mkBvLogicalShiftRightExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.arg, expr.shift, ::transformApp, KContext::mkBvLogicalShiftRightExpr
+        )
 
     override fun <T : KBvSort> transform(expr: KBvArithShiftRightExpr<T>): KExpr<T> =
-        transformExprAfterTransformedDefault(expr, expr.arg, expr.shift, ::transformApp, KContext::mkBvArithShiftRightExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.arg, expr.shift, ::transformApp, KContext::mkBvArithShiftRightExpr
+        )
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>): KExpr<T> =
-        transformExprAfterTransformedDefault(expr, expr.arg, expr.rotation, ::transformApp, KContext::mkBvRotateLeftExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.arg, expr.rotation, ::transformApp, KContext::mkBvRotateLeftExpr
+        )
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftIndexedExpr<T>): KExpr<T> =
         transformExprAfterTransformedDefault(expr, expr.value, ::transformApp) { value ->
@@ -287,7 +305,9 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         }
 
     override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>): KExpr<T> =
-        transformExprAfterTransformedDefault(expr, expr.arg, expr.rotation, ::transformApp, KContext::mkBvRotateRightExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.arg, expr.rotation, ::transformApp, KContext::mkBvRotateRightExpr
+        )
 
     override fun <T : KBvSort> transform(expr: KBvRotateRightIndexedExpr<T>): KExpr<T> =
         transformExprAfterTransformedDefault(expr, expr.value, ::transformApp) { value ->
@@ -305,10 +325,14 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         }
 
     override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvAddNoUnderflowExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvAddNoUnderflowExpr
+        )
 
     override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvSubNoOverflowExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvSubNoOverflowExpr
+        )
 
     override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>): KExpr<KBoolSort> =
         transformExprAfterTransformedDefault(expr, expr.arg0, expr.arg1, ::transformApp) { arg0, arg1 ->
@@ -316,7 +340,9 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         }
 
     override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvDivNoOverflowExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvDivNoOverflowExpr
+        )
 
     override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>): KExpr<KBoolSort> =
         transformExprAfterTransformedDefault(expr, expr.value, ::transformApp, KContext::mkBvNegationNoOverflowExpr)
@@ -327,7 +353,9 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         }
 
     override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvMulNoUnderflowExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkBvMulNoUnderflowExpr
+        )
 
     // fp operations tranformation
     override fun <T : KFpSort> transform(expr: KFpAbsExpr<T>): KExpr<T> =
@@ -337,28 +365,42 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         transformExprAfterTransformedDefault(expr, expr.value, ::transformApp, KContext::mkFpNegationExpr)
 
     override fun <T : KFpSort> transform(expr: KFpAddExpr<T>): KExpr<T> =
-        transformExprAfterTransformedDefault(expr, expr.roundingMode, expr.arg0, expr.arg1, ::transformApp, KContext::mkFpAddExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.roundingMode, expr.arg0, expr.arg1, ::transformApp, KContext::mkFpAddExpr
+        )
 
     override fun <T : KFpSort> transform(expr: KFpSubExpr<T>): KExpr<T> =
-        transformExprAfterTransformedDefault(expr, expr.roundingMode, expr.arg0, expr.arg1, ::transformApp, KContext::mkFpSubExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.roundingMode, expr.arg0, expr.arg1, ::transformApp, KContext::mkFpSubExpr
+        )
 
     override fun <T : KFpSort> transform(expr: KFpMulExpr<T>): KExpr<T> =
-        transformExprAfterTransformedDefault(expr, expr.roundingMode, expr.arg0, expr.arg1, ::transformApp, KContext::mkFpMulExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.roundingMode, expr.arg0, expr.arg1, ::transformApp, KContext::mkFpMulExpr
+        )
 
     override fun <T : KFpSort> transform(expr: KFpDivExpr<T>): KExpr<T> =
-        transformExprAfterTransformedDefault(expr, expr.roundingMode, expr.arg0, expr.arg1, ::transformApp, KContext::mkFpDivExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.roundingMode, expr.arg0, expr.arg1, ::transformApp, KContext::mkFpDivExpr
+        )
 
     override fun <T : KFpSort> transform(expr: KFpFusedMulAddExpr<T>): KExpr<T> =
-        transformExprAfterTransformedDefault(expr, expr.roundingMode, expr.arg0, expr.arg1, expr.arg2, ::transformApp, KContext::mkFpFusedMulAddExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.roundingMode, expr.arg0, expr.arg1, expr.arg2, ::transformApp, KContext::mkFpFusedMulAddExpr
+        )
 
     override fun <T : KFpSort> transform(expr: KFpSqrtExpr<T>): KExpr<T> =
-        transformExprAfterTransformedDefault(expr, expr.roundingMode, expr.value, ::transformApp, KContext::mkFpSqrtExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.roundingMode, expr.value, ::transformApp, KContext::mkFpSqrtExpr
+        )
 
     override fun <T : KFpSort> transform(expr: KFpRemExpr<T>): KExpr<T> =
         transformExprAfterTransformedDefault(expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkFpRemExpr)
 
     override fun <T : KFpSort> transform(expr: KFpRoundToIntegralExpr<T>): KExpr<T> =
-        transformExprAfterTransformedDefault(expr, expr.roundingMode, expr.value, ::transformApp, KContext::mkFpRoundToIntegralExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.roundingMode, expr.value, ::transformApp, KContext::mkFpRoundToIntegralExpr
+        )
 
     override fun <T : KFpSort> transform(expr: KFpMinExpr<T>): KExpr<T> =
         transformExprAfterTransformedDefault(expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkFpMinExpr)
@@ -373,7 +415,9 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         transformExprAfterTransformedDefault(expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkFpLessExpr)
 
     override fun <T : KFpSort> transform(expr: KFpGreaterOrEqualExpr<T>): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkFpGreaterOrEqualExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkFpGreaterOrEqualExpr
+        )
 
     override fun <T : KFpSort> transform(expr: KFpGreaterExpr<T>): KExpr<KBoolSort> =
         transformExprAfterTransformedDefault(expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkFpGreaterExpr)
@@ -414,20 +458,30 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         transformExprAfterTransformedDefault(expr, expr.value, ::transformApp, KContext::mkFpToIEEEBvExpr)
 
     override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> =
-        transformExprAfterTransformedDefault(expr, expr.sign, expr.biasedExponent, expr.significand, ::transformApp, KContext::mkFpFromBvExpr)
+        transformExprAfterTransformedDefault(
+            expr, expr.sign, expr.biasedExponent, expr.significand, ::transformApp, KContext::mkFpFromBvExpr
+        )
 
     override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> =
-        transformExprAfterTransformedDefault(expr, expr.roundingMode, expr.value, ::transformApp) { rm, value -> mkFpToFpExpr(expr.sort, rm, value) }
+        transformExprAfterTransformedDefault(
+            expr, expr.roundingMode, expr.value, ::transformApp
+        ) { rm, value -> mkFpToFpExpr(expr.sort, rm, value) }
 
     override fun <T : KFpSort> transform(expr: KRealToFpExpr<T>): KExpr<T> =
-        transformExprAfterTransformedDefault(expr, expr.roundingMode, expr.value, ::transformApp) { rm, value -> mkRealToFpExpr(expr.sort, rm, value) }
+        transformExprAfterTransformedDefault(
+            expr, expr.roundingMode, expr.value, ::transformApp
+        ) { rm, value -> mkRealToFpExpr(expr.sort, rm, value) }
 
     override fun <T : KFpSort> transform(expr: KBvToFpExpr<T>): KExpr<T> =
-        transformExprAfterTransformedDefault(expr, expr.roundingMode, expr.value, ::transformApp) { rm, value -> mkBvToFpExpr(expr.sort, rm, value, expr.signed) }
+        transformExprAfterTransformedDefault(
+            expr, expr.roundingMode, expr.value, ::transformApp
+        ) { rm, value -> mkBvToFpExpr(expr.sort, rm, value, expr.signed) }
 
     // array transformers
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> =
-        transformExprAfterTransformedDefault(expr, expr.array, expr.index, expr.value, ::transformApp, KContext::mkArrayStore)
+        transformExprAfterTransformedDefault(
+            expr, expr.array, expr.index, expr.value, ::transformApp, KContext::mkArrayStore
+        )
 
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> =
         transformExprAfterTransformedDefault(expr, expr.array, expr.index, ::transformApp, KContext::mkArraySelect)
@@ -515,7 +569,8 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         ifNotTransformed: (In) -> KExpr<T>,
         transformer: KContext.(List<KExpr<A>>) -> Out
     ): KExpr<T> = transformExprAfterTransformed(expr, dependencies) { transformedDependencies ->
-        if (transformedDependencies == dependencies) return ifNotTransformed(expr)
+        if (transformedDependencies == dependencies)
+            return ifNotTransformed(expr)
 
         val transformedExpr = ctx.transformer(transformedDependencies)
 
@@ -528,28 +583,33 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         ifNotTransformed: (In) -> KExpr<T>,
         transformer: KContext.(KExpr<A>) -> Out
     ): KExpr<T> = transformExprAfterTransformed(expr, dependency) { td ->
-        if (td == dependency) return ifNotTransformed(expr)
+        if (td == dependency)
+            return ifNotTransformed(expr)
 
         val transformedExpr = ctx.transformer(td)
 
         return transformExprDefault(transformedExpr)
     }
 
-    private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort> transformExprAfterTransformedDefault(
+    private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort>
+    transformExprAfterTransformedDefault(
         expr: In,
         dependency0: KExpr<A0>,
         dependency1: KExpr<A1>,
         ifNotTransformed: (In) -> KExpr<T>,
         transformer: KContext.(KExpr<A0>, KExpr<A1>) -> Out
     ): KExpr<T> = transformExprAfterTransformed(expr, dependency0, dependency1) { td0, td1 ->
-        if (td0 == dependency0 && td1 == dependency1) return ifNotTransformed(expr)
+        if (td0 == dependency0 && td1 == dependency1)
+            return ifNotTransformed(expr)
 
         val transformedExpr = ctx.transformer(td0, td1)
 
         return transformExprDefault(transformedExpr)
     }
 
-    private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> transformExprAfterTransformedDefault(
+    @Suppress("LongParameterList")
+    private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort, A2 : KSort>
+    transformExprAfterTransformedDefault(
         expr: In,
         dependency0: KExpr<A0>,
         dependency1: KExpr<A1>,
@@ -557,14 +617,17 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         ifNotTransformed: (In) -> KExpr<T>,
         transformer: KContext.(KExpr<A0>, KExpr<A1>, KExpr<A2>) -> Out
     ): KExpr<T> = transformExprAfterTransformed(expr, dependency0, dependency1, dependency2) { td0, td1, td2 ->
-        if (td0 == dependency0 && td1 == dependency1 && td2 == dependency2) return ifNotTransformed(expr)
+        if (td0 == dependency0 && td1 == dependency1 && td2 == dependency2)
+            return ifNotTransformed(expr)
 
         val transformedExpr = ctx.transformer(td0, td1, td2)
 
         return transformExprDefault(transformedExpr)
     }
 
-    private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort> transformExprAfterTransformedDefault(
+    @Suppress("LongParameterList", "ComplexCondition")
+    private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort>
+    transformExprAfterTransformedDefault(
         expr: In,
         dependency0: KExpr<A0>,
         dependency1: KExpr<A1>,
@@ -572,12 +635,14 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         dependency3: KExpr<A3>,
         ifNotTransformed: (In) -> KExpr<T>,
         transformer: KContext.(KExpr<A0>, KExpr<A1>, KExpr<A2>, KExpr<A3>) -> Out
-    ): KExpr<T> = transformExprAfterTransformed(expr, dependency0, dependency1, dependency2, dependency3) { td0, td1, td2, td3 ->
-        if (td0 == dependency0 && td1 == dependency1 && td2 == dependency2 && td3 == dependency3) return ifNotTransformed(expr)
+    ): KExpr<T> =
+        transformExprAfterTransformed(expr, dependency0, dependency1, dependency2, dependency3) { td0, td1, td2, td3 ->
+            if (td0 == dependency0 && td1 == dependency1 && td2 == dependency2 && td3 == dependency3)
+                return ifNotTransformed(expr)
 
-        val transformedExpr = ctx.transformer(td0, td1, td2, td3)
+            val transformedExpr = ctx.transformer(td0, td1, td2, td3)
 
-        return transformExprDefault(transformedExpr)
-    }
+            return transformExprDefault(transformedExpr)
+        }
 
 }

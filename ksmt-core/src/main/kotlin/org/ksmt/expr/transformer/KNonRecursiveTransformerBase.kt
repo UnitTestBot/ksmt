@@ -179,6 +179,7 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
         return transformer(transformedDependency0, transformedDependency1, transformedDependency2)
     }
 
+    @Suppress("LongParameterList", "ComplexCondition")
     inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3: KSort> transformExprAfterTransformed(
         expr: KExpr<T>,
         dependency0: KExpr<A0>,
