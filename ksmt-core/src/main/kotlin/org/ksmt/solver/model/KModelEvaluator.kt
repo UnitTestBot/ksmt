@@ -56,9 +56,7 @@ open class KModelEvaluator(
         return if (rewrittenSelect == null) {
             super.transform(expr)
         } else {
-            simplifyApp(expr, preprocess = { rewrittenSelect }) {
-                error("Always preprocessed")
-            }
+            simplifyExpr(expr, preprocess = { rewrittenSelect })
         }
     }
 
