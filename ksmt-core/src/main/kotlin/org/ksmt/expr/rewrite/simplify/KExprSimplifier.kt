@@ -258,15 +258,6 @@ open class KExprSimplifier(override val ctx: KContext) :
     }
 }
 
-@Deprecated("use specialized simplifiers", ReplaceWith("simplifyExpr"), DeprecationLevel.ERROR)
-inline fun <T : KSort, A : KSort> KExprSimplifierBase.simplifyApp(
-    expr: KApp<T, A>,
-    preprocess: KContext.() -> KExpr<T> = { expr },
-    crossinline simplifier: KContext.(List<KExpr<A>>) -> KExpr<T>
-): KExpr<T> = simplifyExprBase(expr, { ctx.preprocess() }, {
-    transformAppAfterArgsTransformed(expr) { args -> ctx.simplifier(args) }
-})
-
 inline fun <T : KSort> KExprSimplifierBase.simplifyExpr(
     expr: KExpr<T>,
     preprocess: KContext.() -> KExpr<T>,
