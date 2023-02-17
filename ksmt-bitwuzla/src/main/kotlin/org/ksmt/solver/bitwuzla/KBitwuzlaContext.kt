@@ -126,8 +126,8 @@ open class KBitwuzlaContext : AutoCloseable {
 
     /**
      * Internalize constant.
-     *  Since [Native.bitwuzlaMkConst] creates fresh constant on each invocation caches are used
-     *  to guarantee that if two constants are equal in ksmt they are also equal in Bitwuzla.
+     * Since [Native.bitwuzlaMkConst] creates fresh constant on each invocation caches are used
+     * to guarantee that if two constants are equal in ksmt they are also equal in Bitwuzla.
      * */
     fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = constants.getOrPut(decl) {
         Native.bitwuzlaMkConst(bitwuzla, sort, decl.name).also {

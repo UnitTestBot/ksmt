@@ -1104,7 +1104,14 @@ open class KBitwuzlaExprInternalizer(
         Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, kind, args.toLongArray())
     }
 
+    /**
+     * Abort current internalization because we found an unsupported expression,
+     * that can be rewritten using axioms.
+     *
+     * See [internalizeAssertion].
+     * */
     class TryRewriteExpressionUsingAxioms(override val message: String) : Exception(message) {
+        // Not a real exception -> we can avoid stacktrace collection
         override fun fillInStackTrace(): Throwable = this
     }
 

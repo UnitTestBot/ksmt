@@ -197,10 +197,27 @@ open class KBitwuzlaModel(
     private inline fun <T> handleModelIsUnsupportedWithQuantifiers(body: () -> T): T = try {
         body()
     } catch (ex: BitwuzlaNativeException) {
-        val modelUnsupportedMessage = "'get-value' is currently not supported with quantifiers"
-        if (modelUnsupportedMessage in (ex.message ?: "")) {
-            throw KSolverUnsupportedFeatureException(modelUnsupportedMessage)
+        if (isModelUnsupportedWithQuantifiers(ex)) {
+            throw KSolverUnsupportedFeatureException("Model are not supported for formulas with quantifiers")
         }
         throw ex
+    }
+
+    companion object {
+        private const val MODEL_UNSUPPORTED_WITH_QUANTIFIERS =
+            "'get-value' is currently not supported with quantifiers\n"
+
+        private fun isModelUnsupportedWithQuantifiers(ex: BitwuzlaNativeException): Boolean {
+            val message = ex.message ?: return false
+            /**
+             * Bitwuzla exception message has the following format:
+             * `[bitwuzla] <api method name> 'get-value' is currently ....`.
+             *
+             * Since we don't know the actual api method name
+             * (we have multiple ways to trigger get-value),
+             * we use `endsWith`.
+             * */
+            return message.endsWith(MODEL_UNSUPPORTED_WITH_QUANTIFIERS)
+        }
     }
 }

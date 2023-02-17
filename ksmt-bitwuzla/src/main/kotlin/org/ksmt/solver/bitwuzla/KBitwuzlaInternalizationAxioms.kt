@@ -33,9 +33,15 @@ class KBitwuzlaInternalizationAxioms(ctx: KContext) : KNonRecursiveTransformer(c
 
                 val size = stub.sort.sizeBits.toInt()
                 val exponentBits = value.sort.exponentBits.toInt()
-                val sign = mkBvExtractExpr(size - 1, size - 1, stub)
-                val exponent = mkBvExtractExpr(size - 2, size - exponentBits - 1, stub)
-                val significand = mkBvExtractExpr(size - exponentBits - 2, 0, stub)
+
+                val signBitIdx = size - 1
+                val exponentFirstBitIdx = signBitIdx - 1
+                val exponentLastBitIdx = size - exponentBits - 1
+                val significandFirstBitIdx = exponentLastBitIdx - 1
+
+                val sign = mkBvExtractExpr(high = signBitIdx, low = signBitIdx, value = stub)
+                val exponent = mkBvExtractExpr(high = exponentFirstBitIdx, low = exponentLastBitIdx, value = stub)
+                val significand = mkBvExtractExpr(high = significandFirstBitIdx, low = 0, value = stub)
 
                 val inverseOperation = mkFpFromBvExpr<T>(sign.uncheckedCast(), exponent, significand)
                 axioms += value eq inverseOperation

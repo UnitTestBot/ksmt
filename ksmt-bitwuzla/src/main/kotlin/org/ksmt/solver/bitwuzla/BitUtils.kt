@@ -6,7 +6,7 @@ private const val BYTE_MASK = 0xff
 
 /**
  * Construct BigInteger value from bits array of the form:
- * array[0] = array[0] = bits[31:0], array[1] = bits[64:32], ...
+ * array[0] = bits[31:0], array[1] = bits[64:32], ...
  * */
 fun bvBitsToBigInteger(bvBits: IntArray): BigInteger {
     val valueByteArray = ByteArray(bvBits.size * Int.SIZE_BYTES) {
