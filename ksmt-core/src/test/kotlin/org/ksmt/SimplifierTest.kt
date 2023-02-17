@@ -2,8 +2,11 @@ package org.ksmt
 
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KBitVecValue
+import org.ksmt.expr.KExpr
 import org.ksmt.expr.rewrite.simplify.KExprSimplifier
+import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBvSort
+import org.ksmt.sort.KIntSort
 import org.ksmt.utils.BvUtils.shiftLeft
 import org.ksmt.utils.BvUtils.shiftRightArith
 import org.ksmt.utils.BvUtils.shiftRightLogical
@@ -32,8 +35,8 @@ class SimplifierTest {
         val specialIdx by intSort
         val indices1 = (0..3).map { it.expr } + listOf(specialIdx) + (7..10).map { it.expr }
         val indices2 = (0..1).map { it.expr } + listOf(specialIdx) + ((2..3) + (7..10)).map { it.expr }
-        val array1 = indices1.fold(array) { a, idx -> a.store(idx, idx) }
-        val array2 = indices2.fold(array) { a, idx -> a.store(idx, idx) }
+        val array1 = indices1.fold(array as KExpr<KArraySort<KIntSort, KIntSort>>) { a, idx -> a.store(idx, idx) }
+        val array2 = indices2.fold(array as KExpr<KArraySort<KIntSort, KIntSort>>) { a, idx -> a.store(idx, idx) }
         val arrayEq = array1 eq array2
         val allSelectsEq = mkAnd((indices1 + indices2).map {
             array1.select(it) eq array2.select(it)

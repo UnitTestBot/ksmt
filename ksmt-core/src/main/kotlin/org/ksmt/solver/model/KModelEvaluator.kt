@@ -2,7 +2,6 @@ package org.ksmt.solver.model
 
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
-import org.ksmt.expr.KApp
 import org.ksmt.expr.KArrayLambda
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr

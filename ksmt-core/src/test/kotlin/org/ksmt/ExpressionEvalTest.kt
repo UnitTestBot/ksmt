@@ -1,5 +1,6 @@
 package org.ksmt
 
+import org.ksmt.KContext.SimplificationMode.SIMPLIFY
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
@@ -10,7 +11,6 @@ import org.ksmt.expr.KInt32NumExpr
 import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.KRealNumExpr
 import org.ksmt.expr.rewrite.simplify.KExprSimplifier
-import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.sort.KBvSort
@@ -23,6 +23,7 @@ import kotlin.random.Random
 import kotlin.random.nextInt
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.test.asserter
 
 open class ExpressionEvalTest {
 
@@ -49,7 +50,7 @@ open class ExpressionEvalTest {
         }
 
         // random values
-        repeat(30) {
+        repeat(50) {
             val binaryValue = String(CharArray(sort.sizeBits.toInt()) {
                 if (random.nextBoolean()) '1' else '0'
             })
@@ -117,57 +118,85 @@ open class ExpressionEvalTest {
         mkSort: KContext.() -> S,
         test: KContext.(S, TestRunner) -> Unit
     ) {
-        val ctx = KContext()
+        val ctx = KContext(simplificationMode = SIMPLIFY)
         val sort = ctx.mkSort()
-        KZ3Solver(ctx).use { solver ->
-            val checker = TestRunner(ctx, solver)
-            ctx.test(sort, checker)
-        }
+        val checker = TestRunner(ctx)
+        ctx.test(sort, checker)
+        checker.runTests()
     }
 
-    internal class TestRunner(
-        private val ctx: KContext,
-        private val solver: KSolver<*>
+    private class TestCase(
+        val unsimplifiedExpr: KExpr<*>,
+        val simplifiedExpr: KExpr<*>,
+        val printArgs: () -> String
     ) {
+        lateinit var solverValue: KExpr<*>
+    }
 
-        fun <T : KSort> check(expr: KExpr<T>, printArgs: () -> String) {
-            val expectedValue = solverValue(expr)
-            val actualValue = evalExpr(expr)
+    internal class TestRunner(private val ctx: KContext) {
+        private val testCases = arrayListOf<TestCase>()
 
-            assertEquals(expectedValue, actualValue, printArgs())
+        fun <T : KSort> check(unsimplifiedExpr: KExpr<T>, simplifiedExpr: KExpr<T>, printArgs: () -> String) {
+            testCases += TestCase(unsimplifiedExpr, simplifiedExpr, printArgs)
 
-            val decl = (expectedValue as KApp<*, *>).decl
-            val declValue = decl.apply(emptyList())
-            assertEquals(expectedValue, declValue, printArgs())
+            if (testCases.size > 1000) {
+                runTests()
+            }
         }
 
-        private fun <T : KSort> solverValue(expr: KExpr<T>): KExpr<T> =
-            withSolverScope { solver ->
-                with(ctx) {
-                    val valueVar = mkFreshConst("v", expr.sort)
-                    solver.assert(valueVar eq expr)
-                    assertEquals(KSolverStatus.SAT, solver.check())
-                    val value = solver.model().eval(valueVar)
-                    assertTrue(value is KInterpretedValue<*>)
-                    value
-                }
+        fun runTests() {
+            KZ3Solver(ctx).use {
+                computeSolverValues(it)
             }
 
+            testCases.forEach {
+                val expectedValue = it.solverValue
+                val simplifierValueValue = evalExpr(it.unsimplifiedExpr)
+
+                assertEquals(expectedValue, it.simplifiedExpr) { it.printArgs() }
+                assertEquals(expectedValue, simplifierValueValue) { it.printArgs() }
+
+                val decl = (expectedValue as KApp<*, *>).decl
+                val declValue = decl.apply(emptyList())
+                assertEquals(expectedValue, declValue) { it.printArgs() }
+            }
+
+            testCases.clear()
+        }
+
+        private fun computeSolverValues(solver: KZ3Solver) = with(ctx) {
+            val testCaseVars = testCases.map {
+                val valueVar = mkFreshConst("v", it.unsimplifiedExpr.sort)
+                solver.assert(valueVar eq it.unsimplifiedExpr.uncheckedCast())
+                valueVar
+            }
+            assertEquals(KSolverStatus.SAT, solver.check())
+
+            val model = solver.model()
+            testCases.zip(testCaseVars).forEach { (testCase, tcVar) ->
+                val value = model.eval(tcVar, isComplete = false)
+                assertTrue(value is KInterpretedValue<*>)
+                testCase.solverValue = value
+            }
+        }
 
         private fun <T : KSort> evalExpr(expr: KExpr<T>): KExpr<T> {
             val evaluator = KExprSimplifier(ctx)
             return evaluator.apply(expr)
-        }
-
-        private fun <T> withSolverScope(block: (KSolver<*>) -> T): T = try {
-            solver.push()
-            block(solver)
-        } finally {
-            solver.pop()
         }
     }
 
     companion object {
         val random = Random(42)
     }
+}
+
+private fun assertEquals(expected: Any?, actual: Any?, lazyMessage: () -> String) {
+    asserter.assertTrue(
+        lazyMessage = {
+            val message = lazyMessage()
+            "$message\nExpected <$expected>, actual <$actual>."
+        },
+        expected == actual
+    )
 }

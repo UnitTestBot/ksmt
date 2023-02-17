@@ -1,10 +1,14 @@
 package org.ksmt.solver.bitwuzla
 
 import org.ksmt.KContext
+import org.ksmt.expr.KExpr
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.Native
+import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBv32Sort
+import org.ksmt.sort.KBv8Sort
 import org.ksmt.utils.getValue
 import kotlin.test.Ignore
 import kotlin.test.Test
@@ -129,7 +133,7 @@ class SolverTest {
         val arrayBase by mkArraySort(mkBv32Sort(), mkBv8Sort())
         val x by mkBv8Sort()
 
-        var array = arrayBase
+        var array: KExpr<KArraySort<KBv32Sort, KBv8Sort>> = arrayBase
         for (i in 0..1024) {
             val v = mkBv((i xor 1024).toByte())
             array = array.store(mkBv(4198400 + i), v)

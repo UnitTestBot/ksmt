@@ -676,7 +676,14 @@ open class KZ3ExprInternalizer(
     override fun transform(expr: KIsIntRealExpr) = with(expr) { transform(arg, Native::mkIsInt) }
 
     override fun transform(expr: KRealNumExpr) = with(expr) {
-        transform(ctx.mkIntToReal(numerator), ctx.mkIntToReal(denominator), Native::mkDiv)
+        transform(numerator, denominator) { numeratorExpr: Long, denominatorExpr: Long ->
+            val realNumerator = z3InternCtx.temporaryAst(Native.mkInt2real(nCtx, numeratorExpr))
+            val realDenominator = z3InternCtx.temporaryAst(Native.mkInt2real(nCtx, denominatorExpr))
+            Native.mkDiv(nCtx, realNumerator, realDenominator).also {
+                z3InternCtx.releaseTemporaryAst(realNumerator)
+                z3InternCtx.releaseTemporaryAst(realDenominator)
+            }
+        }
     }
 
     private fun transformQuantifier(expr: KQuantifier, isUniversal: Boolean) = with(expr) {

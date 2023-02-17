@@ -26,7 +26,8 @@ open class ExpressionCreationBenchmark {
     fun expressionCreationBenchmark(state: ExprGenerationState, bh: Blackhole) {
         val ctx = KContext(
             operationMode = state.contextOperationMode,
-            astManagementMode = state.contextAstManagementMode
+            astManagementMode = state.contextAstManagementMode,
+            simplificationMode = state.contextSimplificationMode
         )
 
         bh.consume(state.generator.replay(ctx))
@@ -79,10 +80,13 @@ open class ExpressionCreationBenchmark {
         @Param("NO_GC", "GC")
         lateinit var contextAstManagementMode: KContext.AstManagementMode
 
+        @Param("NO_SIMPLIFY", "SIMPLIFY")
+        lateinit var contextSimplificationMode: KContext.SimplificationMode
+
         val generator = RandomExpressionGenerator().apply {
             generate(
                 limit = SINGLE_BENCHMARK_EXPRESSIONS,
-                context = KContext(),
+                context = KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY),
                 random = Random(42),
                 generatorFilter = RandomExpressionGenerator.noFreshConstants
             )
@@ -101,7 +105,7 @@ open class ExpressionCreationBenchmark {
             RandomExpressionGenerator().apply {
                 generate(
                     limit = SINGLE_BENCHMARK_EXPRESSIONS / GENERATORS_COUNT,
-                    context = KContext(),
+                    context = KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY),
                     random = Random(seed),
                     generatorFilter = RandomExpressionGenerator.noFreshConstants
                 )
@@ -118,7 +122,7 @@ open class ExpressionCreationBenchmark {
             RandomExpressionGenerator().apply {
                 generate(
                     limit = SINGLE_BENCHMARK_EXPRESSIONS / GENERATORS_COUNT,
-                    context = KContext(),
+                    context = KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY),
                     random = Random(seed),
                     generatorFilter = RandomExpressionGenerator.noFreshConstants
                 )

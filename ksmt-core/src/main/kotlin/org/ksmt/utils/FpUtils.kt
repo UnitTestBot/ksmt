@@ -13,17 +13,19 @@ import org.ksmt.expr.KIntNumExpr
 import org.ksmt.expr.KRealNumExpr
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
+import org.ksmt.utils.ArithUtils.RealValue
+import org.ksmt.utils.BvUtils.addMaxValueSigned
 import org.ksmt.utils.BvUtils.bigIntValue
-import org.ksmt.utils.BvUtils.bvMaxValueSigned
 import org.ksmt.utils.BvUtils.bvMaxValueUnsigned
 import org.ksmt.utils.BvUtils.bvOne
 import org.ksmt.utils.BvUtils.bvZero
 import org.ksmt.utils.BvUtils.isBvMaxValueUnsigned
 import org.ksmt.utils.BvUtils.isBvZero
 import org.ksmt.utils.BvUtils.minus
-import org.ksmt.utils.BvUtils.plus
+import org.ksmt.utils.BvUtils.subMaxValueSigned
 import org.ksmt.utils.BvUtils.unsignedLessOrEqual
 import java.math.BigInteger
+import kotlin.math.absoluteValue
 import kotlin.math.round
 import kotlin.math.sqrt
 
@@ -226,11 +228,19 @@ object FpUtils {
         sort = sort
     )
 
-    fun KContext.biasFpExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> =
-        exponent + bvMaxValueSigned(exponentSize)
+    fun biasFpExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> {
+        check(exponent.sort.sizeBits == exponentSize) {
+            "Incorrect exponent size: expected $exponentSize but ${exponent.sort.sizeBits} provided"
+        }
+        return exponent.addMaxValueSigned()
+    }
 
-    fun KContext.unbiasFpExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> =
-        exponent - bvMaxValueSigned(exponentSize)
+    fun unbiasFpExponent(exponent: KBitVecValue<*>, exponentSize: UInt): KBitVecValue<*> {
+        check(exponent.sort.sizeBits == exponentSize) {
+            "Incorrect exponent size: expected $exponentSize but ${exponent.sort.sizeBits} provided"
+        }
+        return exponent.subMaxValueSigned()
+    }
 
     // All 1 bits
     private fun KContext.fpTopExponentBiased(size: UInt): KBitVecValue<*> =
@@ -654,21 +664,31 @@ object FpUtils {
     }
 
     private fun UnpackedFp.fpBvValueUnpacked(rm: KFpRoundingMode): BigInteger {
-        var e = unbiasedExponent - significandSize.toInt().toBigInteger() + BigInteger.ONE
+        val e = unbiasedExponent - significandSize.toInt().toBigInteger() + BigInteger.ONE
 
         val roundedSignificandBvValue = if (e < BigInteger.ZERO) {
             var value = significand
-
-            var lastBit = !value.isEven()
-            var round = false
             var sticky = false
 
-            while (e != BigInteger.ZERO) {
+            // We need only 3 last bits for rounding
+            var exponentValue = e.abs()
+            val three = 3.toBigInteger()
+            if (exponentValue > three) {
+                val bitsToDrop = (exponentValue - three).ensureSuitablePowerOfTwo()
+                sticky = value.anyOfLastKBitsSet(bitsToDrop)
+                value = value.div2k(bitsToDrop)
+                exponentValue = three
+            }
+
+            var round = false
+            var lastBit = !value.isEven()
+
+            while (!exponentValue.isZero()) {
                 value = value.div2k(1u)
                 sticky = sticky || round
                 round = lastBit
                 lastBit = !value.isEven()
-                e++
+                exponentValue--
             }
 
             value.roundSignificandIfNeeded(rm, sign, lastBit, round, sticky)
@@ -731,7 +751,7 @@ object FpUtils {
         val rhsSignificand = rSignificand.mul2k(3u)
 
         // Alignment shift with sticky bit computation.
-        val (shiftedRhs, stickyRem) = rhsSignificand.divideAndRemainder(powerOfTwo(expDelta))
+        val (shiftedRhs, stickyRem) = rhsSignificand.divAndRem2k(expDelta)
 
         // Significand addition
         return if (lSign != rSign) {
@@ -765,10 +785,7 @@ object FpUtils {
          *  [significandSize result bits][4 special bits][significandSize-4 extra bits]
          *  */
         var (normalizedSignificand, stickyRem) = if (lhs.significandSize >= 4u) {
-            val resultWithReminder = multipliedSignificand.divideAndRemainder(
-                powerOfTwo(lhs.significandSize - 4u)
-            )
-            resultWithReminder[0] to resultWithReminder[1]
+            multipliedSignificand.divAndRem2k(lhs.significandSize - 4u)
         } else {
             // Ensure significand has at least 4 bits (required for rounding)
             val correctedSignificand = multipliedSignificand.mul2k(4u - lhs.significandSize)
@@ -803,9 +820,7 @@ object FpUtils {
          *  Remove the extra bits, keeping a sticky bit.
          *  [normalizedResultSignificand] will have at least 4 bits as required for rounding.
          *  */
-        var (normalizedResultSignificand, stickyRem) = divisionResultSignificand.divideAndRemainder(
-            powerOfTwo(lhs.significandSize)
-        )
+        var (normalizedResultSignificand, stickyRem) = divisionResultSignificand.divAndRem2k(lhs.significandSize)
         if (!stickyRem.isZero() && normalizedResultSignificand.isEven()) {
             normalizedResultSignificand++
         }
@@ -867,10 +882,10 @@ object FpUtils {
         var resultExponent = value.unbiasedExponent
 
         // re-normalize
-        val maxValue = powerOfTwo(value.significandSize)
-        while (resultSignificand >= maxValue) {
-            resultSignificand = resultSignificand.div2k(1u)
-            resultExponent++
+        val powerToNormalize = resultSignificand.log2() - value.significandSize.toInt() + 1
+        if (powerToNormalize > 0) {
+            resultExponent += powerToNormalize.toBigInteger()
+            resultSignificand = resultSignificand.div2k(powerToNormalize.toUInt())
         }
 
         return mkRoundedValue(
@@ -883,7 +898,7 @@ object FpUtils {
         shift: BigInteger,
         rm: KFpRoundingMode
     ): BigInteger {
-        var (div, rem) = value.significand.divideAndRemainder(powerOfTwo(shift))
+        var (div, rem) = value.significand.divAndRem2k(shift)
 
         when (rm) {
             KFpRoundingMode.RoundNearestTiesToEven,
@@ -929,20 +944,15 @@ object FpUtils {
         toSignificandSize: UInt
     ): KFpValue<*> {
 
-        var significandSizeDelta = toSignificandSize.toInt() - value.significandSize.toInt() + 3 // plus rounding bits
+        val significandSizeDelta = toSignificandSize.toInt() - value.significandSize.toInt() + 3 // plus rounding bits
 
         val resultSignificand = when {
             significandSizeDelta > 0 -> value.significand.mul2k(significandSizeDelta.toUInt())
 
             significandSizeDelta < 0 -> {
-                var sticky = false
-                var significand = value.significand
-
-                while (significandSizeDelta < 0) {
-                    sticky = sticky || !significand.isEven()
-                    significand = significand.div2k(1u)
-                    significandSizeDelta++
-                }
+                val bitsToDrop = significandSizeDelta.absoluteValue.toUInt()
+                val sticky = value.significand.anyOfLastKBitsSet(bitsToDrop)
+                var significand = value.significand.div2k(bitsToDrop)
 
                 if (sticky && significand.isEven()) {
                     significand++
@@ -974,7 +984,7 @@ object FpUtils {
         // Normalize such that 1.0 <= sig < 2.0
         val denormalizedSignificand = value.abs()
         val (resultExponent, normalizedSignificand) = when {
-            denormalizedSignificand < RealValue.create(BigInteger.ONE) -> {
+            denormalizedSignificand < RealValue.one -> {
                 val nearestInteger = denormalizedSignificand.inverse().floor()
 
                 var nearestPowerOfTwo = nearestInteger.log2()
@@ -987,7 +997,8 @@ object FpUtils {
 
                 -nearestPowerOfTwo.toBigInteger() to significand
             }
-            denormalizedSignificand >= RealValue.create(2.toBigInteger()) -> {
+
+            denormalizedSignificand >= RealValue.two -> {
                 val nearestInteger = denormalizedSignificand.floor()
                 val nearestPowerOfTwo = nearestInteger.log2()
 
@@ -996,6 +1007,7 @@ object FpUtils {
 
                 nearestPowerOfTwo.toBigInteger() to significand
             }
+
             else -> {
                 BigInteger.ZERO to denormalizedSignificand
             }
@@ -1143,7 +1155,7 @@ object FpUtils {
     ): BigInteger {
         return if (normalizationShiftSize < BigInteger.ZERO) {
             // Right shift
-            var (res, stickyRem) = significand.divideAndRemainder(powerOfTwo(-normalizationShiftSize))
+            var (res, stickyRem) = significand.divAndRem2k(-normalizationShiftSize)
             if (!stickyRem.isZero() && res.isEven()) {
                 res++
             }
@@ -1261,16 +1273,13 @@ object FpUtils {
     private fun KFpValue<*>.unpackSubnormalValueAndNormalizeSignificand(): UnpackedFp {
         var normalizedExponent = fpMinExponentValue(sort.exponentBits)
 
-        var significandValue = significand.bigIntValue().normalizeValue(sort.significandBits - 1u)
+        val significandValue = significand.bigIntValue().normalizeValue(sort.significandBits - 1u)
         val normalizedSignificand = if (significandValue.isZero()) {
             significandValue
         } else {
-            val p = powerOfTwo(sort.significandBits - 1u)
-            while (p > significandValue) {
-                normalizedExponent--
-                significandValue = significandValue.mul2k(1u)
-            }
-            significandValue
+            val powerToNormalize = maxOf(0, sort.significandBits.toInt() - significandValue.log2() - 1)
+            normalizedExponent -= powerToNormalize.toBigInteger()
+            significandValue.mul2k(powerToNormalize.toUInt())
         }
 
         return UnpackedFp(
@@ -1287,22 +1296,40 @@ object FpUtils {
         return powerOfTwo(exponent - 1u) - BigInteger.ONE
     }
 
-    private fun powerOfTwo(power: BigInteger): BigInteger {
-        check(power.signum() >= 0) { "Negative power" }
-        val intPower = power.longValueExact()
-        if (intPower <= Int.MAX_VALUE) {
-            return BigInteger.ONE.shiftLeft(intPower.toInt())
-        } else {
-            error("Number 2^$intPower is too big to be represented as a BigInteger")
+    private fun BigInteger.ensureSuitablePowerOfTwo(): UInt {
+        check(signum() >= 0) { "Negative power" }
+        check(bitLength() < Int.SIZE_BITS) {
+            "Number 2^$this is too big to be represented as a BigInteger"
         }
+        return intValueExact().toUInt()
     }
 
+    private fun powerOfTwo(power: BigInteger): BigInteger = powerOfTwo(power.ensureSuitablePowerOfTwo())
+
     private fun BigInteger.isEven(): Boolean = toInt() % 2 == 0
-    private fun BigInteger.isZero(): Boolean = this == BigInteger.ZERO
+    private fun BigInteger.isZero(): Boolean = signum() == 0
     private fun BigInteger.log2(): Int = bitLength() - 1
-    private fun BigInteger.mul2k(k: UInt): BigInteger = this * powerOfTwo(k)
-    private fun BigInteger.mul2k(k: BigInteger): BigInteger = this * powerOfTwo(k)
-    private fun BigInteger.div2k(k: UInt): BigInteger = this / powerOfTwo(k)
+    private fun BigInteger.anyOfLastKBitsSet(k: UInt): Boolean =
+        lowestSetBit.let { it != -1 && it <= k.toInt() }
+
+    private fun BigInteger.mul2k(k: BigInteger): BigInteger = mul2k(k.ensureSuitablePowerOfTwo())
+    private fun BigInteger.mul2k(k: UInt): BigInteger = shiftLeft(k.toInt())
+
+    private fun BigInteger.div2k(k: UInt): BigInteger {
+        val result = abs().shiftRight(k.toInt())
+        return if (signum() >= 0) result else result.negate()
+    }
+
+    private fun BigInteger.divAndRem2k(power: BigInteger): Pair<BigInteger, BigInteger> =
+        divAndRem2k(power.ensureSuitablePowerOfTwo())
+
+    private fun BigInteger.divAndRem2k(power: UInt): Pair<BigInteger, BigInteger> {
+        val quotient = div2k(power)
+        val remainderMask = powerOfTwo(power) - BigInteger.ONE
+        val remainder = abs().and(remainderMask)
+        return quotient to remainder
+    }
+
     private fun UInt.ceilDiv(other: UInt): UInt =
         if (this % other == 0u) {
             this / other
@@ -1334,9 +1361,8 @@ object FpUtils {
         }
 
         // Refine using bisection.
-        val two = 2.toBigInteger()
         while (true) {
-            val mid = (upper + lower).divide(two)
+            val mid = (upper + lower).div2k(1u)
             val midSquared = mid.pow(2)
 
             // We have a precise square root
@@ -1355,82 +1381,6 @@ object FpUtils {
             } else {
                 upper = mid
             }
-        }
-    }
-
-    private class RealValue private constructor(
-        numerator: BigInteger,
-        denominator: BigInteger
-    ) : Comparable<RealValue> {
-        val numerator: BigInteger
-        val denominator: BigInteger
-
-        init {
-            if (denominator.signum() < 0) {
-                this.numerator = -numerator
-                this.denominator = -denominator
-            } else {
-                this.numerator = numerator
-                this.denominator = denominator
-            }
-        }
-
-        fun isNegative(): Boolean = numerator.signum() < 0
-
-        fun isZero(): Boolean = numerator.isZero()
-
-        fun abs() = RealValue(numerator.abs(), denominator)
-
-        fun inverse() = RealValue(denominator, numerator)
-
-        fun floor(): BigInteger {
-            if (denominator == BigInteger.ONE) {
-                return numerator
-            }
-
-            var result = numerator.divide(denominator)
-            if (isNegative()) {
-                result--
-            }
-            return result
-        }
-
-        fun div(value: BigInteger) = RealValue(numerator, denominator * value).normalize()
-
-        fun mul(value: BigInteger) = RealValue(numerator * value, denominator).normalize()
-
-        fun sub(other: RealValue): RealValue {
-            val resultNumerator = numerator * other.denominator - other.numerator * denominator
-            val resultDenominator = denominator * other.denominator
-            return RealValue(resultNumerator, resultDenominator).normalize()
-        }
-
-        override fun compareTo(other: RealValue): Int = when {
-            this.eq(other) -> 0
-            this.lt(other) -> -1
-            else -> 1
-        }
-
-        private fun eq(other: RealValue): Boolean =
-            numerator == other.numerator && denominator == other.denominator
-
-        private fun lt(b: RealValue): Boolean = when {
-            numerator.signum() < 0 && b.numerator.signum() >= 0 -> true
-            numerator.signum() > 0 && b.numerator.signum() <= 0 -> false
-            numerator.signum() == 0 -> b.numerator.signum() > 0
-            else -> numerator * b.denominator < b.numerator * denominator
-        }
-
-        private fun normalize(): RealValue {
-            val gcd = numerator.gcd(denominator)
-            val normalizedNumerator = numerator.divide(gcd)
-            val normalizedDenominator = denominator.divide(gcd)
-            return RealValue(normalizedNumerator, normalizedDenominator)
-        }
-
-        companion object{
-            fun create(numerator: BigInteger, denominator: BigInteger = BigInteger.ONE) =
-                RealValue(numerator, denominator).normalize()
         }
     }
 }

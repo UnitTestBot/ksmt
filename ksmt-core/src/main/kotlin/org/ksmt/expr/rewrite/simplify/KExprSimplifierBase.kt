@@ -17,6 +17,20 @@ interface KExprSimplifierBase : KTransformer {
      * Typically used for a new expression created by simplifying another expression.
      * */
     fun <T : KSort> rewrite(expr: KExpr<T>): KExpr<T>
+
+    /**
+     * Ask simplifier to rewrite an expression with bound check.
+     * Typically used for expressions which produce expressions of the same
+     * type during simplification process.
+     *
+     * [allowedDepth] --- maximal allowed nested rewrites.
+     * */
+    fun <T : KSort> boundedRewrite(allowedDepth: Int, expr: KExpr<T>): KExpr<T>
+
+    /**
+     * Returns true if simplifier has enough depth to perform bounded rewrite.
+     * */
+    fun canPerformBoundedRewrite(): Boolean
 }
 
 /**
@@ -36,3 +50,11 @@ internal inline fun <T : KSort> auxExpr(builder: () -> KExpr<T>): SimplifierAuxE
 
 internal fun <T : KSort> KExprSimplifierBase.rewrite(expr: SimplifierAuxExpression<T>): KExpr<T> =
     rewrite(expr.expr)
+
+
+const val SIMPLIFIER_DEFAULT_BOUNDED_REWRITE_DEPTH = 3
+
+internal fun <T : KSort> KExprSimplifierBase.boundedRewrite(
+    expr: SimplifierAuxExpression<T>,
+    depth: Int = SIMPLIFIER_DEFAULT_BOUNDED_REWRITE_DEPTH
+): KExpr<T> = boundedRewrite(depth, expr.expr)

@@ -24,9 +24,6 @@ open class KExprSimplifier(ctx: KContext) :
     KFpExprSimplifier,
     KArrayExprSimplifier {
 
-    private var needPostRewrite = false
-    private val rewrittenExpressions = hashMapOf<KExpr<*>, KExpr<*>>()
-
     @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> transform(expr: KEqExpr<T>) = simplifyApp(
         expr = expr,
@@ -41,7 +38,7 @@ open class KExprSimplifier(ctx: KContext) :
             is KFpSort -> simplifyEqFp(lhs as KExpr<KFpSort>, rhs.uncheckedCast() )
             is KArraySort<*, *> -> simplifyEqArray(lhs as KExpr<KArraySort<KSort, KSort>>, rhs.uncheckedCast())
             is KUninterpretedSort -> simplifyEqUninterpreted(lhs.uncheckedCast(), rhs.uncheckedCast())
-            else -> mkEq(lhs, rhs)
+            else -> mkEqNoSimplify(lhs, rhs)
         }
     }
 
@@ -56,7 +53,7 @@ open class KExprSimplifier(ctx: KContext) :
         }
     ) { args ->
         val distinct = checkAllExpressionsAreDistinct(args)
-        distinct?.expr ?: mkDistinct(args)
+        distinct?.expr ?: mkDistinctNoSimplify(args)
     }
 
     private fun <T : KSort> checkAllExpressionsAreDistinct(expressions: List<KExpr<T>>): Boolean? {
@@ -102,25 +99,49 @@ open class KExprSimplifier(ctx: KContext) :
     open fun simplifyEqUninterpreted(
         lhs: KExpr<KUninterpretedSort>,
         rhs: KExpr<KUninterpretedSort>
-    ): KExpr<KBoolSort> = ctx.mkEq(lhs, rhs)
+    ): KExpr<KBoolSort> = ctx.mkEqNoSimplify(lhs, rhs)
 
     open fun areDefinitelyDistinctUninterpreted(
         lhs: KExpr<KUninterpretedSort>,
         rhs: KExpr<KUninterpretedSort>
     ): Boolean = false
 
+
+    private class RewriteFrame(
+        val original: KExpr<*>,
+        val rewritten: KExpr<*>,
+        val rewriteDepthBound: Int
+    )
+
+    private var rewriteDepth = UNBOUND_REWRITE_DEPTH
+    private var currentFrameDepth = UNBOUND_REWRITE_DEPTH
+    private val rewriteStack = arrayListOf<RewriteFrame>()
+
     fun <T : KSort> rewrittenOrNull(expr: KExpr<T>): KExpr<T>? {
-        val rewritten = rewrittenExpressions.remove(expr) ?: return null
-        val result = transformedExpr(rewritten)
+        if (rewriteStack.lastOrNull()?.original != expr) return null
+
+        val rewriteFrame = rewriteStack.removeLast()
+        rewriteDepth = rewriteFrame.rewriteDepthBound
+
+        val result = transformedExpr(rewriteFrame.rewritten)
             ?: error("Nested rewrite failed")
+
         return result.uncheckedCast()
     }
 
     fun postRewrite(original: KExpr<*>, rewritten: KExpr<*>) {
-        rewrittenExpressions[original] = rewritten
+        rewriteStack += RewriteFrame(original, rewritten, rewriteDepth)
+
+        if (currentFrameDepth != UNBOUND_REWRITE_DEPTH) {
+            rewriteDepth = minOf(rewriteDepth - 1, currentFrameDepth)
+        }
+
         original.transformAfter(listOf(rewritten))
         markExpressionAsNotTransformed()
     }
+
+
+    private var needPostRewrite = false
 
     fun disablePostRewrite() {
         needPostRewrite = false
@@ -133,8 +154,22 @@ open class KExprSimplifier(ctx: KContext) :
     fun postRewriteEnabled(): Boolean = needPostRewrite
 
     override fun <T : KSort> rewrite(expr: KExpr<T>): KExpr<T> {
+        currentFrameDepth = UNBOUND_REWRITE_DEPTH
         needPostRewrite = true
         return expr
+    }
+
+    override fun canPerformBoundedRewrite(): Boolean = rewriteDepth > 0
+
+    override fun <T : KSort> boundedRewrite(allowedDepth: Int, expr: KExpr<T>): KExpr<T> {
+        check(canPerformBoundedRewrite()) { "Bound rewrite depth limit reached" }
+        currentFrameDepth = allowedDepth
+        needPostRewrite = true
+        return expr
+    }
+
+    companion object {
+        private const val UNBOUND_REWRITE_DEPTH = 10000
     }
 }
 
