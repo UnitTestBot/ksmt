@@ -36,6 +36,7 @@ dependencies {
     testImplementation(project(":ksmt-z3"))
     testImplementation(project(":ksmt-bitwuzla"))
     testImplementation(project(":ksmt-yices"))
+    testImplementation(project(":ksmt-cvc5"))
 }
 
 val sourcesBaseDir = projectDir.resolve("src/main/kotlin")

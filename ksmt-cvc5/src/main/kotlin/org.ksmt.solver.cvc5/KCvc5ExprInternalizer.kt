@@ -1,7 +1,6 @@
 package org.ksmt.solver.cvc5
 
 import io.github.cvc5.*
-import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.*
 import org.ksmt.solver.util.KExprInternalizerBase
@@ -9,7 +8,6 @@ import org.ksmt.sort.*
 import java.math.BigInteger
 
 class KCvc5ExprInternalizer(
-    private val ctx: KContext,
     private val cvc5Ctx: KCvc5Context
 ) : KExprInternalizerBase<Term>() {
 
@@ -706,49 +704,49 @@ class KCvc5ExprInternalizer(
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) = TODO("no direct impl for $expr")
 
-    override fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KAddArithExpr<T>) = with(expr) {
         transformArray(args) { args -> nsolver.mkTerm(Kind.ADD, args) }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KSubArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KSubArithExpr<T>) = with(expr) {
         transformArray(args) { args -> nsolver.mkTerm(Kind.SUB, args) }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KMulArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KMulArithExpr<T>) = with(expr) {
         transformArray(args) { args -> nsolver.mkTerm(Kind.MULT, args) }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KUnaryMinusArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KUnaryMinusArithExpr<T>) = with(expr) {
         transform(arg) { arg: Term -> nsolver.mkTerm(Kind.NEG, arg) }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KDivArithExpr<T>) = with(expr) {
         transform(lhs, rhs) { lhs: Term, rhs: Term -> nsolver.mkTerm(Kind.DIVISION, lhs, rhs) }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>) = with(expr) {
         transform(lhs, rhs) { lhs: Term, rhs: Term -> nsolver.mkTerm(Kind.POW, lhs, rhs) }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KLtArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KLtArithExpr<T>) = with(expr) {
         transform(lhs, rhs) { lhs: Term, rhs: Term ->
             nsolver.mkTerm(Kind.LT, lhs, rhs)
         }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KLeArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KLeArithExpr<T>) = with(expr) {
         transform(lhs, rhs) { lhs: Term, rhs: Term ->
             nsolver.mkTerm(Kind.LEQ, lhs, rhs)
         }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KGtArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KGtArithExpr<T>) = with(expr) {
         transform(lhs, rhs) { lhs: Term, rhs: Term ->
             nsolver.mkTerm(Kind.GT, lhs, rhs)
         }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KGeArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KGeArithExpr<T>) = with(expr) {
         transform(lhs, rhs) { lhs: Term, rhs: Term ->
             nsolver.mkTerm(Kind.GEQ, lhs, rhs)
         }

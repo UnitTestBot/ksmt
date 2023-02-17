@@ -22,6 +22,7 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
             +"Z3"
             +"Bitwuzla"
             +"Yices"
+            +"CVC5"
         })
     }
 

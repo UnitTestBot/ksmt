@@ -45,7 +45,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         solver.setOption("produce-unsat-cores", "true")
     }
 
-    open fun createExprInternalizer(cvc5Ctx: KCvc5Context): KCvc5ExprInternalizer = KCvc5ExprInternalizer(ctx, cvc5Ctx)
+    open fun createExprInternalizer(cvc5Ctx: KCvc5Context): KCvc5ExprInternalizer = KCvc5ExprInternalizer(cvc5Ctx)
 
     override fun configure(configurator: KCvc5SolverConfiguration.() -> Unit) {
         KCvc5SolverConfigurationImpl(solver).configurator()

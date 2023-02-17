@@ -36,10 +36,10 @@ open class KCvc5ExprConverter(
             Kind.EQUAL -> expr.convert(::mkEq)
             Kind.DISTINCT -> expr.convertList(::mkDistinct)
             Kind.ITE -> expr.convert(::mkIte)
-            Kind.LEQ -> expr.convertChainable<KArithSort<*>>(::mkArithLe, ::mkAnd)
-            Kind.GEQ -> expr.convertChainable<KArithSort<*>>(::mkArithGe, ::mkAnd)
-            Kind.LT -> expr.convertChainable<KArithSort<*>>(::mkArithLt, ::mkAnd)
-            Kind.GT -> expr.convertChainable<KArithSort<*>>(::mkArithGt, ::mkAnd)
+            Kind.LEQ -> expr.convertChainable<KArithSort>(::mkArithLe, ::mkAnd)
+            Kind.GEQ -> expr.convertChainable<KArithSort>(::mkArithGe, ::mkAnd)
+            Kind.LT -> expr.convertChainable<KArithSort>(::mkArithLt, ::mkAnd)
+            Kind.GT -> expr.convertChainable<KArithSort>(::mkArithGt, ::mkAnd)
 
             // bool
             Kind.NOT -> expr.convert(::mkNot)
@@ -75,21 +75,21 @@ open class KCvc5ExprConverter(
             Kind.SEXPR -> TODO("no direct impl in ksmt now (experimental in cvc5 1.0.2)")
 
             // arith
-            Kind.ABS -> expr.convert { arithExpr: KExpr<KArithSort<*>> ->
+            Kind.ABS -> expr.convert { arithExpr: KExpr<KArithSort> ->
                 val geExpr = if (arithExpr.sort is KIntSort) arithExpr.asExpr(intSort) ge 0.expr
                 else arithExpr.asExpr(realSort) ge mkRealNum(0)
                 mkIte(geExpr, arithExpr, -arithExpr)
             }
-            Kind.ADD -> expr.convertList<KArithSort<*>, KArithSort<*>>(::mkArithAdd)
-            Kind.SUB -> expr.convertList<KArithSort<*>, KArithSort<*>>(::mkArithSub)
-            Kind.MULT -> expr.convertList<KArithSort<*>, KArithSort<*>>(::mkArithMul)
-            Kind.NEG -> expr.convert<KArithSort<*>, KArithSort<*>>(::mkArithUnaryMinus)
+            Kind.ADD -> expr.convertList<KArithSort, KArithSort>(::mkArithAdd)
+            Kind.SUB -> expr.convertList<KArithSort, KArithSort>(::mkArithSub)
+            Kind.MULT -> expr.convertList<KArithSort, KArithSort>(::mkArithMul)
+            Kind.NEG -> expr.convert<KArithSort, KArithSort>(::mkArithUnaryMinus)
             Kind.SQRT -> TODO("No direct mapping of sqrt on real in ksmt")
             Kind.POW -> convertNativePowExpr(expr)
             Kind.POW2 -> convertNativePowExpr(expr)
             Kind.INTS_MODULUS -> expr.convert(::mkIntMod)
-            Kind.INTS_DIVISION -> expr.convert<KArithSort<*>, KArithSort<*>, KArithSort<*>>(::mkArithDiv)
-            Kind.DIVISION -> expr.convert<KArithSort<*>, KArithSort<*>, KArithSort<*>>(::mkArithDiv)
+            Kind.INTS_DIVISION -> expr.convert<KArithSort, KArithSort, KArithSort>(::mkArithDiv)
+            Kind.DIVISION -> expr.convert<KArithSort, KArithSort, KArithSort>(::mkArithDiv)
             Kind.ARCCOTANGENT -> TODO("No direct mapping in ksmt")
             Kind.ARCSECANT -> TODO("No direct mapping in ksmt")
             Kind.ARCCOSECANT -> TODO("No direct mapping in ksmt")
@@ -485,8 +485,8 @@ open class KCvc5ExprConverter(
 
     private fun convertNativePowExpr(expr: Term): ExprConversionResult = with(ctx) {
         when (expr.kind) {
-            Kind.POW -> expr.convert<KArithSort<*>, KArithSort<*>, KArithSort<*>>(::mkArithPower)
-            Kind.POW2 -> expr.convert { baseExpr: KExpr<KArithSort<*>> ->
+            Kind.POW -> expr.convert<KArithSort, KArithSort, KArithSort>(::mkArithPower)
+            Kind.POW2 -> expr.convert { baseExpr: KExpr<KArithSort> ->
                 mkArithMul(baseExpr, baseExpr)
             }
             else -> error("expected power expr term, but was $expr")

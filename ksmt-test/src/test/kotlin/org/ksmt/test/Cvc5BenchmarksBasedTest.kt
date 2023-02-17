@@ -17,9 +17,8 @@ class Cvc5BenchmarksBasedTest : BenchmarksBasedTest() {
     @Execution(ExecutionMode.CONCURRENT)
     @ParameterizedTest(name = "{0}")
     @MethodSource("cvc5TestData")
-    fun testConverter(name: String, samplePath: Path) =
-        testConverter(name, samplePath) { assertions ->
-            assertions
+    fun testConverter(name: String, samplePath: Path) = testConverter(name, samplePath) { assertions ->
+            internalizeAndConvertCvc5(assertions)
         }
 
     companion object {
