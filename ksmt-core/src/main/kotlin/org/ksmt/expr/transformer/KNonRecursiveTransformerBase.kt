@@ -232,7 +232,7 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
     }
 
     /**
-     * Specialized version of [transformExprAfterTransformed] for expression with 4 arguments.
+     * Specialized version of [transformExprAfterTransformed] for expression with four arguments.
      * */
     @Suppress("LongParameterList", "ComplexCondition")
     inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3: KSort> transformExprAfterTransformed(

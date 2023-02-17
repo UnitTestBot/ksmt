@@ -319,7 +319,7 @@ inline fun <T : KSort, A0 : KSort, A1 : KSort> KExprSimplifierBase.simplifyExpr(
 )
 
 /**
- * Specialized version of [simplifyExpr] for expressions with 3 arguments.
+ * Specialized version of [simplifyExpr] for expressions with three arguments.
  * */
 @Suppress("LongParameterList")
 inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> KExprSimplifierBase.simplifyExpr(
@@ -336,7 +336,7 @@ inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> KExprSimplifierBase.s
 )
 
 /**
- * Specialized version of [simplifyExpr] for expressions with 4 arguments.
+ * Specialized version of [simplifyExpr] for expressions with four arguments.
  * */
 @Suppress("LongParameterList")
 inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort> KExprSimplifierBase.simplifyExpr(
