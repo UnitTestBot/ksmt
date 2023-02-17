@@ -1,31 +1,32 @@
-| Feature                                                                           | Status          |
-|-----------------------------------------------------------------------------------|-----------------|
-| [Rich expression system](#rich-expression-system)                                 | Done            |
-| [Expression interning](#expression-interning)                                     | Done            |
-| [Basic theories support](#basic-theories-support)                                 | Done            |
-| [SMT-LIB2 parser](#smt-lib2-parser)                                               | Done partially  |
-| [SMT-LIB2 serializer](#smt-lib2-serializer)                                       | TODO            |
-| [Unsupported features handling](#unsupported-features-handling)                   | Done partially  |
-| [SMT solver support](#smt-solver-support)                                         | Done            |
-| [Z3 solver support](#z3-solver-support)                                           | Done            |
-| [Bitwuzla solver support](#bitwuzla-solver-support)                               | Done            |
-| [Yices2 solver support](#yices2-solver-support)                                   | In progress     |
-| [CVC5 solver support](#cvc5-solver-support)                                       | TODO            |
-| [External process runner](#external-process-runner)                               | Done            |
-| [Portfolio solver](#portfolio-solver)                                             | TODO            |
-| [Solver configuration API](#solver-configuration-api)                             | Done            |
-| [Deployment](#deployment)                                                         | Done partially  |
-| [Expression simplification / evaluation](#expression-simplification--evaluation)  | Done partially  |
-| [Performance tests](#performance-tests)                                           | TODO            |
-| [Better Z3 API](#better-z3-api)                                                   | Done partially  |
-| [Better Bitwuzla bindings](#better-bitwuzla-bindings)                             | TODO            |
-| [Solver specific features API](#solver-specific-features-api)                     | TODO            |
-| [Quantifier elimination](#quantifier-elimination)                                 | TODO            |
-| [Interpolation](#interpolation)                                                   | TODO            |
-| [Model based projection](#model-based-projection)                                 | TODO            |
-| [Support more theories](#support-more-theories)                                   | TODO            |
-| [Solver proofs](#solver-proofs)                                                   | TODO            |
-| ...                                                                               | -               |
+| Feature                                                                          | Status         |
+|----------------------------------------------------------------------------------|----------------|
+| [Rich expression system](#rich-expression-system)                                | Done           |
+| [Expression interning](#expression-interning)                                    | Done           |
+| [Basic theories support](#basic-theories-support)                                | Done           |
+| [SMT-LIB2 parser](#smt-lib2-parser)                                              | Done partially |
+| [SMT-LIB2 serializer](#smt-lib2-serializer)                                      | TODO           |
+| [Unsupported features handling](#unsupported-features-handling)                  | Done partially |
+| [SMT solver support](#smt-solver-support)                                        | Done           |
+| [Z3 solver support](#z3-solver-support)                                          | Done           |
+| [Bitwuzla solver support](#bitwuzla-solver-support)                              | Done           |
+| [Yices2 solver support](#yices2-solver-support)                                  | Done           |
+| [CVC5 solver support](#cvc5-solver-support)                                      | In progress    |
+| [External process runner](#external-process-runner)                              | Done           |
+| [Portfolio solver](#portfolio-solver)                                            | In progress    |
+| [Solver configuration API](#solver-configuration-api)                            | Done           |
+| [Deployment](#deployment)                                                        | Done partially |
+| [Expression simplification / evaluation](#expression-simplification--evaluation) | Done           |
+| [Performance tests](#performance-tests)                                          | TODO           |
+| [Better Z3 API](#better-z3-api)                                                  | Done partially |
+| [Better Bitwuzla bindings](#better-bitwuzla-bindings)                            | Done           |
+| [Solver specific features API](#solver-specific-features-api)                    | TODO           |
+| [Quantifier elimination](#quantifier-elimination)                                | TODO           |
+| [Interpolation](#interpolation)                                                  | TODO           |
+| [Model based projection](#model-based-projection)                                | TODO           |
+| [Support more theories](#support-more-theories)                                  | TODO           |
+| [Solver proofs](#solver-proofs)                                                  | TODO           |
+| [SymFpu](#symfpu)                                                                | In progress    |
+| ...                                                                              | -              |
 
 
 ### Rich expression system
@@ -293,7 +294,12 @@ Some solvers provide native support for theories above, e.g. Z3 and CVC5.
 
 ### Solver proofs
 
-In case of UNSAT many solvers can produce proof. 
+In case of UNSAT many solvers can produce proof.
 
 Provide a universal representation of proof in KSMT and implement conversion from solver native proof.
 
+### SymFpu
+
+Support for Fp theory in SMT solvers that support Bv (e.g. Yices2).
+The [SymFpu](https://github.com/martin-cs/symfpu) approach proposes to rewrite all
+FP expressions over BV terms.
