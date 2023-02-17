@@ -573,8 +573,9 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         ifNotTransformed: (In) -> KExpr<T>,
         transformer: KContext.(List<KExpr<A>>) -> Out
     ): KExpr<T> = transformExprAfterTransformed(expr, dependencies) { transformedDependencies ->
-        if (transformedDependencies == dependencies)
+        if (transformedDependencies == dependencies) {
             return ifNotTransformed(expr)
+        }
 
         val transformedExpr = ctx.transformer(transformedDependencies)
 
@@ -587,8 +588,9 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         ifNotTransformed: (In) -> KExpr<T>,
         transformer: KContext.(KExpr<A>) -> Out
     ): KExpr<T> = transformExprAfterTransformed(expr, dependency) { td ->
-        if (td == dependency)
+        if (td == dependency) {
             return ifNotTransformed(expr)
+        }
 
         val transformedExpr = ctx.transformer(td)
 
@@ -603,8 +605,9 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         ifNotTransformed: (In) -> KExpr<T>,
         transformer: KContext.(KExpr<A0>, KExpr<A1>) -> Out
     ): KExpr<T> = transformExprAfterTransformed(expr, dependency0, dependency1) { td0, td1 ->
-        if (td0 == dependency0 && td1 == dependency1)
+        if (td0 == dependency0 && td1 == dependency1) {
             return ifNotTransformed(expr)
+        }
 
         val transformedExpr = ctx.transformer(td0, td1)
 
@@ -621,8 +624,9 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         ifNotTransformed: (In) -> KExpr<T>,
         transformer: KContext.(KExpr<A0>, KExpr<A1>, KExpr<A2>) -> Out
     ): KExpr<T> = transformExprAfterTransformed(expr, dependency0, dependency1, dependency2) { td0, td1, td2 ->
-        if (td0 == dependency0 && td1 == dependency1 && td2 == dependency2)
+        if (td0 == dependency0 && td1 == dependency1 && td2 == dependency2) {
             return ifNotTransformed(expr)
+        }
 
         val transformedExpr = ctx.transformer(td0, td1, td2)
 
@@ -641,8 +645,9 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         transformer: KContext.(KExpr<A0>, KExpr<A1>, KExpr<A2>, KExpr<A3>) -> Out
     ): KExpr<T> =
         transformExprAfterTransformed(expr, dependency0, dependency1, dependency2, dependency3) { td0, td1, td2, td3 ->
-            if (td0 == dependency0 && td1 == dependency1 && td2 == dependency2 && td3 == dependency3)
+            if (td0 == dependency0 && td1 == dependency1 && td2 == dependency2 && td3 == dependency3) {
                 return ifNotTransformed(expr)
+            }
 
             val transformedExpr = ctx.transformer(td0, td1, td2, td3)
 
