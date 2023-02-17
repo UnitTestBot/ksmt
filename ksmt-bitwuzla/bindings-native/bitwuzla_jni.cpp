@@ -106,7 +106,7 @@ void set_ptr_array(JNIEnv* env, jlongArray array, T* ptr_array, size_t size) {
 
 #define BZLA (Bitwuzla*) bitwuzla
 #define TERM(t) (BitwuzlaTerm*) t
-#define SORT(s) (BitwuzlaSort *) s
+#define SORT(s) (BitwuzlaSort*) s
 
 void abort_callback(const char* msg) {
     throw std::runtime_error(msg);
