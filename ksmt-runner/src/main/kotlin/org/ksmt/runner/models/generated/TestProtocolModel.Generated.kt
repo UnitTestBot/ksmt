@@ -24,7 +24,7 @@ class TestProtocolModel private constructor(
     private val _convertAssertions: RdCall<List<Long>, TestConversionResult>,
     private val _internalizeAndConvertBitwuzla: RdCall<TestInternalizeAndConvertParams, TestConversionResult>,
     private val _internalizeAndConvertYices: RdCall<TestInternalizeAndConvertParams, TestConversionResult>,
-    private val _createSolver: RdCall<Unit, Int>,
+    private val _createSolver: RdCall<Int, Int>,
     private val _assert: RdCall<TestAssertParams, Unit>,
     private val _check: RdCall<Int, TestCheckResult>,
     private val _exprToString: RdCall<Long, String>,
@@ -71,7 +71,7 @@ class TestProtocolModel private constructor(
         private val __LongListSerializer = FrameworkMarshallers.Long.list()
         private val __IntNullableSerializer = FrameworkMarshallers.Int.nullable()
         
-        const val serializationHash = -5618680705340996311L
+        const val serializationHash = -251717700895261451L
         
     }
     override val serializersOwner: ISerializersOwner get() = TestProtocolModel
@@ -112,7 +112,7 @@ class TestProtocolModel private constructor(
     /**
      * Create solver
      */
-    val createSolver: RdCall<Unit, Int> get() = _createSolver
+    val createSolver: RdCall<Int, Int> get() = _createSolver
     
     /**
      * Assert expr
@@ -207,7 +207,7 @@ class TestProtocolModel private constructor(
         RdCall<List<Long>, TestConversionResult>(__LongListSerializer, TestConversionResult),
         RdCall<TestInternalizeAndConvertParams, TestConversionResult>(TestInternalizeAndConvertParams, TestConversionResult),
         RdCall<TestInternalizeAndConvertParams, TestConversionResult>(TestInternalizeAndConvertParams, TestConversionResult),
-        RdCall<Unit, Int>(FrameworkMarshallers.Void, FrameworkMarshallers.Int),
+        RdCall<Int, Int>(FrameworkMarshallers.Int, FrameworkMarshallers.Int),
         RdCall<TestAssertParams, Unit>(TestAssertParams, FrameworkMarshallers.Void),
         RdCall<Int, TestCheckResult>(FrameworkMarshallers.Int, TestCheckResult),
         RdCall<Long, String>(FrameworkMarshallers.Long, FrameworkMarshallers.String),

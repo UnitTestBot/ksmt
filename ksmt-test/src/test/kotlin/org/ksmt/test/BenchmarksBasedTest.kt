@@ -11,8 +11,11 @@ import org.ksmt.KContext
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KDivArithExpr
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFpMaxExpr
+import org.ksmt.expr.KFpMinExpr
 import org.ksmt.expr.KFpToBvExpr
 import org.ksmt.expr.KFpToRealExpr
+import org.ksmt.expr.KFpValue
 import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KModIntExpr
 import org.ksmt.expr.KPowerArithExpr
@@ -40,6 +43,7 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.FpUtils.isZero
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.Path
@@ -49,6 +53,7 @@ import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 @Suppress("UnnecessaryAbstractClass")
@@ -95,7 +100,7 @@ abstract class BenchmarksBasedTest {
                 val model = solverManager.createSolver(ctx, solverType).use { testSolver ->
                     ksmtAssertions.forEach { testSolver.assertAsync(it) }
 
-                    val status = testSolver.checkAsync(timeout = 1.seconds)
+                    val status = testSolver.checkAsync(SOLVER_CHECK_SAT_TIMEOUT)
                     if (status != KSolverStatus.SAT) {
                         ignoreTest { "No model to check" }
                     }
@@ -127,6 +132,11 @@ abstract class BenchmarksBasedTest {
                  * */
                 val assertionsToCheck = evaluatedAssertions.filterNot { hasUnderspecifiedOperations(it) }
 
+                // Samples are false UNSAT in Z3 because of incorrect FMA eval
+                if (name in KnownZ3Issues.z3FpFmaFalseUnsatSamples) {
+                    ignoreTest { "Example is known to be false UNSAT in Z3 test oracle" }
+                }
+
                 worker.performEqualityChecks {
                     cardinalityConstraints.forEach { assume(it) }
                     assertionsToCheck.forEach { isTrue(it) }
@@ -146,12 +156,21 @@ abstract class BenchmarksBasedTest {
         testWorkers.withWorker(ctx) { worker ->
             worker.skipBadTestCases {
                 val assertions = worker.parseFile(samplePath)
-                val solver = worker.createSolver()
+                val solver = worker.createSolver(TEST_WORKER_CHECK_SAT_TIMEOUT)
                 assertions.forEach {
                     worker.assert(solver, it)
                 }
 
-                val expectedStatus = worker.check(solver)
+                var expectedStatus = worker.check(solver)
+
+                // Fix known Z3 satisfiability issues
+                if (expectedStatus == KSolverStatus.UNSAT && name in KnownZ3Issues.z3FpFmaFalseUnsatSamples) {
+                    expectedStatus = KSolverStatus.SAT
+                }
+                if (expectedStatus == KSolverStatus.SAT && name in KnownZ3Issues.z3FpFmaFalseSatSamples) {
+                    expectedStatus = KSolverStatus.UNSAT
+                }
+
                 if (expectedStatus == KSolverStatus.UNKNOWN) {
                     ignoreTest { "Expected status is unknown" }
                 }
@@ -162,7 +181,7 @@ abstract class BenchmarksBasedTest {
                     ksmtAssertions.forEach { ksmtSolver.assertAsync(it) }
 
                     // use greater timeout to reduce false-positive unknowns
-                    val status = ksmtSolver.check(timeout = 2.seconds)
+                    val status = ksmtSolver.check(SOLVER_CHECK_SAT_TIMEOUT)
                     if (status == KSolverStatus.UNKNOWN) {
                         ignoreTest { "Actual status is unknown: ${ksmtSolver.reasonOfUnknown()}" }
                     }
@@ -188,7 +207,7 @@ abstract class BenchmarksBasedTest {
             worker.astSerializationCtx.resetCtx()
         }
         try {
-            TestRunner(ctx, worker).let {
+            TestRunner(ctx, TEST_WORKER_SINGLE_OPERATION_TIMEOUT, worker).let {
                 try {
                     it.init()
                     body(it)
@@ -209,6 +228,7 @@ abstract class BenchmarksBasedTest {
      * 2. integer mod/rem with zero divisor
      * 3. zero to the zero power
      * 4. Fp to number conversions with NaN and Inf
+     * 5. Fp max/min with +/- zero
      * */
     private fun hasUnderspecifiedOperations(expr: KExpr<*>): Boolean {
         val detector = UnderspecifiedOperationDetector(expr.ctx)
@@ -237,6 +257,12 @@ abstract class BenchmarksBasedTest {
         override fun <T : KFpSort> transform(expr: KFpToRealExpr<T>): KExpr<KRealSort>  =
             super.transform(expr).also { checkFpNaNOrInf(expr.value) }
 
+        override fun <T : KFpSort> transform(expr: KFpMinExpr<T>): KExpr<T> =
+            super.transform(expr).also { checkFpZeroWithDifferentSign(expr.arg0, expr.arg1) }
+
+        override fun <T : KFpSort> transform(expr: KFpMaxExpr<T>): KExpr<T> =
+            super.transform(expr).also { checkFpZeroWithDifferentSign(expr.arg0, expr.arg1) }
+
         private fun checkDivisionByZero(divisor: KExpr<*>) = with(ctx) {
             if (divisor == 0.expr) {
                 hasUnderspecifiedOperation = true
@@ -259,9 +285,23 @@ abstract class BenchmarksBasedTest {
                 hasUnderspecifiedOperation = true
             }
         }
+
+        private fun <T : KFpSort> checkFpZeroWithDifferentSign(lhs: KExpr<T>, rhs: KExpr<T>) {
+            if (lhs !is KFpValue<T> || rhs !is KFpValue<T>) return
+            if (lhs.isZero() && rhs.isZero() && lhs.signBit != rhs.signBit) {
+                hasUnderspecifiedOperation = true
+            }
+        }
     }
 
     companion object {
+        val TEST_WORKER_SINGLE_OPERATION_TIMEOUT = 10.seconds
+        val TEST_WORKER_EQUALITY_CHECK_TIMEOUT = 3.seconds
+        val TEST_WORKER_CHECK_SAT_TIMEOUT = 1.seconds
+
+        val SOLVER_SINGLE_OPERATION_TIMEOUT = 10.seconds
+        val SOLVER_CHECK_SAT_TIMEOUT = 3.seconds
+
         internal lateinit var solverManager: KSolverRunnerManager
         internal lateinit var testWorkers: KsmtWorkerPool<TestProtocolModel>
 
@@ -320,12 +360,12 @@ abstract class BenchmarksBasedTest {
         fun initWorkerPools() {
             solverManager = KSolverRunnerManager(
                 workerPoolSize = 4,
-                hardTimeout = 3.seconds,
-                workerProcessIdleTimeout = 50.seconds
+                hardTimeout = SOLVER_SINGLE_OPERATION_TIMEOUT,
+                workerProcessIdleTimeout = 10.minutes
             )
             testWorkers = KsmtWorkerPool(
                 maxWorkerPoolSize = 4,
-                workerProcessIdleTimeout = 300.seconds,
+                workerProcessIdleTimeout = 10.minutes,
                 workerFactory = object : KsmtWorkerFactory<TestProtocolModel> {
                     override val childProcessEntrypoint = TestWorkerProcess::class
                     override fun updateArgs(args: KsmtWorkerArgs): KsmtWorkerArgs = args
@@ -382,7 +422,7 @@ abstract class BenchmarksBasedTest {
     }
 
     suspend fun TestRunner.performEqualityChecks(checks: suspend EqualityChecker.() -> Unit) {
-        val solver = createSolver()
+        val solver = createSolver(TEST_WORKER_EQUALITY_CHECK_TIMEOUT)
         val checker = EqualityChecker(this, solver)
         checker.checks()
     }
@@ -478,5 +518,179 @@ abstract class BenchmarksBasedTest {
             System.err.println("IGNORE $testClassName.$testName: ${ignore.message}")
             Assumptions.assumeTrue(false)
         }
+    }
+
+    object KnownZ3Issues {
+        /**
+         * These samples are known to be SAT according to the annotation
+         * in the source and according to the previous versions of Z3 (e.g. 4.8.15).
+         * Currently used z3 4.11.2 treat these samples as UNSAT.
+         *
+         * Todo: remove when this issue will be fixed in Z3.
+         * */
+        val z3FpFmaFalseUnsatSamples = setOf(
+            "QF_FP_fma-has-solution-10232.smt2",
+            "QF_FP_fma-has-solution-10256.smt2",
+            "QF_FP_fma-has-solution-10601.smt2",
+            "QF_FP_fma-has-solution-10792.smt2",
+            "QF_FP_fma-has-solution-10834.smt2",
+            "QF_FP_fma-has-solution-10856.smt2",
+            "QF_FP_fma-has-solution-10867.smt2",
+            "QF_FP_fma-has-solution-10998.smt2",
+            "QF_FP_fma-has-solution-11152.smt2",
+            "QF_FP_fma-has-solution-11193.smt2",
+            "QF_FP_fma-has-solution-11245.smt2",
+            "QF_FP_fma-has-solution-11482.smt2",
+            "QF_FP_fma-has-solution-11503.smt2",
+            "QF_FP_fma-has-solution-12238.smt2",
+            "QF_FP_fma-has-solution-12329.smt2",
+            "QF_FP_fma-has-solution-1247.smt2",
+            "QF_FP_fma-has-solution-12600.smt2",
+            "QF_FP_fma-has-solution-12639.smt2",
+            "QF_FP_fma-has-solution-12682.smt2",
+            "QF_FP_fma-has-solution-12789.smt2",
+            "QF_FP_fma-has-solution-12840.smt2",
+            "QF_FP_fma-has-solution-12969.smt2",
+            "QF_FP_fma-has-solution-1325.smt2",
+            "QF_FP_fma-has-solution-13421.smt2",
+            "QF_FP_fma-has-solution-13786.smt2",
+            "QF_FP_fma-has-solution-14111.smt2",
+            "QF_FP_fma-has-solution-14346.smt2",
+            "QF_FP_fma-has-solution-14535.smt2",
+            "QF_FP_fma-has-solution-14613.smt2",
+            "QF_FP_fma-has-solution-14742.smt2",
+            "QF_FP_fma-has-solution-14799.smt2",
+            "QF_FP_fma-has-solution-14835.smt2",
+            "QF_FP_fma-has-solution-154.smt2",
+            "QF_FP_fma-has-solution-15774.smt2",
+            "QF_FP_fma-has-solution-15798.smt2",
+            "QF_FP_fma-has-solution-15963.smt2",
+            "QF_FP_fma-has-solution-15995.smt2",
+            "QF_FP_fma-has-solution-17127.smt2",
+            "QF_FP_fma-has-solution-17650.smt2",
+            "QF_FP_fma-has-solution-17915.smt2",
+            "QF_FP_fma-has-solution-17959.smt2",
+            "QF_FP_fma-has-solution-1809.smt2",
+            "QF_FP_fma-has-solution-18220.smt2",
+            "QF_FP_fma-has-solution-18700.smt2",
+            "QF_FP_fma-has-solution-19191.smt2",
+            "QF_FP_fma-has-solution-19593.smt2",
+            "QF_FP_fma-has-solution-2988.smt2",
+            "QF_FP_fma-has-solution-3042.smt2",
+            "QF_FP_fma-has-solution-3742.smt2",
+            "QF_FP_fma-has-solution-4281.smt2",
+            "QF_FP_fma-has-solution-457.smt2",
+            "QF_FP_fma-has-solution-4615.smt2",
+            "QF_FP_fma-has-solution-4981.smt2",
+            "QF_FP_fma-has-solution-4983.smt2",
+            "QF_FP_fma-has-solution-5056.smt2",
+            "QF_FP_fma-has-solution-5127.smt2",
+            "QF_FP_fma-has-solution-5213.smt2",
+            "QF_FP_fma-has-solution-5986.smt2",
+            "QF_FP_fma-has-solution-6211.smt2",
+            "QF_FP_fma-has-solution-6468.smt2",
+            "QF_FP_fma-has-solution-6573.smt2",
+            "QF_FP_fma-has-solution-6673.smt2",
+            "QF_FP_fma-has-solution-6822.smt2",
+            "QF_FP_fma-has-solution-7580.smt2",
+            "QF_FP_fma-has-solution-7736.smt2",
+            "QF_FP_fma-has-solution-7832.smt2",
+            "QF_FP_fma-has-solution-7920.smt2",
+            "QF_FP_fma-has-solution-80.smt2",
+            "QF_FP_fma-has-solution-8278.smt2",
+            "QF_FP_fma-has-solution-8475.smt2",
+            "QF_FP_fma-has-solution-8483.smt2",
+            "QF_FP_fma-has-solution-9132.smt2",
+            "QF_FP_fma-has-solution-9188.smt2",
+            "QF_FP_fma-has-solution-9455.smt2",
+            "QF_FP_fma-has-solution-9467.smt2",
+            "QF_FP_fma-has-solution-9517.smt2",
+        )
+
+        /**
+         * These samples are known to be UNSAT according to the annotation
+         * in the source and according to the previous versions of Z3 (e.g. 4.8.15).
+         * Currently used z3 4.11.2 treat these samples as SAT.
+         *
+         * Todo: remove when this issue will be fixed in Z3.
+         * */
+        val z3FpFmaFalseSatSamples = setOf(
+            "QF_FP_fma-has-no-other-solution-10232.smt2",
+            "QF_FP_fma-has-no-other-solution-10256.smt2",
+            "QF_FP_fma-has-no-other-solution-10601.smt2",
+            "QF_FP_fma-has-no-other-solution-10856.smt2",
+            "QF_FP_fma-has-no-other-solution-10834.smt2",
+            "QF_FP_fma-has-no-other-solution-10792.smt2",
+            "QF_FP_fma-has-no-other-solution-10867.smt2",
+            "QF_FP_fma-has-no-other-solution-10998.smt2",
+            "QF_FP_fma-has-no-other-solution-11152.smt2",
+            "QF_FP_fma-has-no-other-solution-11193.smt2",
+            "QF_FP_fma-has-no-other-solution-11245.smt2",
+            "QF_FP_fma-has-no-other-solution-11482.smt2",
+            "QF_FP_fma-has-no-other-solution-11503.smt2",
+            "QF_FP_fma-has-no-other-solution-12238.smt2",
+            "QF_FP_fma-has-no-other-solution-12329.smt2",
+            "QF_FP_fma-has-no-other-solution-1247.smt2",
+            "QF_FP_fma-has-no-other-solution-12639.smt2",
+            "QF_FP_fma-has-no-other-solution-12600.smt2",
+            "QF_FP_fma-has-no-other-solution-12682.smt2",
+            "QF_FP_fma-has-no-other-solution-12789.smt2",
+            "QF_FP_fma-has-no-other-solution-12840.smt2",
+            "QF_FP_fma-has-no-other-solution-12969.smt2",
+            "QF_FP_fma-has-no-other-solution-1325.smt2",
+            "QF_FP_fma-has-no-other-solution-13421.smt2",
+            "QF_FP_fma-has-no-other-solution-13786.smt2",
+            "QF_FP_fma-has-no-other-solution-14111.smt2",
+            "QF_FP_fma-has-no-other-solution-14346.smt2",
+            "QF_FP_fma-has-no-other-solution-14613.smt2",
+            "QF_FP_fma-has-no-other-solution-14535.smt2",
+            "QF_FP_fma-has-no-other-solution-14742.smt2",
+            "QF_FP_fma-has-no-other-solution-14835.smt2",
+            "QF_FP_fma-has-no-other-solution-14799.smt2",
+            "QF_FP_fma-has-no-other-solution-154.smt2",
+            "QF_FP_fma-has-no-other-solution-15774.smt2",
+            "QF_FP_fma-has-no-other-solution-15798.smt2",
+            "QF_FP_fma-has-no-other-solution-15963.smt2",
+            "QF_FP_fma-has-no-other-solution-15995.smt2",
+            "QF_FP_fma-has-no-other-solution-17127.smt2",
+            "QF_FP_fma-has-no-other-solution-17650.smt2",
+            "QF_FP_fma-has-no-other-solution-17915.smt2",
+            "QF_FP_fma-has-no-other-solution-17959.smt2",
+            "QF_FP_fma-has-no-other-solution-1809.smt2",
+            "QF_FP_fma-has-no-other-solution-18220.smt2",
+            "QF_FP_fma-has-no-other-solution-18700.smt2",
+            "QF_FP_fma-has-no-other-solution-19191.smt2",
+            "QF_FP_fma-has-no-other-solution-19593.smt2",
+            "QF_FP_fma-has-no-other-solution-2988.smt2",
+            "QF_FP_fma-has-no-other-solution-3042.smt2",
+            "QF_FP_fma-has-no-other-solution-3742.smt2",
+            "QF_FP_fma-has-no-other-solution-4281.smt2",
+            "QF_FP_fma-has-no-other-solution-457.smt2",
+            "QF_FP_fma-has-no-other-solution-4615.smt2",
+            "QF_FP_fma-has-no-other-solution-4981.smt2",
+            "QF_FP_fma-has-no-other-solution-5056.smt2",
+            "QF_FP_fma-has-no-other-solution-4983.smt2",
+            "QF_FP_fma-has-no-other-solution-5213.smt2",
+            "QF_FP_fma-has-no-other-solution-5127.smt2",
+            "QF_FP_fma-has-no-other-solution-5986.smt2",
+            "QF_FP_fma-has-no-other-solution-6211.smt2",
+            "QF_FP_fma-has-no-other-solution-6468.smt2",
+            "QF_FP_fma-has-no-other-solution-6573.smt2",
+            "QF_FP_fma-has-no-other-solution-6673.smt2",
+            "QF_FP_fma-has-no-other-solution-6822.smt2",
+            "QF_FP_fma-has-no-other-solution-7580.smt2",
+            "QF_FP_fma-has-no-other-solution-7736.smt2",
+            "QF_FP_fma-has-no-other-solution-7832.smt2",
+            "QF_FP_fma-has-no-other-solution-7920.smt2",
+            "QF_FP_fma-has-no-other-solution-80.smt2",
+            "QF_FP_fma-has-no-other-solution-8278.smt2",
+            "QF_FP_fma-has-no-other-solution-8475.smt2",
+            "QF_FP_fma-has-no-other-solution-8483.smt2",
+            "QF_FP_fma-has-no-other-solution-9132.smt2",
+            "QF_FP_fma-has-no-other-solution-9188.smt2",
+            "QF_FP_fma-has-no-other-solution-9517.smt2",
+            "QF_FP_fma-has-no-other-solution-9455.smt2",
+            "QF_FP_fma-has-no-other-solution-9467.smt2",
+        )
     }
 }

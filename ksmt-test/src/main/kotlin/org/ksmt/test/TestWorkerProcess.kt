@@ -29,8 +29,6 @@ import org.ksmt.solver.z3.KZ3ExprInternalizer
 import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.sort.KBoolSort
 import org.ksmt.utils.uncheckedCast
-import kotlin.time.Duration.Companion.seconds
-import kotlin.time.DurationUnit
 
 class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
     private var workerCtx: KContext? = null
@@ -115,11 +113,11 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         }
     }
 
-    private fun createSolver(): Int {
+    private fun createSolver(timeout: Int): Int {
         val solver = with(z3Ctx) {
             mkSolver().apply {
                 val params = mkParams().apply {
-                    add("timeout", solverCheckTimeout.toInt(DurationUnit.MILLISECONDS))
+                    add("timeout",  timeout)
                     add("random_seed", SEED_FOR_RANDOM)
                 }
                 setParameters(params)
@@ -248,8 +246,8 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
             val converted = internalizeAndConvertYices(params.expressions as List<KExpr<KBoolSort>>)
             TestConversionResult(converted)
         }
-        createSolver.measureExecutionForTermination {
-            createSolver()
+        createSolver.measureExecutionForTermination { timeout ->
+            createSolver(timeout)
         }
         assert.measureExecutionForTermination { params ->
             assert(params.solver, params.expr)
@@ -284,7 +282,6 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
 
     companion object {
         private const val SEED_FOR_RANDOM = 12345
-        private val solverCheckTimeout = 1.seconds
 
         init {
             // force native library load

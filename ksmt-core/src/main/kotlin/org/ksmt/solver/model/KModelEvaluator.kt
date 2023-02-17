@@ -3,10 +3,14 @@ package org.ksmt.solver.model
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArraySelect
+import org.ksmt.expr.KArrayStore
+import org.ksmt.expr.KConst
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KFunctionAsArray
+import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector.Companion.collectUninterpretedDeclarations
@@ -42,6 +46,19 @@ open class KModelEvaluator(
 
             evalFunction(expr.decl, args).also { rewrite(it) }
         }
+
+    private val rewrittenArraySelects = hashMapOf<KArraySelect<*, *>, KArraySelect<*, *>?>()
+    override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> {
+        val rewrittenSelect: KArraySelect<D, R>? = rewrittenArraySelects.getOrPut(expr) {
+            ctx.tryEliminateFunctionAsArray(expr)
+        }?.uncheckedCast()
+
+        return if (rewrittenSelect == null) {
+            super.transform(expr)
+        } else {
+            simplifyExpr(expr, preprocess = { rewrittenSelect })
+        }
+    }
 
     override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
         // No way to evaluate f when it is quantified in (as-array f)
@@ -196,38 +213,122 @@ open class KModelEvaluator(
                 "${interpretation.vars.size} arguments expected but ${args.size} provided"
             }
 
-            evalFuncInterp(interpretation, args)
+            val resolvedInterpretation = ctx.resolveFunctionInterpretationComplete(interpretation, args)
+
+            // Interpretation was fully resolved
+            if (resolvedInterpretation.entries.isEmpty() && resolvedInterpretation.default != null) {
+                return@getOrPut resolvedInterpretation.default
+            }
+
+            // Interpretation was not fully resolved --> generate ITE chain
+            evalResolvedFunctionInterpretation(resolvedInterpretation, args)
         }
         return evaluated.asExpr(decl.sort)
     }
 
-    @Suppress("UNCHECKED_CAST")
-    open fun <T : KSort> evalFuncInterp(
-        interpretation: KModel.KFuncInterp<T>,
+    private fun <T : KSort> evalResolvedFunctionInterpretation(
+        resolvedInterpretation: KModel.KFuncInterp<T>,
         args: List<KExpr<*>>
     ): KExpr<T> = with(ctx) {
+        // in case of partial interpretation we can generate any default expr to preserve expression correctness
+        val defaultExpr = resolvedInterpretation.default ?: completeModelValue(resolvedInterpretation.sort)
+        return resolvedInterpretation.entries.foldRight(defaultExpr) { entry, acc ->
+            val argBinding = entry.args.zip(args) { ea, a ->
+                val entryArg: KExpr<KSort> = ea.uncheckedCast()
+                val actualArg: KExpr<KSort> = a.uncheckedCast()
+                mkEq(entryArg, actualArg)
+            }
+            mkIte(mkAnd(argBinding), entry.value, acc)
+        }
+    }
+
+    private fun <T : KSort> KContext.resolveFunctionInterpretationComplete(
+        interpretation: KModel.KFuncInterp<T>,
+        args: List<KExpr<*>>
+    ): KModel.KFuncInterp<T> {
+        // Replace function parameters vars with actual arguments
         val varSubstitution = KExprSubstitutor(ctx).apply {
             interpretation.vars.zip(args).forEach { (v, a) ->
-                val app = mkApp(v, emptyList())
-                substitute(app as KExpr<KSort>, a as KExpr<KSort>)
+                val app: KExpr<KSort> = mkConstApp(v).uncheckedCast()
+                substitute(app, a.uncheckedCast())
             }
         }
 
-        val entries = interpretation.entries.map { entry ->
-            KModel.KFuncInterpEntry(
-                entry.args.map { varSubstitution.apply(it) },
-                varSubstitution.apply(entry.value)
-            )
+        val argsAreConstants = args.all { it is KInterpretedValue<*> }
+
+        val resolvedEntries = arrayListOf<KModel.KFuncInterpEntry<T>>()
+        for (entry in interpretation.entries) {
+            val entryArgs = entry.args.map { varSubstitution.apply(it) }
+            val entryValue = varSubstitution.apply(entry.value)
+
+            if (resolvedEntries.isEmpty() && entryArgs == args) {
+                // We have no possibly matching entries and we found a matched entry
+                return KModel.KFuncInterp(
+                    decl = interpretation.decl,
+                    vars = interpretation.vars,
+                    entries = emptyList(),
+                    default = entryValue
+                )
+            }
+
+            val definitelyDontMatch = argsAreConstants && entryArgs.all { it is KInterpretedValue<*> }
+            if (definitelyDontMatch) {
+                // No need to keep entry, since it doesn't match arguments
+                continue
+            }
+
+            resolvedEntries += KModel.KFuncInterpEntry(entryArgs, entryValue)
         }
 
-        // in case of partial interpretation we can generate any default expr to preserve expression correctness
-        val defaultExpr = interpretation.default ?: completeModelValue(interpretation.sort)
-        val default = varSubstitution.apply(defaultExpr)
+        val resolvedDefault = interpretation.default?.let { varSubstitution.apply(it) }
 
-        return entries.foldRight(default) { entry, acc ->
-            val argBinding = mkAnd(entry.args.zip(args) { ea, a -> mkEq(ea as KExpr<KSort>, a as KExpr<KSort>) })
-            mkIte(argBinding, entry.value, acc)
+        return KModel.KFuncInterp(
+            decl = interpretation.decl,
+            vars = interpretation.vars,
+            entries = resolvedEntries,
+            default = resolvedDefault
+        )
+    }
+
+    /**
+     * Usually, [KFunctionAsArray] will be expanded into large array store chain.
+     * In case of array select, we can avoid such expansion and replace
+     * (select (as-array f) i) with (f i).
+     * */
+    private fun <D : KSort, R : KSort> KContext.tryEliminateFunctionAsArray(
+        expr: KArraySelect<D, R>
+    ): KArraySelect<D, R>? {
+        // Unroll stores until we find some base array
+        val parentStores = arrayListOf<KArrayStore<D, R>>()
+        var base = expr.array
+        while (base is KArrayStore<D, R>) {
+            parentStores += base
+            base = base.array
         }
+
+        // If base array in uninterpreted, try to replace it with model value
+        if (base is KConst<KArraySort<D, R>>) {
+            val interpretation = model.interpretation(base.decl) ?: return null
+            if (interpretation.entries.isNotEmpty()) return null
+            base = interpretation.default ?: return null
+        }
+
+        if (base !is KFunctionAsArray<D, R>) return null
+
+        /**
+         * Replace as-array with (const (f i)) since:
+         * 1. we may have parent stores here and we need an array expression
+         * 2. (select (const (f i)) i) ==> (f i)
+         * */
+        val defaultSelectValue = base.function.apply(listOf(expr.index))
+        var newArrayBase: KExpr<KArraySort<D, R>> = mkArrayConst(base.sort, defaultSelectValue)
+
+        // Rebuild array
+        for (store in parentStores.asReversed()) {
+            newArrayBase = newArrayBase.store(store.index, store.value)
+        }
+
+        return mkArraySelectNoSimplify(newArrayBase, expr.index)
     }
 
     private fun <T : KSort> completeModelValue(sort: T): KExpr<T> {
