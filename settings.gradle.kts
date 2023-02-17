@@ -4,6 +4,7 @@ include("ksmt-z3")
 include("ksmt-bitwuzla")
 include("ksmt-yices")
 include("ksmt-runner")
+include("ksmt-runner:solver-generator")
 include("ksmt-test")
 
 pluginManagement {

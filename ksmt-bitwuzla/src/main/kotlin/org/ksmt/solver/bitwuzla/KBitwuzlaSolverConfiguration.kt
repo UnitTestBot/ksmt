@@ -44,7 +44,6 @@ class KBitwuzlaSolverConfigurationImpl(private val bitwuzla: Bitwuzla) : KBitwuz
     }
 }
 
-@Suppress("unused") // Used in ksmt-runner
 class KBitwuzlaSolverUniversalConfiguration(
     private val builder: KSolverUniversalConfigurationBuilder
 ) : KBitwuzlaSolverConfiguration {

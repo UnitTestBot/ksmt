@@ -6,6 +6,7 @@ import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.runner.core.ChildProcessBase
 import org.ksmt.runner.core.KsmtWorkerArgs
+import org.ksmt.runner.generated.createInstance
 import org.ksmt.runner.generated.models.CheckResult
 import org.ksmt.runner.generated.models.ModelEntry
 import org.ksmt.runner.generated.models.ModelFuncInterpEntry

@@ -85,6 +85,13 @@ val generateModels = tasks.register<RdGenTask>("generateProtocolModels") {
     }
 }
 
+val generateSolverUtils = tasks.register("generateSolverUtils") {
+    val generatorProject = project(":ksmt-runner:solver-generator")
+    generatorProject.ext["generatedSolverUtilsPackage"] = generatedPackage
+    generatorProject.ext["generatedSolverUtilsPath"] = generatedSourceDir.absolutePath
+    dependsOn(":ksmt-runner:solver-generator:generateSolverUtils")
+}
+
 tasks.getByName<KotlinCompile>("compileKotlin") {
     // don't treat warnings as errors because of warnings in generated rd models
     kotlinOptions.allWarningsAsErrors = false

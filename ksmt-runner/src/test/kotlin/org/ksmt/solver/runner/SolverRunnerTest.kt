@@ -5,6 +5,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.ksmt.KContext
+import org.ksmt.runner.generated.createInstance
 import org.ksmt.runner.generated.models.SolverType
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverStatus

@@ -7,8 +7,10 @@ import org.ksmt.runner.core.KsmtWorkerFactory
 import org.ksmt.runner.core.KsmtWorkerPool
 import org.ksmt.runner.core.RdServer
 import org.ksmt.runner.core.WorkerInitializationFailedException
+import org.ksmt.runner.generated.createConfigurationBuilder
 import org.ksmt.runner.generated.models.SolverProtocolModel
 import org.ksmt.runner.generated.models.SolverType
+import org.ksmt.runner.generated.solverType
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.KSolverException
@@ -44,8 +46,7 @@ open class KSolverRunnerManager(
             throw KSolverException("Solver runner manager is terminated")
         }
         val solverType = solver.solverType
-        val configurationBuilder = solver.createConfigurationBuilder()
-        return KSolverRunner(this, ctx, configurationBuilder, solverType)
+        return KSolverRunner(this, ctx, solverType.createConfigurationBuilder(), solverType)
     }
 
     internal suspend fun createSolverExecutor(ctx: KContext, solverType: SolverType): KSolverRunnerExecutor {

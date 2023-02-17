@@ -7,12 +7,12 @@ import kotlinx.coroutines.sync.withLock
 import org.ksmt.KContext
 import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
+import org.ksmt.runner.generated.ConfigurationBuilder
 import org.ksmt.runner.generated.models.SolverType
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
-import org.ksmt.solver.KSolverUniversalConfigurationBuilder
 import org.ksmt.solver.async.KAsyncSolver
 import org.ksmt.sort.KBoolSort
 import java.util.concurrent.atomic.AtomicBoolean

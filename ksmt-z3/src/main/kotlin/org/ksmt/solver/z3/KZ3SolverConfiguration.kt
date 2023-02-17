@@ -45,7 +45,6 @@ class KZ3SolverConfigurationImpl(private val params: Params) : KZ3SolverConfigur
     }
 }
 
-@Suppress("unused") // Used in ksmt-runner
 class KZ3SolverUniversalConfiguration(
     private val builder: KSolverUniversalConfigurationBuilder
 ) : KZ3SolverConfiguration {

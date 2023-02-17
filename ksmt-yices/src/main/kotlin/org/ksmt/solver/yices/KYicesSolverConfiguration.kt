@@ -31,7 +31,6 @@ class KYicesSolverConfigurationImpl(private val config: Config) : KYicesSolverCo
     }
 }
 
-@Suppress("unused") // Used in ksmt-runner
 class KYicesSolverUniversalConfiguration(
     private val builder: KSolverUniversalConfigurationBuilder
 ) : KYicesSolverConfiguration {
