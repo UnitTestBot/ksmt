@@ -27,14 +27,7 @@ class KArrayStore<D : KSort, R : KSort> internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<KArraySort<D, R>> = transformer.transform(this)
 
-    override val sort: KArraySort<D, R>
-        get() = ctx.getExprSort(this)
-
-    override fun computeExprSort(): KArraySort<D, R> = array.sort
-
-    override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
-        dependency += array
-    }
+    override val sort: KArraySort<D, R> = array.sort
 
     override fun internHashCode(): Int = hash(array, index, value)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { array }, { index }, { value })
@@ -54,14 +47,7 @@ class KArraySelect<D : KSort, R : KSort> internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<R> = transformer.transform(this)
 
-    override val sort: R
-        get() = ctx.getExprSort(this)
-
-    override fun computeExprSort(): R = array.sort.range
-
-    override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
-        dependency += array
-    }
+    override val sort: R = array.sort.range
 
     override fun internHashCode(): Int = hash(array, index)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { array }, { index })
@@ -99,8 +85,7 @@ class KFunctionAsArray<D : KSort, R : KSort> internal constructor(
         domainSort = function.argSorts.single() as D
     }
 
-    override val sort: KArraySort<D, R>
-        get() = ctx.mkArraySort(domainSort, function.sort)
+    override val sort: KArraySort<D, R> = ctx.mkArraySort(domainSort, function.sort)
 
     override fun print(printer: ExpressionPrinter): Unit = with(printer) {
         append("(asArray ")
@@ -142,14 +127,7 @@ class KArrayLambda<D : KSort, R : KSort> internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<KArraySort<D, R>> = transformer.transform(this)
 
-    override val sort: KArraySort<D, R>
-        get() = ctx.getExprSort(this)
-
-    override fun computeExprSort(): KArraySort<D, R> = ctx.mkArraySort(indexVarDecl.sort, body.sort)
-
-    override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
-        dependency += body
-    }
+    override val sort: KArraySort<D, R> = ctx.mkArraySort(indexVarDecl.sort, body.sort)
 
     override fun internHashCode(): Int = hash(indexVarDecl, body)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { indexVarDecl }, { body })

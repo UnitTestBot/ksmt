@@ -735,8 +735,7 @@ open class KBitwuzlaExprConverter(
     }
 
     private inner class BoolToBv1AdapterExpr(val arg: KExpr<KBoolSort>) : KExpr<KBv1Sort>(ctx) {
-        override val sort: KBv1Sort
-            get() = ctx.bv1Sort
+        override val sort: KBv1Sort = ctx.bv1Sort
 
         override fun print(printer: ExpressionPrinter) = with(printer) {
             append("(toBV1 ")
@@ -754,8 +753,7 @@ open class KBitwuzlaExprConverter(
     }
 
     private inner class Bv1ToBoolAdapterExpr(val arg: KExpr<KBv1Sort>) : KExpr<KBoolSort>(ctx) {
-        override val sort: KBoolSort
-            get() = ctx.boolSort
+        override val sort: KBoolSort = ctx.boolSort
 
         override fun print(printer: ExpressionPrinter) = with(printer) {
             append("(toBool ")
@@ -777,8 +775,7 @@ open class KBitwuzlaExprConverter(
         val toDomainSort: ToDomain,
         val toRangeSort: ToRange
     ) : KExpr<KArraySort<ToDomain, ToRange>>(ctx) {
-        override val sort: KArraySort<ToDomain, ToRange>
-            get() = ctx.mkArraySort(toDomainSort, toRangeSort)
+        override val sort: KArraySort<ToDomain, ToRange> = ctx.mkArraySort(toDomainSort, toRangeSort)
 
         override fun print(printer: ExpressionPrinter) = with(printer) {
             append("(toArray ")

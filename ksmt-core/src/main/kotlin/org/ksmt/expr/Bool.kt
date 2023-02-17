@@ -22,8 +22,7 @@ class KAndExpr internal constructor(
     ctx: KContext,
     override val args: List<KExpr<KBoolSort>>
 ) : KApp<KBoolSort, KBoolSort>(ctx) {
-    override val sort: KBoolSort
-        get() = ctx.boolSort
+    override val sort: KBoolSort = ctx.boolSort
 
     override val decl: KAndDecl
         get() = ctx.mkAndDecl()
@@ -38,8 +37,7 @@ class KOrExpr internal constructor(
     ctx: KContext,
     override val args: List<KExpr<KBoolSort>>
 ) : KApp<KBoolSort, KBoolSort>(ctx) {
-    override val sort: KBoolSort
-        get() = ctx.boolSort
+    override val sort: KBoolSort = ctx.boolSort
 
     override val decl: KOrDecl
         get() = ctx.mkOrDecl()
@@ -54,8 +52,7 @@ class KNotExpr internal constructor(
     ctx: KContext,
     val arg: KExpr<KBoolSort>
 ) : KApp<KBoolSort, KBoolSort>(ctx) {
-    override val sort: KBoolSort
-        get() = ctx.boolSort
+    override val sort: KBoolSort = ctx.boolSort
 
     override val decl: KNotDecl
         get() = ctx.mkNotDecl()
@@ -74,8 +71,7 @@ class KImpliesExpr internal constructor(
     val p: KExpr<KBoolSort>,
     val q: KExpr<KBoolSort>
 ) : KApp<KBoolSort, KBoolSort>(ctx) {
-    override val sort: KBoolSort
-        get() = ctx.boolSort
+    override val sort: KBoolSort = ctx.boolSort
 
     override val decl: KImpliesDecl
         get() = ctx.mkImpliesDecl()
@@ -94,8 +90,7 @@ class KXorExpr internal constructor(
     val a: KExpr<KBoolSort>,
     val b: KExpr<KBoolSort>
 ) : KApp<KBoolSort, KBoolSort>(ctx) {
-    override val sort: KBoolSort
-        get() = ctx.boolSort
+    override val sort: KBoolSort = ctx.boolSort
 
     override val decl: KXorDecl
         get() = ctx.mkXorDecl()
@@ -113,8 +108,7 @@ class KEqExpr<T : KSort> internal constructor(
     ctx: KContext,
     val lhs: KExpr<T>, val rhs: KExpr<T>
 ) : KApp<KBoolSort, T>(ctx) {
-    override val sort: KBoolSort
-        get() = ctx.boolSort
+    override val sort: KBoolSort = ctx.boolSort
 
     override val decl: KEqDecl<T>
         get() = with(ctx) { mkEqDecl(lhs.sort) }
@@ -136,8 +130,7 @@ class KDistinctExpr<T : KSort> internal constructor(
         require(args.isNotEmpty()) { "distinct requires at least a single argument" }
     }
 
-    override val sort: KBoolSort
-        get() = ctx.boolSort
+    override val sort: KBoolSort = ctx.boolSort
 
     override val decl: KDistinctDecl<T>
         get() = with(ctx) { mkDistinctDecl(args.first().sort) }
@@ -163,14 +156,7 @@ class KIteExpr<T : KSort> internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<T> = transformer.transform(this)
 
-    override val sort: T
-        get() = ctx.getExprSort(this)
-
-    override fun computeExprSort(): T = trueBranch.sort
-
-    override fun sortComputationExprDependency(dependency: MutableList<KExpr<*>>) {
-        dependency += trueBranch
-    }
+    override val sort: T = trueBranch.sort
 
     override fun internHashCode(): Int = hash(condition, trueBranch, falseBranch)
     override fun internEquals(other: Any): Boolean =
@@ -178,8 +164,7 @@ class KIteExpr<T : KSort> internal constructor(
 }
 
 class KTrue(ctx: KContext) : KInterpretedValue<KBoolSort>(ctx) {
-    override val sort: KBoolSort
-        get() = ctx.boolSort
+    override val sort: KBoolSort = ctx.boolSort
 
     override val decl: KTrueDecl
         get() = ctx.mkTrueDecl()
@@ -191,8 +176,7 @@ class KTrue(ctx: KContext) : KInterpretedValue<KBoolSort>(ctx) {
 }
 
 class KFalse(ctx: KContext) : KInterpretedValue<KBoolSort>(ctx) {
-    override val sort: KBoolSort
-        get() = ctx.boolSort
+    override val sort: KBoolSort = ctx.boolSort
 
     override val decl: KFalseDecl
         get() = ctx.mkFalseDecl()

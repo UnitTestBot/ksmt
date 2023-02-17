@@ -8,7 +8,6 @@ import org.ksmt.KContext.SimplificationMode.NO_SIMPLIFY
 import org.ksmt.KContext.SimplificationMode.SIMPLIFY
 import org.ksmt.cache.AstInterner
 import org.ksmt.cache.KInternedObject
-import org.ksmt.cache.mkAstCache
 import org.ksmt.cache.mkAstInterner
 import org.ksmt.cache.mkCache
 import org.ksmt.decl.KAndDecl
@@ -488,10 +487,12 @@ open class KContext(
 
     fun mkBoolSort(): KBoolSort = boolSort
 
+    private val arraySortCache = mkCache<Pair<KSort, KSort>, KArraySort<*, *>>(operationMode)
+
     fun <D : KSort, R : KSort> mkArraySort(domain: D, range: R): KArraySort<D, R> =
         ensureContextActive {
             ensureContextMatch(domain, range)
-            KArraySort(this, domain, range)
+            arraySortCache.getOrPut(domain to range) { KArraySort(this, domain, range) }.uncheckedCast()
         }
 
     private val intSortCache by lazy {
@@ -512,6 +513,7 @@ open class KContext(
     private val bv16SortCache: KBv16Sort by lazy { KBv16Sort(this) }
     private val bv32SortCache: KBv32Sort by lazy { KBv32Sort(this) }
     private val bv64SortCache: KBv64Sort by lazy { KBv64Sort(this) }
+    private val bvCustomSizeSortCache = mkCache<UInt, KBvSort>(operationMode)
 
     fun mkBv1Sort(): KBv1Sort = bv1SortCache
     fun mkBv8Sort(): KBv8Sort = bv8SortCache
@@ -526,7 +528,9 @@ open class KContext(
             Short.SIZE_BITS -> mkBv16Sort()
             Int.SIZE_BITS -> mkBv32Sort()
             Long.SIZE_BITS -> mkBv64Sort()
-            else -> KBvCustomSizeSort(this, sizeBits)
+            else -> bvCustomSizeSortCache.getOrPut(sizeBits) {
+                KBvCustomSizeSort(this, sizeBits)
+            }
         }
     }
 
@@ -540,6 +544,7 @@ open class KContext(
     private val fp32SortCache: KFp32Sort by lazy { KFp32Sort(this) }
     private val fp64SortCache: KFp64Sort by lazy { KFp64Sort(this) }
     private val fp128SortCache: KFp128Sort by lazy { KFp128Sort(this) }
+    private val fpCustomSizeSortCache = mkCache<Pair<UInt, UInt>, KFpSort>(operationMode)
 
     fun mkFp16Sort(): KFp16Sort = fp16SortCache
     fun mkFp32Sort(): KFp32Sort = fp32SortCache
@@ -555,7 +560,9 @@ open class KContext(
                 eb == KFp32Sort.exponentBits && sb == KFp32Sort.significandBits -> mkFp32Sort()
                 eb == KFp64Sort.exponentBits && sb == KFp64Sort.significandBits -> mkFp64Sort()
                 eb == KFp128Sort.exponentBits && sb == KFp128Sort.significandBits -> mkFp128Sort()
-                else -> KFpCustomSizeSort(this, eb, sb)
+                else -> fpCustomSizeSortCache.getOrPut(eb to sb) {
+                    KFpCustomSizeSort(this, eb, sb)
+                }
             }
         }
 
@@ -2626,49 +2633,6 @@ open class KContext(
             ensureContextMatch(it)
             mkFreshConst("${it.name}_default_value", it)
         }
-
-    // utils
-    private val exprSortCache = mkAstCache<KExpr<*>, KSort>(operationMode, astManagementMode)
-    private fun computeExprSort(expr: KExpr<*>): KSort {
-        val exprsToComputeSorts = arrayListOf<KExpr<*>>()
-        val dependency = arrayListOf<KExpr<*>>()
-
-        expr.sortComputationExprDependency(dependency)
-
-        while (dependency.isNotEmpty()) {
-            val e = dependency.removeLast()
-
-            if (exprSortCache.get(e) != null) continue
-
-            val sizeBeforeExpand = dependency.size
-            e.sortComputationExprDependency(dependency)
-
-            if (sizeBeforeExpand != dependency.size) {
-                exprsToComputeSorts += e
-            }
-        }
-
-        exprsToComputeSorts.asReversed().forEach {
-            it.sort
-        }
-
-        return expr.computeExprSort()
-    }
-
-    /**
-     * Compute expression sort using cache.
-     * Useful for non-recursive sort computation of deeply nested expressions.
-     * See [KExpr.computeExprSort].
-     * */
-    fun <T : KSort> getExprSort(expr: KExpr<T>): T = ensureContextActive {
-        val current = exprSortCache.get(expr)
-        if (current != null) return current.uncheckedCast()
-
-        val exprSort = computeExprSort(expr)
-        exprSortCache.putIfAbsent(expr, exprSort)
-
-        exprSort.uncheckedCast()
-    }
 
     /*
     * declarations
