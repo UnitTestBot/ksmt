@@ -54,6 +54,7 @@ fun <T : KArithSort> KContext.simplifyArithAdd(args: List<KExpr<T>>): KExpr<T> {
         }
     }
 
+    // If all args are constants we have no simplifiedArgs and a single constant value
     if (simplifiedArgs.isEmpty()) {
         return numericValue(constantTerm, args.first().sort)
     }
