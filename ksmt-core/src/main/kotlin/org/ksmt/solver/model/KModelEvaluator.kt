@@ -11,7 +11,7 @@ import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector.Companion.collectUninterpretedDeclarations
 import org.ksmt.expr.rewrite.simplify.KExprSimplifier
-import org.ksmt.expr.rewrite.simplify.simplifyApp
+import org.ksmt.expr.rewrite.simplify.simplifyExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.DefaultValueSampler.Companion.sampleValue
 import org.ksmt.sort.KArraySort
@@ -31,13 +31,13 @@ open class KModelEvaluator(
     private val evaluatedFunctionArray: MutableMap<KDecl<*>, KExpr<*>> = hashMapOf()
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> =
-        simplifyApp(expr) { args ->
+        simplifyExpr(expr, expr.args) { args ->
             /**
              * Don't evaluate expr when it is quantified since
              * it is definitely not present in the model.
              * */
             if (expr.decl in quantifiedVars) {
-                return@simplifyApp expr.decl.apply(args)
+                return@simplifyExpr expr.decl.apply(args)
             }
 
             evalFunction(expr.decl, args).also { rewrite(it) }
@@ -77,17 +77,17 @@ open class KModelEvaluator(
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> =
         transformQuantifiedExpression(setOf(expr.indexVarDecl), expr.body) { body ->
-            ctx.mkArrayLambda(expr.indexVarDecl, body)
+            ctx.simplifyArrayLambda(expr.indexVarDecl, body)
         }
 
     override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> =
         transformQuantifiedExpression(expr.bounds.toSet(), expr.body) { body ->
-            ctx.mkExistentialQuantifier(body, expr.bounds)
+            ctx.simplifyExistentialQuantifier(expr.bounds, body)
         }
 
     override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> =
         transformQuantifiedExpression(expr.bounds.toSet(), expr.body) { body ->
-            ctx.mkUniversalQuantifier(body, expr.bounds)
+            ctx.simplifyUniversalQuantifier(expr.bounds, body)
         }
 
     private inline fun <B : KSort, T: KSort> transformQuantifiedExpression(

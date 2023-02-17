@@ -43,12 +43,11 @@ open class KExprSubstitutor(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     override fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> =
         exprExprSubstitution[expr]?.uncheckedCast() ?: expr
 
-    override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> =
-        transformAppAfterArgsTransformed(expr) { transformedArgs ->
-            val decl = declDeclSubstitution[expr.decl]?.uncheckedCast() ?: expr.decl
-            val transformedApp = decl.apply(transformedArgs)
-            return transformExpr(transformedApp)
-        }
+    override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> {
+        val substitution: KDecl<T> = declDeclSubstitution[expr.decl]?.uncheckedCast() ?: return transformExpr(expr)
+        val transformedApp = substitution.apply(expr.args)
+        return transformExpr(transformedApp)
+    }
 
     override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
         val declSubstitution = declDeclSubstitution[expr.function]?.uncheckedCast() ?: expr.function
@@ -92,7 +91,7 @@ open class KExprSubstitutor(ctx: KContext) : KNonRecursiveTransformer(ctx) {
             resolveQuantifierShadowedVars(quantifiedVars, body)
         }
         @Suppress("UNCHECKED_CAST")
-        return transformExprAfterTransformed(quantifiedExpr, listOf(unshadowedBody as KExpr<B>)) { (transformedBody) ->
+        return transformExprAfterTransformed(quantifiedExpr, unshadowedBody as KExpr<B>) { transformedBody ->
             unprocessedQuantifiers.remove(quantifiedExpr)
             quantifierBuilder(transformedBody, unshadowedBounds)
         }

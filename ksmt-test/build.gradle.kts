@@ -126,3 +126,7 @@ task<TestReport>("mergeTestReports") {
         reportOn(*reports)
     }
 }
+
+jmh {
+    stringProperty("jmhIncludes")?.let { includes.add(it) }
+}

@@ -17,8 +17,8 @@ import org.ksmt.sort.KSort
 
 interface KBoolExprSimplifier : KExprSimplifierBase {
 
-    override fun transform(expr: KAndExpr): KExpr<KBoolSort> = simplifyApp(
-        expr = expr,
+    override fun transform(expr: KAndExpr): KExpr<KBoolSort> = simplifyExpr(
+        expr, expr.args,
         preprocess = {
             // (and a (and b c)) ==> (and a b c)
             val flatArgs = flatAnd(expr)
@@ -30,8 +30,8 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
         }
     ) { args -> simplifyAnd(args) }
 
-    override fun transform(expr: KOrExpr): KExpr<KBoolSort> = simplifyApp(
-        expr = expr,
+    override fun transform(expr: KOrExpr): KExpr<KBoolSort> = simplifyExpr(
+        expr, expr.args,
         preprocess = {
             // (or a (or b c)) ==> (or a b c)
             val flatArgs = flatOr(expr)
@@ -43,7 +43,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
         }
     ) { args -> simplifyOr(args) }
 
-    override fun transform(expr: KNotExpr) = simplifyApp(expr) { (arg) ->
+    override fun transform(expr: KNotExpr) = simplifyExpr(expr, expr.arg) { arg ->
         simplifyNot(arg)
     }
 
@@ -54,17 +54,15 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
      * 2. Simplify ite branches [SimplifierStagedIteBranches].
      * */
     override fun <T : KSort> transform(expr: KIteExpr<T>): KExpr<T> =
-        simplifyApp(
+        simplifyExpr(
             expr = expr,
             preprocess = {
                 SimplifierStagedIteCondition(ctx, expr.condition, expr.trueBranch, expr.falseBranch)
             }
-        ) {
-            error("Always preprocessed")
-        }
+        )
 
     private fun <T : KSort> transform(expr: SimplifierStagedIteCondition<T>): KExpr<T> =
-        simplifyApp(expr) { (simplifiedCondition) ->
+        simplifyExpr(expr, expr.condition) { simplifiedCondition ->
             var c = simplifiedCondition
             var t = expr.trueBranch
             var e = expr.falseBranch
@@ -79,41 +77,37 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
 
             // (ite true t e) ==> t
             if (c == trueExpr) {
-                return@simplifyApp rewrite(t)
+                return@simplifyExpr rewrite(t)
             }
 
             // (ite false t e) ==> e
             if (c == falseExpr) {
-                return@simplifyApp rewrite(e)
+                return@simplifyExpr rewrite(e)
             }
 
             rewrite(SimplifierStagedIteBranches(ctx, c, t, e))
         }
 
     private fun <T : KSort> transform(expr: SimplifierStagedIteBranches<T>): KExpr<T> =
-        simplifyApp(expr) { (simplifiedTrueBranch, simplifiedFalseBranch) ->
+        simplifyExpr(expr, expr.trueBranch, expr.falseBranch) { simplifiedTrueBranch, simplifiedFalseBranch ->
             simplifyIte(expr.simplifiedCondition, simplifiedTrueBranch, simplifiedFalseBranch)
         }
 
-    override fun transform(expr: KImpliesExpr): KExpr<KBoolSort> = simplifyApp(
+    override fun transform(expr: KImpliesExpr): KExpr<KBoolSort> = simplifyExpr(
         expr = expr,
         preprocess = {
             val notP = KNotExpr(this, expr.p)
             KOrExpr(this, listOf(notP, expr.q))
         }
-    ) {
-        error("Always preprocessed")
-    }
+    )
 
-    override fun transform(expr: KXorExpr): KExpr<KBoolSort> = simplifyApp(
+    override fun transform(expr: KXorExpr): KExpr<KBoolSort> = simplifyExpr(
         expr = expr,
         preprocess = {
             val notA = KNotExpr(this, expr.a)
             KEqExpr(this, notA, expr.b)
         }
-    ) {
-        error("Always preprocessed")
-    }
+    )
 
     fun simplifyEqBool(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
         ctx.simplifyEqBool(lhs, rhs)

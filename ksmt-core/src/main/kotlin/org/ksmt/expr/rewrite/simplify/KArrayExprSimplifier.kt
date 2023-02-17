@@ -167,15 +167,13 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> =
-        simplifyApp(
+        simplifyExpr(
             expr = expr,
             preprocess = { flatStores(expr) }
-        ) {
-            error("Always preprocessed")
-        }
+        )
 
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> =
-        simplifyApp(
+        simplifyExpr(
             expr = expr,
             preprocess = {
                 val array = flatStores(expr.array)
@@ -188,13 +186,11 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
                     index = expr.index
                 )
             }
-        ) {
-            error("Always preprocessed")
-        }
+        )
 
     @Suppress("ComplexMethod", "LoopWithTooManyJumpStatements")
     private fun <D : KSort, R : KSort> transform(expr: SimplifierFlatArrayStoreExpr<D, R>): KExpr<KArraySort<D, R>> =
-        simplifyApp(expr) { transformedArgs ->
+        simplifyExpr(expr, expr.args) { transformedArgs ->
             val base: KExpr<KArraySort<D, R>> = transformedArgs.first().uncheckedCast()
             val indices: List<KExpr<D>> = transformedArgs.subList(
                 fromIndex = 1, toIndex = 1 + expr.indices.size
@@ -204,7 +200,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             ).uncheckedCast()
 
             if (indices.isEmpty()) {
-                return@simplifyApp base
+                return@simplifyExpr base
             }
 
             val storedIndices = hashMapOf<KExpr<D>, Int>()
@@ -270,7 +266,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
                 result = mkArrayStoreNoSimplify(result, index, value)
             }
 
-            return@simplifyApp result
+            return@simplifyExpr result
         }
 
     private fun <D : KSort> allParentSoreIndicesAreDistinct(
@@ -312,7 +308,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
      * Usually this will be enough and we will not produce many irrelevant array store expressions.
      * */
     private fun <D : KSort, R : KSort> transform(expr: SimplifierFlatArraySelectExpr<D, R>): KExpr<R> =
-        simplifyApp(expr) { allIndices ->
+        simplifyExpr(expr, expr.args) { allIndices ->
             val index = allIndices.first()
             val arrayIndices = allIndices.subList(fromIndex = 1, toIndex = allIndices.size)
 
@@ -322,7 +318,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
 
                 // (select (store i v) i) ==> v
                 if (storeIdx == index) {
-                    return@simplifyApp rewrite(expr.storedValues[arrayStoreIdx])
+                    return@simplifyExpr rewrite(expr.storedValues[arrayStoreIdx])
                 }
 
                 if (!areDefinitelyDistinct(index, storeIdx)) {
@@ -334,21 +330,21 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             }
 
             if (arrayStoreIdx == arrayIndices.size) {
-                return@simplifyApp rewrite(SimplifierArraySelectExpr(ctx, expr.baseArray, index))
+                return@simplifyExpr rewrite(SimplifierArraySelectExpr(ctx, expr.baseArray, index))
             }
 
             rewrite(SimplifierArraySelectExpr(ctx, expr.original, index))
         }
 
     private fun <D : KSort, R : KSort> transform(expr: SimplifierArraySelectExpr<D, R>): KExpr<R> =
-        simplifyApp(expr) { (arrayArg, indexArg) ->
+        simplifyExpr(expr, expr.array, expr.index) { arrayArg, indexArg ->
             var array: KExpr<KArraySort<D, R>> = arrayArg.uncheckedCast()
             val index: KExpr<D> = indexArg.uncheckedCast()
 
             while (array is KArrayStore<D, R>) {
                 // (select (store i v) i) ==> v
                 if (array.index == index) {
-                    return@simplifyApp array.value
+                    return@simplifyExpr array.value
                 }
 
                 // (select (store a i v) j), i != j ==> (select a j)

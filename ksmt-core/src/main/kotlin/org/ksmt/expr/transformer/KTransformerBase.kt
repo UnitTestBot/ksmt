@@ -150,6 +150,8 @@ import org.ksmt.sort.KSort
 
 
 interface KTransformerBase {
+    fun <T : KSort> apply(expr: KExpr<T>): KExpr<T> = expr.accept(this)
+
     fun transform(expr: KExpr<*>): Any = error("transformer is not implemented for expr $expr")
 
     // function transformers
