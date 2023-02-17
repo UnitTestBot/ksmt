@@ -40,6 +40,10 @@ fun <T : KArithSort> KContext.simplifyArithUnaryMinus(arg: KExpr<T>): KExpr<T> {
 }
 
 fun <T : KArithSort> KContext.simplifyArithAdd(args: List<KExpr<T>>): KExpr<T> {
+    require(args.isNotEmpty()) {
+        "Arith add requires at least a single argument"
+    }
+
     val simplifiedArgs = ArrayList<KExpr<T>>(args.size)
     var constantTerm = RealValue.zero
 
@@ -54,7 +58,6 @@ fun <T : KArithSort> KContext.simplifyArithAdd(args: List<KExpr<T>>): KExpr<T> {
         }
     }
 
-    // If all args are constants we have no simplifiedArgs and a single constant value
     if (simplifiedArgs.isEmpty()) {
         return numericValue(constantTerm, args.first().sort)
     }
@@ -77,6 +80,10 @@ fun <T : KArithSort> KContext.simplifyArithSub(args: List<KExpr<T>>): KExpr<T> =
     if (args.size == 1) {
         args.single()
     } else {
+        require(args.isNotEmpty()) {
+            "Arith sub requires at least a single argument"
+        }
+
         val simplifiedArgs = arrayListOf(args.first())
         for (arg in args.drop(1)) {
             simplifiedArgs += simplifyArithUnaryMinus(arg)
@@ -85,6 +92,10 @@ fun <T : KArithSort> KContext.simplifyArithSub(args: List<KExpr<T>>): KExpr<T> =
     }
 
 fun <T : KArithSort> KContext.simplifyArithMul(args: List<KExpr<T>>): KExpr<T> {
+    require(args.isNotEmpty()) {
+        "Arith mul requires at least a single argument"
+    }
+
     val simplifiedArgs = ArrayList<KExpr<T>>(args.size)
     var constantTerm = RealValue.one
 
