@@ -10,6 +10,16 @@ import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import java.util.IdentityHashMap
 
+/**
+ * Non-recursive expression transformer.
+ *
+ * Standard use-case: perform bottom-up expression transformation.
+ * In this scenario, we need to transform expression arguments first,
+ * and then perform transformation of the expression using
+ * the transformed arguments.
+ * For this scenario, non-recursive transformer provides
+ * a [transformExprAfterTransformed] method.
+ * */
 abstract class KNonRecursiveTransformerBase: KTransformer {
     private val transformed = IdentityHashMap<KExpr<*>, KExpr<*>>()
     private val exprStack = ArrayList<KExpr<*>>()

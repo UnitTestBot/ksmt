@@ -258,15 +258,13 @@ open class KExprSimplifier(override val ctx: KContext) :
     }
 }
 
-inline fun <T : KSort> KExprSimplifierBase.simplifyExpr(
-    expr: KExpr<T>,
-    preprocess: KContext.() -> KExpr<T>,
-): KExpr<T> = simplifyExprBase(
-    expr,
-    { ctx.preprocess() },
-    { error("Always preprocessed") }
-)
-
+/**
+ * Simplify an expression.
+ * [preprocess] Rewrite an expression before simplification of an [args] (top-down).
+ * [simplifier] Rewrite an expression after [args] simplification (bottom-up).
+ *
+ * See [simplifyExprBase] for the details.
+ * */
 inline fun <T : KSort, A : KSort> KExprSimplifierBase.simplifyExpr(
     expr: KExpr<T>,
     args: List<KExpr<A>>,
@@ -278,6 +276,22 @@ inline fun <T : KSort, A : KSort> KExprSimplifierBase.simplifyExpr(
     { transformExprAfterTransformed(expr, args) { tArgs -> ctx.simplifier(tArgs) } }
 )
 
+/**
+ * Specialized version of [simplifyExpr] for expressions which are always
+ * rewritten with another expression on the [preprocess] stage.
+ * */
+inline fun <T : KSort> KExprSimplifierBase.simplifyExpr(
+    expr: KExpr<T>,
+    preprocess: KContext.() -> KExpr<T>,
+): KExpr<T> = simplifyExprBase(
+    expr,
+    { ctx.preprocess() },
+    { error("Always preprocessed") }
+)
+
+/**
+ * Specialized version of [simplifyExpr] for expressions with a single argument.
+ * */
 inline fun <T : KSort, A0 : KSort> KExprSimplifierBase.simplifyExpr(
     expr: KExpr<T>,
     a0: KExpr<A0>,
@@ -289,6 +303,9 @@ inline fun <T : KSort, A0 : KSort> KExprSimplifierBase.simplifyExpr(
     { transformExprAfterTransformed(expr, a0) { ta0 -> ctx.simplifier(ta0) } }
 )
 
+/**
+ * Specialized version of [simplifyExpr] for expressions with two arguments.
+ * */
 inline fun <T : KSort, A0 : KSort, A1 : KSort> KExprSimplifierBase.simplifyExpr(
     expr: KExpr<T>,
     a0: KExpr<A0>,
@@ -301,6 +318,9 @@ inline fun <T : KSort, A0 : KSort, A1 : KSort> KExprSimplifierBase.simplifyExpr(
     { transformExprAfterTransformed(expr, a0, a1) { ta0, ta1 -> ctx.simplifier(ta0, ta1) } }
 )
 
+/**
+ * Specialized version of [simplifyExpr] for expressions with 3 arguments.
+ * */
 @Suppress("LongParameterList")
 inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> KExprSimplifierBase.simplifyExpr(
     expr: KExpr<T>,
@@ -315,6 +335,9 @@ inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> KExprSimplifierBase.s
     { transformExprAfterTransformed(expr, a0, a1, a2) { ta0, ta1, ta2 -> ctx.simplifier(ta0, ta1, ta2) } }
 )
 
+/**
+ * Specialized version of [simplifyExpr] for expressions with 4 arguments.
+ * */
 @Suppress("LongParameterList")
 inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort> KExprSimplifierBase.simplifyExpr(
     expr: KExpr<T>,
