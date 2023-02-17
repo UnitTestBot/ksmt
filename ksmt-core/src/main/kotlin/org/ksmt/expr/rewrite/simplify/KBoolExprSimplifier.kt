@@ -4,6 +4,7 @@ import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KImpliesExpr
 import org.ksmt.expr.KIteExpr
