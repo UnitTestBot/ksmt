@@ -567,6 +567,12 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         else -> transformExpr(expr)
     }
 
+    /**
+     * Transform expressions [dependencies] before expression transformation.
+     * If all dependencies remain unchanged after transformation
+     * invoke [ifNotTransformed] on the original expression and return it result.
+     * Otherwise, apply [transformer] to the modified dependencies.
+     * */
     private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A : KSort> transformExprAfterTransformedDefault(
         expr: In,
         dependencies: List<KExpr<A>>,
@@ -582,6 +588,9 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         return transformExprDefault(transformedExpr)
     }
 
+    /**
+     * Specialized version of [transformExprAfterTransformedDefault] for expression with single argument.
+     * */
     private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A : KSort> transformExprAfterTransformedDefault(
         expr: In,
         dependency: KExpr<A>,
@@ -597,6 +606,9 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         return transformExprDefault(transformedExpr)
     }
 
+    /**
+     * Specialized version of [transformExprAfterTransformedDefault] for expression with two arguments.
+     * */
     private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort>
     transformExprAfterTransformedDefault(
         expr: In,
@@ -614,6 +626,9 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         return transformExprDefault(transformedExpr)
     }
 
+    /**
+     * Specialized version of [transformExprAfterTransformedDefault] for expression with three arguments.
+     * */
     @Suppress("LongParameterList")
     private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort, A2 : KSort>
     transformExprAfterTransformedDefault(
@@ -633,6 +648,9 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         return transformExprDefault(transformedExpr)
     }
 
+    /**
+     * Specialized version of [transformExprAfterTransformedDefault] for expression with 4 arguments.
+     * */
     @Suppress("LongParameterList", "ComplexCondition")
     private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort>
     transformExprAfterTransformedDefault(

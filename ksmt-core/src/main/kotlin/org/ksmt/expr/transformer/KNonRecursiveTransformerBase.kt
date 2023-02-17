@@ -1,7 +1,12 @@
 package org.ksmt.expr.transformer
 
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KUniversalQuantifier
+import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import java.util.IdentityHashMap
 
@@ -38,6 +43,24 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
      * for non-recursive usage.
      * */
     abstract override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T>
+
+    /**
+     * Disable [KTransformer] transform KArrayLambda implementation since it is incorrect
+     * for non-recursive usage.
+     * */
+    abstract override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>>
+
+    /**
+     * Disable [KTransformer] transform KExistentialQuantifier implementation since it is incorrect
+     * for non-recursive usage.
+     * */
+    abstract override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort>
+
+    /**
+     * Disable [KTransformer] transform KUniversalQuantifier implementation since it is incorrect
+     * for non-recursive usage.
+     * */
+    abstract override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort>
 
     /**
      *  Get [expr] transformation result or
@@ -123,6 +146,9 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
         return transformer(transformedDependencies)
     }
 
+    /**
+     * Specialized version of [transformExprAfterTransformed] for expression with single argument.
+     * */
     inline fun <T : KSort, A : KSort> transformExprAfterTransformed(
         expr: KExpr<T>,
         dependency: KExpr<A>,
@@ -140,6 +166,9 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
         return transformer(transformedDependency)
     }
 
+    /**
+     * Specialized version of [transformExprAfterTransformed] for expression with two arguments.
+     * */
     inline fun <T : KSort, A0 : KSort, A1 : KSort> transformExprAfterTransformed(
         expr: KExpr<T>,
         dependency0: KExpr<A0>,
@@ -163,6 +192,9 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
         return transformer(transformedDependency0, transformedDependency1)
     }
 
+    /**
+     * Specialized version of [transformExprAfterTransformed] for expression with three arguments.
+     * */
     inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> transformExprAfterTransformed(
         expr: KExpr<T>,
         dependency0: KExpr<A0>,
@@ -189,6 +221,9 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
         return transformer(transformedDependency0, transformedDependency1, transformedDependency2)
     }
 
+    /**
+     * Specialized version of [transformExprAfterTransformed] for expression with 4 arguments.
+     * */
     @Suppress("LongParameterList", "ComplexCondition")
     inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3: KSort> transformExprAfterTransformed(
         expr: KExpr<T>,
