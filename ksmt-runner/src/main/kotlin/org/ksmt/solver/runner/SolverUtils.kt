@@ -26,6 +26,7 @@ val KClass<out KSolver<*>>.solverType: SolverType
     get() = when (qualifiedName) {
         Z3_SOLVER_CLASS_NAME -> SolverType.Z3
         BITWUZLA_SOLVER_CLASS_NAME -> SolverType.Bitwuzla
+        YICES_SOLVER_CLASS_NAME -> SolverType.Yices
         else -> error("Unsupported solver: ${this.qualifiedName}")
     }
 
