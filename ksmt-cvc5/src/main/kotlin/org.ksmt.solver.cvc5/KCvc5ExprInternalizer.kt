@@ -1,7 +1,6 @@
 package org.ksmt.solver.cvc5
 
 import io.github.cvc5.Kind
-import io.github.cvc5.Op
 import io.github.cvc5.RoundingMode
 import io.github.cvc5.Solver
 import io.github.cvc5.Sort
@@ -14,7 +13,6 @@ import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
-import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KBitVec16Value
 import org.ksmt.expr.KBitVec1Value
 import org.ksmt.expr.KBitVec32Value
@@ -22,6 +20,7 @@ import org.ksmt.expr.KBitVec64Value
 import org.ksmt.expr.KBitVec8Value
 import org.ksmt.expr.KBitVecCustomValue
 import org.ksmt.expr.KBitVecNumberValue
+import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KBv2IntExpr
 import org.ksmt.expr.KBvAddExpr
 import org.ksmt.expr.KBvAddNoOverflowExpr
@@ -142,6 +141,16 @@ import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
+import org.ksmt.expr.rewrite.simplify.rewriteBvAddNoOverflowExpr
+import org.ksmt.expr.rewrite.simplify.rewriteBvAddNoUnderflowExpr
+import org.ksmt.expr.rewrite.simplify.rewriteBvDivNoOverflowExpr
+import org.ksmt.expr.rewrite.simplify.rewriteBvMulNoOverflowExpr
+import org.ksmt.expr.rewrite.simplify.rewriteBvMulNoUnderflowExpr
+import org.ksmt.expr.rewrite.simplify.rewriteBvNegNoOverflowExpr
+import org.ksmt.expr.rewrite.simplify.rewriteBvSubNoOverflowExpr
+import org.ksmt.expr.rewrite.simplify.rewriteBvSubNoUnderflowExpr
+import org.ksmt.expr.rewrite.simplify.simplifyBvRotateLeftExpr
+import org.ksmt.expr.rewrite.simplify.simplifyBvRotateRightExpr
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.util.KExprInternalizerBase
 import org.ksmt.sort.KArithSort
@@ -156,6 +165,7 @@ import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.powerOfTwo
 import java.math.BigInteger
 
 @Suppress("LargeClass")
@@ -470,39 +480,30 @@ class KCvc5ExprInternalizer(
         }
     }
 
+    /*
+     * we can internalize rotate expr as concat expr due to simplification,
+     * otherwise we can't process rotate expr on expression
+     */
+    override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>) = with(expr) {
+        val simplifiedExpr = ctx.simplifyBvRotateLeftExpr(arg, rotation)
 
-    private fun <T : KBvSort> transformKBvRotateExpr(expr: KExpr<T>) = with(expr) {
-        val rotation: KExpr<T>
-        val arg: KExpr<T>
+        if (simplifiedExpr is KBvRotateLeftExpr<*>)
+            throw KSolverUnsupportedFeatureException("Rotate expr with expression argument is not supported by cvc5")
 
-        val rotationKind = when (this) {
-            is KBvRotateLeftExpr<T> -> Kind.BITVECTOR_ROTATE_LEFT.also { rotation = this.rotation; arg = this.arg }
-            is KBvRotateRightExpr<T> -> Kind.BITVECTOR_ROTATE_RIGHT.also { rotation = this.rotation; arg = this.arg }
-            else -> error("unexpected expr $this, but was expected KBvRotate expr")
-        }
-
-        val rotationOp: Op = when (rotation) {
-            is KBitVec1Value -> nsolver.mkOp(rotationKind, if (rotation.value) 1 else 0)
-            is KBitVec8Value, is KBitVec16Value, is KBitVec32Value -> nsolver.mkOp(
-                rotationKind,
-                (rotation as KBitVecNumberValue<*, *>).numberValue.toInt()
-            )
-
-            is KBitVec64Value, is KBitVecCustomValue -> nsolver.mkOp(
-                rotationKind,
-                (rotation as KBitVecValue<*>).stringValue
-            )
-
-            else -> throw KSolverUnsupportedFeatureException(
-                "Rotate expr with expression argument is not supported by cvc5"
-            )
-        }
-        transform(arg) { bvArg: Term ->
-            nsolver.mkTerm(rotationOp, bvArg)
-        }
+        apply(simplifiedExpr)
     }
 
-    override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>) = transformKBvRotateExpr(expr)
+    /*
+     * @see transform(expr: KBvRotateLeftExpr<T>)
+     */
+    override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>) = with(expr) {
+        val simplifiedExpr = ctx.simplifyBvRotateRightExpr(arg, rotation)
+
+        if (simplifiedExpr is KBvRotateRightExpr<*>)
+            throw KSolverUnsupportedFeatureException("Rotate expr with expression argument is not supported by cvc5")
+
+        apply(simplifiedExpr)
+    }
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftIndexedExpr<T>) = with(expr) {
         transform(value) { value: Term ->
@@ -511,7 +512,6 @@ class KCvc5ExprInternalizer(
         }
     }
 
-    override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>) = transformKBvRotateExpr(expr)
 
     override fun <T : KBvSort> transform(expr: KBvRotateRightIndexedExpr<T>) = with(expr) {
         transform(value) { value: Term ->
@@ -529,8 +529,8 @@ class KCvc5ExprInternalizer(
 
             if (isSigned) {
                 val size = this.value.sort.sizeBits.toInt()
-                val modulo = BigInteger.ONE shl size
-                val maxInt = (BigInteger.ONE shl (size - 1)) - BigInteger.ONE
+                val modulo = powerOfTwo(size.toUInt())
+                val maxInt = (powerOfTwo((size - 1).toUInt())) - BigInteger.ONE
 
                 val moduloTerm = nsolver.mkInteger(modulo.toString(10))
                 val maxIntTerm = nsolver.mkInteger(maxInt.toString(10))
@@ -543,48 +543,53 @@ class KCvc5ExprInternalizer(
         }
     }
 
-    // custom implementation
     override fun <T : KBvSort> transform(expr: KBvAddNoOverflowExpr<T>) = with(expr) {
-        transform(arg0, arg1) { a0: Term, a1: Term ->
-
-            val zExtOp = nsolver.mkOp(Kind.BITVECTOR_ZERO_EXTEND, 1)
-
-            val a0ExtTerm = nsolver.mkTerm(zExtOp, a0)
-            val a1ExtTerm = nsolver.mkTerm(zExtOp, a1)
-
-            val additionTerm = nsolver.mkTerm(Kind.BITVECTOR_ADD, a0ExtTerm, a1ExtTerm)
-
-            val signBitPos = arg0.sort.sizeBits.toInt()
-            val extractOp = nsolver.mkOp(Kind.BITVECTOR_EXTRACT, signBitPos, signBitPos)
-
-            val extractionTerm = nsolver.mkTerm(extractOp, additionTerm)
-
-            val zeroBvValueTerm = nsolver.mkBitVector(1, 0L)
-
-            nsolver.mkTerm(Kind.EQUAL, extractionTerm, zeroBvValueTerm)
-        }
+        val simplifiedExpr = ctx.rewriteBvAddNoOverflowExpr(expr.arg0, expr.arg1, isSigned)
+        apply(simplifiedExpr)
     }
 
-    override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>) =
-        throw KSolverUnsupportedFeatureException("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>) = with(expr) {
+        val simplifiedExpr = ctx.rewriteBvAddNoUnderflowExpr(expr.arg0, expr.arg1)
+        apply(simplifiedExpr)
+    }
 
-    override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>) =
-        throw KSolverUnsupportedFeatureException("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>) = with(expr) {
+        val simplifiedExpr = ctx.rewriteBvSubNoOverflowExpr(expr.arg0, expr.arg1)
+        apply(simplifiedExpr)
+    }
 
-    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>) =
-        throw KSolverUnsupportedFeatureException("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>) = with(expr) {
+        val simplifiedExpr = ctx.rewriteBvSubNoUnderflowExpr(expr.arg0, expr.arg1, isSigned)
+        apply(simplifiedExpr)
+    }
 
-    override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>) =
-        throw KSolverUnsupportedFeatureException("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>) = with(expr) {
+        val simplifiedExpr = ctx.rewriteBvDivNoOverflowExpr(expr.arg0, expr.arg1)
+        apply(simplifiedExpr)
+    }
 
-    override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>) =
-        throw KSolverUnsupportedFeatureException("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>) = with(expr) {
+        val simplifiedExpr = ctx.rewriteBvNegNoOverflowExpr(expr.value)
+        apply(simplifiedExpr)
+    }
 
-    override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>) =
-        throw KSolverUnsupportedFeatureException("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>) = with(expr) {
+        val simplifiedExpr = ctx.rewriteBvMulNoOverflowExpr(expr.arg0, expr.arg1, isSigned)
 
-    override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) =
-        throw KSolverUnsupportedFeatureException("no direct support for $expr")
+        if (simplifiedExpr is KBvMulNoOverflowExpr<*>) // can't rewrite
+            throw KSolverUnsupportedFeatureException("no direct support in cvc5")
+
+        apply(simplifiedExpr)
+    }
+
+    override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) = with(expr) {
+        val simplifiedExpr = ctx.rewriteBvMulNoUnderflowExpr(expr.arg0, expr.arg1)
+
+        if (simplifiedExpr is KBvMulNoUnderflowExpr<*>) // can't rewrite
+            throw KSolverUnsupportedFeatureException("no direct support in cvc5")
+
+        apply(simplifiedExpr)
+    }
 
     private fun fpToBvTerm(signBit: Boolean, biasedExp: KBitVecValue<*>, significand: KBitVecValue<*>): Term {
         val signString = if (signBit) "1" else "0"

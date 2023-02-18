@@ -27,8 +27,20 @@ open class KCvc5Model(
     private val uninterpretedSortsUniverses = hashMapOf<KUninterpretedSort, Set<KExpr<KUninterpretedSort>>>()
 
     /*
-    Always returns evaluated value regardless of isComplete (forever isComplete = true).
-    However, cvc5 has option "model-cores", which usage brings overhead on model evaluation
+     * Always returns evaluated value regardless of isComplete (forever isComplete = true).
+     * However, cvc5 has option "model-cores", which usage brings overhead on model evaluation
+     * and influences only on free constants.
+
+     * There is evaluation of expressions containing previously unknown declarations like this
+     * (independently of isComplete):
+     *
+     * val a by boolSort
+     * solver.assert(a)
+     * solver.check()
+     *
+     * val b by boolSort
+     * solver.model().eval(b) // << false
+     *
      */
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
         ctx.ensureContextMatch(expr)
