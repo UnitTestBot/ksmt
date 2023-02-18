@@ -70,12 +70,10 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         val trackedExpr = with(ctx) { trackVar implies expr }
 
         val cvc5TrackVar = with(exprInternalizer) { trackVar.internalizeExpr() }
-        val cvc5TrackedExpr = with(exprInternalizer) { trackedExpr.internalizeExpr() }
 
         cvc5CurrentLevelTrackedAssertions.add(cvc5TrackVar)
-        currentLevelAssertions.add(trackedExpr)
 
-        solver.assertFormula(cvc5TrackedExpr)
+        assert(trackedExpr)
         solver.assertFormula(cvc5TrackVar)
 
         trackVar
@@ -126,7 +124,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
 
     override fun model(): KModel = cvc5Try {
         require(lastCheckStatus == KSolverStatus.SAT) { "Models are only available after SAT checks" }
-        return KCvc5Model(ctx, cvc5Ctx, assertions.flatten(), exprConverter, exprInternalizer)
+        return KCvc5Model(ctx, cvc5Ctx, exprConverter, exprInternalizer)
     }
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = cvc5Try {

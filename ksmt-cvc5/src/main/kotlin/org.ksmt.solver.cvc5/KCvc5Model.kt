@@ -6,10 +6,8 @@ import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.KModelImpl
-import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.mkFreshConst
@@ -17,26 +15,13 @@ import org.ksmt.utils.mkFreshConst
 open class KCvc5Model(
     private val ctx: KContext,
     private val cvc5Ctx: KCvc5Context,
-    private val assertions: Collection<KExpr<KBoolSort>>,
     private val converter: KCvc5ExprConverter,
     private val internalizer: KCvc5ExprInternalizer
 ) : KModel {
 
-    override val declarations: Set<KDecl<*>> by lazy {
-        buildSet {
-            assertions.forEach { assertion ->
-                this += KExprUninterpretedDeclCollector.collectUninterpretedDeclarations(assertion)
-            }
-        }
-    }
+    override val declarations: Set<KDecl<*>> = cvc5Ctx.declarations.toHashSet()
 
-    override val uninterpretedSorts: Set<KUninterpretedSort> by lazy {
-        buildSet {
-            assertions.forEach { assertion ->
-                this += KExprUninterpretedSortCollector.collectUninterpretedSorts(assertion)
-            }
-        }
-    }
+    override val uninterpretedSorts: Set<KUninterpretedSort> = cvc5Ctx.uninterpretedSorts.toHashSet()
 
     private val interpretations = hashMapOf<KDecl<*>, KModel.KFuncInterp<*>?>()
     private val uninterpretedSortsUniverses = hashMapOf<KUninterpretedSort, Set<KExpr<KUninterpretedSort>>>()

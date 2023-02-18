@@ -6,6 +6,7 @@ import io.github.cvc5.Term
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 import java.util.TreeMap
 
 class KCvc5Context(private val solver: Solver) : AutoCloseable {
@@ -18,6 +19,10 @@ class KCvc5Context(private val solver: Solver) : AutoCloseable {
     private val cvc5Sorts = TreeMap<Sort, KSort>()
     private val decls = HashMap<KDecl<*>, Term>()
     private val cvc5Decls = TreeMap<Term, KDecl<*>>()
+
+    internal val uninterpretedSorts = hashSetOf<KUninterpretedSort>()
+    internal val declarations: Set<KDecl<*>>
+        get() = decls.keys.toHashSet()
 
     val nativeSolver: Solver
         get() = solver
@@ -144,6 +149,7 @@ class KCvc5Context(private val solver: Solver) : AutoCloseable {
 
         expressions.clear()
         cvc5Expressions.clear()
+        uninterpretedSorts.clear()
         sorts.clear()
         cvc5Sorts.clear()
         decls.clear()
