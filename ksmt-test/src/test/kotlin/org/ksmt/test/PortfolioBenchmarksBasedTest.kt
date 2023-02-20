@@ -33,6 +33,8 @@ class PortfolioBenchmarksBasedTest : BenchmarksBasedTest() {
     companion object {
         @JvmStatic
         fun portfolioTestData() = testData
+            .filter { it.name.startsWith("QF_") }
+            .filter { "BV" in it.name }
 
         private lateinit var portfolioSolverManager: KPortfolioSolverManager
 

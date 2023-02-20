@@ -2,11 +2,14 @@ package org.ksmt.solver.portfolio
 
 import com.jetbrains.rd.util.AtomicInteger
 import com.jetbrains.rd.util.AtomicReference
-import com.jetbrains.rd.util.ConcurrentHashMap
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.runBlocking
 import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
@@ -18,17 +21,47 @@ import org.ksmt.solver.async.KAsyncSolver
 import org.ksmt.solver.runner.KSolverRunner
 import org.ksmt.sort.KBoolSort
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicReferenceArray
 import kotlin.time.Duration
 
-class KPortfolioSolver(
-    private val solverOperationScope: CoroutineScope,
-    solverRunners: List<KSolverRunner<*>>,
-) : KAsyncSolver<KSolverConfiguration> {
+class KPortfolioSolver(solverRunners: List<KSolverRunner<*>>) : KAsyncSolver<KSolverConfiguration> {
     private val lastSuccessfulSolver = AtomicReference<KSolverRunner<*>?>(null)
     private val pendingTermination = ConcurrentLinkedQueue<KSolverRunner<*>>()
-    private val solvers = ConcurrentHashMap<KSolverRunner<*>, AtomicReference<CompletableDeferred<Unit>?>>(
-        solverRunners.associateWith { AtomicReference(null) }
-    )
+
+    @OptIn(DelicateCoroutinesApi::class)
+    private inner class SolverOperationState(
+        val solverId: Int,
+        val solver: KSolverRunner<*>
+    ) : AutoCloseable {
+        val operationCompletion = AtomicReference<CompletableDeferred<Unit>?>(null)
+
+        /**
+         * Solver operation thread.
+         * We maintain the following properties:
+         * 1. All operation with a single solver are sequential
+         * 2. Since we have a thread per solver,
+         * operations with different solvers are concurrent.
+         * */
+        private val operationCtx = newSingleThreadContext("portfolio-solver")
+        private val exceptionIgnoringCtx = operationCtx + CoroutineExceptionHandler { _, ex ->
+            // Uncaught exception during solver operation -> solver is not valid
+            removeSolverFromPortfolio(solverId)
+            operationCompletion.get()?.completeExceptionally(ex)
+            solver.close()
+        }
+
+        val operationScope = CoroutineScope(exceptionIgnoringCtx)
+
+        override fun close() {
+            operationCtx.close()
+        }
+    }
+
+    private val solverStates = Array(solverRunners.size) {
+        SolverOperationState(it, solverRunners[it])
+    }
+
+    private val activeSolvers = AtomicReferenceArray(solverStates)
 
     override suspend fun configureAsync(configurator: KSolverConfiguration.() -> Unit) = solverOperation {
         configureAsync(configurator)
@@ -78,12 +111,18 @@ class KPortfolioSolver(
         interruptAsync()
     }
 
-    override fun close() = runBlocking {
-        solvers.keys.map { solver ->
-            solverOperationScope.launch {
-                solver.deleteSolverAsync()
+    override fun close() = try {
+        runBlocking {
+            val pendingJobs = mutableListOf<Job>()
+            activeSolvers.forEach { _, solverOperationState ->
+                pendingJobs += solverOperationState.operationScope.launch {
+                    solverOperationState.solver.deleteSolverAsync()
+                }
             }
-        }.joinAll()
+            pendingJobs.joinAll()
+        }
+    } finally {
+        solverStates.forEach { it.close() }
     }
 
     private suspend inline fun solverOperation(
@@ -118,11 +157,14 @@ class KPortfolioSolver(
 
         lastSuccessfulSolver.getAndSet(result.solver)
 
-        solvers.keys.filter { it != result.solver }.forEach { failedSolver ->
-            solverOperationScope.launch {
-                failedSolver.interruptAsync()
+        activeSolvers.forEach { _, solverOperationState ->
+            if (solverOperationState.solver != result.solver) {
+                val failedSolver = solverOperationState.solver
+                solverOperationState.operationScope.launch {
+                    failedSolver.interruptAsync()
+                }
+                pendingTermination.offer(failedSolver)
             }
-            pendingTermination.offer(failedSolver)
         }
 
         return result.result
@@ -137,13 +179,20 @@ class KPortfolioSolver(
         crossinline operation: suspend KSolverRunner<*>.() -> T,
         crossinline predicate: (T) -> Boolean
     ): SolverAwaitResult<T> {
-        val pendingSolvers = AtomicInteger(solvers.size)
+        val pendingSolvers = AtomicInteger(activeSolvers.length())
         val results = ConcurrentLinkedQueue<Result<SolverOperationResult<T>>>()
         val resultFuture = CompletableDeferred<SolverAwaitResult<T>>()
-        solvers.keys.forEach { solver ->
+        activeSolvers.forEach(
+            onNullValue = {
+                // Solver is not active -> skip
+                pendingSolvers.decrementAndGet()
+            }
+        ) { solverId, solverOperationState ->
             val operationCompletion = CompletableDeferred<Unit>()
-            val previousOperationCompletion = solvers[solver]?.getAndSet(operationCompletion)
-            solverOperationScope.launch {
+            val previousOperationCompletion = solverOperationState.operationCompletion.getAndSet(operationCompletion)
+            val solver = solverOperationState.solver
+
+            solverOperationState.operationScope.launch {
                 try {
                     // Ensure solver operation order
                     previousOperationCompletion?.await()
@@ -160,7 +209,7 @@ class KPortfolioSolver(
                     operationCompletion.complete(Unit)
                 } catch (ex: Throwable) {
                     // Solver has incorrect state now. Remove it from portfolio
-                    solvers.remove(solver)
+                    removeSolverFromPortfolio(solverId)
                     operationCompletion.completeExceptionally(ex)
                     solver.deleteSolverAsync()
                     results.offer(Result.failure(ex))
@@ -177,7 +226,18 @@ class KPortfolioSolver(
                 }
             }
         }
+
+        // We have no active solvers in portfolio
+        if (pendingSolvers.get() == 0) {
+            val failure = SolverAwaitFailure(results)
+            resultFuture.complete(failure)
+        }
+
         return resultFuture.await()
+    }
+
+    private fun removeSolverFromPortfolio(solverId: Int) {
+        activeSolvers.set(solverId, null)
     }
 
     private fun <T> SolverAwaitFailure<T>.findSuccessOrThrow(): SolverOperationResult<T> {
@@ -215,4 +275,18 @@ class KPortfolioSolver(
     private class SolverAwaitFailure<T>(
         val results: Collection<Result<SolverOperationResult<T>>>
     ) : SolverAwaitResult<T>
+
+    private inline fun <T> AtomicReferenceArray<T?>.forEach(
+        onNullValue: (Int) -> Unit = {},
+        notNullBody: (Int, T) -> Unit
+    ) {
+        for (i in 0 until length()) {
+            val value = get(i)
+            if (value == null) {
+                onNullValue(i)
+                continue
+            }
+            notNullBody(i, value)
+        }
+    }
 }

@@ -1,7 +1,5 @@
 package org.ksmt.solver.portfolio
 
-import com.jetbrains.rd.util.lifetime.LifetimeDefinition
-import com.jetbrains.rd.util.threading.SingleThreadScheduler
 import org.ksmt.KContext
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverConfiguration
@@ -25,21 +23,12 @@ class KPortfolioSolverManager(
         require(solvers.isNotEmpty()) { "Empty solver portfolio" }
     }
 
-    private val lifetime = LifetimeDefinition()
-    private val solverOperationScheduler = SingleThreadScheduler(lifetime, "portfolio-solver")
-    private val solverOperationScope = PortfolioSolverCoroutineScope(lifetime, solverOperationScheduler)
-
-    override fun close() {
-        lifetime.terminate()
-        super.close()
-    }
-
     fun createPortfolioSolver(ctx: KContext): KPortfolioSolver {
         val solverInstances = solvers.map {
             val solverType: KClass<out KSolver<KSolverConfiguration>> = it.uncheckedCast()
             createSolver(ctx, solverType)
         }
-        return KPortfolioSolver(solverOperationScope, solverInstances)
+        return KPortfolioSolver(solverInstances)
     }
 
     companion object {
