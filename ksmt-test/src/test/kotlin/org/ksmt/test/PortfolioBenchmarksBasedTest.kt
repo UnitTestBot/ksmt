@@ -35,6 +35,7 @@ class PortfolioBenchmarksBasedTest : BenchmarksBasedTest() {
         fun portfolioTestData() = testData
             .filter { it.name.startsWith("QF_") }
             .filter { "BV" in it.name }
+            .ensureNotEmpty()
 
         private lateinit var portfolioSolverManager: KPortfolioSolverManager
 
