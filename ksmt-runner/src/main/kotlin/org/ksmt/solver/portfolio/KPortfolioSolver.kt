@@ -14,6 +14,7 @@ import kotlinx.coroutines.runBlocking
 import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
+import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
@@ -21,10 +22,14 @@ import org.ksmt.solver.async.KAsyncSolver
 import org.ksmt.solver.runner.KSolverRunner
 import org.ksmt.sort.KBoolSort
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReferenceArray
+import kotlin.reflect.KClass
 import kotlin.time.Duration
 
-class KPortfolioSolver(solverRunners: List<KSolverRunner<*>>) : KAsyncSolver<KSolverConfiguration> {
+class KPortfolioSolver(
+    solverRunners: List<Pair<KClass<out KSolver<*>>, KSolverRunner<*>>>
+) : KAsyncSolver<KSolverConfiguration> {
     private val lastSuccessfulSolver = AtomicReference<KSolverRunner<*>?>(null)
     private val pendingTermination = ConcurrentLinkedQueue<KSolverRunner<*>>()
 
@@ -57,11 +62,42 @@ class KPortfolioSolver(solverRunners: List<KSolverRunner<*>>) : KAsyncSolver<KSo
         }
     }
 
+    class SolverStatistic(val solver: KClass<out KSolver<*>>) {
+        private val numberOfBestQueries = AtomicInteger(0)
+        private val solverIsActive = AtomicBoolean(true)
+
+        val queriesBest: Int
+            get() = numberOfBestQueries.get()
+
+        val isActive: Boolean
+            get() = solverIsActive.get()
+
+        internal fun logSolverQueryBest() {
+            numberOfBestQueries.incrementAndGet()
+        }
+
+        internal fun logSolverRemovedFromPortfolio() {
+            solverIsActive.set(false)
+        }
+
+        override fun toString(): String =
+            "${solver.simpleName}: queriesBest=${queriesBest}, isActive=${isActive}"
+    }
+
     private val solverStates = Array(solverRunners.size) {
-        SolverOperationState(it, solverRunners[it])
+        SolverOperationState(it, solverRunners[it].second)
     }
 
     private val activeSolvers = AtomicReferenceArray(solverStates)
+
+    private val solverStats = Array(solverRunners.size) {
+        SolverStatistic(solverRunners[it].first)
+    }
+
+    /**
+     * Gather current statistic on the solvers in the portfolio.
+     * */
+    fun solverPortfolioStats(): List<SolverStatistic> = solverStats.toList()
 
     override suspend fun configureAsync(configurator: KSolverConfiguration.() -> Unit) = solverOperation {
         configureAsync(configurator)
@@ -147,7 +183,9 @@ class KPortfolioSolver(solverRunners: List<KSolverRunner<*>>) : KAsyncSolver<KSo
         }
 
         val result = when (awaitResult) {
-            is SolverAwaitSuccess -> awaitResult.result
+            is SolverAwaitSuccess -> awaitResult.result.also {
+                solverStats[awaitResult.result.solverId].logSolverQueryBest()
+            }
             /**
              * All solvers finished with Unknown or failed with exception.
              * If some solver ends up with Unknown we can treat this result as successful.
@@ -198,7 +236,7 @@ class KPortfolioSolver(solverRunners: List<KSolverRunner<*>>) : KAsyncSolver<KSo
                     previousOperationCompletion?.await()
 
                     val operationResult = solver.operation()
-                    val solverOperationResult = SolverOperationResult(solver, operationResult)
+                    val solverOperationResult = SolverOperationResult(solverId, solver, operationResult)
                     results.offer(Result.success(solverOperationResult))
 
                     if (predicate(operationResult)) {
@@ -238,6 +276,7 @@ class KPortfolioSolver(solverRunners: List<KSolverRunner<*>>) : KAsyncSolver<KSo
 
     private fun removeSolverFromPortfolio(solverId: Int) {
         activeSolvers.set(solverId, null)
+        solverStats[solverId].logSolverRemovedFromPortfolio()
     }
 
     private fun <T> SolverAwaitFailure<T>.findSuccessOrThrow(): SolverOperationResult<T> {
@@ -262,6 +301,7 @@ class KPortfolioSolver(solverRunners: List<KSolverRunner<*>>) : KAsyncSolver<KSo
     }
 
     data class SolverOperationResult<T>(
+        val solverId: Int,
         val solver: KSolverRunner<*>,
         val result: T
     )

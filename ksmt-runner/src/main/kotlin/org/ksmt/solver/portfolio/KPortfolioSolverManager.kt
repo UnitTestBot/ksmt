@@ -26,7 +26,7 @@ class KPortfolioSolverManager(
     fun createPortfolioSolver(ctx: KContext): KPortfolioSolver {
         val solverInstances = solvers.map {
             val solverType: KClass<out KSolver<KSolverConfiguration>> = it.uncheckedCast()
-            createSolver(ctx, solverType)
+            it to createSolver(ctx, solverType)
         }
         return KPortfolioSolver(solverInstances)
     }
