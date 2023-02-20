@@ -13,9 +13,9 @@ import kotlin.time.Duration.Companion.seconds
 
 class KPortfolioSolverManager(
     private val solvers: List<KClass<out KSolver<out KSolverConfiguration>>>,
-    portfolioPoolSize: Int = 1,
-    hardTimeout: Duration = 10.seconds,
-    workerProcessIdleTimeout: Duration = 100.seconds
+    portfolioPoolSize: Int = DEFAULT_PORTFOLIO_POOL_SIZE,
+    hardTimeout: Duration = DEFAULT_HARD_TIMEOUT,
+    workerProcessIdleTimeout: Duration = DEFAULT_WORKER_PROCESS_IDLE_TIMEOUT
 ) : KSolverRunnerManager(
     workerPoolSize = portfolioPoolSize * solvers.size,
     hardTimeout = hardTimeout,
@@ -40,5 +40,11 @@ class KPortfolioSolverManager(
             createSolver(ctx, solverType)
         }
         return KPortfolioSolver(solverOperationScope, solverInstances)
+    }
+
+    companion object {
+        const val DEFAULT_PORTFOLIO_POOL_SIZE = 1
+        val DEFAULT_HARD_TIMEOUT = 10.seconds
+        val DEFAULT_WORKER_PROCESS_IDLE_TIMEOUT = 100.seconds
     }
 }

@@ -19,13 +19,13 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 open class KSolverRunnerManager(
-    workerPoolSize: Int = 1,
-    private val hardTimeout: Duration = 10.seconds,
-    workerProcessIdleTimeout: Duration = 100.seconds
+    workerPoolSize: Int = DEFAULT_WORKER_POOL_SIZE,
+    private val hardTimeout: Duration = DEFAULT_HARD_TIMEOUT,
+    workerProcessIdleTimeout: Duration = DEFAULT_WORKER_PROCESS_IDLE_TIMEOUT
 ) : AutoCloseable {
     private val workers = KsmtWorkerPool(
         maxWorkerPoolSize = workerPoolSize,
-        initializationTimeout = 15.seconds,
+        initializationTimeout = SOLVER_WORKER_INITIALIZATION_TIMEOUT,
         workerProcessIdleTimeout = workerProcessIdleTimeout,
         workerFactory = object : KsmtWorkerFactory<SolverProtocolModel> {
             override val childProcessEntrypoint = KSolverWorkerProcess::class
@@ -60,5 +60,12 @@ open class KSolverRunnerManager(
         return KSolverRunnerExecutor(hardTimeout, worker).also {
             it.initSolver(solverType)
         }
+    }
+
+    companion object {
+        const val DEFAULT_WORKER_POOL_SIZE = 1
+        val DEFAULT_HARD_TIMEOUT = 10.seconds
+        val DEFAULT_WORKER_PROCESS_IDLE_TIMEOUT = 100.seconds
+        val SOLVER_WORKER_INITIALIZATION_TIMEOUT = 15.seconds
     }
 }
