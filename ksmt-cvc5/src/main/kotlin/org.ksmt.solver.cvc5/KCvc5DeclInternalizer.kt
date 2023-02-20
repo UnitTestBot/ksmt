@@ -11,6 +11,9 @@ open class KCvc5DeclInternalizer(
 ) : KDeclVisitor<Term> {
 
     override fun <S : KSort> visit(decl: KFuncDecl<S>): Term = cvc5Ctx.internalizeDecl(decl) {
+        // declarations incremental collection optimization
+        cvc5Ctx.addDeclaration(decl)
+
         val domainSorts = decl.argSorts.map { it.accept(sortInternalizer) }
         val rangeSort = decl.sort.accept(sortInternalizer)
 

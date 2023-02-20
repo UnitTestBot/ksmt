@@ -1,10 +1,10 @@
 package org.ksmt.solver.cvc5
 
 import io.github.cvc5.CVC5ApiException
-import io.github.cvc5.Solver
-import io.github.cvc5.UnknownExplanation
 import io.github.cvc5.Result
+import io.github.cvc5.Solver
 import io.github.cvc5.Term
+import io.github.cvc5.UnknownExplanation
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
@@ -35,9 +35,6 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     private var cvc5CurrentLevelTrackedAssertions = mutableListOf<Term>()
     private val cvc5TrackedAssertions = mutableListOf(cvc5CurrentLevelTrackedAssertions)
 
-    private var currentLevelAssertions = mutableListOf<KExpr<KBoolSort>>()
-    private val assertions = mutableListOf(currentLevelAssertions)
-
     private var cvc5LastAssumptions = TreeSet<Term>()
 
     init {
@@ -60,7 +57,6 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
 
     override fun assert(expr: KExpr<KBoolSort>) = cvc5Try {
         val cvc5Expr = with(exprInternalizer) { expr.internalizeExpr() }
-        currentLevelAssertions.add(expr)
 
         solver.assertFormula(cvc5Expr)
     }
@@ -83,8 +79,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         cvc5CurrentLevelTrackedAssertions = mutableListOf()
         cvc5TrackedAssertions.add(cvc5CurrentLevelTrackedAssertions)
 
-        currentLevelAssertions = mutableListOf()
-        assertions.add(currentLevelAssertions)
+        cvc5Ctx.push()
     }
 
     override fun pop(n: UInt) {
@@ -96,11 +91,10 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
 
         repeat(n.toInt()) {
             cvc5TrackedAssertions.removeLast()
-            assertions.removeLast()
         }
         cvc5CurrentLevelTrackedAssertions = cvc5TrackedAssertions.last()
-        currentLevelAssertions = assertions.last()
 
+        cvc5Ctx.pop(n)
         solver.pop(n.toInt())
     }
 
@@ -124,7 +118,14 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
 
     override fun model(): KModel = cvc5Try {
         require(lastCheckStatus == KSolverStatus.SAT) { "Models are only available after SAT checks" }
-        return KCvc5Model(ctx, cvc5Ctx, exprConverter, exprInternalizer)
+        return KCvc5Model(
+            ctx,
+            cvc5Ctx,
+            exprConverter,
+            exprInternalizer,
+            cvc5Ctx.declarations(),
+            cvc5Ctx.uninterpretedSorts()
+        )
     }
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = cvc5Try {
@@ -138,9 +139,6 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     }
 
     override fun close() {
-        currentLevelAssertions.clear()
-        assertions.clear()
-
         cvc5CurrentLevelTrackedAssertions.clear()
         cvc5TrackedAssertions.clear()
 

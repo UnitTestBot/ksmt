@@ -54,7 +54,8 @@ open class KCvc5SortInternalizer(
     }
 
     override fun visit(sort: KUninterpretedSort): Sort = cvc5Ctx.internalizeSort(sort) {
-        cvc5Ctx.uninterpretedSorts += sort
+        // uninterpreted sorts incremental collection optimization
+        cvc5Ctx.addUninterpretedSort(sort)
         nSolver.mkUninterpretedSort(sort.name)
     }
 

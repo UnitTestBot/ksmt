@@ -16,12 +16,10 @@ open class KCvc5Model(
     private val ctx: KContext,
     private val cvc5Ctx: KCvc5Context,
     private val converter: KCvc5ExprConverter,
-    private val internalizer: KCvc5ExprInternalizer
+    private val internalizer: KCvc5ExprInternalizer,
+    override val declarations: Set<KDecl<*>>,
+    override val uninterpretedSorts: Set<KUninterpretedSort>
 ) : KModel {
-
-    override val declarations: Set<KDecl<*>> = cvc5Ctx.declarations.toHashSet()
-
-    override val uninterpretedSorts: Set<KUninterpretedSort> = cvc5Ctx.uninterpretedSorts.toHashSet()
 
     private val interpretations = hashMapOf<KDecl<*>, KModel.KFuncInterp<*>?>()
     private val uninterpretedSortsUniverses = hashMapOf<KUninterpretedSort, Set<KExpr<KUninterpretedSort>>>()
