@@ -7,6 +7,17 @@ import org.ksmt.sort.KBoolSort
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.ConcurrentLinkedQueue
 
+/**
+ * State of an SMT solver.
+ * Allows us to recover the state of the solver after failures.
+ *
+ * The state of the solver:
+ * 1. Solver configuration
+ * 2. Asserted expressions
+ * 3. Assertion level (push commands)
+ *
+ * We don't consider last check-sat result as a solver state.
+ * */
 class KSolverState {
     private sealed interface AssertFrame
     private data class ExprAssertFrame(val expr: KExpr<KBoolSort>) : AssertFrame
@@ -16,6 +27,12 @@ class KSolverState {
     ) : AssertFrame
 
     private val configuration = ConcurrentLinkedQueue<SolverConfigurationParam>()
+
+    /**
+     * Asserted expressions.
+     * Each nested queue contains expressions of the
+     * corresponding assertion level.
+     * */
     private val assertFrames = ConcurrentLinkedDeque<ConcurrentLinkedQueue<AssertFrame>>()
 
     init {
@@ -44,6 +61,10 @@ class KSolverState {
         }
     }
 
+    /**
+     * Recover the solver state via re-applying
+     * all solver state modification operations.
+     * */
     suspend fun apply(executor: KSolverRunnerExecutor) {
         if (configuration.isNotEmpty()) {
             executor.configureAsync(configuration.toList())
@@ -52,6 +73,7 @@ class KSolverState {
         var firstFrame = true
         for (frame in assertFrames) {
             if (!firstFrame) {
+                // Increase the solver assertion scope
                 executor.pushAsync()
             }
             firstFrame = false
