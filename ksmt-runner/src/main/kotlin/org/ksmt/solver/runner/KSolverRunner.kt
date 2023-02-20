@@ -47,9 +47,9 @@ class KSolverRunner<Config : KSolverConfiguration>(
     }
 
     override suspend fun configureAsync(configurator: Config.() -> Unit) {
-        val univesalConfigurator = KSolverRunnerUniversalConfigurator()
-        configurationBuilder(univesalConfigurator).configurator()
-        val config = univesalConfigurator.config
+        val universalConfigurator = KSolverRunnerUniversalConfigurator()
+        configurationBuilder(universalConfigurator).configurator()
+        val config = universalConfigurator.config
 
         try {
             ensureInitializedAndExecute(onException = {}) {
