@@ -242,8 +242,26 @@ class KSolverRunner<Config : KSolverConfiguration>(
         if (oldValue != null) return oldValue
 
         val newValue = body()
+        if (compareAndSet(null, newValue)) {
+            return newValue
+        }
 
-        getAndSet(newValue)
-        return newValue
+        while (true) {
+            val value = get()
+            if (value != null) return value
+
+            /**
+             * Updated from null -> value -> null
+             * According to our workflow that means:
+             * <start> --> updateIfNull (current) --------------> <we are here>
+             *         |                                     |
+             *         -> updateIfNull (parallel) -> reset --|
+             *
+             * Since reset was performed we need to recompute [body].
+             * */
+
+            val updatedValue = body()
+            compareAndSet(null, updatedValue)
+        }
     }
 }
