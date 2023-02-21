@@ -680,15 +680,12 @@ open class KBitwuzlaExprInternalizer(
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) = with(expr) {
         transform(array, index, value) { a: BitwuzlaTerm, i: BitwuzlaTerm, v: BitwuzlaTerm ->
             if (Native.bitwuzlaTermGetBitwuzlaKind(a) == BitwuzlaKind.BITWUZLA_KIND_LAMBDA) {
-                mkArrayLambdaTerm(index.sort) {
+                mkArrayLambdaTerm(index.sort) { lambdaVar ->
+                    // (store a i v) ==> (ite (= x i) v (select a x))
+                    val nestedValue = mkArraySelectTerm(BitwuzlaKind.BITWUZLA_KIND_LAMBDA, a, lambdaVar)
                     val condition = Native.bitwuzlaMkTerm2(
-                        bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, it, i
+                        bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lambdaVar, i
                     )
-
-                    val nestedValue = Native.bitwuzlaMkTerm2(
-                        bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, a, i
-                    )
-
                     Native.bitwuzlaMkTerm3(
                         bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_ITE, condition, v, nestedValue
                     )
