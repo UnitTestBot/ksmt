@@ -367,19 +367,14 @@ open class KBitwuzlaExprInternalizer(
             val lKind = Native.bitwuzlaTermGetBitwuzlaKind(l)
             val rKind = Native.bitwuzlaTermGetBitwuzlaKind(r)
             if (lKind == BitwuzlaKind.BITWUZLA_KIND_LAMBDA || rKind == BitwuzlaKind.BITWUZLA_KIND_LAMBDA) {
-                var lWrapped = l
-                if (lKind != BitwuzlaKind.BITWUZLA_KIND_LAMBDA) {
-                    lWrapped = mkArrayLambdaTerm(sort.domain) { mkArraySelectTerm(lKind, l, it) }
-                }
-
-                var rWrapped = r
-                if (rKind != BitwuzlaKind.BITWUZLA_KIND_LAMBDA) {
-                    rWrapped = mkArrayLambdaTerm(sort.domain) { mkArraySelectTerm(lKind, r, it) }
-                }
-
-                return Native.bitwuzlaMkTerm2(
-                    bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lWrapped, rWrapped
+                // (= a b) ==> (forall (x) (= (select a x) (select b x)))
+                val idxVar = Native.bitwuzlaMkVar(bitwuzlaCtx.bitwuzla, sort.domain.internalizeSort(), "x")
+                val lValue = mkArraySelectTerm(lKind, l, idxVar)
+                val rValue = mkArraySelectTerm(rKind, r, idxVar)
+                val body = Native.bitwuzlaMkTerm2(
+                    bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lValue, rValue
                 )
+                return Native.bitwuzlaMkTerm2(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FORALL, idxVar, body)
             }
         }
         return Native.bitwuzlaMkTerm2(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, l, r)
@@ -389,19 +384,21 @@ open class KBitwuzlaExprInternalizer(
         if (sort is KArraySort<*, *>) {
             val kinds = args.map { Native.bitwuzlaTermGetBitwuzlaKind(it) }
             if (kinds.any { it == BitwuzlaKind.BITWUZLA_KIND_LAMBDA }) {
-                val wrappedArgs = args.zip(kinds) { arg, kind ->
-                    if (kind != BitwuzlaKind.BITWUZLA_KIND_LAMBDA) {
-                        mkArrayLambdaTerm(sort.domain) { mkArraySelectTerm(kind, arg, it) }
-                    } else {
-                        arg
-                    }
+                // (distinct a b) ==> (forall (x) (distinct (select a x) (select b x)))
+                val idxVar = Native.bitwuzlaMkVar(bitwuzlaCtx.bitwuzla, sort.domain.internalizeSort(), "x")
+                val values = args.zip(kinds) { arg, kind ->
+                    mkArraySelectTerm(kind, arg, idxVar)
                 }
+                val distinctValues = Native.bitwuzlaMkTerm(
+                    bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, values.toLongArray()
+                )
 
-                return Native.bitwuzlaMkTerm(
-                    bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, wrappedArgs.toLongArray()
+                return Native.bitwuzlaMkTerm2(
+                    bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FORALL, idxVar, distinctValues
                 )
             }
         }
+
         return Native.bitwuzlaMkTerm(
             bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, args.toLongArray()
         )
