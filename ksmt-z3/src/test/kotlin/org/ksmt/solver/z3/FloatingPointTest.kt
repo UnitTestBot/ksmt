@@ -1,5 +1,9 @@
 package org.ksmt.solver.z3
 
+import com.microsoft.z3.Context
+import com.microsoft.z3.Expr
+import com.microsoft.z3.FPSort
+import com.microsoft.z3.Status
 import java.lang.Float.intBitsToFloat
 import kotlin.math.abs
 import kotlin.math.max
@@ -493,8 +497,8 @@ class FloatingPointTest {
     )
 
     @Test
-    fun testDoubleNanValue() = testDoubleConstant(
-        symbolicOperation = { context.mkFpNan(context.mkFp64Sort()) },
+    fun testDoubleNaNValue() = testDoubleConstant(
+        symbolicOperation = { context.mkFpNaN(context.mkFp64Sort()) },
         concreteOperation = { Double.NaN }
     )
 
@@ -523,8 +527,8 @@ class FloatingPointTest {
     )
 
     @Test
-    fun testFloatNanValue() = testFloatConstant(
-        symbolicOperation = { context.mkFpNan(context.mkFp32Sort()) },
+    fun testFloatNaNValue() = testFloatConstant(
+        symbolicOperation = { context.mkFpNaN(context.mkFp32Sort()) },
         concreteOperation = { Float.NaN }
     )
 
@@ -553,8 +557,8 @@ class FloatingPointTest {
     )
 
     @Test
-    fun testHalfNanValue() = testHalfConstant(
-        symbolicOperation = { context.mkFpNan(context.mkFp16Sort()) },
+    fun testHalfNaNValue() = testHalfConstant(
+        symbolicOperation = { context.mkFpNaN(context.mkFp16Sort()) },
         concreteOperation = { Float.NaN }
     )
 
@@ -581,6 +585,21 @@ class FloatingPointTest {
         symbolicOperation = { context.mkFpZero(signBit = true, context.mkFp16Sort()) },
         concreteOperation = { -0.0f }
     )
+
+    @Test
+    fun testMatchSolverInternalNaN() = compareWithSolverInternal(::compareNaNWithSolverInternal)
+
+    @Test
+    fun testMatchSolverInternalPosInf() = compareWithSolverInternal(::comparePosInfWithSolverInternal)
+
+    @Test
+    fun testMatchSolverInternalNegInf() = compareWithSolverInternal(::compareNegInfWithSolverInternal)
+
+    @Test
+    fun testMatchSolverInternalPosZero() = compareWithSolverInternal(::comparePosZeroWithSolverInternal)
+
+    @Test
+    fun testMatchSolverInternalNegZero() = compareWithSolverInternal(::compareNegZeroWithSolverInternal)
 
     private fun testCompare(
         symbolicOperation: (KExpr<KFp64Sort>, KExpr<KFp64Sort>) -> KExpr<KBoolSort>,
@@ -624,6 +643,73 @@ class FloatingPointTest {
                 assertEquals(concreteOperation(fp.value), eval(variable) is KTrue)
             }
         }
+    }
+
+    private fun compareWithSolverInternal(check: (KFpSort) -> Unit) {
+        val sorts = with(context) {
+            val fpCustom = mkFpSort(5u, 10u)
+            listOf(fp16Sort, fp32Sort, fp64Sort, mkFp128Sort(), fpCustom)
+        }
+        sorts.forEach(check)
+    }
+
+    private fun <S : KFpSort> compareNaNWithSolverInternal(sort: S) = compareWithSolverInternal(
+        sort = sort,
+        operation = context::mkFpNaN,
+        solverInternal = { mkFPNaN(it) }
+    )
+
+    private fun <S : KFpSort> comparePosInfWithSolverInternal(sort: S) = compareWithSolverInternal(
+        sort = sort,
+        operation = { context.mkFpInf(sort = sort, signBit = false) },
+        solverInternal = { mkFPInf(it, false) }
+    )
+
+    private fun <S : KFpSort> compareNegInfWithSolverInternal(sort: S) = compareWithSolverInternal(
+        sort = sort,
+        operation = { context.mkFpInf(sort = sort, signBit = true) },
+        solverInternal = { mkFPInf(it, true) }
+    )
+
+    private fun <S : KFpSort> comparePosZeroWithSolverInternal(sort: S) = compareWithSolverInternal(
+        sort = sort,
+        operation = { context.mkFpZero(sort = sort, signBit = false) },
+        solverInternal = { mkFPZero(it, false) }
+    )
+
+    private fun <S : KFpSort> compareNegZeroWithSolverInternal(sort: S) = compareWithSolverInternal(
+        sort = sort,
+        operation = { context.mkFpZero(sort = sort, signBit = true) },
+        solverInternal = { mkFPZero(it, true) }
+    )
+
+    private fun <S : KFpSort> compareWithSolverInternal(
+        sort: S,
+        operation: (S) -> KExpr<S>,
+        solverInternal: Context.(FPSort) -> Expr<*>
+    ) = KZ3Context().use { solverInternalCtx ->
+        val internalizer = KZ3ExprInternalizer(context, solverInternalCtx)
+
+        val solverInternalSort = with(internalizer) { sort.internalizeSortWrapped() as FPSort }
+        val solverInternalExpr = solverInternal(solverInternalCtx.nativeContext, solverInternalSort)
+
+        val ksmtExpr = operation(sort)
+        val ksmtInternalizedExpr = with(internalizer) { ksmtExpr.internalizeExprWrapped() }
+
+        val check = solverInternalCtx.nativeContext.mkEq(solverInternalExpr, ksmtInternalizedExpr)
+
+        val checker = solverInternalCtx.nativeContext.mkSolver()
+        checker.add(check)
+        val status = checker.check()
+
+        val message = """
+            Representation mismatch for $sort
+            Expected: $solverInternalExpr
+            Actual: $ksmtInternalizedExpr
+            Actual KSMT: $ksmtExpr
+        """.trimIndent()
+
+        assertEquals(Status.SATISFIABLE, status, message)
     }
 
     @Test

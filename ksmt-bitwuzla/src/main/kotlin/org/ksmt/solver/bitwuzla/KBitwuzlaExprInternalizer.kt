@@ -1,5 +1,7 @@
 package org.ksmt.solver.bitwuzla
 
+import org.ksmt.KContext
+import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KDeclVisitor
 import org.ksmt.decl.KFuncDecl
@@ -116,7 +118,7 @@ import org.ksmt.expr.KImpliesExpr
 import org.ksmt.expr.KInt32NumExpr
 import org.ksmt.expr.KInt64NumExpr
 import org.ksmt.expr.KIntBigNumExpr
-import org.ksmt.expr.KInterpretedConstant
+import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.KIsIntRealExpr
 import org.ksmt.expr.KIteExpr
 import org.ksmt.expr.KLeArithExpr
@@ -137,8 +139,8 @@ import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
+import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.solver.KSolverUnsupportedFeatureException
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBVBase
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaRoundingMode
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
@@ -164,10 +166,13 @@ import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KSortVisitor
 import org.ksmt.sort.KUninterpretedSort
+import org.ksmt.utils.uncheckedCast
+import java.math.BigInteger
 
 @Suppress("LargeClass")
 open class KBitwuzlaExprInternalizer(
-    val bitwuzlaCtx: KBitwuzlaContext
+    val bitwuzlaCtx: KBitwuzlaContext,
+    private val scopedVars: Map<KDecl<*>, BitwuzlaTerm> = emptyMap()
 ) : KExprInternalizerBase<BitwuzlaTerm>() {
 
     open val sortInternalizer: SortInternalizer by lazy { SortInternalizer(bitwuzlaCtx) }
@@ -186,10 +191,53 @@ open class KBitwuzlaExprInternalizer(
     /**
     * Create Bitwuzla term from KSMT expression
     * */
-    fun <T : KSort> KExpr<T>.internalize(): BitwuzlaTerm {
+    fun <T : KSort> KExpr<T>.internalize(): BitwuzlaTerm = tryInternalize({
         bitwuzlaCtx.ensureActive()
-        return internalizeExpr()
-    }
+        internalizeExpr()
+    }, rewriteWithAxiomsRequired = {
+        // Expression axioms are not supported here
+        throw KSolverUnsupportedFeatureException(it)
+    })
+
+
+    class AssertionWithAxioms(
+        val assertion: BitwuzlaTerm,
+        val axioms: List<BitwuzlaTerm>
+    )
+
+    /**
+     * Some expressions are not representable in Bitwuzla, but in some cases
+     * we can rewrite them using axioms preserving formula satisfiability.
+     *
+     * For example, there is no way to create [KFpToIEEEBvExpr] but we can create
+     * a corresponding inverse function [KFpFromBvExpr]. We can replace an expression
+     * of the form (fpToIEEEBv x) with a fresh variable y and add an axiom that
+     * (= x (fpFromBv y)).
+     * */
+    fun KExpr<KBoolSort>.internalizeAssertion(): AssertionWithAxioms = tryInternalize({
+        bitwuzlaCtx.ensureActive()
+
+        // Try to internalize without axioms first, since it is the most common case.
+        AssertionWithAxioms(
+            assertion = internalizeExpr(),
+            axioms = emptyList()
+        )
+    }, rewriteWithAxiomsRequired = {
+        // We have an expression that can be rewritten using axioms
+
+        // Reset internalizer
+        exprStack.clear()
+
+        // Rewrite whole assertion using axioms
+        val rewriterWithAxioms = KBitwuzlaInternalizationAxioms(ctx)
+        val exprWithAxioms = rewriterWithAxioms.rewriteWithAxioms(this)
+
+        // Rerun internalizer
+        AssertionWithAxioms(
+            assertion = exprWithAxioms.expr.internalizeExpr(),
+            axioms = exprWithAxioms.axioms.map { it.internalizeExpr() }
+        )
+    })
 
     /**
     * Create Bitwuzla sort from KSMT sort
@@ -207,9 +255,9 @@ open class KBitwuzlaExprInternalizer(
         bitwuzlaCtx.internalizeExpr(expr) { term }
 
         // Save only constants
-        if (expr !is KInterpretedConstant) return
+        if (expr !is KInterpretedValue<*>) return
 
-        val kind = Native.bitwuzlaTermGetKind(term)
+        val kind = Native.bitwuzlaTermGetBitwuzlaKind(term)
 
         /*
          * Save internalized values for [KBitwuzlaExprConverter] needs
@@ -224,17 +272,20 @@ open class KBitwuzlaExprInternalizer(
         }
     }
 
+    private inline fun mkConstant(decl: KDecl<*>, sort: () -> BitwuzlaSort): BitwuzlaTerm =
+        scopedVars[decl] ?: bitwuzlaCtx.mkConstant(decl, sort())
+
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = with(expr) {
         transformList(args) { args: Array<BitwuzlaTerm> ->
-            val const = bitwuzlaCtx.mkConstant(decl, decl.bitwuzlaFunctionSort())
+            val const = mkConstant(decl) { decl.bitwuzlaFunctionSort() }
             val termArgs = (listOf(const) + args).toTypedArray()
 
-            Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, termArgs)
+            Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, termArgs.toLongArray())
         }
     }
 
     override fun <T : KSort> transform(expr: KConst<T>) = expr.transform {
-        bitwuzlaCtx.mkConstant(expr.decl, expr.sort.internalizeSort())
+        mkConstant(expr.decl) { expr.sort.internalizeSort() }
     }
 
     override fun transform(expr: KAndExpr) = with(expr) {
@@ -243,7 +294,7 @@ open class KBitwuzlaExprInternalizer(
                 0 -> bitwuzlaCtx.trueTerm
                 1 -> args[0]
                 else -> Native.bitwuzlaMkTerm(
-                    bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_AND, args
+                    bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_AND, args.toLongArray()
                 )
             }
         }
@@ -255,7 +306,7 @@ open class KBitwuzlaExprInternalizer(
                 0 -> bitwuzlaCtx.falseTerm
                 1 -> args[0]
                 else -> Native.bitwuzlaMkTerm(
-                    bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_OR, args
+                    bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_OR, args.toLongArray()
                 )
             }
         }
@@ -284,7 +335,7 @@ open class KBitwuzlaExprInternalizer(
     override fun <T : KSort> transform(expr: KDistinctExpr<T>) = with(expr) {
         transformList(args) { args: Array<BitwuzlaTerm> ->
             Native.bitwuzlaMkTerm(
-                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, args
+                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, args.toLongArray()
             )
         }
     }
@@ -312,43 +363,32 @@ open class KBitwuzlaExprInternalizer(
         }
     }
 
-    /**
-     * Use uint32 values since uint64 doesn't work on Windows.
-     * @see [Native.bitwuzlaMkBvValueUint64]
-     * */
     fun <T : KBitVecNumberValue<S, *>, S : KBvSort> transformBv64Number(expr: T): T = with(expr) {
         transform {
-            val lowerBits = numberValue.toInt()
-            val higherBits = (numberValue.toLong() ushr Int.SIZE_BITS).toInt()
-            val lowerBitsTerm = Native.bitwuzlaMkBvValueUint32(
-                bitwuzlaCtx.bitwuzla,
-                ctx.bv32Sort.internalizeSort(),
-                lowerBits
-            )
-            val higherBitsTerm = Native.bitwuzlaMkBvValueUint32(
-                bitwuzlaCtx.bitwuzla,
-                ctx.bv32Sort.internalizeSort(),
-                higherBits
-            )
-            Native.bitwuzlaMkTerm2(
-                bitwuzlaCtx.bitwuzla,
-                BitwuzlaKind.BITWUZLA_KIND_BV_CONCAT,
-                higherBitsTerm,
-                lowerBitsTerm
-            ).also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
+            transformBvLongNumber(numberValue.toLong(), sort.sizeBits.toInt())
+                .also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
         }
     }
 
     override fun transform(expr: KBitVecCustomValue) = with(expr) {
         transform {
-            Native.bitwuzlaMkBvValue(
-                bitwuzlaCtx.bitwuzla,
-                sort.internalizeSort(),
-                binaryStringValue,
-                BitwuzlaBVBase.BITWUZLA_BV_BASE_BIN
-            ).also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
+            transformCustomBvNumber(value, expr.sizeBits.toInt())
+                .also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
         }
     }
+
+    private fun transformBvLongNumber(value: Long, size: Int): BitwuzlaTerm {
+        val intParts = intArrayOf((value ushr Int.SIZE_BITS).toInt(), value.toInt())
+        return Native.bitwuzlaMkBvValueUint32Array(bitwuzlaCtx.bitwuzla, size, intParts)
+    }
+
+    private fun transformCustomBvNumber(value: BigInteger, size: Int): BitwuzlaTerm =
+        if (size <= Long.SIZE_BITS) {
+            transformBvLongNumber(value.toLong(), size)
+        } else {
+            val intParts = bigIntegerToBvBits(value, size)
+            Native.bitwuzlaMkBvValueUint32Array(bitwuzlaCtx.bitwuzla, size, intParts)
+        }
 
     override fun <T : KBvSort> transform(expr: KBvNotExpr<T>) = with(expr) {
         transform(value, BitwuzlaKind.BITWUZLA_KIND_BV_NOT)
@@ -591,45 +631,19 @@ open class KBitwuzlaExprInternalizer(
         }
     }
 
-    @Suppress("LABEL_NAME_CLASH")
-    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) = with(expr) {
-        transform {
-            bitwuzlaCtx.withConstantScope {
-                val indexVar = mkVar(indexVarDecl, indexVarDecl.sort.internalizeSort())
-                val bodyInternalizer = KBitwuzlaExprInternalizer(bitwuzlaCtx)
-                val body = with(bodyInternalizer) {
-                    body.internalize()
-                }
-                val bodyKind = Native.bitwuzlaTermGetKind(body)
-
-                if (bodyKind == BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT) {
-                    val selectArgs = Native.bitwuzlaTermGetChildren(body)
-                    if (selectArgs[1] == indexVar) {
-                        /*
-                         Recognize and support special case of lambda expressions
-                         which can be produced by [KBitwuzlaExprConverter].
-
-                         (lambda (i) (select array i)) -> array
-                         */
-                        return@transform selectArgs[0]
-                    }
-                }
-
-                throw KSolverUnsupportedFeatureException("array lambda expressions are not supported in Bitwuzla")
-            }
-        }
-    }
+    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) =
+        expr.internalizeArrayLambdaQuantifier()
 
     override fun transform(
         expr: KExistentialQuantifier
     ): KExpr<KBoolSort> = expr.internalizeQuantifier { args ->
-        Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EXISTS, args)
+        Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EXISTS, args.toLongArray())
     }
 
     override fun transform(
         expr: KUniversalQuantifier
     ): KExpr<KBoolSort> = expr.internalizeQuantifier { args ->
-        Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FORALL, args)
+        Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FORALL, args.toLongArray())
     }
 
     override fun transform(expr: KBv2IntExpr): KExpr<KIntSort> {
@@ -680,43 +694,43 @@ open class KBitwuzlaExprInternalizer(
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>): KExpr<T> {
+    override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KMulArithExpr<T>): KExpr<T> {
+    override fun <T : KArithSort> transform(expr: KMulArithExpr<T>): KExpr<T> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KSubArithExpr<T>): KExpr<T> {
+    override fun <T : KArithSort> transform(expr: KSubArithExpr<T>): KExpr<T> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> {
+    override fun <T : KArithSort> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>): KExpr<T> {
+    override fun <T : KArithSort> transform(expr: KDivArithExpr<T>): KExpr<T> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>): KExpr<T> {
+    override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>): KExpr<T> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> {
+    override fun <T : KArithSort> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> {
+    override fun <T : KArithSort> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> {
+    override fun <T : KArithSort> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> {
+    override fun <T : KArithSort> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> {
         throw KSolverUnsupportedFeatureException("int and real theories are not supported in Bitwuzla")
     }
 
@@ -853,8 +867,8 @@ open class KBitwuzlaExprInternalizer(
         }
     }
 
-    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> = with(expr) {
-        TODO("KFpToIEEEBvExpr is not yet supported in bitwuzla")
+    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> {
+        throw TryRewriteExpressionUsingAxioms("KFpToIEEEBvExpr is not supported in bitwuzla")
     }
 
     override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> = with(expr) {
@@ -901,22 +915,73 @@ open class KBitwuzlaExprInternalizer(
 
     inline fun <T : KQuantifier> T.internalizeQuantifier(
         crossinline internalizer: T.(Array<BitwuzlaTerm>) -> BitwuzlaTerm
-    ) = transform {
-        bitwuzlaCtx.withConstantScope {
-            val boundVars = bounds.map {
-                mkVar(it, it.sort.internalizeSort())
-            }
-            val bodyInternalizer = KBitwuzlaExprInternalizer(bitwuzlaCtx)
-            val body = with(bodyInternalizer) {
-                body.internalize()
-            }
+    ): T = transform {
+        val (_, internalizedBounds, internalizedBody) = ctx.internalizeQuantifierBody(bounds, body)
 
-            if (bounds.isEmpty()) return@transform body
-
-            val args = (boundVars + body).toTypedArray()
-
-            internalizer(args)
+        if (internalizedBounds.isEmpty()) {
+            return@transform internalizedBody
         }
+
+        val args = (internalizedBounds + internalizedBody).toTypedArray()
+        internalizer(args)
+    }
+
+    fun <T : KArrayLambda<*, *>> T.internalizeArrayLambdaQuantifier(): T = transform {
+        val (_, internalizedBounds, internalizedBody) = ctx.internalizeQuantifierBody(listOf(indexVarDecl), body)
+
+        val bodyKind = Native.bitwuzlaTermGetBitwuzlaKind(internalizedBody)
+        if (bodyKind == BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT) {
+            val selectArgs = Native.bitwuzlaTermGetChildren(internalizedBody)
+            if (selectArgs[1] == internalizedBounds.single()) {
+                /*
+                 Recognize and support special case of lambda expressions
+                 which can be produced by [KBitwuzlaExprConverter].
+
+                 (lambda (i) (select array i)) -> array
+                 */
+                return@transform selectArgs[0]
+            }
+        }
+
+        throw TryRewriteExpressionUsingAxioms("Array lambda expressions are not supported in Bitwuzla")
+    }
+
+    fun KContext.internalizeQuantifierBody(
+        bounds: List<KDecl<*>>,
+        body: KExpr<*>
+    ): Triple<List<KConstDecl<KSort>>, List<BitwuzlaTerm>, BitwuzlaTerm> {
+        if (bounds.any { it.hasUninterpretedSorts() }) {
+            throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support quantifiers with uninterpreted sorts")
+        }
+
+        // Replace all bound vars since they can overlap with constants from outer scope
+        val uniqueBounds = bounds.map { mkFreshConstDecl(it.name, it.sort) }
+        val shadowingResolver = KExprSubstitutor(this).apply {
+            bounds.zip(uniqueBounds).forEach { (old, new) ->
+                substitute(old.uncheckedCast(), new)
+            }
+        }
+        val bodyWithoutShadowing = shadowingResolver.apply(body)
+
+        // Since all bound variable are unique now we can create variables
+        val internalizedBounds = uniqueBounds.map {
+            Native.bitwuzlaMkVar(bitwuzlaCtx.bitwuzla, it.sort.internalizeSort(), it.name)
+        }
+
+        /**
+         * Internalizer will produce var instead of normal constants
+         * for all bound variables.
+         * */
+        val nestedVarScope = scopedVars.toMutableMap().apply {
+            uniqueBounds.zip(internalizedBounds).forEach { (decl, variable) ->
+                put(decl, variable)
+            }
+        }
+
+        val bodyInternalizer = KBitwuzlaExprInternalizer(bitwuzlaCtx, nestedVarScope)
+        val internalizedBody = with(bodyInternalizer) { bodyWithoutShadowing.internalize() }
+
+        return Triple(uniqueBounds, internalizedBounds, internalizedBody)
     }
 
     open class SortInternalizer(private val bitwuzlaCtx: KBitwuzlaContext) : KSortVisitor<BitwuzlaSort> {
@@ -956,8 +1021,13 @@ open class KBitwuzlaExprInternalizer(
         override fun visit(sort: KRealSort): BitwuzlaSort =
             throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
 
-        override fun visit(sort: KUninterpretedSort): BitwuzlaSort =
-            throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
+        /**
+         * Replace Uninterpreted sorts with (BitVec 32).
+         * The sort universe size is limited by 2^32 values which should be enough.
+         * */
+        override fun visit(sort: KUninterpretedSort): BitwuzlaSort = bitwuzlaCtx.internalizeSort(sort) {
+            Native.bitwuzlaMkBvSort(bitwuzlaCtx.bitwuzla, UNINTERPRETED_SORT_REPLACEMENT_BV_SIZE)
+        }
 
         override fun <S : KFpSort> visit(sort: S): BitwuzlaSort =
             bitwuzlaCtx.internalizeSort(sort) {
@@ -972,6 +1042,10 @@ open class KBitwuzlaExprInternalizer(
             bitwuzlaCtx.internalizeSort(sort) {
                 Native.bitwuzlaMkRmSort(bitwuzlaCtx.bitwuzla)
             }
+
+        companion object {
+            const val UNINTERPRETED_SORT_REPLACEMENT_BV_SIZE = 32
+        }
     }
 
     open class FunctionSortInternalizer(
@@ -992,7 +1066,7 @@ open class KBitwuzlaExprInternalizer(
 
             if (domain.isEmpty()) return@internalizeDeclSort range
 
-            Native.bitwuzlaMkFunSort(bitwuzlaCtx.bitwuzla, domain.size, domain, range)
+            Native.bitwuzlaMkFunSort(bitwuzlaCtx.bitwuzla, domain.size, domain.toLongArray(), range)
         }
     }
 
@@ -1027,6 +1101,43 @@ open class KBitwuzlaExprInternalizer(
         kind: BitwuzlaKind
     ): S = transform(arg0, arg1, arg2, arg3) { a0: BitwuzlaTerm, a1: BitwuzlaTerm, a2: BitwuzlaTerm, a3: BitwuzlaTerm ->
         val args = arrayOf(a0, a1, a2, a3)
-        Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, kind, args)
+        Native.bitwuzlaMkTerm(bitwuzlaCtx.bitwuzla, kind, args.toLongArray())
     }
+
+    /**
+     * Abort current internalization because we found an unsupported expression,
+     * that can be rewritten using axioms.
+     *
+     * See [internalizeAssertion].
+     * */
+    class TryRewriteExpressionUsingAxioms(override val message: String) : Exception(message) {
+        // Not a real exception -> we can avoid stacktrace collection
+        override fun fillInStackTrace(): Throwable = this
+    }
+
+    private inline fun <T> tryInternalize(
+        body: () -> T,
+        rewriteWithAxiomsRequired: (String) -> T
+    ): T = try {
+        body()
+    } catch (ex: TryRewriteExpressionUsingAxioms) {
+        rewriteWithAxiomsRequired(ex.message)
+    }
+
+    private val uninterpretedSortsDetector = object : KSortVisitor<Boolean> {
+        override fun visit(sort: KUninterpretedSort): Boolean = true
+
+        override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): Boolean =
+            sort.domain.accept(this) || sort.range.accept(this)
+
+        override fun visit(sort: KBoolSort): Boolean = false
+        override fun visit(sort: KIntSort): Boolean = false
+        override fun visit(sort: KRealSort): Boolean = false
+        override fun <S : KBvSort> visit(sort: S): Boolean = false
+        override fun <S : KFpSort> visit(sort: S): Boolean = false
+        override fun visit(sort: KFpRoundingModeSort): Boolean = false
+    }
+
+    private fun KDecl<*>.hasUninterpretedSorts(): Boolean =
+        sort.accept(uninterpretedSortsDetector)
 }

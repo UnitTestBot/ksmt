@@ -18,7 +18,7 @@ class KIntModDecl internal constructor(
     override fun KContext.apply(
         arg0: KExpr<KIntSort>,
         arg1: KExpr<KIntSort>
-    ): KApp<KIntSort, *> = mkIntMod(arg0, arg1)
+    ): KApp<KIntSort, *> = mkIntModNoSimplify(arg0, arg1)
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
@@ -35,7 +35,7 @@ class KIntRemDecl internal constructor(
     override fun KContext.apply(
         arg0: KExpr<KIntSort>,
         arg1: KExpr<KIntSort>
-    ): KApp<KIntSort, *> = mkIntRem(arg0, arg1)
+    ): KApp<KIntSort, *> = mkIntRemNoSimplify(arg0, arg1)
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
@@ -48,7 +48,7 @@ class KIntToRealDecl internal constructor(
     ctx.mkRealSort(),
     ctx.mkIntSort()
 ) {
-    override fun KContext.apply(arg: KExpr<KIntSort>): KApp<KRealSort, KExpr<KIntSort>> = mkIntToReal(arg)
+    override fun KContext.apply(arg: KExpr<KIntSort>): KApp<KRealSort, KIntSort> = mkIntToRealNoSimplify(arg)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 

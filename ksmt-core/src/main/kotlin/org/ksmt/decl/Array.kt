@@ -20,7 +20,7 @@ class KArrayStoreDecl<D : KSort, R : KSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<KArraySort<D, R>>,
         arg1: KExpr<D>, arg2: KExpr<R>
-    ): KApp<KArraySort<D, R>, *> = mkArrayStore(arg0, arg1, arg2)
+    ): KApp<KArraySort<D, R>, *> = mkArrayStoreNoSimplify(arg0, arg1, arg2)
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
@@ -38,7 +38,7 @@ class KArraySelectDecl<D : KSort, R : KSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<KArraySort<D, R>>,
         arg1: KExpr<D>
-    ): KApp<R, *> = mkArraySelect(arg0, arg1)
+    ): KApp<R, *> = mkArraySelectNoSimplify(arg0, arg1)
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
@@ -47,7 +47,7 @@ class KArrayConstDecl<D : KSort, R : KSort>(
     ctx: KContext,
     sort: KArraySort<D, R>
 ) : KFuncDecl1<KArraySort<D, R>, R>(ctx, "const", sort, sort.range) {
-    override fun KContext.apply(arg: KExpr<R>): KApp<KArraySort<D, R>, KExpr<R>> = mkArrayConst(sort, arg)
+    override fun KContext.apply(arg: KExpr<R>): KApp<KArraySort<D, R>, R> = mkArrayConst(sort, arg)
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }

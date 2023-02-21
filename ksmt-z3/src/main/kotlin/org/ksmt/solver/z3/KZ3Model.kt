@@ -11,6 +11,7 @@ import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.mkFreshConst
+import org.ksmt.utils.uncheckedCast
 
 open class KZ3Model(
     private val model: Model,
@@ -44,7 +45,6 @@ open class KZ3Model(
         return with(converter) { z3Result.convertExprWrapped() }
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? =
         interpretations.getOrPut(decl) {
             ctx.ensureContextMatch(decl)
@@ -59,7 +59,7 @@ open class KZ3Model(
                 in model.funcDecls -> funcInterp<T>(z3Decl)
                 else -> error("decl $decl is in model declarations but not present in model")
             }
-        } as? KModel.KFuncInterp<T>
+        }?.uncheckedCast()
 
     override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KExpr<KUninterpretedSort>>? =
         uninterpretedSortsUniverses.getOrPut(sort) {

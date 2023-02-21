@@ -8,6 +8,7 @@ import com.microsoft.z3.Expr
 import com.microsoft.z3.Native
 import com.microsoft.z3.Solver
 import com.microsoft.z3.Status
+import org.ksmt.solver.fixtures.yices.KTestYicesContext
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.runner.core.ChildProcessBase
@@ -22,13 +23,12 @@ import org.ksmt.solver.bitwuzla.KBitwuzlaContext
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprConverter
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprInternalizer
 import org.ksmt.solver.z3.KZ3Context
+import org.ksmt.solver.yices.*
 import org.ksmt.solver.z3.KZ3ExprConverter
 import org.ksmt.solver.z3.KZ3ExprInternalizer
 import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.sort.KBoolSort
 import org.ksmt.utils.uncheckedCast
-import kotlin.time.Duration.Companion.seconds
-import kotlin.time.DurationUnit
 
 class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
     private var workerCtx: KContext? = null
@@ -97,11 +97,27 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
             }
         }
 
-    private fun createSolver(): Int {
+    private fun internalizeAndConvertYices(assertions: List<KExpr<KBoolSort>>): List<KExpr<KBoolSort>> {
+        KTestYicesContext().use { internContext ->
+            val internalizer = KYicesExprInternalizer(ctx, internContext)
+
+            val yicesAssertions = with(internalizer) {
+                assertions.map { it.internalize() }
+            }
+
+            val converter = KYicesExprConverter(ctx, internContext)
+
+            return with(converter) {
+                yicesAssertions.map { it.convert() }
+            }
+        }
+    }
+
+    private fun createSolver(timeout: Int): Int {
         val solver = with(z3Ctx) {
             mkSolver().apply {
                 val params = mkParams().apply {
-                    add("timeout", solverCheckTimeout.toInt(DurationUnit.MILLISECONDS))
+                    add("timeout",  timeout)
                     add("random_seed", SEED_FOR_RANDOM)
                 }
                 setParameters(params)
@@ -225,8 +241,13 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
             val converted = internalizeAndConvertBitwuzla(params.expressions as List<KExpr<KBoolSort>>)
             TestConversionResult(converted)
         }
-        createSolver.measureExecutionForTermination {
-            createSolver()
+        internalizeAndConvertYices.measureExecutionForTermination { params ->
+            @Suppress("UNCHECKED_CAST")
+            val converted = internalizeAndConvertYices(params.expressions as List<KExpr<KBoolSort>>)
+            TestConversionResult(converted)
+        }
+        createSolver.measureExecutionForTermination { timeout ->
+            createSolver(timeout)
         }
         assert.measureExecutionForTermination { params ->
             assert(params.solver, params.expr)
@@ -261,7 +282,6 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
 
     companion object {
         private const val SEED_FOR_RANDOM = 12345
-        private val solverCheckTimeout = 1.seconds
 
         init {
             // force native library load

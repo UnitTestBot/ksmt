@@ -6,15 +6,15 @@ package org.ksmt.solver.bitwuzla.bindings
  * The configuration options supported by Bitwuzla.
  *
  * Options that list string values can be configured via
- * [Native.bitwuzla_set_option_str]. Options with integer configuration values are
- * configured via [Native.bitwuzla_set_option].
+ * [Native.bitwuzlaSetOptionStr]. Options with integer configuration values are
+ * configured via [Native.bitwuzlaSetOption].
  *
  * For all options, the current configuration value can be queried via
- * [Native.bitwuzla_get_option].
+ * [Native.bitwuzlaGetOption].
  * Options with string configuration values internally represent these
  * values as enum values.
- * For these options, [Native.bitwuzla_get_option] will return such an enum value.
- * Use [Native.bitwuzla_get_option_str] to query enum options for the corresponding
+ * For these options, [Native.bitwuzlaGetOption] will return such an enum value.
+ * Use [Native.bitwuzlaGetOptionStr] to query enum options for the corresponding
  * string representation.
  */
 enum class BitwuzlaOption(val value: Int) {

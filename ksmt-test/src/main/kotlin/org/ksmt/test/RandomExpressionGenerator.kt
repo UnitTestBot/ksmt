@@ -4,7 +4,7 @@ import org.ksmt.KAst
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpRoundingMode
-import org.ksmt.expr.KInterpretedConstant
+import org.ksmt.expr.KInterpretedValue
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
@@ -79,7 +79,8 @@ class RandomExpressionGenerator {
         limit: Int,
         context: KContext,
         random: Random = Random(42),
-        params: GenerationParameters = GenerationParameters()
+        params: GenerationParameters = GenerationParameters(),
+        generatorFilter: (KFunction<*>) -> Boolean = { true }
     ): List<KExpr<*>> {
         generationContext = GenerationContext(
             random = random,
@@ -91,8 +92,10 @@ class RandomExpressionGenerator {
 
         generateInitialSeed(samplesPerSort = params.seedExpressionsPerSort)
 
+        val filteredGenerators = generators.filter { generatorFilter(it.function) }
+
         while (generationContext.expressions.size < limit) {
-            val generator = generators.random(random)
+            val generator = filteredGenerators.random(random)
 
             nullIfGenerationFailed {
                 generator.generate(generationContext)
@@ -159,6 +162,9 @@ class RandomExpressionGenerator {
     }
 
     companion object {
+
+        val noFreshConstants: (KFunction<*>) -> Boolean = {  it != freshConstGen }
+
         private val ctxFunctions by lazy {
             KContext::class.members
                 .filter { it.visibility == KVisibility.PUBLIC }
@@ -191,6 +197,8 @@ class RandomExpressionGenerator {
                 }
                 .toList()
         }
+
+        private val freshConstGen: KFunction<KExpr<KSort>> by lazy { KContext::mkFreshConst }
 
         /**
          * Filter out generators that require a string with special format.
@@ -238,7 +246,7 @@ class RandomExpressionGenerator {
             simpleValueGenerators.keys.any { this.isSubclassOf(it) }
 
         private fun KType.isKExpr(): Boolean = isSubclassOf(KExpr::class)
-        private fun KType.isConst(): Boolean = isSubclassOf(KInterpretedConstant::class)
+        private fun KType.isConst(): Boolean = isSubclassOf(KInterpretedValue::class)
         private fun KType.isKSort(): Boolean = isSubclassOf(KSort::class)
         private fun KType.isKContext(): Boolean = this == KContext::class.createType()
 
@@ -268,7 +276,7 @@ class RandomExpressionGenerator {
                      * Bv repeat operation can enormously increase the size of bv.
                      * To avoid extremely large bvs, we move the repetitions count to the range 1..3.
                      * */
-                    "mkBvRepeatExpr" -> listOf(
+                    "mkBvRepeatExpr", "mkBvRepeatExprNoSimplify" -> listOf(
                         SimpleArgument(((args[0] as SimpleArgument).value as Int) % 3 + 1),
                         args[1]
                     )
@@ -692,7 +700,7 @@ class RandomExpressionGenerator {
                 val expressionIds = index.getOrPut(depth) { arrayListOf() }
                 expressionIds.add(exprId)
 
-                if (expr is KInterpretedConstant) {
+                if (expr is KInterpretedValue<*>) {
                     constantIndex.getOrPut(expr.sort) { arrayListOf() }.add(exprId)
                 }
 

@@ -165,8 +165,8 @@ class BitVecTest {
         val positiveBvFromString = mkBv(positiveValue, sizeBits) as KBitVecCustomValue
         val negativeBvFromString = mkBv(negativeValue, sizeBits) as KBitVecCustomValue
 
-        assertEquals(positiveBvFromString.binaryStringValue, positiveValue)
-        assertEquals(negativeBvFromString.binaryStringValue, negativeValue)
+        assertEquals(positiveBvFromString.stringValue, positiveValue)
+        assertEquals(negativeBvFromString.stringValue, negativeValue)
 
         assertEquals(positiveBvFromString.sort.sizeBits, sizeBits)
         assertEquals(negativeBvFromString.sort.sizeBits, sizeBits)
@@ -182,7 +182,7 @@ class BitVecTest {
         val sizeBits = 42u
         val bitvector = mkBv(Long.MAX_VALUE, sizeBits) as KBitVecCustomValue
 
-        assertEquals(bitvector.binaryStringValue, Long.MAX_VALUE.toBinary().takeLast(sizeBits.toInt()))
+        assertEquals(bitvector.stringValue, Long.MAX_VALUE.toBinary().takeLast(sizeBits.toInt()))
     }
 
     @Test
@@ -193,11 +193,11 @@ class BitVecTest {
 
         val sizeDifference = sizeBits.toInt() - Long.SIZE_BITS
 
-        assertEquals(positiveBv.binaryStringValue.take(sizeDifference), "0".repeat(sizeDifference))
-        assertEquals(negativeBv.binaryStringValue.take(sizeDifference), "1".repeat(sizeDifference))
+        assertEquals(positiveBv.stringValue.take(sizeDifference), "0".repeat(sizeDifference))
+        assertEquals(negativeBv.stringValue.take(sizeDifference), "1".repeat(sizeDifference))
 
-        assertEquals(positiveBv.binaryStringValue.takeLast(Long.SIZE_BITS), Long.MAX_VALUE.toBinary())
-        assertEquals(negativeBv.binaryStringValue.takeLast(Long.SIZE_BITS), Long.MIN_VALUE.toBinary())
+        assertEquals(positiveBv.stringValue.takeLast(Long.SIZE_BITS), Long.MAX_VALUE.toBinary())
+        assertEquals(negativeBv.stringValue.takeLast(Long.SIZE_BITS), Long.MIN_VALUE.toBinary())
     }
 
     @Test
@@ -532,7 +532,7 @@ class BitVecTest {
         val resultValue = solver.model().eval(symbolicConst) as KBitVecCustomValue
         val expectedResult = firstBv.numberValue.toBinary() + secondBv.numberValue.toBinary()
 
-        assertEquals(expectedResult, resultValue.binaryStringValue)
+        assertEquals(expectedResult, resultValue.stringValue)
     }
 
     @Test

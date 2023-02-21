@@ -162,16 +162,16 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_EQ -> expr.convert(::mkEq)
             Z3_decl_kind.Z3_OP_DISTINCT -> expr.convertList(::mkDistinct)
             Z3_decl_kind.Z3_OP_ITE -> expr.convert(::mkIte)
-            Z3_decl_kind.Z3_OP_LE -> expr.convert<KBoolSort, KArithSort<*>, KArithSort<*>>(::mkArithLe)
-            Z3_decl_kind.Z3_OP_GE -> expr.convert<KBoolSort, KArithSort<*>, KArithSort<*>>(::mkArithGe)
-            Z3_decl_kind.Z3_OP_LT -> expr.convert<KBoolSort, KArithSort<*>, KArithSort<*>>(::mkArithLt)
-            Z3_decl_kind.Z3_OP_GT -> expr.convert<KBoolSort, KArithSort<*>, KArithSort<*>>(::mkArithGt)
-            Z3_decl_kind.Z3_OP_ADD -> expr.convertList<KArithSort<*>, KArithSort<*>>(::mkArithAdd)
-            Z3_decl_kind.Z3_OP_SUB -> expr.convertList<KArithSort<*>, KArithSort<*>>(::mkArithSub)
-            Z3_decl_kind.Z3_OP_MUL -> expr.convertList<KArithSort<*>, KArithSort<*>>(::mkArithMul)
-            Z3_decl_kind.Z3_OP_UMINUS -> expr.convert<KArithSort<*>, KArithSort<*>>(::mkArithUnaryMinus)
-            Z3_decl_kind.Z3_OP_DIV -> expr.convert<KArithSort<*>, KArithSort<*>, KArithSort<*>>(::mkArithDiv)
-            Z3_decl_kind.Z3_OP_POWER -> expr.convert<KArithSort<*>, KArithSort<*>, KArithSort<*>>(::mkArithPower)
+            Z3_decl_kind.Z3_OP_LE -> expr.convert(::mkArithLe)
+            Z3_decl_kind.Z3_OP_GE -> expr.convert(::mkArithGe)
+            Z3_decl_kind.Z3_OP_LT -> expr.convert(::mkArithLt)
+            Z3_decl_kind.Z3_OP_GT -> expr.convert(::mkArithGt)
+            Z3_decl_kind.Z3_OP_ADD -> expr.convertList(::mkArithAdd)
+            Z3_decl_kind.Z3_OP_SUB -> expr.convertList(::mkArithSub)
+            Z3_decl_kind.Z3_OP_MUL -> expr.convertList(::mkArithMul)
+            Z3_decl_kind.Z3_OP_UMINUS -> expr.convert(::mkArithUnaryMinus)
+            Z3_decl_kind.Z3_OP_DIV -> expr.convert(::mkArithDiv)
+            Z3_decl_kind.Z3_OP_POWER -> expr.convert(::mkArithPower)
             Z3_decl_kind.Z3_OP_REM -> expr.convert(::mkIntRem)
             Z3_decl_kind.Z3_OP_MOD -> expr.convert(::mkIntMod)
             Z3_decl_kind.Z3_OP_TO_REAL -> expr.convert(::mkIntToReal)
@@ -332,7 +332,7 @@ open class KZ3ExprConverter(
 
             Z3_decl_kind.Z3_OP_FPA_NAN -> convert {
                 val sort = Native.getSort(nCtx, expr).convertSort<KFpSort>()
-                mkFpNan(sort)
+                mkFpNaN(sort)
             }
 
             Z3_decl_kind.Z3_OP_FPA_PLUS_ZERO -> convert {
@@ -406,8 +406,8 @@ open class KZ3ExprConverter(
 
     private fun convertRealToFpExpr(
         rm: KExpr<KFpRoundingModeSort>,
-        arg1: KExpr<KArithSort<*>>,
-        arg2: KExpr<KArithSort<*>>
+        arg1: KExpr<KArithSort>,
+        arg2: KExpr<KArithSort>
     ): KExpr<KFpSort> = with(ctx) {
         TODO("unsupported fpaTofp: ${rm.sort} + real (${arg1.sort}) + int (${arg2.sort}) -> float")
     }

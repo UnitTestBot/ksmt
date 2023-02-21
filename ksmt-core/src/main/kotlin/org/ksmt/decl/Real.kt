@@ -15,7 +15,7 @@ class KRealToIntDecl internal constructor(
     ctx.mkIntSort(),
     ctx.mkRealSort()
 ) {
-    override fun KContext.apply(arg: KExpr<KRealSort>): KApp<KIntSort, KExpr<KRealSort>> = mkRealToInt(arg)
+    override fun KContext.apply(arg: KExpr<KRealSort>): KApp<KIntSort, KRealSort> = mkRealToIntNoSimplify(arg)
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
@@ -28,7 +28,7 @@ class KRealIsIntDecl internal constructor(
     ctx.mkBoolSort(),
     ctx.mkRealSort()
 ) {
-    override fun KContext.apply(arg: KExpr<KRealSort>): KApp<KBoolSort, KExpr<KRealSort>> = mkRealIsInt(arg)
+    override fun KContext.apply(arg: KExpr<KRealSort>): KApp<KBoolSort, KRealSort> = mkRealIsIntNoSimplify(arg)
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }

@@ -1,6 +1,8 @@
 package org.ksmt.expr
 
 import org.ksmt.KContext
+import org.ksmt.cache.hash
+import org.ksmt.cache.structurallyEqual
 import org.ksmt.decl.KIntModDecl
 import org.ksmt.decl.KIntNumDecl
 import org.ksmt.decl.KIntRemDecl
@@ -14,7 +16,7 @@ class KModIntExpr internal constructor(
     ctx: KContext,
     val lhs: KExpr<KIntSort>,
     val rhs: KExpr<KIntSort>
-) : KApp<KIntSort, KExpr<KIntSort>>(ctx) {
+) : KApp<KIntSort, KIntSort>(ctx) {
     override val sort: KIntSort
         get() = ctx.intSort
 
@@ -25,13 +27,16 @@ class KModIntExpr internal constructor(
         get() = listOf(lhs, rhs)
 
     override fun accept(transformer: KTransformerBase): KExpr<KIntSort> = transformer.transform(this)
+
+    override fun internHashCode(): Int = hash(lhs, rhs)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
 }
 
 class KRemIntExpr internal constructor(
     ctx: KContext,
     val lhs: KExpr<KIntSort>,
     val rhs: KExpr<KIntSort>
-) : KApp<KIntSort, KExpr<KIntSort>>(ctx) {
+) : KApp<KIntSort, KIntSort>(ctx) {
     override val sort: KIntSort
         get() = ctx.intSort
 
@@ -42,12 +47,15 @@ class KRemIntExpr internal constructor(
         get() = listOf(lhs, rhs)
 
     override fun accept(transformer: KTransformerBase): KExpr<KIntSort> = transformer.transform(this)
+
+    override fun internHashCode(): Int = hash(lhs, rhs)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
 }
 
 class KToRealIntExpr internal constructor(
     ctx: KContext,
     val arg: KExpr<KIntSort>
-) : KApp<KRealSort, KExpr<KIntSort>>(ctx) {
+) : KApp<KRealSort, KIntSort>(ctx) {
     override val sort: KRealSort
         get() = ctx.realSort
 
@@ -58,19 +66,23 @@ class KToRealIntExpr internal constructor(
         get() = listOf(arg)
 
     override fun accept(transformer: KTransformerBase): KExpr<KRealSort> = transformer.transform(this)
+
+    override fun internHashCode(): Int = hash(arg)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
 }
 
 abstract class KIntNumExpr(
     ctx: KContext,
     private val value: Number
-) : KApp<KIntSort, KExpr<*>>(ctx), KInterpretedConstant {
+) : KInterpretedValue<KIntSort>(ctx) {
     override val sort: KIntSort
         get() = ctx.intSort
 
     override val decl: KIntNumDecl
         get() = ctx.mkIntNumDecl("$value")
 
-    override val args = emptyList<KExpr<*>>()
+    override fun internHashCode(): Int = hash(value)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 class KInt32NumExpr internal constructor(
@@ -78,6 +90,9 @@ class KInt32NumExpr internal constructor(
     val value: Int
 ) : KIntNumExpr(ctx, value) {
     override fun accept(transformer: KTransformerBase): KExpr<KIntSort> = transformer.transform(this)
+
+    override fun internHashCode(): Int = hash(value)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 class KInt64NumExpr internal constructor(
@@ -85,6 +100,9 @@ class KInt64NumExpr internal constructor(
     val value: Long
 ) : KIntNumExpr(ctx, value) {
     override fun accept(transformer: KTransformerBase): KExpr<KIntSort> = transformer.transform(this)
+
+    override fun internHashCode(): Int = hash(value)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }
 
 class KIntBigNumExpr internal constructor(
@@ -92,4 +110,7 @@ class KIntBigNumExpr internal constructor(
     val value: BigInteger
 ) : KIntNumExpr(ctx, value) {
     override fun accept(transformer: KTransformerBase): KExpr<KIntSort> = transformer.transform(this)
+
+    override fun internHashCode(): Int = hash(value)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }

@@ -12,6 +12,7 @@ import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KIntSort
 import org.ksmt.utils.toBinary
+import java.math.BigInteger
 
 abstract class KBitVecValueDecl<T : KBvSort> internal constructor(
     ctx: KContext,
@@ -72,10 +73,14 @@ class KBitVec64ValueDecl internal constructor(
 
 class KBitVecCustomSizeValueDecl internal constructor(
     ctx: KContext,
-    value: String,
+    val bigIntValue: BigInteger,
     sizeBits: UInt
-) : KBitVecValueDecl<KBvSort>(ctx, value, ctx.mkBvSort(sizeBits)) {
-    override fun apply(args: List<KExpr<*>>): KApp<KBvSort, *> = ctx.mkBv(value, sort.sizeBits)
+) : KBitVecValueDecl<KBvSort>(
+    ctx,
+    value = bigIntValue.toBinary(sizeBits),
+    ctx.mkBvSort(sizeBits)
+) {
+    override fun apply(args: List<KExpr<*>>): KApp<KBvSort, *> = ctx.mkBv(bigIntValue, sort.sizeBits)
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
@@ -88,7 +93,7 @@ class KBvNotDecl<T : KBvSort> internal constructor(
 ) : KFuncDecl1<T, T>(ctx, "bvnot", resultSort = valueSort, valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<T, KExpr<T>> = mkBvNotExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<T, T> = mkBvNotExprNoSimplify(arg)
 }
 
 class KBvReductionAndDecl<T : KBvSort> internal constructor(
@@ -97,7 +102,7 @@ class KBvReductionAndDecl<T : KBvSort> internal constructor(
 ) : KFuncDecl1<KBv1Sort, T>(ctx, "bvredand", resultSort = ctx.mkBv1Sort(), valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<KBv1Sort, KExpr<T>> = mkBvReductionAndExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<KBv1Sort, T> = mkBvReductionAndExprNoSimplify(arg)
 }
 
 class KBvReductionOrDecl<T : KBvSort> internal constructor(
@@ -106,7 +111,7 @@ class KBvReductionOrDecl<T : KBvSort> internal constructor(
 ) : KFuncDecl1<KBv1Sort, T>(ctx, "bvredor", resultSort = ctx.mkBv1Sort(), valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<KBv1Sort, KExpr<T>> = mkBvReductionOrExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<KBv1Sort, T> = mkBvReductionOrExprNoSimplify(arg)
 }
 
 class KBvAndDecl<T : KBvSort> internal constructor(
@@ -120,7 +125,7 @@ class KBvAndDecl<T : KBvSort> internal constructor(
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvAndExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvAndExprNoSimplify(arg0, arg1)
 }
 
 class KBvOrDecl<T : KBvSort> internal constructor(
@@ -134,7 +139,7 @@ class KBvOrDecl<T : KBvSort> internal constructor(
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvOrExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvOrExprNoSimplify(arg0, arg1)
 }
 
 class KBvXorDecl<T : KBvSort> internal constructor(
@@ -148,7 +153,7 @@ class KBvXorDecl<T : KBvSort> internal constructor(
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvXorExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvXorExprNoSimplify(arg0, arg1)
 }
 
 class KBvNAndDecl<T : KBvSort> internal constructor(
@@ -162,7 +167,7 @@ class KBvNAndDecl<T : KBvSort> internal constructor(
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvNAndExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvNAndExprNoSimplify(arg0, arg1)
 }
 
 class KBvNorDecl<T : KBvSort> internal constructor(
@@ -176,7 +181,7 @@ class KBvNorDecl<T : KBvSort> internal constructor(
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvNorExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvNorExprNoSimplify(arg0, arg1)
 }
 
 class KBvXNorDecl<T : KBvSort> internal constructor(
@@ -190,7 +195,7 @@ class KBvXNorDecl<T : KBvSort> internal constructor(
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvXNorExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvXNorExprNoSimplify(arg0, arg1)
 }
 
 class KBvNegationDecl<T : KBvSort> internal constructor(
@@ -199,7 +204,7 @@ class KBvNegationDecl<T : KBvSort> internal constructor(
 ) : KFuncDecl1<T, T>(ctx, "bvneg", resultSort = valueSort, valueSort) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg: KExpr<T>): KApp<T, KExpr<T>> = mkBvNegationExpr(arg)
+    override fun KContext.apply(arg: KExpr<T>): KApp<T, T> = mkBvNegationExprNoSimplify(arg)
 }
 
 class KBvAddDecl<T : KBvSort> internal constructor(
@@ -213,7 +218,7 @@ class KBvAddDecl<T : KBvSort> internal constructor(
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvAddExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvAddExprNoSimplify(arg0, arg1)
 }
 
 class KBvSubDecl<T : KBvSort> internal constructor(
@@ -227,7 +232,7 @@ class KBvSubDecl<T : KBvSort> internal constructor(
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvSubExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvSubExprNoSimplify(arg0, arg1)
 }
 
 class KBvMulDecl<T : KBvSort> internal constructor(
@@ -241,7 +246,7 @@ class KBvMulDecl<T : KBvSort> internal constructor(
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvMulExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvMulExprNoSimplify(arg0, arg1)
 }
 
 class KBvUnsignedDivDecl<T : KBvSort> internal constructor(
@@ -255,7 +260,7 @@ class KBvUnsignedDivDecl<T : KBvSort> internal constructor(
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvUnsignedDivExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvUnsignedDivExprNoSimplify(arg0, arg1)
 }
 
 class KBvSignedDivDecl<T : KBvSort> internal constructor(
@@ -269,7 +274,7 @@ class KBvSignedDivDecl<T : KBvSort> internal constructor(
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvSignedDivExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvSignedDivExprNoSimplify(arg0, arg1)
 }
 
 class KBvUnsignedRemDecl<T : KBvSort> internal constructor(
@@ -283,7 +288,7 @@ class KBvUnsignedRemDecl<T : KBvSort> internal constructor(
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvUnsignedRemExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvUnsignedRemExprNoSimplify(arg0, arg1)
 }
 
 class KBvSignedRemDecl<T : KBvSort> internal constructor(
@@ -297,7 +302,7 @@ class KBvSignedRemDecl<T : KBvSort> internal constructor(
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvSignedRemExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvSignedRemExprNoSimplify(arg0, arg1)
 }
 
 class KBvSignedModDecl<T : KBvSort> internal constructor(
@@ -311,7 +316,7 @@ class KBvSignedModDecl<T : KBvSort> internal constructor(
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvSignedModExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvSignedModExprNoSimplify(arg0, arg1)
 }
 
 class KBvUnsignedLessDecl<T : KBvSort> internal constructor(
@@ -328,7 +333,7 @@ class KBvUnsignedLessDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KApp<KBoolSort, *> = mkBvUnsignedLessExpr(arg0, arg1)
+    ): KApp<KBoolSort, *> = mkBvUnsignedLessExprNoSimplify(arg0, arg1)
 }
 
 class KBvSignedLessDecl<T : KBvSort> internal constructor(
@@ -345,7 +350,7 @@ class KBvSignedLessDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KApp<KBoolSort, *> = mkBvSignedLessExpr(arg0, arg1)
+    ): KApp<KBoolSort, *> = mkBvSignedLessExprNoSimplify(arg0, arg1)
 }
 
 class KBvSignedLessOrEqualDecl<T : KBvSort> internal constructor(
@@ -362,7 +367,7 @@ class KBvSignedLessOrEqualDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KApp<KBoolSort, *> = mkBvSignedLessOrEqualExpr(arg0, arg1)
+    ): KApp<KBoolSort, *> = mkBvSignedLessOrEqualExprNoSimplify(arg0, arg1)
 }
 
 
@@ -380,7 +385,7 @@ class KBvUnsignedLessOrEqualDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KApp<KBoolSort, *> = mkBvUnsignedLessOrEqualExpr(arg0, arg1)
+    ): KApp<KBoolSort, *> = mkBvUnsignedLessOrEqualExprNoSimplify(arg0, arg1)
 }
 
 class KBvUnsignedGreaterOrEqualDecl<T : KBvSort> internal constructor(
@@ -397,7 +402,7 @@ class KBvUnsignedGreaterOrEqualDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KApp<KBoolSort, *> = mkBvUnsignedGreaterOrEqualExpr(arg0, arg1)
+    ): KApp<KBoolSort, *> = mkBvUnsignedGreaterOrEqualExprNoSimplify(arg0, arg1)
 }
 
 class KBvSignedGreaterOrEqualDecl<T : KBvSort> internal constructor(
@@ -414,7 +419,7 @@ class KBvSignedGreaterOrEqualDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KApp<KBoolSort, *> = mkBvSignedGreaterOrEqualExpr(arg0, arg1)
+    ): KApp<KBoolSort, *> = mkBvSignedGreaterOrEqualExprNoSimplify(arg0, arg1)
 }
 
 class KBvUnsignedGreaterDecl<T : KBvSort> internal constructor(
@@ -431,7 +436,7 @@ class KBvUnsignedGreaterDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KApp<KBoolSort, *> = mkBvUnsignedGreaterExpr(arg0, arg1)
+    ): KApp<KBoolSort, *> = mkBvUnsignedGreaterExprNoSimplify(arg0, arg1)
 }
 
 class KBvSignedGreaterDecl<T : KBvSort> internal constructor(
@@ -448,7 +453,7 @@ class KBvSignedGreaterDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KApp<KBoolSort, *> = mkBvSignedGreaterExpr(arg0, arg1)
+    ): KApp<KBoolSort, *> = mkBvSignedGreaterExprNoSimplify(arg0, arg1)
 }
 
 class KBvConcatDecl internal constructor(
@@ -467,7 +472,7 @@ class KBvConcatDecl internal constructor(
     override fun KContext.apply(
         arg0: KExpr<KBvSort>,
         arg1: KExpr<KBvSort>
-    ): KApp<KBvSort, *> = mkBvConcatExpr(arg0, arg1)
+    ): KApp<KBvSort, *> = mkBvConcatExprNoSimplify(arg0, arg1)
 }
 
 class KBvExtractDecl internal constructor(
@@ -485,7 +490,7 @@ class KBvExtractDecl internal constructor(
 
     override fun KContext.apply(
         arg: KExpr<KBvSort>
-    ): KApp<KBvSort, KExpr<KBvSort>> = mkBvExtractExpr(high, low, arg)
+    ): KApp<KBvSort, KBvSort> = mkBvExtractExprNoSimplify(high, low, arg)
 
     override val parameters: List<Any>
         get() = listOf(high, low)
@@ -505,7 +510,7 @@ class KSignExtDecl internal constructor(
 
     override fun KContext.apply(
         arg: KExpr<KBvSort>
-    ): KApp<KBvSort, KExpr<KBvSort>> = mkBvSignExtensionExpr(i, arg)
+    ): KApp<KBvSort, KBvSort> = mkBvSignExtensionExprNoSimplify(i, arg)
 
     override val parameters: List<Any>
         get() = listOf(i)
@@ -525,7 +530,7 @@ class KZeroExtDecl internal constructor(
 
     override fun KContext.apply(
         arg: KExpr<KBvSort>
-    ): KApp<KBvSort, KExpr<KBvSort>> = mkBvZeroExtensionExpr(i, arg)
+    ): KApp<KBvSort, KBvSort> = mkBvZeroExtensionExprNoSimplify(i, arg)
 
     override val parameters: List<Any>
         get() = listOf(i)
@@ -545,7 +550,7 @@ class KBvRepeatDecl internal constructor(
 
     override fun KContext.apply(
         arg: KExpr<KBvSort>
-    ): KApp<KBvSort, KExpr<KBvSort>> = mkBvRepeatExpr(i, arg)
+    ): KApp<KBvSort, KBvSort> = mkBvRepeatExprNoSimplify(i, arg)
 
     override val parameters: List<Any>
         get() = listOf(i)
@@ -562,7 +567,7 @@ class KBvShiftLeftDecl<T : KBvSort> internal constructor(
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvShiftLeftExpr(arg0, arg1)
+    override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<T, *> = mkBvShiftLeftExprNoSimplify(arg0, arg1)
 }
 
 class KBvLogicalShiftRightDecl<T : KBvSort> internal constructor(
@@ -579,7 +584,7 @@ class KBvLogicalShiftRightDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KApp<T, *> = mkBvLogicalShiftRightExpr(arg0, arg1)
+    ): KApp<T, *> = mkBvLogicalShiftRightExprNoSimplify(arg0, arg1)
 }
 
 class KBvArithShiftRightDecl<T : KBvSort> internal constructor(
@@ -596,7 +601,7 @@ class KBvArithShiftRightDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KApp<T, *> = mkBvArithShiftRightExpr(arg0, arg1)
+    ): KApp<T, *> = mkBvArithShiftRightExprNoSimplify(arg0, arg1)
 }
 
 class KBvRotateLeftDecl<T : KBvSort> internal constructor(
@@ -613,7 +618,7 @@ class KBvRotateLeftDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KApp<T, KExpr<T>> = mkBvRotateLeftExpr(arg0, arg1)
+    ): KApp<T, T> = mkBvRotateLeftExprNoSimplify(arg0, arg1)
 }
 
 class KBvRotateLeftIndexedDecl<T : KBvSort> internal constructor(
@@ -625,7 +630,7 @@ class KBvRotateLeftIndexedDecl<T : KBvSort> internal constructor(
 
     override fun KContext.apply(
         arg: KExpr<T>
-    ): KApp<T, KExpr<T>> = mkBvRotateLeftIndexedExpr(i, arg)
+    ): KApp<T, T> = mkBvRotateLeftIndexedExprNoSimplify(i, arg)
 
     override val parameters: List<Any>
         get() = listOf(i)
@@ -651,7 +656,7 @@ class KBvRotateRightDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>
-    ): KApp<T, KExpr<T>> = mkBvRotateRightExpr(arg0, arg1)
+    ): KApp<T, T> = mkBvRotateRightExprNoSimplify(arg0, arg1)
 }
 
 class KBvRotateRightIndexedDecl<T : KBvSort> internal constructor(
@@ -668,7 +673,7 @@ class KBvRotateRightIndexedDecl<T : KBvSort> internal constructor(
 
     override fun KContext.apply(
         arg: KExpr<T>
-    ): KApp<T, KExpr<T>> = mkBvRotateRightIndexedExpr(i, arg)
+    ): KApp<T, T> = mkBvRotateRightIndexedExprNoSimplify(i, arg)
 
     override val parameters: List<Any>
         get() = listOf(i)
@@ -688,7 +693,7 @@ class KBv2IntDecl internal constructor(
 
     override fun KContext.apply(
         arg: KExpr<KBvSort>
-    ): KApp<KIntSort, KExpr<KBvSort>> = mkBv2IntExpr(arg, isSigned)
+    ): KApp<KIntSort, KBvSort> = mkBv2IntExprNoSimplify(arg, isSigned)
 
     override val parameters: List<Any>
         get() = listOf(isSigned)
@@ -715,7 +720,7 @@ class KBvAddNoOverflowDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>,
-    ): KApp<KBoolSort, *> = mkBvAddNoOverflowExpr(arg0, arg1, isSigned)
+    ): KApp<KBoolSort, *> = mkBvAddNoOverflowExprNoSimplify(arg0, arg1, isSigned)
 
     override val parameters: List<Any>
         get() = listOf(isSigned)
@@ -741,7 +746,7 @@ class KBvAddNoUnderflowDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>,
-    ): KApp<KBoolSort, *> = mkBvAddNoUnderflowExpr(arg0, arg1)
+    ): KApp<KBoolSort, *> = mkBvAddNoUnderflowExprNoSimplify(arg0, arg1)
 }
 
 class KBvSubNoOverflowDecl<T : KBvSort> internal constructor(
@@ -764,7 +769,7 @@ class KBvSubNoOverflowDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>,
-    ): KApp<KBoolSort, *> = mkBvSubNoOverflowExpr(arg0, arg1)
+    ): KApp<KBoolSort, *> = mkBvSubNoOverflowExprNoSimplify(arg0, arg1)
 }
 
 class KBvSubNoUnderflowDecl<T : KBvSort> internal constructor(
@@ -788,7 +793,7 @@ class KBvSubNoUnderflowDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>,
-    ): KApp<KBoolSort, *> = mkBvSubNoUnderflowExpr(arg0, arg1, isSigned)
+    ): KApp<KBoolSort, *> = mkBvSubNoUnderflowExprNoSimplify(arg0, arg1, isSigned)
 
     override val parameters: List<Any>
         get() = listOf(isSigned)
@@ -814,7 +819,7 @@ class KBvDivNoOverflowDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>,
-    ): KApp<KBoolSort, *> = mkBvDivNoOverflowExpr(arg0, arg1)
+    ): KApp<KBoolSort, *> = mkBvDivNoOverflowExprNoSimplify(arg0, arg1)
 }
 
 class KBvNegNoOverflowDecl<T : KBvSort> internal constructor(
@@ -830,7 +835,7 @@ class KBvNegNoOverflowDecl<T : KBvSort> internal constructor(
 
     override fun KContext.apply(
         arg: KExpr<T>
-    ): KApp<KBoolSort, KExpr<T>> = mkBvNegationNoOverflowExpr(arg)
+    ): KApp<KBoolSort, T> = mkBvNegationNoOverflowExprNoSimplify(arg)
 }
 
 class KBvMulNoOverflowDecl<T : KBvSort> internal constructor(
@@ -854,7 +859,7 @@ class KBvMulNoOverflowDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>,
-    ): KApp<KBoolSort, *> = mkBvMulNoOverflowExpr(arg0, arg1, isSigned)
+    ): KApp<KBoolSort, *> = mkBvMulNoOverflowExprNoSimplify(arg0, arg1, isSigned)
 
     override val parameters: List<Any>
         get() = listOf(isSigned)
@@ -880,11 +885,11 @@ class KBvMulNoUnderflowDecl<T : KBvSort> internal constructor(
     override fun KContext.apply(
         arg0: KExpr<T>,
         arg1: KExpr<T>,
-    ): KApp<KBoolSort, *> = mkBvMulNoUnderflowExpr(arg0, arg1)
+    ): KApp<KBoolSort, *> = mkBvMulNoUnderflowExprNoSimplify(arg0, arg1)
 }
 
 private fun checkSortsAreTheSame(vararg sorts: KBvSort) {
     val sort = sorts.firstOrNull() ?: error("An empty array of sorts given for check")
 
-    require(sorts.all { it === sort }) { "Given sorts are different: $sorts" }
+    require(sorts.all { it == sort }) { "Given sorts are different: $sorts" }
 }

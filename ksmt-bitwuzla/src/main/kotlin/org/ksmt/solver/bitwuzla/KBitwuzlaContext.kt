@@ -1,19 +1,23 @@
 package org.ksmt.solver.bitwuzla
 
-import com.sun.jna.Pointer
-import org.ksmt.cache.mkCache
 import org.ksmt.decl.KDecl
+import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KSolverException
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
+import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KBvSort
+import org.ksmt.sort.KFpRoundingModeSort
+import org.ksmt.sort.KFpSort
+import org.ksmt.sort.KIntSort
+import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
-import java.util.Collections
-import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
-import kotlin.time.TimeMark
-import kotlin.time.TimeSource
+import org.ksmt.sort.KSortVisitor
+import org.ksmt.sort.KUninterpretedSort
 
 open class KBitwuzlaContext : AutoCloseable {
     private var isClosed = false
@@ -24,13 +28,28 @@ open class KBitwuzlaContext : AutoCloseable {
     val falseTerm: BitwuzlaTerm by lazy { Native.bitwuzlaMkFalse(bitwuzla) }
     val boolSort: BitwuzlaSort by lazy { Native.bitwuzlaMkBoolSort(bitwuzla) }
 
-    private val expressions = hashMapOf<KExpr<*>, BitwuzlaTerm>()
+    private var expressions = hashMapOf<KExpr<*>, BitwuzlaTerm>()
     private val bitwuzlaExpressions = hashMapOf<BitwuzlaTerm, KExpr<*>>()
     private val sorts = hashMapOf<KSort, BitwuzlaSort>()
     private val bitwuzlaSorts = hashMapOf<BitwuzlaSort, KSort>()
     private val declSorts = hashMapOf<KDecl<*>, BitwuzlaSort>()
-    private val bitwuzlaConstants = hashMapOf<BitwuzlaTerm, KDecl<*>>()
+
     private val bitwuzlaValues = hashMapOf<BitwuzlaTerm, KExpr<*>>()
+
+    private var constants = hashMapOf<KDecl<*>, BitwuzlaTerm>()
+    private val bitwuzlaConstants = hashMapOf<BitwuzlaTerm, KDecl<*>>()
+
+    private var declarations = hashSetOf<KDecl<*>>()
+    private var uninterpretedSorts = hashMapOf<KUninterpretedSort, HashSet<KDecl<*>>>()
+    private var uninterpretedSortRegisterer = UninterpretedSortRegisterer(uninterpretedSorts)
+
+    private var declarationScope = DeclarationScope(
+        expressions = expressions,
+        constants = constants,
+        declarations = declarations,
+        uninterpretedSorts = uninterpretedSorts,
+        parentScope = null
+    )
 
     operator fun get(expr: KExpr<*>): BitwuzlaTerm? = expressions[expr]
     operator fun get(sort: KSort): BitwuzlaSort? = sorts[sort]
@@ -57,7 +76,7 @@ open class KBitwuzlaContext : AutoCloseable {
     fun internalizeDeclSort(decl: KDecl<*>, internalizer: (KDecl<*>) -> BitwuzlaSort): BitwuzlaSort =
         declSorts.getOrPut(decl) {
             internalizer(decl)
-        }
+        }.also { registerDeclaration(decl) }
 
     /**
      * Internalize and reverse cache Bv value to support Bv values conversion.
@@ -83,69 +102,75 @@ open class KBitwuzlaContext : AutoCloseable {
     // Constant is known only if it was previously internalized
     fun convertConstantIfKnown(term: BitwuzlaTerm): KDecl<*>? = bitwuzlaConstants[term]
 
-    private val normalConstantScope: NormalConstantScope = NormalConstantScope()
-    var currentConstantScope: ConstantScope = normalConstantScope
+    // Find normal constant if it was previously internalized
+    fun findConstant(decl: KDecl<*>): BitwuzlaTerm? = constants[decl]
 
-    fun declaredConstants(): Set<KDecl<*>> = Collections.unmodifiableSet(normalConstantScope.constants)
+    fun declarations(): Set<KDecl<*>> = declarations
+
+    fun uninterpretedSortsWithRelevantDecls(): Map<KUninterpretedSort, Set<KDecl<*>>> = uninterpretedSorts
+
+    /**
+     * Add declaration to the current declaration scope.
+     * Also, if declaration sort is uninterpreted,
+     * register this declaration as relevant to the sort.
+     * */
+    private fun registerDeclaration(decl: KDecl<*>) {
+        if (declarations.add(decl)) {
+            uninterpretedSortRegisterer.decl = decl
+            decl.sort.accept(uninterpretedSortRegisterer)
+            if (decl is KFuncDecl<*>) {
+                decl.argSorts.forEach { it.accept(uninterpretedSortRegisterer) }
+            }
+        }
+    }
 
     /**
      * Internalize constant.
-     *  1. Since [Native.bitwuzlaMkConst] creates fresh constant on each invocation caches are used
-     *  to guarantee that if two constants are equal in ksmt they are also equal in Bitwuzla;
-     *  2. Scoping is used to support quantifier bound variables (see [withConstantScope]).
+     * Since [Native.bitwuzlaMkConst] creates fresh constant on each invocation caches are used
+     * to guarantee that if two constants are equal in ksmt they are also equal in Bitwuzla.
      * */
-    fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = currentConstantScope.mkConstant(decl, sort)
+    fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = constants.getOrPut(decl) {
+        Native.bitwuzlaMkConst(bitwuzla, sort, decl.name).also {
+            bitwuzlaConstants[it] = decl
+        }
+    }.also { registerDeclaration(decl) }
 
     /**
-     * Constant scope for quantifiers.
-     *
-     * Quantifier bound variables:
-     * 1. may clash with constants from outer scope;
-     * 2. must be replaced with vars in quantifier body.
-     *
-     * @see QuantifiedConstantScope
+     * Create nested declaration scope to allow [popDeclarationScope].
+     * Declarations scopes are used to manage set of currently asserted declarations
+     * and must match to the corresponding assertion level ([KBitwuzlaSolver.push]).
      * */
-    inline fun <reified T> withConstantScope(body: QuantifiedConstantScope.() -> T): T {
-        val oldScope = currentConstantScope
-        val newScope = QuantifiedConstantScope(currentConstantScope)
-
-        currentConstantScope = newScope
-        val result = newScope.body()
-        currentConstantScope = oldScope
-
-        return result
+    fun createNestedDeclarationScope() {
+        expressions = expressions.toMap(hashMapOf())
+        constants = constants.toMap(hashMapOf())
+        declarations = declarations.toHashSet()
+        uninterpretedSorts = uninterpretedSorts.mapValuesTo(hashMapOf()) { (_, decls) -> decls.toHashSet() }
+        uninterpretedSortRegisterer = UninterpretedSortRegisterer(uninterpretedSorts)
+        declarationScope = DeclarationScope(expressions, constants, declarations, uninterpretedSorts, declarationScope)
     }
 
-
     /**
-     * Keep strong reference to bitwuzla timeout callback to avoid sigsegv.
+     * Pop declaration scope to ensure that [declarations] match
+     * the set of asserted declarations at the current assertion level ([KBitwuzlaSolver.pop]).
+     *
+     * We also invalidate [expressions] internalization cache, since it may contain
+     * expressions with invalidated declarations.
      * */
-    private var timeoutTerminator: BitwuzlaTimeout? = null
+    fun popDeclarationScope() {
+        declarationScope = declarationScope.parentScope
+            ?: error("Can't pop root declaration scope")
 
-    @OptIn(ExperimentalTime::class)
-    fun <T> withTimeout(timeout: Duration, body: () -> T): T {
-        if (timeout == Duration.INFINITE) {
-            Native.bitwuzlaResetTerminationCallback(bitwuzla)
-            return body()
-        }
-
-        val currentTime = TimeSource.Monotonic.markNow()
-        val finishTime = currentTime + timeout
-        timeoutTerminator = BitwuzlaTimeout(finishTime)
-
-        try {
-            Native.bitwuzlaSetTerminationCallback(bitwuzla, timeoutTerminator, state = null)
-            return body()
-        } finally {
-            timeoutTerminator = null
-            Native.bitwuzlaResetTerminationCallback(bitwuzla)
-        }
+        expressions = declarationScope.expressions
+        constants = declarationScope.constants
+        declarations = declarationScope.declarations
+        uninterpretedSorts = declarationScope.uninterpretedSorts
+        uninterpretedSortRegisterer = UninterpretedSortRegisterer(uninterpretedSorts)
     }
 
     inline fun <reified T> bitwuzlaTry(body: () -> T): T = try {
         ensureActive()
         body()
-    } catch (ex: Native.BitwuzlaException) {
+    } catch (ex: BitwuzlaNativeException) {
         throw KSolverException(ex)
     }
 
@@ -155,6 +180,7 @@ open class KBitwuzlaContext : AutoCloseable {
         bitwuzlaSorts.clear()
         expressions.clear()
         bitwuzlaExpressions.clear()
+        constants.clear()
         declSorts.clear()
         bitwuzlaConstants.clear()
         Native.bitwuzlaDelete(bitwuzla)
@@ -181,48 +207,45 @@ open class KBitwuzlaContext : AutoCloseable {
         return converted
     }
 
-    sealed interface ConstantScope {
-        fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm
-    }
+    private class DeclarationScope(
+        val expressions: HashMap<KExpr<*>, BitwuzlaTerm>,
+        val constants: HashMap<KDecl<*>, BitwuzlaTerm>,
+        val declarations: HashSet<KDecl<*>>,
+        val uninterpretedSorts: HashMap<KUninterpretedSort, HashSet<KDecl<*>>>,
+        val parentScope: DeclarationScope?
+    )
 
+    private class UninterpretedSortRegisterer(
+        private val register: MutableMap<KUninterpretedSort, HashSet<KDecl<*>>>
+    ) : KSortVisitor<Unit> {
+        lateinit var decl: KDecl<*>
 
-    /**
-     * Produce normal constants for KSMT declarations.
-     *
-     * Guarantee that if two declarations are equal
-     * then the same Bitwuzla native pointer is returned.
-     * */
-    inner class NormalConstantScope : ConstantScope {
-        val constants = hashSetOf<KDecl<*>>()
-        private val constantCache = mkCache { decl: KDecl<*>, sort: BitwuzlaSort ->
-            Native.bitwuzlaMkConst(bitwuzla, sort, decl.name).also {
-                constants += decl
-                bitwuzlaConstants[it] = decl
-            }
+        override fun visit(sort: KUninterpretedSort) {
+            val sortElements = register.getOrPut(sort) { hashSetOf() }
+            sortElements += decl
         }
 
-        override fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = constantCache.create(decl, sort)
-    }
+        override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>) {
+            sort.domain.accept(this)
+            sort.range.accept(this)
+        }
 
-    /**
-     * Constant quantification.
-     *
-     * If constant declaration is registered as quantified variable,
-     * then the corresponding var is returned instead of constant.
-     * */
-    inner class QuantifiedConstantScope(private val parent: ConstantScope) : ConstantScope {
-        private val constants = hashMapOf<Pair<KDecl<*>, BitwuzlaSort>, BitwuzlaTerm>()
-        fun mkVar(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm =
-            constants.getOrPut(decl to sort) {
-                Native.bitwuzlaMkVar(bitwuzla, sort, decl.name)
-            }
+        override fun visit(sort: KBoolSort) {
+        }
 
-        override fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm =
-            constants[decl to sort] ?: parent.mkConstant(decl, sort)
-    }
+        override fun visit(sort: KIntSort) {
+        }
 
-    @OptIn(ExperimentalTime::class)
-    class BitwuzlaTimeout(private val finishTime: TimeMark) : Native.BitwuzlaTerminationCallback {
-        override fun terminate(state: Pointer?): Int = if (finishTime.hasNotPassedNow()) 0 else 1
+        override fun visit(sort: KRealSort) {
+        }
+
+        override fun <S : KBvSort> visit(sort: S) {
+        }
+
+        override fun <S : KFpSort> visit(sort: S) {
+        }
+
+        override fun visit(sort: KFpRoundingModeSort) {
+        }
     }
 }

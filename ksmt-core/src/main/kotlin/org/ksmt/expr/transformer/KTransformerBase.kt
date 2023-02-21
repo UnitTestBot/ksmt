@@ -150,6 +150,8 @@ import org.ksmt.sort.KSort
 
 
 interface KTransformerBase {
+    fun <T : KSort> apply(expr: KExpr<T>): KExpr<T> = expr.accept(this)
+
     fun transform(expr: KExpr<*>): Any = error("transformer is not implemented for expr $expr")
 
     // function transformers
@@ -276,16 +278,16 @@ interface KTransformerBase {
     fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>>
 
     // arith transformers
-    fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>): KExpr<T>
-    fun <T : KArithSort<T>> transform(expr: KMulArithExpr<T>): KExpr<T>
-    fun <T : KArithSort<T>> transform(expr: KSubArithExpr<T>): KExpr<T>
-    fun <T : KArithSort<T>> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T>
-    fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>): KExpr<T>
-    fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>): KExpr<T>
-    fun <T : KArithSort<T>> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort>
-    fun <T : KArithSort<T>> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort>
-    fun <T : KArithSort<T>> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort>
-    fun <T : KArithSort<T>> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort>
+    fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T>
+    fun <T : KArithSort> transform(expr: KMulArithExpr<T>): KExpr<T>
+    fun <T : KArithSort> transform(expr: KSubArithExpr<T>): KExpr<T>
+    fun <T : KArithSort> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T>
+    fun <T : KArithSort> transform(expr: KDivArithExpr<T>): KExpr<T>
+    fun <T : KArithSort> transform(expr: KPowerArithExpr<T>): KExpr<T>
+    fun <T : KArithSort> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort>
+    fun <T : KArithSort> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort>
+    fun <T : KArithSort> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort>
+    fun <T : KArithSort> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort>
 
     // integer transformers
     fun transform(expr: KModIntExpr): KExpr<KIntSort>

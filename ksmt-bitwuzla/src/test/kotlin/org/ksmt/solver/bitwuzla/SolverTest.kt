@@ -1,12 +1,14 @@
 package org.ksmt.solver.bitwuzla
 
 import org.ksmt.KContext
-import org.ksmt.solver.KSolverException
+import org.ksmt.expr.KExpr
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
 import org.ksmt.solver.bitwuzla.bindings.Native
+import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBv32Sort
 import org.ksmt.utils.getValue
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -17,16 +19,11 @@ class SolverTest {
     private val ctx = KContext()
     private val solver = KBitwuzlaSolver(ctx)
 
-    @Ignore
     @Test
-    fun testAbortHandling(): Unit = with(ctx) {
-        val x by mkBv32Sort()
-        val array by mkArraySort(mkBv32Sort(), mkBv32Sort())
-        val body = array.select(x) eq x
-        val quantifier = mkUniversalQuantifier(body, listOf(x.decl))
-        solver.assert(quantifier)
-        assertFailsWith(KSolverException::class) {
-            solver.check()
+    fun testAbortHandling() {
+        assertFailsWith(BitwuzlaNativeException::class) {
+            // Incorrect native expression with invalid term (0)
+            Native.bitwuzlaMkTerm1(solver.bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_AND, 0)
         }
     }
 
@@ -115,39 +112,34 @@ class SolverTest {
         var status = solver.checkWithAssumptions(listOf(a))
         assertEquals(KSolverStatus.UNSAT, status)
         val core = solver.unsatCore()
-        assertEquals(2, core.size)
-        assertTrue(track in core)
-        assertTrue(a in core)
+        assertEquals(1, core.size)
+        assertTrue(track in core || a in core)
         solver.pop()
         status = solver.check()
         assertEquals(KSolverStatus.SAT, status)
     }
 
     @Test
-    @Suppress("ForbiddenComment") // todo: don't use native api
     fun testTimeout(): Unit = with(ctx) {
-        val arrayBase by mkArraySort(mkBv32Sort(), mkBv8Sort())
-        val x by mkBv8Sort()
+        val arrayBase by mkArraySort(mkBv32Sort(), mkBv32Sort())
+        val x by mkBv32Sort()
 
-        var array = arrayBase
+        var array: KExpr<KArraySort<KBv32Sort, KBv32Sort>> = arrayBase
         for (i in 0..1024) {
-            val v = mkBv((i xor 1024).toByte())
+            val v = mkBv((i xor 1024))
             array = array.store(mkBv(4198400 + i), v)
         }
 
-        var xoredX = with(solver.exprInternalizer) { x.internalize() }
-        for (i in 0..3000) {
+        var xoredX: KExpr<KBv32Sort> = x
+        for (i in 0..10000) {
             val selectedValue = array.select(mkBv(4198500 + i))
-            val selectedValueTerm = with(solver.exprInternalizer) { selectedValue.internalize() }
-            xoredX = Native.bitwuzlaMkTerm2(
-                solver.bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_XOR, xoredX, selectedValueTerm
-            )
+            xoredX = mkBvXorExpr(xoredX, selectedValue)
+            xoredX = mkBvOrExpr(mkBvUnsignedDivExpr(xoredX, mkBv(3)), mkBvUnsignedRemExpr(xoredX, mkBv(3)))
         }
-        val someRandomValue = with(solver.exprInternalizer) { mkBv(42.toByte()).internalize() }
-        val assertion = Native.bitwuzlaMkTerm2(
-            solver.bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, xoredX, someRandomValue
-        )
-        Native.bitwuzlaAssert(solver.bitwuzlaCtx.bitwuzla, assertion)
+        val someRandomValue = mkBv(42)
+        val assertion = xoredX eq someRandomValue
+
+        solver.assert(assertion)
 
         val status = solver.check(timeout = 1.milliseconds)
 
@@ -163,4 +155,30 @@ class SolverTest {
         assertEquals(KSolverStatus.SAT, status)
     }
 
+    @Test
+    fun testUninterpretedSortSupport(): Unit = with(ctx) {
+        val aSort = mkUninterpretedSort("a")
+        val bSort = mkUninterpretedSort("b")
+        val aaArraySort = mkArraySort(aSort, aSort)
+        val abArraySort = mkArraySort(aSort, bSort)
+
+        val ax by aSort
+        val ay by aSort
+
+        val bx by bSort
+        val by by bSort
+
+        val aaArray by aaArraySort
+        val abArray by abArraySort
+
+        solver.assert(aaArray.select(ax) eq ay)
+        solver.assert(aaArray.select(ay) eq ax)
+
+        solver.assert(abArray.select(ax) eq bx)
+        solver.assert(abArray.select(ay) eq by)
+        solver.assert(bx neq by)
+
+        val status = solver.check()
+        assertEquals(KSolverStatus.SAT, status)
+    }
 }

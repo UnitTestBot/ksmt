@@ -11,6 +11,8 @@ dependencies {
     implementation(project(":ksmt-core"))
     implementation(project(":ksmt-z3"))
     implementation(project(":ksmt-bitwuzla"))
+    implementation(project(":ksmt-yices"))
+    implementation(testFixtures(project(":ksmt-yices")))
     implementation(project(":ksmt-runner"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     implementation(kotlin("reflect"))
@@ -123,4 +125,8 @@ task<TestReport>("mergeTestReports") {
         val reports = rootDir.resolve("reports").listFiles { f: File -> f.name.startsWith(mergePrefix) }
         reportOn(*reports)
     }
+}
+
+jmh {
+    stringProperty("jmhIncludes")?.let { includes.add(it) }
 }

@@ -15,7 +15,7 @@ import org.ksmt.sort.KSortVisitor
 import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.asExpr
 
-class DefaultValueSampler<T : KSort> private constructor(
+open class DefaultValueSampler<T : KSort> (
     val ctx: KContext,
     val sort: T
 ) : KSortVisitor<KExpr<T>> {

@@ -25,6 +25,7 @@ dependencies {
     implementation(project(":ksmt-core"))
     implementation(project(":ksmt-z3"))
     implementation(project(":ksmt-bitwuzla"))
+    implementation(project(":ksmt-yices"))
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
 

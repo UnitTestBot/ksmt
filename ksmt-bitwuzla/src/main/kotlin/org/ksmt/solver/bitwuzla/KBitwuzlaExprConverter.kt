@@ -1,15 +1,19 @@
 package org.ksmt.solver.bitwuzla
 
 import org.ksmt.KContext
+import org.ksmt.cache.hash
+import org.ksmt.cache.structurallyEqual
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
+import org.ksmt.expr.KArrayConst
+import org.ksmt.expr.KBitVec32Value
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.printer.ExpressionPrinter
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.expr.transformer.KTransformerBase
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBitVector
+import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
@@ -22,28 +26,20 @@ import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.mkFreshConst
+import org.ksmt.utils.powerOfTwo
 import org.ksmt.utils.uncheckedCast
+import java.math.BigInteger
 
 @Suppress("LargeClass")
 open class KBitwuzlaExprConverter(
     private val ctx: KContext,
-    val bitwuzlaCtx: KBitwuzlaContext
+    private val bitwuzlaCtx: KBitwuzlaContext,
+    private val scopedVars: Map<BitwuzlaTerm, KDecl<*>>? = null
 ) : KExprConverterBase<BitwuzlaTerm>() {
 
     private val adapterTermRewriter = AdapterTermRewriter(ctx)
-    private val incompleteDeclarations = hashSetOf<KDecl<*>>()
-
-    /**
-     * New declarations introduced by Bitwuzla to return correct expressions.
-     *
-     * For example, when converting array with partial interpretation,
-     * default value will be represented with new unnamed declaration.
-     *
-     * @see generateDecl
-     * */
-    val incompleteDecls: Set<KDecl<*>>
-        get() = incompleteDeclarations
 
     /**
      * Create KSMT expression from Bitwuzla term.
@@ -58,6 +54,25 @@ open class KBitwuzlaExprConverter(
             .convertToExpectedIfNeeded(expectedSort)
             .let { adapterTermRewriter.apply(it) }
 
+    private var uninterpretedSortValueContext: KBitwuzlaUninterpretedSortValueContext? = null
+
+    fun useUninterpretedSortValueContext(ctx: KBitwuzlaUninterpretedSortValueContext) {
+        uninterpretedSortValueContext = ctx
+    }
+
+    fun resetUninterpretedSortValueContext() {
+        uninterpretedSortValueContext = null
+    }
+
+    inline fun <T> withUninterpretedSortValueContext(
+        ctx: KBitwuzlaUninterpretedSortValueContext,
+        body: () -> T
+    ): T = try {
+        useUninterpretedSortValueContext(ctx)
+        body()
+    } finally {
+        resetUninterpretedSortValueContext()
+    }
 
     override fun findConvertedNative(expr: BitwuzlaTerm): KExpr<*>? =
         bitwuzlaCtx.findConvertedExpr(expr)
@@ -101,31 +116,36 @@ open class KBitwuzlaExprConverter(
 
     @Suppress("LongMethod", "ComplexMethod")
     override fun convertNativeExpr(expr: BitwuzlaTerm): ExprConversionResult = with(ctx) {
-        when (val kind = Native.bitwuzlaTermGetKind(expr)) {
+        when (val kind = Native.bitwuzlaTermGetBitwuzlaKind(expr)) {
             // constants, functions, values
             BitwuzlaKind.BITWUZLA_KIND_CONST -> convertConst(expr)
             BitwuzlaKind.BITWUZLA_KIND_APPLY -> convertFunctionApp(expr)
             BitwuzlaKind.BITWUZLA_KIND_VAL -> convertValue(expr)
-            BitwuzlaKind.BITWUZLA_KIND_VAR -> TODO("var conversion is not implemented")
+            BitwuzlaKind.BITWUZLA_KIND_VAR -> convertVar(expr)
 
             // bool
             BitwuzlaKind.BITWUZLA_KIND_IFF,
-            BitwuzlaKind.BITWUZLA_KIND_EQUAL -> expr.convert(::mkEq)
-            BitwuzlaKind.BITWUZLA_KIND_DISTINCT -> expr.convertList(::mkDistinct)
-            BitwuzlaKind.BITWUZLA_KIND_ITE -> expr.convert(::mkIte)
-            BitwuzlaKind.BITWUZLA_KIND_IMPLIES -> expr.convert(::mkImplies)
+            BitwuzlaKind.BITWUZLA_KIND_EQUAL -> expr.convert(::convertEqExpr)
+
+            BitwuzlaKind.BITWUZLA_KIND_DISTINCT -> expr.convertList(::convertDistinctExpr)
+            BitwuzlaKind.BITWUZLA_KIND_ITE -> expr.convert(::convertIteExpr)
+
+            BitwuzlaKind.BITWUZLA_KIND_IMPLIES -> expr.convert { p: KExpr<KBoolSort>, q: KExpr<KBoolSort> ->
+                mkImplies(p.ensureBoolExpr(), q.ensureBoolExpr())
+            }
 
             // array
             BitwuzlaKind.BITWUZLA_KIND_CONST_ARRAY -> expr.convert { value: KExpr<KSort> ->
                 val sort = Native.bitwuzlaTermGetSort(expr).convertSort() as KArraySort<*, *>
-                mkArrayConst(sort, value)
+                convertConstArrayExpr(sort, value)
             }
-            BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT -> expr.convert(::mkArraySelect)
-            BitwuzlaKind.BITWUZLA_KIND_ARRAY_STORE -> expr.convert(::mkArrayStore)
+
+            BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT -> expr.convert(::convertArraySelectExpr)
+            BitwuzlaKind.BITWUZLA_KIND_ARRAY_STORE -> expr.convert(::convertArrayStoreExpr)
 
             // quantifiers
             BitwuzlaKind.BITWUZLA_KIND_EXISTS,
-            BitwuzlaKind.BITWUZLA_KIND_FORALL -> TODO("quantifier conversion is not implemented")
+            BitwuzlaKind.BITWUZLA_KIND_FORALL -> convertQuantifier(expr, kind)
 
             // bit-vec or bool
             BitwuzlaKind.BITWUZLA_KIND_AND,
@@ -304,44 +324,28 @@ open class KBitwuzlaExprConverter(
         }
     }
 
-    private fun BitwuzlaBitVector.getBit(idx: Int): Boolean =
-        Native.bitwuzlaBvBitsGetBit(this, idx) != 0
-
-    private fun BooleanArray.toReversedBinaryString() = String(CharArray(size) { charIdx ->
-        val bitIdx = size - 1 - charIdx
-        if (this[bitIdx]) '1' else '0'
-    })
+    private fun KContext.convertVar(expr: BitwuzlaTerm): ExprConversionResult = convert {
+        val varsScope = scopedVars ?: error("Unexpected var without scope")
+        val decl = varsScope[expr] ?: error("Unregistered var")
+        mkConstApp(decl)
+    }
 
     private fun KContext.convertBvValue(expr: BitwuzlaTerm): KBitVecValue<KBvSort> {
         val size = Native.bitwuzlaTermBvGetSize(expr)
 
         val convertedValue = if (Native.bitwuzlaTermIsBvValue(expr)) {
             // convert Bv value from native representation
-            val nativeBits = Native.bitwuzlaBvConstNodeGetBits(expr)
-            val nativeBitsSize = Native.bitwuzlaBvBitsGetWidth(nativeBits)
-
-            check(size == nativeBitsSize) { "Bv size mismatch, expr size $size, native size $nativeBitsSize " }
-
-            val bits = when {
+            when {
                 size <= Int.SIZE_BITS -> {
-                    val numericValue = Native.bitwuzlaBvBitsToUInt32(nativeBits).toUInt()
-                    numericValue.toString(radix = 2).padStart(size, '0')
+                    val bits = Native.bitwuzlaBvConstNodeGetBitsUInt32(bitwuzlaCtx.bitwuzla, expr)
+                    mkBv(bits, size.toUInt())
                 }
-                /**
-                Disabled until [Native.bitwuzlaBvBitsToUInt64] will be fixed
-
-                size <= Long.SIZE_BITS -> {
-                val numericValue = Native.bitwuzlaBvBitsToUInt64(nativeBits).toULong()
-                numericValue.toString(radix = 2).padStart(size, '0')
-                }
-                 */
                 else -> {
-                    val bits = BooleanArray(size) { nativeBits.getBit(it) }
-                    bits.toReversedBinaryString()
+                    val intBits = Native.bitwuzlaBvConstNodeGetBitsUIntArray(bitwuzlaCtx.bitwuzla, expr)
+                    val bits = bvBitsToBigInteger(intBits)
+                    mkBv(bits, size.toUInt())
                 }
             }
-
-            mkBv(bits, size.toUInt())
         } else {
             val value = Native.bitwuzlaGetBvValue(bitwuzlaCtx.bitwuzla, expr)
             mkBv(value, size.toUInt())
@@ -356,54 +360,42 @@ open class KBitwuzlaExprConverter(
         val sort = Native.bitwuzlaTermGetSort(expr).convertSort() as KFpSort
 
         val convertedValue = if (Native.bitwuzlaTermIsFpValue(expr)) {
-            // convert Fp value from native representation
-            val nativeBits = Native.bitwuzlaFpConstNodeGetBits(bitwuzlaCtx.bitwuzla, expr)
-            val nativeBitsSize = Native.bitwuzlaBvBitsGetWidth(nativeBits)
-            val size = (sort.exponentBits + sort.significandBits).toInt()
-            check(size == nativeBitsSize) {
-                "Fp size mismatch, expr size $size, native size $nativeBitsSize "
-            }
-
-            when (size) {
-                /**
-                Disabled until [Native.bitwuzlaBvBitsToUInt64] will be fixed
-
-                Double.SIZE_BITS -> {
-                val numericValue = Native.bitwuzlaBvBitsToUInt64(nativeBits)
-                mkFp(Double.fromBits(numericValue), sort)
+            when (sort) {
+                fp32Sort -> {
+                    val fpBits = Native.bitwuzlaFpConstNodeGetBitsUInt32(bitwuzlaCtx.bitwuzla, expr)
+                    mkFp(Float.fromBits(fpBits), sort)
                 }
-                 */
-                Float.SIZE_BITS -> {
-                    val numericValue = Native.bitwuzlaBvBitsToUInt32(nativeBits)
-                    mkFp(Float.fromBits(numericValue), sort)
+                fp64Sort -> {
+                    val fpBitsArray = Native.bitwuzlaFpConstNodeGetBitsUIntArray(bitwuzlaCtx.bitwuzla, expr)
+                    val higherBits = fpBitsArray[1].toLong() shl Int.SIZE_BITS
+                    val lowerBits = fpBitsArray[0].toUInt().toLong()
+                    val fpBits = higherBits or lowerBits
+                    mkFp(Double.fromBits(fpBits), sort)
                 }
                 else -> {
-                    val exponentSize = sort.exponentBits
-                    val significandSize = sort.significandBits
+                    val fpBitsArray = Native.bitwuzlaFpConstNodeGetBitsUIntArray(bitwuzlaCtx.bitwuzla, expr)
+                    val fpBits = bvBitsToBigInteger(fpBitsArray)
 
-                    val signBit = nativeBits.getBit(size - 1)
-                    val exponentBits = BooleanArray(exponentSize.toInt()) {
-                        val lowestBit = size - 1 - exponentSize.toInt()
-                        nativeBits.getBit(lowestBit + it)
-                    }
-                    val significandBits = BooleanArray(significandSize.toInt() - 1) {
-                        nativeBits.getBit(it)
-                    }
+                    val significandMask = powerOfTwo(sort.significandBits - 1u) - BigInteger.ONE
+                    val exponentMask = powerOfTwo(sort.exponentBits) - BigInteger.ONE
 
-                    mkFpFromBvExpr(
-                        sign = mkBv(signBit),
-                        biasedExponent = mkBv(exponentBits.toReversedBinaryString(), exponentSize),
-                        significand = mkBv(significandBits.toReversedBinaryString(), significandSize - 1u)
+                    val significandBits = fpBits.and(significandMask)
+                    val exponentBits = fpBits.shiftRight(sort.significandBits.toInt() - 1).and(exponentMask)
+                    val signBit = fpBits.testBit(sort.significandBits.toInt() + sort.exponentBits.toInt() - 1)
+
+                    mkFpBiased(
+                        signBit = signBit,
+                        biasedExponent = mkBv(exponentBits, sort.exponentBits),
+                        significand = mkBv(significandBits, sort.significandBits - 1u),
+                        sort = sort
                     )
                 }
             }
-
         } else {
             val value = Native.bitwuzlaGetFpValue(bitwuzlaCtx.bitwuzla, expr)
 
-            @Suppress("UNCHECKED_CAST")
             mkFpFromBvExpr(
-                sign = mkBv(value.sign, sizeBits = 1u) as KExpr<KBv1Sort>,
+                sign = mkBv(value.sign, sizeBits = 1u).uncheckedCast(),
                 biasedExponent = mkBv(value.exponent, value.exponent.length.toUInt()),
                 significand = mkBv(value.significand, value.significand.length.toUInt())
             )
@@ -604,13 +596,102 @@ open class KBitwuzlaExprConverter(
         else -> error("unexpected Fp kind $kind")
     }
 
+    fun convertQuantifier(expr: BitwuzlaTerm, kind: BitwuzlaKind): ExprConversionResult = convert {
+        val children = Native.bitwuzlaTermGetChildren(expr)
+        val boundVars = children.dropLast(1)
+        val body = children.last()
+
+        val scope = boundVars.associateWith {
+            val sort = Native.bitwuzlaTermGetSort(it)
+            val name = Native.bitwuzlaTermGetSymbol(it)
+            ctx.mkFreshConstDecl(name ?: "var", sort.convertSort())
+        }
+
+        val nestedScope = scopedVars?.toMutableMap() ?: hashMapOf()
+        nestedScope.putAll(scope)
+
+        val bodyConverter = KBitwuzlaExprConverter(ctx, bitwuzlaCtx, nestedScope)
+        val convertedBody = with(bodyConverter) { body.convertExpr(ctx.boolSort) }
+
+        val convertedBounds = scope.values.toList()
+
+        when (kind) {
+            BitwuzlaKind.BITWUZLA_KIND_FORALL -> ctx.mkUniversalQuantifier(convertedBody, convertedBounds)
+            BitwuzlaKind.BITWUZLA_KIND_EXISTS -> ctx.mkExistentialQuantifier(convertedBody, convertedBounds)
+            else -> error("Unexpected quantifier: $kind")
+        }
+    }
+
+    fun convertEqExpr(lhs: KExpr<KSort>, rhs: KExpr<KSort>): KExpr<KBoolSort> = with(ctx) {
+        val expectedSort = selectExpectedSort(lhs.sort, rhs.sort)
+        return mkEq(
+            lhs.convertToExpectedIfNeeded(expectedSort),
+            rhs.convertToExpectedIfNeeded(expectedSort)
+        )
+    }
+
+    fun convertDistinctExpr(args: List<KExpr<KSort>>): KExpr<KBoolSort> = with(ctx) {
+        val expectedSort = selectExpectedSort(args.map { it.sort })
+        val normalizedArgs = args.map { it.convertToExpectedIfNeeded(expectedSort) }
+        return mkDistinct(normalizedArgs)
+    }
+
+    fun convertIteExpr(
+        condition: KExpr<KBoolSort>,
+        trueBranch: KExpr<KSort>,
+        falseBranch: KExpr<KSort>
+    ): KExpr<KSort> = with(ctx) {
+        val expectedSort = selectExpectedSort(trueBranch.sort, falseBranch.sort)
+        return mkIte(
+            condition,
+            trueBranch.convertToExpectedIfNeeded(expectedSort),
+            falseBranch.convertToExpectedIfNeeded(expectedSort)
+        )
+    }
+
+    fun convertConstArrayExpr(
+        currentSort: KArraySort<KSort, KSort>,
+        value: KExpr<KSort>
+    ): KArrayConst<KSort, KSort> = with(ctx) {
+        val expectedValueSort = selectExpectedSort(currentSort.range, value.sort)
+        val expectedArraySort = mkArraySort(currentSort.domain, expectedValueSort)
+        return mkArrayConst(expectedArraySort, value.convertToExpectedIfNeeded(expectedValueSort))
+    }
+
+    fun convertArraySelectExpr(array: KExpr<KArraySort<KSort, KSort>>, index: KExpr<KSort>): KExpr<KSort> = with(ctx) {
+        val expectedIndexSort = selectExpectedSort(array.sort.domain, index.sort)
+        val expectedArraySort = mkArraySort(expectedIndexSort, array.sort.range)
+        return mkArraySelect(
+            array.convertToExpectedIfNeeded(expectedArraySort),
+            index.convertToExpectedIfNeeded(expectedIndexSort)
+        )
+    }
+
+    fun convertArrayStoreExpr(
+        array: KExpr<KArraySort<KSort, KSort>>,
+        index: KExpr<KSort>,
+        value: KExpr<KSort>
+    ): KExpr<KArraySort<KSort, KSort>> = with(ctx) {
+        val expectedIndexSort = selectExpectedSort(array.sort.domain, index.sort)
+        val expectedValueSort = selectExpectedSort(array.sort.range, value.sort)
+        val expectedArraySort = mkArraySort(expectedIndexSort, expectedValueSort)
+        return mkArrayStore(
+            array.convertToExpectedIfNeeded(expectedArraySort),
+            index.convertToExpectedIfNeeded(expectedIndexSort),
+            value.convertToExpectedIfNeeded(expectedValueSort)
+        )
+    }
+
+    fun selectExpectedSort(lhs: KSort, rhs: KSort): KSort =
+        if (rhs is KUninterpretedSort) rhs else lhs
+
+    fun selectExpectedSort(sorts: List<KSort>): KSort =
+        sorts.firstOrNull { it is KUninterpretedSort } ?: sorts.first()
+
     private fun <T : KDecl<*>> generateDecl(term: BitwuzlaTerm, generator: (String) -> T): T {
         val name = Native.bitwuzlaTermGetSymbol(term)
         val declName = name ?: generateBitwuzlaSymbol(term)
-        val decl = generator(declName)
-        incompleteDeclarations += decl
-
-        return decl
+        return generator(declName)
     }
 
     private fun generateBitwuzlaSymbol(expr: BitwuzlaTerm): String {
@@ -639,7 +720,7 @@ open class KBitwuzlaExprConverter(
      * @see ensureArrayExprSortMatch
      * */
     @Suppress("UNCHECKED_CAST")
-    fun KExpr<*>.convertToBoolIfNeeded(): KExpr<*> = when (with(ctx) { sort }) {
+    fun KExpr<*>.convertToBoolIfNeeded(): KExpr<*> = when (sort) {
         ctx.bv1Sort -> ensureBoolExpr()
         is KArraySort<*, *> -> (this as KExpr<KArraySort<*, *>>)
             .ensureArrayExprSortMatch(
@@ -652,7 +733,7 @@ open class KBitwuzlaExprConverter(
     /**
      * Convert expression to expected sort.
      *
-     *  Mainly used for convert from Bool to (BitVec 1):
+     *  Mainly used for convert from Bool to (BitVec 1) or (BitVec 32) to Uninterpreted Sort:
      *  1. In function app, when argument sort doesn't match
      *  2. When top level expression expectedSort doesn't match ([convertExpr])
      *
@@ -660,24 +741,44 @@ open class KBitwuzlaExprConverter(
      *
      * @see convertToBoolIfNeeded
      * */
-    @Suppress("UNCHECKED_CAST")
     fun <T : KSort> KExpr<*>.convertToExpectedIfNeeded(expected: T): KExpr<T> = when (expected) {
-        ctx.bv1Sort -> ensureBv1Expr() as KExpr<T>
-        ctx.boolSort -> ensureBoolExpr() as KExpr<T>
+        ctx.bv1Sort -> ensureBv1Expr().uncheckedCast()
+        ctx.boolSort -> ensureBoolExpr().uncheckedCast()
         is KArraySort<*, *> -> {
+            @Suppress("UNCHECKED_CAST")
             val array = this as? KExpr<KArraySort<*, *>> ?: error("An array was expected. Actual is $this")
 
             array.ensureArrayExprSortMatch(
                 domainExpected = { expected.domain },
                 rangeExpected = { expected.range }
-            ) as KExpr<T>
+            ).uncheckedCast()
         }
-        else -> this as KExpr<T>
+        is KUninterpretedSort -> ensureUninterpretedSortExpr(expected).uncheckedCast()
+        else -> {
+            check(this.sort !is KUninterpretedSort) {
+                "Unexpected cast from ${this.sort} to $expected"
+            }
+            this.uncheckedCast()
+        }
     }
+
+    fun KExpr<*>.ensureBvExpr(): KExpr<KBvSort> = with(ctx) {
+        val expr = if (sort == boolSort) {
+            ensureBv1Expr()
+        } else {
+            check(sort is KBvSort) { "Bv sort expected but $sort occurred" }
+            this@ensureBvExpr
+        }
+
+        expr.uncheckedCast()
+    }
+
+    private val bv1One: KExpr<KBv1Sort> by lazy { ctx.mkBv(true) }
+    private val bv1Zero: KExpr<KBv1Sort> by lazy { ctx.mkBv(false) }
 
     /**
      * Convert expression from (Array A B) to (Array X Y),
-     * where A,B,X,Y are Bool or (BitVec 1)
+     * where A,B,X,Y are Bool or (BitVec 1), (BitVec 32) or Uninterpreted
      * */
     private inline fun KExpr<KArraySort<*, *>>.ensureArrayExprSortMatch(
         domainExpected: (KSort) -> KSort,
@@ -703,42 +804,47 @@ open class KBitwuzlaExprConverter(
     /**
      * Convert expression from (BitVec 1) to Bool.
      * */
-    @Suppress("UNCHECKED_CAST")
     private fun KExpr<*>.ensureBoolExpr(): KExpr<KBoolSort> = with(ctx) {
         when {
-            sort == boolSort -> this@ensureBoolExpr as KExpr<KBoolSort>
+            sort == boolSort -> this@ensureBoolExpr.uncheckedCast()
             this@ensureBoolExpr is BoolToBv1AdapterExpr -> arg
-            else -> Bv1ToBoolAdapterExpr(this@ensureBoolExpr as KExpr<KBv1Sort>)
+            this@ensureBoolExpr == bv1One -> trueExpr
+            this@ensureBoolExpr == bv1Zero -> falseExpr
+            else -> Bv1ToBoolAdapterExpr(this@ensureBoolExpr.uncheckedCast())
         }
     }
 
     /**
      * Convert expression from Bool to (BitVec 1).
      * */
-    @Suppress("UNCHECKED_CAST")
     private fun KExpr<*>.ensureBv1Expr(): KExpr<KBv1Sort> = with(ctx) {
         when {
-            sort == bv1Sort -> this@ensureBv1Expr as KExpr<KBv1Sort>
+            sort == bv1Sort -> this@ensureBv1Expr.uncheckedCast()
             this@ensureBv1Expr is Bv1ToBoolAdapterExpr -> arg
-            else -> BoolToBv1AdapterExpr(this@ensureBv1Expr as KExpr<KBoolSort>)
+            this@ensureBv1Expr == trueExpr -> bv1One
+            this@ensureBv1Expr == falseExpr -> bv1Zero
+            else -> BoolToBv1AdapterExpr(this@ensureBv1Expr.uncheckedCast())
         }
     }
 
-    fun KExpr<*>.ensureBvExpr(): KExpr<KBvSort> = with(ctx) {
-        val expr = if (sort == boolSort) {
-            ensureBv1Expr()
-        } else {
-            check(sort is KBvSort) { "Bv sort expected but $sort occurred" }
-            this@ensureBvExpr
+    /**
+     * Convert expression from (BitVec 32) to uninterpreted sort.
+     * */
+    private fun KExpr<*>.ensureUninterpretedSortExpr(expected: KUninterpretedSort): KExpr<*> {
+        if (sort == expected) return this
+
+        if (this !is KBitVec32Value) {
+            throw KSolverUnsupportedFeatureException(
+                "Expression $this it too complex for conversion to $expected sort"
+            )
         }
 
-        @Suppress("UNCHECKED_CAST")
-        expr as KExpr<KBvSort>
+        // Use adapter term to keep caches consistent
+        return Bv32ToUninterpretedSortAdapterExpr(this, expected)
     }
 
     private inner class BoolToBv1AdapterExpr(val arg: KExpr<KBoolSort>) : KExpr<KBv1Sort>(ctx) {
-        override val sort: KBv1Sort
-            get() = ctx.bv1Sort
+        override val sort: KBv1Sort = ctx.bv1Sort
 
         override fun print(printer: ExpressionPrinter) = with(printer) {
             append("(toBV1 ")
@@ -750,11 +856,13 @@ open class KBitwuzlaExprConverter(
             check(transformer is AdapterTermRewriter) { "leaked adapter term" }
             return transformer.transform(this)
         }
+
+        override fun internHashCode(): Int = hash(arg)
+        override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg })
     }
 
     private inner class Bv1ToBoolAdapterExpr(val arg: KExpr<KBv1Sort>) : KExpr<KBoolSort>(ctx) {
-        override val sort: KBoolSort
-            get() = ctx.boolSort
+        override val sort: KBoolSort = ctx.boolSort
 
         override fun print(printer: ExpressionPrinter) = with(printer) {
             append("(toBool ")
@@ -766,6 +874,28 @@ open class KBitwuzlaExprConverter(
             check(transformer is AdapterTermRewriter) { "leaked adapter term" }
             return transformer.transform(this)
         }
+
+        override fun internHashCode(): Int = hash(arg)
+        override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg })
+    }
+
+    private inner class Bv32ToUninterpretedSortAdapterExpr(
+        val arg: KBitVec32Value,
+        override val sort: KUninterpretedSort
+    ) : KExpr<KUninterpretedSort>(ctx) {
+        override fun print(printer: ExpressionPrinter) = with(printer) {
+            append("(to $sort ")
+            append(arg)
+            append(")")
+        }
+
+        override fun internHashCode(): Int = hash(arg, sort)
+        override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg }, { sort })
+
+        override fun accept(transformer: KTransformerBase): KExpr<KUninterpretedSort> {
+            check(transformer is AdapterTermRewriter) { "leaked adapter term" }
+            return transformer.transform(this)
+        }
     }
 
     private inner class ArrayAdapterExpr<FromDomain : KSort, FromRange : KSort, ToDomain : KSort, ToRange : KSort>(
@@ -773,8 +903,7 @@ open class KBitwuzlaExprConverter(
         val toDomainSort: ToDomain,
         val toRangeSort: ToRange
     ) : KExpr<KArraySort<ToDomain, ToRange>>(ctx) {
-        override val sort: KArraySort<ToDomain, ToRange>
-            get() = ctx.mkArraySort(toDomainSort, toRangeSort)
+        override val sort: KArraySort<ToDomain, ToRange> = ctx.mkArraySort(toDomainSort, toRangeSort)
 
         override fun print(printer: ExpressionPrinter) = with(printer) {
             append("(toArray ")
@@ -788,6 +917,10 @@ open class KBitwuzlaExprConverter(
             check(transformer is AdapterTermRewriter) { "leaked adapter term" }
             return transformer.transform(this)
         }
+
+        override fun internHashCode(): Int = hash(arg, toDomainSort, toRangeSort)
+        override fun internEquals(other: Any): Boolean =
+            structurallyEqual(other, { arg }, { toDomainSort }, { toRangeSort })
     }
 
     /**
@@ -799,8 +932,12 @@ open class KBitwuzlaExprConverter(
          * (toBv x) -> (ite x #b1 #b0)
          * */
         fun transform(expr: BoolToBv1AdapterExpr): KExpr<KBv1Sort> = with(ctx) {
-            transformExprAfterTransformed(expr, listOf(expr.arg)) { transformedArg ->
-                mkIte(transformedArg.single(), bv1Sort.trueValue(), bv1Sort.falseValue())
+            transformExprAfterTransformed(expr, expr.arg) { transformedArg ->
+                when (transformedArg) {
+                    trueExpr -> bv1Sort.trueValue()
+                    falseExpr -> bv1Sort.falseValue()
+                    else -> mkIte(transformedArg, bv1Sort.trueValue(), bv1Sort.falseValue())
+                }
             }
         }
 
@@ -809,9 +946,22 @@ open class KBitwuzlaExprConverter(
          * (toBool x) -> (ite (x == #b1) true false)
          * */
         fun transform(expr: Bv1ToBoolAdapterExpr): KExpr<KBoolSort> = with(ctx) {
-            transformExprAfterTransformed(expr, listOf(expr.arg)) { transformedArg ->
-                mkIte(transformedArg.single() eq bv1Sort.trueValue(), trueExpr, falseExpr)
+            transformExprAfterTransformed(expr, expr.arg) { transformedArg ->
+                when (transformedArg) {
+                    bv1Sort.trueValue() -> trueExpr
+                    bv1Sort.falseValue() -> falseExpr
+                    else -> mkIte(transformedArg eq bv1Sort.trueValue(), trueExpr, falseExpr)
+                }
             }
+        }
+
+        /**
+         * Replace (BitVec 32) value with an uninterpreted constant.
+         * */
+        fun transform(expr: Bv32ToUninterpretedSortAdapterExpr): KExpr<KUninterpretedSort> {
+            val valueContext = uninterpretedSortValueContext
+                ?: error("Uninterpreted sort value context is required to convert expr with ${expr.sort} sort")
+            return valueContext.mkValue(expr.sort, expr.arg)
         }
 
         /**
@@ -834,7 +984,6 @@ open class KBitwuzlaExprConverter(
          * ```
          * This array generation procedure can be represented as [org.ksmt.expr.KArrayLambda]
          * */
-        @Suppress("UNCHECKED_CAST")
         fun <FromDomain : KSort, FromRange : KSort, ToDomain : KSort, ToRange : KSort> transform(
             expr: ArrayAdapterExpr<FromDomain, FromRange, ToDomain, ToRange>
         ): KExpr<KArraySort<ToDomain, ToRange>> = with(ctx) {
@@ -844,7 +993,7 @@ open class KBitwuzlaExprConverter(
             val exprRangeSort = expr.toRangeSort
 
             if (fromSort.domain == exprDomainSort && fromSort.range == exprRangeSort) {
-                return@with expr.arg as KExpr<KArraySort<ToDomain, ToRange>>
+                return@with expr.arg.uncheckedCast()
             }
 
             val replacement = when (fromSort.domain) {
@@ -869,10 +1018,10 @@ open class KBitwuzlaExprConverter(
                     }
 
                     val index = exprDomainSort.mkFreshConst("index")
-                    val bodyExpr = expr.arg.select(index as KExpr<FromDomain>)
+                    val bodyExpr = expr.arg.select(index.uncheckedCast())
                     val body: KExpr<ToRange> = when (exprRangeSort) {
-                        bv1Sort -> bodyExpr.ensureBv1Expr() as KExpr<ToRange>
-                        boolSort -> bodyExpr.ensureBoolExpr() as KExpr<ToRange>
+                        bv1Sort -> bodyExpr.ensureBv1Expr().uncheckedCast()
+                        boolSort -> bodyExpr.ensureBoolExpr().uncheckedCast()
                         else -> error("unexpected domain: $exprRangeSort")
                     }
 
@@ -883,20 +1032,15 @@ open class KBitwuzlaExprConverter(
             AdapterTermRewriter(ctx).apply(replacement)
         }
 
-        private val bv1One: KExpr<KBv1Sort> by lazy { ctx.mkBv(true) }
-        private val bv1Zero: KExpr<KBv1Sort> by lazy { ctx.mkBv(false) }
-
-        @Suppress("UNCHECKED_CAST")
         private fun <T : KSort> T.trueValue(): KExpr<T> = when (this) {
-            is KBv1Sort -> bv1One as KExpr<T>
-            is KBoolSort -> ctx.trueExpr as KExpr<T>
+            is KBv1Sort -> bv1One.uncheckedCast()
+            is KBoolSort -> ctx.trueExpr.uncheckedCast()
             else -> error("unexpected sort: $this")
         }
 
-        @Suppress("UNCHECKED_CAST")
         private fun <T : KSort> T.falseValue(): KExpr<T> = when (this) {
-            is KBv1Sort -> bv1Zero as KExpr<T>
-            is KBoolSort -> ctx.falseExpr as KExpr<T>
+            is KBv1Sort -> bv1Zero.uncheckedCast()
+            is KBoolSort -> ctx.falseExpr.uncheckedCast()
             else -> error("unexpected sort: $this")
         }
     }
@@ -915,36 +1059,24 @@ open class KBitwuzlaExprConverter(
 
     inline fun <T : KSort, A0 : KSort> BitwuzlaTerm.convert(
         op: (KExpr<A0>) -> KExpr<T>
-    ): ExprConversionResult {
-        val args = Native.bitwuzlaTermGetChildren(this)
-        return convert(args, op)
-    }
+    ): ExprConversionResult = convert(getTermChildren(this), op)
 
     inline fun <T : KSort, A0 : KSort, A1 : KSort> BitwuzlaTerm.convert(
         op: (KExpr<A0>, KExpr<A1>) -> KExpr<T>
-    ): ExprConversionResult {
-        val args = Native.bitwuzlaTermGetChildren(this)
-        return convert(args, op)
-    }
+    ): ExprConversionResult = convert(getTermChildren(this), op)
 
     inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> BitwuzlaTerm.convert(
         op: (KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<T>
-    ): ExprConversionResult {
-        val args = Native.bitwuzlaTermGetChildren(this)
-        return convert(args, op)
-    }
+    ): ExprConversionResult = convert(getTermChildren(this), op)
 
     inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort> BitwuzlaTerm.convert(
         op: (KExpr<A0>, KExpr<A1>, KExpr<A2>, KExpr<A3>) -> KExpr<T>
-    ): ExprConversionResult {
-        val args = Native.bitwuzlaTermGetChildren(this)
-        return convert(args, op)
-    }
+    ): ExprConversionResult = convert(getTermChildren(this), op)
 
     inline fun <T : KSort, A : KSort> BitwuzlaTerm.convertList(
         op: (List<KExpr<A>>) -> KExpr<T>
-    ): ExprConversionResult {
-        val args = Native.bitwuzlaTermGetChildren(this)
-        return convertList(args, op)
-    }
+    ): ExprConversionResult = convertList(getTermChildren(this), op)
+
+    fun getTermChildren(term: BitwuzlaTerm): Array<BitwuzlaTerm> =
+        Native.bitwuzlaTermGetChildren(term).toTypedArray()
 }

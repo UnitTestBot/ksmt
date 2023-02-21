@@ -24,12 +24,12 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
     private var lastCheckStatus = KSolverStatus.UNKNOWN
 
     init {
+        Native.bitwuzlaSetOption(bitwuzlaCtx.bitwuzla, BitwuzlaOption.BITWUZLA_OPT_INCREMENTAL, value = 1)
         Native.bitwuzlaSetOption(bitwuzlaCtx.bitwuzla, BitwuzlaOption.BITWUZLA_OPT_PRODUCE_MODELS, value = 1)
-        Native.bitwuzlaSetOption(bitwuzlaCtx.bitwuzla, BitwuzlaOption.BITWUZLA_OPT_PRODUCE_UNSAT_CORES, value = 1)
     }
 
-    private var currentLevelTrackedAssertions = hashSetOf<BitwuzlaTerm>()
-    private val trackedAssertions = mutableListOf(currentLevelTrackedAssertions)
+    private var trackVars = mutableListOf<Pair<KExpr<KBoolSort>, BitwuzlaTerm>>()
+    private val trackVarsAssertionFrames = arrayListOf(trackVars)
 
     override fun configure(configurator: KBitwuzlaSolverConfiguration.() -> Unit) {
         KBitwuzlaSolverConfigurationImpl(bitwuzlaCtx.bitwuzla).configurator()
@@ -38,8 +38,12 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
     override fun assert(expr: KExpr<KBoolSort>) = bitwuzlaCtx.bitwuzlaTry {
         ctx.ensureContextMatch(expr)
 
-        val term = with(exprInternalizer) { expr.internalize() }
-        Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, term)
+        val assertionWithAxioms = with(exprInternalizer) { expr.internalizeAssertion() }
+
+        assertionWithAxioms.axioms.forEach {
+            Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, it)
+        }
+        Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, assertionWithAxioms.assertion)
     }
 
     override fun assertAndTrack(expr: KExpr<KBoolSort>): KExpr<KBoolSort> = bitwuzlaCtx.bitwuzlaTry {
@@ -47,13 +51,11 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
 
         val trackVar = with(ctx) { boolSort.mkFreshConst("track") }
         val trackedExpr = with(ctx) { !trackVar or expr }
-        val exprTerm = with(exprInternalizer) { trackedExpr.internalize() }
+
+        assert(trackedExpr)
+
         val trackVarTerm = with(exprInternalizer) { trackVar.internalize() }
-
-        currentLevelTrackedAssertions += trackVarTerm
-
-        Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, exprTerm)
-        Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, trackVarTerm)
+        trackVars += trackVar to trackVarTerm
 
         trackVar
     }
@@ -61,60 +63,78 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
     override fun push(): Unit = bitwuzlaCtx.bitwuzlaTry {
         Native.bitwuzlaPush(bitwuzlaCtx.bitwuzla, nlevels = 1)
 
-        currentLevelTrackedAssertions = hashSetOf()
-        trackedAssertions.add(currentLevelTrackedAssertions)
+        trackVars = trackVars.toMutableList()
+        trackVarsAssertionFrames.add(trackVars)
+
+        bitwuzlaCtx.createNestedDeclarationScope()
     }
 
     override fun pop(n: UInt): Unit = bitwuzlaCtx.bitwuzlaTry {
-        val currentLevel = trackedAssertions.lastIndex.toUInt()
+        val currentLevel = trackVarsAssertionFrames.lastIndex.toUInt()
         require(n <= currentLevel) {
             "Cannot pop $n scope levels because current scope level is $currentLevel"
         }
 
         if (n == 0u) return
 
-        repeat(n.toInt()) { trackedAssertions.removeLast() }
-        currentLevelTrackedAssertions = trackedAssertions.last()
+        repeat(n.toInt()) {
+            trackVarsAssertionFrames.removeLast()
+            bitwuzlaCtx.popDeclarationScope()
+        }
+
+        trackVars = trackVarsAssertionFrames.last()
 
         Native.bitwuzlaPop(bitwuzlaCtx.bitwuzla, n.toInt())
     }
 
-    override fun check(timeout: Duration): KSolverStatus = bitwuzlaCtx.bitwuzlaTry {
-        bitwuzlaCtx.withTimeout(timeout) {
-            Native.bitwuzlaCheckSat(bitwuzlaCtx.bitwuzla).processCheckResult()
-        }
+    override fun check(timeout: Duration): KSolverStatus =
+        checkWithAssumptions(emptyList(), timeout)
+
+    private val lastAssumptions = arrayListOf<Pair<KExpr<KBoolSort>, BitwuzlaTerm>>()
+
+    private fun assumeExpr(expr: KExpr<KBoolSort>, term: BitwuzlaTerm) {
+        lastAssumptions += expr to term
+        Native.bitwuzlaAssume(bitwuzlaCtx.bitwuzla, term)
     }
 
     override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus =
         bitwuzlaCtx.bitwuzlaTry {
             ctx.ensureContextMatch(assumptions)
 
-            val bitwuzlaAssumptions = with(exprInternalizer) {
-                assumptions.map { it.internalize() }
+            lastAssumptions.clear()
+
+            trackVars.forEach {
+                assumeExpr(it.first, it.second)
             }
-            bitwuzlaAssumptions.forEach {
-                Native.bitwuzlaAssume(bitwuzlaCtx.bitwuzla, it)
+
+            assumptions.forEach {
+                val assumptionTerm = with(exprInternalizer) { it.internalize() }
+                assumeExpr(it, assumptionTerm)
             }
-            bitwuzlaCtx.withTimeout(timeout) {
-                Native.bitwuzlaCheckSat(bitwuzlaCtx.bitwuzla).processCheckResult()
-            }
+
+            checkWithTimeout(timeout).processCheckResult()
         }
+
+    private fun checkWithTimeout(timeout: Duration): BitwuzlaResult = if (timeout.isInfinite()) {
+        Native.bitwuzlaCheckSatResult(bitwuzlaCtx.bitwuzla)
+    } else {
+        Native.bitwuzlaCheckSatTimeoutResult(bitwuzlaCtx.bitwuzla, timeout.inWholeMilliseconds)
+    }
 
     override fun model(): KModel = bitwuzlaCtx.bitwuzlaTry {
         require(lastCheckStatus == KSolverStatus.SAT) { "Model are only available after SAT checks" }
-        return KBitwuzlaModel(ctx, bitwuzlaCtx, exprInternalizer, exprConverter)
+        return KBitwuzlaModel(
+            ctx, bitwuzlaCtx, exprConverter,
+            bitwuzlaCtx.declarations(),
+            bitwuzlaCtx.uninterpretedSortsWithRelevantDecls()
+        )
     }
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = bitwuzlaCtx.bitwuzlaTry {
         require(lastCheckStatus == KSolverStatus.UNSAT) { "Unsat cores are only available after UNSAT checks" }
+        val unsatCore = Native.bitwuzlaGetUnsatAssumptions(bitwuzlaCtx.bitwuzla).toSet()
 
-        val fullCore = Native.bitwuzlaGetUnsatCore(bitwuzlaCtx.bitwuzla)
-        val trackVars = trackedAssertions.flatten().toSet()
-        val onlyTrackedAssertions = fullCore.filter { it in trackVars }
-        val unsatAssumptions = Native.bitwuzlaGetUnsatAssumptions(bitwuzlaCtx.bitwuzla)
-        val unsatCore = onlyTrackedAssertions + unsatAssumptions
-
-        return with(exprConverter) { unsatCore.map { it.convertExpr(ctx.boolSort) } }
+        return lastAssumptions.filter { it.second in unsatCore }.map { it.first }
     }
 
     override fun reasonOfUnknown(): String = bitwuzlaCtx.bitwuzlaTry {

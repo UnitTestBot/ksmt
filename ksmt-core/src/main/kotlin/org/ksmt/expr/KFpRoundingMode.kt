@@ -1,6 +1,8 @@
 package org.ksmt.expr
 
 import org.ksmt.KContext
+import org.ksmt.cache.hash
+import org.ksmt.cache.structurallyEqual
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KFpRoundingModeSort
@@ -16,10 +18,7 @@ enum class KFpRoundingMode(val modeName: String) {
 class KFpRoundingModeExpr(
     ctx: KContext,
     val value: KFpRoundingMode
-) : KApp<KFpRoundingModeSort, KExpr<*>>(ctx), KInterpretedConstant {
-    override val args: List<KExpr<*>>
-        get() = emptyList()
-
+) : KInterpretedValue<KFpRoundingModeSort>(ctx) {
     override val decl: KDecl<KFpRoundingModeSort>
         get() = ctx.mkFpRoundingModeDecl(value)
 
@@ -27,4 +26,7 @@ class KFpRoundingModeExpr(
         get() = ctx.mkFpRoundingModeSort()
 
     override fun accept(transformer: KTransformerBase): KExpr<KFpRoundingModeSort> = transformer.transform(this)
+
+    override fun internHashCode(): Int = hash(value)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
 }

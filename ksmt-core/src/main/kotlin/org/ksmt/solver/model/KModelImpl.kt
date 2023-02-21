@@ -6,6 +6,7 @@ import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
+import org.ksmt.utils.uncheckedCast
 
 open class KModelImpl(
     val ctx: KContext,
@@ -28,13 +29,12 @@ open class KModelImpl(
         return evaluator.apply(expr)
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> interpretation(
         decl: KDecl<T>
     ): KModel.KFuncInterp<T>? {
         ctx.ensureContextMatch(decl)
 
-        return interpretations[decl] as? KModel.KFuncInterp<T>
+        return interpretations[decl]?.uncheckedCast()
     }
 
     override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KExpr<KUninterpretedSort>>? {

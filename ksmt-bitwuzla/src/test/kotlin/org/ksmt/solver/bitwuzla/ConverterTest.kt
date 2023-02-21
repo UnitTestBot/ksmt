@@ -4,16 +4,18 @@ import org.ksmt.KContext
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.rewrite.simplify.KExprSimplifier
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaBVBase
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaOption
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaResult
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
-import org.ksmt.solver.bitwuzla.bindings.FilePtrUtils
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.getValue
+import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -63,8 +65,8 @@ class ConverterTest {
         convertedBv.accept(sortChecker)
         val convertedBoolTerm = with(internalizer) { convertedBool.internalize() }
         val convertedBvTerm = with(internalizer) { convertedBv.internalize() }
-        assertEquals(term, convertedBoolTerm)
-        assertEquals(term, convertedBvTerm)
+
+        assertEquals(convertedBoolTerm, convertedBvTerm)
     }
 
     @Test
@@ -146,7 +148,7 @@ class ConverterTest {
     }
 
     private class SortChecker(ctx: KContext) : KNonRecursiveTransformer(ctx) {
-        override fun <T : KSort> transformApp(expr: KApp<T, *>): KExpr<T> = with(ctx) {
+        override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> = with(ctx) {
             // apply internally check arguments sorts
             expr.decl.apply(expr.args)
             return super.transformApp(expr)
@@ -161,10 +163,7 @@ class ConverterTest {
         )
         Native.bitwuzlaPush(bitwuzla, 1)
         Native.bitwuzlaAssert(bitwuzla, checkExpr)
-        val status = Native.bitwuzlaCheckSat(bitwuzla)
-        if (status == BitwuzlaResult.BITWUZLA_SAT) {
-            Native.bitwuzlaPrintModel(bitwuzla, "smt2", FilePtrUtils.stdout())
-        }
+        val status = Native.bitwuzlaCheckSatResult(bitwuzla)
         Native.bitwuzlaPop(bitwuzla, 1)
         status == BitwuzlaResult.BITWUZLA_UNSAT
     }
@@ -181,6 +180,27 @@ class ConverterTest {
         val ones32 = Native.bitwuzlaMkBvOnes(bitwuzla, Native.bitwuzlaMkBvSort(bitwuzla, 32))
         val ksmtOnes32 = with(converter) { ones32.convertExpr(ctx.bv32Sort) }
         assertEquals(32, (ksmtOnes32 as KBitVecValue<*>).stringValue.count { it == '1' })
+
+        val someBvSorts = listOf(
+            ctx.bv32Sort,
+            ctx.bv64Sort,
+            ctx.mkBvSort(17u),
+            ctx.mkBvSort(517u),
+            ctx.mkBvSort(1024u),
+            ctx.mkBvSort(2048u),
+        )
+
+        for (sort in someBvSorts) {
+            val randomBits = randomBits(sort.sizeBits)
+
+            val nativeSort = with(internalizer) { sort.internalizeSort() }
+            val randomBitsTerm = Native.bitwuzlaMkBvValue(
+                bitwuzla, nativeSort, randomBits, BitwuzlaBVBase.BITWUZLA_BV_BASE_BIN
+            )
+            val randomBitsConverted = with(converter) { randomBitsTerm.convertExpr(sort) }
+            val randomBitsKsmt = ctx.mkBv(randomBits, sort.sizeBits)
+            assertEquals(randomBitsKsmt, randomBitsConverted)
+        }
     }
 
     @Test
@@ -191,15 +211,86 @@ class ConverterTest {
 
         val ones64 = ctx.mkBvConcatExpr(ctx.mkBv(-1), ctx.mkBv(-1))
         val ones128 = ctx.mkBvConcatExpr(ctx.mkBv(-1L), ctx.mkBv(-1L))
+        val ones125 = ctx.mkBv("1".repeat(125), 125u)
 
         val bzlaOnes64 = with(internalizer) { ones64.internalize() }
         val bzlaOnes128 = with(internalizer) { ones128.internalize() }
+        val bzlaOnes125 = with(internalizer) { ones125.internalize() }
 
         val ksmtOnes64 = with(converter) { bzlaOnes64.convertExpr(ones64.sort) }
         val ksmtOnes128 = with(converter) { bzlaOnes128.convertExpr(ones128.sort) }
+        val ksmtOnes125 = with(converter) { bzlaOnes125.convertExpr(ones125.sort) }
 
         assertEquals(64, (ksmtOnes64 as KBitVecValue<*>).stringValue.count { it == '1' })
         assertEquals(128, (ksmtOnes128 as KBitVecValue<*>).stringValue.count { it == '1' })
+        assertEquals(125, (ksmtOnes125 as KBitVecValue<*>).stringValue.count { it == '1' })
+
+        val someBvSorts = listOf(
+            ctx.bv32Sort,
+            ctx.bv64Sort,
+            ctx.mkBvSort(17u),
+            ctx.mkBvSort(517u),
+            ctx.mkBvSort(1024u),
+            ctx.mkBvSort(2048u),
+        )
+
+        for (sort in someBvSorts) {
+            val randomBits = randomBits(sort.sizeBits)
+
+            val randomBitsKsmt = ctx.mkBv(randomBits, sort.sizeBits)
+            val randomBitsInternalized = with(internalizer) { randomBitsKsmt.internalize() }
+
+            Native.bitwuzlaCheckSat(bitwuzla) // Get value is not available before check-sat
+            val internalizedBits = Native.bitwuzlaGetBvValue(bitwuzla, randomBitsInternalized)
+
+            assertEquals(randomBits, internalizedBits)
+        }
     }
 
+    @Test
+    fun testFpValueConversion() = with(bitwuzlaCtx) {
+        val ctx = KContext()
+        val fpCustom = ctx.mkFpSort(9u, 11u)
+
+        val internalizer = KBitwuzlaExprInternalizer(this)
+        val fp32sort = with(internalizer) { ctx.fp32Sort.internalizeSort() }
+        val fp64sort = with(internalizer) { ctx.fp64Sort.internalizeSort() }
+        val fpCustomSort = with(internalizer) { fpCustom.internalizeSort() }
+
+        val fp32NegInf = Native.bitwuzlaMkFpNegInf(bitwuzla, fp32sort)
+        val fp64NegInf = Native.bitwuzlaMkFpNegInf(bitwuzla, fp64sort)
+        val fpCustomNegInf = Native.bitwuzlaMkFpNegInf(bitwuzla, fpCustomSort)
+
+        val converter = KBitwuzlaExprConverter(ctx, this)
+        val ksmt32NegInf = with(converter) { fp32NegInf.convertExpr(ctx.fp32Sort) }
+        val ksmt64NegInf = with(converter) { fp64NegInf.convertExpr(ctx.fp64Sort) }
+        val ksmtCustomNegInf = with(converter) { fpCustomNegInf.convertExpr(fpCustom) }
+
+        assertEquals(ctx.mkFpInf(sort = ctx.fp32Sort, signBit = true), ksmt32NegInf)
+        assertEquals(ctx.mkFpInf(sort = ctx.fp64Sort, signBit = true), ksmt64NegInf)
+        assertEquals(ctx.mkFpInf(sort = fpCustom, signBit = true), ksmtCustomNegInf)
+
+        val someFpSorts = listOf(ctx.fp32Sort, ctx.fp64Sort, ctx.mkFpSort(17u, 29u))
+        for (someFpSort in someFpSorts) {
+            val someBvSort = ctx.mkBvSort(someFpSort.exponentBits + someFpSort.significandBits)
+
+            val randomBits = randomBits(someBvSort.sizeBits)
+            val nativeBvSort = with(internalizer) { someBvSort.internalizeSort() }
+            val randomBitsTerm = Native.bitwuzlaMkBvValue(
+                bitwuzla, nativeBvSort, randomBits, BitwuzlaBVBase.BITWUZLA_BV_BASE_BIN
+            )
+            val randomBitsFp = Native.bitwuzlaMkTerm1Indexed2(
+                bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FP_TO_FP_FROM_BV,
+                randomBitsTerm, someFpSort.exponentBits.toInt(), someFpSort.significandBits.toInt()
+            )
+            val convertedRandomFp = with(converter) { randomBitsFp.convertExpr(someFpSort) }
+            val convertedBvValue = KExprSimplifier(ctx).apply(ctx.mkFpToIEEEBvExpr(convertedRandomFp))
+
+            val expectedBv = ctx.mkBv(randomBits, someBvSort.sizeBits)
+            assertEquals(expectedBv, convertedBvValue)
+        }
+    }
+
+    private fun randomBits(size: UInt) =
+        String(CharArray(size.toInt()) { if (Random.nextBoolean()) '0' else '1' })
 }

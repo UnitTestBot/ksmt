@@ -4,6 +4,7 @@ import org.ksmt.sort.KFp16Sort
 import org.ksmt.sort.KFp32Sort
 import org.ksmt.sort.KFp64Sort
 import org.ksmt.sort.KFpSort
+import java.math.BigInteger
 
 // We can have here `0` as a pad symbol since `toString` can return a string
 // containing fewer symbols than `sizeBits` only for non-negative numbers
@@ -16,6 +17,37 @@ fun Number.toBinary(): String = when (this) {
     is Double -> toRawBits().toBinary()
     else -> error("Unsupported type for transformation into a binary string: ${this::class.simpleName}")
 }
+
+fun Number.toULongValue(): ULong = when (this) {
+    is Byte -> toUByte().toULong()
+    is Short -> toUShort().toULong()
+    is Int -> toUInt().toULong()
+    is Long -> toULong()
+    else -> error("Unsupported type for transformation into a ULong: ${this::class.simpleName}")
+}
+
+fun Number.toBigInteger(): BigInteger =
+    if (this is BigInteger) this else BigInteger.valueOf(toLong())
+
+fun Number.toUnsignedBigInteger(): BigInteger =
+    toULongValue().toLong().toBigInteger()
+
+fun powerOfTwo(power: UInt): BigInteger =
+    BigInteger.ONE.shiftLeft(power.toInt())
+
+/**
+ * Ensure that BigInteger value is suitable for representation of Bv with [size] bits.
+ * 1. If the value is signed convert it to unsigned with the correct binary representation.
+ * 2. Trim value binary representation up to the [size] bits.
+ * */
+fun BigInteger.normalizeValue(size: UInt): BigInteger =
+    this.mod(powerOfTwo(size))
+
+fun BigInteger.toBinary(size: UInt): String =
+    toString(2).padStart(size.toInt(), '0')
+
+fun String.toBigInteger(radix: Int): BigInteger =
+    BigInteger(this, radix)
 
 /**
  * Significand for Fp16 takes 10 bits from the float value: from 14 to 23 bits
@@ -30,22 +62,14 @@ val Float.halfPrecisionSignificand: Int
  */
 @Suppress("MagicNumber")
 fun Float.getHalfPrecisionExponent(isBiased: Boolean): Int {
-    // take an unbiased exponent from the given value
-    val unbiasedFloatExponent = getExponent(isBiased = false)
-    val unbiasedFp16Exponent = when {
-        unbiasedFloatExponent <= -KFp16Sort.exponentShiftSize -> -KFp16Sort.exponentShiftSize
-        unbiasedFloatExponent >= KFp16Sort.exponentShiftSize + 1 -> KFp16Sort.exponentShiftSize + 1
-        else -> {
-            // extract a sign bit from it -- fifth one
-            val signBit = (unbiasedFloatExponent shr 4) and 1
-            // take remaining bits of the exponent
-            val otherBits = unbiasedFloatExponent and 0b1111
-            // create an unbiased fp16 exponent containing five bits
-            (signBit shl 4) or otherBits
-        }
-    }
+    val biasedFloatExponent = getExponent(isBiased = true)
 
-    return if (isBiased) unbiasedFp16Exponent + KFp16Sort.exponentShiftSize else unbiasedFp16Exponent
+    // Cancel out unused three bits between sign and others
+    val fp16ExponentSign = (biasedFloatExponent and 0x80) shr 3
+    val fp16ExponentOtherBits = biasedFloatExponent and 0x0f
+    val biasedFloat16Exponent = fp16ExponentSign or fp16ExponentOtherBits
+
+    return if (isBiased) biasedFloat16Exponent else biasedFloat16Exponent - KFp16Sort.exponentShiftSize
 }
 
 /**
@@ -188,5 +212,5 @@ fun Double.extractExponent(sort: KFpSort, isBiased: Boolean): Long {
 
 inline fun <reified T, reified Base> Base.cast(): T where T : Base = this as T
 
-@Suppress("UNCHECKED_CAST")
-fun <Base, T> Base.uncheckedCast(): T = this as T
+@Suppress("UNCHECKED_CAST", "NOTHING_TO_INLINE")
+inline fun <Base, T> Base.uncheckedCast(): T = this as T

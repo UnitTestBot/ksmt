@@ -393,7 +393,7 @@ class AstSerializer(
     override fun transform(expr: KBitVecCustomValue) = with(expr) {
         transform {
             writeExpr {
-                writeString(binaryStringValue)
+                writeBigInteger(value)
                 writeUInt(sort.sizeBits)
             }
         }
@@ -834,7 +834,7 @@ class AstSerializer(
         }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KAddArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KAddArithExpr<T>) = with(expr) {
         transformList(args) { args: Array<Int> ->
             writeExpr {
                 writeAstArray(args)
@@ -842,7 +842,7 @@ class AstSerializer(
         }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KSubArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KSubArithExpr<T>) = with(expr) {
         transformList(args) { args: Array<Int> ->
             writeExpr {
                 writeAstArray(args)
@@ -850,7 +850,7 @@ class AstSerializer(
         }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KMulArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KMulArithExpr<T>) = with(expr) {
         transformList(args) { args: Array<Int> ->
             writeExpr {
                 writeAstArray(args)
@@ -858,25 +858,25 @@ class AstSerializer(
         }
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KUnaryMinusArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KUnaryMinusArithExpr<T>) = with(expr) {
         serialize(arg)
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KDivArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KDivArithExpr<T>) = with(expr) {
         serialize(lhs, rhs)
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KPowerArithExpr<T>) = with(expr) {
+    override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>) = with(expr) {
         serialize(lhs, rhs)
     }
 
-    override fun <T : KArithSort<T>> transform(expr: KLtArithExpr<T>) = with(expr) { serialize(lhs, rhs) }
+    override fun <T : KArithSort> transform(expr: KLtArithExpr<T>) = with(expr) { serialize(lhs, rhs) }
 
-    override fun <T : KArithSort<T>> transform(expr: KLeArithExpr<T>) = with(expr) { serialize(lhs, rhs) }
+    override fun <T : KArithSort> transform(expr: KLeArithExpr<T>) = with(expr) { serialize(lhs, rhs) }
 
-    override fun <T : KArithSort<T>> transform(expr: KGtArithExpr<T>) = with(expr) { serialize(lhs, rhs) }
+    override fun <T : KArithSort> transform(expr: KGtArithExpr<T>) = with(expr) { serialize(lhs, rhs) }
 
-    override fun <T : KArithSort<T>> transform(expr: KGeArithExpr<T>) = with(expr) { serialize(lhs, rhs) }
+    override fun <T : KArithSort> transform(expr: KGeArithExpr<T>) = with(expr) { serialize(lhs, rhs) }
 
     override fun transform(expr: KModIntExpr) = with(expr) { serialize(lhs, rhs) }
 

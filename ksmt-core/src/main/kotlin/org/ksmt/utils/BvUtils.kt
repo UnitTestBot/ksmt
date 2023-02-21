@@ -6,62 +6,110 @@ import org.ksmt.expr.KBitVec1Value
 import org.ksmt.expr.KBitVec32Value
 import org.ksmt.expr.KBitVec64Value
 import org.ksmt.expr.KBitVec8Value
+import org.ksmt.expr.KBitVecCustomValue
+import org.ksmt.expr.KBitVecNumberValue
 import org.ksmt.expr.KBitVecValue
-import org.ksmt.sort.KBvSort
 import java.math.BigInteger
+import kotlin.experimental.and
 import kotlin.experimental.inv
 import kotlin.experimental.or
 import kotlin.experimental.xor
 
 object BvUtils {
 
-    fun KContext.bvMinValueSigned(size: UInt): KBitVecValue<*> = when (size.toInt()) {
-        1 -> mkBv(true) // sign bit 1
-        Byte.SIZE_BITS -> mkBv(Byte.MIN_VALUE)
-        Short.SIZE_BITS -> mkBv(Short.MIN_VALUE)
-        Int.SIZE_BITS -> mkBv(Int.MIN_VALUE)
-        Long.SIZE_BITS -> mkBv(Long.MIN_VALUE)
-        else -> {
-            val binaryValue = "1" + "0".repeat(size.toInt() - 1)
-            mkBv(binaryValue, size)
+    private val bvMinValueSigned = object : BvSpecialValueSource {
+        override val bv1: Boolean = true // sign bit 1
+        override val bv8: Byte = Byte.MIN_VALUE
+        override val bv16: Short = Short.MIN_VALUE
+        override val bv32: Int = Int.MIN_VALUE
+        override val bv64: Long = Long.MIN_VALUE
+
+        override fun bvDefault(size: UInt): BigInteger =
+            powerOfTwo(size - 1u)
+    }
+
+    fun KContext.bvMinValueSigned(size: UInt): KBitVecValue<*> = mkBvSpecialValue(size, bvMinValueSigned)
+    fun KBitVecValue<*>.isBvMinValueSigned(): Boolean = isBvSpecialValue(bvMinValueSigned)
+
+    private val bvMaxValueSigned = object : BvSpecialValueSource {
+        override val bv1: Boolean = false // sign bit 0
+        override val bv8: Byte = Byte.MAX_VALUE
+        override val bv16: Short = Short.MAX_VALUE
+        override val bv32: Int = Int.MAX_VALUE
+        override val bv64: Long = Long.MAX_VALUE
+
+        override fun bvDefault(size: UInt): BigInteger =
+            powerOfTwo(size - 1u) - BigInteger.ONE
+    }
+
+    fun KContext.bvMaxValueSigned(size: UInt): KBitVecValue<*> = mkBvSpecialValue(size, bvMaxValueSigned)
+    fun KBitVecValue<*>.isBvMaxValueSigned(): Boolean = isBvSpecialValue(bvMaxValueSigned)
+
+    private val bvMaxValueUnsigned = object : BvSpecialValueSource {
+        override val bv1: Boolean = true
+        override val bv8: Byte = (-1).toByte()
+        override val bv16: Short = (-1).toShort()
+        override val bv32: Int = -1
+        override val bv64: Long = -1L
+
+        override fun bvDefault(size: UInt): BigInteger =
+            powerOfTwo(size) - BigInteger.ONE
+    }
+
+    fun KContext.bvMaxValueUnsigned(size: UInt): KBitVecValue<*> = mkBvSpecialValue(size, bvMaxValueUnsigned)
+    fun KBitVecValue<*>.isBvMaxValueUnsigned(): Boolean = isBvSpecialValue(bvMaxValueUnsigned)
+
+    private val bvZeroValue = object : BvSpecialValueSource {
+        override val bv1: Boolean = false
+        override val bv8: Byte = 0
+        override val bv16: Short = 0
+        override val bv32: Int = 0
+        override val bv64: Long = 0
+
+        override fun bvDefault(size: UInt): BigInteger = BigInteger.ZERO
+    }
+
+    fun KContext.bvZero(size: UInt): KBitVecValue<*> = mkBvSpecialValue(size, bvZeroValue)
+    fun KBitVecValue<*>.isBvZero(): Boolean = isBvSpecialValue(bvZeroValue)
+
+    private val bvOneValue = object : BvSpecialValueSource {
+        override val bv1: Boolean = true
+        override val bv8: Byte = 1
+        override val bv16: Short = 1
+        override val bv32: Int = 1
+        override val bv64: Long = 1L
+
+        override fun bvDefault(size: UInt): BigInteger = BigInteger.ONE
+    }
+
+    fun KContext.bvOne(size: UInt): KBitVecValue<*> = mkBvSpecialValue(size, bvOneValue)
+    fun KBitVecValue<*>.isBvOne(): Boolean = isBvSpecialValue(bvOneValue)
+
+    private class BvIntValue(val value: Int) : BvSpecialValueSource {
+        override val bv1: Boolean = value != 0
+        override val bv8: Byte = value.toByte()
+        override val bv16: Short = value.toShort()
+        override val bv32: Int = value
+        override val bv64: Long = value.toLong()
+
+        override fun bvDefault(size: UInt): BigInteger =
+            value.toBigInteger().normalizeValue(size)
+    }
+
+    fun KContext.bvValue(size: UInt, value: Int): KBitVecValue<*> = mkBvSpecialValue(size, BvIntValue(value))
+    fun KBitVecValue<*>.bvValueIs(value: Int): Boolean = isBvSpecialValue(BvIntValue(value))
+
+    fun KBitVecValue<*>.getBit(bit: UInt): Boolean {
+        check(bit < sort.sizeBits) { "Requested bit is out of bounds for $sort" }
+        return when (this) {
+            is KBitVec1Value -> value
+            is KBitVecNumberValue<*, *> -> ((numberValue.toLong() shr bit.toInt()) and 0x1L) == 0x1L
+            is KBitVecCustomValue -> value.testBit(bit.toInt())
+            else -> stringValue.let { it[it.lastIndex - bit.toInt()] == '1' }
         }
     }
 
-    fun KContext.bvMaxValueSigned(size: UInt): KBitVecValue<*> = when (size.toInt()) {
-        1 -> mkBv(false) // sign bit 0
-        Byte.SIZE_BITS -> mkBv(Byte.MAX_VALUE)
-        Short.SIZE_BITS -> mkBv(Short.MAX_VALUE)
-        Int.SIZE_BITS -> mkBv(Int.MAX_VALUE)
-        Long.SIZE_BITS -> mkBv(Long.MAX_VALUE)
-        else -> {
-            val binaryValue = "0" + "1".repeat(size.toInt() - 1)
-            mkBv(binaryValue, size)
-        }
-    }
-
-    fun KContext.bvMaxValueUnsigned(size: UInt): KBitVecValue<*> = when (size.toInt()) {
-        1 -> mkBv(true)
-        Byte.SIZE_BITS -> mkBv((-1).toByte())
-        Short.SIZE_BITS -> mkBv((-1).toShort())
-        Int.SIZE_BITS -> mkBv(-1)
-        Long.SIZE_BITS -> mkBv(-1L)
-        else -> {
-            val binaryValue = "1".repeat(size.toInt())
-            mkBv(binaryValue, size)
-        }
-    }
-
-    fun KContext.bvZero(size: UInt): KBitVecValue<*> = bvValue(size, 0)
-    fun KContext.bvOne(size: UInt): KBitVecValue<*> = bvValue(size, 1)
-
-    fun KContext.bvValue(size: UInt, value: Int): KBitVecValue<*> = when (size.toInt()) {
-        1 -> mkBv(value == 1)
-        Byte.SIZE_BITS -> mkBv(value.toByte())
-        Short.SIZE_BITS -> mkBv(value.toShort())
-        Int.SIZE_BITS -> mkBv(value)
-        Long.SIZE_BITS -> mkBv(value.toLong())
-        else -> mkBv(value, size)
-    }
+    fun KBitVecValue<*>.signBit(): Boolean = getBit(sort.sizeBits - 1u)
 
     fun KBitVecValue<*>.signedGreaterOrEqual(other: Int): Boolean = when (this) {
         is KBitVec1Value -> if (value) {
@@ -73,11 +121,13 @@ object BvUtils {
             // 0 >= 0 -> true
             true
         }
+
         is KBitVec8Value -> numberValue >= other
         is KBitVec16Value -> numberValue >= other
         is KBitVec32Value -> numberValue >= other
         is KBitVec64Value -> numberValue >= other
-        else -> signedBigIntFromBinary(stringValue) >= other.toBigInteger()
+        is KBitVecCustomValue -> value.signedValue(sizeBits) >= other.toBigInteger()
+        else -> stringValue.toBigInteger(radix = 2).signedValue(sort.sizeBits) >= other.toBigInteger()
     }
 
     fun KBitVecValue<*>.signedLessOrEqual(other: KBitVecValue<*>): Boolean = when (this) {
@@ -91,11 +141,21 @@ object BvUtils {
             val otherValue = (other as KBitVec1Value).value
             !otherValue
         }
+
         is KBitVec8Value -> numberValue <= (other as KBitVec8Value).numberValue
         is KBitVec16Value -> numberValue <= (other as KBitVec16Value).numberValue
         is KBitVec32Value -> numberValue <= (other as KBitVec32Value).numberValue
         is KBitVec64Value -> numberValue <= (other as KBitVec64Value).numberValue
-        else -> signedBigIntFromBinary(stringValue) <= signedBigIntFromBinary(other.stringValue)
+        is KBitVecCustomValue -> {
+            val lhs = value.signedValue(sizeBits)
+            val rhs = (other as KBitVecCustomValue).value.signedValue(sizeBits)
+            lhs <= rhs
+        }
+        else -> {
+            val lhs = stringValue.toBigInteger(radix = 2).signedValue(sort.sizeBits)
+            val rhs = other.stringValue.toBigInteger(radix = 2).signedValue(sort.sizeBits)
+            lhs <= rhs
+        }
     }
 
     fun KBitVecValue<*>.unsignedLessOrEqual(other: KBitVecValue<*>): Boolean = when (this) {
@@ -104,9 +164,38 @@ object BvUtils {
         is KBitVec16Value -> numberValue.toUShort() <= (other as KBitVec16Value).numberValue.toUShort()
         is KBitVec32Value -> numberValue.toUInt() <= (other as KBitVec32Value).numberValue.toUInt()
         is KBitVec64Value -> numberValue.toULong() <= (other as KBitVec64Value).numberValue.toULong()
+        is KBitVecCustomValue -> value <= (other as KBitVecCustomValue).value
         // MSB first -> lexical order works
         else -> stringValue <= other.stringValue
     }
+
+    fun KBitVecValue<*>.signedLess(other: KBitVecValue<*>): Boolean =
+        signedLessOrEqual(other) && this != other
+
+    fun KBitVecValue<*>.unsignedLess(other: KBitVecValue<*>): Boolean =
+        unsignedLessOrEqual(other) && this != other
+
+    fun KBitVecValue<*>.signedGreaterOrEqual(other: KBitVecValue<*>): Boolean =
+        other.signedLessOrEqual(this)
+
+    fun KBitVecValue<*>.unsignedGreaterOrEqual(other: KBitVecValue<*>): Boolean =
+        other.unsignedLessOrEqual(this)
+
+    fun KBitVecValue<*>.signedGreater(other: KBitVecValue<*>): Boolean =
+        other.signedLess(this)
+
+    fun KBitVecValue<*>.unsignedGreater(other: KBitVecValue<*>): Boolean =
+        other.unsignedLess(this)
+
+    operator fun KBitVecValue<*>.unaryMinus(): KBitVecValue<*> = bvOperation(
+        other = this,
+        bv1 = { a, _ -> a xor false },
+        bv8 = { a, _ -> (-a).toByte() },
+        bv16 = { a, _ -> (-a).toShort() },
+        bv32 = { a, _ -> -a },
+        bv64 = { a, _ -> -a },
+        bvDefault = { a, _ -> -a },
+    )
 
     operator fun KBitVecValue<*>.plus(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
         other = other,
@@ -140,7 +229,8 @@ object BvUtils {
 
     fun KBitVecValue<*>.signedDivide(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
         other = other,
-        bv1 = { a, b -> a == b },
+        signIsImportant = true,
+        bv1 = { a, _ -> a },
         bv8 = { a, b -> (a / b).toByte() },
         bv16 = { a, b -> (a / b).toShort() },
         bv32 = { a, b -> a / b },
@@ -150,7 +240,7 @@ object BvUtils {
 
     fun KBitVecValue<*>.unsignedDivide(other: KBitVecValue<*>): KBitVecValue<*> = bvUnsignedOperation(
         other = other,
-        bv1 = { a, b -> a == b },
+        bv1 = { a, _ -> a },
         bv8 = { a, b -> (a / b).toUByte() },
         bv16 = { a, b -> (a / b).toUShort() },
         bv32 = { a, b -> a / b },
@@ -160,7 +250,8 @@ object BvUtils {
 
     fun KBitVecValue<*>.signedRem(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
         other = other,
-        bv1 = { a, b -> a != b },
+        signIsImportant = true,
+        bv1 = { _, _ -> false },
         bv8 = { a, b -> (a.rem(b)).toByte() },
         bv16 = { a, b -> (a.rem(b)).toShort() },
         bv32 = { a, b -> a.rem(b) },
@@ -170,7 +261,7 @@ object BvUtils {
 
     fun KBitVecValue<*>.unsignedRem(other: KBitVecValue<*>): KBitVecValue<*> = bvUnsignedOperation(
         other = other,
-        bv1 = { a, b -> a != b },
+        bv1 = { _, _ -> false },
         bv8 = { a, b -> (a.rem(b)).toUByte() },
         bv16 = { a, b -> (a.rem(b)).toUShort() },
         bv32 = { a, b -> a.rem(b) },
@@ -180,7 +271,8 @@ object BvUtils {
 
     fun KBitVecValue<*>.signedMod(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
         other = other,
-        bv1 = { a, b -> a != b },
+        signIsImportant = true,
+        bv1 = { _, _ -> false },
         bv8 = { a, b -> a.mod(b) },
         bv16 = { a, b -> a.mod(b) },
         bv32 = { a, b -> a.mod(b) },
@@ -201,7 +293,7 @@ object BvUtils {
     )
 
     fun KBitVecValue<*>.bitwiseNot(): KBitVecValue<*> = bvOperation(
-        other = ctx.bvZero(sort.sizeBits),
+        other = this,
         bv1 = { a, _ -> a.not() },
         bv8 = { a, _ -> a.inv() },
         bv16 = { a, _ -> a.inv() },
@@ -228,6 +320,16 @@ object BvUtils {
         bv32 = { a, b -> a xor b },
         bv64 = { a, b -> a xor b },
         bvDefault = { a, b -> a xor b },
+    )
+
+    fun KBitVecValue<*>.bitwiseAnd(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+        other = other,
+        bv1 = { a, b -> a && b },
+        bv8 = { a, b -> a and b },
+        bv16 = { a, b -> a and b },
+        bv32 = { a, b -> a and b },
+        bv64 = { a, b -> a and b },
+        bvDefault = { a, b -> a and b },
     )
 
     private val bv8PossibleShift = 0 until Byte.SIZE_BITS
@@ -257,7 +359,7 @@ object BvUtils {
         bv8 = { a, b -> if (b.toInt() !in bv8PossibleShift) 0u else (a.toInt() ushr b.toInt()).toUByte() },
         bv16 = { a, b -> if (b.toInt() !in bv16PossibleShift) 0u else (a.toInt() ushr b.toInt()).toUShort() },
         bv32 = { a, b -> if (b.toInt() !in bv32PossibleShift) 0u else (a.toInt() ushr b.toInt()).toUInt() },
-        bv64 = { a, b -> if (b.toInt() !in bv64PossibleShift) 0u else (a.toLong() ushr b.toInt()).toULong() },
+        bv64 = { a, b -> if (b.toLong() !in bv64PossibleShift) 0u else (a.toLong() ushr b.toInt()).toULong() },
         bvDefault = { a, b ->
             if (b < BigInteger.ZERO || b >= sort.sizeBits.toInt().toBigInteger()) {
                 BigInteger.ZERO
@@ -269,6 +371,7 @@ object BvUtils {
 
     fun KBitVecValue<*>.shiftRightArith(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
         other = other,
+        signIsImportant = true,
         bv1 = { a, _ -> a },
         bv8 = { a, b -> if (b !in bv8PossibleShift) (if (a < 0) -1 else 0) else (a.toInt() shr b.toInt()).toByte() },
         bv16 = { a, b -> if (b !in bv16PossibleShift) (if (a < 0) -1 else 0) else (a.toInt() shr b.toInt()).toShort() },
@@ -284,32 +387,102 @@ object BvUtils {
     )
 
     fun KBitVecValue<*>.powerOfTwoOrNull(): Int? {
-        val value = unsignedBigIntFromBinary(stringValue)
+        val value = bigIntValue()
         val valueMinusOne = value - BigInteger.ONE
         if ((value and valueMinusOne) != BigInteger.ZERO) return null
         return valueMinusOne.bitLength()
     }
 
-    fun KBitVecValue<*>.intValueOrNull(): Int? = when (this) {
-        is KBitVec1Value -> if (value) 1 else 0
-        is KBitVec8Value -> numberValue.toInt()
-        is KBitVec16Value -> numberValue.toInt()
-        is KBitVec32Value -> numberValue
-        is KBitVec64Value -> if (numberValue <= Int.MAX_VALUE) numberValue.toInt() else null
-        else -> stringValue.toIntOrNull(radix = 2)
-    }
-
-    fun KContext.mkBvFromBigInteger(value: BigInteger, size: UInt): KBitVecValue<KBvSort> {
-        val normalizedValue = value.normalizeValue(size)
-        val resultBinary = unsignedBinaryString(normalizedValue).padStart(size.toInt(), '0')
-        return mkBv(resultBinary, size)
+    fun KBitVecValue<*>.bigIntValue(): BigInteger = when (this) {
+        is KBitVec1Value -> if (value) BigInteger.ONE else BigInteger.ZERO
+        is KBitVecNumberValue<*, *> -> numberValue.toBigInteger()
+        is KBitVecCustomValue -> value
+        else -> stringValue.toBigInteger(radix = 2)
     }
 
     fun KBitVecValue<*>.toBigIntegerSigned(): BigInteger =
-        signedBigIntFromBinary(stringValue)
+        toBigIntegerUnsigned().signedValue(sort.sizeBits)
 
     fun KBitVecValue<*>.toBigIntegerUnsigned(): BigInteger =
-        unsignedBigIntFromBinary(stringValue)
+        bigIntValue().normalizeValue(sort.sizeBits)
+
+    fun concatBv(lhs: KBitVecValue<*>, rhs: KBitVecValue<*>): KBitVecValue<*> = with(lhs.ctx) {
+        when {
+            lhs is KBitVec8Value && rhs is KBitVec8Value -> {
+                var result = lhs.numberValue.toUByte().toInt() shl Byte.SIZE_BITS
+                result = result or rhs.numberValue.toUByte().toInt()
+                mkBv(result.toShort())
+            }
+
+            lhs is KBitVec16Value && rhs is KBitVec16Value -> {
+                var result = lhs.numberValue.toUShort().toInt() shl Short.SIZE_BITS
+                result = result or rhs.numberValue.toUShort().toInt()
+                mkBv(result)
+            }
+
+            lhs is KBitVec32Value && rhs is KBitVec32Value -> {
+                var result = lhs.numberValue.toUInt().toLong() shl Int.SIZE_BITS
+                result = result or rhs.numberValue.toUInt().toLong()
+                mkBv(result)
+            }
+
+            else -> {
+                val lhsValue = lhs.bigIntValue().normalizeValue(lhs.sort.sizeBits)
+                val rhsValue = rhs.bigIntValue().normalizeValue(rhs.sort.sizeBits)
+                val concatenatedValue = concatValues(lhsValue, rhsValue, rhs.sort.sizeBits)
+                mkBv(concatenatedValue, lhs.sort.sizeBits + rhs.sort.sizeBits)
+            }
+        }
+    }
+
+    fun KBitVecValue<*>.extractBv(high: Int, low: Int): KBitVecValue<*> = with(ctx) {
+        val size = (high - low + 1).toUInt()
+        val value = bigIntValue().normalizeValue(sort.sizeBits)
+        val trimLowerBits = value.shiftRight(low)
+        val trimHigherBits = trimLowerBits.and(binaryOnes(onesCount = size))
+        mkBv(trimHigherBits, size)
+    }
+
+    fun KBitVecValue<*>.signExtension(extensionSize: UInt): KBitVecValue<*> =
+        if (!signBit()) {
+            zeroExtension(extensionSize)
+        } else {
+            val extension = binaryOnes(onesCount = extensionSize)
+            val value = bigIntValue().normalizeValue(sort.sizeBits)
+            val extendedValue = concatValues(extension, value, sort.sizeBits)
+            ctx.mkBv(extendedValue, sort.sizeBits + extensionSize)
+        }
+
+    fun KBitVecValue<*>.zeroExtension(extensionSize: UInt): KBitVecValue<*> = with(ctx) {
+        mkBv(bigIntValue().normalizeValue(sort.sizeBits), sort.sizeBits + extensionSize)
+    }
+
+    // Add max value without creation of Bv expr
+    fun KBitVecValue<*>.addMaxValueSigned(): KBitVecValue<*> = bvOperation(
+        other = this,
+        bv1 = { a, _ -> a xor bvMaxValueSigned.bv1 },
+        bv8 = { a, _ -> (a + bvMaxValueSigned.bv8).toByte() },
+        bv16 = { a, _ -> (a + bvMaxValueSigned.bv16).toShort() },
+        bv32 = { a, _ -> a + bvMaxValueSigned.bv32 },
+        bv64 = { a, _ -> a + bvMaxValueSigned.bv64 },
+        bvDefault = { a, _ -> a + bvMaxValueSigned.bvDefault(sort.sizeBits) },
+    )
+
+    // Subtract max value without creation of Bv expr
+    fun KBitVecValue<*>.subMaxValueSigned(): KBitVecValue<*> = bvOperation(
+        other = this,
+        bv1 = { a, _ -> a xor bvMaxValueSigned.bv1 },
+        bv8 = { a, _ -> (a - bvMaxValueSigned.bv8).toByte() },
+        bv16 = { a, _ -> (a - bvMaxValueSigned.bv16).toShort() },
+        bv32 = { a, _ -> a - bvMaxValueSigned.bv32 },
+        bv64 = { a, _ -> a - bvMaxValueSigned.bv64 },
+        bvDefault = { a, _ -> a - bvMaxValueSigned.bvDefault(sort.sizeBits) },
+    )
+
+    private fun binaryOnes(onesCount: UInt): BigInteger = powerOfTwo(onesCount) - BigInteger.ONE
+
+    private fun concatValues(lhs: BigInteger, rhs: BigInteger, rhsSize: UInt): BigInteger =
+        lhs.shiftLeft(rhsSize.toInt()).or(rhs)
 
     @Suppress("LongParameterList")
     private inline fun KBitVecValue<*>.bvUnsignedOperation(
@@ -326,12 +499,14 @@ object BvUtils {
         is KBitVec16Value -> bv16UnsignedOperation(other, op = bv16)
         is KBitVec32Value -> bv32UnsignedOperation(other, op = bv32)
         is KBitVec64Value -> bv64UnsignedOperation(other, op = bv64)
+        is KBitVecCustomValue -> bvCustomOperation(other, signed = false, operation = bvDefault)
         else -> bvOperationDefault(other, signed = false, operation = bvDefault)
     }
 
     @Suppress("LongParameterList")
     private inline fun KBitVecValue<*>.bvOperation(
         other: KBitVecValue<*>,
+        signIsImportant: Boolean = false,
         crossinline bv1: (Boolean, Boolean) -> Boolean,
         crossinline bv8: (Byte, Byte) -> Byte,
         crossinline bv16: (Short, Short) -> Short,
@@ -344,7 +519,8 @@ object BvUtils {
         is KBitVec16Value -> bv16Operation(other, op = bv16)
         is KBitVec32Value -> bv32Operation(other, op = bv32)
         is KBitVec64Value -> bv64Operation(other, op = bv64)
-        else -> bvOperationDefault(other, signed = true, operation = bvDefault)
+        is KBitVecCustomValue -> bvCustomOperation(other, signed = signIsImportant, operation = bvDefault)
+        else -> bvOperationDefault(other, signed = signIsImportant, operation = bvDefault)
     }
 
     private inline fun KBitVec1Value.bv1Operation(
@@ -437,17 +613,28 @@ object BvUtils {
         op = op
     )
 
+    private inline fun KBitVecCustomValue.bvCustomOperation(
+        other: KBitVecValue<*>,
+        signed: Boolean = false,
+        crossinline operation: (BigInteger, BigInteger) -> BigInteger
+    ): KBitVecCustomValue = bvNumericOperation(
+        this, other,
+        unwrap = { if (!signed) it.value else it.value.signedValue(sizeBits) },
+        wrap = { ctx.mkBv(it.normalizeValue(sizeBits), sizeBits).uncheckedCast() },
+        op = operation
+    )
+
     private inline fun KBitVecValue<*>.bvOperationDefault(
         other: KBitVecValue<*>,
         signed: Boolean = false,
         crossinline operation: (BigInteger, BigInteger) -> BigInteger
     ): KBitVecValue<*> = bvNumericOperation(
         this, other,
-        unwrap = { if (!signed) unsignedBigIntFromBinary(it.stringValue) else signedBigIntFromBinary(it.stringValue) },
-        wrap = {
-            val size = this.sort.sizeBits
-            ctx.mkBvFromBigInteger(it, size)
+        unwrap = {
+            val bigIntValue = it.stringValue.toBigInteger(radix = 2)
+            if (!signed) bigIntValue else bigIntValue.signedValue(sort.sizeBits)
         },
+        wrap = { ctx.mkBv(it.normalizeValue(sort.sizeBits), sort.sizeBits) },
         op = operation
     )
 
@@ -462,22 +649,42 @@ object BvUtils {
         return wrap(op(a0, a1))
     }
 
-    private fun signedBigIntFromBinary(value: String): BigInteger {
-        var result = BigInteger(value, 2)
-        val maxValue = BigInteger.valueOf(2).pow(value.length - 1)
-        if (result >= maxValue) {
-            result -= BigInteger.valueOf(2).pow(value.length)
+    private fun BigInteger.signedValue(size: UInt): BigInteger {
+        val maxValue = powerOfTwo(size - 1u) - BigInteger.ONE
+        return if (this > maxValue) {
+            this - powerOfTwo(size)
+        } else {
+            this
         }
-        return result
     }
 
-    private fun unsignedBigIntFromBinary(value: String): BigInteger =
-        BigInteger(value, 2)
+    private interface BvSpecialValueSource {
+        val bv1: Boolean
+        val bv8: Byte
+        val bv16: Short
+        val bv32: Int
+        val bv64: Long
+        fun bvDefault(size: UInt): BigInteger
+    }
 
-    private fun unsignedBinaryString(value: BigInteger): String =
-        value.toString(2)
+    private fun KContext.mkBvSpecialValue(size: UInt, source: BvSpecialValueSource): KBitVecValue<*> =
+        when (size.toInt()) {
+            1 -> mkBv(source.bv1)
+            Byte.SIZE_BITS -> mkBv(source.bv8)
+            Short.SIZE_BITS -> mkBv(source.bv16)
+            Int.SIZE_BITS -> mkBv(source.bv32)
+            Long.SIZE_BITS -> mkBv(source.bv64)
+            else -> mkBv(source.bvDefault(size), size)
+        }
 
-    private fun BigInteger.normalizeValue(size: UInt): BigInteger =
-        this.mod(BigInteger.valueOf(2).pow(size.toInt()))
+    private fun KBitVecValue<*>.isBvSpecialValue(source: BvSpecialValueSource) = when (this) {
+        is KBitVec1Value -> value == source.bv1
+        is KBitVec8Value -> numberValue == source.bv8
+        is KBitVec16Value -> numberValue == source.bv16
+        is KBitVec32Value -> numberValue == source.bv32
+        is KBitVec64Value -> numberValue == source.bv64
+        is KBitVecCustomValue -> value == source.bvDefault(sizeBits)
+        else -> this == ctx.mkBvSpecialValue(sort.sizeBits, source)
+    }
 
 }
