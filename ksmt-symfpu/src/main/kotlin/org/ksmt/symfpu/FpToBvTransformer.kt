@@ -19,10 +19,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
 //    }
 
     override fun <Fp : KFpSort> transform(expr: KFpEqualExpr<Fp>): KExpr<KBoolSort> = with(ctx) {
-        println("in transform for KFpEqualExpr")
-        transformHelper(expr, ::equal).apply {
-            println("transform for KFpEqualExpr done")
-        }
+        transformHelper(expr, ::equal)
     }
 
     override fun <Fp : KFpSort> transform(expr: KFpLessExpr<Fp>): KExpr<KBoolSort> = with(ctx) {
@@ -30,7 +27,6 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     }
 
     override fun <Fp : KFpSort> transform(expr: KFpMulExpr<Fp>): KExpr<Fp> = with(ctx) {
-//        transformHelper(expr, ::multiply)
         val args1: List<KExpr<Fp>> = expr.args.cast()
         transformExprAfterTransformed(expr, args1) { args ->
             val (left, right) = argsToTypedPair(args.drop(1))

@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test
 import org.ksmt.KContext
 import org.ksmt.expr.*
 import org.ksmt.solver.KModel
+import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.sort.KBoolSort
@@ -98,14 +99,32 @@ class FpToBvTransformerTest {
     }
 
     @Test
-    fun testFpToBvMult3Expr() = with(KContext()) {
-        val a = mkFp32(1.0f)
-        val b = mkFp32(1.0f)
-//        val b = mkFp32(0.25f)
+    fun testFpToBvMult5Expr() = with(KContext()) {
+        val a = mkFp32(Float.fromBits(0b0_00000000_00000000000000000000001)) // min
+        val b = mkFp32(Float.fromBits(0b0_01111110_00000000000000000000000)) // 0.5
         testFpExpr(
             mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b), mapOf("a" to a, "b" to b)
         )
     }
+
+    @Test
+    fun testFpToBvMult5NegExpr() = with(KContext()) {
+        val a = mkFp32(Float.fromBits(0b0_00000000_00000000000000000000001)) // min
+        val b = mkFp32(Float.fromBits(0b1_01111110_00000000000000000000000.toInt())) // -0.5
+        testFpExpr(
+            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b), mapOf("a" to a, "b" to b)
+        )
+    }
+
+    @Test
+    fun testFpToBvMultToMinExpr() = with(KContext()) {
+        val a = mkFp32(Float.fromBits(0b0_00000000_00000000000000000000001)) // min
+        val b = mkFp32(Float.fromBits(0b1_01111110_00000000000000000000001.toInt())) // -0.5...1
+        testFpExpr(
+            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b), mapOf("a" to a, "b" to b)
+        )
+    }
+
 
     @Test
     fun testFpToBvMaxExpr() = withContextAndVariables { a, b ->
@@ -126,33 +145,116 @@ class FpToBvTransformerTest {
 
 
     @Test
-    fun testFpToBvZMultFp16Expr() = with(KContext()) {
+    fun testFpToBvMultFp16RNEExpr() = with(KContext()) {
         val a by mkFp16Sort()
         val b by mkFp16Sort()
         testFpExpr(
             mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b),
             mapOf("a" to a, "b" to b),
-            extraAssert = assertionForUnderflowRounding(a.sort)
         )
     }
 
-    private fun <Fp : KFpSort> KContext.assertionForUnderflowRounding(sort: Fp): (KExpr<Fp>, KExpr<Fp>) -> KExpr<KBoolSort> =
-        {
-                transformed: KExpr<Fp>,
-                expr: KExpr<Fp>,
-            ->
-            !(mkFpIsZeroExpr(transformed) and (expr eq makeMin(sort, trueExpr).toFp() or (expr eq makeMin(
-                sort,
-                falseExpr
-            ).toFp())))
-        }
+    @Test
+    fun testFpToBvMultFp16RNAExpr() = with(KContext()) {
+        val a by mkFp16Sort()
+        val b by mkFp16Sort()
+        testFpExpr(
+            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToAway), a, b),
+            mapOf("a" to a, "b" to b),
+        )
+    }
+
 
     @Test
-    fun testFpToBvZMultFp32Expr() = withContextAndVariables { a, b ->
+    fun testFpToBvMultFp16RTNExpr() = with(KContext()) {
+        val a by mkFp16Sort()
+        val b by mkFp16Sort()
+        testFpExpr(
+            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardNegative), a, b),
+            mapOf("a" to a, "b" to b),
+        )
+    }
+
+
+    @Test
+    fun testFpToBvMultFp16RTPExpr() = with(KContext()) {
+        val a by mkFp16Sort()
+        val b by mkFp16Sort()
+        testFpExpr(
+            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardPositive), a, b),
+            mapOf("a" to a, "b" to b),
+        )
+    }
+
+
+    @Test
+    fun testFpToBvMultFp16RTZExpr() = with(KContext()) {
+        val a by mkFp16Sort()
+        val b by mkFp16Sort()
+        testFpExpr(
+            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardZero), a, b),
+            mapOf("a" to a, "b" to b),
+        )
+    }
+
+
+    @Test
+    fun testFpToBvZZMultRoundTowardNegativeFp16Expr() = with(KContext()) {
+        val a by mkFp16Sort()
+        val b by mkFp16Sort()
+        testFpExpr(
+            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardZero), a, b),
+            mapOf("a" to a, "b" to b),
+        )
+    }
+
+
+    @Test
+    fun testFpToBvZMultFp32UnderflowZeroExpr() = with(KContext()) {
+        // should return -0
+        val a = mkFp32(Float.fromBits(0b00000000000000000000000011100111)) // 3.24E-43
+        val b = mkFp32(Float.fromBits(0b10000000000111111101111011010011.toInt())) // -2.926835E-39
         testFpExpr(
             mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b),
             mapOf("a" to a, "b" to b),
-            assertionForUnderflowRounding(a.sort)
+        )
+    }
+
+    @Test
+    fun testFpToBvZMultFp32UnderflowMinExpr() = with(KContext()) {
+        // should return -min but returns -0
+        val a = mkFp32(Float.fromBits(0b00000000001111011000100100000111))
+        val b = mkFp32(Float.fromBits(0b10110100000001010010000001111110.toInt()))
+        testFpExpr(
+            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b),
+            mapOf("a" to a, "b" to b),
+        )
+    }
+
+    @Test
+    fun testFpToBvZMultFp32UnderflowZero2Expr() = with(KContext()) {
+        val a = mkFp32(Float.fromBits(0b00000000111011101110111111111011))
+        val b = mkFp32(Float.fromBits(0b10000000000000001110001000000110.toInt()))
+        testFpExpr(
+            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b),
+            mapOf("a" to a, "b" to b),
+        )
+    }
+
+    @Test
+    fun testFpToBvZMultFp32SlowExpr() = with(KContext()) {
+        val a = mkFp32(Float.fromBits(0b0_10000000_0000000000000000000010))
+        val b = mkFp32(Float.fromBits(0b0_01111111_11111111111111111111111))
+        testFpExpr(
+            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b),
+            mapOf("a" to a, "b" to b),
+        )
+    }
+    @Test
+    fun testFpToBvMultFp32Expr() = withContextAndVariables { a, b ->
+        testFpExpr(
+            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardPositive), a, b),
+            mapOf("a" to a, "b" to b)
         )
     }
 
@@ -171,7 +273,7 @@ class FpToBvTransformerTest {
 
     private fun <T : KSort, Fp : KFpSort> KContext.checkTransformer(
         transformer: FpToBvTransformer,
-        solver: KZ3Solver,
+        solver: KSolver<*>,
         exprToTransform: KExpr<T>,
         printVars: Map<String, KApp<Fp, *>>,
         extraAssert: ((KExpr<T>, KExpr<T>) -> KExpr<KBoolSort>)
@@ -182,7 +284,7 @@ class FpToBvTransformerTest {
         solver.assert(transformedExpr neq exprToTransform.cast())
 
         // check assertions satisfiability with timeout
-        val status = solver.check(timeout = 30000.seconds)
+        val status = solver.check(timeout = 30.seconds)
 
         if (status == KSolverStatus.SAT) {
             val model = solver.model()
@@ -197,6 +299,7 @@ class FpToBvTransformerTest {
                 println("$name :: $evalUnpacked")
             }
         } else if (status == KSolverStatus.UNKNOWN) {
+            println("STATUS == UNKNOWN")
             println(solver.reasonOfUnknown())
         }
         assertEquals(KSolverStatus.UNSAT, status)
@@ -204,7 +307,7 @@ class FpToBvTransformerTest {
 
     private fun KContext.unpackedString(value: KExpr<*>, model: KModel) = if (value.sort is KFpSort) {
         val sb = StringBuilder()
-        val fpExpr: KExpr<Fp> = value.cast()
+        val fpExpr: KExpr<KFpSort> = value.cast()
         val fpValue = model.eval(fpExpr) as KFpValue
         with(unpack(fpExpr.sort, mkFpToIEEEBvExpr(fpExpr.cast()))) {
             sb.append("uFP sign ")
@@ -243,7 +346,7 @@ class FpToBvTransformerTest {
             sb.append("\nbv: ")
             model.eval(packedFloat).print(sb)
 
-            sb.append(" \nactually ${(fpValue as? KFp32Value)?.value}")
+            sb.append(" \nactually ${(fpValue as? KFp32Value)?.value ?: (fpValue as? KFp16Value)?.value}")
 
             sb.toString()
         }
@@ -251,5 +354,4 @@ class FpToBvTransformerTest {
         "${model.eval(value)}"
     }
 }
-
 

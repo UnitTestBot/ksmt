@@ -38,7 +38,7 @@ fun <Fp : KFpSort> KContext.round(
     /*** Round to correct significand. ***/
     val extractedSignificand = mkBvExtractExpr(sigWidth - 1, sigWidth - targetSignificandWidth, sig)
 
-
+    // guard bit is the bit after the target significand, sticky bit is the rest
     val guardBitPosition = sigWidth - (targetSignificandWidth + 1)
     val guardBit = bvToBool(mkBvExtractExpr(guardBitPosition, guardBitPosition, sig))
     val stickyBit = !isAllZeros(mkBvExtractExpr(guardBitPosition - 1, 0, sig))
@@ -163,8 +163,10 @@ private fun <Fp : KFpSort> KContext.rounderSpecialCases(
 
     // On underflow either return 0 or minimum subnormal
     val returnZero = mkOr(
-        mkEq(roundingMode, mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven)),
-        mkEq(roundingMode, mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToAway)),
+        mkEq(roundingMode, mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven)) and
+            (roundedResult.significand eq zero(roundedResult.sort.significandBits.toInt())),
+        mkEq(roundingMode, mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToAway)) and
+            (roundedResult.significand eq zero(roundedResult.sort.significandBits.toInt())),
         mkEq(roundingMode, mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardZero)),
         mkAnd(
             mkEq(roundingMode, mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardPositive)), roundedResult.sign
