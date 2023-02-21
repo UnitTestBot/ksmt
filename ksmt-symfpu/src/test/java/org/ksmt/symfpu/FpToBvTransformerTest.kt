@@ -242,19 +242,39 @@ class FpToBvTransformerTest {
     }
 
     @Test
-    fun testFpToBvZMultFp32SlowExpr() = with(KContext()) {
-        val a = mkFp32(Float.fromBits(0b0_10000000_0000000000000000000010))
-        val b = mkFp32(Float.fromBits(0b0_01111111_11111111111111111111111))
+    fun testFpToBvZMultFp16SlowExpr() = with(KContext()) {
+//        1 5 10
+        val upper =
+            mkFpBiased(signBit = false, biasedExponent = 0b10001, significand = 0b0011111111, sort = mkFp16Sort()) // 2
+        val lower =
+            mkFpBiased(
+                signBit = false,
+                biasedExponent = 0b10000,
+                significand = 0b1111111111,
+                sort = mkFp16Sort()
+            ) // 1.9991
+//0b0000000000 0b1111111111  0b10000 0b01111
+        val a by fp16Sort
+        val b by fp16Sort
+
         testFpExpr(
             mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b),
             mapOf("a" to a, "b" to b),
-        )
+        ) { _, _ ->
+            trueExpr
+            mkAnd(
+                mkFpLessOrEqualExpr(lower, a),
+                mkFpLessOrEqualExpr(lower, b),
+                mkFpLessOrEqualExpr(a, upper),
+                mkFpLessOrEqualExpr(b, upper),
+            )
+        }
     }
+
     @Test
     fun testFpToBvMultFp32Expr() = withContextAndVariables { a, b ->
         testFpExpr(
-            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardPositive), a, b),
-            mapOf("a" to a, "b" to b)
+            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardPositive), a, b), mapOf("a" to a, "b" to b)
         )
     }
 
@@ -284,8 +304,9 @@ class FpToBvTransformerTest {
         solver.assert(transformedExpr neq exprToTransform.cast())
 
         // check assertions satisfiability with timeout
-        val status = solver.check(timeout = 30.seconds)
-
+        println("checking satisfiability...")
+        val status = solver.check(timeout = 1.seconds)
+        println("status: $status")
         if (status == KSolverStatus.SAT) {
             val model = solver.model()
             val transformed = model.eval(transformedExpr)

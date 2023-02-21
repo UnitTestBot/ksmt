@@ -26,6 +26,7 @@ class UnpackedFp<Fp : KFpSort> private constructor(
     val isInf: KExpr<KBoolSort> = ctx.mkFalse(),
     val isZero: KExpr<KBoolSort> = ctx.mkFalse(),
 ) : KExpr<Fp>(ctx) {
+
     constructor(
         ctx: KContext, sort: Fp, sign: KExpr<KBoolSort>, exponent: KExpr<KBvSort>, significand: KExpr<KBvSort>
     ) : this(

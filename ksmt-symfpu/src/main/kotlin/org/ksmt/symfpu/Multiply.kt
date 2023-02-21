@@ -1,5 +1,3 @@
-@file:Suppress("UNUSED_VARIABLE", "UNUSED_PARAMETER")
-
 package org.ksmt.symfpu
 
 import org.ksmt.KContext
@@ -13,6 +11,9 @@ import org.ksmt.symfpu.UnpackedFp.Companion.iteOp
 import org.ksmt.symfpu.UnpackedFp.Companion.makeInf
 import org.ksmt.symfpu.UnpackedFp.Companion.makeNaN
 import org.ksmt.symfpu.UnpackedFp.Companion.makeZero
+import org.ksmt.utils.BvUtils.bvOne
+import org.ksmt.utils.cast
+
 
 internal fun <Fp : KFpSort> KContext.multiply(
     left: UnpackedFp<Fp>, right: UnpackedFp<Fp>, roundingMode: KExpr<KFpRoundingModeSort>
@@ -90,7 +91,7 @@ private fun <Fp : KFpSort> KContext.arithmeticMultiply(
 private fun KContext.conditionalLeftShiftOne(
     condition: KEqExpr<KBvSort>, expr: KExpr<KBvSort>
 ) = mkIte(
-    condition, expr, mkBvShiftLeftExpr(expr, one(expr.sort.sizeBits))
+    condition, expr, mkBvShiftLeftExpr(expr, bvOne(expr.sort.sizeBits).cast())
 )
 
 

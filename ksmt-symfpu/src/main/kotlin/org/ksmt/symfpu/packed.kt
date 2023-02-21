@@ -10,6 +10,7 @@ import org.ksmt.symfpu.UnpackedFp.Companion.iteOp
 import org.ksmt.symfpu.UnpackedFp.Companion.makeInf
 import org.ksmt.symfpu.UnpackedFp.Companion.makeNaN
 import org.ksmt.symfpu.UnpackedFp.Companion.makeZero
+import org.ksmt.utils.BvUtils.bvZero
 import org.ksmt.utils.cast
 
 fun <Fp : KFpSort> KContext.unpack(sort: Fp, packedFloat: KExpr<KBvSort>): UnpackedFp<Fp> {
@@ -73,13 +74,13 @@ fun <Fp : KFpSort> KContext.pack(uf: UnpackedFp<Fp>): KFpFromBvExpr<Fp> {
     // Will be correct for normal values only, subnormals may still be negative.
     val packedBiasedExp = mkBvExtractExpr(packedExWidth - 1, 0, biasedExp)
     val maxExp = ones(packedExWidth.toUInt())
-    val minExp = zeros(packedExWidth.toUInt())
+    val minExp = bvZero(packedExWidth.toUInt())
 
     val hasMaxExp = uf.isNaN or uf.isInf
     val hasMinExp = uf.isZero or inSubnormalRange
     val hasFixedExp = hasMaxExp or hasMinExp
 
-    val packedExp = mkIte(hasFixedExp, mkIte(hasMaxExp, maxExp, minExp), packedBiasedExp)
+    val packedExp = mkIte(hasFixedExp, mkIte(hasMaxExp, maxExp, minExp.cast()), packedBiasedExp)
 
     // Significand
     val packedSigWidth = uf.sort.significandBits.toInt() - 1
@@ -92,7 +93,7 @@ fun <Fp : KFpSort> KContext.pack(uf: UnpackedFp<Fp>): KFpFromBvExpr<Fp> {
     // The amount needed to normalise the number
     val subnormalShiftAmount = max(
         mkBvSubExpr(minNormalExponent(uf.sort), uf.exponent), // minNormalExponent - exponent
-        zeros(uf.exponent.sort.sizeBits)
+        bvZero(uf.exponent.sort.sizeBits).cast()
     )
 
 
@@ -110,7 +111,7 @@ fun <Fp : KFpSort> KContext.pack(uf: UnpackedFp<Fp>): KFpFromBvExpr<Fp> {
     val nanBv = leadingOne(packedSigWidth)
     val packedSig = mkIte(
         hasFixedSignificand, mkIte(
-            uf.isNaN, nanBv, zero(packedSigWidth)
+            uf.isNaN, nanBv, bvZero(packedSigWidth.toUInt()).cast()
         ), mkIte(
             inNormalRange, dropLeadingOne, correctedSubnormal
         )

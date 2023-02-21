@@ -9,6 +9,9 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.symfpu.UnpackedFp.Companion.iteOp
 import org.ksmt.symfpu.UnpackedFp.Companion.makeInf
 import org.ksmt.symfpu.UnpackedFp.Companion.makeZero
+import org.ksmt.utils.BvUtils.bvOne
+import org.ksmt.utils.BvUtils.bvZero
+import org.ksmt.utils.cast
 
 fun <Fp : KFpSort> KContext.round(
     uf: UnpackedFp<KFpSort>, roundingMode: KExpr<KFpRoundingModeSort>, format: Fp
@@ -52,14 +55,14 @@ fun <Fp : KFpSort> KContext.round(
     } else {
         mkBvExtractExpr(extractedSignificandWidth - 1, 0, subnormalAmount)
     }
-    val guardLocation = mkBvShiftLeftExpr(one(targetSignificandWidth.toUInt()), subnormalShiftPrepared)
-    val stickyMask = mkBvSubExpr(guardLocation, one(targetSignificandWidth.toUInt()))
+    val guardLocation = mkBvShiftLeftExpr(bvOne(targetSignificandWidth.toUInt()).cast(), subnormalShiftPrepared)
+    val stickyMask = mkBvSubExpr(guardLocation, bvOne(targetSignificandWidth.toUInt()).cast())
 
     val subnormalGuardBit = !isAllZeros(mkBvAndExpr(extractedSignificand, guardLocation))
     val subnormalStickyBit = mkOr(guardBit, stickyBit, !isAllZeros(mkBvAndExpr(extractedSignificand, stickyMask)))
 
     // Can overflow but is handled
-    val incrementedSignificand = mkBvAddExpr(extractedSignificand, one(targetSignificandWidth.toUInt()))
+    val incrementedSignificand = mkBvAddExpr(extractedSignificand, bvOne(targetSignificandWidth.toUInt()).cast())
     val incrementedSignificandOverflow = isAllZeros(incrementedSignificand)
 
     check(incrementedSignificand.sort == leadingOne(format.significandBits.toInt()).sort)
@@ -70,7 +73,7 @@ fun <Fp : KFpSort> KContext.round(
     )
 
 
-    val incrementAmount = mkBvShiftLeftExpr(guardLocation, one(guardLocation.sort.sizeBits))
+    val incrementAmount = mkBvShiftLeftExpr(guardLocation, bvOne(guardLocation.sort.sizeBits).cast())
     val mask = mkBvOrExpr(guardLocation, stickyMask)
     val maskedSignificand = mkBvAndExpr(extractedSignificand, mkBvNotExpr(mask))
 
@@ -164,9 +167,9 @@ private fun <Fp : KFpSort> KContext.rounderSpecialCases(
     // On underflow either return 0 or minimum subnormal
     val returnZero = mkOr(
         mkEq(roundingMode, mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven)) and
-            (roundedResult.significand eq zero(roundedResult.sort.significandBits.toInt())),
+                (roundedResult.significand eq bvZero(roundedResult.sort.significandBits).cast()),
         mkEq(roundingMode, mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToAway)) and
-            (roundedResult.significand eq zero(roundedResult.sort.significandBits.toInt())),
+                (roundedResult.significand eq bvZero(roundedResult.sort.significandBits).cast()),
         mkEq(roundingMode, mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardZero)),
         mkAnd(
             mkEq(roundingMode, mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardPositive)), roundedResult.sign
@@ -224,3 +227,6 @@ private fun KContext.roundingDecision(
         !knownRoundDown, mkOr(roundUpRNE, roundUpRNA, roundUpRTP, roundUpRTN, roundUpRTZ)
     )
 }
+
+
+
