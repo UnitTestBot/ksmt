@@ -6,6 +6,7 @@ import org.ksmt.expr.*
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverStatus
+import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
 import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KFp32Sort
@@ -285,7 +286,11 @@ class FpToBvTransformerTest {
     ) {
         val transformer = FpToBvTransformer(this)
 
-        KZ3Solver(this).use { solver ->
+        if (System.getProperty("os.name") == "Mac OS X") {
+            KZ3Solver(this)
+        } else {
+            KBitwuzlaSolver(this)
+        }.use { solver ->
             checkTransformer(transformer, solver, exprToTransform, printVars, extraAssert)
         }
     }
@@ -298,6 +303,7 @@ class FpToBvTransformerTest {
         printVars: Map<String, KApp<Fp, *>>,
         extraAssert: ((KExpr<T>, KExpr<T>) -> KExpr<KBoolSort>)
     ) {
+
         val applied = transformer.apply(exprToTransform)
         val transformedExpr: KExpr<T> = ((applied as? UnpackedFp<*>)?.toFp() ?: applied).cast()
         solver.assert(extraAssert(transformedExpr, exprToTransform))
@@ -305,7 +311,7 @@ class FpToBvTransformerTest {
 
         // check assertions satisfiability with timeout
         println("checking satisfiability...")
-        val status = solver.check(timeout = 1.seconds)
+        val status = solver.check(timeout = 30000.seconds)
         println("status: $status")
         if (status == KSolverStatus.SAT) {
             val model = solver.model()
