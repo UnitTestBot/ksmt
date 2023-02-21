@@ -1,7 +1,6 @@
 package org.ksmt.symfpu
 
 import org.ksmt.KContext
-import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
@@ -89,7 +88,7 @@ private fun <Fp : KFpSort> KContext.arithmeticMultiply(
 }
 
 private fun KContext.conditionalLeftShiftOne(
-    condition: KEqExpr<KBvSort>, expr: KExpr<KBvSort>
+    condition: KExpr<KBoolSort>, expr: KExpr<KBvSort>
 ) = mkIte(
     condition, expr, mkBvShiftLeftExpr(expr, bvOne(expr.sort.sizeBits).cast())
 )

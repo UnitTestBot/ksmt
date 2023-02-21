@@ -1,6 +1,8 @@
 package org.ksmt.symfpu
 
 import org.ksmt.KContext
+import org.ksmt.cache.hash
+import org.ksmt.cache.structurallyEqual
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.printer.ExpressionPrinter
 import org.ksmt.expr.transformer.KTransformerBase
@@ -50,6 +52,12 @@ class UnpackedFp<Fp : KFpSort> private constructor(
         append("sign: ${sign}, exponent: $exponent, significand: $significand")
         append(")")
     }
+
+    override fun internEquals(other: Any): Boolean =
+        structurallyEqual(other) { listOf(sign, exponent, significand, isNaN, isInf, isZero) }
+
+    override fun internHashCode(): Int = hash(listOf(sign, exponent, significand, isNaN, isInf, isZero))
+
 
     val isNegative = sign
     val isNegativeInfinity by lazy {

@@ -2,7 +2,6 @@ package org.ksmt.symfpu
 
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.KFpFromBvExpr
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
@@ -63,7 +62,7 @@ fun <Fp : KFpSort> KContext.unpack(
     )
 }
 
-fun <Fp : KFpSort> KContext.pack(uf: UnpackedFp<Fp>): KFpFromBvExpr<Fp> {
+fun <Fp : KFpSort> KContext.pack(uf: UnpackedFp<Fp>): KExpr<Fp> {
     // Sign
     val packedSign = uf.signBv()
     // Exponent

@@ -306,12 +306,13 @@ class FpToBvTransformerTest {
 
         val applied = transformer.apply(exprToTransform)
         val transformedExpr: KExpr<T> = ((applied as? UnpackedFp<*>)?.toFp() ?: applied).cast()
-        solver.assert(extraAssert(transformedExpr, exprToTransform))
+//        solver.assert(extraAssert(transformedExpr, exprToTransform))
         solver.assert(transformedExpr neq exprToTransform.cast())
 
         // check assertions satisfiability with timeout
         println("checking satisfiability...")
-        val status = solver.check(timeout = 30000.seconds)
+        val status =
+            solver.checkWithAssumptions(listOf(extraAssert(transformedExpr, exprToTransform)), timeout = 30000.seconds)
         println("status: $status")
         if (status == KSolverStatus.SAT) {
             val model = solver.model()

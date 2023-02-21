@@ -2,7 +2,6 @@ package org.ksmt.symfpu
 
 import org.ksmt.KContext
 import org.ksmt.expr.KBitVecValue
-import org.ksmt.expr.KBvConcatExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
@@ -53,7 +52,7 @@ fun KContext.bvZero() = mkBv(0, 1u)
 
 fun <T : KBvSort, S : KBvSort, F : KBvSort> KContext.mkBvConcatExpr(
     arg0: KExpr<T>, arg1: KExpr<S>, arg2: KExpr<F>
-): KBvConcatExpr = mkBvConcatExpr(mkBvConcatExpr(arg0, arg1), arg2)
+) = mkBvConcatExpr(mkBvConcatExpr(arg0, arg1), arg2)
 
 fun KContext.leadingOne(width: Int): KBitVecValue<KBvSort> {
     val binaryValue = "1" + "0".repeat(width - 1)

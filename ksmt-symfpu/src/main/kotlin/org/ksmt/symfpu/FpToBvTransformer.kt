@@ -78,7 +78,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     }
 
     private fun <Fp : KFpSort, R : KSort> transformHelper(
-        expr: KApp<R, KExpr<Fp>>, f: (UnpackedFp<Fp>, UnpackedFp<Fp>) -> KExpr<R>
+        expr: KApp<R, Fp>, f: (UnpackedFp<Fp>, UnpackedFp<Fp>) -> KExpr<R>
     ): KExpr<R> =
         transformExprAfterTransformed(expr, expr.args) { args ->
             val (left, right) = argsToTypedPair(args)

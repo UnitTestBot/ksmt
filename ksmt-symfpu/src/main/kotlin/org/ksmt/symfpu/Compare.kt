@@ -1,9 +1,7 @@
 package org.ksmt.symfpu
 
 import org.ksmt.KContext
-import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.KOrExpr
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.symfpu.UnpackedFp.Companion.iteOp
@@ -41,11 +39,11 @@ internal fun <Fp : KFpSort> KContext.lessOrEqual(
 private fun <Fp : KFpSort> KContext.lessHelper(
     left: UnpackedFp<Fp>,
     right: UnpackedFp<Fp>,
-    infCase: KOrExpr,
-    zeroCase: KOrExpr,
+    infCase: KExpr<KBoolSort>,
+    zeroCase: KExpr<KBoolSort>,
     positiveCaseSignificandComparison: KExpr<KBoolSort> = mkBvUnsignedLessExpr(left.significand, right.significand),
     negativeCaseSignificandComparison: KExpr<KBoolSort> = mkBvUnsignedLessExpr(right.significand, left.significand),
-): KAndExpr {
+): KExpr<KBoolSort> {
     val neitherNan = left.isNaN.not() and right.isNaN.not()
 
     // Infinities are bigger than everything but themselves
