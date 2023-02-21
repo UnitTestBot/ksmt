@@ -329,19 +329,82 @@ open class KBitwuzlaExprInternalizer(
     override fun transform(expr: KFalse) = expr.transform { bitwuzlaCtx.falseTerm }
 
     override fun <T : KSort> transform(expr: KEqExpr<T>) = with(expr) {
-        transform(lhs, rhs, BitwuzlaKind.BITWUZLA_KIND_EQUAL)
+        transform(lhs, rhs) { l: BitwuzlaTerm, r: BitwuzlaTerm ->
+            mkEqTerm(lhs.sort, l, r)
+        }
     }
 
     override fun <T : KSort> transform(expr: KDistinctExpr<T>) = with(expr) {
         transformList(args) { args: Array<BitwuzlaTerm> ->
-            Native.bitwuzlaMkTerm(
-                bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, args.toLongArray()
-            )
+            mkDistinctTerm(expr.args.first().sort, args)
         }
     }
 
     override fun <T : KSort> transform(expr: KIteExpr<T>) = with(expr) {
-        transform(condition, trueBranch, falseBranch, BitwuzlaKind.BITWUZLA_KIND_ITE)
+        transform(condition, trueBranch, falseBranch) { c: BitwuzlaTerm, t: BitwuzlaTerm, f: BitwuzlaTerm ->
+            mkIteTerm(sort, c, t, f)
+        }
+    }
+
+    private fun mkIteTerm(sort: KSort, c: BitwuzlaTerm, t: BitwuzlaTerm, f: BitwuzlaTerm): BitwuzlaTerm {
+        if (sort is KArraySort<*, *>) {
+            val tKind = Native.bitwuzlaTermGetBitwuzlaKind(t)
+            val fKind = Native.bitwuzlaTermGetBitwuzlaKind(f)
+            if (tKind == BitwuzlaKind.BITWUZLA_KIND_LAMBDA || fKind == BitwuzlaKind.BITWUZLA_KIND_LAMBDA) {
+                return mkArrayLambdaTerm(sort.domain) { lambdaVar ->
+                    val tValue = mkArraySelectTerm(tKind, t, lambdaVar)
+                    val fValue = mkArraySelectTerm(fKind, f, lambdaVar)
+
+                    Native.bitwuzlaMkTerm3(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_ITE, c, tValue, fValue)
+                }
+            }
+        }
+        return Native.bitwuzlaMkTerm3(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_ITE, c, t, f)
+    }
+
+    private fun mkEqTerm(sort: KSort, l: BitwuzlaTerm, r: BitwuzlaTerm): BitwuzlaTerm {
+        if (sort is KArraySort<*, *>) {
+            val lKind = Native.bitwuzlaTermGetBitwuzlaKind(l)
+            val rKind = Native.bitwuzlaTermGetBitwuzlaKind(r)
+            if (lKind == BitwuzlaKind.BITWUZLA_KIND_LAMBDA || rKind == BitwuzlaKind.BITWUZLA_KIND_LAMBDA) {
+                var lWrapped = l
+                if (lKind != BitwuzlaKind.BITWUZLA_KIND_LAMBDA) {
+                    lWrapped = mkArrayLambdaTerm(sort.domain) { mkArraySelectTerm(lKind, l, it) }
+                }
+
+                var rWrapped = r
+                if (rKind != BitwuzlaKind.BITWUZLA_KIND_LAMBDA) {
+                    rWrapped = mkArrayLambdaTerm(sort.domain) { mkArraySelectTerm(lKind, r, it) }
+                }
+
+                return Native.bitwuzlaMkTerm2(
+                    bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lWrapped, rWrapped
+                )
+            }
+        }
+        return Native.bitwuzlaMkTerm2(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, l, r)
+    }
+
+    private fun mkDistinctTerm(sort: KSort, args: Array<BitwuzlaTerm>): BitwuzlaTerm {
+        if (sort is KArraySort<*, *>) {
+            val kinds = args.map { Native.bitwuzlaTermGetBitwuzlaKind(it) }
+            if (kinds.any { it == BitwuzlaKind.BITWUZLA_KIND_LAMBDA }) {
+                val wrappedArgs = args.zip(kinds) { arg, kind ->
+                    if (kind != BitwuzlaKind.BITWUZLA_KIND_LAMBDA) {
+                        mkArrayLambdaTerm(sort.domain) { mkArraySelectTerm(kind, arg, it) }
+                    } else {
+                        arg
+                    }
+                }
+
+                return Native.bitwuzlaMkTerm(
+                    bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, wrappedArgs.toLongArray()
+                )
+            }
+        }
+        return Native.bitwuzlaMkTerm(
+            bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, args.toLongArray()
+        )
     }
 
     override fun transform(expr: KBitVec1Value) = with(expr) {
@@ -618,12 +681,39 @@ open class KBitwuzlaExprInternalizer(
         TODO("no direct support for $expr")
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) = with(expr) {
-        transform(array, index, value, BitwuzlaKind.BITWUZLA_KIND_ARRAY_STORE)
+        transform(array, index, value) { a: BitwuzlaTerm, i: BitwuzlaTerm, v: BitwuzlaTerm ->
+            if (Native.bitwuzlaTermGetBitwuzlaKind(a) == BitwuzlaKind.BITWUZLA_KIND_LAMBDA) {
+                mkArrayLambdaTerm(index.sort) {
+                    val condition = Native.bitwuzlaMkTerm2(
+                        bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, it, i
+                    )
+
+                    val nestedValue = Native.bitwuzlaMkTerm2(
+                        bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, a, i
+                    )
+
+                    Native.bitwuzlaMkTerm3(
+                        bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_ITE, condition, v, nestedValue
+                    )
+                }
+            } else {
+                Native.bitwuzlaMkTerm3(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_ARRAY_STORE, a, i, v)
+            }
+        }
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>) = with(expr) {
-        transform(array, index, BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT)
+        transform(array, index) { a: BitwuzlaTerm, i: BitwuzlaTerm ->
+            mkArraySelectTerm(Native.bitwuzlaTermGetBitwuzlaKind(a), a, i)
+        }
     }
+
+    private fun mkArraySelectTerm(arrayKind: BitwuzlaKind, array: BitwuzlaTerm, idx: BitwuzlaTerm): BitwuzlaTerm =
+        if (arrayKind == BitwuzlaKind.BITWUZLA_KIND_LAMBDA) {
+            Native.bitwuzlaMkTerm2(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, array, idx)
+        } else {
+            Native.bitwuzlaMkTerm2(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT, array, idx)
+        }
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>) = with(expr) {
         transform(value) { value: BitwuzlaTerm ->
@@ -631,8 +721,22 @@ open class KBitwuzlaExprInternalizer(
         }
     }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) =
-        expr.internalizeArrayLambdaQuantifier()
+    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) = expr.transform {
+        val (_, internalizedBounds, internalizedBody) = expr.ctx.internalizeQuantifierBody(
+            listOf(expr.indexVarDecl), expr.body
+        )
+        mkLambdaTerm(internalizedBounds.single(), internalizedBody)
+    }
+
+    private inline fun mkArrayLambdaTerm(boundVarSort: KSort, body: (BitwuzlaTerm) -> BitwuzlaTerm): BitwuzlaTerm {
+        val varSort = boundVarSort.internalizeSort()
+        val boundVar = Native.bitwuzlaMkVar(bitwuzlaCtx.bitwuzla, varSort, "x")
+        val lambdaBody = body(boundVar)
+        return mkLambdaTerm(boundVar, lambdaBody)
+    }
+
+    private fun mkLambdaTerm(boundVar: BitwuzlaSort, body: BitwuzlaTerm): BitwuzlaTerm =
+        Native.bitwuzlaMkTerm2(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_LAMBDA, boundVar, body)
 
     override fun transform(
         expr: KExistentialQuantifier
@@ -924,26 +1028,6 @@ open class KBitwuzlaExprInternalizer(
 
         val args = (internalizedBounds + internalizedBody).toTypedArray()
         internalizer(args)
-    }
-
-    fun <T : KArrayLambda<*, *>> T.internalizeArrayLambdaQuantifier(): T = transform {
-        val (_, internalizedBounds, internalizedBody) = ctx.internalizeQuantifierBody(listOf(indexVarDecl), body)
-
-        val bodyKind = Native.bitwuzlaTermGetBitwuzlaKind(internalizedBody)
-        if (bodyKind == BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT) {
-            val selectArgs = Native.bitwuzlaTermGetChildren(internalizedBody)
-            if (selectArgs[1] == internalizedBounds.single()) {
-                /*
-                 Recognize and support special case of lambda expressions
-                 which can be produced by [KBitwuzlaExprConverter].
-
-                 (lambda (i) (select array i)) -> array
-                 */
-                return@transform selectArgs[0]
-            }
-        }
-
-        throw TryRewriteExpressionUsingAxioms("Array lambda expressions are not supported in Bitwuzla")
     }
 
     fun KContext.internalizeQuantifierBody(
