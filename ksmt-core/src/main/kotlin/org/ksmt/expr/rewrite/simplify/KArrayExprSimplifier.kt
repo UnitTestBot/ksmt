@@ -194,20 +194,22 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         TODO()
     }
 
+    fun <D : KSort, R : KSort> preprocessArraySelect(expr: KArraySelect<D, R>): SimplifierFlatArraySelectExpr<D, R> {
+        val array = flatStores(expr.array)
+        return SimplifierFlatArraySelectExpr(
+            ctx,
+            original = expr.array,
+            baseArray = array.base,
+            storedValues = array.values,
+            storedIndices = array.indices,
+            index = expr.index
+        )
+    }
+
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> =
         simplifyExpr(
             expr = expr,
-            preprocess = {
-                val array = flatStores(expr.array)
-                SimplifierFlatArraySelectExpr(
-                    ctx,
-                    original = expr.array,
-                    baseArray = array.base,
-                    storedValues = array.values,
-                    storedIndices = array.indices,
-                    index = expr.index
-                )
-            }
+            preprocess = { preprocessArraySelect(expr) }
         )
 
     override fun <D0 : KSort, D1 : KSort, R : KSort> transform(expr: KArray2Select<D0, D1, R>): KExpr<R> {
@@ -461,7 +463,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
      * Auxiliary expression to handle select with base array expanded.
      * @see [SimplifierAuxExpression]
      * */
-    private class SimplifierFlatArraySelectExpr<D : KSort, R : KSort>(
+    class SimplifierFlatArraySelectExpr<D : KSort, R : KSort>(
         ctx: KContext,
         val original: KExpr<KArraySort<D, R>>,
         val baseArray: KExpr<KArraySort<D, R>>,
