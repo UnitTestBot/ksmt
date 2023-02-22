@@ -376,6 +376,7 @@ import org.ksmt.expr.rewrite.simplify.simplifyRealToInt
 import org.ksmt.expr.rewrite.simplify.simplifyXor
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv16Sort
 import org.ksmt.sort.KBv1Sort
@@ -792,22 +793,22 @@ open class KContext(
         KArraySelect(this, array, index)
     }.cast()
 
-    private val arrayConstCache = mkAstInterner<KArrayConst<out KSort, out KSort>>()
+    private val arrayConstCache = mkAstInterner<KArrayConst<out KArraySortBase<KSort>, out KSort>>()
 
-    fun <D : KSort, R : KSort> mkArrayConst(
-        arraySort: KArraySort<D, R>,
+    fun <A : KArraySortBase<R>, R : KSort> mkArrayConst(
+        arraySort: A,
         value: KExpr<R>
-    ): KArrayConst<D, R> = arrayConstCache.createIfContextActive {
+    ): KArrayConst<A, R> = arrayConstCache.createIfContextActive {
         ensureContextMatch(arraySort, value)
         KArrayConst(this, arraySort, value)
     }.cast()
 
-    private val functionAsArrayCache = mkAstInterner<KFunctionAsArray<out KSort, out KSort>>()
+    private val functionAsArrayCache = mkAstInterner<KFunctionAsArray<out KArraySortBase<KSort>, out KSort>>()
 
-    fun <D : KSort, R : KSort> mkFunctionAsArray(function: KFuncDecl<R>): KFunctionAsArray<D, R> =
+    fun <A : KArraySortBase<R>, R : KSort> mkFunctionAsArray(sort: A, function: KFuncDecl<R>): KFunctionAsArray<A, R> =
         functionAsArrayCache.createIfContextActive {
             ensureContextMatch(function)
-            KFunctionAsArray<D, R>(this, function)
+            KFunctionAsArray(this, sort, function)
         }.cast()
 
     private val arrayLambdaCache = mkAstInterner<KArrayLambda<out KSort, out KSort>>()
