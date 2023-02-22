@@ -375,6 +375,9 @@ import org.ksmt.expr.rewrite.simplify.simplifyRealToFpExpr
 import org.ksmt.expr.rewrite.simplify.simplifyRealToInt
 import org.ksmt.expr.rewrite.simplify.simplifyXor
 import org.ksmt.sort.KArithSort
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
@@ -488,12 +491,41 @@ open class KContext(
 
     fun mkBoolSort(): KBoolSort = boolSort
 
-    private val arraySortCache = mkCache<Pair<KSort, KSort>, KArraySort<*, *>>(operationMode)
+    private val arraySortCache = mkCache<KArraySort<*, *>, KArraySort<*, *>>(operationMode)
+    private val array2SortCache = mkCache<KArray2Sort<*, *, *>, KArray2Sort<*, *, *>>(operationMode)
+    private val array3SortCache = mkCache<KArray3Sort<*, *, *, *>, KArray3Sort<*, *, *, *>>(operationMode)
+    private val arrayNSortCache = mkCache<KArrayNSort<*>, KArrayNSort<*>>(operationMode)
 
     fun <D : KSort, R : KSort> mkArraySort(domain: D, range: R): KArraySort<D, R> =
         ensureContextActive {
             ensureContextMatch(domain, range)
-            arraySortCache.getOrPut(domain to range) { KArraySort(this, domain, range) }.uncheckedCast()
+            val sort = KArraySort(this, domain, range)
+            (arraySortCache.putIfAbsent(sort, sort) ?: sort).uncheckedCast()
+        }
+
+    fun <D0 : KSort, D1 : KSort, R : KSort> mkArray2Sort(domain0: D0, domain1: D1, range: R): KArray2Sort<D0, D1, R> =
+        ensureContextActive {
+            ensureContextMatch(domain0, domain1, range)
+            val sort = KArray2Sort(this, domain0, domain1, range)
+            (array2SortCache.putIfAbsent(sort, sort) ?: sort).uncheckedCast()
+        }
+
+    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArray3Sort(
+        domain0: D0, domain1: D1, domain2: D2, range: R
+    ): KArray3Sort<D0, D1, D2, R> =
+        ensureContextActive {
+            ensureContextMatch(domain0, domain1, domain2, range)
+            val sort = KArray3Sort(this, domain0, domain1, domain2, range)
+            (array3SortCache.putIfAbsent(sort, sort) ?: sort).uncheckedCast()
+        }
+
+    fun <R : KSort> mkArrayNSort(domain: List<KSort>, range: R): KArrayNSort<R> =
+        ensureContextActive {
+            ensureContextMatch(range)
+            ensureContextMatch(domain)
+
+            val sort = KArrayNSort(this, domain, range)
+            (arrayNSortCache.putIfAbsent(sort, sort) ?: sort).uncheckedCast()
         }
 
     private val intSortCache by lazy {
