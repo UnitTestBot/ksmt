@@ -17,6 +17,7 @@ import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KInterpretedValue
+import org.ksmt.expr.printer.ExpressionPrinter
 import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KArray2Sort
@@ -206,23 +207,42 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         )
     }
 
+    fun <D0 : KSort, D1 : KSort, R : KSort> preprocessArraySelect(
+        expr: KArray2Select<D0, D1, R>
+    ): SimplifierFlatArray2SelectExpr<D0, D1, R> = TODO()
+
+    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> preprocessArraySelect(
+        expr: KArray3Select<D0, D1, D2, R>
+    ): SimplifierFlatArray3SelectExpr<D0, D1, D2, R> = TODO()
+
+    fun <R : KSort> preprocessArraySelect(
+        expr: KArrayNSelect<R>
+    ): SimplifierFlatArrayNSelectExpr<R> = TODO()
+
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> =
         simplifyExpr(
             expr = expr,
             preprocess = { preprocessArraySelect(expr) }
         )
 
-    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(expr: KArray2Select<D0, D1, R>): KExpr<R> {
-        TODO()
-    }
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(expr: KArray2Select<D0, D1, R>): KExpr<R>  =
+        simplifyExpr(
+            expr = expr,
+            preprocess = { preprocessArraySelect(expr) }
+        )
 
-    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(expr: KArray3Select<D0, D1, D2, R>): KExpr<R> {
-        TODO()
-    }
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Select<D0, D1, D2, R>
+    ): KExpr<R> = simplifyExpr(
+        expr = expr,
+        preprocess = { preprocessArraySelect(expr) }
+    )
 
-    override fun <R : KSort> transform(expr: KArrayNSelect<R>): KExpr<R> {
-        TODO()
-    }
+    override fun <R : KSort> transform(expr: KArrayNSelect<R>): KExpr<R>  =
+        simplifyExpr(
+            expr = expr,
+            preprocess = { preprocessArraySelect(expr) }
+        )
 
     @Suppress("ComplexMethod", "LoopWithTooManyJumpStatements")
     private fun <D : KSort, R : KSort> transform(expr: SimplifierFlatArrayStoreExpr<D, R>): KExpr<KArraySort<D, R>> =
@@ -344,7 +364,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
      * Usually this will be enough and we will not produce many irrelevant array store expressions.
      * */
     private fun <D : KSort, R : KSort> transform(expr: SimplifierFlatArraySelectExpr<D, R>): KExpr<R> =
-        simplifyExpr(expr, expr.args) { allIndices ->
+        simplifyExpr(expr, listOf(expr.index) + expr.storedIndices) { allIndices ->
             val index = allIndices.first()
             val arrayIndices = allIndices.subList(fromIndex = 1, toIndex = allIndices.size)
 
@@ -463,28 +483,105 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
      * Auxiliary expression to handle select with base array expanded.
      * @see [SimplifierAuxExpression]
      * */
-    class SimplifierFlatArraySelectExpr<D : KSort, R : KSort>(
+    sealed class SimplifierFlatArraySelectBaseExpr<A : KArraySortBase<R>, R : KSort>(
         ctx: KContext,
-        val original: KExpr<KArraySort<D, R>>,
-        val baseArray: KExpr<KArraySort<D, R>>,
-        val storedIndices: List<KExpr<D>>,
-        val storedValues: List<KExpr<R>>,
-        val index: KExpr<D>,
-    ) : KApp<R, D>(ctx) {
-
-        override val args: List<KExpr<D>> =
-            listOf(index) + storedIndices
-
+        val original: KExpr<A>,
+        val baseArray: KExpr<A>,
+        val storedValues: List<KExpr<R>>
+    ) : KExpr<R>(ctx) {
         override val sort: R
             get() = baseArray.sort.range
 
-        override val decl: KDecl<R>
-            get() = ctx.mkArraySelectDecl(baseArray.sort)
+        override fun internEquals(other: Any): Boolean =
+            error("Interning is not used for Aux expressions")
 
+        override fun internHashCode(): Int =
+            error("Interning is not used for Aux expressions")
+
+        override fun print(printer: ExpressionPrinter) {
+            original.print(printer)
+        }
+
+        abstract fun changeBaseArray(newBaseArray: KExpr<A>): SimplifierFlatArraySelectBaseExpr<A, R>
+    }
+
+    class SimplifierFlatArraySelectExpr<D : KSort, R : KSort>(
+        ctx: KContext,
+        original: KExpr<KArraySort<D, R>>,
+        baseArray: KExpr<KArraySort<D, R>>,
+        val storedIndices: List<KExpr<D>>,
+        storedValues: List<KExpr<R>>,
+        val index: KExpr<D>,
+    ) : SimplifierFlatArraySelectBaseExpr<KArraySort<D, R>, R>(ctx, original, baseArray, storedValues) {
         override fun accept(transformer: KTransformerBase): KExpr<R> {
             transformer as KArrayExprSimplifier
             return transformer.transform(this)
         }
+
+        override fun changeBaseArray(newBaseArray: KExpr<KArraySort<D, R>>) =
+            SimplifierFlatArraySelectExpr(ctx, original, newBaseArray, storedIndices, storedValues, index)
+    }
+
+    class SimplifierFlatArray2SelectExpr<D0 : KSort, D1 : KSort, R : KSort>(
+        ctx: KContext,
+        original: KExpr<KArray2Sort<D0, D1, R>>,
+        baseArray: KExpr<KArray2Sort<D0, D1, R>>,
+        val storedIndices0: List<KExpr<D0>>,
+        val storedIndices1: List<KExpr<D1>>,
+        storedValues: List<KExpr<R>>,
+        val index0: KExpr<D0>,
+        val index1: KExpr<D1>,
+    ) : SimplifierFlatArraySelectBaseExpr<KArray2Sort<D0, D1, R>, R>(ctx, original, baseArray, storedValues) {
+        override fun accept(transformer: KTransformerBase): KExpr<R> {
+            transformer as KArrayExprSimplifier
+            return transformer.transform(this)
+        }
+
+        override fun changeBaseArray(newBaseArray: KExpr<KArray2Sort<D0, D1, R>>) =
+            SimplifierFlatArray2SelectExpr(
+                ctx, original, newBaseArray, storedIndices0, storedIndices1, storedValues, index0, index1
+            )
+    }
+
+    class SimplifierFlatArray3SelectExpr<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort>(
+        ctx: KContext,
+        original: KExpr<KArray3Sort<D0, D1, D2, R>>,
+        baseArray: KExpr<KArray3Sort<D0, D1, D2, R>>,
+        val storedIndices0: List<KExpr<D0>>,
+        val storedIndices1: List<KExpr<D1>>,
+        val storedIndices2: List<KExpr<D2>>,
+        storedValues: List<KExpr<R>>,
+        val index0: KExpr<D0>,
+        val index1: KExpr<D1>,
+        val index2: KExpr<D2>,
+    ) : SimplifierFlatArraySelectBaseExpr<KArray3Sort<D0, D1, D2, R>, R>(ctx, original, baseArray, storedValues) {
+        override fun accept(transformer: KTransformerBase): KExpr<R> {
+            transformer as KArrayExprSimplifier
+            return transformer.transform(this)
+        }
+
+        override fun changeBaseArray(newBaseArray: KExpr<KArray3Sort<D0, D1, D2, R>>) =
+            SimplifierFlatArray3SelectExpr(
+                ctx, original, newBaseArray, storedIndices0, storedIndices1, storedIndices2,
+                storedValues, index0, index1, index2
+            )
+    }
+
+    class SimplifierFlatArrayNSelectExpr<R : KSort>(
+        ctx: KContext,
+        original: KExpr<KArrayNSort<R>>,
+        baseArray: KExpr<KArrayNSort<R>>,
+        val storedIndices: List<List<KExpr<*>>>,
+        storedValues: List<KExpr<R>>,
+        val indices: List<KExpr<*>>,
+    ) : SimplifierFlatArraySelectBaseExpr<KArrayNSort<R>, R>(ctx, original, baseArray, storedValues) {
+        override fun accept(transformer: KTransformerBase): KExpr<R> {
+            transformer as KArrayExprSimplifier
+            return transformer.transform(this)
+        }
+
+        override fun changeBaseArray(newBaseArray: KExpr<KArrayNSort<R>>) =
+            SimplifierFlatArrayNSelectExpr(ctx, original, newBaseArray, storedIndices, storedValues, indices)
     }
 
     /**

@@ -2,7 +2,11 @@ package org.ksmt.solver.model
 
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
+import org.ksmt.decl.KFuncDecl
+import org.ksmt.expr.KArray2Select
+import org.ksmt.expr.KArray3Select
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArrayNSelect
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KExistentialQuantifier
@@ -13,6 +17,10 @@ import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector.Companion.collectUninterpretedDeclarations
+import org.ksmt.expr.rewrite.simplify.KArrayExprSimplifier.SimplifierFlatArray2SelectExpr
+import org.ksmt.expr.rewrite.simplify.KArrayExprSimplifier.SimplifierFlatArray3SelectExpr
+import org.ksmt.expr.rewrite.simplify.KArrayExprSimplifier.SimplifierFlatArrayNSelectExpr
+import org.ksmt.expr.rewrite.simplify.KArrayExprSimplifier.SimplifierFlatArraySelectBaseExpr
 import org.ksmt.expr.rewrite.simplify.KArrayExprSimplifier.SimplifierFlatArraySelectExpr
 import org.ksmt.expr.rewrite.simplify.KExprSimplifier
 import org.ksmt.expr.rewrite.simplify.simplifyExpr
@@ -54,7 +62,38 @@ open class KModelEvaluator(
     override fun <D : KSort, R : KSort> preprocessArraySelect(
         expr: KArraySelect<D, R>
     ): SimplifierFlatArraySelectExpr<D, R> =
-        super.preprocessArraySelect(expr).let { ctx.tryEliminateFunctionAsArray(it) }
+        super.preprocessArraySelect(expr).let {
+            ctx.tryEliminateFunctionAsArray(it) { func ->
+                func.apply(listOf(it.index))
+            }
+        }.uncheckedCast()
+
+    override fun <D0 : KSort, D1 : KSort, R : KSort> preprocessArraySelect(
+        expr: KArray2Select<D0, D1, R>
+    ): SimplifierFlatArray2SelectExpr<D0, D1, R> =
+        super.preprocessArraySelect(expr).let {
+            ctx.tryEliminateFunctionAsArray(it) { func ->
+                func.apply(listOf(it.index0, it.index1))
+            }
+        }.uncheckedCast()
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> preprocessArraySelect(
+        expr: KArray3Select<D0, D1, D2, R>
+    ): SimplifierFlatArray3SelectExpr<D0, D1, D2, R> =
+        super.preprocessArraySelect(expr).let {
+            ctx.tryEliminateFunctionAsArray(it) { func ->
+                func.apply(listOf(it.index0, it.index1, it.index2))
+            }
+        }.uncheckedCast()
+
+    override fun <R : KSort> preprocessArraySelect(
+        expr: KArrayNSelect<R>
+    ): SimplifierFlatArrayNSelectExpr<R> =
+        super.preprocessArraySelect(expr).let {
+            ctx.tryEliminateFunctionAsArray(it) { func ->
+                func.apply(it.indices)
+            }
+        }.uncheckedCast()
 
     override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KFunctionAsArray<A, R>): KExpr<A> {
         // No way to evaluate f when it is quantified in (as-array f)
@@ -317,36 +356,30 @@ open class KModelEvaluator(
      * In case of array select, we can avoid such expansion and replace
      * (select (as-array f) i) with (f i).
      * */
-    private fun <D : KSort, R : KSort> KContext.tryEliminateFunctionAsArray(
-        expr: SimplifierFlatArraySelectExpr<D, R>
-    ): SimplifierFlatArraySelectExpr<D, R> {
+    private inline fun <A : KArraySortBase<R>, R : KSort> KContext.tryEliminateFunctionAsArray(
+        expr: SimplifierFlatArraySelectBaseExpr<A, R>,
+        evalFunction: KContext.(KFuncDecl<R>) -> KExpr<R>
+    ): SimplifierFlatArraySelectBaseExpr<A, R> {
         var base = expr.baseArray
 
         // If base array in uninterpreted, try to replace it with model value
-        if (base is KConst<KArraySort<D, R>>) {
+        if (base is KConst<A>) {
             val interpretation = model.interpretation(base.decl) ?: return expr
             if (interpretation.entries.isNotEmpty()) return expr
             base = interpretation.default ?: return expr
         }
 
-        if (base !is KFunctionAsArray<KArraySort<D, R>, *>) return expr
+        if (base !is KFunctionAsArray<A, *>) return expr
 
         /**
          * Replace as-array with (const (f i)) since:
          * 1. we may have parent stores here and we need an array expression
          * 2. (select (const (f i)) i) ==> (f i)
          * */
-        val defaultSelectValue: KExpr<R> = base.function.apply(listOf(expr.index)).uncheckedCast()
+        val defaultSelectValue = evalFunction(base.function.uncheckedCast())
         val newArrayBase = mkArrayConst(base.sort, defaultSelectValue)
 
-        return SimplifierFlatArraySelectExpr(
-            ctx = ctx,
-            original = expr.original,
-            baseArray = newArrayBase,
-            storedIndices = expr.storedIndices,
-            storedValues = expr.storedValues,
-            index = expr.index
-        )
+        return expr.changeBaseArray(newArrayBase)
     }
 
     private fun <T : KSort> completeModelValue(sort: T): KExpr<T> {
