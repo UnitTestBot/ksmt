@@ -4,14 +4,21 @@ import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KArray2Lambda
+import org.ksmt.expr.KArray3Lambda
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArrayNLambda
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector.Companion.collectUninterpretedDeclarations
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.uncheckedCast
@@ -49,27 +56,60 @@ open class KExprSubstitutor(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         return transformExpr(transformedApp)
     }
 
-    override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
+    override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KFunctionAsArray<A, R>): KExpr<A> {
         val declSubstitution = declDeclSubstitution[expr.function]?.uncheckedCast() ?: expr.function
-        return transformExpr(ctx.mkFunctionAsArray(declSubstitution))
+        return transformExpr(ctx.mkFunctionAsArray(expr.sort, declSubstitution))
     }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> =
-        transformQuantifiedExpression(expr, setOf(expr.indexVarDecl), expr.body) { body, bounds ->
-            ctx.mkArrayLambda(bounds.single().uncheckedCast(), body)
-        }
+    override fun <D : KSort, R : KSort> transform(
+        expr: KArrayLambda<D, R>
+    ): KExpr<KArraySort<D, R>> = transformQuantifiedExpression(
+        expr, listOf(expr.indexVarDecl), expr.body
+    ) { body, bounds ->
+        val boundVar: KDecl<D> = bounds.single().uncheckedCast()
+        ctx.mkArrayLambda(boundVar, body)
+    }
+
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Lambda<D0, D1, R>
+    ): KExpr<KArray2Sort<D0, D1, R>> = transformQuantifiedExpression(
+        expr, listOf(expr.indexVar0Decl, expr.indexVar1Decl), expr.body
+    ) { body, bounds ->
+        val bound0: KDecl<D0> = bounds.first().uncheckedCast()
+        val bound1: KDecl<D1> = bounds.last().uncheckedCast()
+        ctx.mkArrayLambda(bound0, bound1, body)
+    }
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Lambda<D0, D1, D2, R>
+    ): KExpr<KArray3Sort<D0, D1, D2, R>>  = transformQuantifiedExpression(
+        expr, listOf(expr.indexVar0Decl, expr.indexVar1Decl, expr.indexVar2Decl), expr.body
+    ) { body, bounds ->
+        val bound0: KDecl<D0> = bounds[0].uncheckedCast()
+        val bound1: KDecl<D1> = bounds[1].uncheckedCast()
+        val bound2: KDecl<D2> = bounds[2].uncheckedCast()
+        ctx.mkArrayLambda(bound0, bound1, bound2, body)
+    }
+
+    override fun <R : KSort> transform(
+        expr: KArrayNLambda<R>
+    ): KExpr<KArrayNSort<R>> = transformQuantifiedExpression(
+        expr, expr.indexVarDeclarations, expr.body
+    ) { body, bounds ->
+        ctx.mkArrayLambda(bounds, body)
+    }
 
     override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> =
-        transformQuantifiedExpression(expr, expr.bounds.toSet(), expr.body) { body, bounds ->
-            ctx.mkExistentialQuantifier(body, bounds.toList())
+        transformQuantifiedExpression(expr, expr.bounds, expr.body) { body, bounds ->
+            ctx.mkExistentialQuantifier(body, bounds)
         }
 
     override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> =
-        transformQuantifiedExpression(expr, expr.bounds.toSet(), expr.body) { body, bounds ->
-            ctx.mkUniversalQuantifier(body, bounds.toList())
+        transformQuantifiedExpression(expr, expr.bounds, expr.body) { body, bounds ->
+            ctx.mkUniversalQuantifier(body, bounds)
         }
 
-    private val unprocessedQuantifiers = hashMapOf<KExpr<*>, Pair<Set<KDecl<*>>, KExpr<*>>>()
+    private val unprocessedQuantifiers = hashMapOf<KExpr<*>, Pair<List<KDecl<*>>, KExpr<*>>>()
 
     /**
      * Resolve quantifier bound vars shadowing.
@@ -83,9 +123,9 @@ open class KExprSubstitutor(ctx: KContext) : KNonRecursiveTransformer(ctx) {
      * */
     private inline fun <B : KSort, T: KSort> transformQuantifiedExpression(
         quantifiedExpr: KExpr<T>,
-        quantifiedVars: Set<KDecl<*>>,
+        quantifiedVars: List<KDecl<*>>,
         body: KExpr<B>,
-        crossinline quantifierBuilder: (KExpr<B>, Set<KDecl<*>>) -> KExpr<T>
+        crossinline quantifierBuilder: (KExpr<B>, List<KDecl<*>>) -> KExpr<T>
     ): KExpr<T> {
         val (unshadowedBounds, unshadowedBody) = unprocessedQuantifiers.getOrPut(quantifiedExpr) {
             resolveQuantifierShadowedVars(quantifiedVars, body)
@@ -98,9 +138,9 @@ open class KExprSubstitutor(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     }
 
     private fun <B : KSort> resolveQuantifierShadowedVars(
-        quantifiedVars: Set<KDecl<*>>,
+        quantifiedVars: List<KDecl<*>>,
         body: KExpr<B>,
-    ): Pair<Set<KDecl<*>>, KExpr<*>> {
+    ): Pair<List<KDecl<*>>, KExpr<*>> {
         val usedDeclarationsList = exprExprSubstitution.flatMap {
             collectUninterpretedDeclarations(it.key) + collectUninterpretedDeclarations(it.value)
         } + declDeclSubstitution.keys + declDeclSubstitution.values
@@ -113,7 +153,7 @@ open class KExprSubstitutor(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         }
 
         val shadowedBoundsReplacement = shadowedDeclarations.associateWith { it.freshStub() }
-        val unshadowedQuantifiedVars = quantifiedVars.mapTo(hashSetOf()) { shadowedBoundsReplacement[it] ?: it }
+        val unshadowedQuantifiedVars = quantifiedVars.map { shadowedBoundsReplacement[it] ?: it }
         val shadowedBoundRemover = KExprSubstitutor(ctx).also { remover ->
             shadowedBoundsReplacement.forEach {
                 @Suppress("UNCHECKED_CAST")

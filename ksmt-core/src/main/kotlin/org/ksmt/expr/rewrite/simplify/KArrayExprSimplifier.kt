@@ -4,8 +4,14 @@ import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KArray2Select
+import org.ksmt.expr.KArray2Store
+import org.ksmt.expr.KArray3Select
+import org.ksmt.expr.KArray3Store
 import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArrayNSelect
+import org.ksmt.expr.KArrayNStore
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KEqExpr
@@ -13,16 +19,20 @@ import org.ksmt.expr.KExpr
 import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.expr.transformer.KTransformerBase
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.uncheckedCast
 
 interface KArrayExprSimplifier : KExprSimplifierBase {
 
-    fun <D : KSort, R : KSort> simplifyEqArray(
-        lhs: KExpr<KArraySort<D, R>>,
-        rhs: KExpr<KArraySort<D, R>>
+    fun <A : KArraySortBase<R>, R : KSort> simplifyEqArray(
+        lhs: KExpr<A>,
+        rhs: KExpr<A>
     ): KExpr<KBoolSort> = with(ctx) {
         if (lhs == rhs) return trueExpr
 
@@ -172,6 +182,18 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             preprocess = { flatStores(expr) }
         )
 
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(expr: KArray2Store<D0, D1, R>): KExpr<KArray2Sort<D0, D1, R>> {
+        TODO()
+    }
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(expr: KArray3Store<D0, D1, D2, R>): KExpr<KArray3Sort<D0, D1, D2, R>> {
+        TODO()
+    }
+
+    override fun <R : KSort> transform(expr: KArrayNStore<R>): KExpr<KArrayNSort<R>> {
+        TODO()
+    }
+
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> =
         simplifyExpr(
             expr = expr,
@@ -187,6 +209,18 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
                 )
             }
         )
+
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(expr: KArray2Select<D0, D1, R>): KExpr<R> {
+        TODO()
+    }
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(expr: KArray3Select<D0, D1, D2, R>): KExpr<R> {
+        TODO()
+    }
+
+    override fun <R : KSort> transform(expr: KArrayNSelect<R>): KExpr<R> {
+        TODO()
+    }
 
     @Suppress("ComplexMethod", "LoopWithTooManyJumpStatements")
     private fun <D : KSort, R : KSort> transform(expr: SimplifierFlatArrayStoreExpr<D, R>): KExpr<KArraySort<D, R>> =
