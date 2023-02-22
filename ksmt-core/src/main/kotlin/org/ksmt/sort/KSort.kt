@@ -76,7 +76,7 @@ class KArraySort<out D : KSort, out R : KSort> internal constructor(
         this === other || (other is KArraySort<*, *> && domain == other.domain && range == other.range)
 }
 
-class KArraySort2<out D0 : KSort, out D1 : KSort, out R : KSort> internal constructor(
+class KArray2Sort<out D0 : KSort, out D1 : KSort, out R : KSort> internal constructor(
     ctx: KContext, val domain0: D0, val domain1: D1, override val range: R
 ) : KArraySortBase<R>(ctx) {
 
@@ -89,12 +89,12 @@ class KArraySort2<out D0 : KSort, out D1 : KSort, out R : KSort> internal constr
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is KArraySort2<*, *, *>) return false
+        if (other !is KArray2Sort<*, *, *>) return false
         return domain0 == other.domain0 && domain1 == other.domain1 && range == other.range
     }
 }
 
-class KArraySort3<out D0 : KSort, out D1 : KSort, out D2 : KSort, out R : KSort> internal constructor(
+class KArray3Sort<out D0 : KSort, out D1 : KSort, out D2 : KSort, out R : KSort> internal constructor(
     ctx: KContext, val domain0: D0, val domain1: D1, val domain2: D2, override val range: R
 ) : KArraySortBase<R>(ctx) {
 
@@ -107,12 +107,12 @@ class KArraySort3<out D0 : KSort, out D1 : KSort, out D2 : KSort, out R : KSort>
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is KArraySort3<*, *, *, *>) return false
+        if (other !is KArray3Sort<*, *, *, *>) return false
         return domain0 == other.domain0 && domain1 == other.domain1 && domain2 == other.domain2 && range == other.range
     }
 }
 
-class KArraySortN<out R : KSort> internal constructor(
+class KArrayNSort<out R : KSort> internal constructor(
     ctx: KContext, val domain: List<KSort>, override val range: R
 ) : KArraySortBase<R>(ctx) {
 
@@ -124,7 +124,7 @@ class KArraySortN<out R : KSort> internal constructor(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is KArraySortN<*>) return false
+        if (other !is KArrayNSort<*>) return false
         return domain == other.domain && range == other.range
     }
 }
