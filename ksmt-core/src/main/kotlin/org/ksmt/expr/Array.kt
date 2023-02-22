@@ -58,7 +58,7 @@ class KArray2Store<D0 : KSort, D1 : KSort, R : KSort> internal constructor(
         get() = listOf(index0, index1)
 
     override val decl: KDecl<KArray2Sort<D0, D1, R>>
-        get() = ctx.mkArray2StoreDecl(array.sort)
+        get() = ctx.mkArrayStoreDecl(array.sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<KArray2Sort<D0, D1, R>> =
         transformer.transform(this)
@@ -82,7 +82,7 @@ class KArray3Store<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal const
         get() = listOf(index0, index1, index2)
 
     override val decl: KDecl<KArray3Sort<D0, D1, D2, R>>
-        get() = ctx.mkArray3StoreDecl(array.sort)
+        get() = ctx.mkArrayStoreDecl(array.sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<KArray3Sort<D0, D1, D2, R>> =
         transformer.transform(this)
@@ -102,7 +102,7 @@ class KArrayNStore<R : KSort> internal constructor(
 ) : KArrayStoreBase<KArrayNSort<R>, R>(ctx, array, value) {
 
     override val decl: KDecl<KArrayNSort<R>>
-        get() = ctx.mkArrayNStoreDecl(array.sort)
+        get() = ctx.mkArrayStoreDecl(array.sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<KArrayNSort<R>> =
         transformer.transform(this)
@@ -150,7 +150,7 @@ class KArray2Select<D0 : KSort, D1 : KSort, R : KSort> internal constructor(
         get() = listOf(index0, index1)
 
     override val decl: KDecl<R>
-        get() = ctx.mkArray2SelectDecl(array.sort)
+        get() = ctx.mkArraySelectDecl(array.sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<R> = transformer.transform(this)
 
@@ -170,7 +170,7 @@ class KArray3Select<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal cons
         get() = listOf(index0, index1, index2)
 
     override val decl: KDecl<R>
-        get() = ctx.mkArray3SelectDecl(array.sort)
+        get() = ctx.mkArraySelectDecl(array.sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<R> = transformer.transform(this)
 
@@ -185,7 +185,7 @@ class KArrayNSelect<R : KSort> internal constructor(
     override val indices: List<KExpr<*>>
 ) : KArraySelectBase<KArrayNSort<R>, R>(ctx, array) {
     override val decl: KDecl<R>
-        get() = ctx.mkArrayNSelectDecl(array.sort)
+        get() = ctx.mkArraySelectDecl(array.sort)
 
     override fun accept(transformer: KTransformerBase): KExpr<R> = transformer.transform(this)
 
