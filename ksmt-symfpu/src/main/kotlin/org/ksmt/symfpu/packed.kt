@@ -73,7 +73,7 @@ fun <Fp : KFpSort> KContext.pack(uf: UnpackedFp<Fp>): KExpr<Fp> {
     val packedExWidth = uf.sort.exponentBits.toInt()
     val inNormalRange = uf.inNormalRange()
     val inSubnormalRange = !inNormalRange
-    val biasedExp = mkBvAddExpr(uf.exponent, bias(uf.sort))
+    val biasedExp = mkBvAddExpr(uf.unbiasedExponent, bias(uf.sort))
     // Will be correct for normal values only, subnormals may still be negative.
     val packedBiasedExp = mkBvExtractExpr(packedExWidth - 1, 0, biasedExp)
     val maxExp = ones(packedExWidth.toUInt())
@@ -87,16 +87,16 @@ fun <Fp : KFpSort> KContext.pack(uf: UnpackedFp<Fp>): KExpr<Fp> {
 
     // Significand
     val packedSigWidth = uf.sort.significandBits.toInt() - 1
-    val unpackedSignificand = uf.significand
-    val unpackedSignificandWidth = uf.significand.sort.sizeBits.toInt()
+    val unpackedSignificand = uf.normalizedSignificand
+    val unpackedSignificandWidth = uf.normalizedSignificand.sort.sizeBits.toInt()
 
     check(packedSigWidth == unpackedSignificandWidth - 1)
     val dropLeadingOne = mkBvExtractExpr(packedSigWidth - 1, 0, unpackedSignificand)
 
     // The amount needed to normalise the number
     val subnormalShiftAmount = max(
-        mkBvSubExpr(minNormalExponent(uf.sort), uf.exponent), // minNormalExponent - exponent
-        bvZero(uf.exponent.sort.sizeBits).cast()
+        mkBvSubExpr(minNormalExponent(uf.sort), uf.unbiasedExponent), // minNormalExponent - exponent
+        bvZero(uf.unbiasedExponent.sort.sizeBits).cast()
     )
 
 

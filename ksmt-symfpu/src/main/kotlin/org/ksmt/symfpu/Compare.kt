@@ -3,6 +3,7 @@ package org.ksmt.symfpu
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.symfpu.UnpackedFp.Companion.iteOp
 
@@ -10,28 +11,45 @@ internal fun <Fp : KFpSort> KContext.less(
     left: UnpackedFp<Fp>, right: UnpackedFp<Fp>
 ): KExpr<KBoolSort> {
     val infCase =
-        (left.isNegativeInfinity and right.isNegativeInfinity.not()) or (left.isPositiveInfinity.not() and right.isPositiveInfinity)
+        (left.isNegativeInfinity and !right.isNegativeInfinity) or (!left.isPositiveInfinity and right.isPositiveInfinity)
 
     val zeroCase =
-        (left.isZero and right.isZero.not() and right.isNegative.not()) or (left.isZero.not() and left.isNegative and right.isZero)
+        (left.isZero and !right.isZero and !right.isNegative) or (!left.isZero and left.isNegative and right.isZero)
 
-    return lessHelper(left, right, infCase, zeroCase)
+    val packedExists = left.packedBv != null && right.packedBv != null
+    println("packedExists: $packedExists")
+
+    return lessHelper(
+        left, right, infCase, zeroCase, packedExists, positiveCaseSignificandComparison = mkBvUnsignedLessExpr(
+            left.getSignificand(packedExists), right.getSignificand(packedExists)
+        ), negativeCaseSignificandComparison = mkBvUnsignedLessExpr(
+            right.getSignificand(packedExists), left.getSignificand(packedExists)
+        )
+    )
 }
+
 
 internal fun <Fp : KFpSort> KContext.lessOrEqual(
     left: UnpackedFp<Fp>, right: UnpackedFp<Fp>
 ): KExpr<KBoolSort> {
-    val infCase = (left.isInf and right.isInf and (left.isNegative eq right.isNegative)) or
-            left.isNegativeInfinity or right.isPositiveInfinity
+    val infCase =
+        (left.isInf and right.isInf and (left.isNegative eq right.isNegative)) or left.isNegativeInfinity or right.isPositiveInfinity
 
 
     val zeroCase =
         (left.isZero and right.isZero) or (left.isZero and right.isNegative.not()) or (left.isNegative and right.isZero)
 
+    val packedExists = left.packedBv != null && right.packedBv != null
+    println("packedExists: $packedExists")
 
     return lessHelper(
-        left, right, infCase, zeroCase, mkBvUnsignedLessOrEqualExpr(left.significand, right.significand),
-        mkBvUnsignedLessOrEqualExpr(right.significand, left.significand),
+        left,
+        right,
+        infCase,
+        zeroCase,
+        packedExists,
+        mkBvUnsignedLessOrEqualExpr(left.getSignificand(packedExists), right.getSignificand(packedExists)),
+        mkBvUnsignedLessOrEqualExpr(right.getSignificand(packedExists), left.getSignificand(packedExists)),
     )
 }
 
@@ -41,10 +59,15 @@ private fun <Fp : KFpSort> KContext.lessHelper(
     right: UnpackedFp<Fp>,
     infCase: KExpr<KBoolSort>,
     zeroCase: KExpr<KBoolSort>,
-    positiveCaseSignificandComparison: KExpr<KBoolSort> = mkBvUnsignedLessExpr(left.significand, right.significand),
-    negativeCaseSignificandComparison: KExpr<KBoolSort> = mkBvUnsignedLessExpr(right.significand, left.significand),
+    packedExists: Boolean,
+    positiveCaseSignificandComparison: KExpr<KBoolSort> = mkBvUnsignedLessExpr(
+        left.getSignificand(packedExists), right.getSignificand(packedExists)
+    ),
+    negativeCaseSignificandComparison: KExpr<KBoolSort> = mkBvUnsignedLessExpr(
+        right.getSignificand(packedExists), left.getSignificand(packedExists)
+    ),
 ): KExpr<KBoolSort> {
-    val neitherNan = left.isNaN.not() and right.isNaN.not()
+    val neitherNan = !left.isNaN and !right.isNaN
 
     // Infinities are bigger than everything but themselves
     val eitherInf = left.isInf or right.isInf
@@ -52,16 +75,22 @@ private fun <Fp : KFpSort> KContext.lessHelper(
     // Both zero are equal
     val eitherZero = left.isZero or right.isZero
 
+    val exponentLessExpr = { a: KExpr<KBvSort>, b : KExpr<KBvSort>->
+        if (packedExists)
+            mkBvUnsignedLessExpr(a, b)
+        else
+            mkBvSignedLessExpr(a, b)
+    }
     // Normal and subnormal
-    val negativeLessThanPositive = left.isNegative and right.isNegative.not()
-    val positiveCase = left.isNegative.not() and right.isNegative.not() and (mkBvSignedLessExpr(
-        left.exponent, right.exponent
-    ) or (left.exponent eq right.exponent and positiveCaseSignificandComparison))
+    val negativeLessThanPositive = left.isNegative and !right.isNegative
+    val positiveCase = !left.isNegative and !right.isNegative and (exponentLessExpr(
+        left.getExponent(packedExists), right.getExponent(packedExists)
+    ) or (left.getExponent(packedExists) eq right.getExponent(packedExists) and positiveCaseSignificandComparison))
 
 
-    val negativeCase = left.isNegative and right.isNegative and (mkBvSignedLessExpr(
-        right.exponent, left.exponent
-    ) or (left.exponent eq right.exponent and negativeCaseSignificandComparison))
+    val negativeCase = left.isNegative and right.isNegative and (exponentLessExpr(
+        right.getExponent(packedExists), left.getExponent(packedExists)
+    ) or (left.getExponent(packedExists) eq right.getExponent(packedExists) and negativeCaseSignificandComparison))
 
 
     return neitherNan and mkIte(
@@ -89,16 +118,15 @@ internal fun <Fp : KFpSort> KContext.equal(
     val bothZero = left.isZero and right.isZero
     val neitherZero = !left.isZero and !right.isZero
 
-    val flagsAndExponent = neitherNan and
-            (bothZero or (neitherZero and
-                    (left.isInf eq right.isInf and (left.sign eq right.sign) and (left.exponent eq right.exponent))))
+    val flagsAndExponent =
+        neitherNan and (bothZero or (neitherZero and (left.isInf eq right.isInf and (left.sign eq right.sign) and (left.unbiasedExponent eq right.unbiasedExponent))))
 
     if (left.packedBv != null) {
         if (right.packedBv != null) {
             return neitherNan and (bothZero or (left.packedBv eq right.packedBv))
         }
     }
-    return flagsAndExponent and (left.significand eq right.significand)
+    return flagsAndExponent and (left.normalizedSignificand eq right.normalizedSignificand)
 }
 
 internal fun <Fp : KFpSort> KContext.min(

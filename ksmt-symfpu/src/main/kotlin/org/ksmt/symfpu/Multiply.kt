@@ -70,7 +70,7 @@ private fun <Fp : KFpSort> KContext.arithmeticMultiply(
     val multiplySign = left.isNegative xor right.isNegative
 
     // Multiply the significands
-    val significandProduct = expandingMultiply(left.significand, right.significand)
+    val significandProduct = expandingMultiply(left.normalizedSignificand, right.normalizedSignificand)
 
     val spWidth = significandProduct.sort.sizeBits.toInt()
     val topBit = mkBvExtractExpr(spWidth - 1, spWidth - 1, significandProduct)
@@ -78,12 +78,12 @@ private fun <Fp : KFpSort> KContext.arithmeticMultiply(
 
     val alignedSignificand = conditionalLeftShiftOne(topBitSet, significandProduct)
 
-    val alignedExponent = expandingAddWithCarryIn(left.exponent, right.exponent, topBitSet)
+    val alignedExponent = expandingAddWithCarryIn(left.unbiasedExponent, right.unbiasedExponent, topBitSet)
 
 
     val sort = mkFpSort(left.sort.exponentBits + 1u, left.sort.significandBits * 2u)
     return UnpackedFp(
-        this, sort, multiplySign, alignedExponent, alignedSignificand
+        this, sort, multiplySign, alignedExponent, alignedSignificand, packedBv = null
     )
 }
 

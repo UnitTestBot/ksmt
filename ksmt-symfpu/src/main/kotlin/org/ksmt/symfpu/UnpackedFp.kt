@@ -24,12 +24,12 @@ private fun KExpr<KBvSort>.resize(newSize: UInt, ctx: KContext): KExpr<KBvSort> 
 class UnpackedFp<Fp : KFpSort> private constructor(
     ctx: KContext, override val sort: Fp,
     val sign: KExpr<KBoolSort>, // negative
-    val exponent: KExpr<KBvSort>,
-    val significand: KExpr<KBvSort>,
+    val unbiasedExponent: KExpr<KBvSort>,
+    val normalizedSignificand: KExpr<KBvSort>,
     val isNaN: KExpr<KBoolSort> = ctx.mkFalse(),
     val isInf: KExpr<KBoolSort> = ctx.mkFalse(),
     val isZero: KExpr<KBoolSort> = ctx.mkFalse(),
-    val packedBv: KExpr<KBvSort>? = null,
+    val packedBv: KExpr<KBvSort>?,
 ) : KExpr<Fp>(ctx) {
 
     constructor(
@@ -47,6 +47,30 @@ class UnpackedFp<Fp : KFpSort> private constructor(
         packedBv
     )
 
+    private val expWidth = sort.exponentBits.toInt()
+    val packedSignificand =
+        packedBv?.let { ctx.mkBvExtractExpr(packedBv.sort.sizeBits.toInt() - expWidth - 2, 0, packedBv) }
+    val packedExponent = packedBv?.let {
+        ctx.mkBvExtractExpr(
+            packedBv.sort.sizeBits.toInt() - 2,
+            packedBv.sort.sizeBits.toInt() - expWidth - 1,
+            packedBv
+        )
+    }
+
+    fun getSignificand(packed: Boolean): KExpr<KBvSort> {
+        return if (packed) {
+            println("get packedSignificand")
+            packedSignificand!!
+        } else {
+            println("get normalizedSignificand")
+            normalizedSignificand
+        }
+    }
+
+    //same for exponent
+    fun getExponent(packed: Boolean) = if (packed) packedExponent!! else unbiasedExponent
+
     fun signBv() = ctx.boolToBv(sign)
 
     override fun accept(transformer: KTransformerBase): KExpr<Fp> =
@@ -54,14 +78,15 @@ class UnpackedFp<Fp : KFpSort> private constructor(
 
     override fun print(printer: ExpressionPrinter) = with(printer) {
         append("(unpackedFp ")
-        append("sign: ${sign}, exponent: $exponent, significand: $significand")
+        append("sign: ${sign}, exponent: $unbiasedExponent, significand: $normalizedSignificand")
         append(")")
     }
 
     override fun internEquals(other: Any): Boolean =
-        structurallyEqual(other) { listOf(sign, exponent, significand, isNaN, isInf, isZero) }
+        structurallyEqual(other) { listOf(sign, unbiasedExponent, normalizedSignificand, isNaN, isInf, isZero) }
 
-    override fun internHashCode(): Int = hash(listOf(sign, exponent, significand, isNaN, isInf, isZero))
+    override fun internHashCode(): Int =
+        hash(listOf(sign, unbiasedExponent, normalizedSignificand, isNaN, isInf, isZero))
 
 
     val isNegative = sign
@@ -76,29 +101,29 @@ class UnpackedFp<Fp : KFpSort> private constructor(
     // Moves the leading 1 up to the correct position, adjusting the
     // exponent as required.
     fun normaliseUp(): UnpackedFp<Fp> = with(ctx) {
-        val normal = normaliseShift(significand)
+        val normal = normaliseShift(normalizedSignificand)
 
-        val exponentWidth = exponent.sort.sizeBits
+        val exponentWidth = unbiasedExponent.sort.sizeBits
         check(
             normal.shiftAmount.sort.sizeBits < exponentWidth
         ) // May lose data / be incorrect for very small exponents and very large significands
 
         val signedAlignAmount = normal.shiftAmount.resize(exponentWidth, ctx)
-        val correctedExponent = mkBvSubExpr(exponent, signedAlignAmount)
+        val correctedExponent = mkBvSubExpr(unbiasedExponent, signedAlignAmount)
 
         // Optimisation : could move the zero detect version in if used in all cases
         //  catch - it zero detection in unpacking is different.
         return UnpackedFp(ctx, sort, sign, correctedExponent, normal.normalised, packedBv)
     }
 
-    fun inNormalRange() = ctx.mkBvSignedLessOrEqualExpr(ctx.minNormalExponent(sort), exponent)
+    fun inNormalRange() = ctx.mkBvSignedLessOrEqualExpr(ctx.minNormalExponent(sort), unbiasedExponent)
 
     companion object {
 
 
         fun <Fp : KFpSort> KContext.makeNaN(sort: Fp) = UnpackedFp(
-            this, sort, sign = falseExpr, exponent = defaultExponent(sort),
-            significand = defaultSignificand(sort), isNaN = trueExpr,
+            this, sort, sign = falseExpr, unbiasedExponent = defaultExponent(sort),
+            normalizedSignificand = defaultSignificand(sort), isNaN = trueExpr,
             packedBv = mkFpToIEEEBvExpr(mkFpNaN(sort)).apply {
                 check(this.sort.sizeBits == sort.exponentBits + sort.significandBits)
             }
@@ -107,8 +132,8 @@ class UnpackedFp<Fp : KFpSort> private constructor(
         fun <Fp : KFpSort> KContext.makeInf(
             sort: Fp, sign: KExpr<KBoolSort>
         ) = UnpackedFp(
-            this, sort, sign, exponent = defaultExponent(sort),
-            significand = defaultSignificand(sort), isInf = trueExpr,
+            this, sort, sign, unbiasedExponent = defaultExponent(sort),
+            normalizedSignificand = defaultSignificand(sort), isInf = trueExpr,
             packedBv = mkBvConcatExpr(
                 boolToBv(sign),
                 fpInfExponentBiased(sort),
@@ -119,8 +144,8 @@ class UnpackedFp<Fp : KFpSort> private constructor(
         )
 
         fun <Fp : KFpSort> KContext.makeZero(sort: Fp, sign: KExpr<KBoolSort>) = UnpackedFp(
-            this, sort, sign, exponent = defaultExponent(sort),
-            significand = defaultSignificand(sort), isZero = trueExpr,
+            this, sort, sign, unbiasedExponent = defaultExponent(sort),
+            normalizedSignificand = defaultSignificand(sort), isZero = trueExpr,
             packedBv = mkBvConcatExpr(boolToBv(sign), mkBv(0, sort.exponentBits + sort.significandBits - 1u)).apply {
                 check(this.sort.sizeBits == sort.exponentBits + sort.significandBits)
             }
@@ -133,8 +158,8 @@ class UnpackedFp<Fp : KFpSort> private constructor(
                 this,
                 l.sort,
                 sign = mkIte(cond, l.sign, r.sign),
-                exponent = mkIte(cond, l.exponent, r.exponent),
-                significand = mkIte(cond, l.significand, r.significand),
+                unbiasedExponent = mkIte(cond, l.unbiasedExponent, r.unbiasedExponent),
+                normalizedSignificand = mkIte(cond, l.normalizedSignificand, r.normalizedSignificand),
                 isNaN = mkIte(cond, l.isNaN, r.isNaN),
                 isInf = mkIte(cond, l.isInf, r.isInf),
                 isZero = mkIte(cond, l.isZero, r.isZero),

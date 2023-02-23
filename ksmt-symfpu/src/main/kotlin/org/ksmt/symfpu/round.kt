@@ -16,13 +16,13 @@ import org.ksmt.utils.cast
 fun <Fp : KFpSort> KContext.round(
     uf: UnpackedFp<KFpSort>, roundingMode: KExpr<KFpRoundingModeSort>, format: Fp
 ): UnpackedFp<Fp> {
-    val sigWidth = uf.significand.sort.sizeBits.toInt()
-    val sig = mkBvOrExpr(uf.significand, leadingOne(sigWidth))
+    val sigWidth = uf.normalizedSignificand.sort.sizeBits.toInt()
+    val sig = mkBvOrExpr(uf.normalizedSignificand, leadingOne(sigWidth))
 
     val targetSignificandWidth = format.significandBits.toInt()
     check(sigWidth >= targetSignificandWidth + 2)
 
-    val exp = uf.exponent
+    val exp = uf.unbiasedExponent
     val expWidth = exp.sort.sizeBits.toInt()
     val targetExponentWidth = exponentWidth(format)
     check(expWidth >= targetExponentWidth)
@@ -167,9 +167,9 @@ private fun <Fp : KFpSort> KContext.rounderSpecialCases(
     // On underflow either return 0 or minimum subnormal
     val returnZero = mkOr(
         mkEq(roundingMode, mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven)) and
-                (roundedResult.significand eq bvZero(roundedResult.sort.significandBits).cast()),
+                (roundedResult.normalizedSignificand eq bvZero(roundedResult.sort.significandBits).cast()),
         mkEq(roundingMode, mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToAway)) and
-                (roundedResult.significand eq bvZero(roundedResult.sort.significandBits).cast()),
+                (roundedResult.normalizedSignificand eq bvZero(roundedResult.sort.significandBits).cast()),
         mkEq(roundingMode, mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardZero)),
         mkAnd(
             mkEq(roundingMode, mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardPositive)), roundedResult.sign
