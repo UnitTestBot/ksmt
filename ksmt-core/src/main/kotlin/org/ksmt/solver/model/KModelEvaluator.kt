@@ -115,12 +115,10 @@ open class KModelEvaluator(
                     evaluated
                 ).uncheckedCast()
 
-                is KArray3Sort<*, *, *, *> -> ctx.mkArrayLambda(
-                    interpretation.vars[0],
-                    interpretation.vars[1],
-                    interpretation.vars[2],
-                    evaluated
-                ).uncheckedCast()
+                is KArray3Sort<*, *, *, *> -> {
+                    val (v0, v1, v2) = interpretation.vars
+                    ctx.mkArrayLambda(v0, v1, v2, evaluated).uncheckedCast()
+                }
 
                 is KArrayNSort<*> -> ctx.mkArrayLambda(
                     interpretation.vars,
@@ -209,19 +207,27 @@ open class KModelEvaluator(
         sort: A,
         interpretation: KModel.KFuncInterp<R>
     ): KExpr<A> = when (sort as KArraySortBase<R>) {
-        is KArraySort<*, R> -> sort.evalArrayInterpretation(interpretation) { array: KExpr<KArraySort<KSort, R>>, args, value ->
+        is KArraySort<*, R> -> sort.evalArrayInterpretation(
+            interpretation
+        ) { array: KExpr<KArraySort<KSort, R>>, args, value ->
             mkArrayStore(array, args.single(), value)
         }
 
-        is KArray2Sort<*, *, *> -> sort.evalArrayInterpretation(interpretation) { array: KExpr<KArray2Sort<KSort, KSort, R>>, args, value ->
-            mkArrayStore(array, args.first(), args.last(), value)
+        is KArray2Sort<*, *, *> -> sort.evalArrayInterpretation(
+            interpretation
+        ) { array: KExpr<KArray2Sort<KSort, KSort, R>>, (idx0, idx1), value ->
+            mkArrayStore(array, idx0, idx1, value)
         }
 
-        is KArray3Sort<*, *, *, *> -> sort.evalArrayInterpretation(interpretation) { array: KExpr<KArray3Sort<KSort, KSort, KSort, R>>, args, value ->
-            mkArrayStore(array, args[0], args[1], args[2], value)
+        is KArray3Sort<*, *, *, *> -> sort.evalArrayInterpretation(
+            interpretation
+        ) { array: KExpr<KArray3Sort<KSort, KSort, KSort, R>>, (idx0, idx1, idx2), value ->
+            mkArrayStore(array, idx0, idx1, idx2, value)
         }
 
-        is KArrayNSort<*> -> sort.evalArrayInterpretation(interpretation) { array: KExpr<KArrayNSort<R>>, args, value ->
+        is KArrayNSort<*> -> sort.evalArrayInterpretation(
+            interpretation
+        ) { array: KExpr<KArrayNSort<R>>, args, value ->
             mkArrayStore(array, args, value)
         }
     }

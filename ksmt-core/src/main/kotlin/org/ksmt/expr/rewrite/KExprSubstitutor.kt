@@ -74,9 +74,9 @@ open class KExprSubstitutor(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         expr: KArray2Lambda<D0, D1, R>
     ): KExpr<KArray2Sort<D0, D1, R>> = transformQuantifiedExpression(
         expr, listOf(expr.indexVar0Decl, expr.indexVar1Decl), expr.body
-    ) { body, bounds ->
-        val bound0: KDecl<D0> = bounds.first().uncheckedCast()
-        val bound1: KDecl<D1> = bounds.last().uncheckedCast()
+    ) { body, (b0, b1) ->
+        val bound0: KDecl<D0> = b0.uncheckedCast()
+        val bound1: KDecl<D1> = b1.uncheckedCast()
         ctx.mkArrayLambda(bound0, bound1, body)
     }
 
@@ -84,10 +84,10 @@ open class KExprSubstitutor(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         expr: KArray3Lambda<D0, D1, D2, R>
     ): KExpr<KArray3Sort<D0, D1, D2, R>>  = transformQuantifiedExpression(
         expr, listOf(expr.indexVar0Decl, expr.indexVar1Decl, expr.indexVar2Decl), expr.body
-    ) { body, bounds ->
-        val bound0: KDecl<D0> = bounds[0].uncheckedCast()
-        val bound1: KDecl<D1> = bounds[1].uncheckedCast()
-        val bound2: KDecl<D2> = bounds[2].uncheckedCast()
+    ) { body, (b0, b1, b2) ->
+        val bound0: KDecl<D0> = b0.uncheckedCast()
+        val bound1: KDecl<D1> = b1.uncheckedCast()
+        val bound2: KDecl<D2> = b2.uncheckedCast()
         ctx.mkArrayLambda(bound0, bound1, bound2, body)
     }
 

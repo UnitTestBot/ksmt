@@ -20,12 +20,14 @@ class KArrayStoreDecl<D : KSort, R : KSort> internal constructor(
     ctx: KContext,
     sort: KArraySort<D, R>
 ) : KArrayStoreDeclBase<KArraySort<D, R>, R>(ctx, sort) {
-    override fun apply(args: List<KExpr<*>>): KApp<KArraySort<D, R>, *> =
-        ctx.mkArrayStoreNoSimplify(
-            array = args[0].uncheckedCast(),
-            index = args[1].uncheckedCast(),
-            value = args[2].uncheckedCast()
+    override fun apply(args: List<KExpr<*>>): KApp<KArraySort<D, R>, *> {
+        val (array, index, value) = args
+        return ctx.mkArrayStoreNoSimplify(
+            array = array.uncheckedCast(),
+            index = index.uncheckedCast(),
+            value = value.uncheckedCast()
         )
+    }
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
@@ -34,13 +36,15 @@ class KArray2StoreDecl<D0 : KSort, D1 : KSort, R : KSort> internal constructor(
     ctx: KContext,
     sort: KArray2Sort<D0, D1, R>
 ) : KArrayStoreDeclBase<KArray2Sort<D0, D1, R>, R>(ctx, sort) {
-    override fun apply(args: List<KExpr<*>>): KApp<KArray2Sort<D0, D1, R>, *> =
-        ctx.mkArrayStoreNoSimplify(
-            array = args[0].uncheckedCast(),
-            index0 = args[1].uncheckedCast(),
-            index1 = args[2].uncheckedCast(),
-            value = args[3].uncheckedCast()
+    override fun apply(args: List<KExpr<*>>): KApp<KArray2Sort<D0, D1, R>, *> {
+        val (array, index0, index1, value) = args
+        return ctx.mkArrayStoreNoSimplify(
+            array = array.uncheckedCast(),
+            index0 = index0.uncheckedCast(),
+            index1 = index1.uncheckedCast(),
+            value = value.uncheckedCast()
         )
+    }
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
@@ -49,14 +53,16 @@ class KArray3StoreDecl<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal c
     ctx: KContext,
     sort: KArray3Sort<D0, D1, D2, R>
 ) : KArrayStoreDeclBase<KArray3Sort<D0, D1, D2, R>, R>(ctx, sort) {
-    override fun apply(args: List<KExpr<*>>): KApp<KArray3Sort<D0, D1, D2, R>, *> =
-        ctx.mkArrayStoreNoSimplify(
-            array = args[0].uncheckedCast(),
-            index0 = args[1].uncheckedCast(),
-            index1 = args[2].uncheckedCast(),
-            index2 = args[3].uncheckedCast(),
-            value = args[4].uncheckedCast()
+    override fun apply(args: List<KExpr<*>>): KApp<KArray3Sort<D0, D1, D2, R>, *> {
+        val (array, index0, index1, index2, value) = args
+        return ctx.mkArrayStoreNoSimplify(
+            array = array.uncheckedCast(),
+            index0 = index0.uncheckedCast(),
+            index1 = index1.uncheckedCast(),
+            index2 = index2.uncheckedCast(),
+            value = value.uncheckedCast()
         )
+    }
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
@@ -85,11 +91,13 @@ class KArraySelectDecl<D : KSort, R : KSort> internal constructor(
     sort: KArraySort<D, R>
 ) : KArraySelectDeclBase<KArraySort<D, R>, R>(ctx, sort) {
 
-    override fun apply(args: List<KExpr<*>>): KApp<R, *> =
-        ctx.mkArraySelectNoSimplify(
-            array = args[0].uncheckedCast(),
-            index = args[1].uncheckedCast<_, KExpr<D>>()
+    override fun apply(args: List<KExpr<*>>): KApp<R, *> {
+        val (array, index) = args
+        return ctx.mkArraySelectNoSimplify(
+            array = array.uncheckedCast(),
+            index = index.uncheckedCast<_, KExpr<D>>()
         )
+    }
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
@@ -99,12 +107,14 @@ class KArray2SelectDecl<D0 : KSort, D1 : KSort, R : KSort> internal constructor(
     sort: KArray2Sort<D0, D1, R>
 ) : KArraySelectDeclBase<KArray2Sort<D0, D1, R>, R>(ctx, sort) {
 
-    override fun apply(args: List<KExpr<*>>): KApp<R, *> =
-        ctx.mkArraySelectNoSimplify(
-            array = args[0].uncheckedCast(),
-            index0 = args[1].uncheckedCast<_, KExpr<D0>>(),
-            index1 = args[2].uncheckedCast<_, KExpr<D1>>()
+    override fun apply(args: List<KExpr<*>>): KApp<R, *> {
+        val (array, index0, index1) = args
+        return ctx.mkArraySelectNoSimplify(
+            array = array.uncheckedCast(),
+            index0 = index0.uncheckedCast<_, KExpr<D0>>(),
+            index1 = index1.uncheckedCast<_, KExpr<D1>>()
         )
+    }
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
@@ -114,13 +124,15 @@ class KArray3SelectDecl<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal 
     sort: KArray3Sort<D0, D1, D2, R>
 ) : KArraySelectDeclBase<KArray3Sort<D0, D1, D2, R>, R>(ctx, sort) {
 
-    override fun apply(args: List<KExpr<*>>): KApp<R, *> =
-        ctx.mkArraySelectNoSimplify(
-            array = args[0].uncheckedCast(),
-            index0 = args[1].uncheckedCast<_, KExpr<D0>>(),
-            index1 = args[2].uncheckedCast<_, KExpr<D1>>(),
-            index2 = args[3].uncheckedCast<_, KExpr<D2>>()
+    override fun apply(args: List<KExpr<*>>): KApp<R, *> {
+        val (array, index0, index1, index2) = args
+        return ctx.mkArraySelectNoSimplify(
+            array = array.uncheckedCast(),
+            index0 = index0.uncheckedCast<_, KExpr<D0>>(),
+            index1 = index1.uncheckedCast<_, KExpr<D1>>(),
+            index2 = index2.uncheckedCast<_, KExpr<D2>>()
         )
+    }
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }

@@ -768,19 +768,23 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
      * Specialized version of [transformExprAfterTransformedDefault] for expression with five arguments.
      * */
     @Suppress("LongParameterList", "ComplexCondition")
-    private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort, A4 : KSort>
-    transformExprAfterTransformedDefault(
+    private inline fun <
+        In : KExpr<T>, Out : KExpr<T>,
+        T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort, A4 : KSort
+    > transformExprAfterTransformedDefault(
         expr: In,
-        dependency0: KExpr<A0>,
-        dependency1: KExpr<A1>,
-        dependency2: KExpr<A2>,
-        dependency3: KExpr<A3>,
-        dependency4: KExpr<A4>,
+        d0: KExpr<A0>,
+        d1: KExpr<A1>,
+        d2: KExpr<A2>,
+        d3: KExpr<A3>,
+        d4: KExpr<A4>,
         ifNotTransformed: (In) -> KExpr<T>,
         transformer: KContext.(KExpr<A0>, KExpr<A1>, KExpr<A2>, KExpr<A3>, KExpr<A4>) -> Out
     ): KExpr<T> =
-        transformExprAfterTransformed(expr, dependency0, dependency1, dependency2, dependency3, dependency4) { td0, td1, td2, td3, td4 ->
-            if (td0 == dependency0 && td1 == dependency1 && td2 == dependency2 && td3 == dependency3 && td4 == dependency4) {
+        transformExprAfterTransformed(
+            expr, d0, d1, d2, d3, d4
+        ) { td0, td1, td2, td3, td4 ->
+            if (td0 == d0 && td1 == d1 && td2 == d2 && td3 == d3 && td4 == d4) {
                 return ifNotTransformed(expr)
             }
 

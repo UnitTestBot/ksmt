@@ -28,7 +28,10 @@ import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KSort
 import org.ksmt.utils.uncheckedCast
 
-private inline fun <reified A : KArraySortBase<R>, R : KSort, reified S : KArraySelectBase<out A, R>> simplifyArrayStore(
+private inline fun <
+    reified A : KArraySortBase<R>, R : KSort,
+    reified S : KArraySelectBase<out A, R>
+> simplifyArrayStore(
     array: KExpr<A>,
     value: KExpr<R>,
     selectIndicesMatch: (S) -> Boolean,
@@ -96,12 +99,13 @@ fun <R : KSort> KContext.simplifyArrayStore(
     default = { mkArrayStoreNoSimplify(array, indices, value) }
 )
 
+@Suppress("LongParameterList")
 private inline fun <
     reified A : KArraySortBase<R>,
     R : KSort,
     reified S : KArrayStoreBase<A, R>,
     reified L : KArrayLambdaBase<A, R>
-    > KContext.simplifyArraySelect(
+> KContext.simplifyArraySelect(
     array: KExpr<A>,
     indicesAreValues: () -> Boolean,
     storeIndicesMatch: (S) -> Boolean,

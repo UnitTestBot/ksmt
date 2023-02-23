@@ -36,6 +36,7 @@ import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.uncheckedCast
 
+@Suppress("LargeClass")
 interface KArrayExprSimplifier : KExprSimplifierBase {
 
     fun <A : KArraySortBase<R>, R : KSort> simplifyEqArray(
@@ -394,6 +395,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         )
     }
 
+    @Suppress("LongParameterList", "NestedBlockDepth", "ComplexMethod", "LoopWithTooManyJumpStatements")
     private inline fun <A : KArraySortBase<R>, R : KSort, reified S : KArraySelectBase<out A, R>> simplifyArrayStore(
         expr: SimplifierFlatArrayStoreBaseExpr<A, R>,
         findStoredIndexPosition: (Int) -> Int?,
@@ -474,6 +476,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         return result
     }
 
+    @Suppress("LongParameterList")
     private inline fun allParentSoreIndicesAreDistinct(
         index: Int,
         storedIndexPosition: Int,
@@ -980,6 +983,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             KArray2Select(ctx, originalArray, index.first().uncheckedCast(), index.last().uncheckedCast())
     }
 
+    @Suppress("LongParameterList")
     private class SimplifierFlatArray3StoreExpr<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort>(
         ctx: KContext,
         original: KExpr<KArray3Sort<D0, D1, D2, R>>,
@@ -996,6 +1000,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
 
         fun unwrap(): List<KExpr<KSort>> = (listOf(base) + indices0 + indices1 + indices2 + values).uncheckedCast()
 
+        @Suppress("MagicNumber")
         fun wrap(args: List<KExpr<KSort>>) = SimplifierFlatArray3StoreExpr(
             ctx,
             original,
@@ -1016,14 +1021,16 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
 
         override fun getStoreIndex(idx: Int): List<KExpr<*>> = listOf(indices0[idx], indices1[idx], indices2[idx])
 
-        override fun selectValue(originalArray: KExpr<KArray3Sort<D0, D1, D2, R>>, index: List<KExpr<*>>): KExpr<R> =
-            KArray3Select(
+        override fun selectValue(originalArray: KExpr<KArray3Sort<D0, D1, D2, R>>, index: List<KExpr<*>>): KExpr<R> {
+            val (idx0, idx1, idx2) = index
+            return KArray3Select(
                 ctx,
                 originalArray,
-                index[0].uncheckedCast(),
-                index[1].uncheckedCast(),
-                index[2].uncheckedCast()
+                idx0.uncheckedCast(),
+                idx1.uncheckedCast(),
+                idx2.uncheckedCast()
             )
+        }
     }
 
     private class SimplifierFlatArrayNStoreExpr<R : KSort>(
