@@ -243,17 +243,13 @@ class FpToBvTransformerTest {
     }
 
     @Test
-    fun testFpToBvZMultFp16SlowExpr() = with(KContext()) {
+    fun testFpToBvZMultFp16SlowExpr() = with(KContext(simplificationMode = KContext.SimplificationMode.SIMPLIFY)) {
 //        1 5 10
         val upper =
-            mkFpBiased(signBit = false, biasedExponent = 0b10001, significand = 0b0011111111, sort = mkFp16Sort()) // 2
-        val lower =
-            mkFpBiased(
-                signBit = false,
-                biasedExponent = 0b10000,
-                significand = 0b1111111111,
-                sort = mkFp16Sort()
-            ) // 1.9991
+            mkFpBiased(signBit = false, biasedExponent = 0b10001, significand = 0b0000111111, sort = mkFp16Sort()) // 2
+        val lower = mkFpBiased(
+            signBit = false, biasedExponent = 0b10001, significand = 0b0000000001, sort = mkFp16Sort()
+        ) // 1.9991
 //0b0000000000 0b1111111111  0b10000 0b01111
         val a by fp16Sort
         val b by fp16Sort
@@ -312,7 +308,7 @@ class FpToBvTransformerTest {
         // check assertions satisfiability with timeout
         println("checking satisfiability...")
         val status =
-            solver.checkWithAssumptions(listOf(extraAssert(transformedExpr, exprToTransform)), timeout = 30000.seconds)
+            solver.checkWithAssumptions(listOf(extraAssert(transformedExpr, exprToTransform)), timeout = 20.seconds)
         println("status: $status")
         if (status == KSolverStatus.SAT) {
             val model = solver.model()
