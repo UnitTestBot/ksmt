@@ -1,6 +1,9 @@
 package org.ksmt.solver.z3
 
 import com.microsoft.z3.Native
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
@@ -40,6 +43,34 @@ open class KZ3SortInternalizer(
             val domain = sort.domain.internalizeZ3Sort()
             val range = sort.range.internalizeZ3Sort()
             Native.mkArraySort(nCtx, domain, range)
+        }
+
+    override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>): Long =
+        z3Ctx.internalizeSort(sort) {
+            val domain = longArrayOf(
+                sort.domain0.internalizeZ3Sort(),
+                sort.domain1.internalizeZ3Sort()
+            )
+            val range = sort.range.internalizeZ3Sort()
+            Native.mkArraySortN(nCtx, domain.size, domain, range)
+        }
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>): Long =
+        z3Ctx.internalizeSort(sort) {
+            val domain = longArrayOf(
+                sort.domain0.internalizeZ3Sort(),
+                sort.domain1.internalizeZ3Sort(),
+                sort.domain2.internalizeZ3Sort()
+            )
+            val range = sort.range.internalizeZ3Sort()
+            Native.mkArraySortN(nCtx, domain.size, domain, range)
+        }
+
+    override fun <R : KSort> visit(sort: KArrayNSort<R>): Long =
+        z3Ctx.internalizeSort(sort) {
+            val domain = sort.domain.map { it.internalizeZ3Sort() }.toLongArray()
+            val range = sort.range.internalizeZ3Sort()
+            Native.mkArraySortN(nCtx, domain.size, domain, range)
         }
 
     override fun visit(sort: KFpRoundingModeSort): Long = z3Ctx.internalizeSort(sort) {
