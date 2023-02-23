@@ -169,13 +169,15 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
 
     companion object {
         init {
-            System.setProperty("cvc5.skipLibraryLoad", "true")
-            NativeLibraryLoader.load { os ->
-                when (os) {
-                    NativeLibraryLoader.OS.LINUX -> listOf("libcvc5", "libcvc5jni")
-                    NativeLibraryLoader.OS.WINDOWS -> listOf("libcvc5", "libcvc5jni")
-                    NativeLibraryLoader.OS.MACOS -> throw KSolverUnsupportedFeatureException("add macOS cvc5 libs")
+            if (System.getProperty("cvc5.skipLibraryLoad") != "true") {
+                NativeLibraryLoader.load { os ->
+                    when (os) {
+                        NativeLibraryLoader.OS.LINUX -> listOf("libcvc5", "libcvc5jni")
+                        NativeLibraryLoader.OS.WINDOWS -> listOf("libcvc5", "libcvc5jni")
+                        NativeLibraryLoader.OS.MACOS -> throw KSolverUnsupportedFeatureException("add macOS cvc5 libs")
+                    }
                 }
+                System.setProperty("cvc5.skipLibraryLoad", "true")
             }
         }
     }

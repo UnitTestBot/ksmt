@@ -28,7 +28,9 @@ class Cvc5BenchmarksBasedTest : BenchmarksBasedTest() {
 
     companion object {
         @JvmStatic
-        fun cvc5TestData() = testData.filter { it.name !in KnownCvc5Issues.fp64CrashSamples }
+        fun cvc5TestData() = testData
+            .filter { it.name !in KnownCvc5Issues.fp64CrashSamples }
+            .ensureNotEmpty()
     }
 }
 
@@ -277,5 +279,19 @@ object KnownCvc5Issues {
         "FP_8_24_RTZ_fp.rem_fp.isNaN0.smt2",
         "FP_8_24_RTZ_fp.rem_fp.isNormal1.smt2",
         "FP_8_24_RTZ_fp.rem_fp.isPositive0.smt2",
-        "FP_8_24_RTZ_fp.rem_fp.isSubnormal0.smt2")
+        "FP_8_24_RTZ_fp.rem_fp.isSubnormal0.smt2",
+        "FP_11_53_RNA_fp.rem_=0.smt2",
+        "FP_11_53_RNA_fp.rem_distinct0.smt2",
+        "FP_11_53_RNA_fp.rem_distinct1.smt2",
+        "FP_11_53_RNE_fp.rem_=0.smt2",
+        "FP_11_53_RNE_fp.rem_distinct0.smt2",
+        "FP_11_53_RNE_fp.rem_distinct1.smt2",
+        "FP_11_53_RTN_fp.rem_=0.smt2",
+        "FP_11_53_RTN_fp.rem_distinct0.smt2",
+        "FP_11_53_RTN_fp.rem_distinct1.smt2",
+        "FP_11_53_RTP_fp.rem_distinct0.smt2",
+        "FP_11_53_RTZ_fp.rem_=0.smt2",
+        "FP_11_53_RTZ_fp.rem_distinct0.smt2",
+        "FP_11_53_RTZ_fp.rem_distinct1.smt2",
+    )
 }
