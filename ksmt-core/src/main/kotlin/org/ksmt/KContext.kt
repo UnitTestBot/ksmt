@@ -881,7 +881,7 @@ open class KContext(
         ensureContextMatch(indices)
         ensureContextMatch(array, value)
 
-        KArrayNStore(this, array, indices, value)
+        KArrayNStore(this, array, indices.uncheckedCast(), value)
     }.cast()
 
     private val arraySelectCache = mkAstInterner<KArraySelect<out KSort, out KSort>>()
@@ -946,10 +946,10 @@ open class KContext(
         ensureContextMatch(array)
         ensureContextMatch(indices)
 
-        KArrayNSelect(this, array, indices)
+        KArrayNSelect(this, array, indices.uncheckedCast())
     }.cast()
 
-    private val arrayConstCache = mkAstInterner<KArrayConst<out KArraySortBase<KSort>, out KSort>>()
+    private val arrayConstCache = mkAstInterner<KArrayConst<out KArraySortBase<out KSort>, out KSort>>()
 
     fun <A : KArraySortBase<R>, R : KSort> mkArrayConst(
         arraySort: A,
@@ -959,7 +959,7 @@ open class KContext(
         KArrayConst(this, arraySort, value)
     }.cast()
 
-    private val functionAsArrayCache = mkAstInterner<KFunctionAsArray<out KArraySortBase<KSort>, out KSort>>()
+    private val functionAsArrayCache = mkAstInterner<KFunctionAsArray<out KArraySortBase<out KSort>, out KSort>>()
 
     fun <A : KArraySortBase<R>, R : KSort> mkFunctionAsArray(sort: A, function: KFuncDecl<R>): KFunctionAsArray<A, R> =
         functionAsArrayCache.createIfContextActive {

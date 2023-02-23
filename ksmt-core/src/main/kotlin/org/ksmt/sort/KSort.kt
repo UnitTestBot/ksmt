@@ -46,7 +46,7 @@ class KRealSort internal constructor(ctx: KContext) : KArithSort(ctx) {
     override fun equals(other: Any?): Boolean = this === other || other is KRealSort
 }
 
-sealed class KArraySortBase<out R : KSort>(ctx: KContext) : KSort(ctx) {
+sealed class KArraySortBase<R : KSort>(ctx: KContext) : KSort(ctx) {
     abstract val domainSorts: List<KSort>
     abstract val range: R
 
@@ -61,7 +61,7 @@ sealed class KArraySortBase<out R : KSort>(ctx: KContext) : KSort(ctx) {
     }
 }
 
-class KArraySort<out D : KSort, out R : KSort> internal constructor(
+class KArraySort<D : KSort, R : KSort> internal constructor(
     ctx: KContext, val domain: D, override val range: R
 ) : KArraySortBase<R>(ctx) {
 
@@ -76,7 +76,7 @@ class KArraySort<out D : KSort, out R : KSort> internal constructor(
         this === other || (other is KArraySort<*, *> && domain == other.domain && range == other.range)
 }
 
-class KArray2Sort<out D0 : KSort, out D1 : KSort, out R : KSort> internal constructor(
+class KArray2Sort<D0 : KSort, D1 : KSort, R : KSort> internal constructor(
     ctx: KContext, val domain0: D0, val domain1: D1, override val range: R
 ) : KArraySortBase<R>(ctx) {
 
@@ -94,7 +94,7 @@ class KArray2Sort<out D0 : KSort, out D1 : KSort, out R : KSort> internal constr
     }
 }
 
-class KArray3Sort<out D0 : KSort, out D1 : KSort, out D2 : KSort, out R : KSort> internal constructor(
+class KArray3Sort<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal constructor(
     ctx: KContext, val domain0: D0, val domain1: D1, val domain2: D2, override val range: R
 ) : KArraySortBase<R>(ctx) {
 
@@ -112,7 +112,7 @@ class KArray3Sort<out D0 : KSort, out D1 : KSort, out D2 : KSort, out R : KSort>
     }
 }
 
-class KArrayNSort<out R : KSort> internal constructor(
+class KArrayNSort<R : KSort> internal constructor(
     ctx: KContext, val domain: List<KSort>, override val range: R
 ) : KArraySortBase<R>(ctx) {
 

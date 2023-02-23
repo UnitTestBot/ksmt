@@ -23,7 +23,7 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
 ) : KApp<A, KSort>(ctx) {
     override val sort: A = array.sort
 
-    abstract val indices: List<KExpr<*>>
+    abstract val indices: List<KExpr<KSort>>
 
     override val args: List<KExpr<KSort>>
         get() = (listOf(array) + indices + listOf(value)).uncheckedCast()
@@ -35,8 +35,8 @@ class KArrayStore<D : KSort, R : KSort> internal constructor(
     val index: KExpr<D>,
     value: KExpr<R>
 ) : KArrayStoreBase<KArraySort<D, R>, R>(ctx, array, value) {
-    override val indices: List<KExpr<*>>
-        get() = listOf(index)
+    override val indices: List<KExpr<KSort>>
+        get() = listOf(index).uncheckedCast()
 
     override val decl: KDecl<KArraySort<D, R>>
         get() = ctx.mkArrayStoreDecl(array.sort)
@@ -54,8 +54,8 @@ class KArray2Store<D0 : KSort, D1 : KSort, R : KSort> internal constructor(
     val index1: KExpr<D1>,
     value: KExpr<R>
 ) : KArrayStoreBase<KArray2Sort<D0, D1, R>, R>(ctx, array, value) {
-    override val indices: List<KExpr<*>>
-        get() = listOf(index0, index1)
+    override val indices: List<KExpr<KSort>>
+        get() = listOf(index0, index1).uncheckedCast()
 
     override val decl: KDecl<KArray2Sort<D0, D1, R>>
         get() = ctx.mkArrayStoreDecl(array.sort)
@@ -78,8 +78,8 @@ class KArray3Store<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal const
     val index2: KExpr<D2>,
     value: KExpr<R>
 ) : KArrayStoreBase<KArray3Sort<D0, D1, D2, R>, R>(ctx, array, value) {
-    override val indices: List<KExpr<*>>
-        get() = listOf(index0, index1, index2)
+    override val indices: List<KExpr<KSort>>
+        get() = listOf(index0, index1, index2).uncheckedCast()
 
     override val decl: KDecl<KArray3Sort<D0, D1, D2, R>>
         get() = ctx.mkArrayStoreDecl(array.sort)
@@ -97,7 +97,7 @@ class KArray3Store<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal const
 class KArrayNStore<R : KSort> internal constructor(
     ctx: KContext,
     array: KExpr<KArrayNSort<R>>,
-    override val indices: List<KExpr<*>>,
+    override val indices: List<KExpr<KSort>>,
     value: KExpr<R>
 ) : KArrayStoreBase<KArrayNSort<R>, R>(ctx, array, value) {
 
@@ -117,7 +117,7 @@ sealed class KArraySelectBase<A : KArraySortBase<R>, R : KSort>(
 ) : KApp<R, KSort>(ctx) {
     override val sort: R = array.sort.range
 
-    abstract val indices: List<KExpr<*>>
+    abstract val indices: List<KExpr<KSort>>
 
     override val args: List<KExpr<KSort>>
         get() = (listOf(array) + indices).uncheckedCast()
@@ -128,8 +128,8 @@ class KArraySelect<D : KSort, R : KSort> internal constructor(
     array: KExpr<KArraySort<D, R>>,
     val index: KExpr<D>
 ) : KArraySelectBase<KArraySort<D, R>, R>(ctx, array) {
-    override val indices: List<KExpr<*>>
-        get() = listOf(index)
+    override val indices: List<KExpr<KSort>>
+        get() = listOf(index).uncheckedCast()
 
     override val decl: KDecl<R>
         get() = ctx.mkArraySelectDecl(array.sort)
@@ -146,8 +146,8 @@ class KArray2Select<D0 : KSort, D1 : KSort, R : KSort> internal constructor(
     val index0: KExpr<D0>,
     val index1: KExpr<D1>
 ) : KArraySelectBase<KArray2Sort<D0, D1, R>, R>(ctx, array) {
-    override val indices: List<KExpr<*>>
-        get() = listOf(index0, index1)
+    override val indices: List<KExpr<KSort>>
+        get() = listOf(index0, index1).uncheckedCast()
 
     override val decl: KDecl<R>
         get() = ctx.mkArraySelectDecl(array.sort)
@@ -166,8 +166,8 @@ class KArray3Select<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal cons
     val index1: KExpr<D1>,
     val index2: KExpr<D2>
 ) : KArraySelectBase<KArray3Sort<D0, D1, D2, R>, R>(ctx, array) {
-    override val indices: List<KExpr<*>>
-        get() = listOf(index0, index1, index2)
+    override val indices: List<KExpr<KSort>>
+        get() = listOf(index0, index1, index2).uncheckedCast()
 
     override val decl: KDecl<R>
         get() = ctx.mkArraySelectDecl(array.sort)
@@ -182,7 +182,7 @@ class KArray3Select<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal cons
 class KArrayNSelect<R : KSort> internal constructor(
     ctx: KContext,
     array: KExpr<KArrayNSort<R>>,
-    override val indices: List<KExpr<*>>
+    override val indices: List<KExpr<KSort>>
 ) : KArraySelectBase<KArrayNSort<R>, R>(ctx, array) {
     override val decl: KDecl<R>
         get() = ctx.mkArraySelectDecl(array.sort)
