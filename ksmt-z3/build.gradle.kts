@@ -9,14 +9,15 @@ repositories {
     mavenCentral()
 }
 
-val z3Version = "4.11.2"
+val z3Version = "4.12.1"
 
 val z3JavaJar by lazy { mkZ3ReleaseDownloadTask("x64-win", "*.jar") }
 
 val z3Binaries = listOf(
     mkZ3ReleaseDownloadTask("x64-win", "*.dll"),
-    mkZ3ReleaseDownloadTask("x64-glibc-2.31", "*.so"),
-    mkZ3ReleaseDownloadTask("x64-osx-10.16", "*.dylib")
+    mkZ3ReleaseDownloadTask("x64-glibc-2.35", "*.so"),
+    mkZ3ReleaseDownloadTask("x64-osx-10.16", "*.dylib"),
+    mkZ3ReleaseDownloadTask("arm64-osx-11.0", "*.dylib")
 )
 
 dependencies {
@@ -27,6 +28,8 @@ dependencies {
 }
 
 tasks.withType<ProcessResources> {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+
     dependsOn.addAll(z3Binaries)
     z3Binaries.forEach { z3BinaryTask ->
         from(z3BinaryTask.outputFiles) {

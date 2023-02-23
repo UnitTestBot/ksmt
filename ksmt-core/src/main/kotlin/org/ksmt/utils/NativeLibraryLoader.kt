@@ -8,7 +8,7 @@ object NativeLibraryLoader {
         LINUX, WINDOWS, MACOS
     }
 
-    private val supportedArchs = setOf("amd64", "x86_64")
+    private val supportedArchs = setOf("amd64", "x86_64", "aarch64")
 
     fun load(libraries: (OS) -> List<String>) {
         val arch = System.getProperty("os.arch")
