@@ -771,6 +771,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         }
     }
 
+    @Suppress("USELESS_CAST") // Exhaustive when
     private fun <A : KArraySortBase<R>, R : KSort> flatStoresGeneric(
         sort: A, expr: KExpr<A>
     ): SimplifierFlatArrayStoreBaseExpr<A, R> = when (sort as KArraySortBase<R>) {
@@ -885,7 +886,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
      * Auxiliary expression to handle expanded array stores.
      * @see [SimplifierAuxExpression]
      * */
-    sealed class SimplifierFlatArrayStoreBaseExpr<A : KArraySortBase<R>, R : KSort>(
+    private sealed class SimplifierFlatArrayStoreBaseExpr<A : KArraySortBase<R>, R : KSort>(
         ctx: KContext,
         val numIndices: Int,
         val original: KExpr<A>,
@@ -910,7 +911,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         abstract fun selectValue(originalArray: KExpr<A>, index: List<KExpr<*>>): KExpr<R>
     }
 
-    class SimplifierFlatArrayStoreExpr<D : KSort, R : KSort>(
+    private class SimplifierFlatArrayStoreExpr<D : KSort, R : KSort>(
         ctx: KContext,
         original: KExpr<KArraySort<D, R>>,
         base: KExpr<KArraySort<D, R>>,
@@ -939,17 +940,10 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         override fun getStoreIndex(idx: Int): List<KExpr<*>> = listOf(indices[idx])
 
         override fun selectValue(originalArray: KExpr<KArraySort<D, R>>, index: List<KExpr<*>>): KExpr<R> =
-            SimplifierFlatArraySelectExpr(
-                ctx,
-                originalArray,
-                base,
-                indices,
-                values,
-                index.single().uncheckedCast()
-            )
+            KArraySelect(ctx, originalArray, index.single().uncheckedCast())
     }
 
-    class SimplifierFlatArray2StoreExpr<D0 : KSort, D1 : KSort, R : KSort>(
+    private class SimplifierFlatArray2StoreExpr<D0 : KSort, D1 : KSort, R : KSort>(
         ctx: KContext,
         original: KExpr<KArray2Sort<D0, D1, R>>,
         base: KExpr<KArray2Sort<D0, D1, R>>,
@@ -983,19 +977,10 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         override fun getStoreIndex(idx: Int): List<KExpr<*>> = listOf(indices0[idx], indices1[idx])
 
         override fun selectValue(originalArray: KExpr<KArray2Sort<D0, D1, R>>, index: List<KExpr<*>>): KExpr<R> =
-            SimplifierFlatArray2SelectExpr(
-                ctx,
-                originalArray,
-                base,
-                indices0,
-                indices1,
-                values,
-                index.first().uncheckedCast(),
-                index.last().uncheckedCast()
-            )
+            KArray2Select(ctx, originalArray, index.first().uncheckedCast(), index.last().uncheckedCast())
     }
 
-    class SimplifierFlatArray3StoreExpr<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort>(
+    private class SimplifierFlatArray3StoreExpr<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort>(
         ctx: KContext,
         original: KExpr<KArray3Sort<D0, D1, D2, R>>,
         base: KExpr<KArray3Sort<D0, D1, D2, R>>,
@@ -1032,19 +1017,16 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         override fun getStoreIndex(idx: Int): List<KExpr<*>> = listOf(indices0[idx], indices1[idx], indices2[idx])
 
         override fun selectValue(originalArray: KExpr<KArray3Sort<D0, D1, D2, R>>, index: List<KExpr<*>>): KExpr<R> =
-            SimplifierFlatArray3SelectExpr(
+            KArray3Select(
                 ctx,
                 originalArray,
-                base,
-                indices0, indices1, indices2,
-                values,
                 index[0].uncheckedCast(),
                 index[1].uncheckedCast(),
                 index[2].uncheckedCast()
             )
     }
 
-    class SimplifierFlatArrayNStoreExpr<R : KSort>(
+    private class SimplifierFlatArrayNStoreExpr<R : KSort>(
         ctx: KContext,
         original: KExpr<KArrayNSort<R>>,
         base: KExpr<KArrayNSort<R>>,
@@ -1072,21 +1054,14 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         override fun getStoreIndex(idx: Int): List<KExpr<*>> = indices[idx]
 
         override fun selectValue(originalArray: KExpr<KArrayNSort<R>>, index: List<KExpr<*>>): KExpr<R> =
-            SimplifierFlatArrayNSelectExpr(
-                ctx,
-                originalArray,
-                base,
-                indices,
-                values,
-                index
-            )
+            KArrayNSelect(ctx, originalArray, index.uncheckedCast())
     }
 
     /**
      * Auxiliary expression to handle array select.
      * @see [SimplifierAuxExpression]
      * */
-    sealed class SimplifierArraySelectBaseExpr<A : KArraySortBase<R>, R : KSort>(
+    private sealed class SimplifierArraySelectBaseExpr<A : KArraySortBase<R>, R : KSort>(
         ctx: KContext,
         val array: KExpr<A>
     ) : KExpr<R>(ctx) {
@@ -1106,7 +1081,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         }
     }
 
-    class SimplifierArraySelectExpr<D : KSort, R : KSort>(
+    private class SimplifierArraySelectExpr<D : KSort, R : KSort>(
         ctx: KContext,
         array: KExpr<KArraySort<D, R>>,
         val index: KExpr<D>,
@@ -1117,7 +1092,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         }
     }
 
-    class SimplifierArray2SelectExpr<D0 : KSort, D1 : KSort, R : KSort>(
+    private class SimplifierArray2SelectExpr<D0 : KSort, D1 : KSort, R : KSort>(
         ctx: KContext,
         array: KExpr<KArray2Sort<D0, D1, R>>,
         val index0: KExpr<D0>,
@@ -1129,7 +1104,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         }
     }
 
-    class SimplifierArray3SelectExpr<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort>(
+    private class SimplifierArray3SelectExpr<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort>(
         ctx: KContext,
         array: KExpr<KArray3Sort<D0, D1, D2, R>>,
         val index0: KExpr<D0>,
@@ -1142,7 +1117,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         }
     }
 
-    class SimplifierArrayNSelectExpr<R : KSort>(
+    private class SimplifierArrayNSelectExpr<R : KSort>(
         ctx: KContext,
         array: KExpr<KArrayNSort<R>>,
         val indices: List<KExpr<*>>,
@@ -1157,7 +1132,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
      * Auxiliary expression to handle select from array store.
      * @see [SimplifierAuxExpression]
      * */
-    sealed class SelectFromStoreExprBase<A : KArraySortBase<R>, R : KSort>(
+    private sealed class SelectFromStoreExprBase<A : KArraySortBase<R>, R : KSort>(
         ctx: KContext,
         array: KArrayStoreBase<A, R>
     ) : KExpr<R>(ctx) {
@@ -1176,7 +1151,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             error("Interning is not used for Aux expressions")
     }
 
-    class Select1FromStoreExpr<D : KSort, R : KSort>(
+    private class Select1FromStoreExpr<D : KSort, R : KSort>(
         ctx: KContext,
         val array: KArrayStore<D, R>,
         val index: KExpr<D>,
@@ -1187,7 +1162,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         }
     }
 
-    class Select2FromStoreExpr<D0 : KSort, D1 : KSort, R : KSort>(
+    private class Select2FromStoreExpr<D0 : KSort, D1 : KSort, R : KSort>(
         ctx: KContext,
         val array: KArray2Store<D0, D1, R>,
         val index0: KExpr<D0>,
@@ -1199,7 +1174,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         }
     }
 
-    class Select3FromStoreExpr<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort>(
+    private class Select3FromStoreExpr<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort>(
         ctx: KContext,
         val array: KArray3Store<D0, D1, D2, R>,
         val index0: KExpr<D0>,
@@ -1212,7 +1187,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         }
     }
 
-    class SelectNFromStoreExpr<R : KSort>(
+    private class SelectNFromStoreExpr<R : KSort>(
         ctx: KContext,
         val array: KArrayNStore<R>,
         val indices: List<KExpr<KSort>>,

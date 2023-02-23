@@ -102,6 +102,7 @@ open class KModelEvaluator(
 
             val evaluated = evalFunction(expr.function, interpretation.vars.map { ctx.mkConstApp(it) })
 
+            @Suppress("USELESS_CAST") // Exhaustive when
             return when (expr.sort as KArraySortBase<R>) {
                 is KArraySort<*, *> -> ctx.mkArrayLambda(
                     interpretation.vars.single(),
@@ -203,6 +204,7 @@ open class KModelEvaluator(
         return expr in sortUniverse
     }
 
+    @Suppress("USELESS_CAST") // Exhaustive when
     private fun <A : KArraySortBase<R>, R : KSort> evalArrayInterpretation(
         sort: A,
         interpretation: KModel.KFuncInterp<R>

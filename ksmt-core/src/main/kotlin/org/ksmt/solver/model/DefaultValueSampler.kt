@@ -48,7 +48,7 @@ open class DefaultValueSampler<T : KSort> (
         mkFpRoundingModeExpr(defaultRm).asExpr(this@DefaultValueSampler.sort)
     }
 
-    private fun <T : KArraySortBase<*>> sampleArrayValue(sort: T): KExpr<T> =
+    private fun <T : KArraySortBase<R>, R: KSort> sampleArrayValue(sort: T): KExpr<T> =
         ctx.mkArrayConst(sort, sort.range.sampleValue())
 
     override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): KExpr<T> =
