@@ -9,6 +9,8 @@ import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
+import org.ksmt.utils.FpUtils.fpInfExponentBiased
+import org.ksmt.utils.FpUtils.fpInfSignificand
 
 private fun KExpr<KBvSort>.resize(newSize: UInt, ctx: KContext): KExpr<KBvSort> {
     val width = sort.sizeBits
@@ -27,10 +29,12 @@ class UnpackedFp<Fp : KFpSort> private constructor(
     val isNaN: KExpr<KBoolSort> = ctx.mkFalse(),
     val isInf: KExpr<KBoolSort> = ctx.mkFalse(),
     val isZero: KExpr<KBoolSort> = ctx.mkFalse(),
+    val packedBv: KExpr<KBvSort>? = null,
 ) : KExpr<Fp>(ctx) {
 
     constructor(
-        ctx: KContext, sort: Fp, sign: KExpr<KBoolSort>, exponent: KExpr<KBvSort>, significand: KExpr<KBvSort>
+        ctx: KContext, sort: Fp, sign: KExpr<KBoolSort>, exponent: KExpr<KBvSort>, significand: KExpr<KBvSort>,
+        packedBv: KExpr<KBvSort>? = null,
     ) : this(
         ctx,
         sort,
@@ -39,7 +43,8 @@ class UnpackedFp<Fp : KFpSort> private constructor(
         significand,
         ctx.mkFalse(),
         ctx.mkFalse(),
-        ctx.mkFalse()
+        ctx.mkFalse(),
+        packedBv
     )
 
     fun signBv() = ctx.boolToBv(sign)
@@ -60,15 +65,9 @@ class UnpackedFp<Fp : KFpSort> private constructor(
 
 
     val isNegative = sign
-    val isNegativeInfinity by lazy {
-        with(ctx) {
-            isNegative and isInf
-        }
-    }
-    val isPositiveInfinity by lazy {
-        with(ctx) {
-            !isNegative and isInf
-        }
+    val isNegativeInfinity = with(ctx) { isNegative and isInf }
+    val isPositiveInfinity = with(ctx) {
+        !isNegative and isInf
     }
 
     // for tests
@@ -89,7 +88,7 @@ class UnpackedFp<Fp : KFpSort> private constructor(
 
         // Optimisation : could move the zero detect version in if used in all cases
         //  catch - it zero detection in unpacking is different.
-        return UnpackedFp(ctx, sort, sign, correctedExponent, normal.normalised)
+        return UnpackedFp(ctx, sort, sign, correctedExponent, normal.normalised, packedBv)
     }
 
     fun inNormalRange() = ctx.mkBvSignedLessOrEqualExpr(ctx.minNormalExponent(sort), exponent)
@@ -100,6 +99,9 @@ class UnpackedFp<Fp : KFpSort> private constructor(
         fun <Fp : KFpSort> KContext.makeNaN(sort: Fp) = UnpackedFp(
             this, sort, sign = falseExpr, exponent = defaultExponent(sort),
             significand = defaultSignificand(sort), isNaN = trueExpr,
+            packedBv = mkFpToIEEEBvExpr(mkFpNaN(sort)).apply {
+                check(this.sort.sizeBits == sort.exponentBits + sort.significandBits)
+            }
         )
 
         fun <Fp : KFpSort> KContext.makeInf(
@@ -107,11 +109,21 @@ class UnpackedFp<Fp : KFpSort> private constructor(
         ) = UnpackedFp(
             this, sort, sign, exponent = defaultExponent(sort),
             significand = defaultSignificand(sort), isInf = trueExpr,
+            packedBv = mkBvConcatExpr(
+                boolToBv(sign),
+                fpInfExponentBiased(sort),
+                fpInfSignificand(sort),
+            ).apply {
+                check(this.sort.sizeBits == sort.exponentBits + sort.significandBits)
+            }
         )
 
         fun <Fp : KFpSort> KContext.makeZero(sort: Fp, sign: KExpr<KBoolSort>) = UnpackedFp(
             this, sort, sign, exponent = defaultExponent(sort),
             significand = defaultSignificand(sort), isZero = trueExpr,
+            packedBv = mkBvConcatExpr(boolToBv(sign), mkBv(0, sort.exponentBits + sort.significandBits - 1u)).apply {
+                check(this.sort.sizeBits == sort.exponentBits + sort.significandBits)
+            }
         )
 
         fun <T : KFpSort> KContext.iteOp(
@@ -125,7 +137,8 @@ class UnpackedFp<Fp : KFpSort> private constructor(
                 significand = mkIte(cond, l.significand, r.significand),
                 isNaN = mkIte(cond, l.isNaN, r.isNaN),
                 isInf = mkIte(cond, l.isInf, r.isInf),
-                isZero = mkIte(cond, l.isZero, r.isZero)
+                isZero = mkIte(cond, l.isZero, r.isZero),
+                packedBv = l.packedBv?.let { r.packedBv?.let { mkIte(cond, l.packedBv, r.packedBv) } }
             )
         }
     }

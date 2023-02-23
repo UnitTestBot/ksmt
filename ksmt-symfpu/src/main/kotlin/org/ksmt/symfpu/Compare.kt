@@ -84,15 +84,21 @@ internal fun <Fp : KFpSort> KContext.equal(
     left: UnpackedFp<Fp>, right: UnpackedFp<Fp>
 ): KExpr<KBoolSort> {
     // All comparison with NaN are false
-    val neitherNan = left.isNaN.not() and right.isNaN.not()
+    val neitherNan = !left.isNaN and !right.isNaN
 
     val bothZero = left.isZero and right.isZero
-    val neitherZero = left.isZero.not() and right.isZero.not()
-    val bitEq = mkBvConcatExpr(left.signBv(), left.exponent, left.significand) eq mkBvConcatExpr(
-        right.signBv(), right.exponent, right.significand
-    )
+    val neitherZero = !left.isZero and !right.isZero
 
-    return neitherNan and (bothZero or (neitherZero and (left.isInf eq right.isInf and bitEq)))
+    val flagsAndExponent = neitherNan and
+            (bothZero or (neitherZero and
+                    (left.isInf eq right.isInf and (left.sign eq right.sign) and (left.exponent eq right.exponent))))
+
+    if (left.packedBv != null) {
+        if (right.packedBv != null) {
+            return neitherNan and (bothZero or (left.packedBv eq right.packedBv))
+        }
+    }
+    return flagsAndExponent and (left.significand eq right.significand)
 }
 
 internal fun <Fp : KFpSort> KContext.min(

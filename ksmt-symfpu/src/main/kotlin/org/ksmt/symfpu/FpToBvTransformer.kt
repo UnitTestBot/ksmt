@@ -66,7 +66,8 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
             expr.sort,
             expr.signBit.expr,
             expr.biasedExponent.asExpr(mkBvSort(expr.sort.exponentBits)),
-            expr.significand.asExpr(mkBvSort(expr.sort.significandBits - 1u))
+            expr.significand.asExpr(mkBvSort(expr.sort.significandBits - 1u)),
+            mkFpToIEEEBvExpr(expr)
         )
     }
 
