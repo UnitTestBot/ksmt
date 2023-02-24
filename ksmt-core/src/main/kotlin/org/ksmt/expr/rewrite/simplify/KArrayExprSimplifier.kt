@@ -390,7 +390,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
                 indices[i] == select.indices
             },
             mkSimplifiedStore = { array, simplifiedIdx, value ->
-                ctx.mkArrayStoreNoSimplify(array, simplifiedIndices[simplifiedIdx], value)
+                ctx.mkArrayNStoreNoSimplify(array, simplifiedIndices[simplifiedIdx], value)
             }
         )
     }
@@ -725,7 +725,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
                         substitute(mkConstApp(varDecl).uncheckedCast<_, KExpr<KSort>>(), index.uncheckedCast())
                     }
                 },
-                default = { mkArraySelectNoSimplify(it, expr.indices) }
+                default = { mkArrayNSelectNoSimplify(it, expr.indices) }
             )
         }
 

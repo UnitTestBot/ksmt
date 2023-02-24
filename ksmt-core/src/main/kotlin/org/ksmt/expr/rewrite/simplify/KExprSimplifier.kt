@@ -175,7 +175,7 @@ open class KExprSimplifier(override val ctx: KContext) :
         bounds = listOf(bound0, bound1),
         simplifiedBody = simplifiedBody,
         eliminateQuantifier = { body ->
-            val sort = mkArray2Sort(bound0.sort, bound1.sort, body.sort)
+            val sort = mkArraySort(bound0.sort, bound1.sort, body.sort)
             mkArrayConst(sort, body)
         },
         buildQuantifier = { _, body -> mkArrayLambda(bound0, bound1, body) }
@@ -188,7 +188,7 @@ open class KExprSimplifier(override val ctx: KContext) :
         bounds = listOf(bound0, bound1, bound2),
         simplifiedBody = simplifiedBody,
         eliminateQuantifier = { body ->
-            val sort = mkArray3Sort(bound0.sort, bound1.sort, bound2.sort, body.sort)
+            val sort = mkArraySort(bound0.sort, bound1.sort, bound2.sort, body.sort)
             mkArrayConst(sort, body)
         },
         buildQuantifier = { _, body -> mkArrayLambda(bound0, bound1, bound2, body) }
@@ -204,7 +204,7 @@ open class KExprSimplifier(override val ctx: KContext) :
             val sort = mkArrayNSort(bounds.map { it.sort }, body.sort)
             mkArrayConst(sort, body)
         },
-        buildQuantifier = { _, body -> mkArrayLambda(bounds, body) }
+        buildQuantifier = { _, body -> mkArrayNLambda(bounds, body) }
     )
 
     fun KContext.simplifyExistentialQuantifier(

@@ -376,7 +376,7 @@ interface KTransformer : KTransformerBase {
     override fun <R : KSort> transform(expr: KArrayNLambda<R>): KExpr<KArrayNSort<R>> = with(ctx) {
         val body = expr.body.accept(this@KTransformer)
         if (body == expr.body) return transformArrayLambda(expr)
-        return transformArrayLambda(mkArrayLambda(expr.indexVarDeclarations, body))
+        return transformArrayLambda(mkArrayNLambda(expr.indexVarDeclarations, body))
     }
 
     // arith transformers

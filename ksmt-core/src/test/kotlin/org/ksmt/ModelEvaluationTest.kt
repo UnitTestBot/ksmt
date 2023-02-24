@@ -3,7 +3,6 @@ package org.ksmt
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.DefaultValueSampler.Companion.sampleValue
 import org.ksmt.solver.model.KModelImpl
-import org.ksmt.sort.KBv32Sort
 import org.ksmt.utils.getValue
 import kotlin.test.Test
 import kotlin.test.assertEquals

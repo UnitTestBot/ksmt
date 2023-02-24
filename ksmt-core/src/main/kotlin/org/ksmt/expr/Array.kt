@@ -296,7 +296,7 @@ class KArray2Lambda<D0 : KSort, D1 : KSort, R : KSort> internal constructor(
     body: KExpr<R>
 ) : KArrayLambdaBase<KArray2Sort<D0, D1, R>, R>(
     ctx,
-    ctx.mkArray2Sort(indexVar0Decl.sort, indexVar1Decl.sort, body.sort),
+    ctx.mkArraySort(indexVar0Decl.sort, indexVar1Decl.sort, body.sort),
     body
 ) {
     override val indexVarDeclarations: List<KDecl<*>>
@@ -318,7 +318,7 @@ class KArray3Lambda<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal cons
     body: KExpr<R>
 ) : KArrayLambdaBase<KArray3Sort<D0, D1, D2, R>, R>(
     ctx,
-    ctx.mkArray3Sort(indexVar0Decl.sort, indexVar1Decl.sort, indexVar2Decl.sort, body.sort),
+    ctx.mkArraySort(indexVar0Decl.sort, indexVar1Decl.sort, indexVar2Decl.sort, body.sort),
     body
 ) {
     override val indexVarDeclarations: List<KDecl<*>>

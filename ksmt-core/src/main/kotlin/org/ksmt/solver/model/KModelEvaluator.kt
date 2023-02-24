@@ -120,7 +120,7 @@ open class KModelEvaluator(
                     ctx.mkArrayLambda(v0, v1, v2, evaluated).uncheckedCast()
                 }
 
-                is KArrayNSort<*> -> ctx.mkArrayLambda(
+                is KArrayNSort<*> -> ctx.mkArrayNLambda(
                     interpretation.vars,
                     evaluated
                 ).uncheckedCast()
@@ -228,7 +228,7 @@ open class KModelEvaluator(
         is KArrayNSort<*> -> sort.evalArrayInterpretation(
             interpretation
         ) { array: KExpr<KArrayNSort<R>>, args, value ->
-            mkArrayStore(array, args, value)
+            mkArrayNStore(array, args, value)
         }
     }
 

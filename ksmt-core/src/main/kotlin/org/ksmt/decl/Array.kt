@@ -72,7 +72,7 @@ class KArrayNStoreDecl<R : KSort> internal constructor(
     sort: KArrayNSort<R>
 ) : KArrayStoreDeclBase<KArrayNSort<R>, R>(ctx, sort) {
     override fun apply(args: List<KExpr<*>>): KApp<KArrayNSort<R>, *> =
-        ctx.mkArrayStoreNoSimplify(
+        ctx.mkArrayNStoreNoSimplify(
             array = args.first().uncheckedCast(),
             indices = args.subList(fromIndex = 1, toIndex = args.size - 1).uncheckedCast(),
             value = args.last().uncheckedCast()
@@ -143,7 +143,7 @@ class KArrayNSelectDecl<R : KSort> internal constructor(
 ) : KArraySelectDeclBase<KArrayNSort<R>, R>(ctx, sort) {
 
     override fun apply(args: List<KExpr<*>>): KApp<R, *> =
-        ctx.mkArraySelectNoSimplify(
+        ctx.mkArrayNSelectNoSimplify(
             array = args.first().uncheckedCast(),
             indices = args.drop(1)
         )

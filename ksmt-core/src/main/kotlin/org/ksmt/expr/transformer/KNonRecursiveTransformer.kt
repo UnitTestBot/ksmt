@@ -520,7 +520,7 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
     ): KExpr<KArrayNSort<R>> = transformExprAfterTransformedDefault(
         expr, expr.args, ::transformArrayStore
     ) { args ->
-        mkArrayStore(
+        mkArrayNStore(
             array = args.first().uncheckedCast(),
             indices = args.subList(fromIndex = 1, toIndex = args.size - 1).uncheckedCast(),
             value = args.last().uncheckedCast()
@@ -550,7 +550,7 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
     ): KExpr<R> = transformExprAfterTransformedDefault(
         expr, expr.args, ::transformArraySelect
     ) { args ->
-        mkArraySelect(
+        mkArrayNSelect(
             array = args.first().uncheckedCast(),
             indices = args.drop(1)
         )
@@ -585,7 +585,7 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
     ): KExpr<KArrayNSort<R>> = transformExprAfterTransformedDefault(
         expr, expr.body, ::transformArrayLambda
     ) { body ->
-        mkArrayLambda(expr.indexVarDeclarations, body)
+        mkArrayNLambda(expr.indexVarDeclarations, body)
     }
 
     override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KArrayConst<A, R>): KExpr<A> =

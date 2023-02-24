@@ -88,7 +88,7 @@ fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> KContext.simplifyArrayStore(
     default = { mkArrayStoreNoSimplify(array, index0, index1, index2, value) }
 )
 
-fun <R : KSort> KContext.simplifyArrayStore(
+fun <R : KSort> KContext.simplifyArrayNStore(
     array: KExpr<KArrayNSort<R>>,
     indices: List<KExpr<*>>,
     value: KExpr<R>
@@ -96,7 +96,7 @@ fun <R : KSort> KContext.simplifyArrayStore(
     array,
     value,
     selectIndicesMatch = { select: KArrayNSelect<R> -> indices == select.indices },
-    default = { mkArrayStoreNoSimplify(array, indices, value) }
+    default = { mkArrayNStoreNoSimplify(array, indices, value) }
 )
 
 @Suppress("LongParameterList")
@@ -205,7 +205,7 @@ fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> KContext.simplifyArraySelect
     default = { mkArraySelectNoSimplify(it, index0, index1, index2) }
 )
 
-fun <R : KSort> KContext.simplifyArraySelect(
+fun <R : KSort> KContext.simplifyArrayNSelect(
     array: KExpr<KArrayNSort<R>>,
     indices: List<KExpr<*>>
 ): KExpr<R> = simplifyArraySelect(
@@ -218,5 +218,5 @@ fun <R : KSort> KContext.simplifyArraySelect(
             substitute(mkConstApp(varDecl).uncheckedCast<_, KExpr<KSort>>(), index.uncheckedCast())
         }
     },
-    default = { mkArraySelectNoSimplify(it, indices) }
+    default = { mkArrayNSelectNoSimplify(it, indices) }
 )

@@ -96,7 +96,7 @@ open class KExprSubstitutor(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     ): KExpr<KArrayNSort<R>> = transformQuantifiedExpression(
         expr, expr.indexVarDeclarations, expr.body
     ) { body, bounds ->
-        ctx.mkArrayLambda(bounds, body)
+        ctx.mkArrayNLambda(bounds, body)
     }
 
     override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> =

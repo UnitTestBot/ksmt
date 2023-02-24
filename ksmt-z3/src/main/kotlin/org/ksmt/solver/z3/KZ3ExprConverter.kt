@@ -123,10 +123,10 @@ open class KZ3ExprConverter(
 
         return when (domain.size) {
             KArraySort.DOMAIN_SIZE -> mkArraySort(domain.single(), range)
-            KArray2Sort.DOMAIN_SIZE -> mkArray2Sort(domain.first(), domain.last(), range)
+            KArray2Sort.DOMAIN_SIZE -> mkArraySort(domain.first(), domain.last(), range)
             KArray3Sort.DOMAIN_SIZE -> {
                 val (d0, d1, d2) = domain
-                mkArray3Sort(d0, d1, d2, range)
+                mkArraySort(d0, d1, d2, range)
             }
 
             else -> mkArrayNSort(domain, range)
@@ -555,7 +555,7 @@ open class KZ3ExprConverter(
     private fun mkArrayNSelect(
         array: KExpr<KArrayNSort<KSort>>,
         indices: List<KExpr<KSort>>
-    ) = ctx.mkArraySelect(array, indices)
+    ) = ctx.mkArrayNSelect(array, indices)
 
     private fun mkArray1Store(
         array: KExpr<KArraySort<KSort, KSort>>,
@@ -579,7 +579,7 @@ open class KZ3ExprConverter(
         array: KExpr<KArrayNSort<KSort>>,
         indices: List<KExpr<KSort>>,
         value: KExpr<KSort>
-    ) = ctx.mkArrayStore(array, indices, value)
+    ) = ctx.mkArrayNStore(array, indices, value)
 
     open fun convertQuantifier(expr: Long): ExprConversionResult = with(ctx) {
         val numBound = Native.getQuantifierNumBound(nCtx, expr)
@@ -623,7 +623,7 @@ open class KZ3ExprConverter(
                         val (b0, b1, b2) = bounds
                         mkArrayLambda(b0, b1, b2, body)
                     }
-                    else -> mkArrayLambda(bounds, body)
+                    else -> mkArrayNLambda(bounds, body)
                 }
             }
             else -> TODO("unexpected quantifier: ${Native.astToString(nCtx, expr)}")

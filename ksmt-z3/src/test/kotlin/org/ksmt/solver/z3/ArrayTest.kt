@@ -30,7 +30,7 @@ class ArrayTest {
 
     @Test
     fun testArray2Conversion(): Unit = with(KContext()) {
-        val sort = mkArray2Sort(bv32Sort, bv8Sort, bv64Sort)
+        val sort = mkArraySort(bv32Sort, bv8Sort, bv64Sort)
 
         val array by sort
         val index0 by bv32Sort
@@ -49,7 +49,7 @@ class ArrayTest {
 
     @Test
     fun testArray3Conversion(): Unit = with(KContext()) {
-        val sort = mkArray3Sort(bv32Sort, bv8Sort, bv16Sort, bv64Sort)
+        val sort = mkArraySort(bv32Sort, bv8Sort, bv16Sort, bv64Sort)
 
         val array by sort
         val index0 by bv32Sort
@@ -84,9 +84,9 @@ class ArrayTest {
 
         testArrayConvert(
             mkConst = { mkArrayConst(sort, value) },
-            mkSelect = { mkArraySelect(array, indices) },
-            mkStore = { mkArrayStore(array, indices, value) },
-            mkLambda = { mkArrayLambda(indices.map { it.decl }, mkArraySelect(array, indices)) },
+            mkSelect = { mkArrayNSelect(array, indices) },
+            mkStore = { mkArrayNStore(array, indices, value) },
+            mkLambda = { mkArrayNLambda(indices.map { it.decl }, mkArrayNSelect(array, indices)) },
             mkAsArray = { mkFunctionAsArray(sort, decl) }
         )
     }

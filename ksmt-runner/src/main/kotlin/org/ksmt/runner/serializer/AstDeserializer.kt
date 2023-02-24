@@ -88,8 +88,8 @@ class AstDeserializer(
             SortKind.Bv -> mkBvSort(readUInt())
             SortKind.Fp -> mkFpSort(readUInt(), readUInt())
             SortKind.Array -> mkArraySort(readSort(), readSort())
-            SortKind.Array2 -> mkArray2Sort(readSort(), readSort(), readSort())
-            SortKind.Array3 -> mkArray3Sort(readSort(), readSort(), readSort(), readSort())
+            SortKind.Array2 -> mkArraySort(readSort(), readSort(), readSort())
+            SortKind.Array3 -> mkArraySort(readSort(), readSort(), readSort(), readSort())
             SortKind.ArrayN -> mkArraySort(readAstArray().uncheckedCast(), readSort())
             SortKind.Uninterpreted -> mkUninterpretedSort(readString())
         }
@@ -215,7 +215,7 @@ class AstDeserializer(
             ExprKind.Array3Store -> mkArrayStoreNoSimplify(
                 readExpr(), readExpr(), readExpr(), readExpr(), readExpr()
             )
-            ExprKind.ArrayNStore -> mkArrayStoreNoSimplify(
+            ExprKind.ArrayNStore -> mkArrayNStoreNoSimplify(
                 readExpr(), readAstArray() as List<KExpr<KSort>>, readExpr()
             )
             ExprKind.ArraySelect -> mkArraySelectNoSimplify(
@@ -227,7 +227,7 @@ class AstDeserializer(
             ExprKind.Array3Select -> mkArraySelectNoSimplify(
                 readExpr(), readExpr(), readExpr(), readExpr()
             )
-            ExprKind.ArrayNSelect -> mkArraySelectNoSimplify(
+            ExprKind.ArrayNSelect -> mkArrayNSelectNoSimplify(
                 readExpr(), readAstArray() as List<KExpr<KSort>>
             )
             ExprKind.ArrayConst -> mkArrayConst(readSort() as KArraySort<KSort, KSort>, readExpr())
@@ -244,7 +244,7 @@ class AstDeserializer(
             ExprKind.Array3Lambda -> mkArrayLambda(
                 readDecl(), readDecl(), readDecl(), readExpr()
             )
-            ExprKind.ArrayNLambda -> mkArrayLambda(
+            ExprKind.ArrayNLambda -> mkArrayNLambda(
                 readAstArray() as List<KDecl<KSort>>, readExpr()
             )
             ExprKind.AddArithExpr -> mkArithAddNoSimplify(readAstArray() as List<KExpr<KArithSort>>)
