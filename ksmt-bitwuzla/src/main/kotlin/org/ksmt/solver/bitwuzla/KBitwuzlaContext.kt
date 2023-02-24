@@ -16,6 +16,9 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
@@ -274,6 +277,24 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
 
         override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>) {
             sort.domain.accept(this)
+            sort.range.accept(this)
+        }
+
+        override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>) {
+            sort.domain0.accept(this)
+            sort.domain1.accept(this)
+            sort.range.accept(this)
+        }
+
+        override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>) {
+            sort.domain0.accept(this)
+            sort.domain1.accept(this)
+            sort.domain2.accept(this)
+            sort.range.accept(this)
+        }
+
+        override fun <R : KSort> visit(sort: KArrayNSort<R>) {
+            sort.domain.forEach { it.accept(this) }
             sort.range.accept(this)
         }
 

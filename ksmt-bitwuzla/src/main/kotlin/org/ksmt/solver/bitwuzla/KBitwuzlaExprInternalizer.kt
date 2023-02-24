@@ -7,8 +7,17 @@ import org.ksmt.decl.KDeclVisitor
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KAddArithExpr
 import org.ksmt.expr.KAndExpr
+import org.ksmt.expr.KArray2Lambda
+import org.ksmt.expr.KArray2Select
+import org.ksmt.expr.KArray2Store
+import org.ksmt.expr.KArray3Lambda
+import org.ksmt.expr.KArray3Select
+import org.ksmt.expr.KArray3Store
 import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArrayNLambda
+import org.ksmt.expr.KArrayNSelect
+import org.ksmt.expr.KArrayNStore
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KBitVec16Value
@@ -148,7 +157,11 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.solver.util.KExprInternalizerBase
 import org.ksmt.sort.KArithSort
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv16Sort
 import org.ksmt.sort.KBv32Sort
@@ -696,6 +709,22 @@ open class KBitwuzlaExprInternalizer(
         }
     }
 
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Store<D0, D1, R>
+    ): KExpr<KArray2Sort<D0, D1, R>> {
+        TODO("Multi-indexed arrays are not supported")
+    }
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Store<D0, D1, D2, R>
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> {
+        TODO("Multi-indexed arrays are not supported")
+    }
+
+    override fun <R : KSort> transform(expr: KArrayNStore<R>): KExpr<KArrayNSort<R>> {
+        TODO("Multi-indexed arrays are not supported")
+    }
+
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>) = with(expr) {
         transform(array, index) { a: BitwuzlaTerm, i: BitwuzlaTerm ->
             mkArraySelectTerm(Native.bitwuzlaTermGetBitwuzlaKind(a), a, i)
@@ -709,7 +738,21 @@ open class KBitwuzlaExprInternalizer(
             Native.bitwuzlaMkTerm2(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT, array, idx)
         }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>) = with(expr) {
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(expr: KArray2Select<D0, D1, R>): KExpr<R> {
+        TODO("Multi-indexed arrays are not supported")
+    }
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Select<D0, D1, D2, R>
+    ): KExpr<R> {
+        TODO("Multi-indexed arrays are not supported")
+    }
+
+    override fun <R : KSort> transform(expr: KArrayNSelect<R>): KExpr<R> {
+        TODO("Multi-indexed arrays are not supported")
+    }
+
+    override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KArrayConst<A, R>) = with(expr) {
         transform(value) { value: BitwuzlaTerm ->
             Native.bitwuzlaMkConstArray(bitwuzlaCtx.bitwuzla, sort.internalizeSort(), value)
         }
@@ -731,6 +774,24 @@ open class KBitwuzlaExprInternalizer(
 
     private fun mkLambdaTerm(boundVar: BitwuzlaTerm, body: BitwuzlaTerm): BitwuzlaTerm =
         Native.bitwuzlaMkTerm2(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_LAMBDA, boundVar, body)
+
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Lambda<D0, D1, R>
+    ): KExpr<KArray2Sort<D0, D1, R>> {
+        TODO("Multi-indexed arrays are not supported")
+    }
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Lambda<D0, D1, D2, R>
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> {
+        TODO("Multi-indexed arrays are not supported")
+    }
+
+    override fun <R : KSort> transform(
+        expr: KArrayNLambda<R>
+    ): KExpr<KArrayNSort<R>> {
+        TODO("Multi-indexed arrays are not supported")
+    }
 
     override fun transform(
         expr: KExistentialQuantifier
@@ -1007,7 +1068,7 @@ open class KBitwuzlaExprInternalizer(
         }
     }
 
-    override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
+    override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KFunctionAsArray<A, R>): KExpr<A> {
         TODO("KFunctionAsArray internalization is not implemented in bitwuzla")
     }
 
@@ -1078,6 +1139,20 @@ open class KBitwuzlaExprInternalizer(
 
                 Native.bitwuzlaMkArraySort(bitwuzlaCtx.bitwuzla, domain, range)
             }
+
+        override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>): BitwuzlaSort {
+            TODO("Multi-indexed arrays are not supported")
+        }
+
+        override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(
+            sort: KArray3Sort<D0, D1, D2, R>
+        ): BitwuzlaSort {
+            TODO("Multi-indexed arrays are not supported")
+        }
+
+        override fun <R : KSort> visit(sort: KArrayNSort<R>): BitwuzlaSort {
+            TODO("Multi-indexed arrays are not supported")
+        }
 
         override fun <S : KBvSort> visit(sort: S): BitwuzlaSort =
             bitwuzlaCtx.internalizeSort(sort) {
@@ -1207,6 +1282,16 @@ open class KBitwuzlaExprInternalizer(
 
         override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): Boolean =
             sort.domain.accept(this) || sort.range.accept(this)
+
+        override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>): Boolean =
+            sort.domain0.accept(this) || sort.domain1.accept(this) || sort.range.accept(this)
+
+        override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>): Boolean =
+            sort.domain0.accept(this) || sort.domain1.accept(this)
+                || sort.domain2.accept(this) || sort.range.accept(this)
+
+        override fun <R : KSort> visit(sort: KArrayNSort<R>): Boolean =
+            sort.domain.any { it.accept(this) } || sort.range.accept(this)
 
         override fun visit(sort: KBoolSort): Boolean = false
         override fun visit(sort: KIntSort): Boolean = false
