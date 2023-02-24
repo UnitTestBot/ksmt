@@ -10,6 +10,7 @@ import com.microsoft.z3.enumerations.Z3_sort_kind
 import com.microsoft.z3.enumerations.Z3_symbol_kind
 import com.microsoft.z3.fpSignOrNull
 import com.microsoft.z3.getAppArgs
+import com.microsoft.z3.getArraySortDomain
 import com.microsoft.z3.intOrNull
 import com.microsoft.z3.longOrNull
 import org.ksmt.KContext
@@ -97,9 +98,18 @@ open class KZ3ExprConverter(
             Z3_sort_kind.Z3_INT_SORT -> intSort
             Z3_sort_kind.Z3_REAL_SORT -> realSort
             Z3_sort_kind.Z3_ARRAY_SORT -> {
-                val domain = Native.getArraySortDomain(nCtx, sort)
-                val range = Native.getArraySortRange(nCtx, sort)
-                mkArraySort(domain.convertSort(), range.convertSort())
+                val domain = getArraySortDomain(nCtx, sort).map { it.convertSort<KSort>() }
+                val range = Native.getArraySortRange(nCtx, sort).convertSort<KSort>()
+
+                when (domain.size) {
+                    1 -> mkArraySort(domain.single(), range)
+                    2 -> mkArray2Sort(domain.first(), domain.last(), range)
+                    3 -> {
+                        val (d0, d1, d2) = domain
+                        mkArray3Sort(d0, d1, d2, range)
+                    }
+                    else -> mkArrayNSort(domain, range)
+                }
             }
             Z3_sort_kind.Z3_BV_SORT -> mkBvSort(Native.getBvSortSize(nCtx, sort).toUInt())
             Z3_sort_kind.Z3_FLOATING_POINT_SORT ->

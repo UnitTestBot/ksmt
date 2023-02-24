@@ -813,8 +813,8 @@ open class KZ3ExprInternalizer(
 
     override fun transform(expr: KUniversalQuantifier) = transformQuantifier(expr, isUniversal = true)
 
-    override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KFunctionAsArray<A, R>): KExpr<A> {
-        TODO("KFunctionAsArray internalization is not implemented in z3")
+    override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KFunctionAsArray<A, R>): KExpr<A> = with(expr) {
+        transform { Native.mkAsArray(nCtx, function.internalizeDecl()) }
     }
 
     inline fun <S : KExpr<*>> S.transform(

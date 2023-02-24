@@ -1,5 +1,7 @@
 package com.microsoft.z3
 
+import com.microsoft.z3.enumerations.Z3_error_code
+
 fun intOrNull(ctx: Long, expr: Long): Int? {
     val result = Native.IntPtr()
     if (!Native.getNumeralInt(ctx, expr, result)) return null
@@ -45,4 +47,28 @@ fun mkQuantifier(
 fun getAppArgs(ctx: Long, expr: Long): LongArray {
     val size = Native.getAppNumArgs(ctx, expr)
     return LongArray(size) { idx -> Native.getAppArg(ctx, expr, idx) }
+}
+
+/**
+ * We have no way to obtain array sort domain size.
+ * To overcome this we iterate over domain until index is out of bounds.
+ * */
+fun getArraySortDomain(ctx: Long, sort: Long): List<Long> {
+    val domain = arrayListOf<Long>()
+    while (true) {
+        val domainSortI = Native.INTERNALgetArraySortDomainN(ctx, sort, domain.size)
+        when (val errorCode = Z3_error_code.fromInt(Native.INTERNALgetErrorCode(ctx))) {
+            Z3_error_code.Z3_OK -> {
+                domain.add(domainSortI)
+                continue
+            }
+
+            /**
+             * Z3 set [Z3_error_code.Z3_INVALID_ARG] error code when sort domain index is out of bounds.
+             * */
+            Z3_error_code.Z3_INVALID_ARG -> break
+            else -> throw Z3Exception(Native.INTERNALgetErrorMsg(ctx, errorCode.toInt()))
+        }
+    }
+    return domain
 }
