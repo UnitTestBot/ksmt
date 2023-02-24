@@ -70,7 +70,7 @@ class KYicesModel(
 
                 funcInterpretationsToDo.add(Pair(yval, funcDecl))
 
-                mkFunctionAsArray<KSort, KSort>(funcDecl).uncheckedCast()
+                mkFunctionAsArray(sort.uncheckedCast(), funcDecl).uncheckedCast()
             }
             else -> error("Unsupported sort $sort")
         }
