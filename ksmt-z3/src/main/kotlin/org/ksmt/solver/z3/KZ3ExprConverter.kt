@@ -505,11 +505,11 @@ open class KZ3ExprConverter(
         when (Native.getAppNumArgs(nCtx, expr)) {
             3 -> expr.convert(::mkArray1Store)
             4 -> expr.convert(::mkArray2Store)
-            5 -> expr.convertList { args ->
+            5 -> expr.convertList { args: List<KExpr<KSort>> ->
                 val (i0, i1, i2) = args.subList(1, args.lastIndex)
                 mkArray3Store(args.first().uncheckedCast(), i0, i1, i2, args.last())
             }
-            else -> expr.convertList { args ->
+            else -> expr.convertList { args: List<KExpr<KSort>> ->
                 mkArrayNStore(args.first().uncheckedCast(), args.subList(1, args.lastIndex), args.last())
             }
         }
@@ -519,7 +519,7 @@ open class KZ3ExprConverter(
             2 -> expr.convert(::mkArray1Select)
             3 -> expr.convert(::mkArray2Select)
             4 -> expr.convert(::mkArray3Select)
-            else -> expr.convertList { args ->
+            else -> expr.convertList { args: List<KExpr<KSort>> ->
                 mkArrayNSelect(args.first().uncheckedCast(), args.drop(1))
             }
         }
