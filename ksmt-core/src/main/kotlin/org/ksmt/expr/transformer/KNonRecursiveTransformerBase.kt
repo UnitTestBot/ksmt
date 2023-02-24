@@ -4,7 +4,6 @@ import org.ksmt.expr.KApp
 import org.ksmt.expr.KArray2Lambda
 import org.ksmt.expr.KArray3Lambda
 import org.ksmt.expr.KArrayLambda
-import org.ksmt.expr.KArrayLambdaBase
 import org.ksmt.expr.KArrayNLambda
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
@@ -13,7 +12,6 @@ import org.ksmt.sort.KArray2Sort
 import org.ksmt.sort.KArray3Sort
 import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
-import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import java.util.IdentityHashMap

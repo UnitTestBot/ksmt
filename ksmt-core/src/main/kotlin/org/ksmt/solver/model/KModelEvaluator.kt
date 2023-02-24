@@ -66,7 +66,7 @@ open class KModelEvaluator(
     override fun <R : KSort> transformSelect(array: KExpr<KArrayNSort<R>>, indices: List<KExpr<KSort>>): KExpr<R> =
         super.transformSelect(tryEvalArrayConst(array), indices)
 
-    // If base array in uninterpreted, try to replace it with model value
+    // If base array is uninterpreted, try to replace it with model value
     private fun <A : KArraySortBase<R>, R : KSort> tryEvalArrayConst(array: KExpr<A>): KExpr<A> {
         if (array !is KConst<A>) return array
         val interpretation = model.interpretation(array.decl) ?: return array

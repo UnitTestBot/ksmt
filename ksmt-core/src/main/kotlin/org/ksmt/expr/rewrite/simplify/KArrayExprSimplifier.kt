@@ -173,7 +173,9 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         val lastNonConstantToCheck = array.nonConstantsToCheck[storeIndex]
         for (i in 0 until lastNonConstantToCheck) {
             val nonConstant = array.nonConstants[i]
-            if (!areDefinitelyDistinct(selectIndex, nonConstant)) return null
+            if (!areDefinitelyDistinct(selectIndex, nonConstant)) {
+                return null
+            }
         }
 
         return array.storeValues[storeIndex]

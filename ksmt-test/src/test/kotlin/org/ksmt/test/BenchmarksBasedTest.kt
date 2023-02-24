@@ -37,7 +37,6 @@ import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.async.KAsyncSolver
 import org.ksmt.solver.runner.KSolverRunnerManager
 import org.ksmt.sort.KArithSort
-import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
