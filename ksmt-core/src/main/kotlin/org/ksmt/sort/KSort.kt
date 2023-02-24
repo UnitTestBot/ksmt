@@ -74,6 +74,10 @@ class KArraySort<D : KSort, R : KSort> internal constructor(
 
     override fun equals(other: Any?): Boolean =
         this === other || (other is KArraySort<*, *> && domain == other.domain && range == other.range)
+
+    companion object {
+        const val DOMAIN_SIZE = 1
+    }
 }
 
 class KArray2Sort<D0 : KSort, D1 : KSort, R : KSort> internal constructor(
@@ -92,6 +96,10 @@ class KArray2Sort<D0 : KSort, D1 : KSort, R : KSort> internal constructor(
         if (other !is KArray2Sort<*, *, *>) return false
         return domain0 == other.domain0 && domain1 == other.domain1 && range == other.range
     }
+
+    companion object {
+        const val DOMAIN_SIZE = 2
+    }
 }
 
 class KArray3Sort<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal constructor(
@@ -109,6 +117,10 @@ class KArray3Sort<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal constr
         if (this === other) return true
         if (other !is KArray3Sort<*, *, *, *>) return false
         return domain0 == other.domain0 && domain1 == other.domain1 && domain2 == other.domain2 && range == other.range
+    }
+
+    companion object {
+        const val DOMAIN_SIZE = 3
     }
 }
 

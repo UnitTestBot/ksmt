@@ -62,7 +62,7 @@ class ModelEvaluationTest {
             default = null
         )
 
-        val arrayInterp = mkFunctionAsArray<KBv32Sort, KBv32Sort>(tmpDecl)
+        val arrayInterp = mkFunctionAsArray(arraySort, tmpDecl)
 
 
         val model = KModelImpl(
@@ -121,8 +121,8 @@ class ModelEvaluationTest {
             default = null
         )
 
-        val array1Interp = mkFunctionAsArray<KBv32Sort, KBv32Sort>(tmpDecl1)
-        val array2Interp = mkFunctionAsArray<KBv32Sort, KBv32Sort>(tmpDecl2)
+        val array1Interp = mkFunctionAsArray(arraySort, tmpDecl1)
+        val array2Interp = mkFunctionAsArray(arraySort, tmpDecl2)
 
 
         val model = KModelImpl(

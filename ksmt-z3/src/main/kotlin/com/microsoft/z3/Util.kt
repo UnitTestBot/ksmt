@@ -53,6 +53,7 @@ fun getAppArgs(ctx: Long, expr: Long): LongArray {
  * We have no way to obtain array sort domain size.
  * To overcome this we iterate over domain until index is out of bounds.
  * */
+@Suppress("LoopWithTooManyJumpStatements")
 fun getArraySortDomain(ctx: Long, sort: Long): List<Long> {
     val domain = arrayListOf<Long>()
     while (true) {
