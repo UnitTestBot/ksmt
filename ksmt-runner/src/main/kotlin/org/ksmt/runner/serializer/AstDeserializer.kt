@@ -9,10 +9,12 @@ import org.ksmt.expr.KExpr
 import org.ksmt.expr.KIntNumExpr
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.uncheckedCast
 
 @OptIn(ExperimentalUnsignedTypes::class)
 class AstDeserializer(
@@ -86,6 +88,9 @@ class AstDeserializer(
             SortKind.Bv -> mkBvSort(readUInt())
             SortKind.Fp -> mkFpSort(readUInt(), readUInt())
             SortKind.Array -> mkArraySort(readSort(), readSort())
+            SortKind.Array2 -> mkArray2Sort(readSort(), readSort(), readSort())
+            SortKind.Array3 -> mkArray3Sort(readSort(), readSort(), readSort(), readSort())
+            SortKind.ArrayN -> mkArraySort(readAstArray().uncheckedCast(), readSort())
             SortKind.Uninterpreted -> mkUninterpretedSort(readString())
         }
     }
@@ -201,11 +206,47 @@ class AstDeserializer(
             ExprKind.FpToFpExpr -> mkFpToFpExprNoSimplify(readSort() as KFpSort, readExpr(), readExpr())
             ExprKind.RealToFpExpr -> mkRealToFpExprNoSimplify(readSort() as KFpSort, readExpr(), readExpr())
             ExprKind.BvToFpExpr -> mkBvToFpExprNoSimplify(readSort() as KFpSort, readExpr(), readExpr(), readBoolean())
-            ExprKind.ArrayStore -> deserialize(::mkArrayStoreNoSimplify)
-            ExprKind.ArraySelect -> deserialize(::mkArraySelectNoSimplify)
+            ExprKind.ArrayStore -> mkArrayStoreNoSimplify(
+                readExpr(), readExpr(), readExpr()
+            )
+            ExprKind.Array2Store -> mkArrayStoreNoSimplify(
+                readExpr(), readExpr(), readExpr(), readExpr()
+            )
+            ExprKind.Array3Store -> mkArrayStoreNoSimplify(
+                readExpr(), readExpr(), readExpr(), readExpr(), readExpr()
+            )
+            ExprKind.ArrayNStore -> mkArrayStoreNoSimplify(
+                readExpr(), readAstArray() as List<KExpr<KSort>>, readExpr()
+            )
+            ExprKind.ArraySelect -> mkArraySelectNoSimplify(
+                readExpr(), readExpr()
+            )
+            ExprKind.Array2Select -> mkArraySelectNoSimplify(
+                readExpr(), readExpr(), readExpr()
+            )
+            ExprKind.Array3Select -> mkArraySelectNoSimplify(
+                readExpr(), readExpr(), readExpr(), readExpr()
+            )
+            ExprKind.ArrayNSelect -> mkArraySelectNoSimplify(
+                readExpr(), readAstArray() as List<KExpr<KSort>>
+            )
             ExprKind.ArrayConst -> mkArrayConst(readSort() as KArraySort<KSort, KSort>, readExpr())
-            ExprKind.FunctionAsArray -> mkFunctionAsArray<KSort, KSort>(readDecl() as KFuncDecl<KSort>)
-            ExprKind.ArrayLambda -> mkArrayLambda(readDecl(), readExpr())
+            ExprKind.FunctionAsArray -> mkFunctionAsArray(
+                readSort() as KArraySortBase<KSort>,
+                readDecl() as KFuncDecl<KSort>
+            )
+            ExprKind.ArrayLambda -> mkArrayLambda(
+                readDecl(), readExpr()
+            )
+            ExprKind.Array2Lambda -> mkArrayLambda(
+                readDecl(), readDecl(), readExpr()
+            )
+            ExprKind.Array3Lambda -> mkArrayLambda(
+                readDecl(), readDecl(), readDecl(), readExpr()
+            )
+            ExprKind.ArrayNLambda -> mkArrayLambda(
+                readAstArray() as List<KDecl<KSort>>, readExpr()
+            )
             ExprKind.AddArithExpr -> mkArithAddNoSimplify(readAstArray() as List<KExpr<KArithSort>>)
             ExprKind.MulArithExpr -> mkArithMulNoSimplify(readAstArray() as List<KExpr<KArithSort>>)
             ExprKind.SubArithExpr -> mkArithSubNoSimplify(readAstArray() as List<KExpr<KArithSort>>)
