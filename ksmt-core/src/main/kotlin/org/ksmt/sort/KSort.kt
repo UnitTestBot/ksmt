@@ -127,6 +127,11 @@ class KArray3Sort<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal constr
 class KArrayNSort<R : KSort> internal constructor(
     ctx: KContext, val domain: List<KSort>, override val range: R
 ) : KArraySortBase<R>(ctx) {
+    init {
+        require(domain.size > KArray3Sort.DOMAIN_SIZE) {
+            "Use specialized Array with domain size ${domain.size}"
+        }
+    }
 
     override val domainSorts: List<KSort> = domain
 
