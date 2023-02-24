@@ -2922,7 +2922,7 @@ open class KContext(
         array: KArray3Sort<D0, D1, D2, R>
     ): KArray3SelectDecl<D0, D1, D2, R> = KArray3SelectDecl(this, array)
 
-    fun <R : KSort> mkArraySelectDecl(array: KArrayNSort<R>): KArrayNSelectDecl<R> =
+    fun <R : KSort> mkArrayNSelectDecl(array: KArrayNSort<R>): KArrayNSelectDecl<R> =
         KArrayNSelectDecl(this, array)
 
     fun <D : KSort, R : KSort> mkArrayStoreDecl(array: KArraySort<D, R>): KArrayStoreDecl<D, R> =
@@ -2936,7 +2936,7 @@ open class KContext(
         array: KArray3Sort<D0, D1, D2, R>
     ): KArray3StoreDecl<D0, D1, D2, R> = KArray3StoreDecl(this, array)
 
-    fun <R : KSort> mkArrayStoreDecl(array: KArrayNSort<R>): KArrayNStoreDecl<R> =
+    fun <R : KSort> mkArrayNStoreDecl(array: KArrayNSort<R>): KArrayNStoreDecl<R> =
         KArrayNStoreDecl(this, array)
 
     fun <A : KArraySortBase<R>, R : KSort> mkArrayConstDecl(array: A): KArrayConstDecl<A, R> =
