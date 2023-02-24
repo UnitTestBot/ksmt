@@ -729,7 +729,7 @@ open class KBitwuzlaExprInternalizer(
         return mkLambdaTerm(boundVar, lambdaBody)
     }
 
-    private fun mkLambdaTerm(boundVar: BitwuzlaSort, body: BitwuzlaTerm): BitwuzlaTerm =
+    private fun mkLambdaTerm(boundVar: BitwuzlaTerm, body: BitwuzlaTerm): BitwuzlaTerm =
         Native.bitwuzlaMkTerm2(bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_LAMBDA, boundVar, body)
 
     override fun transform(
