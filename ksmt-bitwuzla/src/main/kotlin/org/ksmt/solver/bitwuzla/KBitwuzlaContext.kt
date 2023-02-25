@@ -79,10 +79,10 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
      * See [ExprMover].
      * */
     fun findExprTerm(expr: KExpr<*>): BitwuzlaTerm? {
+        val globalTerm = exprGlobalCache[expr] ?: return null
+
         val currentLevelTerm = exprCurrentLevelCache[expr]
         if (currentLevelTerm != null) return currentLevelTerm
-
-        val globalTerm = exprGlobalCache[expr] ?: return null
 
         currentLevelExprMover.apply(expr)
 
