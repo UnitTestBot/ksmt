@@ -101,6 +101,10 @@ open class KExprSimplifier(override val ctx: KContext) :
         }
     }
 
+    // We can skip values transformation since values can't be simplified
+    override fun <T : KSort> exprTransformationRequired(expr: KExpr<T>): Boolean =
+        expr !is KInterpretedValue<T>
+
     // Interpreted values can't be simplified.
     override fun <T : KSort> transformValue(expr: KInterpretedValue<T>): KExpr<T> = expr
 
