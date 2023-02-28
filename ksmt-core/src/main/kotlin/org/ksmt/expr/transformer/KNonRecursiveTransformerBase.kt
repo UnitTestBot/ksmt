@@ -77,9 +77,16 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
      *  null if expression was not transformed yet
      * */
     fun <T : KSort> transformedExpr(expr: KExpr<T>): KExpr<T>? {
+        if (!exprTransformationRequired(expr)) return expr
+
         @Suppress("UNCHECKED_CAST")
         return transformed[expr] as? KExpr<T>
     }
+
+    /**
+     * Allows to skip expression transformation and stop deepening.
+     * */
+    open fun <T : KSort> exprTransformationRequired(expr: KExpr<T>): Boolean = true
 
     /**
      * Transform [this] expression after [dependencies] expressions
