@@ -181,4 +181,45 @@ class SolverTest {
         val status = solver.check()
         assertEquals(KSolverStatus.SAT, status)
     }
+
+    @Test
+    fun testArrayLambdaEq(): Unit = with(ctx) {
+        val sort = mkArraySort(bv32Sort, bv32Sort)
+        val arrayVar by sort
+
+        val bias by bv32Sort
+        val idx by bv32Sort
+        val lambdaBody = mkBvAddExpr(idx, bias)
+        val lambda = mkArrayLambda(idx.decl, lambdaBody)
+
+        solver.assert(arrayVar eq lambda)
+        val status = solver.check()
+
+        assertEquals(KSolverStatus.SAT, status)
+    }
+
+    @Test
+    fun testArrayLambdaSelect(): Unit = with(ctx) {
+        val sort = mkArraySort(bv32Sort, bv32Sort)
+        val arrayVar by sort
+
+        val bias by bv32Sort
+        val idx by bv32Sort
+        val lambdaBody = arrayVar.select(mkBvAddExpr(idx, bias))
+        val lambda = mkArrayLambda(idx.decl, lambdaBody)
+
+        val selectIdx by bv32Sort
+        val selectValue by bv32Sort
+        val lambdaSelectValue by bv32Sort
+
+        solver.assert(bias neq mkBv(0))
+        solver.assert(selectValue eq arrayVar.select(selectIdx))
+        solver.assert(lambdaSelectValue eq lambda.select(mkBvSubExpr(selectIdx, bias)))
+
+        assertEquals(KSolverStatus.SAT, solver.check())
+
+        solver.assert(lambdaSelectValue neq  selectValue)
+
+        assertEquals(KSolverStatus.UNSAT, solver.check())
+    }
 }

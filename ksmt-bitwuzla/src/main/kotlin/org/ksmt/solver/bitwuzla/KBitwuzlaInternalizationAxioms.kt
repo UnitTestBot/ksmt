@@ -2,17 +2,14 @@ package org.ksmt.solver.bitwuzla
 
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
-import org.ksmt.expr.KArrayLambda
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpToIEEEBvExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
-import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
-import org.ksmt.sort.KSort
 import org.ksmt.utils.uncheckedCast
 
 class KBitwuzlaInternalizationAxioms(ctx: KContext) : KNonRecursiveTransformer(ctx) {
@@ -49,23 +46,6 @@ class KBitwuzlaInternalizationAxioms(ctx: KContext) : KNonRecursiveTransformer(c
                 stub
             }
         }
-
-    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> = with(ctx) {
-        val stub = mkFreshConst("arrayLambda", expr.sort)
-        stubs += stub.decl
-
-        val indexVar = mkConstApp(expr.indexVarDecl)
-        val quantifierBody = stub.select(indexVar) eq expr.body
-
-        val nestedRewriter = KBitwuzlaInternalizationAxioms(ctx)
-        val exprWithAxioms = nestedRewriter.rewriteWithAxioms(quantifierBody)
-        val rewrittenBody = ctx.mkAnd(listOf(exprWithAxioms.expr) + exprWithAxioms.axioms)
-        val newBounds = listOf(expr.indexVarDecl) + exprWithAxioms.stubs
-        val axiomQuantifier = ctx.mkUniversalQuantifier(rewrittenBody, newBounds)
-        axioms += axiomQuantifier
-
-        stub
-    }
 
     // (exists (a, b) (= a (f b))) ==> (exists (a, b, c) (and (= a c) (= b (f^-1 c))))
     override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> {
