@@ -67,6 +67,8 @@ open class KBitwuzlaModel(
         ctx.ensureContextMatch(decl)
         bitwuzlaCtx.ensureActive()
 
+        if (decl !in modelDeclarations) return null
+
         val interpretation = interpretations.getOrPut(decl) {
             // Constant was not internalized --> constant is unknown to solver --> constant is not present in model
             val bitwuzlaConstant = bitwuzlaCtx.findConstant(decl)

@@ -14,7 +14,7 @@ import org.ksmt.sort.KBoolSort
 import kotlin.time.Duration
 
 open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverConfiguration> {
-    open val bitwuzlaCtx = KBitwuzlaContext()
+    open val bitwuzlaCtx = KBitwuzlaContext(ctx)
     open val exprInternalizer: KBitwuzlaExprInternalizer by lazy {
         KBitwuzlaExprInternalizer(bitwuzlaCtx)
     }

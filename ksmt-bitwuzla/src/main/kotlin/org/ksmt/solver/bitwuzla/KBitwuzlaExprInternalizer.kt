@@ -181,7 +181,7 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun findInternalizedExpr(expr: KExpr<*>): BitwuzlaTerm? {
-        return bitwuzlaCtx[expr]
+        return bitwuzlaCtx.findExprTerm(expr)
     }
 
     override fun saveInternalizedExpr(expr: KExpr<*>, internalized: BitwuzlaTerm) {
@@ -252,7 +252,7 @@ open class KBitwuzlaExprInternalizer(
     fun <T : KSort> KDecl<T>.bitwuzlaFunctionSort(): BitwuzlaSort = accept(functionSortInternalizer)
 
     private fun saveExprInternalizationResult(expr: KExpr<*>, term: BitwuzlaTerm) {
-        bitwuzlaCtx.internalizeExpr(expr) { term }
+        bitwuzlaCtx.saveExprTerm(expr, term)
 
         // Save only constants
         if (expr !is KInterpretedValue<*>) return
