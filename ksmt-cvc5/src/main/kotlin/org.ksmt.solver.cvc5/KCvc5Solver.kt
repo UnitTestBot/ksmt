@@ -6,6 +6,7 @@ import io.github.cvc5.Solver
 import io.github.cvc5.Term
 import io.github.cvc5.UnknownExplanation
 import org.ksmt.KContext
+import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
@@ -14,7 +15,6 @@ import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.sort.KBoolSort
 import org.ksmt.utils.NativeLibraryLoader
-import org.ksmt.utils.mkFreshConst
 import java.util.TreeSet
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
@@ -61,18 +61,15 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         solver.assertFormula(cvc5Expr)
     }
 
-    override fun assertAndTrack(expr: KExpr<KBoolSort>): KExpr<KBoolSort> = cvc5Try {
-        val trackVar = with(ctx) { boolSort.mkFreshConst("track") }
-        val trackedExpr = with(ctx) { trackVar implies expr }
-
-        val cvc5TrackVar = with(exprInternalizer) { trackVar.internalizeExpr() }
+    override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) {
+        val trackVarApp = trackVar.apply()
+        val cvc5TrackVar = with(exprInternalizer) { trackVarApp.internalizeExpr() }
+        val trackedExpr = with(ctx) { trackVarApp implies expr }
 
         cvc5CurrentLevelTrackedAssertions.add(cvc5TrackVar)
 
         assert(trackedExpr)
         solver.assertFormula(cvc5TrackVar)
-
-        trackVar
     }
 
     override fun push() = solver.push().also {
@@ -145,6 +142,12 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         cvc5Ctx.close()
         solver.close()
     }
+
+    /*
+     there are no methods to interrupt cvc5,
+     but maybe CVC5ApiRecoverableException can be thrown in someway
+    */
+    override fun interrupt() = Unit
 
     private fun Result.processCheckResult() = when {
         isSat -> KSolverStatus.SAT
