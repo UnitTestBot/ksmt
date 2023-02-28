@@ -1291,7 +1291,7 @@ open class KBitwuzlaExprInternalizer(
                 || sort.domain2.accept(this) || sort.range.accept(this)
 
         override fun <R : KSort> visit(sort: KArrayNSort<R>): Boolean =
-            sort.domain.any { it.accept(this) } || sort.range.accept(this)
+            sort.domainSorts.any { it.accept(this) } || sort.range.accept(this)
 
         override fun visit(sort: KBoolSort): Boolean = false
         override fun visit(sort: KIntSort): Boolean = false

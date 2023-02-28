@@ -101,8 +101,8 @@ class KArrayNStore<R : KSort> internal constructor(
     value: KExpr<R>
 ) : KArrayStoreBase<KArrayNSort<R>, R>(ctx, array, value) {
     init {
-        require(indices.size == array.sort.domain.size) {
-            "Array domain size mismatch: expected ${array.sort.domain.size}, provided: ${indices.size}"
+        require(indices.size == array.sort.domainSorts.size) {
+            "Array domain size mismatch: expected ${array.sort.domainSorts.size}, provided: ${indices.size}"
         }
     }
 
@@ -190,8 +190,8 @@ class KArrayNSelect<R : KSort> internal constructor(
     override val indices: List<KExpr<KSort>>
 ) : KArraySelectBase<KArrayNSort<R>, R>(ctx, array) {
     init {
-        require(indices.size == array.sort.domain.size) {
-            "Array domain size mismatch: expected ${array.sort.domain.size}, provided: ${indices.size}"
+        require(indices.size == array.sort.domainSorts.size) {
+            "Array domain size mismatch: expected ${array.sort.domainSorts.size}, provided: ${indices.size}"
         }
     }
 

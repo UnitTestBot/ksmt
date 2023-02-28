@@ -68,7 +68,7 @@ open class KZ3SortInternalizer(
 
     override fun <R : KSort> visit(sort: KArrayNSort<R>): Long =
         z3Ctx.internalizeSort(sort) {
-            val domain = sort.domain.map { it.internalizeZ3Sort() }.toLongArray()
+            val domain = sort.domainSorts.map { it.internalizeZ3Sort() }.toLongArray()
             val range = sort.range.internalizeZ3Sort()
             Native.mkArraySortN(nCtx, domain.size, domain, range)
         }

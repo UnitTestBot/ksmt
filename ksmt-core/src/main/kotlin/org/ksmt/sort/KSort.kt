@@ -125,24 +125,22 @@ class KArray3Sort<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal constr
 }
 
 class KArrayNSort<R : KSort> internal constructor(
-    ctx: KContext, val domain: List<KSort>, override val range: R
+    ctx: KContext, override val domainSorts: List<KSort>, override val range: R
 ) : KArraySortBase<R>(ctx) {
     init {
-        require(domain.size > KArray3Sort.DOMAIN_SIZE) {
-            "Use specialized Array with domain size ${domain.size}"
+        require(domainSorts.size > KArray3Sort.DOMAIN_SIZE) {
+            "Use specialized Array with domain size ${domainSorts.size}"
         }
     }
 
-    override val domainSorts: List<KSort> = domain
-
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
 
-    override fun hashCode(): Int = hash(javaClass, domain, range)
+    override fun hashCode(): Int = hash(javaClass, domainSorts, range)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is KArrayNSort<*>) return false
-        return domain == other.domain && range == other.range
+        return domainSorts == other.domainSorts && range == other.range
     }
 }
 

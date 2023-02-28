@@ -298,7 +298,7 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
         }
 
         override fun <R : KSort> visit(sort: KArrayNSort<R>) {
-            sort.domain.forEach { it.accept(this) }
+            sort.domainSorts.forEach { it.accept(this) }
             sort.range.accept(this)
         }
 

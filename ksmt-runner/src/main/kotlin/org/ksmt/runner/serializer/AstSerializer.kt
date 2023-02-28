@@ -261,7 +261,7 @@ class AstSerializer(
         }
 
         override fun <R : KSort> visit(sort: KArrayNSort<R>): Int {
-            val domain = sort.domain.map { it.serializeSort() }
+            val domain = sort.domainSorts.map { it.serializeSort() }
             val range = sort.range.serializeSort()
             return serializeSort(sort, SortKind.ArrayN) {
                 writeAstArray(domain)
