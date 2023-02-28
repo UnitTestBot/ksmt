@@ -4,6 +4,9 @@ import org.ksmt.expr.KExpr
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KSort
 
+/**
+ * Specialized version of [KExprConverterBase] for Long native expressions.
+ * */
 abstract class KExprLongInternalizerBase : KTransformerBase {
     @JvmField
     val exprStack = arrayListOf<KExpr<*>>()
@@ -30,8 +33,7 @@ abstract class KExprLongInternalizerBase : KTransformerBase {
     }
 
     inline fun <S : KExpr<*>> S.transform(operation: () -> Long): S = also {
-        val internalized = operation()
-        saveInternalizedExpr(this, internalized)
+        saveInternalizedExpr(this, operation())
     }
 
     inline fun <S : KExpr<*>> S.transform(

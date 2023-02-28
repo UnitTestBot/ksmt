@@ -6,6 +6,9 @@ import org.ksmt.solver.util.KExprConverterBase.Companion.argumentsConversionRequ
 import org.ksmt.solver.util.KExprConverterBase.Companion.checkArgumentsSizeMatchExpected
 import org.ksmt.sort.KSort
 
+/**
+ * Specialized version of [KExprConverterBase] for Long native expressions.
+ * */
 abstract class KExprLongConverterBase {
     abstract fun findConvertedNative(expr: Long): KExpr<*>?
 
