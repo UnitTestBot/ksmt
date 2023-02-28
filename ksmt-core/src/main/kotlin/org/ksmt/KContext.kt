@@ -21,7 +21,13 @@ import org.ksmt.decl.KArithMulDecl
 import org.ksmt.decl.KArithPowerDecl
 import org.ksmt.decl.KArithSubDecl
 import org.ksmt.decl.KArithUnaryMinusDecl
+import org.ksmt.decl.KArray2SelectDecl
+import org.ksmt.decl.KArray2StoreDecl
+import org.ksmt.decl.KArray3SelectDecl
+import org.ksmt.decl.KArray3StoreDecl
 import org.ksmt.decl.KArrayConstDecl
+import org.ksmt.decl.KArrayNSelectDecl
+import org.ksmt.decl.KArrayNStoreDecl
 import org.ksmt.decl.KArraySelectDecl
 import org.ksmt.decl.KArrayStoreDecl
 import org.ksmt.decl.KBitVec16ValueDecl
@@ -139,8 +145,17 @@ import org.ksmt.decl.KZeroExtDecl
 import org.ksmt.expr.KAddArithExpr
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KArray2Lambda
+import org.ksmt.expr.KArray2Select
+import org.ksmt.expr.KArray2Store
+import org.ksmt.expr.KArray3Lambda
+import org.ksmt.expr.KArray3Select
+import org.ksmt.expr.KArray3Store
 import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArrayNLambda
+import org.ksmt.expr.KArrayNSelect
+import org.ksmt.expr.KArrayNStore
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KBitVec16Value
@@ -283,7 +298,9 @@ import org.ksmt.expr.rewrite.simplify.simplifyArithPower
 import org.ksmt.expr.rewrite.simplify.simplifyArithSub
 import org.ksmt.expr.rewrite.simplify.simplifyArithUnaryMinus
 import org.ksmt.expr.rewrite.simplify.simplifyArraySelect
+import org.ksmt.expr.rewrite.simplify.simplifyArrayNSelect
 import org.ksmt.expr.rewrite.simplify.simplifyArrayStore
+import org.ksmt.expr.rewrite.simplify.simplifyArrayNStore
 import org.ksmt.expr.rewrite.simplify.simplifyBv2IntExpr
 import org.ksmt.expr.rewrite.simplify.simplifyBvAddExpr
 import org.ksmt.expr.rewrite.simplify.simplifyBvAddNoOverflowExpr
@@ -375,7 +392,11 @@ import org.ksmt.expr.rewrite.simplify.simplifyRealToFpExpr
 import org.ksmt.expr.rewrite.simplify.simplifyRealToInt
 import org.ksmt.expr.rewrite.simplify.simplifyXor
 import org.ksmt.sort.KArithSort
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv16Sort
 import org.ksmt.sort.KBv1Sort
@@ -487,12 +508,41 @@ open class KContext(
 
     fun mkBoolSort(): KBoolSort = boolSort
 
-    private val arraySortCache = mkCache<Pair<KSort, KSort>, KArraySort<*, *>>(operationMode)
+    private val arraySortCache = mkCache<KArraySort<*, *>, KArraySort<*, *>>(operationMode)
+    private val array2SortCache = mkCache<KArray2Sort<*, *, *>, KArray2Sort<*, *, *>>(operationMode)
+    private val array3SortCache = mkCache<KArray3Sort<*, *, *, *>, KArray3Sort<*, *, *, *>>(operationMode)
+    private val arrayNSortCache = mkCache<KArrayNSort<*>, KArrayNSort<*>>(operationMode)
 
     fun <D : KSort, R : KSort> mkArraySort(domain: D, range: R): KArraySort<D, R> =
         ensureContextActive {
             ensureContextMatch(domain, range)
-            arraySortCache.getOrPut(domain to range) { KArraySort(this, domain, range) }.uncheckedCast()
+            val sort = KArraySort(this, domain, range)
+            (arraySortCache.putIfAbsent(sort, sort) ?: sort).uncheckedCast()
+        }
+
+    fun <D0 : KSort, D1 : KSort, R : KSort> mkArraySort(domain0: D0, domain1: D1, range: R): KArray2Sort<D0, D1, R> =
+        ensureContextActive {
+            ensureContextMatch(domain0, domain1, range)
+            val sort = KArray2Sort(this, domain0, domain1, range)
+            (array2SortCache.putIfAbsent(sort, sort) ?: sort).uncheckedCast()
+        }
+
+    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArraySort(
+        domain0: D0, domain1: D1, domain2: D2, range: R
+    ): KArray3Sort<D0, D1, D2, R> =
+        ensureContextActive {
+            ensureContextMatch(domain0, domain1, domain2, range)
+            val sort = KArray3Sort(this, domain0, domain1, domain2, range)
+            (array3SortCache.putIfAbsent(sort, sort) ?: sort).uncheckedCast()
+        }
+
+    fun <R : KSort> mkArrayNSort(domain: List<KSort>, range: R): KArrayNSort<R> =
+        ensureContextActive {
+            ensureContextMatch(range)
+            ensureContextMatch(domain)
+
+            val sort = KArrayNSort(this, domain, range)
+            (arrayNSortCache.putIfAbsent(sort, sort) ?: sort).uncheckedCast()
         }
 
     private val intSortCache by lazy {
@@ -760,6 +810,9 @@ open class KContext(
 
     // array
     private val arrayStoreCache = mkAstInterner<KArrayStore<out KSort, out KSort>>()
+    private val array2StoreCache = mkAstInterner<KArray2Store<out KSort, out KSort, out KSort>>()
+    private val array3StoreCache = mkAstInterner<KArray3Store<out KSort, out KSort, out KSort, out KSort>>()
+    private val arrayNStoreCache = mkAstInterner<KArrayNStore<out KSort>>()
 
     fun <D : KSort, R : KSort> mkArrayStore(
         array: KExpr<KArraySort<D, R>>,
@@ -767,6 +820,30 @@ open class KContext(
         value: KExpr<R>
     ): KExpr<KArraySort<D, R>> =
         mkSimplified(array, index, value, KContext::simplifyArrayStore, ::mkArrayStoreNoSimplify)
+
+    fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayStore(
+        array: KExpr<KArray2Sort<D0, D1, R>>,
+        index0: KExpr<D0>,
+        index1: KExpr<D1>,
+        value: KExpr<R>
+    ): KExpr<KArray2Sort<D0, D1, R>> =
+        mkSimplified(array, index0, index1, value, KContext::simplifyArrayStore, ::mkArrayStoreNoSimplify)
+
+    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayStore(
+        array: KExpr<KArray3Sort<D0, D1, D2, R>>,
+        index0: KExpr<D0>,
+        index1: KExpr<D1>,
+        index2: KExpr<D2>,
+        value: KExpr<R>
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> =
+        mkSimplified(array, index0, index1, index2, value, KContext::simplifyArrayStore, ::mkArrayStoreNoSimplify)
+
+    fun <R : KSort> mkArrayNStore(
+        array: KExpr<KArrayNSort<R>>,
+        indices: List<KExpr<*>>,
+        value: KExpr<R>
+    ): KExpr<KArrayNSort<R>> =
+        mkSimplified(array, indices, value, KContext::simplifyArrayNStore, ::mkArrayNStoreNoSimplify)
 
     fun <D : KSort, R : KSort> mkArrayStoreNoSimplify(
         array: KExpr<KArraySort<D, R>>,
@@ -777,12 +854,65 @@ open class KContext(
         KArrayStore(this, array, index, value)
     }.cast()
 
+    fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayStoreNoSimplify(
+        array: KExpr<KArray2Sort<D0, D1, R>>,
+        index0: KExpr<D0>,
+        index1: KExpr<D1>,
+        value: KExpr<R>
+    ): KArray2Store<D0, D1, R> = array2StoreCache.createIfContextActive {
+        ensureContextMatch(array, index0, index1, value)
+        KArray2Store(this, array, index0, index1, value)
+    }.cast()
+
+    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayStoreNoSimplify(
+        array: KExpr<KArray3Sort<D0, D1, D2, R>>,
+        index0: KExpr<D0>,
+        index1: KExpr<D1>,
+        index2: KExpr<D2>,
+        value: KExpr<R>
+    ): KArray3Store<D0, D1, D2, R> = array3StoreCache.createIfContextActive {
+        ensureContextMatch(array, index0, index1, index2, value)
+        KArray3Store(this, array, index0, index1, index2, value)
+    }.cast()
+
+    fun <R : KSort> mkArrayNStoreNoSimplify(
+        array: KExpr<KArrayNSort<R>>,
+        indices: List<KExpr<*>>,
+        value: KExpr<R>
+    ): KArrayNStore<R> = arrayNStoreCache.createIfContextActive {
+        ensureContextMatch(indices)
+        ensureContextMatch(array, value)
+
+        KArrayNStore(this, array, indices.uncheckedCast(), value)
+    }.cast()
+
     private val arraySelectCache = mkAstInterner<KArraySelect<out KSort, out KSort>>()
+    private val array2SelectCache = mkAstInterner<KArray2Select<out KSort, out KSort, out KSort>>()
+    private val array3SelectCache = mkAstInterner<KArray3Select<out KSort, out KSort, out KSort, out KSort>>()
+    private val arrayNSelectCache = mkAstInterner<KArrayNSelect<out KSort>>()
 
     fun <D : KSort, R : KSort> mkArraySelect(
         array: KExpr<KArraySort<D, R>>,
         index: KExpr<D>
     ): KExpr<R> = mkSimplified(array, index, KContext::simplifyArraySelect, ::mkArraySelectNoSimplify)
+
+    fun <D0 : KSort, D1 : KSort, R : KSort> mkArraySelect(
+        array: KExpr<KArray2Sort<D0, D1, R>>,
+        index0: KExpr<D0>,
+        index1: KExpr<D1>
+    ): KExpr<R> = mkSimplified(array, index0, index1, KContext::simplifyArraySelect, ::mkArraySelectNoSimplify)
+
+    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArraySelect(
+        array: KExpr<KArray3Sort<D0, D1, D2, R>>,
+        index0: KExpr<D0>,
+        index1: KExpr<D1>,
+        index2: KExpr<D2>
+    ): KExpr<R> = mkSimplified(array, index0, index1, index2, KContext::simplifyArraySelect, ::mkArraySelectNoSimplify)
+
+    fun <R : KSort> mkArrayNSelect(
+        array: KExpr<KArrayNSort<R>>,
+        indices: List<KExpr<*>>
+    ): KExpr<R> = mkSimplified(array, indices, KContext::simplifyArrayNSelect, ::mkArrayNSelectNoSimplify)
 
     fun <D : KSort, R : KSort> mkArraySelectNoSimplify(
         array: KExpr<KArraySort<D, R>>,
@@ -792,36 +922,111 @@ open class KContext(
         KArraySelect(this, array, index)
     }.cast()
 
-    private val arrayConstCache = mkAstInterner<KArrayConst<out KSort, out KSort>>()
+    fun <D0 : KSort, D1 : KSort, R : KSort> mkArraySelectNoSimplify(
+        array: KExpr<KArray2Sort<D0, D1, R>>,
+        index0: KExpr<D0>,
+        index1: KExpr<D1>
+    ): KArray2Select<D0, D1, R> = array2SelectCache.createIfContextActive {
+        ensureContextMatch(array, index0, index1)
+        KArray2Select(this, array, index0, index1)
+    }.cast()
 
-    fun <D : KSort, R : KSort> mkArrayConst(
-        arraySort: KArraySort<D, R>,
+    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArraySelectNoSimplify(
+        array: KExpr<KArray3Sort<D0, D1, D2, R>>,
+        index0: KExpr<D0>,
+        index1: KExpr<D1>,
+        index2: KExpr<D2>
+    ): KArray3Select<D0, D1, D2, R> = array3SelectCache.createIfContextActive {
+        ensureContextMatch(array, index0, index1, index2)
+        KArray3Select(this, array, index0, index1, index2)
+    }.cast()
+
+    fun <R : KSort> mkArrayNSelectNoSimplify(
+        array: KExpr<KArrayNSort<R>>,
+        indices: List<KExpr<*>>
+    ): KArrayNSelect<R> = arrayNSelectCache.createIfContextActive {
+        ensureContextMatch(array)
+        ensureContextMatch(indices)
+
+        KArrayNSelect(this, array, indices.uncheckedCast())
+    }.cast()
+
+    private val arrayConstCache = mkAstInterner<KArrayConst<out KArraySortBase<out KSort>, out KSort>>()
+
+    fun <A : KArraySortBase<R>, R : KSort> mkArrayConst(
+        arraySort: A,
         value: KExpr<R>
-    ): KArrayConst<D, R> = arrayConstCache.createIfContextActive {
+    ): KArrayConst<A, R> = arrayConstCache.createIfContextActive {
         ensureContextMatch(arraySort, value)
         KArrayConst(this, arraySort, value)
     }.cast()
 
-    private val functionAsArrayCache = mkAstInterner<KFunctionAsArray<out KSort, out KSort>>()
+    private val functionAsArrayCache = mkAstInterner<KFunctionAsArray<out KArraySortBase<out KSort>, out KSort>>()
 
-    fun <D : KSort, R : KSort> mkFunctionAsArray(function: KFuncDecl<R>): KFunctionAsArray<D, R> =
+    fun <A : KArraySortBase<R>, R : KSort> mkFunctionAsArray(sort: A, function: KFuncDecl<R>): KFunctionAsArray<A, R> =
         functionAsArrayCache.createIfContextActive {
             ensureContextMatch(function)
-            KFunctionAsArray<D, R>(this, function)
+            KFunctionAsArray(this, sort, function)
         }.cast()
 
     private val arrayLambdaCache = mkAstInterner<KArrayLambda<out KSort, out KSort>>()
+    private val array2LambdaCache = mkAstInterner<KArray2Lambda<out KSort, out KSort, out KSort>>()
+    private val array3LambdaCache = mkAstInterner<KArray3Lambda<out KSort, out KSort, out KSort, out KSort>>()
+    private val arrayNLambdaCache = mkAstInterner<KArrayNLambda<out KSort>>()
 
-    fun <D : KSort, R : KSort> mkArrayLambda(indexVar: KDecl<D>, body: KExpr<R>): KArrayLambda<D, R> =
-        arrayLambdaCache.createIfContextActive {
-            ensureContextMatch(indexVar, body)
-            KArrayLambda(this, indexVar, body)
-        }.cast()
+    fun <D : KSort, R : KSort> mkArrayLambda(
+        indexVar: KDecl<D>, body: KExpr<R>
+    ): KArrayLambda<D, R> = arrayLambdaCache.createIfContextActive {
+        ensureContextMatch(indexVar, body)
+        KArrayLambda(this, indexVar, body)
+    }.cast()
+
+    fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayLambda(
+        indexVar0: KDecl<D0>, indexVar1: KDecl<D1>, body: KExpr<R>
+    ): KArray2Lambda<D0, D1, R> = array2LambdaCache.createIfContextActive {
+        ensureContextMatch(indexVar0, indexVar1, body)
+        KArray2Lambda(this, indexVar0, indexVar1, body)
+    }.cast()
+
+    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayLambda(
+        indexVar0: KDecl<D0>, indexVar1: KDecl<D1>, indexVar2: KDecl<D2>, body: KExpr<R>
+    ): KArray3Lambda<D0, D1, D2, R> = array3LambdaCache.createIfContextActive {
+        ensureContextMatch(indexVar0, indexVar1, indexVar2, body)
+        KArray3Lambda(this, indexVar0, indexVar1, indexVar2, body)
+    }.cast()
+
+    fun <R : KSort> mkArrayNLambda(
+        indices: List<KDecl<*>>, body: KExpr<R>
+    ): KArrayNLambda<R> = arrayNLambdaCache.createIfContextActive {
+        ensureContextMatch(indices)
+        ensureContextMatch(body)
+
+        KArrayNLambda(this, indices, body)
+    }.cast()
 
     fun <D : KSort, R : KSort> KExpr<KArraySort<D, R>>.store(index: KExpr<D>, value: KExpr<R>) =
         mkArrayStore(this, index, value)
 
+    fun <D0 : KSort, D1 : KSort, R : KSort> KExpr<KArray2Sort<D0, D1, R>>.store(
+        index0: KExpr<D0>, index1: KExpr<D1>, value: KExpr<R>
+    ) = mkArrayStore(this, index0, index1, value)
+
+    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> KExpr<KArray3Sort<D0, D1, D2, R>>.store(
+        index0: KExpr<D0>, index1: KExpr<D1>, index2: KExpr<D2>, value: KExpr<R>
+    ) = mkArrayStore(this, index0, index1, index2, value)
+
     fun <D : KSort, R : KSort> KExpr<KArraySort<D, R>>.select(index: KExpr<D>) = mkArraySelect(this, index)
+
+    fun <D0 : KSort, D1 : KSort, R : KSort> KExpr<KArray2Sort<D0, D1, R>>.select(
+        index0: KExpr<D0>,
+        index1: KExpr<D1>
+    ) = mkArraySelect(this, index0, index1)
+
+    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> KExpr<KArray3Sort<D0, D1, D2, R>>.select(
+        index0: KExpr<D0>,
+        index1: KExpr<D1>,
+        index2: KExpr<D2>
+    ) = mkArraySelect(this, index0, index1, index2)
 
     // arith
     private val arithAddCache = mkAstInterner<KAddArithExpr<out KArithSort>>()
@@ -1764,6 +1969,7 @@ open class KContext(
             mkFp16WithoutNaNCheck(normalizedValue)
         }
     }
+
     fun mkFp16NaN(): KFp16Value = mkFp16WithoutNaNCheck(Float.NaN)
     private fun mkFp16WithoutNaNCheck(value: Float): KFp16Value =
         fp16Cache.createIfContextActive { KFp16Value(this, value) }
@@ -1791,9 +1997,9 @@ open class KContext(
         biasedExponent: KBitVecValue<*>,
         signBit: Boolean
     ): KFp128Value = fp128Cache.createIfContextActive {
-            ensureContextMatch(significand, biasedExponent)
-            KFp128Value(this, significand, biasedExponent, signBit)
-        }
+        ensureContextMatch(significand, biasedExponent)
+        KFp128Value(this, significand, biasedExponent, signBit)
+    }
 
     fun mkFp128(significand: KBitVecValue<*>, unbiasedExponent: KBitVecValue<*>, signBit: Boolean): KFp128Value =
         mkFp128Biased(
@@ -1906,7 +2112,7 @@ open class KContext(
         significand: KBitVecValue<*>,
         biasedExponent: KBitVecValue<*>,
         signBit: Boolean
-    ): KFpValue<T>  {
+    ): KFpValue<T> {
         val intSignBit = if (signBit) 1 else 0
 
         return when (sort) {
@@ -2708,10 +2914,32 @@ open class KContext(
     fun <D : KSort, R : KSort> mkArraySelectDecl(array: KArraySort<D, R>): KArraySelectDecl<D, R> =
         KArraySelectDecl(this, array)
 
+    fun <D0 : KSort, D1 : KSort, R : KSort> mkArraySelectDecl(
+        array: KArray2Sort<D0, D1, R>
+    ): KArray2SelectDecl<D0, D1, R> = KArray2SelectDecl(this, array)
+
+    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArraySelectDecl(
+        array: KArray3Sort<D0, D1, D2, R>
+    ): KArray3SelectDecl<D0, D1, D2, R> = KArray3SelectDecl(this, array)
+
+    fun <R : KSort> mkArrayNSelectDecl(array: KArrayNSort<R>): KArrayNSelectDecl<R> =
+        KArrayNSelectDecl(this, array)
+
     fun <D : KSort, R : KSort> mkArrayStoreDecl(array: KArraySort<D, R>): KArrayStoreDecl<D, R> =
         KArrayStoreDecl(this, array)
 
-    fun <D : KSort, R : KSort> mkArrayConstDecl(array: KArraySort<D, R>): KArrayConstDecl<D, R> =
+    fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayStoreDecl(
+        array: KArray2Sort<D0, D1, R>
+    ): KArray2StoreDecl<D0, D1, R> = KArray2StoreDecl(this, array)
+
+    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayStoreDecl(
+        array: KArray3Sort<D0, D1, D2, R>
+    ): KArray3StoreDecl<D0, D1, D2, R> = KArray3StoreDecl(this, array)
+
+    fun <R : KSort> mkArrayNStoreDecl(array: KArrayNSort<R>): KArrayNStoreDecl<R> =
+        KArrayNStoreDecl(this, array)
+
+    fun <A : KArraySortBase<R>, R : KSort> mkArrayConstDecl(array: A): KArrayConstDecl<A, R> =
         KArrayConstDecl(this, array)
 
     // arith
@@ -3242,6 +3470,18 @@ open class KContext(
         when (simplificationMode) {
             SIMPLIFY -> simplifier(a0, a1, a2, a3)
             NO_SIMPLIFY -> createNoSimplify(a0, a1, a2, a3)
+        }
+    }
+
+    @Suppress("LongParameterList")
+    private inline fun <T : KSort, A0, A1, A2, A3, A4> mkSimplified(
+        a0: A0, a1: A1, a2: A2, a3: A3, a4: A4,
+        simplifier: KContext.(A0, A1, A2, A3, A4) -> KExpr<T>,
+        createNoSimplify: (A0, A1, A2, A3, A4) -> KExpr<T>
+    ): KExpr<T> = ensureContextActive {
+        when (simplificationMode) {
+            SIMPLIFY -> simplifier(a0, a1, a2, a3, a4)
+            NO_SIMPLIFY -> createNoSimplify(a0, a1, a2, a3, a4)
         }
     }
 }

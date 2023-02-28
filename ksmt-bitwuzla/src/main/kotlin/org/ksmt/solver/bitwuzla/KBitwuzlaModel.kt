@@ -142,7 +142,7 @@ open class KBitwuzlaModel(
         decl: KDecl<T>,
         term: BitwuzlaTerm
     ): KModel.KFuncInterp<T> = with(converter) {
-        val sort = decl.sort as KArraySort<*, *>
+        val sort: KArraySort<KSort, KSort> = decl.sort.uncheckedCast()
         val entries = mutableListOf<KModel.KFuncInterpEntry<KSort>>()
         val interp = Native.bitwuzlaGetArrayValue(bitwuzlaCtx.bitwuzla, term)
 
@@ -168,7 +168,7 @@ open class KBitwuzlaModel(
             decl = decl,
             vars = emptyList(),
             entries = emptyList(),
-            default = mkFunctionAsArray<KSort, KSort>(arrayInterpDecl).uncheckedCast()
+            default = mkFunctionAsArray(sort, arrayInterpDecl).uncheckedCast()
         )
     }
 

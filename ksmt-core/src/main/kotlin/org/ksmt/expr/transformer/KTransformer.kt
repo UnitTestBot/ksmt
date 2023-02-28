@@ -4,10 +4,22 @@ import org.ksmt.KContext
 import org.ksmt.expr.KAddArithExpr
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KArray2Lambda
+import org.ksmt.expr.KArray2Select
+import org.ksmt.expr.KArray2Store
+import org.ksmt.expr.KArray3Lambda
+import org.ksmt.expr.KArray3Select
+import org.ksmt.expr.KArray3Store
 import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArrayLambdaBase
+import org.ksmt.expr.KArrayNLambda
+import org.ksmt.expr.KArrayNSelect
+import org.ksmt.expr.KArrayNStore
 import org.ksmt.expr.KArraySelect
+import org.ksmt.expr.KArraySelectBase
 import org.ksmt.expr.KArrayStore
+import org.ksmt.expr.KArrayStoreBase
 import org.ksmt.expr.KBitVec16Value
 import org.ksmt.expr.KBitVec1Value
 import org.ksmt.expr.KBitVec32Value
@@ -136,7 +148,11 @@ import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.sort.KArithSort
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv16Sort
 import org.ksmt.sort.KBv1Sort
@@ -294,17 +310,73 @@ interface KTransformer : KTransformerBase {
     override fun <T : KFpSort> transform(expr: KBvToFpExpr<T>): KExpr<T> = transformApp(expr)
 
     // array transformers
-    override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> = transformApp(expr)
-    override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> = transformApp(expr)
-    override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>): KExpr<KArraySort<D, R>> = transformApp(expr)
+    fun <A : KArraySortBase<R>, R : KSort> transformArrayStore(expr: KArrayStoreBase<A, R>): KExpr<A> =
+        transformApp(expr)
 
-    override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> =
+    override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> =
+        transformArrayStore(expr)
+
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Store<D0, D1, R>
+    ): KExpr<KArray2Sort<D0, D1, R>> = transformArrayStore(expr)
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Store<D0, D1, D2, R>
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> = transformArrayStore(expr)
+
+    override fun <R : KSort> transform(expr: KArrayNStore<R>): KExpr<KArrayNSort<R>> =
+        transformArrayStore(expr)
+
+    fun <A : KArraySortBase<R>, R : KSort> transformArraySelect(expr: KArraySelectBase<A, R>): KExpr<R> =
+        transformApp(expr)
+
+    override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> =
+        transformArraySelect(expr)
+
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(expr: KArray2Select<D0, D1, R>): KExpr<R> =
+        transformArraySelect(expr)
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Select<D0, D1, D2, R>
+    ): KExpr<R> = transformArraySelect(expr)
+
+    override fun <R : KSort> transform(expr: KArrayNSelect<R>): KExpr<R> =
+        transformArraySelect(expr)
+
+    override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KArrayConst<A, R>): KExpr<A> = transformApp(expr)
+
+    override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KFunctionAsArray<A, R>): KExpr<A> =
+        transformExpr(expr)
+
+    fun <A : KArraySortBase<R>, R : KSort> transformArrayLambda(expr: KArrayLambdaBase<A, R>): KExpr<A> =
         transformExpr(expr)
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> = with(ctx) {
         val body = expr.body.accept(this@KTransformer)
-        if (body == expr.body) return transformExpr(expr)
-        return transformExpr(mkArrayLambda(expr.indexVarDecl, body))
+        if (body == expr.body) return transformArrayLambda(expr)
+        return transformArrayLambda(mkArrayLambda(expr.indexVarDecl, body))
+    }
+
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Lambda<D0, D1, R>
+    ): KExpr<KArray2Sort<D0, D1, R>> = with(ctx) {
+        val body = expr.body.accept(this@KTransformer)
+        if (body == expr.body) return transformArrayLambda(expr)
+        return transformArrayLambda(mkArrayLambda(expr.indexVar0Decl, expr.indexVar1Decl, body))
+    }
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Lambda<D0, D1, D2, R>
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> = with(ctx) {
+        val body = expr.body.accept(this@KTransformer)
+        if (body == expr.body) return transformArrayLambda(expr)
+        return transformArrayLambda(mkArrayLambda(expr.indexVar0Decl, expr.indexVar1Decl, expr.indexVar2Decl, body))
+    }
+
+    override fun <R : KSort> transform(expr: KArrayNLambda<R>): KExpr<KArrayNSort<R>> = with(ctx) {
+        val body = expr.body.accept(this@KTransformer)
+        if (body == expr.body) return transformArrayLambda(expr)
+        return transformArrayLambda(mkArrayNLambda(expr.indexVarDeclarations, body))
     }
 
     // arith transformers

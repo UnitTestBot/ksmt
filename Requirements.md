@@ -12,7 +12,7 @@
 | [Yices2 solver support](#yices2-solver-support)                                  | Done           |
 | [CVC5 solver support](#cvc5-solver-support)                                      | In progress    |
 | [External process runner](#external-process-runner)                              | Done           |
-| [Portfolio solver](#portfolio-solver)                                            | In progress    |
+| [Portfolio solver](#portfolio-solver)                                            | Done           |
 | [Solver configuration API](#solver-configuration-api)                            | Done           |
 | [Deployment](#deployment)                                                        | Done partially |
 | [Expression simplification / evaluation](#expression-simplification--evaluation) | Done           |

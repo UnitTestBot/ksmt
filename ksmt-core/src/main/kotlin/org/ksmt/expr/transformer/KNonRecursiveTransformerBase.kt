@@ -1,10 +1,16 @@
 package org.ksmt.expr.transformer
 
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KArray2Lambda
+import org.ksmt.expr.KArray3Lambda
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArrayNLambda
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KUniversalQuantifier
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
@@ -59,6 +65,28 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
      * for non-recursive usage.
      * */
     abstract override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>>
+
+    /**
+     * Disable [KTransformer] transform KArray2Lambda implementation since it is incorrect
+     * for non-recursive usage.
+     * */
+    abstract override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Lambda<D0, D1, R>
+    ): KExpr<KArray2Sort<D0, D1, R>>
+
+    /**
+     * Disable [KTransformer] transform KArray3Lambda implementation since it is incorrect
+     * for non-recursive usage.
+     * */
+    abstract override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Lambda<D0, D1, D2, R>
+    ): KExpr<KArray3Sort<D0, D1, D2, R>>
+
+    /**
+     * Disable [KTransformer] transform KArrayNLambda implementation since it is incorrect
+     * for non-recursive usage.
+     * */
+    abstract override fun <R : KSort> transform(expr: KArrayNLambda<R>): KExpr<KArrayNSort<R>>
 
     /**
      * Disable [KTransformer] transform KExistentialQuantifier implementation since it is incorrect
@@ -269,5 +297,41 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
         }
 
         return transformer(td0, td1, td2, td3)
+    }
+
+    /**
+     * Specialized version of [transformExprAfterTransformed] for expression with five arguments.
+     * */
+    @Suppress("LongParameterList", "ComplexCondition")
+    inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort, A4 : KSort> transformExprAfterTransformed(
+        expr: KExpr<T>,
+        dependency0: KExpr<A0>,
+        dependency1: KExpr<A1>,
+        dependency2: KExpr<A2>,
+        dependency3: KExpr<A3>,
+        dependency4: KExpr<A4>,
+        transformer: (KExpr<A0>, KExpr<A1>, KExpr<A2>, KExpr<A3>, KExpr<A4>) -> KExpr<T>
+    ): KExpr<T> {
+        val td0 = transformedExpr(dependency0)
+        val td1 = transformedExpr(dependency1)
+        val td2 = transformedExpr(dependency2)
+        val td3 = transformedExpr(dependency3)
+        val td4 = transformedExpr(dependency4)
+
+        if (td0 == null || td1 == null || td2 == null || td3 == null || td4 == null) {
+            retryExprTransformation(expr)
+
+            transformExprDependencyIfNeeded(dependency0, td0)
+            transformExprDependencyIfNeeded(dependency1, td1)
+            transformExprDependencyIfNeeded(dependency2, td2)
+            transformExprDependencyIfNeeded(dependency3, td3)
+            transformExprDependencyIfNeeded(dependency4, td4)
+
+            markExpressionAsNotTransformed()
+
+            return expr
+        }
+
+        return transformer(td0, td1, td2, td3, td4)
     }
 }

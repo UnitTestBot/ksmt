@@ -82,13 +82,13 @@ open class KYicesExprConverter(
                         && argType.range is KIntSort
                         && exprSort is KArraySort<*, *>
                         && exprSort.range is KRealSort ->
-                    castArrayRangeToInt(convertedExpr.uncheckedCast<_, KExpr<KArraySort<*, KRealSort>>>())
+                    castArrayRangeToInt(convertedExpr.uncheckedCast<_, KExpr<KArraySort<KSort, KRealSort>>>())
 
                 argType is KArraySort<*, *>
                         && argType.range is KRealSort
                         && exprSort is KArraySort<*, *>
                         && exprSort.range is KIntSort ->
-                    castArrayRangeToReal(convertedExpr.uncheckedCast<_, KExpr<KArraySort<*, KIntSort>>>())
+                    castArrayRangeToReal(convertedExpr.uncheckedCast<_, KExpr<KArraySort<KSort, KIntSort>>>())
 
                 else -> error("Invalid state")
             }
@@ -345,7 +345,9 @@ open class KYicesExprConverter(
 
                 if (convertedExprSort is KArraySort<*, *>) {
                     argTypes.addAll(listOf(convertedExprSort, convertedExprSort.domain))
-                    return expr.convert(yicesArgs, ::mkArraySelect)
+                    return expr.convert(yicesArgs) { array: KExpr<KArraySort<KSort, KSort>>, index: KExpr<KSort> ->
+                        mkArraySelect(array, index)
+                    }
                 }
 
                 if (!Terms.isAtomic(yicesArgs.first())) {
@@ -376,7 +378,11 @@ open class KYicesExprConverter(
                 val rangeType = arrayType.range
                 argTypes.addAll(listOf(arrayType, indexType, rangeType))
 
-                expr.convert(yicesArgs, ::mkArrayStore)
+                expr.convert(
+                    yicesArgs
+                ) { array: KExpr<KArraySort<KSort, KSort>>, index: KExpr<KSort>, value: KExpr<KSort> ->
+                    mkArrayStore(array, index, value)
+                }
             }
             Constructor.EQ_TERM -> {
                 if (Terms.isArithmetic(yicesArgs.first())) {
@@ -413,7 +419,7 @@ open class KYicesExprConverter(
                     if (yicesCtx.findConvertedDecl(yicesArgs.first()) == null) {
                         mkArrayConst(mkArraySort(convertSort(Terms.typeOf(yicesArgs.first())), body.sort), body)
                     } else {
-                        val index = convertDecl(yicesArgs.first())
+                        val index: KDecl<KSort> = convertDecl(yicesArgs.first()).uncheckedCast()
                         mkArrayLambda(index, body)
                     }
                 }

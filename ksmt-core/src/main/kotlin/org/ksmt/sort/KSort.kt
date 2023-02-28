@@ -46,23 +46,102 @@ class KRealSort internal constructor(ctx: KContext) : KArithSort(ctx) {
     override fun equals(other: Any?): Boolean = this === other || other is KRealSort
 }
 
-class KArraySort<out D : KSort, out R : KSort> internal constructor(
-    ctx: KContext, val domain: D, val range: R
-) : KSort(ctx) {
-    override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
+sealed class KArraySortBase<R : KSort>(ctx: KContext) : KSort(ctx) {
+    abstract val domainSorts: List<KSort>
+    abstract val range: R
 
     override fun print(builder: StringBuilder): Unit = with(builder) {
         append("(Array ")
-        domain.print(this)
-        append(' ')
+        domainSorts.forEach {
+            append(it)
+            append(' ')
+        }
         range.print(this)
         append(')')
     }
+}
+
+class KArraySort<D : KSort, R : KSort> internal constructor(
+    ctx: KContext, val domain: D, override val range: R
+) : KArraySortBase<R>(ctx) {
+
+    override val domainSorts: List<KSort>
+        get() = listOf(domain)
+
+    override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
 
     override fun hashCode(): Int = hash(javaClass, domain, range)
 
     override fun equals(other: Any?): Boolean =
         this === other || (other is KArraySort<*, *> && domain == other.domain && range == other.range)
+
+    companion object {
+        const val DOMAIN_SIZE = 1
+    }
+}
+
+class KArray2Sort<D0 : KSort, D1 : KSort, R : KSort> internal constructor(
+    ctx: KContext, val domain0: D0, val domain1: D1, override val range: R
+) : KArraySortBase<R>(ctx) {
+
+    override val domainSorts: List<KSort>
+        get() = listOf(domain0, domain1)
+
+    override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
+
+    override fun hashCode(): Int = hash(javaClass, domain0, domain1, range)
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is KArray2Sort<*, *, *>) return false
+        return domain0 == other.domain0 && domain1 == other.domain1 && range == other.range
+    }
+
+    companion object {
+        const val DOMAIN_SIZE = 2
+    }
+}
+
+class KArray3Sort<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal constructor(
+    ctx: KContext, val domain0: D0, val domain1: D1, val domain2: D2, override val range: R
+) : KArraySortBase<R>(ctx) {
+
+    override val domainSorts: List<KSort>
+        get() = listOf(domain0, domain1, domain2)
+
+    override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
+
+    override fun hashCode(): Int = hash(javaClass, domain0, domain1, domain2, range)
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is KArray3Sort<*, *, *, *>) return false
+        return domain0 == other.domain0 && domain1 == other.domain1 && domain2 == other.domain2 && range == other.range
+    }
+
+    companion object {
+        const val DOMAIN_SIZE = 3
+    }
+}
+
+class KArrayNSort<R : KSort> internal constructor(
+    ctx: KContext, override val domainSorts: List<KSort>, override val range: R
+) : KArraySortBase<R>(ctx) {
+    init {
+        require(domainSorts.size > KArray3Sort.DOMAIN_SIZE) {
+            "Use specialized Array with domain size ${domainSorts.size}"
+        }
+    }
+
+    override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
+
+    override fun hashCode(): Int = hash(javaClass, domainSorts, range)
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is KArrayNSort<*>) return false
+        return domainSorts == other.domainSorts && range == other.range
+    }
 }
 
 abstract class KBvSort(ctx: KContext) : KSort(ctx) {

@@ -37,7 +37,7 @@ import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.async.KAsyncSolver
 import org.ksmt.solver.runner.KSolverRunnerManager
 import org.ksmt.sort.KArithSort
-import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
@@ -422,7 +422,7 @@ abstract class BenchmarksBasedTest {
     }
 
     class AsArrayDeclChecker(override val ctx: KContext, val model: KModel) : KTransformer {
-        override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
+        override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KFunctionAsArray<A, R>): KExpr<A> {
             assertNotNull(model.interpretation(expr.function), "no interpretation for as-array: $expr")
             return expr
         }

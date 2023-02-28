@@ -10,6 +10,7 @@ import com.microsoft.z3.enumerations.Z3_sort_kind
 import com.microsoft.z3.enumerations.Z3_symbol_kind
 import com.microsoft.z3.fpSignOrNull
 import com.microsoft.z3.getAppArgs
+import com.microsoft.z3.getArraySortDomain
 import com.microsoft.z3.intOrNull
 import com.microsoft.z3.longOrNull
 import org.ksmt.KContext
@@ -23,7 +24,11 @@ import org.ksmt.expr.KIntNumExpr
 import org.ksmt.expr.KRealNumExpr
 import org.ksmt.solver.util.KExprConverterBase
 import org.ksmt.sort.KArithSort
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBvSort
@@ -31,6 +36,7 @@ import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.uncheckedCast
 
 open class KZ3ExprConverter(
     private val ctx: KContext,
@@ -91,11 +97,7 @@ open class KZ3ExprConverter(
             Z3_sort_kind.Z3_BOOL_SORT -> boolSort
             Z3_sort_kind.Z3_INT_SORT -> intSort
             Z3_sort_kind.Z3_REAL_SORT -> realSort
-            Z3_sort_kind.Z3_ARRAY_SORT -> {
-                val domain = Native.getArraySortDomain(nCtx, sort)
-                val range = Native.getArraySortRange(nCtx, sort)
-                mkArraySort(domain.convertSort(), range.convertSort())
-            }
+            Z3_sort_kind.Z3_ARRAY_SORT -> convertNativeArraySort(sort)
             Z3_sort_kind.Z3_BV_SORT -> mkBvSort(Native.getBvSortSize(nCtx, sort).toUInt())
             Z3_sort_kind.Z3_FLOATING_POINT_SORT ->
                 mkFpSort(Native.fpaGetEbits(nCtx, sort).toUInt(), Native.fpaGetSbits(nCtx, sort).toUInt())
@@ -112,6 +114,22 @@ open class KZ3ExprConverter(
             Z3_sort_kind.Z3_CHAR_SORT,
             Z3_sort_kind.Z3_UNKNOWN_SORT -> TODO("$sort is not supported yet")
             null -> error("z3 sort kind cannot be null")
+        }
+    }
+
+    open fun KContext.convertNativeArraySort(sort: Long): KSort {
+        val domain = getArraySortDomain(nCtx, sort).map { it.convertSort<KSort>() }
+        val range = Native.getArraySortRange(nCtx, sort).convertSort<KSort>()
+
+        return when (domain.size) {
+            KArraySort.DOMAIN_SIZE -> mkArraySort(domain.single(), range)
+            KArray2Sort.DOMAIN_SIZE -> mkArraySort(domain.first(), domain.last(), range)
+            KArray3Sort.DOMAIN_SIZE -> {
+                val (d0, d1, d2) = domain
+                mkArraySort(d0, d1, d2, range)
+            }
+
+            else -> mkArrayNSort(domain, range)
         }
     }
 
@@ -177,11 +195,11 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_TO_REAL -> expr.convert(::mkIntToReal)
             Z3_decl_kind.Z3_OP_TO_INT -> expr.convert(::mkRealToInt)
             Z3_decl_kind.Z3_OP_IS_INT -> expr.convert(::mkRealIsInt)
-            Z3_decl_kind.Z3_OP_STORE -> expr.convert(::mkArrayStore)
-            Z3_decl_kind.Z3_OP_SELECT -> expr.convert(::mkArraySelect)
+            Z3_decl_kind.Z3_OP_STORE -> convertArrayStore(expr)
+            Z3_decl_kind.Z3_OP_SELECT -> convertArraySelect(expr)
             Z3_decl_kind.Z3_OP_CONST_ARRAY -> expr.convert { arg: KExpr<KSort> ->
-                val range = Native.getRange(nCtx, decl).convertSort<KArraySort<*, *>>()
-                mkArrayConst(range, arg)
+                val sort = Native.getRange(nCtx, decl).convertSort<KArraySortBase<KSort>>()
+                mkArrayConst(sort, arg)
             }
             Z3_decl_kind.Z3_OP_BNUM,
             Z3_decl_kind.Z3_OP_BIT1,
@@ -277,9 +295,10 @@ open class KZ3ExprConverter(
 
             Z3_decl_kind.Z3_OP_BSMUL_NO_UDFL -> expr.convert(::mkBvMulNoUnderflowExpr)
             Z3_decl_kind.Z3_OP_AS_ARRAY -> convert {
+                val sort = Native.getRange(nCtx, decl).convertSort<KArraySortBase<KSort>>()
                 val z3Decl = Native.getDeclFuncDeclParameter(nCtx, decl, 0).convertDecl<KSort>()
                 val funDecl = z3Decl as? KFuncDecl<KSort> ?: error("unexpected as-array decl $z3Decl")
-                mkFunctionAsArray<KSort, KSort>(funDecl)
+                mkFunctionAsArray(sort, funDecl)
             }
 
             Z3_decl_kind.Z3_OP_FPA_NEG -> expr.convert(::mkFpNegationExpr)
@@ -495,6 +514,73 @@ open class KZ3ExprConverter(
         mkFpRoundingModeExpr(roundingMode)
     }
 
+    private fun convertArrayStore(expr: Long): ExprConversionResult =
+        when (Native.getAppNumArgs(nCtx, expr)) {
+            KArraySort.DOMAIN_SIZE + 2 -> expr.convert(::mkArray1Store)
+            KArray2Sort.DOMAIN_SIZE + 2 -> expr.convert(::mkArray2Store)
+            KArray3Sort.DOMAIN_SIZE + 2 -> expr.convertList { args: List<KExpr<KSort>> ->
+                val (i0, i1, i2) = args.subList(1, args.lastIndex)
+                mkArray3Store(args.first().uncheckedCast(), i0, i1, i2, args.last())
+            }
+            else -> expr.convertList { args: List<KExpr<KSort>> ->
+                mkArrayNStore(args.first().uncheckedCast(), args.subList(1, args.lastIndex), args.last())
+            }
+        }
+
+    private fun convertArraySelect(expr: Long): ExprConversionResult =
+        when (Native.getAppNumArgs(nCtx, expr)) {
+            KArraySort.DOMAIN_SIZE + 1 -> expr.convert(::mkArray1Select)
+            KArray2Sort.DOMAIN_SIZE + 1 -> expr.convert(::mkArray2Select)
+            KArray3Sort.DOMAIN_SIZE + 1 -> expr.convert(::mkArray3Select)
+            else -> expr.convertList { args: List<KExpr<KSort>> ->
+                mkArrayNSelect(args.first().uncheckedCast(), args.drop(1))
+            }
+        }
+
+    private fun mkArray1Select(
+        array: KExpr<KArraySort<KSort, KSort>>,
+        index: KExpr<KSort>
+    ) = ctx.mkArraySelect(array, index)
+
+    private fun mkArray2Select(
+        array: KExpr<KArray2Sort<KSort, KSort, KSort>>,
+        index0: KExpr<KSort>, index1: KExpr<KSort>
+    ) = ctx.mkArraySelect(array, index0, index1)
+
+    private fun mkArray3Select(
+        array: KExpr<KArray3Sort<KSort, KSort, KSort, KSort>>,
+        index0: KExpr<KSort>, index1: KExpr<KSort>, index2: KExpr<KSort>
+    ) = ctx.mkArraySelect(array, index0, index1, index2)
+
+    private fun mkArrayNSelect(
+        array: KExpr<KArrayNSort<KSort>>,
+        indices: List<KExpr<KSort>>
+    ) = ctx.mkArrayNSelect(array, indices)
+
+    private fun mkArray1Store(
+        array: KExpr<KArraySort<KSort, KSort>>,
+        index: KExpr<KSort>,
+        value: KExpr<KSort>
+    ) = ctx.mkArrayStore(array, index, value)
+
+    private fun mkArray2Store(
+        array: KExpr<KArray2Sort<KSort, KSort, KSort>>,
+        index0: KExpr<KSort>, index1: KExpr<KSort>,
+        value: KExpr<KSort>
+    ) = ctx.mkArrayStore(array, index0, index1, value)
+
+    private fun mkArray3Store(
+        array: KExpr<KArray3Sort<KSort, KSort, KSort, KSort>>,
+        index0: KExpr<KSort>, index1: KExpr<KSort>, index2: KExpr<KSort>,
+        value: KExpr<KSort>
+    ) = ctx.mkArrayStore(array, index0, index1, index2, value)
+
+    private fun mkArrayNStore(
+        array: KExpr<KArrayNSort<KSort>>,
+        indices: List<KExpr<KSort>>,
+        value: KExpr<KSort>
+    ) = ctx.mkArrayNStore(array, indices, value)
+
     open fun convertQuantifier(expr: Long): ExprConversionResult = with(ctx) {
         val numBound = Native.getQuantifierNumBound(nCtx, expr)
         val boundSorts = List(numBound) { idx -> Native.getQuantifierBoundSort(nCtx, expr, idx) }
@@ -530,8 +616,15 @@ open class KZ3ExprConverter(
             Native.isQuantifierForall(nCtx, expr) -> mkUniversalQuantifier(body, bounds)
             Native.isQuantifierExists(nCtx, expr) -> mkExistentialQuantifier(body, bounds)
             Native.isLambda(nCtx, expr) -> {
-                val boundVar = bounds.singleOrNull() ?: TODO("Array lambda with multiple indices")
-                mkArrayLambda(boundVar, body)
+                when (bounds.size) {
+                    KArraySort.DOMAIN_SIZE -> mkArrayLambda(bounds.single(), body)
+                    KArray2Sort.DOMAIN_SIZE -> mkArrayLambda(bounds.first(), bounds.last(), body)
+                    KArray3Sort.DOMAIN_SIZE -> {
+                        val (b0, b1, b2) = bounds
+                        mkArrayLambda(b0, b1, b2, body)
+                    }
+                    else -> mkArrayNLambda(bounds, body)
+                }
             }
             else -> TODO("unexpected quantifier: ${Native.astToString(nCtx, expr)}")
         }

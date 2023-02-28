@@ -136,7 +136,7 @@ open class KBitwuzlaExprConverter(
 
             // array
             BitwuzlaKind.BITWUZLA_KIND_CONST_ARRAY -> expr.convert { value: KExpr<KSort> ->
-                val sort = Native.bitwuzlaTermGetSort(expr).convertSort() as KArraySort<*, *>
+                val sort: KArraySort<KSort, KSort> = Native.bitwuzlaTermGetSort(expr).convertSort().uncheckedCast()
                 convertConstArrayExpr(sort, value)
             }
 
@@ -652,7 +652,7 @@ open class KBitwuzlaExprConverter(
     fun convertConstArrayExpr(
         currentSort: KArraySort<KSort, KSort>,
         value: KExpr<KSort>
-    ): KArrayConst<KSort, KSort> = with(ctx) {
+    ): KArrayConst<KArraySort<KSort, KSort>, KSort> = with(ctx) {
         val expectedValueSort = selectExpectedSort(currentSort.range, value.sort)
         val expectedArraySort = mkArraySort(currentSort.domain, expectedValueSort)
         return mkArrayConst(expectedArraySort, value.convertToExpectedIfNeeded(expectedValueSort))
@@ -796,7 +796,8 @@ open class KBitwuzlaExprConverter(
                 check(expectedDomain !is KArraySort<*, *> && expectedRange !is KArraySort<*, *>) {
                     "Bitwuzla doesn't support nested arrays"
                 }
-                ArrayAdapterExpr(this@ensureArrayExprSortMatch, expectedDomain, expectedRange)
+                val array: KExpr<KArraySort<KSort, KSort>> = this@ensureArrayExprSortMatch.uncheckedCast()
+                ArrayAdapterExpr(array, expectedDomain, expectedRange)
             }
         }
     }

@@ -3,7 +3,11 @@ package org.ksmt.solver.model
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpRoundingMode
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpRoundingModeSort
@@ -44,9 +48,20 @@ open class DefaultValueSampler<T : KSort> (
         mkFpRoundingModeExpr(defaultRm).asExpr(this@DefaultValueSampler.sort)
     }
 
-    override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): KExpr<T> = with(ctx) {
-        mkArrayConst(sort, sort.range.sampleValue()).asExpr(this@DefaultValueSampler.sort)
-    }
+    private fun <T : KArraySortBase<R>, R: KSort> sampleArrayValue(sort: T): KExpr<T> =
+        ctx.mkArrayConst(sort, sort.range.sampleValue())
+
+    override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): KExpr<T> =
+        sampleArrayValue(sort).asExpr(this@DefaultValueSampler.sort)
+
+    override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>): KExpr<T> =
+        sampleArrayValue(sort).asExpr(this@DefaultValueSampler.sort)
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>): KExpr<T> =
+        sampleArrayValue(sort).asExpr(this@DefaultValueSampler.sort)
+
+    override fun <R : KSort> visit(sort: KArrayNSort<R>): KExpr<T> =
+        sampleArrayValue(sort).asExpr(this@DefaultValueSampler.sort)
 
     override fun visit(sort: KUninterpretedSort): KExpr<T> =
         ctx.uninterpretedSortDefaultValue(sort).asExpr(this@DefaultValueSampler.sort)
