@@ -1,5 +1,5 @@
 @file:Suppress("EXPERIMENTAL_API_USAGE","EXPERIMENTAL_UNSIGNED_LITERALS","PackageDirectoryMismatch","UnusedImport","unused","LocalVariableName","CanBeVal","PropertyName","EnumEntryName","ClassName","ObjectPropertyName","UnnecessaryVariable","SpellCheckingInspection")
-package org.ksmt.runner.models.generated
+package org.ksmt.runner.generated.models
 
 import com.jetbrains.rd.framework.*
 import com.jetbrains.rd.framework.base.*

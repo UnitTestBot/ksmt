@@ -27,13 +27,14 @@ import org.ksmt.runner.core.KsmtWorkerFactory
 import org.ksmt.runner.core.KsmtWorkerPool
 import org.ksmt.runner.core.RdServer
 import org.ksmt.runner.core.WorkerInitializationFailedException
-import org.ksmt.runner.models.generated.TestProtocolModel
+import org.ksmt.runner.generated.models.TestProtocolModel
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.KSolverUnsupportedFeatureException
+import org.ksmt.solver.async.KAsyncSolver
 import org.ksmt.solver.runner.KSolverRunnerManager
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
@@ -89,6 +90,14 @@ abstract class BenchmarksBasedTest {
         name: String,
         samplePath: Path,
         solverType: KClass<out KSolver<C>>
+    ) = testModelConversion(name, samplePath) { ctx ->
+        solverManager.createSolver(ctx, solverType)
+    }
+
+    fun <C : KSolverConfiguration> testModelConversion(
+        name: String,
+        samplePath: Path,
+        solverProvider: (KContext) -> KAsyncSolver<C>
     ) = handleIgnoredTests("testModelConversion[$name]") {
         ignoreNoTestDataStub(name)
         val ctx = KContext()
@@ -97,7 +106,7 @@ abstract class BenchmarksBasedTest {
                 val assertions = worker.parseFile(samplePath)
                 val ksmtAssertions = worker.convertAssertions(assertions)
 
-                val model = solverManager.createSolver(ctx, solverType).use { testSolver ->
+                val model = solverProvider(ctx).use { testSolver ->
                     ksmtAssertions.forEach { testSolver.assertAsync(it) }
 
                     val status = testSolver.checkAsync(SOLVER_CHECK_SAT_TIMEOUT)
@@ -150,6 +159,14 @@ abstract class BenchmarksBasedTest {
         name: String,
         samplePath: Path,
         solverType: KClass<out KSolver<C>>
+    ) = testSolver(name, samplePath) { ctx ->
+        solverManager.createSolver(ctx, solverType)
+    }
+
+    fun <C : KSolverConfiguration> testSolver(
+        name: String,
+        samplePath: Path,
+        solverProvider: (KContext) -> KAsyncSolver<C>
     ) = handleIgnoredTests("testSolver[$name]") {
         ignoreNoTestDataStub(name)
         val ctx = KContext()
@@ -177,7 +194,7 @@ abstract class BenchmarksBasedTest {
 
                 val ksmtAssertions = worker.convertAssertions(assertions)
 
-                val actualStatus = solverManager.createSolver(ctx, solverType).use { ksmtSolver ->
+                val actualStatus = solverProvider(ctx).use { ksmtSolver ->
                     ksmtAssertions.forEach { ksmtSolver.assertAsync(it) }
 
                     // use greater timeout to reduce false-positive unknowns

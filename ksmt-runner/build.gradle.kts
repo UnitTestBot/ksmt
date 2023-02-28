@@ -23,9 +23,6 @@ kotlin {
 
 dependencies {
     implementation(project(":ksmt-core"))
-    implementation(project(":ksmt-z3"))
-    implementation(project(":ksmt-bitwuzla"))
-    implementation(project(":ksmt-yices"))
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
 
@@ -35,14 +32,23 @@ dependencies {
     rdgenModelsCompileClasspath("com.jetbrains.rd:rd-gen:2022.3.2")
 
     testImplementation(kotlin("test"))
+
+    testImplementation(project(":ksmt-z3"))
+    testImplementation(project(":ksmt-bitwuzla"))
+    testImplementation(project(":ksmt-yices"))
 }
+
+val sourcesBaseDir = projectDir.resolve("src/main/kotlin")
+
+val generatedPackage = "org.ksmt.runner.generated"
+val generatedSourceDir = sourcesBaseDir.resolve(generatedPackage.replace('.', '/'))
+
+val generatedModelsPackage = "$generatedPackage.models"
+val generatedModelsSourceDir = sourcesBaseDir.resolve(generatedModelsPackage.replace('.', '/'))
 
 val generateModels = tasks.register<RdGenTask>("generateProtocolModels") {
     val rdParams = extensions.getByName("params") as RdGenExtension
     val sourcesDir = projectDir.resolve("src/main/rdgen").resolve("org/ksmt/runner/models")
-    val sourcesBaseDir = projectDir.resolve("src/main/kotlin")
-    val generatedModelsPackage = "org.ksmt.runner.models.generated"
-    val generatedSourceDir = sourcesBaseDir.resolve(generatedModelsPackage.replace('.', '/'))
 
     group = "rdgen"
     rdParams.verbose = true
@@ -56,7 +62,7 @@ val generateModels = tasks.register<RdGenTask>("generateProtocolModels") {
         transform = "symmetric"
         root = "org.ksmt.runner.models.SolverProtocolRoot"
 
-        directory = generatedSourceDir.absolutePath
+        directory = generatedModelsSourceDir.absolutePath
         namespace = generatedModelsPackage
     }
 
@@ -65,7 +71,7 @@ val generateModels = tasks.register<RdGenTask>("generateProtocolModels") {
         transform = "symmetric"
         root = "org.ksmt.runner.models.TestProtocolRoot"
 
-        directory = generatedSourceDir.absolutePath
+        directory = generatedModelsSourceDir.absolutePath
         namespace = generatedModelsPackage
     }
 
@@ -74,9 +80,16 @@ val generateModels = tasks.register<RdGenTask>("generateProtocolModels") {
         transform = "symmetric"
         root = "org.ksmt.runner.models.SyncProtocolRoot"
 
-        directory = generatedSourceDir.absolutePath
+        directory = generatedModelsSourceDir.absolutePath
         namespace = generatedModelsPackage
     }
+}
+
+val generateSolverUtils = tasks.register("generateSolverUtils") {
+    val generatorProject = project(":ksmt-runner:solver-generator")
+    generatorProject.ext["generatedSolverUtilsPackage"] = generatedPackage
+    generatorProject.ext["generatedSolverUtilsPath"] = generatedSourceDir.absolutePath
+    dependsOn(":ksmt-runner:solver-generator:generateSolverUtils")
 }
 
 tasks.getByName<KotlinCompile>("compileKotlin") {

@@ -1,5 +1,5 @@
 @file:Suppress("EXPERIMENTAL_API_USAGE","EXPERIMENTAL_UNSIGNED_LITERALS","PackageDirectoryMismatch","UnusedImport","unused","LocalVariableName","CanBeVal","PropertyName","EnumEntryName","ClassName","ObjectPropertyName","UnnecessaryVariable","SpellCheckingInspection")
-package org.ksmt.runner.models.generated
+package org.ksmt.runner.generated.models
 
 import com.jetbrains.rd.framework.*
 import com.jetbrains.rd.framework.base.*
@@ -15,28 +15,28 @@ import kotlin.jvm.JvmStatic
 
 
 /**
- * #### Generated from [SyncProtocolModel.kt:5]
+ * #### Generated from [TestProtocolModel.kt:12]
  */
-class SyncProtocolRoot private constructor(
+class TestProtocolRoot private constructor(
 ) : RdExtBase() {
     //companion
     
     companion object : ISerializersOwner {
         
         override fun registerSerializersCore(serializers: ISerializers)  {
-            SyncProtocolRoot.register(serializers)
-            SyncProtocolModel.register(serializers)
+            TestProtocolRoot.register(serializers)
+            TestProtocolModel.register(serializers)
         }
         
         
         
         
         
-        const val serializationHash = 4402368171949397719L
+        const val serializationHash = -791875420344711602L
         
     }
-    override val serializersOwner: ISerializersOwner get() = SyncProtocolRoot
-    override val serializationHash: Long get() = SyncProtocolRoot.serializationHash
+    override val serializersOwner: ISerializersOwner get() = TestProtocolRoot
+    override val serializationHash: Long get() = TestProtocolRoot.serializationHash
     
     //fields
     //methods
@@ -46,12 +46,12 @@ class SyncProtocolRoot private constructor(
     //hash code trait
     //pretty print
     override fun print(printer: PrettyPrinter)  {
-        printer.println("SyncProtocolRoot (")
+        printer.println("TestProtocolRoot (")
         printer.print(")")
     }
     //deepClone
-    override fun deepClone(): SyncProtocolRoot   {
-        return SyncProtocolRoot(
+    override fun deepClone(): TestProtocolRoot   {
+        return TestProtocolRoot(
         )
     }
     //contexts

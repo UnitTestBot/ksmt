@@ -13,10 +13,10 @@ import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.runner.core.ChildProcessBase
 import org.ksmt.runner.core.KsmtWorkerArgs
-import org.ksmt.runner.models.generated.TestCheckResult
-import org.ksmt.runner.models.generated.TestConversionResult
-import org.ksmt.runner.models.generated.TestProtocolModel
-import org.ksmt.runner.models.generated.testProtocolModel
+import org.ksmt.runner.generated.models.TestCheckResult
+import org.ksmt.runner.generated.models.TestConversionResult
+import org.ksmt.runner.generated.models.TestProtocolModel
+import org.ksmt.runner.generated.models.testProtocolModel
 import org.ksmt.runner.serializer.AstSerializationCtx
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.bitwuzla.KBitwuzlaContext

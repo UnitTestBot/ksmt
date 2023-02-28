@@ -5,6 +5,8 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.ksmt.KContext
+import org.ksmt.runner.generated.createInstance
+import org.ksmt.runner.generated.models.SolverType
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.z3.KZ3Solver
@@ -17,7 +19,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 
-class IncrementalApiTest {
+class SolverRunnerTest {
     private lateinit var context: KContext
     private lateinit var solver: KSolver<KZ3SolverConfiguration>
 
@@ -149,5 +151,12 @@ class IncrementalApiTest {
 
         assertNotEquals(model1, model2)
         assertEquals(model1, model3)
+    }
+
+    @Test
+    fun testSolverInstanceCreation(): Unit = with(context){
+        SolverType.Z3.createInstance(this)
+        SolverType.Bitwuzla.createInstance(this)
+        SolverType.Yices.createInstance(this)
     }
 }

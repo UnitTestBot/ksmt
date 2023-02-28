@@ -1584,6 +1584,8 @@ enum class BitwuzlaOption(val value: Int) {
 
     companion object {
         private val valueMapping = BitwuzlaOption.values().associateBy { it.value }
+        private val nameMapping = BitwuzlaOption.values().associateBy { it.name }
         fun fromValue(value: Int): BitwuzlaOption = valueMapping.getValue(value)
+        fun forName(name: String): BitwuzlaOption? = nameMapping[name]
     }
 }
