@@ -26,7 +26,11 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
     abstract val indices: List<KExpr<KSort>>
 
     override val args: List<KExpr<KSort>>
-        get() = (listOf(array) + indices + listOf(value)).uncheckedCast()
+        get() = buildList {
+            add(array)
+            addAll(indices)
+            add(value)
+        }.uncheckedCast()
 }
 
 class KArrayStore<D : KSort, R : KSort> internal constructor(
@@ -125,7 +129,10 @@ sealed class KArraySelectBase<A : KArraySortBase<R>, R : KSort>(
     abstract val indices: List<KExpr<KSort>>
 
     override val args: List<KExpr<KSort>>
-        get() = (listOf(array) + indices).uncheckedCast()
+        get() = buildList {
+            add(array)
+            addAll(indices)
+        }.uncheckedCast()
 }
 
 class KArraySelect<D : KSort, R : KSort> internal constructor(

@@ -961,7 +961,12 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             return transformer.transform(this)
         }
 
-        fun unwrap(): List<KExpr<KSort>> = (listOf(base) + indices0 + indices1 + values).uncheckedCast()
+        fun unwrap(): List<KExpr<KSort>> = buildList {
+            add(base)
+            addAll(indices0)
+            addAll(indices1)
+            addAll(values)
+        }.uncheckedCast()
 
         fun wrap(args: List<KExpr<KSort>>) = SimplifierFlatArray2StoreExpr(
             ctx,
@@ -1000,7 +1005,13 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             return transformer.transform(this)
         }
 
-        fun unwrap(): List<KExpr<KSort>> = (listOf(base) + indices0 + indices1 + indices2 + values).uncheckedCast()
+        fun unwrap(): List<KExpr<KSort>> = buildList {
+            add(base)
+            addAll(indices0)
+            addAll(indices1)
+            addAll(indices2)
+            addAll(values)
+        }.uncheckedCast()
 
         @Suppress("MagicNumber")
         fun wrap(args: List<KExpr<KSort>>) = SimplifierFlatArray3StoreExpr(
@@ -1047,7 +1058,13 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             return transformer.transform(this)
         }
 
-        fun unwrap(): List<KExpr<KSort>> = (listOf(base) + values + indices.flatten()).uncheckedCast()
+        fun unwrap(): List<KExpr<KSort>> = buildList {
+            add(base)
+            addAll(values)
+            this@SimplifierFlatArrayNStoreExpr.indices.forEach {
+                addAll(it)
+            }
+        }.uncheckedCast()
 
         fun wrap(args: List<KExpr<KSort>>) = SimplifierFlatArrayNStoreExpr(
             ctx, original,

@@ -14,7 +14,16 @@ import org.ksmt.utils.uncheckedCast
 sealed class KArrayStoreDeclBase<A : KArraySortBase<R>, R : KSort>(
     ctx: KContext,
     sort: A
-) : KFuncDecl<A>(ctx, "store", sort, listOf(sort) + sort.domainSorts + listOf(sort.range))
+) : KFuncDecl<A>(
+    ctx = ctx,
+    name = "store",
+    resultSort = sort,
+    argSorts = buildList {
+        add(sort)
+        addAll(sort.domainSorts)
+        add(sort.range)
+    }
+)
 
 class KArrayStoreDecl<D : KSort, R : KSort> internal constructor(
     ctx: KContext,
