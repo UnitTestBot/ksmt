@@ -144,7 +144,7 @@ import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
-import org.ksmt.solver.util.KExprInternalizerBase
+import org.ksmt.solver.util.KExprIntInternalizerBase
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArray2Sort
 import org.ksmt.sort.KArray3Sort
@@ -165,12 +165,12 @@ import org.ksmt.sort.KSort
 import org.ksmt.sort.KSortVisitor
 import org.ksmt.sort.KUninterpretedSort
 
-@Suppress("ArrayPrimitive", "LargeClass")
+@Suppress("LargeClass")
 @OptIn(ExperimentalUnsignedTypes::class)
 class AstSerializer(
     private val serializationCtx: AstSerializationCtx,
     private val output: AbstractBuffer
-) : KExprInternalizerBase<Int>() {
+) : KExprIntInternalizerBase() {
 
     private val exprKindMapper = ExprKindMapper()
 
@@ -201,7 +201,8 @@ class AstSerializer(
         return accept(sortSerializer)
     }
 
-    override fun findInternalizedExpr(expr: KExpr<*>): Int? = serializationCtx.getAstIndex(expr)
+    override fun findInternalizedExpr(expr: KExpr<*>): Int =
+        serializationCtx.getAstIndex(expr) ?: NOT_INTERNALIZED
 
     override fun saveInternalizedExpr(expr: KExpr<*>, internalized: Int) {
         // Do nothing since expr is already saved into serializationCtx
@@ -305,9 +306,8 @@ class AstSerializer(
         writeIntArray(indices)
     }
 
-    private fun AbstractBuffer.writeAstArray(asts: Array<Int>) {
-        val indices = asts.toIntArray()
-        writeIntArray(indices)
+    private fun AbstractBuffer.writeAstArray(asts: IntArray) {
+        writeIntArray(asts)
     }
 
     private inline fun KAst.serializeAst(body: AbstractBuffer.() -> Unit): Int {
@@ -358,7 +358,7 @@ class AstSerializer(
     }
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>) = with(expr) {
-        transformList(args) { args: Array<Int> ->
+        transformList(args) { args: IntArray ->
             val declIdx = decl.serializeDecl()
             writeExpr {
                 writeAst(declIdx)
@@ -377,7 +377,7 @@ class AstSerializer(
     }
 
     override fun transform(expr: KAndExpr) = with(expr) {
-        transformList(args) { args: Array<Int> ->
+        transformList(args) { args: IntArray ->
             writeExpr {
                 writeAstArray(args)
             }
@@ -385,7 +385,7 @@ class AstSerializer(
     }
 
     override fun transform(expr: KOrExpr) = with(expr) {
-        transformList(args) { args: Array<Int> ->
+        transformList(args) { args: IntArray ->
             writeExpr {
                 writeAstArray(args)
             }
@@ -405,7 +405,7 @@ class AstSerializer(
     override fun <T : KSort> transform(expr: KEqExpr<T>) = with(expr) { serialize(lhs, rhs) }
 
     override fun <T : KSort> transform(expr: KDistinctExpr<T>) = with(expr) {
-        transformList(args) { args: Array<Int> ->
+        transformList(args) { args: IntArray ->
             writeExpr {
                 writeAstArray(args)
             }
@@ -992,7 +992,7 @@ class AstSerializer(
     }
 
     override fun <T : KArithSort> transform(expr: KAddArithExpr<T>) = with(expr) {
-        transformList(args) { args: Array<Int> ->
+        transformList(args) { args: IntArray ->
             writeExpr {
                 writeAstArray(args)
             }
@@ -1000,7 +1000,7 @@ class AstSerializer(
     }
 
     override fun <T : KArithSort> transform(expr: KSubArithExpr<T>) = with(expr) {
-        transformList(args) { args: Array<Int> ->
+        transformList(args) { args: IntArray ->
             writeExpr {
                 writeAstArray(args)
             }
@@ -1008,7 +1008,7 @@ class AstSerializer(
     }
 
     override fun <T : KArithSort> transform(expr: KMulArithExpr<T>) = with(expr) {
-        transformList(args) { args: Array<Int> ->
+        transformList(args) { args: IntArray ->
             writeExpr {
                 writeAstArray(args)
             }
