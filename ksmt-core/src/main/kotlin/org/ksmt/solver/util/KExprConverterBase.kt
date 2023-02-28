@@ -41,13 +41,10 @@ abstract class KExprConverterBase<T : Any> {
         expectedSize: Int,
         converter: (List<KExpr<*>>) -> KExpr<*>
     ): ExprConversionResult {
-        check(args.size == expectedSize) {
-            "arguments size mismatch: expected $expectedSize, actual ${args.size}"
-        }
+        checkArgumentsSizeMatchExpected(args.size, expectedSize)
 
         val convertedArgs = mutableListOf<KExpr<*>>()
-        var exprAdded = false
-        var argsReady = true
+        var hasNotConvertedArgs = false
 
         for (arg in args) {
             val converted = findConvertedNative(arg)
@@ -57,17 +54,15 @@ abstract class KExprConverterBase<T : Any> {
                 continue
             }
 
-            argsReady = false
-
-            if (!exprAdded) {
+            if (!hasNotConvertedArgs) {
+                hasNotConvertedArgs = true
                 exprStack.add(expr)
-                exprAdded = true
             }
 
             exprStack.add(arg)
         }
 
-        if (!argsReady) return argumentsConversionRequired
+        if (hasNotConvertedArgs) return argumentsConversionRequired
 
         val convertedExpr = converter(convertedArgs)
         return ExprConversionResult(convertedExpr)
@@ -144,5 +139,12 @@ abstract class KExprConverterBase<T : Any> {
 
         @JvmStatic
         val argumentsConversionRequired = ExprConversionResult(null)
+
+        @JvmStatic
+        fun checkArgumentsSizeMatchExpected(argumentsSize: Int, expectedSize: Int) {
+            check(argumentsSize == expectedSize) {
+                "arguments size mismatch: expected $expectedSize, actual $argumentsSize"
+            }
+        }
     }
 }

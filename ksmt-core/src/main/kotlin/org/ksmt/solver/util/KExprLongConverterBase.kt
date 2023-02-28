@@ -3,6 +3,7 @@ package org.ksmt.solver.util
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.util.KExprConverterBase.Companion.ExprConversionResult
 import org.ksmt.solver.util.KExprConverterBase.Companion.argumentsConversionRequired
+import org.ksmt.solver.util.KExprConverterBase.Companion.checkArgumentsSizeMatchExpected
 import org.ksmt.sort.KSort
 
 abstract class KExprLongConverterBase {
@@ -34,12 +35,6 @@ abstract class KExprLongConverterBase {
         return findConvertedNative(native) as? KExpr<S> ?: error("expr is not properly converted")
     }
 
-    fun checkArgumentsSizeMatchExpected(args: LongArray, expectedSize: Int) {
-        check(args.size == expectedSize) {
-            "arguments size mismatch: expected $expectedSize, actual ${args.size}"
-        }
-    }
-
     /**
      * Ensure all expression arguments are already converted.
      * If not so, [argumentsConversionRequired] is returned.
@@ -50,7 +45,7 @@ abstract class KExprLongConverterBase {
         expectedSize: Int,
         converter: (List<KExpr<*>>) -> KExpr<*>
     ): ExprConversionResult {
-        checkArgumentsSizeMatchExpected(args, expectedSize)
+        checkArgumentsSizeMatchExpected(args.size, expectedSize)
 
         val convertedArgs = mutableListOf<KExpr<*>>()
         var hasNotConvertedArgs = false
