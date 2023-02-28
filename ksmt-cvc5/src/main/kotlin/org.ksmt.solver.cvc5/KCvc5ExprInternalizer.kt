@@ -176,16 +176,7 @@ class KCvc5ExprInternalizer(
     private val sortInternalizer = KCvc5SortInternalizer(cvc5Ctx)
     private val declInternalizer = KCvc5DeclInternalizer(cvc5Ctx, sortInternalizer)
 
-    override fun findInternalizedExpr(expr: KExpr<*>): Term? = cvc5Ctx.findCurrentScopeInternalizedExpr(expr)
-        ?: cvc5Ctx.findInternalizedExpr(expr)?.also {
-            /*
-             * expr is not in current scope cache, but in global cache.
-             * Recollect declarations and uninterpreted sorts
-             * and add entire expression tree to the current scope cache from the global
-             * to avoid re-internalizing with native calls
-             */
-            cvc5Ctx.collectCurrentLevelInternalizations(expr)
-        }
+    override fun findInternalizedExpr(expr: KExpr<*>): Term? = cvc5Ctx.findInternalizedExpr(expr)
 
     override fun saveInternalizedExpr(expr: KExpr<*>, internalized: Term) {
         cvc5Ctx.saveInternalizedExpr(expr, internalized)

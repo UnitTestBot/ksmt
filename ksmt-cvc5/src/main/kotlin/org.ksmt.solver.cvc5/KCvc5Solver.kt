@@ -21,7 +21,7 @@ import kotlin.time.DurationUnit
 
 open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfiguration> {
     private val solver = Solver()
-    private val cvc5Ctx = KCvc5Context(solver)
+    private val cvc5Ctx = KCvc5Context(solver, ctx)
 
     private val exprInternalizer by lazy { createExprInternalizer(cvc5Ctx) }
     private val exprConverter: KCvc5ExprConverter by lazy { createExprConverter(cvc5Ctx) }
