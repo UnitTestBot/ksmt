@@ -168,7 +168,7 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
         transformer: (List<KExpr<A>>) -> KExpr<T>
     ): KExpr<T> {
         val transformedDependencies = ArrayList<KExpr<A>>(dependencies.size)
-        val notTransformedDependencies = ArrayList<KExpr<A>>(dependencies.size)
+        var hasNonTransformedDependencies = false
 
         for (dependency in dependencies) {
             val transformedDependency = transformedExpr(dependency)
@@ -176,13 +176,16 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
             if (transformedDependency != null) {
                 transformedDependencies += transformedDependency
                 continue
-            } else {
-                notTransformedDependencies += dependency
             }
+
+            if (!hasNonTransformedDependencies) {
+                hasNonTransformedDependencies = true
+                retryExprTransformation(expr)
+            }
+            transformExprDependencyIfNeeded(dependency, transformedDependency)
         }
 
-        if (notTransformedDependencies.isNotEmpty()) {
-            expr.transformAfter(notTransformedDependencies)
+        if (hasNonTransformedDependencies) {
             markExpressionAsNotTransformed()
 
             return expr

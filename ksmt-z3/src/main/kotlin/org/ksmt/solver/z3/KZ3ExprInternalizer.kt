@@ -149,7 +149,7 @@ import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
-import org.ksmt.solver.util.KExprInternalizerBase
+import org.ksmt.solver.util.KExprLongInternalizerBase
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArray2Sort
 import org.ksmt.sort.KArray3Sort
@@ -167,18 +167,19 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 
-@Suppress("SpreadOperator")
 open class KZ3ExprInternalizer(
     val ctx: KContext,
     private val z3InternCtx: KZ3Context
-) : KExprInternalizerBase<Long>() {
+) : KExprLongInternalizerBase() {
 
+    @JvmField
     val nCtx: Long = z3InternCtx.nCtx
 
     private val sortInternalizer = KZ3SortInternalizer(z3InternCtx)
     private val declInternalizer = KZ3DeclInternalizer(z3InternCtx, sortInternalizer)
 
-    override fun findInternalizedExpr(expr: KExpr<*>): Long? = z3InternCtx.findInternalizedExpr(expr)
+    override fun findInternalizedExpr(expr: KExpr<*>): Long =
+        z3InternCtx.findInternalizedExpr(expr) ?: NOT_INTERNALIZED
 
     override fun saveInternalizedExpr(expr: KExpr<*>, internalized: Long) {
         z3InternCtx.saveInternalizedExpr(expr, internalized)
@@ -851,10 +852,9 @@ open class KZ3ExprInternalizer(
         operation(nCtx, a0, a1, a2, a3)
     }
 
-    @Suppress("ArrayPrimitive")
     inline fun <S : KExpr<*>> S.transformArray(
         args: List<KExpr<*>>,
         operation: (LongArray) -> Long
-    ): S = transformList(args) { a: Array<Long> -> operation(a.toLongArray()) }
+    ): S = transformList(args) { a: LongArray -> operation(a) }
 
 }
