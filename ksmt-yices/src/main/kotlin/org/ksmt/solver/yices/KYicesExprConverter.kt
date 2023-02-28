@@ -9,6 +9,7 @@ import org.ksmt.expr.KExpr
 import org.ksmt.solver.util.KExprConverterBase
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
+import org.ksmt.solver.util.KExprConverterBase.Companion.ExprConversionResult
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort

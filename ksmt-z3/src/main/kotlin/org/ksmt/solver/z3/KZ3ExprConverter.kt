@@ -22,7 +22,9 @@ import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.KFpRoundingModeExpr
 import org.ksmt.expr.KIntNumExpr
 import org.ksmt.expr.KRealNumExpr
-import org.ksmt.solver.util.KExprConverterBase
+import org.ksmt.solver.util.KExprConverterBase.Companion.ExprConversionResult
+import org.ksmt.solver.util.KExprConverterBase.Companion.argumentsConversionRequired
+import org.ksmt.solver.util.KExprLongConverterBase
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArray2Sort
 import org.ksmt.sort.KArray3Sort
@@ -41,10 +43,11 @@ import org.ksmt.utils.uncheckedCast
 open class KZ3ExprConverter(
     private val ctx: KContext,
     private val z3Ctx: KZ3Context
-) : KExprConverterBase<Long>() {
+) : KExprLongConverterBase() {
 
     private val internalizer = KZ3ExprInternalizer(ctx, z3Ctx)
 
+    @JvmField
     val nCtx: Long = z3Ctx.nCtx
 
     override fun findConvertedNative(expr: Long): KExpr<*>? {
@@ -64,7 +67,7 @@ open class KZ3ExprConverter(
     fun Sort.convertSortWrapped(): KSort =
         z3Ctx.nativeContext.unwrapAST(this).convertSort()
 
-    fun <T : KSort> Long.convertExpr(): KExpr<T> = convertFromNative()
+    fun <T : KSort> Long.convertExpr(): KExpr<T> = convertFromNative(this)
 
     @Suppress("UNCHECKED_CAST")
     fun <T : KSort> Long.convertSort(): T = z3Ctx.convertSort(this) {
@@ -476,7 +479,7 @@ open class KZ3ExprConverter(
                 val significandBv = z3Ctx.temporaryAst(Native.fpaGetNumeralSignificandBv(nCtx, expr))
 
                 expr.convert(
-                    arrayOf(biasedExponentBv, significandBv)
+                    longArrayOf(biasedExponentBv, significandBv)
                 ) { exponent: KExpr<KBvSort>, significand: KExpr<KBvSort> ->
                     val sort = sortx.convertSort<KFpSort>()
 
@@ -633,27 +636,23 @@ open class KZ3ExprConverter(
     }
 
     inline fun <T : KSort, A0 : KSort> Long.convert(op: (KExpr<A0>) -> KExpr<T>) =
-        convert(appArgs(nCtx, this), op)
+        convert(getAppArgs(nCtx, this), op)
 
     inline fun <T : KSort, A0 : KSort, A1 : KSort> Long.convert(op: (KExpr<A0>, KExpr<A1>) -> KExpr<T>) =
-        convert(appArgs(nCtx, this), op)
+        convert(getAppArgs(nCtx, this), op)
 
     inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> Long.convert(
         op: (KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<T>
-    ) = convert(appArgs(nCtx, this), op)
+    ) = convert(getAppArgs(nCtx, this), op)
 
     inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort> Long.convert(
         op: (KExpr<A0>, KExpr<A1>, KExpr<A2>, KExpr<A3>) -> KExpr<T>
-    ) = convert(appArgs(nCtx, this), op)
+    ) = convert(getAppArgs(nCtx, this), op)
 
     inline fun <T : KSort, A : KSort> Long.convertList(op: (List<KExpr<A>>) -> KExpr<T>) =
-        convertList(appArgs(nCtx, this), op)
+        convertList(getAppArgs(nCtx, this), op)
 
     inline fun <T : KSort> Long.convertReduced(op: (KExpr<T>, KExpr<T>) -> KExpr<T>) =
-        convertReduced(appArgs(nCtx, this), op)
-
-    @Suppress("ArrayPrimitive")
-    fun appArgs(ctx: Long, expr: Long): Array<Long> =
-        getAppArgs(ctx, expr).toTypedArray()
+        convertReduced(getAppArgs(nCtx, this), op)
 
 }

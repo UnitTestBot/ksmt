@@ -1,19 +1,22 @@
 package org.ksmt.solver.util
 
 import org.ksmt.expr.KExpr
+import org.ksmt.solver.util.KExprConverterBase.Companion.ExprConversionResult
+import org.ksmt.solver.util.KExprConverterBase.Companion.argumentsConversionRequired
 import org.ksmt.sort.KSort
 
-abstract class KExprConverterBase<T : Any> {
-    abstract fun findConvertedNative(expr: T): KExpr<*>?
+abstract class KExprLongConverterBase {
+    abstract fun findConvertedNative(expr: Long): KExpr<*>?
 
-    abstract fun saveConvertedNative(native: T, converted: KExpr<*>)
+    abstract fun saveConvertedNative(native: Long, converted: KExpr<*>)
 
-    abstract fun convertNativeExpr(expr: T): ExprConversionResult
+    abstract fun convertNativeExpr(expr: Long): ExprConversionResult
 
-    val exprStack = arrayListOf<T>()
+    @JvmField
+    val exprStack = arrayListOf<Long>()
 
-    fun <S : KSort> T.convertFromNative(): KExpr<S> {
-        exprStack.add(this)
+    fun <S : KSort> convertFromNative(native: Long): KExpr<S> {
+        exprStack.add(native)
 
         while (exprStack.isNotEmpty()) {
             val expr = exprStack.removeLast()
@@ -28,7 +31,13 @@ abstract class KExprConverterBase<T : Any> {
         }
 
         @Suppress("UNCHECKED_CAST")
-        return findConvertedNative(this) as? KExpr<S> ?: error("expr is not properly converted")
+        return findConvertedNative(native) as? KExpr<S> ?: error("expr is not properly converted")
+    }
+
+    fun checkArgumentsSizeMatchExpected(args: LongArray, expectedSize: Int) {
+        check(args.size == expectedSize) {
+            "arguments size mismatch: expected $expectedSize, actual ${args.size}"
+        }
     }
 
     /**
@@ -36,18 +45,15 @@ abstract class KExprConverterBase<T : Any> {
      * If not so, [argumentsConversionRequired] is returned.
      * */
     inline fun ensureArgsConvertedAndConvert(
-        expr: T,
-        args: Array<T>,
+        expr: Long,
+        args: LongArray,
         expectedSize: Int,
         converter: (List<KExpr<*>>) -> KExpr<*>
     ): ExprConversionResult {
-        check(args.size == expectedSize) {
-            "arguments size mismatch: expected $expectedSize, actual ${args.size}"
-        }
+        checkArgumentsSizeMatchExpected(args, expectedSize)
 
         val convertedArgs = mutableListOf<KExpr<*>>()
-        var exprAdded = false
-        var argsReady = true
+        var hasNotConvertedArgs = false
 
         for (arg in args) {
             val converted = findConvertedNative(arg)
@@ -57,17 +63,15 @@ abstract class KExprConverterBase<T : Any> {
                 continue
             }
 
-            argsReady = false
-
-            if (!exprAdded) {
+            if (!hasNotConvertedArgs) {
+                hasNotConvertedArgs = true
                 exprStack.add(expr)
-                exprAdded = true
             }
 
             exprStack.add(arg)
         }
 
-        if (!argsReady) return argumentsConversionRequired
+        if (hasNotConvertedArgs) return argumentsConversionRequired
 
         val convertedExpr = converter(convertedArgs)
         return ExprConversionResult(convertedExpr)
@@ -76,24 +80,24 @@ abstract class KExprConverterBase<T : Any> {
     inline fun <T : KSort> convert(op: () -> KExpr<T>) = ExprConversionResult(op())
 
     @Suppress("UNCHECKED_CAST")
-    inline fun <S : KSort, A0 : KSort> T.convert(
-        args: Array<T>,
+    inline fun <S : KSort, A0 : KSort> Long.convert(
+        args: LongArray,
         op: (KExpr<A0>) -> KExpr<S>
     ) = ensureArgsConvertedAndConvert(this, args, expectedSize = 1) { convertedArgs ->
         op(convertedArgs[0] as KExpr<A0>)
     }
 
     @Suppress("UNCHECKED_CAST")
-    inline fun <S : KSort, A0 : KSort, A1 : KSort> T.convert(
-        args: Array<T>,
+    inline fun <S : KSort, A0 : KSort, A1 : KSort> Long.convert(
+        args: LongArray,
         op: (KExpr<A0>, KExpr<A1>) -> KExpr<S>
     ) = ensureArgsConvertedAndConvert(this, args, expectedSize = 2) { convertedArgs ->
         op(convertedArgs[0] as KExpr<A0>, convertedArgs[1] as KExpr<A1>)
     }
 
     @Suppress("UNCHECKED_CAST", "MagicNumber")
-    inline fun <S : KSort, A0 : KSort, A1 : KSort, A2 : KSort> T.convert(
-        args: Array<T>,
+    inline fun <S : KSort, A0 : KSort, A1 : KSort, A2 : KSort> Long.convert(
+        args: LongArray,
         op: (KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<S>
     ) = ensureArgsConvertedAndConvert(this, args, expectedSize = 3) { convertedArgs ->
         op(
@@ -104,8 +108,8 @@ abstract class KExprConverterBase<T : Any> {
     }
 
     @Suppress("UNCHECKED_CAST", "MagicNumber")
-    inline fun <S : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort> T.convert(
-        args: Array<T>,
+    inline fun <S : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort> Long.convert(
+        args: LongArray,
         op: (KExpr<A0>, KExpr<A1>, KExpr<A2>, KExpr<A3>) -> KExpr<S>
     ) = ensureArgsConvertedAndConvert(this, args, expectedSize = 4) { convertedArgs ->
         op(
@@ -117,32 +121,18 @@ abstract class KExprConverterBase<T : Any> {
     }
 
     @Suppress("UNCHECKED_CAST")
-    inline fun <S : KSort, A : KSort> T.convertList(
-        args: Array<T>,
+    inline fun <S : KSort, A : KSort> Long.convertList(
+        args: LongArray,
         op: (List<KExpr<A>>) -> KExpr<S>
     ) = ensureArgsConvertedAndConvert(this, args, expectedSize = args.size) { convertedArgs ->
         op(convertedArgs as List<KExpr<A>>)
     }
 
     @Suppress("UNCHECKED_CAST")
-    inline fun <S : KSort> T.convertReduced(
-        args: Array<T>,
+    inline fun <S : KSort> Long.convertReduced(
+        args: LongArray,
         op: (KExpr<S>, KExpr<S>) -> KExpr<S>
     ) = ensureArgsConvertedAndConvert(this, args, expectedSize = args.size) { convertedArgs ->
         (convertedArgs as List<KExpr<S>>).reduce(op)
-    }
-
-    companion object {
-        @JvmInline
-        value class ExprConversionResult(private val expr: KExpr<*>?) {
-            val isArgumentsConversionRequired: Boolean
-                get() = expr == null
-
-            val convertedExpr: KExpr<*>
-                get() = expr ?: error("expr is not converted")
-        }
-
-        @JvmStatic
-        val argumentsConversionRequired = ExprConversionResult(null)
     }
 }
