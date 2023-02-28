@@ -184,7 +184,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> =
         simplifyExpr(
             expr = expr,
-            preprocess = { flatStores1(expr) }
+            preprocess = { flatStores(expr) }
         )
 
     override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
@@ -540,7 +540,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         array: KExpr<KArraySort<D, R>>, index: KExpr<D>
     ): KExpr<R> = transformSelect(
         array,
-        selectFromStore = { store: KArrayStore<D, R> -> Select1FromStoreExpr(ctx, store, index) },
+        selectFromStore = { store: KArrayStore<D, R> -> SelectFromStoreExpr(ctx, store, index) },
         selectFromFunction = { f -> KFunctionApp(ctx, f, listOf(index).uncheckedCast()) },
         default = { SimplifierArraySelectExpr(ctx, array, index) }
     )
@@ -586,7 +586,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         else -> rewrite(default())
     }
 
-    private fun <D : KSort, R : KSort> transform(expr: Select1FromStoreExpr<D, R>): KExpr<R> =
+    private fun <D : KSort, R : KSort> transform(expr: SelectFromStoreExpr<D, R>): KExpr<R> =
         simplifyExpr(expr, expr.array.index) { storeIndex ->
             transformSelectFromStore(
                 expr = expr,
@@ -780,13 +780,13 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
     private fun <A : KArraySortBase<R>, R : KSort> flatStoresGeneric(
         sort: A, expr: KExpr<A>
     ): SimplifierFlatArrayStoreBaseExpr<A, R> = when (sort as KArraySortBase<R>) {
-        is KArraySort<*, R> -> flatStores1<KSort, R>(expr.uncheckedCast()).uncheckedCast()
+        is KArraySort<*, R> -> flatStores<KSort, R>(expr.uncheckedCast()).uncheckedCast()
         is KArray2Sort<*, *, R> -> flatStores2<KSort, KSort, R>(expr.uncheckedCast()).uncheckedCast()
         is KArray3Sort<*, *, *, R> -> flatStores3<KSort, KSort, KSort, R>(expr.uncheckedCast()).uncheckedCast()
         is KArrayNSort<R> -> flatStoresN<R>(expr.uncheckedCast()).uncheckedCast()
     }
 
-    private fun <D : KSort, R : KSort> flatStores1(
+    private fun <D : KSort, R : KSort> flatStores(
         expr: KExpr<KArraySort<D, R>>,
     ): SimplifierFlatArrayStoreExpr<D, R> {
         val indices = arrayListOf<KExpr<D>>()
@@ -1177,7 +1177,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             error("Interning is not used for Aux expressions")
     }
 
-    private class Select1FromStoreExpr<D : KSort, R : KSort>(
+    private class SelectFromStoreExpr<D : KSort, R : KSort>(
         ctx: KContext,
         val array: KArrayStore<D, R>,
         val index: KExpr<D>,
