@@ -191,18 +191,18 @@ class AstSerializer(
 
     private fun <T : KDecl<*>> T.serializeDecl(): Int {
         val idx = serializationCtx.getAstIndex(this)
-        if (idx != null) return idx
-        return accept(declSerializer)
+        if (idx != NOT_INTERNALIZED) return idx
+        return declSerializer.serializeDecl(this)
     }
 
     private fun <T : KSort> T.serializeSort(): Int {
         val idx = serializationCtx.getAstIndex(this)
-        if (idx != null) return idx
-        return accept(sortSerializer)
+        if (idx != NOT_INTERNALIZED) return idx
+        return sortSerializer.serializeSort(this)
     }
 
     override fun findInternalizedExpr(expr: KExpr<*>): Int =
-        serializationCtx.getAstIndex(expr) ?: NOT_INTERNALIZED
+        serializationCtx.getAstIndex(expr)
 
     override fun saveInternalizedExpr(expr: KExpr<*>, internalized: Int) {
         // Do nothing since expr is already saved into serializationCtx
@@ -212,26 +212,38 @@ class AstSerializer(
     private val declSerializer = DeclSerializer()
 
     @OptIn(ExperimentalUnsignedTypes::class)
-    private inner class SortSerializer : KSortVisitor<Int> {
-        override fun visit(sort: KBoolSort): Int = serializeSort(sort, SortKind.Bool) {}
+    private inner class SortSerializer : KSortVisitor<Unit> {
+        private var serializedSort: Int = NOT_INTERNALIZED
 
-        override fun visit(sort: KIntSort): Int = serializeSort(sort, SortKind.Int) {}
-
-        override fun visit(sort: KRealSort): Int = serializeSort(sort, SortKind.Real) {}
-
-        override fun <S : KBvSort> visit(sort: S): Int = serializeSort(sort, SortKind.Bv) {
-            writeUInt(sort.sizeBits)
+        override fun visit(sort: KBoolSort) {
+            serializeSort(sort, SortKind.Bool) {}
         }
 
-        override fun <S : KFpSort> visit(sort: S): Int = serializeSort(sort, SortKind.Fp) {
-            writeUInt(sort.exponentBits)
-            writeUInt(sort.significandBits)
+        override fun visit(sort: KIntSort) {
+            serializeSort(sort, SortKind.Int) {}
         }
 
-        override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): Int {
+        override fun visit(sort: KRealSort) {
+            serializeSort(sort, SortKind.Real) {}
+        }
+
+        override fun <S : KBvSort> visit(sort: S) {
+            serializeSort(sort, SortKind.Bv) {
+                writeUInt(sort.sizeBits)
+            }
+        }
+
+        override fun <S : KFpSort> visit(sort: S) {
+            serializeSort(sort, SortKind.Fp) {
+                writeUInt(sort.exponentBits)
+                writeUInt(sort.significandBits)
+            }
+        }
+
+        override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>) {
             val domain = sort.domain.serializeSort()
             val range = sort.range.serializeSort()
-            return serializeSort(sort, SortKind.Array) {
+            serializeSort(sort, SortKind.Array) {
                 writeAst(domain)
                 writeAst(range)
             }
@@ -270,30 +282,50 @@ class AstSerializer(
             }
         }
 
-        override fun visit(sort: KFpRoundingModeSort): Int = serializeSort(sort, SortKind.FpRM) {}
-
-        override fun visit(sort: KUninterpretedSort): Int = serializeSort(sort, SortKind.Uninterpreted) {
-            writeString(sort.name)
+        override fun visit(sort: KFpRoundingModeSort) {
+            serializeSort(sort, SortKind.FpRM) {}
         }
 
-        private inline fun serializeSort(sort: KSort, kind: SortKind, sortArgs: AbstractBuffer.() -> Unit): Int =
-            sort.serializeAst {
+        override fun visit(sort: KUninterpretedSort) {
+            serializeSort(sort, SortKind.Uninterpreted) {
+                writeString(sort.name)
+            }
+        }
+
+        private inline fun serializeSort(sort: KSort, kind: SortKind, sortArgs: AbstractBuffer.() -> Unit) {
+            serializedSort = sort.serializeAst {
                 output.writeEnum(AstKind.Sort)
                 output.writeEnum(kind)
                 sortArgs()
             }
+        }
+
+        fun serializeSort(sort: KSort): Int {
+            sort.accept(this)
+            return serializedSort
+        }
     }
 
-    private inner class DeclSerializer : KDeclVisitor<Int> {
-        override fun <S : KSort> visit(decl: KFuncDecl<S>): Int {
-            val args = decl.argSorts.map { it.serializeSort() }
+    private inner class DeclSerializer : KDeclVisitor<Unit> {
+        private var serializedDecl: Int = NOT_INTERNALIZED
+
+        override fun <S : KSort> visit(decl: KFuncDecl<S>) {
+            val args = decl.argSorts.let { argSorts ->
+                IntArray(argSorts.size) { argSorts[it].serializeSort() }
+            }
             val sort = decl.sort.serializeSort()
-            return decl.serializeAst {
+
+            serializedDecl = decl.serializeAst {
                 writeEnum(AstKind.Decl)
                 writeString(decl.name)
                 writeAstArray(args)
                 writeAst(sort)
             }
+        }
+
+        fun serializeDecl(decl: KDecl<*>): Int {
+            decl.accept(this)
+            return serializedDecl
         }
     }
 
