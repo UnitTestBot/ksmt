@@ -2,6 +2,10 @@ package org.ksmt.solver.cvc5
 
 import io.github.cvc5.Solver
 import io.github.cvc5.Sort
+import org.ksmt.solver.KSolverUnsupportedFeatureException
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
@@ -37,6 +41,18 @@ open class KCvc5SortInternalizer(
             val range = sort.range.internalizeCvc5Sort()
             nSolver.mkArraySort(domain, range)
         }
+
+    override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>): Sort {
+        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+    }
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>): Sort {
+        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+    }
+
+    override fun <R : KSort> visit(sort: KArrayNSort<R>): Sort {
+        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+    }
 
     override fun visit(sort: KFpRoundingModeSort): Sort = cvc5Ctx.internalizeSort(sort) {
         nSolver.roundingModeSort

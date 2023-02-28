@@ -14,7 +14,11 @@ import org.ksmt.expr.KFunctionAsArray
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpRoundingModeSort
@@ -273,6 +277,21 @@ class KCvc5Context(
             sort.range.accept(this)
         }
 
+        override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>) {
+            sort.domainSorts.forEach { it.accept(this) }
+            sort.range.accept(this)
+        }
+
+        override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>) {
+            sort.domainSorts.forEach { it.accept(this) }
+            sort.range.accept(this)
+        }
+
+        override fun <R : KSort> visit(sort: KArrayNSort<R>) {
+            sort.domainSorts.forEach { it.accept(this) }
+            sort.range.accept(this)
+        }
+
         override fun visit(sort: KFpRoundingModeSort) = Unit
 
         override fun visit(sort: KUninterpretedSort) = cvc5Ctx.addUninterpretedSort(sort)
@@ -301,7 +320,7 @@ class KCvc5Context(
             this@KCvc5Context.savePreviouslyInternalizedExpr(expr)
         }
 
-        override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> =
+        override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KFunctionAsArray<A, R>): KExpr<A> =
             cacheIfNeed(expr) {
                 this@KCvc5Context.addDeclaration(expr.function)
                 uninterpretedSortCollector.collect(expr.function)

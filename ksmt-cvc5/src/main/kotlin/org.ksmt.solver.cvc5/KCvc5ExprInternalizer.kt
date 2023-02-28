@@ -9,8 +9,17 @@ import io.github.cvc5.mkQuantifier
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAddArithExpr
 import org.ksmt.expr.KAndExpr
+import org.ksmt.expr.KArray2Lambda
+import org.ksmt.expr.KArray2Select
+import org.ksmt.expr.KArray2Store
+import org.ksmt.expr.KArray3Lambda
+import org.ksmt.expr.KArray3Select
+import org.ksmt.expr.KArray3Store
 import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArrayNLambda
+import org.ksmt.expr.KArrayNSelect
+import org.ksmt.expr.KArrayNStore
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KBitVec16Value
@@ -154,7 +163,10 @@ import org.ksmt.expr.rewrite.simplify.simplifyBvRotateRightExpr
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.util.KExprInternalizerBase
 import org.ksmt.sort.KArithSort
-import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFp128Sort
@@ -882,20 +894,52 @@ class KCvc5ExprInternalizer(
         }
     }
 
+    override fun <R : KSort> transform(expr: KArrayNStore<R>): KExpr<KArrayNSort<R>> =
+        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+
+    @Suppress("MaxLineLength")
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(expr: KArray3Store<D0, D1, D2, R>): KExpr<KArray3Sort<D0, D1, D2, R>> =
+        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+
+    @Suppress("MaxLineLength")
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(expr: KArray2Store<D0, D1, R>): KExpr<KArray2Sort<D0, D1, R>> =
+        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>) = with(expr) {
         transform(array, index) { array: Term, index: Term ->
             nsolver.mkTerm(Kind.SELECT, array, index)
         }
     }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>) = with(expr) {
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(expr: KArray2Select<D0, D1, R>): KExpr<R> =
+        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+
+    @Suppress("MaxLineLength")
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(expr: KArray3Select<D0, D1, D2, R>): KExpr<R> =
+        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+
+    override fun <R : KSort> transform(expr: KArrayNSelect<R>): KExpr<R> =
+        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+
+    override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KArrayConst<A, R>) = with(expr) {
         transform(value) { value: Term ->
             nsolver.mkConstArray(sort.internalizeSort(), value)
         }
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) =
-        throw KSolverUnsupportedFeatureException("no direct support for $expr")
+        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+
+    @Suppress("MaxLineLength")
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(expr: KArray2Lambda<D0, D1, R>): KExpr<KArray2Sort<D0, D1, R>> =
+        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+
+    @Suppress("MaxLineLength")
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(expr: KArray3Lambda<D0, D1, D2, R>): KExpr<KArray3Sort<D0, D1, D2, R>> =
+        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+
+    override fun <R : KSort> transform(expr: KArrayNLambda<R>): KExpr<KArrayNSort<R>> =
+        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
 
     override fun <T : KArithSort> transform(expr: KAddArithExpr<T>) = with(expr) {
         transformArray(args) { args -> nsolver.mkTerm(Kind.ADD, args) }
@@ -1019,7 +1063,7 @@ class KCvc5ExprInternalizer(
 
     override fun transform(expr: KUniversalQuantifier) = transformQuantifier(expr, isUniversal = true)
 
-    override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
+    override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KFunctionAsArray<A, R>): KExpr<A> {
         throw KSolverUnsupportedFeatureException(
             "No direct impl in cvc5 (as-array is CONST_ARRAY term with base array element)"
         )

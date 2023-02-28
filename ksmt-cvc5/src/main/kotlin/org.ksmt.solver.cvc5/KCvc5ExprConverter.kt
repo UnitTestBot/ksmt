@@ -32,6 +32,7 @@ import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.asExpr
+import org.ksmt.utils.uncheckedCast
 import java.util.*
 
 open class KCvc5ExprConverter(
@@ -303,8 +304,8 @@ open class KCvc5ExprConverter(
             Kind.FLOATINGPOINT_TO_REAL -> expr.convert { fpExpr: KExpr<KFpSort> -> mkFpToRealExpr(fpExpr) }
 
             // array
-            Kind.SELECT -> expr.convert(::mkArraySelect)
-            Kind.STORE -> expr.convert(::mkArrayStore)
+            Kind.SELECT -> expr.convert(::mkArray1Select)
+            Kind.STORE -> expr.convert(::mkArray1Store)
 
             Kind.EQ_RANGE -> throw KSolverUnsupportedFeatureException("EQ_RANGE is not supported")
 
@@ -512,6 +513,17 @@ open class KCvc5ExprConverter(
         }
     }
 
+    private fun mkArray1Select(
+        array: KExpr<KArraySort<KSort, KSort>>,
+        index: KExpr<KSort>
+    ) = ctx.mkArraySelect(array, index)
+
+    private fun mkArray1Store(
+        array: KExpr<KArraySort<KSort, KSort>>,
+        index: KExpr<KSort>,
+        value: KExpr<KSort>
+    ) = ctx.mkArrayStore(array, index, value)
+
     private fun convertNativeConstIntegerExpr(expr: Term): ExprConversionResult = with(ctx) {
         convert { mkIntNum(expr.integerValue) }
     }
@@ -641,7 +653,6 @@ open class KCvc5ExprConverter(
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
     inline fun <T : KSort> Term.convertCascadeBinaryArityOpOrArg(crossinline op: (KExpr<T>, KExpr<T>) -> KExpr<T>) =
         getChildren().let { children ->
             when {
@@ -649,7 +660,7 @@ open class KCvc5ExprConverter(
                 children.size == 1 -> children.first().convert<T, T> { it }
                 children.size == 2 -> convert(children, op)
                 else -> {
-                    val accumulate = { a: KExpr<*>, b: KExpr<*> -> op(a as KExpr<T>, b as KExpr<T>) }
+                    val accumulate = { a: KExpr<*>, b: KExpr<*> -> op(a.uncheckedCast(), b.uncheckedCast()) }
 
                     ensureArgsConvertedAndConvert(this, children, expectedSize = children.size) { convertedArgs ->
                         convertedArgs.subList(2, convertedArgs.size).fold(
