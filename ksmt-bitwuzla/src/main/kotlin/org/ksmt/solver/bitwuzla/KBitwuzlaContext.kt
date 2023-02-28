@@ -3,7 +3,10 @@ package org.ksmt.solver.bitwuzla
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
+import org.ksmt.expr.KArray2Lambda
+import org.ksmt.expr.KArray3Lambda
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArrayNLambda
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
@@ -20,6 +23,7 @@ import org.ksmt.sort.KArray2Sort
 import org.ksmt.sort.KArray3Sort
 import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpRoundingModeSort
@@ -365,7 +369,7 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
             return super.transform(expr)
         }
 
-        override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
+        override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KFunctionAsArray<A, R>): KExpr<A> {
             registerDeclIfNotIgnored(expr.function)
             return super.transform(expr)
         }
@@ -386,7 +390,20 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
         }
 
         override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> =
-            expr.transformQuantifier(listOf(expr.indexVarDecl), expr.body)
+            expr.transformQuantifier(expr.indexVarDeclarations, expr.body)
+
+        override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+            expr: KArray2Lambda<D0, D1, R>
+        ): KExpr<KArray2Sort<D0, D1, R>> =
+            expr.transformQuantifier(expr.indexVarDeclarations, expr.body)
+
+        override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+            expr: KArray3Lambda<D0, D1, D2, R>
+        ): KExpr<KArray3Sort<D0, D1, D2, R>> =
+            expr.transformQuantifier(expr.indexVarDeclarations, expr.body)
+
+        override fun <R : KSort> transform(expr: KArrayNLambda<R>): KExpr<KArrayNSort<R>> =
+            expr.transformQuantifier(expr.indexVarDeclarations, expr.body)
 
         override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> =
             expr.transformQuantifier(expr.bounds, expr.body)
