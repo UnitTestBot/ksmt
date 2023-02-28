@@ -354,7 +354,7 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
         private fun <T : KSort> KExpr<T>.transformQuantifier(bounds: List<KDecl<*>>, body: KExpr<*>): KExpr<T> {
             if (quantifiedVarsScope.lastOrNull()?.first != this) {
                 quantifiedVarsScope.add(this to currentlyIgnoredDeclarations)
-                val ignoredDecls = currentlyIgnoredDeclarations?.toMutableSet() ?: hashSetOf()
+                val ignoredDecls = currentlyIgnoredDeclarations?.toHashSet() ?: hashSetOf()
                 ignoredDecls.addAll(bounds)
                 currentlyIgnoredDeclarations = ignoredDecls
             }
