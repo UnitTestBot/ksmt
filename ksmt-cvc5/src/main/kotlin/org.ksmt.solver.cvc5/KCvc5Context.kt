@@ -32,7 +32,8 @@ class KCvc5Context(
 ) : AutoCloseable {
     private var isClosed = false
 
-    private var exprCurrentLevelCacheRestorer = KCurrentScopeExprCacheRestorer(ctx)
+    private val uninterpretedSortCollector = KUninterpretedSortCollector(this)
+    private var exprCurrentLevelCacheRestorer = KCurrentScopeExprCacheRestorer(uninterpretedSortCollector, ctx)
 
     /**
      * We use double-scoped expression internalization cache:
@@ -68,10 +69,18 @@ class KCvc5Context(
     private val declarations = mutableListOf(currentLevelDeclarations)
 
     fun addUninterpretedSort(sort: KUninterpretedSort) { currentLevelUninterpretedSorts += sort }
-    fun uninterpretedSorts(): Set<KUninterpretedSort> = uninterpretedSorts.flatten().toSet()
 
-    fun addDeclaration(sort: KDecl<*>) { currentLevelDeclarations += sort }
-    fun declarations(): Set<KDecl<*>> = declarations.flatten().toSet()
+    /**
+     * uninterpreted sorts of active push-levels
+     */
+    fun uninterpretedSorts(): List<Set<KUninterpretedSort>> = uninterpretedSorts
+
+    fun addDeclaration(decl: KDecl<*>) { currentLevelDeclarations += decl }
+
+    /**
+     * declarations of active push-levels
+     */
+    fun declarations(): List<Set<KDecl<*>>> = declarations
 
     val nativeSolver: Solver
         get() = solver
@@ -97,8 +106,8 @@ class KCvc5Context(
 
         expressions += currentScopeExpressions
         currentScopeExpressions.clear()
-        // recreate cache restorer to avoid KNonRecursiveVisitor cache
-        exprCurrentLevelCacheRestorer = KCurrentScopeExprCacheRestorer(ctx)
+        // recreate cache restorer to avoid KNonRecursiveTransformer cache
+        exprCurrentLevelCacheRestorer = KCurrentScopeExprCacheRestorer(uninterpretedSortCollector, ctx)
     }
 
     // expr
@@ -110,9 +119,8 @@ class KCvc5Context(
              * and add entire expression tree to the current scope cache from the global
              * to avoid re-internalizing with native calls
              */
-            exprCurrentLevelCacheRestorer.apply(expr) }
-
-    fun findCurrentScopeInternalizedExpr(expr: KExpr<*>): Term? = currentScopeExpressions[expr]
+            exprCurrentLevelCacheRestorer.apply(expr)
+        }
 
     fun findConvertedExpr(expr: Term): KExpr<*>? = cvc5Expressions[expr]
 
@@ -267,9 +275,7 @@ class KCvc5Context(
 
         override fun visit(sort: KFpRoundingModeSort) = Unit
 
-        override fun visit(sort: KUninterpretedSort) {
-            cvc5Ctx.addUninterpretedSort(sort)
-        }
+        override fun visit(sort: KUninterpretedSort) = cvc5Ctx.addUninterpretedSort(sort)
 
         fun collect(decl: KDecl<*>) {
             decl.argSorts.map { it.accept(this) }
@@ -277,14 +283,12 @@ class KCvc5Context(
         }
     }
 
-    inner class KCurrentScopeExprCacheRestorer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
-        private val uninterpretedSortCollector = KUninterpretedSortCollector(this@KCvc5Context)
+    inner class KCurrentScopeExprCacheRestorer(
+        private val uninterpretedSortCollector: KUninterpretedSortCollector,
+        ctx: KContext
+    ) : KNonRecursiveTransformer(ctx) {
 
         override fun <T : KSort> exprTransformationRequired(expr: KExpr<T>): Boolean = expr !in currentScopeExpressions
-
-        override fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> {
-            return super.transformExpr(expr)
-        }
 
         override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = cacheIfNeed(expr) {
             this@KCvc5Context.addDeclaration(expr.decl)
@@ -323,7 +327,7 @@ class KCvc5Context(
         }
 
         private fun <S : KSort, E : KExpr<S>> cacheIfNeed(expr: E, transform: E.() -> Unit): KExpr<S> {
-            if (findCurrentScopeInternalizedExpr(expr) != null)
+            if (expr in currentScopeExpressions)
                 return expr
 
             expr.transform()

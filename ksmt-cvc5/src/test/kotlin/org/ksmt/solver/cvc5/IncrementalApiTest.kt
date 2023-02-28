@@ -9,13 +9,127 @@ import org.ksmt.sort.KBv8Sort
 import org.ksmt.utils.getValue
 import org.ksmt.utils.mkConst
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 
 class IncrementalApiTest {
     private val ctx = KContext()
     private val solver = KCvc5Solver(ctx)
+
+    @Test
+    fun testScopedSorts(): Unit = with(ctx) {
+        val sort1 = mkUninterpretedSort("us")
+        val sort2 = mkUninterpretedSort("usus")
+        val sort3 = mkUninterpretedSort("ususus")
+
+        val a1 = sort1.mkConst("us_a")
+        val b1 = sort1.mkConst("us_b")
+
+        val a2 = sort2.mkConst("usus_a")
+        val b2 = sort2.mkConst("usus_b")
+
+        val a3 = sort3.mkConst("ususus_a")
+        val b3 = sort3.mkConst("ususus_b")
+
+        val f1 = a1 neq b1
+        val f2 = a2 neq b2
+        val f3 = a3 neq b3
+
+        solver.assert(mkTrue())
+        solver.push() // => level 1
+
+        // let context know about exprs
+        solver.assert(f1)
+        solver.assert(f2)
+        solver.assert(f3)
+
+        solver.pop() // => level 0
+
+        solver.check().also { assertEquals(KSolverStatus.SAT, it) }
+        solver.model().also { model -> assertFalse { sort1 in model.uninterpretedSorts } }
+
+        solver.assert(f1)
+
+        solver.push() // => level 1
+        solver.push() // => level 2
+
+        solver.assert(f2)
+
+        solver.pop() // => level 1
+        solver.pop() // => level 0
+        solver.push() // => level 1
+        solver.push() // => level 2
+
+        solver.assert(f3)
+
+        solver.check().also { assertEquals(KSolverStatus.SAT, it) }
+        solver.model().also { model ->
+            assertContains(model.uninterpretedSorts, sort1)
+            assertFalse { sort2 in model.uninterpretedSorts }
+            assertContains(model.uninterpretedSorts, sort1)
+        }
+    }
+
+    @Test
+    fun testScopedDeclsAndSorts(): Unit = with(ctx) {
+        val sort = mkUninterpretedSort("us")
+
+        val a = sort.mkConst("a")
+        val b = sort.mkConst("b")
+        val c = sort.mkConst("c")
+
+        solver.assert(a neq b)
+        solver.push() // => level 1
+
+        solver.check().also { assertEquals(KSolverStatus.SAT, it) }
+        solver.model().also { model ->
+            assertContains(model.declarations, a.decl)
+            assertContains(model.declarations, b.decl)
+            assertFalse { c.decl in model.declarations }
+
+            assertContains(model.uninterpretedSorts, sort)
+        }
+
+        solver.pop() // => level 0
+
+        solver.check().also { assertEquals(KSolverStatus.SAT, it) }
+        solver.model().also { model ->
+            assertContains(model.declarations, a.decl)
+            assertContains(model.declarations, b.decl)
+            assertFalse { c.decl in model.declarations }
+
+            assertContains(model.uninterpretedSorts, sort)
+        }
+
+        solver.push() // => level 1
+        solver.push() // => level 2
+
+        solver.assert(b neq c)
+
+        solver.check().also { assertEquals(KSolverStatus.SAT, it) }
+        solver.model().also { model ->
+            assertContains(model.declarations, a.decl)
+            assertContains(model.declarations, b.decl)
+            assertContains(model.declarations, c.decl)
+
+            assertContains(model.uninterpretedSorts, sort)
+        }
+
+        solver.pop() // => level 1
+        solver.pop() // => level 0
+
+        solver.check().also { assertEquals(KSolverStatus.SAT, it) }
+        solver.model().also { model ->
+            assertContains(model.declarations, a.decl)
+            assertContains(model.declarations, b.decl)
+            assertFalse { c.decl in model.declarations }
+
+            assertContains(model.uninterpretedSorts, sort)
+        }
+    }
 
     @Test
     fun testUnsatCoreGeneration(): Unit = with(ctx) {

@@ -24,7 +24,7 @@ open class KCvc5Model(
     private val interpretations = hashMapOf<KDecl<*>, KModel.KFuncInterp<*>?>()
     private val uninterpretedSortsUniverses = hashMapOf<KUninterpretedSort, Set<KExpr<KUninterpretedSort>>>()
 
-    /*
+    /**
      * Always returns evaluated value regardless of isComplete (forever isComplete = true).
      * However, cvc5 has option "model-cores", which usage brings overhead on model evaluation
      * and influences only on free constants.

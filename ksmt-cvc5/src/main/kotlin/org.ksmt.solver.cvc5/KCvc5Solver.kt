@@ -56,12 +56,15 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     }
 
     override fun assert(expr: KExpr<KBoolSort>) = cvc5Try {
-        val cvc5Expr = with(exprInternalizer) { expr.internalizeExpr() }
+        ctx.ensureContextMatch(expr)
 
+        val cvc5Expr = with(exprInternalizer) { expr.internalizeExpr() }
         solver.assertFormula(cvc5Expr)
     }
 
     override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) {
+        ctx.ensureContextMatch(expr, trackVar)
+
         val trackVarApp = trackVar.apply()
         val cvc5TrackVar = with(exprInternalizer) { trackVarApp.internalizeExpr() }
         val trackedExpr = with(ctx) { trackVarApp implies expr }
@@ -107,6 +110,8 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     }
 
     override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus = cvc5Try {
+        ctx.ensureContextMatch(assumptions)
+
         val cvc5Assumptions = with(exprInternalizer) { assumptions.map { it.internalizeExpr() } }.toTypedArray()
         cvc5LastAssumptions = cvc5Assumptions.toCollection(TreeSet())
         solver.updateTimeout(timeout)
@@ -120,8 +125,8 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
             cvc5Ctx,
             exprConverter,
             exprInternalizer,
-            cvc5Ctx.declarations(),
-            cvc5Ctx.uninterpretedSorts()
+            cvc5Ctx.declarations().flatten().toSet(),
+            cvc5Ctx.uninterpretedSorts().flatten().toSet()
         )
     }
 
