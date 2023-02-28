@@ -1,5 +1,6 @@
 package org.ksmt.solver.util
 
+import it.unimi.dsi.fastutil.longs.LongArrayList
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.util.KExprConverterBase.Companion.ExprConversionResult
 import org.ksmt.solver.util.KExprConverterBase.Companion.argumentsConversionRequired
@@ -17,13 +18,13 @@ abstract class KExprLongConverterBase {
     abstract fun convertNativeExpr(expr: Long): ExprConversionResult
 
     @JvmField
-    val exprStack = arrayListOf<Long>()
+    val exprStack = LongArrayList()
 
     fun <S : KSort> convertFromNative(native: Long): KExpr<S> {
         exprStack.add(native)
 
         while (exprStack.isNotEmpty()) {
-            val expr = exprStack.removeLast()
+            val expr = exprStack.removeLong(exprStack.lastIndex)
 
             if (findConvertedNative(expr) != null) continue
 

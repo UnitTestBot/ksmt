@@ -179,7 +179,7 @@ open class KZ3ExprInternalizer(
     private val declInternalizer = KZ3DeclInternalizer(z3InternCtx, sortInternalizer)
 
     override fun findInternalizedExpr(expr: KExpr<*>): Long =
-        z3InternCtx.findInternalizedExpr(expr) ?: NOT_INTERNALIZED
+        z3InternCtx.findInternalizedExpr(expr)
 
     override fun saveInternalizedExpr(expr: KExpr<*>, internalized: Long) {
         z3InternCtx.saveInternalizedExpr(expr, internalized)
@@ -194,9 +194,9 @@ open class KZ3ExprInternalizer(
     fun KSort.internalizeSortWrapped(): Sort =
         z3InternCtx.nativeContext.wrapAST(internalizeSort()) as Sort
 
-    fun <T : KDecl<*>> T.internalizeDecl(): Long = accept(declInternalizer)
+    fun <T : KDecl<*>> T.internalizeDecl(): Long = declInternalizer.internalizeZ3Decl(this)
 
-    fun <T : KSort> T.internalizeSort(): Long = accept(sortInternalizer)
+    fun <T : KSort> T.internalizeSort(): Long = sortInternalizer.internalizeZ3Sort(this)
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>) = with(expr) {
         transformArray(args) { args ->
