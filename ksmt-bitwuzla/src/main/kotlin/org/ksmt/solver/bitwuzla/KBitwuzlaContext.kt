@@ -50,12 +50,12 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
     private val bitwuzlaConstants = hashMapOf<BitwuzlaTerm, KDecl<*>>()
 
     private val sorts = hashMapOf<KSort, BitwuzlaSort>()
-    private val bitwuzlaSorts = hashMapOf<BitwuzlaSort, KSort>()
     private val declSorts = hashMapOf<KDecl<*>, BitwuzlaSort>()
+    private val bitwuzlaSorts = hashMapOf<BitwuzlaSort, KSort>()
 
     private val bitwuzlaValues = hashMapOf<BitwuzlaTerm, KExpr<*>>()
 
-    private var exprCurrentLevelCache = hashMapOf<KExpr<*>, BitwuzlaTerm>()
+    private var exprCurrentLevelCache = hashSetOf<KExpr<*>>()
     private val exprCacheLevel = hashMapOf<KExpr<*>, Int>()
     private val exprLeveledCache = arrayListOf(exprCurrentLevelCache)
     private var currentLevelExprMover = ExprMover()
@@ -86,18 +86,17 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
      * See [ExprMover].
      * */
     fun findExprTerm(expr: KExpr<*>): BitwuzlaTerm? {
-        val globalTerm = exprGlobalCache[expr] ?: return null
+        val term = exprGlobalCache[expr] ?: return null
 
-        val currentLevelTerm = exprCurrentLevelCache[expr]
-        if (currentLevelTerm != null) return currentLevelTerm
+        if (expr in exprCurrentLevelCache) return term
 
         currentLevelExprMover.apply(expr)
 
-        return globalTerm
+        return term
     }
 
     fun saveExprTerm(expr: KExpr<*>, term: BitwuzlaTerm) {
-        if (exprCurrentLevelCache.putIfAbsent(expr, term) == null) {
+        if (exprCurrentLevelCache.add(expr)) {
             exprGlobalCache[expr] = term
             exprCacheLevel[expr] = currentLevel
         }
@@ -192,7 +191,7 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
      * and must match to the corresponding assertion level ([KBitwuzlaSolver.push]).
      * */
     fun createNestedDeclarationScope() {
-        exprCurrentLevelCache = hashMapOf()
+        exprCurrentLevelCache = hashSetOf()
         exprLeveledCache.add(exprCurrentLevelCache)
         currentLevelExprMover = ExprMover()
 
@@ -340,9 +339,9 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
                  *  1. Body may contain vars which can't be moved correctly
                  *  2. Expression caches will remain correct regardless of body moved
                  *  */
-                val term = exprGlobalCache.getValue(expr)
-                exprCacheLevel[expr] = currentLevel
-                exprCurrentLevelCache[expr] = term
+                if (exprCurrentLevelCache.add(expr)) {
+                    exprCacheLevel[expr] = currentLevel
+                }
             }
 
             return super.transformExpr(expr)
