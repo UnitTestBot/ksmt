@@ -332,10 +332,18 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
      * */
     private inner class ExprMover : KNonRecursiveTransformer(ctx) {
         override fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> {
-            // Move expr to current level
-            val term = exprGlobalCache.getValue(expr)
-            exprCacheLevel[expr] = currentLevel
-            exprCurrentLevelCache[expr] = term
+            if (!insideQuantifiedScope) {
+                /**
+                 *  Move expr to current level.
+                 *
+                 *  Don't move quantified expression since:
+                 *  1. Body may contain vars which can't be moved correctly
+                 *  2. Expression caches will remain correct regardless of body moved
+                 *  */
+                val term = exprGlobalCache.getValue(expr)
+                exprCacheLevel[expr] = currentLevel
+                exprCurrentLevelCache[expr] = term
+            }
 
             return super.transformExpr(expr)
         }
@@ -374,18 +382,25 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
             return super.transform(expr)
         }
 
-        private val quantifiedVarsScope = arrayListOf<Pair<KExpr<*>, Set<KDecl<*>>?>>()
+        private val quantifiedVarsScopeOwner = arrayListOf<KExpr<*>>()
+        private val quantifiedVarsScope = arrayListOf<Set<KDecl<*>>?>()
+
+        private val insideQuantifiedScope: Boolean
+            get() = quantifiedVarsScopeOwner.isNotEmpty()
 
         private fun <T : KSort> KExpr<T>.transformQuantifier(bounds: List<KDecl<*>>, body: KExpr<*>): KExpr<T> {
-            if (quantifiedVarsScope.lastOrNull()?.first != this) {
-                quantifiedVarsScope.add(this to currentlyIgnoredDeclarations)
+            if (quantifiedVarsScopeOwner.lastOrNull() != this) {
+                quantifiedVarsScopeOwner.add(this)
+                quantifiedVarsScope.add(currentlyIgnoredDeclarations)
+
                 val ignoredDecls = currentlyIgnoredDeclarations?.toHashSet() ?: hashSetOf()
                 ignoredDecls.addAll(bounds)
                 currentlyIgnoredDeclarations = ignoredDecls
             }
             return transformExprAfterTransformed(this, body) {
-                currentlyIgnoredDeclarations = quantifiedVarsScope.removeLast().second
-                this
+                quantifiedVarsScopeOwner.removeLast()
+                currentlyIgnoredDeclarations = quantifiedVarsScope.removeLast()
+                transformExpr(this)
             }
         }
 
