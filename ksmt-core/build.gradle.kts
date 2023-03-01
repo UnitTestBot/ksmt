@@ -5,8 +5,6 @@ plugins {
 }
 
 dependencies {
-    api("it.unimi.dsi:fastutil-core:8.5.11")
-
     testImplementation(project(":ksmt-z3"))
     testImplementation("org.junit.jupiter", "junit-jupiter-params", "5.8.2")
 }
