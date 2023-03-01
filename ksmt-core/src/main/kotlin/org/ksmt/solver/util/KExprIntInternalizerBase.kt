@@ -2,6 +2,7 @@ package org.ksmt.solver.util
 
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.transformer.KTransformerBase
+import org.ksmt.solver.util.KExprLongInternalizerBase.Companion.NOT_INTERNALIZED
 import org.ksmt.sort.KSort
 
 /**
