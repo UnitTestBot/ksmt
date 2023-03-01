@@ -1,5 +1,6 @@
 package org.ksmt.solver.bitwuzla
 
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
 import org.ksmt.KContext
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
@@ -186,7 +187,7 @@ import java.math.BigInteger
 @Suppress("LargeClass")
 open class KBitwuzlaExprInternalizer(
     val bitwuzlaCtx: KBitwuzlaContext,
-    private val scopedVars: Map<KDecl<*>, BitwuzlaTerm> = emptyMap()
+    private val scopedVars: Map<KDecl<*>, BitwuzlaTerm>? = null
 ) : KExprLongInternalizerBase() {
 
     @JvmField
@@ -291,8 +292,15 @@ open class KBitwuzlaExprInternalizer(
         }
     }
 
-    private inline fun mkConstant(decl: KDecl<*>, sort: () -> BitwuzlaSort): BitwuzlaTerm =
-        scopedVars[decl] ?: bitwuzlaCtx.mkConstant(decl, sort())
+    private inline fun mkConstant(decl: KDecl<*>, sort: () -> BitwuzlaSort): BitwuzlaTerm {
+        if (scopedVars != null) {
+            val scopedVar = scopedVars[decl]
+            if (scopedVar != null) {
+                return scopedVar
+            }
+        }
+        return bitwuzlaCtx.mkConstant(decl, sort())
+    }
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = with(expr) {
         transformList(args) { args: LongArray ->
@@ -1120,7 +1128,7 @@ open class KBitwuzlaExprInternalizer(
          * Internalizer will produce var instead of normal constants
          * for all bound variables.
          * */
-        val nestedVarScope = scopedVars.toMutableMap().apply {
+        val nestedVarScope = HashMap(scopedVars ?: emptyMap()).apply {
             uniqueBounds.zip(internalizedBounds).forEach { (decl, variable) ->
                 put(decl, variable)
             }
