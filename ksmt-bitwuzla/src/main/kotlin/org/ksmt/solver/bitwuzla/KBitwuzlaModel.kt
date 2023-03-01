@@ -28,7 +28,7 @@ open class KBitwuzlaModel(
     private val modelDeclarations = assertedDeclarations.toHashSet()
 
     override val declarations: Set<KDecl<*>>
-        get() = modelDeclarations.toSet()
+        get() = modelDeclarations.toHashSet()
 
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
         ctx.ensureContextMatch(expr)
