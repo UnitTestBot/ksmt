@@ -46,33 +46,32 @@ open class KZ3SortInternalizer(
         internalizedSort = Native.mkArraySort(nCtx, domain, range)
     }
 
-    override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>): Long =
-        z3Ctx.internalizeSort(sort) {
-            val domain = longArrayOf(
-                sort.domain0.internalizeZ3Sort(),
-                sort.domain1.internalizeZ3Sort()
-            )
-            val range = sort.range.internalizeZ3Sort()
-            Native.mkArraySortN(nCtx, domain.size, domain, range)
-        }
+    override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>) {
+        val domain = longArrayOf(
+            internalizeZ3Sort(sort.domain0),
+            internalizeZ3Sort(sort.domain1)
+        )
+        val range = internalizeZ3Sort(sort.range)
+        internalizedSort = Native.mkArraySortN(nCtx, domain.size, domain, range)
+    }
 
-    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>): Long =
-        z3Ctx.internalizeSort(sort) {
-            val domain = longArrayOf(
-                sort.domain0.internalizeZ3Sort(),
-                sort.domain1.internalizeZ3Sort(),
-                sort.domain2.internalizeZ3Sort()
-            )
-            val range = sort.range.internalizeZ3Sort()
-            Native.mkArraySortN(nCtx, domain.size, domain, range)
-        }
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>) {
+        val domain = longArrayOf(
+            internalizeZ3Sort(sort.domain0),
+            internalizeZ3Sort(sort.domain1),
+            internalizeZ3Sort(sort.domain2)
+        )
+        val range = internalizeZ3Sort(sort.range)
+        internalizedSort = Native.mkArraySortN(nCtx, domain.size, domain, range)
+    }
 
-    override fun <R : KSort> visit(sort: KArrayNSort<R>): Long =
-        z3Ctx.internalizeSort(sort) {
-            val domain = sort.domainSorts.map { it.internalizeZ3Sort() }.toLongArray()
-            val range = sort.range.internalizeZ3Sort()
-            Native.mkArraySortN(nCtx, domain.size, domain, range)
+    override fun <R : KSort> visit(sort: KArrayNSort<R>) {
+        val domain = sort.domainSorts.let { sorts ->
+            LongArray(sorts.size) { internalizeZ3Sort(sorts[it]) }
         }
+        val range = internalizeZ3Sort(sort.range)
+        internalizedSort = Native.mkArraySortN(nCtx, domain.size, domain, range)
+    }
 
     override fun visit(sort: KFpRoundingModeSort) {
         internalizedSort = Native.mkFpaRoundingModeSort(nCtx)
