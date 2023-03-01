@@ -1,9 +1,6 @@
 package org.ksmt.solver.z3
 
-import com.microsoft.z3.Expr
-import com.microsoft.z3.FuncDecl
 import com.microsoft.z3.Native
-import com.microsoft.z3.Sort
 import com.microsoft.z3.enumerations.Z3_ast_kind
 import com.microsoft.z3.enumerations.Z3_decl_kind
 import com.microsoft.z3.enumerations.Z3_sort_kind
@@ -57,15 +54,6 @@ open class KZ3ExprConverter(
     override fun saveConvertedNative(native: Long, converted: KExpr<*>) {
         z3Ctx.saveConvertedExpr(native, converted)
     }
-
-    fun <T : KSort> Expr<*>.convertExprWrapped(): KExpr<T> =
-        z3Ctx.nativeContext.unwrapAST(this).convertExpr()
-
-    fun <T : KSort> FuncDecl<*>.convertDeclWrapped(): KDecl<T> =
-        z3Ctx.nativeContext.unwrapAST(this).convertDecl()
-
-    fun Sort.convertSortWrapped(): KSort =
-        z3Ctx.nativeContext.unwrapAST(this).convertSort()
 
     fun <T : KSort> Long.convertExpr(): KExpr<T> = convertFromNative(this)
 
@@ -299,7 +287,7 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_BSMUL_NO_UDFL -> expr.convert(::mkBvMulNoUnderflowExpr)
             Z3_decl_kind.Z3_OP_AS_ARRAY -> convert {
                 val sort = Native.getRange(nCtx, decl).convertSort<KArraySortBase<KSort>>()
-                val z3Decl = Native.getDeclFuncDeclParameter(nCtx, decl, 0).convertDecl<KSort>()
+                val z3Decl = Native.getAsArrayFuncDecl(nCtx, expr).convertDecl<KSort>()
                 val funDecl = z3Decl as? KFuncDecl<KSort> ?: error("unexpected as-array decl $z3Decl")
                 mkFunctionAsArray(sort, funDecl)
             }

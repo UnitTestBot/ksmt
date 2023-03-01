@@ -216,7 +216,8 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
 
     private fun internalize(expr: KExpr<*>): Expr<*> {
         val internalizer = KZ3ExprInternalizer(ctx, KZ3Context(z3Ctx))
-        return with(internalizer) { expr.internalizeExprWrapped() }
+        val internalized = with(internalizer) { expr.internalizeExpr() }
+        return z3Ctx.wrapAST(internalized) as Expr<*>
     }
 
     private data class EqualityCheck(val actual: Expr<*>, val expected: Expr<*>)
