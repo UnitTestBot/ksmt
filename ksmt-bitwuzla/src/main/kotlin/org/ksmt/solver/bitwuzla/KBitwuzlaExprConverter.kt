@@ -82,7 +82,7 @@ open class KBitwuzlaExprConverter(
         bitwuzlaCtx.findConvertedExpr(expr)
 
     override fun saveConvertedNative(native: BitwuzlaTerm, converted: KExpr<*>) {
-        bitwuzlaCtx.convertExpr(native) { converted }
+        bitwuzlaCtx.saveConvertedExpr(native, converted)
     }
 
     private fun BitwuzlaSort.convertSort(): KSort = bitwuzlaCtx.convertSort(this) {

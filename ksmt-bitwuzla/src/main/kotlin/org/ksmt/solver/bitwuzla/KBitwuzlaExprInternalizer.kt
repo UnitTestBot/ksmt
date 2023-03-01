@@ -198,7 +198,7 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun findInternalizedExpr(expr: KExpr<*>): BitwuzlaTerm {
-        return bitwuzlaCtx.findExprTerm(expr) ?: NOT_INTERNALIZED
+        return bitwuzlaCtx.findExprTerm(expr)
     }
 
     override fun saveInternalizedExpr(expr: KExpr<*>, internalized: BitwuzlaTerm) {
@@ -259,14 +259,16 @@ open class KBitwuzlaExprInternalizer(
     /**
     * Create Bitwuzla sort from KSMT sort
     * */
-    fun <T : KSort> T.internalizeSort(): BitwuzlaSort = accept(sortInternalizer)
+    fun <T : KSort> T.internalizeSort(): BitwuzlaSort =
+        sortInternalizer.internalizeSort(this)
 
     /**
     * Create Bitwuzla function sort for KSMT declaration.
      *
     * If [this] declaration is a constant then non-function sort is returned
     * */
-    fun <T : KSort> KDecl<T>.bitwuzlaFunctionSort(): BitwuzlaSort = accept(functionSortInternalizer)
+    fun <T : KSort> KDecl<T>.bitwuzlaFunctionSort(): BitwuzlaSort =
+        functionSortInternalizer.internalizeDeclSort(this)
 
     private fun saveExprInternalizationResult(expr: KExpr<*>, term: BitwuzlaTerm) {
         bitwuzlaCtx.saveExprTerm(expr, term)
@@ -1130,78 +1132,79 @@ open class KBitwuzlaExprInternalizer(
         return Triple(uniqueBounds, internalizedBounds, internalizedBody)
     }
 
-    open class SortInternalizer(private val bitwuzlaCtx: KBitwuzlaContext) : KSortVisitor<BitwuzlaSort> {
-        override fun visit(sort: KBoolSort): BitwuzlaSort = bitwuzlaCtx.internalizeSort(sort) {
-            bitwuzlaCtx.boolSort
+    open class SortInternalizer(private val bitwuzlaCtx: KBitwuzlaContext) : KSortVisitor<Unit> {
+        private var internalizedSort: BitwuzlaSort = NOT_INTERNALIZED
+
+        override fun visit(sort: KBoolSort) {
+            internalizedSort = bitwuzlaCtx.boolSort
         }
 
-        override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): BitwuzlaSort =
-            bitwuzlaCtx.internalizeSort(sort) {
-                if (sort.range is KArraySort<*, *> || sort.domain is KArraySort<*, *>) {
-                    throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support nested arrays")
-                }
-
-                val domain = sort.domain.accept(this@SortInternalizer)
-                val range = sort.range.accept(this@SortInternalizer)
-
-                Native.bitwuzlaMkArraySort(bitwuzlaCtx.bitwuzla, domain, range)
+        override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>) {
+            if (sort.range is KArraySort<*, *> || sort.domain is KArraySort<*, *>) {
+                throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support nested arrays")
             }
 
-        override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>): BitwuzlaSort {
+            val domain = internalizeSort(sort.domain)
+            val range = internalizeSort(sort.range)
+
+            internalizedSort = Native.bitwuzlaMkArraySort(bitwuzlaCtx.bitwuzla, domain, range)
+        }
+
+        override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>) {
             TODO("Multi-indexed arrays are not supported")
         }
 
-        override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(
-            sort: KArray3Sort<D0, D1, D2, R>
-        ): BitwuzlaSort {
+        override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>) {
             TODO("Multi-indexed arrays are not supported")
         }
 
-        override fun <R : KSort> visit(sort: KArrayNSort<R>): BitwuzlaSort {
+        override fun <R : KSort> visit(sort: KArrayNSort<R>) {
             TODO("Multi-indexed arrays are not supported")
         }
 
-        override fun <S : KBvSort> visit(sort: S): BitwuzlaSort =
-            bitwuzlaCtx.internalizeSort(sort) {
-                val size = sort.sizeBits.toInt()
+        override fun <S : KBvSort> visit(sort: S) {
+            val size = sort.sizeBits.toInt()
 
-                if (size == 1) {
-                    bitwuzlaCtx.boolSort
-                } else {
-                    Native.bitwuzlaMkBvSort(bitwuzlaCtx.bitwuzla, size)
-                }
+            internalizedSort = if (size == 1) {
+                bitwuzlaCtx.boolSort
+            } else {
+                Native.bitwuzlaMkBvSort(bitwuzlaCtx.bitwuzla, size)
             }
+        }
 
         /**
          * Bitwuzla doesn't support integers and reals.
          * */
-        override fun visit(sort: KIntSort): BitwuzlaSort =
+        override fun visit(sort: KIntSort) =
             throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
 
-        override fun visit(sort: KRealSort): BitwuzlaSort =
+        override fun visit(sort: KRealSort) =
             throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
 
         /**
          * Replace Uninterpreted sorts with (BitVec 32).
          * The sort universe size is limited by 2^32 values which should be enough.
          * */
-        override fun visit(sort: KUninterpretedSort): BitwuzlaSort = bitwuzlaCtx.internalizeSort(sort) {
-            Native.bitwuzlaMkBvSort(bitwuzlaCtx.bitwuzla, UNINTERPRETED_SORT_REPLACEMENT_BV_SIZE)
+        override fun visit(sort: KUninterpretedSort) {
+            internalizedSort = Native.bitwuzlaMkBvSort(bitwuzlaCtx.bitwuzla, UNINTERPRETED_SORT_REPLACEMENT_BV_SIZE)
         }
 
-        override fun <S : KFpSort> visit(sort: S): BitwuzlaSort =
-            bitwuzlaCtx.internalizeSort(sort) {
-                Native.bitwuzlaMkFpSort(
-                    bitwuzlaCtx.bitwuzla,
-                    expSize = sort.exponentBits.toInt(),
-                    sigSize = sort.significandBits.toInt()
-                )
-            }
+        override fun <S : KFpSort> visit(sort: S) {
+            internalizedSort = Native.bitwuzlaMkFpSort(
+                bitwuzlaCtx.bitwuzla,
+                expSize = sort.exponentBits.toInt(),
+                sigSize = sort.significandBits.toInt()
+            )
+        }
 
-        override fun visit(sort: KFpRoundingModeSort): BitwuzlaSort =
-            bitwuzlaCtx.internalizeSort(sort) {
-                Native.bitwuzlaMkRmSort(bitwuzlaCtx.bitwuzla)
-            }
+        override fun visit(sort: KFpRoundingModeSort) {
+            internalizedSort = Native.bitwuzlaMkRmSort(bitwuzlaCtx.bitwuzla)
+        }
+
+        fun internalizeSort(sort: KSort): BitwuzlaSort = bitwuzlaCtx.internalizeSort(sort) {
+            sort.accept(this)
+            internalizedSort
+        }
 
         companion object {
             const val UNINTERPRETED_SORT_REPLACEMENT_BV_SIZE = 32
@@ -1211,8 +1214,10 @@ open class KBitwuzlaExprInternalizer(
     open class FunctionSortInternalizer(
         private val bitwuzlaCtx: KBitwuzlaContext,
         private val sortInternalizer: SortInternalizer
-    ) : KDeclVisitor<BitwuzlaSort> {
-        override fun <S : KSort> visit(decl: KFuncDecl<S>): BitwuzlaSort = bitwuzlaCtx.internalizeDeclSort(decl) {
+    ) : KDeclVisitor<Unit> {
+        private var declSort: BitwuzlaSort = NOT_INTERNALIZED
+
+        override fun <S : KSort> visit(decl: KFuncDecl<S>) {
             if (decl.argSorts.any { it is KArraySort<*, *> }) {
                 throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support functions with arrays in domain")
             }
@@ -1221,12 +1226,25 @@ open class KBitwuzlaExprInternalizer(
                 throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support functions with arrays in range")
             }
 
-            val domain = decl.argSorts.map { it.accept(sortInternalizer) }.toTypedArray()
-            val range = decl.sort.accept(sortInternalizer)
+            val domain = decl.argSorts.let { sorts ->
+                LongArray(sorts.size) { sortInternalizer.internalizeSort(sorts[it]) }
+            }
+            val range = sortInternalizer.internalizeSort(decl.sort)
 
-            if (domain.isEmpty()) return@internalizeDeclSort range
+            declSort = if (domain.isEmpty()) {
+                range
+            } else {
+                Native.bitwuzlaMkFunSort(bitwuzlaCtx.bitwuzla, domain.size, domain, range)
+            }
+        }
 
-            Native.bitwuzlaMkFunSort(bitwuzlaCtx.bitwuzla, domain.size, domain.toLongArray(), range)
+        override fun <S : KSort> visit(decl: KConstDecl<S>) {
+            declSort = sortInternalizer.internalizeSort(decl.sort)
+        }
+
+        fun internalizeDeclSort(decl: KDecl<*>): BitwuzlaSort = bitwuzlaCtx.internalizeDeclSort(decl) {
+            decl.accept(this)
+            declSort
         }
     }
 

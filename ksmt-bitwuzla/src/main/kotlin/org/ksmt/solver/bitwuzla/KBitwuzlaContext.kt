@@ -19,6 +19,7 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
+import org.ksmt.solver.util.KExprLongInternalizerBase.Companion.NOT_INTERNALIZED
 import org.ksmt.sort.KArray2Sort
 import org.ksmt.sort.KArray3Sort
 import org.ksmt.sort.KArrayNSort
@@ -85,8 +86,8 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
      * Move expression and recollect declarations.
      * See [ExprMover].
      * */
-    fun findExprTerm(expr: KExpr<*>): BitwuzlaTerm? {
-        val term = exprGlobalCache[expr] ?: return null
+    fun findExprTerm(expr: KExpr<*>): BitwuzlaTerm {
+        val term = exprGlobalCache[expr] ?: return NOT_INTERNALIZED
 
         if (expr in exprCurrentLevelCache) return term
 
@@ -101,8 +102,6 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
             exprCacheLevel[expr] = currentLevel
         }
     }
-
-    operator fun get(sort: KSort): BitwuzlaSort? = sorts[sort]
 
     fun internalizeSort(sort: KSort, internalizer: (KSort) -> BitwuzlaSort): BitwuzlaSort =
         sorts.getOrPut(sort) {
@@ -129,7 +128,11 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
 
     fun findConvertedExpr(expr: BitwuzlaTerm): KExpr<*>? = bitwuzlaExpressions[expr]
 
-    fun convertExpr(expr: BitwuzlaTerm, converter: (BitwuzlaTerm) -> KExpr<*>): KExpr<*> =
+    fun saveConvertedExpr(expr: BitwuzlaTerm, converted: KExpr<*>) {
+        convertExpr(expr) { converted }
+    }
+
+    private fun convertExpr(expr: BitwuzlaTerm, converter: (BitwuzlaTerm) -> KExpr<*>): KExpr<*> =
         convert(exprGlobalCache, bitwuzlaExpressions, expr, converter)
 
     fun convertSort(sort: BitwuzlaSort, converter: (BitwuzlaSort) -> KSort): KSort =
