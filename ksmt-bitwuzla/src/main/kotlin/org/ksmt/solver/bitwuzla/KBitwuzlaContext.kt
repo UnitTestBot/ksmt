@@ -1,5 +1,8 @@
 package org.ksmt.solver.bitwuzla
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
@@ -40,24 +43,27 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
 
     val bitwuzla = Native.bitwuzlaNew()
 
-    val trueTerm: BitwuzlaTerm by lazy { Native.bitwuzlaMkTrue(bitwuzla) }
-    val falseTerm: BitwuzlaTerm by lazy { Native.bitwuzlaMkFalse(bitwuzla) }
-    val boolSort: BitwuzlaSort by lazy { Native.bitwuzlaMkBoolSort(bitwuzla) }
+    val trueTerm: BitwuzlaTerm = Native.bitwuzlaMkTrue(bitwuzla)
+    val falseTerm: BitwuzlaTerm = Native.bitwuzlaMkFalse(bitwuzla)
+    val boolSort: BitwuzlaSort = Native.bitwuzlaMkBoolSort(bitwuzla)
 
-    private val exprGlobalCache = hashMapOf<KExpr<*>, BitwuzlaTerm>()
-    private val bitwuzlaExpressions = hashMapOf<BitwuzlaTerm, KExpr<*>>()
+    private val exprGlobalCache = mkTermCache<KExpr<*>>()
+    private val bitwuzlaExpressions = mkTermReverseCache<KExpr<*>>()
 
-    private val constantsGlobalCache = hashMapOf<KDecl<*>, BitwuzlaTerm>()
-    private val bitwuzlaConstants = hashMapOf<BitwuzlaTerm, KDecl<*>>()
+    private val constantsGlobalCache = mkTermCache<KDecl<*>>()
+    private val bitwuzlaConstants = mkTermReverseCache<KDecl<*>>()
 
-    private val sorts = hashMapOf<KSort, BitwuzlaSort>()
-    private val declSorts = hashMapOf<KDecl<*>, BitwuzlaSort>()
-    private val bitwuzlaSorts = hashMapOf<BitwuzlaSort, KSort>()
+    private val sorts = mkTermCache<KSort>()
+    private val declSorts = mkTermCache<KDecl<*>>()
+    private val bitwuzlaSorts = mkTermReverseCache<KSort>()
 
-    private val bitwuzlaValues = hashMapOf<BitwuzlaTerm, KExpr<*>>()
+    private val bitwuzlaValues = mkTermReverseCache<KExpr<*>>()
+
+    private val exprCacheLevel = Object2IntOpenHashMap<KExpr<*>>().apply {
+        defaultReturnValue(Int.MAX_VALUE) // Level which is greater than any possible level
+    }
 
     private var exprCurrentLevelCache = hashSetOf<KExpr<*>>()
-    private val exprCacheLevel = hashMapOf<KExpr<*>, Int>()
     private val exprLeveledCache = arrayListOf(exprCurrentLevelCache)
     private var currentLevelExprMover = ExprMover()
 
@@ -87,7 +93,8 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
      * See [ExprMover].
      * */
     fun findExprTerm(expr: KExpr<*>): BitwuzlaTerm {
-        val term = exprGlobalCache[expr] ?: return NOT_INTERNALIZED
+        val term = exprGlobalCache.getLong(expr)
+        if (term == NOT_INTERNALIZED) return NOT_INTERNALIZED
 
         if (expr in exprCurrentLevelCache) return term
 
@@ -98,22 +105,45 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
 
     fun saveExprTerm(expr: KExpr<*>, term: BitwuzlaTerm) {
         if (exprCurrentLevelCache.add(expr)) {
-            exprGlobalCache[expr] = term
-            exprCacheLevel[expr] = currentLevel
+            exprGlobalCache.put(expr, term)
+            exprCacheLevel.put(expr, currentLevel)
         }
     }
 
-    fun internalizeSort(sort: KSort, internalizer: (KSort) -> BitwuzlaSort): BitwuzlaSort =
-        sorts.getOrPut(sort) {
-            internalizer(sort).also {
-                bitwuzlaSorts[it] = sort
-            }
-        }
+    fun findInternalizedSort(sort: KSort): BitwuzlaSort =
+        sorts.getLong(sort)
 
-    fun internalizeDeclSort(decl: KDecl<*>, internalizer: (KDecl<*>) -> BitwuzlaSort): BitwuzlaSort =
-        declSorts.getOrPut(decl) {
-            internalizer(decl)
-        }.also { registerDeclaration(decl) }
+    fun saveInternalizedSort(sort: KSort, native: BitwuzlaSort) {
+        sorts.put(sort, native)
+        bitwuzlaSorts.put(native, sort)
+    }
+
+    inline fun internalizeSort(sort: KSort, internalizer: (KSort) -> BitwuzlaSort): BitwuzlaSort {
+        val cached = findInternalizedSort(sort)
+        if (cached != NOT_INTERNALIZED) return cached
+
+        val internalizedSort = internalizer(sort)
+        saveInternalizedSort(sort, internalizedSort)
+        return internalizedSort
+    }
+
+    fun findInternalizedDeclSort(decl: KDecl<*>): BitwuzlaSort =
+        declSorts.getLong(decl)
+
+    fun saveInternalizedDeclSort(decl: KDecl<*>, native: BitwuzlaSort) {
+        declSorts.put(decl, native)
+    }
+
+    inline fun internalizeDeclSort(decl: KDecl<*>, internalizer: (KDecl<*>) -> BitwuzlaSort): BitwuzlaSort {
+        registerDeclaration(decl)
+
+        val cached = findInternalizedDeclSort(decl)
+        if (cached != NOT_INTERNALIZED) return cached
+
+        val internalizedDeclSort = internalizer(decl)
+        saveInternalizedDeclSort(decl, internalizedDeclSort)
+        return internalizedDeclSort
+    }
 
     /**
      * Internalize and reverse cache Bv value to support Bv values conversion.
@@ -123,28 +153,42 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
      * expressions.
      * */
     fun saveInternalizedValue(expr: KExpr<*>, term: BitwuzlaTerm) {
-        bitwuzlaValues[term] = expr
+        bitwuzlaValues.put(term, expr)
     }
 
-    fun findConvertedExpr(expr: BitwuzlaTerm): KExpr<*>? = bitwuzlaExpressions[expr]
+    fun findConvertedExpr(expr: BitwuzlaTerm): KExpr<*>? = bitwuzlaExpressions.get(expr)
 
     fun saveConvertedExpr(expr: BitwuzlaTerm, converted: KExpr<*>) {
-        convertExpr(expr) { converted }
+        if (bitwuzlaExpressions.putIfAbsent(expr, converted) == null) {
+            exprGlobalCache.putIfAbsent(converted, expr)
+        }
     }
 
-    private fun convertExpr(expr: BitwuzlaTerm, converter: (BitwuzlaTerm) -> KExpr<*>): KExpr<*> =
-        convert(exprGlobalCache, bitwuzlaExpressions, expr, converter)
+    fun findConvertedSort(sort: BitwuzlaSort): KSort? = bitwuzlaSorts.get(sort)
 
-    fun convertSort(sort: BitwuzlaSort, converter: (BitwuzlaSort) -> KSort): KSort =
-        convert(sorts, bitwuzlaSorts, sort, converter)
+    fun saveConvertedSort(sort: BitwuzlaSort, converted: KSort) {
+        if (bitwuzlaSorts.putIfAbsent(sort, converted) == null) {
+            sorts.putIfAbsent(converted, sort)
+        }
+    }
 
-    fun convertValue(value: BitwuzlaTerm): KExpr<*>? = bitwuzlaValues[value]
+    inline fun convertSort(sort: BitwuzlaSort, converter: (BitwuzlaSort) -> KSort): KSort {
+        val cached = findConvertedSort(sort)
+        if (cached != null) return cached
+
+        val convertedSort = converter(sort)
+        saveConvertedSort(sort, convertedSort)
+        return convertedSort
+    }
+
+    fun convertValue(value: BitwuzlaTerm): KExpr<*>? = bitwuzlaValues.get(value)
 
     // Constant is known only if it was previously internalized
-    fun convertConstantIfKnown(term: BitwuzlaTerm): KDecl<*>? = bitwuzlaConstants[term]
+    fun convertConstantIfKnown(term: BitwuzlaTerm): KDecl<*>? = bitwuzlaConstants.get(term)
 
     // Find normal constant if it was previously internalized
-    fun findConstant(decl: KDecl<*>): BitwuzlaTerm? = constantsGlobalCache[decl]
+    fun findConstant(decl: KDecl<*>): BitwuzlaTerm? =
+        constantsGlobalCache.getLong(decl).takeIf { it != NOT_INTERNALIZED }
 
     fun declarations(): Set<KDecl<*>> =
         leveledDeclarations.flatMapTo(hashSetOf()) { it }
@@ -167,7 +211,7 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
      * Also, if declaration sort is uninterpreted,
      * register this declaration as relevant to the sort.
      * */
-    private fun registerDeclaration(decl: KDecl<*>) {
+    fun registerDeclaration(decl: KDecl<*>) {
         if (currentLevelDeclarations.add(decl)) {
             currentLevelUninterpretedSortRegisterer.decl = decl
             decl.sort.accept(currentLevelUninterpretedSortRegisterer)
@@ -182,11 +226,19 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
      * Since [Native.bitwuzlaMkConst] creates fresh constant on each invocation caches are used
      * to guarantee that if two constants are equal in ksmt they are also equal in Bitwuzla.
      * */
-    fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm = constantsGlobalCache.getOrPut(decl) {
-        Native.bitwuzlaMkConst(bitwuzla, sort, decl.name).also {
-            bitwuzlaConstants[it] = decl
+    fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm {
+        registerDeclaration(decl)
+
+        val value = constantsGlobalCache.getLong(decl)
+        if (value != NOT_INTERNALIZED) return value
+
+        val term = Native.bitwuzlaMkConst(bitwuzla, sort, decl.name).also {
+            bitwuzlaConstants.put(it, decl)
         }
-    }.also { registerDeclaration(decl) }
+        constantsGlobalCache.put(decl, term)
+
+        return term
+    }
 
     /**
      * Create nested declaration scope to allow [popDeclarationScope].
@@ -252,23 +304,6 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
 
     fun ensureActive() {
         check(!isClosed) { "The context is already closed." }
-    }
-
-    private inline fun <K, V> convert(
-        cache: MutableMap<K, V>,
-        reverseCache: MutableMap<V, K>,
-        key: V,
-        converter: (V) -> K
-    ): K {
-        val current = reverseCache[key]
-
-        if (current != null) return current
-
-        val converted = converter(key)
-        cache.putIfAbsent(converted, key)
-        reverseCache[key] = converted
-
-        return converted
     }
 
     private class UninterpretedSortRegisterer(
@@ -343,7 +378,7 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
                  *  2. Expression caches will remain correct regardless of body moved
                  *  */
                 if (exprCurrentLevelCache.add(expr)) {
-                    exprCacheLevel[expr] = currentLevel
+                    exprCacheLevel.put(expr, currentLevel)
                 }
             }
 
@@ -351,8 +386,8 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
         }
 
         override fun <T : KSort> exprTransformationRequired(expr: KExpr<T>): Boolean {
-            val cachedLevel = exprCacheLevel[expr]
-            if (cachedLevel != null && cachedLevel < currentLevel) {
+            val cachedLevel = exprCacheLevel.getInt(expr)
+            if (cachedLevel < currentLevel) {
                 val levelCache = exprLeveledCache[cachedLevel]
                 // If expr is valid on its level we don't need to move it
                 return expr !in levelCache
@@ -427,5 +462,15 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
 
         override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort>  =
             expr.transformQuantifier(expr.bounds, expr.body)
+    }
+
+    companion object {
+        @JvmStatic
+        private fun <T> mkTermCache() = Object2LongOpenHashMap<T>().apply {
+            defaultReturnValue(NOT_INTERNALIZED)
+        }
+
+        @JvmStatic
+        private fun <T> mkTermReverseCache() = Long2ObjectOpenHashMap<T>()
     }
 }
