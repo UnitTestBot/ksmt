@@ -1,6 +1,7 @@
 package org.ksmt.solver.z3
 
 import com.microsoft.z3.Native
+import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KDeclVisitor
 import org.ksmt.decl.KFuncDecl
@@ -28,6 +29,19 @@ open class KZ3DeclInternalizer(
             domainSorts.size,
             domainSorts,
             rangeSort
+        )
+    }
+
+    override fun <S : KSort> visit(decl: KConstDecl<S>) {
+        val declSort = sortInternalizer.internalizeZ3Sort(decl.sort)
+        val nameSymbol = Native.mkStringSymbol(nCtx, decl.name)
+
+        lastInternalizedDecl = Native.mkFuncDecl(
+            nCtx,
+            nameSymbol,
+            0,
+            null,
+            declSort
         )
     }
 
