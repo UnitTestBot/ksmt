@@ -149,10 +149,8 @@ class KZ3Context(private val ctx: Context) : AutoCloseable {
         val reverseCached = reverseCache.putIfAbsent(native, ksmt)
         if (reverseCached != null) return reverseCached
 
-        val cached = cache.putIfAbsent(ksmt, native)
-        if (cached == NOT_INTERNALIZED) {
-            incRefUnsafe(nCtx, native)
-        }
+        cache.putIfAbsent(ksmt, native)
+        incRefUnsafe(nCtx, native)
 
         return ksmt
     }
