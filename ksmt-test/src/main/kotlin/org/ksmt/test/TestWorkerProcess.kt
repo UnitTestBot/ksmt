@@ -22,6 +22,11 @@ import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.bitwuzla.KBitwuzlaContext
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprConverter
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprInternalizer
+import org.ksmt.solver.cvc5.KCvc5Context
+import org.ksmt.solver.cvc5.KCvc5ExprConverter
+import org.ksmt.solver.cvc5.KCvc5ExprInternalizer
+import org.ksmt.solver.cvc5.KCvc5Solver
+import io.github.cvc5.Solver as Cvc5Solver
 import org.ksmt.solver.z3.KZ3Context
 import org.ksmt.solver.yices.*
 import org.ksmt.solver.z3.KZ3ExprConverter
@@ -109,6 +114,22 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
 
             return with(converter) {
                 yicesAssertions.map { it.convert() }
+            }
+        }
+    }
+
+    private fun internalizeAndConvertCvc5(assertions: List<KExpr<KBoolSort>>): List<KExpr<KBoolSort>> {
+        KCvc5Solver(ctx).close() // ensure native libs loaded
+
+        return Cvc5Solver().use { cvc5Solver ->
+            val cvc5Assertions = KCvc5Context(cvc5Solver, ctx).use { cvc5Ctx ->
+                val internalizer = KCvc5ExprInternalizer(cvc5Ctx)
+                with(internalizer) { assertions.map { it.internalizeExpr() } }
+            }
+
+            KCvc5Context(cvc5Solver, ctx).use { cvc5Ctx ->
+                val converter = KCvc5ExprConverter(ctx, cvc5Ctx)
+                with(converter) { cvc5Assertions.map { it.convertExpr() } }
             }
         }
     }
@@ -244,6 +265,11 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         internalizeAndConvertYices.measureExecutionForTermination { params ->
             @Suppress("UNCHECKED_CAST")
             val converted = internalizeAndConvertYices(params.expressions as List<KExpr<KBoolSort>>)
+            TestConversionResult(converted)
+        }
+        internalizeAndConvertCvc5.measureExecutionForTermination { params ->
+            @Suppress("UNCHECKED_CAST")
+            val converted = internalizeAndConvertCvc5(params.expressions as List<KExpr<KBoolSort>>)
             TestConversionResult(converted)
         }
         createSolver.measureExecutionForTermination { timeout ->

@@ -50,10 +50,23 @@ private val configConstructorYices: (KSolverUniversalConfigurationBuilder) -> KS
     ({ builder: KSolverUniversalConfigurationBuilder -> ctor.newInstance(builder) as KSolverConfiguration })
 }
 
+private val solverConstructorCvc5: (KContext) -> KSolver<*> by lazy {
+    val cls = Class.forName("org.ksmt.solver.cvc5.KCvc5Solver")
+    val ctor = cls.getConstructor(KContext::class.java)
+    ({ ctx: KContext -> ctor.newInstance(ctx) as KSolver<*> })
+}
+
+private val configConstructorCvc5: (KSolverUniversalConfigurationBuilder) -> KSolverConfiguration by lazy {
+    val cls = Class.forName("org.ksmt.solver.cvc5.KCvc5SolverUniversalConfiguration")
+    val ctor = cls.getConstructor(KSolverUniversalConfigurationBuilder::class.java)
+    ({ builder: KSolverUniversalConfigurationBuilder -> ctor.newInstance(builder) as KSolverConfiguration })
+}
+
 private val solverTypes = mapOf(
     "org.ksmt.solver.z3.KZ3Solver" to SolverType.Z3,
     "org.ksmt.solver.bitwuzla.KBitwuzlaSolver" to SolverType.Bitwuzla,
     "org.ksmt.solver.yices.KYicesSolver" to SolverType.Yices,
+    "org.ksmt.solver.cvc5.KCvc5Solver" to SolverType.Cvc5,
 )
 
 val KClass<out KSolver<*>>.solverType: SolverType
@@ -63,6 +76,7 @@ fun SolverType.createInstance(ctx: KContext): KSolver<*> = when (this) {
     SolverType.Z3 -> solverConstructorZ3(ctx)
     SolverType.Bitwuzla -> solverConstructorBitwuzla(ctx)
     SolverType.Yices -> solverConstructorYices(ctx)
+    SolverType.Cvc5 -> solverConstructorCvc5(ctx)
 }
 
 @Suppress("UNCHECKED_CAST")
@@ -70,5 +84,6 @@ fun <C : KSolverConfiguration> SolverType.createConfigurationBuilder(): Configur
     SolverType.Z3 -> { builder -> configConstructorZ3(builder) as C }
     SolverType.Bitwuzla -> { builder -> configConstructorBitwuzla(builder) as C }
     SolverType.Yices -> { builder -> configConstructorYices(builder) as C }
+    SolverType.Cvc5 -> { builder -> configConstructorCvc5(builder) as C }
 }
 

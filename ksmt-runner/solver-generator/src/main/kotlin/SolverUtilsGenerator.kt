@@ -4,6 +4,8 @@ import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.KSolverUniversalConfigurationBuilder
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolverUniversalConfiguration
+import org.ksmt.solver.cvc5.KCvc5Solver
+import org.ksmt.solver.cvc5.KCvc5SolverUniversalConfiguration
 import org.ksmt.solver.yices.KYicesSolver
 import org.ksmt.solver.yices.KYicesSolverUniversalConfiguration
 import org.ksmt.solver.z3.KZ3Solver
@@ -17,6 +19,7 @@ val solvers = listOf(
     SolverDescription("Z3", KZ3Solver::class, KZ3SolverUniversalConfiguration::class),
     SolverDescription("Bitwuzla", KBitwuzlaSolver::class, KBitwuzlaSolverUniversalConfiguration::class),
     SolverDescription("Yices", KYicesSolver::class, KYicesSolverUniversalConfiguration::class),
+    SolverDescription("Cvc5", KCvc5Solver::class, KCvc5SolverUniversalConfiguration::class),
 )
 
 data class SolverDescription(

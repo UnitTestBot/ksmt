@@ -8,6 +8,7 @@ dependencies {
     implementation(project(":ksmt-z3"))
     implementation(project(":ksmt-bitwuzla"))
     implementation(project(":ksmt-yices"))
+    implementation(project(":ksmt-cvc5"))
 
     implementation(kotlin("reflect"))
 }
