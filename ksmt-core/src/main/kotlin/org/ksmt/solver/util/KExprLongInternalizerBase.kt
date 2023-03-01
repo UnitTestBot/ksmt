@@ -11,6 +11,10 @@ abstract class KExprLongInternalizerBase : KTransformerBase {
     @JvmField
     val exprStack = arrayListOf<KExpr<*>>()
 
+    /**
+     * Return internalized expression or
+     * [NOT_INTERNALIZED] if expression was not internalized yet.
+     * */
     abstract fun findInternalizedExpr(expr: KExpr<*>): Long
 
     abstract fun saveInternalizedExpr(expr: KExpr<*>, internalized: Long)

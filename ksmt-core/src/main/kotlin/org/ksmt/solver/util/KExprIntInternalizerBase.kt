@@ -2,6 +2,7 @@ package org.ksmt.solver.util
 
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.transformer.KTransformerBase
+import org.ksmt.solver.util.KExprLongInternalizerBase.Companion.NOT_INTERNALIZED
 import org.ksmt.sort.KSort
 
 /**
@@ -11,6 +12,10 @@ abstract class KExprIntInternalizerBase : KTransformerBase {
     @JvmField
     val exprStack = arrayListOf<KExpr<*>>()
 
+    /**
+     * Return internalized expression or
+     * [NOT_INTERNALIZED] if expression was not internalized yet.
+     * */
     abstract fun findInternalizedExpr(expr: KExpr<*>): Int
 
     abstract fun saveInternalizedExpr(expr: KExpr<*>, internalized: Int)

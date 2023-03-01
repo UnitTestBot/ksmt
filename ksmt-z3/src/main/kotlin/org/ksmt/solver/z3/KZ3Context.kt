@@ -51,11 +51,13 @@ class KZ3Context(private val ctx: Context) : AutoCloseable {
 
     fun findConvertedExpr(expr: Long): KExpr<*>? = z3Expressions[expr]
 
-    fun saveInternalizedExpr(expr: KExpr<*>, internalized: Long): Long =
-        internalizeAst(expressions, z3Expressions, expr) { internalized }
+    fun saveInternalizedExpr(expr: KExpr<*>, internalized: Long) {
+        saveAst(internalized, expr, expressions, z3Expressions)
+    }
 
-    fun saveConvertedExpr(expr: Long, converted: KExpr<*>): KExpr<*> =
-        convertAst(expressions, z3Expressions, expr) { converted }
+    fun saveConvertedExpr(expr: Long, converted: KExpr<*>) {
+        saveConvertedAst(expr, converted, expressions, z3Expressions)
+    }
 
     /**
      * Find internalized sort.
@@ -66,10 +68,10 @@ class KZ3Context(private val ctx: Context) : AutoCloseable {
     fun findConvertedSort(sort: Long): KSort? = z3Sorts[sort]
 
     fun saveInternalizedSort(sort: KSort, internalized: Long): Long =
-        internalizeAst(sorts, z3Sorts, sort) { internalized }
+        saveAst(internalized, sort, sorts, z3Sorts)
 
     fun saveConvertedSort(sort: Long, converted: KSort): KSort =
-        convertAst(sorts, z3Sorts, sort) { converted }
+        saveConvertedAst(sort, converted, sorts, z3Sorts)
 
     inline fun internalizeSort(sort: KSort, internalizer: () -> Long): Long =
         findOrSave(sort, internalizer, ::findInternalizedSort, ::saveInternalizedSort)
@@ -86,10 +88,10 @@ class KZ3Context(private val ctx: Context) : AutoCloseable {
     fun findConvertedDecl(decl: Long): KDecl<*>? = z3Decls[decl]
 
     fun saveInternalizedDecl(decl: KDecl<*>, internalized: Long): Long =
-        internalizeAst(decls, z3Decls, decl) { internalized }
+        saveAst(internalized, decl, decls, z3Decls)
 
     fun saveConvertedDecl(decl: Long, converted: KDecl<*>): KDecl<*> =
-        convertAst(decls, z3Decls, decl) { converted }
+        saveConvertedAst(decl, converted, decls, z3Decls)
 
     inline fun internalizeDecl(decl: KDecl<*>, internalizer: () -> Long): Long =
         findOrSave(decl, internalizer, ::findInternalizedDecl, ::saveInternalizedDecl)
@@ -138,34 +140,31 @@ class KZ3Context(private val ctx: Context) : AutoCloseable {
         return save(key, computeValue())
     }
 
-    private inline fun <K> internalizeAst(
-        cache: MutableMap<K, Long>,
-        reverseCache: MutableMap<Long, K>,
-        key: K,
-        internalizer: () -> Long
-    ): Long = cache.getOrPut(key) {
-        internalizer().also {
-            reverseCache[it] = key
-            incRefUnsafe(nCtx, it)
-        }
+    private fun <T> saveConvertedAst(
+        native: Long,
+        ksmt: T,
+        cache: Object2LongOpenHashMap<T>,
+        reverseCache: Long2ObjectOpenHashMap<T>
+    ): T {
+        val reverseCached = reverseCache.get(native)
+        if (reverseCached != null) return reverseCached
+        saveAst(native, ksmt, cache, reverseCache)
+        return ksmt
     }
 
-    private inline fun <K> convertAst(
-        cache: MutableMap<K, Long>,
-        reverseCache: MutableMap<Long, K>,
-        key: Long,
-        converter: () -> K
-    ): K {
-        val current = reverseCache[key]
-
-        if (current != null) return current
-
-        val converted = converter()
-        cache.getOrPut(converted) { key }
-        reverseCache[key] = converted
-        incRefUnsafe(nCtx, key)
-
-        return converted
+    private fun <T> saveAst(
+        native: Long,
+        ksmt: T,
+        cache: Object2LongOpenHashMap<T>,
+        reverseCache: Long2ObjectOpenHashMap<T>
+    ): Long {
+        val cached = cache.putIfAbsent(ksmt, native)
+        if (cached == NOT_INTERNALIZED) {
+            incRefUnsafe(nCtx, native)
+            reverseCache.put(native, ksmt)
+            return native
+        }
+        return cached
     }
 
     override fun close() {
