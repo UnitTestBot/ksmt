@@ -3,6 +3,7 @@ package org.ksmt.solver.bitwuzla
 import org.ksmt.KContext
 import org.ksmt.cache.hash
 import org.ksmt.cache.structurallyEqual
+import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KArrayConst
@@ -22,7 +23,11 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.solver.util.ExprConversionResult
 import org.ksmt.solver.util.KExprLongConverterBase
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBvSort
@@ -30,7 +35,6 @@ import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
-import org.ksmt.utils.mkFreshConst
 import org.ksmt.utils.powerOfTwo
 import org.ksmt.utils.uncheckedCast
 import java.math.BigInteger
@@ -148,6 +152,7 @@ open class KBitwuzlaExprConverter(
             BitwuzlaKind.BITWUZLA_KIND_ARRAY_STORE -> expr.convert(::convertArrayStoreExpr)
 
             // quantifiers
+            BitwuzlaKind.BITWUZLA_KIND_LAMBDA,
             BitwuzlaKind.BITWUZLA_KIND_EXISTS,
             BitwuzlaKind.BITWUZLA_KIND_FORALL -> convertQuantifier(expr, kind)
 
@@ -247,8 +252,7 @@ open class KBitwuzlaExprConverter(
             BitwuzlaKind.BITWUZLA_KIND_FP_TO_UBV -> convertFpExpr(expr, kind)
 
             // unsupported
-            BitwuzlaKind.BITWUZLA_NUM_KINDS,
-            BitwuzlaKind.BITWUZLA_KIND_LAMBDA -> TODO("unsupported kind $kind")
+            BitwuzlaKind.BITWUZLA_NUM_KINDS -> TODO("unsupported kind $kind")
         }
     }
 
@@ -258,18 +262,35 @@ open class KBitwuzlaExprConverter(
         check(children.isNotEmpty()) { "Apply has no function term" }
 
         val function = children[0]
-        val appArgs = children.copyOfRange(fromIndex = 1, toIndex = children.size)
+        val isArray = Native.bitwuzlaTermGetBitwuzlaKind(function) != BitwuzlaKind.BITWUZLA_KIND_CONST
+
+        val appArgs = if (!isArray) {
+            // convert function decl separately
+            children.copyOfRange(fromIndex = 1, toIndex = children.size)
+        } else {
+            // convert array expression as part of arguments
+            children
+        }
 
         return expr.convertList(appArgs) { convertedArgs: List<KExpr<KSort>> ->
-            check(Native.bitwuzlaTermIsFun(function)) { "Expected a function term, actual: $function" }
+            if (!isArray) {
+                val funcDecl = convertFuncDecl(function)
+                applyFunction(funcDecl, convertedArgs)
+            } else {
+                val array: KExpr<KArraySortBase<*>> = convertedArgs.first().uncheckedCast()
+                val args = convertedArgs.drop(1)
 
-            val funcDecl = convertFuncDecl(function)
-            val args = convertedArgs.zip(funcDecl.argSorts) { arg, expectedSort ->
-                arg.convertToExpectedIfNeeded(expectedSort)
+                mkAnyArraySelect(array, args).convertToBoolIfNeeded()
             }
-
-            funcDecl.apply(args).convertToBoolIfNeeded()
         }
+    }
+
+    private fun applyFunction(funcDecl: KFuncDecl<*>, args: List<KExpr<KSort>>): KExpr<*> {
+        val wellSortedArgs = args.zip(funcDecl.argSorts) { arg, expectedSort ->
+            arg.convertToExpectedIfNeeded(expectedSort)
+        }
+
+        return funcDecl.apply(wellSortedArgs).convertToBoolIfNeeded()
     }
 
     private fun KContext.convertFuncDecl(function: BitwuzlaTerm): KFuncDecl<*> {
@@ -289,22 +310,33 @@ open class KBitwuzlaExprConverter(
     private fun KContext.convertConst(expr: BitwuzlaTerm): ExprConversionResult = convert {
         val knownConstDecl = bitwuzlaCtx.convertConstantIfKnown(expr)
 
-        if (knownConstDecl != null) {
-            @Suppress("UNCHECKED_CAST")
-            return@convert mkConstApp(knownConstDecl).convertToBoolIfNeeded() as KExpr<KSort>
+        val convertedExpr: KExpr<*> = if (knownConstDecl != null) {
+            when (knownConstDecl) {
+                is KConstDecl<*> -> mkConstApp(knownConstDecl)
+                is KFuncDecl<*> -> rewriteFunctionAsArray(knownConstDecl)
+                else -> error("Unexpected declaration: $knownConstDecl")
+            }
+        } else {
+            // newly generated constant
+            val sort = Native.bitwuzlaTermGetSort(expr)
+
+            if (!Native.bitwuzlaSortIsFun(sort) || Native.bitwuzlaSortIsArray(sort)) {
+                val decl = generateDecl(expr) { mkConstDecl(it, sort.convertSort()) }
+                mkConstApp(decl)
+            } else {
+                // newly generated functional constant
+                val decl = convertFuncDecl(expr)
+                rewriteFunctionAsArray(decl)
+            }
         }
 
-        // newly generated constant
-        val sort = Native.bitwuzlaTermGetSort(expr)
+        @Suppress("UNCHECKED_CAST")
+        return@convert convertedExpr.convertToBoolIfNeeded() as KExpr<KSort>
+    }
 
-        if (!Native.bitwuzlaSortIsFun(sort) || Native.bitwuzlaSortIsArray(sort)) {
-            val decl = generateDecl(expr) { mkConstDecl(it, sort.convertSort()) }
-            @Suppress("UNCHECKED_CAST")
-            return@convert decl.apply().convertToBoolIfNeeded() as KExpr<KSort>
-        }
-
-        // newly generated functional constant
-        error("Constants with functional type are not supported")
+    private fun KContext.rewriteFunctionAsArray(decl: KFuncDecl<*>): KExpr<*> {
+        val sort = mkAnyArraySort(decl.argSorts, decl.sort)
+        return mkFunctionAsArray(sort, decl.uncheckedCast())
     }
 
     private fun KContext.convertValue(expr: BitwuzlaTerm): ExprConversionResult = convert {
@@ -605,23 +637,34 @@ open class KBitwuzlaExprConverter(
         val boundVars = children.dropLast(1)
         val body = children.last()
 
-        val scope = boundVars.associateWith {
-            val sort = Native.bitwuzlaTermGetSort(it)
-            val name = Native.bitwuzlaTermGetSymbol(it)
-            ctx.mkFreshConstDecl(name ?: "var", sort.convertSort())
+        val nestedScope = scopedVars?.toMutableMap() ?: hashMapOf()
+
+        val convertedBounds = boundVars.map { boundVar ->
+            val sort = Native.bitwuzlaTermGetSort(boundVar)
+            val name = Native.bitwuzlaTermGetSymbol(boundVar)
+            ctx.mkFreshConstDecl(name ?: "var", sort.convertSort()).also {
+                nestedScope[boundVar] = it
+            }
         }
 
-        val nestedScope = scopedVars?.toMutableMap() ?: hashMapOf()
-        nestedScope.putAll(scope)
-
         val bodyConverter = KBitwuzlaExprConverter(ctx, bitwuzlaCtx, nestedScope)
-        val convertedBody = with(bodyConverter) { body.convertExpr(ctx.boolSort) }
-
-        val convertedBounds = scope.values.toList()
 
         when (kind) {
-            BitwuzlaKind.BITWUZLA_KIND_FORALL -> ctx.mkUniversalQuantifier(convertedBody, convertedBounds)
-            BitwuzlaKind.BITWUZLA_KIND_EXISTS -> ctx.mkExistentialQuantifier(convertedBody, convertedBounds)
+            BitwuzlaKind.BITWUZLA_KIND_FORALL,
+            BitwuzlaKind.BITWUZLA_KIND_EXISTS -> {
+                val convertedBody = with(bodyConverter) { body.convertExpr(ctx.boolSort) }
+                when (kind) {
+                    BitwuzlaKind.BITWUZLA_KIND_FORALL -> ctx.mkUniversalQuantifier(convertedBody, convertedBounds)
+                    BitwuzlaKind.BITWUZLA_KIND_EXISTS -> ctx.mkExistentialQuantifier(convertedBody, convertedBounds)
+                    else -> error("impossible: when is exhaustive")
+                }
+            }
+
+            BitwuzlaKind.BITWUZLA_KIND_LAMBDA -> {
+                val convertedBody = bodyConverter.convertFromNative<KSort>(body)
+                ctx.mkAnyArrayLambda(convertedBounds, convertedBody)
+            }
+
             else -> error("Unexpected quantifier: $kind")
         }
     }
@@ -662,28 +705,104 @@ open class KBitwuzlaExprConverter(
         return mkArrayConst(expectedArraySort, value.convertToExpectedIfNeeded(expectedValueSort))
     }
 
-    fun convertArraySelectExpr(array: KExpr<KArraySort<KSort, KSort>>, index: KExpr<KSort>): KExpr<KSort> = with(ctx) {
-        val expectedIndexSort = selectExpectedSort(array.sort.domain, index.sort)
-        val expectedArraySort = mkArraySort(expectedIndexSort, array.sort.range)
-        return mkArraySelect(
-            array.convertToExpectedIfNeeded(expectedArraySort),
-            index.convertToExpectedIfNeeded(expectedIndexSort)
-        )
-    }
+    fun convertArraySelectExpr(
+        array: KExpr<KArraySort<KSort, KSort>>,
+        index: KExpr<KSort>
+    ): KExpr<KSort> = ctx.mkAnyArraySelect(array, listOf(index))
 
     fun convertArrayStoreExpr(
         array: KExpr<KArraySort<KSort, KSort>>,
         index: KExpr<KSort>,
         value: KExpr<KSort>
-    ): KExpr<KArraySort<KSort, KSort>> = with(ctx) {
-        val expectedIndexSort = selectExpectedSort(array.sort.domain, index.sort)
+    ): KExpr<KArraySort<KSort, KSort>> = ctx.mkAnyArrayStore(array, listOf(index), value)
+
+    private fun <A : KArraySortBase<*>> KContext.mkAnyArrayStore(
+        array: KExpr<A>,
+        indices: List<KExpr<KSort>>,
+        value: KExpr<KSort>
+    ): KExpr<A> {
         val expectedValueSort = selectExpectedSort(array.sort.range, value.sort)
-        val expectedArraySort = mkArraySort(expectedIndexSort, expectedValueSort)
-        return mkArrayStore(
-            array.convertToExpectedIfNeeded(expectedArraySort),
-            index.convertToExpectedIfNeeded(expectedIndexSort),
-            value.convertToExpectedIfNeeded(expectedValueSort)
+        val wellSortedValue = value.convertToExpectedIfNeeded(expectedValueSort)
+        return mkAnyArrayOperation(
+            array, indices,
+            { a, d0 -> mkArrayStore(a, d0, wellSortedValue) },
+            { a, d0, d1 -> mkArrayStore(a, d0, d1, wellSortedValue) },
+            { a, d0, d1, d2 -> mkArrayStore(a, d0, d1, d2, wellSortedValue) },
+            { a, domain -> mkArrayNStore(a, domain, wellSortedValue) }
+        ).uncheckedCast()
+    }
+
+    private fun <A : KArraySortBase<*>> KContext.mkAnyArraySelect(
+        array: KExpr<A>,
+        indices: List<KExpr<KSort>>
+    ): KExpr<KSort> = mkAnyArrayOperation(
+        array, indices,
+        { a, d0 -> mkArraySelect(a, d0) },
+        { a, d0, d1 -> mkArraySelect(a, d0, d1) },
+        { a, d0, d1, d2 -> mkArraySelect(a, d0, d1, d2) },
+        { a, domain -> mkArrayNSelect(a, domain) }
+    )
+
+    private inline fun <A : KArraySortBase<*>, R> KContext.mkAnyArrayOperation(
+        array: KExpr<A>,
+        indices: List<KExpr<KSort>>,
+        array1: (KExpr<KArraySort<KSort, KSort>>, KExpr<KSort>) -> R,
+        array2: (KExpr<KArray2Sort<KSort, KSort, KSort>>, KExpr<KSort>, KExpr<KSort>) -> R,
+        array3: (KExpr<KArray3Sort<KSort, KSort, KSort, KSort>>, KExpr<KSort>, KExpr<KSort>, KExpr<KSort>) -> R,
+        arrayN: (KExpr<KArrayNSort<KSort>>, List<KExpr<KSort>>) -> R
+    ): R {
+        val expectedIndicesSorts = array.sort.domainSorts.zip(indices) { domainSort, index ->
+            selectExpectedSort(domainSort, index.sort)
+        }
+        val expectedArraySort = mkAnyArraySort(expectedIndicesSorts, array.sort.range)
+
+        val wellSortedArray = array.convertToExpectedIfNeeded(expectedArraySort)
+        val wellSortedIndices = indices.zip(expectedIndicesSorts) { index, expectedSort ->
+            index.convertToExpectedIfNeeded(expectedSort)
+        }
+
+        return mkAnyArrayOperation(
+            wellSortedIndices,
+            { d0 -> array1(wellSortedArray.uncheckedCast(), d0) },
+            { d0, d1 -> array2(wellSortedArray.uncheckedCast(), d0, d1) },
+            { d0, d1, d2 -> array3(wellSortedArray.uncheckedCast(), d0, d1, d2) },
+            { arrayN(wellSortedArray.uncheckedCast(), it) }
         )
+    }
+
+    private fun KContext.mkAnyArrayLambda(domain: List<KDecl<KSort>>, body: KExpr<*>) =
+        mkAnyArrayOperation(
+            domain,
+            { d0 -> mkArrayLambda(d0, body) },
+            { d0, d1 -> mkArrayLambda(d0, d1, body) },
+            { d0, d1, d2 -> mkArrayLambda(d0, d1, d2, body) },
+            { mkArrayNLambda(it, body) }
+        )
+
+    private fun KContext.mkAnyArraySort(domain: List<KSort>, range: KSort): KArraySortBase<KSort> =
+        mkAnyArrayOperation(
+            domain,
+            { d0 -> mkArraySort(d0, range) },
+            { d0, d1 -> mkArraySort(d0, d1, range) },
+            { d0, d1, d2 -> mkArraySort(d0, d1, d2, range) },
+            { mkArrayNSort(it, range) }
+        )
+
+    private inline fun <T, R> mkAnyArrayOperation(
+        domain: List<T>,
+        array1: (T) -> R,
+        array2: (T, T) -> R,
+        array3: (T, T, T) -> R,
+        arrayN: (List<T>) -> R
+    ): R = when (domain.size) {
+        KArraySort.DOMAIN_SIZE -> array1(domain.single())
+        KArray2Sort.DOMAIN_SIZE -> array2(domain.first(), domain.last())
+        KArray3Sort.DOMAIN_SIZE -> {
+            val (d0, d1, d2) = domain
+            array3(d0, d1, d2)
+        }
+
+        else -> arrayN(domain)
     }
 
     fun selectExpectedSort(lhs: KSort, rhs: KSort): KSort =
@@ -728,7 +847,7 @@ open class KBitwuzlaExprConverter(
         ctx.bv1Sort -> ensureBoolExpr()
         is KArraySort<*, *> -> (this as KExpr<KArraySort<*, *>>)
             .ensureArrayExprSortMatch(
-                domainExpected = { if (it == ctx.bv1Sort) ctx.boolSort else it },
+                domainExpected = { domain -> domain.map { if (it == ctx.bv1Sort) ctx.boolSort else it } },
                 rangeExpected = { if (it == ctx.bv1Sort) ctx.boolSort else it }
             )
         else -> this
@@ -748,12 +867,10 @@ open class KBitwuzlaExprConverter(
     fun <T : KSort> KExpr<*>.convertToExpectedIfNeeded(expected: T): KExpr<T> = when (expected) {
         ctx.bv1Sort -> ensureBv1Expr().uncheckedCast()
         ctx.boolSort -> ensureBoolExpr().uncheckedCast()
-        is KArraySort<*, *> -> {
-            @Suppress("UNCHECKED_CAST")
-            val array = this as? KExpr<KArraySort<*, *>> ?: error("An array was expected. Actual is $this")
-
+        is KArraySortBase<*> -> {
+            val array: KExpr<KArraySortBase<*>> = this.uncheckedCast()
             array.ensureArrayExprSortMatch(
-                domainExpected = { expected.domain },
+                domainExpected = { expected.domainSorts },
                 rangeExpected = { expected.range }
             ).uncheckedCast()
         }
@@ -784,24 +901,21 @@ open class KBitwuzlaExprConverter(
      * Convert expression from (Array A B) to (Array X Y),
      * where A,B,X,Y are Bool or (BitVec 1), (BitVec 32) or Uninterpreted
      * */
-    private inline fun KExpr<KArraySort<*, *>>.ensureArrayExprSortMatch(
-        domainExpected: (KSort) -> KSort,
+    private inline fun <A : KArraySortBase<*>> KExpr<A>.ensureArrayExprSortMatch(
+        domainExpected: (List<KSort>) -> List<KSort>,
         rangeExpected: (KSort) -> KSort
     ): KExpr<*> = with(ctx) {
-        val expectedDomain = domainExpected(sort.domain)
+        val expectedDomain = domainExpected(sort.domainSorts)
         val expectedRange = rangeExpected(sort.range)
 
         when {
-            expectedDomain == sort.domain && expectedRange == sort.range -> this@ensureArrayExprSortMatch
-            this@ensureArrayExprSortMatch is ArrayAdapterExpr<*, *, *, *>
-                    && arg.sort.domain == expectedDomain
+            expectedDomain == sort.domainSorts && expectedRange == sort.range -> this@ensureArrayExprSortMatch
+            this@ensureArrayExprSortMatch is ArrayAdapterExpr<*, *>
+                    && arg.sort.domainSorts == expectedDomain
                     && arg.sort.range == expectedRange -> arg
             else -> {
-                check(expectedDomain !is KArraySort<*, *> && expectedRange !is KArraySort<*, *>) {
-                    "Bitwuzla doesn't support nested arrays"
-                }
-                val array: KExpr<KArraySort<KSort, KSort>> = this@ensureArrayExprSortMatch.uncheckedCast()
-                ArrayAdapterExpr(array, expectedDomain, expectedRange)
+                val expectedSort = mkAnyArraySort(expectedDomain, expectedRange)
+                ArrayAdapterExpr(this@ensureArrayExprSortMatch, expectedSort)
             }
         }
     }
@@ -903,13 +1017,10 @@ open class KBitwuzlaExprConverter(
         }
     }
 
-    private inner class ArrayAdapterExpr<FromDomain : KSort, FromRange : KSort, ToDomain : KSort, ToRange : KSort>(
-        val arg: KExpr<KArraySort<FromDomain, FromRange>>,
-        val toDomainSort: ToDomain,
-        val toRangeSort: ToRange
-    ) : KExpr<KArraySort<ToDomain, ToRange>>(ctx) {
-        override val sort: KArraySort<ToDomain, ToRange> = ctx.mkArraySort(toDomainSort, toRangeSort)
-
+    private inner class ArrayAdapterExpr<FromSort : KArraySortBase<*>, ToSort : KArraySortBase<*>>(
+        val arg: KExpr<FromSort>,
+        override val sort: ToSort
+    ) : KExpr<ToSort>(ctx) {
         override fun print(printer: ExpressionPrinter) = with(printer) {
             append("(toArray ")
             append("$sort")
@@ -918,14 +1029,14 @@ open class KBitwuzlaExprConverter(
             append(")")
         }
 
-        override fun accept(transformer: KTransformerBase): KExpr<KArraySort<ToDomain, ToRange>> {
+        override fun accept(transformer: KTransformerBase): KExpr<ToSort> {
             check(transformer is AdapterTermRewriter) { "leaked adapter term" }
             return transformer.transform(this)
         }
 
-        override fun internHashCode(): Int = hash(arg, toDomainSort, toRangeSort)
+        override fun internHashCode(): Int = hash(arg, sort)
         override fun internEquals(other: Any): Boolean =
-            structurallyEqual(other, { arg }, { toDomainSort }, { toRangeSort })
+            structurallyEqual(other, { arg }, { sort })
     }
 
     /**
@@ -993,50 +1104,29 @@ open class KBitwuzlaExprConverter(
          * ```
          * This array generation procedure can be represented as [org.ksmt.expr.KArrayLambda]
          * */
-        fun <FromDomain : KSort, FromRange : KSort, ToDomain : KSort, ToRange : KSort> transform(
-            expr: ArrayAdapterExpr<FromDomain, FromRange, ToDomain, ToRange>
-        ): KExpr<KArraySort<ToDomain, ToRange>> = with(ctx) {
+        fun <FromSort : KArraySortBase<*>, ToSort : KArraySortBase<*>> transform(
+            expr: ArrayAdapterExpr<FromSort, ToSort>
+        ): KExpr<ToSort> = with(ctx) {
             val fromSort = expr.arg.sort
+            val toSort = expr.sort
 
-            val exprDomainSort = expr.toDomainSort
-            val exprRangeSort = expr.toRangeSort
-
-            if (fromSort.domain == exprDomainSort && fromSort.range == exprRangeSort) {
+            if (fromSort == toSort) {
                 return@with expr.arg.uncheckedCast()
             }
 
-            val replacement = when (fromSort.domain) {
-                bv1Sort, boolSort -> {
-                    // avoid lambda expression when possible
-                    check(exprDomainSort == boolSort || exprDomainSort == bv1Sort) {
-                        "unexpected cast from ${fromSort.domain} to $exprDomainSort"
-                    }
-
-                    val falseValue = expr.arg.select(fromSort.domain.falseValue())
-                        .convertToExpectedIfNeeded(exprRangeSort)
-                    val trueValue = expr.arg.select(fromSort.domain.trueValue())
-                        .convertToExpectedIfNeeded(exprRangeSort)
-
-                    val resultArraySort = mkArraySort(exprDomainSort, exprRangeSort)
-
-                    mkArrayConst(resultArraySort, falseValue).store(exprDomainSort.trueValue(), trueValue)
-                }
-                else -> {
-                    check(fromSort.domain == exprDomainSort) {
-                        "unexpected cast from ${fromSort.domain} to $exprDomainSort"
-                    }
-
-                    val index = exprDomainSort.mkFreshConst("index")
-                    val bodyExpr = expr.arg.select(index.uncheckedCast())
-                    val body: KExpr<ToRange> = when (exprRangeSort) {
-                        bv1Sort -> bodyExpr.ensureBv1Expr().uncheckedCast()
-                        boolSort -> bodyExpr.ensureBoolExpr().uncheckedCast()
-                        else -> error("unexpected domain: $exprRangeSort")
-                    }
-
-                    mkArrayLambda(index.decl, body)
-                }
+            val indices = toSort.domainSorts.map {
+                mkFreshConst("i", it)
             }
+            val fromIndices = indices.zip(fromSort.domainSorts) { idx, sort ->
+                idx.convertToExpectedIfNeeded(sort)
+            }
+
+            val value = mkAnyArraySelect(expr.arg, fromIndices)
+            val toValue = value.convertToExpectedIfNeeded(toSort.range)
+
+            val replacement: KExpr<ToSort> = mkAnyArrayLambda(
+                indices.map { it.decl }, toValue
+            ).uncheckedCast()
 
             AdapterTermRewriter(ctx).apply(replacement)
         }
