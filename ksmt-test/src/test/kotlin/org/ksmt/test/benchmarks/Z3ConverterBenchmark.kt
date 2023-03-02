@@ -1,4 +1,4 @@
-package org.ksmt.test
+package org.ksmt.test.benchmarks
 
 import com.microsoft.z3.Context
 import kotlinx.coroutines.async

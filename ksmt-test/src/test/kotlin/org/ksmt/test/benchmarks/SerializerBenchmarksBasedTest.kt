@@ -1,4 +1,4 @@
-package org.ksmt.test
+package org.ksmt.test.benchmarks
 
 import com.jetbrains.rd.framework.IMarshaller
 import com.jetbrains.rd.framework.SerializationCtx
