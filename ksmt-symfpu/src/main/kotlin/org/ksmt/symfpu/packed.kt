@@ -67,6 +67,17 @@ fun <Fp : KFpSort> KContext.unpack(
 }
 
 fun <Fp : KFpSort> KContext.pack(uf: UnpackedFp<Fp>): KExpr<Fp> {
+    uf.packedBv?.let {
+        val pWidth = it.sort.sizeBits.toInt()
+        val exWidth = uf.sort.exponentBits.toInt()
+
+        // Extract
+        val packedSignificand = mkBvExtractExpr(pWidth - exWidth - 2, 0, it)
+        val packedExponent = mkBvExtractExpr(pWidth - 2, pWidth - exWidth - 1, it)
+        val sign = (mkBvExtractExpr(pWidth - 1, pWidth - 1, it))
+        return mkFpFromBvExpr(sign.cast(), packedExponent, packedSignificand)
+    }
+
     // Sign
     val packedSign = uf.signBv()
     // Exponent
