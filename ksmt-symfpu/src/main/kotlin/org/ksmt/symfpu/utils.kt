@@ -134,6 +134,7 @@ data class NormaliseShiftResult(
     val normalised: KExpr<KBvSort>, val shiftAmount: KExpr<KBvSort>, val isZero: KExpr<KBoolSort>
 )
 
+/* CLZ https://en.wikipedia.org/wiki/Find_first_set */
 fun KContext.normaliseShift(input: KExpr<KBvSort>): NormaliseShiftResult {
     val width = input.sort.sizeBits
     val startingMask = previousPowerOfTwo(width)

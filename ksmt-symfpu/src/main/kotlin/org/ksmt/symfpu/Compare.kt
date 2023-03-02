@@ -7,6 +7,7 @@ import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.symfpu.UnpackedFp.Companion.iteOp
 
+// doesn't matter if significand is normalized or not
 internal fun <Fp : KFpSort> KContext.less(
     left: UnpackedFp<Fp>, right: UnpackedFp<Fp>
 ): KExpr<KBoolSort> {
@@ -75,7 +76,7 @@ private fun <Fp : KFpSort> KContext.lessHelper(
     // Both zero are equal
     val eitherZero = left.isZero or right.isZero
 
-    val exponentLessExpr = { a: KExpr<KBvSort>, b : KExpr<KBvSort>->
+    val exponentLessExpr = { a: KExpr<KBvSort>, b: KExpr<KBvSort> ->
         if (packedExists)
             mkBvUnsignedLessExpr(a, b)
         else
