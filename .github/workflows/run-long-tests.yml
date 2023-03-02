@@ -157,7 +157,7 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: |
-            :ksmt-test:test --tests  ${{ format('"org.ksmt.test.{0}"', matrix.test) }}
+            :ksmt-test:test --tests  ${{ format('"org.ksmt.test.benchmarks.{0}"', matrix.test) }}
             --no-daemon
             --continue
             -PrunBenchmarksBasedTests=true
