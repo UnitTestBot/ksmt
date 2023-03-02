@@ -36,6 +36,17 @@ class MultiIndexedArrayTest {
         }
     }
 
+    @Test
+    fun testMultiIndexedArraysBitwuzla(): Unit = with(KContext()) {
+        KZ3Solver(this).use { oracleSolver ->
+            KBitwuzlaContext(this).use { z3NativeCtx ->
+                runMultiIndexedArraySamples(oracleSolver) { expr ->
+                    internalizeAndConvertBitwuzla(z3NativeCtx, expr)
+                }
+            }
+        }
+    }
+
     private inline fun KContext.runMultiIndexedArraySamples(
         oracle: KSolver<*>,
         process: (KExpr<KSort>) -> KExpr<KSort>
