@@ -53,8 +53,7 @@ inline fun <S : KExpr<*>, T> S.transform(
         exprStack.add(this)
         exprStack.add(arg)
     } else {
-        val internalized = operation(internalizedArg)
-        saveInternalized(this, internalized)
+        saveInternalized(this, operation(internalizedArg))
     }
 }
 
