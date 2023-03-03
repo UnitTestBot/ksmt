@@ -1,6 +1,7 @@
 package org.ksmt.solver.util
 
 import org.ksmt.expr.KExpr
+import org.ksmt.solver.util.KExprConverterUtils.argumentsConversionRequired
 import org.ksmt.sort.KSort
 
 abstract class KExprConverterBase<T : Any> {
@@ -12,24 +13,35 @@ abstract class KExprConverterBase<T : Any> {
 
     val exprStack = arrayListOf<T>()
 
-    fun <S : KSort> T.convertFromNative(): KExpr<S> {
-        exprStack.add(this)
+    fun <S : KSort> T.convertFromNative(): KExpr<S> = conversionLoop(
+        stack = exprStack,
+        native = this,
+        stackPush = { stack, element -> stack.add(element) },
+        stackPop = { stack -> stack.removeLast() },
+        stackIsNotEmpty = { stack -> stack.isNotEmpty() },
+        convertNative = { expr -> convertNativeExpr(expr) },
+        findConverted = { expr -> findConvertedNative(expr) },
+        saveConverted = { expr, converted -> saveConvertedNative(expr, converted) }
+    )
 
-        while (exprStack.isNotEmpty()) {
-            val expr = exprStack.removeLast()
-
-            if (findConvertedNative(expr) != null) continue
-
-            val converted = convertNativeExpr(expr)
-
-            if (!converted.isArgumentsConversionRequired) {
-                saveConvertedNative(expr, converted.convertedExpr)
-            }
-        }
-
-        @Suppress("UNCHECKED_CAST")
-        return findConvertedNative(this) as? KExpr<S> ?: error("expr is not properly converted")
-    }
+    /**
+     * Ensure all expression arguments are already converted.
+     * Return converted arguments or null if not all arguments converted.
+     * */
+    fun ensureArgsConvertedAndConvert(
+        expr: T,
+        args: Array<T>,
+        expectedSize: Int
+    ): List<KExpr<*>>? = ensureArgsConvertedAndConvert(
+        stack = exprStack,
+        expr = expr,
+        args = args,
+        expectedSize = expectedSize,
+        arraySize = { it.size },
+        arrayGet = { array, idx -> array[idx] },
+        stackPush = { stack, element -> stack.add(element) },
+        findConverted = { findConvertedNative(it) }
+    )
 
     /**
      * Ensure all expression arguments are already converted.
@@ -41,31 +53,12 @@ abstract class KExprConverterBase<T : Any> {
         expectedSize: Int,
         converter: (List<KExpr<*>>) -> KExpr<*>
     ): ExprConversionResult {
-        checkArgumentsSizeMatchExpected(args.size, expectedSize)
-
-        val convertedArgs = mutableListOf<KExpr<*>>()
-        var hasNotConvertedArgs = false
-
-        for (arg in args) {
-            val converted = findConvertedNative(arg)
-
-            if (converted != null) {
-                convertedArgs.add(converted)
-                continue
-            }
-
-            if (!hasNotConvertedArgs) {
-                hasNotConvertedArgs = true
-                exprStack.add(expr)
-            }
-
-            exprStack.add(arg)
+        val convertedArgs = ensureArgsConvertedAndConvert(expr, args, expectedSize)
+        return if (convertedArgs == null) {
+            argumentsConversionRequired
+        } else {
+            ExprConversionResult(converter(convertedArgs))
         }
-
-        if (hasNotConvertedArgs) return argumentsConversionRequired
-
-        val convertedExpr = converter(convertedArgs)
-        return ExprConversionResult(convertedExpr)
     }
 
     inline fun <T : KSort> convert(op: () -> KExpr<T>) = ExprConversionResult(op())
@@ -125,26 +118,5 @@ abstract class KExprConverterBase<T : Any> {
         op: (KExpr<S>, KExpr<S>) -> KExpr<S>
     ) = ensureArgsConvertedAndConvert(this, args, expectedSize = args.size) { convertedArgs ->
         (convertedArgs as List<KExpr<S>>).reduce(op)
-    }
-
-    companion object {
-        @JvmInline
-        value class ExprConversionResult(private val expr: KExpr<*>?) {
-            val isArgumentsConversionRequired: Boolean
-                get() = expr == null
-
-            val convertedExpr: KExpr<*>
-                get() = expr ?: error("expr is not converted")
-        }
-
-        @JvmStatic
-        val argumentsConversionRequired = ExprConversionResult(null)
-
-        @JvmStatic
-        fun checkArgumentsSizeMatchExpected(argumentsSize: Int, expectedSize: Int) {
-            check(argumentsSize == expectedSize) {
-                "arguments size mismatch: expected $expectedSize, actual $argumentsSize"
-            }
-        }
     }
 }

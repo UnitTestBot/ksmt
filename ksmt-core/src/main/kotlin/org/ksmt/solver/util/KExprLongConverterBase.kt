@@ -2,9 +2,7 @@ package org.ksmt.solver.util
 
 import it.unimi.dsi.fastutil.longs.LongArrayList
 import org.ksmt.expr.KExpr
-import org.ksmt.solver.util.KExprConverterBase.Companion.ExprConversionResult
-import org.ksmt.solver.util.KExprConverterBase.Companion.argumentsConversionRequired
-import org.ksmt.solver.util.KExprConverterBase.Companion.checkArgumentsSizeMatchExpected
+import org.ksmt.solver.util.KExprConverterUtils.argumentsConversionRequired
 import org.ksmt.sort.KSort
 
 /**
@@ -20,24 +18,35 @@ abstract class KExprLongConverterBase {
     @JvmField
     val exprStack = LongArrayList()
 
-    fun <S : KSort> convertFromNative(native: Long): KExpr<S> {
-        exprStack.add(native)
+    fun <S : KSort> convertFromNative(native: Long): KExpr<S> = conversionLoop(
+        stack = exprStack,
+        native = native,
+        stackPush = { stack, element -> stack.add(element) },
+        stackPop = { stack -> stack.removeLong(stack.lastIndex) },
+        stackIsNotEmpty = { stack -> stack.isNotEmpty() },
+        convertNative = { expr -> convertNativeExpr(expr) },
+        findConverted = { expr -> findConvertedNative(expr) },
+        saveConverted = { expr, converted -> saveConvertedNative(expr, converted) }
+    )
 
-        while (exprStack.isNotEmpty()) {
-            val expr = exprStack.removeLong(exprStack.lastIndex)
-
-            if (findConvertedNative(expr) != null) continue
-
-            val converted = convertNativeExpr(expr)
-
-            if (!converted.isArgumentsConversionRequired) {
-                saveConvertedNative(expr, converted.convertedExpr)
-            }
-        }
-
-        @Suppress("UNCHECKED_CAST")
-        return findConvertedNative(native) as? KExpr<S> ?: error("expr is not properly converted")
-    }
+    /**
+     * Ensure all expression arguments are already converted.
+     * Return converted arguments or null if not all arguments converted.
+     * */
+    fun ensureArgsConvertedAndConvert(
+        expr: Long,
+        args: LongArray,
+        expectedSize: Int
+    ): List<KExpr<*>>? = ensureArgsConvertedAndConvert(
+        stack = exprStack,
+        expr = expr,
+        args = args,
+        expectedSize = expectedSize,
+        arraySize = { it.size },
+        arrayGet = { array, idx -> array[idx] },
+        stackPush = { stack, element -> stack.add(element) },
+        findConverted = { findConvertedNative(it) }
+    )
 
     /**
      * Ensure all expression arguments are already converted.
@@ -49,31 +58,12 @@ abstract class KExprLongConverterBase {
         expectedSize: Int,
         converter: (List<KExpr<*>>) -> KExpr<*>
     ): ExprConversionResult {
-        checkArgumentsSizeMatchExpected(args.size, expectedSize)
-
-        val convertedArgs = mutableListOf<KExpr<*>>()
-        var hasNotConvertedArgs = false
-
-        for (arg in args) {
-            val converted = findConvertedNative(arg)
-
-            if (converted != null) {
-                convertedArgs.add(converted)
-                continue
-            }
-
-            if (!hasNotConvertedArgs) {
-                hasNotConvertedArgs = true
-                exprStack.add(expr)
-            }
-
-            exprStack.add(arg)
+        val convertedArgs = ensureArgsConvertedAndConvert(expr, args, expectedSize)
+        return if (convertedArgs == null) {
+            argumentsConversionRequired
+        } else {
+            ExprConversionResult(converter(convertedArgs))
         }
-
-        if (hasNotConvertedArgs) return argumentsConversionRequired
-
-        val convertedExpr = converter(convertedArgs)
-        return ExprConversionResult(convertedExpr)
     }
 
     inline fun <T : KSort> convert(op: () -> KExpr<T>) = ExprConversionResult(op())

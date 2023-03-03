@@ -19,8 +19,8 @@ import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.KFpRoundingModeExpr
 import org.ksmt.expr.KIntNumExpr
 import org.ksmt.expr.KRealNumExpr
-import org.ksmt.solver.util.KExprConverterBase.Companion.ExprConversionResult
-import org.ksmt.solver.util.KExprConverterBase.Companion.argumentsConversionRequired
+import org.ksmt.solver.util.ExprConversionResult
+import org.ksmt.solver.util.KExprConverterUtils.argumentsConversionRequired
 import org.ksmt.solver.util.KExprLongConverterBase
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArray2Sort

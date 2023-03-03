@@ -20,7 +20,7 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
-import org.ksmt.solver.util.KExprConverterBase.Companion.ExprConversionResult
+import org.ksmt.solver.util.ExprConversionResult
 import org.ksmt.solver.util.KExprLongConverterBase
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
