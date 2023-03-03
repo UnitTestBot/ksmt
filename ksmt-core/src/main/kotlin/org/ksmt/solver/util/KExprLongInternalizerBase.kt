@@ -123,13 +123,13 @@ abstract class KExprLongInternalizerBase : KTransformerBase {
         val internalizedArg2 = findInternalizedExpr(arg2)
         val internalizedArg3 = findInternalizedExpr(arg3)
 
-        val someArgumentIsNotInternalzied =
+        val someArgumentIsNotInternalized =
             internalizedArg0 == NOT_INTERNALIZED
                     || internalizedArg1 == NOT_INTERNALIZED
                     || internalizedArg2 == NOT_INTERNALIZED
                     || internalizedArg3 == NOT_INTERNALIZED
 
-        if (someArgumentIsNotInternalzied) {
+        if (someArgumentIsNotInternalized) {
             exprStack.add(this)
 
             if (internalizedArg0 == NOT_INTERNALIZED) {
