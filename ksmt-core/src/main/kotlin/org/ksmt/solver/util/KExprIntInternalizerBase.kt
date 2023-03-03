@@ -6,7 +6,7 @@ import org.ksmt.solver.util.KExprLongInternalizerBase.Companion.NOT_INTERNALIZED
 import org.ksmt.sort.KSort
 
 /**
- * Specialized version of [KExprConverterBase] for Int native expressions.
+ * Specialized version of [KExprInternalizerBase] for Int native expressions.
  * */
 abstract class KExprIntInternalizerBase : KTransformerBase {
     @JvmField

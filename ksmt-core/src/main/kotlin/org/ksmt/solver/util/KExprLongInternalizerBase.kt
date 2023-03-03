@@ -5,7 +5,7 @@ import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KSort
 
 /**
- * Specialized version of [KExprConverterBase] for Long native expressions.
+ * Specialized version of [KExprInternalizerBase] for Long native expressions.
  * */
 abstract class KExprLongInternalizerBase : KTransformerBase {
     @JvmField
