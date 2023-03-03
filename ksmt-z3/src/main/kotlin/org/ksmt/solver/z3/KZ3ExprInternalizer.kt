@@ -675,7 +675,9 @@ open class KZ3ExprInternalizer(
         if (sort is KArraySort<*, *>) {
             Native.mkConstArray(nCtx, sort.domain.internalizeSort(), value)
         } else {
-            val domain = sort.domainSorts.map { it.internalizeSort() }.toLongArray()
+            val domain = sort.domainSorts.let { domain ->
+                LongArray(domain.size) { domain[it].internalizeSort() }
+            }
             val domainNames = LongArray(sort.domainSorts.size) { Native.mkIntSymbol(nCtx, it) }
             Native.mkLambda(nCtx, domain.size, domain, domainNames, value)
         }
