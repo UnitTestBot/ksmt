@@ -76,7 +76,7 @@ private fun <Fp : KFpSort> KContext.arithmeticMultiply(
     val topBit = mkBvExtractExpr(spWidth - 1, spWidth - 1, significandProduct)
     val topBitSet = topBit eq bvOne()
 
-    val alignedSignificand = conditionalLeftShiftOne(topBitSet, significandProduct)
+    val alignedSignificand = conditionalLeftShiftOne(!topBitSet, significandProduct)
 
     val alignedExponent = expandingAddWithCarryIn(left.unbiasedExponent, right.unbiasedExponent, topBitSet)
 
@@ -90,7 +90,7 @@ private fun <Fp : KFpSort> KContext.arithmeticMultiply(
 private fun KContext.conditionalLeftShiftOne(
     condition: KExpr<KBoolSort>, expr: KExpr<KBvSort>
 ) = mkIte(
-    condition, expr, mkBvShiftLeftExpr(expr, bvOne(expr.sort.sizeBits).cast())
+    condition, mkBvShiftLeftExpr(expr, bvOne(expr.sort.sizeBits).cast()), expr
 )
 
 
