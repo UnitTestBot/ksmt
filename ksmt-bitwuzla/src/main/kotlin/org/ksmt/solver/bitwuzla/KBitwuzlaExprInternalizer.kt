@@ -1160,9 +1160,8 @@ open class KBitwuzlaExprInternalizer(
         }
 
         override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>) {
-            if (sort.range is KArraySort<*, *> || sort.domain is KArraySort<*, *>) {
-                throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support nested arrays")
-            }
+            checkNoNestedArrays(sort.domain)
+            checkNoNestedArrays(sort.range)
 
             val domain = internalizeSort(sort.domain)
             val range = internalizeSort(sort.range)
@@ -1171,15 +1170,51 @@ open class KBitwuzlaExprInternalizer(
         }
 
         override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>) {
-            TODO("Multi-indexed arrays are not supported")
+            checkNoNestedArrays(sort.domain0)
+            checkNoNestedArrays(sort.domain1)
+            checkNoNestedArrays(sort.range)
+
+            val domain = longArrayOf(
+                internalizeSort(sort.domain0),
+                internalizeSort(sort.domain1)
+            )
+            val range = internalizeSort(sort.range)
+
+            internalizedSort = Native.bitwuzlaMkFunSort(bitwuzlaCtx.bitwuzla, domain.size, domain, range)
         }
 
         override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>) {
-            TODO("Multi-indexed arrays are not supported")
+            checkNoNestedArrays(sort.domain0)
+            checkNoNestedArrays(sort.domain1)
+            checkNoNestedArrays(sort.domain2)
+            checkNoNestedArrays(sort.range)
+
+            val domain = longArrayOf(
+                internalizeSort(sort.domain0),
+                internalizeSort(sort.domain1),
+                internalizeSort(sort.domain2)
+            )
+            val range = internalizeSort(sort.range)
+
+            internalizedSort = Native.bitwuzlaMkFunSort(bitwuzlaCtx.bitwuzla, domain.size, domain, range)
         }
 
         override fun <R : KSort> visit(sort: KArrayNSort<R>) {
-            TODO("Multi-indexed arrays are not supported")
+            sort.domainSorts.forEach { checkNoNestedArrays(it) }
+            checkNoNestedArrays(sort.range)
+
+            val domain = sort.domainSorts.let { sorts ->
+                LongArray(sorts.size) { internalizeSort(sorts[it]) }
+            }
+            val range = internalizeSort(sort.range)
+
+            internalizedSort = Native.bitwuzlaMkFunSort(bitwuzlaCtx.bitwuzla, domain.size, domain, range)
+        }
+
+        private fun checkNoNestedArrays(sort: KSort) {
+            if (sort is KArraySortBase<*>) {
+                throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support nested arrays")
+            }
         }
 
         override fun <S : KBvSort> visit(sort: S) {
@@ -1238,11 +1273,11 @@ open class KBitwuzlaExprInternalizer(
         private var declSort: BitwuzlaSort = NOT_INTERNALIZED
 
         override fun <S : KSort> visit(decl: KFuncDecl<S>) {
-            if (decl.argSorts.any { it is KArraySort<*, *> }) {
+            if (decl.argSorts.any { it is KArraySortBase<*> }) {
                 throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support functions with arrays in domain")
             }
 
-            if (decl.argSorts.isNotEmpty() && decl.sort is KArraySort<*, *>) {
+            if (decl.argSorts.isNotEmpty() && decl.sort is KArraySortBase<*>) {
                 throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support functions with arrays in range")
             }
 
