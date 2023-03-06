@@ -262,9 +262,9 @@ open class KBitwuzlaExprConverter(
         check(children.isNotEmpty()) { "Apply has no function term" }
 
         val function = children[0]
-        val isArray = Native.bitwuzlaTermGetBitwuzlaKind(function) != BitwuzlaKind.BITWUZLA_KIND_CONST
+        val isFunctionDecl = Native.bitwuzlaTermGetBitwuzlaKind(function) == BitwuzlaKind.BITWUZLA_KIND_CONST
 
-        val appArgs = if (!isArray) {
+        val appArgs = if (isFunctionDecl) {
             // convert function decl separately
             children.copyOfRange(fromIndex = 1, toIndex = children.size)
         } else {
@@ -273,9 +273,14 @@ open class KBitwuzlaExprConverter(
         }
 
         return expr.convertList(appArgs) { convertedArgs: List<KExpr<KSort>> ->
-            if (!isArray) {
+            if (isFunctionDecl) {
                 val funcDecl = convertFuncDecl(function)
-                applyFunction(funcDecl, convertedArgs)
+                if (convertedArgs.isNotEmpty() && funcDecl is KConstDecl<*> && funcDecl.sort is KArraySortBase<*>) {
+                    val array: KExpr<KArraySortBase<*>> = mkConstApp(funcDecl).uncheckedCast()
+                    mkAnyArraySelect(array, convertedArgs).convertToBoolIfNeeded()
+                } else {
+                    applyFunction(funcDecl, convertedArgs)
+                }
             } else {
                 val array: KExpr<KArraySortBase<*>> = convertedArgs.first().uncheckedCast()
                 val args = convertedArgs.drop(1)
@@ -286,6 +291,8 @@ open class KBitwuzlaExprConverter(
     }
 
     private fun applyFunction(funcDecl: KFuncDecl<*>, args: List<KExpr<KSort>>): KExpr<*> {
+        check(args.size == funcDecl.argSorts.size) { "Function arguments size mismatch" }
+
         val wellSortedArgs = args.zip(funcDecl.argSorts) { arg, expectedSort ->
             arg.convertToExpectedIfNeeded(expectedSort)
         }
