@@ -4,6 +4,8 @@ PROJECT(bitwuzla_jni)
 
 FIND_PACKAGE(JNI REQUIRED)
 
+SET(CXX_STANDARD 17)
+
 # Path to bitwuzla.h
 SET(BITWUZLA_INCLUDE "${PROJECT_SOURCE_DIR}/bitwuzla/include")
 

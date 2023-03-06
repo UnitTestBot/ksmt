@@ -14,13 +14,15 @@ repositories {
 val cvc5Version = "1.0.2"
 val cvc5Jar = projectDir.resolve("dist/cvc5-$cvc5Version.jar")
 
-val cvc5NativeLib by configurations.creating
+val cvc5NativeLibX64 by configurations.creating
+val cvc5NativeLibArm by configurations.creating
 
 dependencies {
     implementation(project(":ksmt-core"))
 
-    cvc5NativeLib("cvc5", "cvc5-native-linux-x86-64", cvc5Version, ext = "zip")
-    cvc5NativeLib("cvc5", "cvc5-native-win-x86-64", cvc5Version, ext = "zip")
+    cvc5NativeLibX64("cvc5", "cvc5-native-linux-x86-64", cvc5Version, ext = "zip")
+    cvc5NativeLibX64("cvc5", "cvc5-native-win-x86-64", cvc5Version, ext = "zip")
+    cvc5NativeLibArm("cvc5", "cvc5-native-osx-arm64", cvc5Version, ext = "zip")
 
     api(files(cvc5Jar))
 }
@@ -28,9 +30,11 @@ dependencies {
 tasks.withType<ProcessResources> {
     dependsOn(tasks.compileJava)
 
-    cvc5NativeLib.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
-        from(zipTree(artifact.file)) {
-            into("lib/x64")
+    sequenceOf("x64" to cvc5NativeLibX64, "arm" to cvc5NativeLibArm).forEach { (arch, config) ->
+        config.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
+            from(zipTree(artifact.file)) {
+                into("lib/$arch")
+            }
         }
     }
 }
