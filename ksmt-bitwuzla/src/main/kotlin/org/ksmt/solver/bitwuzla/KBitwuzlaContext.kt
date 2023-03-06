@@ -466,11 +466,11 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
 
     companion object {
         @JvmStatic
-        private fun <T> mkTermCache() = Object2LongOpenHashMap<T>().apply {
+        internal fun <T> mkTermCache() = Object2LongOpenHashMap<T>().apply {
             defaultReturnValue(NOT_INTERNALIZED)
         }
 
         @JvmStatic
-        private fun <T> mkTermReverseCache() = Long2ObjectOpenHashMap<T>()
+        internal fun <T> mkTermReverseCache() = Long2ObjectOpenHashMap<T>()
     }
 }
