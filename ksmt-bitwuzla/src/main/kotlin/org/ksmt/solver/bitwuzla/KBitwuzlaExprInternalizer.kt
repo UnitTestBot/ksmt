@@ -413,14 +413,9 @@ open class KBitwuzlaExprInternalizer(
             val lIsArray = Native.bitwuzlaTermIsArray(l)
             val rIsArray = Native.bitwuzlaTermIsArray(r)
             if (lIsArray != rIsArray) {
-                // (= a b) ==> (forall (x) (= (select a x) (select b x)))
-                val idxVar = Native.bitwuzlaMkVar(bitwuzla, sort.domain.internalizeSort(), "x")
-                val lValue = mkArraySelectTerm(lIsArray, l, idxVar)
-                val rValue = mkArraySelectTerm(rIsArray, r, idxVar)
-                val body = Native.bitwuzlaMkTerm2(
-                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lValue, rValue
-                )
-                return Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FORALL, idxVar, body)
+                val lFunction = wrapArrayAsFunction(sort, lIsArray, l)
+                val rFunction = wrapArrayAsFunction(sort, rIsArray, r)
+                return Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lFunction, rFunction)
             }
         }
         return Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, l, r)
@@ -431,17 +426,11 @@ open class KBitwuzlaExprInternalizer(
             val allArgsAreArrays = args.map { Native.bitwuzlaTermIsArray(it) }
             val anyDifferentArgs = allArgsAreArrays.count { it }.let { it != 0 && it != allArgsAreArrays.size }
             if (anyDifferentArgs) {
-                // (distinct a b) ==> (forall (x) (distinct (select a x) (select b x)))
-                val idxVar = Native.bitwuzlaMkVar(bitwuzla, sort.domain.internalizeSort(), "x")
-                val values = args.zip(allArgsAreArrays) { arg, isArray ->
-                    mkArraySelectTerm(isArray, arg, idxVar)
+                val functions = args.zip(allArgsAreArrays) { arg, isArray ->
+                    wrapArrayAsFunction(sort, isArray, arg)
                 }
-                val distinctValues = Native.bitwuzlaMkTerm(
-                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, values.toLongArray()
-                )
-
-                return Native.bitwuzlaMkTerm2(
-                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FORALL, idxVar, distinctValues
+                return Native.bitwuzlaMkTerm(
+                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, functions.toLongArray()
                 )
             }
         }
@@ -449,6 +438,15 @@ open class KBitwuzlaExprInternalizer(
         return Native.bitwuzlaMkTerm(
             bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, args
         )
+    }
+
+    private fun wrapArrayAsFunction(sort: KArraySort<*, *>, isArray: Boolean, expr: BitwuzlaTerm): BitwuzlaTerm {
+        // Expr is already a function
+        if (!isArray) return expr
+
+        return mkArrayLambdaTerm(sort.domain) { boundVar ->
+            mkArraySelectTerm(isArray, expr, boundVar)
+        }
     }
 
     override fun transform(expr: KBitVec1Value) = with(expr) {
