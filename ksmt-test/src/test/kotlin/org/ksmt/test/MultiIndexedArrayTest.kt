@@ -27,6 +27,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.seconds
 
+//@Disabled
 class MultiIndexedArrayTest {
 
     @Test
@@ -77,6 +78,7 @@ class MultiIndexedArrayTest {
         oracle: KSolver<*>,
         process: (KExpr<KSort>) -> KExpr<KSort>
     ) {
+        val stats = TestStats()
         val sorts = listOf(
             mkArraySort(bv32Sort, bv32Sort),
 //            mkArraySort(bv32Sort, bv16Sort, bv32Sort),
@@ -88,15 +90,17 @@ class MultiIndexedArrayTest {
             val expressions = mkArrayExpressions(sort)
             for (expr in expressions) {
                 val processed = process(expr)
-                assertEquals(oracle, expr, processed)
+                assertEquals(stats, oracle, expr, processed)
             }
         }
+
+        System.err.println("STATS: $stats")
     }
 
     private fun <A : KArraySortBase<KBv32Sort>> KContext.mkArrayExpressions(sort: A): List<KExpr<KSort>> {
-        var arrayExpressions = listOf(
+        var arrayExpressions = listOfNotNull(
             mkConst(sort),
-            mkAsArray(sort), // disable as-array because it is too hard to check equality
+//            mkAsArray(sort), // disable as-array because it is too hard to check equality
             mkArrayConst(sort) { mkConst("cv", bv32Sort) },
             mkLambda(sort) { mkConst("lv", bv32Sort) }
         )
@@ -113,9 +117,14 @@ class MultiIndexedArrayTest {
 
         val arrayEq = arrayExpressions.zipWithNext().map { (first, second) -> first eq second }
 
-        var arraySelects = arrayExpressions.map { mkSelect { it } }
+        var arraySelects = arrayExpressions.map { mkSelect(it) }
 
         val arrayValues = arraySelects + listOf(mkConst("x", bv32Sort))
+
+        arrayExpressions = arrayExpressions + arrayExpressions.map { array ->
+            mkLambda(sort) { indices -> mkSelect(array) { indices.uncheckedCast() } }
+        }
+
         arrayExpressions = arrayExpressions + arrayValues.flatMap { value ->
             listOf(
                 mkArrayConst(sort) { value },
@@ -129,7 +138,7 @@ class MultiIndexedArrayTest {
             }
         }
 
-        arraySelects = arraySelects + arrayExpressions.map { mkSelect { it } }
+        arraySelects = arraySelects + arrayExpressions.map { mkSelect(it) }
 
         return listOf(
             arrayExpressions,
@@ -188,10 +197,12 @@ class MultiIndexedArrayTest {
     }
 
     private fun <A : KArraySortBase<KBv32Sort>> KContext.mkSelect(
-        mkArray: () -> KExpr<A>
+        array: KExpr<A>,
+        mkIndices: KContext.(A) -> List<KExpr<KSort>> = { sort ->
+            sort.domainSorts.map { mkFreshConst("i", it) }
+        }
     ): KExpr<KBv32Sort> {
-        val array = mkArray()
-        val indices = array.sort.domainSorts.map { mkFreshConst("i", it) }
+        val indices = mkIndices(array.sort)
         return when (indices.size) {
             KArraySort.DOMAIN_SIZE -> mkArraySelect(array.uncheckedCast(), indices.single())
             KArray2Sort.DOMAIN_SIZE -> mkArraySelect(array.uncheckedCast(), indices.first(), indices.last())
@@ -240,8 +251,16 @@ class MultiIndexedArrayTest {
         return converted
     }
 
-    private fun <T : KSort> KContext.assertEquals(oracle: KSolver<*>, expected: KExpr<T>, actual: KExpr<T>) {
+    private fun <T : KSort> KContext.assertEquals(
+        stats: TestStats,
+        oracle: KSolver<*>,
+        expected: KExpr<T>,
+        actual: KExpr<T>
+    ) {
+        stats.total++
+
         if (expected == actual) {
+            stats.passedFast++
             return
         }
 
@@ -257,8 +276,10 @@ class MultiIndexedArrayTest {
         val exprPossibleStatus = oracle.check(timeout = 1.seconds)
         if (exprPossibleStatus == KSolverStatus.UNKNOWN) {
             System.err.println("IGNORED: ${oracle.reasonOfUnknown()}")
+            stats.ignored++
             return
         }
+
         assertEquals(KSolverStatus.SAT, exprPossibleStatus)
 
         oracle.pop()
@@ -272,10 +293,19 @@ class MultiIndexedArrayTest {
         }
 
         oracle.pop()
+
+        stats.passed++
     }
 
     private fun mkZ3Context(ctx: KContext): Context {
         KZ3Solver(ctx).close()
         return Context()
     }
+
+    private data class TestStats(
+        var total: Int = 0,
+        var passed: Int = 0,
+        var passedFast: Int = 0,
+        var ignored: Int = 0
+    )
 }
