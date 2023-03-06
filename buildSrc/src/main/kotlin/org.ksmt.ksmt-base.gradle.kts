@@ -16,6 +16,9 @@ repositories {
 }
 
 dependencies {
+    // Primitive collections
+    implementation("it.unimi.dsi:fastutil-core:8.5.11") // 6.1MB
+
     testImplementation(kotlin("test"))
 }
 

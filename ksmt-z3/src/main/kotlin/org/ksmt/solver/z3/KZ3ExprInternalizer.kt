@@ -1,9 +1,6 @@
 package org.ksmt.solver.z3
 
-import com.microsoft.z3.Expr
-import com.microsoft.z3.FuncDecl
 import com.microsoft.z3.Native
-import com.microsoft.z3.Sort
 import com.microsoft.z3.mkQuantifier
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
@@ -149,7 +146,7 @@ import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
-import org.ksmt.solver.util.KExprInternalizerBase
+import org.ksmt.solver.util.KExprLongInternalizerBase
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArray2Sort
 import org.ksmt.sort.KArray3Sort
@@ -167,35 +164,27 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 
-@Suppress("SpreadOperator")
 open class KZ3ExprInternalizer(
     val ctx: KContext,
     private val z3InternCtx: KZ3Context
-) : KExprInternalizerBase<Long>() {
+) : KExprLongInternalizerBase() {
 
+    @JvmField
     val nCtx: Long = z3InternCtx.nCtx
 
     private val sortInternalizer = KZ3SortInternalizer(z3InternCtx)
     private val declInternalizer = KZ3DeclInternalizer(z3InternCtx, sortInternalizer)
 
-    override fun findInternalizedExpr(expr: KExpr<*>): Long? = z3InternCtx.findInternalizedExpr(expr)
+    override fun findInternalizedExpr(expr: KExpr<*>): Long =
+        z3InternCtx.findInternalizedExpr(expr)
 
     override fun saveInternalizedExpr(expr: KExpr<*>, internalized: Long) {
         z3InternCtx.saveInternalizedExpr(expr, internalized)
     }
 
-    fun <T : KSort> KExpr<T>.internalizeExprWrapped(): Expr<*> =
-        z3InternCtx.nativeContext.wrapAST(internalizeExpr()) as Expr<*>
+    fun <T : KDecl<*>> T.internalizeDecl(): Long = declInternalizer.internalizeZ3Decl(this)
 
-    fun <T : KDecl<*>> T.internalizeDeclWrapped(): FuncDecl<*> =
-        z3InternCtx.nativeContext.wrapAST(internalizeDecl()) as FuncDecl<*>
-
-    fun KSort.internalizeSortWrapped(): Sort =
-        z3InternCtx.nativeContext.wrapAST(internalizeSort()) as Sort
-
-    fun <T : KDecl<*>> T.internalizeDecl(): Long = accept(declInternalizer)
-
-    fun <T : KSort> T.internalizeSort(): Long = accept(sortInternalizer)
+    fun <T : KSort> T.internalizeSort(): Long = sortInternalizer.internalizeZ3Sort(this)
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>) = with(expr) {
         transformArray(args) { args ->
@@ -686,7 +675,9 @@ open class KZ3ExprInternalizer(
         if (sort is KArraySort<*, *>) {
             Native.mkConstArray(nCtx, sort.domain.internalizeSort(), value)
         } else {
-            val domain = sort.domainSorts.map { it.internalizeSort() }.toLongArray()
+            val domain = sort.domainSorts.let { domain ->
+                LongArray(domain.size) { domain[it].internalizeSort() }
+            }
             val domainNames = LongArray(sort.domainSorts.size) { Native.mkIntSymbol(nCtx, it) }
             Native.mkLambda(nCtx, domain.size, domain, domainNames, value)
         }
@@ -851,10 +842,9 @@ open class KZ3ExprInternalizer(
         operation(nCtx, a0, a1, a2, a3)
     }
 
-    @Suppress("ArrayPrimitive")
     inline fun <S : KExpr<*>> S.transformArray(
         args: List<KExpr<*>>,
         operation: (LongArray) -> Long
-    ): S = transformList(args) { a: Array<Long> -> operation(a.toLongArray()) }
+    ): S = transformList(args) { a: LongArray -> operation(a) }
 
 }

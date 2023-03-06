@@ -10,15 +10,18 @@ import org.ksmt.expr.KBitVec32Value
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpRoundingMode
+import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.printer.ExpressionPrinter
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.solver.KSolverUnsupportedFeatureException
+import org.ksmt.solver.bitwuzla.bindings.Bitwuzla
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
-import org.ksmt.solver.util.KExprConverterBase
+import org.ksmt.solver.util.ExprConversionResult
+import org.ksmt.solver.util.KExprLongConverterBase
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
@@ -37,7 +40,8 @@ open class KBitwuzlaExprConverter(
     private val ctx: KContext,
     private val bitwuzlaCtx: KBitwuzlaContext,
     private val scopedVars: Map<BitwuzlaTerm, KDecl<*>>? = null
-) : KExprConverterBase<BitwuzlaTerm>() {
+) : KExprLongConverterBase() {
+    private val bitwuzla: Bitwuzla = bitwuzlaCtx.bitwuzla
 
     private val adapterTermRewriter = AdapterTermRewriter(ctx)
 
@@ -50,7 +54,7 @@ open class KBitwuzlaExprConverter(
      * @see convertToBoolIfNeeded
      * */
     fun <T : KSort> BitwuzlaTerm.convertExpr(expectedSort: T): KExpr<T> =
-        convertFromNative<KSort>()
+        convertFromNative<KSort>(this)
             .convertToExpectedIfNeeded(expectedSort)
             .let { adapterTermRewriter.apply(it) }
 
@@ -78,7 +82,7 @@ open class KBitwuzlaExprConverter(
         bitwuzlaCtx.findConvertedExpr(expr)
 
     override fun saveConvertedNative(native: BitwuzlaTerm, converted: KExpr<*>) {
-        bitwuzlaCtx.convertExpr(native) { converted }
+        bitwuzlaCtx.saveConvertedExpr(native, converted)
     }
 
     private fun BitwuzlaSort.convertSort(): KSort = bitwuzlaCtx.convertSort(this) {
@@ -254,7 +258,7 @@ open class KBitwuzlaExprConverter(
         check(children.isNotEmpty()) { "Apply has no function term" }
 
         val function = children[0]
-        val appArgs = children.drop(1).toTypedArray()
+        val appArgs = children.copyOfRange(fromIndex = 1, toIndex = children.size)
 
         return expr.convertList(appArgs) { convertedArgs: List<KExpr<KSort>> ->
             check(Native.bitwuzlaTermIsFun(function)) { "Expected a function term, actual: $function" }
@@ -337,17 +341,17 @@ open class KBitwuzlaExprConverter(
             // convert Bv value from native representation
             when {
                 size <= Int.SIZE_BITS -> {
-                    val bits = Native.bitwuzlaBvConstNodeGetBitsUInt32(bitwuzlaCtx.bitwuzla, expr)
+                    val bits = Native.bitwuzlaBvConstNodeGetBitsUInt32(bitwuzla, expr)
                     mkBv(bits, size.toUInt())
                 }
                 else -> {
-                    val intBits = Native.bitwuzlaBvConstNodeGetBitsUIntArray(bitwuzlaCtx.bitwuzla, expr)
+                    val intBits = Native.bitwuzlaBvConstNodeGetBitsUIntArray(bitwuzla, expr)
                     val bits = bvBitsToBigInteger(intBits)
                     mkBv(bits, size.toUInt())
                 }
             }
         } else {
-            val value = Native.bitwuzlaGetBvValue(bitwuzlaCtx.bitwuzla, expr)
+            val value = Native.bitwuzlaGetBvValue(bitwuzla, expr)
             mkBv(value, size.toUInt())
         }
 
@@ -362,18 +366,18 @@ open class KBitwuzlaExprConverter(
         val convertedValue = if (Native.bitwuzlaTermIsFpValue(expr)) {
             when (sort) {
                 fp32Sort -> {
-                    val fpBits = Native.bitwuzlaFpConstNodeGetBitsUInt32(bitwuzlaCtx.bitwuzla, expr)
+                    val fpBits = Native.bitwuzlaFpConstNodeGetBitsUInt32(bitwuzla, expr)
                     mkFp(Float.fromBits(fpBits), sort)
                 }
                 fp64Sort -> {
-                    val fpBitsArray = Native.bitwuzlaFpConstNodeGetBitsUIntArray(bitwuzlaCtx.bitwuzla, expr)
+                    val fpBitsArray = Native.bitwuzlaFpConstNodeGetBitsUIntArray(bitwuzla, expr)
                     val higherBits = fpBitsArray[1].toLong() shl Int.SIZE_BITS
                     val lowerBits = fpBitsArray[0].toUInt().toLong()
                     val fpBits = higherBits or lowerBits
                     mkFp(Double.fromBits(fpBits), sort)
                 }
                 else -> {
-                    val fpBitsArray = Native.bitwuzlaFpConstNodeGetBitsUIntArray(bitwuzlaCtx.bitwuzla, expr)
+                    val fpBitsArray = Native.bitwuzlaFpConstNodeGetBitsUIntArray(bitwuzla, expr)
                     val fpBits = bvBitsToBigInteger(fpBitsArray)
 
                     val significandMask = powerOfTwo(sort.significandBits - 1u) - BigInteger.ONE
@@ -392,7 +396,7 @@ open class KBitwuzlaExprConverter(
                 }
             }
         } else {
-            val value = Native.bitwuzlaGetFpValue(bitwuzlaCtx.bitwuzla, expr)
+            val value = Native.bitwuzlaGetFpValue(bitwuzla, expr)
 
             mkFpFromBvExpr(
                 sign = mkBv(value.sign, sizeBits = 1u).uncheckedCast(),
@@ -928,6 +932,10 @@ open class KBitwuzlaExprConverter(
      * Remove auxiliary terms introduced by [convertToBoolIfNeeded] and [convertToExpectedIfNeeded].
      * */
     private inner class AdapterTermRewriter(ctx: KContext) : KNonRecursiveTransformer(ctx) {
+        // We can skip values transformation since values may not contain any adapter terms
+        override fun <T : KSort> exprTransformationRequired(expr: KExpr<T>): Boolean =
+            expr !is KInterpretedValue<T>
+
         /**
          * x: Bool
          * (toBv x) -> (ite x #b1 #b0)
@@ -1078,6 +1086,6 @@ open class KBitwuzlaExprConverter(
         op: (List<KExpr<A>>) -> KExpr<T>
     ): ExprConversionResult = convertList(getTermChildren(this), op)
 
-    fun getTermChildren(term: BitwuzlaTerm): Array<BitwuzlaTerm> =
-        Native.bitwuzlaTermGetChildren(term).toTypedArray()
+    fun getTermChildren(term: BitwuzlaTerm): LongArray =
+        Native.bitwuzlaTermGetChildren(term)
 }

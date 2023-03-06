@@ -21,6 +21,8 @@ import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.util.KExprConverterBase
+import org.ksmt.solver.util.ExprConversionResult
+import org.ksmt.solver.util.KExprConverterUtils.argumentsConversionRequired
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort

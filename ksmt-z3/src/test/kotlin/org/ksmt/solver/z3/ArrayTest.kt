@@ -1,6 +1,7 @@
 package org.ksmt.solver.z3
 
 import com.microsoft.z3.Context
+import com.microsoft.z3.Expr
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KSort
@@ -110,18 +111,24 @@ class ArrayTest {
             val z3ConvertCtx = KZ3Context(z3Native)
 
             with(KZ3ExprInternalizer(ctx, z3InternCtx)) {
-                val iConst = const.internalizeExprWrapped().simplify()
-                val iSelect = select.internalizeExprWrapped().simplify()
-                val iStore = store.internalizeExprWrapped().simplify()
-                val iLambda = lambda.internalizeExprWrapped().simplify()
-                val iAsArray = asArray.internalizeExprWrapped().simplify()
+                val iConst = const.internalizeExpr()
+
+                // Simplify const since we use lambdas for n-ary array consts
+                val iConstExpr = z3Native.wrapAST(iConst) as Expr<*>
+                val iConstExprSimplified = iConstExpr.simplify()
+                val iConstSimplified = z3Native.unwrapAST(iConstExprSimplified)
+
+                val iSelect = select.internalizeExpr()
+                val iStore = store.internalizeExpr()
+                val iLambda = lambda.internalizeExpr()
+                val iAsArray = asArray.internalizeExpr()
 
                 with(KZ3ExprConverter(ctx, z3ConvertCtx)) {
-                    val cConst = iConst.convertExprWrapped<KSort>()
-                    val cSelect = iSelect.convertExprWrapped<KSort>()
-                    val cStore = iStore.convertExprWrapped<KSort>()
-                    val cLambda = iLambda.convertExprWrapped<KSort>()
-                    val cAsArray = iAsArray.convertExprWrapped<KSort>()
+                    val cConst = iConstSimplified.convertExpr<KSort>()
+                    val cSelect = iSelect.convertExpr<KSort>()
+                    val cStore = iStore.convertExpr<KSort>()
+                    val cLambda = iLambda.convertExpr<KSort>()
+                    val cAsArray = iAsArray.convertExpr<KSort>()
 
                     assertEquals(const, cConst)
                     assertEquals(select, cSelect)

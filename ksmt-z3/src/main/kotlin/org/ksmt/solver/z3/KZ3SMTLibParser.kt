@@ -42,7 +42,7 @@ class KZ3SMTLibParser(private val ctx: KContext) : KSMTLibParser {
 
     private fun KZ3Context.convertAssertions(assertions: List<BoolExpr>): List<KExpr<KBoolSort>> {
         val converter = KZ3ExprConverter(ctx, this)
-        return with(converter) { assertions.map { it.convertExprWrapped() } }
+        return with(converter) { assertions.map { nativeContext.unwrapAST(it).convertExpr() } }
     }
 
     companion object {

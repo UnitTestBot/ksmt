@@ -28,7 +28,7 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
     override val args: List<KExpr<KSort>>
         get() = buildList {
             add(array)
-            addAll(indices)
+            addAll(this@KArrayStoreBase.indices)
             add(value)
         }.uncheckedCast()
 }
@@ -131,7 +131,7 @@ sealed class KArraySelectBase<A : KArraySortBase<R>, R : KSort>(
     override val args: List<KExpr<KSort>>
         get() = buildList {
             add(array)
-            addAll(indices)
+            addAll(this@KArraySelectBase.indices)
         }.uncheckedCast()
 }
 

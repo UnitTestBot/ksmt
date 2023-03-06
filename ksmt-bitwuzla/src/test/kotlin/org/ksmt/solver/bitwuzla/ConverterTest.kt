@@ -13,6 +13,8 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaResult
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KBv1Sort
+import org.ksmt.sort.KBvSort
+import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.getValue
 import kotlin.random.Random
@@ -286,9 +288,28 @@ class ConverterTest {
             val convertedRandomFp = with(converter) { randomBitsFp.convertExpr(someFpSort) }
             val convertedBvValue = KExprSimplifier(ctx).apply(ctx.mkFpToIEEEBvExpr(convertedRandomFp))
 
-            val expectedBv = ctx.mkBv(randomBits, someBvSort.sizeBits)
+            val expectedBv = ctx.normalizeFpBits(someFpSort, randomBits)
             assertEquals(expectedBv, convertedBvValue)
         }
+    }
+
+    /**
+     * Normalize fp bits to ensure equivalent bit representation for NaN values.
+     * */
+    private fun KContext.normalizeFpBits(sort: KFpSort, bits: String): KExpr<KBvSort> {
+        val sign = mkBv(bits[0] == '1')
+        val exponent = mkBv(
+            bits.substring(1, sort.exponentBits.toInt() + 1),
+            sort.exponentBits
+        )
+        val significand = mkBv(
+            bits.substring(sort.exponentBits.toInt() + 1),
+            sort.significandBits - 1u
+        )
+        val normalizedBits = mkFpToIEEEBvExpr(mkFpFromBvExpr(sign, exponent, significand))
+        val normalizedBv = KExprSimplifier(this).apply(normalizedBits)
+        assertTrue(normalizedBv is KBitVecValue<*>)
+        return normalizedBv
     }
 
     private fun randomBits(size: UInt) =

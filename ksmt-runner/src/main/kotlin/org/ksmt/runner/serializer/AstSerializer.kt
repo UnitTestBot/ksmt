@@ -144,7 +144,7 @@ import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
-import org.ksmt.solver.util.KExprInternalizerBase
+import org.ksmt.solver.util.KExprIntInternalizerBase
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArray2Sort
 import org.ksmt.sort.KArray3Sort
@@ -165,12 +165,12 @@ import org.ksmt.sort.KSort
 import org.ksmt.sort.KSortVisitor
 import org.ksmt.sort.KUninterpretedSort
 
-@Suppress("ArrayPrimitive", "LargeClass")
+@Suppress("LargeClass")
 @OptIn(ExperimentalUnsignedTypes::class)
 class AstSerializer(
     private val serializationCtx: AstSerializationCtx,
     private val output: AbstractBuffer
-) : KExprInternalizerBase<Int>() {
+) : KExprIntInternalizerBase() {
 
     private val exprKindMapper = ExprKindMapper()
 
@@ -191,17 +191,18 @@ class AstSerializer(
 
     private fun <T : KDecl<*>> T.serializeDecl(): Int {
         val idx = serializationCtx.getAstIndex(this)
-        if (idx != null) return idx
-        return accept(declSerializer)
+        if (idx != NOT_INTERNALIZED) return idx
+        return declSerializer.serializeDecl(this)
     }
 
     private fun <T : KSort> T.serializeSort(): Int {
         val idx = serializationCtx.getAstIndex(this)
-        if (idx != null) return idx
-        return accept(sortSerializer)
+        if (idx != NOT_INTERNALIZED) return idx
+        return sortSerializer.serializeSort(this)
     }
 
-    override fun findInternalizedExpr(expr: KExpr<*>): Int? = serializationCtx.getAstIndex(expr)
+    override fun findInternalizedExpr(expr: KExpr<*>): Int =
+        serializationCtx.getAstIndex(expr)
 
     override fun saveInternalizedExpr(expr: KExpr<*>, internalized: Int) {
         // Do nothing since expr is already saved into serializationCtx
@@ -211,48 +212,60 @@ class AstSerializer(
     private val declSerializer = DeclSerializer()
 
     @OptIn(ExperimentalUnsignedTypes::class)
-    private inner class SortSerializer : KSortVisitor<Int> {
-        override fun visit(sort: KBoolSort): Int = serializeSort(sort, SortKind.Bool) {}
+    private inner class SortSerializer : KSortVisitor<Unit> {
+        private var serializedSort: Int = NOT_INTERNALIZED
 
-        override fun visit(sort: KIntSort): Int = serializeSort(sort, SortKind.Int) {}
-
-        override fun visit(sort: KRealSort): Int = serializeSort(sort, SortKind.Real) {}
-
-        override fun <S : KBvSort> visit(sort: S): Int = serializeSort(sort, SortKind.Bv) {
-            writeUInt(sort.sizeBits)
+        override fun visit(sort: KBoolSort) {
+            serializeSort(sort, SortKind.Bool) {}
         }
 
-        override fun <S : KFpSort> visit(sort: S): Int = serializeSort(sort, SortKind.Fp) {
-            writeUInt(sort.exponentBits)
-            writeUInt(sort.significandBits)
+        override fun visit(sort: KIntSort) {
+            serializeSort(sort, SortKind.Int) {}
         }
 
-        override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): Int {
+        override fun visit(sort: KRealSort) {
+            serializeSort(sort, SortKind.Real) {}
+        }
+
+        override fun <S : KBvSort> visit(sort: S) {
+            serializeSort(sort, SortKind.Bv) {
+                writeUInt(sort.sizeBits)
+            }
+        }
+
+        override fun <S : KFpSort> visit(sort: S) {
+            serializeSort(sort, SortKind.Fp) {
+                writeUInt(sort.exponentBits)
+                writeUInt(sort.significandBits)
+            }
+        }
+
+        override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>) {
             val domain = sort.domain.serializeSort()
             val range = sort.range.serializeSort()
-            return serializeSort(sort, SortKind.Array) {
+            serializeSort(sort, SortKind.Array) {
                 writeAst(domain)
                 writeAst(range)
             }
         }
 
-        override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>): Int {
+        override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>) {
             val domain0 = sort.domain0.serializeSort()
             val domain1 = sort.domain1.serializeSort()
             val range = sort.range.serializeSort()
-            return serializeSort(sort, SortKind.Array2) {
+            serializeSort(sort, SortKind.Array2) {
                 writeAst(domain0)
                 writeAst(domain1)
                 writeAst(range)
             }
         }
 
-        override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>): Int {
+        override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>) {
             val domain0 = sort.domain0.serializeSort()
             val domain1 = sort.domain1.serializeSort()
             val domain2 = sort.domain2.serializeSort()
             val range = sort.range.serializeSort()
-            return serializeSort(sort, SortKind.Array3) {
+            serializeSort(sort, SortKind.Array3) {
                 writeAst(domain0)
                 writeAst(domain1)
                 writeAst(domain2)
@@ -260,39 +273,61 @@ class AstSerializer(
             }
         }
 
-        override fun <R : KSort> visit(sort: KArrayNSort<R>): Int {
-            val domain = sort.domainSorts.map { it.serializeSort() }
+        override fun <R : KSort> visit(sort: KArrayNSort<R>) {
+            val domain = sort.domainSorts.let { sorts ->
+                IntArray(sorts.size) { sorts[it].serializeSort() }
+            }
             val range = sort.range.serializeSort()
-            return serializeSort(sort, SortKind.ArrayN) {
+            serializeSort(sort, SortKind.ArrayN) {
                 writeAstArray(domain)
                 writeAst(range)
             }
         }
 
-        override fun visit(sort: KFpRoundingModeSort): Int = serializeSort(sort, SortKind.FpRM) {}
-
-        override fun visit(sort: KUninterpretedSort): Int = serializeSort(sort, SortKind.Uninterpreted) {
-            writeString(sort.name)
+        override fun visit(sort: KFpRoundingModeSort) {
+            serializeSort(sort, SortKind.FpRM) {}
         }
 
-        private inline fun serializeSort(sort: KSort, kind: SortKind, sortArgs: AbstractBuffer.() -> Unit): Int =
-            sort.serializeAst {
+        override fun visit(sort: KUninterpretedSort) {
+            serializeSort(sort, SortKind.Uninterpreted) {
+                writeString(sort.name)
+            }
+        }
+
+        private inline fun serializeSort(sort: KSort, kind: SortKind, sortArgs: AbstractBuffer.() -> Unit) {
+            serializedSort = sort.serializeAst {
                 output.writeEnum(AstKind.Sort)
                 output.writeEnum(kind)
                 sortArgs()
             }
+        }
+
+        fun serializeSort(sort: KSort): Int {
+            sort.accept(this)
+            return serializedSort
+        }
     }
 
-    private inner class DeclSerializer : KDeclVisitor<Int> {
-        override fun <S : KSort> visit(decl: KFuncDecl<S>): Int {
-            val args = decl.argSorts.map { it.serializeSort() }
+    private inner class DeclSerializer : KDeclVisitor<Unit> {
+        private var serializedDecl: Int = NOT_INTERNALIZED
+
+        override fun <S : KSort> visit(decl: KFuncDecl<S>) {
+            val args = decl.argSorts.let { argSorts ->
+                IntArray(argSorts.size) { argSorts[it].serializeSort() }
+            }
             val sort = decl.sort.serializeSort()
-            return decl.serializeAst {
+
+            serializedDecl = decl.serializeAst {
                 writeEnum(AstKind.Decl)
                 writeString(decl.name)
                 writeAstArray(args)
                 writeAst(sort)
             }
+        }
+
+        fun serializeDecl(decl: KDecl<*>): Int {
+            decl.accept(this)
+            return serializedDecl
         }
     }
 
@@ -305,9 +340,8 @@ class AstSerializer(
         writeIntArray(indices)
     }
 
-    private fun AbstractBuffer.writeAstArray(asts: Array<Int>) {
-        val indices = asts.toIntArray()
-        writeIntArray(indices)
+    private fun AbstractBuffer.writeAstArray(asts: IntArray) {
+        writeIntArray(asts)
     }
 
     private inline fun KAst.serializeAst(body: AbstractBuffer.() -> Unit): Int {
@@ -358,7 +392,7 @@ class AstSerializer(
     }
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>) = with(expr) {
-        transformList(args) { args: Array<Int> ->
+        transformList(args) { args: IntArray ->
             val declIdx = decl.serializeDecl()
             writeExpr {
                 writeAst(declIdx)
@@ -377,7 +411,7 @@ class AstSerializer(
     }
 
     override fun transform(expr: KAndExpr) = with(expr) {
-        transformList(args) { args: Array<Int> ->
+        transformList(args) { args: IntArray ->
             writeExpr {
                 writeAstArray(args)
             }
@@ -385,7 +419,7 @@ class AstSerializer(
     }
 
     override fun transform(expr: KOrExpr) = with(expr) {
-        transformList(args) { args: Array<Int> ->
+        transformList(args) { args: IntArray ->
             writeExpr {
                 writeAstArray(args)
             }
@@ -405,7 +439,7 @@ class AstSerializer(
     override fun <T : KSort> transform(expr: KEqExpr<T>) = with(expr) { serialize(lhs, rhs) }
 
     override fun <T : KSort> transform(expr: KDistinctExpr<T>) = with(expr) {
-        transformList(args) { args: Array<Int> ->
+        transformList(args) { args: IntArray ->
             writeExpr {
                 writeAstArray(args)
             }
@@ -872,7 +906,7 @@ class AstSerializer(
     override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
         expr: KArray3Store<D0, D1, D2, R>
     ): KExpr<KArray3Sort<D0, D1, D2, R>> = with(expr) {
-        transformList(listOf(array, index0, index1, index2, value)) { args: Array<Int> ->
+        transformList(listOf(array, index0, index1, index2, value)) { args: IntArray ->
             val (a: Int, i0: Int, i1: Int, i2: Int, v: Int) = args
             writeExpr {
                 writeAst(a)
@@ -885,10 +919,10 @@ class AstSerializer(
     }
 
     override fun <R : KSort> transform(expr: KArrayNStore<R>): KExpr<KArrayNSort<R>> = with(expr) {
-        transformList(indices + listOf(array, value)) { args: Array<Int> ->
+        transformList(indices + listOf(array, value)) { args: IntArray ->
             val array = args[args.lastIndex - 1]
             val value = args[args.lastIndex]
-            val indices = args.dropLast(2)
+            val indices = args.copyOf(args.size - 2)
             writeExpr {
                 writeAst(array)
                 writeAstArray(indices)
@@ -921,9 +955,9 @@ class AstSerializer(
     }
 
     override fun <R : KSort> transform(expr: KArrayNSelect<R>): KExpr<R> = with(expr) {
-        transformList(indices + array) { args: Array<Int> ->
+        transformList(indices + array) { args: IntArray ->
             val array = args.last()
-            val indices = args.dropLast(1)
+            val indices = args.copyOf(args.size - 1)
             writeExpr {
                 writeAst(array)
                 writeAstArray(indices)
@@ -992,7 +1026,7 @@ class AstSerializer(
     }
 
     override fun <T : KArithSort> transform(expr: KAddArithExpr<T>) = with(expr) {
-        transformList(args) { args: Array<Int> ->
+        transformList(args) { args: IntArray ->
             writeExpr {
                 writeAstArray(args)
             }
@@ -1000,7 +1034,7 @@ class AstSerializer(
     }
 
     override fun <T : KArithSort> transform(expr: KSubArithExpr<T>) = with(expr) {
-        transformList(args) { args: Array<Int> ->
+        transformList(args) { args: IntArray ->
             writeExpr {
                 writeAstArray(args)
             }
@@ -1008,7 +1042,7 @@ class AstSerializer(
     }
 
     override fun <T : KArithSort> transform(expr: KMulArithExpr<T>) = with(expr) {
-        transformList(args) { args: Array<Int> ->
+        transformList(args) { args: IntArray ->
             writeExpr {
                 writeAstArray(args)
             }

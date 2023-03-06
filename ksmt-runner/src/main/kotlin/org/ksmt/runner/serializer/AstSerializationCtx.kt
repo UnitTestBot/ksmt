@@ -4,14 +4,20 @@ import com.jetbrains.rd.framework.FrameworkMarshallers
 import com.jetbrains.rd.framework.RdId
 import com.jetbrains.rd.framework.Serializers
 import com.jetbrains.rd.framework.getPlatformIndependentHash
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
 import org.ksmt.KAst
 import org.ksmt.KContext
+import org.ksmt.solver.util.KExprIntInternalizerBase.Companion.NOT_INTERNALIZED
 
 class AstSerializationCtx {
     private var context: KContext? = null
 
-    private val serializedAst = hashMapOf<KAst, Int>()
-    private val deserializedAst = hashMapOf<Int, KAst>()
+    private val serializedAst = Object2IntOpenHashMap<KAst>().apply {
+        defaultReturnValue(NOT_INTERNALIZED)
+    }
+
+    private val deserializedAst = Int2ObjectOpenHashMap<KAst>()
 
     private var nextGeneratedIndex = 1
 
@@ -38,27 +44,27 @@ class AstSerializationCtx {
     }
 
     private fun saveAst(idx: Int, ast: KAst) {
-        deserializedAst[idx] = ast
-        serializedAst[ast] = idx
+        deserializedAst.put(idx, ast)
+        serializedAst.put(ast, idx)
     }
 
     fun writeAst(idx: Int, ast: KAst) {
-        val current = deserializedAst[idx]
+        val current = deserializedAst.get(idx)
         if (current != null) {
             check(current == ast) { "Serialization failed: different ast with same idx" }
             return
         }
-        val reversed = serializedAst[ast]
-        if (reversed != null) {
-            check(deserializedAst[reversed] == ast) { "Serialization failed: cache mismatch" }
+        val reversed = serializedAst.getInt(ast)
+        if (reversed != NOT_INTERNALIZED) {
+            check(deserializedAst.get(reversed) == ast) { "Serialization failed: cache mismatch" }
         }
         saveAst(idx, ast)
         nextGeneratedIndex = maxOf(nextGeneratedIndex, idx + 1)
     }
 
-    fun getAstIndex(ast: KAst): Int? = serializedAst[ast]
+    fun getAstIndex(ast: KAst): Int = serializedAst.getInt(ast)
 
-    fun getAstByIndexOrError(idx: Int): KAst = deserializedAst[idx]
+    fun getAstByIndexOrError(idx: Int): KAst = deserializedAst.get(idx)
         ?: error("Serialization failed: $idx is not properly deserialized")
 
     companion object {
