@@ -151,7 +151,6 @@ import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
-import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.bitwuzla.KBitwuzlaContext.Companion.mkTermCache
 import org.ksmt.solver.bitwuzla.bindings.Bitwuzla
@@ -184,7 +183,6 @@ import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KSortVisitor
 import org.ksmt.sort.KUninterpretedSort
-import org.ksmt.utils.uncheckedCast
 import java.math.BigInteger
 
 @Suppress("LargeClass")
@@ -397,10 +395,9 @@ open class KBitwuzlaExprInternalizer(
             val tIsArray = Native.bitwuzlaTermIsArray(t)
             val fIsArray = Native.bitwuzlaTermIsArray(f)
             if (tIsArray != fIsArray) {
-                return mkArrayLambdaTerm(sort.domain) { lambdaVar ->
-                    val tValue = mkArraySelectTerm(tIsArray, t, lambdaVar)
-                    val fValue = mkArraySelectTerm(fIsArray, f, lambdaVar)
-
+                return mkArrayLambdaTerm(sort.domain) { boundVar ->
+                    val tValue = mkArraySelectTerm(tIsArray, t, boundVar)
+                    val fValue = mkArraySelectTerm(fIsArray, f, boundVar)
                     Native.bitwuzlaMkTerm3(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_ITE, c, tValue, fValue)
                 }
             }
@@ -413,9 +410,18 @@ open class KBitwuzlaExprInternalizer(
             val lIsArray = Native.bitwuzlaTermIsArray(l)
             val rIsArray = Native.bitwuzlaTermIsArray(r)
             if (lIsArray != rIsArray) {
-                val lFunction = wrapArrayAsFunction(sort, lIsArray, l)
-                val rFunction = wrapArrayAsFunction(sort, rIsArray, r)
-                return Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lFunction, rFunction)
+                val wrappingIsPossible = arrayAsFunctionWrappingIsPossible(lIsArray, l)
+                        && arrayAsFunctionWrappingIsPossible(rIsArray, r)
+
+                return if (wrappingIsPossible) {
+                    val lFunction = wrapArrayAsFunction(sort, lIsArray, l)
+                    val rFunction = wrapArrayAsFunction(sort, rIsArray, r)
+                    Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lFunction, rFunction)
+                } else {
+                    val lFunction = wrapArrayAsHighArityFunction(sort, lIsArray, l)
+                    val rFunction = wrapArrayAsHighArityFunction(sort, rIsArray, r)
+                    Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lFunction, rFunction)
+                }
             }
         }
         return Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, l, r)
@@ -426,12 +432,24 @@ open class KBitwuzlaExprInternalizer(
             val allArgsAreArrays = args.map { Native.bitwuzlaTermIsArray(it) }
             val anyDifferentArgs = allArgsAreArrays.count { it }.let { it != 0 && it != allArgsAreArrays.size }
             if (anyDifferentArgs) {
-                val functions = args.zip(allArgsAreArrays) { arg, isArray ->
-                    wrapArrayAsFunction(sort, isArray, arg)
+                val wrappingIsPossible = args.zip(allArgsAreArrays)
+                    .all { (arg, isArray) -> arrayAsFunctionWrappingIsPossible(isArray, arg) }
+
+                return if (wrappingIsPossible) {
+                    val functions = args.zip(allArgsAreArrays) { arg, isArray ->
+                        wrapArrayAsFunction(sort, isArray, arg)
+                    }
+                    Native.bitwuzlaMkTerm(
+                        bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, functions.toLongArray()
+                    )
+                } else {
+                    val functions = args.zip(allArgsAreArrays) { arg, isArray ->
+                        wrapArrayAsHighArityFunction(sort, isArray, arg)
+                    }
+                    Native.bitwuzlaMkTerm(
+                        bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, functions.toLongArray()
+                    )
                 }
-                return Native.bitwuzlaMkTerm(
-                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, functions.toLongArray()
-                )
             }
         }
 
@@ -440,12 +458,47 @@ open class KBitwuzlaExprInternalizer(
         )
     }
 
-    private fun wrapArrayAsFunction(sort: KArraySort<*, *>, isArray: Boolean, expr: BitwuzlaTerm): BitwuzlaTerm {
+    private fun arrayAsFunctionWrappingIsPossible(isArray: Boolean, expr: BitwuzlaTerm): Boolean {
+        // no wrapping needed
+        if (!isArray) return true
+
+        val exprKind = Native.bitwuzlaTermGetBitwuzlaKind(expr)
+
+        // constant arrays can't be wrapped as lambda expressions
+        return exprKind != BitwuzlaKind.BITWUZLA_KIND_CONST_ARRAY
+    }
+
+    private fun wrapArrayAsFunction(
+        sort: KArraySort<*, *>,
+        isArray: Boolean,
+        expr: BitwuzlaTerm
+    ): BitwuzlaTerm {
         // Expr is already a function
         if (!isArray) return expr
 
         return mkArrayLambdaTerm(sort.domain) { boundVar ->
             mkArraySelectTerm(isArray, expr, boundVar)
+        }.also {
+            check(!Native.bitwuzlaTermIsArray(it)) { "Array term was not eliminated" }
+        }
+    }
+
+    /**
+     * Since lambda expressions with constant body are always simplified
+     * to constant arrays we have no normal way to replace constant array as function.
+     *
+     * Trick: replace constant array as 2-ary function, since it can't be rewritten
+     * as constant array.
+     * */
+    private fun wrapArrayAsHighArityFunction(
+        sort: KArraySort<*, *>,
+        isArray: Boolean,
+        expr: BitwuzlaTerm
+    ): BitwuzlaTerm {
+        return mkArrayLambdaTerm(listOf(sort.domain, sort.domain)) { (boundVar) ->
+            mkArraySelectTerm(isArray, expr, boundVar)
+        }.also {
+            check(!Native.bitwuzlaTermIsArray(it)) { "Array term was not eliminated" }
         }
     }
 
