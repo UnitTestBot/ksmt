@@ -960,7 +960,8 @@ open class KBitwuzlaExprInternalizer(
         boundVarSort: KSort,
         body: (BitwuzlaTerm) -> BitwuzlaTerm
     ): BitwuzlaTerm {
-        val boundVar = Native.bitwuzlaMkVar(bitwuzla, boundVarSort.internalizeSort(), "x")
+        val boundDecl = bitwuzlaCtx.ctx.mkFreshConstDecl("x", boundVarSort)
+        val boundVar = bitwuzlaCtx.mkVar(boundDecl, boundVarSort.internalizeSort())
         val lambdaBody = body(boundVar)
         return mkLambdaTerm(boundVar, lambdaBody)
     }
@@ -970,7 +971,8 @@ open class KBitwuzlaExprInternalizer(
         body: (LongArray) -> BitwuzlaTerm
     ): BitwuzlaTerm {
         val boundVars = LongArray(bounds.size) {
-            Native.bitwuzlaMkVar(bitwuzla, bounds[it].internalizeSort(), "x$it")
+            val boundDecl = bitwuzlaCtx.ctx.mkFreshConstDecl("x", bounds[it])
+            bitwuzlaCtx.mkVar(boundDecl, bounds[it].internalizeSort())
         }
         val lambdaBody = body(boundVars)
         return mkLambdaTerm(boundVars, lambdaBody)
@@ -1300,7 +1302,7 @@ open class KBitwuzlaExprInternalizer(
          * */
         val internalizedBounds = LongArray(bounds.size) { idx ->
             val boundDecl = bounds[idx]
-            Native.bitwuzlaMkVar(bitwuzla, boundDecl.sort.internalizeSort(), boundDecl.name).also {
+            bitwuzlaCtx.mkVar(boundDecl, boundDecl.sort.internalizeSort()).also {
                 nestedVarScope.put(boundDecl, it)
             }
         }

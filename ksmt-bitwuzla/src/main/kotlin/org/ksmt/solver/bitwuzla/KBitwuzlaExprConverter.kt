@@ -647,11 +647,13 @@ open class KBitwuzlaExprConverter(
         val nestedScope = scopedVars?.toMutableMap() ?: hashMapOf()
 
         val convertedBounds = boundVars.map { boundVar ->
-            val sort = Native.bitwuzlaTermGetSort(boundVar)
-            val name = Native.bitwuzlaTermGetSymbol(boundVar)
-            ctx.mkFreshConstDecl(name ?: "var", sort.convertSort()).also {
-                nestedScope[boundVar] = it
+            val decl = bitwuzlaCtx.findConvertedVar(boundVar) ?: run {
+                val sort = Native.bitwuzlaTermGetSort(boundVar)
+                val name = Native.bitwuzlaTermGetSymbol(boundVar)
+                ctx.mkFreshConstDecl(name ?: "var", sort.convertSort())
             }
+            nestedScope[boundVar] = decl
+            decl
         }
 
         val bodyConverter = KBitwuzlaExprConverter(ctx, bitwuzlaCtx, nestedScope)
@@ -777,7 +779,7 @@ open class KBitwuzlaExprConverter(
         )
     }
 
-    private fun KContext.mkAnyArrayLambda(domain: List<KDecl<KSort>>, body: KExpr<*>) =
+    private fun KContext.mkAnyArrayLambda(domain: List<KDecl<*>>, body: KExpr<*>) =
         mkAnyArrayOperation(
             domain,
             { d0 -> mkArrayLambda(d0, body) },

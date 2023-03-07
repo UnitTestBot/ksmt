@@ -53,6 +53,8 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
     private val constantsGlobalCache = mkTermCache<KDecl<*>>()
     private val bitwuzlaConstants = mkTermReverseCache<KDecl<*>>()
 
+    private val bitwuzlaVars = mkTermReverseCache<KDecl<*>>()
+
     private val sorts = mkTermCache<KSort>()
     private val declSorts = mkTermCache<KDecl<*>>()
     private val bitwuzlaSorts = mkTermReverseCache<KSort>()
@@ -190,6 +192,8 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
     fun findConstant(decl: KDecl<*>): BitwuzlaTerm? =
         constantsGlobalCache.getLong(decl).takeIf { it != NOT_INTERNALIZED }
 
+    fun findConvertedVar(term: BitwuzlaTerm): KDecl<*>? = bitwuzlaVars.get(term)
+
     fun declarations(): Set<KDecl<*>> =
         leveledDeclarations.flatMapTo(hashSetOf()) { it }
 
@@ -239,6 +243,11 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
 
         return term
     }
+
+    fun mkVar(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm =
+        Native.bitwuzlaMkVar(bitwuzla, sort, decl.name).also {
+            bitwuzlaVars.put(it, decl)
+        }
 
     /**
      * Create nested declaration scope to allow [popDeclarationScope].
