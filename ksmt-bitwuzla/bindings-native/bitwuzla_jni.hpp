@@ -136,6 +136,14 @@ Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkFpValue
          jlong bitwuzla_bvSignificand);
 
 JNIEXPORT jlong JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkFpValueFromReal
+        (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong sort, jlong rm, jstring real);
+
+JNIEXPORT jlong JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkFpValueFromRational
+        (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong sort, jlong rm, jstring num, jstring den);
+
+JNIEXPORT jlong JNICALL
 Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkRmValue
         (JNIEnv* env, jobject native_class, jlong bitwuzla, jint rm);
 
@@ -172,6 +180,10 @@ Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkTerm2Indexed2
         (JNIEnv* env, jobject native_class, jlong bitwuzla, jint kind, jlong term0, jlong term1, jint idx0, jint idx1);
 
 JNIEXPORT jlong JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkTermIndexed
+        (JNIEnv* env, jobject native_class, jlong bitwuzla, jint kind, jlongArray args, jintArray idxs);
+
+JNIEXPORT jlong JNICALL
 Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkConst
         (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_sort, jstring symbol);
 
@@ -199,6 +211,10 @@ JNIEXPORT void JNICALL
 Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaAssume
         (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong term);
 
+JNIEXPORT jboolean JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaIsUnsatAssumption
+        (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong term);
+
 JNIEXPORT jlongArray JNICALL
 Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetUnsatAssumptions
         (JNIEnv* env, jobject native_class, jlong bitwuzla);
@@ -213,6 +229,10 @@ Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaFixateAssumptions
 
 JNIEXPORT void JNICALL
 Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaResetAssumptions
+        (JNIEnv* env, jobject native_class, jlong bitwuzla);
+
+JNIEXPORT jint JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSimplify
         (JNIEnv* env, jobject native_class, jlong bitwuzla);
 
 JNIEXPORT jint JNICALL
@@ -239,6 +259,10 @@ JNIEXPORT jobject JNICALL
 Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetFpValue
         (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_term);
 
+JNIEXPORT jstring JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetRmValue
+        (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_term);
+
 JNIEXPORT jobject JNICALL
 Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetArrayValue
         (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_term);
@@ -246,6 +270,16 @@ Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetArrayValue
 JNIEXPORT jobject JNICALL
 Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetFunValue
         (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_term);
+
+JNIEXPORT jlong JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSubstituteTerm
+        (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_term,
+         jlongArray map_keys, jlongArray map_values);
+
+JNIEXPORT void JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSubstituteTerms
+        (JNIEnv* env, jobject native_class, jlong bitwuzla, jlongArray terms,
+         jlongArray map_keys, jlongArray map_values);
 
 JNIEXPORT jlong JNICALL
 Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortHash
@@ -281,6 +315,18 @@ Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortArrayGetIndex
 
 JNIEXPORT jlong JNICALL
 Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortArrayGetElement
+        (JNIEnv* env, jobject native_class, jlong bitwuzla_sort);
+
+JNIEXPORT jlongArray JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortFunGetDomainSorts
+        (JNIEnv* env, jobject native_class, jlong bitwuzla_sort);
+
+JNIEXPORT jlong JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortFunGetCodomain
+        (JNIEnv* env, jobject native_class, jlong bitwuzla_sort);
+
+JNIEXPORT jint JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortFunGetArity
         (JNIEnv* env, jobject native_class, jlong bitwuzla_sort);
 
 JNIEXPORT jboolean JNICALL
@@ -329,6 +375,10 @@ Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermArrayGetIndexSort
 
 JNIEXPORT jlong JNICALL
 Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermArrayGetElementSort
+        (JNIEnv* env, jobject native_class, jlong bitwuzla_term);
+
+JNIEXPORT jlongArray JNICALL
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermFunGetDomainSorts
         (JNIEnv* env, jobject native_class, jlong bitwuzla_term);
 
 JNIEXPORT jlong JNICALL
