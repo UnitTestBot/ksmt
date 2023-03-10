@@ -1,4 +1,4 @@
-package org.ksmt.test
+package org.ksmt.test.benchmarks
 
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode

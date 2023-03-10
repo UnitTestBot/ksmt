@@ -106,12 +106,13 @@ val downloadPreparedBenchmarksTestData = downloadPreparedSmtLibBenchmarkTestData
 )
 
 tasks.withType<Test> {
-    enabled = runBenchmarksBasedTests
     if (runBenchmarksBasedTests) {
         dependsOn.add(prepareTestData)
+        environment("benchmarkChunkMaxSize", benchmarkChunkMaxSize)
+        environment("benchmarkChunk", benchmarkChunk)
+    } else {
+        exclude("org/ksmt/test/benchmarks/**")
     }
-    environment("benchmarkChunkMaxSize", benchmarkChunkMaxSize)
-    environment("benchmarkChunk", benchmarkChunk)
 }
 
 /**

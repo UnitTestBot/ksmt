@@ -1,4 +1,4 @@
-package org.ksmt.test
+package org.ksmt.test.benchmarks
 
 import com.jetbrains.rd.util.reactive.RdFault
 import kotlinx.coroutines.TimeoutCancellationException
@@ -44,6 +44,10 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.test.SmtLibParseError
+import org.ksmt.test.TestRunner
+import org.ksmt.test.TestWorker
+import org.ksmt.test.TestWorkerProcess
 import org.ksmt.utils.FpUtils.isZero
 import java.nio.file.Path
 import java.nio.file.Paths
