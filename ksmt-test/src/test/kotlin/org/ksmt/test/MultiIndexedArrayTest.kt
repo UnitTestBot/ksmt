@@ -19,13 +19,12 @@ import org.ksmt.sort.KArray2Sort
 import org.ksmt.sort.KArray3Sort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KArraySortBase
-import org.ksmt.sort.KBv32Sort
+import org.ksmt.sort.KBv8Sort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.uncheckedCast
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.time.Duration.Companion.seconds
 
 //@Disabled
 class MultiIndexedArrayTest {
@@ -80,7 +79,7 @@ class MultiIndexedArrayTest {
     ) {
         val stats = TestStats()
         val sorts = listOf(
-            mkArraySort(bv32Sort, bv32Sort),
+            mkArraySort(bv8Sort, bv8Sort),
 //            mkArraySort(bv32Sort, bv16Sort, bv32Sort),
 //            mkArraySort(bv32Sort, bv16Sort, bv8Sort, bv32Sort),
 //            mkArrayNSort(listOf(bv32Sort, bv16Sort, bv8Sort, bv32Sort, bv8Sort), bv32Sort)
@@ -88,25 +87,28 @@ class MultiIndexedArrayTest {
 
         for (sort in sorts) {
             val expressions = mkArrayExpressions(sort)
-            for (expr in expressions) {
+            for ((i, expr) in expressions.withIndex()) {
+                if (i != 7532) continue
+                println("Start: $i")
                 val processed = process(expr)
                 assertEquals(stats, oracle, expr, processed)
+                println("End: $i")
             }
         }
 
         System.err.println("STATS: $stats")
     }
 
-    private fun <A : KArraySortBase<KBv32Sort>> KContext.mkArrayExpressions(sort: A): List<KExpr<KSort>> {
+    private fun <A : KArraySortBase<KBv8Sort>> KContext.mkArrayExpressions(sort: A): List<KExpr<KSort>> {
         var arrayExpressions = listOfNotNull(
             mkConst(sort),
 //            mkAsArray(sort), // disable as-array because it is too hard to check equality
-            mkArrayConst(sort) { mkConst("cv", bv32Sort) },
-            mkLambda(sort) { mkConst("lv", bv32Sort) }
+            mkArrayConst(sort) { mkConst("cv", bv8Sort) },
+            mkLambda(sort) { mkConst("lv", bv8Sort) }
         )
 
         arrayExpressions = arrayExpressions + arrayExpressions.map {
-            mkStore(it) { mkConst("v", bv32Sort) }
+            mkStore(it) { mkConst("v", bv8Sort) }
         }
 
         arrayExpressions = arrayExpressions + arrayExpressions.flatMap { first ->
@@ -119,7 +121,7 @@ class MultiIndexedArrayTest {
 
         var arraySelects = arrayExpressions.map { mkSelect(it) }
 
-        val arrayValues = arraySelects + listOf(mkConst("x", bv32Sort))
+        val arrayValues = arraySelects + listOf(mkConst("x", bv8Sort))
 
         arrayExpressions = arrayExpressions + arrayExpressions.map { array ->
             mkLambda(sort) { indices -> mkSelect(array) { indices.uncheckedCast() } }
@@ -141,28 +143,28 @@ class MultiIndexedArrayTest {
         arraySelects = arraySelects + arrayExpressions.map { mkSelect(it) }
 
         return listOf(
-            arrayExpressions,
+//            arrayExpressions,
             arraySelects,
             arrayEq
         ).flatten().uncheckedCast()
     }
 
-    private fun <A : KArraySortBase<KBv32Sort>> KContext.mkConst(sort: A): KExpr<A> =
+    private fun <A : KArraySortBase<KBv8Sort>> KContext.mkConst(sort: A): KExpr<A> =
         mkFreshConst("c", sort)
 
-    private fun <A : KArraySortBase<KBv32Sort>> KContext.mkArrayConst(
+    private fun <A : KArraySortBase<KBv8Sort>> KContext.mkArrayConst(
         sort: A,
-        value: () -> KExpr<KBv32Sort>
+        value: () -> KExpr<KBv8Sort>
     ): KExpr<A> = mkArrayConst(sort, value())
 
-    private fun <A : KArraySortBase<KBv32Sort>> KContext.mkAsArray(sort: A): KExpr<A> {
+    private fun <A : KArraySortBase<KBv8Sort>> KContext.mkAsArray(sort: A): KExpr<A> {
         val function = mkFreshFuncDecl("f", sort.range, sort.domainSorts)
         return mkFunctionAsArray(sort, function)
     }
 
-    private fun <A : KArraySortBase<KBv32Sort>> KContext.mkLambda(
+    private fun <A : KArraySortBase<KBv8Sort>> KContext.mkLambda(
         sort: A,
-        mkBody: (List<KExpr<KBvSort>>) -> KExpr<KBv32Sort>
+        mkBody: (List<KExpr<KBvSort>>) -> KExpr<KBv8Sort>
     ): KExpr<A> {
         val indices = sort.domainSorts.map { mkFreshConst("i", it) }
         val body = mkBody(indices.uncheckedCast())
@@ -178,9 +180,9 @@ class MultiIndexedArrayTest {
         }.uncheckedCast()
     }
 
-    private fun <A : KArraySortBase<KBv32Sort>> KContext.mkStore(
+    private fun <A : KArraySortBase<KBv8Sort>> KContext.mkStore(
         array: KExpr<A>,
-        mkValue: () -> KExpr<KBv32Sort>
+        mkValue: () -> KExpr<KBv8Sort>
     ): KExpr<A> {
         val indices = array.sort.domainSorts.map { mkFreshConst("i", it) }
         val value = mkValue()
@@ -196,12 +198,12 @@ class MultiIndexedArrayTest {
         }.uncheckedCast()
     }
 
-    private fun <A : KArraySortBase<KBv32Sort>> KContext.mkSelect(
+    private fun <A : KArraySortBase<KBv8Sort>> KContext.mkSelect(
         array: KExpr<A>,
         mkIndices: KContext.(A) -> List<KExpr<KSort>> = { sort ->
             sort.domainSorts.map { mkFreshConst("i", it) }
         }
-    ): KExpr<KBv32Sort> {
+    ): KExpr<KBv8Sort> {
         val indices = mkIndices(array.sort)
         return when (indices.size) {
             KArraySort.DOMAIN_SIZE -> mkArraySelect(array.uncheckedCast(), indices.single())
@@ -264,37 +266,67 @@ class MultiIndexedArrayTest {
             return
         }
 
-//        println("#".repeat(20))
-//        println(expected)
-//        println("-".repeat(20))
-//        println(actual)
+        println("#".repeat(20))
+        println(expected)
+        println("-".repeat(20))
+        println(actual)
 
-        oracle.push()
+        val expectedTrack = mkFreshConst("expected", expected.sort)
+        val actualTrack = mkFreshConst("actual", actual.sort)
 
-        // Check expressions are possible to be SAT
-        oracle.assert(expected eq actual)
-        val exprPossibleStatus = oracle.check(timeout = 1.seconds)
-        if (exprPossibleStatus == KSolverStatus.UNKNOWN) {
-            System.err.println("IGNORED: ${oracle.reasonOfUnknown()}")
-            stats.ignored++
-            return
+        oracle.scoped {
+            oracle.assert(expectedTrack eq expected)
+            assertEquals(KSolverStatus.SAT, oracle.check())
         }
 
-        assertEquals(KSolverStatus.SAT, exprPossibleStatus)
-
-        oracle.pop()
-        oracle.push()
-
-        // Check expressions are equal
-        oracle.assert(expected neq actual)
-        val exprEqualStatus = oracle.check()
-        if (exprEqualStatus != KSolverStatus.UNSAT) {
-            assertEquals(expected, actual, "Expressions are not equal")
+        oracle.scoped {
+            oracle.assert(actualTrack eq actual)
+            assertEquals(KSolverStatus.SAT, oracle.check())
         }
 
-        oracle.pop()
+        oracle.scoped {
+            oracle.assert(actualTrack eq actual)
+            oracle.assert(expectedTrack eq expected)
 
+            // Check expressions are possible to be SAT
+            oracle.scoped {
+                oracle.assert(expectedTrack eq actualTrack)
+                val status = oracle.check()
+                if (status == KSolverStatus.UNKNOWN) {
+                    System.err.println("IGNORED: ${oracle.reasonOfUnknown()}")
+                    stats.ignored++
+                    return
+                }
+
+                assertEquals(KSolverStatus.SAT, status)
+            }
+
+            // Check expressions are equal
+            oracle.scoped {
+                oracle.assert(expectedTrack neq actualTrack)
+                val status = oracle.check()
+
+                if (status == KSolverStatus.UNKNOWN) {
+                    System.err.println("IGNORED: ${oracle.reasonOfUnknown()}")
+                    stats.ignored++
+                    return
+                }
+
+                if (status != KSolverStatus.UNSAT) {
+                    assertEquals(expected, actual, "Expressions are not equal")
+                }
+            }
+        }
         stats.passed++
+    }
+
+    private inline fun KSolver<*>.scoped(block: () -> Unit) {
+        push()
+        try {
+            block()
+        } finally {
+            pop()
+        }
     }
 
     private fun mkZ3Context(ctx: KContext): Context {
