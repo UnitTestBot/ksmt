@@ -1273,6 +1273,10 @@ open class KBitwuzlaExprInternalizer(
     private inline fun <T : KQuantifier> T.internalizeQuantifier(
         crossinline internalizer: T.(LongArray) -> BitwuzlaTerm
     ): T = transform {
+        if (bounds.any { it.hasUninterpretedSorts() }) {
+            throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support quantifiers with uninterpreted sorts")
+        }
+
         internalizeQuantifierBody(bounds, body) { internalizedBounds, internalizedBody ->
             if (internalizedBounds.isEmpty()) {
                 internalizedBody
@@ -1288,10 +1292,6 @@ open class KBitwuzlaExprInternalizer(
         body: KExpr<*>,
         crossinline transformInternalized: (LongArray, BitwuzlaTerm) -> BitwuzlaTerm
     ): BitwuzlaTerm {
-        if (bounds.any { it.hasUninterpretedSorts() }) {
-            throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support quantifiers with uninterpreted sorts")
-        }
-
         val nestedVarScope = mkTermCache<KDecl<*>>().apply {
             scopedVars?.let { putAll(it) }
         }
