@@ -926,11 +926,10 @@ open class KBitwuzlaExprInternalizer(
 
     override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KArrayConst<A, R>) = with(expr) {
         transform(value) { value: BitwuzlaTerm ->
-            if (sort is KArraySort<*, *>) {
-                Native.bitwuzlaMkConstArray(bitwuzla, sort.internalizeSort(), value)
-            } else {
-                mkArrayLambdaTerm(sort.domainSorts) { value }
-            }
+            /**
+             * Note: don't use [Native.bitwuzlaMkConstArray] due to bitwuzla internal issues.
+             * */
+            mkArrayLambdaTerm(sort.domainSorts) { value }
         }
     }
 
