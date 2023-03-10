@@ -276,7 +276,7 @@ Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSubstituteTerm
         (JNIEnv* env, jobject native_class, jlong bitwuzla, jlong bitwuzla_term,
          jlongArray map_keys, jlongArray map_values);
 
-JNIEXPORT void JNICALL
+JNIEXPORT jlongArray JNICALL
 Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSubstituteTerms
         (JNIEnv* env, jobject native_class, jlong bitwuzla, jlongArray terms,
          jlongArray map_keys, jlongArray map_values);
