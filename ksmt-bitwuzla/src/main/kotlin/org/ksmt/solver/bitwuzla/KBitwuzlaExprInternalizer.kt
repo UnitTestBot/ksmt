@@ -7,6 +7,7 @@ import org.ksmt.decl.KDecl
 import org.ksmt.decl.KDeclVisitor
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KAddArithExpr
+import org.ksmt.expr.KAndBinaryExpr
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KArray2Lambda
 import org.ksmt.expr.KArray2Select
@@ -136,6 +137,7 @@ import org.ksmt.expr.KLtArithExpr
 import org.ksmt.expr.KModIntExpr
 import org.ksmt.expr.KMulArithExpr
 import org.ksmt.expr.KNotExpr
+import org.ksmt.expr.KOrBinaryExpr
 import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KPowerArithExpr
 import org.ksmt.expr.KQuantifier
@@ -330,6 +332,10 @@ open class KBitwuzlaExprInternalizer(
         }
     }
 
+    override fun transform(expr: KAndBinaryExpr) = with(expr) {
+        transform(lhs, rhs, BitwuzlaKind.BITWUZLA_KIND_AND)
+    }
+
     override fun transform(expr: KOrExpr) = with(expr) {
         transformList(args) { args: LongArray ->
             when (args.size) {
@@ -340,6 +346,10 @@ open class KBitwuzlaExprInternalizer(
                 )
             }
         }
+    }
+
+    override fun transform(expr: KOrBinaryExpr) = with(expr) {
+        transform(lhs, rhs, BitwuzlaKind.BITWUZLA_KIND_OR)
     }
 
     override fun transform(expr: KNotExpr) = with(expr) {

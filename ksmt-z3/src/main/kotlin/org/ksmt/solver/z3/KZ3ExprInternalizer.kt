@@ -5,6 +5,7 @@ import com.microsoft.z3.mkQuantifier
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAddArithExpr
+import org.ksmt.expr.KAndBinaryExpr
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KArray2Lambda
 import org.ksmt.expr.KArray2Select
@@ -133,6 +134,7 @@ import org.ksmt.expr.KLtArithExpr
 import org.ksmt.expr.KModIntExpr
 import org.ksmt.expr.KMulArithExpr
 import org.ksmt.expr.KNotExpr
+import org.ksmt.expr.KOrBinaryExpr
 import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KPowerArithExpr
 import org.ksmt.expr.KQuantifier
@@ -200,8 +202,16 @@ open class KZ3ExprInternalizer(
         transformArray(args) { args -> Native.mkAnd(nCtx, args.size, args) }
     }
 
+    override fun transform(expr: KAndBinaryExpr) = with(expr) {
+        transform(lhs, rhs) { l, r -> Native.mkAnd(nCtx, 2, longArrayOf(l, r)) }
+    }
+
     override fun transform(expr: KOrExpr) = with(expr) {
         transformArray(args) { args -> Native.mkOr(nCtx, args.size, args) }
+    }
+
+    override fun transform(expr: KOrBinaryExpr) = with(expr) {
+        transform(lhs, rhs) { l, r -> Native.mkOr(nCtx, 2, longArrayOf(l, r)) }
     }
 
     override fun transform(expr: KNotExpr) = with(expr) { transform(arg, Native::mkNot) }

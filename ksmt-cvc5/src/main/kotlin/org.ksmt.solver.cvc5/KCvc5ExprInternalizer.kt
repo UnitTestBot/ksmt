@@ -8,6 +8,7 @@ import io.github.cvc5.Term
 import io.github.cvc5.mkQuantifier
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAddArithExpr
+import org.ksmt.expr.KAndBinaryExpr
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KArray2Lambda
 import org.ksmt.expr.KArray2Select
@@ -137,6 +138,7 @@ import org.ksmt.expr.KLtArithExpr
 import org.ksmt.expr.KModIntExpr
 import org.ksmt.expr.KMulArithExpr
 import org.ksmt.expr.KNotExpr
+import org.ksmt.expr.KOrBinaryExpr
 import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KPowerArithExpr
 import org.ksmt.expr.KQuantifier
@@ -226,8 +228,16 @@ class KCvc5ExprInternalizer(
         transformArray(args) { args: Array<Term> -> nsolver.mkTerm(Kind.AND, args) }
     }
 
+    override fun transform(expr: KAndBinaryExpr) = with(expr) {
+        transform(lhs, rhs) { l: Term, r: Term -> nsolver.mkTerm(Kind.AND, l, r) }
+    }
+
     override fun transform(expr: KOrExpr) = with(expr) {
         transformArray(args) { args: Array<Term> -> nsolver.mkTerm(Kind.OR, args) }
+    }
+
+    override fun transform(expr: KOrBinaryExpr) = with(expr) {
+        transform(lhs, rhs) { l: Term, r: Term -> nsolver.mkTerm(Kind.OR, l, r) }
     }
 
     override fun transform(expr: KNotExpr) =
