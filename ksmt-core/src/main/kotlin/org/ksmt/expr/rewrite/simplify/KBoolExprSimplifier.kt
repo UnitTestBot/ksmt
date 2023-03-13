@@ -3,13 +3,16 @@ package org.ksmt.expr.rewrite.simplify
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAndExpr
+import org.ksmt.expr.KAndNaryExpr
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KImpliesExpr
 import org.ksmt.expr.KIteExpr
 import org.ksmt.expr.KNotExpr
+import org.ksmt.expr.KOrBinaryExpr
 import org.ksmt.expr.KOrExpr
+import org.ksmt.expr.KOrNaryExpr
 import org.ksmt.expr.KXorExpr
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KBoolSort
@@ -23,7 +26,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
             // (and a (and b c)) ==> (and a b c)
             val flatArgs = flatAnd(expr)
             if (flatArgs.size != expr.args.size) {
-                KAndExpr(this, flatArgs)
+                KAndNaryExpr(this, flatArgs)
             } else {
                 expr
             }
@@ -36,7 +39,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
             // (or a (or b c)) ==> (or a b c)
             val flatArgs = flatOr(expr)
             if (flatArgs.size != expr.args.size) {
-                KOrExpr(this, flatArgs)
+                KOrNaryExpr(this, flatArgs)
             } else {
                 expr
             }
@@ -97,7 +100,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
         expr = expr,
         preprocess = {
             val notP = KNotExpr(this, expr.p)
-            KOrExpr(this, listOf(notP, expr.q))
+            KOrBinaryExpr(this, notP, expr.q)
         }
     )
 

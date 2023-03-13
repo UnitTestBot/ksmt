@@ -629,7 +629,7 @@ fun <T : KBvSort> KContext.rewriteBvAddNoOverflowExpr(
         val sum = simplifyBvAddExpr(lhs, rhs)
         val zeroSltSum = simplifyBvSignedLessExpr(zero, sum)
 
-        return simplifyImplies(simplifyAnd(listOf(zeroSltA, zeroSltB)), zeroSltSum)
+        return simplifyImplies(simplifyAnd(zeroSltA, zeroSltB), zeroSltSum)
     } else {
         /**
          * (bvadd no ovf unsigned a b) ==>
@@ -657,7 +657,7 @@ fun <T : KBvSort> KContext.rewriteBvAddNoUnderflowExpr(lhs: KExpr<T>, rhs: KExpr
     val sum = simplifyBvAddExpr(lhs, rhs)
     val sumLtZero = simplifyBvSignedLessExpr(sum, zero)
 
-    return simplifyImplies(simplifyAnd(listOf(aLtZero, bLtZero)), sumLtZero)
+    return simplifyImplies(simplifyAnd(aLtZero, bLtZero), sumLtZero)
 }
 
 fun <T : KBvSort> KContext.rewriteBvSubNoOverflowExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> {
@@ -721,7 +721,7 @@ fun <T : KBvSort> KContext.rewriteBvDivNoOverflowExpr(lhs: KExpr<T>, rhs: KExpr<
 
     val aIsMsb = simplifyEq(lhs, mostSignificantBit.uncheckedCast())
     val bIsMinusOne = simplifyEq(rhs, minusOne.uncheckedCast())
-    return simplifyNot(simplifyAnd(listOf(aIsMsb, bIsMinusOne)))
+    return simplifyNot(simplifyAnd(aIsMsb, bIsMinusOne))
 }
 
 fun <T : KBvSort> KContext.rewriteBvMulNoOverflowExpr(

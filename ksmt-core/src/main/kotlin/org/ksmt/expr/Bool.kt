@@ -18,31 +18,71 @@ import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.uncheckedCast
 
-class KAndExpr internal constructor(
-    ctx: KContext,
-    override val args: List<KExpr<KBoolSort>>
-) : KApp<KBoolSort, KBoolSort>(ctx) {
+abstract class KAndExpr(ctx: KContext) : KApp<KBoolSort, KBoolSort>(ctx) {
     override val sort: KBoolSort = ctx.boolSort
 
     override val decl: KAndDecl
         get() = ctx.mkAndDecl()
 
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
+}
+
+class KAndBinaryExpr internal constructor(
+    ctx: KContext,
+    val lhs: KExpr<KBoolSort>,
+    val rhs: KExpr<KBoolSort>
+) : KAndExpr(ctx) {
+    override val args: List<KExpr<KBoolSort>>
+        get() = listOf(lhs, rhs)
+
+    override fun internHashCode(): Int = hash(lhs, rhs)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
+}
+
+class KAndNaryExpr internal constructor(
+    ctx: KContext,
+    override val args: List<KExpr<KBoolSort>>
+) : KAndExpr(ctx) {
+    init {
+        require(args.size != 2) {
+            "Specialized binary AND expression should be used"
+        }
+    }
 
     override fun internHashCode(): Int = hash(args)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { args }
 }
 
-class KOrExpr internal constructor(
-    ctx: KContext,
-    override val args: List<KExpr<KBoolSort>>
-) : KApp<KBoolSort, KBoolSort>(ctx) {
+abstract class KOrExpr(ctx: KContext) : KApp<KBoolSort, KBoolSort>(ctx) {
     override val sort: KBoolSort = ctx.boolSort
 
     override val decl: KOrDecl
         get() = ctx.mkOrDecl()
 
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
+}
+
+class KOrBinaryExpr internal constructor(
+    ctx: KContext,
+    val lhs: KExpr<KBoolSort>,
+    val rhs: KExpr<KBoolSort>
+) : KOrExpr(ctx) {
+    override val args: List<KExpr<KBoolSort>>
+        get() = listOf(lhs, rhs)
+
+    override fun internHashCode(): Int = hash(lhs, rhs)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
+}
+
+class KOrNaryExpr internal constructor(
+    ctx: KContext,
+    override val args: List<KExpr<KBoolSort>>
+) : KOrExpr(ctx) {
+    init {
+        require(args.size != 2) {
+            "Specialized binary OR expression should be used"
+        }
+    }
 
     override fun internHashCode(): Int = hash(args)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { args }

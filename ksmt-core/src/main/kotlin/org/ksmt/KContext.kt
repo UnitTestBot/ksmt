@@ -143,7 +143,9 @@ import org.ksmt.decl.KUninterpretedFuncDecl
 import org.ksmt.decl.KXorDecl
 import org.ksmt.decl.KZeroExtDecl
 import org.ksmt.expr.KAddArithExpr
+import org.ksmt.expr.KAndBinaryExpr
 import org.ksmt.expr.KAndExpr
+import org.ksmt.expr.KAndNaryExpr
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KArray2Lambda
 import org.ksmt.expr.KArray2Select
@@ -274,7 +276,9 @@ import org.ksmt.expr.KLtArithExpr
 import org.ksmt.expr.KModIntExpr
 import org.ksmt.expr.KMulArithExpr
 import org.ksmt.expr.KNotExpr
+import org.ksmt.expr.KOrBinaryExpr
 import org.ksmt.expr.KOrExpr
+import org.ksmt.expr.KOrNaryExpr
 import org.ksmt.expr.KPowerArithExpr
 import org.ksmt.expr.KRealNumExpr
 import org.ksmt.expr.KRealToFpExpr
@@ -287,6 +291,7 @@ import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.expr.rewrite.simplify.simplifyAnd
+import org.ksmt.expr.rewrite.simplify.simplifyAndNoFlat
 import org.ksmt.expr.rewrite.simplify.simplifyArithAdd
 import org.ksmt.expr.rewrite.simplify.simplifyArithDiv
 import org.ksmt.expr.rewrite.simplify.simplifyArithGe
@@ -387,6 +392,7 @@ import org.ksmt.expr.rewrite.simplify.simplifyIntToReal
 import org.ksmt.expr.rewrite.simplify.simplifyIte
 import org.ksmt.expr.rewrite.simplify.simplifyNot
 import org.ksmt.expr.rewrite.simplify.simplifyOr
+import org.ksmt.expr.rewrite.simplify.simplifyOrNoFlat
 import org.ksmt.expr.rewrite.simplify.simplifyRealIsInt
 import org.ksmt.expr.rewrite.simplify.simplifyRealToFpExpr
 import org.ksmt.expr.rewrite.simplify.simplifyRealToInt
@@ -657,31 +663,67 @@ open class KContext(
     * expressions
     * */
     // bool
-    private val andCache = mkAstInterner<KAndExpr>()
+    private val andNaryCache = mkAstInterner<KAndNaryExpr>()
+    private val andBinaryCache = mkAstInterner<KAndBinaryExpr>()
 
     open fun mkAnd(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
         mkSimplified(args, KContext::simplifyAnd, ::mkAndNoSimplify)
 
-    open fun mkAndNoSimplify(args: List<KExpr<KBoolSort>>): KAndExpr = andCache.createIfContextActive {
-        ensureContextMatch(args)
-        KAndExpr(this, args)
-    }
+    open fun mkAndNoFlat(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
+        mkSimplified(args, KContext::simplifyAndNoFlat, ::mkAndNoSimplify)
 
-    @Suppress("MemberVisibilityCanBePrivate")
-    fun mkAnd(vararg args: KExpr<KBoolSort>): KExpr<KBoolSort> = mkAnd(args.toList())
+    open fun mkAnd(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
+        mkSimplified(lhs, rhs, KContext::simplifyAnd, ::mkAndNoSimplify)
 
-    private val orCache = mkAstInterner<KOrExpr>()
+    open fun mkAndNoFlat(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
+        mkSimplified(lhs, rhs, KContext::simplifyAndNoFlat, ::mkAndNoSimplify)
+
+    open fun mkAndNoSimplify(args: List<KExpr<KBoolSort>>): KAndExpr =
+        if (args.size == 2) {
+            mkAndNoSimplify(args.first(), args.last())
+        } else {
+            andNaryCache.createIfContextActive {
+                ensureContextMatch(args)
+                KAndNaryExpr(this, args)
+            }
+        }
+
+    open fun mkAndNoSimplify(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KAndBinaryExpr =
+        andBinaryCache.createIfContextActive {
+            ensureContextMatch(lhs, rhs)
+            KAndBinaryExpr(this, lhs, rhs)
+        }
+
+    private val orNaryCache = mkAstInterner<KOrNaryExpr>()
+    private val orBinaryCache = mkAstInterner<KOrBinaryExpr>()
 
     open fun mkOr(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
         mkSimplified(args, KContext::simplifyOr, ::mkOrNoSimplify)
 
-    open fun mkOrNoSimplify(args: List<KExpr<KBoolSort>>): KOrExpr = orCache.createIfContextActive {
-        ensureContextMatch(args)
-        KOrExpr(this, args)
-    }
+    open fun mkOrNoFlat(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
+        mkSimplified(args, KContext::simplifyOrNoFlat, ::mkOrNoSimplify)
 
-    @Suppress("MemberVisibilityCanBePrivate")
-    fun mkOr(vararg args: KExpr<KBoolSort>): KExpr<KBoolSort> = mkOr(args.toList())
+    open fun mkOr(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
+        mkSimplified(lhs, rhs, KContext::simplifyOr, ::mkOrNoSimplify)
+
+    open fun mkOrNoFlat(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
+        mkSimplified(lhs, rhs, KContext::simplifyOrNoFlat, ::mkOrNoSimplify)
+
+    open fun mkOrNoSimplify(args: List<KExpr<KBoolSort>>): KOrExpr =
+        if (args.size == 2) {
+            mkOrNoSimplify(args.first(), args.last())
+        } else {
+            orNaryCache.createIfContextActive {
+                ensureContextMatch(args)
+                KOrNaryExpr(this, args)
+            }
+        }
+
+    open fun mkOrNoSimplify(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KOrBinaryExpr =
+        orBinaryCache.createIfContextActive {
+            ensureContextMatch(lhs, rhs)
+            KOrBinaryExpr(this, lhs, rhs)
+        }
 
     private val notCache = mkAstInterner<KNotExpr>()
 
@@ -769,6 +811,9 @@ open class KContext(
     infix fun KExpr<KBoolSort>.xor(other: KExpr<KBoolSort>) = mkXor(this, other)
     infix fun KExpr<KBoolSort>.implies(other: KExpr<KBoolSort>) = mkImplies(this, other)
     infix fun <T : KSort> KExpr<T>.neq(other: KExpr<T>) = !(this eq other)
+
+    fun mkAnd(vararg args: KExpr<KBoolSort>): KExpr<KBoolSort> = mkAnd(args.toList())
+    fun mkOr(vararg args: KExpr<KBoolSort>): KExpr<KBoolSort> = mkOr(args.toList())
 
     fun mkBool(value: Boolean): KExpr<KBoolSort> =
         if (value) trueExpr else falseExpr
