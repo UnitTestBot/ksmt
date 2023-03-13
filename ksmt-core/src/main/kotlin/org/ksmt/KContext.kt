@@ -659,10 +659,10 @@ open class KContext(
     // bool
     private val andCache = mkAstInterner<KAndExpr>()
 
-    fun mkAnd(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
+    open fun mkAnd(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
         mkSimplified(args, KContext::simplifyAnd, ::mkAndNoSimplify)
 
-    fun mkAndNoSimplify(args: List<KExpr<KBoolSort>>): KAndExpr = andCache.createIfContextActive {
+    open fun mkAndNoSimplify(args: List<KExpr<KBoolSort>>): KAndExpr = andCache.createIfContextActive {
         ensureContextMatch(args)
         KAndExpr(this, args)
     }
@@ -672,10 +672,10 @@ open class KContext(
 
     private val orCache = mkAstInterner<KOrExpr>()
 
-    fun mkOr(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
+    open fun mkOr(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
         mkSimplified(args, KContext::simplifyOr, ::mkOrNoSimplify)
 
-    fun mkOrNoSimplify(args: List<KExpr<KBoolSort>>): KOrExpr = orCache.createIfContextActive {
+    open fun mkOrNoSimplify(args: List<KExpr<KBoolSort>>): KOrExpr = orCache.createIfContextActive {
         ensureContextMatch(args)
         KOrExpr(this, args)
     }
@@ -685,20 +685,20 @@ open class KContext(
 
     private val notCache = mkAstInterner<KNotExpr>()
 
-    fun mkNot(arg: KExpr<KBoolSort>): KExpr<KBoolSort> =
+    open fun mkNot(arg: KExpr<KBoolSort>): KExpr<KBoolSort> =
         mkSimplified(arg, KContext::simplifyNot, ::mkNotNoSimplify)
 
-    fun mkNotNoSimplify(arg: KExpr<KBoolSort>): KNotExpr = notCache.createIfContextActive {
+    open fun mkNotNoSimplify(arg: KExpr<KBoolSort>): KNotExpr = notCache.createIfContextActive {
         ensureContextMatch(arg)
         KNotExpr(this, arg)
     }
 
     private val impliesCache = mkAstInterner<KImpliesExpr>()
 
-    fun mkImplies(p: KExpr<KBoolSort>, q: KExpr<KBoolSort>): KExpr<KBoolSort> =
+    open fun mkImplies(p: KExpr<KBoolSort>, q: KExpr<KBoolSort>): KExpr<KBoolSort> =
         mkSimplified(p, q, KContext::simplifyImplies, ::mkImpliesNoSimplify)
 
-    fun mkImpliesNoSimplify(
+    open fun mkImpliesNoSimplify(
         p: KExpr<KBoolSort>,
         q: KExpr<KBoolSort>
     ): KImpliesExpr = impliesCache.createIfContextActive {
@@ -708,10 +708,10 @@ open class KContext(
 
     private val xorCache = mkAstInterner<KXorExpr>()
 
-    fun mkXor(a: KExpr<KBoolSort>, b: KExpr<KBoolSort>): KExpr<KBoolSort> =
+    open fun mkXor(a: KExpr<KBoolSort>, b: KExpr<KBoolSort>): KExpr<KBoolSort> =
         mkSimplified(a, b, KContext::simplifyXor, ::mkXorNoSimplify)
 
-    fun mkXorNoSimplify(a: KExpr<KBoolSort>, b: KExpr<KBoolSort>): KXorExpr =
+    open fun mkXorNoSimplify(a: KExpr<KBoolSort>, b: KExpr<KBoolSort>): KXorExpr =
         xorCache.createIfContextActive {
             ensureContextMatch(a, b)
             KXorExpr(this, a, b)
@@ -725,10 +725,10 @@ open class KContext(
 
     private val eqCache = mkAstInterner<KEqExpr<out KSort>>()
 
-    fun <T : KSort> mkEq(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KSort> mkEq(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(lhs, rhs, KContext::simplifyEq, ::mkEqNoSimplify)
 
-    fun <T : KSort> mkEqNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KEqExpr<T> =
+    open fun <T : KSort> mkEqNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KEqExpr<T> =
         eqCache.createIfContextActive {
             ensureContextMatch(lhs, rhs)
             KEqExpr(this, lhs, rhs)
@@ -736,10 +736,10 @@ open class KContext(
 
     private val distinctCache = mkAstInterner<KDistinctExpr<out KSort>>()
 
-    fun <T : KSort> mkDistinct(args: List<KExpr<T>>): KExpr<KBoolSort> =
+    open fun <T : KSort> mkDistinct(args: List<KExpr<T>>): KExpr<KBoolSort> =
         mkSimplified(args, KContext::simplifyDistinct, ::mkDistinctNoSimplify)
 
-    fun <T : KSort> mkDistinctNoSimplify(args: List<KExpr<T>>): KDistinctExpr<T> =
+    open fun <T : KSort> mkDistinctNoSimplify(args: List<KExpr<T>>): KDistinctExpr<T> =
         distinctCache.createIfContextActive {
             ensureContextMatch(args)
             KDistinctExpr(this, args)
@@ -747,13 +747,13 @@ open class KContext(
 
     private val iteCache = mkAstInterner<KIteExpr<out KSort>>()
 
-    fun <T : KSort> mkIte(
+    open fun <T : KSort> mkIte(
         condition: KExpr<KBoolSort>,
         trueBranch: KExpr<T>,
         falseBranch: KExpr<T>
     ): KExpr<T> = mkSimplified(condition, trueBranch, falseBranch, KContext::simplifyIte, ::mkIteNoSimplify)
 
-    fun <T : KSort> mkIteNoSimplify(
+    open fun <T : KSort> mkIteNoSimplify(
         condition: KExpr<KBoolSort>,
         trueBranch: KExpr<T>,
         falseBranch: KExpr<T>
@@ -782,7 +782,7 @@ open class KContext(
     * For example, mkApp(KAndDecl, a, b) and mkAnd(a, b) must end up with the same KAndExpr object.
     * To achieve such behaviour we override apply for all builtin declarations.
     */
-    fun <T : KSort> mkApp(decl: KDecl<T>, args: List<KExpr<*>>) = with(decl) { apply(args) }
+    open fun <T : KSort> mkApp(decl: KDecl<T>, args: List<KExpr<*>>) = with(decl) { apply(args) }
 
     private val functionAppCache = mkAstInterner<KFunctionApp<out KSort>>()
 
@@ -799,7 +799,7 @@ open class KContext(
 
     private val constAppCache = mkAstInterner<KConst<out KSort>>()
 
-    fun <T : KSort> mkConstApp(decl: KDecl<T>): KConst<T> = constAppCache.createIfContextActive {
+    open fun <T : KSort> mkConstApp(decl: KDecl<T>): KConst<T> = constAppCache.createIfContextActive {
         ensureContextMatch(decl)
         KConst(this, decl)
     }.cast()
@@ -814,14 +814,14 @@ open class KContext(
     private val array3StoreCache = mkAstInterner<KArray3Store<out KSort, out KSort, out KSort, out KSort>>()
     private val arrayNStoreCache = mkAstInterner<KArrayNStore<out KSort>>()
 
-    fun <D : KSort, R : KSort> mkArrayStore(
+    open fun <D : KSort, R : KSort> mkArrayStore(
         array: KExpr<KArraySort<D, R>>,
         index: KExpr<D>,
         value: KExpr<R>
     ): KExpr<KArraySort<D, R>> =
         mkSimplified(array, index, value, KContext::simplifyArrayStore, ::mkArrayStoreNoSimplify)
 
-    fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayStore(
+    open fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayStore(
         array: KExpr<KArray2Sort<D0, D1, R>>,
         index0: KExpr<D0>,
         index1: KExpr<D1>,
@@ -829,7 +829,7 @@ open class KContext(
     ): KExpr<KArray2Sort<D0, D1, R>> =
         mkSimplified(array, index0, index1, value, KContext::simplifyArrayStore, ::mkArrayStoreNoSimplify)
 
-    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayStore(
+    open fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayStore(
         array: KExpr<KArray3Sort<D0, D1, D2, R>>,
         index0: KExpr<D0>,
         index1: KExpr<D1>,
@@ -838,14 +838,14 @@ open class KContext(
     ): KExpr<KArray3Sort<D0, D1, D2, R>> =
         mkSimplified(array, index0, index1, index2, value, KContext::simplifyArrayStore, ::mkArrayStoreNoSimplify)
 
-    fun <R : KSort> mkArrayNStore(
+    open fun <R : KSort> mkArrayNStore(
         array: KExpr<KArrayNSort<R>>,
         indices: List<KExpr<*>>,
         value: KExpr<R>
     ): KExpr<KArrayNSort<R>> =
         mkSimplified(array, indices, value, KContext::simplifyArrayNStore, ::mkArrayNStoreNoSimplify)
 
-    fun <D : KSort, R : KSort> mkArrayStoreNoSimplify(
+    open fun <D : KSort, R : KSort> mkArrayStoreNoSimplify(
         array: KExpr<KArraySort<D, R>>,
         index: KExpr<D>,
         value: KExpr<R>
@@ -854,7 +854,7 @@ open class KContext(
         KArrayStore(this, array, index, value)
     }.cast()
 
-    fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayStoreNoSimplify(
+    open fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayStoreNoSimplify(
         array: KExpr<KArray2Sort<D0, D1, R>>,
         index0: KExpr<D0>,
         index1: KExpr<D1>,
@@ -864,7 +864,7 @@ open class KContext(
         KArray2Store(this, array, index0, index1, value)
     }.cast()
 
-    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayStoreNoSimplify(
+    open fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayStoreNoSimplify(
         array: KExpr<KArray3Sort<D0, D1, D2, R>>,
         index0: KExpr<D0>,
         index1: KExpr<D1>,
@@ -875,7 +875,7 @@ open class KContext(
         KArray3Store(this, array, index0, index1, index2, value)
     }.cast()
 
-    fun <R : KSort> mkArrayNStoreNoSimplify(
+    open fun <R : KSort> mkArrayNStoreNoSimplify(
         array: KExpr<KArrayNSort<R>>,
         indices: List<KExpr<*>>,
         value: KExpr<R>
@@ -891,30 +891,30 @@ open class KContext(
     private val array3SelectCache = mkAstInterner<KArray3Select<out KSort, out KSort, out KSort, out KSort>>()
     private val arrayNSelectCache = mkAstInterner<KArrayNSelect<out KSort>>()
 
-    fun <D : KSort, R : KSort> mkArraySelect(
+    open fun <D : KSort, R : KSort> mkArraySelect(
         array: KExpr<KArraySort<D, R>>,
         index: KExpr<D>
     ): KExpr<R> = mkSimplified(array, index, KContext::simplifyArraySelect, ::mkArraySelectNoSimplify)
 
-    fun <D0 : KSort, D1 : KSort, R : KSort> mkArraySelect(
+    open fun <D0 : KSort, D1 : KSort, R : KSort> mkArraySelect(
         array: KExpr<KArray2Sort<D0, D1, R>>,
         index0: KExpr<D0>,
         index1: KExpr<D1>
     ): KExpr<R> = mkSimplified(array, index0, index1, KContext::simplifyArraySelect, ::mkArraySelectNoSimplify)
 
-    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArraySelect(
+    open fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArraySelect(
         array: KExpr<KArray3Sort<D0, D1, D2, R>>,
         index0: KExpr<D0>,
         index1: KExpr<D1>,
         index2: KExpr<D2>
     ): KExpr<R> = mkSimplified(array, index0, index1, index2, KContext::simplifyArraySelect, ::mkArraySelectNoSimplify)
 
-    fun <R : KSort> mkArrayNSelect(
+    open fun <R : KSort> mkArrayNSelect(
         array: KExpr<KArrayNSort<R>>,
         indices: List<KExpr<*>>
     ): KExpr<R> = mkSimplified(array, indices, KContext::simplifyArrayNSelect, ::mkArrayNSelectNoSimplify)
 
-    fun <D : KSort, R : KSort> mkArraySelectNoSimplify(
+    open fun <D : KSort, R : KSort> mkArraySelectNoSimplify(
         array: KExpr<KArraySort<D, R>>,
         index: KExpr<D>
     ): KArraySelect<D, R> = arraySelectCache.createIfContextActive {
@@ -922,7 +922,7 @@ open class KContext(
         KArraySelect(this, array, index)
     }.cast()
 
-    fun <D0 : KSort, D1 : KSort, R : KSort> mkArraySelectNoSimplify(
+    open fun <D0 : KSort, D1 : KSort, R : KSort> mkArraySelectNoSimplify(
         array: KExpr<KArray2Sort<D0, D1, R>>,
         index0: KExpr<D0>,
         index1: KExpr<D1>
@@ -931,7 +931,7 @@ open class KContext(
         KArray2Select(this, array, index0, index1)
     }.cast()
 
-    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArraySelectNoSimplify(
+    open fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArraySelectNoSimplify(
         array: KExpr<KArray3Sort<D0, D1, D2, R>>,
         index0: KExpr<D0>,
         index1: KExpr<D1>,
@@ -941,7 +941,7 @@ open class KContext(
         KArray3Select(this, array, index0, index1, index2)
     }.cast()
 
-    fun <R : KSort> mkArrayNSelectNoSimplify(
+    open fun <R : KSort> mkArrayNSelectNoSimplify(
         array: KExpr<KArrayNSort<R>>,
         indices: List<KExpr<*>>
     ): KArrayNSelect<R> = arrayNSelectCache.createIfContextActive {
@@ -953,7 +953,7 @@ open class KContext(
 
     private val arrayConstCache = mkAstInterner<KArrayConst<out KArraySortBase<out KSort>, out KSort>>()
 
-    fun <A : KArraySortBase<R>, R : KSort> mkArrayConst(
+    open fun <A : KArraySortBase<R>, R : KSort> mkArrayConst(
         arraySort: A,
         value: KExpr<R>
     ): KArrayConst<A, R> = arrayConstCache.createIfContextActive {
@@ -963,7 +963,9 @@ open class KContext(
 
     private val functionAsArrayCache = mkAstInterner<KFunctionAsArray<out KArraySortBase<out KSort>, out KSort>>()
 
-    fun <A : KArraySortBase<R>, R : KSort> mkFunctionAsArray(sort: A, function: KFuncDecl<R>): KFunctionAsArray<A, R> =
+    open fun <A : KArraySortBase<R>, R : KSort> mkFunctionAsArray(
+        sort: A, function: KFuncDecl<R>
+    ): KFunctionAsArray<A, R> =
         functionAsArrayCache.createIfContextActive {
             ensureContextMatch(function)
             KFunctionAsArray(this, sort, function)
@@ -974,28 +976,28 @@ open class KContext(
     private val array3LambdaCache = mkAstInterner<KArray3Lambda<out KSort, out KSort, out KSort, out KSort>>()
     private val arrayNLambdaCache = mkAstInterner<KArrayNLambda<out KSort>>()
 
-    fun <D : KSort, R : KSort> mkArrayLambda(
+    open fun <D : KSort, R : KSort> mkArrayLambda(
         indexVar: KDecl<D>, body: KExpr<R>
     ): KArrayLambda<D, R> = arrayLambdaCache.createIfContextActive {
         ensureContextMatch(indexVar, body)
         KArrayLambda(this, indexVar, body)
     }.cast()
 
-    fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayLambda(
+    open fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayLambda(
         indexVar0: KDecl<D0>, indexVar1: KDecl<D1>, body: KExpr<R>
     ): KArray2Lambda<D0, D1, R> = array2LambdaCache.createIfContextActive {
         ensureContextMatch(indexVar0, indexVar1, body)
         KArray2Lambda(this, indexVar0, indexVar1, body)
     }.cast()
 
-    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayLambda(
+    open fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayLambda(
         indexVar0: KDecl<D0>, indexVar1: KDecl<D1>, indexVar2: KDecl<D2>, body: KExpr<R>
     ): KArray3Lambda<D0, D1, D2, R> = array3LambdaCache.createIfContextActive {
         ensureContextMatch(indexVar0, indexVar1, indexVar2, body)
         KArray3Lambda(this, indexVar0, indexVar1, indexVar2, body)
     }.cast()
 
-    fun <R : KSort> mkArrayNLambda(
+    open fun <R : KSort> mkArrayNLambda(
         indices: List<KDecl<*>>, body: KExpr<R>
     ): KArrayNLambda<R> = arrayNLambdaCache.createIfContextActive {
         ensureContextMatch(indices)
@@ -1031,10 +1033,10 @@ open class KContext(
     // arith
     private val arithAddCache = mkAstInterner<KAddArithExpr<out KArithSort>>()
 
-    fun <T : KArithSort> mkArithAdd(args: List<KExpr<T>>): KExpr<T> =
+    open fun <T : KArithSort> mkArithAdd(args: List<KExpr<T>>): KExpr<T> =
         mkSimplified(args, KContext::simplifyArithAdd, ::mkArithAddNoSimplify)
 
-    fun <T : KArithSort> mkArithAddNoSimplify(args: List<KExpr<T>>): KAddArithExpr<T> =
+    open fun <T : KArithSort> mkArithAddNoSimplify(args: List<KExpr<T>>): KAddArithExpr<T> =
         arithAddCache.createIfContextActive {
             ensureContextMatch(args)
             KAddArithExpr(this, args)
@@ -1042,10 +1044,10 @@ open class KContext(
 
     private val arithMulCache = mkAstInterner<KMulArithExpr<out KArithSort>>()
 
-    fun <T : KArithSort> mkArithMul(args: List<KExpr<T>>): KExpr<T> =
+    open fun <T : KArithSort> mkArithMul(args: List<KExpr<T>>): KExpr<T> =
         mkSimplified(args, KContext::simplifyArithMul, ::mkArithMulNoSimplify)
 
-    fun <T : KArithSort> mkArithMulNoSimplify(args: List<KExpr<T>>): KMulArithExpr<T> =
+    open fun <T : KArithSort> mkArithMulNoSimplify(args: List<KExpr<T>>): KMulArithExpr<T> =
         arithMulCache.createIfContextActive {
             ensureContextMatch(args)
             KMulArithExpr(this, args)
@@ -1053,10 +1055,10 @@ open class KContext(
 
     private val arithSubCache = mkAstInterner<KSubArithExpr<out KArithSort>>()
 
-    fun <T : KArithSort> mkArithSub(args: List<KExpr<T>>): KExpr<T> =
+    open fun <T : KArithSort> mkArithSub(args: List<KExpr<T>>): KExpr<T> =
         mkSimplified(args, KContext::simplifyArithSub, ::mkArithSubNoSimplify)
 
-    fun <T : KArithSort> mkArithSubNoSimplify(args: List<KExpr<T>>): KSubArithExpr<T> =
+    open fun <T : KArithSort> mkArithSubNoSimplify(args: List<KExpr<T>>): KSubArithExpr<T> =
         arithSubCache.createIfContextActive {
             ensureContextMatch(args)
             KSubArithExpr(this, args)
@@ -1073,10 +1075,10 @@ open class KContext(
 
     private val arithUnaryMinusCache = mkAstInterner<KUnaryMinusArithExpr<out KArithSort>>()
 
-    fun <T : KArithSort> mkArithUnaryMinus(arg: KExpr<T>): KExpr<T> =
+    open fun <T : KArithSort> mkArithUnaryMinus(arg: KExpr<T>): KExpr<T> =
         mkSimplified(arg, KContext::simplifyArithUnaryMinus, ::mkArithUnaryMinusNoSimplify)
 
-    fun <T : KArithSort> mkArithUnaryMinusNoSimplify(arg: KExpr<T>): KUnaryMinusArithExpr<T> =
+    open fun <T : KArithSort> mkArithUnaryMinusNoSimplify(arg: KExpr<T>): KUnaryMinusArithExpr<T> =
         arithUnaryMinusCache.createIfContextActive {
             ensureContextMatch(arg)
             KUnaryMinusArithExpr(this, arg)
@@ -1084,10 +1086,10 @@ open class KContext(
 
     private val arithDivCache = mkAstInterner<KDivArithExpr<out KArithSort>>()
 
-    fun <T : KArithSort> mkArithDiv(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
+    open fun <T : KArithSort> mkArithDiv(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
         mkSimplified(lhs, rhs, KContext::simplifyArithDiv, ::mkArithDivNoSimplify)
 
-    fun <T : KArithSort> mkArithDivNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KDivArithExpr<T> =
+    open fun <T : KArithSort> mkArithDivNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KDivArithExpr<T> =
         arithDivCache.createIfContextActive {
             ensureContextMatch(lhs, rhs)
             KDivArithExpr(this, lhs, rhs)
@@ -1095,10 +1097,10 @@ open class KContext(
 
     private val arithPowerCache = mkAstInterner<KPowerArithExpr<out KArithSort>>()
 
-    fun <T : KArithSort> mkArithPower(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
+    open fun <T : KArithSort> mkArithPower(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
         mkSimplified(lhs, rhs, KContext::simplifyArithPower, ::mkArithPowerNoSimplify)
 
-    fun <T : KArithSort> mkArithPowerNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KPowerArithExpr<T> =
+    open fun <T : KArithSort> mkArithPowerNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KPowerArithExpr<T> =
         arithPowerCache.createIfContextActive {
             ensureContextMatch(lhs, rhs)
             KPowerArithExpr(this, lhs, rhs)
@@ -1106,10 +1108,10 @@ open class KContext(
 
     private val arithLtCache = mkAstInterner<KLtArithExpr<out KArithSort>>()
 
-    fun <T : KArithSort> mkArithLt(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KArithSort> mkArithLt(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(lhs, rhs, KContext::simplifyArithLt, ::mkArithLtNoSimplify)
 
-    fun <T : KArithSort> mkArithLtNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KLtArithExpr<T> =
+    open fun <T : KArithSort> mkArithLtNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KLtArithExpr<T> =
         arithLtCache.createIfContextActive {
             ensureContextMatch(lhs, rhs)
             KLtArithExpr(this, lhs, rhs)
@@ -1117,10 +1119,10 @@ open class KContext(
 
     private val arithLeCache = mkAstInterner<KLeArithExpr<out KArithSort>>()
 
-    fun <T : KArithSort> mkArithLe(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KArithSort> mkArithLe(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(lhs, rhs, KContext::simplifyArithLe, ::mkArithLeNoSimplify)
 
-    fun <T : KArithSort> mkArithLeNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KLeArithExpr<T> =
+    open fun <T : KArithSort> mkArithLeNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KLeArithExpr<T> =
         arithLeCache.createIfContextActive {
             ensureContextMatch(lhs, rhs)
             KLeArithExpr(this, lhs, rhs)
@@ -1128,10 +1130,10 @@ open class KContext(
 
     private val arithGtCache = mkAstInterner<KGtArithExpr<out KArithSort>>()
 
-    fun <T : KArithSort> mkArithGt(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KArithSort> mkArithGt(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(lhs, rhs, KContext::simplifyArithGt, ::mkArithGtNoSimplify)
 
-    fun <T : KArithSort> mkArithGtNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KGtArithExpr<T> =
+    open fun <T : KArithSort> mkArithGtNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KGtArithExpr<T> =
         arithGtCache.createIfContextActive {
             ensureContextMatch(lhs, rhs)
             KGtArithExpr(this, lhs, rhs)
@@ -1139,10 +1141,10 @@ open class KContext(
 
     private val arithGeCache = mkAstInterner<KGeArithExpr<out KArithSort>>()
 
-    fun <T : KArithSort> mkArithGe(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KArithSort> mkArithGe(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(lhs, rhs, KContext::simplifyArithGe, ::mkArithGeNoSimplify)
 
-    fun <T : KArithSort> mkArithGeNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KGeArithExpr<T> =
+    open fun <T : KArithSort> mkArithGeNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KGeArithExpr<T> =
         arithGeCache.createIfContextActive {
             ensureContextMatch(lhs, rhs)
             KGeArithExpr(this, lhs, rhs)
@@ -1163,10 +1165,10 @@ open class KContext(
     // integer
     private val intModCache = mkAstInterner<KModIntExpr>()
 
-    fun mkIntMod(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): KExpr<KIntSort> =
+    open fun mkIntMod(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): KExpr<KIntSort> =
         mkSimplified(lhs, rhs, KContext::simplifyIntMod, ::mkIntModNoSimplify)
 
-    fun mkIntModNoSimplify(
+    open fun mkIntModNoSimplify(
         lhs: KExpr<KIntSort>,
         rhs: KExpr<KIntSort>
     ): KModIntExpr = intModCache.createIfContextActive {
@@ -1176,10 +1178,10 @@ open class KContext(
 
     private val intRemCache = mkAstInterner<KRemIntExpr>()
 
-    fun mkIntRem(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): KExpr<KIntSort> =
+    open fun mkIntRem(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): KExpr<KIntSort> =
         mkSimplified(lhs, rhs, KContext::simplifyIntRem, ::mkIntRemNoSimplify)
 
-    fun mkIntRemNoSimplify(
+    open fun mkIntRemNoSimplify(
         lhs: KExpr<KIntSort>,
         rhs: KExpr<KIntSort>
     ): KRemIntExpr = intRemCache.createIfContextActive {
@@ -1189,10 +1191,10 @@ open class KContext(
 
     private val intToRealCache = mkAstInterner<KToRealIntExpr>()
 
-    fun mkIntToReal(arg: KExpr<KIntSort>): KExpr<KRealSort> =
+    open fun mkIntToReal(arg: KExpr<KIntSort>): KExpr<KRealSort> =
         mkSimplified(arg, KContext::simplifyIntToReal, ::mkIntToRealNoSimplify)
 
-    fun mkIntToRealNoSimplify(arg: KExpr<KIntSort>): KToRealIntExpr = intToRealCache.createIfContextActive {
+    open fun mkIntToRealNoSimplify(arg: KExpr<KIntSort>): KToRealIntExpr = intToRealCache.createIfContextActive {
         ensureContextMatch(arg)
         KToRealIntExpr(this, arg)
     }
@@ -1238,20 +1240,20 @@ open class KContext(
     // real
     private val realToIntCache = mkAstInterner<KToIntRealExpr>()
 
-    fun mkRealToInt(arg: KExpr<KRealSort>): KExpr<KIntSort> =
+    open fun mkRealToInt(arg: KExpr<KRealSort>): KExpr<KIntSort> =
         mkSimplified(arg, KContext::simplifyRealToInt, ::mkRealToIntNoSimplify)
 
-    fun mkRealToIntNoSimplify(arg: KExpr<KRealSort>): KToIntRealExpr = realToIntCache.createIfContextActive {
+    open fun mkRealToIntNoSimplify(arg: KExpr<KRealSort>): KToIntRealExpr = realToIntCache.createIfContextActive {
         ensureContextMatch(arg)
         KToIntRealExpr(this, arg)
     }
 
     private val realIsIntCache = mkAstInterner<KIsIntRealExpr>()
 
-    fun mkRealIsInt(arg: KExpr<KRealSort>): KExpr<KBoolSort> =
+    open fun mkRealIsInt(arg: KExpr<KRealSort>): KExpr<KBoolSort> =
         mkSimplified(arg, KContext::simplifyRealIsInt, ::mkRealIsIntNoSimplify)
 
-    fun mkRealIsIntNoSimplify(arg: KExpr<KRealSort>): KIsIntRealExpr = realIsIntCache.createIfContextActive {
+    open fun mkRealIsIntNoSimplify(arg: KExpr<KRealSort>): KIsIntRealExpr = realIsIntCache.createIfContextActive {
         ensureContextMatch(arg)
         KIsIntRealExpr(this, arg)
     }
@@ -1391,10 +1393,10 @@ open class KContext(
 
     private val bvNotExprCache = mkAstInterner<KBvNotExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvNotExpr(value: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvNotExpr(value: KExpr<T>): KExpr<T> =
         mkSimplified(value, KContext::simplifyBvNotExpr, ::mkBvNotExprNoSimplify)
 
-    fun <T : KBvSort> mkBvNotExprNoSimplify(value: KExpr<T>): KBvNotExpr<T> =
+    open fun <T : KBvSort> mkBvNotExprNoSimplify(value: KExpr<T>): KBvNotExpr<T> =
         bvNotExprCache.createIfContextActive {
             ensureContextMatch(value)
             KBvNotExpr(this, value)
@@ -1402,10 +1404,10 @@ open class KContext(
 
     private val bvRedAndExprCache = mkAstInterner<KBvReductionAndExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvReductionAndExpr(value: KExpr<T>): KExpr<KBv1Sort> =
+    open fun <T : KBvSort> mkBvReductionAndExpr(value: KExpr<T>): KExpr<KBv1Sort> =
         mkSimplified(value, KContext::simplifyBvReductionAndExpr, ::mkBvReductionAndExprNoSimplify)
 
-    fun <T : KBvSort> mkBvReductionAndExprNoSimplify(value: KExpr<T>): KBvReductionAndExpr<T> =
+    open fun <T : KBvSort> mkBvReductionAndExprNoSimplify(value: KExpr<T>): KBvReductionAndExpr<T> =
         bvRedAndExprCache.createIfContextActive {
             ensureContextMatch(value)
             KBvReductionAndExpr(this, value)
@@ -1415,10 +1417,10 @@ open class KContext(
 
     private val bvRedOrExprCache = mkAstInterner<KBvReductionOrExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvReductionOrExpr(value: KExpr<T>): KExpr<KBv1Sort> =
+    open fun <T : KBvSort> mkBvReductionOrExpr(value: KExpr<T>): KExpr<KBv1Sort> =
         mkSimplified(value, KContext::simplifyBvReductionOrExpr, ::mkBvReductionOrExprNoSimplify)
 
-    fun <T : KBvSort> mkBvReductionOrExprNoSimplify(value: KExpr<T>): KBvReductionOrExpr<T> =
+    open fun <T : KBvSort> mkBvReductionOrExprNoSimplify(value: KExpr<T>): KBvReductionOrExpr<T> =
         bvRedOrExprCache.createIfContextActive {
             ensureContextMatch(value)
             KBvReductionOrExpr(this, value)
@@ -1428,10 +1430,10 @@ open class KContext(
 
     private val bvAndExprCache = mkAstInterner<KBvAndExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvAndExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvAndExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvAndExpr, ::mkBvAndExprNoSimplify)
 
-    fun <T : KBvSort> mkBvAndExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvAndExpr<T> =
+    open fun <T : KBvSort> mkBvAndExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvAndExpr<T> =
         bvAndExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvAndExpr(this, arg0, arg1)
@@ -1439,10 +1441,10 @@ open class KContext(
 
     private val bvOrExprCache = mkAstInterner<KBvOrExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvOrExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvOrExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvOrExpr, ::mkBvOrExprNoSimplify)
 
-    fun <T : KBvSort> mkBvOrExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvOrExpr<T> =
+    open fun <T : KBvSort> mkBvOrExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvOrExpr<T> =
         bvOrExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvOrExpr(this, arg0, arg1)
@@ -1450,10 +1452,10 @@ open class KContext(
 
     private val bvXorExprCache = mkAstInterner<KBvXorExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvXorExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvXorExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvXorExpr, ::mkBvXorExprNoSimplify)
 
-    fun <T : KBvSort> mkBvXorExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvXorExpr<T> =
+    open fun <T : KBvSort> mkBvXorExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvXorExpr<T> =
         bvXorExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvXorExpr(this, arg0, arg1)
@@ -1461,10 +1463,10 @@ open class KContext(
 
     private val bvNAndExprCache = mkAstInterner<KBvNAndExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvNAndExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvNAndExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvNAndExpr, ::mkBvNAndExprNoSimplify)
 
-    fun <T : KBvSort> mkBvNAndExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvNAndExpr<T> =
+    open fun <T : KBvSort> mkBvNAndExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvNAndExpr<T> =
         bvNAndExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvNAndExpr(this, arg0, arg1)
@@ -1472,10 +1474,10 @@ open class KContext(
 
     private val bvNorExprCache = mkAstInterner<KBvNorExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvNorExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvNorExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvNorExpr, ::mkBvNorExprNoSimplify)
 
-    fun <T : KBvSort> mkBvNorExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvNorExpr<T> =
+    open fun <T : KBvSort> mkBvNorExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvNorExpr<T> =
         bvNorExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvNorExpr(this, arg0, arg1)
@@ -1483,10 +1485,10 @@ open class KContext(
 
     private val bvXNorExprCache = mkAstInterner<KBvXNorExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvXNorExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvXNorExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvXNorExpr, ::mkBvXNorExprNoSimplify)
 
-    fun <T : KBvSort> mkBvXNorExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvXNorExpr<T> =
+    open fun <T : KBvSort> mkBvXNorExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvXNorExpr<T> =
         bvXNorExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvXNorExpr(this, arg0, arg1)
@@ -1494,10 +1496,10 @@ open class KContext(
 
     private val bvNegationExprCache = mkAstInterner<KBvNegationExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvNegationExpr(value: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvNegationExpr(value: KExpr<T>): KExpr<T> =
         mkSimplified(value, KContext::simplifyBvNegationExpr, ::mkBvNegationExprNoSimplify)
 
-    fun <T : KBvSort> mkBvNegationExprNoSimplify(value: KExpr<T>): KBvNegationExpr<T> =
+    open fun <T : KBvSort> mkBvNegationExprNoSimplify(value: KExpr<T>): KBvNegationExpr<T> =
         bvNegationExprCache.createIfContextActive {
             ensureContextMatch(value)
             KBvNegationExpr(this, value)
@@ -1505,10 +1507,10 @@ open class KContext(
 
     private val bvAddExprCache = mkAstInterner<KBvAddExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvAddExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvAddExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvAddExpr, ::mkBvAddExprNoSimplify)
 
-    fun <T : KBvSort> mkBvAddExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvAddExpr<T> =
+    open fun <T : KBvSort> mkBvAddExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvAddExpr<T> =
         bvAddExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvAddExpr(this, arg0, arg1)
@@ -1516,10 +1518,10 @@ open class KContext(
 
     private val bvSubExprCache = mkAstInterner<KBvSubExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvSubExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvSubExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSubExpr, ::mkBvSubExprNoSimplify)
 
-    fun <T : KBvSort> mkBvSubExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSubExpr<T> =
+    open fun <T : KBvSort> mkBvSubExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSubExpr<T> =
         bvSubExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvSubExpr(this, arg0, arg1)
@@ -1527,10 +1529,10 @@ open class KContext(
 
     private val bvMulExprCache = mkAstInterner<KBvMulExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvMulExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvMulExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvMulExpr, ::mkBvMulExprNoSimplify)
 
-    fun <T : KBvSort> mkBvMulExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvMulExpr<T> =
+    open fun <T : KBvSort> mkBvMulExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvMulExpr<T> =
         bvMulExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvMulExpr(this, arg0, arg1)
@@ -1538,10 +1540,10 @@ open class KContext(
 
     private val bvUnsignedDivExprCache = mkAstInterner<KBvUnsignedDivExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvUnsignedDivExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvUnsignedDivExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvUnsignedDivExpr, ::mkBvUnsignedDivExprNoSimplify)
 
-    fun <T : KBvSort> mkBvUnsignedDivExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvUnsignedDivExpr<T> =
+    open fun <T : KBvSort> mkBvUnsignedDivExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvUnsignedDivExpr<T> =
         bvUnsignedDivExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvUnsignedDivExpr(this, arg0, arg1)
@@ -1549,10 +1551,10 @@ open class KContext(
 
     private val bvSignedDivExprCache = mkAstInterner<KBvSignedDivExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvSignedDivExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvSignedDivExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSignedDivExpr, ::mkBvSignedDivExprNoSimplify)
 
-    fun <T : KBvSort> mkBvSignedDivExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedDivExpr<T> =
+    open fun <T : KBvSort> mkBvSignedDivExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedDivExpr<T> =
         bvSignedDivExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvSignedDivExpr(this, arg0, arg1)
@@ -1560,10 +1562,10 @@ open class KContext(
 
     private val bvUnsignedRemExprCache = mkAstInterner<KBvUnsignedRemExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvUnsignedRemExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvUnsignedRemExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvUnsignedRemExpr, ::mkBvUnsignedRemExprNoSimplify)
 
-    fun <T : KBvSort> mkBvUnsignedRemExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvUnsignedRemExpr<T> =
+    open fun <T : KBvSort> mkBvUnsignedRemExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvUnsignedRemExpr<T> =
         bvUnsignedRemExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvUnsignedRemExpr(this, arg0, arg1)
@@ -1571,10 +1573,10 @@ open class KContext(
 
     private val bvSignedRemExprCache = mkAstInterner<KBvSignedRemExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvSignedRemExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvSignedRemExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSignedRemExpr, ::mkBvSignedRemExprNoSimplify)
 
-    fun <T : KBvSort> mkBvSignedRemExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedRemExpr<T> =
+    open fun <T : KBvSort> mkBvSignedRemExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedRemExpr<T> =
         bvSignedRemExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvSignedRemExpr(this, arg0, arg1)
@@ -1582,10 +1584,10 @@ open class KContext(
 
     private val bvSignedModExprCache = mkAstInterner<KBvSignedModExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvSignedModExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvSignedModExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSignedModExpr, ::mkBvSignedModExprNoSimplify)
 
-    fun <T : KBvSort> mkBvSignedModExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedModExpr<T> =
+    open fun <T : KBvSort> mkBvSignedModExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedModExpr<T> =
         bvSignedModExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvSignedModExpr(this, arg0, arg1)
@@ -1593,10 +1595,10 @@ open class KContext(
 
     private val bvUnsignedLessExprCache = mkAstInterner<KBvUnsignedLessExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvUnsignedLessExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KBvSort> mkBvUnsignedLessExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvUnsignedLessExpr, ::mkBvUnsignedLessExprNoSimplify)
 
-    fun <T : KBvSort> mkBvUnsignedLessExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvUnsignedLessExpr<T> =
+    open fun <T : KBvSort> mkBvUnsignedLessExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvUnsignedLessExpr<T> =
         bvUnsignedLessExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvUnsignedLessExpr(this, arg0, arg1)
@@ -1604,10 +1606,10 @@ open class KContext(
 
     private val bvSignedLessExprCache = mkAstInterner<KBvSignedLessExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvSignedLessExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KBvSort> mkBvSignedLessExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSignedLessExpr, ::mkBvSignedLessExprNoSimplify)
 
-    fun <T : KBvSort> mkBvSignedLessExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedLessExpr<T> =
+    open fun <T : KBvSort> mkBvSignedLessExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedLessExpr<T> =
         bvSignedLessExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvSignedLessExpr(this, arg0, arg1)
@@ -1615,10 +1617,12 @@ open class KContext(
 
     private val bvSignedLessOrEqualExprCache = mkAstInterner<KBvSignedLessOrEqualExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvSignedLessOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KBvSort> mkBvSignedLessOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSignedLessOrEqualExpr, ::mkBvSignedLessOrEqualExprNoSimplify)
 
-    fun <T : KBvSort> mkBvSignedLessOrEqualExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedLessOrEqualExpr<T> =
+    open fun <T : KBvSort> mkBvSignedLessOrEqualExprNoSimplify(
+        arg0: KExpr<T>, arg1: KExpr<T>
+    ): KBvSignedLessOrEqualExpr<T> =
         bvSignedLessOrEqualExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvSignedLessOrEqualExpr(this, arg0, arg1)
@@ -1626,10 +1630,10 @@ open class KContext(
 
     private val bvUnsignedLessOrEqualExprCache = mkAstInterner<KBvUnsignedLessOrEqualExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvUnsignedLessOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KBvSort> mkBvUnsignedLessOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvUnsignedLessOrEqualExpr, ::mkBvUnsignedLessOrEqualExprNoSimplify)
 
-    fun <T : KBvSort> mkBvUnsignedLessOrEqualExprNoSimplify(
+    open fun <T : KBvSort> mkBvUnsignedLessOrEqualExprNoSimplify(
         arg0: KExpr<T>,
         arg1: KExpr<T>
     ): KBvUnsignedLessOrEqualExpr<T> = bvUnsignedLessOrEqualExprCache.createIfContextActive {
@@ -1639,7 +1643,7 @@ open class KContext(
 
     private val bvUnsignedGreaterOrEqualExprCache = mkAstInterner<KBvUnsignedGreaterOrEqualExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvUnsignedGreaterOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KBvSort> mkBvUnsignedGreaterOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(
             arg0,
             arg1,
@@ -1647,7 +1651,7 @@ open class KContext(
             ::mkBvUnsignedGreaterOrEqualExprNoSimplify
         )
 
-    fun <T : KBvSort> mkBvUnsignedGreaterOrEqualExprNoSimplify(
+    open fun <T : KBvSort> mkBvUnsignedGreaterOrEqualExprNoSimplify(
         arg0: KExpr<T>,
         arg1: KExpr<T>
     ): KBvUnsignedGreaterOrEqualExpr<T> = bvUnsignedGreaterOrEqualExprCache.createIfContextActive {
@@ -1657,10 +1661,10 @@ open class KContext(
 
     private val bvSignedGreaterOrEqualExprCache = mkAstInterner<KBvSignedGreaterOrEqualExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvSignedGreaterOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KBvSort> mkBvSignedGreaterOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSignedGreaterOrEqualExpr, ::mkBvSignedGreaterOrEqualExprNoSimplify)
 
-    fun <T : KBvSort> mkBvSignedGreaterOrEqualExprNoSimplify(
+    open fun <T : KBvSort> mkBvSignedGreaterOrEqualExprNoSimplify(
         arg0: KExpr<T>,
         arg1: KExpr<T>
     ): KBvSignedGreaterOrEqualExpr<T> = bvSignedGreaterOrEqualExprCache.createIfContextActive {
@@ -1670,10 +1674,12 @@ open class KContext(
 
     private val bvUnsignedGreaterExprCache = mkAstInterner<KBvUnsignedGreaterExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvUnsignedGreaterExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KBvSort> mkBvUnsignedGreaterExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvUnsignedGreaterExpr, ::mkBvUnsignedGreaterExprNoSimplify)
 
-    fun <T : KBvSort> mkBvUnsignedGreaterExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvUnsignedGreaterExpr<T> =
+    open fun <T : KBvSort> mkBvUnsignedGreaterExprNoSimplify(
+        arg0: KExpr<T>, arg1: KExpr<T>
+    ): KBvUnsignedGreaterExpr<T> =
         bvUnsignedGreaterExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvUnsignedGreaterExpr(this, arg0, arg1)
@@ -1681,10 +1687,10 @@ open class KContext(
 
     private val bvSignedGreaterExprCache = mkAstInterner<KBvSignedGreaterExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvSignedGreaterExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KBvSort> mkBvSignedGreaterExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSignedGreaterExpr, ::mkBvSignedGreaterExprNoSimplify)
 
-    fun <T : KBvSort> mkBvSignedGreaterExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedGreaterExpr<T> =
+    open fun <T : KBvSort> mkBvSignedGreaterExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedGreaterExpr<T> =
         bvSignedGreaterExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvSignedGreaterExpr(this, arg0, arg1)
@@ -1692,10 +1698,10 @@ open class KContext(
 
     private val concatExprCache = mkAstInterner<KBvConcatExpr>()
 
-    fun <T : KBvSort, S : KBvSort> mkBvConcatExpr(arg0: KExpr<T>, arg1: KExpr<S>): KExpr<KBvSort> =
+    open fun <T : KBvSort, S : KBvSort> mkBvConcatExpr(arg0: KExpr<T>, arg1: KExpr<S>): KExpr<KBvSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvConcatExpr, ::mkBvConcatExprNoSimplify)
 
-    fun <T : KBvSort, S : KBvSort> mkBvConcatExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<S>): KBvConcatExpr =
+    open fun <T : KBvSort, S : KBvSort> mkBvConcatExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<S>): KBvConcatExpr =
         concatExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvConcatExpr(this, arg0.cast(), arg1.cast())
@@ -1703,10 +1709,10 @@ open class KContext(
 
     private val extractExprCache = mkAstInterner<KBvExtractExpr>()
 
-    fun <T : KBvSort> mkBvExtractExpr(high: Int, low: Int, value: KExpr<T>): KExpr<KBvSort> =
+    open fun <T : KBvSort> mkBvExtractExpr(high: Int, low: Int, value: KExpr<T>): KExpr<KBvSort> =
         mkSimplified(high, low, value, KContext::simplifyBvExtractExpr, ::mkBvExtractExprNoSimplify)
 
-    fun <T : KBvSort> mkBvExtractExprNoSimplify(high: Int, low: Int, value: KExpr<T>): KBvExtractExpr =
+    open fun <T : KBvSort> mkBvExtractExprNoSimplify(high: Int, low: Int, value: KExpr<T>): KBvExtractExpr =
         extractExprCache.createIfContextActive {
             ensureContextMatch(value)
             KBvExtractExpr(this, high, low, value.cast())
@@ -1714,10 +1720,10 @@ open class KContext(
 
     private val signExtensionExprCache = mkAstInterner<KBvSignExtensionExpr>()
 
-    fun <T : KBvSort> mkBvSignExtensionExpr(extensionSize: Int, value: KExpr<T>): KExpr<KBvSort> =
+    open fun <T : KBvSort> mkBvSignExtensionExpr(extensionSize: Int, value: KExpr<T>): KExpr<KBvSort> =
         mkSimplified(extensionSize, value, KContext::simplifyBvSignExtensionExpr, ::mkBvSignExtensionExprNoSimplify)
 
-    fun <T : KBvSort> mkBvSignExtensionExprNoSimplify(
+    open fun <T : KBvSort> mkBvSignExtensionExprNoSimplify(
         extensionSize: Int,
         value: KExpr<T>
     ): KBvSignExtensionExpr = signExtensionExprCache.createIfContextActive {
@@ -1727,10 +1733,10 @@ open class KContext(
 
     private val zeroExtensionExprCache = mkAstInterner<KBvZeroExtensionExpr>()
 
-    fun <T : KBvSort> mkBvZeroExtensionExpr(extensionSize: Int, value: KExpr<T>): KExpr<KBvSort> =
+    open fun <T : KBvSort> mkBvZeroExtensionExpr(extensionSize: Int, value: KExpr<T>): KExpr<KBvSort> =
         mkSimplified(extensionSize, value, KContext::simplifyBvZeroExtensionExpr, ::mkBvZeroExtensionExprNoSimplify)
 
-    fun <T : KBvSort> mkBvZeroExtensionExprNoSimplify(
+    open fun <T : KBvSort> mkBvZeroExtensionExprNoSimplify(
         extensionSize: Int,
         value: KExpr<T>
     ): KBvZeroExtensionExpr = zeroExtensionExprCache.createIfContextActive {
@@ -1740,10 +1746,10 @@ open class KContext(
 
     private val repeatExprCache = mkAstInterner<KBvRepeatExpr>()
 
-    fun <T : KBvSort> mkBvRepeatExpr(repeatNumber: Int, value: KExpr<T>): KExpr<KBvSort> =
+    open fun <T : KBvSort> mkBvRepeatExpr(repeatNumber: Int, value: KExpr<T>): KExpr<KBvSort> =
         mkSimplified(repeatNumber, value, KContext::simplifyBvRepeatExpr, ::mkBvRepeatExprNoSimplify)
 
-    fun <T : KBvSort> mkBvRepeatExprNoSimplify(
+    open fun <T : KBvSort> mkBvRepeatExprNoSimplify(
         repeatNumber: Int,
         value: KExpr<T>
     ): KBvRepeatExpr = repeatExprCache.createIfContextActive {
@@ -1753,10 +1759,10 @@ open class KContext(
 
     private val bvShiftLeftExprCache = mkAstInterner<KBvShiftLeftExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvShiftLeftExpr(arg: KExpr<T>, shift: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvShiftLeftExpr(arg: KExpr<T>, shift: KExpr<T>): KExpr<T> =
         mkSimplified(arg, shift, KContext::simplifyBvShiftLeftExpr, ::mkBvShiftLeftExprNoSimplify)
 
-    fun <T : KBvSort> mkBvShiftLeftExprNoSimplify(arg: KExpr<T>, shift: KExpr<T>): KBvShiftLeftExpr<T> =
+    open fun <T : KBvSort> mkBvShiftLeftExprNoSimplify(arg: KExpr<T>, shift: KExpr<T>): KBvShiftLeftExpr<T> =
         bvShiftLeftExprCache.createIfContextActive {
             ensureContextMatch(arg, shift)
             KBvShiftLeftExpr(this, arg, shift)
@@ -1764,10 +1770,12 @@ open class KContext(
 
     private val bvLogicalShiftRightExprCache = mkAstInterner<KBvLogicalShiftRightExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvLogicalShiftRightExpr(arg: KExpr<T>, shift: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvLogicalShiftRightExpr(arg: KExpr<T>, shift: KExpr<T>): KExpr<T> =
         mkSimplified(arg, shift, KContext::simplifyBvLogicalShiftRightExpr, ::mkBvLogicalShiftRightExprNoSimplify)
 
-    fun <T : KBvSort> mkBvLogicalShiftRightExprNoSimplify(arg: KExpr<T>, shift: KExpr<T>): KBvLogicalShiftRightExpr<T> =
+    open fun <T : KBvSort> mkBvLogicalShiftRightExprNoSimplify(
+        arg: KExpr<T>, shift: KExpr<T>
+    ): KBvLogicalShiftRightExpr<T> =
         bvLogicalShiftRightExprCache.createIfContextActive {
             ensureContextMatch(arg, shift)
             KBvLogicalShiftRightExpr(this, arg, shift)
@@ -1775,10 +1783,12 @@ open class KContext(
 
     private val bvArithShiftRightExprCache = mkAstInterner<KBvArithShiftRightExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvArithShiftRightExpr(arg: KExpr<T>, shift: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvArithShiftRightExpr(arg: KExpr<T>, shift: KExpr<T>): KExpr<T> =
         mkSimplified(arg, shift, KContext::simplifyBvArithShiftRightExpr, ::mkBvArithShiftRightExprNoSimplify)
 
-    fun <T : KBvSort> mkBvArithShiftRightExprNoSimplify(arg: KExpr<T>, shift: KExpr<T>): KBvArithShiftRightExpr<T> =
+    open fun <T : KBvSort> mkBvArithShiftRightExprNoSimplify(
+        arg: KExpr<T>, shift: KExpr<T>
+    ): KBvArithShiftRightExpr<T> =
         bvArithShiftRightExprCache.createIfContextActive {
             ensureContextMatch(arg, shift)
             KBvArithShiftRightExpr(this, arg, shift)
@@ -1786,10 +1796,10 @@ open class KContext(
 
     private val bvRotateLeftExprCache = mkAstInterner<KBvRotateLeftExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvRotateLeftExpr(arg: KExpr<T>, rotation: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvRotateLeftExpr(arg: KExpr<T>, rotation: KExpr<T>): KExpr<T> =
         mkSimplified(arg, rotation, KContext::simplifyBvRotateLeftExpr, ::mkBvRotateLeftExprNoSimplify)
 
-    fun <T : KBvSort> mkBvRotateLeftExprNoSimplify(arg: KExpr<T>, rotation: KExpr<T>): KBvRotateLeftExpr<T> =
+    open fun <T : KBvSort> mkBvRotateLeftExprNoSimplify(arg: KExpr<T>, rotation: KExpr<T>): KBvRotateLeftExpr<T> =
         bvRotateLeftExprCache.createIfContextActive {
             ensureContextMatch(arg, rotation)
             KBvRotateLeftExpr(this, arg, rotation)
@@ -1797,10 +1807,12 @@ open class KContext(
 
     private val bvRotateLeftIndexedExprCache = mkAstInterner<KBvRotateLeftIndexedExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvRotateLeftIndexedExpr(rotation: Int, value: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvRotateLeftIndexedExpr(rotation: Int, value: KExpr<T>): KExpr<T> =
         mkSimplified(rotation, value, KContext::simplifyBvRotateLeftIndexedExpr, ::mkBvRotateLeftIndexedExprNoSimplify)
 
-    fun <T : KBvSort> mkBvRotateLeftIndexedExprNoSimplify(rotation: Int, value: KExpr<T>): KBvRotateLeftIndexedExpr<T> =
+    open fun <T : KBvSort> mkBvRotateLeftIndexedExprNoSimplify(
+        rotation: Int, value: KExpr<T>
+    ): KBvRotateLeftIndexedExpr<T> =
         bvRotateLeftIndexedExprCache.createIfContextActive {
             ensureContextMatch(value)
             KBvRotateLeftIndexedExpr(this, rotation, value)
@@ -1808,7 +1820,7 @@ open class KContext(
 
     private val bvRotateRightIndexedExprCache = mkAstInterner<KBvRotateRightIndexedExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvRotateRightIndexedExpr(rotation: Int, value: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvRotateRightIndexedExpr(rotation: Int, value: KExpr<T>): KExpr<T> =
         mkSimplified(
             rotation,
             value,
@@ -1816,7 +1828,7 @@ open class KContext(
             ::mkBvRotateRightIndexedExprNoSimplify
         )
 
-    fun <T : KBvSort> mkBvRotateRightIndexedExprNoSimplify(
+    open fun <T : KBvSort> mkBvRotateRightIndexedExprNoSimplify(
         rotation: Int,
         value: KExpr<T>
     ): KBvRotateRightIndexedExpr<T> =
@@ -1827,10 +1839,10 @@ open class KContext(
 
     private val bvRotateRightExprCache = mkAstInterner<KBvRotateRightExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvRotateRightExpr(arg: KExpr<T>, rotation: KExpr<T>): KExpr<T> =
+    open fun <T : KBvSort> mkBvRotateRightExpr(arg: KExpr<T>, rotation: KExpr<T>): KExpr<T> =
         mkSimplified(arg, rotation, KContext::simplifyBvRotateRightExpr, ::mkBvRotateRightExprNoSimplify)
 
-    fun <T : KBvSort> mkBvRotateRightExprNoSimplify(arg: KExpr<T>, rotation: KExpr<T>): KBvRotateRightExpr<T> =
+    open fun <T : KBvSort> mkBvRotateRightExprNoSimplify(arg: KExpr<T>, rotation: KExpr<T>): KBvRotateRightExpr<T> =
         bvRotateRightExprCache.createIfContextActive {
             ensureContextMatch(arg, rotation)
             KBvRotateRightExpr(this, arg, rotation)
@@ -1838,10 +1850,10 @@ open class KContext(
 
     private val bv2IntExprCache = mkAstInterner<KBv2IntExpr>()
 
-    fun <T : KBvSort> mkBv2IntExpr(value: KExpr<T>, isSigned: Boolean): KExpr<KIntSort> =
+    open fun <T : KBvSort> mkBv2IntExpr(value: KExpr<T>, isSigned: Boolean): KExpr<KIntSort> =
         mkSimplified(value, isSigned, KContext::simplifyBv2IntExpr, ::mkBv2IntExprNoSimplify)
 
-    fun <T : KBvSort> mkBv2IntExprNoSimplify(value: KExpr<T>, isSigned: Boolean): KBv2IntExpr =
+    open fun <T : KBvSort> mkBv2IntExprNoSimplify(value: KExpr<T>, isSigned: Boolean): KBv2IntExpr =
         bv2IntExprCache.createIfContextActive {
             ensureContextMatch(value)
             KBv2IntExpr(this, value.cast(), isSigned)
@@ -1849,10 +1861,10 @@ open class KContext(
 
     private val bvAddNoOverflowExprCache = mkAstInterner<KBvAddNoOverflowExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvAddNoOverflowExpr(arg0: KExpr<T>, arg1: KExpr<T>, isSigned: Boolean): KExpr<KBoolSort> =
+    open fun <T : KBvSort> mkBvAddNoOverflowExpr(arg0: KExpr<T>, arg1: KExpr<T>, isSigned: Boolean): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, isSigned, KContext::simplifyBvAddNoOverflowExpr, ::mkBvAddNoOverflowExprNoSimplify)
 
-    fun <T : KBvSort> mkBvAddNoOverflowExprNoSimplify(
+    open fun <T : KBvSort> mkBvAddNoOverflowExprNoSimplify(
         arg0: KExpr<T>,
         arg1: KExpr<T>,
         isSigned: Boolean
@@ -1863,10 +1875,10 @@ open class KContext(
 
     private val bvAddNoUnderflowExprCache = mkAstInterner<KBvAddNoUnderflowExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvAddNoUnderflowExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KBvSort> mkBvAddNoUnderflowExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvAddNoUnderflowExpr, ::mkBvAddNoUnderflowExprNoSimplify)
 
-    fun <T : KBvSort> mkBvAddNoUnderflowExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvAddNoUnderflowExpr<T> =
+    open fun <T : KBvSort> mkBvAddNoUnderflowExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvAddNoUnderflowExpr<T> =
         bvAddNoUnderflowExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvAddNoUnderflowExpr(this, arg0, arg1)
@@ -1874,10 +1886,10 @@ open class KContext(
 
     private val bvSubNoOverflowExprCache = mkAstInterner<KBvSubNoOverflowExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvSubNoOverflowExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KBvSort> mkBvSubNoOverflowExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSubNoOverflowExpr, ::mkBvSubNoOverflowExprNoSimplify)
 
-    fun <T : KBvSort> mkBvSubNoOverflowExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSubNoOverflowExpr<T> =
+    open fun <T : KBvSort> mkBvSubNoOverflowExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSubNoOverflowExpr<T> =
         bvSubNoOverflowExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvSubNoOverflowExpr(this, arg0, arg1)
@@ -1885,10 +1897,10 @@ open class KContext(
 
     private val bvSubNoUnderflowExprCache = mkAstInterner<KBvSubNoUnderflowExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvSubNoUnderflowExpr(arg0: KExpr<T>, arg1: KExpr<T>, isSigned: Boolean): KExpr<KBoolSort> =
+    open fun <T : KBvSort> mkBvSubNoUnderflowExpr(arg0: KExpr<T>, arg1: KExpr<T>, isSigned: Boolean): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, isSigned, KContext::simplifyBvSubNoUnderflowExpr, ::mkBvSubNoUnderflowExprNoSimplify)
 
-    fun <T : KBvSort> mkBvSubNoUnderflowExprNoSimplify(
+    open fun <T : KBvSort> mkBvSubNoUnderflowExprNoSimplify(
         arg0: KExpr<T>,
         arg1: KExpr<T>,
         isSigned: Boolean
@@ -1899,10 +1911,10 @@ open class KContext(
 
     private val bvDivNoOverflowExprCache = mkAstInterner<KBvDivNoOverflowExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvDivNoOverflowExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KBvSort> mkBvDivNoOverflowExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvDivNoOverflowExpr, ::mkBvDivNoOverflowExprNoSimplify)
 
-    fun <T : KBvSort> mkBvDivNoOverflowExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvDivNoOverflowExpr<T> =
+    open fun <T : KBvSort> mkBvDivNoOverflowExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvDivNoOverflowExpr<T> =
         bvDivNoOverflowExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvDivNoOverflowExpr(this, arg0, arg1)
@@ -1910,10 +1922,10 @@ open class KContext(
 
     private val bvNegNoOverflowExprCache = mkAstInterner<KBvNegNoOverflowExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvNegationNoOverflowExpr(value: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KBvSort> mkBvNegationNoOverflowExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyBvNegationNoOverflowExpr, ::mkBvNegationNoOverflowExprNoSimplify)
 
-    fun <T : KBvSort> mkBvNegationNoOverflowExprNoSimplify(value: KExpr<T>): KBvNegNoOverflowExpr<T> =
+    open fun <T : KBvSort> mkBvNegationNoOverflowExprNoSimplify(value: KExpr<T>): KBvNegNoOverflowExpr<T> =
         bvNegNoOverflowExprCache.createIfContextActive {
             ensureContextMatch(value)
             KBvNegNoOverflowExpr(this, value)
@@ -1921,10 +1933,10 @@ open class KContext(
 
     private val bvMulNoOverflowExprCache = mkAstInterner<KBvMulNoOverflowExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvMulNoOverflowExpr(arg0: KExpr<T>, arg1: KExpr<T>, isSigned: Boolean): KExpr<KBoolSort> =
+    open fun <T : KBvSort> mkBvMulNoOverflowExpr(arg0: KExpr<T>, arg1: KExpr<T>, isSigned: Boolean): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, isSigned, KContext::simplifyBvMulNoOverflowExpr, ::mkBvMulNoOverflowExprNoSimplify)
 
-    fun <T : KBvSort> mkBvMulNoOverflowExprNoSimplify(
+    open fun <T : KBvSort> mkBvMulNoOverflowExprNoSimplify(
         arg0: KExpr<T>,
         arg1: KExpr<T>,
         isSigned: Boolean
@@ -1935,10 +1947,10 @@ open class KContext(
 
     private val bvMulNoUnderflowExprCache = mkAstInterner<KBvMulNoUnderflowExpr<out KBvSort>>()
 
-    fun <T : KBvSort> mkBvMulNoUnderflowExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KBvSort> mkBvMulNoUnderflowExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvMulNoUnderflowExpr, ::mkBvMulNoUnderflowExprNoSimplify)
 
-    fun <T : KBvSort> mkBvMulNoUnderflowExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvMulNoUnderflowExpr<T> =
+    open fun <T : KBvSort> mkBvMulNoUnderflowExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvMulNoUnderflowExpr<T> =
         bvMulNoUnderflowExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KBvMulNoUnderflowExpr(this, arg0, arg1)
@@ -2394,10 +2406,10 @@ open class KContext(
 
     private val fpAbsExprCache = mkAstInterner<KFpAbsExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpAbsExpr(value: KExpr<T>): KExpr<T> =
+    open fun <T : KFpSort> mkFpAbsExpr(value: KExpr<T>): KExpr<T> =
         mkSimplified(value, KContext::simplifyFpAbsExpr, ::mkFpAbsExprNoSimplify)
 
-    fun <T : KFpSort> mkFpAbsExprNoSimplify(
+    open fun <T : KFpSort> mkFpAbsExprNoSimplify(
         value: KExpr<T>
     ): KFpAbsExpr<T> = fpAbsExprCache.createIfContextActive {
         ensureContextMatch(value)
@@ -2406,10 +2418,10 @@ open class KContext(
 
     private val fpNegationExprCache = mkAstInterner<KFpNegationExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpNegationExpr(value: KExpr<T>): KExpr<T> =
+    open fun <T : KFpSort> mkFpNegationExpr(value: KExpr<T>): KExpr<T> =
         mkSimplified(value, KContext::simplifyFpNegationExpr, ::mkFpNegationExprNoSimplify)
 
-    fun <T : KFpSort> mkFpNegationExprNoSimplify(
+    open fun <T : KFpSort> mkFpNegationExprNoSimplify(
         value: KExpr<T>
     ): KFpNegationExpr<T> = fpNegationExprCache.createIfContextActive {
         ensureContextMatch(value)
@@ -2418,10 +2430,12 @@ open class KContext(
 
     private val fpAddExprCache = mkAstInterner<KFpAddExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpAddExpr(roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KFpSort> mkFpAddExpr(
+        roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<T>, arg1: KExpr<T>
+    ): KExpr<T> =
         mkSimplified(roundingMode, arg0, arg1, KContext::simplifyFpAddExpr, ::mkFpAddExprNoSimplify)
 
-    fun <T : KFpSort> mkFpAddExprNoSimplify(
+    open fun <T : KFpSort> mkFpAddExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
         arg1: KExpr<T>
@@ -2432,10 +2446,12 @@ open class KContext(
 
     private val fpSubExprCache = mkAstInterner<KFpSubExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpSubExpr(roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KFpSort> mkFpSubExpr(
+        roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<T>, arg1: KExpr<T>
+    ): KExpr<T> =
         mkSimplified(roundingMode, arg0, arg1, KContext::simplifyFpSubExpr, ::mkFpSubExprNoSimplify)
 
-    fun <T : KFpSort> mkFpSubExprNoSimplify(
+    open fun <T : KFpSort> mkFpSubExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
         arg1: KExpr<T>
@@ -2446,10 +2462,12 @@ open class KContext(
 
     private val fpMulExprCache = mkAstInterner<KFpMulExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpMulExpr(roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KFpSort> mkFpMulExpr(
+        roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<T>, arg1: KExpr<T>
+    ): KExpr<T> =
         mkSimplified(roundingMode, arg0, arg1, KContext::simplifyFpMulExpr, ::mkFpMulExprNoSimplify)
 
-    fun <T : KFpSort> mkFpMulExprNoSimplify(
+    open fun <T : KFpSort> mkFpMulExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
         arg1: KExpr<T>
@@ -2460,10 +2478,12 @@ open class KContext(
 
     private val fpDivExprCache = mkAstInterner<KFpDivExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpDivExpr(roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KFpSort> mkFpDivExpr(
+        roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<T>, arg1: KExpr<T>
+    ): KExpr<T> =
         mkSimplified(roundingMode, arg0, arg1, KContext::simplifyFpDivExpr, ::mkFpDivExprNoSimplify)
 
-    fun <T : KFpSort> mkFpDivExprNoSimplify(
+    open fun <T : KFpSort> mkFpDivExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
         arg1: KExpr<T>
@@ -2474,7 +2494,7 @@ open class KContext(
 
     private val fpFusedMulAddExprCache = mkAstInterner<KFpFusedMulAddExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpFusedMulAddExpr(
+    open fun <T : KFpSort> mkFpFusedMulAddExpr(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
         arg1: KExpr<T>,
@@ -2488,7 +2508,7 @@ open class KContext(
         ::mkFpFusedMulAddExprNoSimplify
     )
 
-    fun <T : KFpSort> mkFpFusedMulAddExprNoSimplify(
+    open fun <T : KFpSort> mkFpFusedMulAddExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
         arg1: KExpr<T>,
@@ -2500,10 +2520,10 @@ open class KContext(
 
     private val fpSqrtExprCache = mkAstInterner<KFpSqrtExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpSqrtExpr(roundingMode: KExpr<KFpRoundingModeSort>, value: KExpr<T>): KExpr<T> =
+    open fun <T : KFpSort> mkFpSqrtExpr(roundingMode: KExpr<KFpRoundingModeSort>, value: KExpr<T>): KExpr<T> =
         mkSimplified(roundingMode, value, KContext::simplifyFpSqrtExpr, ::mkFpSqrtExprNoSimplify)
 
-    fun <T : KFpSort> mkFpSqrtExprNoSimplify(
+    open fun <T : KFpSort> mkFpSqrtExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<T>
     ): KFpSqrtExpr<T> = fpSqrtExprCache.createIfContextActive {
@@ -2513,10 +2533,10 @@ open class KContext(
 
     private val fpRemExprCache = mkAstInterner<KFpRemExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpRemExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KFpSort> mkFpRemExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyFpRemExpr, ::mkFpRemExprNoSimplify)
 
-    fun <T : KFpSort> mkFpRemExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpRemExpr<T> =
+    open fun <T : KFpSort> mkFpRemExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpRemExpr<T> =
         fpRemExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KFpRemExpr(this, arg0, arg1)
@@ -2524,10 +2544,12 @@ open class KContext(
 
     private val fpRoundToIntegralExprCache = mkAstInterner<KFpRoundToIntegralExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpRoundToIntegralExpr(roundingMode: KExpr<KFpRoundingModeSort>, value: KExpr<T>): KExpr<T> =
+    open fun <T : KFpSort> mkFpRoundToIntegralExpr(
+        roundingMode: KExpr<KFpRoundingModeSort>, value: KExpr<T>
+    ): KExpr<T> =
         mkSimplified(roundingMode, value, KContext::simplifyFpRoundToIntegralExpr, ::mkFpRoundToIntegralExprNoSimplify)
 
-    fun <T : KFpSort> mkFpRoundToIntegralExprNoSimplify(
+    open fun <T : KFpSort> mkFpRoundToIntegralExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<T>
     ): KFpRoundToIntegralExpr<T> = fpRoundToIntegralExprCache.createIfContextActive {
@@ -2537,10 +2559,10 @@ open class KContext(
 
     private val fpMinExprCache = mkAstInterner<KFpMinExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpMinExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KFpSort> mkFpMinExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyFpMinExpr, ::mkFpMinExprNoSimplify)
 
-    fun <T : KFpSort> mkFpMinExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpMinExpr<T> =
+    open fun <T : KFpSort> mkFpMinExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpMinExpr<T> =
         fpMinExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KFpMinExpr(this, arg0, arg1)
@@ -2548,10 +2570,10 @@ open class KContext(
 
     private val fpMaxExprCache = mkAstInterner<KFpMaxExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpMaxExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
+    open fun <T : KFpSort> mkFpMaxExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyFpMaxExpr, ::mkFpMaxExprNoSimplify)
 
-    fun <T : KFpSort> mkFpMaxExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpMaxExpr<T> =
+    open fun <T : KFpSort> mkFpMaxExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpMaxExpr<T> =
         fpMaxExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KFpMaxExpr(this, arg0, arg1)
@@ -2559,10 +2581,10 @@ open class KContext(
 
     private val fpLessOrEqualExprCache = mkAstInterner<KFpLessOrEqualExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpLessOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KFpSort> mkFpLessOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyFpLessOrEqualExpr, ::mkFpLessOrEqualExprNoSimplify)
 
-    fun <T : KFpSort> mkFpLessOrEqualExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpLessOrEqualExpr<T> =
+    open fun <T : KFpSort> mkFpLessOrEqualExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpLessOrEqualExpr<T> =
         fpLessOrEqualExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KFpLessOrEqualExpr(this, arg0, arg1)
@@ -2570,10 +2592,10 @@ open class KContext(
 
     private val fpLessExprCache = mkAstInterner<KFpLessExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpLessExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KFpSort> mkFpLessExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyFpLessExpr, ::mkFpLessExprNoSimplify)
 
-    fun <T : KFpSort> mkFpLessExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpLessExpr<T> =
+    open fun <T : KFpSort> mkFpLessExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpLessExpr<T> =
         fpLessExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KFpLessExpr(this, arg0, arg1)
@@ -2581,10 +2603,10 @@ open class KContext(
 
     private val fpGreaterOrEqualExprCache = mkAstInterner<KFpGreaterOrEqualExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpGreaterOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KFpSort> mkFpGreaterOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyFpGreaterOrEqualExpr, ::mkFpGreaterOrEqualExprNoSimplify)
 
-    fun <T : KFpSort> mkFpGreaterOrEqualExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpGreaterOrEqualExpr<T> =
+    open fun <T : KFpSort> mkFpGreaterOrEqualExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpGreaterOrEqualExpr<T> =
         fpGreaterOrEqualExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KFpGreaterOrEqualExpr(this, arg0, arg1)
@@ -2592,10 +2614,10 @@ open class KContext(
 
     private val fpGreaterExprCache = mkAstInterner<KFpGreaterExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpGreaterExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KFpSort> mkFpGreaterExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyFpGreaterExpr, ::mkFpGreaterExprNoSimplify)
 
-    fun <T : KFpSort> mkFpGreaterExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpGreaterExpr<T> =
+    open fun <T : KFpSort> mkFpGreaterExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpGreaterExpr<T> =
         fpGreaterExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KFpGreaterExpr(this, arg0, arg1)
@@ -2603,10 +2625,10 @@ open class KContext(
 
     private val fpEqualExprCache = mkAstInterner<KFpEqualExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KFpSort> mkFpEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyFpEqualExpr, ::mkFpEqualExprNoSimplify)
 
-    fun <T : KFpSort> mkFpEqualExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpEqualExpr<T> =
+    open fun <T : KFpSort> mkFpEqualExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpEqualExpr<T> =
         fpEqualExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KFpEqualExpr(this, arg0, arg1)
@@ -2614,10 +2636,10 @@ open class KContext(
 
     private val fpIsNormalExprCache = mkAstInterner<KFpIsNormalExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpIsNormalExpr(value: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KFpSort> mkFpIsNormalExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsNormalExpr, ::mkFpIsNormalExprNoSimplify)
 
-    fun <T : KFpSort> mkFpIsNormalExprNoSimplify(value: KExpr<T>): KFpIsNormalExpr<T> =
+    open fun <T : KFpSort> mkFpIsNormalExprNoSimplify(value: KExpr<T>): KFpIsNormalExpr<T> =
         fpIsNormalExprCache.createIfContextActive {
             ensureContextMatch(value)
             KFpIsNormalExpr(this, value)
@@ -2625,10 +2647,10 @@ open class KContext(
 
     private val fpIsSubnormalExprCache = mkAstInterner<KFpIsSubnormalExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpIsSubnormalExpr(value: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KFpSort> mkFpIsSubnormalExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsSubnormalExpr, ::mkFpIsSubnormalExprNoSimplify)
 
-    fun <T : KFpSort> mkFpIsSubnormalExprNoSimplify(value: KExpr<T>): KFpIsSubnormalExpr<T> =
+    open fun <T : KFpSort> mkFpIsSubnormalExprNoSimplify(value: KExpr<T>): KFpIsSubnormalExpr<T> =
         fpIsSubnormalExprCache.createIfContextActive {
             ensureContextMatch(value)
             KFpIsSubnormalExpr(this, value)
@@ -2636,10 +2658,10 @@ open class KContext(
 
     private val fpIsZeroExprCache = mkAstInterner<KFpIsZeroExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpIsZeroExpr(value: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KFpSort> mkFpIsZeroExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsZeroExpr, ::mkFpIsZeroExprNoSimplify)
 
-    fun <T : KFpSort> mkFpIsZeroExprNoSimplify(value: KExpr<T>): KFpIsZeroExpr<T> =
+    open fun <T : KFpSort> mkFpIsZeroExprNoSimplify(value: KExpr<T>): KFpIsZeroExpr<T> =
         fpIsZeroExprCache.createIfContextActive {
             ensureContextMatch(value)
             KFpIsZeroExpr(this, value)
@@ -2647,10 +2669,10 @@ open class KContext(
 
     private val fpIsInfiniteExprCache = mkAstInterner<KFpIsInfiniteExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpIsInfiniteExpr(value: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KFpSort> mkFpIsInfiniteExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsInfiniteExpr, ::mkFpIsInfiniteExprNoSimplify)
 
-    fun <T : KFpSort> mkFpIsInfiniteExprNoSimplify(value: KExpr<T>): KFpIsInfiniteExpr<T> =
+    open fun <T : KFpSort> mkFpIsInfiniteExprNoSimplify(value: KExpr<T>): KFpIsInfiniteExpr<T> =
         fpIsInfiniteExprCache.createIfContextActive {
             ensureContextMatch(value)
             KFpIsInfiniteExpr(this, value)
@@ -2658,10 +2680,10 @@ open class KContext(
 
     private val fpIsNaNExprCache = mkAstInterner<KFpIsNaNExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpIsNaNExpr(value: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KFpSort> mkFpIsNaNExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsNaNExpr, ::mkFpIsNaNExprNoSimplify)
 
-    fun <T : KFpSort> mkFpIsNaNExprNoSimplify(value: KExpr<T>): KFpIsNaNExpr<T> =
+    open fun <T : KFpSort> mkFpIsNaNExprNoSimplify(value: KExpr<T>): KFpIsNaNExpr<T> =
         fpIsNaNExprCache.createIfContextActive {
             ensureContextMatch(value)
             KFpIsNaNExpr(this, value)
@@ -2669,10 +2691,10 @@ open class KContext(
 
     private val fpIsNegativeExprCache = mkAstInterner<KFpIsNegativeExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpIsNegativeExpr(value: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KFpSort> mkFpIsNegativeExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsNegativeExpr, ::mkFpIsNegativeExprNoSimplify)
 
-    fun <T : KFpSort> mkFpIsNegativeExprNoSimplify(value: KExpr<T>): KFpIsNegativeExpr<T> =
+    open fun <T : KFpSort> mkFpIsNegativeExprNoSimplify(value: KExpr<T>): KFpIsNegativeExpr<T> =
         fpIsNegativeExprCache.createIfContextActive {
             ensureContextMatch(value)
             KFpIsNegativeExpr(this, value)
@@ -2680,10 +2702,10 @@ open class KContext(
 
     private val fpIsPositiveExprCache = mkAstInterner<KFpIsPositiveExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpIsPositiveExpr(value: KExpr<T>): KExpr<KBoolSort> =
+    open fun <T : KFpSort> mkFpIsPositiveExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsPositiveExpr, ::mkFpIsPositiveExprNoSimplify)
 
-    fun <T : KFpSort> mkFpIsPositiveExprNoSimplify(value: KExpr<T>): KFpIsPositiveExpr<T> =
+    open fun <T : KFpSort> mkFpIsPositiveExprNoSimplify(value: KExpr<T>): KFpIsPositiveExpr<T> =
         fpIsPositiveExprCache.createIfContextActive {
             ensureContextMatch(value)
             KFpIsPositiveExpr(this, value)
@@ -2691,7 +2713,7 @@ open class KContext(
 
     private val fpToBvExprCache = mkAstInterner<KFpToBvExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpToBvExpr(
+    open fun <T : KFpSort> mkFpToBvExpr(
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<T>,
         bvSize: Int,
@@ -2699,7 +2721,7 @@ open class KContext(
     ): KExpr<KBvSort> =
         mkSimplified(roundingMode, value, bvSize, isSigned, KContext::simplifyFpToBvExpr, ::mkFpToBvExprNoSimplify)
 
-    fun <T : KFpSort> mkFpToBvExprNoSimplify(
+    open fun <T : KFpSort> mkFpToBvExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<T>,
         bvSize: Int,
@@ -2711,10 +2733,10 @@ open class KContext(
 
     private val fpToRealExprCache = mkAstInterner<KFpToRealExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpToRealExpr(value: KExpr<T>): KExpr<KRealSort> =
+    open fun <T : KFpSort> mkFpToRealExpr(value: KExpr<T>): KExpr<KRealSort> =
         mkSimplified(value, KContext::simplifyFpToRealExpr, ::mkFpToRealExprNoSimplify)
 
-    fun <T : KFpSort> mkFpToRealExprNoSimplify(value: KExpr<T>): KFpToRealExpr<T> =
+    open fun <T : KFpSort> mkFpToRealExprNoSimplify(value: KExpr<T>): KFpToRealExpr<T> =
         fpToRealExprCache.createIfContextActive {
             ensureContextMatch(value)
             KFpToRealExpr(this, value)
@@ -2722,10 +2744,10 @@ open class KContext(
 
     private val fpToIEEEBvExprCache = mkAstInterner<KFpToIEEEBvExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpToIEEEBvExpr(value: KExpr<T>): KExpr<KBvSort> =
+    open fun <T : KFpSort> mkFpToIEEEBvExpr(value: KExpr<T>): KExpr<KBvSort> =
         mkSimplified(value, KContext::simplifyFpToIEEEBvExpr, ::mkFpToIEEEBvExprNoSimplify)
 
-    fun <T : KFpSort> mkFpToIEEEBvExprNoSimplify(value: KExpr<T>): KFpToIEEEBvExpr<T> =
+    open fun <T : KFpSort> mkFpToIEEEBvExprNoSimplify(value: KExpr<T>): KFpToIEEEBvExpr<T> =
         fpToIEEEBvExprCache.createIfContextActive {
             ensureContextMatch(value)
             KFpToIEEEBvExpr(this, value)
@@ -2733,7 +2755,7 @@ open class KContext(
 
     private val fpFromBvExprCache = mkAstInterner<KFpFromBvExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpFromBvExpr(
+    open fun <T : KFpSort> mkFpFromBvExpr(
         sign: KExpr<KBv1Sort>,
         biasedExponent: KExpr<out KBvSort>,
         significand: KExpr<out KBvSort>
@@ -2745,7 +2767,7 @@ open class KContext(
         ::mkFpFromBvExprNoSimplify
     )
 
-    fun <T : KFpSort> mkFpFromBvExprNoSimplify(
+    open fun <T : KFpSort> mkFpFromBvExprNoSimplify(
         sign: KExpr<KBv1Sort>,
         biasedExponent: KExpr<out KBvSort>,
         significand: KExpr<out KBvSort>,
@@ -2764,13 +2786,13 @@ open class KContext(
     private val realToFpExprCache = mkAstInterner<KRealToFpExpr<out KFpSort>>()
     private val bvToFpExprCache = mkAstInterner<KBvToFpExpr<out KFpSort>>()
 
-    fun <T : KFpSort> mkFpToFpExpr(
+    open fun <T : KFpSort> mkFpToFpExpr(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<out KFpSort>
     ): KExpr<T> = mkSimplified(sort, roundingMode, value, KContext::simplifyFpToFpExpr, ::mkFpToFpExprNoSimplify)
 
-    fun <T : KFpSort> mkFpToFpExprNoSimplify(
+    open fun <T : KFpSort> mkFpToFpExprNoSimplify(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<out KFpSort>
@@ -2779,13 +2801,13 @@ open class KContext(
         KFpToFpExpr(this, sort, roundingMode, value)
     }.cast()
 
-    fun <T : KFpSort> mkRealToFpExpr(
+    open fun <T : KFpSort> mkRealToFpExpr(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<KRealSort>
     ): KExpr<T> = mkSimplified(sort, roundingMode, value, KContext::simplifyRealToFpExpr, ::mkRealToFpExprNoSimplify)
 
-    fun <T : KFpSort> mkRealToFpExprNoSimplify(
+    open fun <T : KFpSort> mkRealToFpExprNoSimplify(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<KRealSort>
@@ -2794,7 +2816,7 @@ open class KContext(
         KRealToFpExpr(this, sort, roundingMode, value)
     }.cast()
 
-    fun <T : KFpSort> mkBvToFpExpr(
+    open fun <T : KFpSort> mkBvToFpExpr(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<KBvSort>,
@@ -2802,7 +2824,7 @@ open class KContext(
     ): KExpr<T> =
         mkSimplified(sort, roundingMode, value, signed, KContext::simplifyBvToFpExpr, ::mkBvToFpExprNoSimplify)
 
-    fun <T : KFpSort> mkBvToFpExprNoSimplify(
+    open fun <T : KFpSort> mkBvToFpExprNoSimplify(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<KBvSort>,
@@ -2815,7 +2837,7 @@ open class KContext(
     // quantifiers
     private val existentialQuantifierCache = mkAstInterner<KExistentialQuantifier>()
 
-    fun mkExistentialQuantifier(body: KExpr<KBoolSort>, bounds: List<KDecl<*>>) =
+    open fun mkExistentialQuantifier(body: KExpr<KBoolSort>, bounds: List<KDecl<*>>) =
         existentialQuantifierCache.createIfContextActive {
             ensureContextMatch(body)
             ensureContextMatch(bounds)
@@ -2824,7 +2846,7 @@ open class KContext(
 
     private val universalQuantifierCache = mkAstInterner<KUniversalQuantifier>()
 
-    fun mkUniversalQuantifier(body: KExpr<KBoolSort>, bounds: List<KDecl<*>>) =
+    open fun mkUniversalQuantifier(body: KExpr<KBoolSort>, bounds: List<KDecl<*>>) =
         universalQuantifierCache.createIfContextActive {
             ensureContextMatch(body)
             ensureContextMatch(bounds)
@@ -2834,7 +2856,7 @@ open class KContext(
     private val uninterpretedSortDefaultValueCache =
         mkCache<KUninterpretedSort, KExpr<KUninterpretedSort>>(operationMode)
 
-    fun uninterpretedSortDefaultValue(sort: KUninterpretedSort): KExpr<KUninterpretedSort> =
+    open fun uninterpretedSortDefaultValue(sort: KUninterpretedSort): KExpr<KUninterpretedSort> =
         uninterpretedSortDefaultValueCache.computeIfAbsent(sort) {
             ensureContextMatch(it)
             mkFreshConst("${it.name}_default_value", it)
