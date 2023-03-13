@@ -151,7 +151,6 @@ import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.solver.KSolverUnsupportedFeatureException
-import org.ksmt.solver.bitwuzla.KBitwuzlaContext.Companion.mkTermCache
 import org.ksmt.solver.bitwuzla.bindings.Bitwuzla
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaRoundingMode
