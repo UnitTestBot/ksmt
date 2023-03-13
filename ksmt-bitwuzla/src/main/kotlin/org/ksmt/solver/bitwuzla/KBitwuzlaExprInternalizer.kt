@@ -1,6 +1,5 @@
 package org.ksmt.solver.bitwuzla
 
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KDeclVisitor
@@ -186,11 +185,7 @@ import org.ksmt.sort.KUninterpretedSort
 import java.math.BigInteger
 
 @Suppress("LargeClass")
-open class KBitwuzlaExprInternalizer(
-    val bitwuzlaCtx: KBitwuzlaContext,
-    private val scopedVars: Object2LongOpenHashMap<KDecl<*>>? = null,
-    private val scopedExpressions: Object2LongOpenHashMap<KExpr<*>>? = null
-) : KExprLongInternalizerBase() {
+open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprLongInternalizerBase() {
 
     @JvmField
     val bitwuzla: Bitwuzla = bitwuzlaCtx.bitwuzla
@@ -200,19 +195,16 @@ open class KBitwuzlaExprInternalizer(
         FunctionSortInternalizer(bitwuzlaCtx, sortInternalizer)
     }
 
+    private val quantifiedDeclarationsScopeOwner = arrayListOf<KExpr<*>>()
+    private val quantifiedDeclarationsScope = arrayListOf<Set<KDecl<*>>?>()
+    private var quantifiedDeclarations: Set<KDecl<*>>? = null
+
     override fun findInternalizedExpr(expr: KExpr<*>): BitwuzlaTerm {
-        if (scopedExpressions != null) {
-            return scopedExpressions.getLong(expr)
-        }
         return bitwuzlaCtx.findExprTerm(expr)
     }
 
     override fun saveInternalizedExpr(expr: KExpr<*>, internalized: BitwuzlaTerm) {
-        if (scopedExpressions != null) {
-            scopedExpressions.put(expr, internalized)
-        } else {
-            saveExprInternalizationResult(expr, internalized)
-        }
+        saveExprInternalizationResult(expr, internalized)
     }
 
     /**
@@ -252,8 +244,7 @@ open class KBitwuzlaExprInternalizer(
     }, rewriteWithAxiomsRequired = {
         // We have an expression that can be rewritten using axioms
 
-        // Reset internalizer
-        exprStack.clear()
+        resetInternalizer()
 
         // Rewrite whole assertion using axioms
         val rewriterWithAxioms = KBitwuzlaInternalizationAxioms(ctx)
@@ -265,6 +256,14 @@ open class KBitwuzlaExprInternalizer(
             axioms = exprWithAxioms.axioms.map { it.internalizeExpr() }
         )
     })
+
+    private fun resetInternalizer() {
+        exprStack.clear()
+
+        quantifiedDeclarations = null
+        quantifiedDeclarationsScope.clear()
+        quantifiedDeclarationsScopeOwner.clear()
+    }
 
     /**
     * Create Bitwuzla sort from KSMT sort
@@ -302,13 +301,8 @@ open class KBitwuzlaExprInternalizer(
     }
 
     private inline fun mkConstant(decl: KDecl<*>, sort: () -> BitwuzlaSort): BitwuzlaTerm {
-        if (scopedVars != null) {
-            val scopedVar = scopedVars.getLong(decl)
-            if (scopedVar != NOT_INTERNALIZED) {
-                return scopedVar
-            }
-        }
-        return bitwuzlaCtx.mkConstant(decl, sort())
+        val isQuantified = quantifiedDeclarations?.contains(decl) ?: false
+        return bitwuzlaCtx.mkConstant(decl, sort(), isQuantified)
     }
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = with(expr) {
@@ -949,11 +943,10 @@ open class KBitwuzlaExprInternalizer(
         expr: KArrayNLambda<R>
     ) = expr.transformArrayLambda()
 
-    private fun <E : KArrayLambdaBase<*, *>> E.transformArrayLambda(): E = transform {
+    private fun <E : KArrayLambdaBase<*, *>> E.transformArrayLambda(): E =
         internalizeQuantifierBody(indexVarDeclarations, body) { internalizedBounds, internalizedBody ->
             mkLambdaTerm(internalizedBounds, internalizedBody)
         }
-    }
 
     private inline fun mkArrayLambdaTerm(
         boundVarSort: KSort,
@@ -1270,52 +1263,63 @@ open class KBitwuzlaExprInternalizer(
     }
 
     private inline fun <T : KQuantifier> T.internalizeQuantifier(
-        crossinline internalizer: T.(LongArray) -> BitwuzlaTerm
-    ): T = transform {
+        crossinline mkQuantifierTerm: (LongArray) -> BitwuzlaTerm
+    ): T {
         if (bounds.any { it.hasUninterpretedSorts() }) {
             throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support quantifiers with uninterpreted sorts")
         }
 
-        internalizeQuantifierBody(bounds, body) { internalizedBounds, internalizedBody ->
+        return internalizeQuantifierBody(bounds, body) { internalizedBounds, internalizedBody ->
             if (internalizedBounds.isEmpty()) {
                 internalizedBody
             } else {
                 val args = internalizedBounds.addLast(internalizedBody)
-                internalizer(args)
+                mkQuantifierTerm(args)
             }
         }
     }
 
-    private inline fun internalizeQuantifierBody(
+    private fun pushQuantifiedDeclScope(owner: KExpr<*>, quantifiedDecls: List<KDecl<*>>) {
+        if (owner == quantifiedDeclarationsScopeOwner.lastOrNull()) return
+
+        quantifiedDeclarationsScopeOwner.add(owner)
+        quantifiedDeclarationsScope.add(quantifiedDeclarations)
+
+        val newQuantifiedDecls = quantifiedDeclarations?.toHashSet() ?: hashSetOf()
+        newQuantifiedDecls.addAll(quantifiedDecls)
+        quantifiedDeclarations = newQuantifiedDecls
+    }
+
+    private fun popQuantifiedDeclScope() {
+        quantifiedDeclarationsScopeOwner.removeLast()
+        quantifiedDeclarations = quantifiedDeclarationsScope.removeLast()
+    }
+
+    private inline fun <T : KExpr<*>> T.internalizeQuantifierBody(
         bounds: List<KDecl<*>>,
         body: KExpr<*>,
         crossinline transformInternalized: (LongArray, BitwuzlaTerm) -> BitwuzlaTerm
-    ): BitwuzlaTerm {
-        val nestedVarScope = mkTermCache<KDecl<*>>().apply {
-            scopedVars?.let { putAll(it) }
-        }
+    ): T {
+        pushQuantifiedDeclScope(this, bounds)
+        return transform(body) { internalizedBody ->
+            popQuantifiedDeclScope()
 
-        /**
-         * Internalizer will produce var instead of normal constants
-         * for all bound variables.
-         * */
-        val internalizedBounds = LongArray(bounds.size) { idx ->
-            val boundDecl = bounds[idx]
-            bitwuzlaCtx.mkVar(boundDecl, boundDecl.sort.internalizeSort()).also {
-                nestedVarScope.put(boundDecl, it)
+            val boundConstants = LongArray(bounds.size)
+            val boundVars = LongArray(bounds.size)
+            for (idx in bounds.indices) {
+                val boundDecl = bounds[idx]
+                val boundSort = boundDecl.sort.internalizeSort()
+
+                boundConstants[idx] = bitwuzlaCtx.mkConstant(boundDecl, boundSort, isQuantifiedConstant = true)
+                boundVars[idx] = bitwuzlaCtx.mkVar(boundDecl, boundSort)
             }
+
+            val internalizedBodyWithVars = Native.bitwuzlaSubstituteTerm(
+                bitwuzla, internalizedBody, boundConstants, boundVars
+            )
+
+            transformInternalized(boundVars, internalizedBodyWithVars)
         }
-
-        /**
-         * Internalizer will not use expressions cache because
-         * bound variables may overlap with already cached constants
-         * */
-        val nestedExpressionCache = mkTermCache<KExpr<*>>()
-
-        val bodyInternalizer = KBitwuzlaExprInternalizer(bitwuzlaCtx, nestedVarScope, nestedExpressionCache)
-        val internalizedBody = with(bodyInternalizer) { body.internalize() }
-
-        return transformInternalized(internalizedBounds, internalizedBody)
     }
 
     open class SortInternalizer(private val bitwuzlaCtx: KBitwuzlaContext) : KSortVisitor<Unit> {
@@ -1521,6 +1525,8 @@ open class KBitwuzlaExprInternalizer(
         body()
     } catch (ex: TryRewriteExpressionUsingAxioms) {
         rewriteWithAxiomsRequired(ex.message)
+    } finally {
+        resetInternalizer()
     }
 
     private val uninterpretedSortsDetector = object : KSortVisitor<Boolean> {

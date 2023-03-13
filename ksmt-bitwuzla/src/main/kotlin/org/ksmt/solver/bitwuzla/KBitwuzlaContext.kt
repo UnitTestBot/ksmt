@@ -229,9 +229,12 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
      * Internalize constant declaration.
      * Since [Native.bitwuzlaMkConst] creates fresh constant on each invocation caches are used
      * to guarantee that if two constants are equal in ksmt they are also equal in Bitwuzla.
+     * Also, if the declaration is not [isQuantifiedConstant], register it in the current scope.
      * */
-    fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm {
-        registerDeclaration(decl)
+    fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort, isQuantifiedConstant: Boolean): BitwuzlaTerm {
+        if (!isQuantifiedConstant) {
+            registerDeclaration(decl)
+        }
 
         val value = constantsGlobalCache.getLong(decl)
         if (value != NOT_INTERNALIZED) return value
