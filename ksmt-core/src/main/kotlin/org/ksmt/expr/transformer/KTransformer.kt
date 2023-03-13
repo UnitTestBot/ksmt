@@ -2,6 +2,7 @@ package org.ksmt.expr.transformer
 
 import org.ksmt.KContext
 import org.ksmt.expr.KAddArithExpr
+import org.ksmt.expr.KAndBinaryExpr
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KArray2Lambda
@@ -135,6 +136,7 @@ import org.ksmt.expr.KLtArithExpr
 import org.ksmt.expr.KModIntExpr
 import org.ksmt.expr.KMulArithExpr
 import org.ksmt.expr.KNotExpr
+import org.ksmt.expr.KOrBinaryExpr
 import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KPowerArithExpr
 import org.ksmt.expr.KRealNumExpr
@@ -195,7 +197,9 @@ interface KTransformer : KTransformerBase {
 
     // bool transformers
     override fun transform(expr: KAndExpr): KExpr<KBoolSort> = transformApp(expr)
+    override fun transform(expr: KAndBinaryExpr): KExpr<KBoolSort> = transform(expr as KAndExpr)
     override fun transform(expr: KOrExpr): KExpr<KBoolSort> = transformApp(expr)
+    override fun transform(expr: KOrBinaryExpr): KExpr<KBoolSort> = transform(expr as KOrExpr)
     override fun transform(expr: KNotExpr): KExpr<KBoolSort> = transformApp(expr)
     override fun transform(expr: KImpliesExpr): KExpr<KBoolSort> = transformApp(expr)
     override fun transform(expr: KXorExpr): KExpr<KBoolSort> = transformApp(expr)

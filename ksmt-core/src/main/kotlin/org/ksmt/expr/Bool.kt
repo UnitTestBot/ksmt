@@ -35,6 +35,8 @@ class KAndBinaryExpr internal constructor(
     override val args: List<KExpr<KBoolSort>>
         get() = listOf(lhs, rhs)
 
+    override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
+
     override fun internHashCode(): Int = hash(lhs, rhs)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
 }
@@ -69,6 +71,8 @@ class KOrBinaryExpr internal constructor(
 ) : KOrExpr(ctx) {
     override val args: List<KExpr<KBoolSort>>
         get() = listOf(lhs, rhs)
+
+    override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(lhs, rhs)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
