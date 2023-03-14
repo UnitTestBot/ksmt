@@ -25,9 +25,11 @@ object NativeLibraryLoader {
 
         val librariesToLoad = libraries(os)
 
+        val destinationFolder = if (arch == "aarch64") "arm" else "x64"
+
         for (libName in librariesToLoad) {
             val osLibName = libName + libraryExt
-            val resourceName = "lib/x64/$osLibName"
+            val resourceName = "lib/$destinationFolder/$osLibName"
             val libUri = NativeLibraryLoader::class.java.classLoader
                 .getResource(resourceName)
                 ?.toURI()
