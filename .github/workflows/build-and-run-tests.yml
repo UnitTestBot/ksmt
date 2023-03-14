@@ -29,11 +29,11 @@ jobs:
           distribution: 'zulu'
           cache: gradle
 
-      - name: Cd to ksmt-z3 on macOS
+      - name: Build and run simple tests on macOS
         if: runner.os == 'macOS'
         run: ./gradlew :ksmt-z3:build
 
-      - name: Build and run simple tests
+      - name: Build and run simple tests on Linux or Windows
         uses: gradle/gradle-build-action@v2
         if: runner.os != 'macOS'
         with:
