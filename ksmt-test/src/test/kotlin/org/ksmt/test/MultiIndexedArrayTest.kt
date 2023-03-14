@@ -1,6 +1,7 @@
 package org.ksmt.test
 
 import com.microsoft.z3.Context
+import org.junit.jupiter.api.AfterAll
 import org.ksmt.KContext
 import org.ksmt.KContext.SimplificationMode.NO_SIMPLIFY
 import org.ksmt.expr.KExpr
@@ -11,6 +12,7 @@ import org.ksmt.solver.bitwuzla.KBitwuzlaContext
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprConverter
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprInternalizer
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
+import org.ksmt.solver.runner.KSolverRunnerManager
 import org.ksmt.solver.z3.KZ3Context
 import org.ksmt.solver.z3.KZ3ExprConverter
 import org.ksmt.solver.z3.KZ3ExprInternalizer
@@ -24,14 +26,15 @@ import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.uncheckedCast
 import kotlin.test.Test
-import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.minutes
 
 //@Disabled
 class MultiIndexedArrayTest {
 
     @Test
     fun testMultiIndexedArraysZ3WithZ3Oracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
-        KZ3Solver(this).use { oracleSolver ->
+        oracleManager.createSolver(this, KZ3Solver::class).use { oracleSolver ->
             mkZ3Context(this).use { z3NativeCtx ->
                 runMultiIndexedArraySamples(oracleSolver) { expr ->
                     internalizeAndConvertZ3(z3NativeCtx, expr)
@@ -42,7 +45,7 @@ class MultiIndexedArrayTest {
 
     @Test
     fun testMultiIndexedArraysBitwuzlaWithZ3Oracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
-        KZ3Solver(this).use { oracleSolver ->
+        oracleManager.createSolver(this, KZ3Solver::class).use { oracleSolver ->
             KBitwuzlaContext(this).use { z3NativeCtx ->
                 runMultiIndexedArraySamples(oracleSolver) { expr ->
                     internalizeAndConvertBitwuzla(z3NativeCtx, expr)
@@ -53,7 +56,7 @@ class MultiIndexedArrayTest {
 
     @Test
     fun testMultiIndexedArraysZ3WithBitwuzlaOracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
-        KBitwuzlaSolver(this).use { oracleSolver ->
+        oracleManager.createSolver(this, KBitwuzlaSolver::class).use { oracleSolver ->
             mkZ3Context(this).use { z3NativeCtx ->
                 runMultiIndexedArraySamples(oracleSolver) { expr ->
                     internalizeAndConvertZ3(z3NativeCtx, expr)
@@ -64,7 +67,7 @@ class MultiIndexedArrayTest {
 
     @Test
     fun testMultiIndexedArraysBitwuzlaWithBitwuzlaOracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
-        KBitwuzlaSolver(this).use { oracleSolver ->
+        oracleManager.createSolver(this, KBitwuzlaSolver::class).use { oracleSolver ->
             KBitwuzlaContext(this).use { z3NativeCtx ->
                 runMultiIndexedArraySamples(oracleSolver) { expr ->
                     internalizeAndConvertBitwuzla(z3NativeCtx, expr)
@@ -80,23 +83,21 @@ class MultiIndexedArrayTest {
         val stats = TestStats()
         val sorts = listOf(
             mkArraySort(bv8Sort, bv8Sort),
-//            mkArraySort(bv32Sort, bv16Sort, bv32Sort),
-//            mkArraySort(bv32Sort, bv16Sort, bv8Sort, bv32Sort),
-//            mkArrayNSort(listOf(bv32Sort, bv16Sort, bv8Sort, bv32Sort, bv8Sort), bv32Sort)
+            mkArraySort(bv32Sort, bv16Sort, bv8Sort),
+            mkArraySort(bv32Sort, bv16Sort, bv8Sort, bv8Sort),
+            mkArrayNSort(listOf(bv32Sort, bv16Sort, bv8Sort, bv32Sort, bv8Sort), bv8Sort)
         )
 
         for (sort in sorts) {
             val expressions = mkArrayExpressions(sort)
-            for ((i, expr) in expressions.withIndex()) {
-                if (i != 7532) continue
-                println("Start: $i")
+            for (expr in expressions) {
+                stats.start()
                 val processed = process(expr)
                 assertEquals(stats, oracle, expr, processed)
-                println("End: $i")
             }
         }
 
-        System.err.println("STATS: $stats")
+        stats.result()
     }
 
     private fun <A : KArraySortBase<KBv8Sort>> KContext.mkArrayExpressions(sort: A): List<KExpr<KSort>> {
@@ -143,7 +144,7 @@ class MultiIndexedArrayTest {
         arraySelects = arraySelects + arrayExpressions.map { mkSelect(it) }
 
         return listOf(
-//            arrayExpressions,
+            arrayExpressions,
             arraySelects,
             arrayEq
         ).flatten().uncheckedCast()
@@ -259,29 +260,22 @@ class MultiIndexedArrayTest {
         expected: KExpr<T>,
         actual: KExpr<T>
     ) {
-        stats.total++
-
         if (expected == actual) {
-            stats.passedFast++
+            stats.passedFast()
             return
         }
-
-        println("#".repeat(20))
-        println(expected)
-        println("-".repeat(20))
-        println(actual)
 
         val expectedTrack = mkFreshConst("expected", expected.sort)
         val actualTrack = mkFreshConst("actual", actual.sort)
 
         oracle.scoped {
             oracle.assert(expectedTrack eq expected)
-            assertEquals(KSolverStatus.SAT, oracle.check())
+            oracle.checkSatAndReport(stats, expected, actual, KSolverStatus.SAT, "Expected is SAT") ?: return
         }
 
         oracle.scoped {
             oracle.assert(actualTrack eq actual)
-            assertEquals(KSolverStatus.SAT, oracle.check())
+            oracle.checkSatAndReport(stats, expected, actual, KSolverStatus.SAT, "Actual is SAT") ?: return
         }
 
         oracle.scoped {
@@ -291,33 +285,48 @@ class MultiIndexedArrayTest {
             // Check expressions are possible to be SAT
             oracle.scoped {
                 oracle.assert(expectedTrack eq actualTrack)
-                val status = oracle.check()
-                if (status == KSolverStatus.UNKNOWN) {
-                    System.err.println("IGNORED: ${oracle.reasonOfUnknown()}")
-                    stats.ignored++
-                    return
-                }
-
-                assertEquals(KSolverStatus.SAT, status)
+                oracle.checkSatAndReport(stats, expected, actual, KSolverStatus.SAT, "SAT is possible") ?: return
             }
 
             // Check expressions are equal
             oracle.scoped {
                 oracle.assert(expectedTrack neq actualTrack)
-                val status = oracle.check()
+                oracle.checkSatAndReport(stats, expected, actual, KSolverStatus.UNSAT, "Expressions equal") {
+                    val model = oracle.model()
+                    val actualValue = model.eval(actual, isComplete = false)
+                    val expectedValue = model.eval(expected, isComplete = false)
 
-                if (status == KSolverStatus.UNKNOWN) {
-                    System.err.println("IGNORED: ${oracle.reasonOfUnknown()}")
-                    stats.ignored++
-                    return
-                }
-
-                if (status != KSolverStatus.UNSAT) {
-                    assertEquals(expected, actual, "Expressions are not equal")
-                }
+                    if (expectedValue == actualValue) {
+                        stats.ignore(expected, actual, "Expressions equal: check incorrect")
+                        return
+                    }
+                } ?: return
             }
         }
-        stats.passed++
+
+        stats.passed()
+    }
+
+    private inline fun KSolver<*>.checkSatAndReport(
+        stats: TestStats,
+        expected: KExpr<*>,
+        actual: KExpr<*>,
+        expectedStatus: KSolverStatus,
+        prefix: String,
+        onFailure: () -> Unit = {}
+    ): Unit? = when (check()) {
+        expectedStatus -> Unit
+        KSolverStatus.UNKNOWN -> {
+            val message = "$prefix: ${reasonOfUnknown()}"
+            stats.ignore(expected, actual, message)
+            null
+        }
+
+        else -> {
+            onFailure()
+            stats.fail(expected, actual, prefix)
+            null
+        }
     }
 
     private inline fun KSolver<*>.scoped(block: () -> Unit) {
@@ -334,10 +343,69 @@ class MultiIndexedArrayTest {
         return Context()
     }
 
-    private data class TestStats(
-        var total: Int = 0,
-        var passed: Int = 0,
-        var passedFast: Int = 0,
-        var ignored: Int = 0
+    private data class TestCase(
+        val id: Int,
+        val message: String,
+        val expected: KExpr<*>,
+        val actual: KExpr<*>
     )
+
+    private class TestStats(
+        private var total: Int = 0,
+        private var passed: Int = 0,
+        private var passedFast: Int = 0,
+        val ignored: MutableList<TestCase> = mutableListOf(),
+        val failed: MutableList<TestCase> = mutableListOf()
+    ) {
+        private var testId = 0
+
+        fun start() {
+            testId = total++
+        }
+
+        fun passed() {
+            passed++
+        }
+
+        fun passedFast() {
+            passedFast++
+            passed()
+        }
+
+        fun ignore(expected: KExpr<*>, actual: KExpr<*>, message: String) {
+            System.err.println("IGNORED: $message")
+            ignored += TestCase(testId, message, expected, actual)
+        }
+
+        fun fail(expected: KExpr<*>, actual: KExpr<*>, message: String) {
+            System.err.println("FAILED: $message")
+            failed += TestCase(testId, message, expected, actual)
+        }
+
+        fun result() {
+            val stats = listOf(
+                "total=${total}",
+                "failed=${failed.size}",
+                "ignored=${ignored.size}",
+                "passed=${passed}",
+                "passedFast=${passedFast}"
+            )
+            System.err.println("STATS: $stats")
+
+            assertTrue(failed.isEmpty(), "Some tests failed")
+        }
+    }
+
+    companion object {
+        private val oracleManager = KSolverRunnerManager(
+            workerPoolSize = 2,
+            hardTimeout = 1.minutes
+        )
+
+        @AfterAll
+        @JvmStatic
+        fun cleanup() {
+            oracleManager.close()
+        }
+    }
 }
