@@ -29,9 +29,15 @@ jobs:
           distribution: 'zulu'
           cache: gradle
 
-      - name: Build and run simple tests on macOS
+      - name: Build and run z3 tests on macOS
+        uses: gradle/gradle-build-action@v2
         if: runner.os == 'macOS'
-        run: ./gradlew :ksmt-z3:build
+        with:
+          arguments: |
+            :ksmt-z3:build
+             --no-daemon
+             --continue
+             -PrunBenchmarksBasedTests=false
 
       - name: Build and run simple tests on Linux or Windows
         uses: gradle/gradle-build-action@v2
