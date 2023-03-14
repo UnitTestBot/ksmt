@@ -2,7 +2,6 @@ package org.ksmt.expr.rewrite.simplify
 
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
-import org.ksmt.expr.KAndNaryExpr
 import org.ksmt.expr.KArray2Lambda
 import org.ksmt.expr.KArray2Select
 import org.ksmt.expr.KArray2Store
@@ -106,7 +105,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             }
         }
 
-        KAndNaryExpr(ctx, checks)
+        ctx.mkAndAuxExpr(checks)
     }
 
     private class ArrayStoreSearchInfo<A : KArraySortBase<R>, R : KSort>(
