@@ -318,15 +318,15 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
     }
 
     override fun transform(expr: KAndExpr) = with(expr) {
-        transformList(args) { args: LongArray ->
-            when (args.size) {
-                0 -> bitwuzlaCtx.trueTerm
-                1 -> args[0]
-                else -> Native.bitwuzlaMkTerm(
-                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_AND, args
-                )
-            }
-        }
+        transformList(args, ::mkAndTerm)
+    }
+
+    fun mkAndTerm(args: LongArray): BitwuzlaTerm = when (args.size) {
+        0 -> bitwuzlaCtx.trueTerm
+        1 -> args[0]
+        else -> Native.bitwuzlaMkTerm(
+            bitwuzla, BitwuzlaKind.BITWUZLA_KIND_AND, args
+        )
     }
 
     override fun transform(expr: KAndBinaryExpr) = with(expr) {
@@ -334,15 +334,15 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
     }
 
     override fun transform(expr: KOrExpr) = with(expr) {
-        transformList(args) { args: LongArray ->
-            when (args.size) {
-                0 -> bitwuzlaCtx.falseTerm
-                1 -> args[0]
-                else -> Native.bitwuzlaMkTerm(
-                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_OR, args
-                )
-            }
-        }
+        transformList(args, ::mkOrTerm)
+    }
+
+    fun mkOrTerm(args: LongArray): BitwuzlaTerm = when (args.size) {
+        0 -> bitwuzlaCtx.falseTerm
+        1 -> args[0]
+        else -> Native.bitwuzlaMkTerm(
+            bitwuzla, BitwuzlaKind.BITWUZLA_KIND_OR, args
+        )
     }
 
     override fun transform(expr: KOrBinaryExpr) = with(expr) {
@@ -402,48 +402,14 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
         if (sort is KArraySort<*, *>) {
             val lIsArray = Native.bitwuzlaTermIsArray(l)
             val rIsArray = Native.bitwuzlaTermIsArray(r)
-            if (lIsArray != rIsArray) {
-                val wrappingIsPossible = arrayAsFunctionWrappingIsPossible(lIsArray, l)
-                        && arrayAsFunctionWrappingIsPossible(rIsArray, r)
-
-                return if (wrappingIsPossible) {
-                    val lFunction = wrapArrayAsFunction(sort, lIsArray, l)
-                    val rFunction = wrapArrayAsFunction(sort, rIsArray, r)
-                    Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lFunction, rFunction)
-                } else {
-                    val lFunction = wrapArrayAsHighArityFunction(sort, lIsArray, l)
-                    val rFunction = wrapArrayAsHighArityFunction(sort, rIsArray, r)
-                    Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lFunction, rFunction)
-                }
-            }
+            return mkArrayEqTerm(sort, l, lIsArray, r, rIsArray)
         }
         return Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, l, r)
     }
 
     private fun mkDistinctTerm(sort: KSort, args: LongArray): BitwuzlaTerm {
         if (sort is KArraySort<*, *>) {
-            val allArgsAreArrays = args.map { Native.bitwuzlaTermIsArray(it) }
-            val anyDifferentArgs = allArgsAreArrays.count { it }.let { it != 0 && it != allArgsAreArrays.size }
-            if (anyDifferentArgs) {
-                val wrappingIsPossible = args.zip(allArgsAreArrays)
-                    .all { (arg, isArray) -> arrayAsFunctionWrappingIsPossible(isArray, arg) }
-
-                return if (wrappingIsPossible) {
-                    val functions = args.zip(allArgsAreArrays) { arg, isArray ->
-                        wrapArrayAsFunction(sort, isArray, arg)
-                    }
-                    Native.bitwuzlaMkTerm(
-                        bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, functions.toLongArray()
-                    )
-                } else {
-                    val functions = args.zip(allArgsAreArrays) { arg, isArray ->
-                        wrapArrayAsHighArityFunction(sort, isArray, arg)
-                    }
-                    Native.bitwuzlaMkTerm(
-                        bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, functions.toLongArray()
-                    )
-                }
-            }
+            return blastArrayDistinct(sort, args)
         }
 
         return Native.bitwuzlaMkTerm(
@@ -451,48 +417,69 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
         )
     }
 
-    private fun arrayAsFunctionWrappingIsPossible(isArray: Boolean, expr: BitwuzlaTerm): Boolean {
-        // no wrapping needed
-        if (!isArray) return true
-
-        val exprKind = Native.bitwuzlaTermGetBitwuzlaKind(expr)
-
-        // constant arrays can't be wrapped as lambda expressions
-        return exprKind != BitwuzlaKind.BITWUZLA_KIND_CONST_ARRAY
-    }
-
-    private fun wrapArrayAsFunction(
+    private fun mkArrayEqTerm(
         sort: KArraySort<*, *>,
-        isArray: Boolean,
-        expr: BitwuzlaTerm
+        lhs: BitwuzlaTerm, lhsIsArray: Boolean,
+        rhs: BitwuzlaTerm, rhsIsArray: Boolean
     ): BitwuzlaTerm {
-        // Expr is already a function
-        if (!isArray) return expr
+        if (lhsIsArray && rhsIsArray) {
+            return Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lhs, rhs)
+        }
 
-        return mkArrayLambdaTerm(sort.domain) { boundVar ->
-            mkArraySelectTerm(isArray, expr, boundVar)
-        }.also {
-            check(!Native.bitwuzlaTermIsArray(it)) { "Array term was not eliminated" }
+        // todo: maybe push eq over functions
+        if (!lhsIsArray && !rhsIsArray) {
+            return Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lhs, rhs)
+        }
+
+        return if (lhsIsArray) {
+            mkArrayEqFunctionTerm(sort, rhs, lhs)
+        } else {
+            mkArrayEqFunctionTerm(sort, lhs, rhs)
         }
     }
 
-    /**
-     * Since lambda expressions with constant body are always simplified
-     * to constant arrays we have no normal way to replace constant array as function.
-     *
-     * Trick: replace constant array as 2-ary function, since it can't be rewritten
-     * as constant array.
-     * */
-    private fun wrapArrayAsHighArityFunction(
+    private fun mkArrayEqFunctionTerm(
         sort: KArraySort<*, *>,
-        isArray: Boolean,
-        expr: BitwuzlaTerm
+        functionTerm: BitwuzlaTerm,
+        arrayTerm: BitwuzlaTerm
     ): BitwuzlaTerm {
-        return mkArrayLambdaTerm(listOf(sort.domain, sort.domain)) { (boundVar) ->
-            mkArraySelectTerm(isArray, expr, boundVar)
+        val arrayKind = Native.bitwuzlaTermGetBitwuzlaKind(arrayTerm)
+        if (arrayKind == BitwuzlaKind.BITWUZLA_KIND_CONST) {
+            // It is incorrect to use array and function, but equality should work
+            return Native.bitwuzlaMkTerm2(
+                bitwuzla,
+                BitwuzlaKind.BITWUZLA_KIND_EQUAL,
+                arrayTerm,
+                functionTerm
+            )
+        }
+
+        val wrappedArray = mkArrayLambdaTerm(sort.domain) { boundVar ->
+            mkArraySelectTerm(isArray = true, array = arrayTerm, idx = boundVar)
         }.also {
             check(!Native.bitwuzlaTermIsArray(it)) { "Array term was not eliminated" }
         }
+        return Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, wrappedArray, functionTerm)
+    }
+
+    private fun blastArrayDistinct(sort: KArraySort<*, *>, arrays: LongArray): BitwuzlaTerm {
+        val inequalities = mutableListOf<Long>()
+
+        for (i in arrays.indices) {
+            val arrayI = arrays[i]
+            val isArrayI = Native.bitwuzlaTermIsArray(arrayI)
+            for (j in (i + 1) until arrays.size) {
+                val arrayJ = arrays[j]
+                val isArrayJ = Native.bitwuzlaTermIsArray(arrayJ)
+
+                val equality = mkArrayEqTerm(sort, arrayI, isArrayI, arrayJ, isArrayJ)
+                val inequality = Native.bitwuzlaMkTerm1(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_NOT, equality)
+
+                inequalities += inequality
+            }
+        }
+
+        return mkAndTerm(inequalities.toLongArray())
     }
 
     override fun transform(expr: KBitVec1Value) = with(expr) {
