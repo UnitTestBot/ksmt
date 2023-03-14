@@ -31,10 +31,11 @@ jobs:
 
       - name: Cd to ksmt-z3 on macOS
         if: runner.os == 'macOS'
-        run: cd ksmt-z3
+        run: ./gradlew :ksmt-z3:build
 
       - name: Build and run simple tests
         uses: gradle/gradle-build-action@v2
+        if: runner.os != 'macOS'
         with:
           arguments: |
             build
