@@ -29,8 +29,10 @@ tasks.withType<ProcessResources> {
     dependsOn(tasks.compileJava)
 
     cvc5NativeLib.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
+        val name = constructLibraryFolderNameByArtifact(artifact)
+
         from(zipTree(artifact.file)) {
-            into("lib/x64")
+            into("lib/x64/$name")
         }
     }
 }

@@ -26,7 +26,10 @@ dependencies {
 
 tasks.withType<ProcessResources> {
     yicesNative.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
-        val destination = "lib/x64"
+        val name = constructLibraryFolderNameByArtifact(artifact)
+
+        val destination = "lib/x64/$name"
+
         from(zipTree(artifact.file)) {
             into(destination)
         }

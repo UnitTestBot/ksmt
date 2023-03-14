@@ -13,11 +13,11 @@ val z3Version = "4.11.2"
 
 val z3JavaJar by lazy { mkZ3ReleaseDownloadTask("x64-win", "*.jar") }
 
-val z3Binaries = listOf(
-    mkZ3ReleaseDownloadTask("x64-win", "*.dll"),
-    mkZ3ReleaseDownloadTask("x64-glibc-2.31", "*.so"),
-    mkZ3ReleaseDownloadTask("x64-osx-10.16", "*.dylib"),
-    mkZ3ReleaseDownloadTask("arm64-osx-11.0", "*.dylib")
+val z3Binaries = mapOf(
+    "windows" to mkZ3ReleaseDownloadTask("x64-win", "*.dll"),
+    "linux" to mkZ3ReleaseDownloadTask("x64-glibc-2.31", "*.so"),
+    "mac64" to mkZ3ReleaseDownloadTask("x64-osx-10.16", "*.dylib"),
+    "macArm" to mkZ3ReleaseDownloadTask("arm64-osx-11.0", "*.dylib")
 )
 
 dependencies {
@@ -28,12 +28,11 @@ dependencies {
 }
 
 tasks.withType<ProcessResources> {
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    dependsOn.addAll(z3Binaries.values)
 
-    dependsOn.addAll(z3Binaries)
-    z3Binaries.forEach { z3BinaryTask ->
+    z3Binaries.forEach { (systemName, z3BinaryTask) ->
         from(z3BinaryTask.outputFiles) {
-            into("lib/x64")
+            into("lib/x64/${systemName}")
         }
     }
 }

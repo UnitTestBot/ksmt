@@ -25,9 +25,11 @@ object NativeLibraryLoader {
 
         val librariesToLoad = libraries(os)
 
+        val folderName = constructFolderName(os, arch)
+
         for (libName in librariesToLoad) {
             val osLibName = libName + libraryExt
-            val resourceName = "lib/x64/$osLibName"
+            val resourceName = "lib/x64/$folderName/$osLibName"
             val libUri = NativeLibraryLoader::class.java.classLoader
                 .getResource(resourceName)
                 ?.toURI()
@@ -53,5 +55,11 @@ object NativeLibraryLoader {
             // tmp files are not removed on Windows
             libFile.toFile().delete()
         }
+    }
+
+    private fun constructFolderName(os: OS, arch: String) = when (os) {
+        OS.WINDOWS -> "windows"
+        OS.LINUX -> "linux"
+        OS.MACOS -> if (arch == "aarch64") "macArm" else "mac64"
     }
 }

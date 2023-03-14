@@ -24,8 +24,10 @@ tasks.withType<KotlinCompile> {
 
 tasks.withType<ProcessResources> {
     bitwuzlaNative.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
+        val name = constructLibraryFolderNameByArtifact(artifact)
+
         from(zipTree(artifact.file)) {
-            into("lib/x64")
+            into("lib/x64/$name")
         }
     }
 }
@@ -37,4 +39,5 @@ publishing {
             artifact(tasks["kotlinSourcesJar"])
         }
     }
+
 }
