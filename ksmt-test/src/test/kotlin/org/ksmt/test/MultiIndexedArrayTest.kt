@@ -92,8 +92,12 @@ class MultiIndexedArrayTest {
             val expressions = mkArrayExpressions(sort)
             for (expr in expressions) {
                 stats.start()
-                val processed = process(expr)
-                assertEquals(stats, oracle, expr, processed)
+                try {
+                    val processed = process(expr)
+                    assertEquals(stats, oracle, expr, processed)
+                } catch (ex: Throwable) {
+                    stats.fail(ex)
+                }
             }
         }
 
@@ -346,8 +350,8 @@ class MultiIndexedArrayTest {
     private data class TestCase(
         val id: Int,
         val message: String,
-        val expected: KExpr<*>,
-        val actual: KExpr<*>
+        val expected: KExpr<*>?,
+        val actual: KExpr<*>?
     )
 
     private class TestStats(
@@ -380,6 +384,11 @@ class MultiIndexedArrayTest {
         fun fail(expected: KExpr<*>, actual: KExpr<*>, message: String) {
             System.err.println("FAILED: $message")
             failed += TestCase(testId, message, expected, actual)
+        }
+
+        fun fail(ex: Throwable) {
+            System.err.println("FAILED: $ex")
+            failed += TestCase(testId, "$ex", null, null)
         }
 
         fun result() {
