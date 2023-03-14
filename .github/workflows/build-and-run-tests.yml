@@ -29,21 +29,18 @@ jobs:
           distribution: 'zulu'
           cache: gradle
 
+      - name: Cd to ksmt-z3 on macOS
+        if: runner.os == 'macOS'
+        run: cd ksmt-z3
+
       - name: Build and run simple tests
         uses: gradle/gradle-build-action@v2
         with:
           arguments: |
-            if [ "$RUNNER_OS" == "macOS" ]; then
-              :ksmt-z3:build
-                --no-daemon
-                --continue
-                -PrunBenchmarksBasedTests=false
-            else
-              build
-                --no-daemon
-                --continue
-                -PrunBenchmarksBasedTests=false
-            fi
+            build
+             --no-daemon
+             --continue
+             -PrunBenchmarksBasedTests=false
 
       - name: Upload ksmt test reports
         uses: actions/upload-artifact@v3

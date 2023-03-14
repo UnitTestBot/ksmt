@@ -22,6 +22,7 @@ val z3Binaries = mapOf(
 
 dependencies {
     implementation(project(":ksmt-core"))
+
     api(fileTree(z3JavaJar.outputDirectory) {
         builtBy(z3JavaJar)
     })
