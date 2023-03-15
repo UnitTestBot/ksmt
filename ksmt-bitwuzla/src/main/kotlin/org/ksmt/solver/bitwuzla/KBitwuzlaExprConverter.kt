@@ -752,6 +752,7 @@ open class KBitwuzlaExprConverter(
         { a, domain -> mkArrayNSelect(a, domain) }
     )
 
+    @Suppress("LongParameterList")
     private inline fun <A : KArraySortBase<*>, R> KContext.mkAnyArrayOperation(
         array: KExpr<A>,
         indices: List<KExpr<KSort>>,
