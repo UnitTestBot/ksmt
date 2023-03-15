@@ -1,6 +1,7 @@
 package org.ksmt.runner.serializer
 
 import org.ksmt.expr.KAddArithExpr
+import org.ksmt.expr.KAndBinaryExpr
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KArray2Lambda
 import org.ksmt.expr.KArray2Select
@@ -126,6 +127,7 @@ import org.ksmt.expr.KLtArithExpr
 import org.ksmt.expr.KModIntExpr
 import org.ksmt.expr.KMulArithExpr
 import org.ksmt.expr.KNotExpr
+import org.ksmt.expr.KOrBinaryExpr
 import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KPowerArithExpr
 import org.ksmt.expr.KRealNumExpr
@@ -183,9 +185,11 @@ class ExprKindMapper: KTransformerBase {
 
     override fun transform(expr: KAndExpr): KExpr<KBoolSort> = expr.kind(ExprKind.AndExpr)
 
+    override fun transform(expr: KAndBinaryExpr): KExpr<KBoolSort> = expr.kind(ExprKind.AndBinaryExpr)
 
     override fun transform(expr: KOrExpr): KExpr<KBoolSort> = expr.kind(ExprKind.OrExpr)
 
+    override fun transform(expr: KOrBinaryExpr): KExpr<KBoolSort> = expr.kind(ExprKind.OrBinaryExpr)
 
     override fun transform(expr: KNotExpr): KExpr<KBoolSort> = expr.kind(ExprKind.NotExpr)
 
@@ -557,7 +561,7 @@ class ExprKindMapper: KTransformerBase {
     ): KExpr<KArray3Sort<D0, D1, D2, R>> = expr.kind(ExprKind.Array3Lambda)
 
     override fun <R : KSort> transform(expr: KArrayNLambda<R>): KExpr<KArrayNSort<R>> =
-        expr.kind(ExprKind.ArrayLambda)
+        expr.kind(ExprKind.ArrayNLambda)
 
     override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> = expr.kind(ExprKind.AddArithExpr)
 

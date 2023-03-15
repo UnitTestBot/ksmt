@@ -8,7 +8,6 @@ import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KIntNumExpr
 import org.ksmt.sort.KArithSort
-import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KFpSort
@@ -90,7 +89,7 @@ class AstDeserializer(
             SortKind.Array -> mkArraySort(readSort(), readSort())
             SortKind.Array2 -> mkArraySort(readSort(), readSort(), readSort())
             SortKind.Array3 -> mkArraySort(readSort(), readSort(), readSort(), readSort())
-            SortKind.ArrayN -> mkArraySort(readAstArray().uncheckedCast(), readSort())
+            SortKind.ArrayN -> mkArrayNSort(readAstArray().uncheckedCast(), readSort())
             SortKind.Uninterpreted -> mkUninterpretedSort(readString())
         }
     }
@@ -101,7 +100,9 @@ class AstDeserializer(
             ExprKind.FunctionApp -> mkApp(readDecl(), readAstArray() as List<KExpr<*>>)
             ExprKind.Const -> mkConstApp(readDecl())
             ExprKind.AndExpr -> mkAndNoSimplify(readAstArray() as List<KExpr<KBoolSort>>)
+            ExprKind.AndBinaryExpr -> mkAndNoSimplify(readExpr(), readExpr())
             ExprKind.OrExpr -> mkOrNoSimplify(readAstArray() as List<KExpr<KBoolSort>>)
+            ExprKind.OrBinaryExpr -> mkOrNoSimplify(readExpr(), readExpr())
             ExprKind.NotExpr -> deserialize(::mkNotNoSimplify)
             ExprKind.ImpliesExpr -> deserialize(::mkImpliesNoSimplify)
             ExprKind.XorExpr -> deserialize(::mkXorNoSimplify)
@@ -230,7 +231,7 @@ class AstDeserializer(
             ExprKind.ArrayNSelect -> mkArrayNSelectNoSimplify(
                 readExpr(), readAstArray() as List<KExpr<KSort>>
             )
-            ExprKind.ArrayConst -> mkArrayConst(readSort() as KArraySort<KSort, KSort>, readExpr())
+            ExprKind.ArrayConst -> mkArrayConst(readSort() as KArraySortBase<KSort>, readExpr())
             ExprKind.FunctionAsArray -> mkFunctionAsArray(
                 readSort() as KArraySortBase<KSort>,
                 readDecl() as KFuncDecl<KSort>

@@ -21,25 +21,31 @@ fun KContext.simplifyNot(arg: KExpr<KBoolSort>): KExpr<KBoolSort> = when (arg) {
 }
 
 fun KContext.simplifyAnd(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
-    simplifyAndOr<KAndExpr>(
-        args = args,
-        // (and a b true) ==> (and a b)
-        neutralElement = trueExpr,
-        // (and a b false) ==> false
-        zeroElement = falseExpr
-    ) { simplifiedArgs -> mkAndNoSimplify(simplifiedArgs) }
+    simplifyAndCore(args, flat = true)
 
 fun KContext.simplifyOr(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
-    simplifyAndOr<KOrExpr>(
-        args = args,
-        // (or a b false) ==> (or a b)
-        neutralElement = falseExpr,
-        // (or a b true) ==> true
-        zeroElement = trueExpr
-    ) { simplifiedArgs -> mkOrNoSimplify(simplifiedArgs) }
+    simplifyOrCore(args, flat = true)
+
+fun KContext.simplifyAndNoFlat(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
+    simplifyAndCore(args, flat = false)
+
+fun KContext.simplifyOrNoFlat(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
+    simplifyOrCore(args, flat = false)
+
+fun KContext.simplifyAnd(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
+    simplifyAndCore(lhs, rhs, flat = true)
+
+fun KContext.simplifyOr(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
+    simplifyOrCore(lhs, rhs, flat = true)
+
+fun KContext.simplifyAndNoFlat(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
+    simplifyAndCore(lhs, rhs, flat = false)
+
+fun KContext.simplifyOrNoFlat(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
+    simplifyOrCore(lhs, rhs, flat = false)
 
 fun KContext.simplifyImplies(p: KExpr<KBoolSort>, q: KExpr<KBoolSort>): KExpr<KBoolSort> =
-    simplifyOr(listOf(simplifyNot(p), q))
+    simplifyOr(simplifyNot(p), q)
 
 fun KContext.simplifyXor(a: KExpr<KBoolSort>, b: KExpr<KBoolSort>): KExpr<KBoolSort> =
     simplifyEq(simplifyNot(a), b)
@@ -104,15 +110,15 @@ fun <T : KSort> KContext.simplifyIte(
         e = e.falseBranch
     }
 
-    // (ite c t1 (ite c2 t1 t2)) ==> (ite (or c c2) t1 t2)
-    if (e is KIteExpr<T> && e.trueBranch == t) {
-        val simplifiedCondition = simplifyOr(listOf(c, e.condition))
-        return simplifyIte(simplifiedCondition, t, e.falseBranch)
-    }
-
     // (ite c t t) ==> t
     if (t == e) {
         return t
+    }
+
+    // (ite c t1 (ite c2 t1 t2)) ==> (ite (or c c2) t1 t2)
+    if (e is KIteExpr<T> && e.trueBranch == t) {
+        val simplifiedCondition = simplifyOr(c, e.condition)
+        return simplifyIte(simplifiedCondition, t, e.falseBranch)
     }
 
     if (t.sort == boolSort) {
@@ -153,8 +159,114 @@ fun KExpr<KBoolSort>.isComplement(other: KExpr<KBoolSort>) =
 private fun KContext.isComplementCore(a: KExpr<KBoolSort>, b: KExpr<KBoolSort>) =
     (a == trueExpr && b == falseExpr) || (a is KNotExpr && a.arg == b)
 
+fun KContext.simplifyAndCore(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>, flat: Boolean): KExpr<KBoolSort> =
+    simplifyAndOr<KAndExpr>(
+        flat = flat,
+        lhs = lhs, rhs = rhs,
+        // (and a b true) ==> (and a b)
+        neutralElement = trueExpr,
+        // (and a b false) ==> false
+        zeroElement = falseExpr,
+        buildResultBinaryExpr = { simplifiedLhs, simplifiedRhs -> mkAndNoSimplify(simplifiedLhs, simplifiedRhs) },
+        buildResultFlatExpr = { simplifiedArgs -> mkAndNoSimplify(simplifiedArgs) }
+    )
+
+fun KContext.simplifyAndCore(args: List<KExpr<KBoolSort>>, flat: Boolean): KExpr<KBoolSort> =
+    simplifyAndOr<KAndExpr>(
+        flat = flat,
+        args = args,
+        // (and a b true) ==> (and a b)
+        neutralElement = trueExpr,
+        // (and a b false) ==> false
+        zeroElement = falseExpr,
+        buildResultBinaryExpr = { simplifiedLhs, simplifiedRhs -> mkAndNoSimplify(simplifiedLhs, simplifiedRhs) },
+        buildResultFlatExpr = { simplifiedArgs -> mkAndNoSimplify(simplifiedArgs) }
+    )
+
+fun KContext.simplifyOrCore(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>, flat: Boolean): KExpr<KBoolSort> =
+    simplifyAndOr<KOrExpr>(
+        flat = flat,
+        lhs = lhs, rhs = rhs,
+        // (or a b false) ==> (or a b)
+        neutralElement = falseExpr,
+        // (or a b true) ==> true
+        zeroElement = trueExpr,
+        buildResultBinaryExpr = { simplifiedLhs, simplifiedRhs -> mkOrNoSimplify(simplifiedLhs, simplifiedRhs) },
+        buildResultFlatExpr = { simplifiedArgs -> mkOrNoSimplify(simplifiedArgs) }
+    )
+
+fun KContext.simplifyOrCore(args: List<KExpr<KBoolSort>>, flat: Boolean): KExpr<KBoolSort> =
+    simplifyAndOr<KOrExpr>(
+        flat = flat,
+        args = args,
+        // (or a b false) ==> (or a b)
+        neutralElement = falseExpr,
+        // (or a b true) ==> true
+        zeroElement = trueExpr,
+        buildResultBinaryExpr = { simplifiedLhs, simplifiedRhs -> mkOrNoSimplify(simplifiedLhs, simplifiedRhs) },
+        buildResultFlatExpr = { simplifiedArgs -> mkOrNoSimplify(simplifiedArgs) }
+    )
+
+@Suppress("LongParameterList")
+private inline fun <reified T : KApp<KBoolSort, KBoolSort>> simplifyAndOr(
+    flat: Boolean,
+    args: List<KExpr<KBoolSort>>,
+    neutralElement: KExpr<KBoolSort>,
+    zeroElement: KExpr<KBoolSort>,
+    buildResultBinaryExpr: (KExpr<KBoolSort>, KExpr<KBoolSort>) -> T,
+    buildResultFlatExpr: (List<KExpr<KBoolSort>>) -> T
+): KExpr<KBoolSort> = when(args.size){
+    0 -> neutralElement
+    1 -> args.single()
+    2 -> simplifyAndOr(
+        flat = flat,
+        lhs = args.first(), rhs = args.last(),
+        neutralElement = neutralElement,
+        zeroElement = zeroElement,
+        buildResultBinaryExpr = buildResultBinaryExpr,
+        buildResultFlatExpr = buildResultFlatExpr
+    )
+    else -> simplifyAndOr(
+        flat = flat,
+        args = args,
+        neutralElement = neutralElement,
+        zeroElement = zeroElement,
+        buildResultExpr = buildResultFlatExpr
+    )
+}
+
+@Suppress("LongParameterList")
+private inline fun <reified T : KApp<KBoolSort, KBoolSort>> simplifyAndOr(
+    flat: Boolean,
+    lhs: KExpr<KBoolSort>,
+    rhs: KExpr<KBoolSort>,
+    neutralElement: KExpr<KBoolSort>,
+    zeroElement: KExpr<KBoolSort>,
+    buildResultBinaryExpr: (KExpr<KBoolSort>, KExpr<KBoolSort>) -> T,
+    buildResultFlatExpr: (List<KExpr<KBoolSort>>) -> T
+): KExpr<KBoolSort> {
+    if (flat && (lhs is T || rhs is T)) {
+        return simplifyAndOr(
+            flat = true,
+            args = listOf(lhs, rhs),
+            neutralElement = neutralElement,
+            zeroElement = zeroElement
+        ) { simplifiedArgs -> buildResultFlatExpr(simplifiedArgs) }
+    }
+
+    return when {
+        lhs == rhs -> lhs
+        lhs == zeroElement || rhs == zeroElement -> zeroElement
+        lhs == neutralElement -> rhs
+        rhs == neutralElement -> lhs
+        lhs.isComplement(rhs) -> zeroElement
+        else -> buildResultBinaryExpr(lhs, rhs)
+    }
+}
+
 @Suppress("NestedBlockDepth")
 private inline fun <reified T : KApp<KBoolSort, KBoolSort>> simplifyAndOr(
+    flat: Boolean,
     args: List<KExpr<KBoolSort>>,
     neutralElement: KExpr<KBoolSort>,
     zeroElement: KExpr<KBoolSort>,
@@ -165,7 +277,7 @@ private inline fun <reified T : KApp<KBoolSort, KBoolSort>> simplifyAndOr(
     val resultArgs = ArrayList<KExpr<KBoolSort>>(args.size)
 
     for (arg in args) {
-        if (arg is T) {
+        if (flat && arg is T) {
             // flat expr one level
             for (flatArg in arg.args) {
                 trySimplifyAndOrElement(flatArg, neutralElement, zeroElement, posLiterals, negLiterals, resultArgs)
@@ -241,7 +353,7 @@ private fun KContext.simplifyBoolIte(
         if (elseBranch == falseExpr) {
             return condition
         }
-        return simplifyOr(listOf(condition, elseBranch))
+        return simplifyOr(condition, elseBranch)
     }
 
     // (ite c false e) ==> (and (not c) e)
@@ -249,27 +361,27 @@ private fun KContext.simplifyBoolIte(
         if (elseBranch == trueExpr) {
             return simplifyNot(condition)
         }
-        return simplifyAnd(listOf(simplifyNot(condition), elseBranch))
+        return simplifyAnd(simplifyNot(condition), elseBranch)
     }
 
     // (ite c t true) ==> (or (not c) t)
     if (elseBranch == trueExpr) {
-        return simplifyOr(listOf(simplifyNot(condition), thenBranch))
+        return simplifyOr(simplifyNot(condition), thenBranch)
     }
 
     // (ite c t false) ==> (and c t)
     if (elseBranch == falseExpr) {
-        return simplifyAnd(listOf(condition, thenBranch))
+        return simplifyAnd(condition, thenBranch)
     }
 
     // (ite c t c) ==> (and c t)
     if (condition == elseBranch) {
-        return simplifyAnd(listOf(condition, thenBranch))
+        return simplifyAnd(condition, thenBranch)
     }
 
     // (ite c c e) ==> (or c e)
     if (condition == thenBranch) {
-        return simplifyOr(listOf(condition, elseBranch))
+        return simplifyOr(condition, elseBranch)
     }
 
     return mkIteNoSimplify(condition, thenBranch, elseBranch)

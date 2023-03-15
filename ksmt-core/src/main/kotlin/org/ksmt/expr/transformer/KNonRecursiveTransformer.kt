@@ -2,6 +2,7 @@ package org.ksmt.expr.transformer
 
 import org.ksmt.KContext
 import org.ksmt.expr.KAddArithExpr
+import org.ksmt.expr.KAndBinaryExpr
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KArray2Lambda
@@ -112,6 +113,7 @@ import org.ksmt.expr.KLtArithExpr
 import org.ksmt.expr.KModIntExpr
 import org.ksmt.expr.KMulArithExpr
 import org.ksmt.expr.KNotExpr
+import org.ksmt.expr.KOrBinaryExpr
 import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KPowerArithExpr
 import org.ksmt.expr.KRealToFpExpr
@@ -157,8 +159,14 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
     override fun transform(expr: KAndExpr): KExpr<KBoolSort> =
         transformExprAfterTransformedDefault(expr, expr.args, ::transformApp, KContext::mkAnd)
 
+    override fun transform(expr: KAndBinaryExpr): KExpr<KBoolSort> =
+        transformExprAfterTransformedDefault(expr, expr.lhs, expr.rhs, ::transformApp, KContext::mkAnd)
+
     override fun transform(expr: KOrExpr): KExpr<KBoolSort> =
         transformExprAfterTransformedDefault(expr, expr.args, ::transformApp, KContext::mkOr)
+
+    override fun transform(expr: KOrBinaryExpr): KExpr<KBoolSort> =
+        transformExprAfterTransformedDefault(expr, expr.lhs, expr.rhs, ::transformApp, KContext::mkOr)
 
     override fun transform(expr: KNotExpr): KExpr<KBoolSort> =
         transformExprAfterTransformedDefault(expr, expr.arg, ::transformApp, KContext::mkNot)
@@ -653,7 +661,7 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         }
 
     // utils
-    private fun <T : KSort> transformExprDefault(expr: KExpr<T>): KExpr<T> = when (expr) {
+    fun <T : KSort> transformExprDefault(expr: KExpr<T>): KExpr<T> = when (expr) {
         is KInterpretedValue<T> -> transformValue(expr)
         is KApp<T, *> -> transformApp(expr)
         else -> transformExpr(expr)
@@ -665,7 +673,7 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
      * invoke [ifNotTransformed] on the original expression and return it result.
      * Otherwise, apply [transformer] to the modified dependencies.
      * */
-    private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A : KSort> transformExprAfterTransformedDefault(
+    inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A : KSort> transformExprAfterTransformedDefault(
         expr: In,
         dependencies: List<KExpr<A>>,
         ifNotTransformed: (In) -> KExpr<T>,
@@ -683,7 +691,7 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
     /**
      * Specialized version of [transformExprAfterTransformedDefault] for expression with single argument.
      * */
-    private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A : KSort> transformExprAfterTransformedDefault(
+    inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A : KSort> transformExprAfterTransformedDefault(
         expr: In,
         dependency: KExpr<A>,
         ifNotTransformed: (In) -> KExpr<T>,
@@ -701,7 +709,7 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
     /**
      * Specialized version of [transformExprAfterTransformedDefault] for expression with two arguments.
      * */
-    private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort>
+    inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort>
     transformExprAfterTransformedDefault(
         expr: In,
         dependency0: KExpr<A0>,
@@ -722,7 +730,7 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
      * Specialized version of [transformExprAfterTransformedDefault] for expression with three arguments.
      * */
     @Suppress("LongParameterList")
-    private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort, A2 : KSort>
+    inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort, A2 : KSort>
     transformExprAfterTransformedDefault(
         expr: In,
         dependency0: KExpr<A0>,
@@ -744,7 +752,7 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
      * Specialized version of [transformExprAfterTransformedDefault] for expression with four arguments.
      * */
     @Suppress("LongParameterList", "ComplexCondition")
-    private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort>
+    inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort>
     transformExprAfterTransformedDefault(
         expr: In,
         dependency0: KExpr<A0>,
@@ -768,7 +776,7 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
      * Specialized version of [transformExprAfterTransformedDefault] for expression with five arguments.
      * */
     @Suppress("LongParameterList", "ComplexCondition")
-    private inline fun <
+    inline fun <
         In : KExpr<T>, Out : KExpr<T>,
         T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort, A4 : KSort
     > transformExprAfterTransformedDefault(

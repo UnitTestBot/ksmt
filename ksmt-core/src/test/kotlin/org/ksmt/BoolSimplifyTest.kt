@@ -14,10 +14,10 @@ class BoolSimplifyTest : ExpressionSimplifyTest() {
     fun testNot() = testOperation(KContext::mkNot, KContext::mkNotNoSimplify)
 
     @Test
-    fun testAnd() = testOperation(KContext::mkAnd, KContext::mkAndNoSimplify)
+    fun testAnd() = testListOperation(KContext::mkAnd, KContext::mkAndNoSimplify)
 
     @Test
-    fun testOr() = testOperation(KContext::mkOr, KContext::mkOrNoSimplify)
+    fun testOr() = testListOperation(KContext::mkOr, KContext::mkOrNoSimplify)
 
     @Test
     fun testImplies() = testOperation(KContext::mkImplies, KContext::mkImpliesNoSimplify)
@@ -29,7 +29,7 @@ class BoolSimplifyTest : ExpressionSimplifyTest() {
     fun testEq() = testOperation(KContext::mkEq, KContext::mkEqNoSimplify)
 
     @Test
-    fun testDistinct() = testOperation(KContext::mkDistinct, KContext::mkDistinctNoSimplify)
+    fun testDistinct() = testListOperation(KContext::mkDistinct, KContext::mkDistinctNoSimplify)
 
     @Test
     fun testIte() = runTest { _, checker ->
@@ -98,7 +98,7 @@ class BoolSimplifyTest : ExpressionSimplifyTest() {
     }
 
     @JvmName("testBinaryList")
-    private fun testOperation(
+    private fun testListOperation(
         operation: KContext.(List<KExpr<KBoolSort>>) -> KExpr<KBoolSort>,
         operationNoSimplify: KContext.(List<KExpr<KBoolSort>>) -> KExpr<KBoolSort>,
     ) = testOperation(

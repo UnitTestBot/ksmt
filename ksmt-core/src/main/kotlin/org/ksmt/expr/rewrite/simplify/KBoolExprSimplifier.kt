@@ -9,6 +9,7 @@ import org.ksmt.expr.KExpr
 import org.ksmt.expr.KImpliesExpr
 import org.ksmt.expr.KIteExpr
 import org.ksmt.expr.KNotExpr
+import org.ksmt.expr.KOrBinaryExpr
 import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KXorExpr
 import org.ksmt.expr.transformer.KTransformerBase
@@ -18,30 +19,71 @@ import org.ksmt.sort.KSort
 interface KBoolExprSimplifier : KExprSimplifierBase {
 
     override fun transform(expr: KAndExpr): KExpr<KBoolSort> = simplifyExpr(
-        expr, expr.args,
+        expr = expr,
         preprocess = {
-            // (and a (and b c)) ==> (and a b c)
-            val flatArgs = flatAnd(expr)
-            if (flatArgs.size != expr.args.size) {
-                KAndExpr(this, flatArgs)
-            } else {
-                expr
-            }
+            SimplifierStagedBooleanOperationExpr(
+                ctx,
+                operation = SimplifierBooleanOperation.AND,
+                neutralElement = trueExpr,
+                zeroElement = falseExpr,
+                args = expr.args
+            )
         }
-    ) { args -> simplifyAnd(args) }
+    )
 
     override fun transform(expr: KOrExpr): KExpr<KBoolSort> = simplifyExpr(
-        expr, expr.args,
+        expr = expr,
         preprocess = {
-            // (or a (or b c)) ==> (or a b c)
-            val flatArgs = flatOr(expr)
-            if (flatArgs.size != expr.args.size) {
-                KOrExpr(this, flatArgs)
-            } else {
-                expr
-            }
+            SimplifierStagedBooleanOperationExpr(
+                ctx,
+                operation = SimplifierBooleanOperation.OR,
+                neutralElement = falseExpr,
+                zeroElement = trueExpr,
+                args = expr.args
+            )
         }
-    ) { args -> simplifyOr(args) }
+    )
+
+    /**
+     * Perform simplification of AND/OR expression arguments one by one.
+     * */
+    private fun transform(expr: SimplifierStagedBooleanOperationExpr) =
+        if (!expr.hasUnprocessedArgument()) {
+            when (expr.operation) {
+                SimplifierBooleanOperation.AND -> ctx.simplifyAnd(expr.simplifiedArgs)
+                SimplifierBooleanOperation.OR -> ctx.simplifyOr(expr.simplifiedArgs)
+            }
+        } else {
+            this as KExprSimplifier
+            stagedBooleanOperationStep(expr)
+        }
+
+    private fun KExprSimplifier.stagedBooleanOperationStep(
+        expr: SimplifierStagedBooleanOperationExpr
+    ): KExpr<KBoolSort> {
+        val argument = expr.currentArgument()
+        val simplifiedArgument = transformedExpr(argument)
+
+        // Simplify argument and retry expr simplification
+        if (simplifiedArgument == null) {
+            expr.transformAfter(argument)
+            return expr
+        }
+
+        if (simplifiedArgument == expr.zeroElement) return expr.zeroElement
+
+        if (simplifiedArgument != expr.neutralElement) {
+            expr.simplifiedArgs.add(simplifiedArgument)
+        }
+
+        // Select next argument to simplify
+        expr.processNextArgument()
+
+        // Repeat simplification with next argument
+        retryExprTransformation(expr)
+
+        return expr
+    }
 
     override fun transform(expr: KNotExpr) = simplifyExpr(expr, expr.arg) { arg ->
         simplifyNot(arg)
@@ -97,7 +139,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
         expr = expr,
         preprocess = {
             val notP = KNotExpr(this, expr.p)
-            KOrExpr(this, listOf(notP, expr.q))
+            KOrBinaryExpr(this, notP, expr.q)
         }
     )
 
@@ -187,6 +229,83 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
         override fun accept(transformer: KTransformerBase): KExpr<T> {
             transformer as KBoolExprSimplifier
             return transformer.transform(this)
+        }
+    }
+
+    private enum class SimplifierBooleanOperation {
+        AND, OR
+    }
+
+    /**
+     * Auxiliary expression to perform simplification of AND/OR expression
+     * arguments one by one.
+     * @see [SimplifierAuxExpression]
+     * */
+    private class SimplifierStagedBooleanOperationExpr(
+        ctx: KContext,
+        val operation: SimplifierBooleanOperation,
+        val neutralElement: KExpr<KBoolSort>,
+        val zeroElement: KExpr<KBoolSort>,
+        override val args: List<KExpr<KBoolSort>>
+    ) : KApp<KBoolSort, KBoolSort>(ctx) {
+        override val sort: KBoolSort = ctx.boolSort
+        override val decl: KDecl<KBoolSort>
+            get() = when (operation) {
+                SimplifierBooleanOperation.AND -> ctx.mkAndDecl()
+                SimplifierBooleanOperation.OR -> ctx.mkOrDecl()
+            }
+
+        override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> {
+            transformer as KBoolExprSimplifier
+            return transformer.transform(this)
+        }
+
+        val simplifiedArgs = arrayListOf<KExpr<KBoolSort>>()
+
+        private val argsIteratorStack = arrayListOf(args.iterator())
+        private var currentArgument: KExpr<KBoolSort>? = null
+
+        fun currentArgument(): KExpr<KBoolSort> = currentArgument ?: neutralElement
+
+        fun hasUnprocessedArgument(): Boolean {
+            if (currentArgument != null) return true
+
+            moveIterator()
+            return argsIteratorStack.isNotEmpty()
+        }
+
+        /**
+         * Select next argument to process.
+         * If argument can be flattened the next argument
+         * is the first argument of flattened expression.
+         * */
+        fun processNextArgument() {
+            currentArgument = null
+
+            while (hasUnprocessedArgument()) {
+                val argument = argsIteratorStack.last().next()
+                if (!tryFlatExpr(argument)) {
+                    currentArgument = argument
+                    return
+                }
+            }
+        }
+
+        private fun moveIterator() {
+            while (argsIteratorStack.isNotEmpty() && !argsIteratorStack.last().hasNext()) {
+                argsIteratorStack.removeLast()
+            }
+        }
+
+        private fun tryFlatExpr(expr: KExpr<KBoolSort>): Boolean {
+            val flatArgs = when {
+                expr is KAndExpr && operation == SimplifierBooleanOperation.AND -> expr.args
+                expr is KOrExpr && operation == SimplifierBooleanOperation.OR -> expr.args
+                else -> return false
+            }
+
+            argsIteratorStack.add(flatArgs.iterator())
+            return true
         }
     }
 }

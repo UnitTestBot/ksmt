@@ -3,6 +3,7 @@ package org.ksmt.solver.yices
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAddArithExpr
+import org.ksmt.expr.KAndBinaryExpr
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KArray2Lambda
 import org.ksmt.expr.KArray2Select
@@ -128,6 +129,7 @@ import org.ksmt.expr.KLtArithExpr
 import org.ksmt.expr.KModIntExpr
 import org.ksmt.expr.KMulArithExpr
 import org.ksmt.expr.KNotExpr
+import org.ksmt.expr.KOrBinaryExpr
 import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KPowerArithExpr
 import org.ksmt.expr.KQuantifier
@@ -216,8 +218,20 @@ open class KYicesExprInternalizer(
         }
     }
 
+    override fun transform(expr: KAndBinaryExpr): KExpr<KBoolSort> = with(expr) {
+        transform(lhs, rhs) { l: YicesTerm, r: YicesTerm ->
+            yicesCtx.and(listOf(l, r))
+        }
+    }
+
     override fun transform(expr: KOrExpr): KExpr<KBoolSort> = with(expr) {
         transformList(args) { args: Array<YicesTerm> -> yicesCtx.or(args.toList()) }
+    }
+
+    override fun transform(expr: KOrBinaryExpr): KExpr<KBoolSort> = with(expr) {
+        transform(lhs, rhs) { l: YicesTerm, r: YicesTerm ->
+            yicesCtx.or(listOf(l, r))
+        }
     }
 
     override fun transform(expr: KNotExpr): KExpr<KBoolSort> = with(expr) {

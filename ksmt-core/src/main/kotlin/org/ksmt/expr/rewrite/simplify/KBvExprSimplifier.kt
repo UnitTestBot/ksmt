@@ -2,7 +2,6 @@ package org.ksmt.expr.rewrite.simplify
 
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
-import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KBv2IntExpr
@@ -1046,7 +1045,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         // restore concat order
         result.reverse()
 
-        KAndExpr(ctx, result)
+        ctx.mkAndAuxExpr(result)
     }
 
     /**
