@@ -361,7 +361,8 @@ class MultiIndexedArrayTest {
         val ignored: MutableList<TestCase> = mutableListOf(),
         val failed: MutableList<TestCase> = mutableListOf()
     ) {
-        private var testId = 0
+        var testId = 0
+            private set
 
         fun start() {
             testId = total++
