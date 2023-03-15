@@ -561,7 +561,7 @@ class ExprKindMapper: KTransformerBase {
     ): KExpr<KArray3Sort<D0, D1, D2, R>> = expr.kind(ExprKind.Array3Lambda)
 
     override fun <R : KSort> transform(expr: KArrayNLambda<R>): KExpr<KArrayNSort<R>> =
-        expr.kind(ExprKind.ArrayLambda)
+        expr.kind(ExprKind.ArrayNLambda)
 
     override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> = expr.kind(ExprKind.AddArithExpr)
 
