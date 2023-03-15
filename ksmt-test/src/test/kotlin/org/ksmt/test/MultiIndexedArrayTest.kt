@@ -377,17 +377,17 @@ class MultiIndexedArrayTest {
         }
 
         fun ignore(expected: KExpr<*>, actual: KExpr<*>, message: String) {
-            System.err.println("IGNORED: $message")
+            System.err.println("IGNORED ${testId}: $message")
             ignored += TestCase(testId, message, expected, actual)
         }
 
         fun fail(expected: KExpr<*>, actual: KExpr<*>, message: String) {
-            System.err.println("FAILED: $message")
+            System.err.println("FAILED ${testId}: $message")
             failed += TestCase(testId, message, expected, actual)
         }
 
         fun fail(ex: Throwable) {
-            System.err.println("FAILED: $ex")
+            System.err.println("FAILED ${testId}: $ex")
             failed += TestCase(testId, "$ex", null, null)
         }
 
