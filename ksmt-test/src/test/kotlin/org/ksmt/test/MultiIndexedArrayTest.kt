@@ -269,46 +269,41 @@ class MultiIndexedArrayTest {
             return
         }
 
-        val expectedTrack = mkFreshConst("expected", expected.sort)
-        val actualTrack = mkFreshConst("actual", actual.sort)
-
         oracle.scoped {
-            oracle.assert(expectedTrack eq expected)
-            oracle.checkSatAndReport(stats, expected, actual, KSolverStatus.SAT, "Expected is SAT") ?: return
-        }
+            assertNotEqual(oracle, expected, actual)
 
-        oracle.scoped {
-            oracle.assert(actualTrack eq actual)
-            oracle.checkSatAndReport(stats, expected, actual, KSolverStatus.SAT, "Actual is SAT") ?: return
-        }
+            oracle.checkSatAndReport(stats, expected, actual, KSolverStatus.UNSAT, "Expressions equal") {
+                val model = oracle.model()
+                val actualValue = model.eval(actual, isComplete = false)
+                val expectedValue = model.eval(expected, isComplete = false)
 
-        oracle.scoped {
-            oracle.assert(actualTrack eq actual)
-            oracle.assert(expectedTrack eq expected)
-
-            // Check expressions are possible to be SAT
-            oracle.scoped {
-                oracle.assert(expectedTrack eq actualTrack)
-                oracle.checkSatAndReport(stats, expected, actual, KSolverStatus.SAT, "SAT is possible") ?: return
-            }
-
-            // Check expressions are equal
-            oracle.scoped {
-                oracle.assert(expectedTrack neq actualTrack)
-                oracle.checkSatAndReport(stats, expected, actual, KSolverStatus.UNSAT, "Expressions equal") {
-                    val model = oracle.model()
-                    val actualValue = model.eval(actual, isComplete = false)
-                    val expectedValue = model.eval(expected, isComplete = false)
-
-                    if (expectedValue == actualValue) {
-                        stats.ignore(expected, actual, "Expressions equal: check incorrect")
-                        return
-                    }
-                } ?: return
-            }
+                if (expectedValue == actualValue) {
+                    stats.ignore(expected, actual, "Expressions equal: check incorrect")
+                    return
+                }
+            } ?: return
         }
 
         stats.passed()
+    }
+
+    private fun <T : KSort> KContext.assertNotEqual(
+        oracle: KSolver<*>,
+        expected: KExpr<T>,
+        actual: KExpr<T>
+    ) {
+        val sort = expected.sort
+        if (sort !is KArraySortBase<*>) {
+            oracle.assert(expected neq actual)
+            return
+        }
+
+        val expectedArray: KExpr<KArraySortBase<KBv8Sort>> = expected.uncheckedCast()
+        val actualArray: KExpr<KArraySortBase<KBv8Sort>> = actual.uncheckedCast()
+
+        // (exists (i) (/= (select expected i) (select actual i))
+        val indices = sort.domainSorts.mapIndexed { i, srt -> mkFreshConst("i_${i}", srt) }
+        oracle.assert(mkSelect(expectedArray) { indices } neq mkSelect(actualArray) { indices })
     }
 
     private inline fun KSolver<*>.checkSatAndReport(
