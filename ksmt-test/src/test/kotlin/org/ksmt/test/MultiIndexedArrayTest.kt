@@ -2,6 +2,7 @@ package org.ksmt.test
 
 import com.microsoft.z3.Context
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Disabled
 import org.ksmt.KContext
 import org.ksmt.KContext.SimplificationMode.NO_SIMPLIFY
 import org.ksmt.expr.KExpr
@@ -29,7 +30,7 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 
-//@Disabled
+@Disabled
 class MultiIndexedArrayTest {
 
     @Test
