@@ -822,9 +822,9 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
 
     override fun <R : KSort> transform(expr: KArrayNStore<R>): KExpr<KArrayNSort<R>> {
         val exprArgs = buildList {
-            add(expr.value)
-            addAll(expr.indices)
             add(expr.array)
+            addAll(expr.indices)
+            add(expr.value)
         }
 
         return expr.transformList(exprArgs) { transformedArgs: LongArray ->
