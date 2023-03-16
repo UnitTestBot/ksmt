@@ -270,10 +270,17 @@ class MultiIndexedArrayTest {
             return
         }
 
-        oracle.scoped {
+        val satIsPossiblePassed = oracle.scoped {
+            assertPossibleToBeEqual(oracle, expected, actual)
+            oracle.checkSatAndReport(stats, expected, actual, KSolverStatus.SAT, "SAT is possible")
+        }
+
+        val expressionEqualityPassed = oracle.scoped {
             assertNotEqual(oracle, expected, actual)
 
-            oracle.checkSatAndReport(stats, expected, actual, KSolverStatus.UNSAT, "Expressions equal") {
+            oracle.checkSatAndReport(
+                stats, expected, actual, KSolverStatus.UNSAT, "Expressions equal"
+            ) {
                 val model = oracle.model()
                 val actualValue = model.eval(actual, isComplete = false)
                 val expectedValue = model.eval(expected, isComplete = false)
@@ -282,10 +289,12 @@ class MultiIndexedArrayTest {
                     stats.ignore(expected, actual, "Expressions equal: check incorrect")
                     return
                 }
-            } ?: return
+            }
         }
 
-        stats.passed()
+        if (satIsPossiblePassed && expressionEqualityPassed) {
+            stats.passed()
+        }
     }
 
     private fun <T : KSort> KContext.assertNotEqual(
@@ -307,6 +316,25 @@ class MultiIndexedArrayTest {
         oracle.assert(mkSelect(expectedArray) { indices } neq mkSelect(actualArray) { indices })
     }
 
+    private fun <T : KSort> KContext.assertPossibleToBeEqual(
+        oracle: KSolver<*>,
+        expected: KExpr<T>,
+        actual: KExpr<T>
+    ) {
+        val sort = expected.sort
+        if (sort !is KArraySortBase<*>) {
+            oracle.assert(expected eq actual)
+            return
+        }
+
+        val expectedArray: KExpr<KArraySortBase<KBv8Sort>> = expected.uncheckedCast()
+        val actualArray: KExpr<KArraySortBase<KBv8Sort>> = actual.uncheckedCast()
+
+        // (exists (i) (= (select expected i) (select actual i))
+        val indices = sort.domainSorts.mapIndexed { i, srt -> mkFreshConst("i_${i}", srt) }
+        oracle.assert(mkSelect(expectedArray) { indices } eq mkSelect(actualArray) { indices })
+    }
+
     private inline fun KSolver<*>.checkSatAndReport(
         stats: TestStats,
         expected: KExpr<*>,
@@ -314,25 +342,25 @@ class MultiIndexedArrayTest {
         expectedStatus: KSolverStatus,
         prefix: String,
         onFailure: () -> Unit = {}
-    ): Unit? = when (check()) {
-        expectedStatus -> Unit
+    ): Boolean = when (check()) {
+        expectedStatus -> true
         KSolverStatus.UNKNOWN -> {
             val message = "$prefix: ${reasonOfUnknown()}"
             stats.ignore(expected, actual, message)
-            null
+            false
         }
 
         else -> {
             onFailure()
             stats.fail(expected, actual, prefix)
-            null
+            false
         }
     }
 
-    private inline fun KSolver<*>.scoped(block: () -> Unit) {
+    private inline fun <T> KSolver<*>.scoped(block: () -> T): T {
         push()
         try {
-            block()
+            return block()
         } finally {
             pop()
         }
