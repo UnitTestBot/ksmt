@@ -6,14 +6,12 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Disabled
 import org.ksmt.KContext
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
 
-@Disabled
 class ContextAstInterningTest {
 
     @Test
