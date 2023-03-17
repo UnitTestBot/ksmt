@@ -702,9 +702,12 @@ open class KYicesExprInternalizer(
         TODO("Multi-indexed arrays are not supported")
     }
 
-    override fun <A: KArraySortBase<R>, R : KSort> transform(expr: KArrayConst<A, R>): KExpr<A> = with(expr) {
+    override fun <A : KArraySortBase<R>, R : KSort> transform(
+        expr: KArrayConst<A, R>
+    ): KExpr<A> = with(expr) {
         transform(value) { value: YicesTerm ->
-            yicesCtx.lambda(listOf(yicesCtx.newVariable(sort.internalizeSort())), value)
+            val bounds = sort.domainSorts.map { yicesCtx.newVariable(it.internalizeSort()) }
+            yicesCtx.lambda(bounds, value)
         }
     }
 
