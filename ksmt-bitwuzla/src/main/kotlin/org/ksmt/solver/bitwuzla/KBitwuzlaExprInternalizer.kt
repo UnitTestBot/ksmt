@@ -422,11 +422,7 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
         lhs: BitwuzlaTerm, lhsIsArray: Boolean,
         rhs: BitwuzlaTerm, rhsIsArray: Boolean
     ): BitwuzlaTerm {
-        if (lhsIsArray && rhsIsArray) {
-            return Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lhs, rhs)
-        }
-
-        if (!lhsIsArray && !rhsIsArray) {
+        if (lhsIsArray == rhsIsArray) {
             return Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lhs, rhs)
         }
 
