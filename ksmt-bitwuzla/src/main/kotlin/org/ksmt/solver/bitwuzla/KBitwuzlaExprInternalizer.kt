@@ -1,7 +1,5 @@
 package org.ksmt.solver.bitwuzla
 
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
-import org.ksmt.KContext
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KDeclVisitor
@@ -17,6 +15,7 @@ import org.ksmt.expr.KArray3Select
 import org.ksmt.expr.KArray3Store
 import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArrayLambdaBase
 import org.ksmt.expr.KArrayNLambda
 import org.ksmt.expr.KArrayNSelect
 import org.ksmt.expr.KArrayNStore
@@ -151,7 +150,6 @@ import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
-import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.bitwuzla.bindings.Bitwuzla
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
@@ -183,14 +181,10 @@ import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KSortVisitor
 import org.ksmt.sort.KUninterpretedSort
-import org.ksmt.utils.uncheckedCast
 import java.math.BigInteger
 
 @Suppress("LargeClass")
-open class KBitwuzlaExprInternalizer(
-    val bitwuzlaCtx: KBitwuzlaContext,
-    private val scopedVars: Map<KDecl<*>, BitwuzlaTerm>? = null
-) : KExprLongInternalizerBase() {
+open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprLongInternalizerBase() {
 
     @JvmField
     val bitwuzla: Bitwuzla = bitwuzlaCtx.bitwuzla
@@ -199,6 +193,10 @@ open class KBitwuzlaExprInternalizer(
     open val functionSortInternalizer: FunctionSortInternalizer by lazy {
         FunctionSortInternalizer(bitwuzlaCtx, sortInternalizer)
     }
+
+    private val quantifiedDeclarationsScopeOwner = arrayListOf<KExpr<*>>()
+    private val quantifiedDeclarationsScope = arrayListOf<Set<KDecl<*>>?>()
+    private var quantifiedDeclarations: Set<KDecl<*>>? = null
 
     override fun findInternalizedExpr(expr: KExpr<*>): BitwuzlaTerm {
         return bitwuzlaCtx.findExprTerm(expr)
@@ -245,8 +243,7 @@ open class KBitwuzlaExprInternalizer(
     }, rewriteWithAxiomsRequired = {
         // We have an expression that can be rewritten using axioms
 
-        // Reset internalizer
-        exprStack.clear()
+        resetInternalizer()
 
         // Rewrite whole assertion using axioms
         val rewriterWithAxioms = KBitwuzlaInternalizationAxioms(ctx)
@@ -258,6 +255,14 @@ open class KBitwuzlaExprInternalizer(
             axioms = exprWithAxioms.axioms.map { it.internalizeExpr() }
         )
     })
+
+    private fun resetInternalizer() {
+        exprStack.clear()
+
+        quantifiedDeclarations = null
+        quantifiedDeclarationsScope.clear()
+        quantifiedDeclarationsScopeOwner.clear()
+    }
 
     /**
     * Create Bitwuzla sort from KSMT sort
@@ -295,23 +300,15 @@ open class KBitwuzlaExprInternalizer(
     }
 
     private inline fun mkConstant(decl: KDecl<*>, sort: () -> BitwuzlaSort): BitwuzlaTerm {
-        if (scopedVars != null) {
-            val scopedVar = scopedVars[decl]
-            if (scopedVar != null) {
-                return scopedVar
-            }
-        }
-        return bitwuzlaCtx.mkConstant(decl, sort())
+        val isQuantified = quantifiedDeclarations?.contains(decl) ?: false
+        return bitwuzlaCtx.mkConstant(decl, sort(), isQuantified)
     }
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = with(expr) {
         transformList(args) { args: LongArray ->
             val const = mkConstant(decl) { decl.bitwuzlaFunctionSort() }
 
-            val termArgs = LongArray(args.size + 1)
-            termArgs[0] = const
-            args.copyInto(termArgs, destinationOffset = 1)
-
+            val termArgs = args.addFirst(const)
             Native.bitwuzlaMkTerm(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, termArgs)
         }
     }
@@ -321,15 +318,15 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun transform(expr: KAndExpr) = with(expr) {
-        transformList(args) { args: LongArray ->
-            when (args.size) {
-                0 -> bitwuzlaCtx.trueTerm
-                1 -> args[0]
-                else -> Native.bitwuzlaMkTerm(
-                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_AND, args
-                )
-            }
-        }
+        transformList(args, ::mkAndTerm)
+    }
+
+    fun mkAndTerm(args: LongArray): BitwuzlaTerm = when (args.size) {
+        0 -> bitwuzlaCtx.trueTerm
+        1 -> args[0]
+        else -> Native.bitwuzlaMkTerm(
+            bitwuzla, BitwuzlaKind.BITWUZLA_KIND_AND, args
+        )
     }
 
     override fun transform(expr: KAndBinaryExpr) = with(expr) {
@@ -337,15 +334,15 @@ open class KBitwuzlaExprInternalizer(
     }
 
     override fun transform(expr: KOrExpr) = with(expr) {
-        transformList(args) { args: LongArray ->
-            when (args.size) {
-                0 -> bitwuzlaCtx.falseTerm
-                1 -> args[0]
-                else -> Native.bitwuzlaMkTerm(
-                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_OR, args
-                )
-            }
-        }
+        transformList(args, ::mkOrTerm)
+    }
+
+    fun mkOrTerm(args: LongArray): BitwuzlaTerm = when (args.size) {
+        0 -> bitwuzlaCtx.falseTerm
+        1 -> args[0]
+        else -> Native.bitwuzlaMkTerm(
+            bitwuzla, BitwuzlaKind.BITWUZLA_KIND_OR, args
+        )
     }
 
     override fun transform(expr: KOrBinaryExpr) = with(expr) {
@@ -388,13 +385,12 @@ open class KBitwuzlaExprInternalizer(
 
     private fun mkIteTerm(sort: KSort, c: BitwuzlaTerm, t: BitwuzlaTerm, f: BitwuzlaTerm): BitwuzlaTerm {
         if (sort is KArraySort<*, *>) {
-            val tKind = Native.bitwuzlaTermGetBitwuzlaKind(t)
-            val fKind = Native.bitwuzlaTermGetBitwuzlaKind(f)
-            if (tKind == BitwuzlaKind.BITWUZLA_KIND_LAMBDA || fKind == BitwuzlaKind.BITWUZLA_KIND_LAMBDA) {
-                return mkArrayLambdaTerm(sort.domain) { lambdaVar ->
-                    val tValue = mkArraySelectTerm(tKind, t, lambdaVar)
-                    val fValue = mkArraySelectTerm(fKind, f, lambdaVar)
-
+            val tIsArray = Native.bitwuzlaTermIsArray(t)
+            val fIsArray = Native.bitwuzlaTermIsArray(f)
+            if (tIsArray != fIsArray) {
+                return mkArrayLambdaTerm(sort.domain) { boundVar ->
+                    val tValue = mkArraySelectTerm(tIsArray, t, boundVar)
+                    val fValue = mkArraySelectTerm(fIsArray, f, boundVar)
                     Native.bitwuzlaMkTerm3(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_ITE, c, tValue, fValue)
                 }
             }
@@ -404,44 +400,81 @@ open class KBitwuzlaExprInternalizer(
 
     private fun mkEqTerm(sort: KSort, l: BitwuzlaTerm, r: BitwuzlaTerm): BitwuzlaTerm {
         if (sort is KArraySort<*, *>) {
-            val lKind = Native.bitwuzlaTermGetBitwuzlaKind(l)
-            val rKind = Native.bitwuzlaTermGetBitwuzlaKind(r)
-            if (lKind == BitwuzlaKind.BITWUZLA_KIND_LAMBDA || rKind == BitwuzlaKind.BITWUZLA_KIND_LAMBDA) {
-                // (= a b) ==> (forall (x) (= (select a x) (select b x)))
-                val idxVar = Native.bitwuzlaMkVar(bitwuzla, sort.domain.internalizeSort(), "x")
-                val lValue = mkArraySelectTerm(lKind, l, idxVar)
-                val rValue = mkArraySelectTerm(rKind, r, idxVar)
-                val body = Native.bitwuzlaMkTerm2(
-                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lValue, rValue
-                )
-                return Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FORALL, idxVar, body)
-            }
+            val lIsArray = Native.bitwuzlaTermIsArray(l)
+            val rIsArray = Native.bitwuzlaTermIsArray(r)
+            return mkArrayEqTerm(sort, l, lIsArray, r, rIsArray)
         }
         return Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, l, r)
     }
 
     private fun mkDistinctTerm(sort: KSort, args: LongArray): BitwuzlaTerm {
         if (sort is KArraySort<*, *>) {
-            val kinds = args.map { Native.bitwuzlaTermGetBitwuzlaKind(it) }
-            if (kinds.any { it == BitwuzlaKind.BITWUZLA_KIND_LAMBDA }) {
-                // (distinct a b) ==> (forall (x) (distinct (select a x) (select b x)))
-                val idxVar = Native.bitwuzlaMkVar(bitwuzla, sort.domain.internalizeSort(), "x")
-                val values = args.zip(kinds) { arg, kind ->
-                    mkArraySelectTerm(kind, arg, idxVar)
-                }
-                val distinctValues = Native.bitwuzlaMkTerm(
-                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, values.toLongArray()
-                )
-
-                return Native.bitwuzlaMkTerm2(
-                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FORALL, idxVar, distinctValues
-                )
-            }
+            return blastArrayDistinct(sort, args)
         }
 
         return Native.bitwuzlaMkTerm(
             bitwuzla, BitwuzlaKind.BITWUZLA_KIND_DISTINCT, args
         )
+    }
+
+    private fun mkArrayEqTerm(
+        sort: KArraySort<*, *>,
+        lhs: BitwuzlaTerm, lhsIsArray: Boolean,
+        rhs: BitwuzlaTerm, rhsIsArray: Boolean
+    ): BitwuzlaTerm {
+        if (lhsIsArray == rhsIsArray) {
+            return Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lhs, rhs)
+        }
+
+        return if (lhsIsArray) {
+            mkArrayEqFunctionTerm(sort, rhs, lhs)
+        } else {
+            mkArrayEqFunctionTerm(sort, lhs, rhs)
+        }
+    }
+
+    private fun mkArrayEqFunctionTerm(
+        sort: KArraySort<*, *>,
+        functionTerm: BitwuzlaTerm,
+        arrayTerm: BitwuzlaTerm
+    ): BitwuzlaTerm {
+        val arrayKind = Native.bitwuzlaTermGetBitwuzlaKind(arrayTerm)
+        if (arrayKind == BitwuzlaKind.BITWUZLA_KIND_CONST) {
+            // It is incorrect to use array and function, but equality should work
+            return Native.bitwuzlaMkTerm2(
+                bitwuzla,
+                BitwuzlaKind.BITWUZLA_KIND_EQUAL,
+                arrayTerm,
+                functionTerm
+            )
+        }
+
+        val wrappedArray = mkArrayLambdaTerm(sort.domain) { boundVar ->
+            mkArraySelectTerm(isArray = true, array = arrayTerm, idx = boundVar)
+        }.also {
+            check(!Native.bitwuzlaTermIsArray(it)) { "Array term was not eliminated" }
+        }
+        return Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, wrappedArray, functionTerm)
+    }
+
+    private fun blastArrayDistinct(sort: KArraySort<*, *>, arrays: LongArray): BitwuzlaTerm {
+        val inequalities = mutableListOf<Long>()
+
+        for (i in arrays.indices) {
+            val arrayI = arrays[i]
+            val isArrayI = Native.bitwuzlaTermIsArray(arrayI)
+            for (j in (i + 1) until arrays.size) {
+                val arrayJ = arrays[j]
+                val isArrayJ = Native.bitwuzlaTermIsArray(arrayJ)
+
+                val equality = mkArrayEqTerm(sort, arrayI, isArrayI, arrayJ, isArrayJ)
+                val inequality = Native.bitwuzlaMkTerm1(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_NOT, equality)
+
+                inequalities += inequality
+            }
+        }
+
+        return mkAndTerm(inequalities.toLongArray())
     }
 
     override fun transform(expr: KBitVec1Value) = with(expr) {
@@ -719,10 +752,12 @@ open class KBitwuzlaExprInternalizer(
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) = with(expr) {
         transform(array, index, value) { a: BitwuzlaTerm, i: BitwuzlaTerm, v: BitwuzlaTerm ->
-            if (Native.bitwuzlaTermGetBitwuzlaKind(a) == BitwuzlaKind.BITWUZLA_KIND_LAMBDA) {
+            if (Native.bitwuzlaTermIsArray(a)) {
+                Native.bitwuzlaMkTerm3(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_ARRAY_STORE, a, i, v)
+            } else {
                 mkArrayLambdaTerm(index.sort) { lambdaVar ->
                     // (store a i v) ==> (ite (= x i) v (select a x))
-                    val nestedValue = mkArraySelectTerm(BitwuzlaKind.BITWUZLA_KIND_LAMBDA, a, lambdaVar)
+                    val nestedValue = mkArraySelectTerm(array = a, idx = lambdaVar, isArray = false)
                     val condition = Native.bitwuzlaMkTerm2(
                         bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lambdaVar, i
                     )
@@ -730,106 +765,219 @@ open class KBitwuzlaExprInternalizer(
                         bitwuzla, BitwuzlaKind.BITWUZLA_KIND_ITE, condition, v, nestedValue
                     )
                 }
-            } else {
-                Native.bitwuzlaMkTerm3(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_ARRAY_STORE, a, i, v)
             }
         }
     }
 
     override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
         expr: KArray2Store<D0, D1, R>
-    ): KExpr<KArray2Sort<D0, D1, R>> {
-        TODO("Multi-indexed arrays are not supported")
+    ): KExpr<KArray2Sort<D0, D1, R>> = with(expr) {
+        transform(
+            array,
+            index0,
+            index1,
+            value
+        ) { a: BitwuzlaTerm, i0: BitwuzlaTerm, i1: BitwuzlaTerm, v: BitwuzlaTerm ->
+            // (store a i j v) ==> (ite (and (= x0 i) (= x1 j)) v (select a x0 x1))
+            mkArrayLambdaTerm(sort.domainSorts) { lambdaVars ->
+                val selectArgs = lambdaVars.addFirst(a)
+                val nestedValue = Native.bitwuzlaMkTerm(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, selectArgs)
+
+                val condition0 = Native.bitwuzlaMkTerm2(
+                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lambdaVars[0], i0
+                )
+                val condition1 = Native.bitwuzlaMkTerm2(
+                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lambdaVars[1], i1
+                )
+                val condition = Native.bitwuzlaMkTerm2(
+                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_AND, condition0, condition1
+                )
+
+                Native.bitwuzlaMkTerm3(
+                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_ITE, condition, v, nestedValue
+                )
+            }
+        }
     }
 
     override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
         expr: KArray3Store<D0, D1, D2, R>
     ): KExpr<KArray3Sort<D0, D1, D2, R>> {
-        TODO("Multi-indexed arrays are not supported")
+        val exprArgs = buildList {
+            add(expr.array)
+            add(expr.index0)
+            add(expr.index1)
+            add(expr.index2)
+            add(expr.value)
+        }
+        return expr.transformList(exprArgs) { transformedArgs ->
+            mkArrayStoreTerm(transformedArgs, expr.sort)
+        }
     }
 
     override fun <R : KSort> transform(expr: KArrayNStore<R>): KExpr<KArrayNSort<R>> {
-        TODO("Multi-indexed arrays are not supported")
+        val exprArgs = buildList {
+            add(expr.array)
+            addAll(expr.indices)
+            add(expr.value)
+        }
+
+        return expr.transformList(exprArgs) { transformedArgs: LongArray ->
+            mkArrayStoreTerm(transformedArgs, expr.sort)
+        }
+    }
+
+    // args in the format: [array] + indices + [value]
+    private fun mkArrayStoreTerm(args: LongArray, sort: KArraySortBase<*>): BitwuzlaTerm {
+        val array: BitwuzlaTerm = args[0]
+        val value: BitwuzlaTerm = args[args.lastIndex]
+
+        return mkArrayLambdaTerm(sort.domainSorts) { lambdaVars: LongArray ->
+            val selectArgs = lambdaVars.addFirst(array)
+            val nestedValue = Native.bitwuzlaMkTerm(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, selectArgs)
+
+            val conditions = LongArray(lambdaVars.size) {
+                val index = args[it + 1] // +1 for array argument
+                val lambdaIndex = lambdaVars[it]
+
+                Native.bitwuzlaMkTerm2(
+                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EQUAL, lambdaIndex, index
+                )
+            }
+            val condition = Native.bitwuzlaMkTerm(
+                bitwuzla, BitwuzlaKind.BITWUZLA_KIND_AND, conditions
+            )
+
+            Native.bitwuzlaMkTerm3(
+                bitwuzla, BitwuzlaKind.BITWUZLA_KIND_ITE, condition, value, nestedValue
+            )
+        }
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>) = with(expr) {
         transform(array, index) { a: BitwuzlaTerm, i: BitwuzlaTerm ->
-            mkArraySelectTerm(Native.bitwuzlaTermGetBitwuzlaKind(a), a, i)
+            mkArraySelectTerm(Native.bitwuzlaTermIsArray(a), a, i)
         }
     }
 
-    private fun mkArraySelectTerm(arrayKind: BitwuzlaKind, array: BitwuzlaTerm, idx: BitwuzlaTerm): BitwuzlaTerm =
-        if (arrayKind == BitwuzlaKind.BITWUZLA_KIND_LAMBDA) {
-            Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, array, idx)
-        } else {
+    private fun mkArraySelectTerm(isArray: Boolean, array: BitwuzlaTerm, idx: BitwuzlaTerm): BitwuzlaTerm =
+        if (isArray) {
             Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_ARRAY_SELECT, array, idx)
+        } else {
+            Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, array, idx)
         }
 
-    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(expr: KArray2Select<D0, D1, R>): KExpr<R> {
-        TODO("Multi-indexed arrays are not supported")
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Select<D0, D1, R>
+    ): KExpr<R> = with(expr) {
+        transform(array, index0, index1) { a: BitwuzlaTerm, i0: BitwuzlaTerm, i1: BitwuzlaTerm ->
+            Native.bitwuzlaMkTerm3(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, a, i0, i1)
+        }
     }
 
     override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
         expr: KArray3Select<D0, D1, D2, R>
-    ): KExpr<R> {
-        TODO("Multi-indexed arrays are not supported")
+    ): KExpr<R> = with(expr) {
+        transform(
+            array,
+            index0,
+            index1,
+            index2
+        ) { a: BitwuzlaTerm, i0: BitwuzlaTerm, i1: BitwuzlaTerm, i2: BitwuzlaTerm ->
+            val args = longArrayOf(a, i0, i1, i2)
+            Native.bitwuzlaMkTerm(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, args)
+        }
     }
 
     override fun <R : KSort> transform(expr: KArrayNSelect<R>): KExpr<R> {
-        TODO("Multi-indexed arrays are not supported")
+        val exprArgs = buildList {
+            add(expr.array)
+            addAll(expr.indices)
+        }
+        return expr.transformList(exprArgs) { args ->
+            Native.bitwuzlaMkTerm(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_APPLY, args)
+        }
     }
 
     override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KArrayConst<A, R>) = with(expr) {
         transform(value) { value: BitwuzlaTerm ->
-            Native.bitwuzlaMkConstArray(bitwuzla, sort.internalizeSort(), value)
+            /**
+             * Note: don't use [Native.bitwuzlaMkConstArray] due to bitwuzla internal issues.
+             *
+             * Constant arrays are represented as lambdas with `isArray` flag.
+             * Bitwuzla doesn't distinguish between lambda with `isArray` and without
+             * and therefore may use them interchangeably.
+             * In some cases, constant arrays are replaced with lambda expressions without
+             * `isArray` flag which leads to internal errors.
+             * */
+            mkArrayLambdaTerm(sort.domainSorts) { value }
         }
     }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) = expr.transform {
-        val (_, internalizedBounds, internalizedBody) = expr.ctx.internalizeQuantifierBody(
-            listOf(expr.indexVarDecl), expr.body
-        )
-        mkLambdaTerm(internalizedBounds.single(), internalizedBody)
-    }
+    override fun <D : KSort, R : KSort> transform(
+        expr: KArrayLambda<D, R>
+    ) = expr.transformArrayLambda()
 
-    private inline fun mkArrayLambdaTerm(boundVarSort: KSort, body: (BitwuzlaTerm) -> BitwuzlaTerm): BitwuzlaTerm {
-        val varSort = boundVarSort.internalizeSort()
-        val boundVar = Native.bitwuzlaMkVar(bitwuzla, varSort, "x")
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Lambda<D0, D1, R>
+    ) = expr.transformArrayLambda()
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Lambda<D0, D1, D2, R>
+    ) = expr.transformArrayLambda()
+
+    override fun <R : KSort> transform(
+        expr: KArrayNLambda<R>
+    ) = expr.transformArrayLambda()
+
+    private fun <E : KArrayLambdaBase<*, *>> E.transformArrayLambda(): E =
+        internalizeQuantifierBody(indexVarDeclarations, body) { internalizedBounds, internalizedBody ->
+            mkLambdaTerm(internalizedBounds, internalizedBody)
+        }
+
+    private inline fun mkArrayLambdaTerm(
+        boundVarSort: KSort,
+        body: (BitwuzlaTerm) -> BitwuzlaTerm
+    ): BitwuzlaTerm {
+        val boundDecl = bitwuzlaCtx.ctx.mkFreshConstDecl("x", boundVarSort)
+        val boundVar = bitwuzlaCtx.mkVar(boundDecl, boundVarSort.internalizeSort())
         val lambdaBody = body(boundVar)
         return mkLambdaTerm(boundVar, lambdaBody)
+    }
+
+    private inline fun mkArrayLambdaTerm(
+        bounds: List<KSort>,
+        body: (LongArray) -> BitwuzlaTerm
+    ): BitwuzlaTerm {
+        val boundVars = LongArray(bounds.size) {
+            val boundDecl = bitwuzlaCtx.ctx.mkFreshConstDecl("x", bounds[it])
+            bitwuzlaCtx.mkVar(boundDecl, bounds[it].internalizeSort())
+        }
+        val lambdaBody = body(boundVars)
+        return mkLambdaTerm(boundVars, lambdaBody)
     }
 
     private fun mkLambdaTerm(boundVar: BitwuzlaTerm, body: BitwuzlaTerm): BitwuzlaTerm =
         Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_LAMBDA, boundVar, body)
 
-    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
-        expr: KArray2Lambda<D0, D1, R>
-    ): KExpr<KArray2Sort<D0, D1, R>> {
-        TODO("Multi-indexed arrays are not supported")
-    }
-
-    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
-        expr: KArray3Lambda<D0, D1, D2, R>
-    ): KExpr<KArray3Sort<D0, D1, D2, R>> {
-        TODO("Multi-indexed arrays are not supported")
-    }
-
-    override fun <R : KSort> transform(
-        expr: KArrayNLambda<R>
-    ): KExpr<KArrayNSort<R>> {
-        TODO("Multi-indexed arrays are not supported")
+    private fun mkLambdaTerm(
+        bounds: LongArray,
+        body: BitwuzlaTerm
+    ): BitwuzlaTerm {
+        val args = bounds.addLast(body)
+        return Native.bitwuzlaMkTerm(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_LAMBDA, args)
     }
 
     override fun transform(
         expr: KExistentialQuantifier
     ): KExpr<KBoolSort> = expr.internalizeQuantifier { args ->
-        Native.bitwuzlaMkTerm(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EXISTS, args.toLongArray())
+        Native.bitwuzlaMkTerm(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_EXISTS, args)
     }
 
     override fun transform(
         expr: KUniversalQuantifier
     ): KExpr<KBoolSort> = expr.internalizeQuantifier { args ->
-        Native.bitwuzlaMkTerm(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FORALL, args.toLongArray())
+        Native.bitwuzlaMkTerm(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_FORALL, args)
     }
 
     override fun transform(expr: KBv2IntExpr): KExpr<KIntSort> {
@@ -1095,59 +1243,70 @@ open class KBitwuzlaExprInternalizer(
         }
     }
 
-    override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KFunctionAsArray<A, R>): KExpr<A> {
-        TODO("KFunctionAsArray internalization is not implemented in bitwuzla")
+    override fun <A : KArraySortBase<R>, R : KSort> transform(
+        expr: KFunctionAsArray<A, R>
+    ): KExpr<A> = expr.transform {
+        mkConstant(expr.function) { expr.function.bitwuzlaFunctionSort() }
     }
 
-    inline fun <T : KQuantifier> T.internalizeQuantifier(
-        crossinline internalizer: T.(Array<BitwuzlaTerm>) -> BitwuzlaTerm
-    ): T = transform {
-        val (_, internalizedBounds, internalizedBody) = ctx.internalizeQuantifierBody(bounds, body)
-
-        if (internalizedBounds.isEmpty()) {
-            return@transform internalizedBody
-        }
-
-        val args = (internalizedBounds + internalizedBody).toTypedArray()
-        internalizer(args)
-    }
-
-    fun KContext.internalizeQuantifierBody(
-        bounds: List<KDecl<*>>,
-        body: KExpr<*>
-    ): Triple<List<KConstDecl<KSort>>, List<BitwuzlaTerm>, BitwuzlaTerm> {
+    private inline fun <T : KQuantifier> T.internalizeQuantifier(
+        crossinline mkQuantifierTerm: (LongArray) -> BitwuzlaTerm
+    ): T {
         if (bounds.any { it.hasUninterpretedSorts() }) {
             throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support quantifiers with uninterpreted sorts")
         }
 
-        // Replace all bound vars since they can overlap with constants from outer scope
-        val uniqueBounds = bounds.map { mkFreshConstDecl(it.name, it.sort) }
-        val shadowingResolver = KExprSubstitutor(this).apply {
-            bounds.zip(uniqueBounds).forEach { (old, new) ->
-                substitute(old.uncheckedCast(), new)
+        return internalizeQuantifierBody(bounds, body) { internalizedBounds, internalizedBody ->
+            if (internalizedBounds.isEmpty()) {
+                internalizedBody
+            } else {
+                val args = internalizedBounds.addLast(internalizedBody)
+                mkQuantifierTerm(args)
             }
         }
-        val bodyWithoutShadowing = shadowingResolver.apply(body)
+    }
 
-        // Since all bound variable are unique now we can create variables
-        val internalizedBounds = uniqueBounds.map {
-            Native.bitwuzlaMkVar(bitwuzla, it.sort.internalizeSort(), it.name)
-        }
+    private fun pushQuantifiedDeclScope(owner: KExpr<*>, quantifiedDecls: List<KDecl<*>>) {
+        if (owner == quantifiedDeclarationsScopeOwner.lastOrNull()) return
 
-        /**
-         * Internalizer will produce var instead of normal constants
-         * for all bound variables.
-         * */
-        val nestedVarScope = HashMap(scopedVars ?: emptyMap()).apply {
-            uniqueBounds.zip(internalizedBounds).forEach { (decl, variable) ->
-                put(decl, variable)
+        quantifiedDeclarationsScopeOwner.add(owner)
+        quantifiedDeclarationsScope.add(quantifiedDeclarations)
+
+        val newQuantifiedDecls = quantifiedDeclarations?.toHashSet() ?: hashSetOf()
+        newQuantifiedDecls.addAll(quantifiedDecls)
+        quantifiedDeclarations = newQuantifiedDecls
+    }
+
+    private fun popQuantifiedDeclScope() {
+        quantifiedDeclarationsScopeOwner.removeLast()
+        quantifiedDeclarations = quantifiedDeclarationsScope.removeLast()
+    }
+
+    private inline fun <T : KExpr<*>> T.internalizeQuantifierBody(
+        bounds: List<KDecl<*>>,
+        body: KExpr<*>,
+        crossinline transformInternalized: (LongArray, BitwuzlaTerm) -> BitwuzlaTerm
+    ): T {
+        pushQuantifiedDeclScope(this, bounds)
+        return transform(body) { internalizedBody ->
+            popQuantifiedDeclScope()
+
+            val boundConstants = LongArray(bounds.size)
+            val boundVars = LongArray(bounds.size)
+            for (idx in bounds.indices) {
+                val boundDecl = bounds[idx]
+                val boundSort = boundDecl.sort.internalizeSort()
+
+                boundConstants[idx] = bitwuzlaCtx.mkConstant(boundDecl, boundSort, isQuantifiedConstant = true)
+                boundVars[idx] = bitwuzlaCtx.mkVar(boundDecl, boundSort)
             }
+
+            val internalizedBodyWithVars = Native.bitwuzlaSubstituteTerm(
+                bitwuzla, internalizedBody, boundConstants, boundVars
+            )
+
+            transformInternalized(boundVars, internalizedBodyWithVars)
         }
-
-        val bodyInternalizer = KBitwuzlaExprInternalizer(bitwuzlaCtx, nestedVarScope)
-        val internalizedBody = with(bodyInternalizer) { bodyWithoutShadowing.internalize() }
-
-        return Triple(uniqueBounds, internalizedBounds, internalizedBody)
     }
 
     open class SortInternalizer(private val bitwuzlaCtx: KBitwuzlaContext) : KSortVisitor<Unit> {
@@ -1158,9 +1317,8 @@ open class KBitwuzlaExprInternalizer(
         }
 
         override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>) {
-            if (sort.range is KArraySort<*, *> || sort.domain is KArraySort<*, *>) {
-                throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support nested arrays")
-            }
+            checkNoNestedArrays(sort.domain)
+            checkNoNestedArrays(sort.range)
 
             val domain = internalizeSort(sort.domain)
             val range = internalizeSort(sort.range)
@@ -1169,15 +1327,51 @@ open class KBitwuzlaExprInternalizer(
         }
 
         override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>) {
-            TODO("Multi-indexed arrays are not supported")
+            checkNoNestedArrays(sort.domain0)
+            checkNoNestedArrays(sort.domain1)
+            checkNoNestedArrays(sort.range)
+
+            val domain = longArrayOf(
+                internalizeSort(sort.domain0),
+                internalizeSort(sort.domain1)
+            )
+            val range = internalizeSort(sort.range)
+
+            internalizedSort = Native.bitwuzlaMkFunSort(bitwuzlaCtx.bitwuzla, domain.size, domain, range)
         }
 
         override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>) {
-            TODO("Multi-indexed arrays are not supported")
+            checkNoNestedArrays(sort.domain0)
+            checkNoNestedArrays(sort.domain1)
+            checkNoNestedArrays(sort.domain2)
+            checkNoNestedArrays(sort.range)
+
+            val domain = longArrayOf(
+                internalizeSort(sort.domain0),
+                internalizeSort(sort.domain1),
+                internalizeSort(sort.domain2)
+            )
+            val range = internalizeSort(sort.range)
+
+            internalizedSort = Native.bitwuzlaMkFunSort(bitwuzlaCtx.bitwuzla, domain.size, domain, range)
         }
 
         override fun <R : KSort> visit(sort: KArrayNSort<R>) {
-            TODO("Multi-indexed arrays are not supported")
+            sort.domainSorts.forEach { checkNoNestedArrays(it) }
+            checkNoNestedArrays(sort.range)
+
+            val domain = sort.domainSorts.let { sorts ->
+                LongArray(sorts.size) { internalizeSort(sorts[it]) }
+            }
+            val range = internalizeSort(sort.range)
+
+            internalizedSort = Native.bitwuzlaMkFunSort(bitwuzlaCtx.bitwuzla, domain.size, domain, range)
+        }
+
+        private fun checkNoNestedArrays(sort: KSort) {
+            if (sort is KArraySortBase<*>) {
+                throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support nested arrays")
+            }
         }
 
         override fun <S : KBvSort> visit(sort: S) {
@@ -1236,11 +1430,11 @@ open class KBitwuzlaExprInternalizer(
         private var declSort: BitwuzlaSort = NOT_INTERNALIZED
 
         override fun <S : KSort> visit(decl: KFuncDecl<S>) {
-            if (decl.argSorts.any { it is KArraySort<*, *> }) {
+            if (decl.argSorts.any { it is KArraySortBase<*> }) {
                 throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support functions with arrays in domain")
             }
 
-            if (decl.argSorts.isNotEmpty() && decl.sort is KArraySort<*, *>) {
+            if (decl.argSorts.isNotEmpty() && decl.sort is KArraySortBase<*>) {
                 throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support functions with arrays in range")
             }
 
@@ -1318,6 +1512,8 @@ open class KBitwuzlaExprInternalizer(
         body()
     } catch (ex: TryRewriteExpressionUsingAxioms) {
         rewriteWithAxiomsRequired(ex.message)
+    } finally {
+        resetInternalizer()
     }
 
     private val uninterpretedSortsDetector = object : KSortVisitor<Boolean> {
@@ -1346,4 +1542,17 @@ open class KBitwuzlaExprInternalizer(
 
     private fun KDecl<*>.hasUninterpretedSorts(): Boolean =
         sort.accept(uninterpretedSortsDetector)
+
+    private fun LongArray.addLast(element: Long): LongArray {
+        val result = copyOf(size + 1)
+        result[size] = element
+        return result
+    }
+
+    private fun LongArray.addFirst(element: Long): LongArray {
+        val result = LongArray(size + 1)
+        copyInto(result, destinationOffset = 1)
+        result[0] = element
+        return result
+    }
 }

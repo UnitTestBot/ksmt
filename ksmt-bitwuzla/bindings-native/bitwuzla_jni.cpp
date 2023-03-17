@@ -494,7 +494,7 @@ Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkTerm1Indexed1(JNIEnv* en
                      })
 }
 
-JNIEXPORT jlong JNICALL
+jlong
 Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkTerm1Indexed2(JNIEnv* env, jobject native_class, jlong bitwuzla,
                                                                       jint kind, jlong term, jint idx0, jint idx1) {
     BZLA_TRY_OR_ZERO({
@@ -505,7 +505,7 @@ Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkTerm1Indexed2(JNIEnv* en
                      })
 }
 
-JNIEXPORT jlong JNICALL
+jlong
 Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkTerm2Indexed1(JNIEnv* env, jobject native_class, jlong bitwuzla,
                                                                       jint kind, jlong term0, jlong term1, jint idx0) {
     BZLA_TRY_OR_ZERO({
@@ -516,13 +516,31 @@ Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkTerm2Indexed1(JNIEnv* en
                      })
 }
 
-JNIEXPORT jlong JNICALL
+jlong
 Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkTerm2Indexed2(JNIEnv* env, jobject native_class, jlong bitwuzla,
                                                                       jint kind, jlong term0, jlong term1, jint idx0,
                                                                       jint idx1) {
     BZLA_TRY_OR_ZERO({
                          const BitwuzlaTerm* result = bitwuzla_mk_term2_indexed2(
                                  BZLA, BitwuzlaKind(kind), TERM(term0), TERM(term1), idx0, idx1
+                         );
+                         return (jlong) result;
+                     })
+}
+
+jlong
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkTermIndexed(JNIEnv* env, jobject native_class, jlong bitwuzla,
+                                                                    jint kind, jlongArray args, jintArray idxs) {
+    BZLA_TRY_OR_ZERO({
+                         GET_PTR_ARRAY(BitwuzlaTerm const*, args_ptr, args);
+                         jsize argc = env->GetArrayLength(args);
+
+                         JniIntArray indices_array(env, idxs);
+                         auto indices = (uint32_t*) indices_array.elements;
+                         jsize idxc = env->GetArrayLength(idxs);
+
+                         const BitwuzlaTerm* result = bitwuzla_mk_term_indexed(
+                                 BZLA, BitwuzlaKind(kind), argc, args_ptr, idxc, indices
                          );
                          return (jlong) result;
                      })
@@ -583,6 +601,19 @@ void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaAssume(JNIEnv* env, j
                   })
 }
 
+jboolean
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaIsUnsatAssumption(JNIEnv* env, jobject native_class,
+                                                                        jlong bitwuzla, jlong term) {
+    BZLA_TRY_OR_ZERO({
+                         bool result = bitwuzla_is_unsat_assumption(BZLA, TERM(term));
+                         if (result) {
+                             return JNI_TRUE;
+                         } else {
+                             return JNI_FALSE;
+                         }
+                     })
+}
+
 jlongArray Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetUnsatAssumptions(JNIEnv* env, jobject native_class,
                                                                                      jlong bitwuzla) {
     BZLA_TRY_OR_NULL({
@@ -617,6 +648,14 @@ void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaResetAssumptions(JNIE
     BZLA_TRY_VOID({
                       bitwuzla_reset_assumptions(BZLA);
                   })
+}
+
+jint
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSimplify(JNIEnv* env, jobject native_class, jlong bitwuzla) {
+    BZLA_TRY_OR_ZERO({
+                         BitwuzlaResult result = bitwuzla_simplify(BZLA);
+                         return result;
+                     })
 }
 
 jint Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaCheckSat(JNIEnv* env, jobject native_class, jlong bitwuzla) {
@@ -692,6 +731,17 @@ Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetFpValue(JNIEnv* env, jo
                      })
 }
 
+jstring
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetRmValue(JNIEnv* env, jobject native_class, jlong bitwuzla,
+                                                                 jlong bitwuzla_term) {
+    BZLA_TRY_OR_NULL({
+                         const char* result = bitwuzla_get_rm_value(BZLA, TERM(bitwuzla_term));
+                         jstring result_str = env->NewStringUTF(result);
+
+                         return result_str;
+                     })
+}
+
 jobject
 Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetArrayValue(JNIEnv* env, jobject native_class, jlong bitwuzla,
                                                                     jlong bitwuzla_term) {
@@ -759,6 +809,46 @@ Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetFunValue(JNIEnv* env, j
                          env->SetObjectField(result_object, args_id, argsArray);
                          env->SetObjectField(result_object, values_id, valuesArray);
                          return result_object;
+                     })
+}
+
+jlong
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSubstituteTerm(JNIEnv* env, jobject native_class, jlong bitwuzla,
+                                                                     jlong bitwuzla_term, jlongArray map_keys,
+                                                                     jlongArray map_values) {
+    BZLA_TRY_OR_ZERO({
+                         GET_PTR_ARRAY(BitwuzlaTerm const*, keys_ptr, map_keys);
+                         GET_PTR_ARRAY(BitwuzlaTerm const*, values_ptr, map_values);
+                         jsize num_keys = env->GetArrayLength(map_keys);
+
+                         const BitwuzlaTerm* result = bitwuzla_substitute_term(
+                                 BZLA, TERM(bitwuzla_term), num_keys, keys_ptr, values_ptr
+                         );
+
+                         return (jlong) result;
+                     })
+}
+
+jlongArray
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSubstituteTerms(JNIEnv* env, jobject native_class, jlong bitwuzla,
+                                                                      jlongArray terms, jlongArray map_keys,
+                                                                      jlongArray map_values) {
+    BZLA_TRY_OR_NULL({
+                         GET_PTR_ARRAY(BitwuzlaTerm const*, terms_ptr, terms);
+                         jsize num_terms = env->GetArrayLength(terms);
+
+                         GET_PTR_ARRAY(BitwuzlaTerm const*, keys_ptr, map_keys);
+                         GET_PTR_ARRAY(BitwuzlaTerm const*, values_ptr, map_values);
+                         jsize num_keys = env->GetArrayLength(map_keys);
+
+                         bitwuzla_substitute_terms(
+                                 BZLA, num_terms, terms_ptr, num_keys, keys_ptr, values_ptr
+                         );
+
+                         jlongArray result_terms = create_ptr_array(env, num_terms);
+                         set_ptr_array(env, result_terms, terms_ptr, num_terms);
+
+                         return result_terms;
                      })
 }
 
@@ -832,6 +922,40 @@ jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortArrayGetElement(
     BZLA_TRY_OR_ZERO({
                          const BitwuzlaSort* bw_s = bitwuzla_sort_array_get_element(SORT(bitwuzla_sort));
                          return (jlong) bw_s;
+                     })
+}
+
+jlongArray
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortFunGetDomainSorts(JNIEnv* env, jobject native_class,
+                                                                            jlong bitwuzla_sort) {
+    BZLA_TRY_OR_NULL({
+                         size_t result_size = 0;
+                         const BitwuzlaSort** result = bitwuzla_sort_fun_get_domain_sorts(
+                                 SORT(bitwuzla_sort), &result_size
+                         );
+
+                         jlongArray result_array = create_ptr_array(env, result_size);
+                         set_ptr_array(env, result_array, result, result_size);
+
+                         return result_array;
+                     })
+}
+
+jlong
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortFunGetCodomain(JNIEnv* env, jobject native_class,
+                                                                         jlong bitwuzla_sort) {
+    BZLA_TRY_OR_ZERO({
+                         const BitwuzlaSort* result = bitwuzla_sort_fun_get_codomain(SORT(bitwuzla_sort));
+                         return (jlong) result;
+                     })
+}
+
+jint
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortFunGetArity(JNIEnv* env, jobject native_class,
+                                                                      jlong bitwuzla_sort) {
+    BZLA_TRY_OR_ZERO({
+                         uint32_t result = bitwuzla_sort_fun_get_arity(SORT(bitwuzla_sort));
+                         return (jint) result;
                      })
 }
 
@@ -928,6 +1052,22 @@ jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermArrayGetElementS
     BZLA_TRY_OR_ZERO({
                          const BitwuzlaSort* bw_sort = bitwuzla_term_array_get_element_sort(TERM(bitwuzla_term));
                          return (jlong) bw_sort;
+                     })
+}
+
+jlongArray
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermFunGetDomainSorts(JNIEnv* env, jobject native_class,
+                                                                            jlong bitwuzla_term) {
+    BZLA_TRY_OR_NULL({
+                         size_t result_size = 0;
+                         const BitwuzlaSort** result = bitwuzla_term_fun_get_domain_sorts(
+                                 TERM(bitwuzla_term), &result_size
+                         );
+
+                         jlongArray result_array = create_ptr_array(env, result_size);
+                         set_ptr_array(env, result_array, result, result_size);
+
+                         return result_array;
                      })
 }
 
@@ -1229,6 +1369,36 @@ jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkFpValue(JNIEnv* en
                          const BitwuzlaTerm* bv_exponent = (BitwuzlaTerm*) bitwuzla_bvExponent;
                          const BitwuzlaTerm* bv_significand = (BitwuzlaTerm*) bitwuzla_bvSignificand;
                          return (jlong) bitwuzla_mk_fp_value(BZLA, bv_sign, bv_exponent, bv_significand);
+                     })
+}
+
+jlong
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkFpValueFromReal(JNIEnv* env, jobject native_class,
+                                                                        jlong bitwuzla, jlong sort, jlong rm,
+                                                                        jstring real) {
+    BZLA_TRY_OR_ZERO({
+                         GET_STRING(real_str, real);
+                         const BitwuzlaTerm* result = bitwuzla_mk_fp_value_from_real(
+                                 BZLA, SORT(sort), TERM(rm), real_str
+                         );
+
+                         return (jlong) result;
+                     })
+}
+
+jlong
+Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkFpValueFromRational(JNIEnv* env, jobject native_class,
+                                                                            jlong bitwuzla, jlong sort, jlong rm,
+                                                                            jstring num, jstring den) {
+    BZLA_TRY_OR_ZERO({
+                         GET_STRING(num_str, num);
+                         GET_STRING(den_str, den);
+
+                         const BitwuzlaTerm* result = bitwuzla_mk_fp_value_from_rational(
+                                 BZLA, SORT(sort), TERM(rm), num_str, den_str
+                         );
+
+                         return (jlong) result;
                      })
 }
 

@@ -1073,7 +1073,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             ).uncheckedCast(),
             indices = args.subList(
                 fromIndex = 1 + numIndices, toIndex = args.size
-            ).chunked(numIndices)
+            ).chunked(original.sort.domainSorts.size)
         )
 
         override fun getStoreIndex(idx: Int): List<KExpr<*>> = indices[idx]

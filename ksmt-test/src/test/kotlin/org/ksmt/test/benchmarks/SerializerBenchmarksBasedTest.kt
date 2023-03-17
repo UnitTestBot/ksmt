@@ -32,7 +32,7 @@ class SerializerBenchmarksBasedTest : BenchmarksBasedTest() {
             val assertions = worker.parseFile(samplePath)
             val convertedAssertions = worker.convertAssertions(assertions)
 
-            convertedAssertions.forEachIndexed { idx, it ->
+            convertedAssertions.forEachIndexed { _, it ->
                 SortChecker(ctx1).apply(it)
             }
 

@@ -113,6 +113,11 @@ tasks.withType<Test> {
     } else {
         exclude("org/ksmt/test/benchmarks/**")
     }
+
+    testLogging {
+        showStandardStreams = true
+        outputs.upToDateWhen { false }
+    }
 }
 
 /**

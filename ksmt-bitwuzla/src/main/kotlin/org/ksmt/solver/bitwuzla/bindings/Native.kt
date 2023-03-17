@@ -6,6 +6,8 @@ import org.ksmt.utils.NativeLibraryLoader
 typealias Bitwuzla = Long
 typealias BitwuzlaTerm = Long
 typealias BitwuzlaSort = Long
+typealias BitwuzlaTermArray = LongArray
+typealias BitwuzlaSortArray = LongArray
 
 object Native {
     init {
@@ -249,7 +251,7 @@ object Native {
     external fun bitwuzlaMkFunSort(
         bitwuzla: Bitwuzla,
         arity: Int,
-        domain: LongArray,
+        domain: BitwuzlaSortArray,
         codomain: BitwuzlaSort
     ): BitwuzlaSort
 
@@ -501,10 +503,53 @@ object Native {
      */
     @JvmStatic
     external fun bitwuzlaMkFpValue(
-            bitwuzla: Bitwuzla,
-            bvSign: BitwuzlaTerm,
-            bvExponent: BitwuzlaTerm,
-            bvSignificand: BitwuzlaTerm
+        bitwuzla: Bitwuzla,
+        bvSign: BitwuzlaTerm,
+        bvExponent: BitwuzlaTerm,
+        bvSignificand: BitwuzlaTerm
+    ): BitwuzlaTerm
+
+    /**
+     * Create a floating-point value from its real representation, given as a
+     * decimal string, with respect to given rounding mode.
+     *
+     * @param bitwuzla The Bitwuzla instance.
+     * @param sort The sort of the value.
+     * @param rm The rounding mode.
+     * @param value The decimal string representing a real value.
+     *
+     * @return A term of kind [BitwuzlaKind.BITWUZLA_KIND_VAL], representing the floating-point
+     *         value of given sort.
+     */
+    @JvmStatic
+    external fun bitwuzlaMkFpValueFromReal(
+        bitwuzla: Bitwuzla,
+        sort: BitwuzlaSort,
+        rm: BitwuzlaTerm,
+        value: String
+    ): BitwuzlaTerm
+
+    /**
+     * Create a floating-point value from its rational representation, given as
+     * two decimal strings representing the numerator and denominator, with respect
+     * to given rounding mode.
+     *
+     * @param bitwuzla The Bitwuzla instance.
+     * @param sort The sort of the value.
+     * @param rm The rounding mode.
+     * @param numerator The decimal string representing the numerator.
+     * @param denominator The decimal string representing the denominator.
+     *
+     * @return A term of kind [BitwuzlaKind.BITWUZLA_KIND_VAL], representing the floating-point
+     *         value of given sort.
+     */
+    @JvmStatic
+    external fun bitwuzlaMkFpValueFromRational(
+        bitwuzla: Bitwuzla,
+        sort: BitwuzlaSort,
+        rm: BitwuzlaTerm,
+        numerator: String,
+        denominator: String
     ): BitwuzlaTerm
 
     /**
@@ -614,11 +659,11 @@ object Native {
      * @see  BitwuzlaKind
      */
     @JvmStatic
-    fun bitwuzlaMkTerm(bitwuzla: Bitwuzla, kind: BitwuzlaKind, args: LongArray): BitwuzlaTerm =
+    fun bitwuzlaMkTerm(bitwuzla: Bitwuzla, kind: BitwuzlaKind, args: BitwuzlaTermArray): BitwuzlaTerm =
         bitwuzlaMkTerm(bitwuzla, kind.value, args)
 
     @JvmStatic
-    external fun bitwuzlaMkTerm(bitwuzla: Bitwuzla, kind: Int, args: LongArray): BitwuzlaTerm
+    external fun bitwuzlaMkTerm(bitwuzla: Bitwuzla, kind: Int, args: BitwuzlaTermArray): BitwuzlaTerm
 
     /**
      * Create an indexed term of given kind with one argument term and one index.
@@ -728,6 +773,7 @@ object Native {
      * @see  BitwuzlaKind
      */
     @Suppress("LongParameterList")
+    @JvmStatic
     fun bitwuzlaMkTerm2Indexed2(
         bitwuzla: Bitwuzla,
         kind: BitwuzlaKind,
@@ -740,12 +786,39 @@ object Native {
     @Suppress("LongParameterList")
     @JvmStatic
     external fun bitwuzlaMkTerm2Indexed2(
-            bitwuzla: Bitwuzla,
-            kind: Int,
-            arg0: BitwuzlaTerm,
-            arg1: BitwuzlaTerm,
-            idx0: Int,
-            idx1: Int
+        bitwuzla: Bitwuzla,
+        kind: Int,
+        arg0: BitwuzlaTerm,
+        arg1: BitwuzlaTerm,
+        idx0: Int,
+        idx1: Int
+    ): BitwuzlaTerm
+
+    /**
+     * Create an indexed term of given kind with the given argument terms and
+     * indices.
+     *
+     * @param bitwuzla The Bitwuzla instance.
+     * @param kind The operator kind.
+     * @param args The argument terms.
+     * @param indices The indices.
+     *
+     * @return A term representing an indexed operation of given kind.
+     */
+    @JvmStatic
+    fun bitwuzlaMkTermIndexed(
+        bitwuzla: Bitwuzla,
+        kind: BitwuzlaKind,
+        args: BitwuzlaTermArray,
+        indices: IntArray
+    ): BitwuzlaTerm = bitwuzlaMkTermIndexed(bitwuzla, kind.value, args, indices)
+
+    @JvmStatic
+    external fun bitwuzlaMkTermIndexed(
+        bitwuzla: Bitwuzla,
+        kind: Int,
+        args: BitwuzlaTermArray,
+        indices: IntArray
     ): BitwuzlaTerm
 
     /**
@@ -873,6 +946,26 @@ object Native {
     @JvmStatic
     external fun bitwuzlaAssume(bitwuzla: Bitwuzla, term: BitwuzlaTerm)
 
+    /**
+     * Determine if an assumption is an unsat assumption.
+     *
+     * Unsat assumptions are assumptions that force an input formula to become
+     * unsatisfiable. Unsat assumptions handling in Bitwuzla is analogous to
+     * failed assumptions in MiniSAT.
+     *
+     * Requires that incremental solving has been enabled via
+     * [bitwuzlaSetOption].
+     *
+     * Requires that the last [bitwuzlaCheckSat] query returned
+     * [BitwuzlaResult.BITWUZLA_UNSAT].
+     *
+     * @param bitwuzla The Bitwuzla instance.
+     * @param term The assumption to check for.
+     *
+     * @return True if given assumption is an unsat assumption.
+     */
+    @JvmStatic
+    external fun bitwuzlaIsUnsatAssumption(bitwuzla: Bitwuzla, term: BitwuzlaTerm): Boolean
 
     /**
      * Get the set of unsat assumptions.
@@ -897,7 +990,7 @@ object Native {
      * @see BitwuzlaOption.BITWUZLA_OPT_INCREMENTAL
      */
     @JvmStatic
-    external fun bitwuzlaGetUnsatAssumptions(bitwuzla: Bitwuzla): LongArray
+    external fun bitwuzlaGetUnsatAssumptions(bitwuzla: Bitwuzla): BitwuzlaTermArray
 
 
     /**
@@ -917,7 +1010,7 @@ object Native {
      * @see bitwuzlaCheckSat
      */
     @JvmStatic
-    external fun bitwuzlaGetUnsatCore(bitwuzla: Bitwuzla): LongArray
+    external fun bitwuzlaGetUnsatCore(bitwuzla: Bitwuzla): BitwuzlaTermArray
 
 
     /**
@@ -940,6 +1033,23 @@ object Native {
     @JvmStatic
     external fun bitwuzlaResetAssumptions(bitwuzla: Bitwuzla)
 
+    /**
+     * Simplify the current input formula.
+     *
+     * @note Assumptions are not considered for simplification.
+     *
+     * @param bitwuzla The Bitwuzla instance.
+     *
+     * @return [BitwuzlaResult.BITWUZLA_SAT] if the input formula was simplified to true
+     * [BitwuzlaResult.BITWUZLA_UNSAT] if it was simplified to false, and
+     * [BitwuzlaResult.BITWUZLA_UNKNOWN] otherwise.
+     */
+    @JvmStatic
+    fun bitwuzlaSimplifyResult(bitwuzla: Bitwuzla): BitwuzlaResult =
+        bitwuzlaSimplify(bitwuzla).let { BitwuzlaResult.fromValue(it) }
+
+    @JvmStatic
+    external fun bitwuzlaSimplify(bitwuzla: Bitwuzla): Int
 
     /**
      * Check satisfiability of current input formula.
@@ -1039,6 +1149,18 @@ object Native {
     external fun bitwuzlaGetFpValue(bitwuzla: Bitwuzla, term: BitwuzlaTerm): FpValue
 
     /**
+     * Get string representation of the current model value of given rounding mode
+     * term.
+     *
+     * @param bitwuzla The Bitwuzla instance.
+     * @param term The rounding mode term to query a model value for.
+     *
+     * @return String representation of rounding mode (RNA, RNE, RTN, RTP, RTZ).
+     */
+    @JvmStatic
+    external fun bitwuzlaGetRmValue(bitwuzla: Bitwuzla, term: BitwuzlaTerm): String
+
+    /**
      * Get the current model value of given array term.
      *
      * The string representation of `indices` and `values` can be queried via
@@ -1067,6 +1189,43 @@ object Native {
      */
     @JvmStatic
     external fun bitwuzlaGetFunValue(bitwuzla: Bitwuzla, term: BitwuzlaTerm): FunValue
+
+    /**
+     * Substitute a set of keys with their corresponding values in the given term.
+     *
+     * @param bitwuzla The Bitwuzla instance.
+     * @param term The term in which the keys are to be substituted.
+     * @param mapKeys The keys.
+     * @param mapValues The mapped values.
+     *
+     * @return The resulting term from this substitution.
+     */
+    @JvmStatic
+    external fun bitwuzlaSubstituteTerm(
+        bitwuzla: Bitwuzla,
+        term: BitwuzlaTerm,
+        mapKeys: BitwuzlaTermArray,
+        mapValues: BitwuzlaTermArray
+    ): BitwuzlaTerm
+
+    /**
+     * Substitute a set of keys with their corresponding values in the set of given
+     * terms.
+     *
+     * @param bitwuzla The Bitwuzla instance.
+     * @param terms The terms in which the keys are to be substituted.
+     * @param mapKeys The keys.
+     * @param mapValues The mapped values.
+     *
+     * @return The resulting terms from this substitution.
+     */
+    @JvmStatic
+    external fun bitwuzlaSubstituteTerms(
+        bitwuzla: Bitwuzla,
+        terms: BitwuzlaTermArray,
+        mapKeys: BitwuzlaTermArray,
+        mapValues: BitwuzlaTermArray
+    ): BitwuzlaTermArray
 
     /**
      * Compute the hash value for a sort.
@@ -1104,7 +1263,7 @@ object Native {
      * @return The children of `term` as an array of terms.
      */
     @JvmStatic
-    external fun bitwuzlaTermGetChildren(term: BitwuzlaTerm): LongArray
+    external fun bitwuzlaTermGetChildren(term: BitwuzlaTerm): BitwuzlaTermArray
 
     /**
      * Get the indices of an indexed term.
@@ -1177,6 +1336,41 @@ object Native {
      */
     @JvmStatic
     external fun bitwuzlaSortArrayGetElement(sort: BitwuzlaSort): BitwuzlaSort
+
+    /**
+     * Get the domain sorts of a function sort.
+     *
+     * The domain sorts are returned as an array of sorts.
+     * Requires that given sort is a function sort.
+     *
+     * @param sort The sort.
+     *
+     * @return The domain sorts of the function sort.
+     */
+    @JvmStatic
+    external fun bitwuzlaSortFunGetDomainSorts(sort: BitwuzlaSort): BitwuzlaSortArray
+
+    /**
+     * Get the codomain sort of a function sort.
+     *
+     * Requires that given sort is a function sort.
+     *
+     * @param sort The sort.
+     *
+     * @return The codomain sort of the function sort.
+     */
+    @JvmStatic
+    external fun bitwuzlaSortFunGetCodomain(sort: BitwuzlaSort): BitwuzlaSort
+
+    /**
+     * Get the arity of a function sort.
+     *
+     * @param sort The sort.
+     *
+     * @return The number of arguments of the function sort.
+     */
+    @JvmStatic
+    external fun bitwuzlaSortFunGetArity(sort: BitwuzlaSort): Int
 
     /**
      * Determine if two sorts are equal.
@@ -1316,7 +1510,7 @@ object Native {
      * @return The domain sorts of the function term.
      */
     @JvmStatic
-    external fun bitwuzlaTermFunGetDomainSorts(term: BitwuzlaTerm): LongArray
+    external fun bitwuzlaTermFunGetDomainSorts(term: BitwuzlaTerm): BitwuzlaSortArray
 
     /**
      * Get the codomain sort of a function term.

@@ -170,21 +170,21 @@ class KZ3Context(private val ctx: Context) : AutoCloseable {
         return cached
     }
 
+    /**
+     * Note: we don't invoke decRef for each remaining expression/sort/...
+     * because native context releases all memory on close.
+     * */
     override fun close() {
         isClosed = true
 
-        z3Expressions.keys.forEach { decRefUnsafe(nCtx, it) }
         expressions.clear()
         z3Expressions.clear()
 
-        tmpNativeObjects.forEach { decRefUnsafe(nCtx, it) }
         tmpNativeObjects.clear()
 
-        z3Sorts.keys.forEach { decRefUnsafe(nCtx, it) }
         sorts.clear()
         z3Sorts.clear()
 
-        z3Decls.keys.forEach { decRefUnsafe(nCtx, it) }
         decls.clear()
         z3Decls.clear()
 

@@ -53,6 +53,8 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
     private val constantsGlobalCache = mkTermCache<KDecl<*>>()
     private val bitwuzlaConstants = mkTermReverseCache<KDecl<*>>()
 
+    private val bitwuzlaVars = mkTermReverseCache<KDecl<*>>()
+
     private val sorts = mkTermCache<KSort>()
     private val declSorts = mkTermCache<KDecl<*>>()
     private val bitwuzlaSorts = mkTermReverseCache<KSort>()
@@ -190,6 +192,8 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
     fun findConstant(decl: KDecl<*>): BitwuzlaTerm? =
         constantsGlobalCache.getLong(decl).takeIf { it != NOT_INTERNALIZED }
 
+    fun findConvertedVar(term: BitwuzlaTerm): KDecl<*>? = bitwuzlaVars.get(term)
+
     fun declarations(): Set<KDecl<*>> =
         leveledDeclarations.flatMapTo(hashSetOf()) { it }
 
@@ -225,9 +229,12 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
      * Internalize constant declaration.
      * Since [Native.bitwuzlaMkConst] creates fresh constant on each invocation caches are used
      * to guarantee that if two constants are equal in ksmt they are also equal in Bitwuzla.
+     * Also, if the declaration is not [isQuantifiedConstant], register it in the current scope.
      * */
-    fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm {
-        registerDeclaration(decl)
+    fun mkConstant(decl: KDecl<*>, sort: BitwuzlaSort, isQuantifiedConstant: Boolean): BitwuzlaTerm {
+        if (!isQuantifiedConstant) {
+            registerDeclaration(decl)
+        }
 
         val value = constantsGlobalCache.getLong(decl)
         if (value != NOT_INTERNALIZED) return value
@@ -239,6 +246,11 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
 
         return term
     }
+
+    fun mkVar(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm =
+        Native.bitwuzlaMkVar(bitwuzla, sort, decl.name).also {
+            bitwuzlaVars.put(it, decl)
+        }
 
     /**
      * Create nested declaration scope to allow [popDeclarationScope].
@@ -466,11 +478,11 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
 
     companion object {
         @JvmStatic
-        private fun <T> mkTermCache() = Object2LongOpenHashMap<T>().apply {
+        internal fun <T> mkTermCache() = Object2LongOpenHashMap<T>().apply {
             defaultReturnValue(NOT_INTERNALIZED)
         }
 
         @JvmStatic
-        private fun <T> mkTermReverseCache() = Long2ObjectOpenHashMap<T>()
+        internal fun <T> mkTermReverseCache() = Long2ObjectOpenHashMap<T>()
     }
 }
