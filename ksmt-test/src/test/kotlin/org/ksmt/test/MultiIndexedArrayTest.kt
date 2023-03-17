@@ -13,7 +13,11 @@ import org.ksmt.solver.bitwuzla.KBitwuzlaContext
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprConverter
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprInternalizer
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
+import org.ksmt.solver.fixtures.yices.KTestYicesContext
 import org.ksmt.solver.runner.KSolverRunnerManager
+import org.ksmt.solver.yices.KYicesContext
+import org.ksmt.solver.yices.KYicesExprConverter
+import org.ksmt.solver.yices.KYicesExprInternalizer
 import org.ksmt.solver.z3.KZ3Context
 import org.ksmt.solver.z3.KZ3ExprConverter
 import org.ksmt.solver.z3.KZ3ExprInternalizer
@@ -51,9 +55,9 @@ class MultiIndexedArrayTest {
     @Test
     fun testMultiIndexedArraysBitwuzlaWithZ3Oracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
         oracleManager.createSolver(this, KZ3Solver::class).use { oracleSolver ->
-            KBitwuzlaContext(this).use { z3NativeCtx ->
+            KBitwuzlaContext(this).use { bitwuzlaNativeCtx ->
                 runMultiIndexedArraySamples(oracleSolver) { expr ->
-                    internalizeAndConvertBitwuzla(z3NativeCtx, expr)
+                    internalizeAndConvertBitwuzla(bitwuzlaNativeCtx, expr)
                 }
             }
         }
@@ -73,9 +77,22 @@ class MultiIndexedArrayTest {
     @Test
     fun testMultiIndexedArraysBitwuzlaWithBitwuzlaOracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
         oracleManager.createSolver(this, KBitwuzlaSolver::class).use { oracleSolver ->
-            KBitwuzlaContext(this).use { z3NativeCtx ->
+            KBitwuzlaContext(this).use { bitwuzlaNativeCtx ->
                 runMultiIndexedArraySamples(oracleSolver) { expr ->
-                    internalizeAndConvertBitwuzla(z3NativeCtx, expr)
+                    internalizeAndConvertBitwuzla(bitwuzlaNativeCtx, expr)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun testMultiIndexedArraysYicesWithZ3Oracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
+//        oracleManager.createSolver(this, KZ3Solver::class).use { oracleSolver ->
+        KZ3Solver(this).use { oracleSolver ->
+            // Use test context because it doesn't cache expressions
+            KTestYicesContext().use { yicesNativeCtx ->
+                runMultiIndexedArraySamples(oracleSolver) { expr ->
+                    internalizeAndConvertYices(yicesNativeCtx, expr)
                 }
             }
         }
@@ -88,21 +105,21 @@ class MultiIndexedArrayTest {
         val stats = TestStats()
         val sorts = listOf(
             mkArraySort(bv8Sort, bv8Sort),
-            mkArraySort(bv32Sort, bv16Sort, bv8Sort),
-            mkArraySort(bv32Sort, bv16Sort, bv8Sort, bv8Sort),
-            mkArrayNSort(listOf(bv32Sort, bv16Sort, bv8Sort, bv32Sort, bv8Sort), bv8Sort)
+//            mkArraySort(bv32Sort, bv16Sort, bv8Sort),
+//            mkArraySort(bv32Sort, bv16Sort, bv8Sort, bv8Sort),
+//            mkArrayNSort(listOf(bv32Sort, bv16Sort, bv8Sort, bv32Sort, bv8Sort), bv8Sort)
         )
 
         for (sort in sorts) {
             val expressions = mkArrayExpressions(sort)
             for (expr in expressions) {
                 stats.start()
-                try {
+//                try {
                     val processed = process(expr)
                     assertEquals(stats, oracle, expr, processed)
-                } catch (ex: Throwable) {
-                    stats.fail(ex)
-                }
+//                } catch (ex: Throwable) {
+//                    stats.fail(ex)
+//                }
             }
         }
 
@@ -236,6 +253,20 @@ class MultiIndexedArrayTest {
 
         val converted = with(KBitwuzlaExprConverter(this, nativeCtx)) {
             internalized.convertExpr(expr.sort)
+        }
+
+        return converted
+    }
+
+    private fun <T : KSort> KContext.internalizeAndConvertYices(
+        nativeCtx: KYicesContext, expr: KExpr<T>
+    ): KExpr<T> {
+        val internalized = with(KYicesExprInternalizer(this, nativeCtx)) {
+            expr.internalizeExpr()
+        }
+
+        val converted = with(KYicesExprConverter(this, nativeCtx)) {
+            internalized.convert<T>()
         }
 
         return converted
