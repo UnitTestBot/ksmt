@@ -334,6 +334,11 @@ class MultiIndexedArrayTest {
             return
         }
 
+        println("#".repeat(20))
+        println(expected)
+        println("-".repeat(20))
+        println(actual)
+
         val satIsPossiblePassed = oracle.scoped {
             assertPossibleToBeEqual(oracle, expected, actual)
             oracle.checkSatAndReport(stats, expected, actual, KSolverStatus.SAT, "SAT is possible")
