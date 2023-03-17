@@ -103,7 +103,7 @@ open class KYicesContext : AutoCloseable {
 
     fun bvType(sizeBits: UInt) = mkType { Types.bvType(sizeBits.toInt()) }
     fun functionType(domain: YicesSort, range: YicesSort) = mkType { Types.functionType(domain, range) }
-    fun functionType(args: List<YicesSort>) = mkType { Types.functionType(args) }
+    fun functionType(domain: YicesSortArray, range: YicesSort) = mkType { Types.functionType(domain, range) }
     fun newUninterpretedType(name: String) = mkType { Types.newUninterpretedType(name) }
 
     val nullTerm = Terms.NULL_TERM

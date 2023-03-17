@@ -104,8 +104,8 @@ class MultiIndexedArrayTest {
     ) {
         val stats = TestStats()
         val sorts = listOf(
-            mkArraySort(bv8Sort, bv8Sort),
-//            mkArraySort(bv32Sort, bv16Sort, bv8Sort),
+//            mkArraySort(bv8Sort, bv8Sort),
+            mkArraySort(bv32Sort, bv16Sort, bv8Sort),
 //            mkArraySort(bv32Sort, bv16Sort, bv8Sort, bv8Sort),
 //            mkArrayNSort(listOf(bv32Sort, bv16Sort, bv8Sort, bv32Sort, bv8Sort), bv8Sort)
         )

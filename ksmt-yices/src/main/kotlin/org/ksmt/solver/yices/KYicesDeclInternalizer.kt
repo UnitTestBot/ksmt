@@ -11,9 +11,12 @@ open class KYicesDeclInternalizer (
 ) : KDeclVisitor<YicesTerm> {
     override fun <S : KSort> visit(decl: KFuncDecl<S>): YicesTerm =
         yicesCtx.internalizeDecl(decl) {
-            val argSorts = decl.argSorts.map { it.accept(sortInternalizer) }
-            val sort = yicesCtx.functionType(argSorts + decl.sort.accept(sortInternalizer))
+            val argSorts = decl.argSorts.let { domain ->
+                IntArray(domain.size) { domain[it].accept(sortInternalizer) }
+            }
+            val rangeSort = decl.sort.accept(sortInternalizer)
 
+            val sort = yicesCtx.functionType(argSorts, rangeSort)
             yicesCtx.newUninterpretedTerm(decl.name, sort)
         }
 

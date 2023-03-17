@@ -39,16 +39,34 @@ open class KYicesSortInternalizer(
             yicesCtx.functionType(sort.domain.internalizeYicesSort(), sort.range.internalizeYicesSort())
         }
 
-    override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>): YicesSort {
-        TODO("Multi-indexed arrays are not supported")
+    override fun <D0 : KSort, D1 : KSort, R : KSort> visit(
+        sort: KArray2Sort<D0, D1, R>
+    ): YicesSort = yicesCtx.internalizeSort(sort) {
+        val d0 = sort.domain0.internalizeYicesSort()
+        val d1 = sort.domain1.internalizeYicesSort()
+        val range = sort.range.internalizeYicesSort()
+
+        yicesCtx.functionType(intArrayOf(d0, d1), range)
     }
 
-    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>): YicesSort {
-        TODO("Multi-indexed arrays are not supported")
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(
+        sort: KArray3Sort<D0, D1, D2, R>
+    ): YicesSort = yicesCtx.internalizeSort(sort) {
+        val d0 = sort.domain0.internalizeYicesSort()
+        val d1 = sort.domain1.internalizeYicesSort()
+        val d2 = sort.domain2.internalizeYicesSort()
+        val range = sort.range.internalizeYicesSort()
+
+        yicesCtx.functionType(intArrayOf(d0, d1, d2), range)
     }
 
-    override fun <R : KSort> visit(sort: KArrayNSort<R>): YicesSort {
-        TODO("Multi-indexed arrays are not supported")
+    override fun <R : KSort> visit(sort: KArrayNSort<R>): YicesSort = yicesCtx.internalizeSort(sort) {
+        val domain = sort.domainSorts.let { domain ->
+            IntArray(domain.size) { domain[it].internalizeYicesSort() }
+        }
+        val range = sort.range.internalizeYicesSort()
+
+        yicesCtx.functionType(domain, range)
     }
 
     override fun visit(sort: KUninterpretedSort): YicesSort = yicesCtx.internalizeSort(sort) {
