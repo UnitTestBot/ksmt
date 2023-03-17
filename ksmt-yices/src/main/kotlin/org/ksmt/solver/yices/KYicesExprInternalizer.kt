@@ -144,10 +144,20 @@ import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.expr.rewrite.KExprSubstitutor
+import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.util.KExprInternalizerBase
 import org.ksmt.sort.KArithSort
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KBv16Sort
+import org.ksmt.sort.KBv1Sort
+import org.ksmt.sort.KBv32Sort
+import org.ksmt.sort.KBv64Sort
+import org.ksmt.sort.KBv8Sort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFp128Sort
 import org.ksmt.sort.KFp16Sort
@@ -155,19 +165,9 @@ import org.ksmt.sort.KFp32Sort
 import org.ksmt.sort.KFp64Sort
 import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
+import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
-import org.ksmt.solver.KSolverUnsupportedFeatureException
-import org.ksmt.sort.KArray2Sort
-import org.ksmt.sort.KArray3Sort
-import org.ksmt.sort.KArrayNSort
-import org.ksmt.sort.KArraySortBase
-import org.ksmt.sort.KBv16Sort
-import org.ksmt.sort.KBv1Sort
-import org.ksmt.sort.KBv32Sort
-import org.ksmt.sort.KBv64Sort
-import org.ksmt.sort.KBv8Sort
-import org.ksmt.sort.KIntSort
 import org.ksmt.utils.mkFreshConstDecl
 import org.ksmt.utils.uncheckedCast
 import java.math.BigInteger
@@ -818,7 +818,7 @@ open class KYicesExprInternalizer(
         /**
          * Yices doesn't distinguish between IntSort and RealSort
          */
-        transform(arg) {arg: YicesTerm ->
+        transform(arg) { arg: YicesTerm ->
             arg
         }
     }
@@ -861,12 +861,11 @@ open class KYicesExprInternalizer(
         }
     }
 
-    private inline fun <T: KQuantifier> internalizeQuantifier(
+    private inline fun <T : KQuantifier> internalizeQuantifier(
         expr: T,
         crossinline constructor: (KExpr<KBoolSort>, List<KDecl<*>>) -> T,
         internalizer: (YicesTerm, List<YicesTerm>) -> YicesTerm
-    ): T
-    {
+    ): T {
         val transformedExpr = yicesCtx.substituteDecls(expr) { term: T ->
             with(term) {
                 val newBounds = bounds.map { it.sort.mkFreshConstDecl(it.name) }
