@@ -903,6 +903,12 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
         transform(value) { value: BitwuzlaTerm ->
             /**
              * Note: don't use [Native.bitwuzlaMkConstArray] due to bitwuzla internal issues.
+             *
+             * Constant arrays are represented as lambdas with `isArray` flag.
+             * Bitwuzla doesn't distinguish between lambda with `isArray` and without
+             * and therefore may use them interchangeably.
+             * In some cases, constant arrays are replaced with lambda expressions without
+             * `isArray` flag which leads to internal errors.
              * */
             mkArrayLambdaTerm(sort.domainSorts) { value }
         }
