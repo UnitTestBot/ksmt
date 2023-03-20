@@ -13,7 +13,6 @@ dependencies {
     implementation(project(":ksmt-cvc5"))
     implementation(project(":ksmt-bitwuzla"))
     implementation(project(":ksmt-yices"))
-    implementation(testFixtures(project(":ksmt-yices")))
     implementation(project(":ksmt-runner"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     implementation(kotlin("reflect"))

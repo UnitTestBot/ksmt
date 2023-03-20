@@ -1,7 +1,5 @@
 package org.ksmt.solver.yices
 
-import com.sri.yices.Terms
-import com.sri.yices.Yices
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAddArithExpr
@@ -181,26 +179,29 @@ open class KYicesExprInternalizer(
 ) : KExprInternalizerBase<YicesTerm>() {
 
     private val sortInternalizer: KYicesSortInternalizer by lazy { KYicesSortInternalizer(yicesCtx) }
-    private val declInternalizer: KYicesDeclInternalizer by lazy {
-        KYicesDeclInternalizer(yicesCtx, sortInternalizer)
-    }
-    private val variableInternalizer: KYicesVariableInternalizer by lazy {
-        KYicesVariableInternalizer(yicesCtx, sortInternalizer)
+    private val declSortInternalizer: KYicesDeclSortInternalizer by lazy {
+        KYicesDeclSortInternalizer(yicesCtx, sortInternalizer)
     }
 
     override fun findInternalizedExpr(expr: KExpr<*>): YicesTerm? = yicesCtx.findInternalizedExpr(expr)
 
     override fun saveInternalizedExpr(expr: KExpr<*>, internalized: YicesTerm) {
-        yicesCtx.internalizeExpr(expr) { internalized }
+        yicesCtx.saveInternalizedExpr(expr, internalized)
     }
 
     fun <T : KSort> KExpr<T>.internalize(): YicesTerm = internalizeExpr()
 
-    fun <T : KDecl<*>> T.internalizeDecl(): YicesTerm = accept(declInternalizer)
+    fun <T : KDecl<*>> T.internalizeDecl(): YicesTerm = yicesCtx.internalizeDecl(this) {
+        val sort = accept(declSortInternalizer)
+        yicesCtx.newUninterpretedTerm(name, sort)
+    }
+
+    private fun <T : KDecl<*>> T.internalizeVariable(): YicesTerm = yicesCtx.internalizeVar(this) {
+        val sort = accept(declSortInternalizer)
+        yicesCtx.newVariable(name, sort)
+    }
 
     private fun <T : KSort> T.internalizeSort(): YicesSort = accept(sortInternalizer)
-
-    private fun <T : KDecl<*>> T.internalizeVariable(): YicesTerm = accept(variableInternalizer)
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = with(expr) {
         transformList(args) { args: Array<YicesTerm> ->
@@ -769,11 +770,8 @@ open class KYicesExprInternalizer(
 
         for (i in indexVarDeclarations.indices) {
             val decl = indexVarDeclarations[i]
-            val const = decl.internalizeDecl()
-            consts[i] = const
-
-            val sort = Terms.typeOf(const)
-            vars[i] = yicesCtx.newVariable(decl.name, sort)
+            consts[i] = decl.internalizeDecl()
+            vars[i] = decl.internalizeVariable()
         }
 
         val bodyWithVars = yicesCtx.substitute(

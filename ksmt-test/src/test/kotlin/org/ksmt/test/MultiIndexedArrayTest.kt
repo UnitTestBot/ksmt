@@ -13,7 +13,6 @@ import org.ksmt.solver.bitwuzla.KBitwuzlaContext
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprConverter
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprInternalizer
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
-import org.ksmt.solver.fixtures.yices.KTestYicesContext
 import org.ksmt.solver.runner.KSolverRunnerManager
 import org.ksmt.solver.yices.KYicesContext
 import org.ksmt.solver.yices.KYicesExprConverter
@@ -89,8 +88,7 @@ class MultiIndexedArrayTest {
     fun testMultiIndexedArraysYicesWithZ3Oracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
 //        oracleManager.createSolver(this, KZ3Solver::class).use { oracleSolver ->
         KZ3Solver(this).use { oracleSolver ->
-            // Use test context because it doesn't cache expressions
-            KTestYicesContext().use { yicesNativeCtx ->
+            KYicesContext().use { yicesNativeCtx ->
                 runMultiIndexedArraySamples(oracleSolver) { expr ->
                     internalizeAndConvertYices(yicesNativeCtx, expr)
                 }

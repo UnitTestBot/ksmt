@@ -8,7 +8,6 @@ import com.microsoft.z3.Expr
 import com.microsoft.z3.Native
 import com.microsoft.z3.Solver
 import com.microsoft.z3.Status
-import org.ksmt.solver.fixtures.yices.KTestYicesContext
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.runner.core.ChildProcessBase
@@ -103,7 +102,8 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         }
 
     private fun internalizeAndConvertYices(assertions: List<KExpr<KBoolSort>>): List<KExpr<KBoolSort>> {
-        KTestYicesContext().use { internContext ->
+        // Yices doesn't reverse cache internalized expressions (only interpreted values)
+        KYicesContext().use { internContext ->
             val internalizer = KYicesExprInternalizer(ctx, internContext)
 
             val yicesAssertions = with(internalizer) {

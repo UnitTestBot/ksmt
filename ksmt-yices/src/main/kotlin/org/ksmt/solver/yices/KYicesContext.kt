@@ -15,12 +15,18 @@ import java.math.BigInteger
 open class KYicesContext : AutoCloseable {
     private var isClosed = false
 
-    protected val expressions = HashMap<KExpr<*>, YicesTerm>()
+    private val expressions = HashMap<KExpr<*>, YicesTerm>()
     private val yicesExpressions = HashMap<YicesTerm, KExpr<*>>()
-    protected val sorts = HashMap<KSort, YicesSort>()
+
+    private val sorts = HashMap<KSort, YicesSort>()
     private val yicesSorts = HashMap<YicesSort, KSort>()
-    protected val decls = HashMap<KDecl<*>, YicesTerm>()
+
+    private val decls = HashMap<KDecl<*>, YicesTerm>()
     private val yicesDecls = HashMap<YicesTerm, KDecl<*>>()
+
+    private val vars = HashMap<KDecl<*>, YicesTerm>()
+    private val yicesVars = HashMap<YicesTerm, KDecl<*>>()
+
     private val transformed = HashMap<KExpr<*>, KExpr<*>>()
 
     private val yicesTypes = HashSet<YicesSort>()
@@ -30,62 +36,85 @@ open class KYicesContext : AutoCloseable {
         get() = !isClosed
 
     fun findInternalizedExpr(expr: KExpr<*>): YicesTerm? = expressions[expr]
+    fun saveInternalizedExpr(expr: KExpr<*>, internalized: YicesTerm) {
+        if (expressions.putIfAbsent(expr, internalized) == null) {
+            if (expr is KInterpretedValue<*> || expr is KConst<*>) {
+                yicesExpressions[internalized] = expr
+            }
+        }
+    }
+
+    fun findInternalizedSort(sort: KSort): YicesSort? = sorts[sort]
+    fun saveInternalizedSort(sort: KSort, internalized: YicesSort) {
+        saveWithReverseCache(sorts, yicesSorts, sort, internalized)
+    }
+
+    fun findInternalizedDecl(decl: KDecl<*>): YicesTerm? = decls[decl]
+    fun saveInternalizedDecl(decl: KDecl<*>, internalized: YicesTerm) {
+        saveWithReverseCache(decls, yicesDecls, decl, internalized)
+    }
+
+    fun findInternalizedVar(decl: KDecl<*>): YicesTerm? = vars[decl]
+    fun saveInternalizedVar(decl: KDecl<*>, internalized: YicesTerm) {
+        saveWithReverseCache(vars, yicesVars, decl, internalized)
+    }
 
     fun findConvertedExpr(expr: YicesTerm): KExpr<*>? = yicesExpressions[expr]
+    fun saveConvertedExpr(expr: YicesTerm, converted: KExpr<*>) {
+        saveWithReverseCache(yicesExpressions, expressions, expr, converted)
+    }
+
+    fun findConvertedSort(sort: YicesSort): KSort? = yicesSorts[sort]
+    fun saveConvertedSort(sort: YicesSort, converted: KSort) {
+        saveWithReverseCache(yicesSorts, sorts, sort, converted)
+    }
 
     fun findConvertedDecl(decl: YicesTerm): KDecl<*>? = yicesDecls[decl]
+    fun saveConvertedDecl(decl: YicesTerm, converted: KDecl<*>) {
+        saveWithReverseCache(yicesDecls, decls, decl, converted)
+    }
+
+    fun findConvertedVar(decl: YicesTerm): KDecl<*>? = yicesVars[decl]
+
+    inline fun internalizeSort(sort: KSort, internalizer: (KSort) -> YicesSort): YicesSort =
+        findOrSave(::findInternalizedSort, ::saveInternalizedSort, sort) { internalizer(sort) }
+
+    inline fun internalizeDecl(decl: KDecl<*>, internalizer: (KDecl<*>) -> YicesTerm): YicesTerm =
+        findOrSave(::findInternalizedDecl, ::saveInternalizedDecl, decl) { internalizer(decl) }
+
+    inline fun internalizeVar(decl: KDecl<*>, internalizer: (KDecl<*>) -> YicesTerm): YicesTerm =
+        findOrSave(::findInternalizedVar, ::saveInternalizedVar, decl) { internalizer(decl) }
+
+    inline fun convertExpr(expr: YicesTerm, converter: (YicesTerm) -> KExpr<*>): KExpr<*> =
+        findOrSave(::findConvertedExpr, ::saveConvertedExpr, expr) { converter(expr) }
+
+    inline fun convertSort(sort: YicesSort, converter: (YicesSort) -> KSort): KSort =
+        findOrSave(::findConvertedSort, ::saveConvertedSort, sort) { converter(sort) }
+
+    inline fun convertDecl(decl: YicesTerm, converter: (YicesTerm) -> KDecl<*>): KDecl<*> =
+        findOrSave(::findConvertedDecl, ::saveConvertedDecl, decl) { converter(decl) }
 
     fun <K : KExpr<*>> substituteDecls(expr: K, transform: (K) -> K): K =
         transformed.getOrPut(expr) { transform(expr) }.uncheckedCast()
 
-    open fun internalizeExpr(expr: KExpr<*>, internalizer: (KExpr<*>) -> YicesTerm): YicesTerm =
-        expressions.getOrPut(expr) {
-            internalizer(expr).also {
-                if (expr is KInterpretedValue<*> || expr is KConst<*>)
-                    yicesExpressions[it] = expr
-            }
-        }
-
-
-    open fun internalizeSort(sort: KSort, internalizer: (KSort) -> YicesSort): YicesSort =
-        internalize(sorts, yicesSorts, sort, internalizer)
-
-    open fun internalizeDecl(decl: KDecl<*>, internalizer: (KDecl<*>) -> YicesTerm): YicesTerm =
-        internalize(decls, yicesDecls, decl, internalizer)
-
-    fun convertExpr(expr: YicesTerm, converter: (YicesTerm) -> KExpr<*>): KExpr<*> =
-        convert(expressions, yicesExpressions, expr, converter)
-
-    fun convertSort(sort: YicesSort, converter: (YicesSort) -> KSort): KSort =
-        convert(sorts, yicesSorts, sort, converter)
-
-    fun convertDecl(decl: YicesTerm, converter: (YicesTerm) -> KDecl<*>): KDecl<*> =
-        convert(decls, yicesDecls, decl, converter)
-
-    private inline fun <K, V> internalize(
+    private fun <K, V> saveWithReverseCache(
         cache: MutableMap<K, V>,
         reverseCache: MutableMap<V, K>,
         key: K,
-        internalizer: (K) -> V
-    ): V = cache.getOrPut(key) {
-        internalizer(key).also { reverseCache[it] = key }
+        value: V
+    ) {
+        if (cache.putIfAbsent(key, value) == null) {
+            reverseCache.putIfAbsent(value, key)
+        }
     }
 
-    private inline fun <K, V> convert(
-        cache: MutableMap<K, V>,
-        reverseCache: MutableMap<V, K>,
-        key: V,
-        converter: (V) -> K
-    ): K {
-        val current = reverseCache[key]
+    inline fun <K, V> findOrSave(find: (K) -> V?, save: (K, V) -> Unit, key: K, computeValue: () -> V): V {
+        val currentValue = find(key)
+        if (currentValue != null) return currentValue
 
-        if (current != null) return current
-
-        val converted = converter(key)
-        cache.getOrPut(converted) { key }
-        reverseCache[key] = converted
-
-        return converted
+        val value = computeValue()
+        save(key, value)
+        return value
     }
 
     val bool = Types.BOOL
@@ -106,7 +135,6 @@ open class KYicesContext : AutoCloseable {
     fun functionType(domain: YicesSortArray, range: YicesSort) = mkType { Types.functionType(domain, range) }
     fun newUninterpretedType(name: String) = mkType { Types.newUninterpretedType(name) }
 
-    val nullTerm = Terms.NULL_TERM
     val zero = mkTerm { Terms.intConst(0L) }
     val one = mkTerm { Terms.intConst(1L) }
     val minusOne = mkTerm { Terms.intConst(-1L) }

@@ -211,7 +211,7 @@ open class KYicesExprConverter(
     private fun convertSum(expr: YicesTerm) = with(ctx) {
         val (consts, children) = List(Terms.numChildren(expr)) { index ->
             val component = Terms.sumComponent(expr, index).apply {
-                if (term == yicesCtx.nullTerm)
+                if (term == Terms.NULL_TERM)
                     term = yicesCtx.one
             }
 
@@ -236,7 +236,7 @@ open class KYicesExprConverter(
         val bvSize = Terms.bitSize(expr).toUInt()
         val (consts, children) = List(Terms.numChildren(expr)) { index ->
             val component = Terms.sumbvComponent(expr, index).apply {
-                if (term == yicesCtx.nullTerm)
+                if (term == Terms.NULL_TERM)
                     term = yicesCtx.bvConst(bvSize, 1L)
             }
 
@@ -577,10 +577,10 @@ open class KYicesExprConverter(
 
                 val children = when {
                     Terms.isSum(expr) -> (0 until numChildren).mapNotNull { idx ->
-                        Terms.sumComponent(expr, idx).term.takeIf { it != yicesCtx.nullTerm }
+                        Terms.sumComponent(expr, idx).term.takeIf { it != Terms.NULL_TERM }
                     }
                     Terms.isBvSum(expr) -> (0 until numChildren).mapNotNull { idx ->
-                        Terms.sumbvComponent(expr, idx).term.takeIf { it != yicesCtx.nullTerm }
+                        Terms.sumbvComponent(expr, idx).term.takeIf { it != Terms.NULL_TERM }
                     }
                     Terms.isProduct(expr) -> List(numChildren) { idx -> Terms.productComponent(expr, idx).term }
                     Terms.isProjection(expr) -> listOf(Terms.projArg(expr))
