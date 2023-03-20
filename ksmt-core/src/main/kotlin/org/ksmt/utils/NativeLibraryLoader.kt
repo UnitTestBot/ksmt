@@ -1,6 +1,9 @@
 package org.ksmt.utils
 
+import java.io.InputStream
+import java.net.URL
 import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.io.path.outputStream
 
 object NativeLibraryLoader {
@@ -27,33 +30,64 @@ object NativeLibraryLoader {
 
         val destinationFolder = if (arch == "aarch64") "arm" else "x64"
 
-        for (libName in librariesToLoad) {
-            val osLibName = libName + libraryExt
-            val resourceName = "lib/$destinationFolder/$osLibName"
-            val libUri = NativeLibraryLoader::class.java.classLoader
-                .getResource(resourceName)
-                ?.toURI()
-                ?: error("Can't find native library $osLibName")
+        withLibraryUnpacker {
+            for (libName in librariesToLoad) {
+                val osLibName = libName + libraryExt
+                val resourceName = "lib/$destinationFolder/$osLibName"
+                val libraryResource = findResource(resourceName)
+                    ?: error("Can't find native library $osLibName")
 
-            if (libUri.scheme == "file") {
-                System.load(libUri.path)
-                continue
-            }
-
-            // use directory to preserve dll name on Windows
-            val libUnpackDirectory = Files.createTempDirectory("ksmt")
-            val libFile = libUnpackDirectory.resolve(libName + libraryExt)
-
-            NativeLibraryLoader::class.java.classLoader
-                .getResourceAsStream(resourceName)
-                ?.use { libResourceStream ->
-                    libFile.outputStream().use { libResourceStream.copyTo(it) }
+                val libUri = libraryResource.toURI()
+                if (libUri.scheme == "file") {
+                    System.load(libUri.path)
+                    continue
                 }
 
-            System.load(libFile.toAbsolutePath().toString())
+                val libFile = libraryResource.openStream().use { libResourceStream ->
+                    unpackLibrary(
+                        name = libName + libraryExt,
+                        libraryData = libResourceStream
+                    )
+                }
 
-            // tmp files are not removed on Windows
-            libFile.toFile().delete()
+                System.load(libFile.toAbsolutePath().toString())
+            }
+        }
+    }
+
+    private fun findResource(resourceName: String): URL? =
+        NativeLibraryLoader::class.java.classLoader
+            .getResource(resourceName)
+
+    private inline fun withLibraryUnpacker(body: TmpDirLibraryUnpacker.() -> Unit) {
+        val unpacker = TmpDirLibraryUnpacker()
+        try {
+            body(unpacker)
+        } finally {
+            unpacker.cleanup()
+        }
+    }
+
+    private class TmpDirLibraryUnpacker {
+        private val libUnpackDirectory = Files.createTempDirectory("ksmt")
+        private val unpackedFiles = mutableListOf<Path>()
+
+        fun unpackLibrary(name: String, libraryData: InputStream): Path {
+            val libFile = libUnpackDirectory.resolve(name).also { unpackedFiles.add(it) }
+            libFile.outputStream().use { libraryData.copyTo(it) }
+            return libFile
+        }
+
+        fun cleanup() {
+            val notDeletedFiles = unpackedFiles.filterNot { it.toFile().delete() }
+
+            if (notDeletedFiles.isEmpty() && libUnpackDirectory.toFile().delete()) {
+                return
+            }
+
+            // Something was not deleted --> register for deletion in reverse order (according to the API)
+            libUnpackDirectory.toFile().deleteOnExit()
+            notDeletedFiles.forEach { it.toFile().deleteOnExit() }
         }
     }
 }
