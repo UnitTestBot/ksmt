@@ -10,6 +10,7 @@ import java.math.BigInteger
 typealias YicesTerm = Int
 typealias YicesSort = Int
 typealias YicesSortArray = IntArray
+typealias YicesTermArray = IntArray
 
 private fun BooleanArray.extractByte(start: Int): Byte {
     val end = Integer.min(start + Byte.SIZE_BITS, size)

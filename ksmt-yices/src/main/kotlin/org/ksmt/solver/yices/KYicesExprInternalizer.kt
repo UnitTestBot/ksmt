@@ -1,5 +1,7 @@
 package org.ksmt.solver.yices
 
+import com.sri.yices.Terms
+import com.sri.yices.Yices
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAddArithExpr
@@ -13,6 +15,7 @@ import org.ksmt.expr.KArray3Select
 import org.ksmt.expr.KArray3Store
 import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArrayLambdaBase
 import org.ksmt.expr.KArrayNLambda
 import org.ksmt.expr.KArrayNSelect
 import org.ksmt.expr.KArrayNStore
@@ -668,18 +671,34 @@ open class KYicesExprInternalizer(
 
     override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
         expr: KArray2Store<D0, D1, R>
-    ): KExpr<KArray2Sort<D0, D1, R>> {
-        TODO("Multi-indexed arrays are not supported")
+    ): KExpr<KArray2Sort<D0, D1, R>> = with(expr) {
+        transform(array, index0, index1, value) { a: YicesTerm, i0: YicesTerm, i1: YicesTerm, v: YicesTerm ->
+            yicesCtx.functionUpdate(a, intArrayOf(i0, i1), v)
+        }
     }
 
     override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
         expr: KArray3Store<D0, D1, D2, R>
-    ): KExpr<KArray3Sort<D0, D1, D2, R>> {
-        TODO("Multi-indexed arrays are not supported")
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> = with(expr) {
+        transformList(listOf(array, index0, index1, index2, value)) { args: Array<YicesTerm> ->
+            val a = args[0]
+            val indices = IntArray(KArray3Sort.DOMAIN_SIZE) { idx -> args[idx + 1] }
+            val v = args[args.lastIndex]
+
+            yicesCtx.functionUpdate(a, indices, v)
+        }
     }
 
-    override fun <R : KSort> transform(expr: KArrayNStore<R>): KExpr<KArrayNSort<R>> {
-        TODO("Multi-indexed arrays are not supported")
+    override fun <R : KSort> transform(
+        expr: KArrayNStore<R>
+    ): KExpr<KArrayNSort<R>> = with(expr) {
+        transformList(args) { args: Array<YicesTerm> ->
+            val a = args[0]
+            val indices = IntArray(expr.indices.size) { idx -> args[idx + 1] }
+            val v = args[args.lastIndex]
+
+            yicesCtx.functionUpdate(a, indices, v)
+        }
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> = with(expr) {
@@ -688,25 +707,38 @@ open class KYicesExprInternalizer(
         }
     }
 
-    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(expr: KArray2Select<D0, D1, R>): KExpr<R> {
-        TODO("Multi-indexed arrays are not supported")
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Select<D0, D1, R>
+    ): KExpr<R> = with(expr) {
+        transform(array, index0, index1) { a: YicesTerm, i0: YicesTerm, i1: YicesTerm ->
+            yicesCtx.funApplication(a, intArrayOf(i0, i1))
+        }
     }
 
     override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
         expr: KArray3Select<D0, D1, D2, R>
-    ): KExpr<R> {
-        TODO("Multi-indexed arrays are not supported")
+    ): KExpr<R> = with(expr) {
+        transform(array, index0, index1, index2) { a: YicesTerm, i0: YicesTerm, i1: YicesTerm, i2: YicesTerm ->
+            yicesCtx.funApplication(a, intArrayOf(i0, i1, i2))
+        }
     }
 
-    override fun <R : KSort> transform(expr: KArrayNSelect<R>): KExpr<R> {
-        TODO("Multi-indexed arrays are not supported")
+    override fun <R : KSort> transform(expr: KArrayNSelect<R>): KExpr<R> = with(expr) {
+        transformList(args) { args: Array<YicesTerm> ->
+            val a = args[0]
+            val indices = IntArray(expr.indices.size) { idx -> args[idx + 1] }
+
+            yicesCtx.funApplication(a, indices)
+        }
     }
 
     override fun <A : KArraySortBase<R>, R : KSort> transform(
         expr: KArrayConst<A, R>
     ): KExpr<A> = with(expr) {
         transform(value) { value: YicesTerm ->
-            val bounds = sort.domainSorts.map { yicesCtx.newVariable(it.internalizeSort()) }
+            val bounds = sort.domainSorts.let { domain ->
+                IntArray(domain.size) { yicesCtx.newVariable(domain[it].internalizeSort()) }
+            }
             yicesCtx.lambda(bounds, value)
         }
     }
@@ -715,40 +747,42 @@ open class KYicesExprInternalizer(
         transform { function.internalizeDecl() }
     }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>>  {
-        val transformedExpr = yicesCtx.substituteDecls(expr) { term ->
-            with(term) {
-                val newIndex = indexVarDecl.sort.mkFreshConstDecl(indexVarDecl.name)
-                val transformer = KExprSubstitutor(ctx).apply {
-                    substitute(indexVarDecl, newIndex)
-                }
-                ctx.mkArrayLambda(newIndex, transformer.apply(body))
-            }
-        }
-
-        return with(transformedExpr) {
-            val variable = indexVarDecl.internalizeVariable()
-
-            expr.transform(body) { body: YicesTerm ->
-                yicesCtx.lambda(listOf(variable), body)
-            }
-        }
-    }
+    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> =
+        expr.transformArrayLambda()
 
     override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
         expr: KArray2Lambda<D0, D1, R>
-    ): KExpr<KArray2Sort<D0, D1, R>> {
-        TODO("Multi-indexed arrays are not supported")
-    }
+    ): KExpr<KArray2Sort<D0, D1, R>> =
+        expr.transformArrayLambda()
 
     override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
         expr: KArray3Lambda<D0, D1, D2, R>
-    ): KExpr<KArray3Sort<D0, D1, D2, R>> {
-        TODO("Multi-indexed arrays are not supported")
-    }
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> =
+        expr.transformArrayLambda()
 
-    override fun <R : KSort> transform(expr: KArrayNLambda<R>): KExpr<KArrayNSort<R>> {
-        TODO("Multi-indexed arrays are not supported")
+    override fun <R : KSort> transform(expr: KArrayNLambda<R>): KExpr<KArrayNSort<R>> =
+        expr.transformArrayLambda()
+
+    private fun <L : KArrayLambdaBase<*, *>> L.transformArrayLambda(): L = transform(body) { body: YicesTerm ->
+        val consts = IntArray(indexVarDeclarations.size)
+        val vars = IntArray(indexVarDeclarations.size)
+
+        for (i in indexVarDeclarations.indices) {
+            val decl = indexVarDeclarations[i]
+            val const = decl.internalizeDecl()
+            consts[i] = const
+
+            val sort = Terms.typeOf(const)
+            vars[i] = yicesCtx.newVariable(decl.name, sort)
+        }
+
+        val bodyWithVars = yicesCtx.substitute(
+            term = body,
+            substituteFrom = consts,
+            substituteTo = vars
+        )
+
+        yicesCtx.lambda(vars, bodyWithVars)
     }
 
     override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> = with(expr) {

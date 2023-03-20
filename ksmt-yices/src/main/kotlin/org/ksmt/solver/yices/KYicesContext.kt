@@ -126,8 +126,7 @@ open class KYicesContext : AutoCloseable {
 
     fun newVariable(type: YicesSort) = mkTerm { Terms.newVariable(type) }
     fun newVariable(name: String, type: YicesSort) = mkTerm { Terms.newVariable(name, type) }
-    fun funApplication(func: YicesTerm, index: YicesTerm) = mkTerm { Terms.funApplication(func, index) }
-    fun funApplication(func: YicesTerm, args: List<YicesTerm>) = mkTerm { Terms.funApplication(func, args) }
+
     fun and(args: List<YicesTerm>) = mkTerm { Terms.and(args) }
     fun or(args: List<YicesTerm>) = mkTerm { Terms.or(args) }
     fun not(term: YicesTerm) = mkTerm { Terms.not(term) }
@@ -192,11 +191,19 @@ open class KYicesContext : AutoCloseable {
         Terms.bvRotateRight(arg, rotationNumber)
     }
 
+    fun funApplication(func: YicesTerm, index: YicesTerm) = mkTerm { Terms.funApplication(func, index) }
+    fun funApplication(func: YicesTerm, args: List<YicesTerm>) = mkTerm { Terms.funApplication(func, args) }
+    fun funApplication(func: YicesTerm, args: YicesTermArray) = mkTerm { Terms.funApplication(func, *args) }
+
     fun functionUpdate1(func: YicesTerm, arg: YicesTerm, value: YicesTerm) = mkTerm {
         Terms.functionUpdate1(func, arg, value)
     }
+    fun functionUpdate(func: YicesTerm, args: YicesTermArray, value: YicesTerm) = mkTerm {
+        Terms.functionUpdate(func, args, value)
+    }
 
-    fun lambda(bounds: List<YicesTerm>, body: YicesTerm) = mkTerm { Terms.lambda(bounds, body) }
+    fun lambda(bounds: YicesTermArray, body: YicesTerm) = mkTerm { Terms.lambda(bounds, body) }
+
     fun add(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.add(arg0, arg1) }
     fun add(args: List<YicesTerm>) = mkTerm { Terms.add(args) }
     fun mul(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.mul(arg0, arg1) }
@@ -216,8 +223,12 @@ open class KYicesContext : AutoCloseable {
     fun intConst(value: BigInteger) = mkTerm { Terms.intConst(value) }
     fun floor(arg: YicesTerm) = mkTerm { Terms.floor(arg) }
     fun isInt(arg: YicesTerm) = mkTerm { Terms.isInt(arg) }
+
     fun exists(bounds: List<YicesTerm>, body: YicesTerm) = mkTerm { Terms.exists(bounds, body) }
     fun forall(bounds: List<YicesTerm>, body: YicesTerm) = mkTerm { Terms.forall(bounds, body) }
+
+    fun substitute(term: YicesTerm, substituteFrom: YicesTermArray, substituteTo: YicesTermArray): YicesTerm =
+        mkTerm { Terms.subst(term, substituteFrom, substituteTo) }
 
     override fun close() {
         if (isClosed)
