@@ -9,7 +9,6 @@ import org.ksmt.expr.KExpr
 import org.ksmt.expr.KInterpretedValue
 import org.ksmt.sort.KSort
 import org.ksmt.utils.NativeLibraryLoader
-import org.ksmt.utils.uncheckedCast
 import java.math.BigInteger
 
 open class KYicesContext : AutoCloseable {
@@ -26,8 +25,6 @@ open class KYicesContext : AutoCloseable {
 
     private val vars = HashMap<KDecl<*>, YicesTerm>()
     private val yicesVars = HashMap<YicesTerm, KDecl<*>>()
-
-    private val transformed = HashMap<KExpr<*>, KExpr<*>>()
 
     private val yicesTypes = HashSet<YicesSort>()
     private val yicesTerms = HashSet<YicesTerm>()
@@ -94,9 +91,6 @@ open class KYicesContext : AutoCloseable {
     inline fun convertDecl(decl: YicesTerm, converter: (YicesTerm) -> KDecl<*>): KDecl<*> =
         findOrSave(::findConvertedDecl, ::saveConvertedDecl, decl) { converter(decl) }
 
-    fun <K : KExpr<*>> substituteDecls(expr: K, transform: (K) -> K): K =
-        transformed.getOrPut(expr) { transform(expr) }.uncheckedCast()
-
     private fun <K, V> saveWithReverseCache(
         cache: MutableMap<K, V>,
         reverseCache: MutableMap<V, K>,
@@ -155,15 +149,15 @@ open class KYicesContext : AutoCloseable {
     fun newVariable(type: YicesSort) = mkTerm { Terms.newVariable(type) }
     fun newVariable(name: String, type: YicesSort) = mkTerm { Terms.newVariable(name, type) }
 
-    fun and(args: List<YicesTerm>) = mkTerm { Terms.and(args) }
-    fun or(args: List<YicesTerm>) = mkTerm { Terms.or(args) }
+    fun and(args: YicesTermArray) = mkTerm { Terms.and(*args) }
+    fun or(args: YicesTermArray) = mkTerm { Terms.or(*args) }
     fun not(term: YicesTerm) = mkTerm { Terms.not(term) }
     fun implies(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.implies(arg0, arg1) }
     fun xor(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.xor(arg0, arg1) }
     fun mkTrue() = mkTerm(Terms::mkTrue)
     fun mkFalse() = mkTerm(Terms::mkFalse)
     fun eq(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.eq(arg0, arg1) }
-    fun distinct(args: List<YicesTerm>) = mkTerm { Terms.distinct(args) }
+    fun distinct(args: YicesTermArray) = mkTerm { Terms.distinct(*args) }
     fun ifThenElse(condition: YicesTerm, trueBranch: YicesTerm, falseBranch: YicesTerm) = mkTerm {
         Terms.ifThenElse(condition, trueBranch, falseBranch)
     }
@@ -220,7 +214,6 @@ open class KYicesContext : AutoCloseable {
     }
 
     fun funApplication(func: YicesTerm, index: YicesTerm) = mkTerm { Terms.funApplication(func, index) }
-    fun funApplication(func: YicesTerm, args: List<YicesTerm>) = mkTerm { Terms.funApplication(func, args) }
     fun funApplication(func: YicesTerm, args: YicesTermArray) = mkTerm { Terms.funApplication(func, *args) }
 
     fun functionUpdate1(func: YicesTerm, arg: YicesTerm, value: YicesTerm) = mkTerm {
@@ -233,9 +226,9 @@ open class KYicesContext : AutoCloseable {
     fun lambda(bounds: YicesTermArray, body: YicesTerm) = mkTerm { Terms.lambda(bounds, body) }
 
     fun add(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.add(arg0, arg1) }
-    fun add(args: List<YicesTerm>) = mkTerm { Terms.add(args) }
+    fun add(args: YicesTermArray) = mkTerm { Terms.add(*args) }
     fun mul(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.mul(arg0, arg1) }
-    fun mul(args: List<YicesTerm>) = mkTerm { Terms.mul(args) }
+    fun mul(args: YicesTermArray) = mkTerm { Terms.mul(*args) }
     fun sub(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.sub(arg0, arg1) }
     fun neg(arg: YicesTerm) = mkTerm { Terms.neg(arg) }
     fun div(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.div(arg0, arg1) }
@@ -252,8 +245,8 @@ open class KYicesContext : AutoCloseable {
     fun floor(arg: YicesTerm) = mkTerm { Terms.floor(arg) }
     fun isInt(arg: YicesTerm) = mkTerm { Terms.isInt(arg) }
 
-    fun exists(bounds: List<YicesTerm>, body: YicesTerm) = mkTerm { Terms.exists(bounds, body) }
-    fun forall(bounds: List<YicesTerm>, body: YicesTerm) = mkTerm { Terms.forall(bounds, body) }
+    fun exists(bounds: YicesTermArray, body: YicesTerm) = mkTerm { Terms.exists(bounds, body) }
+    fun forall(bounds: YicesTermArray, body: YicesTerm) = mkTerm { Terms.forall(bounds, body) }
 
     fun substitute(term: YicesTerm, substituteFrom: YicesTermArray, substituteTo: YicesTermArray): YicesTerm =
         mkTerm { Terms.subst(term, substituteFrom, substituteTo) }

@@ -206,7 +206,7 @@ open class KYicesExprInternalizer(
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = with(expr) {
         transformList(args) { args: Array<YicesTerm> ->
             if (args.isNotEmpty())
-                yicesCtx.funApplication(decl.internalizeDecl(), args.toList())
+                yicesCtx.funApplication(decl.internalizeDecl(), args.toIntArray())
             else
                 decl.internalizeDecl()
         }
@@ -218,23 +218,23 @@ open class KYicesExprInternalizer(
 
     override fun transform(expr: KAndExpr): KExpr<KBoolSort> = with(expr) {
         transformList(args) { args: Array<YicesTerm> ->
-            yicesCtx.and(args.toList())
+            yicesCtx.and(args.toIntArray())
         }
     }
 
     override fun transform(expr: KAndBinaryExpr): KExpr<KBoolSort> = with(expr) {
         transform(lhs, rhs) { l: YicesTerm, r: YicesTerm ->
-            yicesCtx.and(listOf(l, r))
+            yicesCtx.and(intArrayOf(l, r))
         }
     }
 
     override fun transform(expr: KOrExpr): KExpr<KBoolSort> = with(expr) {
-        transformList(args) { args: Array<YicesTerm> -> yicesCtx.or(args.toList()) }
+        transformList(args) { args: Array<YicesTerm> -> yicesCtx.or(args.toIntArray()) }
     }
 
     override fun transform(expr: KOrBinaryExpr): KExpr<KBoolSort> = with(expr) {
         transform(lhs, rhs) { l: YicesTerm, r: YicesTerm ->
-            yicesCtx.or(listOf(l, r))
+            yicesCtx.or(intArrayOf(l, r))
         }
     }
 
@@ -259,7 +259,7 @@ open class KYicesExprInternalizer(
     }
 
     override fun <T : KSort> transform(expr: KDistinctExpr<T>): KExpr<KBoolSort> = with(expr) {
-        transformList(args) { args: Array<YicesTerm> -> yicesCtx.distinct(args.toList()) }
+        transformList(args) { args: Array<YicesTerm> -> yicesCtx.distinct(args.toIntArray()) }
     }
 
     override fun <T : KSort> transform(expr: KIteExpr<T>): KExpr<T> = with(expr) {
@@ -482,7 +482,7 @@ open class KYicesExprInternalizer(
             if (isSigned)
                 sign = yicesCtx.neg(sign)
 
-            yicesCtx.add(args + sign)
+            yicesCtx.add((args + sign).toIntArray())
         }
     }
 
@@ -764,39 +764,27 @@ open class KYicesExprInternalizer(
     override fun <R : KSort> transform(expr: KArrayNLambda<R>): KExpr<KArrayNSort<R>> =
         expr.transformArrayLambda()
 
-    private fun <L : KArrayLambdaBase<*, *>> L.transformArrayLambda(): L = transform(body) { body: YicesTerm ->
-        val consts = IntArray(indexVarDeclarations.size)
-        val vars = IntArray(indexVarDeclarations.size)
-
-        for (i in indexVarDeclarations.indices) {
-            val decl = indexVarDeclarations[i]
-            consts[i] = decl.internalizeDecl()
-            vars[i] = decl.internalizeVariable()
+    private fun <L : KArrayLambdaBase<*, *>> L.transformArrayLambda(): L =
+        internalizeQuantifiedBody(indexVarDeclarations, body) { vars, body ->
+            yicesCtx.lambda(vars, body)
         }
 
-        val bodyWithVars = yicesCtx.substitute(
-            term = body,
-            substituteFrom = consts,
-            substituteTo = vars
-        )
-
-        yicesCtx.lambda(vars, bodyWithVars)
-    }
-
     override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> = with(expr) {
-        transformList(args) { args: Array<YicesTerm> -> yicesCtx.add(args.toList()) }
+        transformList(args) { args: Array<YicesTerm> -> yicesCtx.add(args.toIntArray()) }
     }
 
     override fun <T : KArithSort> transform(expr: KMulArithExpr<T>): KExpr<T> = with(expr) {
-        transformList(args) { args: Array<YicesTerm> -> yicesCtx.mul(args.toList()) }
+        transformList(args) { args: Array<YicesTerm> -> yicesCtx.mul(args.toIntArray()) }
     }
 
     override fun <T : KArithSort> transform(expr: KSubArithExpr<T>): KExpr<T> = with(expr) {
         transformList(args) { args: Array<YicesTerm> ->
-            if (args.size == 1)
+            if (args.size == 1) {
                 args.first()
-            else
-                yicesCtx.sub(args[0], yicesCtx.add(args.drop(1)))
+            } else {
+                val argsToAdd = args.copyOfRange(fromIndex = 1, toIndex = args.size)
+                yicesCtx.sub(args[0], yicesCtx.add(argsToAdd.toIntArray()))
+            }
         }
     }
 
@@ -881,42 +869,38 @@ open class KYicesExprInternalizer(
         }
     }
 
-    override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> = with(ctx) {
-        internalizeQuantifier(expr, ::mkExistentialQuantifier) { body, variables ->
-            yicesCtx.exists(variables, body)
+    override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> = with(expr) {
+        internalizeQuantifiedBody(bounds, body) { vars, body ->
+            yicesCtx.exists(vars, body)
         }
     }
 
-    override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> = with(ctx) {
-        internalizeQuantifier(expr, ::mkUniversalQuantifier) { body, variables ->
-            yicesCtx.forall(variables, body)
+    override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> = with(expr) {
+        internalizeQuantifiedBody(bounds, body) { vars, body ->
+            yicesCtx.forall(vars, body)
         }
     }
 
-    private inline fun <T : KQuantifier> internalizeQuantifier(
-        expr: T,
-        crossinline constructor: (KExpr<KBoolSort>, List<KDecl<*>>) -> T,
-        internalizer: (YicesTerm, List<YicesTerm>) -> YicesTerm
-    ): T {
-        val transformedExpr = yicesCtx.substituteDecls(expr) { term: T ->
-            with(term) {
-                val newBounds = bounds.map { it.sort.mkFreshConstDecl(it.name) }
-                val transformer = KExprSubstitutor(ctx).apply {
-                    bounds.zip(newBounds).forEach { (bound, newBound) ->
-                        substitute(bound.uncheckedCast(), newBound)
-                    }
-                }
+    private inline fun <E : KExpr<*>> E.internalizeQuantifiedBody(
+        quantifiedDecls: List<KDecl<*>>,
+        quantifierBody: KExpr<*>,
+        internalizer: (YicesTermArray, YicesTerm) -> YicesTerm
+    ): E = transform(quantifierBody) { body: YicesTerm ->
+        val consts = IntArray(quantifiedDecls.size)
+        val vars = IntArray(quantifiedDecls.size)
 
-                constructor(transformer.apply(body), newBounds)
-            }
+        for (i in quantifiedDecls.indices) {
+            val decl = quantifiedDecls[i]
+            consts[i] = decl.internalizeDecl()
+            vars[i] = decl.internalizeVariable()
         }
 
-        return with(transformedExpr) {
-            val variables = bounds.map { it.internalizeVariable() }
+        val bodyWithVars = yicesCtx.substitute(
+            term = body,
+            substituteFrom = consts,
+            substituteTo = vars
+        )
 
-            expr.transform(body) { body: YicesTerm ->
-                internalizer(body, variables)
-            }
-        }
+        internalizer(vars, bodyWithVars)
     }
 }
