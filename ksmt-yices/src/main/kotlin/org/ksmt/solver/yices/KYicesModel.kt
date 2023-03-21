@@ -11,7 +11,7 @@ import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.KModelEvaluator
 import org.ksmt.solver.model.KModelImpl
-import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KIntSort
@@ -65,12 +65,12 @@ class KYicesModel(
                     uninterpretedSortsUniverses.getOrPut(sort) { mutableSetOf() }.add(it)
                 }
             }
-            is KArraySort<*, *> -> {
-                val funcDecl = ctx.mkFreshFuncDecl("array", sort.range, listOf(sort.domain))
+            is KArraySortBase<*> -> {
+                val funcDecl = ctx.mkFreshFuncDecl("array", sort.range, sort.domainSorts)
 
                 funcInterpretationsToDo.add(Pair(yval, funcDecl))
 
-                mkFunctionAsArray(sort.uncheckedCast(), funcDecl).uncheckedCast()
+                mkFunctionAsArray(sort.uncheckedCast(), funcDecl)
             }
             else -> error("Unsupported sort $sort")
         }
@@ -78,10 +78,11 @@ class KYicesModel(
 
     private fun <T: KSort> functionInterpretation(yval: YVal, decl: KFuncDecl<T>): KModel.KFuncInterp<T> {
         val functionChildren = model.expandFunction(yval)
-        val default = if (yval.tag != YValTag.UNKNOWN)
+        val default = if (yval.tag != YValTag.UNKNOWN) {
             getValue(functionChildren.value, decl.sort).uncheckedCast<_, KExpr<T>>()
-        else
+        } else {
             null
+        }
 
         val entries = functionChildren.vector.map { mapping ->
             val entry = model.expandMapping(mapping)

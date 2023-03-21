@@ -71,7 +71,10 @@ open class KYicesContext : AutoCloseable {
         saveWithReverseCache(yicesDecls, decls, decl, converted)
     }
 
-    fun findConvertedVar(decl: YicesTerm): KDecl<*>? = yicesVars[decl]
+    fun findConvertedVar(variable: YicesTerm): KDecl<*>? = yicesVars[variable]
+    fun saveConvertedVar(variable: YicesTerm, converted: KDecl<*>) {
+        saveWithReverseCache(yicesVars, vars, variable, converted)
+    }
 
     inline fun internalizeSort(sort: KSort, internalizer: (KSort) -> YicesSort): YicesSort =
         findOrSave(::findInternalizedSort, ::saveInternalizedSort, sort) { internalizer(sort) }
@@ -90,6 +93,9 @@ open class KYicesContext : AutoCloseable {
 
     inline fun convertDecl(decl: YicesTerm, converter: (YicesTerm) -> KDecl<*>): KDecl<*> =
         findOrSave(::findConvertedDecl, ::saveConvertedDecl, decl) { converter(decl) }
+
+    inline fun convertVar(variable: YicesTerm, converter: (YicesTerm) -> KDecl<*>): KDecl<*> =
+        findOrSave(::findConvertedVar, ::saveConvertedVar, variable) { converter(variable) }
 
     private fun <K, V> saveWithReverseCache(
         cache: MutableMap<K, V>,
