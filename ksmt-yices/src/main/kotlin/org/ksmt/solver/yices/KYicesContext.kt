@@ -222,9 +222,6 @@ open class KYicesContext : AutoCloseable {
     fun funApplication(func: YicesTerm, index: YicesTerm) = mkTerm { Terms.funApplication(func, index) }
     fun funApplication(func: YicesTerm, args: YicesTermArray) = mkTerm { Terms.funApplication(func, *args) }
 
-    fun functionUpdate1(func: YicesTerm, arg: YicesTerm, value: YicesTerm) = mkTerm {
-        Terms.functionUpdate1(func, arg, value)
-    }
     fun functionUpdate(func: YicesTerm, args: YicesTermArray, value: YicesTerm) = mkTerm {
         Terms.functionUpdate(func, args, value)
     }

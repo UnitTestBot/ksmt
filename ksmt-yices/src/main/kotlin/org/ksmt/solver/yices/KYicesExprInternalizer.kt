@@ -667,39 +667,45 @@ open class KYicesExprInternalizer(
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> = with(expr) {
-        transform(array, index, value, yicesCtx::functionUpdate1)
+        transform(array, index, value) { a: YicesTerm, index: YicesTerm, v: YicesTerm ->
+            mkArrayStore(a, intArrayOf(index), v)
+        }
     }
 
     override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
         expr: KArray2Store<D0, D1, R>
     ): KExpr<KArray2Sort<D0, D1, R>> = with(expr) {
         transform(array, index0, index1, value) { a: YicesTerm, i0: YicesTerm, i1: YicesTerm, v: YicesTerm ->
-            yicesCtx.functionUpdate(a, intArrayOf(i0, i1), v)
+            mkArrayStore(a, intArrayOf(i0, i1), v)
         }
     }
 
     override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
         expr: KArray3Store<D0, D1, D2, R>
     ): KExpr<KArray3Sort<D0, D1, D2, R>> = with(expr) {
-        transformList(listOf(array, index0, index1, index2, value)) { args: Array<YicesTerm> ->
-            val a = args[0]
-            val indices = IntArray(KArray3Sort.DOMAIN_SIZE) { idx -> args[idx + 1] }
-            val v = args[args.lastIndex]
-
-            yicesCtx.functionUpdate(a, indices, v)
+        transformList(listOf(array, value, index0, index1, index2)) { args: Array<YicesTerm> ->
+            mkArrayStore(
+                array = args[0],
+                value = args[1],
+                indices = args.copyOfRange(fromIndex = 2, toIndex = indices.size).toIntArray()
+            )
         }
     }
 
     override fun <R : KSort> transform(
         expr: KArrayNStore<R>
     ): KExpr<KArrayNSort<R>> = with(expr) {
-        transformList(args) { args: Array<YicesTerm> ->
-            val a = args[0]
-            val indices = IntArray(expr.indices.size) { idx -> args[idx + 1] }
-            val v = args[args.lastIndex]
-
-            yicesCtx.functionUpdate(a, indices, v)
+        transformList(listOf(array, value) + indices) { args: Array<YicesTerm> ->
+            mkArrayStore(
+                array = args[0],
+                value = args[1],
+                indices = args.copyOfRange(fromIndex = 2, toIndex = indices.size).toIntArray()
+            )
         }
+    }
+
+    private fun mkArrayStore(array: YicesTerm, indices: YicesTermArray, value: YicesTerm): YicesTerm {
+        return yicesCtx.functionUpdate(array, indices, value)
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> = with(expr) {
