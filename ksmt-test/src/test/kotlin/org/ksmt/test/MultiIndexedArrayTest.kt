@@ -17,6 +17,7 @@ import org.ksmt.solver.runner.KSolverRunnerManager
 import org.ksmt.solver.yices.KYicesContext
 import org.ksmt.solver.yices.KYicesExprConverter
 import org.ksmt.solver.yices.KYicesExprInternalizer
+import org.ksmt.solver.yices.KYicesSolver
 import org.ksmt.solver.z3.KZ3Context
 import org.ksmt.solver.z3.KZ3ExprConverter
 import org.ksmt.solver.z3.KZ3ExprInternalizer
@@ -96,28 +97,40 @@ class MultiIndexedArrayTest {
         }
     }
 
+    @Test
+    fun testMultiIndexedArraysZ3WithYicesOracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
+        KYicesSolver(this).use { oracleSolver ->
+//        oracleManager.createSolver(this, KYicesSolver::class).use { oracleSolver ->
+            mkZ3Context(this).use { z3NativeCtx ->
+                runMultiIndexedArraySamples(oracleSolver) { expr ->
+                    internalizeAndConvertZ3(z3NativeCtx, expr)
+                }
+            }
+        }
+    }
+
     private inline fun KContext.runMultiIndexedArraySamples(
         oracle: KSolver<*>,
         process: (KExpr<KSort>) -> KExpr<KSort>
     ) {
         val stats = TestStats()
         val sorts = listOf(
-//            mkArraySort(bv8Sort, bv8Sort),
+            mkArraySort(bv8Sort, bv8Sort),
             mkArraySort(bv32Sort, bv16Sort, bv8Sort),
-//            mkArraySort(bv32Sort, bv16Sort, bv8Sort, bv8Sort),
-//            mkArrayNSort(listOf(bv32Sort, bv16Sort, bv8Sort, bv32Sort, bv8Sort), bv8Sort)
+            mkArraySort(bv32Sort, bv16Sort, bv8Sort, bv8Sort),
+            mkArrayNSort(listOf(bv32Sort, bv16Sort, bv8Sort, bv32Sort, bv8Sort), bv8Sort)
         )
 
         for (sort in sorts) {
             val expressions = mkArrayExpressions(sort)
             for (expr in expressions) {
                 stats.start()
-//                try {
+                try {
                     val processed = process(expr)
                     assertEquals(stats, oracle, expr, processed)
-//                } catch (ex: Throwable) {
-//                    stats.fail(ex)
-//                }
+                } catch (ex: Throwable) {
+                    stats.fail(ex)
+                }
             }
         }
 
@@ -142,7 +155,7 @@ class MultiIndexedArrayTest {
             }
         }
 
-        val arrayEq = arrayExpressions.zipWithNext().map { (first, second) -> first eq second }
+        val arrayEq = arrayExpressions.crossProduct { first, second -> first eq second }
 
         var arraySelects = arrayExpressions.map { mkSelect(it) }
 
@@ -172,6 +185,16 @@ class MultiIndexedArrayTest {
             arraySelects,
             arrayEq
         ).flatten().uncheckedCast()
+    }
+
+    private inline fun <T, R> List<T>.crossProduct(transform: (T, T) -> R): List<R> {
+        val result = mutableListOf<R>()
+        for (i in indices) {
+            for (j in i until size) {
+                result += transform(get(i), get(j))
+            }
+        }
+        return result
     }
 
     private fun <A : KArraySortBase<KBv8Sort>> KContext.mkConst(sort: A): KExpr<A> =
@@ -302,11 +325,6 @@ class MultiIndexedArrayTest {
             stats.passedFast()
             return
         }
-
-        println("#".repeat(20))
-        println(expected)
-        println("-".repeat(20))
-        println(actual)
 
         val satIsPossiblePassed = oracle.scoped {
             assertPossibleToBeEqual(oracle, expected, actual)
