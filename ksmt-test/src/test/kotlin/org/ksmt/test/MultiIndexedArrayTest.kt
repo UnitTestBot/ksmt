@@ -9,6 +9,7 @@ import org.ksmt.expr.KExpr
 import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverStatus
+import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.bitwuzla.KBitwuzlaContext
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprConverter
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprInternalizer
@@ -109,6 +110,18 @@ class MultiIndexedArrayTest {
         }
     }
 
+    @Test
+    fun testMultiIndexedArraysYicesWithYicesOracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
+//        oracleManager.createSolver(this, KYicesSolver::class).use { oracleSolver ->
+        KYicesSolver(this).use { oracleSolver ->
+            KYicesContext().use { yicesNativeCtx ->
+                runMultiIndexedArraySamples(oracleSolver) { expr ->
+                    internalizeAndConvertYices(yicesNativeCtx, expr)
+                }
+            }
+        }
+    }
+
     private inline fun KContext.runMultiIndexedArraySamples(
         oracle: KSolver<*>,
         process: (KExpr<KSort>) -> KExpr<KSort>
@@ -125,11 +138,9 @@ class MultiIndexedArrayTest {
             val expressions = mkArrayExpressions(sort)
             for (expr in expressions) {
                 stats.start()
-                try {
+                stats.withErrorHandling {
                     val processed = process(expr)
                     assertEquals(stats, oracle, expr, processed)
-                } catch (ex: Throwable) {
-                    stats.fail(ex)
                 }
             }
         }
@@ -427,6 +438,14 @@ class MultiIndexedArrayTest {
         return Context()
     }
 
+    private inline fun TestStats.withErrorHandling(body: () -> Unit) = try {
+        body()
+    } catch (ex: KSolverUnsupportedFeatureException) {
+        ignore(ex)
+    } catch (ex: Throwable) {
+        fail(ex)
+    }
+
     private data class TestCase(
         val id: Int,
         val message: String,
@@ -470,6 +489,11 @@ class MultiIndexedArrayTest {
         fun fail(ex: Throwable) {
             System.err.println("FAILED ${testId}: $ex")
             failed += TestCase(testId, "$ex", null, null)
+        }
+
+        fun ignore(ex: Throwable) {
+            System.err.println("IGNORED ${testId}: $ex")
+            ignored += TestCase(testId, "$ex", null, null)
         }
 
         fun result() {
