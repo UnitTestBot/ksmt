@@ -20,6 +20,8 @@ import org.ksmt.runner.generated.models.SolverType
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
+import org.ksmt.solver.KSolverUnsupportedFeatureException
+import org.ksmt.solver.KSolverUnsupportedParameterException
 import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
@@ -222,7 +224,7 @@ class KSolverRunnerExecutor(
                 worker.protocolModel.body()
             }
         } catch (ex: RdFault) {
-            throw KSolverException(ex)
+            throwSolverException(ex)
         } catch (ex: Throwable) {
             terminate()
             if (ex is TimeoutCancellationException) {
@@ -231,5 +233,18 @@ class KSolverRunnerExecutor(
                 throw KSolverExecutorOtherException(ex)
             }
         }
+    }
+
+    private fun throwSolverException(reason: RdFault): Nothing = when (reason.reasonTypeFqn) {
+        KSolverException::class.simpleName ->
+            throw KSolverException(reason.reasonMessage)
+
+        KSolverUnsupportedFeatureException::class.simpleName ->
+            throw KSolverUnsupportedFeatureException(reason.reasonMessage)
+
+        KSolverUnsupportedParameterException::class.simpleName ->
+            throw KSolverUnsupportedParameterException(reason.reasonMessage)
+
+        else -> throw KSolverException(reason)
     }
 }
