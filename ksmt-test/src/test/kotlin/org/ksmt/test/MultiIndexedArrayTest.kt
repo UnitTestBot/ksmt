@@ -88,8 +88,7 @@ class MultiIndexedArrayTest {
 
     @Test
     fun testMultiIndexedArraysYicesWithZ3Oracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
-//        oracleManager.createSolver(this, KZ3Solver::class).use { oracleSolver ->
-        KZ3Solver(this).use { oracleSolver ->
+        oracleManager.createSolver(this, KZ3Solver::class).use { oracleSolver ->
             KYicesContext().use { yicesNativeCtx ->
                 runMultiIndexedArraySamples(oracleSolver) { expr ->
                     internalizeAndConvertYices(yicesNativeCtx, expr)
@@ -100,8 +99,7 @@ class MultiIndexedArrayTest {
 
     @Test
     fun testMultiIndexedArraysZ3WithYicesOracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
-        KYicesSolver(this).use { oracleSolver ->
-//        oracleManager.createSolver(this, KYicesSolver::class).use { oracleSolver ->
+        oracleManager.createSolver(this, KYicesSolver::class).use { oracleSolver ->
             mkZ3Context(this).use { z3NativeCtx ->
                 runMultiIndexedArraySamples(oracleSolver) { expr ->
                     internalizeAndConvertZ3(z3NativeCtx, expr)
@@ -112,8 +110,7 @@ class MultiIndexedArrayTest {
 
     @Test
     fun testMultiIndexedArraysYicesWithYicesOracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
-//        oracleManager.createSolver(this, KYicesSolver::class).use { oracleSolver ->
-        KYicesSolver(this).use { oracleSolver ->
+        oracleManager.createSolver(this, KYicesSolver::class).use { oracleSolver ->
             KYicesContext().use { yicesNativeCtx ->
                 runMultiIndexedArraySamples(oracleSolver) { expr ->
                     internalizeAndConvertYices(yicesNativeCtx, expr)
