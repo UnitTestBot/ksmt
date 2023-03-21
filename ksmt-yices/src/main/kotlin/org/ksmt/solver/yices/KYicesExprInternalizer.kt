@@ -190,7 +190,7 @@ open class KYicesExprInternalizer(
         yicesCtx.saveInternalizedExpr(expr, internalized)
     }
 
-    fun <T : KSort> KExpr<T>.internalize(): YicesTerm = internalizeExpr()
+    fun <T : KSort> KExpr<T>.internalize(): YicesTerm = internalizeExpr(this)
 
     fun <T : KDecl<*>> T.internalizeDecl(): YicesTerm = yicesCtx.internalizeDecl(this) {
         val sort = accept(declSortInternalizer)
@@ -728,7 +728,7 @@ open class KYicesExprInternalizer(
         transformList(listOf(array, value, index0, index1, index2)) { args: Array<YicesTerm> ->
             mkArrayStoreTerm(
                 array = args[0],
-                indices = args.copyOfRange(fromIndex = 2, toIndex = indices.size).toIntArray(),
+                indices = args.copyOfRange(fromIndex = 2, toIndex = args.size).toIntArray(),
                 value = args[1]
             )
         }
@@ -740,7 +740,7 @@ open class KYicesExprInternalizer(
         transformList(listOf(array, value) + indices) { args: Array<YicesTerm> ->
             mkArrayStoreTerm(
                 array = args[0],
-                indices = args.copyOfRange(fromIndex = 2, toIndex = indices.size).toIntArray(),
+                indices = args.copyOfRange(fromIndex = 2, toIndex = args.size).toIntArray(),
                 value = args[1]
             )
         }
@@ -1035,5 +1035,15 @@ open class KYicesExprInternalizer(
 
         val lambdaBody = yicesCtx.ifThenElse(condition, trueBranch, falseBranch)
         return yicesCtx.lambda(lambdaBoundVars, lambdaBody)
+    }
+
+    fun internalizeExpr(expr: KExpr<*>) = try {
+        expr.internalizeExpr()
+    } finally {
+        resetInternalizer()
+    }
+
+    private fun resetInternalizer() {
+        exprStack.clear()
     }
 }
