@@ -291,14 +291,13 @@ open class KYicesContext : AutoCloseable {
         mkTerm { Terms.subst(term, substituteFrom, substituteTo) }
 
     override fun close() {
-        if (isClosed)
-            return
+        if (isClosed) return
+        isClosed = true
 
         yicesTerms.forEach { Yices.yicesDecrefTerm(it) }
         yicesTypes.forEach { Yices.yicesDecrefType(it) }
-        Yices.yicesGarbageCollect()
 
-        isClosed = true
+        Yices.yicesGarbageCollect()
     }
 
     companion object {
@@ -306,8 +305,8 @@ open class KYicesContext : AutoCloseable {
             if (!Yices.isReady()) {
                 NativeLibraryLoader.load { os ->
                     when (os) {
-                        NativeLibraryLoader.OS.LINUX -> listOf("libgmp-10", "libyices", "libyices2java")
-                        NativeLibraryLoader.OS.WINDOWS -> listOf("libgmp-10", "libyices", "libyices2java")
+                        NativeLibraryLoader.OS.LINUX -> listOf("libyices", "libyices2java")
+                        NativeLibraryLoader.OS.WINDOWS -> listOf("libyices", "libyices2java")
                         NativeLibraryLoader.OS.MACOS -> TODO("Mac os platform is not supported")
                     }
                 }
