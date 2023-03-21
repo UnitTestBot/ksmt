@@ -11,6 +11,12 @@ import org.ksmt.expr.KConst
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KInterpretedValue
 import org.ksmt.solver.util.KExprIntInternalizerBase.Companion.NOT_INTERNALIZED
+import org.ksmt.solver.yices.TermUtils.addTerm
+import org.ksmt.solver.yices.TermUtils.andTerm
+import org.ksmt.solver.yices.TermUtils.distinctTerm
+import org.ksmt.solver.yices.TermUtils.funApplicationTerm
+import org.ksmt.solver.yices.TermUtils.mulTerm
+import org.ksmt.solver.yices.TermUtils.orTerm
 import org.ksmt.sort.KSort
 import org.ksmt.utils.NativeLibraryLoader
 import java.math.BigInteger
@@ -191,15 +197,15 @@ open class KYicesContext : AutoCloseable {
     fun newVariable(type: YicesSort) = mkTerm { Terms.newVariable(type) }
     fun newVariable(name: String, type: YicesSort) = mkTerm { Terms.newVariable(name, type) }
 
-    fun and(args: YicesTermArray) = mkTerm { Terms.and(*args) }
-    fun or(args: YicesTermArray) = mkTerm { Terms.or(*args) }
+    fun and(args: YicesTermArray) = mkTerm { andTerm(args) }
+    fun or(args: YicesTermArray) = mkTerm { orTerm(args) }
     fun not(term: YicesTerm) = mkTerm { Terms.not(term) }
     fun implies(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.implies(arg0, arg1) }
     fun xor(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.xor(arg0, arg1) }
     fun mkTrue() = mkTerm(Terms::mkTrue)
     fun mkFalse() = mkTerm(Terms::mkFalse)
     fun eq(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.eq(arg0, arg1) }
-    fun distinct(args: YicesTermArray) = mkTerm { Terms.distinct(*args) }
+    fun distinct(args: YicesTermArray) = mkTerm { distinctTerm(args) }
     fun ifThenElse(condition: YicesTerm, trueBranch: YicesTerm, falseBranch: YicesTerm) = mkTerm {
         Terms.ifThenElse(condition, trueBranch, falseBranch)
     }
@@ -256,7 +262,7 @@ open class KYicesContext : AutoCloseable {
     }
 
     fun funApplication(func: YicesTerm, index: YicesTerm) = mkTerm { Terms.funApplication(func, index) }
-    fun funApplication(func: YicesTerm, args: YicesTermArray) = mkTerm { Terms.funApplication(func, *args) }
+    fun funApplication(func: YicesTerm, args: YicesTermArray) = mkTerm { funApplicationTerm(func, args) }
 
     fun functionUpdate(func: YicesTerm, args: YicesTermArray, value: YicesTerm) = mkTerm {
         Terms.functionUpdate(func, args, value)
@@ -265,9 +271,9 @@ open class KYicesContext : AutoCloseable {
     fun lambda(bounds: YicesTermArray, body: YicesTerm) = mkTerm { Terms.lambda(bounds, body) }
 
     fun add(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.add(arg0, arg1) }
-    fun add(args: YicesTermArray) = mkTerm { Terms.add(*args) }
+    fun add(args: YicesTermArray) = mkTerm { addTerm(args) }
     fun mul(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.mul(arg0, arg1) }
-    fun mul(args: YicesTermArray) = mkTerm { Terms.mul(*args) }
+    fun mul(args: YicesTermArray) = mkTerm { mulTerm(args) }
     fun sub(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.sub(arg0, arg1) }
     fun neg(arg: YicesTerm) = mkTerm { Terms.neg(arg) }
     fun div(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.div(arg0, arg1) }

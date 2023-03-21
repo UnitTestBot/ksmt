@@ -188,8 +188,8 @@ open class KYicesExprConverter(
     private fun convertBvSum(expr: YicesTerm): ExprConversionResult = expr.convertComponents(
         getComponent = { _, idx -> Terms.sumbvComponent(expr, idx) },
         expectedTermSort = ctx.mkBvSort(Terms.bitSize(expr).toUInt()),
-        wrapConstant = { value, sort -> mkBv(value, sort) },
-        mkComponentTerm = { const, term -> mkBvMulExpr(mkBv(const, term.sort), term) },
+        wrapConstant = { value, sort -> mkBv(value.toBooleanArray(), sort) },
+        mkComponentTerm = { const, term -> mkBvMulExpr(mkBv(const.toBooleanArray(), term.sort), term) },
         reduceComponentTerms = { acc, term -> mkBvAddExpr(acc, term) }
     )
 
@@ -216,8 +216,8 @@ open class KYicesExprConverter(
         reduceComponentTerms = { acc, term -> mkArithMul(acc, term) }
     )
 
-    private fun <S : KBvSort> KContext.mkBv(value: Array<Boolean>, sort: S): KExpr<S> =
-        mkBv(value.toBooleanArray(), sort.sizeBits).uncheckedCast()
+    private fun <S : KBvSort> KContext.mkBv(value: BooleanArray, sort: S): KExpr<S> =
+        mkBv(value, sort.sizeBits).uncheckedCast()
 
     private fun KContext.mkBvPow(base: KExpr<KBvSort>, exp: Int): KExpr<KBvSort> {
         check(exp > 0)

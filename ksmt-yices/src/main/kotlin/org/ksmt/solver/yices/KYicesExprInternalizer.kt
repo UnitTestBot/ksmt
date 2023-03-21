@@ -170,6 +170,7 @@ import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import java.math.BigInteger
 
+@Suppress("LargeClass")
 open class KYicesExprInternalizer(
     private val yicesCtx: KYicesContext,
 ) : KExprIntInternalizerBase() {
