@@ -2,7 +2,6 @@ package org.ksmt.solver.yices
 
 import com.sri.yices.Constructor
 import com.sri.yices.Terms
-import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAddArithExpr
 import org.ksmt.expr.KAndBinaryExpr
@@ -146,7 +145,7 @@ import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.solver.KSolverUnsupportedFeatureException
-import org.ksmt.solver.util.KExprInternalizerBase
+import org.ksmt.solver.util.KExprIntInternalizerBase
 import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KArray2Sort
 import org.ksmt.sort.KArray3Sort
@@ -172,9 +171,8 @@ import org.ksmt.sort.KSort
 import java.math.BigInteger
 
 open class KYicesExprInternalizer(
-    private val ctx: KContext,
     private val yicesCtx: KYicesContext,
-) : KExprInternalizerBase<YicesTerm>() {
+) : KExprIntInternalizerBase() {
 
     private val sortInternalizer: KYicesSortInternalizer by lazy {
         KYicesSortInternalizer(yicesCtx)
@@ -184,30 +182,35 @@ open class KYicesExprInternalizer(
         KYicesDeclSortInternalizer(yicesCtx, sortInternalizer)
     }
 
-    override fun findInternalizedExpr(expr: KExpr<*>): YicesTerm? = yicesCtx.findInternalizedExpr(expr)
+    override fun findInternalizedExpr(expr: KExpr<*>) = yicesCtx.findInternalizedExpr(expr)
 
     override fun saveInternalizedExpr(expr: KExpr<*>, internalized: YicesTerm) {
         yicesCtx.saveInternalizedExpr(expr, internalized)
     }
 
-    fun <T : KSort> KExpr<T>.internalize(): YicesTerm = internalizeExpr(this)
+    fun <T : KSort> KExpr<T>.internalize(): YicesTerm = try {
+        internalizeExpr()
+    } finally {
+        resetInternalizer()
+    }
 
     fun <T : KDecl<*>> T.internalizeDecl(): YicesTerm = yicesCtx.internalizeDecl(this) {
-        val sort = accept(declSortInternalizer)
+        val sort = declSortInternalizer.internalizeYicesDeclSort(this)
         yicesCtx.newUninterpretedTerm(name, sort)
     }
 
     private fun <T : KDecl<*>> T.internalizeVariable(): YicesTerm = yicesCtx.internalizeVar(this) {
-        val sort = accept(declSortInternalizer)
+        val sort = declSortInternalizer.internalizeYicesDeclSort(this)
         yicesCtx.newVariable(name, sort)
     }
 
-    private fun <T : KSort> T.internalizeSort(): YicesSort = accept(sortInternalizer)
+    private fun <T : KSort> T.internalizeSort(): YicesSort =
+        sortInternalizer.internalizeYicesSort(this)
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = with(expr) {
-        transformList(args) { args: Array<YicesTerm> ->
+        transformList(args) { args: YicesTermArray ->
             if (args.isNotEmpty()) {
-                yicesCtx.funApplication(decl.internalizeDecl(), args.toIntArray())
+                yicesCtx.funApplication(decl.internalizeDecl(), args)
             } else {
                 decl.internalizeDecl()
             }
@@ -219,8 +222,8 @@ open class KYicesExprInternalizer(
     }
 
     override fun transform(expr: KAndExpr): KExpr<KBoolSort> = with(expr) {
-        transformList(args) { args: Array<YicesTerm> ->
-            yicesCtx.and(args.toIntArray())
+        transformList(args) { args: YicesTermArray ->
+            yicesCtx.and(args)
         }
     }
 
@@ -231,7 +234,7 @@ open class KYicesExprInternalizer(
     }
 
     override fun transform(expr: KOrExpr): KExpr<KBoolSort> = with(expr) {
-        transformList(args) { args: Array<YicesTerm> -> yicesCtx.or(args.toIntArray()) }
+        transformList(args) { args: YicesTermArray -> yicesCtx.or(args) }
     }
 
     override fun transform(expr: KOrBinaryExpr): KExpr<KBoolSort> = with(expr) {
@@ -263,11 +266,11 @@ open class KYicesExprInternalizer(
     }
 
     override fun <T : KSort> transform(expr: KDistinctExpr<T>): KExpr<KBoolSort> = with(expr) {
-        transformList(args) { args: Array<YicesTerm> ->
+        transformList(args) { args: YicesTermArray ->
             if (args.isEmpty()) {
                 yicesCtx.mkTrue()
             } else {
-                internalizeDistinctExpr(expr.args.first().sort, args.toIntArray())
+                internalizeDistinctExpr(expr.args.first().sort, args)
             }
         }
     }
@@ -725,10 +728,10 @@ open class KYicesExprInternalizer(
     override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
         expr: KArray3Store<D0, D1, D2, R>
     ): KExpr<KArray3Sort<D0, D1, D2, R>> = with(expr) {
-        transformList(listOf(array, value, index0, index1, index2)) { args: Array<YicesTerm> ->
+        transformList(listOf(array, value, index0, index1, index2)) { args: YicesTermArray ->
             mkArrayStoreTerm(
                 array = args[0],
-                indices = args.copyOfRange(fromIndex = 2, toIndex = args.size).toIntArray(),
+                indices = args.copyOfRange(fromIndex = 2, toIndex = args.size),
                 value = args[1]
             )
         }
@@ -737,10 +740,10 @@ open class KYicesExprInternalizer(
     override fun <R : KSort> transform(
         expr: KArrayNStore<R>
     ): KExpr<KArrayNSort<R>> = with(expr) {
-        transformList(listOf(array, value) + indices) { args: Array<YicesTerm> ->
+        transformList(listOf(array, value) + indices) { args: YicesTermArray ->
             mkArrayStoreTerm(
                 array = args[0],
-                indices = args.copyOfRange(fromIndex = 2, toIndex = args.size).toIntArray(),
+                indices = args.copyOfRange(fromIndex = 2, toIndex = args.size),
                 value = args[1]
             )
         }
@@ -769,11 +772,11 @@ open class KYicesExprInternalizer(
     }
 
     override fun <R : KSort> transform(expr: KArrayNSelect<R>): KExpr<R> = with(expr) {
-        transformList(args) { args: Array<YicesTerm> ->
-            val a = args[0]
-            val indices = IntArray(expr.indices.size) { idx -> args[idx + 1] }
-
-            yicesCtx.funApplication(a, indices)
+        transformList(args) { args: YicesTermArray ->
+            yicesCtx.funApplication(
+                func = args[0],
+                args = args.copyOfRange(fromIndex = 1, toIndex = args.size)
+            )
         }
     }
 
@@ -814,20 +817,20 @@ open class KYicesExprInternalizer(
         }
 
     override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> = with(expr) {
-        transformList(args) { args: Array<YicesTerm> -> yicesCtx.add(args.toIntArray()) }
+        transformList(args) { args: YicesTermArray -> yicesCtx.add(args) }
     }
 
     override fun <T : KArithSort> transform(expr: KMulArithExpr<T>): KExpr<T> = with(expr) {
-        transformList(args) { args: Array<YicesTerm> -> yicesCtx.mul(args.toIntArray()) }
+        transformList(args) { args: YicesTermArray -> yicesCtx.mul(args) }
     }
 
     override fun <T : KArithSort> transform(expr: KSubArithExpr<T>): KExpr<T> = with(expr) {
-        transformList(args) { args: Array<YicesTerm> ->
+        transformList(args) { args: YicesTermArray ->
             if (args.size == 1) {
                 args.first()
             } else {
                 val argsToAdd = args.copyOfRange(fromIndex = 1, toIndex = args.size)
-                yicesCtx.sub(args[0], yicesCtx.add(argsToAdd.toIntArray()))
+                yicesCtx.sub(args[0], yicesCtx.add(argsToAdd))
             }
         }
     }
@@ -1035,12 +1038,6 @@ open class KYicesExprInternalizer(
 
         val lambdaBody = yicesCtx.ifThenElse(condition, trueBranch, falseBranch)
         return yicesCtx.lambda(lambdaBoundVars, lambdaBody)
-    }
-
-    fun internalizeExpr(expr: KExpr<*>) = try {
-        expr.internalizeExpr()
-    } finally {
-        resetInternalizer()
     }
 
     private fun resetInternalizer() {

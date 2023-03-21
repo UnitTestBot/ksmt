@@ -1,6 +1,7 @@
 package org.ksmt.solver.yices
 
 import org.ksmt.solver.KSolverUnsupportedFeatureException
+import org.ksmt.solver.util.KExprIntInternalizerBase.Companion.NOT_INTERNALIZED
 import org.ksmt.sort.KArray2Sort
 import org.ksmt.sort.KArray3Sort
 import org.ksmt.sort.KArrayNSort
@@ -17,69 +18,72 @@ import org.ksmt.sort.KUninterpretedSort
 
 open class KYicesSortInternalizer(
     private val yicesCtx: KYicesContext
-) : KSortVisitor<YicesSort> {
-    override fun visit(sort: KBoolSort): YicesSort = yicesCtx.internalizeSort(sort) {
-        yicesCtx.bool
+) : KSortVisitor<Unit> {
+    private var internalizedSort: YicesSort = NOT_INTERNALIZED
+
+    override fun visit(sort: KBoolSort) {
+        internalizedSort = yicesCtx.bool
     }
 
-    override fun visit(sort: KIntSort): YicesSort = yicesCtx.internalizeSort(sort) {
-        yicesCtx.int
+    override fun visit(sort: KIntSort) {
+        internalizedSort = yicesCtx.int
     }
 
-    override fun visit(sort: KRealSort): YicesSort = yicesCtx.internalizeSort(sort) {
-        yicesCtx.real
+    override fun visit(sort: KRealSort) {
+        internalizedSort = yicesCtx.real
     }
 
-    override fun <S : KBvSort> visit(sort: S): YicesSort = yicesCtx.internalizeSort(sort) {
-        yicesCtx.bvType(sort.sizeBits)
+    override fun <S : KBvSort> visit(sort: S) {
+        internalizedSort = yicesCtx.bvType(sort.sizeBits)
     }
 
-    override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): YicesSort =
-        yicesCtx.internalizeSort(sort) {
-            yicesCtx.functionType(sort.domain.internalizeYicesSort(), sort.range.internalizeYicesSort())
-        }
+    override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>) {
+        val domain = internalizeYicesSort(sort.domain)
+        val range = internalizeYicesSort(sort.range)
 
-    override fun <D0 : KSort, D1 : KSort, R : KSort> visit(
-        sort: KArray2Sort<D0, D1, R>
-    ): YicesSort = yicesCtx.internalizeSort(sort) {
-        val d0 = sort.domain0.internalizeYicesSort()
-        val d1 = sort.domain1.internalizeYicesSort()
-        val range = sort.range.internalizeYicesSort()
-
-        yicesCtx.functionType(intArrayOf(d0, d1), range)
+        internalizedSort = yicesCtx.functionType(domain, range)
     }
 
-    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(
-        sort: KArray3Sort<D0, D1, D2, R>
-    ): YicesSort = yicesCtx.internalizeSort(sort) {
-        val d0 = sort.domain0.internalizeYicesSort()
-        val d1 = sort.domain1.internalizeYicesSort()
-        val d2 = sort.domain2.internalizeYicesSort()
-        val range = sort.range.internalizeYicesSort()
+    override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>) {
+        val d0 = internalizeYicesSort(sort.domain0)
+        val d1 = internalizeYicesSort(sort.domain1)
+        val range = internalizeYicesSort(sort.range)
 
-        yicesCtx.functionType(intArrayOf(d0, d1, d2), range)
+        internalizedSort = yicesCtx.functionType(intArrayOf(d0, d1), range)
     }
 
-    override fun <R : KSort> visit(sort: KArrayNSort<R>): YicesSort = yicesCtx.internalizeSort(sort) {
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>) {
+        val d0 = internalizeYicesSort(sort.domain0)
+        val d1 = internalizeYicesSort(sort.domain1)
+        val d2 = internalizeYicesSort(sort.domain2)
+        val range = internalizeYicesSort(sort.range)
+
+        internalizedSort = yicesCtx.functionType(intArrayOf(d0, d1, d2), range)
+    }
+
+    override fun <R : KSort> visit(sort: KArrayNSort<R>) {
         val domain = sort.domainSorts.let { domain ->
-            IntArray(domain.size) { domain[it].internalizeYicesSort() }
+            IntArray(domain.size) { internalizeYicesSort(domain[it]) }
         }
-        val range = sort.range.internalizeYicesSort()
+        val range = internalizeYicesSort(sort.range)
 
-        yicesCtx.functionType(domain, range)
+        internalizedSort = yicesCtx.functionType(domain, range)
     }
 
-    override fun visit(sort: KUninterpretedSort): YicesSort = yicesCtx.internalizeSort(sort) {
-        yicesCtx.newUninterpretedType(sort.name)
+    override fun visit(sort: KUninterpretedSort) {
+        internalizedSort = yicesCtx.newUninterpretedType(sort.name)
     }
 
-    override fun <S : KFpSort> visit(sort: S): YicesSort {
+    override fun <S : KFpSort> visit(sort: S) {
         throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
     }
 
-    override fun visit(sort: KFpRoundingModeSort): YicesSort {
+    override fun visit(sort: KFpRoundingModeSort) {
         throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
     }
 
-    private fun KSort.internalizeYicesSort() = accept(this@KYicesSortInternalizer)
+    fun internalizeYicesSort(sort: KSort): YicesSort = yicesCtx.internalizeSort(sort) {
+        sort.accept(this)
+        internalizedSort
+    }
 }

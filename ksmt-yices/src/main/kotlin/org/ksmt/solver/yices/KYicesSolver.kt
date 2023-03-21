@@ -27,7 +27,7 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
     }
 
     private val exprInternalizer: KYicesExprInternalizer by lazy {
-        KYicesExprInternalizer(ctx, yicesCtx)
+        KYicesExprInternalizer(yicesCtx)
     }
     private val exprConverter: KYicesExprConverter by lazy {
         KYicesExprConverter(ctx, yicesCtx)

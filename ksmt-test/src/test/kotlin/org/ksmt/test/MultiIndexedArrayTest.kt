@@ -293,7 +293,7 @@ class MultiIndexedArrayTest {
     private fun <T : KSort> KContext.internalizeAndConvertYices(
         nativeCtx: KYicesContext, expr: KExpr<T>
     ): KExpr<T> {
-        val internalized = with(KYicesExprInternalizer(this, nativeCtx)) {
+        val internalized = with(KYicesExprInternalizer(nativeCtx)) {
             expr.internalizeExpr()
         }
 

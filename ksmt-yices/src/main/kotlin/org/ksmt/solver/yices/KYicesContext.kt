@@ -3,10 +3,14 @@ package org.ksmt.solver.yices
 import com.sri.yices.Terms
 import com.sri.yices.Types
 import com.sri.yices.Yices
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KInterpretedValue
+import org.ksmt.solver.util.KExprIntInternalizerBase.Companion.NOT_INTERNALIZED
 import org.ksmt.sort.KSort
 import org.ksmt.utils.NativeLibraryLoader
 import java.math.BigInteger
@@ -14,44 +18,44 @@ import java.math.BigInteger
 open class KYicesContext : AutoCloseable {
     private var isClosed = false
 
-    private val expressions = HashMap<KExpr<*>, YicesTerm>()
-    private val yicesExpressions = HashMap<YicesTerm, KExpr<*>>()
+    private val expressions = mkTermCache<KExpr<*>>()
+    private val yicesExpressions = mkTermReverseCache<KExpr<*>>()
 
-    private val sorts = HashMap<KSort, YicesSort>()
-    private val yicesSorts = HashMap<YicesSort, KSort>()
+    private val sorts = mkSortCache<KSort>()
+    private val yicesSorts = mkSortReverseCache<KSort>()
 
-    private val decls = HashMap<KDecl<*>, YicesTerm>()
-    private val yicesDecls = HashMap<YicesTerm, KDecl<*>>()
+    private val decls = mkTermCache<KDecl<*>>()
+    private val yicesDecls = mkTermReverseCache<KDecl<*>>()
 
-    private val vars = HashMap<KDecl<*>, YicesTerm>()
-    private val yicesVars = HashMap<YicesTerm, KDecl<*>>()
+    private val vars = mkTermCache<KDecl<*>>()
+    private val yicesVars = mkTermReverseCache<KDecl<*>>()
 
-    private val yicesTypes = HashSet<YicesSort>()
-    private val yicesTerms = HashSet<YicesTerm>()
+    private val yicesTypes = mkSortSet()
+    private val yicesTerms = mkTermSet()
 
     val isActive: Boolean
         get() = !isClosed
 
-    fun findInternalizedExpr(expr: KExpr<*>): YicesTerm? = expressions[expr]
+    fun findInternalizedExpr(expr: KExpr<*>): YicesTerm = expressions.getInt(expr)
     fun saveInternalizedExpr(expr: KExpr<*>, internalized: YicesTerm) {
-        if (expressions.putIfAbsent(expr, internalized) == null) {
+        if (expressions.putIfAbsent(expr, internalized) == NOT_INTERNALIZED) {
             if (expr is KInterpretedValue<*> || expr is KConst<*>) {
-                yicesExpressions[internalized] = expr
+                yicesExpressions.put(internalized, expr)
             }
         }
     }
 
-    fun findInternalizedSort(sort: KSort): YicesSort? = sorts[sort]
+    fun findInternalizedSort(sort: KSort): YicesSort = sorts.getInt(sort)
     fun saveInternalizedSort(sort: KSort, internalized: YicesSort) {
         saveWithReverseCache(sorts, yicesSorts, sort, internalized)
     }
 
-    fun findInternalizedDecl(decl: KDecl<*>): YicesTerm? = decls[decl]
+    fun findInternalizedDecl(decl: KDecl<*>): YicesTerm = decls.getInt(decl)
     fun saveInternalizedDecl(decl: KDecl<*>, internalized: YicesTerm) {
         saveWithReverseCache(decls, yicesDecls, decl, internalized)
     }
 
-    fun findInternalizedVar(decl: KDecl<*>): YicesTerm? = vars[decl]
+    fun findInternalizedVar(decl: KDecl<*>): YicesTerm = vars.getInt(decl)
     fun saveInternalizedVar(decl: KDecl<*>, internalized: YicesTerm) {
         saveWithReverseCache(vars, yicesVars, decl, internalized)
     }
@@ -97,10 +101,10 @@ open class KYicesContext : AutoCloseable {
     inline fun convertVar(variable: YicesTerm, converter: (YicesTerm) -> KDecl<*>): KDecl<*> =
         findOrSave(::findConvertedVar, ::saveConvertedVar, variable) { converter(variable) }
 
-    private fun <K, V> saveWithReverseCache(
-        cache: MutableMap<K, V>,
-        reverseCache: MutableMap<V, K>,
-        key: K,
+    private fun <V> saveWithReverseCache(
+        cache: Int2ObjectOpenHashMap<V>,
+        reverseCache: Object2IntOpenHashMap<V>,
+        key: Int,
         value: V
     ) {
         if (cache.putIfAbsent(key, value) == null) {
@@ -108,9 +112,39 @@ open class KYicesContext : AutoCloseable {
         }
     }
 
-    inline fun <K, V> findOrSave(find: (K) -> V?, save: (K, V) -> Unit, key: K, computeValue: () -> V): V {
+    private fun <K> saveWithReverseCache(
+        cache: Object2IntOpenHashMap<K>,
+        reverseCache: Int2ObjectOpenHashMap<K>,
+        key: K,
+        value: Int
+    ) {
+        if (cache.putIfAbsent(key, value) == NOT_INTERNALIZED) {
+            reverseCache.putIfAbsent(value, key)
+        }
+    }
+
+    inline fun <V> findOrSave(
+        find: (Int) -> V?,
+        save: (Int, V) -> Unit,
+        key: Int,
+        computeValue: () -> V
+    ): V {
         val currentValue = find(key)
         if (currentValue != null) return currentValue
+
+        val value = computeValue()
+        save(key, value)
+        return value
+    }
+
+    inline fun <K> findOrSave(
+        find: (K) -> Int,
+        save: (K, Int) -> Unit,
+        key: K,
+        computeValue: () -> Int
+    ): Int {
+        val currentValue = find(key)
+        if (currentValue != NOT_INTERNALIZED) return currentValue
 
         val value = computeValue()
         save(key, value)
@@ -124,8 +158,9 @@ open class KYicesContext : AutoCloseable {
     private inline fun mkType(mk: () -> YicesSort): YicesSort {
         val type = mk()
 
-        if (yicesTypes.add(type))
+        if (yicesTypes.add(type)) {
             Yices.yicesIncrefType(type)
+        }
 
         return type
     }
@@ -142,8 +177,9 @@ open class KYicesContext : AutoCloseable {
     private inline fun mkTerm(mk: () -> YicesTerm): YicesTerm {
         val term = mk()
 
-        if (yicesTerms.add(term))
+        if (yicesTerms.add(term)) {
             Yices.yicesIncrefTerm(term)
+        }
 
         return term
     }
@@ -279,5 +315,21 @@ open class KYicesContext : AutoCloseable {
                 Yices.setReadyFlag(true)
             }
         }
+
+        internal fun <K> mkTermCache() = Object2IntOpenHashMap<K>().apply {
+            defaultReturnValue(NOT_INTERNALIZED)
+        }
+
+        internal fun <V> mkTermReverseCache() = Int2ObjectOpenHashMap<V>()
+
+        internal fun <K> mkSortCache() = Object2IntOpenHashMap<K>().apply {
+            defaultReturnValue(NOT_INTERNALIZED)
+        }
+
+        internal fun <V> mkSortReverseCache() = Int2ObjectOpenHashMap<V>()
+
+        internal fun mkTermSet() = IntOpenHashSet()
+
+        internal fun mkSortSet() = IntOpenHashSet()
     }
 }
