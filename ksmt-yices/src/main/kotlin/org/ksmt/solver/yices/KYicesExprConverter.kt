@@ -404,32 +404,28 @@ open class KYicesExprConverter(
             }
 
             Constructor.ABS -> expr.convert(yicesArgs) { x: KExpr<KArithSort> ->
-                val condition = if (x.sort == realSort) {
-                    mkArithGe(x.ensureSort(realSort), mkRealNum(0))
-                } else {
-                    mkArithGe(x.ensureSort(intSort), mkIntNum(0))
-                }
+                val condition = mkArithUnaryExpr(
+                    expr = x,
+                    intExpr = { mkArithGe(it, mkIntNum(0)) },
+                    realExpr = { mkArithGe(it, mkRealNum(0)) }
+                )
                 mkIte(condition, x, mkArithUnaryMinus(x))
             }
 
-            Constructor.CEIL -> {
-                expr.convert(yicesArgs) { x: KExpr<KArithSort> ->
-                    if (x.sort == intSort) {
-                        x
-                    } else {
-                        mkCeil(x.ensureSort(realSort))
-                    }
-                }
+            Constructor.CEIL -> expr.convert(yicesArgs) { x: KExpr<KArithSort> ->
+                mkArithUnaryExpr(
+                    expr = x,
+                    intExpr = { it },
+                    realExpr = { mkCeil(it) }
+                )
             }
 
-            Constructor.FLOOR -> {
-                expr.convert(yicesArgs) { x: KExpr<KArithSort> ->
-                    if (x.sort == intSort) {
-                        x
-                    } else {
-                        mkFloor(x.ensureSort(realSort))
-                    }
-                }
+            Constructor.FLOOR -> expr.convert(yicesArgs) { x: KExpr<KArithSort> ->
+                mkArithUnaryExpr(
+                    expr = x,
+                    intExpr = { it },
+                    realExpr = { mkFloor(it) }
+                )
             }
 
             Constructor.RDIV -> expr.convert(yicesArgs) { lhs: KExpr<KArithSort>, rhs: KExpr<KArithSort> ->
@@ -437,40 +433,38 @@ open class KYicesExprConverter(
             }
 
             Constructor.IDIV -> expr.convert(yicesArgs) { lhs: KExpr<KArithSort>, rhs: KExpr<KArithSort> ->
-                val expectedSort = mergeSorts(lhs.sort, rhs.sort)
-                if (expectedSort is KIntSort) {
-                    mkArithDiv(lhs.ensureSort(expectedSort), rhs.ensureSort(expectedSort))
-                } else {
-                    mkIDiv(lhs.ensureSort(realSort), rhs.ensureSort(realSort))
-                }
+                mkArithBinaryExpr(
+                    lhs = lhs, rhs = rhs,
+                    intExpr = { l, r -> mkArithDiv(l, r) },
+                    realExpr = { l, r -> mkIDiv(l, r) }
+                )
             }
 
             Constructor.IMOD -> expr.convert(yicesArgs) { lhs: KExpr<KArithSort>, rhs: KExpr<KArithSort> ->
-                val expectedSort = mergeSorts(lhs.sort, rhs.sort)
-                if (expectedSort is KIntSort) {
-                    mkIntMod(lhs.ensureSort(expectedSort), rhs.ensureSort(expectedSort))
-                } else {
-                    val integerQuotient = mkIDiv(lhs.ensureSort(realSort), rhs.ensureSort(realSort))
-                    val mul = mkArithMul(rhs.ensureSort(realSort), integerQuotient.ensureSort(realSort))
-                    mkArithSub(lhs.ensureSort(realSort), mul)
-                }
+                mkArithBinaryExpr(
+                    lhs = lhs, rhs = rhs,
+                    intExpr = { l, r -> mkIntMod(l, r) },
+                    realExpr = { l, r ->
+                        val integerQuotient = mkIDiv(l, r).ensureSort(realSort)
+                        mkArithSub(l, mkArithMul(r, integerQuotient))
+                    }
+                )
             }
 
             Constructor.IS_INT_ATOM -> expr.convert(yicesArgs) { arg: KExpr<KArithSort> ->
-                if (arg.sort is KIntSort) {
-                    true.expr
-                } else {
-                    mkRealIsInt(arg.ensureSort(realSort))
-                }
+                mkArithUnaryExpr(
+                    expr = arg,
+                    intExpr = { trueExpr },
+                    realExpr = { mkRealIsInt(it) }
+                )
             }
 
             Constructor.DIVIDES_ATOM -> expr.convert(yicesArgs) { lhs: KExpr<KArithSort>, rhs: KExpr<KArithSort> ->
-                val expectedSort = mergeSorts(lhs.sort, rhs.sort)
-                if (expectedSort is KIntSort) {
-                    mkIntRem(rhs.ensureSort(expectedSort), lhs.ensureSort(expectedSort)) eq mkIntNum(0)
-                } else {
-                    mkRealIsInt(mkArithDiv(rhs.ensureSort(realSort), lhs.ensureSort(realSort)))
-                }
+                mkArithBinaryExpr(
+                    lhs = lhs, rhs = rhs,
+                    intExpr = { l, r -> mkIntRem(r, l) eq mkIntNum(0) },
+                    realExpr = { l, r -> mkRealIsInt(mkArithDiv(r, l)) }
+                )
             }
 
             Constructor.ARITH_ROOT_ATOM -> TODO("ARITH_ROOT conversion is not supported")
@@ -478,6 +472,26 @@ open class KYicesExprConverter(
             Constructor.CONSTRUCTOR_ERROR -> error("Constructor error")
             else -> error("Unexpected constructor ${Terms.constructor(expr)}")
         }
+    }
+
+    private inline fun <T : KSort> KContext.mkArithUnaryExpr(
+        expr: KExpr<KArithSort>,
+        intExpr: (KExpr<KIntSort>) -> KExpr<T>,
+        realExpr: (KExpr<KRealSort>) -> KExpr<T>
+    ) = when (expr.sort) {
+        intSort -> intExpr(expr.uncheckedCast())
+        realSort -> realExpr(expr.uncheckedCast())
+        else -> error("Unexpected arith expr ${expr}")
+    }
+
+    private inline fun KContext.mkArithBinaryExpr(
+        lhs: KExpr<KArithSort>, rhs: KExpr<KArithSort>,
+        intExpr: (KExpr<KIntSort>, KExpr<KIntSort>) -> KExpr<*>,
+        realExpr: (KExpr<KRealSort>, KExpr<KRealSort>) -> KExpr<*>
+    ): KExpr<*> = when (val expectedSort = mergeSorts(lhs.sort, rhs.sort)) {
+        intSort -> intExpr(lhs.ensureSort(intSort), rhs.ensureSort(intSort))
+        realSort -> realExpr(lhs.ensureSort(realSort), rhs.ensureSort(realSort))
+        else -> error("Unexpected arith sort ${expectedSort}")
     }
 
     private fun mergeSorts(lhs: KSort, rhs: KSort): KSort {
