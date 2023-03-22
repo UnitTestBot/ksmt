@@ -20,6 +20,7 @@ import org.ksmt.solver.yices.TermUtils.orTerm
 import org.ksmt.sort.KSort
 import org.ksmt.utils.NativeLibraryLoader
 import java.math.BigInteger
+import java.util.concurrent.atomic.AtomicInteger
 
 open class KYicesContext : AutoCloseable {
     private var isClosed = false
@@ -161,7 +162,7 @@ open class KYicesContext : AutoCloseable {
     val int = Types.INT
     val real = Types.REAL
 
-    private inline fun mkType(mk: () -> YicesSort): YicesSort {
+    private inline fun mkType(mk: () -> YicesSort): YicesSort = withGcGuard {
         val type = mk()
 
         if (yicesTypes.add(type)) {
@@ -180,7 +181,7 @@ open class KYicesContext : AutoCloseable {
     val one = mkTerm { Terms.intConst(1L) }
     val minusOne = mkTerm { Terms.intConst(-1L) }
 
-    private inline fun mkTerm(mk: () -> YicesTerm): YicesTerm {
+    private inline fun mkTerm(mk: () -> YicesTerm): YicesTerm = withGcGuard {
         val term = mk()
 
         if (yicesTerms.add(term)) {
@@ -303,7 +304,7 @@ open class KYicesContext : AutoCloseable {
         yicesTerms.forEach { Yices.yicesDecrefTerm(it) }
         yicesTypes.forEach { Yices.yicesDecrefType(it) }
 
-        Yices.yicesGarbageCollect()
+        performGc()
     }
 
     companion object {
@@ -336,5 +337,62 @@ open class KYicesContext : AutoCloseable {
         internal fun mkTermSet() = IntOpenHashSet()
 
         internal fun mkSortSet() = IntOpenHashSet()
+
+        private const val FREE = 0
+        private const val ON_GC = -1000000
+
+        @JvmStatic
+        private val gcGuard = AtomicInteger(FREE)
+
+        /**
+         * Since Yices manages terms globally we must ensure that
+         * there are no Yices GC operations between
+         * the initiation of the term creation process
+         * and the execution of `incRef` on the newly created term.
+         * Otherwise, there is a scenario when the term is deleted before the `incRef`
+         * and therefore remains invalid.
+         *
+         * According to the [gcGuard] possible values we have the following situations:
+         * 1. [gcGuard] == [FREE] -- no currently performing operations
+         * 2. [gcGuard] > [FREE] -- some term creation operations are performed
+         * 3. [gcGuard] < [FREE] -- GC is performed
+         *
+         * All term operations are performed according to the following rules:
+         * 1. We can create term only if [gcGuard] >= [FREE]
+         * (no operations or other term creation operation. No GC operations).
+         * 2. If we are on GC and we want to create a term we spin wait until
+         * [gcGuard] >= [FREE].
+         * 3. If we want to perform GC we spin wait until [gcGuard] == [FREE] (no operations).
+         *
+         * See also [performGc]
+         * */
+        private inline fun <T> withGcGuard(body: () -> T): T {
+            // spin wait until [gcGuard] >= [FREE]
+            while (true) {
+                val status = gcGuard.getAndIncrement()
+                if (status >= FREE) break
+                gcGuard.getAndDecrement()
+            }
+
+            return try {
+                body()
+            } finally {
+                gcGuard.getAndDecrement()
+            }
+        }
+
+        private fun performGc() {
+            // spin wait until [gcGuard] == [FREE]
+            while (true) {
+                if (gcGuard.compareAndSet(FREE, ON_GC)) {
+                    break
+                }
+            }
+
+            Yices.yicesGarbageCollect()
+
+            gcGuard.getAndAdd(-ON_GC)
+        }
+
     }
 }
