@@ -172,7 +172,7 @@ open class KYicesExprConverter(
 
             convertedTerms.zip(termConstants) { term, const ->
                 val termWithCorrectSort = term.ensureSort(expectedTermSort)
-                ctx.mkComponentTerm(const, termWithCorrectSort)
+                expressions += ctx.mkComponentTerm(const, termWithCorrectSort)
             }
 
             expressions.reduce { acc, e -> ctx.reduceComponentTerms(acc, e) }
