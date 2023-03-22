@@ -132,7 +132,7 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
 
         val yicesCore = nativeContext.unsatCore
 
-        with(exprConverter) { yicesCore.map { it.convert() } }
+        with(exprConverter) { yicesCore.map { it.convert(ctx.boolSort) } }
     }
 
     override fun reasonOfUnknown(): String {

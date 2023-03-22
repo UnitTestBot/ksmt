@@ -113,7 +113,7 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
             val converter = KYicesExprConverter(ctx, internContext)
 
             return with(converter) {
-                yicesAssertions.map { it.convert() }
+                yicesAssertions.map { it.convert(ctx.boolSort) }
             }
         }
     }

@@ -295,7 +295,7 @@ class MultiIndexedArrayTest {
         }
 
         val converted = with(KYicesExprConverter(this, nativeCtx)) {
-            internalized.convert<T>()
+            internalized.convert(expr.sort)
         }
 
         return converted

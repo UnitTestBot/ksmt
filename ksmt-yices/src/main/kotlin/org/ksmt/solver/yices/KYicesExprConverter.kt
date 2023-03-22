@@ -29,7 +29,9 @@ open class KYicesExprConverter(
     private val ctx: KContext,
     private val yicesCtx: KYicesContext
 ) : KExprConverterBase<YicesTerm>() {
-    fun <T : KSort> YicesTerm.convert(): KExpr<T> = convertFromNative()
+    fun <T : KSort> YicesTerm.convert(expectedSort: T): KExpr<T> =
+        convertFromNative<KSort>()
+            .ensureSort(expectedSort)
 
     override fun findConvertedNative(expr: YicesTerm): KExpr<*>? =
         yicesCtx.findConvertedExpr(expr)
