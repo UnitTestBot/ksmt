@@ -9,6 +9,8 @@ import org.ksmt.KContext
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.printer.ExpressionPrinter
+import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.solver.util.ExprConversionResult
 import org.ksmt.solver.util.KExprConverterBase
 import org.ksmt.sort.KArithSort
@@ -109,7 +111,7 @@ open class KYicesExprConverter(
             Constructor.ARITH_CONSTANT -> convert {
                 val value = Terms.arithConstValue(expr)
 
-                mkRealNum(value)
+                mkArithNum(value)
             }
 
             Constructor.BV_CONSTANT -> convert {
@@ -145,11 +147,11 @@ open class KYicesExprConverter(
         }
     }
 
-    private inline fun <K, T : KSort> YicesTerm.convertComponents(
+    private inline fun <K, T: KSort, S : KSort?> YicesTerm.convertComponents(
         getComponent: (YicesTerm, Int) -> Component<K>,
-        expectedTermSort: T,
-        wrapConstant: KContext.(K, T) -> KExpr<T>,
-        mkComponentTerm: KContext.(K, KExpr<T>) -> KExpr<T>,
+        expectedTermSort: S,
+        wrapConstant: KContext.(K, S) -> KExpr<*>,
+        mkComponentTerm: KContext.(KExpr<T>, KExpr<T>) -> KExpr<T>,
         reduceComponentTerms: KContext.(KExpr<T>, KExpr<T>) -> KExpr<T>
     ): ExprConversionResult {
         val simpleConstants = mutableListOf<K>()
@@ -167,31 +169,39 @@ open class KYicesExprConverter(
         }
 
         return convertList(terms.toTypedArray()) { convertedTerms: List<KExpr<KSort>> ->
-            val expressions = mutableListOf<KExpr<T>>()
-            simpleConstants.mapTo(expressions) { ctx.wrapConstant(it, expectedTermSort) }
+            val wrappedSimpleConstants = simpleConstants.map { ctx.wrapConstant(it, expectedTermSort) }
+            val wrappedTermConstants = termConstants.map { ctx.wrapConstant(it, expectedTermSort) }
 
-            convertedTerms.zip(termConstants) { term, const ->
-                val termWithCorrectSort = term.ensureSort(expectedTermSort)
-                expressions += ctx.mkComponentTerm(const, termWithCorrectSort)
+            val expectedSort = (wrappedSimpleConstants + wrappedTermConstants + convertedTerms)
+                .map { it.sort }
+                .reduce { acc, exprSort -> mergeSorts(acc, exprSort) }
+
+            val expressions = mutableListOf<KExpr<T>>()
+            wrappedSimpleConstants.mapTo(expressions) { it.ensureSort(expectedSort).uncheckedCast() }
+
+            convertedTerms.zip(wrappedTermConstants) { term, const ->
+                val termWithCorrectSort: KExpr<T> = term.ensureSort(expectedSort).uncheckedCast()
+                val constWithCorrectSort: KExpr<T> = const.ensureSort(expectedSort).uncheckedCast()
+                expressions += ctx.mkComponentTerm(constWithCorrectSort, termWithCorrectSort)
             }
 
             expressions.reduce { acc, e -> ctx.reduceComponentTerms(acc, e) }
         }
     }
 
-    private fun convertSum(expr: YicesTerm): ExprConversionResult = expr.convertComponents(
+    private fun convertSum(expr: YicesTerm): ExprConversionResult = expr.convertComponents<_, KArithSort, _>(
         getComponent = { _, idx -> Terms.sumComponent(expr, idx) },
-        expectedTermSort = ctx.realSort,
-        wrapConstant = { value, _ -> mkRealNum(value) },
-        mkComponentTerm = { const, term -> mkArithMul(mkRealNum(const), term) },
+        expectedTermSort = null,
+        wrapConstant = { value, _ -> mkArithNum(value) },
+        mkComponentTerm = { const, term -> mkArithMul(const, term) },
         reduceComponentTerms = { acc, term -> mkArithAdd(acc, term) }
     )
 
-    private fun convertBvSum(expr: YicesTerm): ExprConversionResult = expr.convertComponents(
+    private fun convertBvSum(expr: YicesTerm): ExprConversionResult = expr.convertComponents<_, KBvSort, _>(
         getComponent = { _, idx -> Terms.sumbvComponent(expr, idx) },
         expectedTermSort = ctx.mkBvSort(Terms.bitSize(expr).toUInt()),
         wrapConstant = { value, sort -> mkBv(value.toBooleanArray(), sort) },
-        mkComponentTerm = { const, term -> mkBvMulExpr(mkBv(const.toBooleanArray(), term.sort), term) },
+        mkComponentTerm = { const, term -> mkBvMulExpr(const, term) },
         reduceComponentTerms = { acc, term -> mkBvAddExpr(acc, term) }
     )
 
@@ -202,19 +212,29 @@ open class KYicesExprConverter(
             convertRealProduct(expr)
         }
 
-    private fun convertBvProduct(expr: YicesTerm): ExprConversionResult = expr.convertComponents(
+    private inner class BvPowerWrapper<T : KBvSort>(val value: Int, override val sort: T) : KExpr<T>(ctx) {
+        override fun print(printer: ExpressionPrinter) {
+            printer.append("(wrap $value)")
+        }
+
+        override fun accept(transformer: KTransformerBase): KExpr<T> = error("Transformers are not used for wrapper")
+        override fun internEquals(other: Any): Boolean = error("Interning is not used for wrapper")
+        override fun internHashCode(): Int = error("Interning is not used for wrapper")
+    }
+
+    private fun convertBvProduct(expr: YicesTerm): ExprConversionResult = expr.convertComponents<_, KBvSort, _>(
         getComponent = { _, idx -> Terms.productComponent(expr, idx) },
         expectedTermSort = ctx.mkBvSort(Terms.bitSize(expr).toUInt()),
-        wrapConstant = { _, _ -> error("Unexpected constant without term in product") },
-        mkComponentTerm = { const, term -> mkBvPow(term, const) },
+        wrapConstant = { value, sort -> BvPowerWrapper(value, sort) },
+        mkComponentTerm = { const, term -> mkBvPow(term, (const as BvPowerWrapper<*>).value) },
         reduceComponentTerms = { acc, term -> mkBvMulExpr(acc, term) }
     )
 
-    private fun convertRealProduct(expr: YicesTerm): ExprConversionResult = expr.convertComponents(
+    private fun convertRealProduct(expr: YicesTerm): ExprConversionResult = expr.convertComponents<_, KArithSort, _>(
         getComponent = { _, idx -> Terms.productComponent(expr, idx) },
         expectedTermSort = ctx.realSort,
-        wrapConstant = { _, _ -> error("Unexpected constant without term in product") },
-        mkComponentTerm = { const, term -> mkArithPower(term, mkRealNum(const)) },
+        wrapConstant = { value, _ -> mkIntNum(value) },
+        mkComponentTerm = { const, term -> mkArithPower(term, const) },
         reduceComponentTerms = { acc, term -> mkArithMul(acc, term) }
     )
 

@@ -75,7 +75,7 @@ class KYicesModel(
             is KBoolSort -> model.boolValue(yval).expr
             is KBvSort -> mkBv(model.bvValue(yval), sort.sizeBits)
             is KRealSort -> mkRealNum(model.bigRationalValue(yval))
-            is KIntSort -> mkRealToInt(mkRealNum(model.bigRationalValue(yval)))
+            is KIntSort -> mkIntNum(model.bigRationalValue(yval))
             is KUninterpretedSort -> {
                 val uninterpretedSortValueId = model.scalarValue(yval)[0]
                 val sortValues = knownUninterpretedSortValues.getOrPut(sort) { hashMapOf() }
