@@ -564,7 +564,7 @@ open class KYicesExprConverter(
         val expectedValueSort = mergeSorts(array.sort.range, value.sort)
         val valueWithCorrectSort = value.ensureSort(expectedValueSort)
         return mkAnyArrayOperation(
-            array, indices,
+            array, expectedValueSort, indices,
             { a, d0 -> mkArrayStore(a, d0, valueWithCorrectSort) },
             { a, d0, d1 -> mkArrayStore(a, d0, d1, valueWithCorrectSort) },
             { a, d0, d1, d2 -> mkArrayStore(a, d0, d1, d2, valueWithCorrectSort) },
@@ -576,7 +576,7 @@ open class KYicesExprConverter(
         array: KExpr<A>,
         indices: List<KExpr<KSort>>
     ): KExpr<KSort> = mkAnyArrayOperation(
-        array, indices,
+        array, array.sort.range, indices,
         { a, d0 -> mkArraySelect(a, d0) },
         { a, d0, d1 -> mkArraySelect(a, d0, d1) },
         { a, d0, d1, d2 -> mkArraySelect(a, d0, d1, d2) },
@@ -597,6 +597,7 @@ open class KYicesExprConverter(
     @Suppress("LongParameterList")
     private inline fun <A : KArraySortBase<*>, R> KContext.mkAnyArrayOperation(
         array: KExpr<A>,
+        expectedArrayRange: KSort,
         indices: List<KExpr<KSort>>,
         array1: (KExpr<KArraySort<KSort, KSort>>, KExpr<KSort>) -> R,
         array2: (KExpr<KArray2Sort<KSort, KSort, KSort>>, KExpr<KSort>, KExpr<KSort>) -> R,
@@ -606,7 +607,7 @@ open class KYicesExprConverter(
         val expectedIndicesSorts = array.sort.domainSorts.zip(indices) { domainSort, index ->
             mergeSorts(domainSort, index.sort)
         }
-        val expectedArraySort = mkAnyArraySort(expectedIndicesSorts, array.sort.range)
+        val expectedArraySort = mkAnyArraySort(expectedIndicesSorts, expectedArrayRange)
 
         val arrayWithCorrectSort = array.ensureSort(expectedArraySort)
         val indicesWithCorrectSorts = indices.zip(expectedIndicesSorts) { index, expectedSort ->
