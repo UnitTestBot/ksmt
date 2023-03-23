@@ -664,17 +664,56 @@ open class KContext(
     private val andNaryCache = mkAstInterner<KAndNaryExpr>()
     private val andBinaryCache = mkAstInterner<KAndBinaryExpr>()
 
-    open fun mkAnd(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
-        mkSimplified(args, { exprArgs -> simplifyAnd(exprArgs, flat = true) }, ::mkAndNoSimplify)
+    /**
+     * Create boolean AND expression.
+     *
+     * @param flat flat nested AND expressions
+     * @param order reorder arguments to ensure that (and a b) == (and b a)
+     * */
+    @JvmOverloads
+    open fun mkAnd(
+        args: List<KExpr<KBoolSort>>,
+        flat: Boolean = true,
+        order: Boolean = true
+    ): KExpr<KBoolSort> = mkSimplified(
+        args,
+        simplifier = { exprArgs -> simplifyAnd(exprArgs, flat, order) },
+        createNoSimplify = ::mkAndNoSimplify
+    )
 
+    @Deprecated(
+        "NoFlat builders are deprecated",
+        replaceWith = ReplaceWith("mkAnd(args, flat = false)"),
+        level = DeprecationLevel.ERROR
+    )
     open fun mkAndNoFlat(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
-        mkSimplified(args, { exprArgs -> simplifyAnd(exprArgs, flat = false) }, ::mkAndNoSimplify)
+        mkAnd(args, flat = false)
 
-    open fun mkAnd(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
-        mkSimplified(lhs, rhs, { a, b -> simplifyAnd(a, b, flat = true) }, ::mkAndNoSimplify)
+    /**
+     * Create boolean binary AND expression.
+     *
+     * @param flat flat nested AND expressions
+     * @param order reorder arguments to ensure that (and a b) == (and b a)
+     * */
+    @JvmOverloads
+    open fun mkAnd(
+        lhs: KExpr<KBoolSort>,
+        rhs: KExpr<KBoolSort>,
+        flat: Boolean = true,
+        order: Boolean = true
+    ): KExpr<KBoolSort> = mkSimplified(
+        lhs, rhs,
+        simplifier = { a, b -> simplifyAnd(a, b, flat, order) },
+        createNoSimplify = ::mkAndNoSimplify
+    )
 
+    @Deprecated(
+        "NoFlat builders are deprecated",
+        replaceWith = ReplaceWith("mkAnd(lhs, rhs, flat = false)"),
+        level = DeprecationLevel.ERROR
+    )
     open fun mkAndNoFlat(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
-        mkSimplified(lhs, rhs, { a, b -> simplifyAnd(a, b, flat = false) }, ::mkAndNoSimplify)
+        mkAnd(lhs, rhs, flat = false)
 
     open fun mkAndNoSimplify(args: List<KExpr<KBoolSort>>): KAndExpr =
         if (args.size == 2) {
@@ -695,17 +734,56 @@ open class KContext(
     private val orNaryCache = mkAstInterner<KOrNaryExpr>()
     private val orBinaryCache = mkAstInterner<KOrBinaryExpr>()
 
-    open fun mkOr(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
-        mkSimplified(args, { exprArgs -> simplifyOr(exprArgs, flat = true) }, ::mkOrNoSimplify)
+    /**
+     * Create boolean OR expression.
+     *
+     * @param flat flat nested OR expressions
+     * @param order reorder arguments to ensure that (or a b) == (or b a)
+     * */
+    @JvmOverloads
+    open fun mkOr(
+        args: List<KExpr<KBoolSort>>,
+        flat: Boolean = true,
+        order: Boolean = true
+    ): KExpr<KBoolSort> = mkSimplified(
+        args,
+        simplifier = { exprArgs -> simplifyOr(exprArgs, flat, order) },
+        createNoSimplify = ::mkOrNoSimplify
+    )
 
+    @Deprecated(
+        "NoFlat builders are deprecated",
+        replaceWith = ReplaceWith("mkOr(args, flat = false)"),
+        level = DeprecationLevel.ERROR
+    )
     open fun mkOrNoFlat(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
-        mkSimplified(args, { exprArgs -> simplifyOr(exprArgs, flat = false) }, ::mkOrNoSimplify)
+        mkOr(args, flat = false)
 
-    open fun mkOr(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
-        mkSimplified(lhs, rhs, { a, b -> simplifyOr(a, b, flat = true) }, ::mkOrNoSimplify)
+    /**
+     * Create boolean binary OR expression.
+     *
+     * @param flat flat nested OR expressions
+     * @param order reorder arguments to ensure that (or a b) == (or b a)
+     * */
+    @JvmOverloads
+    open fun mkOr(
+        lhs: KExpr<KBoolSort>,
+        rhs: KExpr<KBoolSort>,
+        flat: Boolean = true,
+        order: Boolean = true
+    ): KExpr<KBoolSort> = mkSimplified(
+        lhs, rhs,
+        simplifier = { a, b -> simplifyOr(a, b, flat, order) },
+        createNoSimplify = ::mkOrNoSimplify
+    )
 
+    @Deprecated(
+        "NoFlat builders are deprecated",
+        replaceWith = ReplaceWith("mkOr(lhs, rhs, flat = false)"),
+        level = DeprecationLevel.ERROR
+    )
     open fun mkOrNoFlat(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
-        mkSimplified(lhs, rhs, { a, b -> simplifyOr(a, b, flat = false) }, ::mkOrNoSimplify)
+        mkOr(lhs, rhs, flat = false)
 
     open fun mkOrNoSimplify(args: List<KExpr<KBoolSort>>): KOrExpr =
         if (args.size == 2) {
@@ -765,8 +843,21 @@ open class KContext(
 
     private val eqCache = mkAstInterner<KEqExpr<out KSort>>()
 
-    open fun <T : KSort> mkEq(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
-        mkSimplified(lhs, rhs, KContext::simplifyEq, ::mkEqNoSimplify)
+    /**
+     * Create EQ expression.
+     *
+     * @param order reorder arguments to ensure that (= a b) == (= b a)
+     * */
+    @JvmOverloads
+    open fun <T : KSort> mkEq(
+        lhs: KExpr<T>,
+        rhs: KExpr<T>,
+        order: Boolean = true
+    ): KExpr<KBoolSort> = mkSimplified(
+        lhs, rhs,
+        simplifier = { l, r -> simplifyEq(l, r, order) },
+        createNoSimplify = ::mkEqNoSimplify
+    )
 
     open fun <T : KSort> mkEqNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KEqExpr<T> =
         eqCache.createIfContextActive {
@@ -776,8 +867,20 @@ open class KContext(
 
     private val distinctCache = mkAstInterner<KDistinctExpr<out KSort>>()
 
-    open fun <T : KSort> mkDistinct(args: List<KExpr<T>>): KExpr<KBoolSort> =
-        mkSimplified(args, KContext::simplifyDistinct, ::mkDistinctNoSimplify)
+    /**
+     * Create DISTINCT expression.
+     *
+     * @param order reorder arguments to ensure that (distinct a b) == (distinct b a)
+     * */
+    @JvmOverloads
+    open fun <T : KSort> mkDistinct(
+        args: List<KExpr<T>>,
+        order: Boolean = true
+    ): KExpr<KBoolSort> = mkSimplified(
+        args,
+        simplifier = { exprArgs -> simplifyDistinct(exprArgs, order) },
+        createNoSimplify = ::mkDistinctNoSimplify
+    )
 
     open fun <T : KSort> mkDistinctNoSimplify(args: List<KExpr<T>>): KDistinctExpr<T> =
         distinctCache.createIfContextActive {

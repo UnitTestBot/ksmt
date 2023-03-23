@@ -34,7 +34,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
             return (lhs.compareTo(rhs) == 0).expr
         }
 
-        return mkEqNoSimplify(lhs, rhs)
+        withExpressionsOrdered(lhs, rhs, ::mkEqNoSimplify)
     }
 
     fun areDefinitelyDistinctInt(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): Boolean {
@@ -51,7 +51,7 @@ interface KArithExprSimplifier : KExprSimplifierBase {
             return (lhs.toRealValue().compareTo(rhs.toRealValue()) == 0).expr
         }
 
-        return mkEqNoSimplify(lhs, rhs)
+        return withExpressionsOrdered(lhs, rhs, ::mkEqNoSimplify)
     }
 
     fun areDefinitelyDistinctReal(lhs: KExpr<KRealSort>, rhs: KExpr<KRealSort>): Boolean {

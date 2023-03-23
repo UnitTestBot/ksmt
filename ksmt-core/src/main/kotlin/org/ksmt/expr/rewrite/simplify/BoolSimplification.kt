@@ -26,18 +26,26 @@ fun KContext.simplifyImplies(p: KExpr<KBoolSort>, q: KExpr<KBoolSort>): KExpr<KB
 fun KContext.simplifyXor(a: KExpr<KBoolSort>, b: KExpr<KBoolSort>): KExpr<KBoolSort> =
     simplifyEq(simplifyNot(a), b)
 
-fun <T : KSort> KContext.simplifyEq(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> = when {
+fun <T : KSort> KContext.simplifyEq(
+    lhs: KExpr<T>,
+    rhs: KExpr<T>,
+    order: Boolean = true
+): KExpr<KBoolSort> = when {
     lhs == rhs -> trueExpr
     lhs is KInterpretedValue<T> && rhs is KInterpretedValue<T> && lhs != rhs -> falseExpr
-    lhs.sort == boolSort -> simplifyEqBool(lhs.uncheckedCast(), rhs.uncheckedCast())
+    lhs.sort == boolSort -> simplifyEqBool(lhs.uncheckedCast(), rhs.uncheckedCast(), order)
+    order -> withExpressionsOrdered(lhs, rhs, ::mkEqNoSimplify)
     else -> mkEqNoSimplify(lhs, rhs)
 }
 
-fun <T : KSort> KContext.simplifyDistinct(args: List<KExpr<T>>): KExpr<KBoolSort> {
+fun <T : KSort> KContext.simplifyDistinct(
+    args: List<KExpr<T>>,
+    order: Boolean = true
+): KExpr<KBoolSort> {
     if (args.isEmpty() || args.size == 1) return trueExpr
 
     // (distinct a b) ==> (not (= a b))
-    if (args.size == 2) return simplifyNot(simplifyEq(args[0], args[1]))
+    if (args.size == 2) return simplifyNot(simplifyEq(args[0], args[1], order))
 
     // (distinct a b a) ==> false
     val distinctArgs = args.toSet()
@@ -46,7 +54,14 @@ fun <T : KSort> KContext.simplifyDistinct(args: List<KExpr<T>>): KExpr<KBoolSort
     // All arguments are not equal and all are interpreted values ==> all are distinct
     if (args.all { it is KInterpretedValue<*> }) return trueExpr
 
-    return mkDistinctNoSimplify(args)
+    return if (order) {
+        val orderedArgs = args.toMutableList().apply {
+            ensureExpressionsOrder()
+        }
+        mkDistinctNoSimplify(orderedArgs)
+    } else {
+        mkDistinctNoSimplify(args)
+    }
 }
 
 fun <T : KSort> KContext.simplifyIte(
@@ -105,10 +120,14 @@ fun <T : KSort> KContext.simplifyIte(
 }
 
 
-fun KContext.simplifyEqBool(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> {
+fun KContext.simplifyEqBool(
+    lhs: KExpr<KBoolSort>,
+    rhs: KExpr<KBoolSort>,
+    order: Boolean = true
+): KExpr<KBoolSort> {
     // (= (not a) (not b)) ==> (= a b)
     if (lhs is KNotExpr && rhs is KNotExpr) {
-        return simplifyEq(lhs.arg, rhs.arg)
+        return simplifyEq(lhs.arg, rhs.arg, order)
     }
 
     when (lhs) {
@@ -126,7 +145,11 @@ fun KContext.simplifyEqBool(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr
         return falseExpr
     }
 
-    return mkEqNoSimplify(lhs, rhs)
+    return if (order) {
+        withExpressionsOrdered(lhs, rhs, ::mkEqNoSimplify)
+    } else {
+        mkEqNoSimplify(lhs, rhs)
+    }
 }
 
 fun KExpr<KBoolSort>.isComplement(other: KExpr<KBoolSort>) =
@@ -138,9 +161,10 @@ private fun KContext.isComplementCore(a: KExpr<KBoolSort>, b: KExpr<KBoolSort>) 
 fun KContext.simplifyAnd(
     lhs: KExpr<KBoolSort>,
     rhs: KExpr<KBoolSort>,
-    flat: Boolean = true
+    flat: Boolean = true,
+    order: Boolean = true
 ): KExpr<KBoolSort> = simplifyAndOr<KAndExpr>(
-    flat = flat,
+    flat = flat, order = order,
     lhs = lhs, rhs = rhs,
     // (and a b true) ==> (and a b)
     neutralElement = trueExpr,
@@ -152,9 +176,10 @@ fun KContext.simplifyAnd(
 
 fun KContext.simplifyAnd(
     args: List<KExpr<KBoolSort>>,
-    flat: Boolean = true
+    flat: Boolean = true,
+    order: Boolean = true
 ): KExpr<KBoolSort> = simplifyAndOr<KAndExpr>(
-    flat = flat,
+    flat = flat, order = order,
     args = args,
     // (and a b true) ==> (and a b)
     neutralElement = trueExpr,
@@ -167,9 +192,10 @@ fun KContext.simplifyAnd(
 fun KContext.simplifyOr(
     lhs: KExpr<KBoolSort>,
     rhs: KExpr<KBoolSort>,
-    flat: Boolean = true
+    flat: Boolean = true,
+    order: Boolean = true
 ): KExpr<KBoolSort> = simplifyAndOr<KOrExpr>(
-    flat = flat,
+    flat = flat, order = order,
     lhs = lhs, rhs = rhs,
     // (or a b false) ==> (or a b)
     neutralElement = falseExpr,
@@ -181,9 +207,10 @@ fun KContext.simplifyOr(
 
 fun KContext.simplifyOr(
     args: List<KExpr<KBoolSort>>,
-    flat: Boolean = true
+    flat: Boolean = true,
+    order: Boolean = true
 ): KExpr<KBoolSort> = simplifyAndOr<KOrExpr>(
-    flat = flat,
+    flat = flat, order = order,
     args = args,
     // (or a b false) ==> (or a b)
     neutralElement = falseExpr,
@@ -196,6 +223,7 @@ fun KContext.simplifyOr(
 @Suppress("LongParameterList")
 private inline fun <reified T : KApp<KBoolSort, KBoolSort>> simplifyAndOr(
     flat: Boolean,
+    order: Boolean,
     args: List<KExpr<KBoolSort>>,
     neutralElement: KExpr<KBoolSort>,
     zeroElement: KExpr<KBoolSort>,
@@ -205,7 +233,7 @@ private inline fun <reified T : KApp<KBoolSort, KBoolSort>> simplifyAndOr(
     0 -> neutralElement
     1 -> args.single()
     2 -> simplifyAndOr(
-        flat = flat,
+        flat = flat, order = order,
         lhs = args.first(), rhs = args.last(),
         neutralElement = neutralElement,
         zeroElement = zeroElement,
@@ -213,7 +241,7 @@ private inline fun <reified T : KApp<KBoolSort, KBoolSort>> simplifyAndOr(
         buildResultFlatExpr = buildResultFlatExpr
     )
     else -> simplifyAndOr(
-        flat = flat,
+        flat = flat, order = order,
         args = args,
         neutralElement = neutralElement,
         zeroElement = zeroElement,
@@ -224,6 +252,7 @@ private inline fun <reified T : KApp<KBoolSort, KBoolSort>> simplifyAndOr(
 @Suppress("LongParameterList")
 private inline fun <reified T : KApp<KBoolSort, KBoolSort>> simplifyAndOr(
     flat: Boolean,
+    order: Boolean,
     lhs: KExpr<KBoolSort>,
     rhs: KExpr<KBoolSort>,
     neutralElement: KExpr<KBoolSort>,
@@ -233,7 +262,7 @@ private inline fun <reified T : KApp<KBoolSort, KBoolSort>> simplifyAndOr(
 ): KExpr<KBoolSort> {
     if (flat && (lhs is T || rhs is T)) {
         return simplifyAndOr(
-            flat = true,
+            flat = true, order = order,
             args = listOf(lhs, rhs),
             neutralElement = neutralElement,
             zeroElement = zeroElement
@@ -246,13 +275,15 @@ private inline fun <reified T : KApp<KBoolSort, KBoolSort>> simplifyAndOr(
         lhs == neutralElement -> rhs
         rhs == neutralElement -> lhs
         lhs.isComplement(rhs) -> zeroElement
+        order -> withExpressionsOrdered(lhs, rhs) { l, r -> buildResultBinaryExpr(l, r) }
         else -> buildResultBinaryExpr(lhs, rhs)
     }
 }
 
-@Suppress("NestedBlockDepth")
+@Suppress("NestedBlockDepth", "LongParameterList")
 private inline fun <reified T : KApp<KBoolSort, KBoolSort>> simplifyAndOr(
     flat: Boolean,
+    order: Boolean,
     args: List<KExpr<KBoolSort>>,
     neutralElement: KExpr<KBoolSort>,
     zeroElement: KExpr<KBoolSort>,
@@ -278,7 +309,12 @@ private inline fun <reified T : KApp<KBoolSort, KBoolSort>> simplifyAndOr(
     return when (resultArgs.size) {
         0 -> neutralElement
         1 -> resultArgs.single()
-        else -> buildResultExpr(resultArgs)
+        else -> {
+            if (order) {
+                resultArgs.ensureExpressionsOrder()
+            }
+            buildResultExpr(resultArgs)
+        }
     }
 }
 

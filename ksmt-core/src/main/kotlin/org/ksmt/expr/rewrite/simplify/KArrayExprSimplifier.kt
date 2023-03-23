@@ -62,7 +62,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             return rewrite(simplifiedExpr)
         }
 
-        return mkEqNoSimplify(lhs, rhs)
+        return withExpressionsOrdered(lhs, rhs, ::mkEqNoSimplify)
     }
 
     /**

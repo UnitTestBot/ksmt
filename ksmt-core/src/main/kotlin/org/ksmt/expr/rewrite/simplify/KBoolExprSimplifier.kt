@@ -152,31 +152,10 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
     )
 
     fun simplifyEqBool(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
-        ctx.simplifyEqBool(lhs, rhs)
+        ctx.simplifyEqBool(lhs, rhs, order = true)
 
     fun areDefinitelyDistinctBool(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): Boolean =
         lhs.isComplement(rhs)
-
-    private fun flatAnd(expr: KAndExpr) = flatExpr<KAndExpr>(expr) { it.args }
-    private fun flatOr(expr: KOrExpr) = flatExpr<KOrExpr>(expr) { it.args }
-
-    private inline fun <reified T> flatExpr(
-        initial: KExpr<KBoolSort>,
-        getArgs: (T) -> List<KExpr<KBoolSort>>,
-    ): List<KExpr<KBoolSort>> {
-        val flatten = arrayListOf<KExpr<KBoolSort>>()
-        val unprocessed = arrayListOf<KExpr<KBoolSort>>()
-        unprocessed += initial
-        while (unprocessed.isNotEmpty()) {
-            val e = unprocessed.removeLast()
-            if (e !is T) {
-                flatten += e
-                continue
-            }
-            unprocessed += getArgs(e).asReversed()
-        }
-        return flatten
-    }
 
     /**
      * Auxiliary expression to perform ite condition (1) simplification stage.

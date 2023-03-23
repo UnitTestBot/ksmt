@@ -3,6 +3,7 @@ package org.ksmt
 import org.ksmt.KContext.SimplificationMode.NO_SIMPLIFY
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KBitVecValue
+import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.rewrite.simplify.KExprSimplifier
 import org.ksmt.sort.KArraySort
@@ -50,8 +51,9 @@ class SimplifierTest {
         val simplifiedEq = KExprSimplifier(this).apply(arrayEq)
         val simplifiedSelects = KExprSimplifier(this).apply(allSelectsEq)
 
-        val simplifiedEqParts = (simplifiedEq as KAndExpr).args
-        val simplifiedAllSelectsParts = (simplifiedSelects as KAndExpr).args
+        // Compare sets of Eq expressions
+        val simplifiedEqParts = (simplifiedEq as KAndExpr).args.map { (it as KEqExpr<*>).args.toSet() }
+        val simplifiedAllSelectsParts = (simplifiedSelects as KAndExpr).args.map { (it as KEqExpr<*>).args.toSet() }
         assertEquals(simplifiedAllSelectsParts.toSet(), simplifiedEqParts.toSet())
     }
 
@@ -197,7 +199,7 @@ class SimplifierTest {
         val simplifiedExpr = KExprSimplifier(this).apply(expr)
 
         assertTrue(simplifiedExpr is KAndExpr)
-        assertEquals(usedVars, simplifiedExpr.args)
+        assertEquals(usedVars.toSet(), simplifiedExpr.args.toSet())
     }
 
 }
