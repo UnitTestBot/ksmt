@@ -63,8 +63,8 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         equalityCheckAssumptions.clear()
         nativeAsts.clear()
         solvers.clear()
-        ctx.close()
-        z3Ctx.close()
+        workerCtx?.close()
+        workerZ3Ctx?.close()
         workerCtx = null
         workerZ3Ctx = null
     }
