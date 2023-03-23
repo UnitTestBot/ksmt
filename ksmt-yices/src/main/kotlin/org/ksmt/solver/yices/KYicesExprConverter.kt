@@ -10,6 +10,8 @@ import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.printer.ExpressionPrinter
+import org.ksmt.expr.transformer.KNonRecursiveTransformer
+import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.solver.util.ExprConversionResult
 import org.ksmt.solver.util.KExprConverterBase
@@ -20,11 +22,12 @@ import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
-import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.BvUtils.bvMaxValueUnsigned
+import org.ksmt.utils.BvUtils.bvZero
 import org.ksmt.utils.uncheckedCast
 
 open class KYicesExprConverter(
@@ -141,9 +144,7 @@ open class KYicesExprConverter(
         check(constructor == Constructor.BIT_TERM) { "Not supported term ${Terms.toString(expr)}" }
 
         expr.convert(arrayOf(Terms.projArg(expr))) { bv: KExpr<KBvSort> ->
-            val bv1 = mkBvExtractExpr(Terms.projIndex(expr), Terms.projIndex(expr), bv)
-            val condition = mkEq(mkBv(true, 1u), bv1)
-            mkIte(condition, mkTrue(), mkFalse())
+            BvBitExtractRoot(bv, Terms.projIndex(expr))
         }
     }
 
@@ -279,9 +280,13 @@ open class KYicesExprConverter(
         trueBranch: KExpr<KSort>,
         falseBranch: KExpr<KSort>
     ): KExpr<KSort> = with(ctx) {
+        if (trueBranch is BvBitExtractExpr || falseBranch is BvBitExtractExpr) {
+            return BvBitExtractIte(condition, trueBranch.uncheckedCast(), falseBranch.uncheckedCast()).uncheckedCast()
+        }
+
         val expectedSort = mergeSorts(trueBranch.sort, falseBranch.sort)
         return mkIte(
-            condition,
+            condition.ensureSort(boolSort),
             trueBranch.ensureSort(expectedSort),
             falseBranch.ensureSort(expectedSort)
         )
@@ -291,14 +296,49 @@ open class KYicesExprConverter(
         lhs: KExpr<KSort>,
         rhs: KExpr<KSort>
     ): KExpr<KBoolSort> = with(ctx) {
+        if (lhs is BvBitExtractExpr || rhs is BvBitExtractExpr) {
+            return BvBitExtractEq(lhs.uncheckedCast(), rhs.uncheckedCast())
+        }
+
         val expectedSort = mergeSorts(lhs.sort, rhs.sort)
         return mkEq(lhs.ensureSort(expectedSort), rhs.ensureSort(expectedSort))
     }
 
     private fun converterMkDistinct(args: List<KExpr<KSort>>): KExpr<KBoolSort> = with(ctx) {
+        if (args.any { it is BvBitExtractExpr }) {
+            return BvBitExtractDistinct(args.uncheckedCast())
+        }
+
         val expectedSort = args.map { it.sort }.reduce(::mergeSorts)
         return mkDistinct(args.map { it.ensureSort(expectedSort) })
     }
+
+    private fun converterMkNot(arg: KExpr<KBoolSort>): KExpr<KBoolSort> = with(ctx) {
+        if (arg is BvBitExtractExpr) {
+            return BvBitExtractNot(arg)
+        }
+
+        return mkNot(arg)
+    }
+
+    private fun converterMkOr(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> = with(ctx) {
+        if (args.any { it is BvBitExtractExpr }) {
+            return BvBitExtractOr(args)
+        }
+
+        return mkOr(args)
+    }
+
+    private fun converterMkXor(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> = with(ctx) {
+        if (args.any { it is BvBitExtractExpr }) {
+            return BvBitExtractXor(args)
+        }
+
+        return args.reduce(::mkXor)
+    }
+
+    private fun convertBvArray(args: List<KExpr<KBoolSort>>): KExpr<KBvSort> =
+        processBvArrayChunked(args.asReversed())
 
     private fun converterMkFunctionApp(decl: KDecl<*>, args: List<KExpr<KSort>>): KExpr<*> = with(ctx) {
         check(decl.argSorts.size == args.size) { "Arguments size mismatch" }
@@ -370,44 +410,32 @@ open class KYicesExprConverter(
         val yicesArgs = Terms.children(expr).toTypedArray()
 
         when (Terms.constructor(expr)) {
-            Constructor.ITE_TERM -> expr.convert(yicesArgs, ::converterMkIte)
             Constructor.APP_TERM -> expr.convertFunctionApp(yicesArgs)
             Constructor.UPDATE_TERM -> expr.convertFunctionStore(yicesArgs)
+
             Constructor.EQ_TERM -> expr.convert(yicesArgs, ::converterMkEq)
             Constructor.DISTINCT_TERM -> expr.convertList(yicesArgs, ::converterMkDistinct)
+            Constructor.ITE_TERM -> expr.convert(yicesArgs, ::converterMkIte)
+
             Constructor.FORALL_TERM -> {
                 expr.convert(yicesArgs.takeLast(1).toTypedArray()) { body: KExpr<KBoolSort> ->
                     val bounds = yicesArgs.dropLast(1).map { convertVar(it) }
-                    ctx.mkUniversalQuantifier(body, bounds)
+                    ctx.mkUniversalQuantifier(body.ensureSort(boolSort), bounds)
                 }
             }
 
             Constructor.LAMBDA_TERM -> {
                 expr.convert(yicesArgs.takeLast(1).toTypedArray()) { body: KExpr<KSort> ->
                     val bounds = yicesArgs.dropLast(1).map { convertVar(it) }
-                    mkAnyArrayLambda(bounds, body)
+                    mkAnyArrayLambda(bounds, body.eliminateBitExtract())
                 }
             }
 
-            Constructor.NOT_TERM -> expr.convert(yicesArgs, ::mkNot)
-            Constructor.OR_TERM -> expr.convertList(yicesArgs, ::mkOr)
-            Constructor.XOR_TERM -> {
-                expr.convertList(yicesArgs) { args: List<KExpr<KBoolSort>> ->
-                    args.reduce(::mkXor)
-                }
-            }
+            Constructor.NOT_TERM -> expr.convert(yicesArgs, ::converterMkNot)
+            Constructor.OR_TERM -> expr.convertList(yicesArgs, ::converterMkOr)
+            Constructor.XOR_TERM -> expr.convertList(yicesArgs, ::converterMkXor)
 
-            Constructor.BV_ARRAY -> {
-                expr.convertList(yicesArgs) { args: List<KExpr<KBoolSort>> ->
-                    val bvArgs = args.map { element: KExpr<KBoolSort> ->
-                        mkIte(element, mkBv(true), mkBv(false))
-                    }
-
-                    bvArgs.reduce { acc: KExpr<out KBvSort>, t: KExpr<KBv1Sort> ->
-                        mkBvConcatExpr(t, acc)
-                    }
-                }
-            }
+            Constructor.BV_ARRAY -> expr.convertList(yicesArgs, ::convertBvArray)
 
             Constructor.BV_DIV -> expr.convert(yicesArgs, ::mkBvUnsignedDivExpr)
             Constructor.BV_REM -> expr.convert(yicesArgs, ::mkBvUnsignedRemExpr)
@@ -565,6 +593,7 @@ open class KYicesExprConverter(
     private fun <S : KSort> KExpr<*>.ensureSort(sort: S): KExpr<S> {
         val exprSort = this.sort
         return when {
+            sort == ctx.boolSort && this is BvBitExtractExpr -> eliminateBitExtract().uncheckedCast()
             exprSort == sort -> this.uncheckedCast()
             exprSort is KIntSort && sort is KRealSort -> castToReal(this.uncheckedCast()).uncheckedCast()
             exprSort is KRealSort && sort is KIntSort -> castToInt(this.uncheckedCast()).uncheckedCast()
@@ -676,5 +705,352 @@ open class KYicesExprConverter(
         }
 
         else -> arrayN(domain)
+    }
+
+    /**
+     * Yices use bit-blasting for bv logical expressions resulting in an enormous
+     * amount of expressions.
+     *
+     * Usually the following pattern occurred:
+     * 1. Single bit extraction operation (bv1 -> bool)
+     * 2. Boolean operations with the extracted bits
+     * 3. BvArray operation that concatenates individual bits to a single Bv
+     *
+     * We delay bit extraction operations until we definitely know it usage context:
+     * 1. Bit is used as a boolean expression. We eliminate all lazy bit-level operations
+     * and replace them with normal boolean operations.
+     * 2. Bit us used in a BvArray expression. We can try to merge bits into a single Bv
+     * and apply normal Bv operations (e.g. BvAnd).
+     * */
+    private sealed class BvBitExtractExpr(ctx: KContext) : KExpr<KBoolSort>(ctx) {
+        override val sort: KBoolSort = ctx.boolSort
+
+        abstract fun canBeJoinedWith(other: BvBitExtractExpr): Boolean
+
+        override fun print(printer: ExpressionPrinter) {
+            printer.append("(bit extract)")
+        }
+
+        override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> {
+            transformer as? BvBitExtractTransformer ?: error("Leaked bit extract aux expr")
+            return accept(transformer)
+        }
+
+        abstract fun accept(transformer: BvBitExtractTransformer): KExpr<KBoolSort>
+
+        override fun internEquals(other: Any): Boolean = error("Interning is not used for bv bit extract")
+        override fun internHashCode(): Int = error("Interning is not used for bv bit extract")
+    }
+
+    private interface BvBitExtractTransformer : KTransformerBase {
+        fun transform(expr: BvBitExtractRoot): KExpr<KBoolSort>
+
+        fun transform(expr: BvBitExtractEq): KExpr<KBoolSort>
+        fun transform(expr: BvBitExtractIte): KExpr<KBoolSort>
+        fun transform(expr: BvBitExtractDistinct): KExpr<KBoolSort>
+
+        fun transform(expr: BvBitExtractNot): KExpr<KBoolSort>
+        fun transform(expr: BvBitExtractOr): KExpr<KBoolSort>
+        fun transform(expr: BvBitExtractXor): KExpr<KBoolSort>
+    }
+
+    private inner class BvBitExtractEliminator : KNonRecursiveTransformer(ctx), BvBitExtractTransformer {
+        override fun transform(expr: BvBitExtractRoot): KExpr<KBoolSort> = with(ctx) {
+            val bv1 = mkBvExtractExpr(expr.idx, expr.idx, expr.expr)
+            val condition = mkEq(mkBv(true, 1u), bv1)
+            mkIte(condition, mkTrue(), mkFalse())
+        }
+
+        override fun transform(expr: BvBitExtractEq): KExpr<KBoolSort> =
+            transformExprAfterTransformed(expr, expr.lhs, expr.rhs) { lhs, rhs ->
+                converterMkEq(lhs.uncheckedCast(), rhs.uncheckedCast())
+            }
+
+        override fun transform(expr: BvBitExtractIte): KExpr<KBoolSort> =
+            transformExprAfterTransformed(expr, expr.trueBranch, expr.falseBranch) { tb, fb ->
+                converterMkIte(expr.condition, tb.uncheckedCast(), fb.uncheckedCast()).uncheckedCast()
+            }
+
+        override fun transform(expr: BvBitExtractDistinct): KExpr<KBoolSort> =
+            transformExprAfterTransformed(expr, expr.args) { args ->
+                converterMkDistinct(args.uncheckedCast())
+            }
+
+        override fun transform(expr: BvBitExtractNot): KExpr<KBoolSort> =
+            transformExprAfterTransformed(expr, expr.arg) { arg ->
+                converterMkNot(arg)
+            }
+
+        override fun transform(expr: BvBitExtractOr): KExpr<KBoolSort> =
+            transformExprAfterTransformed(expr, expr.args) { args ->
+                converterMkOr(args.uncheckedCast())
+            }
+
+        override fun transform(expr: BvBitExtractXor): KExpr<KBoolSort> =
+            transformExprAfterTransformed(expr, expr.args) { args ->
+                converterMkXor(args.uncheckedCast())
+            }
+    }
+
+    private fun KExpr<*>.eliminateBitExtract(): KExpr<*> {
+        if (this !is BvBitExtractExpr) return this
+        return BvBitExtractEliminator().apply(this)
+    }
+
+    private inner class BvBitExtractRoot(
+        val expr: KExpr<KBvSort>,
+        val idx: Int
+    ) : BvBitExtractExpr(ctx) {
+        override fun canBeJoinedWith(other: BvBitExtractExpr): Boolean =
+            other is BvBitExtractRoot && other.expr == expr
+
+        override fun accept(transformer: BvBitExtractTransformer): KExpr<KBoolSort> =
+            transformer.transform(this)
+    }
+
+    private inner class BvBitExtractEq(
+        val lhs: KExpr<KBoolSort>,
+        val rhs: KExpr<KBoolSort>
+    ) : BvBitExtractExpr(ctx) {
+        override fun canBeJoinedWith(other: BvBitExtractExpr): Boolean =
+            other is BvBitExtractEq
+
+        override fun accept(transformer: BvBitExtractTransformer): KExpr<KBoolSort> =
+            transformer.transform(this)
+    }
+
+    private inner class BvBitExtractIte(
+        val condition: KExpr<KBoolSort>,
+        val trueBranch: KExpr<KBoolSort>,
+        val falseBranch: KExpr<KBoolSort>
+    ) : BvBitExtractExpr(ctx) {
+        override fun canBeJoinedWith(other: BvBitExtractExpr): Boolean =
+            other is BvBitExtractIte && other.condition == condition
+
+        override fun accept(transformer: BvBitExtractTransformer): KExpr<KBoolSort> =
+            transformer.transform(this)
+    }
+
+    private inner class BvBitExtractDistinct(
+        val args: List<KExpr<KBoolSort>>
+    ) : BvBitExtractExpr(ctx) {
+        override fun canBeJoinedWith(other: BvBitExtractExpr): Boolean =
+            other is BvBitExtractDistinct && args.size == other.args.size
+
+        override fun accept(transformer: BvBitExtractTransformer): KExpr<KBoolSort> =
+            transformer.transform(this)
+    }
+
+    private inner class BvBitExtractNot(
+        val arg: KExpr<KBoolSort>
+    ) : BvBitExtractExpr(ctx) {
+        override fun canBeJoinedWith(other: BvBitExtractExpr): Boolean =
+            other is BvBitExtractNot
+
+        override fun accept(transformer: BvBitExtractTransformer): KExpr<KBoolSort> =
+            transformer.transform(this)
+    }
+
+    private inner class BvBitExtractOr(
+        val args: List<KExpr<KBoolSort>>
+    ) : BvBitExtractExpr(ctx) {
+        override fun canBeJoinedWith(other: BvBitExtractExpr): Boolean =
+            other is BvBitExtractOr && args.size == other.args.size
+
+        override fun accept(transformer: BvBitExtractTransformer): KExpr<KBoolSort> =
+            transformer.transform(this)
+    }
+
+    private inner class BvBitExtractXor(
+        val args: List<KExpr<KBoolSort>>
+    ) : BvBitExtractExpr(ctx) {
+        override fun canBeJoinedWith(other: BvBitExtractExpr): Boolean =
+            other is BvBitExtractXor && args.size == other.args.size
+
+        override fun accept(transformer: BvBitExtractTransformer): KExpr<KBoolSort> =
+            transformer.transform(this)
+    }
+
+    private sealed interface BvArrayChunk {
+        fun isEmpty(): Boolean
+        fun add(expr: KExpr<KBoolSort>): BvArrayChunk
+        fun process(): KExpr<KBvSort>
+    }
+
+    private inner class BitExtractChunk(
+        val chunk: MutableList<BvBitExtractExpr>
+    ) : BvArrayChunk {
+        override fun isEmpty(): Boolean = chunk.isEmpty()
+
+        override fun add(expr: KExpr<KBoolSort>): BvArrayChunk = when {
+            expr !is BvBitExtractExpr -> OtherChunk(mutableListOf(expr))
+            !chunk.last().canBeJoinedWith(expr) -> BitExtractChunk(mutableListOf(expr))
+            else -> this.also { chunk.add(expr.uncheckedCast()) }
+        }
+
+        override fun process(): KExpr<KBvSort> = applyBitExtractOperation(ctx, chunk.first(), chunk)
+    }
+
+    private inner class OtherChunk(val chunk: MutableList<KExpr<KBoolSort>>) : BvArrayChunk {
+        override fun isEmpty(): Boolean = chunk.isEmpty()
+        override fun add(expr: KExpr<KBoolSort>): BvArrayChunk = if (expr is BvBitExtractExpr) {
+            BitExtractChunk(mutableListOf(expr))
+        } else {
+            this.also { chunk += expr }
+        }
+
+        override fun process(): KExpr<KBvSort> = with(ctx) {
+            val bvArgs: List<KExpr<KBvSort>> = chunk.map { element: KExpr<KBoolSort> ->
+                mkIte(element, mkBv(true), mkBv(false))
+            }.uncheckedCast()
+
+            bvArgs.reduceConcat()
+        }
+    }
+
+    private fun List<KExpr<KBvSort>>.reduceConcat(): KExpr<KBvSort> = with(ctx){
+        reduce(::mkBvConcatExpr)
+    }
+
+    private fun findBvArrayChunks(args: List<KExpr<KBoolSort>>): List<BvArrayChunk> {
+        var chunk: BvArrayChunk = OtherChunk(mutableListOf())
+        val chunks = mutableListOf(chunk)
+
+        for (arg in args) {
+            val newChunk = chunk.add(arg)
+            if (newChunk !== chunk) {
+                chunk = newChunk
+                chunks += newChunk
+            }
+        }
+
+        return chunks.filterNot { it.isEmpty() }
+    }
+
+    private fun processBvArrayChunked(args: List<KExpr<KBoolSort>>): KExpr<KBvSort> {
+        val unprocessedChunks = findBvArrayChunks(args)
+        val chunksExpressions = unprocessedChunks.map { it.process() }
+        return chunksExpressions.reduceConcat()
+    }
+
+    private inner class BitExtractApplyOperation(
+        override val ctx: KContext,
+        val chunk: List<BvBitExtractExpr>
+    ) : BvBitExtractTransformer, KTransformer {
+        lateinit var result: KExpr<KBvSort>
+
+        override fun transform(expr: BvBitExtractRoot): KExpr<KBoolSort> {
+            result = processRoot(chunk.uncheckedCast())
+            return expr
+        }
+
+        override fun transform(expr: BvBitExtractEq): KExpr<KBoolSort> {
+            result = processEq(chunk.uncheckedCast())
+            return expr
+        }
+
+        override fun transform(expr: BvBitExtractIte): KExpr<KBoolSort> {
+            result = processIte(chunk.uncheckedCast())
+            return expr
+        }
+
+        override fun transform(expr: BvBitExtractDistinct): KExpr<KBoolSort> {
+            result = processDistinct(chunk.uncheckedCast())
+            return expr
+        }
+
+        override fun transform(expr: BvBitExtractNot): KExpr<KBoolSort> {
+            result = processNot(chunk.uncheckedCast())
+            return expr
+        }
+
+        override fun transform(expr: BvBitExtractOr): KExpr<KBoolSort> {
+            result = processOr(chunk.uncheckedCast())
+            return expr
+        }
+
+        override fun transform(expr: BvBitExtractXor): KExpr<KBoolSort> {
+            result = processXor(chunk.uncheckedCast())
+            return expr
+        }
+
+        private fun processRoot(chunk: List<BvBitExtractRoot>): KExpr<KBvSort> = with(ctx) {
+            val groupedExtracts = groupBySubsequentIndices(chunk)
+            val extracts = groupedExtracts.map { mkBvExtractExpr(it.first().idx, it.last().idx, chunk.first().expr) }
+            extracts.reduceConcat()
+        }
+
+        private fun groupBySubsequentIndices(chunk: List<BvBitExtractRoot>): List<List<BvBitExtractRoot>> {
+            var currentGroup = mutableListOf(chunk.first())
+            val result = mutableListOf(currentGroup)
+
+            for (i in 1 until chunk.size) {
+                val element = chunk[i]
+                if (element.idx == currentGroup.last().idx - 1) {
+                    currentGroup += element
+                    continue
+                }
+                currentGroup = mutableListOf(element)
+                result += currentGroup
+            }
+
+            return result
+        }
+
+        private fun processEq(chunk: List<BvBitExtractEq>): KExpr<KBvSort> = with(ctx) {
+            val lhsExpr = processBvArrayChunked(chunk.map { it.lhs })
+            val rhsExpr = processBvArrayChunked(chunk.map { it.rhs })
+
+            mkBvNotExpr(mkBvXorExpr(lhsExpr, rhsExpr))
+        }
+
+        private fun processDistinct(chunk: List<BvBitExtractDistinct>): KExpr<KBvSort> = with(ctx) {
+            val args = processChunkList(chunk.map { it.args })
+            when (args.size) {
+                1 -> bvMaxValueUnsigned(args.single().sort.sizeBits)
+                2 -> mkBvXorExpr(args.first(), args.last())
+                else -> bvZero(args.single().sort.sizeBits)
+            }.uncheckedCast()
+        }
+
+        private fun processIte(chunk: List<BvBitExtractIte>): KExpr<KBvSort> = with(ctx) {
+            val trueExpr = processBvArrayChunked(chunk.map { it.trueBranch })
+            val falseExpr = processBvArrayChunked(chunk.map { it.falseBranch })
+
+            mkIte(chunk.first().condition, trueExpr, falseExpr)
+        }
+
+        private fun processNot(chunk: List<BvBitExtractNot>): KExpr<KBvSort> = with(ctx) {
+            val arg = processBvArrayChunked(chunk.map { it.arg })
+            mkBvNotExpr(arg)
+        }
+
+        private fun processOr(chunk: List<BvBitExtractOr>): KExpr<KBvSort> = with(ctx) {
+            val args = processChunkList(chunk.map { it.args })
+            args.reduce { acc, expr -> mkBvOrExpr(acc, expr) }
+        }
+
+        private fun processXor(chunk: List<BvBitExtractXor>): KExpr<KBvSort> = with(ctx) {
+            val args = processChunkList(chunk.map { it.args })
+            args.reduce { acc, expr -> mkBvXorExpr(acc, expr) }
+        }
+
+        private fun processChunkList(chunkArgs: List<List<KExpr<KBoolSort>>>): List<KExpr<KBvSort>> {
+            val result = mutableListOf<KExpr<KBvSort>>()
+            for (i in chunkArgs.first().indices) {
+                result += processBvArrayChunked(chunkArgs.map { it[i] })
+            }
+            return result
+        }
+    }
+
+    private fun <T : BvBitExtractExpr> applyBitExtractOperation(
+        ctx: KContext,
+        prototype: T,
+        chunk: List<T>
+    ): KExpr<KBvSort> {
+        val operationApplier = BitExtractApplyOperation(ctx, chunk)
+        prototype.accept(operationApplier)
+        return operationApplier.result
     }
 }
