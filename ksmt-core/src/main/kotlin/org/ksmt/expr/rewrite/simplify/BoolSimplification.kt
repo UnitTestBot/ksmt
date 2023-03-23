@@ -20,30 +20,6 @@ fun KContext.simplifyNot(arg: KExpr<KBoolSort>): KExpr<KBoolSort> = when (arg) {
     else -> mkNotNoSimplify(arg)
 }
 
-fun KContext.simplifyAnd(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
-    simplifyAndCore(args, flat = true)
-
-fun KContext.simplifyOr(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
-    simplifyOrCore(args, flat = true)
-
-fun KContext.simplifyAndNoFlat(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
-    simplifyAndCore(args, flat = false)
-
-fun KContext.simplifyOrNoFlat(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
-    simplifyOrCore(args, flat = false)
-
-fun KContext.simplifyAnd(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
-    simplifyAndCore(lhs, rhs, flat = true)
-
-fun KContext.simplifyOr(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
-    simplifyOrCore(lhs, rhs, flat = true)
-
-fun KContext.simplifyAndNoFlat(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
-    simplifyAndCore(lhs, rhs, flat = false)
-
-fun KContext.simplifyOrNoFlat(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
-    simplifyOrCore(lhs, rhs, flat = false)
-
 fun KContext.simplifyImplies(p: KExpr<KBoolSort>, q: KExpr<KBoolSort>): KExpr<KBoolSort> =
     simplifyOr(simplifyNot(p), q)
 
@@ -159,53 +135,63 @@ fun KExpr<KBoolSort>.isComplement(other: KExpr<KBoolSort>) =
 private fun KContext.isComplementCore(a: KExpr<KBoolSort>, b: KExpr<KBoolSort>) =
     (a == trueExpr && b == falseExpr) || (a is KNotExpr && a.arg == b)
 
-fun KContext.simplifyAndCore(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>, flat: Boolean): KExpr<KBoolSort> =
-    simplifyAndOr<KAndExpr>(
-        flat = flat,
-        lhs = lhs, rhs = rhs,
-        // (and a b true) ==> (and a b)
-        neutralElement = trueExpr,
-        // (and a b false) ==> false
-        zeroElement = falseExpr,
-        buildResultBinaryExpr = { simplifiedLhs, simplifiedRhs -> mkAndNoSimplify(simplifiedLhs, simplifiedRhs) },
-        buildResultFlatExpr = { simplifiedArgs -> mkAndNoSimplify(simplifiedArgs) }
-    )
+fun KContext.simplifyAnd(
+    lhs: KExpr<KBoolSort>,
+    rhs: KExpr<KBoolSort>,
+    flat: Boolean = true
+): KExpr<KBoolSort> = simplifyAndOr<KAndExpr>(
+    flat = flat,
+    lhs = lhs, rhs = rhs,
+    // (and a b true) ==> (and a b)
+    neutralElement = trueExpr,
+    // (and a b false) ==> false
+    zeroElement = falseExpr,
+    buildResultBinaryExpr = { simplifiedLhs, simplifiedRhs -> mkAndNoSimplify(simplifiedLhs, simplifiedRhs) },
+    buildResultFlatExpr = { simplifiedArgs -> mkAndNoSimplify(simplifiedArgs) }
+)
 
-fun KContext.simplifyAndCore(args: List<KExpr<KBoolSort>>, flat: Boolean): KExpr<KBoolSort> =
-    simplifyAndOr<KAndExpr>(
-        flat = flat,
-        args = args,
-        // (and a b true) ==> (and a b)
-        neutralElement = trueExpr,
-        // (and a b false) ==> false
-        zeroElement = falseExpr,
-        buildResultBinaryExpr = { simplifiedLhs, simplifiedRhs -> mkAndNoSimplify(simplifiedLhs, simplifiedRhs) },
-        buildResultFlatExpr = { simplifiedArgs -> mkAndNoSimplify(simplifiedArgs) }
-    )
+fun KContext.simplifyAnd(
+    args: List<KExpr<KBoolSort>>,
+    flat: Boolean = true
+): KExpr<KBoolSort> = simplifyAndOr<KAndExpr>(
+    flat = flat,
+    args = args,
+    // (and a b true) ==> (and a b)
+    neutralElement = trueExpr,
+    // (and a b false) ==> false
+    zeroElement = falseExpr,
+    buildResultBinaryExpr = { simplifiedLhs, simplifiedRhs -> mkAndNoSimplify(simplifiedLhs, simplifiedRhs) },
+    buildResultFlatExpr = { simplifiedArgs -> mkAndNoSimplify(simplifiedArgs) }
+)
 
-fun KContext.simplifyOrCore(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>, flat: Boolean): KExpr<KBoolSort> =
-    simplifyAndOr<KOrExpr>(
-        flat = flat,
-        lhs = lhs, rhs = rhs,
-        // (or a b false) ==> (or a b)
-        neutralElement = falseExpr,
-        // (or a b true) ==> true
-        zeroElement = trueExpr,
-        buildResultBinaryExpr = { simplifiedLhs, simplifiedRhs -> mkOrNoSimplify(simplifiedLhs, simplifiedRhs) },
-        buildResultFlatExpr = { simplifiedArgs -> mkOrNoSimplify(simplifiedArgs) }
-    )
+fun KContext.simplifyOr(
+    lhs: KExpr<KBoolSort>,
+    rhs: KExpr<KBoolSort>,
+    flat: Boolean = true
+): KExpr<KBoolSort> = simplifyAndOr<KOrExpr>(
+    flat = flat,
+    lhs = lhs, rhs = rhs,
+    // (or a b false) ==> (or a b)
+    neutralElement = falseExpr,
+    // (or a b true) ==> true
+    zeroElement = trueExpr,
+    buildResultBinaryExpr = { simplifiedLhs, simplifiedRhs -> mkOrNoSimplify(simplifiedLhs, simplifiedRhs) },
+    buildResultFlatExpr = { simplifiedArgs -> mkOrNoSimplify(simplifiedArgs) }
+)
 
-fun KContext.simplifyOrCore(args: List<KExpr<KBoolSort>>, flat: Boolean): KExpr<KBoolSort> =
-    simplifyAndOr<KOrExpr>(
-        flat = flat,
-        args = args,
-        // (or a b false) ==> (or a b)
-        neutralElement = falseExpr,
-        // (or a b true) ==> true
-        zeroElement = trueExpr,
-        buildResultBinaryExpr = { simplifiedLhs, simplifiedRhs -> mkOrNoSimplify(simplifiedLhs, simplifiedRhs) },
-        buildResultFlatExpr = { simplifiedArgs -> mkOrNoSimplify(simplifiedArgs) }
-    )
+fun KContext.simplifyOr(
+    args: List<KExpr<KBoolSort>>,
+    flat: Boolean = true
+): KExpr<KBoolSort> = simplifyAndOr<KOrExpr>(
+    flat = flat,
+    args = args,
+    // (or a b false) ==> (or a b)
+    neutralElement = falseExpr,
+    // (or a b true) ==> true
+    zeroElement = trueExpr,
+    buildResultBinaryExpr = { simplifiedLhs, simplifiedRhs -> mkOrNoSimplify(simplifiedLhs, simplifiedRhs) },
+    buildResultFlatExpr = { simplifiedArgs -> mkOrNoSimplify(simplifiedArgs) }
+)
 
 @Suppress("LongParameterList")
 private inline fun <reified T : KApp<KBoolSort, KBoolSort>> simplifyAndOr(
