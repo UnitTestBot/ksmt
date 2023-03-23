@@ -44,5 +44,9 @@ class YicesBenchmarksBasedTest : BenchmarksBasedTest() {
              * Yices bug: returns an incorrect model
              */
             filterNot { it.name == "QF_UFBV_QF_UFBV_bv8_bv_eq_sdp_v4_ab_cti_max.smt2" }
+                // Yices bug: incorrect bv-add after bv-and on 64 bit bv (63 and 65 are correct).
+                .filterNot { it.name == "QF_BV_countbits064.smt2" }
+                // Yices bug: same as in previous sample
+                .filterNot { it.name == "QF_BV_nextpoweroftwo064.smt2" }
     }
 }
