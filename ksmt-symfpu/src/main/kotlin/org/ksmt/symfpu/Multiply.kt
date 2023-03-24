@@ -87,12 +87,18 @@ private fun <Fp : KFpSort> KContext.arithmeticMultiply(
     )
 }
 
-private fun KContext.conditionalLeftShiftOne(
+fun KContext.conditionalLeftShiftOne(
     condition: KExpr<KBoolSort>, expr: KExpr<KBvSort>
 ) = mkIte(
     condition, mkBvShiftLeftExpr(expr, bvOne(expr.sort.sizeBits).cast()), expr
 )
 
+
+fun KContext.conditionalRightShiftOne(
+    condition: KExpr<KBoolSort>, expr: KExpr<KBvSort>
+) = mkIte(
+    condition, mkBvLogicalShiftRightExpr(expr, bvOne(expr.sort.sizeBits).cast()), expr
+)
 
 
 

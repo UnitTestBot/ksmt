@@ -124,7 +124,7 @@ fun bitsToRepresent(value: Int): Int {
     return i
 }
 
-fun KContext.ones(width: UInt) = mkBv(-1, width)
+fun KContext.ones(width: UInt): KExpr<KBvSort> = mkBv(-1, width)
 
 fun KContext.isAllZeros(expr: KExpr<KBvSort>) = expr eq bvZero(expr.sort.sizeBits).cast()
 fun KContext.isAllOnes(expr: KExpr<KBvSort>): KExpr<KBoolSort> = expr eq mkBv(-1, expr.sort.sizeBits)
@@ -199,3 +199,18 @@ fun <Fp : KFpSort> KContext.makeMin(sort: Fp, sign: KExpr<KBoolSort>) = Unpacked
 fun <Fp : KFpSort> KContext.makeMax(sort: Fp, sign: KExpr<KBoolSort>) = UnpackedFp(
     this, sort, sign, maxNormalExponent(sort), ones(sort.significandBits)
 )
+
+//bv expandingSubtract(const bv &op1, const bv &op2) {
+//    PRECONDITION(op1.getWidth() == op2.getWidth());
+//
+//    bv x(op1.extend(1));
+//    bv y(op2.extend(1));
+//
+//    return x - y;
+//}
+fun KContext.expandingSubtract(op1: KExpr<KBvSort>, op2: KExpr<KBvSort>): KExpr<KBvSort> {
+    check(op1.sort.sizeBits == op2.sort.sizeBits)
+    val x = mkBvZeroExtensionExpr(1, op1)
+    val y = mkBvZeroExtensionExpr(1, op2)
+    return mkBvSubExpr(x, y)
+}

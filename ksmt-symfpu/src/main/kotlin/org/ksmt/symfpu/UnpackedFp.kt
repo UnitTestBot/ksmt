@@ -3,6 +3,7 @@ package org.ksmt.symfpu
 import org.ksmt.KContext
 import org.ksmt.cache.hash
 import org.ksmt.cache.structurallyEqual
+import org.ksmt.expr.KApp
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.printer.ExpressionPrinter
 import org.ksmt.expr.transformer.KTransformerBase
@@ -11,8 +12,9 @@ import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.utils.FpUtils.fpInfExponentBiased
 import org.ksmt.utils.FpUtils.fpInfSignificand
+import org.ksmt.utils.cast
 
-private fun KExpr<KBvSort>.resize(newSize: UInt, ctx: KContext): KExpr<KBvSort> {
+fun KExpr<KBvSort>.resizeUnsigned(newSize: UInt, ctx: KContext): KExpr<KBvSort> {
     val width = sort.sizeBits
     return if (newSize > width) {
         ctx.mkBvZeroExtensionExpr((newSize - width).toInt(), this)
@@ -20,6 +22,13 @@ private fun KExpr<KBvSort>.resize(newSize: UInt, ctx: KContext): KExpr<KBvSort> 
         this
     }
 }
+
+fun KExpr<KBvSort>.contract(reduction: Int, ctx: KContext): KExpr<KBvSort> {
+    val width = sort.sizeBits.toInt()
+    check(width > reduction)
+    return ctx.mkBvExtractExpr((width - 1) - reduction, 0, this)
+}
+
 
 class UnpackedFp<Fp : KFpSort> private constructor(
     ctx: KContext, override val sort: Fp,
@@ -58,18 +67,19 @@ class UnpackedFp<Fp : KFpSort> private constructor(
         )
     }
 
-    fun getSignificand(packed: Boolean): KExpr<KBvSort> {
+    fun getSignificand(packed: Boolean = false): KExpr<KBvSort> {
         return if (packed) {
-            println("get packedSignificand")
             packedSignificand!!
         } else {
-            println("get normalizedSignificand")
             normalizedSignificand
         }
     }
 
+    fun exponentWidth() = unbiasedExponent.sort.sizeBits
+    fun significandWidth() = normalizedSignificand.sort.sizeBits
+
     //same for exponent
-    fun getExponent(packed: Boolean) = if (packed) packedExponent!! else unbiasedExponent
+    fun getExponent(packed: Boolean = false) = if (packed) packedExponent!! else unbiasedExponent
 
     fun signBv() = ctx.boolToBv(sign)
 
@@ -108,7 +118,7 @@ class UnpackedFp<Fp : KFpSort> private constructor(
             normal.shiftAmount.sort.sizeBits < exponentWidth
         ) // May lose data / be incorrect for very small exponents and very large significands
 
-        val signedAlignAmount = normal.shiftAmount.resize(exponentWidth, ctx)
+        val signedAlignAmount = normal.shiftAmount.resizeUnsigned(exponentWidth, ctx)
         val correctedExponent = mkBvSubExpr(unbiasedExponent, signedAlignAmount)
 
         // Optimisation : could move the zero detect version in if used in all cases
@@ -117,6 +127,17 @@ class UnpackedFp<Fp : KFpSort> private constructor(
     }
 
     fun inNormalRange() = ctx.mkBvSignedLessOrEqualExpr(ctx.minNormalExponent(sort), unbiasedExponent)
+
+    fun negate() = with(ctx) {
+        val newSign = mkIte(isNaN, sign, !sign)
+        UnpackedFp(ctx, sort, newSign, unbiasedExponent, normalizedSignificand, isNaN, isInf, isZero, packedBv?.let {
+            mkBvConcatExpr(
+                boolToBv(newSign),
+                packedExponent!!,
+                packedSignificand!!
+            )
+        })
+    }
 
     companion object {
 
@@ -166,6 +187,15 @@ class UnpackedFp<Fp : KFpSort> private constructor(
                 packedBv = l.packedBv?.let { r.packedBv?.let { mkIte(cond, l.packedBv, r.packedBv) } }
             )
         }
+
+        fun dfsCount(node: KApp<*, *>): Int {
+            return if (node.args.isEmpty()) {
+                1
+            } else {
+                node.args.map { dfsCount(it.cast()) }.sum()
+            }
+        }
     }
+
 
 }
