@@ -96,9 +96,6 @@ open class KYicesContext : AutoCloseable {
     inline fun internalizeVar(decl: KDecl<*>, internalizer: (KDecl<*>) -> YicesTerm): YicesTerm =
         findOrSave(::findInternalizedVar, ::saveInternalizedVar, decl) { internalizer(decl) }
 
-    inline fun convertExpr(expr: YicesTerm, converter: (YicesTerm) -> KExpr<*>): KExpr<*> =
-        findOrSave(::findConvertedExpr, ::saveConvertedExpr, expr) { converter(expr) }
-
     inline fun convertSort(sort: YicesSort, converter: (YicesSort) -> KSort): KSort =
         findOrSave(::findConvertedSort, ::saveConvertedSort, sort) { converter(sort) }
 

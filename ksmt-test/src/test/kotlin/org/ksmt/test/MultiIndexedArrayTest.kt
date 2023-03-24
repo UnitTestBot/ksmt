@@ -485,12 +485,12 @@ class MultiIndexedArrayTest {
 
         fun fail(ex: Throwable) {
             System.err.println("FAILED ${testId}: $ex")
-            failed += TestCase(testId, "$ex", null, null)
+            failed += TestCase(testId, message = "$ex", expected = null, actual = null)
         }
 
         fun ignore(ex: Throwable) {
             System.err.println("IGNORED ${testId}: $ex")
-            ignored += TestCase(testId, "$ex", null, null)
+            ignored += TestCase(testId, message = "$ex", expected = null, actual = null)
         }
 
         fun result() {
