@@ -2,8 +2,13 @@ package org.ksmt.utils
 
 import java.io.InputStream
 import java.net.URL
-import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.io.path.createFile
+import kotlin.io.path.createTempDirectory
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.exists
+import kotlin.io.path.forEachDirectoryEntry
+import kotlin.io.path.notExists
 import kotlin.io.path.outputStream
 
 object NativeLibraryLoader {
@@ -68,8 +73,10 @@ object NativeLibraryLoader {
         }
     }
 
+    private const val STALED_DIRECTORY_SUFFIX = ".ksmt-staled"
+
     private class TmpDirLibraryUnpacker {
-        private val libUnpackDirectory = Files.createTempDirectory("ksmt")
+        private val libUnpackDirectory = createTempDirectory("ksmt")
         private val unpackedFiles = mutableListOf<Path>()
 
         fun unpackLibrary(name: String, libraryData: InputStream): Path {
@@ -78,16 +85,64 @@ object NativeLibraryLoader {
             return libFile
         }
 
+        /**
+         * Cleanup unpacked files in two stages:
+         * 1. Try to delete unpacked files.
+         * This operation should succeed on Linux OS.
+         * This operation will not succeed on Windows because process keep file handles
+         * until the very end.
+         * 2. If the previous operation was not successful we keep these files and try to delete them in the future.
+         * Whenever a process with a KSMT library performs unpacked libraries cleanup
+         * it also looks for staled files left over from other processes and tries to delete them.
+         * */
         fun cleanup() {
-            val notDeletedFiles = unpackedFiles.filterNot { it.toFile().delete() }
+            val notDeletedFiles = unpackedFiles.filterNot { it.safeDeleteFile() }
 
-            if (notDeletedFiles.isEmpty() && libUnpackDirectory.toFile().delete()) {
-                return
+            if (notDeletedFiles.isNotEmpty() || !libUnpackDirectory.safeDeleteFile()) {
+                markUnpackDirectoryAsStaled()
             }
 
-            // Something was not deleted --> register for deletion in reverse order (according to the API)
-            libUnpackDirectory.toFile().deleteOnExit()
-            notDeletedFiles.forEach { it.toFile().deleteOnExit() }
+            cleanupStaledDirectories()
+        }
+
+        private fun markUnpackDirectoryAsStaled() {
+            val markerName = "${libUnpackDirectory.fileName}$STALED_DIRECTORY_SUFFIX"
+            val markerFile = libUnpackDirectory.resolveSibling(markerName)
+            if (!markerFile.exists()) {
+                markerFile.createFile()
+            }
+        }
+
+        private fun cleanupStaledDirectories() {
+            libUnpackDirectory.parent.forEachDirectoryEntry("*$STALED_DIRECTORY_SUFFIX") { marker ->
+                val staledDirectoryName = marker.fileName.toString().removeSuffix(STALED_DIRECTORY_SUFFIX)
+                val staledDirectory = marker.resolveSibling(staledDirectoryName)
+                if (staledDirectory.notExists() || tryDeleteStaledDirectory(staledDirectory)) {
+                    withNoSecurityException { marker.deleteIfExists() }
+                }
+            }
+        }
+
+        private fun tryDeleteStaledDirectory(directory: Path): Boolean {
+            directory.forEachDirectoryEntry {
+                if (!it.safeDeleteFile()) return false
+            }
+            return directory.safeDeleteFile()
+        }
+
+        private fun Path.safeDeleteFile(): Boolean = withNoSecurityException {
+            toFile().delete()
+        }
+
+        /**
+         * Handle [SecurityException] because this exception may be thrown when file has no required permissions.
+         * For example, we try do delete file without delete permission.
+         * */
+        @Suppress("SwallowedException")
+        private inline fun withNoSecurityException(block: () -> Boolean): Boolean = try {
+            block()
+        } catch (ex: SecurityException) {
+            false
         }
     }
 }
