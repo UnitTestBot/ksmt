@@ -48,9 +48,9 @@ class UnpackedFp<Fp : KFpSort> private constructor(
     )
 
     private val expWidth = sort.exponentBits.toInt()
-    val packedSignificand =
+    private val packedSignificand =
         packedBv?.let { ctx.mkBvExtractExpr(packedBv.sort.sizeBits.toInt() - expWidth - 2, 0, packedBv) }
-    val packedExponent = packedBv?.let {
+    private val packedExponent = packedBv?.let {
         ctx.mkBvExtractExpr(
             packedBv.sort.sizeBits.toInt() - 2,
             packedBv.sort.sizeBits.toInt() - expWidth - 1,

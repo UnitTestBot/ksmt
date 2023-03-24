@@ -131,42 +131,41 @@ fun KContext.isAllOnes(expr: KExpr<KBvSort>): KExpr<KBoolSort> = expr eq mkBv(-1
 
 
 data class NormaliseShiftResult(
-    val normalised: KExpr<KBvSort>, val shiftAmount: KExpr<KBvSort>, val isZero: KExpr<KBoolSort>
+    val normalised: KExpr<KBvSort>, val shiftAmount: KExpr<KBvSort>
 )
 
 /* CLZ https://en.wikipedia.org/wiki/Find_first_set */
 fun KContext.normaliseShift(input: KExpr<KBvSort>): NormaliseShiftResult {
-    val width = input.sort.sizeBits
-    val startingMask = previousPowerOfTwo(width)
-    check(startingMask < width)
+    val inputWidth = input.sort.sizeBits
+    val startingMask = previousPowerOfTwo(inputWidth)
+    check(startingMask < inputWidth)
 
-    // Catch the zero case
-    val zeroCase = isAllZeros(input)
-    var working = input
+
+    // We need to shift the input to the left until the first bit is set
+    var currentMantissa = input
     var shiftAmount: KExpr<KBvSort>? = null
-    var deactivateShifts: KExpr<KBoolSort> = zeroCase
-    // We need to shift the input to the right until the first bit is set
-    // We need to shift the input to the right by i bits
-    var i = startingMask
-    check(i > 0u)
-    while (i > 0u) {
-        deactivateShifts = deactivateShifts or isAllOnes(mkBvExtractExpr(width.toInt() - 1, width.toInt() - 1, working))
-        val mask = mkBvConcatExpr(ones(i), bvZero(width - i))
-        val shiftNeeded = !deactivateShifts and isAllZeros(mkBvAndExpr(mask, working))
+    var curMaskLen = previousPowerOfTwo(inputWidth)
+    while (curMaskLen > 0u) {
+        val mask = mkBvConcatExpr(ones(curMaskLen), bvZero(inputWidth - curMaskLen))
+        val shiftNeeded = isAllZeros(mkBvAndExpr(mask, currentMantissa))
 
-        // Modular is safe because of the mask comparison
-        working = mkIte(shiftNeeded, mkBvShiftLeftExpr(working, i.toInt().toBv(width)), working)
+        currentMantissa = mkIte(shiftNeeded,
+            mkBvShiftLeftExpr(currentMantissa, curMaskLen.toInt().toBv(inputWidth)),
+            currentMantissa)
+
         shiftAmount = if (shiftAmount == null) {
             boolToBv(shiftNeeded)
         } else {
             mkBvConcatExpr(shiftAmount, boolToBv(shiftNeeded))
         }
 
-        i /= 2u
+        curMaskLen /= 2u
     }
-    val res = NormaliseShiftResult(working, shiftAmount!!, zeroCase)
+    val res = NormaliseShiftResult(currentMantissa, shiftAmount!!)
+
+
     val shiftAmountWidth = res.shiftAmount.sort.sizeBits
-    val widthBits = bitsToRepresent(width.toInt())
+    val widthBits = bitsToRepresent(inputWidth.toInt())
     check(shiftAmountWidth.toInt() == widthBits || shiftAmountWidth.toInt() == widthBits - 1)
 
     return res
