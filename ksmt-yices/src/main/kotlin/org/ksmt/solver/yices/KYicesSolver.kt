@@ -12,8 +12,8 @@ import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.sort.KBoolSort
-import org.ksmt.utils.mkFreshConst
-import java.util.*
+import java.util.Timer
+import java.util.TimerTask
 import kotlin.time.Duration
 
 class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguration> {
@@ -27,7 +27,7 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
     }
 
     private val exprInternalizer: KYicesExprInternalizer by lazy {
-        KYicesExprInternalizer(ctx, yicesCtx)
+        KYicesExprInternalizer(yicesCtx)
     }
     private val exprConverter: KYicesExprConverter by lazy {
         KYicesExprConverter(ctx, yicesCtx)
@@ -60,12 +60,11 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
 
         val trackVarExpr = ctx.mkConstApp(trackVar)
         val trackedExpr = with(ctx) { !trackVarExpr or expr }
+
+        assert(trackedExpr)
+
         val yicesTrackVar = with(exprInternalizer) { trackVarExpr.internalize() }
-        val yicesTrackedExpr = with(exprInternalizer) { trackedExpr.internalize() }
-
         currentLevelTrackedAssertions += yicesTrackVar
-
-        nativeContext.assertFormula(yicesTrackedExpr)
     }
 
     override fun push(): Unit = yicesTry {
@@ -91,13 +90,12 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
     }
 
     override fun check(timeout: Duration): KSolverStatus {
-        val trackedExpressions = trackedAssertions.flatten()
+        if (trackedAssertions.any { it.isNotEmpty() }) {
+            return checkWithAssumptions(emptyList(), timeout)
+        }
 
         return withTimer(timeout) {
-            if (trackedExpressions.isEmpty())
-                nativeContext.check()
-            else
-                nativeContext.checkWithAssumptions(trackedExpressions.toIntArray())
+            nativeContext.check()
         }.processCheckResult()
     }
 
@@ -107,10 +105,11 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
     ): KSolverStatus {
         ctx.ensureContextMatch(assumptions)
 
-        val trackedExpressions = trackedAssertions.flatten()
-        val yicesAssumptions = with(exprInternalizer) {
-            assumptions.map { it.internalize() }
-        } + trackedExpressions
+        val yicesAssumptions = mutableListOf<YicesTerm>()
+        trackedAssertions.flatMapTo(yicesAssumptions) { it }
+        with(exprInternalizer) {
+            assumptions.mapTo(yicesAssumptions) { it.internalize() }
+        }
 
         return withTimer(timeout) {
             nativeContext.checkWithAssumptions(yicesAssumptions.toIntArray())
@@ -133,7 +132,7 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
 
         val yicesCore = nativeContext.unsatCore
 
-        with(exprConverter) { yicesCore.map { it.convert() } }
+        with(exprConverter) { yicesCore.map { it.convert(ctx.boolSort) } }
     }
 
     override fun reasonOfUnknown(): String {
@@ -152,8 +151,9 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
     private inline fun <T> withTimer(timeout: Duration, body: () -> T): T {
         val task = StopSearchTask()
 
-        if (timeout.isFinite())
+        if (timeout.isFinite()) {
             timer.schedule(task, timeout.inWholeMilliseconds)
+        }
 
         return try {
             body()

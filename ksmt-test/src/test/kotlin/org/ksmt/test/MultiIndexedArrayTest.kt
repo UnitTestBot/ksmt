@@ -9,11 +9,16 @@ import org.ksmt.expr.KExpr
 import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverStatus
+import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.bitwuzla.KBitwuzlaContext
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprConverter
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprInternalizer
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
 import org.ksmt.solver.runner.KSolverRunnerManager
+import org.ksmt.solver.yices.KYicesContext
+import org.ksmt.solver.yices.KYicesExprConverter
+import org.ksmt.solver.yices.KYicesExprInternalizer
+import org.ksmt.solver.yices.KYicesSolver
 import org.ksmt.solver.z3.KZ3Context
 import org.ksmt.solver.z3.KZ3ExprConverter
 import org.ksmt.solver.z3.KZ3ExprInternalizer
@@ -51,9 +56,9 @@ class MultiIndexedArrayTest {
     @Test
     fun testMultiIndexedArraysBitwuzlaWithZ3Oracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
         oracleManager.createSolver(this, KZ3Solver::class).use { oracleSolver ->
-            KBitwuzlaContext(this).use { z3NativeCtx ->
+            KBitwuzlaContext(this).use { bitwuzlaNativeCtx ->
                 runMultiIndexedArraySamples(oracleSolver) { expr ->
-                    internalizeAndConvertBitwuzla(z3NativeCtx, expr)
+                    internalizeAndConvertBitwuzla(bitwuzlaNativeCtx, expr)
                 }
             }
         }
@@ -73,9 +78,42 @@ class MultiIndexedArrayTest {
     @Test
     fun testMultiIndexedArraysBitwuzlaWithBitwuzlaOracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
         oracleManager.createSolver(this, KBitwuzlaSolver::class).use { oracleSolver ->
-            KBitwuzlaContext(this).use { z3NativeCtx ->
+            KBitwuzlaContext(this).use { bitwuzlaNativeCtx ->
                 runMultiIndexedArraySamples(oracleSolver) { expr ->
-                    internalizeAndConvertBitwuzla(z3NativeCtx, expr)
+                    internalizeAndConvertBitwuzla(bitwuzlaNativeCtx, expr)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun testMultiIndexedArraysYicesWithZ3Oracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
+        oracleManager.createSolver(this, KZ3Solver::class).use { oracleSolver ->
+            KYicesContext().use { yicesNativeCtx ->
+                runMultiIndexedArraySamples(oracleSolver) { expr ->
+                    internalizeAndConvertYices(yicesNativeCtx, expr)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun testMultiIndexedArraysZ3WithYicesOracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
+        oracleManager.createSolver(this, KYicesSolver::class).use { oracleSolver ->
+            mkZ3Context(this).use { z3NativeCtx ->
+                runMultiIndexedArraySamples(oracleSolver) { expr ->
+                    internalizeAndConvertZ3(z3NativeCtx, expr)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun testMultiIndexedArraysYicesWithYicesOracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
+        oracleManager.createSolver(this, KYicesSolver::class).use { oracleSolver ->
+            KYicesContext().use { yicesNativeCtx ->
+                runMultiIndexedArraySamples(oracleSolver) { expr ->
+                    internalizeAndConvertYices(yicesNativeCtx, expr)
                 }
             }
         }
@@ -97,11 +135,9 @@ class MultiIndexedArrayTest {
             val expressions = mkArrayExpressions(sort)
             for (expr in expressions) {
                 stats.start()
-                try {
+                stats.withErrorHandling {
                     val processed = process(expr)
                     assertEquals(stats, oracle, expr, processed)
-                } catch (ex: Throwable) {
-                    stats.fail(ex)
                 }
             }
         }
@@ -127,7 +163,7 @@ class MultiIndexedArrayTest {
             }
         }
 
-        val arrayEq = arrayExpressions.zipWithNext().map { (first, second) -> first eq second }
+        val arrayEq = arrayExpressions.crossProduct { first, second -> first eq second }
 
         var arraySelects = arrayExpressions.map { mkSelect(it) }
 
@@ -157,6 +193,16 @@ class MultiIndexedArrayTest {
             arraySelects,
             arrayEq
         ).flatten().uncheckedCast()
+    }
+
+    private inline fun <T, R> List<T>.crossProduct(transform: (T, T) -> R): List<R> {
+        val result = mutableListOf<R>()
+        for (i in indices) {
+            for (j in i until size) {
+                result += transform(get(i), get(j))
+            }
+        }
+        return result
     }
 
     private fun <A : KArraySortBase<KBv8Sort>> KContext.mkConst(sort: A): KExpr<A> =
@@ -236,6 +282,20 @@ class MultiIndexedArrayTest {
 
         val converted = with(KBitwuzlaExprConverter(this, nativeCtx)) {
             internalized.convertExpr(expr.sort)
+        }
+
+        return converted
+    }
+
+    private fun <T : KSort> KContext.internalizeAndConvertYices(
+        nativeCtx: KYicesContext, expr: KExpr<T>
+    ): KExpr<T> {
+        val internalized = with(KYicesExprInternalizer(nativeCtx)) {
+            expr.internalizeExpr()
+        }
+
+        val converted = with(KYicesExprConverter(this, nativeCtx)) {
+            internalized.convert(expr.sort)
         }
 
         return converted
@@ -375,6 +435,14 @@ class MultiIndexedArrayTest {
         return Context()
     }
 
+    private inline fun TestStats.withErrorHandling(body: () -> Unit) = try {
+        body()
+    } catch (ex: KSolverUnsupportedFeatureException) {
+        ignore(ex)
+    } catch (ex: Throwable) {
+        fail(ex)
+    }
+
     private data class TestCase(
         val id: Int,
         val message: String,
@@ -417,7 +485,12 @@ class MultiIndexedArrayTest {
 
         fun fail(ex: Throwable) {
             System.err.println("FAILED ${testId}: $ex")
-            failed += TestCase(testId, "$ex", null, null)
+            failed += TestCase(testId, message = "$ex", expected = null, actual = null)
+        }
+
+        fun ignore(ex: Throwable) {
+            System.err.println("IGNORED ${testId}: $ex")
+            ignored += TestCase(testId, message = "$ex", expected = null, actual = null)
         }
 
         fun result() {

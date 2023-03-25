@@ -8,7 +8,6 @@ import com.microsoft.z3.Expr
 import com.microsoft.z3.Native
 import com.microsoft.z3.Solver
 import com.microsoft.z3.Status
-import org.ksmt.solver.fixtures.yices.KTestYicesContext
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.runner.core.ChildProcessBase
@@ -64,8 +63,8 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         equalityCheckAssumptions.clear()
         nativeAsts.clear()
         solvers.clear()
-        ctx.close()
-        z3Ctx.close()
+        workerCtx?.close()
+        workerZ3Ctx?.close()
         workerCtx = null
         workerZ3Ctx = null
     }
@@ -103,8 +102,9 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         }
 
     private fun internalizeAndConvertYices(assertions: List<KExpr<KBoolSort>>): List<KExpr<KBoolSort>> {
-        KTestYicesContext().use { internContext ->
-            val internalizer = KYicesExprInternalizer(ctx, internContext)
+        // Yices doesn't reverse cache internalized expressions (only interpreted values)
+        KYicesContext().use { internContext ->
+            val internalizer = KYicesExprInternalizer(internContext)
 
             val yicesAssertions = with(internalizer) {
                 assertions.map { it.internalize() }
@@ -113,7 +113,7 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
             val converter = KYicesExprConverter(ctx, internContext)
 
             return with(converter) {
-                yicesAssertions.map { it.convert() }
+                yicesAssertions.map { it.convert(ctx.boolSort) }
             }
         }
     }

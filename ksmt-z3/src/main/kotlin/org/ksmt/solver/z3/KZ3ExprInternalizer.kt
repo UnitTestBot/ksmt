@@ -685,6 +685,8 @@ open class KZ3ExprInternalizer(
         if (sort is KArraySort<*, *>) {
             Native.mkConstArray(nCtx, sort.domain.internalizeSort(), value)
         } else {
+            ensureArraySortInternalized(sort)
+
             val domain = sort.domainSorts.let { domain ->
                 LongArray(domain.size) { domain[it].internalizeSort() }
             }
@@ -694,6 +696,8 @@ open class KZ3ExprInternalizer(
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) = with(expr) {
         transform(body, ctx.mkConstApp(indexVarDecl)) { body: Long, index: Long ->
+            ensureArraySortInternalized(expr.sort)
+
             val indices = longArrayOf(index)
             Native.mkLambdaConst(nCtx, indices.size, indices, body)
         }
@@ -705,6 +709,8 @@ open class KZ3ExprInternalizer(
         transform(
             body, ctx.mkConstApp(indexVar0Decl), ctx.mkConstApp(indexVar1Decl)
         ) { body: Long, index0: Long, index1: Long ->
+            ensureArraySortInternalized(expr.sort)
+
             val indices = longArrayOf(index0, index1)
             Native.mkLambdaConst(nCtx, indices.size, indices, body)
         }
@@ -716,6 +722,8 @@ open class KZ3ExprInternalizer(
         transform(
             body, ctx.mkConstApp(indexVar0Decl), ctx.mkConstApp(indexVar1Decl), ctx.mkConstApp(indexVar2Decl)
         ) { body: Long, index0: Long, index1: Long, index2: Long ->
+            ensureArraySortInternalized(expr.sort)
+
             val indices = longArrayOf(index0, index1, index2)
             Native.mkLambdaConst(nCtx, indices.size, indices, body)
         }
@@ -723,10 +731,22 @@ open class KZ3ExprInternalizer(
 
     override fun <R : KSort> transform(expr: KArrayNLambda<R>): KExpr<KArrayNSort<R>> = with(expr) {
         transformArray(indexVarDeclarations.map { ctx.mkConstApp(it) } + body) { args ->
+            ensureArraySortInternalized(expr.sort)
+
             val body = args.last()
             val indices = args.copyOf(args.size - 1)
             Native.mkLambdaConst(nCtx, indices.size, indices, body)
         }
+    }
+
+    /**
+     * Z3 incorrectly manage array sort references on lambda expression creation.
+     * If the created lambda expression is the only reference to the array sort,
+     * it results in native error on context deletion. To bypass this issue
+     * we ensure that array sort is referenced not only in the created lambda
+     * */
+    private fun ensureArraySortInternalized(sort: KArraySortBase<*>) {
+        sort.internalizeSort()
     }
 
     override fun <T : KArithSort> transform(expr: KAddArithExpr<T>) = with(expr) {

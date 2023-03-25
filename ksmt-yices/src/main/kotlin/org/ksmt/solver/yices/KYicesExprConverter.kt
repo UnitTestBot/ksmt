@@ -2,142 +2,73 @@ package org.ksmt.solver.yices
 
 import com.sri.yices.Constructor
 import com.sri.yices.Terms
+import com.sri.yices.Terms.Component
+import com.sri.yices.Terms.NULL_TERM
 import com.sri.yices.Types
 import org.ksmt.KContext
 import org.ksmt.decl.KConstDecl
-import org.ksmt.expr.KExpr
-import org.ksmt.solver.util.KExprConverterBase
 import org.ksmt.decl.KDecl
-import org.ksmt.decl.KFuncDecl
+import org.ksmt.expr.KExpr
+import org.ksmt.expr.printer.ExpressionPrinter
+import org.ksmt.expr.transformer.KNonRecursiveTransformer
+import org.ksmt.expr.transformer.KTransformer
+import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.solver.util.ExprConversionResult
+import org.ksmt.solver.util.KExprConverterBase
 import org.ksmt.sort.KArithSort
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
-import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
-import org.ksmt.utils.mkConst
-import org.ksmt.utils.mkFreshConst
+import org.ksmt.utils.BvUtils.bvMaxValueUnsigned
+import org.ksmt.utils.BvUtils.bvZero
 import org.ksmt.utils.uncheckedCast
-import java.util.LinkedList
-import java.util.Queue
-import kotlin.collections.HashSet
 
 open class KYicesExprConverter(
     private val ctx: KContext,
     private val yicesCtx: KYicesContext
 ) : KExprConverterBase<YicesTerm>() {
-    private var argTypes: Queue<KSort> = LinkedList()
+    fun <T : KSort> YicesTerm.convert(expectedSort: T): KExpr<T> =
+        convertFromNative<KSort>()
+            .ensureSort(expectedSort)
 
-    fun <T : KSort> YicesTerm.convert(): KExpr<T> {
-        /**
-         * In Yices arrays are represented as functions,
-         * so before the conversion we examine the expression
-         * to distinguish between arrays and functions
-         */
-        KYicesExprPreprocessor().processExpr(this)
-        return this.convertFromNative()
-    }
-
-    private fun castToInt(expr: KExpr<KRealSort>): KExpr<KIntSort> = ctx.mkRealToInt(expr)
-    private fun castToReal(expr: KExpr<KIntSort>): KExpr<KRealSort> = ctx.mkIntToReal(expr)
-
-    private fun <D: KSort> castArrayRangeToInt(
-        expr: KExpr<KArraySort<D, KRealSort>>
-    ): KExpr<KArraySort<D, KIntSort>> = with(ctx) {
-        val indexDecl = expr.sort.domain.mkFreshConst("index")
-
-        mkArrayLambda(
-            indexDecl.decl,
-            mkRealToInt(expr.select(indexDecl))
-        )
-    }
-
-    private fun <D: KSort> castArrayRangeToReal(
-        expr: KExpr<KArraySort<D, KIntSort>>
-    ): KExpr<KArraySort<D, KRealSort>> = with(ctx) {
-        val indexDecl = expr.sort.domain.mkFreshConst("index")
-
-        mkArrayLambda(indexDecl.decl, mkIntToReal(expr.select(indexDecl)))
-    }
-
-    @Suppress("ComplexMethod")
-    override fun findConvertedNative(expr: YicesTerm): KExpr<*>? = with(ctx) {
-        val convertedExpr = yicesCtx.findConvertedExpr(expr)
-
-        /**
-         * Yices doesn't distinguish between IntSort and RealSort,
-         * therefore we need to cast terms to suitable sorts if needed
-         */
-        val argType = argTypes.poll() ?: return convertedExpr
-
-        if (convertedExpr != null && convertedExpr.sort != argType) {
-            val exprSort = convertedExpr.sort
-
-            return when {
-                argType is KIntSort && exprSort is KRealSort -> castToInt(convertedExpr.uncheckedCast())
-                argType is KRealSort && exprSort is KIntSort -> castToReal(convertedExpr.uncheckedCast())
-                argType is KArraySort<*, *>
-                        && argType.range is KIntSort
-                        && exprSort is KArraySort<*, *>
-                        && exprSort.range is KRealSort ->
-                    castArrayRangeToInt(convertedExpr.uncheckedCast<_, KExpr<KArraySort<KSort, KRealSort>>>())
-
-                argType is KArraySort<*, *>
-                        && argType.range is KRealSort
-                        && exprSort is KArraySort<*, *>
-                        && exprSort.range is KIntSort ->
-                    castArrayRangeToReal(convertedExpr.uncheckedCast<_, KExpr<KArraySort<KSort, KIntSort>>>())
-
-                else -> error("Invalid state")
-            }
-        }
-
-        return convertedExpr
-    }
-
-    private fun setArithArgTypes(yicesArgs: Array<YicesTerm>) = with(ctx) {
-        val argType = if (yicesArgs.any { Terms.typeOf(it) == yicesCtx.real }) realSort else intSort
-
-        argTypes.addAll(List(yicesArgs.size) { argType })
-    }
-
-    private fun setArrayArgTypes(yicesArgs: Array<YicesTerm>) = with(ctx) {
-        if (yicesArgs.isEmpty())
-            return@with
-
-        val arraySorts = yicesArgs.map {
-            convertSort(Terms.typeOf(it)).toArraySort()
-        }
-
-        val domain = arraySorts.first().domain
-        val range = if (arraySorts.any { it.range == realSort })
-            realSort
-        else
-            arraySorts.first().range
-
-        argTypes.addAll(List(yicesArgs.size) { mkArraySort(domain, range) })
-    }
+    override fun findConvertedNative(expr: YicesTerm): KExpr<*>? =
+        yicesCtx.findConvertedExpr(expr)
 
     override fun saveConvertedNative(native: YicesTerm, converted: KExpr<*>) {
-        yicesCtx.convertExpr(native) { converted }
+        yicesCtx.saveConvertedExpr(native, converted)
     }
 
     open fun convertDecl(decl: YicesTerm): KDecl<*> = yicesCtx.convertDecl(decl) {
-        with(ctx) {
-            val name = Terms.getName(decl) ?: error("Unexpected null name")
-
-            if (!Terms.isFunction(decl))
-                return@with mkConstDecl(name, convertSort(Terms.typeOf(decl)))
-
-            val childrenTypes = Types.children(Terms.typeOf(decl)).map { convertSort(it) }
-
-            mkFuncDecl(name, childrenTypes.last(), childrenTypes.dropLast(1))
-        }
+        generateFreshDecl(decl)
     }
 
+    open fun convertVar(variable: YicesTerm): KDecl<*> = yicesCtx.convertVar(variable) {
+        generateFreshDecl(variable)
+    }
+
+    open fun findOrCreateFunctionDecl(term: YicesTerm): KDecl<*> =
+        yicesCtx.findConvertedDecl(term)
+            ?: yicesCtx.findConvertedVar(term)
+            ?: convertDecl(term)
+
+    open fun generateFreshDecl(term: YicesTerm): KDecl<*> {
+        val name = Terms.getName(term) ?: "yices"
+        val sort = Terms.typeOf(term)
+
+        if (!Terms.isFunction(term)) {
+            return ctx.mkFreshConstDecl(name, convertSort(sort))
+        }
+
+        val childrenTypes = Types.children(sort).map { convertSort(it) }
+        return ctx.mkFreshFuncDecl(name, childrenTypes.last(), childrenTypes.dropLast(1))
+    }
 
     open fun convertSort(sort: YicesSort): KSort = yicesCtx.convertSort(sort) {
         with(ctx) {
@@ -145,18 +76,21 @@ open class KYicesExprConverter(
                 yicesCtx.int -> intSort
                 yicesCtx.real -> realSort
                 yicesCtx.bool -> boolSort
-                else -> {
-                    if (Types.isBitvector(sort))
-                        mkBvSort(Types.bvSize(sort).toUInt())
-                    else if (Types.isUninterpreted(sort))
-                        mkUninterpretedSort(Types.getName(sort) ?: error("Unexpected null name"))
-                    else if (Types.isFunction(sort) && Types.numChildren(sort) == 2) {
-                        val domain = convertSort(Types.child(sort, 0))
-                        val range = convertSort(Types.child(sort, 1))
+                else -> when {
+                    Types.isBitvector(sort) -> mkBvSort(Types.bvSize(sort).toUInt())
+                    Types.isUninterpreted(sort) -> mkUninterpretedSort(
+                        Types.getName(sort) ?: error("Unexpected null name")
+                    )
 
-                        mkArraySort(domain, range)
-                    } else
-                        error("Not supported sort")
+                    Types.isFunction(sort) -> {
+                        val sortChildren = Types.children(sort)
+                        val domain = sortChildren.dropLast(1).map { convertSort(it) }
+                        val range = convertSort(sortChildren.last())
+
+                        mkAnyArraySort(domain, range)
+                    }
+
+                    else -> error("Not supported sort")
                 }
             }
         }
@@ -180,19 +114,27 @@ open class KYicesExprConverter(
             Constructor.ARITH_CONSTANT -> convert {
                 val value = Terms.arithConstValue(expr)
 
-                mkRealNum(value)
+                mkArithNum(value)
             }
 
             Constructor.BV_CONSTANT -> convert {
                 mkBv(Terms.bvConstValue(expr), Terms.bitSize(expr).toUInt())
             }
 
-            Constructor.VARIABLE, Constructor.UNINTERPRETED_TERM -> convert {
+            Constructor.VARIABLE -> convert {
+                val convertedDecl = convertVar(expr)
+                check(convertedDecl is KConstDecl<*>) { "Unexpected variable $convertedDecl" }
+
+                convertedDecl.apply()
+            }
+
+            Constructor.UNINTERPRETED_TERM -> convert {
                 val convertedDecl = convertDecl(expr)
                 check(convertedDecl is KConstDecl<*>) { "Unexpected declaration $convertedDecl" }
 
                 convertedDecl.apply()
             }
+
             else -> error("Not supported term ${Terms.toString(expr)}")
         }
     }
@@ -202,56 +144,103 @@ open class KYicesExprConverter(
         check(constructor == Constructor.BIT_TERM) { "Not supported term ${Terms.toString(expr)}" }
 
         expr.convert(arrayOf(Terms.projArg(expr))) { bv: KExpr<KBvSort> ->
-            val bv1 = mkBvExtractExpr(Terms.projIndex(expr), Terms.projIndex(expr), bv)
-            val condition = mkEq(mkBv(true, 1u), bv1)
-            mkIte(condition, mkTrue(), mkFalse())
+            BvBitExtractRoot(bv, Terms.projIndex(expr))
         }
     }
 
-    private fun convertSum(expr: YicesTerm) = with(ctx) {
-        val (consts, children) = List(Terms.numChildren(expr)) { index ->
-            val component = Terms.sumComponent(expr, index).apply {
-                if (term == yicesCtx.nullTerm)
-                    term = yicesCtx.one
+    private inline fun <K, T: KSort, S : KSort?> YicesTerm.convertComponents(
+        getComponent: (YicesTerm, Int) -> Component<K>,
+        expectedTermSort: S,
+        wrapConstant: KContext.(K, S) -> KExpr<*>,
+        mkComponentTerm: KContext.(KExpr<T>, KExpr<T>) -> KExpr<T>,
+        reduceComponentTerms: KContext.(KExpr<T>, KExpr<T>) -> KExpr<T>
+    ): ExprConversionResult {
+        val simpleConstants = mutableListOf<K>()
+        val termConstants = mutableListOf<K>()
+        val terms = mutableListOf<YicesTerm>()
+
+        for (i in 0 until Terms.numChildren(this)) {
+            val component = getComponent(this, i)
+            if (component.term == NULL_TERM) {
+                simpleConstants.add(component.constValue)
+            } else {
+                termConstants.add(component.constValue)
+                terms.add(component.term)
+            }
+        }
+
+        return convertList(terms.toTypedArray()) { convertedTerms: List<KExpr<KSort>> ->
+            val wrappedSimpleConstants = simpleConstants.map { ctx.wrapConstant(it, expectedTermSort) }
+            val wrappedTermConstants = termConstants.map { ctx.wrapConstant(it, expectedTermSort) }
+
+            val expectedSort = (wrappedSimpleConstants + wrappedTermConstants + convertedTerms)
+                .map { it.sort }
+                .reduce { acc, exprSort -> mergeSorts(acc, exprSort) }
+
+            val expressions = mutableListOf<KExpr<T>>()
+            wrappedSimpleConstants.mapTo(expressions) { it.ensureSort(expectedSort).uncheckedCast() }
+
+            convertedTerms.zip(wrappedTermConstants) { term, const ->
+                val termWithCorrectSort: KExpr<T> = term.ensureSort(expectedSort).uncheckedCast()
+                val constWithCorrectSort: KExpr<T> = const.ensureSort(expectedSort).uncheckedCast()
+                expressions += ctx.mkComponentTerm(constWithCorrectSort, termWithCorrectSort)
             }
 
-            Pair(
-                mkRealNum(component.constValue),
-                component.term
-            )
-        }.unzip()
-
-        argTypes.addAll(List(children.size) { realSort })
-
-        expr.convertList(children.toTypedArray()) { args: List<KExpr<KRealSort>> ->
-            args.zip(consts)
-                .map { mkArithMul(it.first, it.second) }
-                .reduce { acc: KExpr<KRealSort>, t: KExpr<KRealSort> ->
-                    mkArithAdd(acc, t)
-                }
+            expressions.reduce { acc, e -> ctx.reduceComponentTerms(acc, e) }
         }
     }
 
-    private fun convertBvSum(expr: YicesTerm) = with(ctx) {
-        val bvSize = Terms.bitSize(expr).toUInt()
-        val (consts, children) = List(Terms.numChildren(expr)) { index ->
-            val component = Terms.sumbvComponent(expr, index).apply {
-                if (term == yicesCtx.nullTerm)
-                    term = yicesCtx.bvConst(bvSize, 1L)
-            }
+    private fun convertSum(expr: YicesTerm): ExprConversionResult = expr.convertComponents<_, KArithSort, _>(
+        getComponent = { _, idx -> Terms.sumComponent(expr, idx) },
+        expectedTermSort = null,
+        wrapConstant = { value, _ -> mkArithNum(value) },
+        mkComponentTerm = { const, term -> mkArithMul(const, term) },
+        reduceComponentTerms = { acc, term -> mkArithAdd(acc, term) }
+    )
 
-            Pair(
-                mkBv(component.constValue.toBooleanArray(), bvSize),
-                component.term
-            )
-        }.unzip()
+    private fun convertBvSum(expr: YicesTerm): ExprConversionResult = expr.convertComponents<_, KBvSort, _>(
+        getComponent = { _, idx -> Terms.sumbvComponent(expr, idx) },
+        expectedTermSort = ctx.mkBvSort(Terms.bitSize(expr).toUInt()),
+        wrapConstant = { value, sort -> mkBv(value.toBooleanArray(), sort) },
+        mkComponentTerm = { const, term -> mkBvMulExpr(const, term) },
+        reduceComponentTerms = { acc, term -> mkBvAddExpr(acc, term) }
+    )
 
-        expr.convertList(children.toTypedArray()) { args: List<KExpr<KBvSort>> ->
-            args.zip(consts)
-                .map { mkBvMulExpr(it.first, it.second) }
-                .reduce(::mkBvAddExpr)
+    private fun convertProduct(expr: YicesTerm): ExprConversionResult =
+        if (Terms.isBitvector(expr)) {
+            convertBvProduct(expr)
+        } else {
+            convertRealProduct(expr)
         }
+
+    private inner class BvPowerWrapper<T : KBvSort>(val value: Int, override val sort: T) : KExpr<T>(ctx) {
+        override fun print(printer: ExpressionPrinter) {
+            printer.append("(wrap $value)")
+        }
+
+        override fun accept(transformer: KTransformerBase): KExpr<T> = error("Transformers are not used for wrapper")
+        override fun internEquals(other: Any): Boolean = error("Interning is not used for wrapper")
+        override fun internHashCode(): Int = error("Interning is not used for wrapper")
     }
+
+    private fun convertBvProduct(expr: YicesTerm): ExprConversionResult = expr.convertComponents<_, KBvSort, _>(
+        getComponent = { _, idx -> Terms.productComponent(expr, idx) },
+        expectedTermSort = ctx.mkBvSort(Terms.bitSize(expr).toUInt()),
+        wrapConstant = { value, sort -> BvPowerWrapper(value, sort) },
+        mkComponentTerm = { const, term -> mkBvPow(term, (const as BvPowerWrapper<*>).value) },
+        reduceComponentTerms = { acc, term -> mkBvMulExpr(acc, term) }
+    )
+
+    private fun convertRealProduct(expr: YicesTerm): ExprConversionResult = expr.convertComponents<_, KArithSort, _>(
+        getComponent = { _, idx -> Terms.productComponent(expr, idx) },
+        expectedTermSort = ctx.realSort,
+        wrapConstant = { value, _ -> mkIntNum(value) },
+        mkComponentTerm = { const, term -> mkArithPower(term, const) },
+        reduceComponentTerms = { acc, term -> mkArithMul(acc, term) }
+    )
+
+    private fun <S : KBvSort> KContext.mkBv(value: BooleanArray, sort: S): KExpr<S> =
+        mkBv(value, sort.sizeBits).uncheckedCast()
 
     private fun KContext.mkBvPow(base: KExpr<KBvSort>, exp: Int): KExpr<KBvSort> {
         check(exp > 0)
@@ -267,40 +256,6 @@ open class KYicesExprConverter(
             t
         else
             mkBvMulExpr(base, t)
-    }
-
-    private fun convertProduct(expr: YicesTerm) = with(ctx) {
-        val (consts, children) = List(Terms.numChildren(expr)) { index ->
-            val component = Terms.productComponent(expr, index)
-
-            Pair(
-                component.constValue,
-                component.term
-            )
-        }.unzip()
-
-        check(children.isNotEmpty())
-
-        if (Types.isBitvector(Terms.typeOf(children.first()))) {
-            expr.convertList(children.toTypedArray()) { args: List<KExpr<KBvSort>> ->
-                args.zip(consts)
-                    .map { (base: KExpr<KBvSort>, exp: Int) ->
-                        mkBvPow(base, exp)
-                    }.reduce { acc: KExpr<KBvSort>, t: KExpr<KBvSort> ->
-                        ctx.mkBvMulExpr(acc, t)
-                    }
-            }
-        } else {
-            argTypes.addAll(List(children.size) { realSort })
-            expr.convertList(children.toTypedArray()) { args: List<KExpr<KRealSort>> ->
-                args.zip(consts)
-                    .map { (base: KExpr<KRealSort>, exp: Int) ->
-                        mkArithPower(base, mkRealNum(exp))
-                    }.reduce { acc: KExpr<KRealSort>, t: KExpr<KRealSort> ->
-                        mkArithMul(acc, t)
-                    }
-            }
-        }
     }
 
     private fun mkFloor(arg: KExpr<KRealSort>): KExpr<KIntSort> = ctx.mkRealToInt(arg)
@@ -320,129 +275,168 @@ open class KYicesExprConverter(
         mkIte(condition, mkFloor(div), mkCeil(div))
     }
 
+    private fun converterMkIte(
+        condition: KExpr<KBoolSort>,
+        trueBranch: KExpr<KSort>,
+        falseBranch: KExpr<KSort>
+    ): KExpr<KSort> = with(ctx) {
+        if (trueBranch is BvBitExtractExpr || falseBranch is BvBitExtractExpr) {
+            return BvBitExtractIte(condition, trueBranch.uncheckedCast(), falseBranch.uncheckedCast()).uncheckedCast()
+        }
+
+        val expectedSort = mergeSorts(trueBranch.sort, falseBranch.sort)
+        return mkIte(
+            condition.ensureSort(boolSort),
+            trueBranch.ensureSort(expectedSort),
+            falseBranch.ensureSort(expectedSort)
+        )
+    }
+
+    private fun converterMkEq(
+        lhs: KExpr<KSort>,
+        rhs: KExpr<KSort>
+    ): KExpr<KBoolSort> = with(ctx) {
+        if (lhs is BvBitExtractExpr || rhs is BvBitExtractExpr) {
+            return BvBitExtractEq(lhs.uncheckedCast(), rhs.uncheckedCast())
+        }
+
+        val expectedSort = mergeSorts(lhs.sort, rhs.sort)
+        return mkEq(lhs.ensureSort(expectedSort), rhs.ensureSort(expectedSort))
+    }
+
+    private fun converterMkDistinct(args: List<KExpr<KSort>>): KExpr<KBoolSort> = with(ctx) {
+        if (args.any { it is BvBitExtractExpr }) {
+            return BvBitExtractDistinct(args.uncheckedCast())
+        }
+
+        val expectedSort = args.map { it.sort }.reduce(::mergeSorts)
+        return mkDistinct(args.map { it.ensureSort(expectedSort) })
+    }
+
+    private fun converterMkNot(arg: KExpr<KBoolSort>): KExpr<KBoolSort> = with(ctx) {
+        if (arg is BvBitExtractExpr) {
+            return BvBitExtractNot(arg)
+        }
+
+        return mkNot(arg)
+    }
+
+    private fun converterMkOr(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> = with(ctx) {
+        if (args.any { it is BvBitExtractExpr }) {
+            return BvBitExtractOr(args)
+        }
+
+        return mkOr(args)
+    }
+
+    private fun converterMkXor(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> = with(ctx) {
+        if (args.any { it is BvBitExtractExpr }) {
+            return BvBitExtractXor(args)
+        }
+
+        return args.reduce(::mkXor)
+    }
+
+    private fun convertBvArray(args: List<KExpr<KBoolSort>>): KExpr<KBvSort> =
+        processBvArrayChunked(args.asReversed())
+
+    private fun converterMkFunctionApp(decl: KDecl<*>, args: List<KExpr<KSort>>): KExpr<*> = with(ctx) {
+        check(decl.argSorts.size == args.size) { "Arguments size mismatch" }
+        val argsWithCorrectSorts = args.zip(decl.argSorts) { arg, sort -> arg.ensureSort(sort) }
+        decl.apply(argsWithCorrectSorts)
+    }
+
+    private fun YicesTerm.convertFunctionApp(args: Array<YicesTerm>) = convertFunctionExpression(
+        args = args,
+        functionExpression = { decl, convertedArgs -> converterMkFunctionApp(decl, convertedArgs) },
+        arrayExpression = { array, convertedArgs -> ctx.mkAnyArraySelect(array, convertedArgs) }
+    )
+
+    private fun YicesTerm.convertFunctionStore(args: Array<YicesTerm>) = convertFunctionExpression(
+        args = args,
+        functionExpression = { decl, convertedArgs ->
+            val sort = ctx.mkAnyArraySort(decl.argSorts, decl.sort)
+            val array = ctx.mkFunctionAsArray(sort, decl.uncheckedCast())
+            ctx.mkAnyArrayStore(
+                array = array,
+                indices = convertedArgs.dropLast(1),
+                value = convertedArgs.last()
+            )
+        },
+        arrayExpression = { array, convertedArgs ->
+            ctx.mkAnyArrayStore(
+                array = array,
+                indices = convertedArgs.dropLast(1),
+                value = convertedArgs.last()
+            )
+        }
+    )
+
+    private inline fun YicesTerm.convertFunctionExpression(
+        args: Array<YicesTerm>,
+        functionExpression: (KDecl<*>, List<KExpr<KSort>>) -> KExpr<*>,
+        arrayExpression: (KExpr<KArraySortBase<*>>, List<KExpr<KSort>>) -> KExpr<*>
+    ): ExprConversionResult {
+        val functionTerm = args.first()
+        val functionIsDecl = Terms.isAtomic(functionTerm)
+
+        val appArgs = if (functionIsDecl) {
+            // convert function decl separately
+            args.copyOfRange(fromIndex = 1, toIndex = args.size)
+        } else {
+            // convert function expression as part of arguments
+            args
+        }
+
+        return convertList(appArgs) { convertedArgs: List<KExpr<KSort>> ->
+            if (functionIsDecl) {
+                val funcDecl = findOrCreateFunctionDecl(functionTerm)
+                if (convertedArgs.isNotEmpty() && funcDecl is KConstDecl<*> && funcDecl.sort is KArraySortBase<*>) {
+                    val array: KExpr<KArraySortBase<*>> = ctx.mkConstApp(funcDecl).uncheckedCast()
+                    arrayExpression(array, convertedArgs)
+                } else {
+                    functionExpression(funcDecl, convertedArgs)
+                }
+            } else {
+                val array: KExpr<KArraySortBase<*>> = convertedArgs.first().uncheckedCast()
+                val arrayArgs = convertedArgs.drop(1)
+                arrayExpression(array, arrayArgs)
+            }
+        }
+    }
+
     @Suppress("LongMethod", "ComplexMethod")
     private fun convertComposite(expr: YicesTerm) = with(ctx) {
         val yicesArgs = Terms.children(expr).toTypedArray()
-        val numChildren = Terms.numChildren(expr)
-
-        check(yicesArgs.isNotEmpty())
 
         when (Terms.constructor(expr)) {
-            Constructor.ITE_TERM -> {
-                argTypes.add(boolSort)
-                val branches = yicesArgs.drop(1).toTypedArray()
-                if (Terms.isArithmetic(expr)) {
-                    setArithArgTypes(branches)
-                    expr.convert(yicesArgs, ::mkIte)
-                } else if (Terms.isFunction(expr)) {
-                    setArrayArgTypes(branches)
-                    expr.convert(yicesArgs, ::mkIte)
-                } else {
-                    expr.convert(yicesArgs, ::mkIte)
-                }
-            }
-            Constructor.APP_TERM -> {
-                val convertedExprSort = yicesCtx.findConvertedExpr(yicesArgs.first())?.sort
+            Constructor.APP_TERM -> expr.convertFunctionApp(yicesArgs)
+            Constructor.UPDATE_TERM -> expr.convertFunctionStore(yicesArgs)
 
-                if (convertedExprSort is KArraySort<*, *>) {
-                    argTypes.addAll(listOf(convertedExprSort, convertedExprSort.domain))
-                    return expr.convert(yicesArgs) { array: KExpr<KArraySort<KSort, KSort>>, index: KExpr<KSort> ->
-                        mkArraySelect(array, index)
-                    }
-                }
+            Constructor.EQ_TERM -> expr.convert(yicesArgs, ::converterMkEq)
+            Constructor.DISTINCT_TERM -> expr.convertList(yicesArgs, ::converterMkDistinct)
+            Constructor.ITE_TERM -> expr.convert(yicesArgs, ::converterMkIte)
 
-                if (!Terms.isAtomic(yicesArgs.first())) {
-                    // first argument isn't converted
-                    return expr.convertList<KBoolSort, _>(yicesArgs) { _: List<KExpr<KSort>> ->
-                        error("Unexpected op call")
-                    }
-                }
-
-                val funcDecl = convertDecl(yicesArgs.first()) as KFuncDecl<*>
-
-                if (funcDecl is KConstDecl<*>) {
-                    check(yicesArgs.size == 2)
-                    argTypes.add(funcDecl.sort.toArraySort().domain)
-                    expr.convert(yicesArgs.drop(1).toTypedArray()) { index: KExpr<KSort> ->
-                        mkArraySelect(funcDecl.apply().uncheckedCast(), index)
-                    }
-                } else {
-                    argTypes.addAll(funcDecl.argSorts)
-                    expr.convertList(yicesArgs.drop(1).toTypedArray()) { args: List<KExpr<KSort>> ->
-                        mkApp(funcDecl, args)
-                    }
-                }
-            }
-            Constructor.UPDATE_TERM -> {
-                val arrayType = convertSort(Terms.typeOf(yicesArgs.first())).toArraySort()
-                val indexType = arrayType.domain
-                val rangeType = arrayType.range
-                argTypes.addAll(listOf(arrayType, indexType, rangeType))
-
-                expr.convert(
-                    yicesArgs
-                ) { array: KExpr<KArraySort<KSort, KSort>>, index: KExpr<KSort>, value: KExpr<KSort> ->
-                    mkArrayStore(array, index, value)
-                }
-            }
-            Constructor.EQ_TERM -> {
-                if (Terms.isArithmetic(yicesArgs.first())) {
-                    setArithArgTypes(yicesArgs)
-                    expr.convert(yicesArgs, ::mkEq)
-                } else if (Terms.isFunction(yicesArgs.first())) {
-                    setArrayArgTypes(yicesArgs)
-                    expr.convert(yicesArgs, ::mkEq)
-                } else {
-                    expr.convert(yicesArgs, ::mkEq)
-                }
-            }
-            Constructor.DISTINCT_TERM -> {
-                if (Terms.isArithmetic(yicesArgs.first())) {
-                    setArithArgTypes(yicesArgs)
-                    expr.convertList(yicesArgs, ::mkDistinct)
-                } else if (Terms.isFunction(yicesArgs.first())) {
-                    setArrayArgTypes(yicesArgs)
-                    expr.convertList(yicesArgs, ::mkDistinct)
-                } else {
-                    expr.convertList(yicesArgs, ::mkDistinct)
-                }
-            }
             Constructor.FORALL_TERM -> {
                 expr.convert(yicesArgs.takeLast(1).toTypedArray()) { body: KExpr<KBoolSort> ->
-                    val bounds = yicesArgs.dropLast(1).map { convertDecl(it) }
-                    ctx.mkUniversalQuantifier(body, bounds)
+                    val bounds = yicesArgs.dropLast(1).map { convertVar(it) }
+                    ctx.mkUniversalQuantifier(body.ensureSort(boolSort), bounds)
                 }
             }
+
             Constructor.LAMBDA_TERM -> {
-                check(numChildren == 2) { "Unexpected number of bounds" }
-
                 expr.convert(yicesArgs.takeLast(1).toTypedArray()) { body: KExpr<KSort> ->
-                    if (yicesCtx.findConvertedDecl(yicesArgs.first()) == null) {
-                        mkArrayConst(mkArraySort(convertSort(Terms.typeOf(yicesArgs.first())), body.sort), body)
-                    } else {
-                        val index: KDecl<KSort> = convertDecl(yicesArgs.first()).uncheckedCast()
-                        mkArrayLambda(index, body)
-                    }
+                    val bounds = yicesArgs.dropLast(1).map { convertVar(it) }
+                    mkAnyArrayLambda(bounds, body.eliminateBitExtract())
                 }
             }
-            Constructor.NOT_TERM -> expr.convert(yicesArgs, ::mkNot)
-            Constructor.OR_TERM -> expr.convertList(yicesArgs, ::mkOr)
-            Constructor.XOR_TERM -> {
-                expr.convertList(yicesArgs) { args: List<KExpr<KBoolSort>> ->
-                    args.reduce(::mkXor)
-                }
-            }
-            Constructor.BV_ARRAY -> {
-                expr.convertList(yicesArgs) { args: List<KExpr<KBoolSort>> ->
-                    val bvArgs = args.map { element: KExpr<KBoolSort> ->
-                        mkIte(element, mkBv(true), mkBv(false))
-                    }
 
-                    bvArgs.reduce { acc: KExpr<out KBvSort>, t: KExpr<KBv1Sort> ->
-                        mkBvConcatExpr(t, acc)
-                    }
-                }
-            }
+            Constructor.NOT_TERM -> expr.convert(yicesArgs, ::converterMkNot)
+            Constructor.OR_TERM -> expr.convertList(yicesArgs, ::converterMkOr)
+            Constructor.XOR_TERM -> expr.convertList(yicesArgs, ::converterMkXor)
+
+            Constructor.BV_ARRAY -> expr.convertList(yicesArgs, ::convertBvArray)
+
             Constructor.BV_DIV -> expr.convert(yicesArgs, ::mkBvUnsignedDivExpr)
             Constructor.BV_REM -> expr.convert(yicesArgs, ::mkBvUnsignedRemExpr)
             Constructor.BV_SDIV -> expr.convert(yicesArgs, ::mkBvSignedDivExpr)
@@ -453,84 +447,76 @@ open class KYicesExprConverter(
             Constructor.BV_ASHR -> expr.convert(yicesArgs, ::mkBvArithShiftRightExpr)
             Constructor.BV_GE_ATOM -> expr.convert(yicesArgs, ::mkBvUnsignedGreaterOrEqualExpr)
             Constructor.BV_SGE_ATOM -> expr.convert(yicesArgs, ::mkBvSignedGreaterOrEqualExpr)
-            Constructor.ARITH_GE_ATOM -> {
-                setArithArgTypes(yicesArgs)
-                expr.convert(yicesArgs, ::mkArithGe)
-            }
-            Constructor.ABS -> {
-                expr.convert(yicesArgs) { x: KExpr<KArithSort> ->
-                    val isReal = x.sort == realSort
-                    val condition = if (isReal)
-                        mkArithGe(x.uncheckedCast(), mkRealNum(0))
-                    else
-                        mkArithGe(x.uncheckedCast(), mkIntNum(0))
 
-                    mkIte(condition, x, mkArithUnaryMinus(x))
-                }
+            Constructor.ARITH_GE_ATOM -> expr.convert(yicesArgs) { lhs: KExpr<KArithSort>, rhs: KExpr<KArithSort> ->
+                val expectedSort: KArithSort = mergeSorts(lhs.sort, rhs.sort).uncheckedCast()
+                mkArithGe(lhs.ensureSort(expectedSort), rhs.ensureSort(expectedSort))
             }
-            Constructor.CEIL -> {
-                expr.convert(yicesArgs) { x: KExpr<KArithSort> ->
-                    if (x.sort == intSort)
-                        x
-                    else
-                        mkCeil(x.uncheckedCast())
-                }
-            }
-            Constructor.FLOOR -> {
-                expr.convert(yicesArgs) { x: KExpr<KArithSort> ->
-                    if (x.sort == intSort)
-                        x
-                    else
-                        mkFloor(x.uncheckedCast())
-                }
-            }
-            Constructor.RDIV -> {
-                argTypes.addAll(List(numChildren) { realSort })
-                expr.convert(yicesArgs, ::mkArithDiv)
-            }
-            Constructor.IDIV -> {
-                setArithArgTypes(yicesArgs)
-                expr.convert(yicesArgs) { arg0: KExpr<KArithSort>, arg1: KExpr<KArithSort> ->
-                    check(arg0.sort == arg1.sort)
-                    if (arg0.sort is KIntSort)
-                        mkArithDiv(arg0.uncheckedCast(), arg1.uncheckedCast())
-                    else
-                        mkIDiv(arg0.uncheckedCast(), arg1.uncheckedCast())
-                }
-            }
-            Constructor.IMOD -> {
-                setArithArgTypes(yicesArgs)
-                expr.convert(yicesArgs) { arg0: KExpr<KArithSort>, arg1: KExpr<KArithSort> ->
-                    check(arg0.sort == arg1.sort)
-                    if (arg0.sort is KIntSort) {
-                        mkIntMod(arg0.uncheckedCast(), arg1.uncheckedCast())
-                    } else {
-                        val div = mkIntToReal(mkIDiv(arg0.uncheckedCast(), arg1.uncheckedCast()))
-                        val mul = mkArithMul(arg1, div.uncheckedCast())
 
-                        mkArithSub(arg0, mul)
+            Constructor.ABS -> expr.convert(yicesArgs) { x: KExpr<KArithSort> ->
+                val condition = mkArithUnaryExpr(
+                    expr = x,
+                    intExpr = { mkArithGe(it, mkIntNum(0)) },
+                    realExpr = { mkArithGe(it, mkRealNum(0)) }
+                )
+                mkIte(condition, x, mkArithUnaryMinus(x))
+            }
+
+            Constructor.CEIL -> expr.convert(yicesArgs) { x: KExpr<KArithSort> ->
+                mkArithUnaryExpr(
+                    expr = x,
+                    intExpr = { it },
+                    realExpr = { mkCeil(it) }
+                )
+            }
+
+            Constructor.FLOOR -> expr.convert(yicesArgs) { x: KExpr<KArithSort> ->
+                mkArithUnaryExpr(
+                    expr = x,
+                    intExpr = { it },
+                    realExpr = { mkFloor(it) }
+                )
+            }
+
+            Constructor.RDIV -> expr.convert(yicesArgs) { lhs: KExpr<KArithSort>, rhs: KExpr<KArithSort> ->
+                mkArithDiv(lhs.ensureSort(realSort), rhs.ensureSort(realSort))
+            }
+
+            Constructor.IDIV -> expr.convert(yicesArgs) { lhs: KExpr<KArithSort>, rhs: KExpr<KArithSort> ->
+                mkArithBinaryExpr(
+                    lhs = lhs, rhs = rhs,
+                    intExpr = { l, r -> mkArithDiv(l, r) },
+                    realExpr = { l, r -> mkIDiv(l, r) }
+                )
+            }
+
+            Constructor.IMOD -> expr.convert(yicesArgs) { lhs: KExpr<KArithSort>, rhs: KExpr<KArithSort> ->
+                mkArithBinaryExpr(
+                    lhs = lhs, rhs = rhs,
+                    intExpr = { l, r -> mkIntMod(l, r) },
+                    realExpr = { l, r ->
+                        val integerQuotient = mkIDiv(l, r).ensureSort(realSort)
+                        mkArithSub(l, mkArithMul(r, integerQuotient))
                     }
-                }
+                )
             }
-            Constructor.IS_INT_ATOM -> {
-                setArithArgTypes(yicesArgs)
-                expr.convert(yicesArgs) { arg: KExpr<KArithSort> ->
-                    if (arg.sort is KIntSort)
-                        true.expr
-                    else
-                        mkRealIsInt(arg.uncheckedCast())
-                }
+
+            Constructor.IS_INT_ATOM -> expr.convert(yicesArgs) { arg: KExpr<KArithSort> ->
+                mkArithUnaryExpr(
+                    expr = arg,
+                    intExpr = { trueExpr },
+                    realExpr = { mkRealIsInt(it) }
+                )
             }
-            Constructor.DIVIDES_ATOM -> {
-                setArithArgTypes(yicesArgs)
-                expr.convert(yicesArgs) { arg0: KExpr<KArithSort>, arg1: KExpr<KArithSort> ->
-                    check(arg0.sort == arg1.sort)
-                    if (arg0.sort is KIntSort)
-                        mkIntRem(arg1.uncheckedCast(), arg0.uncheckedCast()) eq mkIntNum(0)
-                    else
-                        mkRealIsInt(mkArithDiv(arg1.uncheckedCast(), arg0.uncheckedCast()))
-                }
+
+            Constructor.DIVIDES_ATOM -> expr.convert(yicesArgs) { lhs: KExpr<KArithSort>, rhs: KExpr<KArithSort> ->
+                mkArithBinaryExpr(
+                    lhs = lhs, rhs = rhs,
+                    intExpr = { l, r -> mkIntRem(r, l) eq mkIntNum(0) },
+                    realExpr = { l, r -> mkRealIsInt(mkArithDiv(r, l)) }
+                )
             }
+
             Constructor.ARITH_ROOT_ATOM -> TODO("ARITH_ROOT conversion is not supported")
             Constructor.TUPLE_TERM -> TODO("Tuple conversion is not supported")
             Constructor.CONSTRUCTOR_ERROR -> error("Constructor error")
@@ -538,91 +524,533 @@ open class KYicesExprConverter(
         }
     }
 
-    private fun KSort.toArraySort(): KArraySort<*, *> {
-        check(this is KArraySort<*, *>) { "Unexpected sort $this" }
-
-        return this
+    private inline fun <T : KSort> KContext.mkArithUnaryExpr(
+        expr: KExpr<KArithSort>,
+        intExpr: (KExpr<KIntSort>) -> KExpr<T>,
+        realExpr: (KExpr<KRealSort>) -> KExpr<T>
+    ) = when (expr.sort) {
+        intSort -> intExpr(expr.uncheckedCast())
+        realSort -> realExpr(expr.uncheckedCast())
+        else -> error("Unexpected arith expr ${expr}")
     }
 
-    @Suppress("LoopWithTooManyJumpStatements", "ComplexMethod", "NestedBlockDepth")
-    private inner class KYicesExprPreprocessor {
-        private val processedExpr = HashSet<YicesTerm>()
-        private val exprStack = arrayListOf<YicesTerm>()
-        private val isArrayFlagStack = arrayListOf<Boolean>()
+    private inline fun KContext.mkArithBinaryExpr(
+        lhs: KExpr<KArithSort>, rhs: KExpr<KArithSort>,
+        intExpr: (KExpr<KIntSort>, KExpr<KIntSort>) -> KExpr<*>,
+        realExpr: (KExpr<KRealSort>, KExpr<KRealSort>) -> KExpr<*>
+    ): KExpr<*> = when (val expectedSort = mergeSorts(lhs.sort, rhs.sort)) {
+        intSort -> intExpr(lhs.ensureSort(intSort), rhs.ensureSort(intSort))
+        realSort -> realExpr(lhs.ensureSort(realSort), rhs.ensureSort(realSort))
+        else -> error("Unexpected arith sort ${expectedSort}")
+    }
 
-        /**
-         * Examine expression non-recursively to find array atomics
-         */
-        fun processExpr(yicesExpr: YicesTerm) {
-            exprStack.add(yicesExpr)
-            isArrayFlagStack.add(false)
+    private fun mergeSorts(lhs: KSort, rhs: KSort): KSort {
+        if (lhs == rhs) return lhs
 
-            while (exprStack.isNotEmpty()) {
-                val expr = exprStack.removeLast()
-                val isArray = isArrayFlagStack.removeLast()
-                val constructor: Constructor = Terms.constructor(expr)
-
-                if (processedExpr.contains(expr))
-                    continue
-
-                if (Terms.isAtomic(expr)) {
-                    if (isArray)
-                        processAtomic(expr)
-
-                    continue
-                }
-
-                val numChildren = Terms.numChildren(expr)
-                check(numChildren > 0) { "Unexpected number of children" }
-
-                val children = when {
-                    Terms.isSum(expr) -> (0 until numChildren).mapNotNull { idx ->
-                        Terms.sumComponent(expr, idx).term.takeIf { it != yicesCtx.nullTerm }
-                    }
-                    Terms.isBvSum(expr) -> (0 until numChildren).mapNotNull { idx ->
-                        Terms.sumbvComponent(expr, idx).term.takeIf { it != yicesCtx.nullTerm }
-                    }
-                    Terms.isProduct(expr) -> List(numChildren) { idx -> Terms.productComponent(expr, idx).term }
-                    Terms.isProjection(expr) -> listOf(Terms.projArg(expr))
-                    Terms.isComposite(expr) -> Terms.children(expr).toList()
-                    else -> error("Unexpected term ${Terms.toString(expr)}")
-                }
-
-                children.forEachIndexed { index, child: YicesTerm ->
-                    if (Terms.isFunction(child)) {
-                        if (constructor == Constructor.APP_TERM && index == 0 || constructor == Constructor.LAMBDA_TERM)
-                            isArrayFlagStack.add(false)
-                        else
-                            isArrayFlagStack.add(true)
-                    } else {
-                        isArrayFlagStack.add(isArray)
-                    }
-
-                    exprStack.add(child)
-                }
-
-                processedExpr.add(expr)
+        if (lhs is KArithSort && rhs is KArithSort) {
+            return when {
+                lhs is KRealSort && rhs is KIntSort -> lhs
+                lhs is KIntSort && rhs is KRealSort -> rhs
+                else -> error("Can't merge arith sorts $lhs and $rhs")
             }
         }
 
-        private fun processAtomic(expr: YicesTerm) {
-            val constructor: Constructor = Terms.constructor(expr)
-            val type = Terms.typeOf(expr)
+        if (lhs is KArraySortBase<*> && rhs is KArraySortBase<*>) {
+            check(lhs.domainSorts.size == rhs.domainSorts.size) {
+                "Can't merge arrays $lhs and $rhs"
+            }
 
-            if (!(constructor == Constructor.VARIABLE || constructor == Constructor.UNINTERPRETED_TERM))
-                return
+            val mergedDomain = lhs.domainSorts.zip(rhs.domainSorts) { l, r -> mergeSorts(l, r) }
+            val mergedRange = mergeSorts(lhs.range, rhs.range)
 
-            if (!Terms.isFunction(expr))
-                return
-
-            check(Types.numChildren(type) == 2) { "Unable to convert ${Terms.toString(expr)} into array" }
-
-            val name = Terms.getName(expr) ?: error("Unexpected null name")
-            val domain = convertSort(Types.child(type, 0))
-            val range = convertSort(Types.child(type, 1))
-            val array = ctx.mkArraySort(domain, range).mkConst(name)
-
-            saveConvertedNative(expr, array)
+            return ctx.mkAnyArraySort(mergedDomain, mergedRange)
         }
+
+        error("Unexpected sorts merge: $lhs and $rhs")
+    }
+
+    private fun castToInt(expr: KExpr<KRealSort>): KExpr<KIntSort> = ctx.mkRealToInt(expr)
+    private fun castToReal(expr: KExpr<KIntSort>): KExpr<KRealSort> = ctx.mkIntToReal(expr)
+
+    private fun castArray(
+        expr: KExpr<KArraySortBase<*>>,
+        sort: KArraySortBase<*>
+    ): KExpr<out KArraySortBase<*>> = with(ctx) {
+        val expectedDomain = sort.domainSorts
+        val actualDomain = expr.sort.domainSorts
+
+        val expectedIndices = expectedDomain.map { mkFreshConst("i", it) }
+        val actualIndices = expectedIndices.zip(actualDomain) { idx, actualSort ->
+            idx.ensureSort(actualSort)
+        }
+
+        val actualBody = mkAnyArraySelectUnchecked(expr, actualIndices)
+        val expectedBody = actualBody.ensureSort(sort.range)
+
+        mkAnyArrayLambda(expectedIndices.map { it.decl }, expectedBody)
+    }
+
+    private fun <S : KSort> KExpr<*>.ensureSort(sort: S): KExpr<S> {
+        val exprSort = this.sort
+        return when {
+            sort == ctx.boolSort && this is BvBitExtractExpr -> eliminateBitExtract().uncheckedCast()
+            exprSort == sort -> this.uncheckedCast()
+            exprSort is KIntSort && sort is KRealSort -> castToReal(this.uncheckedCast()).uncheckedCast()
+            exprSort is KRealSort && sort is KIntSort -> castToInt(this.uncheckedCast()).uncheckedCast()
+            exprSort is KArraySortBase<*> && sort is KArraySortBase<*> -> {
+                castArray(this.uncheckedCast(), sort).uncheckedCast()
+            }
+
+            else -> error("Unexpected cast from ${this.sort} to $sort")
+        }
+    }
+
+    private fun <A : KArraySortBase<*>> KContext.mkAnyArrayStore(
+        array: KExpr<A>,
+        indices: List<KExpr<KSort>>,
+        value: KExpr<KSort>
+    ): KExpr<A> {
+        val expectedValueSort = mergeSorts(array.sort.range, value.sort)
+        val valueWithCorrectSort = value.ensureSort(expectedValueSort)
+        return mkAnyArrayOperation(
+            array, expectedValueSort, indices,
+            { a, d0 -> mkArrayStore(a, d0, valueWithCorrectSort) },
+            { a, d0, d1 -> mkArrayStore(a, d0, d1, valueWithCorrectSort) },
+            { a, d0, d1, d2 -> mkArrayStore(a, d0, d1, d2, valueWithCorrectSort) },
+            { a, domain -> mkArrayNStore(a, domain, valueWithCorrectSort) }
+        ).uncheckedCast()
+    }
+
+    private fun <A : KArraySortBase<*>> KContext.mkAnyArraySelect(
+        array: KExpr<A>,
+        indices: List<KExpr<KSort>>
+    ): KExpr<KSort> = mkAnyArrayOperation(
+        array, array.sort.range, indices,
+        { a, d0 -> mkArraySelect(a, d0) },
+        { a, d0, d1 -> mkArraySelect(a, d0, d1) },
+        { a, d0, d1, d2 -> mkArraySelect(a, d0, d1, d2) },
+        { a, domain -> mkArrayNSelect(a, domain) }
+    )
+
+    private fun <A : KArraySortBase<*>> KContext.mkAnyArraySelectUnchecked(
+        array: KExpr<A>,
+        indices: List<KExpr<KSort>>
+    ): KExpr<KSort> = mkAnyArrayOperation(
+        indices,
+        { d0 -> mkArraySelect(array.uncheckedCast(), d0) },
+        { d0, d1 -> mkArraySelect(array.uncheckedCast(), d0, d1) },
+        { d0, d1, d2 -> mkArraySelect(array.uncheckedCast(), d0, d1, d2) },
+        { domain -> mkArrayNSelect(array.uncheckedCast(), domain) }
+    )
+
+    @Suppress("LongParameterList")
+    private inline fun <A : KArraySortBase<*>, R> KContext.mkAnyArrayOperation(
+        array: KExpr<A>,
+        expectedArrayRange: KSort,
+        indices: List<KExpr<KSort>>,
+        array1: (KExpr<KArraySort<KSort, KSort>>, KExpr<KSort>) -> R,
+        array2: (KExpr<KArray2Sort<KSort, KSort, KSort>>, KExpr<KSort>, KExpr<KSort>) -> R,
+        array3: (KExpr<KArray3Sort<KSort, KSort, KSort, KSort>>, KExpr<KSort>, KExpr<KSort>, KExpr<KSort>) -> R,
+        arrayN: (KExpr<KArrayNSort<KSort>>, List<KExpr<KSort>>) -> R
+    ): R {
+        val expectedIndicesSorts = array.sort.domainSorts.zip(indices) { domainSort, index ->
+            mergeSorts(domainSort, index.sort)
+        }
+        val expectedArraySort = mkAnyArraySort(expectedIndicesSorts, expectedArrayRange)
+
+        val arrayWithCorrectSort = array.ensureSort(expectedArraySort)
+        val indicesWithCorrectSorts = indices.zip(expectedIndicesSorts) { index, expectedSort ->
+            index.ensureSort(expectedSort)
+        }
+
+        return mkAnyArrayOperation(
+            indicesWithCorrectSorts,
+            { d0 -> array1(arrayWithCorrectSort.uncheckedCast(), d0) },
+            { d0, d1 -> array2(arrayWithCorrectSort.uncheckedCast(), d0, d1) },
+            { d0, d1, d2 -> array3(arrayWithCorrectSort.uncheckedCast(), d0, d1, d2) },
+            { arrayN(arrayWithCorrectSort.uncheckedCast(), it) }
+        )
+    }
+
+    private fun KContext.mkAnyArrayLambda(domain: List<KDecl<*>>, body: KExpr<*>) =
+        mkAnyArrayOperation(
+            domain,
+            { d0 -> mkArrayLambda(d0, body) },
+            { d0, d1 -> mkArrayLambda(d0, d1, body) },
+            { d0, d1, d2 -> mkArrayLambda(d0, d1, d2, body) },
+            { mkArrayNLambda(it, body) }
+        )
+
+    private fun KContext.mkAnyArraySort(domain: List<KSort>, range: KSort): KArraySortBase<KSort> =
+        mkAnyArrayOperation(
+            domain,
+            { d0 -> mkArraySort(d0, range) },
+            { d0, d1 -> mkArraySort(d0, d1, range) },
+            { d0, d1, d2 -> mkArraySort(d0, d1, d2, range) },
+            { mkArrayNSort(it, range) }
+        )
+
+    private inline fun <T, R> mkAnyArrayOperation(
+        domain: List<T>,
+        array1: (T) -> R,
+        array2: (T, T) -> R,
+        array3: (T, T, T) -> R,
+        arrayN: (List<T>) -> R
+    ): R = when (domain.size) {
+        KArraySort.DOMAIN_SIZE -> array1(domain.single())
+        KArray2Sort.DOMAIN_SIZE -> array2(domain.first(), domain.last())
+        KArray3Sort.DOMAIN_SIZE -> {
+            val (d0, d1, d2) = domain
+            array3(d0, d1, d2)
+        }
+
+        else -> arrayN(domain)
+    }
+
+    /**
+     * Yices use bit-blasting for bv logical expressions resulting in an enormous
+     * amount of expressions.
+     *
+     * Usually the following pattern occurred:
+     * 1. Single bit extraction operation (bv1 -> bool)
+     * 2. Boolean operations with the extracted bits
+     * 3. BvArray operation that concatenates individual bits to a single Bv
+     *
+     * We delay bit extraction operations until we definitely know it usage context:
+     * 1. Bit is used as a boolean expression. We eliminate all lazy bit-level operations
+     * and replace them with normal boolean operations.
+     * 2. Bit us used in a BvArray expression. We can try to merge bits into a single Bv
+     * and apply normal Bv operations (e.g. BvAnd).
+     * */
+    private sealed class BvBitExtractExpr(ctx: KContext) : KExpr<KBoolSort>(ctx) {
+        override val sort: KBoolSort = ctx.boolSort
+
+        abstract fun canBeJoinedWith(other: BvBitExtractExpr): Boolean
+
+        override fun print(printer: ExpressionPrinter) {
+            printer.append("(bit extract)")
+        }
+
+        override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> {
+            transformer as? BvBitExtractTransformer ?: error("Leaked bit extract aux expr")
+            return accept(transformer)
+        }
+
+        abstract fun accept(transformer: BvBitExtractTransformer): KExpr<KBoolSort>
+
+        override fun internEquals(other: Any): Boolean = error("Interning is not used for bv bit extract")
+        override fun internHashCode(): Int = error("Interning is not used for bv bit extract")
+    }
+
+    private interface BvBitExtractTransformer : KTransformerBase {
+        fun transform(expr: BvBitExtractRoot): KExpr<KBoolSort>
+
+        fun transform(expr: BvBitExtractEq): KExpr<KBoolSort>
+        fun transform(expr: BvBitExtractIte): KExpr<KBoolSort>
+        fun transform(expr: BvBitExtractDistinct): KExpr<KBoolSort>
+
+        fun transform(expr: BvBitExtractNot): KExpr<KBoolSort>
+        fun transform(expr: BvBitExtractOr): KExpr<KBoolSort>
+        fun transform(expr: BvBitExtractXor): KExpr<KBoolSort>
+    }
+
+    private inner class BvBitExtractEliminator : KNonRecursiveTransformer(ctx), BvBitExtractTransformer {
+        override fun transform(expr: BvBitExtractRoot): KExpr<KBoolSort> = with(ctx) {
+            val bv1 = mkBvExtractExpr(expr.idx, expr.idx, expr.expr)
+            val condition = mkEq(mkBv(true, 1u), bv1)
+            mkIte(condition, mkTrue(), mkFalse())
+        }
+
+        override fun transform(expr: BvBitExtractEq): KExpr<KBoolSort> =
+            transformExprAfterTransformed(expr, expr.lhs, expr.rhs) { lhs, rhs ->
+                converterMkEq(lhs.uncheckedCast(), rhs.uncheckedCast())
+            }
+
+        override fun transform(expr: BvBitExtractIte): KExpr<KBoolSort> =
+            transformExprAfterTransformed(expr, expr.trueBranch, expr.falseBranch) { tb, fb ->
+                converterMkIte(expr.condition, tb.uncheckedCast(), fb.uncheckedCast()).uncheckedCast()
+            }
+
+        override fun transform(expr: BvBitExtractDistinct): KExpr<KBoolSort> =
+            transformExprAfterTransformed(expr, expr.args) { args ->
+                converterMkDistinct(args.uncheckedCast())
+            }
+
+        override fun transform(expr: BvBitExtractNot): KExpr<KBoolSort> =
+            transformExprAfterTransformed(expr, expr.arg) { arg ->
+                converterMkNot(arg)
+            }
+
+        override fun transform(expr: BvBitExtractOr): KExpr<KBoolSort> =
+            transformExprAfterTransformed(expr, expr.args) { args ->
+                converterMkOr(args.uncheckedCast())
+            }
+
+        override fun transform(expr: BvBitExtractXor): KExpr<KBoolSort> =
+            transformExprAfterTransformed(expr, expr.args) { args ->
+                converterMkXor(args.uncheckedCast())
+            }
+    }
+
+    private fun KExpr<*>.eliminateBitExtract(): KExpr<*> {
+        if (this !is BvBitExtractExpr) return this
+        return BvBitExtractEliminator().apply(this)
+    }
+
+    private inner class BvBitExtractRoot(
+        val expr: KExpr<KBvSort>,
+        val idx: Int
+    ) : BvBitExtractExpr(ctx) {
+        override fun canBeJoinedWith(other: BvBitExtractExpr): Boolean =
+            other is BvBitExtractRoot && other.expr == expr
+
+        override fun accept(transformer: BvBitExtractTransformer): KExpr<KBoolSort> =
+            transformer.transform(this)
+    }
+
+    private inner class BvBitExtractEq(
+        val lhs: KExpr<KBoolSort>,
+        val rhs: KExpr<KBoolSort>
+    ) : BvBitExtractExpr(ctx) {
+        override fun canBeJoinedWith(other: BvBitExtractExpr): Boolean =
+            other is BvBitExtractEq
+
+        override fun accept(transformer: BvBitExtractTransformer): KExpr<KBoolSort> =
+            transformer.transform(this)
+    }
+
+    private inner class BvBitExtractIte(
+        val condition: KExpr<KBoolSort>,
+        val trueBranch: KExpr<KBoolSort>,
+        val falseBranch: KExpr<KBoolSort>
+    ) : BvBitExtractExpr(ctx) {
+        override fun canBeJoinedWith(other: BvBitExtractExpr): Boolean =
+            other is BvBitExtractIte && other.condition == condition
+
+        override fun accept(transformer: BvBitExtractTransformer): KExpr<KBoolSort> =
+            transformer.transform(this)
+    }
+
+    private inner class BvBitExtractDistinct(
+        val args: List<KExpr<KBoolSort>>
+    ) : BvBitExtractExpr(ctx) {
+        override fun canBeJoinedWith(other: BvBitExtractExpr): Boolean =
+            other is BvBitExtractDistinct && args.size == other.args.size
+
+        override fun accept(transformer: BvBitExtractTransformer): KExpr<KBoolSort> =
+            transformer.transform(this)
+    }
+
+    private inner class BvBitExtractNot(
+        val arg: KExpr<KBoolSort>
+    ) : BvBitExtractExpr(ctx) {
+        override fun canBeJoinedWith(other: BvBitExtractExpr): Boolean =
+            other is BvBitExtractNot
+
+        override fun accept(transformer: BvBitExtractTransformer): KExpr<KBoolSort> =
+            transformer.transform(this)
+    }
+
+    private inner class BvBitExtractOr(
+        val args: List<KExpr<KBoolSort>>
+    ) : BvBitExtractExpr(ctx) {
+        override fun canBeJoinedWith(other: BvBitExtractExpr): Boolean =
+            other is BvBitExtractOr && args.size == other.args.size
+
+        override fun accept(transformer: BvBitExtractTransformer): KExpr<KBoolSort> =
+            transformer.transform(this)
+    }
+
+    private inner class BvBitExtractXor(
+        val args: List<KExpr<KBoolSort>>
+    ) : BvBitExtractExpr(ctx) {
+        override fun canBeJoinedWith(other: BvBitExtractExpr): Boolean =
+            other is BvBitExtractXor && args.size == other.args.size
+
+        override fun accept(transformer: BvBitExtractTransformer): KExpr<KBoolSort> =
+            transformer.transform(this)
+    }
+
+    private sealed interface BvArrayChunk {
+        fun isEmpty(): Boolean
+        fun add(expr: KExpr<KBoolSort>): BvArrayChunk
+        fun process(): KExpr<KBvSort>
+    }
+
+    private inner class BitExtractChunk(
+        val chunk: MutableList<BvBitExtractExpr>
+    ) : BvArrayChunk {
+        override fun isEmpty(): Boolean = chunk.isEmpty()
+
+        override fun add(expr: KExpr<KBoolSort>): BvArrayChunk = when {
+            expr !is BvBitExtractExpr -> OtherChunk(mutableListOf(expr))
+            !chunk.last().canBeJoinedWith(expr) -> BitExtractChunk(mutableListOf(expr))
+            else -> this.also { chunk.add(expr.uncheckedCast()) }
+        }
+
+        override fun process(): KExpr<KBvSort> = applyBitExtractOperation(ctx, chunk.first(), chunk)
+    }
+
+    private inner class OtherChunk(val chunk: MutableList<KExpr<KBoolSort>>) : BvArrayChunk {
+        override fun isEmpty(): Boolean = chunk.isEmpty()
+        override fun add(expr: KExpr<KBoolSort>): BvArrayChunk = if (expr is BvBitExtractExpr) {
+            BitExtractChunk(mutableListOf(expr))
+        } else {
+            this.also { chunk += expr }
+        }
+
+        override fun process(): KExpr<KBvSort> = with(ctx) {
+            val bvArgs: List<KExpr<KBvSort>> = chunk.map { element: KExpr<KBoolSort> ->
+                mkIte(element, mkBv(true), mkBv(false))
+            }.uncheckedCast()
+
+            bvArgs.reduceConcat()
+        }
+    }
+
+    private fun List<KExpr<KBvSort>>.reduceConcat(): KExpr<KBvSort> = with(ctx){
+        reduce(::mkBvConcatExpr)
+    }
+
+    private fun findBvArrayChunks(args: List<KExpr<KBoolSort>>): List<BvArrayChunk> {
+        var chunk: BvArrayChunk = OtherChunk(mutableListOf())
+        val chunks = mutableListOf(chunk)
+
+        for (arg in args) {
+            val newChunk = chunk.add(arg)
+            if (newChunk !== chunk) {
+                chunk = newChunk
+                chunks += newChunk
+            }
+        }
+
+        return chunks.filterNot { it.isEmpty() }
+    }
+
+    private fun processBvArrayChunked(args: List<KExpr<KBoolSort>>): KExpr<KBvSort> {
+        val unprocessedChunks = findBvArrayChunks(args)
+        val chunksExpressions = unprocessedChunks.map { it.process() }
+        return chunksExpressions.reduceConcat()
+    }
+
+    private inner class BitExtractApplyOperation(
+        override val ctx: KContext,
+        val chunk: List<BvBitExtractExpr>
+    ) : BvBitExtractTransformer, KTransformer {
+        lateinit var result: KExpr<KBvSort>
+
+        override fun transform(expr: BvBitExtractRoot): KExpr<KBoolSort> {
+            result = processRoot(chunk.uncheckedCast())
+            return expr
+        }
+
+        override fun transform(expr: BvBitExtractEq): KExpr<KBoolSort> {
+            result = processEq(chunk.uncheckedCast())
+            return expr
+        }
+
+        override fun transform(expr: BvBitExtractIte): KExpr<KBoolSort> {
+            result = processIte(chunk.uncheckedCast())
+            return expr
+        }
+
+        override fun transform(expr: BvBitExtractDistinct): KExpr<KBoolSort> {
+            result = processDistinct(chunk.uncheckedCast())
+            return expr
+        }
+
+        override fun transform(expr: BvBitExtractNot): KExpr<KBoolSort> {
+            result = processNot(chunk.uncheckedCast())
+            return expr
+        }
+
+        override fun transform(expr: BvBitExtractOr): KExpr<KBoolSort> {
+            result = processOr(chunk.uncheckedCast())
+            return expr
+        }
+
+        override fun transform(expr: BvBitExtractXor): KExpr<KBoolSort> {
+            result = processXor(chunk.uncheckedCast())
+            return expr
+        }
+
+        private fun processRoot(chunk: List<BvBitExtractRoot>): KExpr<KBvSort> = with(ctx) {
+            val groupedExtracts = groupBySubsequentIndices(chunk)
+            val extracts = groupedExtracts.map { mkBvExtractExpr(it.first().idx, it.last().idx, chunk.first().expr) }
+            extracts.reduceConcat()
+        }
+
+        private fun groupBySubsequentIndices(chunk: List<BvBitExtractRoot>): List<List<BvBitExtractRoot>> {
+            var currentGroup = mutableListOf(chunk.first())
+            val result = mutableListOf(currentGroup)
+
+            for (i in 1 until chunk.size) {
+                val element = chunk[i]
+                if (element.idx == currentGroup.last().idx - 1) {
+                    currentGroup += element
+                    continue
+                }
+                currentGroup = mutableListOf(element)
+                result += currentGroup
+            }
+
+            return result
+        }
+
+        private fun processEq(chunk: List<BvBitExtractEq>): KExpr<KBvSort> = with(ctx) {
+            val lhsExpr = processBvArrayChunked(chunk.map { it.lhs })
+            val rhsExpr = processBvArrayChunked(chunk.map { it.rhs })
+
+            mkBvNotExpr(mkBvXorExpr(lhsExpr, rhsExpr))
+        }
+
+        private fun processDistinct(chunk: List<BvBitExtractDistinct>): KExpr<KBvSort> = with(ctx) {
+            val args = processChunkList(chunk.map { it.args })
+            when (args.size) {
+                1 -> bvMaxValueUnsigned(args.single().sort.sizeBits)
+                2 -> mkBvXorExpr(args.first(), args.last())
+                else -> bvZero(args.single().sort.sizeBits)
+            }.uncheckedCast()
+        }
+
+        private fun processIte(chunk: List<BvBitExtractIte>): KExpr<KBvSort> = with(ctx) {
+            val trueExpr = processBvArrayChunked(chunk.map { it.trueBranch })
+            val falseExpr = processBvArrayChunked(chunk.map { it.falseBranch })
+
+            mkIte(chunk.first().condition, trueExpr, falseExpr)
+        }
+
+        private fun processNot(chunk: List<BvBitExtractNot>): KExpr<KBvSort> = with(ctx) {
+            val arg = processBvArrayChunked(chunk.map { it.arg })
+            mkBvNotExpr(arg)
+        }
+
+        private fun processOr(chunk: List<BvBitExtractOr>): KExpr<KBvSort> = with(ctx) {
+            val args = processChunkList(chunk.map { it.args })
+            args.reduce { acc, expr -> mkBvOrExpr(acc, expr) }
+        }
+
+        private fun processXor(chunk: List<BvBitExtractXor>): KExpr<KBvSort> = with(ctx) {
+            val args = processChunkList(chunk.map { it.args })
+            args.reduce { acc, expr -> mkBvXorExpr(acc, expr) }
+        }
+
+        private fun processChunkList(chunkArgs: List<List<KExpr<KBoolSort>>>): List<KExpr<KBvSort>> {
+            val result = mutableListOf<KExpr<KBvSort>>()
+            for (i in chunkArgs.first().indices) {
+                result += processBvArrayChunked(chunkArgs.map { it[i] })
+            }
+            return result
+        }
+    }
+
+    private fun <T : BvBitExtractExpr> applyBitExtractOperation(
+        ctx: KContext,
+        prototype: T,
+        chunk: List<T>
+    ): KExpr<KBvSort> {
+        val operationApplier = BitExtractApplyOperation(ctx, chunk)
+        prototype.accept(operationApplier)
+        return operationApplier.result
     }
 }

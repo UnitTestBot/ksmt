@@ -3,119 +3,187 @@ package org.ksmt.solver.yices
 import com.sri.yices.Terms
 import com.sri.yices.Types
 import com.sri.yices.Yices
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KInterpretedValue
+import org.ksmt.solver.util.KExprIntInternalizerBase.Companion.NOT_INTERNALIZED
+import org.ksmt.solver.yices.TermUtils.addTerm
+import org.ksmt.solver.yices.TermUtils.andTerm
+import org.ksmt.solver.yices.TermUtils.distinctTerm
+import org.ksmt.solver.yices.TermUtils.funApplicationTerm
+import org.ksmt.solver.yices.TermUtils.mulTerm
+import org.ksmt.solver.yices.TermUtils.orTerm
 import org.ksmt.sort.KSort
 import org.ksmt.utils.NativeLibraryLoader
-import org.ksmt.utils.uncheckedCast
 import java.math.BigInteger
+import java.util.concurrent.atomic.AtomicInteger
 
 open class KYicesContext : AutoCloseable {
     private var isClosed = false
 
-    protected val expressions = HashMap<KExpr<*>, YicesTerm>()
-    private val yicesExpressions = HashMap<YicesTerm, KExpr<*>>()
-    protected val sorts = HashMap<KSort, YicesSort>()
-    private val yicesSorts = HashMap<YicesSort, KSort>()
-    protected val decls = HashMap<KDecl<*>, YicesTerm>()
-    private val yicesDecls = HashMap<YicesTerm, KDecl<*>>()
-    private val transformed = HashMap<KExpr<*>, KExpr<*>>()
+    private val expressions = mkTermCache<KExpr<*>>()
+    private val yicesExpressions = mkTermReverseCache<KExpr<*>>()
 
-    private val yicesTypes = HashSet<YicesSort>()
-    private val yicesTerms = HashSet<YicesTerm>()
+    private val sorts = mkSortCache<KSort>()
+    private val yicesSorts = mkSortReverseCache<KSort>()
+
+    private val decls = mkTermCache<KDecl<*>>()
+    private val yicesDecls = mkTermReverseCache<KDecl<*>>()
+
+    private val vars = mkTermCache<KDecl<*>>()
+    private val yicesVars = mkTermReverseCache<KDecl<*>>()
+
+    private val yicesTypes = mkSortSet()
+    private val yicesTerms = mkTermSet()
 
     val isActive: Boolean
         get() = !isClosed
 
-    fun findInternalizedExpr(expr: KExpr<*>): YicesTerm? = expressions[expr]
-
-    fun findConvertedExpr(expr: YicesTerm): KExpr<*>? = yicesExpressions[expr]
-
-    fun findConvertedDecl(decl: YicesTerm): KDecl<*>? = yicesDecls[decl]
-
-    fun <K : KExpr<*>> substituteDecls(expr: K, transform: (K) -> K): K =
-        transformed.getOrPut(expr) { transform(expr) }.uncheckedCast()
-
-    open fun internalizeExpr(expr: KExpr<*>, internalizer: (KExpr<*>) -> YicesTerm): YicesTerm =
-        expressions.getOrPut(expr) {
-            internalizer(expr).also {
-                if (expr is KInterpretedValue<*> || expr is KConst<*>)
-                    yicesExpressions[it] = expr
+    fun findInternalizedExpr(expr: KExpr<*>): YicesTerm = expressions.getInt(expr)
+    fun saveInternalizedExpr(expr: KExpr<*>, internalized: YicesTerm) {
+        if (expressions.putIfAbsent(expr, internalized) == NOT_INTERNALIZED) {
+            if (expr is KInterpretedValue<*> || expr is KConst<*>) {
+                yicesExpressions.put(internalized, expr)
             }
         }
-
-
-    open fun internalizeSort(sort: KSort, internalizer: (KSort) -> YicesSort): YicesSort =
-        internalize(sorts, yicesSorts, sort, internalizer)
-
-    open fun internalizeDecl(decl: KDecl<*>, internalizer: (KDecl<*>) -> YicesTerm): YicesTerm =
-        internalize(decls, yicesDecls, decl, internalizer)
-
-    fun convertExpr(expr: YicesTerm, converter: (YicesTerm) -> KExpr<*>): KExpr<*> =
-        convert(expressions, yicesExpressions, expr, converter)
-
-    fun convertSort(sort: YicesSort, converter: (YicesSort) -> KSort): KSort =
-        convert(sorts, yicesSorts, sort, converter)
-
-    fun convertDecl(decl: YicesTerm, converter: (YicesTerm) -> KDecl<*>): KDecl<*> =
-        convert(decls, yicesDecls, decl, converter)
-
-    private inline fun <K, V> internalize(
-        cache: MutableMap<K, V>,
-        reverseCache: MutableMap<V, K>,
-        key: K,
-        internalizer: (K) -> V
-    ): V = cache.getOrPut(key) {
-        internalizer(key).also { reverseCache[it] = key }
     }
 
-    private inline fun <K, V> convert(
-        cache: MutableMap<K, V>,
-        reverseCache: MutableMap<V, K>,
-        key: V,
-        converter: (V) -> K
-    ): K {
-        val current = reverseCache[key]
+    fun findInternalizedSort(sort: KSort): YicesSort = sorts.getInt(sort)
+    fun saveInternalizedSort(sort: KSort, internalized: YicesSort) {
+        saveWithReverseCache(sorts, yicesSorts, sort, internalized)
+    }
 
-        if (current != null) return current
+    fun findInternalizedDecl(decl: KDecl<*>): YicesTerm = decls.getInt(decl)
+    fun saveInternalizedDecl(decl: KDecl<*>, internalized: YicesTerm) {
+        saveWithReverseCache(decls, yicesDecls, decl, internalized)
+    }
 
-        val converted = converter(key)
-        cache.getOrPut(converted) { key }
-        reverseCache[key] = converted
+    fun findInternalizedVar(decl: KDecl<*>): YicesTerm = vars.getInt(decl)
+    fun saveInternalizedVar(decl: KDecl<*>, internalized: YicesTerm) {
+        saveWithReverseCache(vars, yicesVars, decl, internalized)
+    }
 
-        return converted
+    fun findConvertedExpr(expr: YicesTerm): KExpr<*>? = yicesExpressions[expr]
+    fun saveConvertedExpr(expr: YicesTerm, converted: KExpr<*>) {
+        saveWithReverseCache(yicesExpressions, expressions, expr, converted)
+    }
+
+    fun findConvertedSort(sort: YicesSort): KSort? = yicesSorts[sort]
+    fun saveConvertedSort(sort: YicesSort, converted: KSort) {
+        saveWithReverseCache(yicesSorts, sorts, sort, converted)
+    }
+
+    fun findConvertedDecl(decl: YicesTerm): KDecl<*>? = yicesDecls[decl]
+    fun saveConvertedDecl(decl: YicesTerm, converted: KDecl<*>) {
+        saveWithReverseCache(yicesDecls, decls, decl, converted)
+    }
+
+    fun findConvertedVar(variable: YicesTerm): KDecl<*>? = yicesVars[variable]
+    fun saveConvertedVar(variable: YicesTerm, converted: KDecl<*>) {
+        saveWithReverseCache(yicesVars, vars, variable, converted)
+    }
+
+    inline fun internalizeSort(sort: KSort, internalizer: (KSort) -> YicesSort): YicesSort =
+        findOrSave(::findInternalizedSort, ::saveInternalizedSort, sort) { internalizer(sort) }
+
+    inline fun internalizeDecl(decl: KDecl<*>, internalizer: (KDecl<*>) -> YicesTerm): YicesTerm =
+        findOrSave(::findInternalizedDecl, ::saveInternalizedDecl, decl) { internalizer(decl) }
+
+    inline fun internalizeVar(decl: KDecl<*>, internalizer: (KDecl<*>) -> YicesTerm): YicesTerm =
+        findOrSave(::findInternalizedVar, ::saveInternalizedVar, decl) { internalizer(decl) }
+
+    inline fun convertSort(sort: YicesSort, converter: (YicesSort) -> KSort): KSort =
+        findOrSave(::findConvertedSort, ::saveConvertedSort, sort) { converter(sort) }
+
+    inline fun convertDecl(decl: YicesTerm, converter: (YicesTerm) -> KDecl<*>): KDecl<*> =
+        findOrSave(::findConvertedDecl, ::saveConvertedDecl, decl) { converter(decl) }
+
+    inline fun convertVar(variable: YicesTerm, converter: (YicesTerm) -> KDecl<*>): KDecl<*> =
+        findOrSave(::findConvertedVar, ::saveConvertedVar, variable) { converter(variable) }
+
+    private fun <V> saveWithReverseCache(
+        cache: Int2ObjectOpenHashMap<V>,
+        reverseCache: Object2IntOpenHashMap<V>,
+        key: Int,
+        value: V
+    ) {
+        if (cache.putIfAbsent(key, value) == null) {
+            reverseCache.putIfAbsent(value, key)
+        }
+    }
+
+    private fun <K> saveWithReverseCache(
+        cache: Object2IntOpenHashMap<K>,
+        reverseCache: Int2ObjectOpenHashMap<K>,
+        key: K,
+        value: Int
+    ) {
+        if (cache.putIfAbsent(key, value) == NOT_INTERNALIZED) {
+            reverseCache.putIfAbsent(value, key)
+        }
+    }
+
+    inline fun <V> findOrSave(
+        find: (Int) -> V?,
+        save: (Int, V) -> Unit,
+        key: Int,
+        computeValue: () -> V
+    ): V {
+        val currentValue = find(key)
+        if (currentValue != null) return currentValue
+
+        val value = computeValue()
+        save(key, value)
+        return value
+    }
+
+    inline fun <K> findOrSave(
+        find: (K) -> Int,
+        save: (K, Int) -> Unit,
+        key: K,
+        computeValue: () -> Int
+    ): Int {
+        val currentValue = find(key)
+        if (currentValue != NOT_INTERNALIZED) return currentValue
+
+        val value = computeValue()
+        save(key, value)
+        return value
     }
 
     val bool = Types.BOOL
     val int = Types.INT
     val real = Types.REAL
 
-    private inline fun mkType(mk: () -> YicesSort): YicesSort {
+    private inline fun mkType(mk: () -> YicesSort): YicesSort = withGcGuard {
         val type = mk()
 
-        if (yicesTypes.add(type))
+        if (yicesTypes.add(type)) {
             Yices.yicesIncrefType(type)
+        }
 
         return type
     }
 
     fun bvType(sizeBits: UInt) = mkType { Types.bvType(sizeBits.toInt()) }
     fun functionType(domain: YicesSort, range: YicesSort) = mkType { Types.functionType(domain, range) }
-    fun functionType(args: List<YicesSort>) = mkType { Types.functionType(args) }
+    fun functionType(domain: YicesSortArray, range: YicesSort) = mkType { Types.functionType(domain, range) }
     fun newUninterpretedType(name: String) = mkType { Types.newUninterpretedType(name) }
 
-    val nullTerm = Terms.NULL_TERM
     val zero = mkTerm { Terms.intConst(0L) }
     val one = mkTerm { Terms.intConst(1L) }
     val minusOne = mkTerm { Terms.intConst(-1L) }
 
-    private inline fun mkTerm(mk: () -> YicesTerm): YicesTerm {
+    private inline fun mkTerm(mk: () -> YicesTerm): YicesTerm = withGcGuard {
         val term = mk()
 
-        if (yicesTerms.add(term))
+        if (yicesTerms.add(term)) {
             Yices.yicesIncrefTerm(term)
+        }
 
         return term
     }
@@ -126,17 +194,16 @@ open class KYicesContext : AutoCloseable {
 
     fun newVariable(type: YicesSort) = mkTerm { Terms.newVariable(type) }
     fun newVariable(name: String, type: YicesSort) = mkTerm { Terms.newVariable(name, type) }
-    fun funApplication(func: YicesTerm, index: YicesTerm) = mkTerm { Terms.funApplication(func, index) }
-    fun funApplication(func: YicesTerm, args: List<YicesTerm>) = mkTerm { Terms.funApplication(func, args) }
-    fun and(args: List<YicesTerm>) = mkTerm { Terms.and(args) }
-    fun or(args: List<YicesTerm>) = mkTerm { Terms.or(args) }
+
+    fun and(args: YicesTermArray) = mkTerm { andTerm(args) }
+    fun or(args: YicesTermArray) = mkTerm { orTerm(args) }
     fun not(term: YicesTerm) = mkTerm { Terms.not(term) }
     fun implies(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.implies(arg0, arg1) }
     fun xor(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.xor(arg0, arg1) }
     fun mkTrue() = mkTerm(Terms::mkTrue)
     fun mkFalse() = mkTerm(Terms::mkFalse)
     fun eq(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.eq(arg0, arg1) }
-    fun distinct(args: List<YicesTerm>) = mkTerm { Terms.distinct(args) }
+    fun distinct(args: YicesTermArray) = mkTerm { distinctTerm(args) }
     fun ifThenElse(condition: YicesTerm, trueBranch: YicesTerm, falseBranch: YicesTerm) = mkTerm {
         Terms.ifThenElse(condition, trueBranch, falseBranch)
     }
@@ -192,15 +259,19 @@ open class KYicesContext : AutoCloseable {
         Terms.bvRotateRight(arg, rotationNumber)
     }
 
-    fun functionUpdate1(func: YicesTerm, arg: YicesTerm, value: YicesTerm) = mkTerm {
-        Terms.functionUpdate1(func, arg, value)
+    fun funApplication(func: YicesTerm, index: YicesTerm) = mkTerm { Terms.funApplication(func, index) }
+    fun funApplication(func: YicesTerm, args: YicesTermArray) = mkTerm { funApplicationTerm(func, args) }
+
+    fun functionUpdate(func: YicesTerm, args: YicesTermArray, value: YicesTerm) = mkTerm {
+        Terms.functionUpdate(func, args, value)
     }
 
-    fun lambda(bounds: List<YicesTerm>, body: YicesTerm) = mkTerm { Terms.lambda(bounds, body) }
+    fun lambda(bounds: YicesTermArray, body: YicesTerm) = mkTerm { Terms.lambda(bounds, body) }
+
     fun add(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.add(arg0, arg1) }
-    fun add(args: List<YicesTerm>) = mkTerm { Terms.add(args) }
+    fun add(args: YicesTermArray) = mkTerm { addTerm(args) }
     fun mul(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.mul(arg0, arg1) }
-    fun mul(args: List<YicesTerm>) = mkTerm { Terms.mul(args) }
+    fun mul(args: YicesTermArray) = mkTerm { mulTerm(args) }
     fun sub(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.sub(arg0, arg1) }
     fun neg(arg: YicesTerm) = mkTerm { Terms.neg(arg) }
     fun div(arg0: YicesTerm, arg1: YicesTerm) = mkTerm { Terms.div(arg0, arg1) }
@@ -216,18 +287,21 @@ open class KYicesContext : AutoCloseable {
     fun intConst(value: BigInteger) = mkTerm { Terms.intConst(value) }
     fun floor(arg: YicesTerm) = mkTerm { Terms.floor(arg) }
     fun isInt(arg: YicesTerm) = mkTerm { Terms.isInt(arg) }
-    fun exists(bounds: List<YicesTerm>, body: YicesTerm) = mkTerm { Terms.exists(bounds, body) }
-    fun forall(bounds: List<YicesTerm>, body: YicesTerm) = mkTerm { Terms.forall(bounds, body) }
+
+    fun exists(bounds: YicesTermArray, body: YicesTerm) = mkTerm { Terms.exists(bounds, body) }
+    fun forall(bounds: YicesTermArray, body: YicesTerm) = mkTerm { Terms.forall(bounds, body) }
+
+    fun substitute(term: YicesTerm, substituteFrom: YicesTermArray, substituteTo: YicesTermArray): YicesTerm =
+        mkTerm { Terms.subst(term, substituteFrom, substituteTo) }
 
     override fun close() {
-        if (isClosed)
-            return
+        if (isClosed) return
+        isClosed = true
 
         yicesTerms.forEach { Yices.yicesDecrefTerm(it) }
         yicesTypes.forEach { Yices.yicesDecrefType(it) }
-        Yices.yicesGarbageCollect()
 
-        isClosed = true
+        performGc()
     }
 
     companion object {
@@ -235,8 +309,8 @@ open class KYicesContext : AutoCloseable {
             if (!Yices.isReady()) {
                 NativeLibraryLoader.load { os ->
                     when (os) {
-                        NativeLibraryLoader.OS.LINUX -> listOf("libgmp-10", "libyices", "libyices2java")
-                        NativeLibraryLoader.OS.WINDOWS -> listOf("libgmp-10", "libyices", "libyices2java")
+                        NativeLibraryLoader.OS.LINUX -> listOf("libyices", "libyices2java")
+                        NativeLibraryLoader.OS.WINDOWS -> listOf("libyices", "libyices2java")
                         NativeLibraryLoader.OS.MACOS -> TODO("Mac os platform is not supported")
                     }
                 }
@@ -244,5 +318,78 @@ open class KYicesContext : AutoCloseable {
                 Yices.setReadyFlag(true)
             }
         }
+
+        internal fun <K> mkTermCache() = Object2IntOpenHashMap<K>().apply {
+            defaultReturnValue(NOT_INTERNALIZED)
+        }
+
+        internal fun <V> mkTermReverseCache() = Int2ObjectOpenHashMap<V>()
+
+        internal fun <K> mkSortCache() = Object2IntOpenHashMap<K>().apply {
+            defaultReturnValue(NOT_INTERNALIZED)
+        }
+
+        internal fun <V> mkSortReverseCache() = Int2ObjectOpenHashMap<V>()
+
+        internal fun mkTermSet() = IntOpenHashSet()
+
+        internal fun mkSortSet() = IntOpenHashSet()
+
+        private const val FREE = 0
+        private const val ON_GC = -1000000
+
+        @JvmStatic
+        private val gcGuard = AtomicInteger(FREE)
+
+        /**
+         * Since Yices manages terms globally we must ensure that
+         * there are no Yices GC operations between
+         * the initiation of the term creation process
+         * and the execution of `incRef` on the newly created term.
+         * Otherwise, there is a scenario when the term is deleted before the `incRef`
+         * and therefore remains invalid.
+         *
+         * According to the [gcGuard] possible values we have the following situations:
+         * 1. [gcGuard] == [FREE] -- no currently performing operations
+         * 2. [gcGuard] > [FREE] -- some term creation operations are performed
+         * 3. [gcGuard] < [FREE] -- GC is performed
+         *
+         * All term operations are performed according to the following rules:
+         * 1. We can create term only if [gcGuard] >= [FREE]
+         * (no operations or other term creation operation. No GC operations).
+         * 2. If we are on GC and we want to create a term we spin wait until
+         * [gcGuard] >= [FREE].
+         * 3. If we want to perform GC we spin wait until [gcGuard] == [FREE] (no operations).
+         *
+         * See also [performGc]
+         * */
+        private inline fun <T> withGcGuard(body: () -> T): T {
+            // spin wait until [gcGuard] >= [FREE]
+            while (true) {
+                val status = gcGuard.getAndIncrement()
+                if (status >= FREE) break
+                gcGuard.getAndDecrement()
+            }
+
+            return try {
+                body()
+            } finally {
+                gcGuard.getAndDecrement()
+            }
+        }
+
+        private fun performGc() {
+            // spin wait until [gcGuard] == [FREE]
+            while (true) {
+                if (gcGuard.compareAndSet(FREE, ON_GC)) {
+                    break
+                }
+            }
+
+            Yices.yicesGarbageCollect()
+
+            gcGuard.getAndAdd(-ON_GC)
+        }
+
     }
 }
