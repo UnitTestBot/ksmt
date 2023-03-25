@@ -3,9 +3,12 @@ package org.ksmt.utils
 import java.io.InputStream
 import java.net.URL
 import java.nio.file.Path
+import kotlin.io.path.Path
+import kotlin.io.path.createDirectories
 import kotlin.io.path.createFile
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.deleteIfExists
+import kotlin.io.path.div
 import kotlin.io.path.exists
 import kotlin.io.path.forEachDirectoryEntry
 import kotlin.io.path.notExists
@@ -76,11 +79,16 @@ object NativeLibraryLoader {
     private const val STALED_DIRECTORY_SUFFIX = ".ksmt-staled"
 
     private class TmpDirLibraryUnpacker {
-        private val libUnpackDirectory = createTempDirectory("ksmt")
+        private val tmpDirectoryRoot = Path(System.getProperty("java.io.tmpdir", "."))
+        private val unpackedLibrariesRoot = (tmpDirectoryRoot / "ksmt-unpacked-libraries").apply {
+            createDirectories()
+        }
+
+        private val libUnpackDirectory = createTempDirectory(unpackedLibrariesRoot, "ksmt")
         private val unpackedFiles = mutableListOf<Path>()
 
         fun unpackLibrary(name: String, libraryData: InputStream): Path {
-            val libFile = libUnpackDirectory.resolve(name).also { unpackedFiles.add(it) }
+            val libFile = (libUnpackDirectory / name).also { unpackedFiles.add(it) }
             libFile.outputStream().use { libraryData.copyTo(it) }
             return libFile
         }
@@ -98,27 +106,31 @@ object NativeLibraryLoader {
         fun cleanup() {
             val notDeletedFiles = unpackedFiles.filterNot { it.safeDeleteFile() }
 
+            var staledDirMarker: Path? = null
             if (notDeletedFiles.isNotEmpty() || !libUnpackDirectory.safeDeleteFile()) {
-                markUnpackDirectoryAsStaled()
+                staledDirMarker = markUnpackDirectoryAsStaled()
             }
 
-            cleanupStaledDirectories()
+            cleanupStaledDirectories(staledDirMarker)
         }
 
-        private fun markUnpackDirectoryAsStaled() {
+        private fun markUnpackDirectoryAsStaled(): Path {
             val markerName = "${libUnpackDirectory.fileName}$STALED_DIRECTORY_SUFFIX"
             val markerFile = libUnpackDirectory.resolveSibling(markerName)
             if (!markerFile.exists()) {
                 markerFile.createFile()
             }
+            return markerFile
         }
 
-        private fun cleanupStaledDirectories() {
-            libUnpackDirectory.parent.forEachDirectoryEntry("*$STALED_DIRECTORY_SUFFIX") { marker ->
-                val staledDirectoryName = marker.fileName.toString().removeSuffix(STALED_DIRECTORY_SUFFIX)
-                val staledDirectory = marker.resolveSibling(staledDirectoryName)
-                if (staledDirectory.notExists() || tryDeleteStaledDirectory(staledDirectory)) {
-                    withNoSecurityException { marker.deleteIfExists() }
+        private fun cleanupStaledDirectories(skipMarker: Path?) {
+            unpackedLibrariesRoot.forEachDirectoryEntry("*$STALED_DIRECTORY_SUFFIX") { marker ->
+                if (marker != skipMarker) {
+                    val staledDirectoryName = marker.fileName.toString().removeSuffix(STALED_DIRECTORY_SUFFIX)
+                    val staledDirectory = marker.resolveSibling(staledDirectoryName)
+                    if (staledDirectory.notExists() || tryDeleteStaledDirectory(staledDirectory)) {
+                        withNoSecurityException { marker.deleteIfExists() }
+                    }
                 }
             }
         }
