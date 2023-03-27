@@ -16,6 +16,10 @@ import org.ksmt.utils.BvUtils.bvZero
 import org.ksmt.utils.cast
 
 
+internal fun <Fp : KFpSort> KContext.sub(left: UnpackedFp<Fp>,
+                                         right: UnpackedFp<Fp>,
+                                         roundingMode: KExpr<KFpRoundingModeSort>) = add(left, right, roundingMode, falseExpr)
+
 internal fun <Fp : KFpSort> KContext.add(
     left: UnpackedFp<Fp>,
     right: UnpackedFp<Fp>,
