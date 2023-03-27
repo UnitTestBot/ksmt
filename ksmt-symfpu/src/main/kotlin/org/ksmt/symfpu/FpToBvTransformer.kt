@@ -50,6 +50,14 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         }
     }
 
+    override fun <Fp : KFpSort> transform(expr: KFpDivExpr<Fp>): KExpr<Fp> = with(ctx) {
+        val args1: List<KExpr<Fp>> = expr.args.cast()
+        transformExprAfterTransformed(expr, args1) { args ->
+            val (left, right) = argsToTypedPair(args.drop(1))
+            divide(left, right, expr.roundingMode)
+        }
+    }
+
     override fun <Fp : KFpSort> transform(expr: KFpLessOrEqualExpr<Fp>): KExpr<KBoolSort> = with(ctx) {
         transformHelper(expr, ::lessOrEqual)
     }

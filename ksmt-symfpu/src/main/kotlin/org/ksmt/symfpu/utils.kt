@@ -192,6 +192,11 @@ fun KContext.conditionalIncrement(cond: KExpr<KBoolSort>, bv: KExpr<KBvSort>): K
     return mkBvAddExpr(bv, inc)
 }
 
+fun KContext.conditionalDecrement(cond: KExpr<KBoolSort>, bv: KExpr<KBvSort>): KExpr<KBvSort> {
+    val inc = mkIte(cond, mkBv(1, bv.sort.sizeBits), mkBv(0, bv.sort.sizeBits))
+    return mkBvSubExpr(bv, inc)
+}
+
 fun <Fp : KFpSort> KContext.makeMin(sort: Fp, sign: KExpr<KBoolSort>) = UnpackedFp(
     this, sort, sign, minSubnormalExponent(sort), leadingOne(sort.significandBits.toInt())
 )
@@ -200,9 +205,17 @@ fun <Fp : KFpSort> KContext.makeMax(sort: Fp, sign: KExpr<KBoolSort>) = Unpacked
     this, sort, sign, maxNormalExponent(sort), ones(sort.significandBits)
 )
 
-fun KContext.expandingSubtract(op1: KExpr<KBvSort>, op2: KExpr<KBvSort>): KExpr<KBvSort> {
+fun KContext.expandingSubtractUnsigned(op1: KExpr<KBvSort>, op2: KExpr<KBvSort>): KExpr<KBvSort> {
     check(op1.sort.sizeBits == op2.sort.sizeBits)
     val x = mkBvZeroExtensionExpr(1, op1)
     val y = mkBvZeroExtensionExpr(1, op2)
+    return mkBvSubExpr(x, y)
+}
+
+
+fun KContext.expandingSubtractSigned(op1: KExpr<KBvSort>, op2: KExpr<KBvSort>): KExpr<KBvSort> {
+    check(op1.sort.sizeBits == op2.sort.sizeBits)
+    val x = mkBvSignExtensionExpr(1, op1)
+    val y = mkBvSignExtensionExpr(1, op2)
     return mkBvSubExpr(x, y)
 }

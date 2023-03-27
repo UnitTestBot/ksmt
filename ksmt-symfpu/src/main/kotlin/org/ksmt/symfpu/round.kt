@@ -165,7 +165,7 @@ fun <Fp : KFpSort> KContext.round(
 
 
     // For subnormals, locating the guard and stick bits is a bit more involved
-    val subnormalAmount = expandingSubtract(
+    val subnormalAmount = expandingSubtractUnsigned(
         minNormalExponent(format).matchWidthSigned(this, exp), exp
     )
     val extractedSignificandWidth = extractedSignificand.sort.sizeBits.toInt()
