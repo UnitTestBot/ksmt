@@ -311,7 +311,7 @@ open class KYicesContext : AutoCloseable {
                     when (os) {
                         NativeLibraryLoader.OS.LINUX -> listOf("libyices", "libyices2java")
                         NativeLibraryLoader.OS.WINDOWS -> listOf("libyices", "libyices2java")
-                        NativeLibraryLoader.OS.MACOS -> listOf("libyices", "libyices2java")
+                        NativeLibraryLoader.OS.MACOS -> listOf("libyices2java")
                     }
                 }
                 Yices.init()
