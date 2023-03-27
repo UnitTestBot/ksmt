@@ -41,6 +41,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
             add(left, right, expr.roundingMode)
         }
     }
+
     override fun <Fp : KFpSort> transform(expr: KFpLessOrEqualExpr<Fp>): KExpr<KBoolSort> = with(ctx) {
         transformHelper(expr, ::lessOrEqual)
     }
@@ -59,6 +60,12 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
 
     override fun <Fp : KFpSort> transform(expr: KFpMaxExpr<Fp>): KExpr<Fp> = with(ctx) {
         transformHelper(expr, ::max)
+    }
+
+    override fun <Fp : KFpSort> transform(expr: KFpNegationExpr<Fp>): KExpr<Fp> = with(ctx) {
+        transformExprAfterTransformed(expr, expr.value) { value ->
+            (value as UnpackedFp<Fp>).negate()
+        }
     }
 
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = with(ctx) {
