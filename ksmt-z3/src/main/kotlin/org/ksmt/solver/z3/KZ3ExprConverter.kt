@@ -19,6 +19,7 @@ import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.KFpRoundingModeExpr
 import org.ksmt.expr.KIntNumExpr
 import org.ksmt.expr.KRealNumExpr
+import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector
 import org.ksmt.solver.util.ExprConversionResult
 import org.ksmt.solver.util.KExprConverterUtils.argumentsConversionRequired
 import org.ksmt.solver.util.KExprLongConverterBase
@@ -35,6 +36,7 @@ import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.asExpr
 import org.ksmt.utils.uncheckedCast
 
 open class KZ3ExprConverter(
@@ -600,21 +602,16 @@ open class KZ3ExprConverter(
 
         z3Ctx.releaseTemporaryAst(preparedBody)
 
-        @Suppress("UNCHECKED_CAST")
-        body as? KExpr<KBoolSort> ?: error("Body is not properly converted")
-
         val convertedExpr = when {
-            Native.isQuantifierForall(nCtx, expr) -> mkUniversalQuantifier(body, bounds)
-            Native.isQuantifierExists(nCtx, expr) -> mkExistentialQuantifier(body, bounds)
+            Native.isQuantifierForall(nCtx, expr) -> mkUniversalQuantifier(body.asExpr(boolSort), bounds)
+            Native.isQuantifierExists(nCtx, expr) -> mkExistentialQuantifier(body.asExpr(boolSort), bounds)
             Native.isLambda(nCtx, expr) -> {
-                when (bounds.size) {
-                    KArraySort.DOMAIN_SIZE -> mkArrayLambda(bounds.single(), body)
-                    KArray2Sort.DOMAIN_SIZE -> mkArrayLambda(bounds.first(), bounds.last(), body)
-                    KArray3Sort.DOMAIN_SIZE -> {
-                        val (b0, b1, b2) = bounds
-                        mkArrayLambda(b0, b1, b2, body)
-                    }
-                    else -> mkArrayNLambda(bounds, body)
+                val usedDeclarations = KExprUninterpretedDeclCollector.collectUninterpretedDeclarations(body)
+                if (bounds.all { it !in usedDeclarations }) {
+                    val sort = mkArrayAnySort(bounds.map { it.sort }, body.sort)
+                    mkArrayConst(sort, body.uncheckedCast())
+                } else {
+                    mkArrayAnyLambda(bounds, body)
                 }
             }
             else -> TODO("unexpected quantifier: ${Native.astToString(nCtx, expr)}")
@@ -622,6 +619,30 @@ open class KZ3ExprConverter(
 
         ExprConversionResult(convertedExpr)
     }
+
+    private fun KContext.mkArrayAnyLambda(bounds: List<KDecl<*>>, body: KExpr<*>) =
+        when (bounds.size) {
+            KArraySort.DOMAIN_SIZE -> mkArrayLambda(bounds.single(), body)
+            KArray2Sort.DOMAIN_SIZE -> mkArrayLambda(bounds.first(), bounds.last(), body)
+            KArray3Sort.DOMAIN_SIZE -> {
+                val (b0, b1, b2) = bounds
+                mkArrayLambda(b0, b1, b2, body)
+            }
+
+            else -> mkArrayNLambda(bounds, body)
+        }
+
+    private fun KContext.mkArrayAnySort(domain: List<KSort>, range: KSort) =
+        when (domain.size) {
+            KArraySort.DOMAIN_SIZE -> mkArraySort(domain.single(), range)
+            KArray2Sort.DOMAIN_SIZE -> mkArraySort(domain.first(), domain.last(), range)
+            KArray3Sort.DOMAIN_SIZE -> {
+                val (b0, b1, b2) = domain
+                mkArraySort(b0, b1, b2, range)
+            }
+
+            else -> mkArrayNSort(domain, range)
+        }
 
     inline fun <T : KSort, A0 : KSort> Long.convert(op: (KExpr<A0>) -> KExpr<T>) =
         convert(getAppArgs(nCtx, this), op)
