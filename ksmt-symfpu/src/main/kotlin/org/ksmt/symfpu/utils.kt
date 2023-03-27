@@ -188,8 +188,8 @@ fun previousPowerOfTwo(x: UInt): UInt {
 fun KContext.max(op1: KExpr<KBvSort>, op2: KExpr<KBvSort>) = mkIte(mkBvSignedLessOrEqualExpr(op1, op2), op2, op1)
 
 fun KContext.conditionalIncrement(cond: KExpr<KBoolSort>, bv: KExpr<KBvSort>): KExpr<KBvSort> {
-    val one = bvOne(bv.sort.sizeBits)
-    return mkIte(cond, mkBvAddExpr(bv, one.cast()), bv)
+    val inc = mkIte(cond, mkBv(1, bv.sort.sizeBits), mkBv(0, bv.sort.sizeBits))
+    return mkBvAddExpr(bv, inc)
 }
 
 fun <Fp : KFpSort> KContext.makeMin(sort: Fp, sign: KExpr<KBoolSort>) = UnpackedFp(
@@ -200,14 +200,6 @@ fun <Fp : KFpSort> KContext.makeMax(sort: Fp, sign: KExpr<KBoolSort>) = Unpacked
     this, sort, sign, maxNormalExponent(sort), ones(sort.significandBits)
 )
 
-//bv expandingSubtract(const bv &op1, const bv &op2) {
-//    PRECONDITION(op1.getWidth() == op2.getWidth());
-//
-//    bv x(op1.extend(1));
-//    bv y(op2.extend(1));
-//
-//    return x - y;
-//}
 fun KContext.expandingSubtract(op1: KExpr<KBvSort>, op2: KExpr<KBvSort>): KExpr<KBvSort> {
     check(op1.sort.sizeBits == op2.sort.sizeBits)
     val x = mkBvZeroExtensionExpr(1, op1)

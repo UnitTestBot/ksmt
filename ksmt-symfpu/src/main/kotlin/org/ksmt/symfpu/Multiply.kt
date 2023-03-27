@@ -39,8 +39,8 @@ private fun <Fp : KFpSort> KContext.addSpecialCases(
 
     return iteOp(
         isNan, makeNaN(multiplyResult.sort), iteOp(
-            isInf, makeInf(multiplyResult.sort, multiplyResult.isNegative), iteOp(
-                isZero, makeZero(left.sort, multiplyResult.isNegative), multiplyResult
+            isInf, makeInf(multiplyResult.sort, multiplyResult.sign), iteOp(
+                isZero, makeZero(left.sort, multiplyResult.sign), multiplyResult
             )
         )
     )
@@ -59,7 +59,9 @@ private fun KContext.expandingAddWithCarryIn(
     val x = mkBvSignExtensionExpr(1, left)
     val y = mkBvSignExtensionExpr(1, right)
     val sum = mkBvAddExpr(x, y)
-    return mkIte(carry, mkBvAddExpr(sum, mkBv(1, sum.sort)), sum)
+
+    val carryBv = mkIte(carry, mkBv(1, sum.sort), mkBv(0, sum.sort))
+    return mkBvAddExpr(sum, carryBv)
 }
 
 private fun <Fp : KFpSort> KContext.arithmeticMultiply(
@@ -67,18 +69,20 @@ private fun <Fp : KFpSort> KContext.arithmeticMultiply(
 ): UnpackedFp<KFpSort> {
 
     // Compute sign
-    val multiplySign = left.isNegative xor right.isNegative
+    val multiplySign = left.sign xor right.sign
 
     // Multiply the significands
     val significandProduct = expandingMultiply(left.normalizedSignificand, right.normalizedSignificand)
 
     val spWidth = significandProduct.sort.sizeBits.toInt()
     val topBit = mkBvExtractExpr(spWidth - 1, spWidth - 1, significandProduct)
-    val topBitSet = topBit eq bvOne()
+    val topBitSet = isAllOnes(topBit)
 
-    val alignedSignificand = conditionalLeftShiftOne(!topBitSet, significandProduct)
+    val alignedSignificand =
+        conditionalLeftShiftOne(!topBitSet, significandProduct)
 
-    val alignedExponent = expandingAddWithCarryIn(left.unbiasedExponent, right.unbiasedExponent, topBitSet)
+    val alignedExponent =
+        expandingAddWithCarryIn(left.unbiasedExponent, right.unbiasedExponent, topBitSet)
 
 
     val sort = mkFpSort(left.sort.exponentBits + 1u, left.sort.significandBits * 2u)
@@ -99,18 +103,5 @@ fun KContext.conditionalRightShiftOne(
 ) = mkIte(
     condition, mkBvLogicalShiftRightExpr(expr, bvOne(expr.sort.sizeBits).cast()), expr
 )
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

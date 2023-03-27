@@ -376,12 +376,11 @@ fun KContext.orderEncode(op: KExpr<KBvSort>): KExpr<KBvSort> {
     return mkBvExtractExpr(
         (w - 1u).toInt(),
         0,
-        mkBvSubExpr(
+        decrement(
             mkBvShiftLeftExpr(
                 one,
                 op.resizeUnsigned(w + 1u, this)
-            ),
-            one
+            )
         )
     )
 }
