@@ -80,10 +80,12 @@ class FpToBvTransformerTest {
     fun testFpToBvLess32Expr() = withContextAndFp32Variables { a, b ->
         testFpExpr(mkFpLessExpr(a, b), mapOf("a" to a, "b" to b)) // 450 ms vs 42 sec :: ~x100
     }
+
     @Test
     fun testFpToBvLess64Expr() = withContextAndFp64Variables { a, b ->
         testFpExpr(mkFpLessExpr(a, b), mapOf("a" to a, "b" to b)) // 450 ms vs 42 sec :: ~x100
     }
+
     @Test
     fun testFpToBvLess128Expr() = withContextAndFp128Variables { a, b ->
         testFpExpr(mkFpLessExpr(a, b), mapOf("a" to a, "b" to b)) // 450 ms vs 42 sec :: ~x100
@@ -216,12 +218,10 @@ class FpToBvTransformerTest {
         testFpExpr(
             mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b),
             mapOf("a" to a, "b" to b),
-        ) { _, e->
+        ) { _, e ->
             mkFpIsSubnormalExpr(e)
         }
     }
-
-
 
 
     @Test
@@ -254,6 +254,7 @@ class FpToBvTransformerTest {
             mapOf("a" to a, "b" to b),
         )
     }
+
     @Test
     fun testFpToBvZZMultRoundTowardNegativeFp16Expr() = with(KContext()) {
         val a by mkFp16Sort()
@@ -263,7 +264,6 @@ class FpToBvTransformerTest {
             mapOf("a" to a, "b" to b),
         )
     }
-
 
 
     @Test
@@ -323,6 +323,7 @@ class FpToBvTransformerTest {
             mapOf("a" to a.cast(), "b" to bApp),
         )
     }
+
     @Test
     fun testFpToBvMultFp32RNAExpr() = with(KContext()) {
         val a by mkFp32Sort()
@@ -534,6 +535,76 @@ class FpToBvTransformerTest {
     }
 
     @Test
+    fun testFpToBvIsNormalExpr() = with(KContext()) {
+        val a by mkFp32Sort()
+
+        testFpExpr(
+            mkFpIsNormalExpr(a),
+            mapOf("a" to a),
+        )
+    }
+
+    @Test
+    fun testFpToBvIsSubnormalExpr() = with(KContext()) {
+        val a by mkFp32Sort()
+
+        testFpExpr(
+            mkFpIsSubnormalExpr(a),
+            mapOf("a" to a),
+        )
+    }
+
+    @Test
+    fun testFpToBvIsZeroExpr() = with(KContext()) {
+        val a by mkFp32Sort()
+
+        testFpExpr(
+            mkFpIsZeroExpr(a),
+            mapOf("a" to a),
+        )
+    }
+
+    @Test
+    fun testFpToBvIsInfExpr() = with(KContext()) {
+        val a by mkFp32Sort()
+
+        testFpExpr(
+            mkFpIsInfiniteExpr(a),
+            mapOf("a" to a),
+        )
+    }
+
+
+    @Test
+    fun testFpToBvIsNaNExpr() = with(KContext()) {
+        val a by mkFp32Sort()
+
+        testFpExpr(
+            mkFpIsNaNExpr(a),
+            mapOf("a" to a),
+        )
+    }
+
+    @Test
+    fun testFpToBvIsPositiveExpr() = with(KContext()) {
+        val a by mkFp32Sort()
+
+        testFpExpr(
+            mkFpIsPositiveExpr(a),
+            mapOf("a" to a),
+        )
+    }
+    @Test
+    fun testFpToBvIsNegativeExpr() = with(KContext()) {
+        val a by mkFp32Sort()
+
+        testFpExpr(
+            mkFpIsNegativeExpr(a),
+            mapOf("a" to a),
+        )
+    }
+
+    @Test
     fun testBvBoolFormulaExpr() = withContextAndFp64Variables { a, b ->
         val sort = fp64Sort
         val zero = mkFpZero(false, sort)
@@ -582,10 +653,12 @@ class FpToBvTransformerTest {
                     println("$name :: $evalUnpacked")
                 }
             }
+
             KSolverStatus.UNKNOWN -> {
                 println("STATUS == UNKNOWN")
                 println(solver.reasonOfUnknown())
             }
+
             KSolverStatus.UNSAT -> {
                 println("STATUS == UNSAT")
                 val model = solver.unsatCore()

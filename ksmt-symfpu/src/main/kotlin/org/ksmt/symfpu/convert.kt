@@ -11,10 +11,10 @@ import org.ksmt.symfpu.UnpackedFp.Companion.iteOp
 import org.ksmt.symfpu.UnpackedFp.Companion.makeZero
 
 
-fun <T : KFpSort> KContext.roundToIntegral(
+fun <T : KFpSort> roundToIntegral(
     roundingMode: KExpr<KFpRoundingModeSort>,
     input: UnpackedFp<T>,
-): UnpackedFp<T> {
+): UnpackedFp<T> = with(input.ctx) {
     val exponent = input.getExponent()
     val exponentWidth = input.exponentWidth()
 

@@ -78,23 +78,21 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         transformHelper(expr, ::max)
     }
 
-    override fun <Fp : KFpSort> transform(expr: KFpNegationExpr<Fp>): KExpr<Fp> = with(ctx) {
+    override fun <Fp : KFpSort> transform(expr: KFpNegationExpr<Fp>): KExpr<Fp> =
         transformExprAfterTransformed(expr, expr.value) { value ->
             (value as UnpackedFp<Fp>).negate()
         }
-    }
 
-    override fun <Fp : KFpSort> transform(expr: KFpAbsExpr<Fp>): KExpr<Fp> = with(ctx) {
+    override fun <Fp : KFpSort> transform(expr: KFpAbsExpr<Fp>): KExpr<Fp> =
         transformExprAfterTransformed(expr, expr.value) { value ->
             (value as UnpackedFp<Fp>).absolute()
         }
-    }
 
-    override fun <Fp : KFpSort> transform(expr: KFpRoundToIntegralExpr<Fp>): KExpr<Fp> = with(ctx) {
+
+    override fun <Fp : KFpSort> transform(expr: KFpRoundToIntegralExpr<Fp>): KExpr<Fp> =
         transformExprAfterTransformed(expr, expr.value) { value ->
             roundToIntegral(expr.roundingMode, (value as UnpackedFp<Fp>))
         }
-    }
 
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = with(ctx) {
         return if (expr.sort is KFpSort) {
@@ -114,6 +112,15 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     }
 
 
+    override fun <T : KFpSort> transform(expr: KFpIsNormalExpr<T>) = transformHelper(expr, ::isNormal)
+    override fun <T : KFpSort> transform(expr: KFpIsSubnormalExpr<T>) = transformHelper(expr, ::isSubnormal)
+    override fun <T : KFpSort> transform(expr: KFpIsZeroExpr<T>) = transformHelper(expr, UnpackedFp<T>::isZero)
+    override fun <T : KFpSort> transform(expr: KFpIsInfiniteExpr<T>) = transformHelper(expr, UnpackedFp<T>::isInf)
+    override fun <T : KFpSort> transform(expr: KFpIsNaNExpr<T>) = transformHelper(expr, UnpackedFp<T>::isNaN)
+    override fun <T : KFpSort> transform(expr: KFpIsNegativeExpr<T>) = transformHelper(expr, ::isNegative)
+    override fun <T : KFpSort> transform(expr: KFpIsPositiveExpr<T>) = transformHelper(expr, ::isPositive)
+
+
     private fun <Fp : KFpSort> argsToTypedPair(args: List<KExpr<Fp>>): Pair<UnpackedFp<Fp>, UnpackedFp<Fp>> {
         val left = args[0] as UnpackedFp<Fp>
         val right = args[1] as UnpackedFp<Fp>
@@ -127,4 +134,13 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
             val (left, right) = argsToTypedPair(args)
             f(left, right)
         }
+
+    private fun <Fp : KFpSort, R : KSort> transformHelper(
+        expr: KApp<R, Fp>, f: (UnpackedFp<Fp>) -> KExpr<R>
+    ): KExpr<R> =
+        transformExprAfterTransformed(expr, expr.args) { args ->
+            val value = args[0] as UnpackedFp<Fp>
+            f(value)
+        }
+
 }
