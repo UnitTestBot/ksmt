@@ -104,7 +104,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             return rewrite(simplifyBvConcatEq(lhs, rhs))
         }
 
-        mkEqNoSimplify(lhs, rhs)
+        withExpressionsOrdered(lhs, rhs, ::mkEqNoSimplify)
     }
 
     fun <T : KBvSort> areDefinitelyDistinctBv(lhs: KExpr<T>, rhs: KExpr<T>): Boolean {

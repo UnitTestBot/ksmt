@@ -157,16 +157,24 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
 
     // bool transformers
     override fun transform(expr: KAndExpr): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.args, ::transformApp, KContext::mkAnd)
+        transformExprAfterTransformedDefault(
+            expr, expr.args, ::transformApp
+        ) { args -> mkAnd(args, flat = false, order = false) }
 
     override fun transform(expr: KAndBinaryExpr): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.lhs, expr.rhs, ::transformApp, KContext::mkAnd)
+        transformExprAfterTransformedDefault(
+            expr, expr.lhs, expr.rhs, ::transformApp
+        ) { l, r -> mkAnd(l, r, flat = false, order = false) }
 
     override fun transform(expr: KOrExpr): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.args, ::transformApp, KContext::mkOr)
+        transformExprAfterTransformedDefault(
+            expr, expr.args, ::transformApp
+        ) { args -> mkOr(args, flat = false) }
 
     override fun transform(expr: KOrBinaryExpr): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.lhs, expr.rhs, ::transformApp, KContext::mkOr)
+        transformExprAfterTransformedDefault(
+            expr, expr.lhs, expr.rhs, ::transformApp
+        ) { l, r -> mkOr(l, r, flat = false, order = false) }
 
     override fun transform(expr: KNotExpr): KExpr<KBoolSort> =
         transformExprAfterTransformedDefault(expr, expr.arg, ::transformApp, KContext::mkNot)
@@ -178,10 +186,14 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         transformExprAfterTransformedDefault(expr, expr.a, expr.b, ::transformApp, KContext::mkXor)
 
     override fun <T : KSort> transform(expr: KEqExpr<T>): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.lhs, expr.rhs, ::transformApp, KContext::mkEq)
+        transformExprAfterTransformedDefault(
+            expr, expr.lhs, expr.rhs, ::transformApp
+        ) { l, r -> mkEq(l, r, order = false) }
 
     override fun <T : KSort> transform(expr: KDistinctExpr<T>): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.args, ::transformApp, KContext::mkDistinct)
+        transformExprAfterTransformedDefault(
+            expr, expr.args, ::transformApp
+        ) { args -> mkDistinct(args, order = false) }
 
     override fun <T : KSort> transform(expr: KIteExpr<T>): KExpr<T> =
         transformExprAfterTransformedDefault(

@@ -43,14 +43,14 @@ open class KExprSimplifier(override val ctx: KContext) :
     ) { lhs, rhs ->
         if (lhs == rhs) return@simplifyExpr trueExpr
         when (lhs.sort) {
-            boolSort -> simplifyEqBool(lhs.uncheckedCast(), rhs.uncheckedCast())
+            boolSort -> this@KExprSimplifier.simplifyEqBool(lhs.uncheckedCast(), rhs.uncheckedCast())
             intSort -> simplifyEqInt(lhs.uncheckedCast(), rhs.uncheckedCast())
             realSort -> simplifyEqReal(lhs.uncheckedCast(), rhs.uncheckedCast())
             is KBvSort -> simplifyEqBv(lhs as KExpr<KBvSort>, rhs.uncheckedCast())
             is KFpSort -> simplifyEqFp(lhs as KExpr<KFpSort>, rhs.uncheckedCast())
             is KArraySortBase<*> -> simplifyEqArray(lhs as KExpr<KArraySortBase<KSort>>, rhs.uncheckedCast())
             is KUninterpretedSort -> simplifyEqUninterpreted(lhs.uncheckedCast(), rhs.uncheckedCast())
-            else -> mkEqNoSimplify(lhs, rhs)
+            else -> withExpressionsOrdered(lhs, rhs, ::mkEqNoSimplify)
         }
     }
 
@@ -252,7 +252,7 @@ open class KExprSimplifier(override val ctx: KContext) :
     open fun simplifyEqUninterpreted(
         lhs: KExpr<KUninterpretedSort>,
         rhs: KExpr<KUninterpretedSort>
-    ): KExpr<KBoolSort> = ctx.mkEqNoSimplify(lhs, rhs)
+    ): KExpr<KBoolSort> = withExpressionsOrdered(lhs, rhs, ctx::mkEqNoSimplify)
 
     open fun areDefinitelyDistinctUninterpreted(
         lhs: KExpr<KUninterpretedSort>,
