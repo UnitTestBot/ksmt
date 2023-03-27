@@ -25,29 +25,26 @@ import org.ksmt.utils.toBinary
 abstract class KFpDecl<T : KFpSort> internal constructor(
     ctx: KContext,
     sort: T,
-    val sign: Boolean,
-    val significandBinary: String,
-    val unbiasedExponentBinary: String
+    val sign: KDecl<KBv1Sort>,
+    val significandBinary: KDecl<out KBvSort>,
+    val unbiasedExponentBinary: KDecl<out KBvSort>
 ) : KConstDecl<T>(
     ctx,
-    constructNameForDeclaration(sign, sort, unbiasedExponentBinary, significandBinary),
+    "(fp ${sign.name} ${unbiasedExponentBinary.name} ${significandBinary.name})",
     sort
-)
+) {
+    companion object {
+        internal fun KContext.fpExponentDecl(exponentBits: UInt, exponentBinary: String) =
+            mkBvDecl(exponentBinary.takeLast(exponentBits.toInt()), exponentBits)
 
-private fun <T : KFpSort> constructNameForDeclaration(
-    sign: Boolean,
-    sort: T,
-    exponent: String,
-    significand: String
-): String {
-    val exponentBits = sort.exponentBits
-    val binaryExponent = exponent.takeLast(exponentBits.toInt())
-    val significandBits = sort.significandBits
-    val binarySignificand = significand
-        .takeLast(significandBits.toInt() - 1)
-        .let { it.padStart(significandBits.toInt() - 1, it[0]) }
-
-    return "FP (sign $sign) ($exponentBits $binaryExponent) ($significandBits $binarySignificand)"
+        internal fun KContext.fpSignificandDecl(significandBits: UInt, significandBinary: String): KDecl<KBvSort> {
+            val normalizedSignificandBits = significandBits - 1u
+            val normalizedSignificandBinary = significandBinary
+                .takeLast(normalizedSignificandBits.toInt())
+                .let { it.padStart(normalizedSignificandBits.toInt(), it[0]) }
+            return mkBvDecl(normalizedSignificandBinary, normalizedSignificandBits)
+        }
+    }
 }
 
 class KFp16Decl internal constructor(
@@ -56,9 +53,15 @@ class KFp16Decl internal constructor(
 ) : KFpDecl<KFp16Sort>(
     ctx = ctx,
     sort = ctx.mkFp16Sort(),
-    sign = value.booleanSignBit,
-    significandBinary = value.halfPrecisionSignificand.toBinary(),
-    unbiasedExponentBinary = value.getHalfPrecisionExponent(isBiased = false).toBinary()
+    sign = ctx.mkBvDecl(value.booleanSignBit),
+    significandBinary = ctx.fpSignificandDecl(
+        KFp16Sort.significandBits,
+        value.halfPrecisionSignificand.toBinary()
+    ),
+    unbiasedExponentBinary = ctx.fpExponentDecl(
+        KFp16Sort.exponentBits,
+        value.getHalfPrecisionExponent(isBiased = false).toBinary()
+    )
 ) {
     override fun apply(args: List<KExpr<*>>): KApp<KFp16Sort, *> = ctx.mkFp16(value)
 
@@ -71,9 +74,15 @@ class KFp32Decl internal constructor(
 ) : KFpDecl<KFp32Sort>(
     ctx = ctx,
     sort = ctx.mkFp32Sort(),
-    sign = value.booleanSignBit,
-    significandBinary = value.significand.toBinary(),
-    unbiasedExponentBinary = value.getExponent(isBiased = false).toBinary()
+    sign = ctx.mkBvDecl(value.booleanSignBit),
+    significandBinary = ctx.fpSignificandDecl(
+        KFp32Sort.significandBits,
+        value.significand.toBinary()
+    ),
+    unbiasedExponentBinary = ctx.fpExponentDecl(
+        KFp32Sort.exponentBits,
+        value.getExponent(isBiased = false).toBinary()
+    )
 ) {
     override fun apply(args: List<KExpr<*>>): KApp<KFp32Sort, *> = ctx.mkFp32(value)
 
@@ -86,9 +95,15 @@ class KFp64Decl internal constructor(
 ) : KFpDecl<KFp64Sort>(
     ctx = ctx,
     sort = ctx.mkFp64Sort(),
-    sign = value.booleanSignBit,
-    significandBinary = value.significand.toBinary(),
-    unbiasedExponentBinary = value.getExponent(isBiased = false).toBinary()
+    sign = ctx.mkBvDecl(value.booleanSignBit),
+    significandBinary = ctx.fpSignificandDecl(
+        KFp64Sort.significandBits,
+        value.significand.toBinary()
+    ),
+    unbiasedExponentBinary = ctx.fpExponentDecl(
+        KFp64Sort.exponentBits,
+        value.getExponent(isBiased = false).toBinary()
+    )
 ) {
     override fun apply(args: List<KExpr<*>>): KApp<KFp64Sort, *> = ctx.mkFp64(value)
 
@@ -99,15 +114,15 @@ class KFp128Decl internal constructor(
     ctx: KContext,
     val significand: KBitVecValue<*>,
     val unbiasedExponent: KBitVecValue<*>,
-    signBit: Boolean
+    val signBit: Boolean
 ) : KFpDecl<KFp128Sort>(
     ctx = ctx,
     sort = ctx.mkFp128Sort(),
-    sign = signBit,
-    significandBinary = significand.stringValue,
-    unbiasedExponentBinary = unbiasedExponent.stringValue
+    sign = ctx.mkBvDecl(signBit),
+    significandBinary = significand.decl,
+    unbiasedExponentBinary = unbiasedExponent.decl
 ) {
-    override fun apply(args: List<KExpr<*>>): KApp<KFp128Sort, *> = ctx.mkFp128(significand, unbiasedExponent, sign)
+    override fun apply(args: List<KExpr<*>>): KApp<KFp128Sort, *> = ctx.mkFp128(significand, unbiasedExponent, signBit)
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
@@ -118,13 +133,13 @@ class KFpCustomSizeDecl internal constructor(
     exponentSize: UInt,
     val significand: KBitVecValue<*>,
     val unbiasedExponent: KBitVecValue<*>,
-    signBit: Boolean
+    val signBit: Boolean
 ) : KFpDecl<KFpSort>(
     ctx = ctx,
     sort = ctx.mkFpSort(exponentSize, significandSize),
-    sign = signBit,
-    significandBinary = significand.stringValue,
-    unbiasedExponentBinary = unbiasedExponent.stringValue
+    sign = ctx.mkBvDecl(signBit),
+    significandBinary = significand.decl,
+    unbiasedExponentBinary = unbiasedExponent.decl
 ) {
     override fun apply(args: List<KExpr<*>>): KApp<KFpSort, *> =
         ctx.mkFpCustomSize(
@@ -132,7 +147,7 @@ class KFpCustomSizeDecl internal constructor(
             sort.significandBits,
             unbiasedExponent,
             significand,
-            sign
+            signBit
         )
 
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)

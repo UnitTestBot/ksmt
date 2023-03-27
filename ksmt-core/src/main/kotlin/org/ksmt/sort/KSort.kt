@@ -208,7 +208,7 @@ class KUninterpretedSort internal constructor(val name: String, ctx: KContext) :
 
 sealed class KFpSort(ctx: KContext, val exponentBits: UInt, val significandBits: UInt) : KSort(ctx) {
     override fun print(builder: StringBuilder) {
-        builder.append("FP (eBits: $exponentBits) (sBits: $significandBits)")
+        builder.append("(FloatingPoint $exponentBits $significandBits)")
     }
 
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
@@ -274,7 +274,7 @@ class KFpCustomSizeSort(
 
 class KFpRoundingModeSort(ctx: KContext) : KSort(ctx) {
     override fun print(builder: StringBuilder) {
-        builder.append("RoundingModeSort")
+        builder.append("RoundingMode")
     }
 
     override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)

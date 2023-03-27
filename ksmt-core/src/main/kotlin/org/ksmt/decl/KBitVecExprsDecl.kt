@@ -3,6 +3,7 @@ package org.ksmt.decl
 import org.ksmt.KContext
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.printer.BvValuePrintMode
 import org.ksmt.sort.KBv16Sort
 import org.ksmt.sort.KBv32Sort
 import org.ksmt.sort.KBv64Sort
@@ -11,15 +12,43 @@ import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KIntSort
-import org.ksmt.utils.toBinary
 import java.math.BigInteger
 
 abstract class KBitVecValueDecl<T : KBvSort> internal constructor(
     ctx: KContext,
-    val value: String,
+    val value: Number,
     sort: T
-) : KConstDecl<T>(ctx, "#b$value", sort) {
-    internal constructor(ctx: KContext, value: Number, sort: T) : this(ctx, value.toBinary(), sort)
+) : KConstDecl<T>(ctx, mkDeclName(ctx, value, sort.sizeBits), sort) {
+    companion object {
+        private fun mkDeclName(ctx: KContext, value: Number, sizeBits: UInt): String =
+            if (ctx.printerParams.bvValuePrintMode == BvValuePrintMode.HEX && sizeBits % HALF_BYTE == 0u) {
+                "#x${value.toHexString(sizeBits / HALF_BYTE)}"
+            } else {
+                "#b${value.toBinaryString(sizeBits)}"
+            }
+
+        private const val HEX_RADIX = 16
+        private const val BINARY_RADIX = 2
+        private const val HALF_BYTE = 4u
+
+        private fun Number.toHexString(sizeHalfBytes: UInt) = when (this) {
+            is Byte -> toUByte().toString(HEX_RADIX)
+            is Short -> toUShort().toString(HEX_RADIX)
+            is Int -> toUInt().toString(HEX_RADIX)
+            is Long -> toULong().toString(HEX_RADIX)
+            is BigInteger -> toString(HEX_RADIX)
+            else -> error("Unsupported type for transformation into a hex string: ${this::class.simpleName}")
+        }.padStart(sizeHalfBytes.toInt(), '0')
+
+        private fun Number.toBinaryString(sizeBits: UInt) = when (this) {
+            is Byte -> toUByte().toString(BINARY_RADIX)
+            is Short -> toUShort().toString(BINARY_RADIX)
+            is Int -> toUInt().toString(BINARY_RADIX)
+            is Long -> toULong().toString(BINARY_RADIX)
+            is BigInteger -> toString(BINARY_RADIX)
+            else -> error("Unsupported type for transformation into a binary string: ${this::class.simpleName}")
+        }.padStart(sizeBits.toInt(), '0')
+    }
 }
 
 class KBitVec1ValueDecl internal constructor(
@@ -27,7 +56,7 @@ class KBitVec1ValueDecl internal constructor(
     val boolValue: Boolean
 ) : KBitVecValueDecl<KBv1Sort>(
     ctx,
-    value = if (boolValue) "1" else "0",
+    value = if (boolValue) 1 else 0,
     ctx.mkBv1Sort()
 ) {
     override fun apply(args: List<KExpr<*>>): KApp<KBv1Sort, *> = ctx.mkBv(boolValue)
@@ -77,7 +106,7 @@ class KBitVecCustomSizeValueDecl internal constructor(
     sizeBits: UInt
 ) : KBitVecValueDecl<KBvSort>(
     ctx,
-    value = bigIntValue.toBinary(sizeBits),
+    value = bigIntValue,
     ctx.mkBvSort(sizeBits)
 ) {
     override fun apply(args: List<KExpr<*>>): KApp<KBvSort, *> = ctx.mkBv(bigIntValue, sort.sizeBits)

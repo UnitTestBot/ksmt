@@ -210,6 +210,7 @@ class RandomExpressionGenerator {
          * */
         private fun Sequence<KFunction<KExpr<*>>>.filterComplexStringGenerators() = this
             .filterNot { (it.name == "mkBv" && it.parameters.any { p -> p.type.isSubclassOf(String::class) }) }
+            .filterNot { (it.name == "mkBvHex" && it.parameters.any { p -> p.type.isSubclassOf(String::class) }) }
             .filterNot { (it.name == "mkIntNum" && it.parameters.any { p -> p.type.isSubclassOf(String::class) }) }
             .filterNot { (it.name == "mkRealNum" && it.parameters.any { p -> p.type.isSubclassOf(String::class) }) }
 

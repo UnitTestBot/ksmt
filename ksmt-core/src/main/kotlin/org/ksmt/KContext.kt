@@ -290,6 +290,7 @@ import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
+import org.ksmt.expr.printer.PrinterParams
 import org.ksmt.expr.rewrite.simplify.simplifyAnd
 import org.ksmt.expr.rewrite.simplify.simplifyArithAdd
 import org.ksmt.expr.rewrite.simplify.simplifyArithDiv
@@ -447,9 +448,10 @@ import java.math.BigInteger
 
 @Suppress("TooManyFunctions", "LargeClass", "unused")
 open class KContext(
-    private val operationMode: OperationMode = CONCURRENT,
-    private val astManagementMode: AstManagementMode = GC,
-    private val simplificationMode: SimplificationMode = SIMPLIFY
+    val operationMode: OperationMode = CONCURRENT,
+    val astManagementMode: AstManagementMode = GC,
+    val simplificationMode: SimplificationMode = SIMPLIFY,
+    val printerParams: PrinterParams = PrinterParams()
 ) : AutoCloseable {
 
     /**
@@ -1517,6 +1519,9 @@ open class KContext(
 
     fun mkBv(value: String, sizeBits: UInt): KBitVecValue<KBvSort> =
         mkBv(value.toBigInteger(radix = 2), sizeBits)
+
+    fun mkBvHex(value: String, sizeBits: UInt): KBitVecValue<KBvSort> =
+        mkBv(value.toBigInteger(radix = 16), sizeBits)
 
     private fun mkBvFromUnsignedBigInteger(
         value: BigInteger,
@@ -3177,6 +3182,9 @@ open class KContext(
 
     fun mkBvDecl(value: String, sizeBits: UInt): KDecl<KBvSort> =
         mkBvDecl(value.toBigInteger(radix = 2), sizeBits)
+
+    fun mkBvHexDecl(value: String, sizeBits: UInt): KDecl<KBvSort> =
+        mkBvDecl(value.toBigInteger(radix = 16), sizeBits)
 
     private fun mkBvDeclFromUnsignedBigInteger(
         value: BigInteger,
