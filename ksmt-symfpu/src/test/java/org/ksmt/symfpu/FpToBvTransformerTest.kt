@@ -523,6 +523,16 @@ class FpToBvTransformerTest {
         )
     }
 
+
+    @Test
+    fun testFpToBvAbsExpr() = with(KContext()) {
+        val a by mkFp32Sort()
+        testFpExpr(
+            mkFpAbsExpr(a),
+            mapOf("a" to a),
+        )
+    }
+
     @Test
     fun testBvBoolFormulaExpr() = withContextAndFp64Variables { a, b ->
         val sort = fp64Sort

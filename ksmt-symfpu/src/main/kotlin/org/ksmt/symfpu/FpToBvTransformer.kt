@@ -84,6 +84,12 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         }
     }
 
+    override fun <Fp : KFpSort> transform(expr: KFpAbsExpr<Fp>): KExpr<Fp> = with(ctx) {
+        transformExprAfterTransformed(expr, expr.value) { value ->
+            (value as UnpackedFp<Fp>).absolute()
+        }
+    }
+
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = with(ctx) {
         return if (expr.sort is KFpSort) {
             val asFp: KConst<KFpSort> = expr.cast()

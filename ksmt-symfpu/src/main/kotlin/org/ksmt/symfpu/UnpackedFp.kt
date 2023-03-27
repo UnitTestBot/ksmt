@@ -138,6 +138,15 @@ class UnpackedFp<Fp : KFpSort> private constructor(
             )
         })
     }
+    fun absolute() = with(ctx) {
+        UnpackedFp(ctx, sort, falseExpr, unbiasedExponent, normalizedSignificand, isNaN, isInf, isZero, packedBv?.let {
+            mkBvConcatExpr(
+                boolToBv(falseExpr),
+                packedExponent!!,
+                packedSignificand!!
+            )
+        })
+    }
 
     companion object {
 
