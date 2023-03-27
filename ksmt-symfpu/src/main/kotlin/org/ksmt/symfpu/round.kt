@@ -64,7 +64,7 @@ private fun <Fp : KFpSort> KContext.rounderSpecialCases(
     )
 }
 
-private fun KContext.roundingDecision(
+fun KContext.roundingDecision(
     roundingMode: KExpr<KFpRoundingModeSort>,
     sign: KExpr<KBoolSort>,
     significandEven: KExpr<KBoolSort>,
@@ -116,6 +116,7 @@ data class CustomRounderInfo(
 }
 
 fun KContext.decrement(expr: KExpr<KBvSort>): KExpr<KBvSort> = mkBvSubExpr(expr, bvOne(expr.sort.sizeBits).cast())
+fun KContext.increment(expr: KExpr<KBvSort>): KExpr<KBvSort> = mkBvAddExpr(expr, bvOne(expr.sort.sizeBits).cast())
 
 // something wrong with. looks like shift misses by one
 // - normal exponent

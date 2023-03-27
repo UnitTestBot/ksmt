@@ -90,6 +90,12 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         }
     }
 
+    override fun <Fp : KFpSort> transform(expr: KFpRoundToIntegralExpr<Fp>): KExpr<Fp> = with(ctx) {
+        transformExprAfterTransformed(expr, expr.value) { value ->
+            roundToIntegral(expr.roundingMode, (value as UnpackedFp<Fp>))
+        }
+    }
+
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = with(ctx) {
         return if (expr.sort is KFpSort) {
             val asFp: KConst<KFpSort> = expr.cast()

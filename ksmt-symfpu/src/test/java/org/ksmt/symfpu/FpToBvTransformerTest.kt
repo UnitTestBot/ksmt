@@ -596,6 +596,19 @@ class FpToBvTransformerTest {
         assertEquals(KSolverStatus.UNSAT, status)
     }
 
+    @Test
+    fun testFpToBvRoundToIntegralExpr() = with(KContext()) {
+        val a by mkFp32Sort()
+        val roundingModes = KFpRoundingMode.values()
+
+        roundingModes.forEach {
+            testFpExpr(
+                mkFpRoundToIntegralExpr(mkFpRoundingModeExpr(it), a),
+                mapOf("a" to a),
+            )
+        }
+    }
+
     private fun KContext.unpackedString(value: KExpr<*>, model: KModel) = if (value.sort is KFpSort) {
         val sb = StringBuilder()
         val fpExpr: KExpr<KFpSort> = value.cast()
