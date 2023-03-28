@@ -15,7 +15,7 @@ object Native {
             when (os) {
                 NativeLibraryLoader.OS.LINUX -> listOf("libbitwuzla", "libbitwuzla_jni")
                 NativeLibraryLoader.OS.WINDOWS -> listOf("libbitwuzla", "libbitwuzla_jni")
-                NativeLibraryLoader.OS.MACOS -> error("Unsupported platform: MACOS")
+                NativeLibraryLoader.OS.MACOS -> listOf("libbitwuzla", "libbitwuzla_jni")
             }
         }
 
