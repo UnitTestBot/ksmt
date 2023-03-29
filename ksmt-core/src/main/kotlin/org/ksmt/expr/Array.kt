@@ -20,12 +20,6 @@ import org.ksmt.sort.KSort
 import org.ksmt.utils.asExpr
 import org.ksmt.utils.uncheckedCast
 
-internal enum class ArrayStoreType {
-    INTERPRETED,
-    UNINTERPRETED,
-    NOT_INITIALIZED
-}
-
 sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
     ctx: KContext,
     val array: KExpr<A>,
@@ -43,6 +37,7 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
         }.uncheckedCast()
 
     private var type: ArrayStoreType = ArrayStoreType.NOT_INITIALIZED
+    private var interpretedStoresAmount: Int = 0
     private var interpretedStores: PersistentMap<Any, KArrayStoreBase<A, R>>? = null
     private var nextUninterpretedArray: KExpr<A>? = null
 
@@ -61,34 +56,76 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
 
         if (array !is KArrayStoreBase<A, *> || array.type != ArrayStoreType.INTERPRETED) {
             nextUninterpretedArray = array
+            interpretedStoresAmount = 1
+            interpretedStores = null
+            return
+        }
+
+        interpretedStoresAmount = array.interpretedStoresAmount + 1
+        nextUninterpretedArray = array.nextUninterpretedArray
+
+        if (interpretedStoresAmount < LINEAR_LOOKUP_THRESHOLD) {
             interpretedStores = null
             return
         }
 
         interpretedStores = updateInterpretedStoresMap(array).uncheckedCast()
-        nextUninterpretedArray = array.nextUninterpretedArray
     }
 
     internal abstract fun createLookupKey(): Any
-
-    internal inline fun lookupArrayToSelectFrom(
-        indicesAreEqual: () -> Boolean,
-        selectIndicesAreInterpreted: () -> Boolean,
-        selectIndicesLookupKey: () -> Any
-    ): KExpr<A> {
-        if (indicesAreEqual()) return this
-        if (type != ArrayStoreType.INTERPRETED || !selectIndicesAreInterpreted()) return this
-        return interpretedStores?.get(selectIndicesLookupKey()) ?: nextUninterpretedArray ?: this
-    }
 
     private fun updateInterpretedStoresMap(
         nestedInterpretedStore: KArrayStoreBase<A, *>
     ) = nestedInterpretedStore.interpretedStores
         ?.put(createLookupKey(), this)
-        ?: persistentHashMapOf<Any, KArrayStoreBase<A, *>>().mutate {
-            it[nestedInterpretedStore.createLookupKey()] = nestedInterpretedStore
-            it[createLookupKey()] = this
+        ?: persistentHashMapOf<Any, KArrayStoreBase<A, *>>().mutate { map ->
+            map[createLookupKey()] = this
+            linearlyTraverseArray(nestedInterpretedStore) { nestedArray ->
+                map[nestedArray.createLookupKey()] = nestedArray
+            }
         }
+
+    companion object {
+        private const val LINEAR_LOOKUP_THRESHOLD = 7
+
+        internal enum class ArrayStoreType {
+            INTERPRETED,
+            UNINTERPRETED,
+            NOT_INITIALIZED
+        }
+
+        internal inline fun <reified S : KArrayStoreBase<A, *>, A : KArraySortBase<*>> S.lookupArrayToSelectFrom(
+            indicesAreEqual: (S) -> Boolean,
+            selectIndicesAreInterpreted: () -> Boolean,
+            selectIndicesLookupKey: () -> Any
+        ): KExpr<A> {
+            if (indicesAreEqual(this)) return this
+            if (type != ArrayStoreType.INTERPRETED || !selectIndicesAreInterpreted()) return this
+
+            val stores = interpretedStores
+            val arrayToSelectFrom = if (stores == null) {
+                linearlyTraverseArray<S, A>(array) { store ->
+                    if (indicesAreEqual(store)) return store
+                }
+                null
+            } else {
+                stores[selectIndicesLookupKey()]
+            }
+
+            return arrayToSelectFrom ?: nextUninterpretedArray ?: this
+        }
+
+        private inline fun <reified S : KArrayStoreBase<A, *>, A : KArraySortBase<*>> linearlyTraverseArray(
+            initialArray: KExpr<A>,
+            onEachStore: (S) -> Unit
+        ) {
+            var array = initialArray
+            while (array is S && array.type == ArrayStoreType.INTERPRETED) {
+                onEachStore(array)
+                array = array.array
+            }
+        }
+    }
 }
 
 class KArrayStore<D : KSort, R : KSort> internal constructor(
@@ -118,7 +155,7 @@ class KArrayStore<D : KSort, R : KSort> internal constructor(
     fun findArrayToSelectFrom(
         index: KExpr<D>
     ): KExpr<KArraySort<D, R>> = lookupArrayToSelectFrom(
-        indicesAreEqual = { index == this.index },
+        indicesAreEqual = { index == it.index },
         selectIndicesAreInterpreted = { index is KInterpretedValue<D> },
         selectIndicesLookupKey = { index }
     )
@@ -162,7 +199,7 @@ class KArray2Store<D0 : KSort, D1 : KSort, R : KSort> internal constructor(
         index0: KExpr<D0>,
         index1: KExpr<D1>,
     ): KExpr<KArray2Sort<D0, D1, R>> = lookupArrayToSelectFrom(
-        indicesAreEqual = { index0 == this.index0 && index1 == this.index1 },
+        indicesAreEqual = { index0 == it.index0 && index1 == it.index1 },
         selectIndicesAreInterpreted = { areInterpreted(index0, index1) },
         selectIndicesLookupKey = { lookupKey(index0, index1) }
     )
@@ -213,7 +250,7 @@ class KArray3Store<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal const
         index1: KExpr<D1>,
         index2: KExpr<D2>
     ): KExpr<KArray3Sort<D0, D1, D2, R>> = lookupArrayToSelectFrom(
-        indicesAreEqual = { index0 == this.index0 && index1 == this.index1 && index2 == this.index2 },
+        indicesAreEqual = { index0 == it.index0 && index1 == it.index1 && index2 == it.index2 },
         selectIndicesAreInterpreted = { areInterpreted(index0, index1, index2) },
         selectIndicesLookupKey = { lookupKey(index0, index1, index2) }
     )
@@ -254,7 +291,7 @@ class KArrayNStore<R : KSort> internal constructor(
             "Array domain size mismatch: expected ${this.indices.size}, provided: ${indices.size}"
         }
         return lookupArrayToSelectFrom(
-            indicesAreEqual = { indices == this.indices },
+            indicesAreEqual = { indices == it.indices },
             selectIndicesAreInterpreted = { indices.all { it is KInterpretedValue<*> } },
             selectIndicesLookupKey = { indices }
         )
