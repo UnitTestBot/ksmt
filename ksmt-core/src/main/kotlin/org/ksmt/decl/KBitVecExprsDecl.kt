@@ -22,6 +22,11 @@ abstract class KBitVecValueDecl<T : KBvSort> internal constructor(
     companion object {
         private fun mkDeclName(ctx: KContext, value: Number, sizeBits: UInt): String =
             if (ctx.printerParams.bvValuePrintMode == BvValuePrintMode.HEX && sizeBits % HALF_BYTE == 0u) {
+                /**
+                 * According to the smt-lib standard, we can use hex notation
+                 * `#x` only if the number of bits in Bv is aligned with the number of bits
+                 * represented by a single character in hexadecimal format ([HALF_BYTE]).
+                 * */
                 "#x${value.toHexString(sizeBits / HALF_BYTE)}"
             } else {
                 "#b${value.toBinaryString(sizeBits)}"
