@@ -18,7 +18,6 @@ import org.ksmt.expr.KArraySelectBase
 import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KArrayStoreBase
 import org.ksmt.expr.KExpr
-import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.sort.KArray2Sort
 import org.ksmt.sort.KArray3Sort
@@ -107,30 +106,22 @@ private inline fun <
     reified L : KArrayLambdaBase<A, R>
 > KContext.simplifyArraySelect(
     array: KExpr<A>,
-    indicesAreValues: () -> Boolean,
     storeIndicesMatch: (S) -> Boolean,
-    storeIndicesAreValues: (S) -> Boolean,
+    findArrayToSelectFrom: (S) -> KExpr<A>,
     mkLambdaSubstitution: KExprSubstitutor.(L) -> Unit,
     default: (KExpr<A>) -> KExpr<R>
 ): KExpr<R> {
     var currentArray = array
 
-    while (currentArray is S) {
-        // (select (store i v) i) ==> v
-        if (storeIndicesMatch(currentArray)) {
-            return currentArray.value
-        }
-
-        // (select (store a i v) j), i != j ==> (select a j)
-        if (indicesAreValues() && storeIndicesAreValues(currentArray)) {
-            currentArray = currentArray.array
-        } else {
-            // possibly equal index, we can't expand stores
-            break
-        }
+    if (currentArray is S) {
+        currentArray = findArrayToSelectFrom(currentArray)
     }
 
     when (currentArray) {
+        // (select (store i v) i) ==> v
+        is S -> if (storeIndicesMatch(currentArray)) {
+            return currentArray.value
+        }
         // (select (const v) i) ==> v
         is KArrayConst<A, *> -> {
             return currentArray.value.uncheckedCast()
@@ -152,9 +143,8 @@ fun <D : KSort, R : KSort> KContext.simplifyArraySelect(
     index: KExpr<D>
 ): KExpr<R> = simplifyArraySelect(
     array = array,
-    indicesAreValues = { index is KInterpretedValue<D> },
     storeIndicesMatch = { store: KArrayStore<D, R> -> index == store.index },
-    storeIndicesAreValues = { store: KArrayStore<D, R> -> store.index is KInterpretedValue<D> },
+    findArrayToSelectFrom = { store: KArrayStore<D, R> -> store.findArrayToSelectFrom(index) },
     mkLambdaSubstitution = { lambda: KArrayLambda<D, R> ->
         substitute(mkConstApp(lambda.indexVarDecl), index)
     },
@@ -167,12 +157,11 @@ fun <D0 : KSort, D1 : KSort, R : KSort> KContext.simplifyArraySelect(
     index1: KExpr<D1>
 ): KExpr<R> = simplifyArraySelect(
     array = array,
-    indicesAreValues = { index0 is KInterpretedValue<D0> && index1 is KInterpretedValue<D1> },
     storeIndicesMatch = { store: KArray2Store<D0, D1, R> ->
         index0 == store.index0 && index1 == store.index1
     },
-    storeIndicesAreValues = { store: KArray2Store<D0, D1, R> ->
-        store.index0 is KInterpretedValue<D0> && store.index1 is KInterpretedValue<D1>
+    findArrayToSelectFrom = { store: KArray2Store<D0, D1, R> ->
+        store.findArrayToSelectFrom(index0, index1)
     },
     mkLambdaSubstitution = { lambda: KArray2Lambda<D0, D1, R> ->
         substitute(mkConstApp(lambda.indexVar0Decl), index0)
@@ -188,14 +177,11 @@ fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> KContext.simplifyArraySelect
     index2: KExpr<D2>
 ): KExpr<R> = simplifyArraySelect(
     array = array,
-    indicesAreValues = {
-        index0 is KInterpretedValue<D0> && index1 is KInterpretedValue<D1> && index2 is KInterpretedValue<D2>
-    },
     storeIndicesMatch = { store: KArray3Store<D0, D1, D2, R> ->
         index0 == store.index0 && index1 == store.index1 && index2 == store.index2
     },
-    storeIndicesAreValues = { s: KArray3Store<D0, D1, D2, R> ->
-        s.index0 is KInterpretedValue<D0> && s.index1 is KInterpretedValue<D1> && s.index2 is KInterpretedValue<D2>
+    findArrayToSelectFrom = { s: KArray3Store<D0, D1, D2, R> ->
+        s.findArrayToSelectFrom(index0, index1, index2)
     },
     mkLambdaSubstitution = { lambda: KArray3Lambda<D0, D1, D2, R> ->
         substitute(mkConstApp(lambda.indexVar0Decl), index0)
@@ -210,9 +196,8 @@ fun <R : KSort> KContext.simplifyArrayNSelect(
     indices: List<KExpr<*>>
 ): KExpr<R> = simplifyArraySelect(
     array = array,
-    indicesAreValues = { indices.all { it is KInterpretedValue<*> } },
     storeIndicesMatch = { store: KArrayNStore<R> -> indices == store.indices },
-    storeIndicesAreValues = { store: KArrayNStore<R> -> store.indices.all { it is KInterpretedValue<*> } },
+    findArrayToSelectFrom = { store: KArrayNStore<R> -> store.findArrayToSelectFrom(indices) },
     mkLambdaSubstitution = { lambda: KArrayNLambda<R> ->
         lambda.indexVarDeclarations.zip(indices) { varDecl, index ->
             substitute(mkConstApp(varDecl).uncheckedCast<_, KExpr<KSort>>(), index.uncheckedCast())

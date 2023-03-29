@@ -1000,7 +1000,7 @@ open class KContext(
     ): KArrayStore<D, R> = arrayStoreCache.createIfContextActive {
         ensureContextMatch(array, index, value)
         KArrayStore(this, array, index, value)
-    }.cast()
+    }.also { it.analyzeStore() }.cast()
 
     open fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayStoreNoSimplify(
         array: KExpr<KArray2Sort<D0, D1, R>>,
@@ -1010,7 +1010,7 @@ open class KContext(
     ): KArray2Store<D0, D1, R> = array2StoreCache.createIfContextActive {
         ensureContextMatch(array, index0, index1, value)
         KArray2Store(this, array, index0, index1, value)
-    }.cast()
+    }.also { it.analyzeStore() }.cast()
 
     open fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayStoreNoSimplify(
         array: KExpr<KArray3Sort<D0, D1, D2, R>>,
@@ -1021,7 +1021,7 @@ open class KContext(
     ): KArray3Store<D0, D1, D2, R> = array3StoreCache.createIfContextActive {
         ensureContextMatch(array, index0, index1, index2, value)
         KArray3Store(this, array, index0, index1, index2, value)
-    }.cast()
+    }.also { it.analyzeStore() }.cast()
 
     open fun <R : KSort> mkArrayNStoreNoSimplify(
         array: KExpr<KArrayNSort<R>>,
@@ -1032,7 +1032,7 @@ open class KContext(
         ensureContextMatch(array, value)
 
         KArrayNStore(this, array, indices.uncheckedCast(), value)
-    }.cast()
+    }.also { it.analyzeStore() }.cast()
 
     private val arraySelectCache = mkAstInterner<KArraySelect<out KSort, out KSort>>()
     private val array2SelectCache = mkAstInterner<KArray2Select<out KSort, out KSort, out KSort>>()

@@ -202,6 +202,13 @@ open class KModelEvaluator(
         return expr in sortUniverse
     }
 
+    private fun isValueInModel(expr: KExpr<*>): Boolean {
+        if (expr is KInterpretedValue<*>) return true
+        val sort = expr.sort
+        if (sort is KUninterpretedSort && isUninterpretedValue(sort, expr.uncheckedCast())) return true
+        return false
+    }
+
     @Suppress("USELESS_CAST") // Exhaustive when
     private fun <A : KArraySortBase<R>, R : KSort> evalArrayInterpretation(
         sort: A,
@@ -324,7 +331,7 @@ open class KModelEvaluator(
             }
         }
 
-        val argsAreConstants = args.all { it is KInterpretedValue<*> }
+        val argsAreConstants = args.all { isValueInModel(it) }
 
         val resolvedEntries = arrayListOf<KModel.KFuncInterpEntry<T>>()
         for (entry in interpretation.entries) {
@@ -341,7 +348,7 @@ open class KModelEvaluator(
                 )
             }
 
-            val definitelyDontMatch = argsAreConstants && entryArgs.all { it is KInterpretedValue<*> }
+            val definitelyDontMatch = argsAreConstants && entryArgs.all { isValueInModel(it) }
             if (definitelyDontMatch) {
                 // No need to keep entry, since it doesn't match arguments
                 continue

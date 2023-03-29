@@ -5,6 +5,8 @@ plugins {
 }
 
 dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.5")
+
     testImplementation(project(":ksmt-z3"))
     testImplementation("org.junit.jupiter", "junit-jupiter-params", "5.8.2")
 }

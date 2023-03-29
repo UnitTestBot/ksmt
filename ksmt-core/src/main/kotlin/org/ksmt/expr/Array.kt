@@ -1,5 +1,8 @@
 package org.ksmt.expr
 
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.mutate
+import kotlinx.collections.immutable.persistentHashMapOf
 import org.ksmt.KContext
 import org.ksmt.cache.hash
 import org.ksmt.cache.structurallyEqual
@@ -14,7 +17,14 @@ import org.ksmt.sort.KArray3Sort
 import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.asExpr
 import org.ksmt.utils.uncheckedCast
+
+internal enum class ArrayStoreType {
+    INTERPRETED,
+    UNINTERPRETED,
+    NOT_INITIALIZED
+}
 
 sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
     ctx: KContext,
@@ -31,6 +41,54 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
             addAll(this@KArrayStoreBase.indices)
             add(value)
         }.uncheckedCast()
+
+    private var type: ArrayStoreType = ArrayStoreType.NOT_INITIALIZED
+    private var interpretedStores: PersistentMap<Any, KArrayStoreBase<A, R>>? = null
+    private var nextUninterpretedArray: KExpr<A>? = null
+
+    abstract fun indicesAreInterpreted(): Boolean
+
+    abstract fun findArrayToSelectFrom(indices: List<KExpr<*>>): KExpr<A>
+
+    fun analyzeStore() {
+        if (type != ArrayStoreType.NOT_INITIALIZED) return
+
+        if (!indicesAreInterpreted()) {
+            type = ArrayStoreType.UNINTERPRETED
+            return
+        }
+        type = ArrayStoreType.INTERPRETED
+
+        if (array !is KArrayStoreBase<A, *> || array.type != ArrayStoreType.INTERPRETED) {
+            nextUninterpretedArray = array
+            interpretedStores = null
+            return
+        }
+
+        interpretedStores = updateInterpretedStoresMap(array).uncheckedCast()
+        nextUninterpretedArray = array.nextUninterpretedArray
+    }
+
+    internal abstract fun createLookupKey(): Any
+
+    internal inline fun lookupArrayToSelectFrom(
+        indicesAreEqual: () -> Boolean,
+        selectIndicesAreInterpreted: () -> Boolean,
+        selectIndicesLookupKey: () -> Any
+    ): KExpr<A> {
+        if (indicesAreEqual()) return this
+        if (type != ArrayStoreType.INTERPRETED || !selectIndicesAreInterpreted()) return this
+        return interpretedStores?.get(selectIndicesLookupKey()) ?: nextUninterpretedArray ?: this
+    }
+
+    private fun updateInterpretedStoresMap(
+        nestedInterpretedStore: KArrayStoreBase<A, *>
+    ) = nestedInterpretedStore.interpretedStores
+        ?.put(createLookupKey(), this)
+        ?: persistentHashMapOf<Any, KArrayStoreBase<A, *>>().mutate {
+            it[nestedInterpretedStore.createLookupKey()] = nestedInterpretedStore
+            it[createLookupKey()] = this
+        }
 }
 
 class KArrayStore<D : KSort, R : KSort> internal constructor(
@@ -49,6 +107,21 @@ class KArrayStore<D : KSort, R : KSort> internal constructor(
 
     override fun internHashCode(): Int = hash(array, index, value)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { array }, { index }, { value })
+
+    override fun indicesAreInterpreted(): Boolean = index is KInterpretedValue<D>
+
+    override fun createLookupKey(): Any = index
+
+    override fun findArrayToSelectFrom(indices: List<KExpr<*>>): KExpr<KArraySort<D, R>> =
+        findArrayToSelectFrom(indices.single().asExpr(index.sort))
+
+    fun findArrayToSelectFrom(
+        index: KExpr<D>
+    ): KExpr<KArraySort<D, R>> = lookupArrayToSelectFrom(
+        indicesAreEqual = { index == this.index },
+        selectIndicesAreInterpreted = { index is KInterpretedValue<D> },
+        selectIndicesLookupKey = { index }
+    )
 }
 
 class KArray2Store<D0 : KSort, D1 : KSort, R : KSort> internal constructor(
@@ -72,6 +145,32 @@ class KArray2Store<D0 : KSort, D1 : KSort, R : KSort> internal constructor(
 
     override fun internEquals(other: Any): Boolean =
         structurallyEqual(other, { array }, { index0 }, { index1 }, { value })
+
+    override fun indicesAreInterpreted(): Boolean = areInterpreted(index0, index1)
+
+    override fun createLookupKey(): Any = lookupKey(index0, index1)
+
+    override fun findArrayToSelectFrom(indices: List<KExpr<*>>): KExpr<KArray2Sort<D0, D1, R>> {
+        require(indices.size == KArray2Sort.DOMAIN_SIZE) {
+            "Array domain size mismatch: expected ${KArray2Sort.DOMAIN_SIZE}, provided: ${indices.size}"
+        }
+        val (i0, i1) = indices
+        return findArrayToSelectFrom(i0.asExpr(index0.sort), i1.asExpr(index1.sort))
+    }
+
+    fun findArrayToSelectFrom(
+        index0: KExpr<D0>,
+        index1: KExpr<D1>,
+    ): KExpr<KArray2Sort<D0, D1, R>> = lookupArrayToSelectFrom(
+        indicesAreEqual = { index0 == this.index0 && index1 == this.index1 },
+        selectIndicesAreInterpreted = { areInterpreted(index0, index1) },
+        selectIndicesLookupKey = { lookupKey(index0, index1) }
+    )
+
+    private fun areInterpreted(i0: KExpr<D0>, i1: KExpr<D1>): Boolean =
+        i0 is KInterpretedValue<D0> && i1 is KInterpretedValue<D1>
+
+    private fun lookupKey(i0: KExpr<D0>, i1: KExpr<D1>) = Pair(i0, i1)
 }
 
 class KArray3Store<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal constructor(
@@ -96,6 +195,33 @@ class KArray3Store<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal const
 
     override fun internEquals(other: Any): Boolean =
         structurallyEqual(other, { array }, { index0 }, { index1 }, { index2 }, { value })
+
+    override fun indicesAreInterpreted(): Boolean = areInterpreted(index0, index1, index2)
+
+    override fun createLookupKey(): Any = lookupKey(index0, index1, index2)
+
+    override fun findArrayToSelectFrom(indices: List<KExpr<*>>): KExpr<KArray3Sort<D0, D1, D2, R>> {
+        require(indices.size == KArray3Sort.DOMAIN_SIZE) {
+            "Array domain size mismatch: expected ${KArray3Sort.DOMAIN_SIZE}, provided: ${indices.size}"
+        }
+        val (i0, i1, i2) = indices
+        return findArrayToSelectFrom(i0.asExpr(index0.sort), i1.asExpr(index1.sort), i2.asExpr(index2.sort))
+    }
+
+    fun findArrayToSelectFrom(
+        index0: KExpr<D0>,
+        index1: KExpr<D1>,
+        index2: KExpr<D2>
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> = lookupArrayToSelectFrom(
+        indicesAreEqual = { index0 == this.index0 && index1 == this.index1 && index2 == this.index2 },
+        selectIndicesAreInterpreted = { areInterpreted(index0, index1, index2) },
+        selectIndicesLookupKey = { lookupKey(index0, index1, index2) }
+    )
+
+    private fun areInterpreted(i0: KExpr<D0>, i1: KExpr<D1>, i2: KExpr<D2>): Boolean =
+        i0 is KInterpretedValue<D0> && i1 is KInterpretedValue<D1> && i2 is KInterpretedValue<D2>
+
+    private fun lookupKey(i0: KExpr<D0>, i1: KExpr<D1>, i2: KExpr<D2>) = Triple(i0, i1, i2)
 }
 
 class KArrayNStore<R : KSort> internal constructor(
@@ -118,6 +244,21 @@ class KArrayNStore<R : KSort> internal constructor(
 
     override fun internHashCode(): Int = hash(array, indices, value)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { array }, { indices }, { value })
+
+    override fun indicesAreInterpreted(): Boolean = indices.all { it is KInterpretedValue<*> }
+
+    override fun createLookupKey(): Any = indices
+
+    override fun findArrayToSelectFrom(indices: List<KExpr<*>>): KExpr<KArrayNSort<R>> {
+        require(indices.size == this.indices.size) {
+            "Array domain size mismatch: expected ${this.indices.size}, provided: ${indices.size}"
+        }
+        return lookupArrayToSelectFrom(
+            indicesAreEqual = { indices == this.indices },
+            selectIndicesAreInterpreted = { indices.all { it is KInterpretedValue<*> } },
+            selectIndicesLookupKey = { indices }
+        )
+    }
 }
 
 sealed class KArraySelectBase<A : KArraySortBase<R>, R : KSort>(
