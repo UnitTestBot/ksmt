@@ -58,7 +58,8 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     override fun assert(expr: KExpr<KBoolSort>) = cvc5Try {
         ctx.ensureContextMatch(expr)
 
-        val cvc5Expr = with(exprInternalizer) { expr.internalizeExpr() }
+        val cvc5Expr = with(exprInternalizer) { expr.internalizeAssertion() }
+
         solver.assertFormula(cvc5Expr)
     }
 
@@ -66,7 +67,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         ctx.ensureContextMatch(expr, trackVar)
 
         val trackVarApp = trackVar.apply()
-        val cvc5TrackVar = with(exprInternalizer) { trackVarApp.internalizeExpr() }
+        val cvc5TrackVar = with(exprInternalizer) { trackVarApp.internalizeWithNoAxiomsAllowed() }
         val trackedExpr = with(ctx) { trackVarApp implies expr }
 
         cvc5CurrentLevelTrackedAssertions.add(cvc5TrackVar)
@@ -112,7 +113,10 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus = cvc5Try {
         ctx.ensureContextMatch(assumptions)
 
-        val cvc5Assumptions = with(exprInternalizer) { assumptions.map { it.internalizeExpr() } }.toTypedArray()
+        val cvc5Assumptions = with(exprInternalizer) {
+            assumptions.map { it.internalizeWithNoAxiomsAllowed() }
+        }.toTypedArray()
+
         cvc5LastAssumptions = cvc5Assumptions.toCollection(TreeSet())
         solver.updateTimeout(timeout)
         solver.checkSatAssuming(cvc5Assumptions).processCheckResult()

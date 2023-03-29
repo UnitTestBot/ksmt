@@ -15,7 +15,9 @@ import io.github.cvc5.intDivisibleArg
 import io.github.cvc5.toFpExponentSize
 import io.github.cvc5.toFpSignificandSize
 import org.ksmt.KContext
+import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
+import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpRoundingMode
@@ -24,7 +26,10 @@ import org.ksmt.solver.util.KExprConverterBase
 import org.ksmt.solver.util.ExprConversionResult
 import org.ksmt.solver.util.KExprConverterUtils.argumentsConversionRequired
 import org.ksmt.sort.KArithSort
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBvSort
@@ -37,6 +42,7 @@ import org.ksmt.utils.asExpr
 import org.ksmt.utils.uncheckedCast
 import java.util.*
 
+@Suppress("LargeClass")
 open class KCvc5ExprConverter(
     private val ctx: KContext,
     private val cvc5Ctx: KCvc5Context
@@ -58,11 +64,13 @@ open class KCvc5ExprConverter(
             Kind.CONST_FLOATINGPOINT -> convertNativeFloatingPointConstExpr(expr)
             Kind.CONST_ROUNDINGMODE -> convertNativeRoundingModeConstExpr(expr)
             Kind.CONST_BITVECTOR -> convertNativeBitvectorConstExpr(expr)
-            Kind.CONST_ARRAY -> convertNativeConstArrayExpr<KSort, KSort>(expr)
+            Kind.CONST_ARRAY -> convertNativeConstArrayExpr<KSort>(expr)
             Kind.CONST_INTEGER -> convertNativeConstIntegerExpr(expr)
             Kind.CONST_RATIONAL -> convertNativeConstRealExpr(expr)
-            Kind.CONSTANT -> convert { mkConst(expr.symbol, expr.sort.convertSort()) }
-            Kind.UNINTERPRETED_SORT_VALUE -> convert { mkConst(expr.uninterpretedSortValue, expr.sort.convertSort()) }
+            Kind.CONSTANT -> convert { convertConstDecl(expr).apply() }
+            Kind.UNINTERPRETED_SORT_VALUE -> convert {
+                mkFreshConst(expr.uninterpretedSortValue, expr.sort.convertSort())
+            }
 
             // equality, cmp, ite
             Kind.EQUAL -> expr.convert(::mkEq)
@@ -306,8 +314,8 @@ open class KCvc5ExprConverter(
             Kind.FLOATINGPOINT_TO_REAL -> expr.convert { fpExpr: KExpr<KFpSort> -> mkFpToRealExpr(fpExpr) }
 
             // array
-            Kind.SELECT -> expr.convert(::mkArray1Select)
-            Kind.STORE -> expr.convert(::mkArray1Store)
+            Kind.SELECT -> convertNativeArraySelect(expr)
+            Kind.STORE -> convertNativeArrayStore(expr)
 
             Kind.EQ_RANGE -> throw KSolverUnsupportedFeatureException("EQ_RANGE is not supported")
 
@@ -475,11 +483,11 @@ open class KCvc5ExprConverter(
         if (cvc5SubstitutedConsts == null) {
 
             // fresh bounds
-            val bounds = cvc5VarList.getChildren().map { mkFreshConstDecl(it.symbol, it.sort.convertSort()) }
+            val bounds = cvc5VarList.getChildren().map { convertFreshConstDecl(it) }
 
             val cvc5ConstBounds = bounds
                 .map { mkConstApp(it) }
-                .map { with(internalizer) { it.internalizeExpr() } }
+                .map { with(internalizer) { it.internalizeWithNoAxiomsAllowed() } }
                 .toTypedArray()
 
             val cvc5PreparedBody = cvc5BodyWithVars.substitute(cvc5VarList.getChildren(), cvc5ConstBounds)
@@ -498,7 +506,7 @@ open class KCvc5ExprConverter(
             return@with ExprConversionResult(mkQf(body, bounds))
         }
 
-        val bounds = cvc5SubstitutedConsts.map { mkConstDecl(it.symbol, it.sort.convertSort()) }
+        val bounds = cvc5SubstitutedConsts.map { convertConstDecl(it) }
         val cvc5PreparedBody = cvc5BodyWithVars.substitute(cvc5VarList.getChildren(), cvc5SubstitutedConsts)
         val body = findConvertedNative(cvc5PreparedBody) ?: error("Body must be converted here")
 
@@ -509,22 +517,75 @@ open class KCvc5ExprConverter(
         ExprConversionResult(mkQf(body, bounds))
     }
 
-    private fun <D : KSort, R : KSort> convertNativeConstArrayExpr(expr: Term): ExprConversionResult = with(ctx) {
+    private fun <R : KSort> convertNativeConstArrayExpr(expr: Term): ExprConversionResult = with(ctx) {
         expr.convert(arrayOf(expr.constArrayBase)) { arrayBase: KExpr<R> ->
-            mkArrayConst(expr.sort.convertSort() as KArraySort<D, R>, arrayBase)
+            mkArrayConst(expr.sort.convertSort() as KArraySortBase<R>, arrayBase)
         }
     }
 
-    private fun mkArray1Select(
-        array: KExpr<KArraySort<KSort, KSort>>,
-        index: KExpr<KSort>
-    ) = ctx.mkArraySelect(array, index)
+    private fun convertNativeArraySelect(expr: Term): ExprConversionResult {
+        val children = expr.getChildren()
+        val array = children.first()
+        val indices = getArrayOperationIndices(children[1])
+        return expr.convertList(arrayOf(array) + indices) { args: List<KExpr<KSort>> ->
+            mkArrayAnySelect(args.first().uncheckedCast(), args.drop(1))
+        }
+    }
 
-    private fun mkArray1Store(
-        array: KExpr<KArraySort<KSort, KSort>>,
-        index: KExpr<KSort>,
+    private fun convertNativeArrayStore(expr: Term): ExprConversionResult {
+        val children = expr.getChildren()
+        val array = children.first()
+        val indices = getArrayOperationIndices(children[1])
+        val value = children.last()
+        return expr.convertList(arrayOf(array, value) + indices) { args: List<KExpr<KSort>> ->
+            mkArrayAnyStore(args.first().uncheckedCast(), args.drop(2), args[1])
+        }
+    }
+
+    private fun getArrayOperationIndices(expr: Term): List<Term> =
+        if (expr.sort.isTuple) {
+            check(expr.kind == Kind.APPLY_CONSTRUCTOR) { "Unexpected array index: $expr" }
+            expr.getChildren().drop(1)
+        } else {
+            listOf(expr)
+        }
+
+    private fun mkArrayAnySelect(
+        array: KExpr<KArraySortBase<KSort>>,
+        indices: List<KExpr<KSort>>
+    ): KExpr<KSort> = with(ctx) {
+        when (indices.size) {
+            KArraySort.DOMAIN_SIZE -> mkArraySelect(array.uncheckedCast(), indices.single())
+            KArray2Sort.DOMAIN_SIZE -> {
+                val (i0, i1) = indices
+                mkArraySelect(array.uncheckedCast(), i0, i1)
+            }
+            KArray3Sort.DOMAIN_SIZE -> {
+                val (i0, i1, i2) = indices
+                mkArraySelect(array.uncheckedCast(), i0, i1, i2)
+            }
+            else -> mkArrayNSelect(array.uncheckedCast(), indices)
+        }
+    }
+
+    private fun mkArrayAnyStore(
+        array: KExpr<KArraySortBase<KSort>>,
+        indices: List<KExpr<KSort>>,
         value: KExpr<KSort>
-    ) = ctx.mkArrayStore(array, index, value)
+    ): KExpr<out KArraySortBase<KSort>> = with(ctx) {
+        when (indices.size) {
+            KArraySort.DOMAIN_SIZE -> mkArrayStore(array.uncheckedCast(), indices.single(), value)
+            KArray2Sort.DOMAIN_SIZE -> {
+                val (i0, i1) = indices
+                mkArrayStore(array.uncheckedCast(), i0, i1, value)
+            }
+            KArray3Sort.DOMAIN_SIZE -> {
+                val (i0, i1, i2) = indices
+                mkArrayStore(array.uncheckedCast(), i0, i1, i2, value)
+            }
+            else -> mkArrayNStore(array.uncheckedCast(), indices, value)
+        }
+    }
 
     private fun convertNativeConstIntegerExpr(expr: Term): ExprConversionResult = with(ctx) {
         convert { mkIntNum(expr.integerValue) }
@@ -622,17 +683,8 @@ open class KCvc5ExprConverter(
 
     open fun convertNativeDecl(decl: Term): KDecl<*> = with(ctx) {
         when {
-            decl.sort.isFunction -> {
-                val range = decl.sort.functionCodomainSort.convertSort<KSort>()
-                val domain = decl.sort.functionDomainSorts.map { it.convertSort<KSort>() }
-                val name = decl.symbol
-                return mkFuncDecl(name, range, domain)
-            }
-
-            decl.kind == Kind.CONSTANT -> {
-                return mkConstDecl(decl.symbol, decl.sort.convertSort())
-            }
-
+            decl.sort.isFunction -> convertFuncDecl(decl)
+            decl.kind == Kind.CONSTANT -> convertConstDecl(decl)
             else -> error("Unexpected term: $decl")
         }
     }
@@ -643,7 +695,10 @@ open class KCvc5ExprConverter(
             sort.isBitVector -> mkBvSort(sort.bitVectorSize.toUInt())
             sort.isInteger -> intSort
             sort.isReal -> realSort
-            sort.isArray -> mkArraySort(sort.arrayIndexSort.convertSort(), sort.arrayElementSort.convertSort())
+            sort.isArray -> mkArrayAnySort(
+                domain = convertArrayDomainSort(sort.arrayIndexSort),
+                range = sort.arrayElementSort.convertSort()
+            )
             sort.isFloatingPoint -> mkFpSort(
                 sort.floatingPointExponentSize.toUInt(),
                 sort.floatingPointSignificandSize.toUInt()
@@ -652,6 +707,52 @@ open class KCvc5ExprConverter(
             sort.isRoundingMode -> mkFpRoundingModeSort()
 
             else -> throw KSolverUnsupportedFeatureException("Sort $sort is not supported now")
+        }
+    }
+
+    private fun convertArrayDomainSort(sort: Sort): List<KSort> = if (sort.isTuple) {
+        sort.tupleSorts.map { it.convertSort() }
+    } else {
+        listOf(sort.convertSort())
+    }
+
+    private fun mkArrayAnySort(domain: List<KSort>, range: KSort): KArraySortBase<*> = with(ctx) {
+        when (domain.size) {
+            KArraySort.DOMAIN_SIZE -> mkArraySort(domain.single(), range)
+            KArray2Sort.DOMAIN_SIZE -> {
+                val (d0, d1) = domain
+                mkArraySort(d0, d1, range)
+            }
+            KArray3Sort.DOMAIN_SIZE -> {
+                val (d0, d1, d2) = domain
+                mkArraySort(d0, d1, d2, range)
+            }
+            else -> mkArrayNSort(domain, range)
+        }
+    }
+
+    private fun KContext.convertConstDecl(expr: Term): KConstDecl<KSort> {
+        val sort = expr.sort.convertSort<KSort>()
+        return if (expr.hasSymbol()) {
+            mkConstDecl(expr.symbol, sort)
+        } else {
+            mkFreshConstDecl("cvc5_var", sort)
+        }
+    }
+
+    private fun KContext.convertFreshConstDecl(expr: Term): KConstDecl<KSort> {
+        val sort = expr.sort.convertSort<KSort>()
+        val name = if (expr.hasSymbol()) expr.symbol else "cvc5_var"
+        return mkFreshConstDecl(name, sort)
+    }
+
+    private fun KContext.convertFuncDecl(expr: Term): KFuncDecl<KSort> {
+        val range = expr.sort.functionCodomainSort.convertSort<KSort>()
+        val domain = expr.sort.functionDomainSorts.map { it.convertSort<KSort>() }
+        return if (expr.hasSymbol()) {
+            mkFuncDecl(expr.symbol, range, domain)
+        } else {
+            mkFreshFuncDecl("cvc5_fun", range, domain)
         }
     }
 
@@ -695,13 +796,13 @@ open class KCvc5ExprConverter(
         else -> error("Children count must me >= 2, but was $numChildren")
     }
 
-    @Suppress("MaxLineLength")
-    inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> Term.convert(op: (KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<T>) =
-        convert(getChildren(), op)
+    inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort> Term.convert(
+        op: (KExpr<A0>, KExpr<A1>, KExpr<A2>) -> KExpr<T>
+    ) = convert(getChildren(), op)
 
-    @Suppress("MaxLineLength")
-    inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort> Term.convert(op: (KExpr<A0>, KExpr<A1>, KExpr<A2>, KExpr<A3>) -> KExpr<T>) =
-        convert(getChildren(), op)
+    inline fun <T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort> Term.convert(
+        op: (KExpr<A0>, KExpr<A1>, KExpr<A2>, KExpr<A3>) -> KExpr<T>
+    ) = convert(getChildren(), op)
 
     inline fun <T : KSort, A0 : KSort> Term.convertList(op: (List<KExpr<A0>>) -> KExpr<T>) =
         convertList(getChildren(), op)

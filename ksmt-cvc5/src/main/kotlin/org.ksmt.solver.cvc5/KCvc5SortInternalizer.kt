@@ -2,7 +2,6 @@ package org.ksmt.solver.cvc5
 
 import io.github.cvc5.Solver
 import io.github.cvc5.Sort
-import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.sort.KArray2Sort
 import org.ksmt.sort.KArray3Sort
 import org.ksmt.sort.KArrayNSort
@@ -42,17 +41,34 @@ open class KCvc5SortInternalizer(
             nSolver.mkArraySort(domain, range)
         }
 
-    override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>): Sort {
-        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
-    }
+    override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>): Sort =
+        cvc5Ctx.internalizeSort(sort) {
+            val d0 = sort.domain0.internalizeCvc5Sort()
+            val d1 = sort.domain1.internalizeCvc5Sort()
 
-    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>): Sort {
-        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
-    }
+            val domain = nSolver.mkTupleSort(arrayOf(d0, d1))
+            val range = sort.range.internalizeCvc5Sort()
+            nSolver.mkArraySort(domain, range)
+        }
 
-    override fun <R : KSort> visit(sort: KArrayNSort<R>): Sort {
-        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
-    }
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>): Sort =
+        cvc5Ctx.internalizeSort(sort) {
+            val d0 = sort.domain0.internalizeCvc5Sort()
+            val d1 = sort.domain1.internalizeCvc5Sort()
+            val d2 = sort.domain2.internalizeCvc5Sort()
+
+            val domain = nSolver.mkTupleSort(arrayOf(d0, d1, d2))
+            val range = sort.range.internalizeCvc5Sort()
+            nSolver.mkArraySort(domain, range)
+        }
+
+    override fun <R : KSort> visit(sort: KArrayNSort<R>): Sort =
+        cvc5Ctx.internalizeSort(sort) {
+            val domainSorts = sort.domainSorts.map { it.internalizeCvc5Sort() }
+            val domain = nSolver.mkTupleSort(domainSorts.toTypedArray())
+            val range = sort.range.internalizeCvc5Sort()
+            nSolver.mkArraySort(domain, range)
+        }
 
     override fun visit(sort: KFpRoundingModeSort): Sort = cvc5Ctx.internalizeSort(sort) {
         nSolver.roundingModeSort

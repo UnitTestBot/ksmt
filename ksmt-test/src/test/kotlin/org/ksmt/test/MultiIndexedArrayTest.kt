@@ -1,6 +1,7 @@
 package org.ksmt.test
 
 import com.microsoft.z3.Context
+import io.github.cvc5.Solver
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.ksmt.KContext
@@ -14,6 +15,10 @@ import org.ksmt.solver.bitwuzla.KBitwuzlaContext
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprConverter
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprInternalizer
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
+import org.ksmt.solver.cvc5.KCvc5Context
+import org.ksmt.solver.cvc5.KCvc5ExprConverter
+import org.ksmt.solver.cvc5.KCvc5ExprInternalizer
+import org.ksmt.solver.cvc5.KCvc5Solver
 import org.ksmt.solver.runner.KSolverRunnerManager
 import org.ksmt.solver.yices.KYicesContext
 import org.ksmt.solver.yices.KYicesExprConverter
@@ -27,6 +32,7 @@ import org.ksmt.sort.KArray2Sort
 import org.ksmt.sort.KArray3Sort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KArraySortBase
+import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv8Sort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KSort
@@ -34,6 +40,7 @@ import org.ksmt.utils.uncheckedCast
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 @EnabledIfEnvironmentVariable(
     named = "runMultiIndexedArrayTest",
@@ -119,9 +126,36 @@ class MultiIndexedArrayTest {
         }
     }
 
+    @Test
+    fun testMultiIndexedArraysZ3WithCvc5Oracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
+        oracleManager.createSolver(this, KCvc5Solver::class).use { oracleSolver ->
+
+            // Enable to don't ignore 'SAT is possible' checks
+            val findCompleteModel = false
+            oracleSolver.configure { setCvc5Option("fmf-bound", "$findCompleteModel") }
+
+            mkZ3Context(this).use { z3NativeCtx ->
+                runMultiIndexedArraySamples(oracleSolver) { expr ->
+                    internalizeAndConvertZ3(z3NativeCtx, expr)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun testMultiIndexedArraysCvc5WithZ3Oracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
+        oracleManager.createSolver(this, KZ3Solver::class).use { oracleSolver ->
+            mkCvc5Context(this).use { cvc5NativeCtx ->
+                runMultiIndexedArraySamples(oracleSolver) { expr ->
+                    internalizeAndConvertCvc5(cvc5NativeCtx, expr)
+                }
+            }
+        }
+    }
+
     private inline fun KContext.runMultiIndexedArraySamples(
         oracle: KSolver<*>,
-        process: (KExpr<KSort>) -> KExpr<KSort>
+        process: (KExpr<KSort>) -> ExprWithAxioms<KSort>
     ) {
         val stats = TestStats()
         val sorts = listOf(
@@ -275,7 +309,7 @@ class MultiIndexedArrayTest {
 
     private fun <T : KSort> KContext.internalizeAndConvertBitwuzla(
         nativeCtx: KBitwuzlaContext, expr: KExpr<T>
-    ): KExpr<T> {
+    ): ExprWithAxioms<T> {
         val internalized = with(KBitwuzlaExprInternalizer(nativeCtx)) {
             expr.internalizeExpr()
         }
@@ -284,12 +318,12 @@ class MultiIndexedArrayTest {
             internalized.convertExpr(expr.sort)
         }
 
-        return converted
+        return ExprWithAxioms(converted)
     }
 
     private fun <T : KSort> KContext.internalizeAndConvertYices(
         nativeCtx: KYicesContext, expr: KExpr<T>
-    ): KExpr<T> {
+    ): ExprWithAxioms<T> {
         val internalized = with(KYicesExprInternalizer(nativeCtx)) {
             expr.internalizeExpr()
         }
@@ -298,10 +332,10 @@ class MultiIndexedArrayTest {
             internalized.convert(expr.sort)
         }
 
-        return converted
+        return ExprWithAxioms(converted)
     }
 
-    private fun <T : KSort> KContext.internalizeAndConvertZ3(nativeCtx: Context, expr: KExpr<T>): KExpr<T> {
+    private fun <T : KSort> KContext.internalizeAndConvertZ3(nativeCtx: Context, expr: KExpr<T>): ExprWithAxioms<T> {
         val z3InternCtx = KZ3Context(nativeCtx)
         val z3ConvertCtx = KZ3Context(nativeCtx)
 
@@ -320,14 +354,31 @@ class MultiIndexedArrayTest {
             internalized.convertExpr<T>()
         }
 
-        return converted
+        return ExprWithAxioms(converted)
+    }
+
+    private fun <T : KSort> KContext.internalizeAndConvertCvc5(nativeCtx: Solver, expr: KExpr<T>): ExprWithAxioms<T> {
+        val internalizationCtx = KCvc5Context(nativeCtx, this)
+        val conversionCtx = KCvc5Context(nativeCtx, this)
+
+        val internalizer = KCvc5ExprInternalizer(internalizationCtx)
+        val converter = KCvc5ExprConverter(this, conversionCtx)
+
+        val (internalized, axiom) = with(internalizer) { internalizeWithAxiom(expr) }
+
+        val converted = with(converter) { internalized.convertExpr<T>() }
+        val convertedAxioms = axiom?.let {
+            with(converter) { it.flatten().map { it.axiom.convertExpr<KBoolSort>() } }
+        }
+
+        return ExprWithAxioms(converted, convertedAxioms ?: emptyList())
     }
 
     private fun <T : KSort> KContext.assertEquals(
         stats: TestStats,
         oracle: KSolver<*>,
         expected: KExpr<T>,
-        actual: KExpr<T>
+        actual: ExprWithAxioms<T>
     ) {
         if (expected == actual) {
             stats.passedFast()
@@ -346,7 +397,7 @@ class MultiIndexedArrayTest {
                 stats, expected, actual, KSolverStatus.UNSAT, "Expressions equal"
             ) {
                 val model = oracle.model()
-                val actualValue = model.eval(actual, isComplete = false)
+                val actualValue = model.eval(actual.expr, isComplete = false)
                 val expectedValue = model.eval(expected, isComplete = false)
 
                 if (expectedValue == actualValue) {
@@ -364,16 +415,18 @@ class MultiIndexedArrayTest {
     private fun <T : KSort> KContext.assertNotEqual(
         oracle: KSolver<*>,
         expected: KExpr<T>,
-        actual: KExpr<T>
+        actual: ExprWithAxioms<T>
     ) {
+        actual.axioms.forEach { oracle.assert(it) }
+
         val sort = expected.sort
         if (sort !is KArraySortBase<*>) {
-            oracle.assert(expected neq actual)
+            oracle.assert(expected neq actual.expr)
             return
         }
 
         val expectedArray: KExpr<KArraySortBase<KBv8Sort>> = expected.uncheckedCast()
-        val actualArray: KExpr<KArraySortBase<KBv8Sort>> = actual.uncheckedCast()
+        val actualArray: KExpr<KArraySortBase<KBv8Sort>> = actual.expr.uncheckedCast()
 
         // (exists (i) (/= (select expected i) (select actual i))
         val indices = sort.domainSorts.mapIndexed { i, srt -> mkFreshConst("i_${i}", srt) }
@@ -383,16 +436,18 @@ class MultiIndexedArrayTest {
     private fun <T : KSort> KContext.assertPossibleToBeEqual(
         oracle: KSolver<*>,
         expected: KExpr<T>,
-        actual: KExpr<T>
+        actual: ExprWithAxioms<T>
     ) {
+        actual.axioms.forEach { oracle.assert(it) }
+
         val sort = expected.sort
         if (sort !is KArraySortBase<*>) {
-            oracle.assert(expected eq actual)
+            oracle.assert(expected eq actual.expr)
             return
         }
 
         val expectedArray: KExpr<KArraySortBase<KBv8Sort>> = expected.uncheckedCast()
-        val actualArray: KExpr<KArraySortBase<KBv8Sort>> = actual.uncheckedCast()
+        val actualArray: KExpr<KArraySortBase<KBv8Sort>> = actual.expr.uncheckedCast()
 
         // (exists (i) (= (select expected i) (select actual i))
         val indices = sort.domainSorts.mapIndexed { i, srt -> mkFreshConst("i_${i}", srt) }
@@ -402,11 +457,11 @@ class MultiIndexedArrayTest {
     private inline fun KSolver<*>.checkSatAndReport(
         stats: TestStats,
         expected: KExpr<*>,
-        actual: KExpr<*>,
+        actual: ExprWithAxioms<*>,
         expectedStatus: KSolverStatus,
         prefix: String,
         onFailure: () -> Unit = {}
-    ): Boolean = when (check()) {
+    ): Boolean = when (check(CHECK_TIMEOUT)) {
         expectedStatus -> true
         KSolverStatus.UNKNOWN -> {
             val message = "$prefix: ${reasonOfUnknown()}"
@@ -435,6 +490,11 @@ class MultiIndexedArrayTest {
         return Context()
     }
 
+    private fun mkCvc5Context(ctx: KContext): Solver {
+        KCvc5Solver(ctx).close()
+        return Solver()
+    }
+
     private inline fun TestStats.withErrorHandling(body: () -> Unit) = try {
         body()
     } catch (ex: KSolverUnsupportedFeatureException) {
@@ -447,7 +507,7 @@ class MultiIndexedArrayTest {
         val id: Int,
         val message: String,
         val expected: KExpr<*>?,
-        val actual: KExpr<*>?
+        val actual: ExprWithAxioms<*>?
     )
 
     private class TestStats(
@@ -473,12 +533,12 @@ class MultiIndexedArrayTest {
             passed()
         }
 
-        fun ignore(expected: KExpr<*>, actual: KExpr<*>, message: String) {
+        fun ignore(expected: KExpr<*>, actual: ExprWithAxioms<*>, message: String) {
             System.err.println("IGNORED ${testId}: $message")
             ignored += TestCase(testId, message, expected, actual)
         }
 
-        fun fail(expected: KExpr<*>, actual: KExpr<*>, message: String) {
+        fun fail(expected: KExpr<*>, actual: ExprWithAxioms<*>, message: String) {
             System.err.println("FAILED ${testId}: $message")
             failed += TestCase(testId, message, expected, actual)
         }
@@ -507,7 +567,14 @@ class MultiIndexedArrayTest {
         }
     }
 
+    private data class ExprWithAxioms<T : KSort>(
+        val expr: KExpr<T>,
+        val axioms: List<KExpr<KBoolSort>> = emptyList()
+    )
+
     companion object {
+        private val CHECK_TIMEOUT = 10.seconds
+
         private val oracleManager = KSolverRunnerManager(
             workerPoolSize = 2,
             hardTimeout = 1.minutes

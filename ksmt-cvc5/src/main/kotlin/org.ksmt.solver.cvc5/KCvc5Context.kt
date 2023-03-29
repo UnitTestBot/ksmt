@@ -66,6 +66,8 @@ class KCvc5Context(
     private val decls = HashMap<KDecl<*>, Term>()
     private val cvc5Decls = TreeMap<Term, KDecl<*>>()
 
+    private val expressionAxiom = hashMapOf<KExpr<*>, ExprAxiom>()
+
     private var currentLevelUninterpretedSorts = hashSetOf<KUninterpretedSort>()
     private val uninterpretedSorts = mutableListOf(currentLevelUninterpretedSorts)
 
@@ -172,6 +174,22 @@ class KCvc5Context(
 
     inline fun convertDecl(decl: Term, converter: () -> KDecl<*>): KDecl<*> =
         findOrSave(decl, converter, ::findConvertedDecl, ::saveConvertedDecl)
+
+    /**
+     * Expression axioms.
+     *
+     * We can guard an expression with an axiom to ensure that it is correct.
+     * This mechanism is usually used for guard an existential variable.
+     * For example, when we can't express `f(x)` but we can express `f^-1(y)`
+     * we can use this mechanism to create an existential variable `y` guarded with `x = f^-1(y)`.
+     * */
+    fun findExpressionAxiom(expr: KExpr<*>): ExprAxiom? = expressionAxiom[expr]
+
+    fun storeExpressionAxiom(expr: KExpr<*>, axiom: ExprAxiom) {
+        expressionAxiom[expr] = axiom
+    }
+
+    fun expressionHasAxiom(expr: KExpr<*>): Boolean = findExpressionAxiom(expr) != null
 
     inline fun <K, V> findOrSave(
         key: K,
@@ -354,4 +372,22 @@ class KCvc5Context(
             return expr
         }
     }
+
+    sealed interface ExprAxiom {
+        fun flatten(): List<ExprAxiomInstance> {
+            val stack = arrayListOf(this)
+            val result = mutableListOf<ExprAxiomInstance>()
+            while (stack.isNotEmpty()) {
+                val axiom = stack.removeLast()
+                when (axiom) {
+                    is ExprAxiomInstance -> result.add(axiom)
+                    is ExprAxiomMerge -> stack.addAll(axiom.axioms)
+                }
+            }
+            return result
+        }
+    }
+
+    class ExprAxiomInstance(val expr: KExpr<*>, val variable: Term, val axiom: Term) : ExprAxiom
+    class ExprAxiomMerge(val axioms: List<ExprAxiom>) : ExprAxiom
 }

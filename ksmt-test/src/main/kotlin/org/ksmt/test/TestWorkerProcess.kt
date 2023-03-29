@@ -124,7 +124,7 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         return Cvc5Solver().use { cvc5Solver ->
             val cvc5Assertions = KCvc5Context(cvc5Solver, ctx).use { cvc5Ctx ->
                 val internalizer = KCvc5ExprInternalizer(cvc5Ctx)
-                with(internalizer) { assertions.map { it.internalizeExpr() } }
+                with(internalizer) { assertions.map { it.internalizeAssertion() } }
             }
 
             KCvc5Context(cvc5Solver, ctx).use { cvc5Ctx ->
