@@ -3,18 +3,20 @@ package org.ksmt.expr.rewrite.simplify
 import org.ksmt.KContext
 import org.ksmt.decl.KIntNumDecl
 import org.ksmt.expr.*
+import org.ksmt.utils.mkConst
 import kotlin.math.sign
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 
 class ExpressionOrderingTest {
     private val ctx = KContext()
     private val values = arrayOf(
-        KConst(ctx, KIntNumDecl(ctx, "1")),
-        KConst(ctx, KIntNumDecl(ctx, "2")),
-        KInt32NumExpr(ctx, 3),
-        KInt32NumExpr(ctx, 4),
-        KAddArithExpr(ctx, listOf(KInt32NumExpr(ctx, 10), KInt32NumExpr(ctx, 20))),
-        KAddArithExpr(ctx, listOf(KInt32NumExpr(ctx, 30), KInt32NumExpr(ctx, 40))),
+        ctx.mkConstApp(ctx.mkIntNumDecl("1")),
+        ctx.mkConstApp(ctx.mkIntNumDecl("2")),
+        ctx.mkIntNum(3),
+        ctx.mkIntNum(4),
+        ctx.mkArithAddNoSimplify(listOf(ctx.mkIntNum(10), ctx.mkIntNum(20))),
+        ctx.mkArithAddNoSimplify(listOf(ctx.mkIntNum(30), ctx.mkIntNum(40))),
     )
 
     @Test
