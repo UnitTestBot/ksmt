@@ -18,7 +18,11 @@ object ExpressionOrdering : Comparator<KExpr<*>> {
             else -> -1
         }
 
-        else -> compareDefault(left, right)
+        else -> when(right) {
+            is KInterpretedValue<*> -> 1
+            is KConst<*> -> 1
+            else -> compareDefault(left, right)
+        }
     }
 
     @JvmStatic
