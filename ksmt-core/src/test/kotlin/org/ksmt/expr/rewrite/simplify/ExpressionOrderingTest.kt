@@ -18,12 +18,10 @@ class ExpressionOrderingTest {
     )
 
     @Test
-    fun testAntisymmetry() {
+    fun testAntisymmetry() = with(ExpressionOrdering) {
         for (value1 in values) {
             for (value2 in values) {
-                assert(
-                    ExpressionOrdering.compare(value1, value2).sign == -ExpressionOrdering.compare(value2, value1).sign
-                ) {
+                assert(compare(value1, value2).sign == -compare(value2, value1).sign) {
                     "Compare $value1 with $value2"
                 }
             }
@@ -40,16 +38,12 @@ class ExpressionOrderingTest {
     }
 
     @Test
-    fun testTransitivity() {
+    fun testTransitivity() = with(ExpressionOrdering) {
         for (value1 in values) {
             for (value2 in values) {
                 for (value3 in values) {
-                    if (ExpressionOrdering.compare(value1, value2) <= 0 && ExpressionOrdering.compare(
-                            value2,
-                            value3
-                        ) <= 0
-                    ) {
-                        assert(ExpressionOrdering.compare(value1, value3) <= 0) {
+                    if (compare(value1, value2) <= 0 && compare(value2, value3) <= 0) {
+                        assert(compare(value1, value3) <= 0) {
                             "Compare $value1 and $value3 when [$value1] <= [$value2] <= [$value3]"
                         }
                     }
