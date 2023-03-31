@@ -3,7 +3,6 @@ package org.ksmt.symfpu
 import org.ksmt.KContext
 import org.ksmt.cache.hash
 import org.ksmt.cache.structurallyEqual
-import org.ksmt.expr.KApp
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.printer.ExpressionPrinter
 import org.ksmt.expr.transformer.KTransformerBase
@@ -12,7 +11,6 @@ import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.utils.FpUtils.fpInfExponentBiased
 import org.ksmt.utils.FpUtils.fpInfSignificand
-import org.ksmt.utils.cast
 
 
 fun KExpr<KBvSort>.extendUnsigned(ext: Int, ctx: KContext): KExpr<KBvSort> {
@@ -224,13 +222,6 @@ class UnpackedFp<Fp : KFpSort> private constructor(
             )
         }
 
-        fun dfsCount(node: KApp<*, *>): Int {
-            return if (node.args.isEmpty()) {
-                1
-            } else {
-                node.args.map { dfsCount(it.cast()) }.sum()
-            }
-        }
     }
 
 
