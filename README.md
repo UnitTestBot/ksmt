@@ -14,9 +14,9 @@ repositories {
 }
 
 // core 
-implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.4.5")
+implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.4.6")
 // z3 solver
-implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.4.5")
+implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.4.6")
 ```
 
 ## Usage
@@ -26,8 +26,8 @@ Also, check out the [Java examples](examples/src/main/java).
 # Features
 Currently, KSMT supports the following SMT solvers:
 
-| SMT Solver                                       |     Linux-x64      |    Windows-x64     | MacOS-aarch64      |     MacOS-x64      |
-|--------------------------------------------------|:------------------:|:------------------:|--------------------|:------------------:|
+| SMT Solver                                       |     Linux-x64      |    Windows-x64     |   MacOS-aarch64    |     MacOS-x64      |
+|--------------------------------------------------|:------------------:|:------------------:|:------------------:|:------------------:|
 | [Z3](https://github.com/Z3Prover/z3)             | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | [Bitwuzla](https://github.com/bitwuzla/bitwuzla) | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |                    |
 | [Yices2](https://github.com/SRI-CSL/yices2)      | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |                    |
@@ -35,8 +35,8 @@ Currently, KSMT supports the following SMT solvers:
 
 KSMT can express formulas in the following theories:
 
-| Theory                  |         Z3         |      Bitwuzla      | Yices2             | cvc5               |
-|-------------------------|:------------------:|:------------------:|--------------------|--------------------|
+| Theory                  |         Z3         |      Bitwuzla      |       Yices2       |        cvc5        |
+|-------------------------|:------------------:|:------------------:|:------------------:|:------------------:|
 | Bitvectors              | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | Arrays                  | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | IEEE Floats             | :heavy_check_mark: | :heavy_check_mark: |                    | :heavy_check_mark: |
