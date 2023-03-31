@@ -10,9 +10,9 @@ repositories {
 
 dependencies {
     // core
-    implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.4.5")
+    implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.4.6")
     // z3 solver
-    implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.4.5")
+    implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.4.6")
 }
 
 java {
