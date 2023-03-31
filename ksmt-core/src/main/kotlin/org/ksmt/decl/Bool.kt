@@ -64,7 +64,7 @@ class KXorDecl internal constructor(
 class KEqDecl<T : KSort> internal constructor(
     ctx: KContext,
     argSort: T
-) : KFuncDecl2<KBoolSort, T, T>(ctx, "eq", ctx.mkBoolSort(), argSort, argSort) {
+) : KFuncDecl2<KBoolSort, T, T>(ctx, "=", ctx.mkBoolSort(), argSort, argSort) {
     override fun KContext.apply(arg0: KExpr<T>, arg1: KExpr<T>): KApp<KBoolSort, T> = mkEqNoSimplify(arg0, arg1)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }

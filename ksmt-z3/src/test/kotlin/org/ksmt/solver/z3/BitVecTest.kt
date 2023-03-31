@@ -4,7 +4,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.ksmt.KContext
-import org.ksmt.decl.KBitVecValueDecl
 import org.ksmt.expr.KBitVec1Value
 import org.ksmt.expr.KBitVec32Value
 import org.ksmt.expr.KBitVec64Value
@@ -57,8 +56,8 @@ class BitVecTest {
         assertTrue(trueBv as KBitVecValue<KBv1Sort> === trueBvFromString)
         assertTrue(falseBv as KBitVecValue<KBv1Sort> === falseBvFromString)
 
-        assertEquals(expected = "#b1", trueBv.decl.name)
-        assertEquals(expected = "#b0", falseBv.decl.name)
+        assertEquals(expected = "1", trueBv.stringValue)
+        assertEquals(expected = "0", falseBv.stringValue)
 
         assertEquals(trueBvFromString.sort, falseBvFromString.sort)
     }
@@ -80,8 +79,8 @@ class BitVecTest {
         assertTrue(positiveBv as KBitVecValue<KBv8Sort> === positiveBvFromString)
         assertTrue(negativeBv as KBitVecValue<KBv8Sort> === negativeBvFromString)
 
-        assertEquals(expected = "#b${positiveStringValue}", positiveBv.decl.name)
-        assertEquals(expected = "#b${negativeStringValue}", negativeBv.decl.name)
+        assertEquals(expected = positiveStringValue, positiveBv.stringValue)
+        assertEquals(expected = negativeStringValue, negativeBv.stringValue)
 
         assertEquals(positiveBvFromString.sort, negativeBvFromString.sort)
     }
@@ -103,8 +102,8 @@ class BitVecTest {
         assertTrue(positiveBv as KBitVecValue<KBv16Sort> === positiveBvFromString)
         assertTrue(negativeBv as KBitVecValue<KBv16Sort> === negativeBvFromString)
 
-        assertEquals(expected = "#b${positiveStringValue}", positiveBv.decl.name)
-        assertEquals(expected = "#b${negativeStringValue}", negativeBv.decl.name)
+        assertEquals(expected = positiveStringValue, positiveBv.stringValue)
+        assertEquals(expected = negativeStringValue, negativeBv.stringValue)
 
         assertEquals(positiveBvFromString.sort, negativeBvFromString.sort)
     }
@@ -126,8 +125,8 @@ class BitVecTest {
         assertTrue(positiveBv as KBitVecValue<KBv32Sort> === positiveBvFromString)
         assertTrue(negativeBv as KBitVecValue<KBv32Sort> === negativeBvFromString)
 
-        assertEquals(expected = "#b${positiveStringValue}", positiveBv.decl.name)
-        assertEquals(expected = "#b${negativeStringValue}", negativeBv.decl.name)
+        assertEquals(expected = positiveStringValue, positiveBv.stringValue)
+        assertEquals(expected = negativeStringValue, negativeBv.stringValue)
 
         assertEquals(positiveBvFromString.sort, negativeBvFromString.sort)
     }
@@ -148,8 +147,8 @@ class BitVecTest {
         assertTrue(positiveBv as KBitVecValue<KBv64Sort> === positiveBvFromString)
         assertTrue(negativeBv as KBitVecValue<KBv64Sort> === negativeBvFromString)
 
-        assertEquals(expected = "#b${positiveStringValue}", positiveBv.decl.name)
-        assertEquals(expected = "#b${negativeStringValue}", negativeBv.decl.name)
+        assertEquals(expected = positiveStringValue, positiveBv.stringValue)
+        assertEquals(expected = negativeStringValue, negativeBv.stringValue)
 
         assertEquals(positiveBvFromString.sort, negativeBvFromString.sort)
     }
@@ -171,8 +170,8 @@ class BitVecTest {
         assertEquals(positiveBvFromString.sort.sizeBits, sizeBits)
         assertEquals(negativeBvFromString.sort.sizeBits, sizeBits)
 
-        assertEquals(expected = "#b$positiveValue", positiveBvFromString.decl.name)
-        assertEquals(expected = "#b$negativeValue", negativeBvFromString.decl.name)
+        assertEquals(expected = positiveValue, positiveBvFromString.stringValue)
+        assertEquals(expected = negativeValue, negativeBvFromString.stringValue)
 
         assertEquals(positiveBvFromString.sort, negativeBvFromString.sort)
     }
@@ -550,7 +549,7 @@ class BitVecTest {
         val sizeBits = value.sort.sizeBits.toInt()
         val expectedResult = value.numberValue.toBinary().substring(sizeBits - high - 1, sizeBits - low)
 
-        assertEquals(expectedResult, (result.decl as KBitVecValueDecl).value)
+        assertEquals(expectedResult, result.stringValue)
     }
 
     @Test
