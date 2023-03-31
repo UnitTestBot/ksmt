@@ -12,6 +12,14 @@ fun Solver.mkQuantifier(
     return mkTerm(kind, quantifiedVars, body)
 }
 
+fun Solver.mkLambda(
+    boundVars: Array<Term>,
+    body: Term
+): Term {
+    val lambdaVars = mkTerm(Kind.VARIABLE_LIST, boundVars)
+    return mkTerm(Kind.LAMBDA, lambdaVars, body)
+}
+
 val Term.bvZeroExtensionSize: Int
     get() {
         require(kind == Kind.BITVECTOR_ZERO_EXTEND) { "Required op is ${Kind.BITVECTOR_ZERO_EXTEND}, but was $kind" }
