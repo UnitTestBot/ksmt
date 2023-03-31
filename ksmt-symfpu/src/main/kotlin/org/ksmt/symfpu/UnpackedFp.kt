@@ -14,6 +14,15 @@ import org.ksmt.utils.FpUtils.fpInfExponentBiased
 import org.ksmt.utils.FpUtils.fpInfSignificand
 import org.ksmt.utils.cast
 
+
+fun KExpr<KBvSort>.extendUnsigned(ext: Int, ctx: KContext): KExpr<KBvSort> {
+    return ctx.mkBvZeroExtensionExpr(ext, this)
+}
+
+fun KExpr<KBvSort>.extendSigned(ext: Int, ctx: KContext): KExpr<KBvSort> {
+    return ctx.mkBvSignExtensionExpr(ext, this)
+}
+
 fun KExpr<KBvSort>.resizeUnsigned(newSize: UInt, ctx: KContext): KExpr<KBvSort> {
     val width = sort.sizeBits
     return if (newSize > width) {
@@ -146,6 +155,24 @@ class UnpackedFp<Fp : KFpSort> private constructor(
                 packedSignificand!!
             )
         })
+    }
+
+    fun <T : KFpSort> extend(expWidth: Int, sigExtension: Int, targetFormat: T): UnpackedFp<T> = with(ctx) {
+
+        return UnpackedFp(
+            this,
+            targetFormat,
+            sign,
+            unbiasedExponent.extendSigned(expWidth, this),
+            mkBvShiftLeftExpr(
+                normalizedSignificand.extendUnsigned(sigExtension, this),
+                mkBv(sigExtension, significandWidth() + sigExtension.toUInt())
+            ),
+            isNaN,
+            isInf,
+            isZero,
+            null,
+        )
     }
 
     companion object {

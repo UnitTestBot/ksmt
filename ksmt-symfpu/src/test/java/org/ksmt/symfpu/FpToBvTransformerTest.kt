@@ -604,6 +604,27 @@ class FpToBvTransformerTest {
         )
     }
 
+    private fun KContext.defaultRounding() = mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven)
+
+    @Test
+    fun testFpToFpUpExpr() = with(KContext()) {
+        val a by mkFp16Sort()
+        testFpExpr(
+            mkFpToFpExpr(mkFp128Sort(), defaultRounding(), a),
+            mapOf("a" to a),
+        )
+    }
+
+
+    @Test
+    fun testFpToFpDownExpr() = with(KContext()) {
+        val a by mkFp128Sort()
+        testFpExpr(
+            mkFpToFpExpr(mkFp16Sort(), defaultRounding(), a),
+            mapOf("a" to a),
+        )
+    }
+
     @Test
     fun testBvBoolFormulaExpr() = withContextAndFp64Variables { a, b ->
         val sort = fp64Sort

@@ -8,8 +8,47 @@ import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.symfpu.UnpackedFp.Companion.iteOp
+import org.ksmt.symfpu.UnpackedFp.Companion.makeInf
+import org.ksmt.symfpu.UnpackedFp.Companion.makeNaN
 import org.ksmt.symfpu.UnpackedFp.Companion.makeZero
+import kotlin.math.max
 
+
+fun <T : KFpSort, S : KFpSort> fpToFp(
+    targetFormat: T,
+    roundingMode: KExpr<KFpRoundingModeSort>,
+    input: UnpackedFp<S>,
+): UnpackedFp<T> = with(input.ctx) {
+    val sourceFormat = input.sort
+
+    val exponentIncreased = exponentWidth(sourceFormat) <= exponentWidth(targetFormat)
+    val significandIncreased = significandWidth(sourceFormat) <= significandWidth(targetFormat)
+
+
+    val expExpression = max(0, exponentWidth(targetFormat) - exponentWidth(sourceFormat))
+    val sigExpression = max(0, significandWidth(targetFormat) - significandWidth(sourceFormat))
+
+    val extended = input.extend(expExpression, sigExpression, targetFormat)
+
+    return if (exponentIncreased && significandIncreased) {
+        extended
+    } else {
+        val rounded = round(extended, roundingMode, targetFormat)
+        iteOp(
+            input.isNaN,
+            makeNaN(targetFormat),
+            iteOp(
+                input.isInf,
+                makeInf(targetFormat, input.sign),
+                iteOp(
+                    input.isZero,
+                    makeZero(targetFormat, input.sign),
+                    rounded
+                )
+            )
+        )
+    }
+}
 
 fun <T : KFpSort> roundToIntegral(
     roundingMode: KExpr<KFpRoundingModeSort>,

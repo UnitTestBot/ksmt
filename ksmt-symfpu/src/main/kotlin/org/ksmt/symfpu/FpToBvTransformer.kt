@@ -119,6 +119,11 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     override fun <T : KFpSort> transform(expr: KFpIsNaNExpr<T>) = transformHelper(expr, UnpackedFp<T>::isNaN)
     override fun <T : KFpSort> transform(expr: KFpIsNegativeExpr<T>) = transformHelper(expr, ::isNegative)
     override fun <T : KFpSort> transform(expr: KFpIsPositiveExpr<T>) = transformHelper(expr, ::isPositive)
+    override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>) =
+        transformExprAfterTransformed(expr, expr.value) { value ->
+            fpToFp(expr.sort, expr.roundingMode, (value as UnpackedFp<*>))
+        }
+
 
 
     private fun <Fp : KFpSort> argsToTypedPair(args: List<KExpr<Fp>>): Pair<UnpackedFp<Fp>, UnpackedFp<Fp>> {

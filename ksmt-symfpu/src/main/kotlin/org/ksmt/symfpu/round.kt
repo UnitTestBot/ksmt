@@ -121,8 +121,8 @@ fun KContext.increment(expr: KExpr<KBvSort>): KExpr<KBvSort> = mkBvAddExpr(expr,
 // something wrong with. looks like shift misses by one
 // - normal exponent
 // - subnormals
-fun <Fp : KFpSort> KContext.round(
-    uf: UnpackedFp<KFpSort>,
+fun <Fp : KFpSort, S: KFpSort> KContext.round(
+    uf: UnpackedFp<S>,
     roundingMode: KExpr<KFpRoundingModeSort>,
     format: Fp,
     known: CustomRounderInfo = defaultRounderInfo()

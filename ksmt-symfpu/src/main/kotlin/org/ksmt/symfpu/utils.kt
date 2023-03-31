@@ -64,6 +64,8 @@ fun <Fp : KFpSort> KContext.defaultExponent(sort: Fp): KBitVecValue<KBvSort> {
     return bvZero(exponentWidth(sort).toUInt()).cast()
 }
 
+fun significandWidth(format: KFpSort): Int = format.significandBits.toInt()
+
 // Get the number of bits in the unpacked format corresponding to a
 // given packed format.  These are the unpacked counter-parts of
 //  format.exponentWidth() and format.significandWidth()
