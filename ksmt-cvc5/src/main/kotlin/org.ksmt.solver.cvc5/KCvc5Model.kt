@@ -57,7 +57,7 @@ open class KCvc5Model(
         val cvc5Interp = cvc5Ctx.nativeSolver.getValue(internalizedDecl)
 
         val vars = decl.argSorts.map { it.mkFreshConst("x") }
-        val cvc5Vars = vars.map { with(internalizer) { it.internalizeWithNoAxiomsAllowed() } }.toTypedArray()
+        val cvc5Vars = vars.map { with(internalizer) { it.internalizeExpr() } }.toTypedArray()
 
         val cvc5InterpArgs = cvc5Interp.getChild(0).getChildren()
         val cvc5FreshVarsInterp = cvc5Interp.substitute(cvc5InterpArgs, cvc5Vars)

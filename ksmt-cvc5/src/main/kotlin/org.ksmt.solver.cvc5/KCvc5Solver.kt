@@ -12,7 +12,6 @@ import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
-import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.sort.KBoolSort
 import org.ksmt.utils.NativeLibraryLoader
 import java.util.TreeSet
@@ -58,8 +57,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     override fun assert(expr: KExpr<KBoolSort>) = cvc5Try {
         ctx.ensureContextMatch(expr)
 
-        val cvc5Expr = with(exprInternalizer) { expr.internalizeAssertion() }
-
+        val cvc5Expr = with(exprInternalizer) { expr.internalizeExpr() }
         solver.assertFormula(cvc5Expr)
     }
 
@@ -67,7 +65,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         ctx.ensureContextMatch(expr, trackVar)
 
         val trackVarApp = trackVar.apply()
-        val cvc5TrackVar = with(exprInternalizer) { trackVarApp.internalizeWithNoAxiomsAllowed() }
+        val cvc5TrackVar = with(exprInternalizer) { trackVarApp.internalizeExpr() }
         val trackedExpr = with(ctx) { trackVarApp implies expr }
 
         cvc5CurrentLevelTrackedAssertions.add(cvc5TrackVar)
@@ -114,7 +112,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         ctx.ensureContextMatch(assumptions)
 
         val cvc5Assumptions = with(exprInternalizer) {
-            assumptions.map { it.internalizeWithNoAxiomsAllowed() }
+            assumptions.map { it.internalizeExpr() }
         }.toTypedArray()
 
         cvc5LastAssumptions = cvc5Assumptions.toCollection(TreeSet())

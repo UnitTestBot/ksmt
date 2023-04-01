@@ -487,7 +487,7 @@ open class KCvc5ExprConverter(
 
             val cvc5ConstBounds = bounds
                 .map { mkConstApp(it) }
-                .map { with(internalizer) { it.internalizeWithNoAxiomsAllowed() } }
+                .map { with(internalizer) { it.internalizeExpr() } }
                 .toTypedArray()
 
             val cvc5PreparedBody = cvc5BodyWithVars.substitute(cvc5VarList.getChildren(), cvc5ConstBounds)
