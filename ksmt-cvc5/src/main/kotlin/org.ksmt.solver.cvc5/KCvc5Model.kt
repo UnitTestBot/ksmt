@@ -21,15 +21,18 @@ open class KCvc5Model(
     override val declarations: Set<KDecl<*>>,
     override val uninterpretedSorts: Set<KUninterpretedSort>
 ) : KModel {
-
     private val interpretations = hashMapOf<KDecl<*>, KModel.KFuncInterp<*>?>()
     private val uninterpretedSortsUniverses = hashMapOf<KUninterpretedSort, Set<KExpr<KUninterpretedSort>>>()
+
+    private val evaluatorWithCompletion by lazy { KModelEvaluator(ctx, this, isComplete = true) }
+    private val evaluatorWithoutCompletion by lazy { KModelEvaluator(ctx, this, isComplete = false) }
 
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
         ctx.ensureContextMatch(expr)
         ensureContextActive()
 
-       return KModelEvaluator(ctx, this, isComplete).apply(expr)
+        val evaluator = if (isComplete) evaluatorWithCompletion else evaluatorWithoutCompletion
+        return evaluator.apply(expr)
     }
 
     @Suppress("UNCHECKED_CAST")
