@@ -18,6 +18,7 @@ import org.ksmt.KContext
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
+import org.ksmt.expr.KArrayLambdaBase
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpRoundingMode
@@ -67,7 +68,7 @@ open class KCvc5ExprConverter(
             Kind.CONST_ARRAY -> convertNativeConstArrayExpr<KSort>(expr)
             Kind.CONST_INTEGER -> convertNativeConstIntegerExpr(expr)
             Kind.CONST_RATIONAL -> convertNativeConstRealExpr(expr)
-            Kind.CONSTANT -> convert { convertConstDecl(expr).apply() }
+            Kind.CONSTANT -> convert { expr.convertDecl<KSort>().apply(emptyList()) }
             Kind.UNINTERPRETED_SORT_VALUE -> convert {
                 mkFreshConst(expr.uninterpretedSortValue, expr.sort.convertSort())
             }
@@ -111,14 +112,9 @@ open class KCvc5ExprConverter(
             Kind.CARDINALITY_CONSTRAINT -> throw KSolverUnsupportedFeatureException(
                 "Operation is not supported in ksmt now"
             )
-            Kind.APPLY_UF -> expr.getChildren().let { children ->
-                expr.convertList(children.copyOfRange(1, children.size)) { args: List<KExpr<KSort>> ->
-                    val fTerm = children.first().convertDecl<KSort>()
-                    mkApp(fTerm, args)
-                }
-            }
+            Kind.APPLY_UF -> convertNativeApplyExpr(expr)
 
-            Kind.LAMBDA -> error("lambdas used only in interpretations, and they handled separately")
+            Kind.LAMBDA -> convertNativeLambdaExpr(expr)
             Kind.SEXPR -> throw KSolverUnsupportedFeatureException("Operation is not supported in ksmt now")
 
             // arith
@@ -465,61 +461,87 @@ open class KCvc5ExprConverter(
 
     }
 
-    // Kind.[FORALL/EXISTS] to Array of Kind.VARIABLE
-    private val qfVarsAsConsts = TreeMap<Term, Array<Term>>()
+    private val quantifiedExpressionBodies = TreeMap<Term, Pair<List<KDecl<*>>, Term>>()
 
-    @Suppress("UNCHECKED_CAST")
-    private fun convertNativeQuantifierExpr(expr: Term) = with(ctx) {
-        val mkQf = when (expr.kind) {
-            Kind.FORALL -> ::mkUniversalQuantifier
-            Kind.EXISTS -> ::mkExistentialQuantifier
-            else -> error("Unknown term of quantifier. Kind of term: ${expr.kind}")
-        }
+    private inline fun convertNativeQuantifiedBodyExpr(
+        expr: Term,
+        mkResultExpr: KContext.(List<KDecl<*>>, KExpr<*>) -> KExpr<*>
+    ): ExprConversionResult {
+        val quantifiedExprBody = quantifiedExpressionBodies[expr]
 
-        val cvc5VarList = expr.getChild(0)
-        val cvc5BodyWithVars = expr.getChild(1)
-
-        val cvc5SubstitutedConsts = qfVarsAsConsts[expr]
-        if (cvc5SubstitutedConsts == null) {
+        val (bounds, body) = if (quantifiedExprBody == null) {
+            val cvc5Vars = expr.getChild(0).getChildren()
+            val cvc5BodyWithVars = expr.getChild(1)
 
             // fresh bounds
-            val bounds = cvc5VarList.getChildren().map { convertFreshConstDecl(it) }
+            val bounds = cvc5Vars.map { ctx.convertFreshConstDecl(it) }
 
             val cvc5ConstBounds = bounds
-                .map { mkConstApp(it) }
+                .map { ctx.mkConstApp(it) }
                 .map { with(internalizer) { it.internalizeExpr() } }
                 .toTypedArray()
 
-            val cvc5PreparedBody = cvc5BodyWithVars.substitute(cvc5VarList.getChildren(), cvc5ConstBounds)
+            val cvc5PreparedBody = cvc5BodyWithVars.substitute(cvc5Vars, cvc5ConstBounds)
 
             val body = findConvertedNative(cvc5PreparedBody)
             if (body == null) {
                 exprStack.add(expr)
                 exprStack.add(cvc5PreparedBody)
 
-                qfVarsAsConsts[expr] = cvc5ConstBounds
-                return@with argumentsConversionRequired
+                quantifiedExpressionBodies[expr] = bounds to cvc5PreparedBody
+                return argumentsConversionRequired
             }
 
-            @Suppress("UNCHECKED_CAST")
-            body as? KExpr<KBoolSort> ?: error("Body is not properly converted")
-            return@with ExprConversionResult(mkQf(body, bounds))
+            bounds to body
+        } else {
+            val body = findConvertedNative(quantifiedExprBody.second) ?: error("Body must be converted here")
+            quantifiedExprBody.first to body
         }
 
-        val bounds = cvc5SubstitutedConsts.map { convertConstDecl(it) }
-        val cvc5PreparedBody = cvc5BodyWithVars.substitute(cvc5VarList.getChildren(), cvc5SubstitutedConsts)
-        val body = findConvertedNative(cvc5PreparedBody) ?: error("Body must be converted here")
+        quantifiedExpressionBodies.remove(expr)
 
-        @Suppress("UNCHECKED_CAST")
-        body as? KExpr<KBoolSort> ?: error("Body is not properly converted")
-
-        qfVarsAsConsts.remove(expr)
-        ExprConversionResult(mkQf(body, bounds))
+        return ExprConversionResult(ctx.mkResultExpr(bounds, body))
     }
+
+
+    private fun convertNativeQuantifierExpr(expr: Term) =
+        convertNativeQuantifiedBodyExpr(expr) { bounds, body ->
+            when (expr.kind) {
+                Kind.FORALL -> mkUniversalQuantifier(body.asExpr(boolSort), bounds)
+                Kind.EXISTS -> mkExistentialQuantifier(body.asExpr(boolSort), bounds)
+                else -> error("Unknown term of quantifier. Kind of term: ${expr.kind}")
+            }
+        }
+
+    private fun convertNativeLambdaExpr(term: Term) =
+        convertNativeQuantifiedBodyExpr(term) { bounds, body ->
+            mkArrayAnyLambda(bounds, body)
+        }
 
     private fun <R : KSort> convertNativeConstArrayExpr(expr: Term): ExprConversionResult = with(ctx) {
         expr.convert(arrayOf(expr.constArrayBase)) { arrayBase: KExpr<R> ->
             mkArrayConst(expr.sort.convertSort() as KArraySortBase<R>, arrayBase)
+        }
+    }
+
+    private fun convertNativeApplyExpr(expr: Term): ExprConversionResult {
+        val children = expr.getChildren()
+        val function = children.first()
+
+        return if (function.kind == Kind.CONSTANT || function.kind == Kind.VARIABLE) {
+            // normal function app
+            val args = children.copyOfRange(fromIndex = 1, toIndex = children.size)
+            expr.convertList(args) { convertedArgs: List<KExpr<KSort>> ->
+                val decl = function.convertDecl<KSort>()
+                decl.apply(convertedArgs)
+            }
+        } else {
+            // convert function as array
+            expr.convertList(children) { convertedArgs: List<KExpr<KSort>> ->
+                val array = convertedArgs.first()
+                val indices = convertedArgs.drop(1)
+                mkArrayAnySelect(array.uncheckedCast(), indices)
+            }
         }
     }
 
@@ -584,6 +606,24 @@ open class KCvc5ExprConverter(
                 mkArrayStore(array.uncheckedCast(), i0, i1, i2, value)
             }
             else -> mkArrayNStore(array.uncheckedCast(), indices, value)
+        }
+    }
+
+    private fun mkArrayAnyLambda(
+        indices: List<KDecl<*>>,
+        body: KExpr<*>
+    ): KArrayLambdaBase<out KArraySortBase<*>, *> = with(ctx) {
+        when (indices.size) {
+            KArraySort.DOMAIN_SIZE -> mkArrayLambda(indices.single(), body)
+            KArray2Sort.DOMAIN_SIZE -> {
+                val (i0, i1) = indices
+                mkArrayLambda(i0, i1, body)
+            }
+            KArray3Sort.DOMAIN_SIZE -> {
+                val (i0, i1, i2) = indices
+                mkArrayLambda(i0, i1, i2, body)
+            }
+            else -> mkArrayNLambda(indices, body)
         }
     }
 
