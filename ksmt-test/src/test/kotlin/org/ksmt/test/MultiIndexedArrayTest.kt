@@ -366,6 +366,14 @@ class MultiIndexedArrayTest {
             expr.internalizeExpr()
         }
 
+        // Copy declarations since we have fresh decls
+        val declarations = KExprUninterpretedDeclCollector.collectUninterpretedDeclarations(expr)
+        declarations.forEach { decl ->
+            internalizationCtx.findInternalizedDecl(decl)?.also {
+                conversionCtx.saveConvertedDecl(it, decl)
+            }
+        }
+
         val converted = with(converter) {
             internalized.convertExpr<T>()
         }
