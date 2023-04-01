@@ -5,6 +5,7 @@ import io.github.cvc5.RoundingMode
 import io.github.cvc5.Solver
 import io.github.cvc5.Sort
 import io.github.cvc5.Term
+import io.github.cvc5.mkLambda
 import io.github.cvc5.mkQuantifier
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAddArithExpr
@@ -242,7 +243,7 @@ class KCvc5ExprInternalizer(
             if (decl.hasOp()) {
                 nsolver.mkTerm(decl.op, args)
             } else {
-                nsolver.mkTerm(Kind.APPLY_UF, arrayOf(decl) + args)
+                decl.mkFunctionApp(args.asList())
             }
         }
     }
@@ -254,7 +255,7 @@ class KCvc5ExprInternalizer(
     }
 
     override fun transform(expr: KAndExpr) = with(expr) {
-        transformListWithAxioms(args) { args: Array<Term> -> nsolver.mkTerm(Kind.AND, args) }
+        transformListWithAxioms(args) { args: Array<Term> -> mkAndTerm(args.asList()) }
     }
 
     override fun transform(expr: KAndBinaryExpr) = with(expr) {
@@ -262,7 +263,7 @@ class KCvc5ExprInternalizer(
     }
 
     override fun transform(expr: KOrExpr) = with(expr) {
-        transformListWithAxioms(args) { args: Array<Term> -> nsolver.mkTerm(Kind.OR, args) }
+        transformListWithAxioms(args) { args: Array<Term> -> mkOrTerm(args.asList()) }
     }
 
     override fun transform(expr: KOrBinaryExpr) = with(expr) {
@@ -290,19 +291,33 @@ class KCvc5ExprInternalizer(
 
     override fun <T : KSort> transform(expr: KEqExpr<T>) = with(expr) {
         transformWithAxioms(lhs, rhs) { lhs: Term, rhs: Term ->
-            nsolver.mkTerm(Kind.EQUAL, lhs, rhs)
+            mkArraySpecificTerm(
+                sort = expr.lhs.sort,
+                arrayTerm = { mkArrayEqTerm(it, lhs, rhs) },
+                default = { lhs.eqTerm(rhs) }
+            )
         }
     }
 
     override fun <T : KSort> transform(expr: KDistinctExpr<T>) = with(expr) {
-        transformListWithAxioms(args) { args: Array<Term> -> nsolver.mkTerm(Kind.DISTINCT, args) }
+        transformListWithAxioms(args) { args: Array<Term> ->
+            mkArraySpecificTerm(
+                sort = expr.args.first().sort,
+                arrayTerm = { mkArrayDistinctTerm(it, args.asList()) },
+                default = { nsolver.mkTerm(Kind.DISTINCT, args) }
+            )
+        }
     }
 
     override fun <T : KSort> transform(expr: KIteExpr<T>) = with(expr) {
         transformWithAxioms(
             condition, trueBranch, falseBranch
         ) { condition: Term, trueBranch: Term, falseBranch: Term ->
-            condition.iteTerm(trueBranch, falseBranch)
+            mkArraySpecificTerm(
+                sort = expr.trueBranch.sort,
+                arrayTerm = { mkArrayIteTerm(it, condition, trueBranch, falseBranch) },
+                default = { condition.iteTerm(trueBranch, falseBranch) }
+            )
         }
     }
 
@@ -929,11 +944,8 @@ class KCvc5ExprInternalizer(
         }
     }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) = with(expr) {
-        transformWithAxioms(array, index, value) { array: Term, index: Term, value: Term ->
-            nsolver.mkTerm(Kind.STORE, arrayOf(array, index, value))
-        }
-    }
+    override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) =
+        expr.transformStore()
 
     override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
         expr: KArray2Store<D0, D1, R>
@@ -950,15 +962,11 @@ class KCvc5ExprInternalizer(
         transformListWithAxioms(listOf(array, value) + indices) { transformedArgs: Array<Term> ->
             val (array, value) = transformedArgs.take(2)
             val indices = transformedArgs.drop(2)
-            val storeIdx = mkArrayOperationIndex(indices)
-            nsolver.mkTerm(Kind.STORE, arrayOf(array, storeIdx, value))
+            mkArrayStoreTerm(array, indices, value)
         }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>) = with(expr) {
-        transformWithAxioms(array, index) { array: Term, index: Term ->
-            nsolver.mkTerm(Kind.SELECT, array, index)
-        }
-    }
+    override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>) =
+        expr.transformSelect()
 
     override fun <D0 : KSort, D1 : KSort, R : KSort> transform(expr: KArray2Select<D0, D1, R>) =
         expr.transformSelect()
@@ -977,34 +985,15 @@ class KCvc5ExprInternalizer(
             mkArraySelectTerm(array, indices)
         }
 
-    private fun mkArraySelectTerm(array: Term, indices: List<Term>): Term {
-        val selectIdx = mkArrayOperationIndex(indices)
-        return nsolver.mkTerm(Kind.SELECT, array, selectIdx)
-    }
-
-    private fun mkArrayOperationIndex(indices: List<Term>): Term =
-        if (indices.size == 1) {
-            indices.single()
-        } else {
-            nsolver.mkTuple(indices.map { it.sort }.toTypedArray(), indices.toTypedArray())
-        }
-
     override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KArrayConst<A, R>) = with(expr) {
-        if (value is KInterpretedValue<*> || value is KArrayConst<*, *>) {
-            transformWithAxioms(value) { value: Term ->
+        transformWithAxioms(value) { valueTerm: Term ->
+            if (value is KInterpretedValue<*> || value is KArrayConst<*, *>) {
                 // const array base must be a value or a constant array
-                nsolver.mkConstArray(sort.internalizeSort(), value)
+                nsolver.mkConstArray(sort.internalizeSort(), valueTerm)
+            } else {
+                val bounds = sort.domainSorts.map { nsolver.mkConst(it.internalizeSort()) }
+                mkLambdaTerm(bounds, valueTerm)
             }
-        } else {
-            transformExprWithQuantifierAxiom(
-                body = value,
-                bounds = sort.domainSorts.map { ctx.mkFreshConstDecl("i", it) },
-                mkResultTerm = { nsolver.mkConst(sort.internalizeSort()) },
-                mkQuantifiedAxiomBody = { bounds, result, body ->
-                    val resultValue = mkArraySelectTerm(result, bounds)
-                    nsolver.mkTerm(Kind.EQUAL, resultValue, body)
-                }
-            )
         }
     }
 
@@ -1024,16 +1013,10 @@ class KCvc5ExprInternalizer(
     override fun <R : KSort> transform(expr: KArrayNLambda<R>): KExpr<KArrayNSort<R>> =
         expr.transformLambda()
 
-    private fun <E : KArrayLambdaBase<*, *>> E.transformLambda(): E =
-        transformExprWithQuantifierAxiom(
-            bounds = indexVarDeclarations,
-            body = body,
-            mkResultTerm = { nsolver.mkConst(sort.internalizeSort()) },
-            mkQuantifiedAxiomBody = { bounds, result, body ->
-                val resultValue = mkArraySelectTerm(result, bounds)
-                nsolver.mkTerm(Kind.EQUAL, resultValue, body)
-            }
-        )
+    private fun <E : KArrayLambdaBase<*, *>> E.transformLambda(): E = transform(body) { bodyTerm: Term ->
+        val bounds = indexVarDeclarations.map { it.internalizeDecl() }
+        mkLambdaTerm(bounds, bodyTerm)
+    }
 
     override fun <T : KArithSort> transform(expr: KAddArithExpr<T>) = with(expr) {
         transformListWithAxioms(args) { args -> nsolver.mkTerm(Kind.ADD, args) }
@@ -1153,34 +1136,6 @@ class KCvc5ExprInternalizer(
         )
     }
 
-    /**
-     * Transform expression into term specified by [mkResultTerm]
-     * guarded with an axiom of the form:
-     * (forall (bounds) [mkQuantifiedAxiomBody])
-     * */
-    private inline fun <E : KExpr<*>> E.transformExprWithQuantifierAxiom(
-        bounds: List<KDecl<*>>,
-        body: KExpr<*>,
-        mkResultTerm: () -> Term,
-        mkQuantifiedAxiomBody: (List<Term>, Term, Term) -> Term,
-    ): E = transform(body) { transformedBody: Term ->
-        val boundConsts = bounds.map { it.internalizeDecl() }
-        val resultTerm = mkResultTerm()
-
-        val axiomBody = mkQuantifiedAxiomBody(boundConsts, resultTerm, transformedBody)
-
-        val (axiomTerm, nestedAxiom) = mkQuantifierWithAxiomsResolved(
-            isUniversal = true, bounds, boundConsts, axiomBody, body
-        )
-        val axiom = KCvc5Context.ExprAxiomInstance(this, resultTerm, axiomTerm)
-
-        mergeAxioms(listOfNotNull(axiom, nestedAxiom))?.let { mergedAxiom ->
-            cvc5Ctx.storeExpressionAxiom(this, mergedAxiom)
-        }
-
-        resultTerm
-    }
-
     private fun <E : KExpr<*>> E.transformQuantifiedExpression(
         bounds: List<KDecl<*>>,
         body: KExpr<*>,
@@ -1246,7 +1201,17 @@ class KCvc5ExprInternalizer(
         return bodyWithoutQuantifiedAxioms to independentAxiom
     }
 
-    private fun mkQuantifierTerm(isUniversal: Boolean, bounds: List<Term>, body: Term): Term {
+    private fun mkQuantifierTerm(isUniversal: Boolean, bounds: List<Term>, body: Term): Term =
+        resolveBoundVars(bounds, body) { boundVars, bodyWithVars ->
+            nsolver.mkQuantifier(isUniversal, boundVars, bodyWithVars)
+        }
+
+    private fun mkLambdaTerm(bounds: List<Term>, body: Term): Term =
+        resolveBoundVars(bounds, body) { boundVars, bodyWithVars ->
+            nsolver.mkLambda(boundVars, bodyWithVars)
+        }
+
+    private inline fun resolveBoundVars(bounds: List<Term>, body: Term, mkTerm: (Array<Term>, Term) -> Term): Term {
         val boundVars = bounds.map {
             if (it.hasSymbol()) {
                 nsolver.mkVar(it.sort, it.symbol)
@@ -1256,7 +1221,103 @@ class KCvc5ExprInternalizer(
         }.toTypedArray()
 
         val bodyWithVars = body.substitute(bounds.toTypedArray(), boundVars)
-        return nsolver.mkQuantifier(isUniversal, boundVars, bodyWithVars)
+        return mkTerm(boundVars, bodyWithVars)
+    }
+
+    private fun Term.mkFunctionApp(args: List<Term>): Term =
+        nsolver.mkTerm(Kind.APPLY_UF, arrayOf(this) + args)
+
+    private fun mkAndTerm(args: List<Term>): Term =
+        if (args.size == 1) args.single() else nsolver.mkTerm(Kind.AND, args.toTypedArray())
+
+    private fun mkOrTerm(args: List<Term>): Term =
+        if (args.size == 1) args.single() else nsolver.mkTerm(Kind.OR, args.toTypedArray())
+
+    private fun mkArraySelectTerm(array: Term, indices: List<Term>): Term =
+        if (array.sort.isArray) {
+            val selectIdx = mkArrayOperationIndex(indices)
+            nsolver.mkTerm(Kind.SELECT, array, selectIdx)
+        } else {
+            nsolver.mkTerm(Kind.APPLY_UF, arrayOf(array) + indices)
+        }
+
+    private fun mkArrayStoreTerm(array: Term, indices: List<Term>, value: Term): Term =
+        if (array.sort.isArray) {
+            val storeIdx = mkArrayOperationIndex(indices)
+            nsolver.mkTerm(Kind.STORE, arrayOf(array, storeIdx, value))
+        } else {
+            val boundVars = indices.map { nsolver.mkVar(it.sort) }
+
+            val condition = indices.zip(boundVars) { idx, boundVar ->
+                idx.eqTerm(boundVar)
+            }.let { mkAndTerm(it) }
+
+            val arrayValue = array.mkFunctionApp(boundVars)
+            val body = condition.iteTerm(value, arrayValue)
+
+            nsolver.mkLambda(boundVars.toTypedArray(), body)
+        }
+
+    private fun mkArrayOperationIndex(indices: List<Term>): Term =
+        if (indices.size == 1) {
+            indices.single()
+        } else {
+            nsolver.mkTuple(indices.map { it.sort }.toTypedArray(), indices.toTypedArray())
+        }
+
+    private fun mkArrayEqTerm(arraySort: KArraySortBase<*>, lhs: Term, rhs: Term): Term {
+        if (lhs.sort == rhs.sort) {
+            return lhs.eqTerm(rhs)
+        }
+
+        val leftLambda = ensureArrayLambda(arraySort, lhs)
+        val rightLambda = ensureArrayLambda(arraySort, rhs)
+        return leftLambda.eqTerm(rightLambda)
+    }
+
+    private fun ensureArrayLambda(arraySort: KArraySortBase<*>, term: Term): Term =
+        if (!term.sort.isArray) {
+            term
+        } else {
+            val boundVars = arraySort.domainSorts.map { nsolver.mkVar(it.internalizeSort()) }
+            val body = mkArraySelectTerm(term, boundVars)
+            nsolver.mkLambda(boundVars.toTypedArray(), body)
+        }
+
+    private fun mkArrayIteTerm(arraySort: KArraySortBase<*>, cond: Term, trueBranch: Term, falseBranch: Term): Term {
+        if (trueBranch.sort.isArray && falseBranch.sort.isArray) {
+            return cond.iteTerm(trueBranch, falseBranch)
+        }
+
+        val boundVars = arraySort.domainSorts.map { nsolver.mkVar(it.internalizeSort()) }
+        val trueValue = mkArraySelectTerm(trueBranch, boundVars)
+        val falseValue = mkArraySelectTerm(falseBranch, boundVars)
+
+        val body = cond.iteTerm(trueValue, falseValue)
+
+        return nsolver.mkLambda(boundVars.toTypedArray(), body)
+    }
+
+    private fun mkArrayDistinctTerm(arraySort: KArraySortBase<*>, args: List<Term>): Term {
+        val inequalities = mutableListOf<Term>()
+        for (i in args.indices) {
+            for (j in (i + 1) until args.size) {
+                val equality = mkArrayEqTerm(arraySort, args[i], args[j])
+                inequalities.add(equality.notTerm())
+            }
+        }
+
+        return mkAndTerm(inequalities)
+    }
+
+    private inline fun mkArraySpecificTerm(
+        sort: KSort,
+        arrayTerm: (KArraySortBase<*>) -> Term,
+        default: () -> Term
+    ): Term = if (sort is KArraySortBase<*>) {
+        arrayTerm(sort)
+    } else {
+        default()
     }
 
     private inline fun <S : KExpr<*>> S.transformWithAxioms(

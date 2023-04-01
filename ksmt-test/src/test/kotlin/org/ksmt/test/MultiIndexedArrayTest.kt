@@ -130,9 +130,8 @@ class MultiIndexedArrayTest {
     fun testMultiIndexedArraysZ3WithCvc5Oracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
         oracleManager.createSolver(this, KCvc5Solver::class).use { oracleSolver ->
 
-            // Enable to don't ignore 'SAT is possible' checks (results in very slow checks)
-            val findCompleteModel = false
-            oracleSolver.configure { setCvc5Option("fmf-bound", "$findCompleteModel") }
+            // Enable HO to test array lambda equalities
+            oracleSolver.configure { setLogic("HO_QF_ALL") }
 
             mkZ3Context(this).use { z3NativeCtx ->
                 runMultiIndexedArraySamples(oracleSolver) { expr ->
