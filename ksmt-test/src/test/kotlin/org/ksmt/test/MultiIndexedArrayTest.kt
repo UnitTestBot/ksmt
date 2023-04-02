@@ -130,7 +130,7 @@ class MultiIndexedArrayTest {
         oracleManager.createSolver(this, KCvc5Solver::class).use { oracleSolver ->
 
             // Enable HO to test array lambda equalities
-            oracleSolver.configure { setLogic("HO_QF_ALL") }
+            oracleSolver.configure { setCvc5Logic("HO_QF_ALL") }
 
             mkZ3Context(this).use { z3NativeCtx ->
                 runMultiIndexedArraySamples(oracleSolver) { expr ->
