@@ -745,6 +745,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             )
         }
 
+    @Suppress("LongParameterList", "LoopWithTooManyJumpStatements")
     private inline fun <
         A : KArraySortBase<R>,
         R : KSort,
