@@ -30,11 +30,15 @@ open class KBitwuzlaModel(
     override val declarations: Set<KDecl<*>>
         get() = modelDeclarations.toHashSet()
 
-    override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
-        ctx.ensureContextMatch(expr)
-        bitwuzlaCtx.ensureActive()
+    private val evaluatorWithModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = true) }
+    private val evaluatorWithoutModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = false) }
 
-        return KModelEvaluator(ctx, this, isComplete).apply(expr)
+    override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
+        bitwuzlaCtx.ensureActive()
+        ctx.ensureContextMatch(expr)
+
+        val evaluator = if (isComplete) evaluatorWithModelCompletion else evaluatorWithoutModelCompletion
+        return evaluator.apply(expr)
     }
 
     private val uninterpretedSortValueContext = KBitwuzlaUninterpretedSortValueContext(ctx)

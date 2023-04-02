@@ -66,8 +66,14 @@ class KYicesModel(
         knownUninterpretedSortValues[sort]?.values?.toHashSet() ?: hashSetOf()
     }
 
+    private val evaluatorWithModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = true) }
+    private val evaluatorWithoutModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = false) }
+
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
-        return KModelEvaluator(ctx, this, isComplete).apply(expr)
+        ctx.ensureContextMatch(expr)
+
+        val evaluator = if (isComplete) evaluatorWithModelCompletion else evaluatorWithoutModelCompletion
+        return evaluator.apply(expr)
     }
 
     private fun getValue(yval: YVal, sort: KSort): KExpr<*> = with(ctx) {
