@@ -19,6 +19,8 @@ dependencies {
     // Primitive collections
     implementation("it.unimi.dsi:fastutil-core:8.5.11") // 6.1MB
 
+    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.5")
+
     testImplementation(kotlin("test"))
 }
 
