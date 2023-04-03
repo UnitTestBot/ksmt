@@ -16,7 +16,8 @@ CXXFLAGS="-fpermissive -g -fPIC -O3 -m64"
 
 # note: libgcc is gcc specific option. Remove if not compiling with gcc
 LD_STATIC_FLAGS="-static-libstdc++ -static-libgcc"
-LD_FLAGS="-L $YICES_DIST/lib -l:libyices.$LIB_EXTENSION.$YICES_VERSION -l:libgmp.a"
+LIBS="-l:libyices.$LIB_EXTENSION.$YICES_VERSION -l:libgmp.a"
+LD_FLAGS="-L $YICES_DIST/lib"
 
 YICES_2_JAVA_LIB_NAME="libyices2java.$LIB_EXTENSION"
 
@@ -37,6 +38,6 @@ $JAVAC -h . ../src/main/java/com/sri/yices/*.java
 
 $CXX $LD_STATIC_FLAGS $CPPFLAGS $CXXFLAGS -c yicesJNI.cpp
 
-$CXX $LD_STATIC_FLAGS $LD_FLAGS -s -shared -o $YICES_2_JAVA_LIB_NAME yicesJNI.o
+$CXX $LD_STATIC_FLAGS $LD_FLAGS -s -shared -o $YICES_2_JAVA_LIB_NAME yicesJNI.o $LIBS
 
 cp $YICES_2_JAVA_LIB_NAME ../../
