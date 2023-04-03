@@ -160,6 +160,7 @@ import org.ksmt.expr.KArrayNSelect
 import org.ksmt.expr.KArrayNStore
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
+import org.ksmt.expr.KArrayStoreBase
 import org.ksmt.expr.KBitVec16Value
 import org.ksmt.expr.KBitVec1Value
 import org.ksmt.expr.KBitVec32Value
@@ -1000,7 +1001,7 @@ open class KContext(
     ): KArrayStore<D, R> = arrayStoreCache.createIfContextActive {
         ensureContextMatch(array, index, value)
         KArrayStore(this, array, index, value)
-    }.also { it.analyzeStore() }.cast()
+    }.analyzeIfSimplificationEnabled().cast()
 
     open fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayStoreNoSimplify(
         array: KExpr<KArray2Sort<D0, D1, R>>,
@@ -1010,7 +1011,7 @@ open class KContext(
     ): KArray2Store<D0, D1, R> = array2StoreCache.createIfContextActive {
         ensureContextMatch(array, index0, index1, value)
         KArray2Store(this, array, index0, index1, value)
-    }.also { it.analyzeStore() }.cast()
+    }.analyzeIfSimplificationEnabled().cast()
 
     open fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayStoreNoSimplify(
         array: KExpr<KArray3Sort<D0, D1, D2, R>>,
@@ -1021,7 +1022,7 @@ open class KContext(
     ): KArray3Store<D0, D1, D2, R> = array3StoreCache.createIfContextActive {
         ensureContextMatch(array, index0, index1, index2, value)
         KArray3Store(this, array, index0, index1, index2, value)
-    }.also { it.analyzeStore() }.cast()
+    }.analyzeIfSimplificationEnabled().cast()
 
     open fun <R : KSort> mkArrayNStoreNoSimplify(
         array: KExpr<KArrayNSort<R>>,
@@ -1032,7 +1033,19 @@ open class KContext(
         ensureContextMatch(array, value)
 
         KArrayNStore(this, array, indices.uncheckedCast(), value)
-    }.also { it.analyzeStore() }.cast()
+    }.analyzeIfSimplificationEnabled().cast()
+
+    private fun <S : KArrayStoreBase<*, *>> S.analyzeIfSimplificationEnabled(): S {
+        /**
+         * Analyze store indices only when simplification is enabled since
+         * we don't expect any benefit from the analyzed stores
+         * if we don't use simplifications.
+         * */
+        if (simplificationMode == SIMPLIFY) {
+            analyzeStore()
+        }
+        return this
+    }
 
     private val arraySelectCache = mkAstInterner<KArraySelect<out KSort, out KSort>>()
     private val array2SelectCache = mkAstInterner<KArray2Select<out KSort, out KSort, out KSort>>()
