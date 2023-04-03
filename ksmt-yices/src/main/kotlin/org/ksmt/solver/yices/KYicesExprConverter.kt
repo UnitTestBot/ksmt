@@ -26,6 +26,7 @@ import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.BvUtils.bvMaxValueUnsigned
 import org.ksmt.utils.BvUtils.bvZero
 import org.ksmt.utils.uncheckedCast
@@ -133,6 +134,13 @@ open class KYicesExprConverter(
                 check(convertedDecl is KConstDecl<*>) { "Unexpected declaration $convertedDecl" }
 
                 convertedDecl.apply()
+            }
+
+            Constructor.SCALAR_CONSTANT -> convert {
+                val idx = Terms.scalarConstantIndex(expr)
+                val sort = convertSort(Terms.typeOf(expr))
+
+                mkUninterpretedSortValue(sort as KUninterpretedSort, idx)
             }
 
             else -> error("Not supported term ${Terms.toString(expr)}")

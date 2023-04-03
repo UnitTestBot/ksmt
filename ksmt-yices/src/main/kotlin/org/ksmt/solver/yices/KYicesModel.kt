@@ -8,6 +8,7 @@ import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.KModelEvaluator
 import org.ksmt.solver.model.KModelImpl
@@ -49,21 +50,20 @@ class KYicesModel(
         sortsWithDependencies
     }
 
-    private val uninterpretedSortUniverse = hashMapOf<KUninterpretedSort, MutableSet<KExpr<KUninterpretedSort>>>()
-    private val knownUninterpretedSortValues =
-        hashMapOf<KUninterpretedSort, MutableMap<Int, KExpr<KUninterpretedSort>>>()
+    private val uninterpretedSortUniverse = hashMapOf<KUninterpretedSort, Set<KUninterpretedSortValue>>()
+    private val knownUninterpretedSortValues = hashMapOf<KUninterpretedSort, MutableSet<KUninterpretedSortValue>>()
 
     private val interpretations = hashMapOf<KDecl<*>, KModel.KFuncInterp<*>>()
     private val funcInterpretationsToDo = arrayListOf<Pair<YVal, KFuncDecl<*>>>()
 
     override fun uninterpretedSortUniverse(
         sort: KUninterpretedSort
-    ): Set<KExpr<KUninterpretedSort>>? = uninterpretedSortUniverse.getOrPut(sort) {
+    ): Set<KUninterpretedSortValue>? = uninterpretedSortUniverse.getOrPut(sort) {
         val sortDependencies = uninterpretedSortDependencies[sort] ?: return null
 
         sortDependencies.forEach { interpretation(it) }
 
-        knownUninterpretedSortValues[sort]?.values?.toHashSet() ?: hashSetOf()
+        knownUninterpretedSortValues[sort] ?: hashSetOf()
     }
 
     private val evaluatorWithModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = true) }
@@ -84,9 +84,9 @@ class KYicesModel(
             is KIntSort -> mkIntNum(model.bigRationalValue(yval))
             is KUninterpretedSort -> {
                 val uninterpretedSortValueId = model.scalarValue(yval)[0]
-                val sortValues = knownUninterpretedSortValues.getOrPut(sort) { hashMapOf() }
-                sortValues.getOrPut(uninterpretedSortValueId) {
-                    mkFreshConst("value_${uninterpretedSortValueId}", sort)
+                val sortValues = knownUninterpretedSortValues.getOrPut(sort) { hashSetOf() }
+                mkUninterpretedSortValue(sort, uninterpretedSortValueId).also {
+                    sortValues.add(it)
                 }
             }
             is KArraySortBase<*> -> {
