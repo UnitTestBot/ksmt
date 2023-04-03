@@ -1,0 +1,645 @@
+From d3ceb9f9c04864e3a78e24c6d07b1f9d0fa68844 Mon Sep 17 00:00:00 2001
+From: Pavel Balay <pavel.balai@gmail.com>
+Date: Tue, 15 Nov 2022 03:01:53 +0300
+Subject: [PATCH 1/7] Add term components access support
+
+---
+ src/main/java/com/sri/yices/Terms.java   |  28 ++++++
+ src/main/java/com/sri/yices/Yices.java   |  20 ++++
+ src/main/java/com/sri/yices/yicesJNI.cpp | 119 +++++++++++++++++++++++
+ 3 files changed, 167 insertions(+)
+
+diff --git a/src/main/java/com/sri/yices/Terms.java b/src/main/java/com/sri/yices/Terms.java
+index 1922d97..c22b764 100644
+--- a/src/main/java/com/sri/yices/Terms.java
++++ b/src/main/java/com/sri/yices/Terms.java
+@@ -1246,6 +1246,34 @@ static public int child(int x, int idx) throws YicesException {
+         return t;
+     }
+
++    static public int sumComponentTerm(int x, int idx) {
++        return Yices.sumComponentTerm(x, idx);
++    }
++
++    static public BigRational sumComponentRationalConstValue(int x, int idx) {
++        BigRational r = Yices.sumComponentRationalConstValue(x, idx);
++        if (r == null) throw new YicesException();
++        return r;
++    }
++
++    static public int sumbvComponentTerm(int x, int idx) {
++        return Yices.sumbvComponentTerm(x, idx);
++    }
++
++    static public boolean[] sumbvComponentBvConstValue(int x, int idx) {
++        boolean[] t = Yices.sumbvComponentBvConstValue(x, idx);
++        if (t == null) throw new YicesException();
++        return t;
++    }
++
++    static public int productComponentTerm(int x, int idx) {
++        return Yices.productComponentTerm(x, idx);
++    }
++
++    static public int productComponentExpConstValue(int x, int idx) {
++        return Yices.productComponentExpConstValue(x, idx);
++    }
++
+     static public int projIndex(int x) throws YicesException {
+         int idx = Yices.termProjIndex(x);
+         if (idx < 0) throw new YicesException();
+diff --git a/src/main/java/com/sri/yices/Yices.java b/src/main/java/com/sri/yices/Yices.java
+index cf628da..1f8680a 100644
+--- a/src/main/java/com/sri/yices/Yices.java
++++ b/src/main/java/com/sri/yices/Yices.java
+@@ -379,6 +379,26 @@ public static int mkRationalConstant(BigInteger num, BigInteger den) {
+     public static native int termNumChildren(int x);
+     public static native int termChild(int x, int idx);
+
++    private static native byte[] sumComponentRationalConstNumAsBytes(int x, int idx); // null for error
++    private static native byte[] sumComponentRationalConstDenAsBytes(int x, int idx); // null for error
++    public static native int sumComponentTerm(int x, int idx);
++
++    public static BigRational sumComponentRationalConstValue(int x, int idx) {
++        byte[] num = sumComponentRationalConstNumAsBytes(x, idx);
++        byte[] den = sumComponentRationalConstDenAsBytes(x, idx);
++        if (num != null && den != null) {
++            return new BigRational(num, den);
++        } else {
++            return null;
++        }
++    }
++
++    public static native int sumbvComponentTerm(int x, int idx);
++    public static native boolean[] sumbvComponentBvConstValue(int x, int idx);
++
++    public static native int productComponentTerm(int x, int idx);
++    public static native int productComponentExpConstValue(int x, int idx);
++
+     // all children of x or NULL if x is not a valid term
+     public static native int[] termChildren(int x);
+     public static native int termProjIndex(int x);
+diff --git a/src/main/java/com/sri/yices/yicesJNI.cpp b/src/main/java/com/sri/yices/yicesJNI.cpp
+index 27290e2..8cb5167 100644
+--- a/src/main/java/com/sri/yices/yicesJNI.cpp
++++ b/src/main/java/com/sri/yices/yicesJNI.cpp
+@@ -2622,6 +2622,125 @@ JNIEXPORT jintArray JNICALL Java_com_sri_yices_Yices_termChildren(JNIEnv *env, j
+ #endif
+ }
+
++JNIEXPORT jbyteArray JNICALL Java_com_sri_yices_Yices_sumComponentRationalConstNumAsBytes(JNIEnv *env, jclass, jint x, jint idx) {
++  jbyteArray result = NULL;
++  mpq_t q;
++
++  term_t t;
++
++  mpq_init(q);
++  if (yices_sum_component(x, idx, q, &t) >= 0) {
++    result = mpz_to_byte_array(env, mpq_numref(q));
++  }
++  mpq_clear(q);
++
++  return result;
++}
++
++
++JNIEXPORT jbyteArray JNICALL Java_com_sri_yices_Yices_sumComponentRationalConstDenAsBytes(JNIEnv *env, jclass, jint x, jint idx) {
++  jbyteArray result = NULL;
++  mpq_t q;
++
++  term_t t;
++
++  mpq_init(q);
++  if (yices_sum_component(x, idx, q, &t) >= 0) {
++    result = mpz_to_byte_array(env, mpq_denref(q));
++  }
++  mpq_clear(q);
++
++  return result;
++}
++
++JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_sumComponentTerm(JNIEnv *env, jclass, jint x, jint idx) {
++  term_t result;
++  mpq_t q;
++
++  mpq_init(q);
++  assert(yices_sum_component(x, idx, q, &result) >= 0);
++  mpq_clear(q);
++
++  return result;
++}
++
++JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_sumbvComponentTerm(JNIEnv *env, jclass, jint x, jint idx) {
++  term_t result;
++
++  assert(yices_term_constructor(x) == YICES_BV_SUM);
++
++  int32_t n = yices_term_bitsize(x);
++
++  assert(n >= 0);
++
++  if (n <= 64) {
++    // this should be the common case
++    int32_t a[64];
++    int32_t code = yices_bvsum_component(x, idx, a, &result);
++    assert(code >= 0);
++  } else {
++    try {
++      int32_t *tmp =  new int32_t[n];
++      int32_t code = yices_bvsum_component(x, idx, tmp, &result);
++      assert(code >= 0);
++      delete [] tmp;
++    } catch (std::bad_alloc) {
++      out_of_mem_exception(env);
++    }
++  }
++
++  return result;
++}
++
++JNIEXPORT jbooleanArray JNICALL Java_com_sri_yices_Yices_sumbvComponentBvConstValue(JNIEnv *env, jclass, jint x, jint idx) {
++  jbooleanArray result = NULL;
++  term_t t;
++
++  assert(yices_term_constructor(x) == YICES_BV_SUM);
++
++  int32_t n = yices_term_bitsize(x);
++
++  assert(n >= 0);
++
++  if (n <= 64) {
++    // this should be the common case
++    int32_t a[64];
++    int32_t code = yices_bvsum_component(x, idx, a, &t);
++    assert(code >= 0);
++    result = convertToBoolArray(env, n, a);
++  } else {
++    try {
++      int32_t *tmp =  new int32_t[n];
++      int32_t code = yices_bvsum_component(x, idx, tmp, &t);
++      assert(code >= 0);
++      result = convertToBoolArray(env, n, tmp);
++      delete [] tmp;
++    } catch (std::bad_alloc) {
++      out_of_mem_exception(env);
++    }
++  }
++
++  return result;
++}
++
++JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_productComponentTerm(JNIEnv *env, jclass, jint x, jint idx) {
++  term_t result;
++  uint32_t exp;
++
++  assert(yices_product_component(x, idx, &result, &exp) >= 0);
++
++  return result;
++}
++
++JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_productComponentExpConstValue(JNIEnv *env, jclass, jint x, jint idx) {
++  uint32_t result;
++  term_t t;
++
++  assert(yices_product_component(x, idx, &t, &result) >= 0);
++
++  return result;
++}
++
+ JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_termProjIndex(JNIEnv *env, jclass, jint x) {
+   return yices_proj_index(x);
+ }
+
+From 3ccc7d74a72c6afbbe5f94a3fa43199ba9d69225 Mon Sep 17 00:00:00 2001
+From: Pavel Balay <pavel.balai@gmail.com>
+Date: Sat, 19 Nov 2022 23:42:00 +0300
+Subject: [PATCH 2/7] Fix bv and
+
+---
+ src/main/java/com/sri/yices/Terms.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/main/java/com/sri/yices/Terms.java b/src/main/java/com/sri/yices/Terms.java
+index c22b764..b4223b1 100644
+--- a/src/main/java/com/sri/yices/Terms.java
++++ b/src/main/java/com/sri/yices/Terms.java
+@@ -818,7 +818,7 @@ static public int bvNot(int arg) throws YicesException {
+     }
+
+     static public int bvAnd(int left, int right) throws YicesException {
+-        int t = Yices.bvAdd(left, right);
++        int t = Yices.bvAnd(left, right);
+         if (t < 0) throw new YicesException();
+         return t;
+     }
+
+From c219a423c1649dbb01c60d3ef825b99780151396 Mon Sep 17 00:00:00 2001
+From: Pavel Balay <pavel.balai@gmail.com>
+Date: Wed, 7 Dec 2022 23:40:10 +0300
+Subject: [PATCH 3/7] Refactor component access
+
+---
+ src/main/java/com/sri/yices/Terms.java   | 43 ++++++++-------
+ src/main/java/com/sri/yices/Yices.java   | 34 ++++++------
+ src/main/java/com/sri/yices/yicesJNI.cpp | 67 +++++++-----------------
+ 3 files changed, 62 insertions(+), 82 deletions(-)
+
+diff --git a/src/main/java/com/sri/yices/Terms.java b/src/main/java/com/sri/yices/Terms.java
+index b4223b1..1ac8ab7 100644
+--- a/src/main/java/com/sri/yices/Terms.java
++++ b/src/main/java/com/sri/yices/Terms.java
+@@ -10,6 +10,16 @@
+  * These call the native API and throw a YicesException if there's an error.
+  */
+ public class Terms {
++    public static class Component<K> {
++        public int term;
++        public K constValue;
++
++        public Component(int term, K constValue) {
++            this.term = term;
++            this.constValue = constValue;
++        }
++    }
++
+     /**
+      * Short cuts for true/false/zero/one/minus_one
+      */
+@@ -1246,32 +1256,29 @@ static public int child(int x, int idx) throws YicesException {
+         return t;
+     }
+
+-    static public int sumComponentTerm(int x, int idx) {
+-        return Yices.sumComponentTerm(x, idx);
+-    }
+-
+-    static public BigRational sumComponentRationalConstValue(int x, int idx) {
++    static public Component<BigRational> sumComponent(int x, int idx) {
++        int t = Yices.sumComponentTerm(x, idx);
+         BigRational r = Yices.sumComponentRationalConstValue(x, idx);
+         if (r == null) throw new YicesException();
+-        return r;
++        return new Component<>(t, r);
+     }
+
+-    static public int sumbvComponentTerm(int x, int idx) {
+-        return Yices.sumbvComponentTerm(x, idx);
+-    }
++    static public Component<Boolean[]> sumbvComponent(int x, int idx) {
++        Yices.IntPtr t = new Yices.IntPtr();
++        boolean[] _constValue = Yices.sumbvComponent(x, idx, t);
++        Boolean[] constValue = new Boolean[_constValue.length];
+
+-    static public boolean[] sumbvComponentBvConstValue(int x, int idx) {
+-        boolean[] t = Yices.sumbvComponentBvConstValue(x, idx);
+-        if (t == null) throw new YicesException();
+-        return t;
+-    }
++        for (int i = 0; i < constValue.length; i++)
++            constValue[i] = _constValue[i];
+
+-    static public int productComponentTerm(int x, int idx) {
+-        return Yices.productComponentTerm(x, idx);
++        return new Component<>(t.value, constValue);
+     }
+
+-    static public int productComponentExpConstValue(int x, int idx) {
+-        return Yices.productComponentExpConstValue(x, idx);
++    static public Component<Integer> productComponent(int x, int idx) {
++        Yices.IntPtr t = new Yices.IntPtr();
++        int constValue = Yices.productComponent(x, idx, t);
++
++        return new Component<>(t.value, constValue);
+     }
+
+     static public int projIndex(int x) throws YicesException {
+diff --git a/src/main/java/com/sri/yices/Yices.java b/src/main/java/com/sri/yices/Yices.java
+index 1f8680a..4af470d 100644
+--- a/src/main/java/com/sri/yices/Yices.java
++++ b/src/main/java/com/sri/yices/Yices.java
+@@ -3,6 +3,8 @@
+ import java.math.BigInteger;
+
+ public final class Yices {
++    public static class IntPtr { public int value; }
++
+     private static boolean is_ready;
+
+     /*
+@@ -11,15 +13,19 @@ public final class Yices {
+      * For now, it's best to see the exception (if any) rather than catch it
+      * and print a generic message.
+      */
+-    static {
+-        try {
+-            System.loadLibrary("yices2java");
+-            init();
+-            is_ready = true;
+-        } catch (LinkageError e) {
+-            is_ready = false;
+-            throw e;
+-        }
++//     static {
++//         try {
++//             System.loadLibrary("yices2java");
++//             init();
++//             is_ready = true;
++//         } catch (LinkageError e) {
++//             is_ready = false;
++//             throw e;
++//         }
++//     }
++
++    public static void setReadyFlag(boolean value) {
++		is_ready = value;
+     }
+
+     /*
+@@ -83,7 +89,7 @@ public static long versionOrdinal(int version, int major, int patch) {
+      * - exit frees the internal data structures used by Yices
+      * - reset is the same as exit(); init();
+      */
+-    private static native void init();
++    public static native void init();
+     private static native void exit();
+     public static native void reset();
+
+@@ -392,12 +398,8 @@ public static BigRational sumComponentRationalConstValue(int x, int idx) {
+             return null;
+         }
+     }
+-
+-    public static native int sumbvComponentTerm(int x, int idx);
+-    public static native boolean[] sumbvComponentBvConstValue(int x, int idx);
+-
+-    public static native int productComponentTerm(int x, int idx);
+-    public static native int productComponentExpConstValue(int x, int idx);
++    public static native boolean[] sumbvComponent(int x, int idx, IntPtr t);
++    public static native int productComponent(int x, int idx, IntPtr t);
+
+     // all children of x or NULL if x is not a valid term
+     public static native int[] termChildren(int x);
+diff --git a/src/main/java/com/sri/yices/yicesJNI.cpp b/src/main/java/com/sri/yices/yicesJNI.cpp
+index 8cb5167..da5f581 100644
+--- a/src/main/java/com/sri/yices/yicesJNI.cpp
++++ b/src/main/java/com/sri/yices/yicesJNI.cpp
+@@ -2664,8 +2664,9 @@ JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_sumComponentTerm(JNIEnv *env, jc
+   return result;
+ }
+
+-JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_sumbvComponentTerm(JNIEnv *env, jclass, jint x, jint idx) {
+-  term_t result;
++JNIEXPORT jbooleanArray JNICALL Java_com_sri_yices_Yices_sumbvComponent(JNIEnv *env, jclass, jint x, jint idx, jobject t) {
++  jbooleanArray constValue = NULL;
++  term_t _t;
+
+   assert(yices_term_constructor(x) == YICES_BV_SUM);
+
+@@ -2676,69 +2677,39 @@ JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_sumbvComponentTerm(JNIEnv *env,
+   if (n <= 64) {
+     // this should be the common case
+     int32_t a[64];
+-    int32_t code = yices_bvsum_component(x, idx, a, &result);
++    int32_t code = yices_bvsum_component(x, idx, a, &_t);
+     assert(code >= 0);
++    constValue = convertToBoolArray(env, n, a);
+   } else {
+     try {
+       int32_t *tmp =  new int32_t[n];
+-      int32_t code = yices_bvsum_component(x, idx, tmp, &result);
++      int32_t code = yices_bvsum_component(x, idx, tmp, &_t);
+       assert(code >= 0);
++      constValue = convertToBoolArray(env, n, tmp);
+       delete [] tmp;
+     } catch (std::bad_alloc) {
+       out_of_mem_exception(env);
+     }
+   }
+
+-  return result;
+-}
+-
+-JNIEXPORT jbooleanArray JNICALL Java_com_sri_yices_Yices_sumbvComponentBvConstValue(JNIEnv *env, jclass, jint x, jint idx) {
+-  jbooleanArray result = NULL;
+-  term_t t;
+-
+-  assert(yices_term_constructor(x) == YICES_BV_SUM);
+-
+-  int32_t n = yices_term_bitsize(x);
+-
+-  assert(n >= 0);
+-
+-  if (n <= 64) {
+-    // this should be the common case
+-    int32_t a[64];
+-    int32_t code = yices_bvsum_component(x, idx, a, &t);
+-    assert(code >= 0);
+-    result = convertToBoolArray(env, n, a);
+-  } else {
+-    try {
+-      int32_t *tmp =  new int32_t[n];
+-      int32_t code = yices_bvsum_component(x, idx, tmp, &t);
+-      assert(code >= 0);
+-      result = convertToBoolArray(env, n, tmp);
+-      delete [] tmp;
+-    } catch (std::bad_alloc) {
+-      out_of_mem_exception(env);
+-    }
+-  }
++  jclass mc = env->GetObjectClass(t);
++  jfieldID fid = env->GetFieldID(mc, "value", "I");
++  env->SetIntField(t, fid, (jint) _t);
+
+-  return result;
++  return constValue;
+ }
+
+-JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_productComponentTerm(JNIEnv *env, jclass, jint x, jint idx) {
+-  term_t result;
+-  uint32_t exp;
+-
+-  assert(yices_product_component(x, idx, &result, &exp) >= 0);
+-
+-  return result;
+-}
++JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_productComponent(JNIEnv *env, jclass, jint x, jint idx, jobject t) {
++  term_t _t;
++  uint32_t constValue;
+
+-JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_productComponentExpConstValue(JNIEnv *env, jclass, jint x, jint idx) {
+-  uint32_t result;
+-  term_t t;
++  assert(yices_product_component(x, idx, &_t, &constValue) >= 0);
+
+-  assert(yices_product_component(x, idx, &t, &result) >= 0);
++  jclass mc = env->GetObjectClass(t);
++  jfieldID fid = env->GetFieldID(mc, "value", "I");
++  env->SetIntField(t, fid, (jint) _t);
+
+-  return result;
++  return constValue;
+ }
+
+ JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_termProjIndex(JNIEnv *env, jclass, jint x) {
+
+From a8845a13a65271b171cb9755c402a3e246a92d64 Mon Sep 17 00:00:00 2001
+From: Pavel Balay <pavel.balai@gmail.com>
+Date: Wed, 21 Dec 2022 01:28:07 +0300
+Subject: [PATCH 4/7] Fix expandFunction()
+
+---
+ src/main/java/com/sri/yices/Model.java   | 2 +-
+ src/main/java/com/sri/yices/yicesJNI.cpp | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/main/java/com/sri/yices/Model.java b/src/main/java/com/sri/yices/Model.java
+index bcd710f..5cbab09 100644
+--- a/src/main/java/com/sri/yices/Model.java
++++ b/src/main/java/com/sri/yices/Model.java
+@@ -398,7 +398,7 @@ public YVal[] expandTuple(YVal yval) throws YicesException {
+
+     public VectorValue expandFunction(YVal yval) throws YicesException {
+         int n = Yices.valFunctionCardinality(ptr, yval.tag.ordinal(), yval.id);
+-        if (n <= 0) throw new YicesException();
++        if (n < 0) throw new YicesException();
+         YVal[] vector =  new YVal[n];
+         YVal[] value = new YVal[1];
+         int code = Yices.valExpandFunction(ptr, yval.tag.ordinal(), yval.id, value, vector);
+diff --git a/src/main/java/com/sri/yices/yicesJNI.cpp b/src/main/java/com/sri/yices/yicesJNI.cpp
+index da5f581..a0b7d4f 100644
+--- a/src/main/java/com/sri/yices/yicesJNI.cpp
++++ b/src/main/java/com/sri/yices/yicesJNI.cpp
+@@ -4678,7 +4678,7 @@ JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_valExpandFunction(JNIEnv *env, j
+     return -1;
+   }
+   cardinality = Java_com_sri_yices_Yices_valFunctionCardinality(env, cls, mdl, tag, id);
+-  if (cardinality <= 0) {
++  if (cardinality < 0) {
+     return -2;
+   }
+   ndef = env->GetArrayLength(def);
+
+From 39b8da01b404ec578a822b7614525b3f8d44f696 Mon Sep 17 00:00:00 2001
+From: Pavel Balay <pavel.balai@gmail.com>
+Date: Mon, 16 Jan 2023 19:54:38 +0300
+Subject: [PATCH 5/7] Minor change
+
+---
+ src/main/java/com/sri/yices/YVal.java | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/main/java/com/sri/yices/YVal.java b/src/main/java/com/sri/yices/YVal.java
+index 574ba57..1509541 100644
+--- a/src/main/java/com/sri/yices/YVal.java
++++ b/src/main/java/com/sri/yices/YVal.java
+@@ -27,4 +27,8 @@ public String toString(){
+         return String.format("<%s: %d>", tag, id);
+     }
+
++    @Override
++    public int hashCode() {
++        return id;
++    }
+ }
+
+From dc29fd6c861384a3cc32eadd7cdc716b914a2efe Mon Sep 17 00:00:00 2001
+From: Pavel Balay <pavel.balai@gmail.com>
+Date: Mon, 6 Feb 2023 02:53:12 +0300
+Subject: [PATCH 6/7] Changes
+
+---
+ src/main/java/com/sri/yices/Config.java  | 9 +++++++++
+ src/main/java/com/sri/yices/Context.java | 8 ++++++++
+ src/main/java/com/sri/yices/Makefile     | 2 +-
+ 3 files changed, 18 insertions(+), 1 deletion(-)
+
+diff --git a/src/main/java/com/sri/yices/Config.java b/src/main/java/com/sri/yices/Config.java
+index ff638cc..b6c9d89 100644
+--- a/src/main/java/com/sri/yices/Config.java
++++ b/src/main/java/com/sri/yices/Config.java
+@@ -46,6 +46,10 @@ public Config(String logic) throws YicesException {
+      */
+     protected long getPtr() { return ptr; }
+
++    public boolean isActive() {
++        return ptr != 0;
++    }
++
+     /*
+      * close
+      */
+@@ -57,6 +61,11 @@ public void close() {
+         }
+     }
+
++    public void defaultConfigForLogic(String logic) throws YicesException {
++        int code = Yices.defaultConfigForLogic(ptr, logic);
++        if (code < 0) throw new YicesException();
++    }
++
+
+     /*
+      * Set a configuration parameter
+diff --git a/src/main/java/com/sri/yices/Context.java b/src/main/java/com/sri/yices/Context.java
+index 53ac5b6..cf8162a 100644
+--- a/src/main/java/com/sri/yices/Context.java
++++ b/src/main/java/com/sri/yices/Context.java
+@@ -338,6 +338,14 @@ public Status checkWithAssumptions(Parameters params, int[] assumptions) {
+         return Status.idToStatus(code);
+     }
+
++    public Status checkWithAssumptions(int[] assumptions) {
++        int code = Yices.checkContextWithAssumptions(ptr, 0, assumptions);
++        if (code < 0) {
++            throw new YicesException();
++        }
++        return Status.idToStatus(code);
++    }
++
+     // Since 2.6.4
+     public Status checkWithModel(Parameters params, Model model, int[] assumptions) {
+         int code = Yices.checkContextWithModel(ptr, params.getPtr(), model.getPtr(), assumptions);
+diff --git a/src/main/java/com/sri/yices/Makefile b/src/main/java/com/sri/yices/Makefile
+index 158571b..83b59cf 100644
+--- a/src/main/java/com/sri/yices/Makefile
++++ b/src/main/java/com/sri/yices/Makefile
+@@ -64,7 +64,7 @@ CXX ?= g++
+
+
+ # JAVAC to compile the java
+-JAVAC ?= javac
++JAVAC ?= javac -source 8 -target 8
+
+ # these defaults are for the ant build, and
+ # should/will be overidden when using the build.sh
+
+From b90c9fe69377c892fdac7e0562fbdc7bd8da6c37 Mon Sep 17 00:00:00 2001
+From: Pavel Balay <pavel.balai@gmail.com>
+Date: Sun, 12 Feb 2023 00:24:04 +0300
+Subject: [PATCH 7/7] Fix bitvector extend
+
+---
+ src/main/java/com/sri/yices/Terms.java | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/main/java/com/sri/yices/Terms.java b/src/main/java/com/sri/yices/Terms.java
+index 1ac8ab7..1af72de 100644
+--- a/src/main/java/com/sri/yices/Terms.java
++++ b/src/main/java/com/sri/yices/Terms.java
+@@ -1034,14 +1034,14 @@ static public int bvRepeat(int a, int n) throws YicesException {
+
+     // add n bits
+     static public int bvSignExtend(int arg, int n) throws YicesException {
+-        if (n <= 0) throw new IllegalArgumentException("n must be positive");
++        if (n < 0) throw new IllegalArgumentException("n must be not negative");
+         int t = Yices.bvSignExtend(arg, n);
+         if (t < 0) throw new YicesException();
+         return t;
+     }
+
+     static public int bvZeroExtend(int arg, int n) throws YicesException {
+-        if (n <= 0) throw new IllegalArgumentException("n must be positive");
++        if (n < 0) throw new IllegalArgumentException("n must be not negative");
+         int t = Yices.bvZeroExtend(arg, n);
+         if (t < 0) throw new YicesException();
+         return t;
