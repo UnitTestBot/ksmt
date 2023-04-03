@@ -43,17 +43,37 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
 
     abstract fun indicesAreInterpreted(): Boolean
 
+    /**
+     * Find an array expression containing the value for the provided indices.
+     *
+     * Returns:
+     * 1. Indices match the current store expression indices -> current store.
+     * 2. We can't determine whether indices match or not -> current store.
+     * 3. Indices definitely don't match current store indices
+     * (e.g. both are interpreted values) -> apply this operation on a nested array.
+     * */
     abstract fun findArrayToSelectFrom(indices: List<KExpr<*>>): KExpr<A>
 
+    /**
+     * Analyze store to provide faster index lookups when
+     * store indices are interpreted values.
+     * */
     fun analyzeStore() {
+        // Store was analyzed already. Nothing to do here.
         if (type != ArrayStoreType.NOT_INITIALIZED) return
 
+        // Store indices are not interpreted values. We can't optimize lookups.
         if (!indicesAreInterpreted()) {
             type = ArrayStoreType.UNINTERPRETED
             return
         }
+
         type = ArrayStoreType.INTERPRETED
 
+        /**
+         * Current store is the first store with interpreted indices.
+         * We don't need to initialize map.
+         * */
         if (array !is KArrayStoreBase<A, *> || array.type != ArrayStoreType.INTERPRETED) {
             nextUninterpretedArray = array
             interpretedStoresAmount = 1
@@ -64,14 +84,25 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
         interpretedStoresAmount = array.interpretedStoresAmount + 1
         nextUninterpretedArray = array.nextUninterpretedArray
 
+        /**
+         * We don't initialize map when interpreted stores chain is small enough.
+         * On a small chains linear lookup will be faster and we can also save some memory.
+         * */
         if (interpretedStoresAmount < LINEAR_LOOKUP_THRESHOLD) {
             interpretedStores = null
             return
         }
 
+        /**
+         * We have a deep chain of interpreted stores.
+         * We use persistent map to provide faster index lookups.
+         * */
         interpretedStores = updateInterpretedStoresMap(array).uncheckedCast()
     }
 
+    /**
+     * Create lookup key that can uniquely identify store indices in the map.
+     * */
     internal abstract fun createLookupKey(): Any
 
     private fun updateInterpretedStoresMap(
@@ -86,6 +117,7 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
         }
 
     companion object {
+        // On a small store chains linear lookup is faster than map lookup.
         private const val LINEAR_LOOKUP_THRESHOLD = 7
 
         internal enum class ArrayStoreType {
