@@ -1,6 +1,7 @@
 package org.ksmt.solver.z3
 
 import com.microsoft.z3.Native
+import com.microsoft.z3.incRefUnsafe
 import com.microsoft.z3.mkQuantifier
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
@@ -146,6 +147,7 @@ import org.ksmt.expr.KToIntRealExpr
 import org.ksmt.expr.KToRealIntExpr
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.solver.util.KExprLongInternalizerBase
@@ -165,6 +167,7 @@ import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 
 open class KZ3ExprInternalizer(
     val ctx: KContext,
@@ -836,6 +839,26 @@ open class KZ3ExprInternalizer(
 
     override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KFunctionAsArray<A, R>): KExpr<A> = with(expr) {
         transform { Native.mkAsArray(nCtx, function.internalizeDecl()) }
+    }
+
+    override fun transform(expr: KUninterpretedSortValue): KExpr<KUninterpretedSort> = with(expr) {
+        transform(ctx.mkIntNum(expr.valueIdx)) { intValueExpr ->
+            val nativeSort = sort.internalizeSort()
+            val valueDecl = z3InternCtx.temporaryAst(
+                Native.mkFreshFuncDecl(nCtx, "value", 0, null, nativeSort)
+            )
+            Native.mkApp(nCtx, valueDecl, 0, null).also {
+                // Force expression save to perform `incRef` and prevent possible reference counting issues
+                saveInternalizedExpr(expr, it)
+
+                z3InternCtx.releaseTemporaryAst(valueDecl)
+
+                z3InternCtx.registerUninterpretedSortValue(expr, intValueExpr, it) {
+                    val descriptorSort = ctx.intSort.internalizeSort()
+                    Native.mkFreshFuncDecl(nCtx, "interpreter", 1, longArrayOf(nativeSort), descriptorSort)
+                }
+            }
+        }
     }
 
     inline fun <S : KExpr<*>> S.transform(

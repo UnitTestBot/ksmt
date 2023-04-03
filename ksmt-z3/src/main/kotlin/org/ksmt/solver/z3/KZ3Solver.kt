@@ -52,6 +52,7 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
 
     override fun push() {
         solver.push()
+        z3Ctx.pushAssertionLevel()
         currentScope++
     }
 
@@ -60,7 +61,10 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
             "Can not pop $n scope levels because current scope level is $currentScope"
         }
         if (n == 0u) return
+
         solver.pop(n.toInt())
+        repeat(n.toInt()) { z3Ctx.popAssertionLevel() }
+
         currentScope -= n
     }
 
@@ -69,6 +73,8 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
 
         val z3Expr = with(exprInternalizer) { expr.internalizeExpr() }
         solver.solverAssert(z3Expr)
+
+        z3Ctx.assertPendingAxioms(solver)
     }
 
     override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) = z3Try {
