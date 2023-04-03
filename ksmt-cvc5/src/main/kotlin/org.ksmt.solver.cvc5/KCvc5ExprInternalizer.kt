@@ -1193,6 +1193,13 @@ class KCvc5ExprInternalizer(
         return leftLambda.eqTerm(rightLambda)
     }
 
+    /**
+     * Ensure that an array expression has a function type.
+     *
+     * Since arrays can be represented as `SMT arrays` or as functions (lambda expressions)
+     * we must coerce them to the same type.
+     * We coerce `SMT arrays` to functions.
+     * */
     private fun ensureArrayLambda(arraySort: KArraySortBase<*>, term: Term): Term =
         if (!term.sort.isArray) {
             term
