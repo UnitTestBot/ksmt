@@ -130,8 +130,7 @@ abstract class BenchmarksBasedTest {
                         with(ctx) {
                             val x = mkFreshConst("x", sort)
                             val variants = mkOr(universe.map { x eq it })
-                            val uniqueness = mkDistinct(universe.toList())
-                            mkUniversalQuantifier(variants and uniqueness, listOf(x.decl))
+                            mkUniversalQuantifier(variants, listOf(x.decl))
                         }
                     }
                 }
