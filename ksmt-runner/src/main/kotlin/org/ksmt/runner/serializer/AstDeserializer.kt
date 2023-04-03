@@ -13,6 +13,7 @@ import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.uncheckedCast
 
 @OptIn(ExperimentalUnsignedTypes::class)
@@ -274,6 +275,9 @@ class AstDeserializer(
             ExprKind.UniversalQuantifier -> {
                 val bounds = readAstArray()
                 mkUniversalQuantifier(readExpr(), bounds as List<KDecl<*>>)
+            }
+            ExprKind.UninterpretedSortValue -> {
+                mkUninterpretedSortValue(readSort() as KUninterpretedSort, readInt())
             }
         }
     }

@@ -140,6 +140,7 @@ import org.ksmt.decl.KSignExtDecl
 import org.ksmt.decl.KTrueDecl
 import org.ksmt.decl.KUninterpretedConstDecl
 import org.ksmt.decl.KUninterpretedFuncDecl
+import org.ksmt.decl.KUninterpretedSortValueDecl
 import org.ksmt.decl.KXorDecl
 import org.ksmt.decl.KZeroExtDecl
 import org.ksmt.expr.KAddArithExpr
@@ -289,6 +290,7 @@ import org.ksmt.expr.KToIntRealExpr
 import org.ksmt.expr.KToRealIntExpr
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.expr.printer.PrinterParams
@@ -3064,14 +3066,16 @@ open class KContext(
             KUniversalQuantifier(this, body, bounds)
         }
 
-    private val uninterpretedSortDefaultValueCache =
-        mkCache<KUninterpretedSort, KExpr<KUninterpretedSort>>(operationMode)
+    private val uninterpretedSortValueCache = mkAstInterner<KUninterpretedSortValue>()
 
-    open fun uninterpretedSortDefaultValue(sort: KUninterpretedSort): KExpr<KUninterpretedSort> =
-        uninterpretedSortDefaultValueCache.computeIfAbsent(sort) {
-            ensureContextMatch(it)
-            mkFreshConst("${it.name}_default_value", it)
+    open fun mkUninterpretedSortValue(sort: KUninterpretedSort, valueIdx: Int): KUninterpretedSortValue =
+        uninterpretedSortValueCache.createIfContextActive {
+            ensureContextMatch(sort)
+            KUninterpretedSortValue(this, sort, valueIdx)
         }
+
+    open fun uninterpretedSortDefaultValue(sort: KUninterpretedSort): KUninterpretedSortValue =
+        mkUninterpretedSortValue(sort, valueIdx = 0)
 
     /*
     * declarations
@@ -3608,6 +3612,9 @@ open class KContext(
 
     fun <T : KFpSort> mkBvToFpDecl(sort: T, rm: KFpRoundingModeSort, value: KBvSort, signed: Boolean): KBvToFpDecl<T> =
         KBvToFpDecl(this, sort, rm, value, signed)
+
+    fun mkUninterpretedSortValueDecl(sort: KUninterpretedSort, valueIdx: Int): KUninterpretedSortValueDecl =
+        KUninterpretedSortValueDecl(this, sort, valueIdx)
 
     /*
     * KAst
