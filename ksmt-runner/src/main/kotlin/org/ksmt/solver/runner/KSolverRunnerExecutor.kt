@@ -7,6 +7,7 @@ import kotlinx.coroutines.withTimeout
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.runner.core.KsmtWorkerSession
 import org.ksmt.runner.generated.models.AssertAndTrackParams
 import org.ksmt.runner.generated.models.AssertParams
@@ -125,7 +126,7 @@ class KSolverRunnerExecutor(
         }
         val uninterpretedSortUniverse = result.uninterpretedSortUniverse.associateBy(
             { entry -> entry.sort as KUninterpretedSort },
-            { entry -> entry.universe.mapTo(hashSetOf()) { it as KExpr<KUninterpretedSort> } }
+            { entry -> entry.universe.mapTo(hashSetOf()) { it as KUninterpretedSortValue } }
         )
         return KModelImpl(worker.astSerializationCtx.ctx, interpretations.toMap(), uninterpretedSortUniverse)
     }

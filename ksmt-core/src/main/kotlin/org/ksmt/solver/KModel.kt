@@ -3,6 +3,7 @@ package org.ksmt.solver
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
 
@@ -18,7 +19,7 @@ interface KModel {
     /**
      * Set of possible values of an Uninterpreted Sort.
      * */
-    fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KExpr<KUninterpretedSort>>?
+    fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KUninterpretedSortValue>?
 
     fun detach(): KModel
 
