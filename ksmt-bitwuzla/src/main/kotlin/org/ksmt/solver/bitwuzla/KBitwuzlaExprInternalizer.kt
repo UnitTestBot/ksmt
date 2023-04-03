@@ -148,6 +148,7 @@ import org.ksmt.expr.KToIntRealExpr
 import org.ksmt.expr.KToRealIntExpr
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.solver.KSolverUnsupportedFeatureException
@@ -283,6 +284,9 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
 
         // Save only constants
         if (expr !is KInterpretedValue<*>) return
+
+        // Don't reverse cache uninterpreted values because we represent them as Bv32
+        if (expr is KUninterpretedSortValue) return
 
         val kind = Native.bitwuzlaTermGetBitwuzlaKind(term)
 
@@ -1247,6 +1251,14 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
         expr: KFunctionAsArray<A, R>
     ): KExpr<A> = expr.transform {
         mkConstant(expr.function) { expr.function.bitwuzlaFunctionSort() }
+    }
+
+    override fun transform(expr: KUninterpretedSortValue): KExpr<KUninterpretedSort> = expr.transform {
+        Native.bitwuzlaMkBvValueUint32(
+            bitwuzla,
+            expr.sort.internalizeSort(),
+            expr.valueIdx
+        )
     }
 
     private inline fun <T : KQuantifier> T.internalizeQuantifier(

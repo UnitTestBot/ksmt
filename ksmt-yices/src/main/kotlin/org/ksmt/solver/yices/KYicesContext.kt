@@ -291,6 +291,8 @@ open class KYicesContext : AutoCloseable {
     fun exists(bounds: YicesTermArray, body: YicesTerm) = mkTerm { Terms.exists(bounds, body) }
     fun forall(bounds: YicesTermArray, body: YicesTerm) = mkTerm { Terms.forall(bounds, body) }
 
+    fun uninterpretedSortConst(sort: YicesSort, idx: Int) = mkTerm { Terms.mkConst(sort, idx) }
+
     fun substitute(term: YicesTerm, substituteFrom: YicesTermArray, substituteTo: YicesTermArray): YicesTerm =
         mkTerm { Terms.subst(term, substituteFrom, substituteTo) }
 
