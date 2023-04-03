@@ -111,11 +111,11 @@ tasks.withType<Test> {
         environment("benchmarkChunk", benchmarkChunk)
     } else {
         exclude("org/ksmt/test/benchmarks/**")
-    }
 
-    testLogging {
-        showStandardStreams = true
-        outputs.upToDateWhen { false }
+        testLogging {
+            showStandardStreams = true
+            outputs.upToDateWhen { false }
+        }
     }
 }
 

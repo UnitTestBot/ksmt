@@ -40,6 +40,9 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
             return cachedExpr
         }
 
+        // In case of exceptional execution we may have some expressions on the stack
+        exprStack.clear()
+
         exprStack.add(expr)
         while (exprStack.isNotEmpty()) {
             val e = exprStack.removeLast()

@@ -5,6 +5,7 @@ import io.github.cvc5.RoundingMode
 import io.github.cvc5.Solver
 import io.github.cvc5.Sort
 import io.github.cvc5.Term
+import io.github.cvc5.mkLambda
 import io.github.cvc5.mkQuantifier
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAddArithExpr
@@ -18,11 +19,14 @@ import org.ksmt.expr.KArray3Select
 import org.ksmt.expr.KArray3Store
 import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArrayLambdaBase
 import org.ksmt.expr.KArrayNLambda
 import org.ksmt.expr.KArrayNSelect
 import org.ksmt.expr.KArrayNStore
 import org.ksmt.expr.KArraySelect
+import org.ksmt.expr.KArraySelectBase
 import org.ksmt.expr.KArrayStore
+import org.ksmt.expr.KArrayStoreBase
 import org.ksmt.expr.KBitVec16Value
 import org.ksmt.expr.KBitVec1Value
 import org.ksmt.expr.KBitVec32Value
@@ -131,6 +135,7 @@ import org.ksmt.expr.KImpliesExpr
 import org.ksmt.expr.KInt32NumExpr
 import org.ksmt.expr.KInt64NumExpr
 import org.ksmt.expr.KIntBigNumExpr
+import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.KIsIntRealExpr
 import org.ksmt.expr.KIteExpr
 import org.ksmt.expr.KLeArithExpr
@@ -141,7 +146,6 @@ import org.ksmt.expr.KNotExpr
 import org.ksmt.expr.KOrBinaryExpr
 import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KPowerArithExpr
-import org.ksmt.expr.KQuantifier
 import org.ksmt.expr.KRealNumExpr
 import org.ksmt.expr.KRealToFpExpr
 import org.ksmt.expr.KRemIntExpr
@@ -213,7 +217,7 @@ class KCvc5ExprInternalizer(
             if (decl.hasOp()) {
                 nsolver.mkTerm(decl.op, args)
             } else {
-                nsolver.mkTerm(Kind.APPLY_UF, arrayOf(decl) + args)
+                decl.mkFunctionApp(args.asList())
             }
         }
     }
@@ -225,7 +229,7 @@ class KCvc5ExprInternalizer(
     }
 
     override fun transform(expr: KAndExpr) = with(expr) {
-        transformArray(args) { args: Array<Term> -> nsolver.mkTerm(Kind.AND, args) }
+        transformArray(args) { args: Array<Term> -> mkAndTerm(args.asList()) }
     }
 
     override fun transform(expr: KAndBinaryExpr) = with(expr) {
@@ -233,7 +237,7 @@ class KCvc5ExprInternalizer(
     }
 
     override fun transform(expr: KOrExpr) = with(expr) {
-        transformArray(args) { args: Array<Term> -> nsolver.mkTerm(Kind.OR, args) }
+        transformArray(args) { args: Array<Term> -> mkOrTerm(args.asList()) }
     }
 
     override fun transform(expr: KOrBinaryExpr) = with(expr) {
@@ -261,17 +265,33 @@ class KCvc5ExprInternalizer(
 
     override fun <T : KSort> transform(expr: KEqExpr<T>) = with(expr) {
         transform(lhs, rhs) { lhs: Term, rhs: Term ->
-            nsolver.mkTerm(Kind.EQUAL, lhs, rhs)
+            mkArraySpecificTerm(
+                sort = expr.lhs.sort,
+                arrayTerm = { mkArrayEqTerm(it, lhs, rhs) },
+                default = { lhs.eqTerm(rhs) }
+            )
         }
     }
 
     override fun <T : KSort> transform(expr: KDistinctExpr<T>) = with(expr) {
-        transformArray(args) { args: Array<Term> -> nsolver.mkTerm(Kind.DISTINCT, args) }
+        transformArray(args) { args: Array<Term> ->
+            mkArraySpecificTerm(
+                sort = expr.args.first().sort,
+                arrayTerm = { mkArrayDistinctTerm(it, args.asList()) },
+                default = { nsolver.mkTerm(Kind.DISTINCT, args) }
+            )
+        }
     }
 
     override fun <T : KSort> transform(expr: KIteExpr<T>) = with(expr) {
-        transform(condition, trueBranch, falseBranch) { condition: Term, trueBranch: Term, falseBranch: Term ->
-            condition.iteTerm(trueBranch, falseBranch)
+        transform(
+            condition, trueBranch, falseBranch
+        ) { condition: Term, trueBranch: Term, falseBranch: Term ->
+            mkArraySpecificTerm(
+                sort = expr.trueBranch.sort,
+                arrayTerm = { mkArrayIteTerm(it, condition, trueBranch, falseBranch) },
+                default = { condition.iteTerm(trueBranch, falseBranch) }
+            )
         }
     }
 
@@ -898,58 +918,79 @@ class KCvc5ExprInternalizer(
         }
     }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) = with(expr) {
-        transform(array, index, value) { array: Term, index: Term, value: Term ->
-            nsolver.mkTerm(Kind.STORE, arrayOf(array, index, value))
-        }
-    }
+    override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) =
+        expr.transformStore()
+
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Store<D0, D1, R>
+    ): KExpr<KArray2Sort<D0, D1, R>> = expr.transformStore()
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Store<D0, D1, D2, R>
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> = expr.transformStore()
 
     override fun <R : KSort> transform(expr: KArrayNStore<R>): KExpr<KArrayNSort<R>> =
-        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+        expr.transformStore()
 
-    @Suppress("MaxLineLength")
-    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(expr: KArray3Store<D0, D1, D2, R>): KExpr<KArray3Sort<D0, D1, D2, R>> =
-        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
-
-    @Suppress("MaxLineLength")
-    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(expr: KArray2Store<D0, D1, R>): KExpr<KArray2Sort<D0, D1, R>> =
-        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
-
-    override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>) = with(expr) {
-        transform(array, index) { array: Term, index: Term ->
-            nsolver.mkTerm(Kind.SELECT, array, index)
+    private fun <E : KArrayStoreBase<*, *>> E.transformStore(): E =
+        transformArray(listOf(array, value) + indices) { transformedArgs: Array<Term> ->
+            val (array, value) = transformedArgs.take(2)
+            val indices = transformedArgs.drop(2)
+            mkArrayStoreTerm(array, indices, value)
         }
-    }
 
-    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(expr: KArray2Select<D0, D1, R>): KExpr<R> =
-        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+    override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>) =
+        expr.transformSelect()
 
-    @Suppress("MaxLineLength")
-    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(expr: KArray3Select<D0, D1, D2, R>): KExpr<R> =
-        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(expr: KArray2Select<D0, D1, R>) =
+        expr.transformSelect()
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Select<D0, D1, D2, R>
+    ): KExpr<R> = expr.transformSelect()
 
     override fun <R : KSort> transform(expr: KArrayNSelect<R>): KExpr<R> =
-        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+        expr.transformSelect()
+
+    private fun <E : KArraySelectBase<*, *>> E.transformSelect(): E =
+        transformArray(listOf(array) + indices) { transformedArgs: Array<Term> ->
+            val array = transformedArgs.first()
+            val indices = transformedArgs.drop(1)
+            mkArraySelectTerm(array, indices)
+        }
 
     override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KArrayConst<A, R>) = with(expr) {
-        transform(value) { value: Term ->
-            nsolver.mkConstArray(sort.internalizeSort(), value)
+        transform(value) { valueTerm: Term ->
+            if (value is KInterpretedValue<*> || value is KArrayConst<*, *>) {
+                // const array base must be a value or a constant array
+                nsolver.mkConstArray(sort.internalizeSort(), valueTerm)
+            } else {
+                val bounds = sort.domainSorts.map { nsolver.mkConst(it.internalizeSort()) }
+                mkLambdaTerm(bounds, valueTerm)
+            }
         }
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) =
-        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+        expr.transformLambda()
 
-    @Suppress("MaxLineLength")
-    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(expr: KArray2Lambda<D0, D1, R>): KExpr<KArray2Sort<D0, D1, R>> =
-        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Lambda<D0, D1, R>
+    ): KExpr<KArray2Sort<D0, D1, R>> =
+        expr.transformLambda()
 
-    @Suppress("MaxLineLength")
-    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(expr: KArray3Lambda<D0, D1, D2, R>): KExpr<KArray3Sort<D0, D1, D2, R>> =
-        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Lambda<D0, D1, D2, R>
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> =
+        expr.transformLambda()
 
     override fun <R : KSort> transform(expr: KArrayNLambda<R>): KExpr<KArrayNSort<R>> =
-        throw KSolverUnsupportedFeatureException("cvc5 does not support multi indexed arrays")
+        expr.transformLambda()
+
+    private fun <E : KArrayLambdaBase<*, *>> E.transformLambda(): E = transform(body) { bodyTerm: Term ->
+        val bounds = indexVarDeclarations.map { it.internalizeDecl() }
+        mkLambdaTerm(bounds, bodyTerm)
+    }
 
     override fun <T : KArithSort> transform(expr: KAddArithExpr<T>) = with(expr) {
         transformArray(args) { args -> nsolver.mkTerm(Kind.ADD, args) }
@@ -1057,21 +1098,11 @@ class KCvc5ExprInternalizer(
         }
     }
 
-    private fun transformQuantifier(expr: KQuantifier, isUniversal: Boolean) = with(expr) {
-        transformArray(bounds.map { ctx.mkConstApp(it) } + body) { args ->
-            val cvc5Consts = args.copyOfRange(0, args.size - 1)
-            val cvc5Body = args.last()
+    override fun transform(expr: KExistentialQuantifier) =
+        expr.transformQuantifiedExpression(expr.bounds, expr.body, isUniversal = false)
 
-            val cvc5Vars = cvc5Consts.map { nsolver.mkVar(it.sort, it.symbol) }.toTypedArray()
-            val cvc5BodySubstituted = cvc5Body.substitute(cvc5Consts, cvc5Vars)
-
-            nsolver.mkQuantifier(isUniversal, cvc5Vars, cvc5BodySubstituted)
-        }
-    }
-
-    override fun transform(expr: KExistentialQuantifier) = transformQuantifier(expr, isUniversal = false)
-
-    override fun transform(expr: KUniversalQuantifier) = transformQuantifier(expr, isUniversal = true)
+    override fun transform(expr: KUniversalQuantifier) =
+        expr.transformQuantifiedExpression(expr.bounds, expr.body, isUniversal = true)
 
     override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KFunctionAsArray<A, R>): KExpr<A> {
         throw KSolverUnsupportedFeatureException(
@@ -1079,7 +1110,141 @@ class KCvc5ExprInternalizer(
         )
     }
 
-    @Suppress("ArrayPrimitive")
+    private fun <E : KExpr<*>> E.transformQuantifiedExpression(
+        bounds: List<KDecl<*>>,
+        body: KExpr<*>,
+        isUniversal: Boolean
+    ): E = transform(body) { transformedBody: Term ->
+        val boundConsts = bounds.map { it.internalizeDecl() }
+        mkQuantifierTerm(isUniversal, boundConsts, transformedBody)
+    }
+
+    private fun mkQuantifierTerm(isUniversal: Boolean, bounds: List<Term>, body: Term): Term =
+        resolveBoundVars(bounds, body) { boundVars, bodyWithVars ->
+            nsolver.mkQuantifier(isUniversal, boundVars, bodyWithVars)
+        }
+
+    private fun mkLambdaTerm(bounds: List<Term>, body: Term): Term =
+        resolveBoundVars(bounds, body) { boundVars, bodyWithVars ->
+            nsolver.mkLambda(boundVars, bodyWithVars)
+        }
+
+    private inline fun resolveBoundVars(bounds: List<Term>, body: Term, mkTerm: (Array<Term>, Term) -> Term): Term {
+        val boundVars = bounds.map {
+            if (it.hasSymbol()) {
+                nsolver.mkVar(it.sort, it.symbol)
+            } else {
+                nsolver.mkVar(it.sort)
+            }
+        }.toTypedArray()
+
+        val bodyWithVars = body.substitute(bounds.toTypedArray(), boundVars)
+        return mkTerm(boundVars, bodyWithVars)
+    }
+
+    private fun Term.mkFunctionApp(args: List<Term>): Term =
+        nsolver.mkTerm(Kind.APPLY_UF, arrayOf(this) + args)
+
+    private fun mkAndTerm(args: List<Term>): Term =
+        if (args.size == 1) args.single() else nsolver.mkTerm(Kind.AND, args.toTypedArray())
+
+    private fun mkOrTerm(args: List<Term>): Term =
+        if (args.size == 1) args.single() else nsolver.mkTerm(Kind.OR, args.toTypedArray())
+
+    private fun mkArraySelectTerm(array: Term, indices: List<Term>): Term =
+        if (array.sort.isArray) {
+            val selectIdx = mkArrayOperationIndex(indices)
+            nsolver.mkTerm(Kind.SELECT, array, selectIdx)
+        } else {
+            nsolver.mkTerm(Kind.APPLY_UF, arrayOf(array) + indices)
+        }
+
+    private fun mkArrayStoreTerm(array: Term, indices: List<Term>, value: Term): Term =
+        if (array.sort.isArray) {
+            val storeIdx = mkArrayOperationIndex(indices)
+            nsolver.mkTerm(Kind.STORE, arrayOf(array, storeIdx, value))
+        } else {
+            val boundVars = indices.map { nsolver.mkVar(it.sort) }
+
+            val condition = indices.zip(boundVars) { idx, boundVar ->
+                idx.eqTerm(boundVar)
+            }.let { mkAndTerm(it) }
+
+            val arrayValue = array.mkFunctionApp(boundVars)
+            val body = condition.iteTerm(value, arrayValue)
+
+            nsolver.mkLambda(boundVars.toTypedArray(), body)
+        }
+
+    private fun mkArrayOperationIndex(indices: List<Term>): Term =
+        if (indices.size == 1) {
+            indices.single()
+        } else {
+            nsolver.mkTuple(indices.map { it.sort }.toTypedArray(), indices.toTypedArray())
+        }
+
+    private fun mkArrayEqTerm(arraySort: KArraySortBase<*>, lhs: Term, rhs: Term): Term {
+        if (lhs.sort == rhs.sort) {
+            return lhs.eqTerm(rhs)
+        }
+
+        val leftLambda = ensureArrayLambda(arraySort, lhs)
+        val rightLambda = ensureArrayLambda(arraySort, rhs)
+        return leftLambda.eqTerm(rightLambda)
+    }
+
+    /**
+     * Ensure that an array expression has a function type.
+     *
+     * Since arrays can be represented as `SMT arrays` or as functions (lambda expressions)
+     * we must coerce them to the same type.
+     * We coerce `SMT arrays` to functions.
+     * */
+    private fun ensureArrayLambda(arraySort: KArraySortBase<*>, term: Term): Term =
+        if (!term.sort.isArray) {
+            term
+        } else {
+            val boundVars = arraySort.domainSorts.map { nsolver.mkVar(it.internalizeSort()) }
+            val body = mkArraySelectTerm(term, boundVars)
+            nsolver.mkLambda(boundVars.toTypedArray(), body)
+        }
+
+    private fun mkArrayIteTerm(arraySort: KArraySortBase<*>, cond: Term, trueBranch: Term, falseBranch: Term): Term {
+        if (trueBranch.sort.isArray && falseBranch.sort.isArray) {
+            return cond.iteTerm(trueBranch, falseBranch)
+        }
+
+        val boundVars = arraySort.domainSorts.map { nsolver.mkVar(it.internalizeSort()) }
+        val trueValue = mkArraySelectTerm(trueBranch, boundVars)
+        val falseValue = mkArraySelectTerm(falseBranch, boundVars)
+
+        val body = cond.iteTerm(trueValue, falseValue)
+
+        return nsolver.mkLambda(boundVars.toTypedArray(), body)
+    }
+
+    private fun mkArrayDistinctTerm(arraySort: KArraySortBase<*>, args: List<Term>): Term {
+        val inequalities = mutableListOf<Term>()
+        for (i in args.indices) {
+            for (j in (i + 1) until args.size) {
+                val equality = mkArrayEqTerm(arraySort, args[i], args[j])
+                inequalities.add(equality.notTerm())
+            }
+        }
+
+        return mkAndTerm(inequalities)
+    }
+
+    private inline fun mkArraySpecificTerm(
+        sort: KSort,
+        arrayTerm: (KArraySortBase<*>) -> Term,
+        default: () -> Term
+    ): Term = if (sort is KArraySortBase<*>) {
+        arrayTerm(sort)
+    } else {
+        default()
+    }
+
     inline fun <S : KExpr<*>> S.transformArray(
         args: List<KExpr<*>>,
         operation: (Array<Term>) -> Term

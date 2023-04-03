@@ -12,7 +12,6 @@ import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
-import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.sort.KBoolSort
 import org.ksmt.utils.NativeLibraryLoader
 import java.util.TreeSet
@@ -112,7 +111,10 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus = cvc5Try {
         ctx.ensureContextMatch(assumptions)
 
-        val cvc5Assumptions = with(exprInternalizer) { assumptions.map { it.internalizeExpr() } }.toTypedArray()
+        val cvc5Assumptions = with(exprInternalizer) {
+            assumptions.map { it.internalizeExpr() }
+        }.toTypedArray()
+
         cvc5LastAssumptions = cvc5Assumptions.toCollection(TreeSet())
         solver.updateTimeout(timeout)
         solver.checkSatAssuming(cvc5Assumptions).processCheckResult()

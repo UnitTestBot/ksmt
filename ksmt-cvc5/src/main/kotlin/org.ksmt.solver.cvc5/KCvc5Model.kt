@@ -7,6 +7,7 @@ import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
+import org.ksmt.solver.model.KModelEvaluator
 import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
@@ -20,34 +21,18 @@ open class KCvc5Model(
     override val declarations: Set<KDecl<*>>,
     override val uninterpretedSorts: Set<KUninterpretedSort>
 ) : KModel {
-
     private val interpretations = hashMapOf<KDecl<*>, KModel.KFuncInterp<*>?>()
     private val uninterpretedSortsUniverses = hashMapOf<KUninterpretedSort, Set<KExpr<KUninterpretedSort>>>()
 
-    /**
-     * Always returns evaluated value regardless of isComplete (forever isComplete = true).
-     * However, cvc5 has option "model-cores", which usage brings overhead on model evaluation
-     * and influences only on free constants.
+    private val evaluatorWithCompletion by lazy { KModelEvaluator(ctx, this, isComplete = true) }
+    private val evaluatorWithoutCompletion by lazy { KModelEvaluator(ctx, this, isComplete = false) }
 
-     * There is evaluation of expressions containing previously unknown declarations like this
-     * (independently of isComplete):
-     *
-     * val a by boolSort
-     * solver.assert(a)
-     * solver.check()
-     *
-     * val b by boolSort
-     * solver.model().eval(b) // << false
-     *
-     */
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
         ctx.ensureContextMatch(expr)
         ensureContextActive()
 
-        val cvc5Expr = with(internalizer) { expr.internalizeExpr() }
-        val cvc5Result = cvc5Ctx.nativeSolver.getValue(cvc5Expr)
-
-        return with(converter) { cvc5Result.convertExpr() }
+        val evaluator = if (isComplete) evaluatorWithCompletion else evaluatorWithoutCompletion
+        return evaluator.apply(expr)
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -60,19 +45,21 @@ open class KCvc5Model(
         val cvc5Decl = with(internalizer) { decl.internalizeDecl() }
 
         when (decl) {
-            is KConstDecl<T> -> constInterp<T>(cvc5Decl)
-            is KFuncDecl<T> -> funcInterp<T>(cvc5Decl)
+            is KConstDecl<T> -> constInterp(decl, cvc5Decl)
+            is KFuncDecl<T> -> funcInterp(decl, cvc5Decl)
             else -> error("Unknown declaration")
         }
     } as? KModel.KFuncInterp<T>
 
 
     // cvc5 function interpretation - declaration is Term of kind Lambda
-    private fun <T : KSort> funcInterp(decl: Term): KModel.KFuncInterp<T> = with(converter) {
-        val cvc5Interp = cvc5Ctx.nativeSolver.getValue(decl)
-        val convertedDecl = decl.convertDecl<T>() as KFuncDecl<T>
+    private fun <T : KSort> funcInterp(
+        decl: KDecl<T>,
+        internalizedDecl: Term
+    ): KModel.KFuncInterp<T> = with(converter) {
+        val cvc5Interp = cvc5Ctx.nativeSolver.getValue(internalizedDecl)
 
-        val vars = convertedDecl.argSorts.map { it.mkFreshConst("x") }
+        val vars = decl.argSorts.map { it.mkFreshConst("x") }
         val cvc5Vars = vars.map { with(internalizer) { it.internalizeExpr() } }.toTypedArray()
 
         val cvc5InterpArgs = cvc5Interp.getChild(0).getChildren()
@@ -80,15 +67,14 @@ open class KCvc5Model(
 
         val defaultBody = cvc5FreshVarsInterp.getChild(1).convertExpr<T>()
 
-        KModel.KFuncInterp(convertedDecl, vars.map { it.decl }, emptyList(), defaultBody)
+        KModel.KFuncInterp(decl, vars.map { it.decl }, emptyList(), defaultBody)
     }
 
-    private fun <T : KSort> constInterp(const: Term): KModel.KFuncInterp<T> = with(converter) {
+    private fun <T : KSort> constInterp(decl: KDecl<T>, const: Term): KModel.KFuncInterp<T> = with(converter) {
         val cvc5Interp = cvc5Ctx.nativeSolver.getValue(const)
-        val convertedDecl = const.convertDecl<T>() as KFuncDecl<T>
         val interp = cvc5Interp.convertExpr<T>()
 
-        KModel.KFuncInterp(decl = convertedDecl, vars = emptyList(), entries = emptyList(), default = interp)
+        KModel.KFuncInterp(decl = decl, vars = emptyList(), entries = emptyList(), default = interp)
     }
 
     override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KExpr<KUninterpretedSort>>? =

@@ -1,6 +1,7 @@
 package org.ksmt.test
 
 import com.microsoft.z3.Context
+import io.github.cvc5.Solver
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.ksmt.KContext
@@ -14,6 +15,10 @@ import org.ksmt.solver.bitwuzla.KBitwuzlaContext
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprConverter
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprInternalizer
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
+import org.ksmt.solver.cvc5.KCvc5Context
+import org.ksmt.solver.cvc5.KCvc5ExprConverter
+import org.ksmt.solver.cvc5.KCvc5ExprInternalizer
+import org.ksmt.solver.cvc5.KCvc5Solver
 import org.ksmt.solver.runner.KSolverRunnerManager
 import org.ksmt.solver.yices.KYicesContext
 import org.ksmt.solver.yices.KYicesExprConverter
@@ -34,6 +39,7 @@ import org.ksmt.utils.uncheckedCast
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 @EnabledIfEnvironmentVariable(
     named = "runMultiIndexedArrayTest",
@@ -114,6 +120,32 @@ class MultiIndexedArrayTest {
             KYicesContext().use { yicesNativeCtx ->
                 runMultiIndexedArraySamples(oracleSolver) { expr ->
                     internalizeAndConvertYices(yicesNativeCtx, expr)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun testMultiIndexedArraysZ3WithCvc5Oracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
+        oracleManager.createSolver(this, KCvc5Solver::class).use { oracleSolver ->
+
+            // Enable HO to test array lambda equalities
+            oracleSolver.configure { setCvc5Logic("HO_QF_ALL") }
+
+            mkZ3Context(this).use { z3NativeCtx ->
+                runMultiIndexedArraySamples(oracleSolver) { expr ->
+                    internalizeAndConvertZ3(z3NativeCtx, expr)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun testMultiIndexedArraysCvc5WithZ3Oracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
+        oracleManager.createSolver(this, KZ3Solver::class).use { oracleSolver ->
+            mkCvc5Context(this).use { cvc5NativeCtx ->
+                runMultiIndexedArraySamples(oracleSolver) { expr ->
+                    internalizeAndConvertCvc5(cvc5NativeCtx, expr)
                 }
             }
         }
@@ -323,6 +355,32 @@ class MultiIndexedArrayTest {
         return converted
     }
 
+    private fun <T : KSort> KContext.internalizeAndConvertCvc5(nativeCtx: Solver, expr: KExpr<T>): KExpr<T> {
+        val internalizationCtx = KCvc5Context(nativeCtx, this)
+        val conversionCtx = KCvc5Context(nativeCtx, this)
+
+        val internalizer = KCvc5ExprInternalizer(internalizationCtx)
+        val converter = KCvc5ExprConverter(this, conversionCtx)
+
+        val internalized = with(internalizer) {
+            expr.internalizeExpr()
+        }
+
+        // Copy declarations since we have fresh decls
+        val declarations = KExprUninterpretedDeclCollector.collectUninterpretedDeclarations(expr)
+        declarations.forEach { decl ->
+            internalizationCtx.findInternalizedDecl(decl)?.also {
+                conversionCtx.saveConvertedDecl(it, decl)
+            }
+        }
+
+        val converted = with(converter) {
+            internalized.convertExpr<T>()
+        }
+
+        return converted
+    }
+
     private fun <T : KSort> KContext.assertEquals(
         stats: TestStats,
         oracle: KSolver<*>,
@@ -406,7 +464,7 @@ class MultiIndexedArrayTest {
         expectedStatus: KSolverStatus,
         prefix: String,
         onFailure: () -> Unit = {}
-    ): Boolean = when (check()) {
+    ): Boolean = when (check(CHECK_TIMEOUT)) {
         expectedStatus -> true
         KSolverStatus.UNKNOWN -> {
             val message = "$prefix: ${reasonOfUnknown()}"
@@ -433,6 +491,11 @@ class MultiIndexedArrayTest {
     private fun mkZ3Context(ctx: KContext): Context {
         KZ3Solver(ctx).close()
         return Context()
+    }
+
+    private fun mkCvc5Context(ctx: KContext): Solver {
+        KCvc5Solver(ctx).close()
+        return Solver()
     }
 
     private inline fun TestStats.withErrorHandling(body: () -> Unit) = try {
@@ -508,6 +571,8 @@ class MultiIndexedArrayTest {
     }
 
     companion object {
+        private val CHECK_TIMEOUT = 10.seconds
+
         private val oracleManager = KSolverRunnerManager(
             workerPoolSize = 2,
             hardTimeout = 1.minutes
