@@ -1,15 +1,20 @@
 package org.ksmt.solver.z3
 
 import com.microsoft.z3.Context
+import com.microsoft.z3.Native
+import com.microsoft.z3.Solver
 import com.microsoft.z3.decRefUnsafe
 import com.microsoft.z3.incRefUnsafe
+import com.microsoft.z3.solverAssert
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.solver.util.KExprLongInternalizerBase.Companion.NOT_INTERNALIZED
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 
 @Suppress("TooManyFunctions")
 class KZ3Context(private val ctx: Context) : AutoCloseable {
@@ -116,6 +121,86 @@ class KZ3Context(private val ctx: Context) : AutoCloseable {
         if (tmpNativeObjects.remove(ast)) {
             decRefUnsafe(nCtx, ast)
         }
+    }
+
+    private data class UninterpretedSortValueDescriptor(
+        val value: KUninterpretedSortValue,
+        val nativeUniqueValueDescriptor: Long,
+        val nativeValueExpr: Long
+    )
+
+    private var currentValueConstraintsLevel = 0
+    private val assertedConstraintLevels = arrayListOf<Int>()
+    private val uninterpretedSortValues = arrayListOf<UninterpretedSortValueDescriptor>()
+    private val uninterpretedSortValueInterpreter = hashMapOf<KUninterpretedSort, Long>()
+
+    inline fun registerUninterpretedSortValue(
+        value: KUninterpretedSortValue,
+        uniqueValueDescriptorExpr: Long,
+        uninterpretedValueExpr: Long,
+        mkInterpreter: () -> Long
+    ) {
+        val interpreter = getUninterpretedSortValueInterpreter(value.sort)
+        if (interpreter == null) {
+            registerUninterpretedSortValueInterpreter(value.sort, mkInterpreter())
+        }
+
+        registerUninterpretedSortValue(value, uniqueValueDescriptorExpr, uninterpretedValueExpr)
+    }
+
+    fun pushAssertionLevel() {
+        assertedConstraintLevels.add(currentValueConstraintsLevel)
+    }
+
+    fun popAssertionLevel() {
+        currentValueConstraintsLevel = assertedConstraintLevels.removeLast()
+    }
+
+    fun assertPendingAxioms(solver: Solver) {
+        assertPendingUninterpretedValueConstraints(solver)
+    }
+
+    fun getUninterpretedSortValueInterpreter(sort: KUninterpretedSort): Long? =
+        uninterpretedSortValueInterpreter[sort]
+
+    fun registerUninterpretedSortValueInterpreter(sort: KUninterpretedSort, interpreter: Long) {
+        incRefUnsafe(nCtx, interpreter)
+        uninterpretedSortValueInterpreter[sort] = interpreter
+    }
+
+    fun registerUninterpretedSortValue(
+        value: KUninterpretedSortValue,
+        uniqueValueDescriptorExpr: Long,
+        uninterpretedValueExpr: Long
+    ) {
+        uninterpretedSortValues += UninterpretedSortValueDescriptor(
+            value = value,
+            nativeUniqueValueDescriptor = uniqueValueDescriptorExpr,
+            nativeValueExpr = uninterpretedValueExpr
+        )
+    }
+
+    private fun assertPendingUninterpretedValueConstraints(solver: Solver) {
+        while (currentValueConstraintsLevel < uninterpretedSortValues.size) {
+            assertUninterpretedSortValueConstraint(solver, uninterpretedSortValues[currentValueConstraintsLevel])
+            currentValueConstraintsLevel++
+        }
+    }
+
+    private fun assertUninterpretedSortValueConstraint(solver: Solver, value: UninterpretedSortValueDescriptor) {
+        val interpreter = uninterpretedSortValueInterpreter[value.value.sort]
+            ?: error("Interpreter was not registered for sort: ${value.value.sort}")
+        val constraintLhs = temporaryAst(
+            Native.mkApp(nCtx, interpreter, 1, longArrayOf(value.nativeValueExpr))
+        )
+        val constraint = temporaryAst(
+            Native.mkEq(nCtx, constraintLhs, value.nativeUniqueValueDescriptor)
+        )
+
+        solver.solverAssert(constraint)
+
+        releaseTemporaryAst(constraint)
+        releaseTemporaryAst(constraintLhs)
     }
 
     inline fun <K> findOrSave(
