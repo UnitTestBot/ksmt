@@ -854,7 +854,7 @@ open class KZ3ExprInternalizer(
 
                 z3InternCtx.registerUninterpretedSortValue(expr, intValueExpr, it) {
                     val descriptorSort = ctx.intSort.internalizeSort()
-                    z3InternCtx.saveUninterpretedSortValueInterpreted(
+                    z3InternCtx.saveUninterpretedSortValueInterpreter(
                         Native.mkFreshFuncDecl(nCtx, "interpreter", 1, longArrayOf(nativeSort), descriptorSort)
                     )
                 }

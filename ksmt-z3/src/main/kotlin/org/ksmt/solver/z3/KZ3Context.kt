@@ -148,7 +148,7 @@ class KZ3Context(private val ctx: Context) : AutoCloseable {
         return decl
     }
 
-    fun saveUninterpretedSortValueInterpreted(decl: Long): Long {
+    fun saveUninterpretedSortValueInterpreter(decl: Long): Long {
         if (uninterpretedSortValueInterpreters.add(decl)) {
             incRefUnsafe(nCtx, decl)
         }

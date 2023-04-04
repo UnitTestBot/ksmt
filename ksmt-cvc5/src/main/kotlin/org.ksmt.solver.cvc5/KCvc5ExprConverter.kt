@@ -46,7 +46,8 @@ import java.util.*
 @Suppress("LargeClass")
 open class KCvc5ExprConverter(
     private val ctx: KContext,
-    private val cvc5Ctx: KCvc5Context
+    private val cvc5Ctx: KCvc5Context,
+    private val model: KCvc5Model? = null
 ) : KExprConverterBase<Term>() {
 
     private val internalizer = KCvc5ExprInternalizer(cvc5Ctx)
@@ -70,7 +71,15 @@ open class KCvc5ExprConverter(
             Kind.CONST_RATIONAL -> convertNativeConstRealExpr(expr)
             Kind.CONSTANT -> convert { expr.convertDecl<KSort>().apply(emptyList()) }
             Kind.UNINTERPRETED_SORT_VALUE -> convert {
-                mkFreshConst(expr.uninterpretedSortValue, expr.sort.convertSort())
+                model ?: error("Uninterpreted value without model")
+                model.resolveUninterpretedSortValue(expr.sort.convertSort(), expr).also {
+                    /**
+                     * Save converted result without reverse cache to prevent
+                     * internalization issue, when KUninterpretedValue can be internalized
+                     * as model bound expression.
+                     * */
+                    cvc5Ctx.saveConvertedExprWithoutReverseCache(expr, it)
+                }
             }
 
             // equality, cmp, ite

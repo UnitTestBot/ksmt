@@ -137,8 +137,7 @@ open class KZ3Model(
             z3SortUniverse.convertToSet {
                 val modelValueDecl = Native.getAppDecl(z3Ctx.nCtx, it)
                 valueMapping.getOrPut(modelValueDecl) {
-                    val valueId = ++lastValueIdx
-                    ctx.mkUninterpretedSortValue(sort, valueId)
+                    ctx.mkUninterpretedSortValue(sort, ++lastValueIdx)
                 }
             }
         }

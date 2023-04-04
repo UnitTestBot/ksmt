@@ -154,6 +154,7 @@ import org.ksmt.expr.KToIntRealExpr
 import org.ksmt.expr.KToRealIntExpr
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.expr.rewrite.simplify.rewriteBvAddNoOverflowExpr
@@ -183,6 +184,7 @@ import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.powerOfTwo
 import java.math.BigInteger
 
@@ -1108,6 +1110,18 @@ class KCvc5ExprInternalizer(
         throw KSolverUnsupportedFeatureException(
             "No direct impl in cvc5 (as-array is CONST_ARRAY term with base array element)"
         )
+    }
+
+    override fun transform(expr: KUninterpretedSortValue): KExpr<KUninterpretedSort> = with(expr) {
+        transform(ctx.mkIntNum(expr.valueIdx)) { intValueExpr: Term ->
+            val exprSort = sort.internalizeSort()
+            cvc5Ctx.saveUninterpretedSortValue(nsolver.mkConst(exprSort), expr).also {
+                cvc5Ctx.registerUninterpretedSortValue(expr, intValueExpr, it) {
+                    val descriptorSort = ctx.intSort.internalizeSort()
+                    nsolver.declareFun("${sort.name}!interpreter", arrayOf(exprSort), descriptorSort)
+                }
+            }
+        }
     }
 
     private fun <E : KExpr<*>> E.transformQuantifiedExpression(
