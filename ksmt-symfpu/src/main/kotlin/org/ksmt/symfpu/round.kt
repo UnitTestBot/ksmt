@@ -2,6 +2,7 @@ package org.ksmt.symfpu
 
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFalse
 import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
@@ -121,7 +122,7 @@ fun KContext.increment(expr: KExpr<KBvSort>): KExpr<KBvSort> = mkBvAddExpr(expr,
 // something wrong with. looks like shift misses by one
 // - normal exponent
 // - subnormals
-fun <Fp : KFpSort, S: KFpSort> KContext.round(
+fun <Fp : KFpSort, S : KFpSort> KContext.round(
     uf: UnpackedFp<S>,
     roundingMode: KExpr<KFpRoundingModeSort>,
     format: Fp,
@@ -273,5 +274,112 @@ fun KContext.collar(op: KExpr<KBvSort>, lower: KExpr<KBvSort>, upper: KExpr<KBvS
         mkBvSignedLessExpr(op, lower), lower, mkIte(
             mkBvSignedLessExpr(upper, op), upper, op
         )
+    )
+}
+
+
+data class SignificandRounderResult(val significand: KExpr<KBvSort>, val incrementExponent: KExpr<KBoolSort>)
+
+fun KContext.variablePositionRound(
+    roundingMode: KExpr<KFpRoundingModeSort>,
+    sign: KExpr<KBoolSort>,
+    significand: KExpr<KBvSort>,
+    roundPosition: KExpr<KBvSort>,
+    knownLeadingOne: KFalse,
+    knownRoundDown: KExpr<KBoolSort>
+): SignificandRounderResult {
+
+
+    val sigWidth = significand.sort.sizeBits
+
+    val expandedSignificand = mkBvConcatExpr(mkBv(0, 2u), significand, mkBv(0, 2u))
+    val exsigWidth = expandedSignificand.sort.sizeBits
+
+    val incrementLocation = mkBvShiftLeftExpr(
+        mkBv(1 shl 2, exsigWidth),
+        roundPosition.matchWidthUnsigned(this, expandedSignificand)
+    )
+
+    val guardLocation = mkBvLogicalShiftRightExpr(incrementLocation, mkBv(1, exsigWidth))
+    val stickyLocation = decrement(guardLocation)
+
+    val significandEven = isAllZeros(mkBvAndExpr(incrementLocation, expandedSignificand))
+    val guardBit = !isAllZeros(mkBvAndExpr(guardLocation, expandedSignificand))
+    val stickyBit = !isAllZeros(mkBvAndExpr(stickyLocation, expandedSignificand))
+
+    val roundUp = roundingDecision(
+        roundingMode, sign, significandEven,
+        guardBit, stickyBit, knownRoundDown
+    )
+
+    val roundedSignificand = mkBvAddExpr(
+        expandedSignificand,
+        mkIte(
+            roundUp,
+            incrementLocation,
+            mkBv(0, exsigWidth)
+        )
+    )
+
+    val maskedRoundedSignificand = mkBvAndExpr(
+        roundedSignificand,
+        mkBvNotExpr(mkBvShiftLeftExpr(stickyLocation, mkBv(1, exsigWidth)))
+    )
+
+    val roundUpFromSticky = mkBvExtractExpr(exsigWidth.toInt() - 1, exsigWidth.toInt() - 1, roundedSignificand)
+
+    val overflowBit = mkBvExtractExpr(exsigWidth.toInt() - 2, exsigWidth.toInt() - 2, roundedSignificand)
+    val maskTrigger = mkBvAndExpr(
+        mkBvOrExpr(roundUpFromSticky, overflowBit),
+        boolToBv(roundUp)
+    )
+    val carryUpMask = mkBvConcatExpr(
+        mkBvOrExpr(maskTrigger, boolToBv(knownLeadingOne)),
+        mkBv(0, sigWidth - 1u)
+    )
+
+    return SignificandRounderResult(
+        mkBvOrExpr(mkBvExtractExpr(sigWidth.toInt() + 1, 2, maskedRoundedSignificand), carryUpMask),
+        isAllOnes(maskTrigger)
+    )
+}
+
+
+fun KContext.fixedPositionRound(
+    roundingMode: KExpr<KFpRoundingModeSort>,
+    sign: KExpr<KBoolSort>,
+    significand: KExpr<KBvSort>,
+    targetWidth: Int,
+    knownLeadingOne: KFalse,
+    knownRoundDown: KExpr<KBoolSort>
+): SignificandRounderResult {
+    val sigWidth = significand.sort.sizeBits.toInt()
+    check(sigWidth >= targetWidth + 2)
+    // Extract
+    val extractedSignificand =
+        mkBvZeroExtensionExpr(1, mkBvExtractExpr(sigWidth - 1, sigWidth - targetWidth, significand))
+
+
+    val significandEven = isAllZeros(mkBvExtractExpr(0, 0, extractedSignificand))
+    // Normal guard and sticky bits
+    val guardBitPosition = sigWidth - (targetWidth + 1)
+    val guardBit = isAllOnes(mkBvExtractExpr(guardBitPosition, guardBitPosition, significand))
+
+
+    val stickyBit = !isAllZeros(mkBvExtractExpr(guardBitPosition - 1, 0, significand))
+    // Rounding decision
+    val roundUp = roundingDecision(roundingMode, sign, significandEven, guardBit, stickyBit, knownRoundDown)
+
+    // Conditional increment
+    val roundedSignificand = conditionalIncrement(roundUp, extractedSignificand)
+    val overflowBit = mkBvAndExpr(mkBvExtractExpr(targetWidth, targetWidth, roundedSignificand), boolToBv(roundUp))
+    val carryUpMask = mkBvConcatExpr(
+        mkBvOrExpr(overflowBit, boolToBv(knownLeadingOne)),
+        mkBv(0, targetWidth.toUInt() - 1u)
+    )
+
+    return SignificandRounderResult(
+        mkBvOrExpr(mkBvExtractExpr(targetWidth - 1, 0, roundedSignificand), carryUpMask),
+        isAllOnes(overflowBit)
     )
 }

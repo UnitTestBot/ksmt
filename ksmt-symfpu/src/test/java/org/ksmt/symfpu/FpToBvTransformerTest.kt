@@ -617,6 +617,29 @@ class FpToBvTransformerTest {
 
 
     @Test
+    fun testFpToUBvUpExpr() = with(KContext()) {
+        val a by mkFp32Sort()
+        testFpExpr(
+            mkFpToBvExprNoSimplify(defaultRounding(), a, 32, false),
+            mapOf("a" to a),
+        ) { _, _ ->
+            mkFpLessExpr(a, mkFp32(UInt.MAX_VALUE.toFloat())) and mkFpIsPositiveExpr(a)
+        }
+    }
+    @Test
+    fun testFpToSBvUpExpr() = with(KContext()) {
+        val a by mkFp32Sort()
+        testFpExpr(
+            mkFpToBvExprNoSimplify(defaultRounding(), a, 32, true),
+            mapOf("a" to a),
+        ) { _, _ ->
+            mkFpLessExpr(a, mkFp32(Int.MAX_VALUE.toFloat())) and mkFpLessExpr(mkFp32(Int.MIN_VALUE.toFloat()), a)
+        }
+    }
+
+
+
+    @Test
     fun testFpToFpDownExpr() = with(KContext()) {
         val a by mkFp128Sort()
         testFpExpr(

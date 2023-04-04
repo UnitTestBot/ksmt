@@ -30,6 +30,15 @@ fun KExpr<KBvSort>.resizeUnsigned(newSize: UInt, ctx: KContext): KExpr<KBvSort> 
     }
 }
 
+fun KExpr<KBvSort>.resizeSigned(newSize: UInt, ctx: KContext): KExpr<KBvSort> {
+    val width = sort.sizeBits
+    return if (newSize > width) {
+        ctx.mkBvSignExtensionExpr((newSize - width).toInt(), this)
+    } else {
+        this
+    }
+}
+
 fun KExpr<KBvSort>.contract(reduction: Int, ctx: KContext): KExpr<KBvSort> {
     val width = sort.sizeBits.toInt()
     check(width > reduction)

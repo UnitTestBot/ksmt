@@ -30,7 +30,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         val args1: List<KExpr<Fp>> = expr.args.cast()
         transformExprAfterTransformed(expr, args1) { args ->
             val (left, right) = argsToTypedPair(args.drop(1))
-            multiply(left, right, expr.roundingMode)
+            multiply(left, right, args[0].cast())
         }
     }
 
@@ -38,7 +38,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         val args1: List<KExpr<Fp>> = expr.args.cast()
         transformExprAfterTransformed(expr, args1) { args ->
             val (left, right) = argsToTypedPair(args.drop(1))
-            add(left, right, expr.roundingMode)
+            add(left, right, args[0].cast())
         }
     }
 
@@ -46,7 +46,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         val args1: List<KExpr<Fp>> = expr.args.cast()
         transformExprAfterTransformed(expr, args1) { args ->
             val (left, right) = argsToTypedPair(args.drop(1))
-            sub(left, right, expr.roundingMode)
+            sub(left, right, args[0].cast())
         }
     }
 
@@ -54,7 +54,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         val args1: List<KExpr<Fp>> = expr.args.cast()
         transformExprAfterTransformed(expr, args1) { args ->
             val (left, right) = argsToTypedPair(args.drop(1))
-            divide(left, right, expr.roundingMode)
+            divide(left, right, args[0].cast())
         }
     }
 
@@ -90,8 +90,8 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
 
 
     override fun <Fp : KFpSort> transform(expr: KFpRoundToIntegralExpr<Fp>): KExpr<Fp> =
-        transformExprAfterTransformed(expr, expr.value) { value ->
-            roundToIntegral(expr.roundingMode, (value as UnpackedFp<Fp>))
+        transformExprAfterTransformed(expr, expr.roundingMode, expr.value) { roundingMode, value ->
+            roundToIntegral(roundingMode, (value as UnpackedFp<Fp>))
         }
 
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = with(ctx) {
@@ -120,10 +120,14 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     override fun <T : KFpSort> transform(expr: KFpIsNegativeExpr<T>) = transformHelper(expr, ::isNegative)
     override fun <T : KFpSort> transform(expr: KFpIsPositiveExpr<T>) = transformHelper(expr, ::isPositive)
     override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>) =
-        transformExprAfterTransformed(expr, expr.value) { value ->
-            fpToFp(expr.sort, expr.roundingMode, (value as UnpackedFp<*>))
+        transformExprAfterTransformed(expr, expr.roundingMode, expr.value) { roundingMode, value ->
+            fpToFp(expr.sort, roundingMode, (value as UnpackedFp<*>))
         }
 
+    override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>) =
+        transformExprAfterTransformed(expr, expr.roundingMode, expr.value) { roundingMode, value ->
+            fpToBv(roundingMode, (value as UnpackedFp<*>), expr.bvSize, expr.isSigned)
+        }
 
 
     private fun <Fp : KFpSort> argsToTypedPair(args: List<KExpr<Fp>>): Pair<UnpackedFp<Fp>, UnpackedFp<Fp>> {

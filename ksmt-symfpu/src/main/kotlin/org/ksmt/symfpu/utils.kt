@@ -189,6 +189,9 @@ fun previousPowerOfTwo(x: UInt): UInt {
 
 fun KContext.max(op1: KExpr<KBvSort>, op2: KExpr<KBvSort>) = mkIte(mkBvSignedLessOrEqualExpr(op1, op2), op2, op1)
 
+fun KContext.conditionalNegate(cond: KExpr<KBoolSort>, bv: KExpr<KBvSort>): KExpr<KBvSort> {
+    return mkIte(cond, mkBvNegationExpr(bv), bv)
+}
 fun KContext.conditionalIncrement(cond: KExpr<KBoolSort>, bv: KExpr<KBvSort>): KExpr<KBvSort> {
     val inc = mkIte(cond, mkBv(1, bv.sort.sizeBits), mkBv(0, bv.sort.sizeBits))
     return mkBvAddExpr(bv, inc)
