@@ -12,6 +12,7 @@ import com.microsoft.z3.getSortUniverse
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KSort
@@ -23,15 +24,18 @@ open class KZ3Model(
     private val model: Model,
     private val ctx: KContext,
     private val z3Ctx: KZ3Context,
-    private val internalizer: KZ3ExprInternalizer,
-    private val converter: KZ3ExprConverter
+    private val internalizer: KZ3ExprInternalizer
 ) : KModel {
+    private val converter by lazy { KZ3ExprConverter(ctx, z3Ctx, this) }
+
     private val constantDeclarations: Set<KDecl<*>> by lazy {
-        model.getNativeConstDecls().convertToSet { it.convertDecl<KSort>() }
+        loadConstDeclarations()
     }
 
     private val functionDeclarations: Set<KDecl<*>> by lazy {
-        model.getNativeFuncDecls().convertToSet { it.convertDecl<KSort>() }
+        model.getNativeFuncDecls().convertToSet {
+            if (z3Ctx.isInternalFuncDecl(it)) null else it.convertDecl<KSort>()
+        }
     }
 
     override val uninterpretedSorts: Set<KUninterpretedSort> by lazy {
@@ -43,7 +47,35 @@ open class KZ3Model(
     }
 
     private val interpretations = hashMapOf<KDecl<*>, KModel.KFuncInterp<*>?>()
-    private val uninterpretedSortsUniverses = hashMapOf<KUninterpretedSort, Set<KExpr<KUninterpretedSort>>>()
+
+    private val uninterpretedSortsUniverses =
+        hashMapOf<KUninterpretedSort, Set<KUninterpretedSortValue>>()
+
+    private val uninterpretedSortValueMapping =
+        hashMapOf<KUninterpretedSort, MutableMap<Long, KUninterpretedSortValue>>()
+
+    private val uninterpretedSortValueDecls =
+        hashMapOf<KUninterpretedSort, MutableMap<Long, KUninterpretedSortValue>>()
+
+    private fun loadConstDeclarations(): Set<KDecl<KSort>> {
+        val nativeDecls = model.getNativeConstDecls()
+        return nativeDecls.convertToSet {
+            val uninterpretedSortValue = z3Ctx.findInternalConstDeclAssociatedUninterpretedSortValue(it)
+            if (uninterpretedSortValue == null) {
+                // normal decl
+                it.convertDecl<KSort>()
+            } else {
+                // internal decl
+                val sortValueDecls = uninterpretedSortValueDecls.getOrPut(uninterpretedSortValue.sort) {
+                    hashMapOf()
+                }
+                sortValueDecls[it] = uninterpretedSortValue
+
+                // hide declaration in model
+                null
+            }
+        }
+    }
 
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
         ctx.ensureContextMatch(expr)
@@ -71,7 +103,7 @@ open class KZ3Model(
             }
         }?.uncheckedCast()
 
-    override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KExpr<KUninterpretedSort>>? =
+    override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KUninterpretedSortValue>? =
         uninterpretedSortsUniverses.getOrPut(sort) {
             ctx.ensureContextMatch(sort)
 
@@ -79,11 +111,44 @@ open class KZ3Model(
                 return@getOrPut emptySet()
             }
 
+            // Force model constants initialization
+            constantDeclarations
+
+            val sortValues = uninterpretedSortValueDecls[sort] ?: emptyMap()
+
+            var lastValueIdx = 0
+            val valueMapping = uninterpretedSortValueMapping.getOrPut(sort) {
+                hashMapOf()
+            }
+
+            sortValues.forEach { (decl, value) ->
+                val modelValue = model.getConstInterp(decl)
+                    ?: error("Const decl is in model decls but not in the model")
+
+                val modelValueDecl = Native.getAppDecl(z3Ctx.nCtx, modelValue)
+
+                lastValueIdx = maxOf(value.valueIdx, lastValueIdx)
+                valueMapping[modelValueDecl] = value
+            }
+
             val z3Sort = with(internalizer) { sort.internalizeSort() }
             val z3SortUniverse = model.getSortUniverse(z3Sort)
 
-            z3SortUniverse.convertToSet { it.convertExpr() }
+            z3SortUniverse.convertToSet {
+                val modelValueDecl = Native.getAppDecl(z3Ctx.nCtx, it)
+                valueMapping.getOrPut(modelValueDecl) {
+                    val valueId = ++lastValueIdx
+                    ctx.mkUninterpretedSortValue(sort, valueId)
+                }
+            }
         }
+
+    internal fun resolveUninterpretedSortValue(sort: KUninterpretedSort, decl: Long): KUninterpretedSortValue {
+        uninterpretedSortUniverse(sort) // ensure sort universe initialized
+
+        return uninterpretedSortValueMapping[sort]?.get(decl)
+            ?: error("Unexpected uninterpreted sort value")
+    }
 
     private fun <T : KSort> constInterp(decl: KDecl<T>, z3Decl: Long): KModel.KFuncInterp<T>? {
         val z3Interp = model.getConstInterp(z3Decl) ?: return null
@@ -133,10 +198,16 @@ open class KZ3Model(
         return detach() == other
     }
 
-    private fun <T> LongArray.convertToSet(convert: KZ3ExprConverter.(Long) -> T): Set<T> =
-        mapTo(hashSetOf()) {
-            converter.convert(it)
+    private fun <T> LongArray.convertToSet(convert: KZ3ExprConverter.(Long) -> T?): Set<T> {
+        val result = HashSet<T>(size)
+        for (it in this) {
+            val converted = converter.convert(it)
+            if (converted != null) {
+                result.add(converted)
+            }
         }
+        return result
+    }
 
     private fun <T : KSort> Long.substituteVarsAndConvert(vars: LongArray): KExpr<T> {
         val preparedExpr = z3Ctx.temporaryAst(

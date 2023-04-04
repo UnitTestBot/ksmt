@@ -112,7 +112,7 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
         }
         val model = solver.model
 
-        KZ3Model(model, ctx, z3Ctx, exprInternalizer, exprConverter)
+        KZ3Model(model, ctx, z3Ctx, exprInternalizer)
     }
 
     // TODO add mapping back from tracked variable into initial value
