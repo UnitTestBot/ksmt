@@ -25,9 +25,7 @@ open class KCvc5Model(
     private val converter: KCvc5ExprConverter by lazy { KCvc5ExprConverter(ctx, cvc5Ctx, this) }
 
     private val interpretations = hashMapOf<KDecl<*>, KModel.KFuncInterp<*>?>()
-    private val uninterpretedSortsUniverses = hashMapOf<KUninterpretedSort, Set<KUninterpretedSortValue>>()
-    private val uninterpretedSortsValuesMapping =
-        hashMapOf<KUninterpretedSort, TreeMap<Term, KUninterpretedSortValue>>()
+    private val uninterpretedSortValues = hashMapOf<KUninterpretedSort, UninterpretedSortValueContext>()
 
     private val evaluatorWithCompletion by lazy { KModelEvaluator(ctx, this, isComplete = true) }
     private val evaluatorWithoutCompletion by lazy { KModelEvaluator(ctx, this, isComplete = false) }
@@ -83,39 +81,32 @@ open class KCvc5Model(
     }
 
     override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KUninterpretedSortValue>? =
-        uninterpretedSortsUniverses.getOrPut(sort) {
+        uninterpretedSortValues.getOrPut(sort) {
             ctx.ensureContextMatch(sort)
             ensureContextActive()
 
-            if (sort !in uninterpretedSorts) {
-                return@getOrPut emptySet()
+            getUninterpretedSortContext(sort).also {
+                initializeSortValueContext(it)
             }
+        }.getSortUniverse()
 
-            var lastValueIdx = 0
-            val registeredValues = cvc5Ctx.getRegisteredSortValues(sort)
-            val valuesMapping = uninterpretedSortsValuesMapping.getOrPut(sort) { TreeMap() }
-
-            registeredValues.forEach { (nativeValue, value) ->
-                val modelValue = cvc5Ctx.nativeSolver.getValue(nativeValue)
-                valuesMapping[modelValue] = value
-                lastValueIdx = maxOf(lastValueIdx, value.valueIdx)
-            }
-
-            val cvc5Sort = with(internalizer) { sort.internalizeSort() }
-            val cvc5SortUniverse = cvc5Ctx.nativeSolver.getModelDomainElements(cvc5Sort)
-
-            cvc5SortUniverse.mapTo(hashSetOf()) { modelValue ->
-                valuesMapping.getOrPut(modelValue) {
-                    ctx.mkUninterpretedSortValue(sort, ++lastValueIdx)
-                }
-            }
+    private fun initializeSortValueContext(sortCtx: UninterpretedSortValueContext) {
+        if (sortCtx.sort !in uninterpretedSorts) {
+            return
         }
+
+        sortCtx.initializeModelValues()
+
+        val cvc5Sort = with(internalizer) { sortCtx.sort.internalizeSort() }
+        val cvc5SortUniverse = cvc5Ctx.nativeSolver.getModelDomainElements(cvc5Sort)
+
+        sortCtx.initializeSortUniverse(cvc5SortUniverse)
+    }
 
     internal fun resolveUninterpretedSortValue(sort: KUninterpretedSort, value: Term): KUninterpretedSortValue {
         uninterpretedSortUniverse(sort) // ensure sort universe initialized
 
-        return uninterpretedSortsValuesMapping[sort]?.get(value)
-            ?: error("Unexpected uninterpreted sort value: $value")
+        return getUninterpretedSortContext(sort).getValue(value)
     }
 
     override fun detach(): KModel {
@@ -138,5 +129,42 @@ open class KCvc5Model(
         if (this === other) return true
         if (other !is KModel) return false
         return detach() == other
+    }
+
+
+    private fun getUninterpretedSortContext(sort: KUninterpretedSort): UninterpretedSortValueContext =
+        uninterpretedSortValues.getOrPut(sort) { UninterpretedSortValueContext(ctx, cvc5Ctx, sort) }
+
+    private class UninterpretedSortValueContext(
+        val ctx: KContext,
+        val cvc5Ctx: KCvc5Context,
+        val sort: KUninterpretedSort
+    ) {
+        private var currentValueIdx = 0
+        private val modelValues = TreeMap<Term, KUninterpretedSortValue>()
+        private val sortUniverse = hashSetOf<KUninterpretedSortValue>()
+
+        fun getSortUniverse(): Set<KUninterpretedSortValue> = sortUniverse
+
+        fun initializeModelValues() {
+            val registeredValues = cvc5Ctx.getRegisteredSortValues(sort)
+            registeredValues.forEach { (nativeValue, value) ->
+                val modelValue = cvc5Ctx.nativeSolver.getValue(nativeValue)
+                modelValues[modelValue] = value
+                currentValueIdx = maxOf(currentValueIdx, value.valueIdx + 1)
+            }
+        }
+
+        fun initializeSortUniverse(universe: Array<Term>) {
+            universe.forEach {
+                sortUniverse.add(getValue(it))
+            }
+        }
+
+        fun getValue(modelValue: Term): KUninterpretedSortValue = modelValues.getOrPut(modelValue) {
+            mkFreshValue()
+        }
+
+        private fun mkFreshValue() = ctx.mkUninterpretedSortValue(sort, currentValueIdx++)
     }
 }
