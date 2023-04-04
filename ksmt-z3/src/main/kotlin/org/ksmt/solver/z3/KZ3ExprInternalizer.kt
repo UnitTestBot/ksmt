@@ -1,7 +1,6 @@
 package org.ksmt.solver.z3
 
 import com.microsoft.z3.Native
-import com.microsoft.z3.incRefUnsafe
 import com.microsoft.z3.mkQuantifier
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
@@ -844,18 +843,20 @@ open class KZ3ExprInternalizer(
     override fun transform(expr: KUninterpretedSortValue): KExpr<KUninterpretedSort> = with(expr) {
         transform(ctx.mkIntNum(expr.valueIdx)) { intValueExpr ->
             val nativeSort = sort.internalizeSort()
-            val valueDecl = z3InternCtx.temporaryAst(
-                Native.mkFreshFuncDecl(nCtx, "value", 0, null, nativeSort)
+            val valueDecl = z3InternCtx.saveUninterpretedSortValueDecl(
+                Native.mkFreshFuncDecl(nCtx, "value", 0, null, nativeSort),
+                expr
             )
+
             Native.mkApp(nCtx, valueDecl, 0, null).also {
                 // Force expression save to perform `incRef` and prevent possible reference counting issues
                 saveInternalizedExpr(expr, it)
 
-                z3InternCtx.releaseTemporaryAst(valueDecl)
-
                 z3InternCtx.registerUninterpretedSortValue(expr, intValueExpr, it) {
                     val descriptorSort = ctx.intSort.internalizeSort()
-                    Native.mkFreshFuncDecl(nCtx, "interpreter", 1, longArrayOf(nativeSort), descriptorSort)
+                    z3InternCtx.saveUninterpretedSortValueInterpreted(
+                        Native.mkFreshFuncDecl(nCtx, "interpreter", 1, longArrayOf(nativeSort), descriptorSort)
+                    )
                 }
             }
         }

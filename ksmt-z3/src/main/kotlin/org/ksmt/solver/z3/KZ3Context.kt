@@ -64,6 +64,10 @@ class KZ3Context(private val ctx: Context) : AutoCloseable {
         saveConvertedAst(expr, converted, expressions, z3Expressions)
     }
 
+    fun saveConvertedExprWithoutReverseCache(expr: Long, converted: KExpr<*>) {
+        z3Expressions.putIfAbsent(expr, converted)
+    }
+
     /**
      * Find internalized sort.
      * Returns [NOT_INTERNALIZED] if sort was not found.
@@ -134,6 +138,23 @@ class KZ3Context(private val ctx: Context) : AutoCloseable {
     private val uninterpretedSortValues = arrayListOf<UninterpretedSortValueDescriptor>()
     private val uninterpretedSortValueInterpreter = hashMapOf<KUninterpretedSort, Long>()
 
+    private val uninterpretedSortValueDecls = Long2ObjectOpenHashMap<KUninterpretedSortValue>()
+    private val uninterpretedSortValueInterpreters = LongOpenHashSet()
+
+    fun saveUninterpretedSortValueDecl(decl: Long, value: KUninterpretedSortValue): Long {
+        if (uninterpretedSortValueDecls.putIfAbsent(decl, value) == null) {
+            incRefUnsafe(nCtx, decl)
+        }
+        return decl
+    }
+
+    fun saveUninterpretedSortValueInterpreted(decl: Long): Long {
+        if (uninterpretedSortValueInterpreters.add(decl)) {
+            incRefUnsafe(nCtx, decl)
+        }
+        return decl
+    }
+
     inline fun registerUninterpretedSortValue(
         value: KUninterpretedSortValue,
         uniqueValueDescriptorExpr: Long,
@@ -164,7 +185,6 @@ class KZ3Context(private val ctx: Context) : AutoCloseable {
         uninterpretedSortValueInterpreter[sort]
 
     fun registerUninterpretedSortValueInterpreter(sort: KUninterpretedSort, interpreter: Long) {
-        incRefUnsafe(nCtx, interpreter)
         uninterpretedSortValueInterpreter[sort] = interpreter
     }
 
@@ -179,6 +199,12 @@ class KZ3Context(private val ctx: Context) : AutoCloseable {
             nativeValueExpr = uninterpretedValueExpr
         )
     }
+
+    fun findInternalConstDeclAssociatedUninterpretedSortValue(decl: Long): KUninterpretedSortValue? =
+        uninterpretedSortValueDecls.get(decl)
+
+    fun isInternalFuncDecl(decl: Long): Boolean =
+        uninterpretedSortValueInterpreters.contains(decl)
 
     private fun assertPendingUninterpretedValueConstraints(solver: Solver) {
         while (currentValueConstraintsLevel < uninterpretedSortValues.size) {

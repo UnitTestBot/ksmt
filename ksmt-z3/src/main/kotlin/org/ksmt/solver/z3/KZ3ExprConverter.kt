@@ -3,6 +3,7 @@ package org.ksmt.solver.z3
 import com.microsoft.z3.Native
 import com.microsoft.z3.enumerations.Z3_ast_kind
 import com.microsoft.z3.enumerations.Z3_decl_kind
+import com.microsoft.z3.enumerations.Z3_parameter_kind
 import com.microsoft.z3.enumerations.Z3_sort_kind
 import com.microsoft.z3.enumerations.Z3_symbol_kind
 import com.microsoft.z3.fpSignOrNull
@@ -29,19 +30,20 @@ import org.ksmt.sort.KArray3Sort
 import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KArraySortBase
-import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.asExpr
 import org.ksmt.utils.uncheckedCast
 
 open class KZ3ExprConverter(
     private val ctx: KContext,
-    private val z3Ctx: KZ3Context
+    private val z3Ctx: KZ3Context,
+    private val model: KZ3Model? = null
 ) : KExprLongConverterBase() {
 
     private val internalizer = KZ3ExprInternalizer(ctx, z3Ctx)
@@ -163,7 +165,13 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_TRUE -> convert { trueExpr }
             Z3_decl_kind.Z3_OP_FALSE -> convert { falseExpr }
             Z3_decl_kind.Z3_OP_UNINTERPRETED -> expr.convertList { args: List<KExpr<KSort>> ->
-                mkApp(decl.convertDecl(), args)
+                val numParameters = Native.getDeclNumParameters(nCtx, decl)
+                val convertedParametrizedDeclApp = if (numParameters != 0) {
+                    tryConvertParametrizedDeclApp(expr, decl, args, numParameters)
+                } else {
+                    null
+                }
+                convertedParametrizedDeclApp ?: mkApp(decl.convertDecl(), args)
             }
             Z3_decl_kind.Z3_OP_AND -> expr.convertList(::mkAnd)
             Z3_decl_kind.Z3_OP_OR -> expr.convertList(::mkOr)
@@ -368,6 +376,42 @@ open class KZ3ExprConverter(
                 TODO("Fp $declKind is not supported")
             }
             else -> TODO("$declKind is not supported")
+        }
+    }
+
+    private fun tryConvertParametrizedDeclApp(
+        expr: Long,
+        nativeDecl: Long,
+        args: List<KExpr<KSort>>,
+        numParameters: Int
+    ): KExpr<*>? {
+        if (numParameters != 2 || args.isNotEmpty()) return null
+
+        val param0Kind = Native.getDeclParameterKind(nCtx, nativeDecl, 0).let { Z3_parameter_kind.fromInt(it) }
+        val param1Kind = Native.getDeclParameterKind(nCtx, nativeDecl, 1).let { Z3_parameter_kind.fromInt(it) }
+
+        if (param0Kind != Z3_parameter_kind.Z3_PARAMETER_INT && param1Kind != Z3_parameter_kind.Z3_PARAMETER_SORT) {
+            return null
+        }
+
+        val nativeSort = Native.getDeclSortParameter(nCtx, nativeDecl, 1)
+        val sort = nativeSort.convertSort<KSort>()
+
+        if (sort !is KUninterpretedSort) return null
+
+        /**
+         * Decl is an interpreted value of an uninterpreted sort.
+         * Such a declaration may appear only in models.
+         * */
+        model ?: error("Uninterpreted value without model")
+
+        return model.resolveUninterpretedSortValue(sort, nativeDecl).also {
+            /**
+             * Save converted result without reverse cache to prevent
+             * internalization issue, when KUninterpretedValue can be internalized
+             * as model bound expression.
+             * */
+            z3Ctx.saveConvertedExprWithoutReverseCache(expr, it)
         }
     }
 
