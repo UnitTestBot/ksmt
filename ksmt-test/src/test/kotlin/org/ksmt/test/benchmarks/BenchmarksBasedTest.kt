@@ -126,7 +126,7 @@ abstract class BenchmarksBasedTest {
                 val evaluatedAssertions = ksmtAssertions.map { model.eval(it, isComplete = true) }
 
                 val cardinalityConstraints = model.uninterpretedSorts.mapNotNull { sort ->
-                    model.uninterpretedSortUniverse(sort)?.let { universe ->
+                    model.uninterpretedSortUniverse(sort)?.takeIf { it.isNotEmpty() }?.let { universe ->
                         with(ctx) {
                             val x = mkFreshConst("x", sort)
                             val variants = mkOr(universe.map { x eq it })
