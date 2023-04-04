@@ -265,7 +265,10 @@ class KCvc5Context(
 
     private fun assertPendingUninterpretedValueConstraints(solver: Solver) {
         while (currentValueConstraintsLevel < uninterpretedSortValueDescriptors.size) {
-            assertUninterpretedSortValueConstraint(solver, uninterpretedSortValueDescriptors[currentValueConstraintsLevel])
+            assertUninterpretedSortValueConstraint(
+                solver,
+                uninterpretedSortValueDescriptors[currentValueConstraintsLevel]
+            )
             currentValueConstraintsLevel++
         }
     }
