@@ -112,7 +112,7 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
         ?: persistentHashMapOf<Any, KArrayStoreBase<A, *>>().mutate { map ->
             map[createLookupKey()] = this
             linearlyTraverseArray(nestedInterpretedStore) { nestedArray ->
-                map[nestedArray.createLookupKey()] = nestedArray
+                map.putIfAbsent(nestedArray.createLookupKey(), nestedArray)
             }
         }
 
