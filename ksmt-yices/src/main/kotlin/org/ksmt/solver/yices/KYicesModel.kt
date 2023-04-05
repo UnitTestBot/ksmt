@@ -32,6 +32,7 @@ import org.ksmt.utils.uncheckedCast
 class KYicesModel(
     private val model: Model,
     private val ctx: KContext,
+    private val yicesCtx: KYicesContext,
     private val internalizer: KYicesExprInternalizer,
     private val converter: KYicesExprConverter
 ) : KModel, AutoCloseable {
@@ -84,8 +85,10 @@ class KYicesModel(
             is KIntSort -> mkIntNum(model.bigRationalValue(yval))
             is KUninterpretedSort -> {
                 val uninterpretedSortValueId = model.scalarValue(yval)[0]
+                val valueIndex = yicesCtx.convertUninterpretedSortValueIndex(uninterpretedSortValueId)
+
                 val sortValues = knownUninterpretedSortValues.getOrPut(sort) { hashSetOf() }
-                mkUninterpretedSortValue(sort, uninterpretedSortValueId).also {
+                mkUninterpretedSortValue(sort, valueIndex).also {
                     sortValues.add(it)
                 }
             }
