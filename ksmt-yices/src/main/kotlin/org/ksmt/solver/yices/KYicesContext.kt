@@ -309,7 +309,7 @@ open class KYicesContext : AutoCloseable {
 
     fun convertUninterpretedSortValueIndex(internalIndex: Int): Int {
         // User provided value index
-        if (internalIndex > UNINTERPRETED_SORT_VALUE_SHIFT) {
+        if (internalIndex >= UNINTERPRETED_SORT_VALUE_SHIFT) {
             return internalIndex - UNINTERPRETED_SORT_VALUE_SHIFT
         }
 
