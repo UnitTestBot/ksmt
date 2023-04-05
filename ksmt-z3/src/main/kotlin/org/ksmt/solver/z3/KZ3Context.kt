@@ -11,6 +11,7 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.solver.util.KExprLongInternalizerBase.Companion.NOT_INTERNALIZED
 import org.ksmt.sort.KSort
@@ -61,6 +62,11 @@ class KZ3Context(private val ctx: Context) : AutoCloseable {
     }
 
     fun saveConvertedExpr(expr: Long, converted: KExpr<*>) {
+        /**
+         * It is not safe to save complex converted expressions
+         * because they may contain model bound variables.
+         * */
+        if (converted !is KInterpretedValue<*>) return
         saveConvertedAst(expr, converted, expressions, z3Expressions)
     }
 
