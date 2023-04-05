@@ -213,6 +213,8 @@ class KCvc5ExprInternalizer(
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>) = with(expr) {
         transformArray(args) { args: Array<Term> ->
+            cvc5Ctx.addDeclaration(decl)
+
             // args[0] is a function declaration
             val decl = decl.internalizeDecl()
 
@@ -226,6 +228,8 @@ class KCvc5ExprInternalizer(
 
     override fun <T : KSort> transform(expr: KConst<T>) = with(expr) {
         transform {
+            cvc5Ctx.addDeclaration(decl)
+
             decl.internalizeDecl()
         }
     }
