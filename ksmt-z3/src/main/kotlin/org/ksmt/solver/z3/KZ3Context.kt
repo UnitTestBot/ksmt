@@ -64,10 +64,6 @@ class KZ3Context(private val ctx: Context) : AutoCloseable {
         saveConvertedAst(expr, converted, expressions, z3Expressions)
     }
 
-    fun saveConvertedExprWithoutReverseCache(expr: Long, converted: KExpr<*>) {
-        z3Expressions.putIfAbsent(expr, converted)
-    }
-
     /**
      * Find internalized sort.
      * Returns [NOT_INTERNALIZED] if sort was not found.
