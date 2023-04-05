@@ -204,7 +204,10 @@ open class KZ3Model(
                 return
             }
 
-            // Force model constants initialization
+            /**
+             * Force model constants initialization to register all value decls.
+             * See [registerValueDecl] usages.
+             * */
             constantDeclarations
 
             initializeModelValues(model)

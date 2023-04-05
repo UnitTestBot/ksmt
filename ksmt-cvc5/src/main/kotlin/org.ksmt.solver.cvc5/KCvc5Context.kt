@@ -194,6 +194,17 @@ class KCvc5Context(
     }
 
 
+    @Suppress("ForbiddenComment")
+    /**
+     * Uninterpreted sort values distinct constraints management.
+     *
+     * 1. save/register uninterpreted value.
+     * See [KUninterpretedSortValue] internalization for the details.
+     * 2. Assert distinct constraints ([assertPendingAxioms]) that may be introduced during internalization.
+     * Currently, we assert constraints for all the values we have ever internalized.
+     *
+     * todo: precise uninterpreted sort values tracking
+     * */
     private data class UninterpretedSortValueDescriptor(
         val value: KUninterpretedSortValue,
         val nativeUniqueValueDescriptor: Term,

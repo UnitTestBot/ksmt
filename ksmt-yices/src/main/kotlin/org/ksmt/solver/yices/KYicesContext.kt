@@ -296,6 +296,14 @@ open class KYicesContext : AutoCloseable {
 
     private var maxValueIndex = 0
 
+    /**
+     * Yices can produce different values with the same index.
+     * This situation happens if we create a value with index I (e.g. 2)
+     * and Yices generates a value in the model with index I.
+     * To overcome this, we shift our indices by some very huge value.
+     * Since Yices generates values with a small indices (e.g. 0, 1, 2, ...)
+     * this trick solves the issue.
+     * */
     fun uninterpretedSortValueIndex(idx: Int): Int {
         if (idx !in UNINTERPRETED_SORT_VALUE_INDEX_RANGE) {
             throw KSolverUnsupportedFeatureException(

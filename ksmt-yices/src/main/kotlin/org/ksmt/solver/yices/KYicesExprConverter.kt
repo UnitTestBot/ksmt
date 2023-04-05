@@ -138,9 +138,11 @@ open class KYicesExprConverter(
 
             Constructor.SCALAR_CONSTANT -> convert {
                 val idx = Terms.scalarConstantIndex(expr)
+                val valueIdx = yicesCtx.convertUninterpretedSortValueIndex(idx)
+
                 val sort = convertSort(Terms.typeOf(expr))
 
-                mkUninterpretedSortValue(sort as KUninterpretedSort, idx)
+                mkUninterpretedSortValue(sort as KUninterpretedSort, valueIdx)
             }
 
             else -> error("Not supported term ${Terms.toString(expr)}")

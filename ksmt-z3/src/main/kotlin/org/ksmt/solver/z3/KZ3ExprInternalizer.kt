@@ -840,6 +840,19 @@ open class KZ3ExprInternalizer(
         transform { Native.mkAsArray(nCtx, function.internalizeDecl()) }
     }
 
+    /**
+     * There is no way in Z3 API to mark uninterpreted constant as value.
+     *
+     * To overcome this we apply the following scheme:
+     * 1. Internalize value `x` of as sort T as normal constant.
+     * 2. Associate unique interpreted value `i` with this constant.
+     * Currently, we use integer values.
+     * 3. Introduce `interpreter` function `F` of type T -> Int.
+     * We introduce one function for each uninterpreted sort.
+     * 4. Assert expression `(= i (F x))` to the solver.
+     * Since all Int values are known to be distinct, this
+     * assertion forces that all values of T are also distinct.
+     * */
     override fun transform(expr: KUninterpretedSortValue): KExpr<KUninterpretedSort> = with(expr) {
         transform(ctx.mkIntNum(expr.valueIdx)) { intValueExpr ->
             val nativeSort = sort.internalizeSort()
