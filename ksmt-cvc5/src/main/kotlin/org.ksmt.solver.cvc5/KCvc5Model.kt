@@ -81,33 +81,10 @@ open class KCvc5Model(
     }
 
     override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KUninterpretedSortValue>? =
-        uninterpretedSortValues.getOrPut(sort) {
-            ctx.ensureContextMatch(sort)
-            ensureContextActive()
+        getUninterpretedSortContext(sort).getSortUniverse()
 
-            getUninterpretedSortContext(sort).also {
-                initializeSortValueContext(it)
-            }
-        }.getSortUniverse()
-
-    private fun initializeSortValueContext(sortCtx: UninterpretedSortValueContext) {
-        if (sortCtx.sort !in uninterpretedSorts) {
-            return
-        }
-
-        sortCtx.initializeModelValues()
-
-        val cvc5Sort = with(internalizer) { sortCtx.sort.internalizeSort() }
-        val cvc5SortUniverse = cvc5Ctx.nativeSolver.getModelDomainElements(cvc5Sort)
-
-        sortCtx.initializeSortUniverse(cvc5SortUniverse)
-    }
-
-    internal fun resolveUninterpretedSortValue(sort: KUninterpretedSort, value: Term): KUninterpretedSortValue {
-        uninterpretedSortUniverse(sort) // ensure sort universe initialized
-
-        return getUninterpretedSortContext(sort).getValue(value)
-    }
+    internal fun resolveUninterpretedSortValue(sort: KUninterpretedSort, value: Term): KUninterpretedSortValue =
+        getUninterpretedSortContext(sort).getValue(value)
 
     override fun detach(): KModel {
         val interpretations = declarations.associateWith {
@@ -133,20 +110,44 @@ open class KCvc5Model(
 
 
     private fun getUninterpretedSortContext(sort: KUninterpretedSort): UninterpretedSortValueContext =
-        uninterpretedSortValues.getOrPut(sort) { UninterpretedSortValueContext(ctx, cvc5Ctx, sort) }
+        uninterpretedSortValues.getOrPut(sort) { UninterpretedSortValueContext(sort) }
 
-    private class UninterpretedSortValueContext(
-        val ctx: KContext,
-        val cvc5Ctx: KCvc5Context,
-        val sort: KUninterpretedSort
-    ) {
+    private inner class UninterpretedSortValueContext(val sort: KUninterpretedSort) {
+        private var initialized = false
         private var currentValueIdx = 0
         private val modelValues = TreeMap<Term, KUninterpretedSortValue>()
         private val sortUniverse = hashSetOf<KUninterpretedSortValue>()
 
-        fun getSortUniverse(): Set<KUninterpretedSortValue> = sortUniverse
+        fun getSortUniverse(): Set<KUninterpretedSortValue> {
+            ensureInitialized()
+            return sortUniverse
+        }
 
-        fun initializeModelValues() {
+        fun getValue(modelValue: Term): KUninterpretedSortValue {
+            ensureInitialized()
+            return mkValue(modelValue)
+        }
+
+        private fun ensureInitialized() {
+            if (initialized) return
+            initialize()
+            initialized = true
+        }
+
+        private fun initialize() {
+            if (sort !in uninterpretedSorts) {
+                return
+            }
+
+            initializeModelValues()
+
+            val cvc5Sort = with(internalizer) { sort.internalizeSort() }
+            val cvc5SortUniverse = cvc5Ctx.nativeSolver.getModelDomainElements(cvc5Sort)
+
+            initializeSortUniverse(cvc5SortUniverse)
+        }
+
+        private fun initializeModelValues() {
             val registeredValues = cvc5Ctx.getRegisteredSortValues(sort)
             registeredValues.forEach { (nativeValue, value) ->
                 val modelValue = cvc5Ctx.nativeSolver.getValue(nativeValue)
@@ -155,13 +156,13 @@ open class KCvc5Model(
             }
         }
 
-        fun initializeSortUniverse(universe: Array<Term>) {
+        private fun initializeSortUniverse(universe: Array<Term>) {
             universe.forEach {
-                sortUniverse.add(getValue(it))
+                sortUniverse.add(mkValue(it))
             }
         }
 
-        fun getValue(modelValue: Term): KUninterpretedSortValue = modelValues.getOrPut(modelValue) {
+        private fun mkValue(modelValue: Term): KUninterpretedSortValue = modelValues.getOrPut(modelValue) {
             mkFreshValue()
         }
 
