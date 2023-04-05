@@ -11,6 +11,7 @@ import com.microsoft.z3.getAppArgs
 import com.microsoft.z3.getArraySortDomain
 import com.microsoft.z3.intOrNull
 import com.microsoft.z3.longOrNull
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
@@ -51,11 +52,16 @@ open class KZ3ExprConverter(
     @JvmField
     val nCtx: Long = z3Ctx.nCtx
 
+    private val modelBoundExpressions = Long2ObjectOpenHashMap<KExpr<*>>()
+
     override fun findConvertedNative(expr: Long): KExpr<*>? {
-        return z3Ctx.findConvertedExpr(expr)
+        return modelBoundExpressions.get(expr)
+            ?: z3Ctx.findConvertedExpr(expr)
     }
 
     override fun saveConvertedNative(native: Long, converted: KExpr<*>) {
+        if (modelBoundExpressions.containsKey(native)) return
+
         z3Ctx.saveConvertedExpr(native, converted)
     }
 
@@ -406,12 +412,7 @@ open class KZ3ExprConverter(
         model ?: error("Uninterpreted value without model")
 
         return model.resolveUninterpretedSortValue(sort, nativeDecl).also {
-            /**
-             * Save converted result without reverse cache to prevent
-             * internalization issue, when KUninterpretedValue can be internalized
-             * as model bound expression.
-             * */
-            z3Ctx.saveConvertedExprWithoutReverseCache(expr, it)
+            modelBoundExpressions.putIfAbsent(expr, it)
         }
     }
 
