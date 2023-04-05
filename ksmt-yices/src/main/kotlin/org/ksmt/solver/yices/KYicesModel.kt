@@ -51,8 +51,11 @@ class KYicesModel(
         sortsWithDependencies
     }
 
-    private val uninterpretedSortUniverse = hashMapOf<KUninterpretedSort, Set<KUninterpretedSortValue>>()
-    private val knownUninterpretedSortValues = hashMapOf<KUninterpretedSort, MutableSet<KUninterpretedSortValue>>()
+    private val uninterpretedSortUniverse =
+        hashMapOf<KUninterpretedSort, Set<KUninterpretedSortValue>>()
+
+    private val knownUninterpretedSortValues =
+        hashMapOf<KUninterpretedSort, MutableMap<Int, KUninterpretedSortValue>>()
 
     private val interpretations = hashMapOf<KDecl<*>, KModel.KFuncInterp<*>>()
     private val funcInterpretationsToDo = arrayListOf<Pair<YVal, KFuncDecl<*>>>()
@@ -64,7 +67,7 @@ class KYicesModel(
 
         sortDependencies.forEach { interpretation(it) }
 
-        knownUninterpretedSortValues[sort] ?: hashSetOf()
+        knownUninterpretedSortValues[sort]?.values?.toHashSet() ?: hashSetOf()
     }
 
     private val evaluatorWithModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = true) }
@@ -85,11 +88,10 @@ class KYicesModel(
             is KIntSort -> mkIntNum(model.bigRationalValue(yval))
             is KUninterpretedSort -> {
                 val uninterpretedSortValueId = model.scalarValue(yval)[0]
-                val valueIndex = yicesCtx.convertUninterpretedSortValueIndex(uninterpretedSortValueId)
-
-                val sortValues = knownUninterpretedSortValues.getOrPut(sort) { hashSetOf() }
-                mkUninterpretedSortValue(sort, valueIndex).also {
-                    sortValues.add(it)
+                val sortValues = knownUninterpretedSortValues.getOrPut(sort) { hashMapOf() }
+                sortValues.getOrPut(uninterpretedSortValueId) {
+                    val valueIndex = yicesCtx.convertUninterpretedSortValueIndex(uninterpretedSortValueId)
+                    mkUninterpretedSortValue(sort, valueIndex)
                 }
             }
             is KArraySortBase<*> -> {
