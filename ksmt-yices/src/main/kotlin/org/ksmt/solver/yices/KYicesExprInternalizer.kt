@@ -933,7 +933,10 @@ open class KYicesExprInternalizer(
 
     override fun transform(expr: KUninterpretedSortValue): KExpr<KUninterpretedSort> = with(expr) {
         transform {
-            yicesCtx.uninterpretedSortConst(sort.internalizeSort(), valueIdx)
+            yicesCtx.uninterpretedSortConst(
+                sort.internalizeSort(),
+                yicesCtx.uninterpretedSortValueIndex(valueIdx)
+            )
         }
     }
 
