@@ -81,7 +81,10 @@ class KCvc5Context(
      */
     fun uninterpretedSorts(): List<Set<KUninterpretedSort>> = uninterpretedSorts
 
-    fun addDeclaration(decl: KDecl<*>) { currentLevelDeclarations += decl }
+    fun addDeclaration(decl: KDecl<*>) {
+        currentLevelDeclarations += decl
+        uninterpretedSortCollector.collect(decl)
+    }
 
     /**
      * declarations of active push-levels
