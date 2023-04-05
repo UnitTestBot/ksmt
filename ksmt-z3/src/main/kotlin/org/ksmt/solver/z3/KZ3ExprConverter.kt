@@ -20,6 +20,7 @@ import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.KFpRoundingModeExpr
 import org.ksmt.expr.KIntNumExpr
+import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.KRealNumExpr
 import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector
 import org.ksmt.solver.util.ExprConversionResult
@@ -68,7 +69,13 @@ open class KZ3ExprConverter(
 
     override fun saveConvertedNative(native: Long, converted: KExpr<*>) {
         if (converterLocalCache.putIfAbsent(native, converted) == null) {
-            z3Ctx.saveConvertedExpr(native, converted)
+            /**
+             * It is not safe to save complex converted expressions
+             * because they may contain model bound variables.
+             * */
+            if (converted is KInterpretedValue<*>) {
+                z3Ctx.saveConvertedExpr(native, converted)
+            }
         }
     }
 
