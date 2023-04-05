@@ -22,6 +22,7 @@ import org.ksmt.expr.KArrayLambdaBase
 import org.ksmt.expr.KBitVecValue
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpRoundingMode
+import org.ksmt.expr.KInterpretedValue
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.util.KExprConverterBase
 import org.ksmt.solver.util.ExprConversionResult
@@ -50,12 +51,32 @@ open class KCvc5ExprConverter(
     private val model: KCvc5Model? = null
 ) : KExprConverterBase<Term>() {
 
-    private val internalizer = KCvc5ExprInternalizer(cvc5Ctx)
+    private val internalizer by lazy { KCvc5ExprInternalizer(cvc5Ctx) }
 
-    override fun findConvertedNative(expr: Term): KExpr<*>? = cvc5Ctx.findConvertedExpr(expr)
+    private val converterLocalCache = TreeMap<Term, KExpr<*>>()
+
+    override fun findConvertedNative(expr: Term): KExpr<*>? {
+        val localCached = converterLocalCache[expr]
+        if (localCached != null) return localCached
+
+        val globalCached = cvc5Ctx.findConvertedExpr(expr)
+        if (globalCached != null) {
+            converterLocalCache[expr] = globalCached
+        }
+
+        return globalCached
+    }
 
     override fun saveConvertedNative(native: Term, converted: KExpr<*>) {
-        cvc5Ctx.saveConvertedExpr(native, converted)
+        if (converterLocalCache.putIfAbsent(native, converted) == null) {
+            /**
+             * It is not safe to save complex converted expressions
+             * because they may contain model bound variables.
+             * */
+            if (converted is KInterpretedValue<*>) {
+                cvc5Ctx.saveConvertedExpr(native, converted)
+            }
+        }
     }
 
     @Suppress("LongMethod", "ComplexMethod")
@@ -73,12 +94,8 @@ open class KCvc5ExprConverter(
             Kind.UNINTERPRETED_SORT_VALUE -> convert {
                 model ?: error("Uninterpreted value without model")
                 model.resolveUninterpretedSortValue(expr.sort.convertSort(), expr).also {
-                    /**
-                     * Save converted result without reverse cache to prevent
-                     * internalization issue, when KUninterpretedValue can be internalized
-                     * as model bound expression.
-                     * */
-                    cvc5Ctx.saveConvertedExprWithoutReverseCache(expr, it)
+                    // Save here to skip save to the global cache
+                    converterLocalCache.putIfAbsent(expr, it)
                 }
             }
 

@@ -145,10 +145,6 @@ class KCvc5Context(
     fun saveConvertedExpr(expr: Term, converted: KExpr<*>): KExpr<*> =
         convertAst(currentScopeExpressions, cvc5Expressions, expr) { converted }
 
-    fun saveConvertedExprWithoutReverseCache(expr: Term, converted: KExpr<*>) {
-        cvc5Expressions.putIfAbsent(expr, converted)
-    }
-
     // sort
     fun findInternalizedSort(sort: KSort): Sort? = sorts[sort]
 
