@@ -52,17 +52,24 @@ open class KZ3ExprConverter(
     @JvmField
     val nCtx: Long = z3Ctx.nCtx
 
-    private val modelBoundExpressions = Long2ObjectOpenHashMap<KExpr<*>>()
+    private val converterLocalCache = Long2ObjectOpenHashMap<KExpr<*>>()
 
     override fun findConvertedNative(expr: Long): KExpr<*>? {
-        return modelBoundExpressions.get(expr)
-            ?: z3Ctx.findConvertedExpr(expr)
+        val localCached = converterLocalCache.get(expr)
+        if (localCached != null) return localCached
+
+        val globalCached = z3Ctx.findConvertedExpr(expr)
+        if (globalCached != null) {
+            converterLocalCache.put(expr, globalCached)
+        }
+
+        return globalCached
     }
 
     override fun saveConvertedNative(native: Long, converted: KExpr<*>) {
-        if (modelBoundExpressions.containsKey(native)) return
-
-        z3Ctx.saveConvertedExpr(native, converted)
+        if (converterLocalCache.putIfAbsent(native, converted) == null) {
+            z3Ctx.saveConvertedExpr(native, converted)
+        }
     }
 
     fun <T : KSort> Long.convertExpr(): KExpr<T> = convertFromNative(this)
@@ -412,7 +419,8 @@ open class KZ3ExprConverter(
         model ?: error("Uninterpreted value without model")
 
         return model.resolveUninterpretedSortValue(sort, nativeDecl).also {
-            modelBoundExpressions.putIfAbsent(expr, it)
+            // Save here to skip save to the global cache
+            converterLocalCache.putIfAbsent(expr, it)
         }
     }
 
