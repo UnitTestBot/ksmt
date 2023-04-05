@@ -179,37 +179,7 @@ open class KModelEvaluator(
         return quantifierBuilder(evaluatedBody)
     }
 
-    override fun simplifyEqUninterpreted(
-        lhs: KExpr<KUninterpretedSort>,
-        rhs: KExpr<KUninterpretedSort>
-    ): KExpr<KBoolSort> = with(ctx) {
-        if (isUninterpretedValue(lhs.sort, lhs) && isUninterpretedValue(lhs.sort, rhs)) {
-            return (lhs == rhs).expr
-        }
-        super.simplifyEqUninterpreted(lhs, rhs)
-    }
-
-    override fun areDefinitelyDistinctUninterpreted(
-        lhs: KExpr<KUninterpretedSort>,
-        rhs: KExpr<KUninterpretedSort>
-    ): Boolean {
-        if (isUninterpretedValue(lhs.sort, lhs) && isUninterpretedValue(lhs.sort, rhs)) {
-            return lhs != rhs
-        }
-        return super.areDefinitelyDistinctUninterpreted(lhs, rhs)
-    }
-
-    private fun isUninterpretedValue(sort: KUninterpretedSort, expr: KExpr<KUninterpretedSort>): Boolean {
-        val sortUniverse = model.uninterpretedSortUniverse(sort) ?: return false
-        return expr in sortUniverse
-    }
-
-    private fun isValueInModel(expr: KExpr<*>): Boolean {
-        if (expr is KInterpretedValue<*>) return true
-        val sort = expr.sort
-        if (sort is KUninterpretedSort && isUninterpretedValue(sort, expr.uncheckedCast())) return true
-        return false
-    }
+    private fun isValueInModel(expr: KExpr<*>): Boolean = expr is KInterpretedValue<*>
 
     @Suppress("USELESS_CAST") // Exhaustive when
     private fun <A : KArraySortBase<R>, R : KSort> evalArrayInterpretation(
@@ -272,15 +242,6 @@ open class KModelEvaluator(
             if (interpretation == null && !isComplete) {
                 // return without cache
                 return ctx.mkApp(decl, args)
-            }
-
-            // Check if expr is an uninterpreted value of a sort
-            if (interpretation == null && decl.sort is KUninterpretedSort) {
-                val universe = model.uninterpretedSortUniverse(decl.sort) ?: emptySet()
-                val expr = ctx.mkApp(decl, args)
-                if (expr.uncheckedCast() in universe) {
-                    return expr
-                }
             }
 
             // isComplete = true, return and cache

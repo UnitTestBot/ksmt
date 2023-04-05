@@ -12,6 +12,7 @@ import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KInterpretedValue
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector
 import org.ksmt.expr.transformer.KNonRecursiveTransformerBase
@@ -252,12 +253,22 @@ open class KExprSimplifier(override val ctx: KContext) :
     open fun simplifyEqUninterpreted(
         lhs: KExpr<KUninterpretedSort>,
         rhs: KExpr<KUninterpretedSort>
-    ): KExpr<KBoolSort> = withExpressionsOrdered(lhs, rhs, ctx::mkEqNoSimplify)
+    ): KExpr<KBoolSort> = with(ctx) {
+        if (lhs is KUninterpretedSortValue && rhs is KUninterpretedSortValue) {
+            return (lhs == rhs).expr
+        }
+        return withExpressionsOrdered(lhs, rhs, ctx::mkEqNoSimplify)
+    }
 
     open fun areDefinitelyDistinctUninterpreted(
         lhs: KExpr<KUninterpretedSort>,
         rhs: KExpr<KUninterpretedSort>
-    ): Boolean = false
+    ): Boolean {
+        if (lhs is KUninterpretedSortValue && rhs is KUninterpretedSortValue) {
+            return lhs != rhs
+        }
+        return false
+    }
 
 
     private class RewriteFrame(
