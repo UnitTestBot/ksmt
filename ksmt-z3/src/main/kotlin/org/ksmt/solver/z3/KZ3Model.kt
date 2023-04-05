@@ -94,34 +94,10 @@ open class KZ3Model(
         }?.uncheckedCast()
 
     override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KUninterpretedSortValue>? =
-        uninterpretedSortValues.getOrPut(sort) {
-            ctx.ensureContextMatch(sort)
-            getUninterpretedSortContext(sort).also {
-                initializeSortUniverse(it)
-            }
-        }.getSortUniverse()
+        getUninterpretedSortContext(sort).getSortUniverse()
 
-    private fun initializeSortUniverse(sortCtx: UninterpretedSortValueContext) {
-        if (sortCtx.sort !in uninterpretedSorts) {
-            return
-        }
-
-        // Force model constants initialization
-        constantDeclarations
-
-        sortCtx.initializeModelValues(model)
-
-        val z3Sort = with(internalizer) { sortCtx.sort.internalizeSort() }
-        val z3SortUniverse = model.getSortUniverse(z3Sort)
-
-        sortCtx.initializeSortUniverse(z3SortUniverse)
-    }
-
-    internal fun resolveUninterpretedSortValue(sort: KUninterpretedSort, decl: Long): KUninterpretedSortValue {
-        uninterpretedSortUniverse(sort) // ensure sort universe initialized
-
-        return getUninterpretedSortContext(sort).getValue(decl)
-    }
+    internal fun resolveUninterpretedSortValue(sort: KUninterpretedSort, decl: Long): KUninterpretedSortValue =
+        getUninterpretedSortContext(sort).getValue(decl)
 
     private fun <T : KSort> constInterp(decl: KDecl<T>, z3Decl: Long): KModel.KFuncInterp<T>? {
         val z3Interp = model.getConstInterp(z3Decl) ?: return null
@@ -194,13 +170,10 @@ open class KZ3Model(
     }
 
     private fun getUninterpretedSortContext(sort: KUninterpretedSort): UninterpretedSortValueContext =
-        uninterpretedSortValues.getOrPut(sort) { UninterpretedSortValueContext(ctx, z3Ctx, sort) }
+        uninterpretedSortValues.getOrPut(sort) { UninterpretedSortValueContext(sort) }
 
-    private class UninterpretedSortValueContext(
-        val ctx: KContext,
-        val z3Ctx: KZ3Context,
-        val sort: KUninterpretedSort
-    ) {
+    private inner class UninterpretedSortValueContext(val sort: KUninterpretedSort) {
+        private var initialized = false
         private var currentValueIdx = 0
         private val declValues = hashMapOf<Long, KUninterpretedSortValue>()
         private val modelValues = hashMapOf<Long, KUninterpretedSortValue>()
@@ -210,9 +183,39 @@ open class KZ3Model(
             declValues[decl] = value
         }
 
-        fun getSortUniverse(): Set<KUninterpretedSortValue> = sortUniverse
+        fun getSortUniverse(): Set<KUninterpretedSortValue> {
+            ensureInitialized()
+            return sortUniverse
+        }
 
-        fun initializeModelValues(model: Model) {
+        fun getValue(decl: Long): KUninterpretedSortValue {
+            ensureInitialized()
+            return mkValue(decl)
+        }
+
+        private fun ensureInitialized() {
+            if (initialized) return
+            initialize()
+            initialized = true
+        }
+
+        private fun initialize() {
+            if (sort !in uninterpretedSorts) {
+                return
+            }
+
+            // Force model constants initialization
+            constantDeclarations
+
+            initializeModelValues(model)
+
+            val z3Sort = with(internalizer) { sort.internalizeSort() }
+            val z3SortUniverse = model.getSortUniverse(z3Sort)
+
+            initializeSortUniverse(z3SortUniverse)
+        }
+
+        private fun initializeModelValues(model: Model) {
             declValues.forEach { (modelDecl, value) ->
                 val modelValue = model.getConstInterp(modelDecl)
                     ?: error("Const decl is in model decls but not in the model")
@@ -224,14 +227,14 @@ open class KZ3Model(
             }
         }
 
-        fun initializeSortUniverse(universe: LongArray) {
+        private fun initializeSortUniverse(universe: LongArray) {
             universe.forEach {
                 val modelValueDecl = Native.getAppDecl(z3Ctx.nCtx, it)
-                sortUniverse.add(getValue(modelValueDecl))
+                sortUniverse.add(mkValue(modelValueDecl))
             }
         }
 
-        fun getValue(decl: Long): KUninterpretedSortValue = modelValues.getOrPut(decl) {
+        private fun mkValue(decl: Long): KUninterpretedSortValue = modelValues.getOrPut(decl) {
             mkFreshValue()
         }
 
