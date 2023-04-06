@@ -84,7 +84,7 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
     }
 
     private fun convertAssertions(nativeAssertions: List<Long>): List<KExpr<KBoolSort>> {
-        val converter = KZ3ExprConverter(ctx, KZ3Context(z3Ctx))
+        val converter = KZ3ExprConverter(ctx, KZ3Context(ctx, z3Ctx))
         return with(converter) { nativeAssertions.map { it.convertExpr() } }
     }
 
@@ -144,7 +144,7 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
                 setParameters(params)
             }
         }
-        solvers.add(solver to KZ3Context(z3Ctx))
+        solvers.add(solver to KZ3Context(ctx, z3Ctx))
         return solvers.lastIndex
     }
 
