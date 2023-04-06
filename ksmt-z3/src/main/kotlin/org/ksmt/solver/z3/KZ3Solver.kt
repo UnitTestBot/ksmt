@@ -23,7 +23,7 @@ import kotlin.time.Duration
 import kotlin.time.DurationUnit
 
 open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration> {
-    private val z3Ctx = KZ3Context()
+    private val z3Ctx = KZ3Context(ctx)
     private val solver = createSolver()
     private var lastCheckStatus = KSolverStatus.UNKNOWN
     private var currentScope: UInt = 0u
