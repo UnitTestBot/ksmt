@@ -52,6 +52,26 @@ class UninterpretedSortValuesTest {
         }
     }
 
+    @Test
+    fun testIncremental(): Unit = with(KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY)) {
+        val testData = generateTestData()
+        KSolverRunnerManager(workerPoolSize = 3).use { solverManager ->
+            solverManager.createSolver(this, KZ3Solver::class).use { oracleSover ->
+                val z3Results = solverManager.testSolverIncremental(this, KZ3Solver::class, testData)
+                validateResults(oracleSover, z3Results)
+
+                val yicesResults = solverManager.testSolverIncremental(this, KYicesSolver::class, testData)
+                validateResults(oracleSover, yicesResults)
+
+                val bitwuzlaResults = solverManager.testSolverIncremental(this, KBitwuzlaSolver::class, testData)
+                validateResults(oracleSover, bitwuzlaResults)
+
+                val cvcResults = solverManager.testSolverIncremental(this, KCvc5Solver::class, testData)
+                validateResults(oracleSover, cvcResults)
+            }
+        }
+    }
+
     private fun <C : KSolverConfiguration> KSolverRunnerManager.testSolver(
         ctx: KContext,
         solverType: KClass<out KSolver<C>>,
@@ -79,6 +99,74 @@ class UninterpretedSortValuesTest {
         }
 
         results
+    }
+
+    private data class SolverTestDataSample(
+        val index: Int,
+        val expr: KExpr<KBoolSort>,
+        val variable: KExpr<KBoolSort>
+    )
+
+    private fun <C : KSolverConfiguration> KSolverRunnerManager.testSolverIncremental(
+        ctx: KContext,
+        solverType: KClass<out KSolver<C>>,
+        data: List<KExpr<KBoolSort>>
+    ) = createSolver(ctx, solverType).use { solver ->
+        val results = arrayListOf<TestResult>()
+
+        val chunks = data.mapIndexed { index, sample ->
+            val variable = ctx.mkFreshConst("t:$index", ctx.boolSort)
+            SolverTestDataSample(index, sample, variable)
+        }.chunked(TEST_SET_INCREMENTAL_CHUNK)
+
+        ctx.pushAssertChunk(solver, chunks.first())
+
+        for (chunk in chunks.drop(1)) {
+            ctx.pushAssertChunk(solver, chunk)
+            popCheckSatChunk(solver, solverType.simpleName!!, chunk, results)
+        }
+
+        popCheckSatChunk(solver, solverType.simpleName!!, chunks.first(), results)
+
+        results
+    }
+
+    private fun KContext.pushAssertChunk(
+        solver: KSolver<*>,
+        chunk: List<SolverTestDataSample>
+    ) {
+        for (sample in chunk) {
+            solver.push()
+            solver.assert(sample.variable implies sample.expr)
+        }
+    }
+
+    private fun popCheckSatChunk(
+        solver: KSolver<*>,
+        solverName: String,
+        chunk: List<SolverTestDataSample>,
+        results: MutableList<TestResult>
+    ) {
+        for (sample in chunk.asReversed()) {
+            solver.push()
+            solver.assert(sample.variable)
+            val status = solver.check(SINGLE_CHECK_TIMEOUT)
+
+            val model = if (status == KSolverStatus.SAT) solver.model() else null
+
+            results += TestResult(
+                testId = sample.index,
+                solverName = solverName,
+                testSample = sample.expr,
+                status = status,
+                model = model?.detach()
+            )
+
+            solver.pop()
+
+            // pop sample assertion
+            solver.pop()
+        }
     }
 
     private fun KContext.validateResults(oracle: KSolver<*>, results: List<TestResult>) {
@@ -109,7 +197,7 @@ class UninterpretedSortValuesTest {
         oracle.assert(actualValue neq trueExpr)
 
         val status = oracle.check()
-        assertEquals(KSolverStatus.UNSAT, status)
+        assertEquals(KSolverStatus.UNSAT, status, result.solverName)
 
         oracle.pop()
     }
@@ -119,7 +207,7 @@ class UninterpretedSortValuesTest {
             .groupBy({ it.testId }, { it.status })
             .mapValues { (_, status) -> status.filterNot { it == KSolverStatus.UNKNOWN }.toSet() }
 
-        assertTrue(statuses.all { it.value.size <= 1 })
+        assertTrue(statuses.all { it.value.size <= 1 }, results.first().solverName)
     }
 
     private fun KContext.generateTestData(): List<KExpr<KBoolSort>> {
@@ -258,6 +346,7 @@ class UninterpretedSortValuesTest {
         private const val RANDOM_SEED = 42
         private const val EXPRESSION_DEPTH = 30
         private const val TEST_SET_SIZE = 500
+        private const val TEST_SET_INCREMENTAL_CHUNK = TEST_SET_SIZE / 50
         private val USORT_VALUE_RANGE = 0 until 25
         private val SINGLE_CHECK_TIMEOUT = 1.seconds
     }
