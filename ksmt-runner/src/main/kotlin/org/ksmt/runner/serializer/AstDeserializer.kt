@@ -76,7 +76,15 @@ class AstDeserializer(
         val name = readString()
         val argSorts = readAstArray()
         val sort = readSort()
-        mkFuncDecl(name, sort, argSorts as List<KSort>)
+
+        /**
+         * Generate fresh decl because:
+         * 1. Declaration is not in the [serializationCtx] --> declaration was not previously serialized.
+         * 2. Was not serialized --> was not registered in our [KContext].
+         * 3. Was not registered --> may clash with some another registered declaration.
+         * 4. Use fresh declaration to ensure that this decl will never overlap with some other registered decl.
+         * */
+        mkFreshFuncDecl(name, sort, argSorts as List<KSort>)
     }
 
     private fun AbstractBuffer.deserializeSort(sortKind: SortKind): KSort = with(serializationCtx.ctx) {
