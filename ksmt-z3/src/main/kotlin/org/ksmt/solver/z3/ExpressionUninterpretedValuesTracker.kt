@@ -26,7 +26,7 @@ class ExpressionUninterpretedValuesTracker(val ctx: KContext, val z3Ctx: KZ3Cont
 
     private var currentFrame = ValueTrackerAssertionFrame(
         ctx, this, expressionLevels,
-        currentLevel = 0,
+        level = 0,
         notAssertedConstraintsFromPreviousLevels = 0
     )
 
@@ -35,6 +35,15 @@ class ExpressionUninterpretedValuesTracker(val ctx: KContext, val z3Ctx: KZ3Cont
     private val registeredUninterpretedSortValues =
         hashMapOf<KUninterpretedSortValue, UninterpretedSortValueDescriptor>()
 
+    /**
+     * Skip any value tracking related actions until
+     * we have uninterpreted values registered.
+     *
+     * Current [ValueTrackerAssertionFrame] correctly
+     * handles situations when expression is belongs to
+     * some assertion level lower than current level
+     * but was not registered on that level.
+     * */
     private inline fun ifTrackingEnabled(body: () -> Unit) {
         if (registeredUninterpretedSortValues.isEmpty()) return
         body()
@@ -76,15 +85,22 @@ class ExpressionUninterpretedValuesTracker(val ctx: KContext, val z3Ctx: KZ3Cont
     }
 
     fun assertPendingUninterpretedValueConstraints(solver: Solver) {
-        for (frameIdx in valueTrackerFrames.lastIndex downTo 0) {
-            val frame = valueTrackerFrames[frameIdx]
+        // Assert constraints into solver and mark them as asserted
+        currentFrame.assertUnassertedConstraints {
+            assertUninterpretedSortValueConstraint(solver, it)
+        }
 
-            while (frame.notAssertedConstraints > 0) {
-                val valueConstraint = frame.assertNextConstraint()
-                assertUninterpretedSortValueConstraint(solver, valueConstraint)
+        var frame = currentFrame
+        while (frame.notAssertedConstraintsFromPreviousLevels != 0 && frame.level > 0) {
+            frame = valueTrackerFrames[frame.level - 1]
+
+            /**
+             * Assert constraints into solver but DON'T mark them as asserted
+             * because these constraints belongs to the lower levels.
+             * */
+            frame.visitUnassertedConstraints {
+                assertUninterpretedSortValueConstraint(solver, it)
             }
-
-            if (frame.notAssertedConstraintsFromPreviousLevels == 0) break
         }
     }
 
@@ -115,47 +131,66 @@ class ExpressionUninterpretedValuesTracker(val ctx: KContext, val z3Ctx: KZ3Cont
         val ctx: KContext,
         val tracker: ExpressionUninterpretedValuesTracker,
         val expressionLevels: Object2IntOpenHashMap<KExpr<*>>,
-        val currentLevel: Int,
+        val level: Int,
         val notAssertedConstraintsFromPreviousLevels: Int
     ) {
-        private var initailized = false
+        private var initialized = false
         private var lastAssertedConstraint = 0
 
         lateinit var currentLevelExpressions: MutableSet<KExpr<*>>
         lateinit var currentLevelUninterpretedValues: MutableList<UninterpretedSortValueDescriptor>
         lateinit var currentLevelExprAnalyzer: ExprUninterpretedValuesAnalyzer
 
+        /**
+         * Delay initialization to reduce memory consumption
+         * since we might not have any uninterpreted values on
+         * a current assertion level.
+         * */
         private fun ensureInitialized() {
-            if (initailized) return
+            if (initialized) return
 
             currentLevelExpressions = hashSetOf()
             currentLevelUninterpretedValues = arrayListOf()
             currentLevelExprAnalyzer = ExprUninterpretedValuesAnalyzer(ctx, this)
 
-            initailized = true
+            initialized = true
         }
 
         private val numberOfConstraints: Int
-            get() = if (!initailized) 0 else currentLevelUninterpretedValues.size
-
-        val notAssertedConstraints: Int
-            get() = numberOfConstraints - lastAssertedConstraint
+            get() = if (!initialized) 0 else currentLevelUninterpretedValues.size
 
         fun nextFrame(): ValueTrackerAssertionFrame {
+            val notAssertedConstraints = numberOfConstraints - lastAssertedConstraint
             val nextLevelRemainingConstraints = notAssertedConstraintsFromPreviousLevels + notAssertedConstraints
             return ValueTrackerAssertionFrame(
                 ctx, tracker, expressionLevels,
-                currentLevel = currentLevel + 1,
+                level = level + 1,
                 notAssertedConstraintsFromPreviousLevels = nextLevelRemainingConstraints
             )
         }
 
-        fun assertNextConstraint(): UninterpretedSortValueDescriptor =
-            currentLevelUninterpretedValues[lastAssertedConstraint++]
+        inline fun assertUnassertedConstraints(action: (UninterpretedSortValueDescriptor) -> Unit) {
+            // Was not initialized --> has no constraints
+            if (!initialized) return
+
+            visitUnassertedConstraints { action(it) }
+
+            lastAssertedConstraint = currentLevelUninterpretedValues.size
+        }
+
+        inline fun visitUnassertedConstraints(action: (UninterpretedSortValueDescriptor) -> Unit) {
+            // Was not initialized --> has no constraints
+            if (!initialized) return
+
+            for (i in lastAssertedConstraint until currentLevelUninterpretedValues.size) {
+                action(currentLevelUninterpretedValues[i])
+            }
+        }
 
         fun cleanupAfterPop() {
-            if (!initailized) return
+            if (!initialized) return
 
+            // Recreate analyzer after pop to reset transformer transformation caches
             currentLevelExprAnalyzer = ExprUninterpretedValuesAnalyzer(ctx, this)
         }
 
@@ -163,6 +198,11 @@ class ExpressionUninterpretedValuesTracker(val ctx: KContext, val z3Ctx: KZ3Cont
             ensureInitialized()
 
             if (expr in currentLevelExpressions) return
+
+            /**
+             * We use an expression that doesn't belong to the current level.
+             * Therefore, we must analyze it for used uninterpreted values.
+             * */
             currentLevelExprAnalyzer.apply(expr)
         }
 
@@ -170,7 +210,7 @@ class ExpressionUninterpretedValuesTracker(val ctx: KContext, val z3Ctx: KZ3Cont
             ensureInitialized()
 
             if (currentLevelExpressions.add(expr)) {
-                expressionLevels.put(expr, currentLevel)
+                expressionLevels.put(expr, level)
             }
         }
 
@@ -195,7 +235,7 @@ class ExpressionUninterpretedValuesTracker(val ctx: KContext, val z3Ctx: KZ3Cont
     ) : KNonRecursiveTransformer(ctx) {
         override fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> = with(frame) {
             if (currentLevelExpressions.add(expr)) {
-                expressionLevels.put(expr, currentLevel)
+                expressionLevels.put(expr, level)
             }
             return super.transformExpr(expr)
         }
@@ -207,7 +247,7 @@ class ExpressionUninterpretedValuesTracker(val ctx: KContext, val z3Ctx: KZ3Cont
 
         override fun <T : KSort> exprTransformationRequired(expr: KExpr<T>): Boolean = with(frame) {
             val frameLevel = expressionLevels.getInt(expr)
-            if (frameLevel < currentLevel) {
+            if (frameLevel < level) {
                 val levelFrame = getFrame(frameLevel)
                 // If expr is valid on its level we don't need to move it
                 return expr !in levelFrame.currentLevelExpressions
