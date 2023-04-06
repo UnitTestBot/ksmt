@@ -38,6 +38,7 @@ class KZ3Context(private val ctx: Context) : AutoCloseable {
     private val z3Sorts = Long2ObjectOpenHashMap<KSort>()
     private val z3Decls = Long2ObjectOpenHashMap<KDecl<*>>()
     private val tmpNativeObjects = LongOpenHashSet()
+    private val converterNativeObjects = LongOpenHashSet()
 
     @JvmField
     val nCtx: Long = ctx.nCtx()
@@ -121,6 +122,16 @@ class KZ3Context(private val ctx: Context) : AutoCloseable {
         if (tmpNativeObjects.remove(ast)) {
             decRefUnsafe(nCtx, ast)
         }
+    }
+
+    /**
+     * Save reference to the converter local object.
+     * */
+    fun saveConverterNativeObject(ast: Long): Long {
+        if (converterNativeObjects.add(ast)) {
+            incRefUnsafe(nCtx, ast)
+        }
+        return ast
     }
 
     @Suppress("ForbiddenComment")
