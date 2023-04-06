@@ -75,6 +75,8 @@ open class KZ3ExprConverter(
              * */
             if (converted is KInterpretedValue<*>) {
                 z3Ctx.saveConvertedExpr(native, converted)
+            } else {
+                z3Ctx.saveConverterNativeObject(native)
             }
         }
     }
