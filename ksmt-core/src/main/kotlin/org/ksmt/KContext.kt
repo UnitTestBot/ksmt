@@ -1009,7 +1009,7 @@ open class KContext(
     ): KArrayStore<D, R> = arrayStoreCache.createIfContextActive {
         ensureContextMatch(array, index, value)
         KArrayStore(this, array, index, value)
-    }.analyzeIfSimplificationEnabled().cast()
+    }.cast()
 
     open fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayStoreNoSimplifyNoAnalyze(
         array: KExpr<KArray2Sort<D0, D1, R>>,
@@ -1019,7 +1019,7 @@ open class KContext(
     ): KArray2Store<D0, D1, R> = array2StoreCache.createIfContextActive {
         ensureContextMatch(array, index0, index1, value)
         KArray2Store(this, array, index0, index1, value)
-    }.analyzeIfSimplificationEnabled().cast()
+    }.cast()
 
     open fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayStoreNoSimplifyNoAnalyze(
         array: KExpr<KArray3Sort<D0, D1, D2, R>>,
@@ -1030,7 +1030,7 @@ open class KContext(
     ): KArray3Store<D0, D1, D2, R> = array3StoreCache.createIfContextActive {
         ensureContextMatch(array, index0, index1, index2, value)
         KArray3Store(this, array, index0, index1, index2, value)
-    }.analyzeIfSimplificationEnabled().cast()
+    }.cast()
 
     open fun <R : KSort> mkArrayNStoreNoSimplifyNoAnalyze(
         array: KExpr<KArrayNSort<R>>,
@@ -1041,7 +1041,7 @@ open class KContext(
         ensureContextMatch(array, value)
 
         KArrayNStore(this, array, indices.uncheckedCast(), value)
-    }.analyzeIfSimplificationEnabled().cast()
+    }.cast()
 
     private fun <S : KArrayStoreBase<*, *>> S.analyzeIfSimplificationEnabled(): S {
         /**
