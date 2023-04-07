@@ -142,6 +142,21 @@ class UnpackedFp<Fp : KFpSort> private constructor(
         return UnpackedFp(ctx, sort, sign, correctedExponent, normal.normalised, packedBv)
     }
 
+    fun normaliseUpDetectZero(): UnpackedFp<Fp> = with(ctx) {
+        val normal = normaliseShift(normalizedSignificand)
+
+        check(normal.shiftAmount.sort.sizeBits < exponentWidth()) // May lose data / be incorrect for very small exponents and very large significands
+
+        val signedAlignAmount = normal.shiftAmount.resizeUnsigned(exponentWidth(), ctx)
+        val correctedExponent = ctx.mkBvSubExpr(unbiasedExponent, signedAlignAmount)
+
+        return iteOp(
+            isAllZeros(normalizedSignificand),
+            makeZero(sort, sign),
+            UnpackedFp(ctx, sort, sign, correctedExponent, normal.normalised, packedBv)
+        )
+    }
+
     fun inNormalRange() = ctx.mkBvSignedLessOrEqualExpr(ctx.minNormalExponent(sort), unbiasedExponent)
 
     fun negate() = with(ctx) {
@@ -154,6 +169,7 @@ class UnpackedFp<Fp : KFpSort> private constructor(
             )
         })
     }
+
     fun absolute() = with(ctx) {
         UnpackedFp(ctx, sort, falseExpr, unbiasedExponent, normalizedSignificand, isNaN, isInf, isZero, packedBv?.let {
             mkBvConcatExpr(

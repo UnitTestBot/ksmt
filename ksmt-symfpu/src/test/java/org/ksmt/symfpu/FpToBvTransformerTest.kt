@@ -397,9 +397,9 @@ class FpToBvTransformerTest {
 //        )
 //    }
 
-    private fun <T : KSort, Fp : KFpSort> KContext.testFpExpr(
+    private fun <T : KSort> KContext.testFpExpr(
         exprToTransform: KExpr<T>,
-        printVars: Map<String, KApp<Fp, *>> = emptyMap(),
+        printVars: Map<String, KApp<*, *>> = emptyMap(),
         extraAssert: ((KExpr<T>, KExpr<T>) -> KExpr<KBoolSort>) = { _, _ -> trueExpr }
     ) {
         val transformer = FpToBvTransformer(this)
@@ -594,6 +594,7 @@ class FpToBvTransformerTest {
             mapOf("a" to a),
         )
     }
+
     @Test
     fun testFpToBvIsNegativeExpr() = with(KContext()) {
         val a by mkFp32Sort()
@@ -626,6 +627,7 @@ class FpToBvTransformerTest {
             mkFpLessExpr(a, mkFp32(UInt.MAX_VALUE.toFloat())) and mkFpIsPositiveExpr(a)
         }
     }
+
     @Test
     fun testFpToSBvUpExpr() = with(KContext()) {
         val a by mkFp32Sort()
@@ -637,7 +639,23 @@ class FpToBvTransformerTest {
         }
     }
 
+    @Test
+    fun testBvToFpExpr() = with(KContext()) {
+        val a by mkBv32Sort()
+        testFpExpr(
+            mkBvToFpExprNoSimplify(fp32Sort, defaultRounding(), a.cast(), true),
+            mapOf("a" to a),
+        )
+    }
 
+    @Test
+    fun testBvToFpUnsignedExpr() = with(KContext()) {
+        val a by mkBv32Sort()
+        testFpExpr(
+            mkBvToFpExprNoSimplify(fp32Sort, defaultRounding(), a.cast(), false),
+            mapOf("a" to a),
+        )
+    }
 
     @Test
     fun testFpToFpDownExpr() = with(KContext()) {
@@ -665,11 +683,11 @@ class FpToBvTransformerTest {
         )
     }
 
-    private fun <T : KSort, Fp : KFpSort> KContext.checkTransformer(
+    private fun <T : KSort> KContext.checkTransformer(
         transformer: FpToBvTransformer,
         solver: KSolver<*>,
         exprToTransform: KExpr<T>,
-        printVars: Map<String, KApp<Fp, *>>,
+        printVars: Map<String, KApp<*, *>>,
         extraAssert: ((KExpr<T>, KExpr<T>) -> KExpr<KBoolSort>)
     ) {
 

@@ -11,6 +11,54 @@ import org.ksmt.symfpu.UnpackedFp.Companion.makeNaN
 import org.ksmt.symfpu.UnpackedFp.Companion.makeZero
 import kotlin.math.max
 
+fun <T : KFpSort> bvToFp(
+    roundingMode: KExpr<KFpRoundingModeSort>,
+    input: KExpr<KBvSort>,
+    targetFormat: T,
+    signed: Boolean,
+): UnpackedFp<T> = with(input.ctx) {
+    // In the case of a 1 bit input(?) extend to 2 bits so that the intermediate float is a sensible format
+    val inputBv = if (input.sort.sizeBits == 1u) input.extendUnsigned(1, this) else input
+    val inputWidth = inputBv.sort.sizeBits
+    if (signed) {
+        val initialExponentWidth = bitsToRepresent(inputWidth.toInt()) + 1
+        val initialFormat = mkFpSort(initialExponentWidth.toUInt(), inputWidth + 1u)
+        val actualExponentWidth = exponentWidth(initialFormat).toUInt()
+
+        // Work out the sign
+        val negative = mkBvSignedLessExpr(inputBv, mkBv(0, inputWidth))
+        val significand = mkBvSignExtensionExpr(1, inputBv).let { mkIte(negative, mkBvNegationExpr(it), it) }
+
+        val initial = UnpackedFp(
+            ctx = this,
+            sort = initialFormat,
+            sign = negative,
+            exponent = mkBv(inputWidth.toInt(), actualExponentWidth),
+            significand = significand,
+        )
+
+        val normalised = initial.normaliseUpDetectZero()
+        // Round (the conversion will catch the cases where no rounding is needed)
+        return fpToFp(targetFormat, roundingMode, normalised)
+    } else {
+        val initialExponentWidth = bitsToRepresent(inputWidth.toInt()) + 1
+        val initialFormat = mkFpSort(initialExponentWidth.toUInt(), inputWidth)
+        val actualExponentWidth = exponentWidth(initialFormat).toUInt()
+
+        val initial = UnpackedFp(
+            ctx = this,
+            sort = initialFormat,
+            sign = falseExpr,
+            exponent = mkBv(inputWidth.toInt() - 1, actualExponentWidth),
+            significand = inputBv,
+        )
+
+        val normalised = initial.normaliseUpDetectZero()
+        // Round (the conversion will catch the cases where no rounding is needed)
+        return fpToFp(targetFormat, roundingMode, normalised)
+    }
+}
+
 
 fun <T : KFpSort, S : KFpSort> fpToFp(
     targetFormat: T,
