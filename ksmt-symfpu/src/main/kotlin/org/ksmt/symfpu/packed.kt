@@ -66,16 +66,9 @@ fun <Fp : KFpSort> KContext.unpack(
     )
 }
 
-fun <Fp : KFpSort> KContext.pack(uf: UnpackedFp<Fp>): KExpr<Fp> {
-    uf.packedBv?.let {
-        val pWidth = it.sort.sizeBits.toInt()
-        val exWidth = uf.sort.exponentBits.toInt()
-
-        // Extract
-        val packedSignificand = mkBvExtractExpr(pWidth - exWidth - 2, 0, it)
-        val packedExponent = mkBvExtractExpr(pWidth - 2, pWidth - exWidth - 1, it)
-        val sign = (mkBvExtractExpr(pWidth - 1, pWidth - 1, it))
-        return mkFpFromBvExpr(sign.cast(), packedExponent, packedSignificand)
+fun <Fp : KFpSort> KContext.packToBv(uf: UnpackedFp<Fp>): KExpr<KBvSort> {
+    if (uf.packedBv != null) {
+        return uf.packedBv
     }
 
     // Sign
@@ -131,10 +124,22 @@ fun <Fp : KFpSort> KContext.pack(uf: UnpackedFp<Fp>): KExpr<Fp> {
         )
     )
 
-    // Finish up
-    val packed = mkBvConcatExpr(packedSign, packedExp, packedSig)
+    return mkBvConcatExpr(packedSign, packedExp, packedSig)
+}
+
+fun <Fp : KFpSort> KContext.pack(uf: UnpackedFp<Fp>): KExpr<Fp> {
+    val packed = packToBv(uf)
     check(packed.sort.sizeBits == uf.sort.exponentBits + uf.sort.significandBits)
-    return mkFpFromBvExpr(packedSign.cast(), packedExp, packedSig)
+
+    val pWidth = packed.sort.sizeBits.toInt()
+    val exWidth = uf.sort.exponentBits.toInt()
+
+    // Extract
+    val packedSignificand = mkBvExtractExpr(pWidth - exWidth - 2, 0, packed)
+    val packedExponent = mkBvExtractExpr(pWidth - 2, pWidth - exWidth - 1, packed)
+    val sign = (mkBvExtractExpr(pWidth - 1, pWidth - 1, packed))
+
+    return mkFpFromBvExpr(sign.cast(), packedExponent, packedSignificand)
 }
 
 fun KExpr<KBvSort>.matchWidthUnsigned(ctx: KContext, expr: KExpr<KBvSort>): KExpr<KBvSort> {

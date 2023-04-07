@@ -134,6 +134,13 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
             bvToFp(roundingMode, value, expr.sort, expr.signed)
         }
 
+    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>) =
+        transformExprAfterTransformed(expr, expr.value) { value ->
+            (value as UnpackedFp<T>).let {
+                it.packedBv ?: it.ctx.packToBv(it)
+            }
+        }
+
 
     private fun <Fp : KFpSort> argsToTypedPair(args: List<KExpr<Fp>>): Pair<UnpackedFp<Fp>, UnpackedFp<Fp>> {
         val left = args[0] as UnpackedFp<Fp>
