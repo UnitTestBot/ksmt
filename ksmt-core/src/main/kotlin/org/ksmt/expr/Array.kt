@@ -222,32 +222,15 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
         /**
          * Select a single result array after performing lookup by multiple indices.
          * */
-        inline fun <reified S : KArrayStoreBase<A, *>, A : KArraySortBase<*>> selectLookupResult(
-            first: () -> KExpr<A>,
-            second: () -> KExpr<A>
+        inline fun <reified S : KArrayStoreBase<A, *>, A : KArraySortBase<*>> S.selectLookupResult(
+            first: (S) -> KExpr<A>,
+            second: (S) -> KExpr<A>
         ): KExpr<A> {
-            val firstArray = first()
+            val firstArray = first(this)
             // Array is not store expression --> we found the deepest array.
             if (firstArray !is S) return firstArray
 
-            val secondArray = second()
-            if (secondArray !is S) return secondArray
-
-            // Prefer array that is deeper in a chain of stores.
-            return if (firstArray.arrayStoreDepth <= secondArray.arrayStoreDepth) firstArray else secondArray
-        }
-
-        inline fun <reified S : KArrayStoreBase<A, *>, A : KArraySortBase<*>> selectLookupResult(
-            size: Int,
-            lookup: (Int) -> KExpr<A>
-        ): KExpr<A> {
-            val arrays = List(size) {
-                val array = lookup(it)
-                if (array !is S) return array
-                array
-            }
-
-            return arrays.minBy { it.arrayStoreDepth }
+            return second(firstArray)
         }
 
         internal inline fun <reified S : KArrayStoreBase<*, *>> S.ifCacheIsNotInitialized(body: () -> Unit) {
@@ -349,17 +332,20 @@ class KArray2Store<D0 : KSort, D1 : KSort, R : KSort> internal constructor(
     fun findArrayToSelectFrom(
         index0: KExpr<D0>,
         index1: KExpr<D1>,
-    ): KExpr<KArray2Sort<D0, D1, R>> = selectLookupResult(
-        {
-            lookupTableSearch(
-                index0, { it.index0 }, { it.index0LookupTable }, { it.index0NextUninterpretedArray }
-            )
-        },
-        {
-            lookupTableSearch(
-                index1, { it.index1 }, { it.index1LookupTable }, { it.index1NextUninterpretedArray }
-            )
-        }
+    ): KExpr<KArray2Sort<D0, D1, R>> = selectLookupResult({ it.lookupIndex0(index0) }, { it.lookupIndex1(index1) })
+
+    private fun lookupIndex0(index0: KExpr<D0>): KExpr<KArray2Sort<D0, D1, R>> = lookupTableSearch(
+        index = index0,
+        getIndex = { it.index0 },
+        getLookup = { it.index0LookupTable },
+        getNextUninterpreted = { it.index0NextUninterpretedArray }
+    )
+
+    private fun lookupIndex1(index1: KExpr<D1>): KExpr<KArray2Sort<D0, D1, R>> = lookupTableSearch(
+        index = index1,
+        getIndex = { it.index1 },
+        getLookup = { it.index1LookupTable },
+        getNextUninterpreted = { it.index1NextUninterpretedArray }
     )
 }
 
@@ -428,25 +414,34 @@ class KArray3Store<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal const
         index1: KExpr<D1>,
         index2: KExpr<D2>
     ): KExpr<KArray3Sort<D0, D1, D2, R>> = selectLookupResult(
-        {
-            lookupTableSearch(
-                index0, { it.index0 }, { it.index0LookupTable }, { it.index0NextUninterpretedArray }
-            )
-        },
-        {
-            selectLookupResult(
-                {
-                    lookupTableSearch(
-                        index1, { it.index1 }, { it.index1LookupTable }, { it.index1NextUninterpretedArray }
-                    )
-                },
-                {
-                    lookupTableSearch(
-                        index2, { it.index2 }, { it.index2LookupTable }, { it.index2NextUninterpretedArray }
-                    )
-                }
+        { it.lookupIndex0(index0) },
+        { array ->
+            array.selectLookupResult(
+                { it.lookupIndex1(index1) },
+                { it.lookupIndex2(index2) },
             )
         }
+    )
+
+    private fun lookupIndex0(index0: KExpr<D0>): KExpr<KArray3Sort<D0, D1, D2, R>> = lookupTableSearch(
+        index = index0,
+        getIndex = { it.index0 },
+        getLookup = { it.index0LookupTable },
+        getNextUninterpreted = { it.index0NextUninterpretedArray }
+    )
+
+    private fun lookupIndex1(index1: KExpr<D1>): KExpr<KArray3Sort<D0, D1, D2, R>> = lookupTableSearch(
+        index = index1,
+        getIndex = { it.index1 },
+        getLookup = { it.index1LookupTable },
+        getNextUninterpreted = { it.index1NextUninterpretedArray }
+    )
+
+    private fun lookupIndex2(index2: KExpr<D2>): KExpr<KArray3Sort<D0, D1, D2, R>> = lookupTableSearch(
+        index = index2,
+        getIndex = { it.index2 },
+        getLookup = { it.index2LookupTable },
+        getNextUninterpreted = { it.index2NextUninterpretedArray }
     )
 }
 
@@ -494,15 +489,19 @@ class KArrayNStore<R : KSort> internal constructor(
             "Array domain size mismatch: expected ${this.indices.size}, provided: ${indices.size}"
         }
 
-        return selectLookupResult(indices.size) { idx ->
-            lookupTableSearch(
-                indices[idx].uncheckedCast(),
-                { it.indices[idx] },
-                { it.indexLookupTables?.get(idx) },
-                { it.nextUninterpretedArrays?.get(idx) }
-            )
+        return indices.foldIndexed(this) { idx, array, index ->
+            val next = array.lookupIndexI(index, idx)
+            if (next !is KArrayNStore<R>) return next
+            next
         }
     }
+
+    private fun lookupIndexI(index: KExpr<*>, idx: Int): KExpr<KArrayNSort<R>> = lookupTableSearch(
+        index = index.uncheckedCast(),
+        getIndex = { it.indices[idx] },
+        getLookup = { it.indexLookupTables?.get(idx) },
+        getNextUninterpreted = { it.nextUninterpretedArrays?.get(idx) }
+    )
 }
 
 sealed class KArraySelectBase<A : KArraySortBase<R>, R : KSort>(
