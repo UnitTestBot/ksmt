@@ -73,6 +73,10 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
         /**
          * Current store is the first store with interpreted indices.
          * We don't need to initialize map.
+         *
+         * Note: when the nested array is an array store expression
+         * we can't skip it in the indices lookup chain because it
+         * contains uninterpreted indices.
          * */
         if (array !is KArrayStoreBase<A, *> || array.type != ArrayStoreType.INTERPRETED) {
             nextUninterpretedArray = array
@@ -120,6 +124,12 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
         // On a small store chains linear lookup is faster than map lookup.
         private const val LINEAR_LOOKUP_THRESHOLD = 7
 
+        /**
+         * Analyzed array store type.
+         * [NOT_INITIALIZED] --- array was not analyzed yet.
+         * [INTERPRETED] --- all array store indices are interpreted values.
+         * [UNINTERPRETED] --- at least one of the array store indices is not an interpreted value.
+         * */
         internal enum class ArrayStoreType {
             INTERPRETED,
             UNINTERPRETED,
