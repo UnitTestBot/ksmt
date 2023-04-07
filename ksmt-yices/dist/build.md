@@ -7,7 +7,30 @@ autoconf
 make MODE=release static-distribution 
 ```
 
-To build Jni bindings `yices2java` we use the provided `Makefile` but we statically link `libgmp`.
+### Building Jni bindings
+We use patched version of the Jni bindings. 
+The patch and build script (`build.sh`) are provided in `bindings-native` directory.
+
+#### Building bindings native library
+To build native library with `build.sh` we need to specify the following variables:
+* `JAVA_HOME` --- path to the JDK root dir.
+* `YICES_DIST` --- path to the directory containing `Yices` build outcomes.
+* `OS` --- OS name.
+* `LIB_EXTENSION` --- shared library file extension.
+
+For example, on linux:
+```shell
+JAVA_HOME="/usr/lib/jvm/java-8-openjdk" YICES_DIST="yices2/build/x86_64-pc-linux-gnu-release/static_dist" OS="linux" LIB_EXTENSION="so" ./build.sh
+```
+
+#### Building bindings Jar file
+```shell
+# Run build script to clone bindings repository and apply patch
+./build.sh
+# To build Jar file we can use the provided `Makefile`.
+cd yices2_java_bindings/src/main/java/com/sri/yices
+make 
+```
 
 #### Building on Windows
 To produce Windows builds we use the same approach as in [`ksmt-bitwuzla`](../../ksmt-bitwuzla/dist/build.md).
