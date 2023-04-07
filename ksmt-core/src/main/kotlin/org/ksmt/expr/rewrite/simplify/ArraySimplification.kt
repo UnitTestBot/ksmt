@@ -216,6 +216,17 @@ fun <R : KSort> KContext.simplifyArrayNSelect(
 )
 
 @Suppress("LoopWithTooManyJumpStatements")
+/**
+ * Simplify select from a chain on array store expressions.
+ *
+ * If array stores are not analyzed (see [KArrayStoreBase.analyzeStore])
+ * this operation will traverse whole array store chain.
+ * Otherwise, we speed up the traversal with [KArrayStoreBase.findArrayToSelectFrom].
+ * In the case of a one-dimensional arrays, this operation is guaranteed
+ * to perform only one iteration of the loop (constant).
+ * For the multi-dimensional arrays, usually only a few iterations will be performed,
+ * but in the worst case we may traverse the entire stores chain.
+ * */
 inline fun <
     A : KArraySortBase<R>,
     R : KSort,
