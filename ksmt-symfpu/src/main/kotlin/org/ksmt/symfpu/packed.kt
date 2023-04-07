@@ -28,7 +28,7 @@ fun <Fp : KFpSort> KContext.unpack(
     sign: KExpr<KBoolSort>,
     packedExponent: KExpr<KBvSort>,
     packedSignificand: KExpr<KBvSort>,
-    packedFloat: KExpr<KBvSort>
+    packedFloat: KExpr<KBvSort> = mkBvConcatExpr(boolToBv(sign), packedExponent, packedSignificand)
 ): UnpackedFp<Fp> {
     val unpackedExWidth = exponentWidth(sort)
 

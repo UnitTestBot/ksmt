@@ -137,8 +137,13 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>) =
         transformExprAfterTransformed(expr, expr.value) { value ->
             (value as UnpackedFp<T>).let {
-                it.packedBv ?: it.ctx.packToBv(it)
+                it.packedBv ?: ctx.packToBv(it)
             }
+        }
+
+    override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>) =
+        transformExprAfterTransformed(expr, expr.sign, expr.biasedExponent, expr.significand) { s, e, sig ->
+            ctx.unpack(expr.sort, ctx.bvToBool(s.cast()), e.cast(), sig.cast())
         }
 
 
