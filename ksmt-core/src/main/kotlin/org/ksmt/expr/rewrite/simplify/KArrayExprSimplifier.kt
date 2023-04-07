@@ -293,7 +293,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             },
             distinctWithSimplifiedIndex = { i, simplifiedIdx ->
                 areDefinitelyDistinct(indices0[i], simplifiedIndices0[simplifiedIdx])
-                    && areDefinitelyDistinct(indices1[i], simplifiedIndices1[simplifiedIdx])
+                    || areDefinitelyDistinct(indices1[i], simplifiedIndices1[simplifiedIdx])
             },
             selectIndicesMatch = { select: KArray2Select<D0, D1, R>, i ->
                 indices0[i] == select.index0 && indices1[i] == select.index1
@@ -343,8 +343,8 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             },
             distinctWithSimplifiedIndex = { i, simplifiedIdx ->
                 areDefinitelyDistinct(indices0[i], simplifiedIndices0[simplifiedIdx])
-                    && areDefinitelyDistinct(indices1[i], simplifiedIndices1[simplifiedIdx])
-                    && areDefinitelyDistinct(indices2[i], simplifiedIndices2[simplifiedIdx])
+                    || areDefinitelyDistinct(indices1[i], simplifiedIndices1[simplifiedIdx])
+                    || areDefinitelyDistinct(indices2[i], simplifiedIndices2[simplifiedIdx])
             },
             selectIndicesMatch = { select: KArray3Select<D0, D1, D2, R>, i ->
                 indices0[i] == select.index0
@@ -610,7 +610,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
                 indexMatch = { expr.index0 == storeIndex0 && expr.index1 == storeIndex1 },
                 indexDistinct = {
                     areDefinitelyDistinct(expr.index0, storeIndex0)
-                        && areDefinitelyDistinct(expr.index1, storeIndex1)
+                        || areDefinitelyDistinct(expr.index1, storeIndex1)
                 },
                 transformNested = { transformSelect(expr.array.array, expr.index0, expr.index1) },
                 default = { SimplifierArray2SelectExpr(ctx, expr.array, expr.index0, expr.index1) }
@@ -626,8 +626,8 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
                 indexMatch = { expr.index0 == si0 && expr.index1 == si1 && expr.index2 == si2 },
                 indexDistinct = {
                     areDefinitelyDistinct(expr.index0, si0)
-                        && areDefinitelyDistinct(expr.index1, si1)
-                        && areDefinitelyDistinct(expr.index2, si2)
+                        || areDefinitelyDistinct(expr.index1, si1)
+                        || areDefinitelyDistinct(expr.index2, si2)
                 },
                 transformNested = { transformSelect(expr.array.array, expr.index0, expr.index1, expr.index2) },
                 default = { SimplifierArray3SelectExpr(ctx, expr.array, expr.index0, expr.index1, expr.index2) }
@@ -692,7 +692,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             },
             storeIndexDistinct = { store: KArray2Store<D0, D1, R> ->
                 areDefinitelyDistinct(expr.index0, store.index0)
-                    && areDefinitelyDistinct(expr.index1, store.index1)
+                    || areDefinitelyDistinct(expr.index1, store.index1)
             },
             mkLambdaSubstitution = { lambda: KArray2Lambda<D0, D1, R> ->
                 substitute(mkConstApp(lambda.indexVar0Decl), expr.index0)
@@ -717,8 +717,8 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             },
             storeIndexDistinct = { store: KArray3Store<D0, D1, D2, R> ->
                 areDefinitelyDistinct(expr.index0, store.index0)
-                    && areDefinitelyDistinct(expr.index1, store.index1)
-                    && areDefinitelyDistinct(expr.index2, store.index2)
+                    || areDefinitelyDistinct(expr.index1, store.index1)
+                    || areDefinitelyDistinct(expr.index2, store.index2)
             },
             mkLambdaSubstitution = { lambda: KArray3Lambda<D0, D1, D2, R> ->
                 substitute(mkConstApp(lambda.indexVar0Decl), expr.index0)
@@ -745,7 +745,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
             )
         }
 
-    @Suppress("LongParameterList", "LoopWithTooManyJumpStatements")
+    @Suppress("LongParameterList")
     private inline fun <
         A : KArraySortBase<R>,
         R : KSort,
@@ -758,28 +758,13 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         storeIndexDistinct: (S) -> Boolean,
         mkLambdaSubstitution: KExprSubstitutor.(L) -> Unit,
         default: (KExpr<A>) -> KExpr<R>
-    ): KExpr<R> {
-        var array: KExpr<A> = expr
-        while (array is S) {
-            array = findArrayToSelectFrom(array)
-
-            if (array !is S) continue
-
-            // (select (store i v) i) ==> v
-            if (storeIndexMatch(array)) {
-                return array.value
-            }
-
-            // (select (store a i v) j), i != j ==> (select a j)
-            if (storeIndexDistinct(array)) {
-                array = array.array
-            } else {
-                // possibly equal index, we can't expand stores
-                break
-            }
-        }
-
-        return when (array) {
+    ): KExpr<R> = simplifySelectFromArrayStore<A, R, S>(
+        initialArray = expr,
+        storeIndicesMatch = { storeIndexMatch(it) },
+        storeIndicesDistinct = { storeIndexDistinct(it) },
+        findArrayToSelectFrom = { findArrayToSelectFrom(it) }
+    ) { array ->
+        when (array) {
             // (select (const v) i) ==> v
             is KArrayConst<A, *> -> {
                 array.value.uncheckedCast()
@@ -897,15 +882,6 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
 
     private val KExpr<*>.definitelyIsConstant: Boolean
         get() = this is KInterpretedValue<*>
-
-    private fun areDefinitelyDistinct(left: List<KExpr<*>>, right: List<KExpr<*>>): Boolean {
-        for (i in left.indices) {
-            val lhs: KExpr<KSort> = left[i].uncheckedCast()
-            val rhs: KExpr<KSort> = right[i].uncheckedCast()
-            if (!areDefinitelyDistinct(lhs, rhs)) return false
-        }
-        return true
-    }
 
     /**
      * Auxiliary expression to handle expanded array stores.

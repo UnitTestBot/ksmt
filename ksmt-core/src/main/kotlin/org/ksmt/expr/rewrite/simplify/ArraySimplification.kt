@@ -18,6 +18,7 @@ import org.ksmt.expr.KArraySelectBase
 import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KArrayStoreBase
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.sort.KArray2Sort
 import org.ksmt.sort.KArray3Sort
@@ -107,21 +108,17 @@ private inline fun <
 > KContext.simplifyArraySelect(
     array: KExpr<A>,
     storeIndicesMatch: (S) -> Boolean,
+    storeIndicesDistinct: (S) -> Boolean,
     findArrayToSelectFrom: (S) -> KExpr<A>,
     mkLambdaSubstitution: KExprSubstitutor.(L) -> Unit,
     default: (KExpr<A>) -> KExpr<R>
-): KExpr<R> {
-    var currentArray = array
-
-    if (currentArray is S) {
-        currentArray = findArrayToSelectFrom(currentArray)
-    }
-
+): KExpr<R> = simplifySelectFromArrayStore<A, R, S>(
+    initialArray = array,
+    storeIndicesMatch = { storeIndicesMatch(it) },
+    storeIndicesDistinct = { storeIndicesDistinct(it) },
+    findArrayToSelectFrom = { findArrayToSelectFrom(it) }
+) { currentArray ->
     when (currentArray) {
-        // (select (store i v) i) ==> v
-        is S -> if (storeIndicesMatch(currentArray)) {
-            return currentArray.value
-        }
         // (select (const v) i) ==> v
         is KArrayConst<A, *> -> {
             return currentArray.value.uncheckedCast()
@@ -133,9 +130,9 @@ private inline fun <
             }.apply(currentArray.body)
             return resolvedBody
         }
-    }
 
-    return default(currentArray)
+        else -> default(currentArray)
+    }
 }
 
 fun <D : KSort, R : KSort> KContext.simplifyArraySelect(
@@ -144,6 +141,7 @@ fun <D : KSort, R : KSort> KContext.simplifyArraySelect(
 ): KExpr<R> = simplifyArraySelect(
     array = array,
     storeIndicesMatch = { store: KArrayStore<D, R> -> index == store.index },
+    storeIndicesDistinct = { store: KArrayStore<D, R> -> areDistinct(index, store.index) },
     findArrayToSelectFrom = { store: KArrayStore<D, R> -> store.findArrayToSelectFrom(index) },
     mkLambdaSubstitution = { lambda: KArrayLambda<D, R> ->
         substitute(mkConstApp(lambda.indexVarDecl), index)
@@ -159,6 +157,9 @@ fun <D0 : KSort, D1 : KSort, R : KSort> KContext.simplifyArraySelect(
     array = array,
     storeIndicesMatch = { store: KArray2Store<D0, D1, R> ->
         index0 == store.index0 && index1 == store.index1
+    },
+    storeIndicesDistinct = { store: KArray2Store<D0, D1, R> ->
+        areDistinct(index0, store.index0) || areDistinct(index1, store.index1)
     },
     findArrayToSelectFrom = { store: KArray2Store<D0, D1, R> ->
         store.findArrayToSelectFrom(index0, index1)
@@ -180,6 +181,11 @@ fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> KContext.simplifyArraySelect
     storeIndicesMatch = { store: KArray3Store<D0, D1, D2, R> ->
         index0 == store.index0 && index1 == store.index1 && index2 == store.index2
     },
+    storeIndicesDistinct = { store: KArray3Store<D0, D1, D2, R> ->
+        areDistinct(index0, store.index0)
+                || areDistinct(index1, store.index1)
+                || areDistinct(index2, store.index2)
+    },
     findArrayToSelectFrom = { s: KArray3Store<D0, D1, D2, R> ->
         s.findArrayToSelectFrom(index0, index1, index2)
     },
@@ -197,6 +203,9 @@ fun <R : KSort> KContext.simplifyArrayNSelect(
 ): KExpr<R> = simplifyArraySelect(
     array = array,
     storeIndicesMatch = { store: KArrayNStore<R> -> indices == store.indices },
+    storeIndicesDistinct = { store: KArrayNStore<R> ->
+        indices.zip(store.indices).any { areDistinct(it.first.uncheckedCast(), it.second) }
+    },
     findArrayToSelectFrom = { store: KArrayNStore<R> -> store.findArrayToSelectFrom(indices) },
     mkLambdaSubstitution = { lambda: KArrayNLambda<R> ->
         lambda.indexVarDeclarations.zip(indices) { varDecl, index ->
@@ -205,3 +214,42 @@ fun <R : KSort> KContext.simplifyArrayNSelect(
     },
     default = { mkArrayNSelectNoSimplify(it, indices) }
 )
+
+@Suppress("LoopWithTooManyJumpStatements")
+inline fun <
+    A : KArraySortBase<R>,
+    R : KSort,
+    reified S : KArrayStoreBase<A, R>
+> simplifySelectFromArrayStore(
+    initialArray: KExpr<A>,
+    storeIndicesMatch: (S) -> Boolean,
+    storeIndicesDistinct: (S) -> Boolean,
+    findArrayToSelectFrom: (S) -> KExpr<A>,
+    simplifyResultArray: (KExpr<A>) -> KExpr<R>
+): KExpr<R> {
+    var array = initialArray
+    while (array is S) {
+        // Try fast index lookup
+        array = findArrayToSelectFrom(array)
+
+        if (array !is S) continue
+
+        // (select (store i v) i) ==> v
+        if (storeIndicesMatch(array)) {
+            return array.value
+        }
+
+        // (select (store a i v) j), i != j ==> (select a j)
+        if (storeIndicesDistinct(array)) {
+            array = array.array
+        } else {
+            // possibly equal index, we can't expand stores
+            break
+        }
+    }
+
+    return simplifyResultArray(array)
+}
+
+private fun <T : KSort> areDistinct(left: KExpr<T>, right: KExpr<T>): Boolean =
+    left is KInterpretedValue<T> && right is KInterpretedValue<T> && left != right

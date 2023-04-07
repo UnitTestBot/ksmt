@@ -16,6 +16,7 @@ import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector.Companion.collectUninterpretedDeclarations
 import org.ksmt.expr.rewrite.simplify.KExprSimplifier
+import org.ksmt.expr.rewrite.simplify.areDefinitelyDistinct
 import org.ksmt.expr.rewrite.simplify.simplifyExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.DefaultValueSampler.Companion.sampleValue
@@ -431,7 +432,9 @@ open class KModelEvaluator(
         } else {
             // Args are not values, entry args are values -> args are definitely not in current entry
             for ((entryArgs, entryValue) in entries) {
-                resultEntries.add(entryArgs to varSubstitution.apply(entryValue))
+                addEntryIfArgsAreNotDistinct(resultEntries, args, entryArgs) {
+                    varSubstitution.apply(entryValue)
+                }
             }
             return null
         }
@@ -454,9 +457,21 @@ open class KModelEvaluator(
                 return rewriteFunctionAppAsIte(entryValue, args, resultEntries)
             }
 
-            resultEntries.add(entryArgs to entryValue)
+            addEntryIfArgsAreNotDistinct(resultEntries, args, entryArgs) { entryValue }
         }
         return null
+    }
+
+    private inline fun <T : KSort> addEntryIfArgsAreNotDistinct(
+        entries: MutableList<Pair<List<KExpr<*>>, KExpr<T>>>,
+        args: List<KExpr<*>>,
+        entryArgs: List<KExpr<*>>,
+        entryValue: () -> KExpr<T>
+    ) {
+        if (areDefinitelyDistinct(args, entryArgs)) return
+
+        val value = entryValue()
+        entries.add(entryArgs to value)
     }
 
     private class ResolvedFunctionInterpretation<T : KSort>(
