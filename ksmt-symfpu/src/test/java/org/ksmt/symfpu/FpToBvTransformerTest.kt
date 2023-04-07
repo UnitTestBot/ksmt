@@ -657,6 +657,18 @@ class FpToBvTransformerTest {
         )
     }
 
+
+    @Test
+    fun testFpFromBvExpr() = with(KContext()) {
+        val sign by mkBv1Sort()
+        val e by mkBv32Sort()
+        val sig by mkBv32Sort()
+        testFpExpr(
+            mkFpFromBvExpr(sign.cast(), e.cast(), sig.cast()),
+            mapOf("sign" to sign, "e" to e, "sig" to sig),
+        )
+    }
+
     @Test
     fun testFpToFpDownExpr() = with(KContext()) {
         val a by mkFp128Sort()
