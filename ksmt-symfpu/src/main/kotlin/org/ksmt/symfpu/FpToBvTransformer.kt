@@ -2,14 +2,17 @@ package org.ksmt.symfpu
 
 import org.ksmt.KContext
 import org.ksmt.expr.*
+import org.ksmt.expr.rewrite.simplify.simplifyFpToIEEEBvExpr
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
 import org.ksmt.utils.asExpr
 import org.ksmt.utils.cast
 
 class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
+    val mapFpToBv = mutableMapOf<KExpr<KFpSort>, KExpr<KBvSort>>()
     // use this function instead of apply as it may return UnpackedFp wrapper
 
 //    fun <T : KSort> applyAndGetBvExpr(expr: KExpr<T>): KExpr<KBvSort> {
@@ -97,7 +100,11 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = with(ctx) {
         return if (expr.sort is KFpSort) {
             val asFp: KConst<KFpSort> = expr.cast()
-            unpack(asFp.sort, mkFpToIEEEBvExpr(asFp)).cast()
+            val bv = mapFpToBv.getOrPut(asFp) {
+                mkConst(asFp.decl.name + "!tobv!", mkBvSort(asFp.sort.exponentBits + asFp.sort.significandBits))
+            }
+            unpack(asFp.sort, bv).cast()
+
         } else expr
     }
 
@@ -107,7 +114,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
             expr.signBit.expr,
             expr.biasedExponent.asExpr(mkBvSort(expr.sort.exponentBits)),
             expr.significand.asExpr(mkBvSort(expr.sort.significandBits - 1u)),
-            mkFpToIEEEBvExpr(expr)
+            simplifyFpToIEEEBvExpr(expr)
         )
     }
 
