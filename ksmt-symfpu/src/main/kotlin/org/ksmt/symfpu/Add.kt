@@ -16,9 +16,11 @@ import org.ksmt.utils.BvUtils.bvZero
 import org.ksmt.utils.cast
 
 
-internal fun <Fp : KFpSort> KContext.sub(left: UnpackedFp<Fp>,
-                                         right: UnpackedFp<Fp>,
-                                         roundingMode: KExpr<KFpRoundingModeSort>) = add(left, right, roundingMode, falseExpr)
+internal fun <Fp : KFpSort> KContext.sub(
+    left: UnpackedFp<Fp>,
+    right: UnpackedFp<Fp>,
+    roundingMode: KExpr<KFpRoundingModeSort>
+) = add(left, right, roundingMode, falseExpr)
 
 internal fun <Fp : KFpSort> KContext.add(
     left: UnpackedFp<Fp>,
@@ -42,7 +44,6 @@ internal fun <Fp : KFpSort> KContext.add(
 }
 
 
-
 data class ExponentCompareInfo(
     val leftIsMax: KExpr<KBoolSort>,
     val maxExponent: KExpr<KBvSort>,
@@ -55,7 +56,7 @@ data class ExponentCompareInfo(
 )
 
 
-private fun KContext.addExponentCompare(
+fun KContext.addExponentCompare(
     significandWidth: Int,
     leftExponent: KExpr<KBvSort>,
     rightExponent: KExpr<KBvSort>,
@@ -200,6 +201,28 @@ private fun <Fp : KFpSort> KContext.addAdditionSpecialCases(
     )
 }
 
+fun <Fp : KFpSort> KContext.addAdditionSpecialCasesWithID(
+    format: Fp,
+    roundingMode: KExpr<KFpRoundingModeSort>,
+    left: UnpackedFp<Fp>,
+    leftID: UnpackedFp<Fp>,
+    right: UnpackedFp<Fp>,
+    additionResult: UnpackedFp<Fp>,
+    isAdd: KExpr<KBoolSort>
+): UnpackedFp<Fp> {
+    return addAdditionSpecialCasesComplete(
+        format,
+        roundingMode,
+        left,
+        leftID,
+        right,
+        falseExpr,
+        falseExpr,
+        additionResult,
+        isAdd
+    )
+}
+
 data class FloatWithCustomRounderInfo<Fp : KFpSort>(
     val uf: UnpackedFp<Fp>,
     val known: CustomRounderInfo
@@ -239,8 +262,10 @@ fun <Fp : KFpSort> KContext.arithmeticAdd(
                     ))
 
     // Extend the significands to give room for carry plus guard and sticky bits
-    val largerSig = mkBvConcatExpr(bvZero(), mkIte(leftLarger, left.getSignificand(), right.getSignificand()), bvZero(2u))
-    val smallerSig = mkBvConcatExpr(bvZero(), mkIte(leftLarger, right.getSignificand(), left.getSignificand()), bvZero(2u))
+    val largerSig =
+        mkBvConcatExpr(bvZero(), mkIte(leftLarger, left.getSignificand(), right.getSignificand()), bvZero(2u))
+    val smallerSig =
+        mkBvConcatExpr(bvZero(), mkIte(leftLarger, right.getSignificand(), left.getSignificand()), bvZero(2u))
 
     val resultSign = mkIte(
         leftLarger,
@@ -252,7 +277,10 @@ fun <Fp : KFpSort> KContext.arithmeticAdd(
     val negatedSmaller = mkIte(effectiveAdd, smallerSig, mkBvNegationExpr(smallerSig))
 
     val shiftAmount = ec.absoluteExponentDifference // Safe as >= 0
-        .resizeUnsigned(negatedSmaller.sort.sizeBits, this) // Safe as long as the significand has more bits than the exponent
+        .resizeUnsigned(
+            negatedSmaller.sort.sizeBits,
+            this
+        ) // Safe as long as the significand has more bits than the exponent
 
 
     // Shift the smaller significand
@@ -285,7 +313,7 @@ fun <Fp : KFpSort> KContext.arithmeticAdd(
     val overflow = !isAllZeros(topBit)
     val cancel = isAllZeros(topBit) and isAllZeros(alignedBit)
     val minorCancel = cancel and isAllOnes(lowerBit)
-    val majorCancel = cancel and isAllZeros(lowerBit) // i'm here now
+    val majorCancel = cancel and isAllZeros(lowerBit)
 
     val fullCancel = majorCancel and isAllZeros(sum)
     val exact = cancel and (ec.diffIsZero or ec.diffIsOne) // For completeness

@@ -44,6 +44,11 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
             add(left, right, args[0].cast())
         }
     }
+    override fun <Fp : KFpSort> transform(expr: KFpFusedMulAddExpr<Fp>): KExpr<Fp> = with(ctx) {
+        transformExprAfterTransformed(expr, expr.arg0, expr.arg1, expr.arg2, expr.roundingMode) { arg0, arg1, arg2, roundingMode ->
+            fma(arg0.cast(), arg1.cast(), arg2.cast(), roundingMode.cast())
+        }
+    }
 
     override fun <Fp : KFpSort> transform(expr: KFpSubExpr<Fp>): KExpr<Fp> = with(ctx) {
         val args1: List<KExpr<Fp>> = expr.args.cast()

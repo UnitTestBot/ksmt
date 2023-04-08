@@ -21,11 +21,11 @@ internal fun <Fp : KFpSort> KContext.multiply(
 
     val rounded = round(multiplyResult, roundingMode, left.sort)
 
-    return addSpecialCases(rounded, left, right)
+    return addMultSpecialCases(rounded, left, right)
 }
 
-private fun <Fp : KFpSort> KContext.addSpecialCases(
-    multiplyResult: UnpackedFp<Fp>, left: UnpackedFp<Fp>, right: UnpackedFp<Fp>
+fun <Fp : KFpSort, T: KFpSort> KContext.addMultSpecialCases(
+    multiplyResult: UnpackedFp<Fp>, left: UnpackedFp<T>, right: UnpackedFp<T>
 ): UnpackedFp<Fp> {
 
     val eitherArgumentNan = left.isNaN or right.isNaN
@@ -40,7 +40,7 @@ private fun <Fp : KFpSort> KContext.addSpecialCases(
     return iteOp(
         isNan, makeNaN(multiplyResult.sort), iteOp(
             isInf, makeInf(multiplyResult.sort, multiplyResult.sign), iteOp(
-                isZero, makeZero(left.sort, multiplyResult.sign), multiplyResult
+                isZero, makeZero(multiplyResult.sort, multiplyResult.sign), multiplyResult
             )
         )
     )
@@ -64,7 +64,7 @@ private fun KContext.expandingAddWithCarryIn(
     return mkBvAddExpr(sum, carryBv)
 }
 
-private fun <Fp : KFpSort> KContext.arithmeticMultiply(
+fun <Fp : KFpSort> KContext.arithmeticMultiply(
     left: UnpackedFp<Fp>, right: UnpackedFp<Fp>
 ): UnpackedFp<KFpSort> {
 

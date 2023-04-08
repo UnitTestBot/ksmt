@@ -425,6 +425,18 @@ class FpToBvTransformerTest {
         )
     }
 
+
+    @Test
+    fun testFpToBvFmaFp16RTNExpr() = with(KContext()) {
+        val a by mkFp16Sort()
+        val b by mkFp16Sort()
+        val c by mkFp16Sort()
+        testFpExpr(
+            mkFpFusedMulAddExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardNegative), a, b, c),
+            mapOf("a" to a, "b" to b, "c" to c),
+        )
+    }
+
     @Test
     fun testFpToBvAddFp16RNAExpr() = with(KContext()) {
         val a by mkFp16Sort()
