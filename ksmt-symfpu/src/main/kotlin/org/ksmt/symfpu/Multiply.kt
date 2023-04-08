@@ -46,7 +46,7 @@ fun <Fp : KFpSort, T: KFpSort> KContext.addMultSpecialCases(
     )
 }
 
-private fun KContext.expandingMultiply(left: KExpr<KBvSort>, right: KExpr<KBvSort>): KExpr<KBvSort> {
+fun KContext.expandingMultiply(left: KExpr<KBvSort>, right: KExpr<KBvSort>): KExpr<KBvSort> {
     val width = left.sort.sizeBits.toInt()
     val x = mkBvZeroExtensionExpr(width, left)
     val y = mkBvZeroExtensionExpr(width, right)

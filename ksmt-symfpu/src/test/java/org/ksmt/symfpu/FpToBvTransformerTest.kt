@@ -438,6 +438,15 @@ class FpToBvTransformerTest {
     }
 
     @Test
+    fun testFpToBvSqrtFp16RTNExpr() = with(KContext()) {
+        val a by mkFp16Sort()
+        testFpExpr(
+            mkFpSqrtExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardNegative), a),
+            mapOf("a" to a),
+        )
+    }
+
+    @Test
     fun testFpToBvAddFp16RNAExpr() = with(KContext()) {
         val a by mkFp16Sort()
         val b by mkFp16Sort()
@@ -728,7 +737,10 @@ class FpToBvTransformerTest {
         // check assertions satisfiability with timeout
         println("checking satisfiability...")
         val status =
-            solver.checkWithAssumptions(listOf(testTransformer.apply(extraAssert(transformedExpr, toCompare))), 200.seconds)
+            solver.checkWithAssumptions(
+                listOf(testTransformer.apply(extraAssert(transformedExpr, toCompare))),
+                200.seconds
+            )
         println("status: $status")
         if (status == KSolverStatus.SAT) {
             val model = solver.model()
@@ -825,6 +837,7 @@ fun <T : KFpSort> KContext.fromPackedBv(it: KExpr<KBvSort>, sort: T): KExpr<T> {
     val sign = (mkBvExtractExpr(pWidth - 1, pWidth - 1, it))
     return mkFpFromBvExpr(sign.cast(), packedExponent, packedSignificand)
 }
+
 class TestTransformerUseBvs(ctx: KContext, private val mapFpToBv: MutableMap<KExpr<KFpSort>, KExpr<KBvSort>>) :
     KNonRecursiveTransformer(ctx) {
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = with(ctx) {
