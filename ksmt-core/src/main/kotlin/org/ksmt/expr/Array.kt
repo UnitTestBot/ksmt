@@ -20,9 +20,6 @@ import org.ksmt.sort.KSort
 import org.ksmt.utils.asExpr
 import org.ksmt.utils.uncheckedCast
 
-// [PersistentMap<KExpr<I>, S> | S] where S : KArrayStoreBase<*>
-internal typealias ArrayStoreIndexLookup = Any
-
 sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
     ctx: KContext,
     val array: KExpr<A>,
@@ -39,9 +36,41 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
             add(value)
         }.uncheckedCast()
 
-    val arrayStoreDepth: Int = if (array is KArrayStoreBase<*, *>) array.arrayStoreDepth + 1 else 0
+    /**
+     * Array store indices cache.
+     *
+     * Each node in array store chain contains a cache for only one index.
+     * Cached index is specified by the [cacheKind] property.
+     * Cached indices are rotated.
+     * For example, in a case of 3 dimensional array nodes [cacheKind] will be 0, 1, 2, 0, 1, 2 ...
+     *
+     * If array store was not analyzed yet [cacheKind] is [NOT_INITIALIZED_CACHE_KIND].
+     * */
+    private var cacheKind: Int = NOT_INITIALIZED_CACHE_KIND
 
-    internal var arrayStoreCacheInitialized: Boolean = false
+    /**
+     * Table to perform fast index lookups.
+     * Can be `null` in the following cases:
+     * 1. Store was not analyzed.
+     * 2. Store index is uninterpreted.
+     * 3. Stores chain is small (see [LINEAR_LOOKUP_THRESHOLD]) and linear lookups are used.
+     * */
+    private var cacheLookupTable: PersistentMap<KExpr<*>, KArrayStoreBase<A, *>>? = null
+
+    /**
+     * Next array store node with uninterpreted index.
+     * Can be `null` in the following cases:
+     * 1. Store was not analyzed.
+     * 2. Store index is uninterpreted.
+     * */
+    private var nextUninterpreted: KExpr<A>? = null
+
+    private val arrayStoreChainSize: Int =
+        if (array is KArrayStoreBase<*, *>) array.arrayStoreChainSize + 1 else 0
+
+    abstract fun getNumIndices(): Int
+
+    abstract fun getIndex(idx: Int): KExpr<*>
 
     /**
      * Find an array expression containing the value for the provided indices.
@@ -58,171 +87,191 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
      * Analyze store to provide faster index lookups when
      * store indices are interpreted values.
      * */
-    abstract fun analyzeStore()
+    fun analyzeStore() {
+        if (cacheKind != NOT_INITIALIZED_CACHE_KIND) return
 
-    companion object {
-        // On a small store chains linear lookup is faster than map lookup.
-        const val LINEAR_LOOKUP_THRESHOLD = 7
+        val numIndices = getNumIndices()
 
-        inline fun <reified S : KArrayStoreBase<A, *>, I : KSort, A : KArraySortBase<*>> S.initializeLookupTable(
-            nested: KExpr<A>,
-            getIndex: (S) -> KExpr<I>,
-            getLookup: (S) -> ArrayStoreIndexLookup?,
-            getNextUninterpreted: (S) -> KExpr<A>?
-        ): ArrayStoreIndexLookup? {
-            val index = getIndex(this)
+        // Rotate cached index
+        cacheKind = if (array is KArrayStoreBase<*, *>) {
+            (array.cacheKind + 1).mod(numIndices)
+        } else {
+            0 // We always start from 0 index
+        }
+
+        val index = getIndex(cacheKind)
+
+        /**
+         * Index is not an interpreted value --> current array is uninterpreted.
+         * */
+        if (index !is KInterpretedValue<*>) return
+
+        val parentStores = ArrayList<KArrayStoreBase<A, *>>(numIndices)
+        var nestedArray = this.array
+
+        /**
+         * Search for the closest array store node that holds cache for [cacheKind].
+         * */
+        while (true) {
 
             /**
-             * Index is not an interpreted value --> we can't perform fast lookups
-             * because we can't skip current store expression.
+             * We found an uninterpreted array --> all stores are analyzed and we don't need to go deeper.
+             * We consider not analyzed store as uninterpreted.
+             * We don't initialize [cacheLookupTable] because array store chain is small
+             * (less than number of array dimensions) and we can use linear lookup.
              * */
-            if (index !is KInterpretedValue<I>) return null
-
-            // Nested array in not an array store expression --> we can't perform fast lookups
-            if (nested !is S) return null
-
-            val nestedLookup = getLookup(nested)
-            if (nestedLookup == null) {
-                val nestedIdx = getIndex(nested)
-
-                /**
-                 * Nested array has uninterpreted index. Therefore, current array
-                 * is a first array with interpreted index.
-                 *
-                 * Note: we can't skip nested array in the indices lookup chain because it
-                 * contains uninterpreted indices.
-                 * */
-                if (nestedIdx !is KInterpretedValue<I>) return null
-
-                /**
-                 * Nested array is the first array with interpreted index in a chain.
-                 * */
-                return nested
+            if (nestedArray !is KArrayStoreBase<A, *> || nestedArray.cacheKind == NOT_INITIALIZED_CACHE_KIND) {
+                nextUninterpreted = nestedArray
+                return
             }
 
+            val nestedIndex = nestedArray.getIndex(cacheKind)
+
+            /**
+             * Array has an uninterpreted index and we can't use fast lookups.
+             * We don't initialize [cacheLookupTable] because array store chain is small.
+             * */
+            if (nestedIndex !is KInterpretedValue<*>) {
+                nextUninterpreted = nestedArray
+                return
+            }
+
+            val kind = nestedArray.cacheKind
+
+            /**
+             * Array index is interpreted but it doesn't contain required cache.
+             * Continue to the next array in a chain.
+             * */
+            if (kind != cacheKind) {
+                parentStores.add(nestedArray)
+                nestedArray = nestedArray.array
+                continue
+            }
+
+            nextUninterpreted = nestedArray.nextUninterpreted
+                ?: error("Interpreted array has no known next uninterpreted")
+
             // Find first array which is not in a current chain of arrays with interpreted indices.
-            val nestedNextUninterpreted = getNextUninterpreted(nested) as? S
-            val arrayStoreChainStartDepth = nestedNextUninterpreted?.arrayStoreDepth ?: 0
+            val nextUninterpretedArrayChainSize =
+                (nextUninterpreted as? KArrayStoreBase<*, *>)?.arrayStoreChainSize ?: 0
+
+            val interpretedArrayStoreChainSize = arrayStoreChainSize - nextUninterpretedArrayChainSize
 
             /**
              * We don't initialize map when interpreted stores chain is small enough.
              * On a small chains linear lookup will be faster and we can also save some memory.
              * */
-            if (arrayStoreDepth - arrayStoreChainStartDepth < LINEAR_LOOKUP_THRESHOLD) {
-                return nested
+            if (interpretedArrayStoreChainSize < LINEAR_LOOKUP_THRESHOLD) {
+                return
             }
 
-            /**
-             * We have a deep chain of interpreted stores.
-             * We use persistent map to provide faster index lookups.
-             * */
-            return lookupTableAdd(nestedLookup, this, nested, index, getIndex, getLookup)
+            cacheLookupTable = lookupTableAdd(nestedArray.cacheLookupTable, index, nestedArray, parentStores)
+            return
         }
+    }
 
-        inline fun <reified S : KArrayStoreBase<A, *>, I : KSort, A : KArraySortBase<*>> S.initializeNextUninterpreted(
-            nested: KExpr<A>,
-            getIndex: (S) -> KExpr<I>,
-            getNextUninterpreted: (S) -> KExpr<A>?
-        ): KExpr<A>? {
-            val index = getIndex(this)
+    fun searchForIndex(
+        index: KExpr<*>,
+        indexKind: Int,
+    ): KExpr<A> {
+        val currentIndex = getIndex(indexKind)
 
+        // Current array contains a value for the selected index
+        if (index == currentIndex) return this
+
+        // Select index and store index are indistinguishable. We can't perform fast lookup.
+        if (index !is KInterpretedValue<*> || currentIndex !is KInterpretedValue<*>) return this
+
+        var lookupOwner: KArrayStoreBase<A, *> = this
+        while (true) {
             /**
-             * Index is not an interpreted value --> current array is uninterpreted.
+             * We found node that manages required cache.
+             * Perform fast lookup.
              * */
-            if (index !is KInterpretedValue<I>) return null
-
-            /**
-             * Nested array is not a store expression.
-             * Therefore, nested array is definitely uninterpreted.
-             * */
-            if (nested !is S) return nested
-
-            val nestedNextUninterpreted = getNextUninterpreted(nested)
-
-            /**
-             * [nestedNextUninterpreted] is null only if nested array is uninterpreted.
-             * */
-            return nestedNextUninterpreted ?: nested
-        }
-
-        inline fun <reified S : KArrayStoreBase<A, *>, I : KSort, A : KArraySortBase<*>> S.lookupTableSearch(
-            index: KExpr<I>,
-            getIndex: (S) -> KExpr<I>,
-            getLookup: (S) -> ArrayStoreIndexLookup?,
-            getNextUninterpreted: (S) -> KExpr<A>?
-        ): KExpr<A> {
-            val currentIndex = getIndex(this)
-
-            // Current array contains a value for the selected index
-            if (index == currentIndex) return this
-
-            // Select index and store index are indistinguishable. We can't perform fast lookup.
-            if (index !is KInterpretedValue<I> || currentIndex !is KInterpretedValue<I>) return this
-
-            val arrayToSelectFrom = getLookup(this)?.let {
-                lookupTableSearch(it, index, getIndex, getLookup)
+            if (lookupOwner.cacheKind == indexKind) {
+                return lookupOwner.lookupCachedIndex(index)
             }
 
+            val lookupOwnerIndex = lookupOwner.getIndex(indexKind)
+
             /**
-             * Index is interpreted but not in the lookup table.
-             * We can skip up to the next uninterpreted array.
+             * We can't proceed to the deeper node because store index is indistinguishable
+             * from the select index.
              * */
-            return arrayToSelectFrom ?: getNextUninterpreted(this) ?: this
+            if (lookupOwnerIndex == index || lookupOwnerIndex !is KInterpretedValue<*>) return lookupOwner
+
+            val nextArrayToLookup = lookupOwner.array
+
+            /**
+             * Nested array is uninterpreted and we can't go deeper.
+             * We consider not analyzed store as uninterpreted.
+             * */
+            if (nextArrayToLookup !is KArrayStoreBase<A, *> || lookupOwner.cacheKind == NOT_INITIALIZED_CACHE_KIND) {
+                return nextArrayToLookup
+            }
+
+            lookupOwner = nextArrayToLookup
         }
+    }
 
-        @Suppress("LongParameterList")
-        inline fun <reified S : KArrayStoreBase<*, *>, I : KSort> lookupTableAdd(
-            lookup: ArrayStoreIndexLookup,
-            current: S,
-            nested: S,
-            currentIndex: KExpr<I>,
-            getIndex: (S) -> KExpr<I>,
-            getLookup: (S) -> ArrayStoreIndexLookup?
-        ): ArrayStoreIndexLookup = if (lookup is PersistentMap<*, *>) {
-            @Suppress("UNCHECKED_CAST")
-            lookup as PersistentMap<KExpr<I>, S>
+    private fun lookupTableAdd(
+        lookup: PersistentMap<KExpr<*>, KArrayStoreBase<A, *>>?,
+        currentIndex: KExpr<*>,
+        lookupOwnerStore: KArrayStoreBase<A, *>,
+        parentInterpretedStores: List<KArrayStoreBase<A, *>>
+    ): PersistentMap<KExpr<*>, KArrayStoreBase<A, *>> = if (lookup != null) {
+        lookup.mutate { map ->
+            for (store in parentInterpretedStores.asReversed()) {
+                map[store.getIndex(cacheKind)] = store
+            }
+            map[currentIndex] = this
+        }
+    } else {
+        persistentHashMapOf<KExpr<*>, KArrayStoreBase<A, *>>().mutate { map ->
+            map[currentIndex] = this
+            for (store in parentInterpretedStores) {
+                map.putIfAbsent(store.getIndex(cacheKind), store)
+            }
 
-            lookup.put(currentIndex, current)
+            var nestedArray: KExpr<A> = lookupOwnerStore
+            while (nestedArray is KArrayStoreBase<A, *> && nestedArray != nextUninterpreted) {
+                map.putIfAbsent(nestedArray.getIndex(cacheKind), nestedArray)
+                nestedArray = nestedArray.array
+            }
+        }
+    }
+
+    private fun lookupCachedIndex(index: KExpr<*>): KExpr<A> {
+        /**
+         * If [nextUninterpreted] is null then the current node is uninterpreted
+         * and we must return it.
+         * */
+        val nextUninterpreted = this.nextUninterpreted ?: return this
+
+        val lookupMap = cacheLookupTable
+        return if (lookupMap != null) {
+            lookupMap[index] ?: nextUninterpreted
         } else {
-            // Create map based lookup from linear lookup
-            persistentHashMapOf<KExpr<I>, S>().mutate { map ->
-                map[currentIndex] = current
-                var nestedLookup: S? = nested
-                while (nestedLookup != null) {
-                    map.putIfAbsent(getIndex(nestedLookup), nestedLookup)
-                    nestedLookup = getLookup(nestedLookup) as? S
-                }
+            var array: KExpr<A> = this
+            while (array is KArrayStoreBase<A, *> && array != nextUninterpreted) {
+                val storeIndex = array.getIndex(cacheKind)
+                if (storeIndex == index) return array
+                array = array.array
             }
+            nextUninterpreted
         }
+    }
 
-        inline fun <reified S : KArrayStoreBase<A, *>, I : KSort, A : KArraySortBase<*>> lookupTableSearch(
-            lookup: ArrayStoreIndexLookup,
-            index: KExpr<I>,
-            getIndex: (S) -> KExpr<I>,
-            getLookup: (S) -> ArrayStoreIndexLookup?
-        ): KExpr<A>? {
-            if (lookup is PersistentMap<*, *>) {
-                @Suppress("UNCHECKED_CAST")
-                lookup as PersistentMap<KExpr<I>, S>
+    companion object {
+        // On a small store chains linear lookup is faster than map lookup.
+        private const val LINEAR_LOOKUP_THRESHOLD = 7
 
-                return lookup[index]
-            } else {
-                // Linear lookup. We will check at most [LINEAR_LOOKUP_THRESHOLD] stores.
-                var selectFrom: S? = lookup as S
-                while (selectFrom != null) {
-                    val elementIndex = getIndex(selectFrom)
-                    if (index == elementIndex) return selectFrom
-                    selectFrom = getLookup(selectFrom) as S?
-                }
-
-                return null
-            }
-        }
+        private const val NOT_INITIALIZED_CACHE_KIND = -1
 
         /**
          * Select a single result array after performing lookup by multiple indices.
          * */
-        inline fun <reified S : KArrayStoreBase<A, *>, A : KArraySortBase<*>> S.selectLookupResult(
+        internal inline fun <reified S : KArrayStoreBase<A, *>, A : KArraySortBase<*>> S.selectLookupResult(
             first: (S) -> KExpr<A>,
             second: (S) -> KExpr<A>
         ): KExpr<A> {
@@ -231,12 +280,6 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
             if (firstArray !is S) return firstArray
 
             return second(firstArray)
-        }
-
-        internal inline fun <reified S : KArrayStoreBase<*, *>> S.ifCacheIsNotInitialized(body: () -> Unit) {
-            if (arrayStoreCacheInitialized) return
-            body()
-            arrayStoreCacheInitialized = true
         }
     }
 }
@@ -258,24 +301,15 @@ class KArrayStore<D : KSort, R : KSort> internal constructor(
     override fun internHashCode(): Int = hash(array, index, value)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { array }, { index }, { value })
 
-    private var indexLookupTable: ArrayStoreIndexLookup? = null
-    private var nextUninterpretedArray: KExpr<KArraySort<D, R>>? = null
-
-    override fun analyzeStore() = ifCacheIsNotInitialized {
-        indexLookupTable = initializeLookupTable(
-            array, { it.index }, { it.indexLookupTable }, { it.nextUninterpretedArray }
-        )
-        nextUninterpretedArray = initializeNextUninterpreted(array, { it.index }, { it.nextUninterpretedArray })
-    }
+    override fun getIndex(idx: Int): KExpr<*> = index
+    override fun getNumIndices(): Int = KArraySort.DOMAIN_SIZE
 
     override fun findArrayToSelectFrom(indices: List<KExpr<*>>): KExpr<KArraySort<D, R>> =
         findArrayToSelectFrom(indices.single().asExpr(index.sort))
 
     fun findArrayToSelectFrom(
         index: KExpr<D>
-    ): KExpr<KArraySort<D, R>> = lookupTableSearch(
-        index, { it.index }, { it.indexLookupTable }, { it.nextUninterpretedArray }
-    )
+    ): KExpr<KArraySort<D, R>> = searchForIndex(index, indexKind = 0)
 }
 
 class KArray2Store<D0 : KSort, D1 : KSort, R : KSort> internal constructor(
@@ -300,26 +334,8 @@ class KArray2Store<D0 : KSort, D1 : KSort, R : KSort> internal constructor(
     override fun internEquals(other: Any): Boolean =
         structurallyEqual(other, { array }, { index0 }, { index1 }, { value })
 
-    private var index0LookupTable: ArrayStoreIndexLookup? = null
-    private var index1LookupTable: ArrayStoreIndexLookup? = null
-    private var index0NextUninterpretedArray: KExpr<KArray2Sort<D0, D1, R>>? = null
-    private var index1NextUninterpretedArray: KExpr<KArray2Sort<D0, D1, R>>? = null
-
-    override fun analyzeStore() = ifCacheIsNotInitialized {
-        index0LookupTable = initializeLookupTable(
-            array, { it.index0 }, { it.index0LookupTable }, { it.index0NextUninterpretedArray }
-        )
-        index1LookupTable = initializeLookupTable(
-            array, { it.index1 }, { it.index1LookupTable }, { it.index1NextUninterpretedArray }
-        )
-
-        index0NextUninterpretedArray = initializeNextUninterpreted(
-            array, { it.index0 }, { it.index0NextUninterpretedArray }
-        )
-        index1NextUninterpretedArray = initializeNextUninterpreted(
-            array, { it.index1 }, { it.index1NextUninterpretedArray }
-        )
-    }
+    override fun getIndex(idx: Int): KExpr<*> = if (idx == 0) index0 else index1
+    override fun getNumIndices(): Int = KArray2Sort.DOMAIN_SIZE
 
     override fun findArrayToSelectFrom(indices: List<KExpr<*>>): KExpr<KArray2Sort<D0, D1, R>> {
         require(indices.size == KArray2Sort.DOMAIN_SIZE) {
@@ -334,19 +350,11 @@ class KArray2Store<D0 : KSort, D1 : KSort, R : KSort> internal constructor(
         index1: KExpr<D1>,
     ): KExpr<KArray2Sort<D0, D1, R>> = selectLookupResult({ it.lookupIndex0(index0) }, { it.lookupIndex1(index1) })
 
-    private fun lookupIndex0(index0: KExpr<D0>): KExpr<KArray2Sort<D0, D1, R>> = lookupTableSearch(
-        index = index0,
-        getIndex = { it.index0 },
-        getLookup = { it.index0LookupTable },
-        getNextUninterpreted = { it.index0NextUninterpretedArray }
-    )
+    private fun lookupIndex0(index0: KExpr<D0>): KExpr<KArray2Sort<D0, D1, R>> =
+        searchForIndex(index0, indexKind = 0)
 
-    private fun lookupIndex1(index1: KExpr<D1>): KExpr<KArray2Sort<D0, D1, R>> = lookupTableSearch(
-        index = index1,
-        getIndex = { it.index1 },
-        getLookup = { it.index1LookupTable },
-        getNextUninterpreted = { it.index1NextUninterpretedArray }
-    )
+    private fun lookupIndex1(index1: KExpr<D1>): KExpr<KArray2Sort<D0, D1, R>> =
+        searchForIndex(index1, indexKind = 1)
 }
 
 class KArray3Store<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal constructor(
@@ -372,34 +380,13 @@ class KArray3Store<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal const
     override fun internEquals(other: Any): Boolean =
         structurallyEqual(other, { array }, { index0 }, { index1 }, { index2 }, { value })
 
-    private var index0LookupTable: ArrayStoreIndexLookup? = null
-    private var index1LookupTable: ArrayStoreIndexLookup? = null
-    private var index2LookupTable: ArrayStoreIndexLookup? = null
-    private var index0NextUninterpretedArray: KExpr<KArray3Sort<D0, D1, D2, R>>? = null
-    private var index1NextUninterpretedArray: KExpr<KArray3Sort<D0, D1, D2, R>>? = null
-    private var index2NextUninterpretedArray: KExpr<KArray3Sort<D0, D1, D2, R>>? = null
-
-    override fun analyzeStore() = ifCacheIsNotInitialized {
-        index0LookupTable = initializeLookupTable(
-            array, { it.index0 }, { it.index0LookupTable }, { it.index0NextUninterpretedArray }
-        )
-        index1LookupTable = initializeLookupTable(
-            array, { it.index1 }, { it.index1LookupTable }, { it.index1NextUninterpretedArray }
-        )
-        index2LookupTable = initializeLookupTable(
-            array, { it.index2 }, { it.index2LookupTable }, { it.index2NextUninterpretedArray }
-        )
-
-        index0NextUninterpretedArray = initializeNextUninterpreted(
-            array, { it.index0 }, { it.index0NextUninterpretedArray }
-        )
-        index1NextUninterpretedArray = initializeNextUninterpreted(
-            array, { it.index1 }, { it.index1NextUninterpretedArray }
-        )
-        index2NextUninterpretedArray = initializeNextUninterpreted(
-            array, { it.index2 }, { it.index2NextUninterpretedArray }
-        )
+    override fun getIndex(idx: Int): KExpr<*> = when (idx) {
+        0 -> index0
+        1 -> index1
+        else -> index2
     }
+
+    override fun getNumIndices(): Int = KArray3Sort.DOMAIN_SIZE
 
     override fun findArrayToSelectFrom(indices: List<KExpr<*>>): KExpr<KArray3Sort<D0, D1, D2, R>> {
         require(indices.size == KArray3Sort.DOMAIN_SIZE) {
@@ -423,26 +410,14 @@ class KArray3Store<D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> internal const
         }
     )
 
-    private fun lookupIndex0(index0: KExpr<D0>): KExpr<KArray3Sort<D0, D1, D2, R>> = lookupTableSearch(
-        index = index0,
-        getIndex = { it.index0 },
-        getLookup = { it.index0LookupTable },
-        getNextUninterpreted = { it.index0NextUninterpretedArray }
-    )
+    private fun lookupIndex0(index0: KExpr<D0>): KExpr<KArray3Sort<D0, D1, D2, R>> =
+        searchForIndex(index0, indexKind = 0)
 
-    private fun lookupIndex1(index1: KExpr<D1>): KExpr<KArray3Sort<D0, D1, D2, R>> = lookupTableSearch(
-        index = index1,
-        getIndex = { it.index1 },
-        getLookup = { it.index1LookupTable },
-        getNextUninterpreted = { it.index1NextUninterpretedArray }
-    )
+    private fun lookupIndex1(index1: KExpr<D1>): KExpr<KArray3Sort<D0, D1, D2, R>> =
+        searchForIndex(index1, indexKind = 1)
 
-    private fun lookupIndex2(index2: KExpr<D2>): KExpr<KArray3Sort<D0, D1, D2, R>> = lookupTableSearch(
-        index = index2,
-        getIndex = { it.index2 },
-        getLookup = { it.index2LookupTable },
-        getNextUninterpreted = { it.index2NextUninterpretedArray }
-    )
+    private fun lookupIndex2(index2: KExpr<D2>): KExpr<KArray3Sort<D0, D1, D2, R>> =
+        searchForIndex(index2, indexKind = 2)
 }
 
 class KArrayNStore<R : KSort> internal constructor(
@@ -466,23 +441,8 @@ class KArrayNStore<R : KSort> internal constructor(
     override fun internHashCode(): Int = hash(array, indices, value)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { array }, { indices }, { value })
 
-    private var indexLookupTables: Array<ArrayStoreIndexLookup?>? = null
-    private var nextUninterpretedArrays: Array<KExpr<KArrayNSort<R>>?>? = null
-
-    override fun analyzeStore() = ifCacheIsNotInitialized {
-        indexLookupTables = Array(indices.size) { idx ->
-            initializeLookupTable(
-                array,
-                { it.indices[idx] },
-                { it.indexLookupTables?.get(idx) },
-                { it.nextUninterpretedArrays?.get(idx) }
-            )
-        }
-
-        nextUninterpretedArrays = Array(indices.size) { idx ->
-            initializeNextUninterpreted(array, { it.indices[idx] }, { it.nextUninterpretedArrays?.get(idx) })
-        }
-    }
+    override fun getIndex(idx: Int): KExpr<*> = indices[idx]
+    override fun getNumIndices(): Int = indices.size
 
     override fun findArrayToSelectFrom(indices: List<KExpr<*>>): KExpr<KArrayNSort<R>> {
         require(indices.size == this.indices.size) {
@@ -496,12 +456,8 @@ class KArrayNStore<R : KSort> internal constructor(
         }
     }
 
-    private fun lookupIndexI(index: KExpr<*>, idx: Int): KExpr<KArrayNSort<R>> = lookupTableSearch(
-        index = index.uncheckedCast(),
-        getIndex = { it.indices[idx] },
-        getLookup = { it.indexLookupTables?.get(idx) },
-        getNextUninterpreted = { it.nextUninterpretedArrays?.get(idx) }
-    )
+    private fun lookupIndexI(index: KExpr<*>, idx: Int): KExpr<KArrayNSort<R>> =
+        searchForIndex(index, indexKind = idx)
 }
 
 sealed class KArraySelectBase<A : KArraySortBase<R>, R : KSort>(
