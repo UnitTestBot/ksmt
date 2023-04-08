@@ -13,22 +13,18 @@ fun Project.mkSmtLibBenchmarkTestData(name: String) = tasks.register("smtLibBenc
 
         download(url, downloadTarget)
 
-        val unpackCompleteMarker = path.resolve("unpack-complete")
-
-        if (!unpackCompleteMarker.exists()) {
+        path.executeIfNotReady("unpack-complete") {
             copy {
                 from(zipTree(downloadTarget))
                 into(path)
                 duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             }
-            unpackCompleteMarker.createNewFile()
         }
 
         val testResources = testResourceDir() ?: error("No resource directory found for $name benchmark")
         val testData = testResources.resolve("testData")
-        val testDataCopyCompleteMarker = testData.resolve("$name-copy-complete")
 
-        if (!testDataCopyCompleteMarker.exists()) {
+        testData.executeIfNotReady("$name-copy-complete") {
             val smtFiles = path.walkTopDown().filter { it.extension == "smt2" }.toList()
             copy {
                 from(smtFiles.toTypedArray())
@@ -36,7 +32,6 @@ fun Project.mkSmtLibBenchmarkTestData(name: String) = tasks.register("smtLibBenc
                 rename { "${name}_$it" }
                 duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             }
-            testDataCopyCompleteMarker.createNewFile()
         }
     }
 }
@@ -46,10 +41,13 @@ fun Project.usePreparedSmtLibBenchmarkTestData(path: File) = tasks.register("smt
         check(path.exists()) { "No test data provided" }
         val testResources = testResourceDir() ?: error("No resource directory found for benchmarks")
         val testData = testResources.resolve("testData")
-        copy {
-            from(path)
-            into(testData)
-            duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+        testData.executeIfNotReady("test-data-ready") {
+            copy {
+                from(path)
+                into(testData)
+                duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+            }
         }
     }
 }
@@ -75,3 +73,12 @@ private fun Project.testResourceDir(): File? {
 }
 
 private const val BENCHMARK_REPO_URL = "http://smt-lib.loria.fr"
+
+private inline fun File.executeIfNotReady(markerName: String, body: () -> Unit) {
+    val marker = this.resolve(markerName)
+    if (marker.exists()) return
+
+    body()
+
+    marker.createNewFile()
+}

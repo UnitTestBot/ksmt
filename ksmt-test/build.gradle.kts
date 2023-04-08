@@ -10,9 +10,9 @@ repositories {
 dependencies {
     implementation(project(":ksmt-core"))
     implementation(project(":ksmt-z3"))
+    implementation(project(":ksmt-cvc5"))
     implementation(project(":ksmt-bitwuzla"))
     implementation(project(":ksmt-yices"))
-    implementation(testFixtures(project(":ksmt-yices")))
     implementation(project(":ksmt-runner"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     implementation(kotlin("reflect"))
@@ -105,12 +105,18 @@ val downloadPreparedBenchmarksTestData = downloadPreparedSmtLibBenchmarkTestData
 )
 
 tasks.withType<Test> {
-    enabled = runBenchmarksBasedTests
     if (runBenchmarksBasedTests) {
         dependsOn.add(prepareTestData)
+        environment("benchmarkChunkMaxSize", benchmarkChunkMaxSize)
+        environment("benchmarkChunk", benchmarkChunk)
+    } else {
+        exclude("org/ksmt/test/benchmarks/**")
+
+        testLogging {
+            showStandardStreams = true
+            outputs.upToDateWhen { false }
+        }
     }
-    environment("benchmarkChunkMaxSize", benchmarkChunkMaxSize)
-    environment("benchmarkChunk", benchmarkChunk)
 }
 
 /**

@@ -15,7 +15,7 @@ jobs:
     name: Run tests
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
 
     runs-on: ${{ matrix.os }}
 
@@ -29,14 +29,25 @@ jobs:
           distribution: 'zulu'
           cache: gradle
 
-      - name: Build and run simple tests
+      - name: Build and run z3 tests on macOS
         uses: gradle/gradle-build-action@v2
+        if: runner.os == 'macOS'
+        with:
+          arguments: |
+            :ksmt-z3:build
+             --no-daemon
+             --continue
+             -PrunBenchmarksBasedTests=false
+
+      - name: Build and run simple tests on Linux or Windows
+        uses: gradle/gradle-build-action@v2
+        if: runner.os != 'macOS'
         with:
           arguments: |
             build
-            --no-daemon
-            --continue
-            -PrunBenchmarksBasedTests=false
+             --no-daemon
+             --continue
+             -PrunBenchmarksBasedTests=false
 
       - name: Upload ksmt test reports
         uses: actions/upload-artifact@v3

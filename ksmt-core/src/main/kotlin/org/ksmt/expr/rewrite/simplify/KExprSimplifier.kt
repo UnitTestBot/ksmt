@@ -3,7 +3,10 @@ package org.ksmt.expr.rewrite.simplify
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KArray2Lambda
+import org.ksmt.expr.KArray3Lambda
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArrayNLambda
 import org.ksmt.expr.KDistinctExpr
 import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExistentialQuantifier
@@ -12,7 +15,11 @@ import org.ksmt.expr.KInterpretedValue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector
 import org.ksmt.expr.transformer.KNonRecursiveTransformerBase
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
@@ -36,14 +43,14 @@ open class KExprSimplifier(override val ctx: KContext) :
     ) { lhs, rhs ->
         if (lhs == rhs) return@simplifyExpr trueExpr
         when (lhs.sort) {
-            boolSort -> simplifyEqBool(lhs.uncheckedCast(), rhs.uncheckedCast())
+            boolSort -> this@KExprSimplifier.simplifyEqBool(lhs.uncheckedCast(), rhs.uncheckedCast())
             intSort -> simplifyEqInt(lhs.uncheckedCast(), rhs.uncheckedCast())
             realSort -> simplifyEqReal(lhs.uncheckedCast(), rhs.uncheckedCast())
             is KBvSort -> simplifyEqBv(lhs as KExpr<KBvSort>, rhs.uncheckedCast())
             is KFpSort -> simplifyEqFp(lhs as KExpr<KFpSort>, rhs.uncheckedCast())
-            is KArraySort<*, *> -> simplifyEqArray(lhs as KExpr<KArraySort<KSort, KSort>>, rhs.uncheckedCast())
+            is KArraySortBase<*> -> simplifyEqArray(lhs as KExpr<KArraySortBase<KSort>>, rhs.uncheckedCast())
             is KUninterpretedSort -> simplifyEqUninterpreted(lhs.uncheckedCast(), rhs.uncheckedCast())
-            else -> mkEqNoSimplify(lhs, rhs)
+            else -> withExpressionsOrdered(lhs, rhs, ::mkEqNoSimplify)
         }
     }
 
@@ -101,6 +108,10 @@ open class KExprSimplifier(override val ctx: KContext) :
         }
     }
 
+    // We can skip values transformation since values can't be simplified
+    override fun <T : KSort> exprTransformationRequired(expr: KExpr<T>): Boolean =
+        expr !is KInterpretedValue<T>
+
     // Interpreted values can't be simplified.
     override fun <T : KSort> transformValue(expr: KInterpretedValue<T>): KExpr<T> = expr
 
@@ -114,6 +125,24 @@ open class KExprSimplifier(override val ctx: KContext) :
         expr: KArrayLambda<D, R>
     ): KExpr<KArraySort<D, R>> = simplifyExpr(expr, expr.body) { body ->
         simplifyArrayLambda(expr.indexVarDecl, body)
+    }
+
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Lambda<D0, D1, R>
+    ): KExpr<KArray2Sort<D0, D1, R>> = simplifyExpr(expr, expr.body) { body ->
+        simplifyArrayLambda(expr.indexVar0Decl, expr.indexVar1Decl, body)
+    }
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Lambda<D0, D1, D2, R>
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> = simplifyExpr(expr, expr.body) { body ->
+        simplifyArrayLambda(expr.indexVar0Decl, expr.indexVar1Decl, expr.indexVar2Decl, body)
+    }
+
+    override fun <R : KSort> transform(
+        expr: KArrayNLambda<R>
+    ): KExpr<KArrayNSort<R>> = simplifyExpr(expr, expr.body) { body ->
+        simplifyArrayLambda(expr.indexVarDeclarations, body)
     }
 
     override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> =
@@ -130,13 +159,52 @@ open class KExprSimplifier(override val ctx: KContext) :
         bound: KDecl<D>,
         simplifiedBody: KExpr<R>
     ): KExpr<KArraySort<D, R>> = simplifyQuantifier(
-        bounds = listOf(element = bound),
+        bounds = listOf(bound),
         simplifiedBody = simplifiedBody,
         eliminateQuantifier = { body ->
             val sort = mkArraySort(bound.sort, body.sort)
             mkArrayConst(sort, body)
         },
         buildQuantifier = { _, body -> mkArrayLambda(bound, body) }
+    )
+
+    fun <D0 : KSort, D1 : KSort, R : KSort> KContext.simplifyArrayLambda(
+        bound0: KDecl<D0>, bound1: KDecl<D1>,
+        simplifiedBody: KExpr<R>
+    ): KExpr<KArray2Sort<D0, D1, R>> = simplifyQuantifier(
+        bounds = listOf(bound0, bound1),
+        simplifiedBody = simplifiedBody,
+        eliminateQuantifier = { body ->
+            val sort = mkArraySort(bound0.sort, bound1.sort, body.sort)
+            mkArrayConst(sort, body)
+        },
+        buildQuantifier = { _, body -> mkArrayLambda(bound0, bound1, body) }
+    )
+
+    fun <D0 : KSort, D1 : KSort, D2: KSort, R : KSort> KContext.simplifyArrayLambda(
+        bound0: KDecl<D0>, bound1: KDecl<D1>, bound2: KDecl<D2>,
+        simplifiedBody: KExpr<R>
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> = simplifyQuantifier(
+        bounds = listOf(bound0, bound1, bound2),
+        simplifiedBody = simplifiedBody,
+        eliminateQuantifier = { body ->
+            val sort = mkArraySort(bound0.sort, bound1.sort, bound2.sort, body.sort)
+            mkArrayConst(sort, body)
+        },
+        buildQuantifier = { _, body -> mkArrayLambda(bound0, bound1, bound2, body) }
+    )
+
+    fun <R : KSort> KContext.simplifyArrayLambda(
+        bounds: List<KDecl<*>>,
+        simplifiedBody: KExpr<R>
+    ): KExpr<KArrayNSort<R>> = simplifyQuantifier(
+        bounds = bounds,
+        simplifiedBody = simplifiedBody,
+        eliminateQuantifier = { body ->
+            val sort = mkArrayNSort(bounds.map { it.sort }, body.sort)
+            mkArrayConst(sort, body)
+        },
+        buildQuantifier = { _, body -> mkArrayNLambda(bounds, body) }
     )
 
     fun KContext.simplifyExistentialQuantifier(
@@ -184,7 +252,7 @@ open class KExprSimplifier(override val ctx: KContext) :
     open fun simplifyEqUninterpreted(
         lhs: KExpr<KUninterpretedSort>,
         rhs: KExpr<KUninterpretedSort>
-    ): KExpr<KBoolSort> = ctx.mkEqNoSimplify(lhs, rhs)
+    ): KExpr<KBoolSort> = withExpressionsOrdered(lhs, rhs, ctx::mkEqNoSimplify)
 
     open fun areDefinitelyDistinctUninterpreted(
         lhs: KExpr<KUninterpretedSort>,

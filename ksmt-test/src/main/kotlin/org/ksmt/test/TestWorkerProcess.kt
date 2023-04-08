@@ -8,20 +8,24 @@ import com.microsoft.z3.Expr
 import com.microsoft.z3.Native
 import com.microsoft.z3.Solver
 import com.microsoft.z3.Status
-import org.ksmt.solver.fixtures.yices.KTestYicesContext
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.runner.core.ChildProcessBase
 import org.ksmt.runner.core.KsmtWorkerArgs
-import org.ksmt.runner.models.generated.TestCheckResult
-import org.ksmt.runner.models.generated.TestConversionResult
-import org.ksmt.runner.models.generated.TestProtocolModel
-import org.ksmt.runner.models.generated.testProtocolModel
+import org.ksmt.runner.generated.models.TestCheckResult
+import org.ksmt.runner.generated.models.TestConversionResult
+import org.ksmt.runner.generated.models.TestProtocolModel
+import org.ksmt.runner.generated.models.testProtocolModel
 import org.ksmt.runner.serializer.AstSerializationCtx
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.bitwuzla.KBitwuzlaContext
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprConverter
 import org.ksmt.solver.bitwuzla.KBitwuzlaExprInternalizer
+import org.ksmt.solver.cvc5.KCvc5Context
+import org.ksmt.solver.cvc5.KCvc5ExprConverter
+import org.ksmt.solver.cvc5.KCvc5ExprInternalizer
+import org.ksmt.solver.cvc5.KCvc5Solver
+import io.github.cvc5.Solver as Cvc5Solver
 import org.ksmt.solver.z3.KZ3Context
 import org.ksmt.solver.yices.*
 import org.ksmt.solver.z3.KZ3ExprConverter
@@ -59,8 +63,8 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         equalityCheckAssumptions.clear()
         nativeAsts.clear()
         solvers.clear()
-        ctx.close()
-        z3Ctx.close()
+        workerCtx?.close()
+        workerZ3Ctx?.close()
         workerCtx = null
         workerZ3Ctx = null
     }
@@ -85,7 +89,7 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
     }
 
     private fun internalizeAndConvertBitwuzla(assertions: List<KExpr<KBoolSort>>): List<KExpr<KBoolSort>> =
-        KBitwuzlaContext().use { bitwuzlaCtx ->
+        KBitwuzlaContext(ctx).use { bitwuzlaCtx ->
             val internalizer = KBitwuzlaExprInternalizer(bitwuzlaCtx)
             val bitwuzlaAssertions = with(internalizer) {
                 assertions.map { it.internalize() }
@@ -98,8 +102,9 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         }
 
     private fun internalizeAndConvertYices(assertions: List<KExpr<KBoolSort>>): List<KExpr<KBoolSort>> {
-        KTestYicesContext().use { internContext ->
-            val internalizer = KYicesExprInternalizer(ctx, internContext)
+        // Yices doesn't reverse cache internalized expressions (only interpreted values)
+        KYicesContext().use { internContext ->
+            val internalizer = KYicesExprInternalizer(internContext)
 
             val yicesAssertions = with(internalizer) {
                 assertions.map { it.internalize() }
@@ -108,7 +113,23 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
             val converter = KYicesExprConverter(ctx, internContext)
 
             return with(converter) {
-                yicesAssertions.map { it.convert() }
+                yicesAssertions.map { it.convert(ctx.boolSort) }
+            }
+        }
+    }
+
+    private fun internalizeAndConvertCvc5(assertions: List<KExpr<KBoolSort>>): List<KExpr<KBoolSort>> {
+        KCvc5Solver(ctx).close() // ensure native libs loaded
+
+        return Cvc5Solver().use { cvc5Solver ->
+            val cvc5Assertions = KCvc5Context(cvc5Solver, ctx).use { cvc5Ctx ->
+                val internalizer = KCvc5ExprInternalizer(cvc5Ctx)
+                with(internalizer) { assertions.map { it.internalizeExpr() } }
+            }
+
+            KCvc5Context(cvc5Solver, ctx).use { cvc5Ctx ->
+                val converter = KCvc5ExprConverter(ctx, cvc5Ctx)
+                with(converter) { cvc5Assertions.map { it.convertExpr() } }
             }
         }
     }
@@ -195,7 +216,8 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
 
     private fun internalize(expr: KExpr<*>): Expr<*> {
         val internalizer = KZ3ExprInternalizer(ctx, KZ3Context(z3Ctx))
-        return with(internalizer) { expr.internalizeExprWrapped() }
+        val internalized = with(internalizer) { expr.internalizeExpr() }
+        return z3Ctx.wrapAST(internalized) as Expr<*>
     }
 
     private data class EqualityCheck(val actual: Expr<*>, val expected: Expr<*>)
@@ -244,6 +266,11 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         internalizeAndConvertYices.measureExecutionForTermination { params ->
             @Suppress("UNCHECKED_CAST")
             val converted = internalizeAndConvertYices(params.expressions as List<KExpr<KBoolSort>>)
+            TestConversionResult(converted)
+        }
+        internalizeAndConvertCvc5.measureExecutionForTermination { params ->
+            @Suppress("UNCHECKED_CAST")
+            val converted = internalizeAndConvertCvc5(params.expressions as List<KExpr<KBoolSort>>)
             TestConversionResult(converted)
         }
         createSolver.measureExecutionForTermination { timeout ->

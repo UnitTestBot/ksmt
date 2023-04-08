@@ -3,7 +3,6 @@ package org.ksmt
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.DefaultValueSampler.Companion.sampleValue
 import org.ksmt.solver.model.KModelImpl
-import org.ksmt.sort.KBv32Sort
 import org.ksmt.utils.getValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -62,7 +61,7 @@ class ModelEvaluationTest {
             default = null
         )
 
-        val arrayInterp = mkFunctionAsArray<KBv32Sort, KBv32Sort>(tmpDecl)
+        val arrayInterp = mkFunctionAsArray(arraySort, tmpDecl)
 
 
         val model = KModelImpl(
@@ -121,8 +120,8 @@ class ModelEvaluationTest {
             default = null
         )
 
-        val array1Interp = mkFunctionAsArray<KBv32Sort, KBv32Sort>(tmpDecl1)
-        val array2Interp = mkFunctionAsArray<KBv32Sort, KBv32Sort>(tmpDecl2)
+        val array1Interp = mkFunctionAsArray(arraySort, tmpDecl1)
+        val array2Interp = mkFunctionAsArray(arraySort, tmpDecl2)
 
 
         val model = KModelImpl(

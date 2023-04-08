@@ -5,7 +5,11 @@ import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.KInterpretedValue
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpRoundingModeSort
@@ -206,6 +210,7 @@ class RandomExpressionGenerator {
          * */
         private fun Sequence<KFunction<KExpr<*>>>.filterComplexStringGenerators() = this
             .filterNot { (it.name == "mkBv" && it.parameters.any { p -> p.type.isSubclassOf(String::class) }) }
+            .filterNot { (it.name == "mkBvHex" && it.parameters.any { p -> p.type.isSubclassOf(String::class) }) }
             .filterNot { (it.name == "mkIntNum" && it.parameters.any { p -> p.type.isSubclassOf(String::class) }) }
             .filterNot { (it.name == "mkRealNum" && it.parameters.any { p -> p.type.isSubclassOf(String::class) }) }
 
@@ -401,7 +406,7 @@ class RandomExpressionGenerator {
                     args + sortArgument
                 }
 
-            override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): AstGenerator<ExprArgument> {
+            private fun <A : KArraySortBase<R>, R : KSort> generateArray(sort: A): AstGenerator<ExprArgument> {
                 val rangeSortArgument = SortArgument(sort.range, generationContext.findSortIdx(sort.range))
                 val rangeExprGenerator = sort.range.accept(ConstExprGenerator(rangeSortArgument, generationContext))
                 val rangeExpr = rangeExprGenerator.generate(generationContext)
@@ -409,6 +414,20 @@ class RandomExpressionGenerator {
                     listOf(sortArgument, rangeExpr)
                 }
             }
+
+            override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): AstGenerator<ExprArgument> =
+                generateArray(sort)
+
+            override fun <D0 : KSort, D1 : KSort, R : KSort> visit(
+                sort: KArray2Sort<D0, D1, R>
+            ): AstGenerator<ExprArgument> = generateArray(sort)
+
+            override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(
+                sort: KArray3Sort<D0, D1, D2, R>
+            ): AstGenerator<ExprArgument> = generateArray(sort)
+
+            override fun <R : KSort> visit(sort: KArrayNSort<R>): AstGenerator<ExprArgument> =
+                generateArray(sort)
         }
 
         sealed interface Argument {

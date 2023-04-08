@@ -3,12 +3,16 @@ package org.ksmt.solver.yices
 import com.sri.yices.BigRational
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
+import org.ksmt.sort.KArithSort
 import org.ksmt.sort.KBvSort
+import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import java.math.BigInteger
 
 typealias YicesTerm = Int
 typealias YicesSort = Int
+typealias YicesSortArray = IntArray
+typealias YicesTermArray = IntArray
 
 private fun BooleanArray.extractByte(start: Int): Byte {
     val end = Integer.min(start + Byte.SIZE_BITS, size)
@@ -31,3 +35,13 @@ fun KContext.mkBv(bits: BooleanArray, sizeBits: UInt): KExpr<KBvSort> {
 
 fun KContext.mkRealNum(value: BigRational): KExpr<KRealSort> =
     mkRealNum(mkIntNum(value.numerator), mkIntNum(value.denominator))
+
+fun KContext.mkIntNum(value: BigRational): KExpr<KIntSort> =
+    if (value.isInteger) {
+        mkIntNum(value.numerator)
+    } else {
+        mkRealToInt(mkRealNum(value))
+    }
+
+fun KContext.mkArithNum(value: BigRational): KExpr<out KArithSort> =
+    if (value.isInteger) mkIntNum(value) else mkRealNum(value)

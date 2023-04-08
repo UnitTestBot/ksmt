@@ -1,6 +1,7 @@
 package org.ksmt.solver.bitwuzla
 
 import org.ksmt.KContext
+import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
@@ -10,11 +11,10 @@ import org.ksmt.solver.bitwuzla.bindings.BitwuzlaResult
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 import org.ksmt.sort.KBoolSort
-import org.ksmt.utils.mkFreshConst
 import kotlin.time.Duration
 
 open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverConfiguration> {
-    open val bitwuzlaCtx = KBitwuzlaContext()
+    open val bitwuzlaCtx = KBitwuzlaContext(ctx)
     open val exprInternalizer: KBitwuzlaExprInternalizer by lazy {
         KBitwuzlaExprInternalizer(bitwuzlaCtx)
     }
@@ -46,18 +46,16 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
         Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, assertionWithAxioms.assertion)
     }
 
-    override fun assertAndTrack(expr: KExpr<KBoolSort>): KExpr<KBoolSort> = bitwuzlaCtx.bitwuzlaTry {
-        ctx.ensureContextMatch(expr)
+    override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) = bitwuzlaCtx.bitwuzlaTry {
+        ctx.ensureContextMatch(expr, trackVar)
 
-        val trackVar = with(ctx) { boolSort.mkFreshConst("track") }
-        val trackedExpr = with(ctx) { !trackVar or expr }
+        val trackVarExpr = ctx.mkConstApp(trackVar)
+        val trackedExpr = with(ctx) { !trackVarExpr or expr }
 
         assert(trackedExpr)
 
-        val trackVarTerm = with(exprInternalizer) { trackVar.internalize() }
-        trackVars += trackVar to trackVarTerm
-
-        trackVar
+        val trackVarTerm = with(exprInternalizer) { trackVarExpr.internalize() }
+        trackVars += trackVarExpr to trackVarTerm
     }
 
     override fun push(): Unit = bitwuzlaCtx.bitwuzlaTry {
@@ -144,6 +142,10 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
 
         // There is no way to retrieve reason of unknown from Bitwuzla in general case.
         return "unknown"
+    }
+
+    override fun interrupt() = bitwuzlaCtx.bitwuzlaTry {
+        Native.bitwuzlaForceTerminate(bitwuzlaCtx.bitwuzla)
     }
 
     override fun close() = bitwuzlaCtx.bitwuzlaTry {

@@ -14,9 +14,9 @@ repositories {
 }
 
 // core 
-implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.4.0")
+implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.4.6")
 // z3 solver
-implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.4.0")
+implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.4.6")
 ```
 
 ## Usage
@@ -26,21 +26,22 @@ Also, check out the [Java examples](examples/src/main/java).
 # Features
 Currently, KSMT supports the following SMT solvers:
 
-| SMT Solver                                       |     Linux-x64      |    Windows-x64     |     MacOS-x64      |
-|--------------------------------------------------|:------------------:|:------------------:|:------------------:|
-| [Z3](https://github.com/Z3Prover/z3)             | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| [Bitwuzla](https://github.com/bitwuzla/bitwuzla) | :heavy_check_mark: | :heavy_check_mark: |                    |
-| [Yices2](https://github.com/SRI-CSL/yices2)      | :heavy_check_mark: | :heavy_check_mark: |                    |
+| SMT Solver                                       |     Linux-x64      |    Windows-x64     |   MacOS-aarch64    |     MacOS-x64      |
+|--------------------------------------------------|:------------------:|:------------------:|:------------------:|:------------------:|
+| [Z3](https://github.com/Z3Prover/z3)             | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| [Bitwuzla](https://github.com/bitwuzla/bitwuzla) | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |                    |
+| [Yices2](https://github.com/SRI-CSL/yices2)      | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |                    |
+| [cvc5](https://github.com/cvc5/cvc5)             | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |                    |
 
 KSMT can express formulas in the following theories:
 
-| Theory                  |         Z3         |      Bitwuzla      | Yices2             |
-|-------------------------|:------------------:|:------------------:|--------------------|
-| Bitvectors              | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| Arrays                  | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| IEEE Floats             | :heavy_check_mark: | :heavy_check_mark: |                    |
-| Uninterpreted Functions | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| Arithmetic              | :heavy_check_mark: |                    | :heavy_check_mark: |
+| Theory                  |         Z3         |      Bitwuzla      |       Yices2       |        cvc5        |
+|-------------------------|:------------------:|:------------------:|:------------------:|:------------------:|
+| Bitvectors              | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| Arrays                  | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| IEEE Floats             | :heavy_check_mark: | :heavy_check_mark: |                    | :heavy_check_mark: |
+| Uninterpreted Functions | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| Arithmetic              | :heavy_check_mark: |                    | :heavy_check_mark: | :heavy_check_mark: |
 
 Check out our [roadmap](Requirements.md) for detailed description of features and future plans.
 

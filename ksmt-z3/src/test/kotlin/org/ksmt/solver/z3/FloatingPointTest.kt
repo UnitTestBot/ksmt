@@ -690,13 +690,19 @@ class FloatingPointTest {
     ) = KZ3Context().use { solverInternalCtx ->
         val internalizer = KZ3ExprInternalizer(context, solverInternalCtx)
 
-        val solverInternalSort = with(internalizer) { sort.internalizeSortWrapped() as FPSort }
-        val solverInternalExpr = solverInternal(solverInternalCtx.nativeContext, solverInternalSort)
+        val solverInternalSort = with(internalizer) { sort.internalizeSort() }
+        val solverInternalExpr = solverInternal(
+            solverInternalCtx.nativeContext,
+            solverInternalCtx.nativeContext.wrapAST(solverInternalSort) as FPSort
+        )
 
         val ksmtExpr = operation(sort)
-        val ksmtInternalizedExpr = with(internalizer) { ksmtExpr.internalizeExprWrapped() }
+        val ksmtInternalizedExpr = with(internalizer) { ksmtExpr.internalizeExpr() }
 
-        val check = solverInternalCtx.nativeContext.mkEq(solverInternalExpr, ksmtInternalizedExpr)
+        val check = solverInternalCtx.nativeContext.mkEq(
+            solverInternalExpr,
+            solverInternalCtx.nativeContext.wrapAST(ksmtInternalizedExpr) as Expr<*>
+        )
 
         val checker = solverInternalCtx.nativeContext.mkSolver()
         checker.add(check)

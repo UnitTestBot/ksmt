@@ -9,13 +9,15 @@ repositories {
     flatDir { dirs("dist") }
 }
 
-val bitwuzlaNative by configurations.creating
+val bitwuzlaNativeX64 by configurations.creating
+val bitwuzlaNativeArm by configurations.creating
 
 dependencies {
     implementation(project(":ksmt-core"))
 
-    bitwuzlaNative("bitwuzla", "bitwuzla-linux64", "1.0", ext = "zip")
-    bitwuzlaNative("bitwuzla", "bitwuzla-win64", "1.0", ext = "zip")
+    bitwuzlaNativeX64("bitwuzla", "bitwuzla-linux64", "1.0", ext = "zip")
+    bitwuzlaNativeX64("bitwuzla", "bitwuzla-win64", "1.0", ext = "zip")
+    bitwuzlaNativeArm("bitwuzla", "bitwuzla-osx-arm64", "1.0", ext = "zip")
 }
 
 tasks.withType<KotlinCompile> {
@@ -23,9 +25,11 @@ tasks.withType<KotlinCompile> {
 }
 
 tasks.withType<ProcessResources> {
-    bitwuzlaNative.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
-        from(zipTree(artifact.file)) {
-            into("lib/x64")
+    sequenceOf("x64" to bitwuzlaNativeX64, "arm" to bitwuzlaNativeArm).forEach { (arch, config) ->
+        config.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
+            from(zipTree(artifact.file)) {
+                into("lib/$arch")
+            }
         }
     }
 }
@@ -37,4 +41,5 @@ publishing {
             artifact(tasks["kotlinSourcesJar"])
         }
     }
+
 }

@@ -53,7 +53,7 @@ interface KFpExprSimplifier : KExprSimplifierBase {
             return fpStructurallyEqual(lhs, rhs).expr
         }
 
-        return mkEqNoSimplify(lhs, rhs)
+        return withExpressionsOrdered(lhs, rhs, ::mkEqNoSimplify)
     }
 
     fun <T : KFpSort> areDefinitelyDistinctFp(lhs: KExpr<T>, rhs: KExpr<T>): Boolean {

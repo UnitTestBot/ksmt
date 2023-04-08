@@ -10,9 +10,9 @@
 | [Z3 solver support](#z3-solver-support)                                          | Done           |
 | [Bitwuzla solver support](#bitwuzla-solver-support)                              | Done           |
 | [Yices2 solver support](#yices2-solver-support)                                  | Done           |
-| [CVC5 solver support](#cvc5-solver-support)                                      | In progress    |
+| [CVC5 solver support](#cvc5-solver-support)                                      | Done           |
 | [External process runner](#external-process-runner)                              | Done           |
-| [Portfolio solver](#portfolio-solver)                                            | In progress    |
+| [Portfolio solver](#portfolio-solver)                                            | Done           |
 | [Solver configuration API](#solver-configuration-api)                            | Done           |
 | [Deployment](#deployment)                                                        | Done partially |
 | [Expression simplification / evaluation](#expression-simplification--evaluation) | Done           |

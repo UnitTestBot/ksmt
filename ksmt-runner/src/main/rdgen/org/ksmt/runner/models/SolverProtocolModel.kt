@@ -22,6 +22,7 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
             +"Z3"
             +"Bitwuzla"
             +"Yices"
+            +"Cvc5"
         })
     }
 
@@ -40,8 +41,9 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
         field("expression", kastType)
     }
 
-    private val assertAndTrackResult = structdef {
+    private val assertAndTrackParams = structdef {
         field("expression", kastType)
+        field("trackVar", kastType)
     }
 
     private val popParams = structdef {
@@ -109,7 +111,7 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
             async
             documentation = "Assert expression"
         }
-        call("assertAndTrack", assertParams, assertAndTrackResult).apply {
+        call("assertAndTrack", assertAndTrackParams, PredefinedType.void).apply {
             async
             documentation = "Assert and track expression"
         }
@@ -140,6 +142,10 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
         call("reasonOfUnknown", PredefinedType.void, reasonUnknownResult).apply {
             async
             documentation = "Get reason of unknown"
+        }
+        call("interrupt", PredefinedType.void, PredefinedType.void).apply {
+            async
+            documentation = "Interrupt current check SAT"
         }
     }
 }

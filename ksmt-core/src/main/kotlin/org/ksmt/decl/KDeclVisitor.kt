@@ -1,7 +1,11 @@
 package org.ksmt.decl
 
 import org.ksmt.sort.KArithSort
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv16Sort
 import org.ksmt.sort.KBv1Sort
@@ -31,8 +35,27 @@ interface KDeclVisitor<T> {
     fun <S : KSort> visit(decl: KIteDecl<S>): T = visit(decl as KFuncDecl<S>)
 
     fun <D : KSort, R : KSort> visit(decl: KArraySelectDecl<D, R>): T = visit(decl as KFuncDecl<R>)
+    fun <D0 : KSort, D1 : KSort, R : KSort> visit(decl: KArray2SelectDecl<D0, D1, R>): T = visit(decl as KFuncDecl<R>)
+
+    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(
+        decl: KArray3SelectDecl<D0, D1, D2, R>
+    ): T = visit(decl as KFuncDecl<R>)
+
+    fun <R : KSort> visit(decl: KArrayNSelectDecl<R>): T = visit(decl as KFuncDecl<R>)
+
     fun <D : KSort, R : KSort> visit(decl: KArrayStoreDecl<D, R>): T = visit(decl as KFuncDecl<KArraySort<D, R>>)
-    fun <D : KSort, R : KSort> visit(decl: KArrayConstDecl<D, R>): T = visit(decl as KFuncDecl<KArraySort<D, R>>)
+
+    fun <D0 : KSort, D1 : KSort, R : KSort> visit(
+        decl: KArray2StoreDecl<D0, D1, R>
+    ): T = visit(decl as KFuncDecl<KArray2Sort<D0, D1, R>>)
+
+    fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(
+        decl: KArray3StoreDecl<D0, D1, D2, R>
+    ): T = visit(decl as KFuncDecl<KArray3Sort<D0, D1, D2, R>>)
+
+    fun <R : KSort> visit(decl: KArrayNStoreDecl<R>): T = visit(decl as KFuncDecl<KArrayNSort<R>>)
+
+    fun <A : KArraySortBase<R>, R : KSort> visit(decl: KArrayConstDecl<A, R>): T = visit(decl as KFuncDecl<A>)
 
     fun <S : KArithSort> visit(decl: KArithSubDecl<S>): T = visit(decl as KFuncDecl<S>)
     fun <S : KArithSort> visit(decl: KArithMulDecl<S>): T = visit(decl as KFuncDecl<S>)

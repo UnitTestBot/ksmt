@@ -1,9 +1,19 @@
 package org.ksmt.runner.serializer
 
 import org.ksmt.expr.KAddArithExpr
+import org.ksmt.expr.KAndBinaryExpr
 import org.ksmt.expr.KAndExpr
+import org.ksmt.expr.KArray2Lambda
+import org.ksmt.expr.KArray2Select
+import org.ksmt.expr.KArray2Store
+import org.ksmt.expr.KArray3Lambda
+import org.ksmt.expr.KArray3Select
+import org.ksmt.expr.KArray3Store
 import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArrayNLambda
+import org.ksmt.expr.KArrayNSelect
+import org.ksmt.expr.KArrayNStore
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KBitVec16Value
@@ -117,6 +127,7 @@ import org.ksmt.expr.KLtArithExpr
 import org.ksmt.expr.KModIntExpr
 import org.ksmt.expr.KMulArithExpr
 import org.ksmt.expr.KNotExpr
+import org.ksmt.expr.KOrBinaryExpr
 import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KPowerArithExpr
 import org.ksmt.expr.KRealNumExpr
@@ -131,7 +142,11 @@ import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KArithSort
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv16Sort
 import org.ksmt.sort.KBv1Sort
@@ -170,9 +185,11 @@ class ExprKindMapper: KTransformerBase {
 
     override fun transform(expr: KAndExpr): KExpr<KBoolSort> = expr.kind(ExprKind.AndExpr)
 
+    override fun transform(expr: KAndBinaryExpr): KExpr<KBoolSort> = expr.kind(ExprKind.AndBinaryExpr)
 
     override fun transform(expr: KOrExpr): KExpr<KBoolSort> = expr.kind(ExprKind.OrExpr)
 
+    override fun transform(expr: KOrBinaryExpr): KExpr<KBoolSort> = expr.kind(ExprKind.OrBinaryExpr)
 
     override fun transform(expr: KNotExpr): KExpr<KBoolSort> = expr.kind(ExprKind.NotExpr)
 
@@ -502,21 +519,49 @@ class ExprKindMapper: KTransformerBase {
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> =
         expr.kind(ExprKind.ArrayStore)
 
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Store<D0, D1, R>
+    ): KExpr<KArray2Sort<D0, D1, R>> = expr.kind(ExprKind.Array2Store)
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Store<D0, D1, D2, R>
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> = expr.kind(ExprKind.Array3Store)
+
+    override fun <R : KSort> transform(expr: KArrayNStore<R>): KExpr<KArrayNSort<R>> =
+        expr.kind(ExprKind.ArrayNStore)
 
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> = expr.kind(ExprKind.ArraySelect)
 
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Select<D0, D1, R>
+    ): KExpr<R> = expr.kind(ExprKind.Array2Select)
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>): KExpr<KArraySort<D, R>> =
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Select<D0, D1, D2, R>
+    ): KExpr<R> = expr.kind(ExprKind.Array3Select)
+
+    override fun <R : KSort> transform(expr: KArrayNSelect<R>): KExpr<R> = expr.kind(ExprKind.ArrayNSelect)
+
+    override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KArrayConst<A, R>): KExpr<A> =
         expr.kind(ExprKind.ArrayConst)
 
-
-    override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> =
+    override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KFunctionAsArray<A, R>): KExpr<A> =
         expr.kind(ExprKind.FunctionAsArray)
 
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> =
         expr.kind(ExprKind.ArrayLambda)
 
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Lambda<D0, D1, R>
+    ): KExpr<KArray2Sort<D0, D1, R>> = expr.kind(ExprKind.Array2Lambda)
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Lambda<D0, D1, D2, R>
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> = expr.kind(ExprKind.Array3Lambda)
+
+    override fun <R : KSort> transform(expr: KArrayNLambda<R>): KExpr<KArrayNSort<R>> =
+        expr.kind(ExprKind.ArrayNLambda)
 
     override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> = expr.kind(ExprKind.AddArithExpr)
 

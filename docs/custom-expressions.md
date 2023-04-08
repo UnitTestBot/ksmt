@@ -216,8 +216,8 @@ class CustomSolver<C : KSolverConfiguration>(
         solver.assert(transformer.apply(expr))
 
     // expr can contain custom expressions -> rewrite
-    override fun assertAndTrack(expr: KExpr<KBoolSort>): KExpr<KBoolSort> =
-        solver.assertAndTrack(transformer.apply(expr))
+    override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) =
+        solver.assertAndTrack(transformer.apply(expr), trackVar)
 
     // assumptions can contain custom expressions -> rewrite
     override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus =
@@ -239,6 +239,7 @@ class CustomSolver<C : KSolverConfiguration>(
 
     override fun close() = solver.close()
     override fun configure(configurator: C.() -> Unit) = solver.configure(configurator)
+    override fun interrupt() = solver.interrupt()
 }
 ```
 

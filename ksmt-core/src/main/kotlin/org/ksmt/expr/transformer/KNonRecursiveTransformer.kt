@@ -2,10 +2,20 @@ package org.ksmt.expr.transformer
 
 import org.ksmt.KContext
 import org.ksmt.expr.KAddArithExpr
+import org.ksmt.expr.KAndBinaryExpr
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KArray2Lambda
+import org.ksmt.expr.KArray2Select
+import org.ksmt.expr.KArray2Store
+import org.ksmt.expr.KArray3Lambda
+import org.ksmt.expr.KArray3Select
+import org.ksmt.expr.KArray3Store
 import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArrayNLambda
+import org.ksmt.expr.KArrayNSelect
+import org.ksmt.expr.KArrayNStore
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KBv2IntExpr
@@ -103,6 +113,7 @@ import org.ksmt.expr.KLtArithExpr
 import org.ksmt.expr.KModIntExpr
 import org.ksmt.expr.KMulArithExpr
 import org.ksmt.expr.KNotExpr
+import org.ksmt.expr.KOrBinaryExpr
 import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KPowerArithExpr
 import org.ksmt.expr.KRealToFpExpr
@@ -114,7 +125,11 @@ import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.sort.KArithSort
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBv1Sort
 import org.ksmt.sort.KBvSort
@@ -122,6 +137,7 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.utils.uncheckedCast
 
 /**
  * Apply specialized non-recursive transformations for all KSMT expressions.
@@ -141,10 +157,24 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
 
     // bool transformers
     override fun transform(expr: KAndExpr): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.args, ::transformApp, KContext::mkAnd)
+        transformExprAfterTransformedDefault(
+            expr, expr.args, ::transformApp
+        ) { args -> mkAnd(args, flat = false, order = false) }
+
+    override fun transform(expr: KAndBinaryExpr): KExpr<KBoolSort> =
+        transformExprAfterTransformedDefault(
+            expr, expr.lhs, expr.rhs, ::transformApp
+        ) { l, r -> mkAnd(l, r, flat = false, order = false) }
 
     override fun transform(expr: KOrExpr): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.args, ::transformApp, KContext::mkOr)
+        transformExprAfterTransformedDefault(
+            expr, expr.args, ::transformApp
+        ) { args -> mkOr(args, flat = false) }
+
+    override fun transform(expr: KOrBinaryExpr): KExpr<KBoolSort> =
+        transformExprAfterTransformedDefault(
+            expr, expr.lhs, expr.rhs, ::transformApp
+        ) { l, r -> mkOr(l, r, flat = false, order = false) }
 
     override fun transform(expr: KNotExpr): KExpr<KBoolSort> =
         transformExprAfterTransformedDefault(expr, expr.arg, ::transformApp, KContext::mkNot)
@@ -156,10 +186,14 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         transformExprAfterTransformedDefault(expr, expr.a, expr.b, ::transformApp, KContext::mkXor)
 
     override fun <T : KSort> transform(expr: KEqExpr<T>): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.lhs, expr.rhs, ::transformApp, KContext::mkEq)
+        transformExprAfterTransformedDefault(
+            expr, expr.lhs, expr.rhs, ::transformApp
+        ) { l, r -> mkEq(l, r, order = false) }
 
     override fun <T : KSort> transform(expr: KDistinctExpr<T>): KExpr<KBoolSort> =
-        transformExprAfterTransformedDefault(expr, expr.args, ::transformApp, KContext::mkDistinct)
+        transformExprAfterTransformedDefault(
+            expr, expr.args, ::transformApp
+        ) { args -> mkDistinct(args, order = false) }
 
     override fun <T : KSort> transform(expr: KIteExpr<T>): KExpr<T> =
         transformExprAfterTransformedDefault(
@@ -482,15 +516,99 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         ) { rm, value -> mkBvToFpExpr(expr.sort, rm, value, expr.signed) }
 
     // array transformers
-    override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> =
-        transformExprAfterTransformedDefault(
-            expr, expr.array, expr.index, expr.value, ::transformApp, KContext::mkArrayStore
+    override fun <D : KSort, R : KSort> transform(
+        expr: KArrayStore<D, R>
+    ): KExpr<KArraySort<D, R>> = transformExprAfterTransformedDefault(
+        expr, expr.array, expr.index, expr.value, ::transformArrayStore, KContext::mkArrayStore
+    )
+
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Store<D0, D1, R>
+    ): KExpr<KArray2Sort<D0, D1, R>> = transformExprAfterTransformedDefault(
+        expr, expr.array, expr.index0, expr.index1, expr.value, ::transformArrayStore, KContext::mkArrayStore
+    )
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Store<D0, D1, D2, R>
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> = transformExprAfterTransformedDefault(
+        expr, expr.array, expr.index0, expr.index1, expr.index2, expr.value,
+        ::transformArrayStore, KContext::mkArrayStore
+    )
+
+    override fun <R : KSort> transform(
+        expr: KArrayNStore<R>
+    ): KExpr<KArrayNSort<R>> = transformExprAfterTransformedDefault(
+        expr, expr.args, ::transformArrayStore
+    ) { args ->
+        mkArrayNStore(
+            array = args.first().uncheckedCast(),
+            indices = args.subList(fromIndex = 1, toIndex = args.size - 1).uncheckedCast(),
+            value = args.last().uncheckedCast()
         )
+    }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> =
-        transformExprAfterTransformedDefault(expr, expr.array, expr.index, ::transformApp, KContext::mkArraySelect)
+    override fun <D : KSort, R : KSort> transform(
+        expr: KArraySelect<D, R>
+    ): KExpr<R> = transformExprAfterTransformedDefault(
+        expr, expr.array, expr.index, ::transformArraySelect, KContext::mkArraySelect
+    )
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>): KExpr<KArraySort<D, R>> =
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Select<D0, D1, R>
+    ): KExpr<R> = transformExprAfterTransformedDefault(
+        expr, expr.array, expr.index0, expr.index1, ::transformArraySelect, KContext::mkArraySelect
+    )
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Select<D0, D1, D2, R>
+    ): KExpr<R> = transformExprAfterTransformedDefault(
+        expr, expr.array, expr.index0, expr.index1, expr.index2, ::transformArraySelect, KContext::mkArraySelect
+    )
+
+    override fun <R : KSort> transform(
+        expr: KArrayNSelect<R>
+    ): KExpr<R> = transformExprAfterTransformedDefault(
+        expr, expr.args, ::transformArraySelect
+    ) { args ->
+        mkArrayNSelect(
+            array = args.first().uncheckedCast(),
+            indices = args.drop(1)
+        )
+    }
+
+    override fun <D : KSort, R : KSort> transform(
+        expr: KArrayLambda<D, R>
+    ): KExpr<KArraySort<D, R>> = transformExprAfterTransformedDefault(
+        expr, expr.body, ::transformArrayLambda
+    ) { body ->
+        mkArrayLambda(expr.indexVarDecl, body)
+    }
+
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Lambda<D0, D1, R>
+    ): KExpr<KArray2Sort<D0, D1, R>> = transformExprAfterTransformedDefault(
+        expr, expr.body, ::transformArrayLambda
+    ) { body ->
+        mkArrayLambda(expr.indexVar0Decl, expr.indexVar1Decl, body)
+    }
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Lambda<D0, D1, D2, R>
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> = transformExprAfterTransformedDefault(
+        expr, expr.body, ::transformArrayLambda
+    ) { body ->
+        mkArrayLambda(expr.indexVar0Decl, expr.indexVar1Decl, expr.indexVar2Decl, body)
+    }
+
+    override fun <R : KSort> transform(
+        expr: KArrayNLambda<R>
+    ): KExpr<KArrayNSort<R>> = transformExprAfterTransformedDefault(
+        expr, expr.body, ::transformArrayLambda
+    ) { body ->
+        mkArrayNLambda(expr.indexVarDeclarations, body)
+    }
+
+    override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KArrayConst<A, R>): KExpr<A> =
         transformExprAfterTransformedDefault(expr, expr.value, ::transformApp) { value ->
             mkArrayConst(expr.sort, value)
         }
@@ -544,12 +662,6 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         transformExprAfterTransformedDefault(expr, expr.arg, ::transformApp, KContext::mkRealIsInt)
 
     // quantified expressions
-    override fun <D : KSort, R : KSort> transform(
-        expr: KArrayLambda<D, R>
-    ): KExpr<KArraySort<D, R>> = transformExprAfterTransformedDefault(expr, expr.body, ::transformExpr) { body ->
-        mkArrayLambda(expr.indexVarDecl, body)
-    }
-
     override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> =
         transformExprAfterTransformedDefault(expr, expr.body, ::transformExpr) { body ->
             mkExistentialQuantifier(body, expr.bounds)
@@ -561,7 +673,7 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         }
 
     // utils
-    private fun <T : KSort> transformExprDefault(expr: KExpr<T>): KExpr<T> = when (expr) {
+    fun <T : KSort> transformExprDefault(expr: KExpr<T>): KExpr<T> = when (expr) {
         is KInterpretedValue<T> -> transformValue(expr)
         is KApp<T, *> -> transformApp(expr)
         else -> transformExpr(expr)
@@ -573,7 +685,7 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
      * invoke [ifNotTransformed] on the original expression and return it result.
      * Otherwise, apply [transformer] to the modified dependencies.
      * */
-    private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A : KSort> transformExprAfterTransformedDefault(
+    inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A : KSort> transformExprAfterTransformedDefault(
         expr: In,
         dependencies: List<KExpr<A>>,
         ifNotTransformed: (In) -> KExpr<T>,
@@ -591,7 +703,7 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
     /**
      * Specialized version of [transformExprAfterTransformedDefault] for expression with single argument.
      * */
-    private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A : KSort> transformExprAfterTransformedDefault(
+    inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A : KSort> transformExprAfterTransformedDefault(
         expr: In,
         dependency: KExpr<A>,
         ifNotTransformed: (In) -> KExpr<T>,
@@ -609,7 +721,7 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
     /**
      * Specialized version of [transformExprAfterTransformedDefault] for expression with two arguments.
      * */
-    private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort>
+    inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort>
     transformExprAfterTransformedDefault(
         expr: In,
         dependency0: KExpr<A0>,
@@ -630,7 +742,7 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
      * Specialized version of [transformExprAfterTransformedDefault] for expression with three arguments.
      * */
     @Suppress("LongParameterList")
-    private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort, A2 : KSort>
+    inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort, A2 : KSort>
     transformExprAfterTransformedDefault(
         expr: In,
         dependency0: KExpr<A0>,
@@ -649,10 +761,10 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
     }
 
     /**
-     * Specialized version of [transformExprAfterTransformedDefault] for expression with 4 arguments.
+     * Specialized version of [transformExprAfterTransformedDefault] for expression with four arguments.
      * */
     @Suppress("LongParameterList", "ComplexCondition")
-    private inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort>
+    inline fun <In : KExpr<T>, Out : KExpr<T>, T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort>
     transformExprAfterTransformedDefault(
         expr: In,
         dependency0: KExpr<A0>,
@@ -668,6 +780,35 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
             }
 
             val transformedExpr = ctx.transformer(td0, td1, td2, td3)
+
+            return transformExprDefault(transformedExpr)
+        }
+
+    /**
+     * Specialized version of [transformExprAfterTransformedDefault] for expression with five arguments.
+     * */
+    @Suppress("LongParameterList", "ComplexCondition")
+    inline fun <
+        In : KExpr<T>, Out : KExpr<T>,
+        T : KSort, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort, A4 : KSort
+    > transformExprAfterTransformedDefault(
+        expr: In,
+        d0: KExpr<A0>,
+        d1: KExpr<A1>,
+        d2: KExpr<A2>,
+        d3: KExpr<A3>,
+        d4: KExpr<A4>,
+        ifNotTransformed: (In) -> KExpr<T>,
+        transformer: KContext.(KExpr<A0>, KExpr<A1>, KExpr<A2>, KExpr<A3>, KExpr<A4>) -> Out
+    ): KExpr<T> =
+        transformExprAfterTransformed(
+            expr, d0, d1, d2, d3, d4
+        ) { td0, td1, td2, td3, td4 ->
+            if (td0 == d0 && td1 == d1 && td2 == d2 && td3 == d3 && td4 == d4) {
+                return ifNotTransformed(expr)
+            }
+
+            val transformedExpr = ctx.transformer(td0, td1, td2, td3, td4)
 
             return transformExprDefault(transformedExpr)
         }

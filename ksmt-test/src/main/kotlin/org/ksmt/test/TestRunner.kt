@@ -5,11 +5,11 @@ import kotlinx.coroutines.withTimeout
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.runner.core.KsmtWorkerSession
-import org.ksmt.runner.models.generated.EqualityCheckAssumptionsParams
-import org.ksmt.runner.models.generated.EqualityCheckParams
-import org.ksmt.runner.models.generated.TestAssertParams
-import org.ksmt.runner.models.generated.TestInternalizeAndConvertParams
-import org.ksmt.runner.models.generated.TestProtocolModel
+import org.ksmt.runner.generated.models.EqualityCheckAssumptionsParams
+import org.ksmt.runner.generated.models.EqualityCheckParams
+import org.ksmt.runner.generated.models.TestAssertParams
+import org.ksmt.runner.generated.models.TestInternalizeAndConvertParams
+import org.ksmt.runner.generated.models.TestProtocolModel
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.sort.KBoolSort
@@ -58,6 +58,16 @@ class TestRunner(
         withTimeoutAndExceptionHandling {
             val params = TestInternalizeAndConvertParams(assertions)
             val result = worker.protocolModel.internalizeAndConvertYices.startSuspending(worker.lifetime, params)
+            result.expressions.map {
+                @Suppress("UNCHECKED_CAST")
+                it as KExpr<KBoolSort>
+            }
+        }
+
+    suspend fun internalizeAndConvertCvc5(assertions: List<KExpr<KBoolSort>>): List<KExpr<KBoolSort>> =
+        withTimeoutAndExceptionHandling {
+            val params = TestInternalizeAndConvertParams(assertions)
+            val result = worker.protocolModel.internalizeAndConvertCvc5.startSuspending(worker.lifetime, params)
             result.expressions.map {
                 @Suppress("UNCHECKED_CAST")
                 it as KExpr<KBoolSort>

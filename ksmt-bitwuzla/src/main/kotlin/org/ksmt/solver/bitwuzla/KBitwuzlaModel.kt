@@ -28,7 +28,7 @@ open class KBitwuzlaModel(
     private val modelDeclarations = assertedDeclarations.toHashSet()
 
     override val declarations: Set<KDecl<*>>
-        get() = modelDeclarations.toSet()
+        get() = modelDeclarations.toHashSet()
 
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
         ctx.ensureContextMatch(expr)
@@ -66,6 +66,8 @@ open class KBitwuzlaModel(
     override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? {
         ctx.ensureContextMatch(decl)
         bitwuzlaCtx.ensureActive()
+
+        if (decl !in modelDeclarations) return null
 
         val interpretation = interpretations.getOrPut(decl) {
             // Constant was not internalized --> constant is unknown to solver --> constant is not present in model
@@ -140,7 +142,7 @@ open class KBitwuzlaModel(
         decl: KDecl<T>,
         term: BitwuzlaTerm
     ): KModel.KFuncInterp<T> = with(converter) {
-        val sort = decl.sort as KArraySort<*, *>
+        val sort: KArraySort<KSort, KSort> = decl.sort.uncheckedCast()
         val entries = mutableListOf<KModel.KFuncInterpEntry<KSort>>()
         val interp = Native.bitwuzlaGetArrayValue(bitwuzlaCtx.bitwuzla, term)
 
@@ -166,7 +168,7 @@ open class KBitwuzlaModel(
             decl = decl,
             vars = emptyList(),
             entries = emptyList(),
-            default = mkFunctionAsArray<KSort, KSort>(arrayInterpDecl).uncheckedCast()
+            default = mkFunctionAsArray(sort, arrayInterpDecl).uncheckedCast()
         )
     }
 

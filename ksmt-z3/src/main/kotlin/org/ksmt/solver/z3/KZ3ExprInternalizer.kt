@@ -1,16 +1,23 @@
 package org.ksmt.solver.z3
 
-import com.microsoft.z3.Expr
-import com.microsoft.z3.FuncDecl
 import com.microsoft.z3.Native
-import com.microsoft.z3.Sort
 import com.microsoft.z3.mkQuantifier
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KAddArithExpr
+import org.ksmt.expr.KAndBinaryExpr
 import org.ksmt.expr.KAndExpr
+import org.ksmt.expr.KArray2Lambda
+import org.ksmt.expr.KArray2Select
+import org.ksmt.expr.KArray2Store
+import org.ksmt.expr.KArray3Lambda
+import org.ksmt.expr.KArray3Select
+import org.ksmt.expr.KArray3Store
 import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArrayNLambda
+import org.ksmt.expr.KArrayNSelect
+import org.ksmt.expr.KArrayNStore
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KBitVec16Value
@@ -127,6 +134,7 @@ import org.ksmt.expr.KLtArithExpr
 import org.ksmt.expr.KModIntExpr
 import org.ksmt.expr.KMulArithExpr
 import org.ksmt.expr.KNotExpr
+import org.ksmt.expr.KOrBinaryExpr
 import org.ksmt.expr.KOrExpr
 import org.ksmt.expr.KPowerArithExpr
 import org.ksmt.expr.KQuantifier
@@ -140,9 +148,13 @@ import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
-import org.ksmt.solver.util.KExprInternalizerBase
+import org.ksmt.solver.util.KExprLongInternalizerBase
 import org.ksmt.sort.KArithSort
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFp128Sort
@@ -154,35 +166,27 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 
-@Suppress("SpreadOperator")
 open class KZ3ExprInternalizer(
     val ctx: KContext,
     private val z3InternCtx: KZ3Context
-) : KExprInternalizerBase<Long>() {
+) : KExprLongInternalizerBase() {
 
+    @JvmField
     val nCtx: Long = z3InternCtx.nCtx
 
     private val sortInternalizer = KZ3SortInternalizer(z3InternCtx)
     private val declInternalizer = KZ3DeclInternalizer(z3InternCtx, sortInternalizer)
 
-    override fun findInternalizedExpr(expr: KExpr<*>): Long? = z3InternCtx.findInternalizedExpr(expr)
+    override fun findInternalizedExpr(expr: KExpr<*>): Long =
+        z3InternCtx.findInternalizedExpr(expr)
 
     override fun saveInternalizedExpr(expr: KExpr<*>, internalized: Long) {
         z3InternCtx.saveInternalizedExpr(expr, internalized)
     }
 
-    fun <T : KSort> KExpr<T>.internalizeExprWrapped(): Expr<*> =
-        z3InternCtx.nativeContext.wrapAST(internalizeExpr()) as Expr<*>
+    fun <T : KDecl<*>> T.internalizeDecl(): Long = declInternalizer.internalizeZ3Decl(this)
 
-    fun <T : KDecl<*>> T.internalizeDeclWrapped(): FuncDecl<*> =
-        z3InternCtx.nativeContext.wrapAST(internalizeDecl()) as FuncDecl<*>
-
-    fun KSort.internalizeSortWrapped(): Sort =
-        z3InternCtx.nativeContext.wrapAST(internalizeSort()) as Sort
-
-    fun <T : KDecl<*>> T.internalizeDecl(): Long = accept(declInternalizer)
-
-    fun <T : KSort> T.internalizeSort(): Long = accept(sortInternalizer)
+    fun <T : KSort> T.internalizeSort(): Long = sortInternalizer.internalizeZ3Sort(this)
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>) = with(expr) {
         transformArray(args) { args ->
@@ -198,8 +202,16 @@ open class KZ3ExprInternalizer(
         transformArray(args) { args -> Native.mkAnd(nCtx, args.size, args) }
     }
 
+    override fun transform(expr: KAndBinaryExpr) = with(expr) {
+        transform(lhs, rhs) { l, r -> Native.mkAnd(nCtx, 2, longArrayOf(l, r)) }
+    }
+
     override fun transform(expr: KOrExpr) = with(expr) {
         transformArray(args) { args -> Native.mkOr(nCtx, args.size, args) }
+    }
+
+    override fun transform(expr: KOrBinaryExpr) = with(expr) {
+        transform(lhs, rhs) { l, r -> Native.mkOr(nCtx, 2, longArrayOf(l, r)) }
     }
 
     override fun transform(expr: KNotExpr) = with(expr) { transform(arg, Native::mkNot) }
@@ -605,20 +617,136 @@ open class KZ3ExprInternalizer(
         transform(array, index, value, Native::mkStore)
     }
 
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Store<D0, D1, R>
+    ): KExpr<KArray2Sort<D0, D1, R>> = with(expr) {
+        transform(array, index0, index1, value) { array: Long, i0: Long, i1: Long, value: Long ->
+            val indices = longArrayOf(i0, i1)
+            Native.mkStoreN(nCtx, array, indices.size, indices, value)
+        }
+    }
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Store<D0, D1, D2, R>
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> = with(expr) {
+        transformArray(listOf(array, index0, index1, index2, value)) { args ->
+            val (array, i0, i1, i2, value) = args
+            val indices = longArrayOf(i0, i1, i2)
+            Native.mkStoreN(nCtx, array, indices.size, indices, value)
+        }
+    }
+
+    override fun <R : KSort> transform(expr: KArrayNStore<R>): KExpr<KArrayNSort<R>> = with(expr) {
+        transformArray(indices + listOf(array, value)) { args ->
+            val value = args[args.lastIndex]
+            val array = args[args.lastIndex - 1]
+            val indices = args.copyOf(args.size - 2)
+            Native.mkStoreN(nCtx, array, indices.size, indices, value)
+        }
+    }
+
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>) = with(expr) {
         transform(array, index, Native::mkSelect)
     }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayConst<D, R>) = with(expr) {
-        transform(value) { value: Long -> Native.mkConstArray(nCtx, sort.domain.internalizeSort(), value) }
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Select<D0, D1, R>
+    ): KExpr<R> = with(expr) {
+        transform(array, index0, index1) { array: Long, i0: Long, i1: Long ->
+            val indices = longArrayOf(i0, i1)
+            Native.mkSelectN(nCtx, array, indices.size, indices)
+        }
     }
 
-    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) = with(expr) {
-        transform(body) { body: Long ->
-            val indexSort = indexVarDecl.sort.internalizeSort()
-            val indexName = Native.mkStringSymbol(nCtx, indexVarDecl.name)
-            Native.mkLambda(nCtx, 1, longArrayOf(indexSort), longArrayOf(indexName), body)
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Select<D0, D1, D2, R>
+    ): KExpr<R>  = with(expr) {
+        transform(array, index0, index1, index2) { array: Long, i0: Long, i1: Long, i2: Long ->
+            val indices = longArrayOf(i0, i1, i2)
+            Native.mkSelectN(nCtx, array, indices.size, indices)
         }
+    }
+
+    override fun <R : KSort> transform(expr: KArrayNSelect<R>): KExpr<R> = with(expr) {
+        transformArray(indices + array) { args ->
+            val array = args.last()
+            val indices = args.copyOf(args.size - 1)
+            Native.mkSelectN(nCtx, array, indices.size, indices)
+        }
+    }
+
+    override fun <A: KArraySortBase<R>, R : KSort> transform(expr: KArrayConst<A, R>) = with(expr) {
+        transform(value) { value: Long ->
+            mkConstArray(sort, value)
+        }
+    }
+
+    private fun mkConstArray(sort: KArraySortBase<*>, value: Long): Long =
+        if (sort is KArraySort<*, *>) {
+            Native.mkConstArray(nCtx, sort.domain.internalizeSort(), value)
+        } else {
+            ensureArraySortInternalized(sort)
+
+            val domain = sort.domainSorts.let { domain ->
+                LongArray(domain.size) { domain[it].internalizeSort() }
+            }
+            val domainNames = LongArray(sort.domainSorts.size) { Native.mkIntSymbol(nCtx, it) }
+            Native.mkLambda(nCtx, domain.size, domain, domainNames, value)
+        }
+
+    override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>) = with(expr) {
+        transform(body, ctx.mkConstApp(indexVarDecl)) { body: Long, index: Long ->
+            ensureArraySortInternalized(expr.sort)
+
+            val indices = longArrayOf(index)
+            Native.mkLambdaConst(nCtx, indices.size, indices, body)
+        }
+    }
+
+    override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+        expr: KArray2Lambda<D0, D1, R>
+    ): KExpr<KArray2Sort<D0, D1, R>> = with(expr) {
+        transform(
+            body, ctx.mkConstApp(indexVar0Decl), ctx.mkConstApp(indexVar1Decl)
+        ) { body: Long, index0: Long, index1: Long ->
+            ensureArraySortInternalized(expr.sort)
+
+            val indices = longArrayOf(index0, index1)
+            Native.mkLambdaConst(nCtx, indices.size, indices, body)
+        }
+    }
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+        expr: KArray3Lambda<D0, D1, D2, R>
+    ): KExpr<KArray3Sort<D0, D1, D2, R>>  = with(expr) {
+        transform(
+            body, ctx.mkConstApp(indexVar0Decl), ctx.mkConstApp(indexVar1Decl), ctx.mkConstApp(indexVar2Decl)
+        ) { body: Long, index0: Long, index1: Long, index2: Long ->
+            ensureArraySortInternalized(expr.sort)
+
+            val indices = longArrayOf(index0, index1, index2)
+            Native.mkLambdaConst(nCtx, indices.size, indices, body)
+        }
+    }
+
+    override fun <R : KSort> transform(expr: KArrayNLambda<R>): KExpr<KArrayNSort<R>> = with(expr) {
+        transformArray(indexVarDeclarations.map { ctx.mkConstApp(it) } + body) { args ->
+            ensureArraySortInternalized(expr.sort)
+
+            val body = args.last()
+            val indices = args.copyOf(args.size - 1)
+            Native.mkLambdaConst(nCtx, indices.size, indices, body)
+        }
+    }
+
+    /**
+     * Z3 incorrectly manage array sort references on lambda expression creation.
+     * If the created lambda expression is the only reference to the array sort,
+     * it results in native error on context deletion. To bypass this issue
+     * we ensure that array sort is referenced not only in the created lambda
+     * */
+    private fun ensureArraySortInternalized(sort: KArraySortBase<*>) {
+        sort.internalizeSort()
     }
 
     override fun <T : KArithSort> transform(expr: KAddArithExpr<T>) = with(expr) {
@@ -706,8 +834,8 @@ open class KZ3ExprInternalizer(
 
     override fun transform(expr: KUniversalQuantifier) = transformQuantifier(expr, isUniversal = true)
 
-    override fun <D : KSort, R : KSort> transform(expr: KFunctionAsArray<D, R>): KExpr<KArraySort<D, R>> {
-        TODO("KFunctionAsArray internalization is not implemented in z3")
+    override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KFunctionAsArray<A, R>): KExpr<A> = with(expr) {
+        transform { Native.mkAsArray(nCtx, function.internalizeDecl()) }
     }
 
     inline fun <S : KExpr<*>> S.transform(
@@ -744,10 +872,9 @@ open class KZ3ExprInternalizer(
         operation(nCtx, a0, a1, a2, a3)
     }
 
-    @Suppress("ArrayPrimitive")
     inline fun <S : KExpr<*>> S.transformArray(
         args: List<KExpr<*>>,
         operation: (LongArray) -> Long
-    ): S = transformList(args) { a: Array<Long> -> operation(a.toLongArray()) }
+    ): S = transformList(args) { a: LongArray -> operation(a) }
 
 }

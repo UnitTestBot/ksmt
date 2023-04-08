@@ -13,22 +13,26 @@ repositories {
     flatDir { dirs(distDir) }
 }
 
-val yicesNative by configurations.creating
+val yicesNativeX64 by configurations.creating
+val yicesNativeArm by configurations.creating
 
 dependencies {
     implementation(project(":ksmt-core"))
     testFixturesImplementation(project(":ksmt-core"))
 
-    yicesNative("yices", "yices-native-linux-x86-64", "0.0", ext = "zip")
-    yicesNative("yices", "yices-native-win32-x86-64", "0.0", ext = "zip")
+    yicesNativeX64("yices", "yices-native-linux-x86-64", "0.0", ext = "zip")
+    yicesNativeX64("yices", "yices-native-win32-x86-64", "0.0", ext = "zip")
+    yicesNativeArm("yices", "yices-native-osx-arm64", "0.0", ext = "zip")
     api(files("$distDir/com.sri.yices.jar"))
 }
 
 tasks.withType<ProcessResources> {
-    yicesNative.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
-        val destination = "lib/x64"
-        from(zipTree(artifact.file)) {
-            into(destination)
+    sequenceOf("x64" to yicesNativeX64, "arm" to yicesNativeArm).forEach { (arch, config) ->
+        config.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
+            val destination = "lib/$arch"
+            from(zipTree(artifact.file)) {
+                into(destination)
+            }
         }
     }
 }

@@ -1,18 +1,24 @@
 package org.ksmt
 
+import org.ksmt.KContext.SimplificationMode.NO_SIMPLIFY
 import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KBitVecValue
+import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.rewrite.simplify.KExprSimplifier
 import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KIntSort
+import org.ksmt.sort.KSort
 import org.ksmt.utils.BvUtils.shiftLeft
 import org.ksmt.utils.BvUtils.shiftRightArith
 import org.ksmt.utils.BvUtils.shiftRightLogical
 import org.ksmt.utils.getValue
+import org.ksmt.utils.mkConst
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class SimplifierTest {
 
@@ -45,8 +51,9 @@ class SimplifierTest {
         val simplifiedEq = KExprSimplifier(this).apply(arrayEq)
         val simplifiedSelects = KExprSimplifier(this).apply(allSelectsEq)
 
-        val simplifiedEqParts = (simplifiedEq as KAndExpr).args
-        val simplifiedAllSelectsParts = (simplifiedSelects as KAndExpr).args
+        // Compare sets of Eq expressions
+        val simplifiedEqParts = (simplifiedEq as KAndExpr).args.map { (it as KEqExpr<*>).args.toSet() }
+        val simplifiedAllSelectsParts = (simplifiedSelects as KAndExpr).args.map { (it as KEqExpr<*>).args.toSet() }
         assertEquals(simplifiedAllSelectsParts.toSet(), simplifiedEqParts.toSet())
     }
 
@@ -160,6 +167,39 @@ class SimplifierTest {
         val expectedBv = mkBv(expected.toInt(), sort)
         val actual = op(mkBv(arg.toInt(), sort), mkBv(shift.toInt(), sort))
         assertEquals(expectedBv, actual)
+    }
+
+    private fun <T : KSort> varGenerator(
+        sort: T,
+        usedVars: MutableList<KExpr<T>>
+    ) = sequence<KExpr<T>> {
+        var idx = 0
+        while (true) {
+            val const = sort.mkConst("v${idx++}")
+            usedVars.add(const)
+            yield(const)
+        }
+    }
+
+    @Test
+    fun testStagedAndSimplification(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
+        val usedVars = mutableListOf<KExpr<KBoolSort>>()
+        val vars = varGenerator(boolSort, usedVars).iterator()
+        val expr = mkAnd(
+            vars.next(),
+            vars.next(),
+            mkAnd(
+                mkAnd(
+                    vars.next(),
+                    vars.next()
+                ),
+                vars.next(),
+            )
+        )
+        val simplifiedExpr = KExprSimplifier(this).apply(expr)
+
+        assertTrue(simplifiedExpr is KAndExpr)
+        assertEquals(usedVars.toSet(), simplifiedExpr.args.toSet())
     }
 
 }

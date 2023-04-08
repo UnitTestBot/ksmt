@@ -9,13 +9,16 @@ plugins {
 }
 
 group = "org.ksmt"
-version = "0.4.0"
+version = "0.4.6"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
+    // Primitive collections
+    implementation("it.unimi.dsi:fastutil-core:8.5.11") // 6.1MB
+
     testImplementation(kotlin("test"))
 }
 

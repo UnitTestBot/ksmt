@@ -1,6 +1,10 @@
 package org.ksmt.solver.z3
 
 import com.microsoft.z3.Native
+import org.ksmt.solver.util.KExprLongInternalizerBase.Companion.NOT_INTERNALIZED
+import org.ksmt.sort.KArray2Sort
+import org.ksmt.sort.KArray3Sort
+import org.ksmt.sort.KArrayNSort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
@@ -20,39 +24,66 @@ import org.ksmt.sort.KUninterpretedSort
 
 open class KZ3SortInternalizer(
     private val z3Ctx: KZ3Context
-) : KSortVisitor<Long> {
+) : KSortVisitor<Unit> {
+    private var internalizedSort: Long = NOT_INTERNALIZED
     private val nCtx: Long = z3Ctx.nCtx
 
-    override fun visit(sort: KBoolSort): Long = z3Ctx.internalizeSort(sort) {
-        Native.mkBoolSort(nCtx)
+    override fun visit(sort: KBoolSort) {
+        internalizedSort = Native.mkBoolSort(nCtx)
     }
 
-    override fun visit(sort: KIntSort): Long = z3Ctx.internalizeSort(sort) {
-        Native.mkIntSort(nCtx)
+    override fun visit(sort: KIntSort) {
+        internalizedSort = Native.mkIntSort(nCtx)
     }
 
-    override fun visit(sort: KRealSort): Long = z3Ctx.internalizeSort(sort) {
-        Native.mkRealSort(nCtx)
+    override fun visit(sort: KRealSort) {
+        internalizedSort = Native.mkRealSort(nCtx)
     }
 
-    override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): Long =
-        z3Ctx.internalizeSort(sort) {
-            val domain = sort.domain.internalizeZ3Sort()
-            val range = sort.range.internalizeZ3Sort()
-            Native.mkArraySort(nCtx, domain, range)
+    override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>) {
+        val domain = internalizeZ3Sort(sort.domain)
+        val range = internalizeZ3Sort(sort.range)
+        internalizedSort = Native.mkArraySort(nCtx, domain, range)
+    }
+
+    override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>) {
+        val domain = longArrayOf(
+            internalizeZ3Sort(sort.domain0),
+            internalizeZ3Sort(sort.domain1)
+        )
+        val range = internalizeZ3Sort(sort.range)
+        internalizedSort = Native.mkArraySortN(nCtx, domain.size, domain, range)
+    }
+
+    override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>) {
+        val domain = longArrayOf(
+            internalizeZ3Sort(sort.domain0),
+            internalizeZ3Sort(sort.domain1),
+            internalizeZ3Sort(sort.domain2)
+        )
+        val range = internalizeZ3Sort(sort.range)
+        internalizedSort = Native.mkArraySortN(nCtx, domain.size, domain, range)
+    }
+
+    override fun <R : KSort> visit(sort: KArrayNSort<R>) {
+        val domain = sort.domainSorts.let { sorts ->
+            LongArray(sorts.size) { internalizeZ3Sort(sorts[it]) }
         }
-
-    override fun visit(sort: KFpRoundingModeSort): Long = z3Ctx.internalizeSort(sort) {
-        Native.mkFpaRoundingModeSort(nCtx)
+        val range = internalizeZ3Sort(sort.range)
+        internalizedSort = Native.mkArraySortN(nCtx, domain.size, domain, range)
     }
 
-    override fun <T : KBvSort> visit(sort: T): Long = z3Ctx.internalizeSort(sort) {
+    override fun visit(sort: KFpRoundingModeSort) {
+        internalizedSort = Native.mkFpaRoundingModeSort(nCtx)
+    }
+
+    override fun <T : KBvSort> visit(sort: T) {
         val size = sort.sizeBits.toInt()
-        Native.mkBvSort(nCtx, size)
+        internalizedSort = Native.mkBvSort(nCtx, size)
     }
 
-    override fun <S : KFpSort> visit(sort: S): Long = z3Ctx.internalizeSort(sort) {
-        when (sort) {
+    override fun <S : KFpSort> visit(sort: S) {
+        internalizedSort = when (sort) {
             is KFp16Sort -> Native.mkFpaSort16(nCtx)
             is KFp32Sort -> Native.mkFpaSort32(nCtx)
             is KFp64Sort -> Native.mkFpaSort64(nCtx)
@@ -62,15 +93,18 @@ open class KZ3SortInternalizer(
                 val significand = sort.significandBits.toInt()
                 Native.mkFpaSort(nCtx, exp, significand)
             }
+
             else -> error("Unsupported sort: $sort")
         }
     }
 
-    override fun visit(sort: KUninterpretedSort): Long = z3Ctx.internalizeSort(sort) {
+    override fun visit(sort: KUninterpretedSort) {
         val sortName = Native.mkStringSymbol(nCtx, sort.name)
-        Native.mkUninterpretedSort(nCtx, sortName)
+        internalizedSort = Native.mkUninterpretedSort(nCtx, sortName)
     }
 
-    @Suppress("MemberVisibilityCanBePrivate")
-    fun <T : KSort> T.internalizeZ3Sort() = accept(this@KZ3SortInternalizer)
+    fun internalizeZ3Sort(sort: KSort): Long = z3Ctx.internalizeSort(sort) {
+        sort.accept(this@KZ3SortInternalizer)
+        internalizedSort
+    }
 }
