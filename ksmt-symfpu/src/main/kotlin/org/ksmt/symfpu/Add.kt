@@ -27,7 +27,7 @@ internal fun <Fp : KFpSort> KContext.add(
     right: UnpackedFp<Fp>,
     roundingMode: KExpr<KFpRoundingModeSort>,
     isAdd: KExpr<KBoolSort> = trueExpr
-): KExpr<Fp> {
+): UnpackedFp<Fp> {
 
     val knownInCorrectOrder = falseExpr
     val ec = addExponentCompare(

@@ -159,8 +159,9 @@ class UnpackedFp<Fp : KFpSort> private constructor(
 
     fun inNormalRange() = ctx.mkBvSignedLessOrEqualExpr(ctx.minNormalExponent(sort), unbiasedExponent)
 
-    fun negate() = with(ctx) {
-        val newSign = mkIte(isNaN, sign, !sign)
+    fun negate() = with(ctx) { setSign(mkIte(isNaN, sign, !sign)) }
+
+    fun setSign(newSign: KExpr<KBoolSort>) = with(ctx) {
         UnpackedFp(ctx, sort, newSign, unbiasedExponent, normalizedSignificand, isNaN, isInf, isZero, packedBv?.let {
             mkBvConcatExpr(
                 boolToBv(newSign),

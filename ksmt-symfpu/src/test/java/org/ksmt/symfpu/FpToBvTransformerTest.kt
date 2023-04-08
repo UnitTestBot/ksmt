@@ -457,6 +457,35 @@ class FpToBvTransformerTest {
     }
 
     @Test
+    fun testFpToBvRemExpr() = with(KContext()) {
+        val a by mkFp16Sort()
+        val b by mkFp16Sort()
+        testFpExpr(
+            mkFpRemExpr(a, b),
+            mapOf("a" to a, "b" to b),
+        )
+    }
+
+    @Test
+    fun testFpToBvRem1Expr() = with(KContext()) {
+        val a = fromPackedBv(
+            mkBv("1111010001001000", 16u),
+            mkFp16Sort()
+        )
+        val b = fromPackedBv(
+            mkBv("0000000010111010", 16u),
+            mkFp16Sort()
+        )
+        println("a = $a")
+        println("b = $b")
+        println("r = ${mkFpRemExpr(a, b)}")
+        testFpExpr(
+            mkFpRemExprNoSimplify(a, b),
+            mapOf("a" to a.cast(), "b" to b.cast()),
+        )
+    }
+
+    @Test
     fun testFpToBvAddFp16RTZExpr() = with(KContext()) {
         val a by mkFp16Sort()
         val b by mkFp16Sort()
