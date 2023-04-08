@@ -123,7 +123,7 @@ fun <Fp : KFpSort> KContext.arithmeticRemainder(
     // The big integer has sign left.getSign() ^ right.getSign() so we subtract something of left.getSign().
     // For the integer part we handle this by working with absolutes (ignoring the sign) and
     // adding it back in at the end.
-    // However for the correction for the rounded part we need to take it into account
+    // However, for the correction for the rounded part we need to take it into account
 
     val signCorrectedRight = right.setSign(left.sign)
 
@@ -159,6 +159,5 @@ private fun KContext.divideStep(x: KExpr<KBvSort>, y: KExpr<KBvSort>): ResultWit
 
 private fun KExpr<KBvSort>.extendUnsigned(i: Int) = ctx.mkBvZeroExtensionExpr(i, this)
 private fun KExpr<KBvSort>.extract(high: Int, low: Int) = ctx.mkBvExtractExpr(high, low, this)
-private fun KExpr<KBvSort>.isAllOnes() = ctx.mkEq(this, ctx.mkBv(-1, sort.sizeBits))
 private fun KExpr<KBvSort>.isAllZeros() = ctx.mkEq(this, ctx.mkBv(0, sort.sizeBits))
 

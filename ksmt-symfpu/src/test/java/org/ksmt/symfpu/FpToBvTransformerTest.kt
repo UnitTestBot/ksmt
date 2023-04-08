@@ -457,9 +457,20 @@ class FpToBvTransformerTest {
     }
 
     @Test
-    fun testFpToBvRemExpr() = with(KContext()) {
+    fun testFpToBvRem16Expr() = with(KContext()) {
         val a by mkFp16Sort()
         val b by mkFp16Sort()
+        testFpExpr(
+            mkFpRemExpr(a, b),
+            mapOf("a" to a, "b" to b),
+        )
+    }
+
+
+    @Test
+    fun testFpToBvRem32Expr() = with(KContext()) {
+        val a by mkFp32Sort()
+        val b by mkFp32Sort()
         testFpExpr(
             mkFpRemExpr(a, b),
             mapOf("a" to a, "b" to b),
@@ -481,6 +492,25 @@ class FpToBvTransformerTest {
         println("r = ${mkFpRemExpr(a, b)}")
         testFpExpr(
             mkFpRemExprNoSimplify(a, b),
+            mapOf("a" to a.cast(), "b" to b.cast()),
+        )
+    }
+    @Test
+    fun testFpToBvRem132Expr() = with(KContext()) {
+        val a = fromPackedBv(
+            mkBv("11111010000000000000000000000000", 32u),
+            mkFp32Sort()
+        )
+        val b = fromPackedBv(
+            mkBv("00000000000000000000010000001000", 32u),
+            mkFp32Sort()
+        )
+        println("a = $a")
+        println("b = $b")
+        println("r = ${mkFpRemExpr(a, b)}")
+        testFpExpr(
+            mkFpRemExprNoSimplify(a, b),
+//            mkFpRemExpr(a, b),
             mapOf("a" to a.cast(), "b" to b.cast()),
         )
     }
@@ -768,14 +798,16 @@ class FpToBvTransformerTest {
         val status =
             solver.checkWithAssumptions(
                 listOf(testTransformer.apply(extraAssert(transformedExpr, toCompare))),
-                200.seconds
+                timeout = 200.seconds
             )
         println("status: $status")
         if (status == KSolverStatus.SAT) {
             val model = solver.model()
             val transformed = model.eval(transformedExpr)
             val baseExpr = model.eval(toCompare)
-
+            println("notequal = ${transformed neq baseExpr}")
+            val neqEval = model.eval(transformedExpr neq toCompare)
+            println("neqEval = $neqEval")
 
             println("transformed: ${unpackedString(transformed, model)}")
             println("exprToTrans: ${unpackedString(baseExpr, model)}")
@@ -857,14 +889,15 @@ class FpToBvTransformerTest {
 
 
 fun <T : KFpSort> KContext.fromPackedBv(it: KExpr<KBvSort>, sort: T): KExpr<T> {
-    val pWidth = it.sort.sizeBits.toInt()
-    val exWidth = sort.exponentBits.toInt()
-
-    // Extract
-    val packedSignificand = mkBvExtractExpr(pWidth - exWidth - 2, 0, it)
-    val packedExponent = mkBvExtractExpr(pWidth - 2, pWidth - exWidth - 1, it)
-    val sign = (mkBvExtractExpr(pWidth - 1, pWidth - 1, it))
-    return mkFpFromBvExpr(sign.cast(), packedExponent, packedSignificand)
+    return unpack(sort, it).toFp()
+//    val pWidth = it.sort.sizeBits.toInt()
+//    val exWidth = sort.exponentBits.toInt()
+//
+//    // Extract
+//    val packedSignificand = mkBvExtractExpr(pWidth - exWidth - 2, 0, it)
+//    val packedExponent = mkBvExtractExpr(pWidth - 2, pWidth - exWidth - 1, it)
+//    val sign = (mkBvExtractExpr(pWidth - 1, pWidth - 1, it))
+//    return mkFpFromBvExpr(sign.cast(), packedExponent, packedSignificand)
 }
 
 class TestTransformerUseBvs(ctx: KContext, private val mapFpToBv: MutableMap<KExpr<KFpSort>, KExpr<KBvSort>>) :
