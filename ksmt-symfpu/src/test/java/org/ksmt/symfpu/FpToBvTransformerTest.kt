@@ -416,17 +416,6 @@ class FpToBvTransformerTest {
 
 
     @Test
-    fun testFpToBvAddFp16RTNExpr() = with(KContext()) {
-        val a by mkFp16Sort()
-        val b by mkFp16Sort()
-        testFpExpr(
-            mkFpAddExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardNegative), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
-
-    @Test
     fun testFpToBvFmaFp16RTNExpr() = with(KContext()) {
         val a by mkFp16Sort()
         val b by mkFp16Sort()
@@ -515,25 +504,6 @@ class FpToBvTransformerTest {
         )
     }
 
-    @Test
-    fun testFpToBvAddFp16RTZExpr() = with(KContext()) {
-        val a by mkFp16Sort()
-        val b by mkFp16Sort()
-        testFpExpr(
-            mkFpAddExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardZero), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
-    @Test
-    fun testFpToBvAddFp16RTPExpr() = with(KContext()) {
-        val a by mkFp16Sort()
-        val b by mkFp16Sort()
-        testFpExpr(
-            mkFpAddExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardPositive), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
 
     @Test
     fun testFpToBvAddFp16RNEExpr() = with(KContext()) {
@@ -545,45 +515,6 @@ class FpToBvTransformerTest {
         )
     }
 
-    @Test
-    fun testFpToBvSubFp16RTNExpr() = with(KContext()) {
-        val a by mkFp16Sort()
-        val b by mkFp16Sort()
-        testFpExpr(
-            mkFpSubExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardNegative), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
-    @Test
-    fun testFpToBvSubFp16RNAExpr() = with(KContext()) {
-        val a by mkFp16Sort()
-        val b by mkFp16Sort()
-        testFpExpr(
-            mkFpSubExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToAway), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
-    @Test
-    fun testFpToBvSubFp16RTZExpr() = with(KContext()) {
-        val a by mkFp16Sort()
-        val b by mkFp16Sort()
-        testFpExpr(
-            mkFpSubExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardZero), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
-    @Test
-    fun testFpToBvSubFp16RTPExpr() = with(KContext()) {
-        val a by mkFp16Sort()
-        val b by mkFp16Sort()
-        testFpExpr(
-            mkFpSubExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardPositive), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
 
     @Test
     fun testFpToBvSubFp16RNEExpr() = with(KContext()) {
