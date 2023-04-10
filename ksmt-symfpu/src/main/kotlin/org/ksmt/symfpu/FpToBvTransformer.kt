@@ -1,7 +1,39 @@
 package org.ksmt.symfpu
 
 import org.ksmt.KContext
-import org.ksmt.expr.*
+import org.ksmt.expr.KApp
+import org.ksmt.expr.KBvToFpExpr
+import org.ksmt.expr.KConst
+import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFpAbsExpr
+import org.ksmt.expr.KFpAddExpr
+import org.ksmt.expr.KFpDivExpr
+import org.ksmt.expr.KFpEqualExpr
+import org.ksmt.expr.KFpFromBvExpr
+import org.ksmt.expr.KFpFusedMulAddExpr
+import org.ksmt.expr.KFpGreaterExpr
+import org.ksmt.expr.KFpGreaterOrEqualExpr
+import org.ksmt.expr.KFpIsInfiniteExpr
+import org.ksmt.expr.KFpIsNaNExpr
+import org.ksmt.expr.KFpIsNegativeExpr
+import org.ksmt.expr.KFpIsNormalExpr
+import org.ksmt.expr.KFpIsPositiveExpr
+import org.ksmt.expr.KFpIsSubnormalExpr
+import org.ksmt.expr.KFpIsZeroExpr
+import org.ksmt.expr.KFpLessExpr
+import org.ksmt.expr.KFpLessOrEqualExpr
+import org.ksmt.expr.KFpMaxExpr
+import org.ksmt.expr.KFpMinExpr
+import org.ksmt.expr.KFpMulExpr
+import org.ksmt.expr.KFpNegationExpr
+import org.ksmt.expr.KFpRemExpr
+import org.ksmt.expr.KFpRoundToIntegralExpr
+import org.ksmt.expr.KFpSqrtExpr
+import org.ksmt.expr.KFpSubExpr
+import org.ksmt.expr.KFpToBvExpr
+import org.ksmt.expr.KFpToFpExpr
+import org.ksmt.expr.KFpToIEEEBvExpr
+import org.ksmt.expr.KFpValue
 import org.ksmt.expr.rewrite.simplify.simplifyFpToIEEEBvExpr
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.sort.KBoolSort
@@ -185,7 +217,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     }
 
     private fun <Fp : KFpSort, R : KSort> transformHelper(
-        expr: KApp<R, Fp>, f: (UnpackedFp<Fp>, UnpackedFp<Fp>) -> KExpr<R>
+            expr: KApp<R, Fp>, f: (UnpackedFp<Fp>, UnpackedFp<Fp>) -> KExpr<R>
     ): KExpr<R> =
         transformExprAfterTransformed(expr, expr.args) { args ->
             val (left, right) = argsToTypedPair(args)

@@ -1,3 +1,4 @@
+@file:Suppress("LongParameterList")
 package org.ksmt.symfpu
 
 import org.ksmt.KContext
@@ -122,6 +123,7 @@ fun KContext.increment(expr: KExpr<KBvSort>): KExpr<KBvSort> = mkBvAddExpr(expr,
 // something wrong with. looks like shift misses by one
 // - normal exponent
 // - subnormals
+@Suppress("LongMethod")
 fun <Fp : KFpSort, S : KFpSort> KContext.round(
     uf: UnpackedFp<S>,
     roundingMode: KExpr<KFpRoundingModeSort>,

@@ -45,7 +45,7 @@ fun KExpr<KBvSort>.contract(reduction: Int, ctx: KContext): KExpr<KBvSort> {
     return ctx.mkBvExtractExpr((width - 1) - reduction, 0, this)
 }
 
-
+@Suppress("LongParameterList")
 class UnpackedFp<Fp : KFpSort> private constructor(
     ctx: KContext, override val sort: Fp,
     val sign: KExpr<KBoolSort>, // negative
@@ -145,7 +145,8 @@ class UnpackedFp<Fp : KFpSort> private constructor(
     fun normaliseUpDetectZero(): UnpackedFp<Fp> = with(ctx) {
         val normal = normaliseShift(normalizedSignificand)
 
-        check(normal.shiftAmount.sort.sizeBits < exponentWidth()) // May lose data / be incorrect for very small exponents and very large significands
+        // May lose data / be incorrect for very small exponents and very large significands
+        check(normal.shiftAmount.sort.sizeBits < exponentWidth())
 
         val signedAlignAmount = normal.shiftAmount.resizeUnsigned(exponentWidth(), ctx)
         val correctedExponent = ctx.mkBvSubExpr(unbiasedExponent, signedAlignAmount)
@@ -249,6 +250,4 @@ class UnpackedFp<Fp : KFpSort> private constructor(
         }
 
     }
-
-
 }
