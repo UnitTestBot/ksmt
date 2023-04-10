@@ -44,7 +44,8 @@ import org.ksmt.utils.asExpr
 import org.ksmt.utils.cast
 
 class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
-    val mapFpToBv = mutableMapOf<KExpr<KFpSort>, KExpr<KBvSort>>()
+    private val mapFpToBvImpl = mutableMapOf<KExpr<KFpSort>, KExpr<KBvSort>>()
+    val mapFpToBv: Map<KExpr<KFpSort>, KExpr<KBvSort>> get() = mapFpToBvImpl
     // use this function instead of apply as it may return UnpackedFp wrapper
 
 //    fun <T : KSort> applyAndGetBvExpr(expr: KExpr<T>): KExpr<KBvSort> {
@@ -156,7 +157,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = with(ctx) {
         return if (expr.sort is KFpSort) {
             val asFp: KConst<KFpSort> = expr.cast()
-            val bv = mapFpToBv.getOrPut(asFp) {
+            val bv = mapFpToBvImpl.getOrPut(asFp) {
                 mkConst(asFp.decl.name + "!tobv!", mkBvSort(asFp.sort.exponentBits + asFp.sort.significandBits))
             }
             unpack(asFp.sort, bv).cast()
@@ -217,7 +218,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     }
 
     private fun <Fp : KFpSort, R : KSort> transformHelper(
-            expr: KApp<R, Fp>, f: (UnpackedFp<Fp>, UnpackedFp<Fp>) -> KExpr<R>
+        expr: KApp<R, Fp>, f: (UnpackedFp<Fp>, UnpackedFp<Fp>) -> KExpr<R>
     ): KExpr<R> =
         transformExprAfterTransformed(expr, expr.args) { args ->
             val (left, right) = argsToTypedPair(args)

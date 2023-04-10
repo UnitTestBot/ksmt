@@ -831,7 +831,7 @@ fun <T : KFpSort> KContext.fromPackedBv(it: KExpr<KBvSort>, sort: T): KExpr<T> {
 //    return mkFpFromBvExpr(sign.cast(), packedExponent, packedSignificand)
 }
 
-class TestTransformerUseBvs(ctx: KContext, private val mapFpToBv: MutableMap<KExpr<KFpSort>, KExpr<KBvSort>>) :
+class TestTransformerUseBvs(ctx: KContext, private val mapFpToBv: Map<KExpr<KFpSort>, KExpr<KBvSort>>) :
     KNonRecursiveTransformer(ctx) {
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = with(ctx) {
         return if (expr.sort is KFpSort) {
