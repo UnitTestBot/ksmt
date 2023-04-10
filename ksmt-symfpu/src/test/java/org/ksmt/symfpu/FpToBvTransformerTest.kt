@@ -821,14 +821,6 @@ class FpToBvTransformerTest {
 
 fun <T : KFpSort> KContext.fromPackedBv(it: KExpr<KBvSort>, sort: T): KExpr<T> {
     return unpack(sort, it).toFp()
-//    val pWidth = it.sort.sizeBits.toInt()
-//    val exWidth = sort.exponentBits.toInt()
-//
-//    // Extract
-//    val packedSignificand = mkBvExtractExpr(pWidth - exWidth - 2, 0, it)
-//    val packedExponent = mkBvExtractExpr(pWidth - 2, pWidth - exWidth - 1, it)
-//    val sign = (mkBvExtractExpr(pWidth - 1, pWidth - 1, it))
-//    return mkFpFromBvExpr(sign.cast(), packedExponent, packedSignificand)
 }
 
 class TestTransformerUseBvs(ctx: KContext, private val mapFpToBv: Map<KExpr<KFpSort>, KExpr<KBvSort>>) :

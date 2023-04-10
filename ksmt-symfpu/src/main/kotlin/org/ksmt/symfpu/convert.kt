@@ -18,7 +18,7 @@ fun <T : KFpSort> bvToFp(
     signed: Boolean,
 ): UnpackedFp<T> = with(input.ctx) {
     // In the case of a 1 bit input(?) extend to 2 bits so that the intermediate float is a sensible format
-    val inputBv = if (input.sort.sizeBits == 1u) input.extendUnsigned(1, this) else input
+    val inputBv = if (input.sort.sizeBits == 1u) input.extendUnsigned(1) else input
     val inputWidth = inputBv.sort.sizeBits
     if (signed) {
         val initialExponentWidth = bitsToRepresent(inputWidth.toInt()) + 1
@@ -268,7 +268,7 @@ private fun fpToBvCommon(
         )
 
 
-        val convertedShiftAmount = shiftAmount.resizeSigned(bitsToRepresent(maxShift).toUInt() + 1u, this)
+        val convertedShiftAmount = shiftAmount.resizeSigned(bitsToRepresent(maxShift).toUInt() + 1u)
             .matchWidthUnsigned(this, expandedSignificand)
 
         val aligned = mkBvShiftLeftExpr(expandedSignificand, convertedShiftAmount)

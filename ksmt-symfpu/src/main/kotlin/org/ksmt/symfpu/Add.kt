@@ -280,8 +280,7 @@ fun <Fp : KFpSort> KContext.arithmeticAdd(
 
     val shiftAmount = ec.absoluteExponentDifference // Safe as >= 0
         .resizeUnsigned(
-            negatedSmaller.sort.sizeBits,
-            this
+            negatedSmaller.sort.sizeBits
         ) // Safe as long as the significand has more bits than the exponent
 
 
@@ -358,7 +357,7 @@ fun <Fp : KFpSort> KContext.arithmeticAdd(
         extendedFormat,
         resultSign,
         correctedExponent,
-        mkBvOrExpr(alignedSum, stickyBit).contract(1, this)
+        mkBvOrExpr(alignedSum, stickyBit).contract(1)
     )
 
     val rtnRounding = mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardNegative)
@@ -417,7 +416,7 @@ fun KContext.orderEncode(op: KExpr<KBvSort>): KExpr<KBvSort> {
         decrement(
             mkBvShiftLeftExpr(
                 one,
-                op.resizeUnsigned(w + 1u, this)
+                op.resizeUnsigned(w + 1u)
             )
         )
     )

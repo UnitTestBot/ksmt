@@ -13,15 +13,15 @@ import org.ksmt.utils.FpUtils.fpInfExponentBiased
 import org.ksmt.utils.FpUtils.fpInfSignificand
 
 
-fun KExpr<KBvSort>.extendUnsigned(ext: Int, ctx: KContext): KExpr<KBvSort> {
+fun KExpr<KBvSort>.extendUnsigned(ext: Int): KExpr<KBvSort> {
     return ctx.mkBvZeroExtensionExpr(ext, this)
 }
 
-fun KExpr<KBvSort>.extendSigned(ext: Int, ctx: KContext): KExpr<KBvSort> {
+fun KExpr<KBvSort>.extendSigned(ext: Int): KExpr<KBvSort> {
     return ctx.mkBvSignExtensionExpr(ext, this)
 }
 
-fun KExpr<KBvSort>.resizeUnsigned(newSize: UInt, ctx: KContext): KExpr<KBvSort> {
+fun KExpr<KBvSort>.resizeUnsigned(newSize: UInt): KExpr<KBvSort> {
     val width = sort.sizeBits
     return if (newSize > width) {
         ctx.mkBvZeroExtensionExpr((newSize - width).toInt(), this)
@@ -30,7 +30,7 @@ fun KExpr<KBvSort>.resizeUnsigned(newSize: UInt, ctx: KContext): KExpr<KBvSort> 
     }
 }
 
-fun KExpr<KBvSort>.resizeSigned(newSize: UInt, ctx: KContext): KExpr<KBvSort> {
+fun KExpr<KBvSort>.resizeSigned(newSize: UInt): KExpr<KBvSort> {
     val width = sort.sizeBits
     return if (newSize > width) {
         ctx.mkBvSignExtensionExpr((newSize - width).toInt(), this)
@@ -39,10 +39,10 @@ fun KExpr<KBvSort>.resizeSigned(newSize: UInt, ctx: KContext): KExpr<KBvSort> {
     }
 }
 
-fun KExpr<KBvSort>.contract(reduction: Int, ctx: KContext): KExpr<KBvSort> {
+fun KExpr<KBvSort>.contract(reduction: Int): KExpr<KBvSort> {
     val width = sort.sizeBits.toInt()
     check(width > reduction)
-    return ctx.mkBvExtractExpr((width - 1) - reduction, 0, this)
+    return this.ctx.mkBvExtractExpr((width - 1) - reduction, 0, this)
 }
 
 @Suppress("LongParameterList")
@@ -134,7 +134,7 @@ class UnpackedFp<Fp : KFpSort> private constructor(
             normal.shiftAmount.sort.sizeBits < exponentWidth
         ) // May lose data / be incorrect for very small exponents and very large significands
 
-        val signedAlignAmount = normal.shiftAmount.resizeUnsigned(exponentWidth, ctx)
+        val signedAlignAmount = normal.shiftAmount.resizeUnsigned(exponentWidth)
         val correctedExponent = mkBvSubExpr(unbiasedExponent, signedAlignAmount)
 
         // Optimisation : could move the zero detect version in if used in all cases
@@ -148,7 +148,7 @@ class UnpackedFp<Fp : KFpSort> private constructor(
         // May lose data / be incorrect for very small exponents and very large significands
         check(normal.shiftAmount.sort.sizeBits < exponentWidth())
 
-        val signedAlignAmount = normal.shiftAmount.resizeUnsigned(exponentWidth(), ctx)
+        val signedAlignAmount = normal.shiftAmount.resizeUnsigned(exponentWidth())
         val correctedExponent = ctx.mkBvSubExpr(unbiasedExponent, signedAlignAmount)
 
         return iteOp(
@@ -188,9 +188,9 @@ class UnpackedFp<Fp : KFpSort> private constructor(
             this,
             targetFormat,
             sign,
-            unbiasedExponent.extendSigned(expWidth, this),
+            unbiasedExponent.extendSigned(expWidth),
             mkBvShiftLeftExpr(
-                normalizedSignificand.extendUnsigned(sigExtension, this),
+                normalizedSignificand.extendUnsigned(sigExtension),
                 mkBv(sigExtension, significandWidth() + sigExtension.toUInt())
             ),
             isNaN,
