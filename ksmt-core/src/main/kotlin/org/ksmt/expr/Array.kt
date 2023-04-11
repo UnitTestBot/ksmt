@@ -87,19 +87,31 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
      * Analyze store to provide faster index lookups when
      * store indices are interpreted values.
      * */
+    @Suppress("ComplexMethod", "LoopWithTooManyJumpStatements")
     fun analyzeStore() {
         if (cacheKind != NOT_INITIALIZED_CACHE_KIND) return
 
         val numIndices = getNumIndices()
+        val cacheEnabledNodesRate = (LINEAR_LOOKUP_THRESHOLD / numIndices).coerceAtLeast(1)
 
         // Rotate cached index
         cacheKind = if (array is KArrayStoreBase<*, *>) {
-            (array.cacheKind + 1).mod(numIndices)
+            val cacheKindRotation = numIndices * cacheEnabledNodesRate
+            (array.cacheKind + 1) % cacheKindRotation
         } else {
             0 // We always start from 0 index
         }
 
-        val index = getIndex(cacheKind)
+        /**
+         * To reduce memory usage we don't store cache in every node.
+         * We guarantee that there is always a node with a cache within
+         * at most [LINEAR_LOOKUP_THRESHOLD] nodes starting from the current one.
+         * We ensure that if node has a cache for index i then it [cacheKind] is i.
+         * */
+        val cachedIndex = cacheKind % numIndices
+        val nodeCacheEnabled = cachedIndex == cacheKind
+
+        val index = getIndex(cachedIndex)
 
         /**
          * Index is not an interpreted value --> current array is uninterpreted.
@@ -125,7 +137,7 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
                 return
             }
 
-            val nestedIndex = nestedArray.getIndex(cacheKind)
+            val nestedIndex = nestedArray.getIndex(cachedIndex)
 
             /**
              * Array has an uninterpreted index and we can't use fast lookups.
@@ -137,12 +149,13 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
             }
 
             val kind = nestedArray.cacheKind
+            val nestedArrayCachedIndex = kind % numIndices
 
             /**
              * Array index is interpreted but it doesn't contain required cache.
              * Continue to the next array in a chain.
              * */
-            if (kind != cacheKind) {
+            if (nestedArrayCachedIndex != cachedIndex) {
                 parentStores.add(nestedArray)
                 nestedArray = nestedArray.array
                 continue
@@ -150,6 +163,23 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
 
             nextUninterpreted = nestedArray.nextUninterpreted
                 ?: error("Interpreted array has no known next uninterpreted")
+
+            /**
+             * Whole store chain is interpreted, but we don't want to
+             * store cache in a current node.
+             * */
+            if (!nodeCacheEnabled) return
+
+            /**
+             * We must find previous node with cache to
+             * initialize cache in a current node.
+             * Current [nestedArray] doesn't contain cache.
+             * */
+            if (kind != cachedIndex) {
+                parentStores.add(nestedArray)
+                nestedArray = nestedArray.array
+                continue
+            }
 
             // Find first array which is not in a current chain of arrays with interpreted indices.
             val nextUninterpretedArrayChainSize =
@@ -165,7 +195,9 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
                 return
             }
 
-            cacheLookupTable = lookupTableAdd(nestedArray.cacheLookupTable, index, nestedArray, parentStores)
+            cacheLookupTable = lookupTableAdd(
+                nestedArray.cacheLookupTable, index, cachedIndex, nestedArray, parentStores
+            )
             return
         }
     }
@@ -217,12 +249,13 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
     private fun lookupTableAdd(
         lookup: PersistentMap<KExpr<*>, KArrayStoreBase<A, *>>?,
         currentIndex: KExpr<*>,
+        cachedIndexKind: Int,
         lookupOwnerStore: KArrayStoreBase<A, *>,
         parentInterpretedStores: List<KArrayStoreBase<A, *>>
     ): PersistentMap<KExpr<*>, KArrayStoreBase<A, *>> = if (lookup != null) {
         lookup.mutate { map ->
             for (store in parentInterpretedStores.asReversed()) {
-                map[store.getIndex(cacheKind)] = store
+                map[store.getIndex(cachedIndexKind)] = store
             }
             map[currentIndex] = this
         }
@@ -230,12 +263,12 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
         persistentHashMapOf<KExpr<*>, KArrayStoreBase<A, *>>().mutate { map ->
             map[currentIndex] = this
             for (store in parentInterpretedStores) {
-                map.putIfAbsent(store.getIndex(cacheKind), store)
+                map.putIfAbsent(store.getIndex(cachedIndexKind), store)
             }
 
             var nestedArray: KExpr<A> = lookupOwnerStore
             while (nestedArray is KArrayStoreBase<A, *> && nestedArray != nextUninterpreted) {
-                map.putIfAbsent(nestedArray.getIndex(cacheKind), nestedArray)
+                map.putIfAbsent(nestedArray.getIndex(cachedIndexKind), nestedArray)
                 nestedArray = nestedArray.array
             }
         }
@@ -264,7 +297,7 @@ sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
 
     companion object {
         // On a small store chains linear lookup is faster than map lookup.
-        private const val LINEAR_LOOKUP_THRESHOLD = 7
+        private const val LINEAR_LOOKUP_THRESHOLD = 12
 
         private const val NOT_INITIALIZED_CACHE_KIND = -1
 
