@@ -40,17 +40,22 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
             return cachedExpr
         }
 
-        // In case of exceptional execution we may have some expressions on the stack
-        exprStack.clear()
+        val initialStackSize = exprStack.size
+        try {
+            exprStack.add(expr)
+            while (exprStack.size > initialStackSize) {
+                val e = exprStack.removeLast()
+                exprWasTransformed = true
+                val transformedExpr = e.accept(this)
 
-        exprStack.add(expr)
-        while (exprStack.isNotEmpty()) {
-            val e = exprStack.removeLast()
-            exprWasTransformed = true
-            val transformedExpr = e.accept(this)
-
-            if (exprWasTransformed) {
-                transformed[e] = transformedExpr
+                if (exprWasTransformed) {
+                    transformed[e] = transformedExpr
+                }
+            }
+        } finally {
+            // cleanup stack after exceptions
+            while (exprStack.size > initialStackSize) {
+                exprStack.removeLast()
             }
         }
 
