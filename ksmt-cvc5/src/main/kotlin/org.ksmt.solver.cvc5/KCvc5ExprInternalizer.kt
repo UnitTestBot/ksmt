@@ -1120,7 +1120,7 @@ class KCvc5ExprInternalizer(
      * There is no way in cvc5 API to mark uninterpreted constant as value.
      *
      * To overcome this we apply the following scheme:
-     * 1. Internalize value `x` of as sort T as normal constant.
+     * 1. Internalize value `x` of a sort T as normal constant.
      * 2. Associate unique interpreted value `i` with this constant.
      * Currently, we use integer values.
      * 3. Introduce `interpreter` function `F` of type T -> Int.

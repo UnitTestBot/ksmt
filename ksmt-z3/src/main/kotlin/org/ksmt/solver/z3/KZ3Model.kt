@@ -34,6 +34,11 @@ open class KZ3Model(
 
     private val functionDeclarations: Set<KDecl<*>> by lazy {
         model.getNativeFuncDecls().convertToSet {
+            /**
+             * In a case of uninterpreted sort values, we introduce
+             * special `interpreter` functions which are internal and
+             * must not appear in a user models.
+             * */
             if (z3Ctx.isInternalFuncDecl(it)) null else it.convertDecl<KSort>()
         }
     }

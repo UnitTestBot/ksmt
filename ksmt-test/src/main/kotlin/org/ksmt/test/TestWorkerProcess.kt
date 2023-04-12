@@ -44,7 +44,12 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
     private val z3Ctx: Context
         get() = workerZ3Ctx ?: error("Solver is not initialized")
 
-    private val solvers = mutableListOf<Pair<Solver, KZ3Context>>()
+    private class OracleSolver(
+        val solver: Solver,
+        val solverCtx: KZ3Context
+    )
+
+    private val solvers = mutableListOf<OracleSolver>()
     private val nativeAsts = mutableListOf<AST>()
     private val equalityChecks = mutableMapOf<Int, MutableList<EqualityCheck>>()
     private val equalityCheckAssumptions = mutableMapOf<Int, MutableList<Expr<BoolSort>>>()
@@ -144,17 +149,17 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
                 setParameters(params)
             }
         }
-        solvers.add(solver to KZ3Context(ctx, z3Ctx))
+        solvers.add(OracleSolver(solver, KZ3Context(ctx, z3Ctx)))
         return solvers.lastIndex
     }
 
     private fun assert(solver: Int, expr: Long) {
         @Suppress("UNCHECKED_CAST")
-        solvers[solver].first.add(z3Ctx.wrapAST(expr) as Expr<BoolSort>)
+        solvers[solver].solver.add(z3Ctx.wrapAST(expr) as Expr<BoolSort>)
     }
 
     private fun check(solver: Int): KSolverStatus {
-        return solvers[solver].first.check().processCheckResult()
+        return solvers[solver].solver.check().processCheckResult()
     }
 
     private fun exprToString(expr: Long): String {
@@ -162,7 +167,7 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
     }
 
     private fun getReasonUnknown(solver: Int): String {
-        return solvers[solver].first.reasonUnknown
+        return solvers[solver].solver.reasonUnknown
     }
 
     private fun addEqualityCheck(solver: Int, actual: KExpr<*>, expected: Long) {
@@ -181,16 +186,16 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
     private fun checkEqualities(solver: Int): KSolverStatus = with(z3Ctx) {
         val checks = equalityChecks[solver] ?: emptyList()
         val equalityBindings = checks.map { mkNot(mkEq(it.actual, it.expected)) }
-        equalityCheckAssumptions[solver]?.forEach { solvers[solver].first.add(it) }
-        solvers[solver].second.assertPendingAxioms(solvers[solver].first)
-        solvers[solver].first.add(mkOr(*equalityBindings.toTypedArray()))
+        equalityCheckAssumptions[solver]?.forEach { solvers[solver].solver.add(it) }
+        solvers[solver].solverCtx.assertPendingAxioms(solvers[solver].solver)
+        solvers[solver].solver.add(mkOr(*equalityBindings.toTypedArray()))
         return check(solver)
     }
 
     private fun findFirstFailedEquality(solver: Int): Int? = with(z3Ctx){
-        val solverInstance = solvers[solver].first
-        equalityCheckAssumptions[solver]?.forEach { solvers[solver].first.add(it) }
-        solvers[solver].second.assertPendingAxioms(solvers[solver].first)
+        val solverInstance = solvers[solver].solver
+        equalityCheckAssumptions[solver]?.forEach { solvers[solver].solver.add(it) }
+        solvers[solver].solverCtx.assertPendingAxioms(solvers[solver].solver)
         val checks = equalityChecks[solver] ?: emptyList()
         for ((idx, check) in checks.withIndex()) {
             solverInstance.push()
@@ -217,7 +222,7 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
     }
 
     private fun internalize(solver: Int, expr: KExpr<*>): Expr<*> {
-        val internCtx = solvers[solver].second
+        val internCtx = solvers[solver].solverCtx
         val internalizer = KZ3ExprInternalizer(ctx, internCtx)
         val internalized = with(internalizer) { expr.internalizeExpr() }
         return z3Ctx.wrapAST(internalized) as Expr<*>

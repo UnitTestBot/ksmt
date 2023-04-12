@@ -401,6 +401,16 @@ open class KZ3ExprConverter(
         }
     }
 
+    /**
+     * Parameterized function declarations are usually internal
+     * Z3 functions with some additional information.
+     * We trying recognize such parameterized functions
+     * and use this information for conversion purposes.
+     * If the recognition fails, then we treat these declarations
+     * as ordinary uninterpreted functions.
+     *
+     * Currently, we can recognize declarations of an uninterpreted sort values.
+     * */
     private fun tryConvertParametrizedDeclApp(
         expr: Long,
         nativeDecl: Long,
