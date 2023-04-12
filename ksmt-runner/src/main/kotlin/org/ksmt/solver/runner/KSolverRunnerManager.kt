@@ -1,10 +1,12 @@
 package org.ksmt.solver.runner
 
 import com.jetbrains.rd.util.lifetime.isNotAlive
+import kotlinx.coroutines.runBlocking
 import org.ksmt.KContext
 import org.ksmt.runner.core.KsmtWorkerArgs
 import org.ksmt.runner.core.KsmtWorkerFactory
 import org.ksmt.runner.core.KsmtWorkerPool
+import org.ksmt.runner.core.KsmtWorkerSession
 import org.ksmt.runner.core.RdServer
 import org.ksmt.runner.core.WorkerInitializationFailedException
 import org.ksmt.runner.generated.ConfigurationBuilder
@@ -100,20 +102,54 @@ open class KSolverRunnerManager(
         customSolvers[solverQualifiedName] = CustomSolverInfo(solverQualifiedName, configBuilderQualifiedName)
     }
 
-    internal suspend fun createSolverExecutor(
+    internal suspend fun createSolverExecutorAsync(
         ctx: KContext,
         solverType: SolverType,
         customSolverInfo: CustomSolverInfo?
+    ) = createSolverExecutor(
+        ctx = ctx,
+        solverType = solverType,
+        customSolverInfo = customSolverInfo,
+        getWorker = {
+            workers.getOrCreateFreeWorker()
+        },
+        initSolverRunner = { type, info ->
+            initSolverAsync(type, info)
+        }
+    )
+
+    internal fun createSolverExecutorSync(
+        ctx: KContext,
+        solverType: SolverType,
+        customSolverInfo: CustomSolverInfo?
+    ) = createSolverExecutor(
+        ctx = ctx,
+        solverType = solverType,
+        customSolverInfo = customSolverInfo,
+        getWorker = {
+            runBlocking { workers.getOrCreateFreeWorker() }
+        },
+        initSolverRunner = { type, info ->
+            initSolverSync(type, info)
+        }
+    )
+
+    private inline fun createSolverExecutor(
+        ctx: KContext,
+        solverType: SolverType,
+        customSolverInfo: CustomSolverInfo?,
+        getWorker: () -> KsmtWorkerSession<SolverProtocolModel>,
+        initSolverRunner: KSolverRunnerExecutor.(SolverType, CustomSolverInfo?) -> Unit
     ): KSolverRunnerExecutor {
         val worker = try {
-            workers.getOrCreateFreeWorker()
+            getWorker()
         } catch (ex: WorkerInitializationFailedException) {
             throw KSolverExecutorWorkerInitializationException(ex)
         }
         worker.astSerializationCtx.initCtx(ctx)
         worker.lifetime.onTermination { worker.astSerializationCtx.resetCtx() }
         return KSolverRunnerExecutor(hardTimeout, worker).also {
-            it.initSolver(solverType, customSolverInfo)
+            it.initSolverRunner(solverType, customSolverInfo)
         }
     }
 

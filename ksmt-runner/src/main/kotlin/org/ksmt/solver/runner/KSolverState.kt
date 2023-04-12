@@ -61,27 +61,46 @@ class KSolverState {
         }
     }
 
+    suspend fun applyAsync(executor: KSolverRunnerExecutor) = replayState(
+        configureSolver = { executor.configureAsync(it) },
+        pushScope = { executor.pushAsync() },
+        assertExpr = { executor.assertAsync(it) },
+        assertExprAndTrack = { expr, trackVar -> executor.assertAndTrackAsync(expr, trackVar) }
+    )
+
+    fun applySync(executor: KSolverRunnerExecutor) = replayState(
+        configureSolver = { executor.configureSync(it) },
+        pushScope = { executor.pushSync() },
+        assertExpr = { executor.assertSync(it) },
+        assertExprAndTrack = { expr, trackVar -> executor.assertAndTrackSync(expr, trackVar) }
+    )
+
     /**
      * Recover the solver state via re-applying
      * all solver state modification operations.
      * */
-    suspend fun apply(executor: KSolverRunnerExecutor) {
+    private inline fun replayState(
+        configureSolver: (List<SolverConfigurationParam>) -> Unit,
+        pushScope: () -> Unit,
+        assertExpr: (KExpr<KBoolSort>) -> Unit,
+        assertExprAndTrack: (KExpr<KBoolSort>, KConstDecl<KBoolSort>) -> Unit
+    ) {
         if (configuration.isNotEmpty()) {
-            executor.configureAsync(configuration.toList())
+            configureSolver(configuration.toList())
         }
 
         var firstFrame = true
         for (frame in assertFrames) {
             if (!firstFrame) {
                 // Increase the solver assertion scope
-                executor.pushAsync()
+                pushScope()
             }
             firstFrame = false
 
             for (assertion in frame) {
                 when (assertion) {
-                    is ExprAssertFrame -> executor.assertAsync(assertion.expr)
-                    is AssertAndTrackFrame -> executor.assertAndTrackAsync(assertion.expr, assertion.trackVar)
+                    is ExprAssertFrame -> assertExpr(assertion.expr)
+                    is AssertAndTrackFrame -> assertExprAndTrack(assertion.expr, assertion.trackVar)
                 }
             }
         }

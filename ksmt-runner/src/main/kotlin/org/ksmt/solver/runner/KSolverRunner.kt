@@ -1,13 +1,13 @@
 package org.ksmt.solver.runner
 
 import com.jetbrains.rd.util.AtomicReference
-import kotlinx.coroutines.runBlocking
+import com.jetbrains.rd.util.threading.SpinWait
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import org.ksmt.KContext
 import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.runner.generated.ConfigurationBuilder
+import org.ksmt.runner.generated.models.SolverConfigurationParam
 import org.ksmt.runner.generated.models.SolverType
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolverConfiguration
@@ -43,72 +43,141 @@ class KSolverRunner<Config : KSolverConfiguration>(
     private val solverState = KSolverState()
 
     override fun close() {
-        runBlocking {
-            deleteSolverAsync()
-        }
+        deleteSolverSync()
     }
 
-    override suspend fun configureAsync(configurator: Config.() -> Unit) {
+    override suspend fun configureAsync(configurator: Config.() -> Unit) =
+        configure(configurator) { config ->
+            ensureInitializedAndExecuteAsync(onException = {}) {
+                configureAsync(config)
+            }
+        }
+
+    override fun configure(configurator: Config.() -> Unit) =
+        configure(configurator) { config ->
+            ensureInitializedAndExecuteSync(onException = {}) {
+                configureSync(config)
+            }
+        }
+
+    private inline fun configure(
+        configurator: Config.() -> Unit,
+        execute: (List<SolverConfigurationParam>) -> Unit
+    ) {
         val universalConfigurator = KSolverRunnerUniversalConfigurator()
         configurationBuilder(universalConfigurator).configurator()
         val config = universalConfigurator.config
 
         try {
-            ensureInitializedAndExecute(onException = {}) {
-                configureAsync(config)
-            }
+            execute(config)
         } finally {
             solverState.configure(config)
         }
     }
 
-    override suspend fun assertAsync(expr: KExpr<KBoolSort>) {
+    override suspend fun assertAsync(expr: KExpr<KBoolSort>) =
+        assert(expr) { e ->
+            ensureInitializedAndExecuteAsync(onException = {}) {
+                assertAsync(e)
+            }
+        }
+
+    override fun assert(expr: KExpr<KBoolSort>) =
+        assert(expr) { e ->
+            ensureInitializedAndExecuteSync(onException = {}) {
+                assertSync(e)
+            }
+        }
+
+    private inline fun assert(
+        expr: KExpr<KBoolSort>,
+        execute: (KExpr<KBoolSort>) -> Unit
+    ) {
         ctx.ensureContextMatch(expr)
 
         try {
-            ensureInitializedAndExecute(onException = {}) {
-                assertAsync(expr)
-            }
+            execute(expr)
         } finally {
             solverState.assert(expr)
         }
     }
 
-    override suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) {
+    override suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) =
+        assertAndTrack(expr, trackVar) { e, track ->
+            ensureInitializedAndExecuteAsync(onException = {}) {
+                assertAndTrackAsync(e, track)
+            }
+        }
+
+    override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) =
+        assertAndTrack(expr, trackVar) { e, track ->
+            ensureInitializedAndExecuteSync(onException = {}) {
+                assertAndTrackSync(e, track)
+            }
+        }
+
+    private inline fun assertAndTrack(
+        expr: KExpr<KBoolSort>,
+        trackVar: KConstDecl<KBoolSort>,
+        execute: (KExpr<KBoolSort>, KConstDecl<KBoolSort>) -> Unit
+    ) {
         ctx.ensureContextMatch(expr, trackVar)
 
         try {
-            ensureInitializedAndExecute(onException = {}) {
-                assertAndTrackAsync(expr, trackVar)
-            }
+            execute(expr, trackVar)
         } finally {
             solverState.assertAndTrack(expr, trackVar)
         }
     }
 
-    override suspend fun pushAsync() {
+    override suspend fun pushAsync() = push {
+        executeIfInitialized(onException = {}) {
+            pushAsync()
+        }
+    }
+
+    override fun push() = push {
+        executeIfInitialized(onException = {}) {
+            pushSync()
+        }
+    }
+
+    private inline fun push(execute: () -> Unit) {
         try {
-            executeIfInitialized(onException = {}) {
-                pushAsync()
-            }
+            execute()
         } finally {
             solverState.push()
         }
     }
 
-    override suspend fun popAsync(n: UInt) {
+    override suspend fun popAsync(n: UInt) = pop(n) {
+        executeIfInitialized(onException = {}) {
+            popAsync(it)
+        }
+    }
+
+    override fun pop(n: UInt) = pop(n) {
+        executeIfInitialized(onException = {}) {
+            popSync(it)
+        }
+    }
+
+    private inline fun pop(n: UInt, execute: (UInt) -> Unit) {
         try {
-            executeIfInitialized(onException = {}) {
-                popAsync(n)
-            }
+            execute(n)
         } finally {
             solverState.pop(n)
         }
     }
 
     override suspend fun checkAsync(timeout: Duration): KSolverStatus =
-        handleCheckSatExceptionAsUnknown {
+        handleCheckSatExceptionAsUnknownAsync {
             checkAsync(timeout)
+        }
+
+    override fun check(timeout: Duration): KSolverStatus =
+        handleCheckSatExceptionAsUnknownSync {
+            checkSync(timeout)
         }
 
     override suspend fun checkWithAssumptionsAsync(
@@ -117,29 +186,62 @@ class KSolverRunner<Config : KSolverConfiguration>(
     ): KSolverStatus {
         ctx.ensureContextMatch(assumptions)
 
-        return handleCheckSatExceptionAsUnknown {
+        return handleCheckSatExceptionAsUnknownAsync {
             checkWithAssumptionsAsync(assumptions, timeout)
         }
     }
 
-    override suspend fun modelAsync(): KModel = lastSatModel.updateIfNull {
+    override fun checkWithAssumptions(
+        assumptions: List<KExpr<KBoolSort>>,
+        timeout: Duration
+    ): KSolverStatus {
+        ctx.ensureContextMatch(assumptions)
+
+        return handleCheckSatExceptionAsUnknownSync {
+            checkWithAssumptionsSync(assumptions, timeout)
+        }
+    }
+
+    override suspend fun modelAsync(): KModel = model { modelAsync() }
+
+    override fun model(): KModel = model { modelSync() }
+
+    private inline fun model(
+        execute: KSolverRunnerExecutor.() -> KModel
+    ): KModel = lastSatModel.updateIfNull {
         executeIfInitialized(
             onException = { ex -> throw KSolverException("Model is not available", ex) },
-            body = { modelAsync() }
+            body = { execute() }
         ) ?: throw KSolverException("Solver is not initialized")
     }
 
-    override suspend fun unsatCoreAsync(): List<KExpr<KBoolSort>> = lastUnsatCore.updateIfNull {
+    override suspend fun unsatCoreAsync(): List<KExpr<KBoolSort>> =
+        unsatCore { unsatCoreAsync() }
+
+    override fun unsatCore(): List<KExpr<KBoolSort>> =
+        unsatCore { unsatCoreSync() }
+
+    private inline fun unsatCore(
+        execute: KSolverRunnerExecutor.() -> List<KExpr<KBoolSort>>
+    ): List<KExpr<KBoolSort>> = lastUnsatCore.updateIfNull {
         executeIfInitialized(
             onException = { ex -> throw KSolverException("Unsat core is not available", ex) },
-            body = { unsatCoreAsync() }
+            body = { execute() }
         ) ?: throw KSolverException("Solver is not initialized")
     }
 
-    override suspend fun reasonOfUnknownAsync(): String = lastReasonOfUnknown.updateIfNull {
+    override suspend fun reasonOfUnknownAsync(): String =
+        reasonOfUnknown { reasonOfUnknownAsync() }
+
+    override fun reasonOfUnknown(): String =
+        reasonOfUnknown { reasonOfUnknownSync() }
+
+    private inline fun reasonOfUnknown(
+        execute: KSolverRunnerExecutor.() -> String
+    ): String = lastReasonOfUnknown.updateIfNull {
         executeIfInitialized(
             onException = { ex -> throw KSolverException("Reason of unknown is not available", ex) },
-            body = { reasonOfUnknownAsync() }
+            body = { execute() }
         ) ?: throw KSolverException("Solver is not initialized")
     }
 
@@ -149,11 +251,32 @@ class KSolverRunner<Config : KSolverConfiguration>(
         }
     }
 
-    suspend fun deleteSolverAsync() {
+    override fun interrupt() {
+        executeIfInitialized(onException = {}) {
+            interruptSync()
+        }
+    }
+
+    suspend fun deleteSolverAsync() = deleteSolver(
+        acquireLock = { lock() },
+        deleteSolver = { deleteSolverAsync() }
+    )
+
+    fun deleteSolverSync() = deleteSolver(
+        acquireLock = { lockSync() },
+        deleteSolver = { deleteSolverSync() }
+    )
+
+    private inline fun deleteSolver(
+        acquireLock: Mutex.() -> Unit,
+        deleteSolver: KSolverRunnerExecutor.() -> Unit,
+    ) {
         isActive.set(false)
-        executorInitializationLock.withLock {
+        executorInitializationLock.withLock({ acquireLock() }) {
             val executor = executorRef.getAndSet(null)
-            executor?.let { runOnExecutor(it, onException = { }) { deleteSolver() } }
+            executor?.let {
+                runOnExecutor(it, onException = { }) { deleteSolver() }
+            }
         }
     }
 
@@ -161,29 +284,39 @@ class KSolverRunner<Config : KSolverConfiguration>(
         executorRef.get()?.terminateIfBusy()
     }
 
-    private suspend inline fun <T> runOnExecutor(
-        executor: KSolverRunnerExecutor,
+    private suspend inline fun <T> ensureInitializedAndExecuteAsync(
         onException: (KSolverExecutorException) -> T,
         crossinline body: suspend KSolverRunnerExecutor.() -> T
-    ): T = try {
-        executor.body()
-    } catch (ex: KSolverExecutorException) {
-        executorRef.compareAndSet(executor, null)
-        executor.terminate()
-        onException(ex)
-    }
+    ): T = ensureInitializedAndExecute(
+        onException = { onException(it) },
+        body = { body() },
+        acquireLock = { lock() },
+        initExecutor = { initExecutorAsync() }
+    )
 
-    private suspend inline fun <T> ensureInitializedAndExecute(
+    private inline fun <T> ensureInitializedAndExecuteSync(
         onException: (KSolverExecutorException) -> T,
-        crossinline body: suspend KSolverRunnerExecutor.() -> T
+        body: KSolverRunnerExecutor.() -> T
+    ): T = ensureInitializedAndExecute(
+        onException = { onException(it) },
+        body = { body() },
+        acquireLock = { lockSync() },
+        initExecutor = { initExecutorSync() }
+    )
+
+    private inline fun <T> ensureInitializedAndExecute(
+        onException: (KSolverExecutorException) -> T,
+        body: KSolverRunnerExecutor.() -> T,
+        acquireLock: Mutex.() -> Unit,
+        initExecutor: () -> KSolverRunnerExecutor
     ): T {
         val executor = executorRef.get()
         if (executor != null) {
-            return runOnExecutor(executor, onException, body)
+            return runOnExecutor(executor, onException) { body() }
         }
 
         val freshExecutor = try {
-            executorInitializationLock.withLock {
+            executorInitializationLock.withLock({ acquireLock() }) {
                 executorRef.updateIfNull {
                     initExecutor()
                 }
@@ -193,52 +326,88 @@ class KSolverRunner<Config : KSolverConfiguration>(
             return onException(ex)
         }
 
-        return runOnExecutor(freshExecutor, onException, body)
+        return runOnExecutor(freshExecutor, onException) { body() }
     }
 
-    private suspend inline fun <T> executeIfInitialized(
-        onException: (KSolverExecutorException) -> T,
-        crossinline body: suspend KSolverRunnerExecutor.() -> T
-    ): T? {
-        val executor = executorRef.get()
-        return executor?.let { runOnExecutor(it, onException, body) }
-    }
-
-    private suspend fun initExecutor(): KSolverRunnerExecutor {
+    private suspend fun initExecutorAsync(): KSolverRunnerExecutor {
         if (!isActive.get()) {
             throw KSolverExecutorNotAliveException()
         }
-        val executor = manager.createSolverExecutor(ctx, solverType, customSolverInfo)
-        solverState.apply(executor)
+        val executor = manager.createSolverExecutorAsync(ctx, solverType, customSolverInfo)
+        solverState.applyAsync(executor)
         return executor
     }
 
-    private suspend inline fun handleCheckSatExceptionAsUnknown(
+    private fun initExecutorSync(): KSolverRunnerExecutor {
+        if (!isActive.get()) {
+            throw KSolverExecutorNotAliveException()
+        }
+        val executor = manager.createSolverExecutorSync(ctx, solverType, customSolverInfo)
+        solverState.applySync(executor)
+        return executor
+    }
+
+    private suspend inline fun handleCheckSatExceptionAsUnknownAsync(
         crossinline body: suspend KSolverRunnerExecutor.() -> KSolverStatus
+    ): KSolverStatus = handleCheckSatExceptionAsUnknown { onException ->
+        ensureInitializedAndExecuteAsync(
+            body = body,
+            onException = { ex -> onException(ex) }
+        )
+    }
+
+    private inline fun handleCheckSatExceptionAsUnknownSync(
+        crossinline body: KSolverRunnerExecutor.() -> KSolverStatus
+    ): KSolverStatus = handleCheckSatExceptionAsUnknown { onException ->
+        ensureInitializedAndExecuteSync(
+            body = body,
+            onException = { ex -> onException(ex) }
+        )
+    }
+
+    private inline fun handleCheckSatExceptionAsUnknown(
+        execute: ((KSolverExecutorException) -> KSolverStatus) -> KSolverStatus
     ): KSolverStatus {
         lastReasonOfUnknown.reset()
         lastSatModel.reset()
         lastUnsatCore.reset()
 
-        return ensureInitializedAndExecute(
-            body = body,
-            onException = { ex ->
-                if (ex is KSolverExecutorTimeoutException) {
-                    lastReasonOfUnknown.getAndSet("timeout: ${ex.message}")
-                } else {
-                    lastReasonOfUnknown.getAndSet("error: $ex")
-                }
-                KSolverStatus.UNKNOWN
+        return execute { ex ->
+            if (ex is KSolverExecutorTimeoutException) {
+                lastReasonOfUnknown.getAndSet("timeout: ${ex.message}")
+            } else {
+                lastReasonOfUnknown.getAndSet("error: $ex")
             }
-        )
+            KSolverStatus.UNKNOWN
+        }
+    }
+
+    private inline fun <T> runOnExecutor(
+        executor: KSolverRunnerExecutor,
+        onException: (KSolverExecutorException) -> T,
+        body: KSolverRunnerExecutor.() -> T
+    ): T = try {
+        executor.body()
+    } catch (ex: KSolverExecutorException) {
+        executorRef.compareAndSet(executor, null)
+        executor.terminate()
+        onException(ex)
+    }
+
+    private inline fun <T> executeIfInitialized(
+        onException: (KSolverExecutorException) -> T,
+        body: KSolverRunnerExecutor.() -> T
+    ): T? {
+        val executor = executorRef.get()
+        return executor?.let { runOnExecutor(it, onException) { body() } }
     }
 
     private fun <T> AtomicReference<T?>.reset() {
         getAndSet(null)
     }
 
-    private suspend inline fun <T> AtomicReference<T?>.updateIfNull(
-        crossinline body: suspend () -> T
+    private inline fun <T> AtomicReference<T?>.updateIfNull(
+        body: () -> T
     ): T {
         val oldValue = get()
         if (oldValue != null) return oldValue
@@ -265,5 +434,19 @@ class KSolverRunner<Config : KSolverConfiguration>(
             val updatedValue = body()
             compareAndSet(null, updatedValue)
         }
+    }
+
+    private fun Mutex.lockSync() {
+        SpinWait.spinUntil { tryLock() }
+    }
+
+    private inline fun <T> Mutex.withLock(
+        acquireLock: Mutex.() -> Unit,
+        action: () -> T
+    ): T = try {
+        acquireLock()
+        action()
+    } finally {
+        unlock()
     }
 }
