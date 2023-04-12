@@ -7,6 +7,7 @@ import org.ksmt.runner.core.KsmtWorkerArgs
 import org.ksmt.runner.core.KsmtWorkerFactory
 import org.ksmt.runner.core.KsmtWorkerPool
 import org.ksmt.runner.core.RdServer
+import org.ksmt.runner.generated.models.ContextSimplificationMode
 import org.ksmt.runner.generated.models.CreateSolverParams
 import org.ksmt.runner.generated.models.SolverProtocolModel
 import org.ksmt.runner.generated.models.SolverType
@@ -21,7 +22,14 @@ class WorkerDebugTest {
     fun testDebuggerAttach() {
         runBlocking {
             val worker = workers.getOrCreateFreeWorker()
-            worker.protocolModel.initSolver.startSuspending(CreateSolverParams(SolverType.Z3))
+            worker.protocolModel.initSolver.startSuspending(
+                CreateSolverParams(
+                    type = SolverType.Z3,
+                    contextSimplificationMode = ContextSimplificationMode.NO_SIMPLIFY,
+                    customSolverQualifiedName = null,
+                    customSolverConfigBuilderQualifiedName = null
+                )
+            )
         }
     }
 

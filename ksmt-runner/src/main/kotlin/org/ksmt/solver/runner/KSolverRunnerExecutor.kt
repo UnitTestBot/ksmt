@@ -4,6 +4,7 @@ import com.jetbrains.rd.util.AtomicInteger
 import com.jetbrains.rd.util.reactive.RdFault
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
+import org.ksmt.KContext
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
@@ -13,6 +14,7 @@ import org.ksmt.runner.generated.models.AssertAndTrackParams
 import org.ksmt.runner.generated.models.AssertParams
 import org.ksmt.runner.generated.models.CheckParams
 import org.ksmt.runner.generated.models.CheckWithAssumptionsParams
+import org.ksmt.runner.generated.models.ContextSimplificationMode
 import org.ksmt.runner.generated.models.CreateSolverParams
 import org.ksmt.runner.generated.models.PopParams
 import org.ksmt.runner.generated.models.SolverConfigurationParam
@@ -24,6 +26,7 @@ import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.KSolverUnsupportedParameterException
 import org.ksmt.solver.model.KModelImpl
+import org.ksmt.solver.runner.KSolverRunnerManager.CustomSolverInfo
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
@@ -164,10 +167,21 @@ class KSolverRunnerExecutor(
         }
     }
 
-    internal suspend fun initSolver(solverType: SolverType) {
+    internal suspend fun initSolver(solverType: SolverType, customSolverInfo: CustomSolverInfo?) {
         ensureActive()
 
-        val params = CreateSolverParams(solverType)
+        val simplificationMode = when (worker.astSerializationCtx.ctx.simplificationMode) {
+            KContext.SimplificationMode.SIMPLIFY -> ContextSimplificationMode.SIMPLIFY
+            KContext.SimplificationMode.NO_SIMPLIFY -> ContextSimplificationMode.NO_SIMPLIFY
+        }
+
+        val params = CreateSolverParams(
+            type = solverType,
+            contextSimplificationMode = simplificationMode,
+            customSolverQualifiedName = customSolverInfo?.solverQualifiedName,
+            customSolverConfigBuilderQualifiedName = customSolverInfo?.configurationQualifiedName
+        )
+
         queryWithTimeoutAndExceptionHandling {
             initSolver.startSuspending(worker.lifetime, params)
         }

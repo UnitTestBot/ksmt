@@ -14,6 +14,7 @@ import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.async.KAsyncSolver
+import org.ksmt.solver.runner.KSolverRunnerManager.CustomSolverInfo
 import org.ksmt.sort.KBoolSort
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration
@@ -29,6 +30,7 @@ class KSolverRunner<Config : KSolverConfiguration>(
     private val ctx: KContext,
     private val configurationBuilder: ConfigurationBuilder<Config>,
     private val solverType: SolverType,
+    private val customSolverInfo: CustomSolverInfo? = null,
 ) : KAsyncSolver<Config> {
     private val isActive = AtomicBoolean(true)
     private val executorInitializationLock = Mutex()
@@ -206,7 +208,7 @@ class KSolverRunner<Config : KSolverConfiguration>(
         if (!isActive.get()) {
             throw KSolverExecutorNotAliveException()
         }
-        val executor = manager.createSolverExecutor(ctx, solverType)
+        val executor = manager.createSolverExecutor(ctx, solverType, customSolverInfo)
         solverState.apply(executor)
         return executor
     }
