@@ -20,6 +20,35 @@ import org.ksmt.sort.KSort
 import org.ksmt.utils.asExpr
 import org.ksmt.utils.uncheckedCast
 
+/**
+ * Base expression for various array store expressions
+ * with interpreted indices cache support.
+ *
+ * Array store indices caches allows faster array select simplification
+ * in a case when many stored indices are interpreted values.
+ * By default, caches are ENABLED when simplifications are enabled in [KContext].
+ *
+ * Array store caches memory impact.
+ * In a case when we have long chains of array stores with
+ * interpreted values memory usage may become significant.
+ * We expect the maximum memory usage overhead to be about
+ * `1.4 * #array dimensions` per store expression.
+ * For example, in a case of two dimensional arrays,
+ * if we denote normal array store expression memory usage as `M`
+ * the caches will use at most `1.4 * 2 * M` of additional memory.
+ *
+ * Manual control of array store caches.
+ * Since the memory usage overhead can become huge in some scenarios,
+ * it is possible to manually manage caching.
+ * 1. Disable array store cache initialization by default.
+ * By default, cache initialization is performed in [KContext.mkArrayStoreNoSimplify]
+ * after expression creation.
+ * To disable cache initialization, you can
+ * override [KContext.mkArrayStoreNoSimplify] and
+ * invoke [KContext.mkArrayStoreNoSimplifyNoAnalyze] directly.
+ * 2. Manually enable caching for some array store expressions.
+ * To initialize cache you can invoke [KArrayStoreBase.analyzeStore] anytime.
+ * */
 sealed class KArrayStoreBase<A : KArraySortBase<R>, R : KSort>(
     ctx: KContext,
     val array: KExpr<A>,
