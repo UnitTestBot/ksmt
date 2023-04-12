@@ -16,6 +16,7 @@ import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.rewrite.KExprSubstitutor
 import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector.Companion.collectUninterpretedDeclarations
 import org.ksmt.expr.rewrite.simplify.KExprSimplifier
+import org.ksmt.expr.rewrite.simplify.areDefinitelyDistinct
 import org.ksmt.expr.rewrite.simplify.simplifyExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.DefaultValueSampler.Companion.sampleValue
@@ -36,8 +37,9 @@ open class KModelEvaluator(
     private val isComplete: Boolean,
     private val quantifiedVars: Set<KDecl<*>> = emptySet()
 ) : KExprSimplifier(ctx) {
-    private val evaluatedFunctionApp: MutableMap<Pair<KDecl<*>, List<KExpr<*>>>, KExpr<*>> = hashMapOf()
-    private val evaluatedFunctionArray: MutableMap<KDecl<*>, KExpr<*>> = hashMapOf()
+    private val evaluatedFunctionApp = hashMapOf<Pair<KDecl<*>, List<KExpr<*>>>, KExpr<*>>()
+    private val evaluatedFunctionArray = hashMapOf<KDecl<*>, KExpr<*>>()
+    private val resolvedFunctionInterpretations = hashMapOf<KModel.KFuncInterp<*>, ResolvedFunctionInterpretation<*>>()
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> =
         simplifyExpr(expr, expr.args) { args ->
@@ -177,30 +179,7 @@ open class KModelEvaluator(
         return quantifierBuilder(evaluatedBody)
     }
 
-    override fun simplifyEqUninterpreted(
-        lhs: KExpr<KUninterpretedSort>,
-        rhs: KExpr<KUninterpretedSort>
-    ): KExpr<KBoolSort> = with(ctx) {
-        if (isUninterpretedValue(lhs.sort, lhs) && isUninterpretedValue(lhs.sort, rhs)) {
-            return (lhs == rhs).expr
-        }
-        super.simplifyEqUninterpreted(lhs, rhs)
-    }
-
-    override fun areDefinitelyDistinctUninterpreted(
-        lhs: KExpr<KUninterpretedSort>,
-        rhs: KExpr<KUninterpretedSort>
-    ): Boolean {
-        if (isUninterpretedValue(lhs.sort, lhs) && isUninterpretedValue(lhs.sort, rhs)) {
-            return lhs != rhs
-        }
-        return super.areDefinitelyDistinctUninterpreted(lhs, rhs)
-    }
-
-    private fun isUninterpretedValue(sort: KUninterpretedSort, expr: KExpr<KUninterpretedSort>): Boolean {
-        val sortUniverse = model.uninterpretedSortUniverse(sort) ?: return false
-        return expr in sortUniverse
-    }
+    private fun isValueInModel(expr: KExpr<*>): Boolean = expr is KInterpretedValue<*>
 
     @Suppress("USELESS_CAST") // Exhaustive when
     private fun <A : KArraySortBase<R>, R : KSort> evalArrayInterpretation(
@@ -265,15 +244,6 @@ open class KModelEvaluator(
                 return ctx.mkApp(decl, args)
             }
 
-            // Check if expr is an uninterpreted value of a sort
-            if (interpretation == null && decl.sort is KUninterpretedSort) {
-                val universe = model.uninterpretedSortUniverse(decl.sort) ?: emptySet()
-                val expr = ctx.mkApp(decl, args)
-                if (expr.uncheckedCast() in universe) {
-                    return expr
-                }
-            }
-
             // isComplete = true, return and cache
             if (interpretation == null) {
                 return@getOrPut completeModelValue(decl.sort)
@@ -283,81 +253,13 @@ open class KModelEvaluator(
                 "${interpretation.vars.size} arguments expected but ${args.size} provided"
             }
 
-            val resolvedInterpretation = ctx.resolveFunctionInterpretationComplete(interpretation, args)
-
-            // Interpretation was fully resolved
-            if (resolvedInterpretation.entries.isEmpty() && resolvedInterpretation.default != null) {
-                return@getOrPut resolvedInterpretation.default
+            val resolvedInterpretation = resolvedFunctionInterpretations.getOrPut(interpretation) {
+                resolveFunctionInterpretation(interpretation)
             }
 
-            // Interpretation was not fully resolved --> generate ITE chain
-            evalResolvedFunctionInterpretation(resolvedInterpretation, args)
+            ctx.applyResolvedInterpretation(resolvedInterpretation, args)
         }
         return evaluated.asExpr(decl.sort)
-    }
-
-    private fun <T : KSort> evalResolvedFunctionInterpretation(
-        resolvedInterpretation: KModel.KFuncInterp<T>,
-        args: List<KExpr<*>>
-    ): KExpr<T> = with(ctx) {
-        // in case of partial interpretation we can generate any default expr to preserve expression correctness
-        val defaultExpr = resolvedInterpretation.default ?: completeModelValue(resolvedInterpretation.sort)
-        return resolvedInterpretation.entries.foldRight(defaultExpr) { entry, acc ->
-            val argBinding = entry.args.zip(args) { ea, a ->
-                val entryArg: KExpr<KSort> = ea.uncheckedCast()
-                val actualArg: KExpr<KSort> = a.uncheckedCast()
-                mkEq(entryArg, actualArg)
-            }
-            mkIte(mkAnd(argBinding), entry.value, acc)
-        }
-    }
-
-    private fun <T : KSort> KContext.resolveFunctionInterpretationComplete(
-        interpretation: KModel.KFuncInterp<T>,
-        args: List<KExpr<*>>
-    ): KModel.KFuncInterp<T> {
-        // Replace function parameters vars with actual arguments
-        val varSubstitution = KExprSubstitutor(ctx).apply {
-            interpretation.vars.zip(args).forEach { (v, a) ->
-                val app: KExpr<KSort> = mkConstApp(v).uncheckedCast()
-                substitute(app, a.uncheckedCast())
-            }
-        }
-
-        val argsAreConstants = args.all { it is KInterpretedValue<*> }
-
-        val resolvedEntries = arrayListOf<KModel.KFuncInterpEntry<T>>()
-        for (entry in interpretation.entries) {
-            val entryArgs = entry.args.map { varSubstitution.apply(it) }
-            val entryValue = varSubstitution.apply(entry.value)
-
-            if (resolvedEntries.isEmpty() && entryArgs == args) {
-                // We have no possibly matching entries and we found a matched entry
-                return KModel.KFuncInterp(
-                    decl = interpretation.decl,
-                    vars = interpretation.vars,
-                    entries = emptyList(),
-                    default = entryValue
-                )
-            }
-
-            val definitelyDontMatch = argsAreConstants && entryArgs.all { it is KInterpretedValue<*> }
-            if (definitelyDontMatch) {
-                // No need to keep entry, since it doesn't match arguments
-                continue
-            }
-
-            resolvedEntries += KModel.KFuncInterpEntry(entryArgs, entryValue)
-        }
-
-        val resolvedDefault = interpretation.default?.let { varSubstitution.apply(it) }
-
-        return KModel.KFuncInterp(
-            decl = interpretation.decl,
-            vars = interpretation.vars,
-            entries = resolvedEntries,
-            default = resolvedDefault
-        )
     }
 
     private fun <T : KSort> completeModelValue(sort: T): KExpr<T> {
@@ -376,4 +278,197 @@ open class KModelEvaluator(
         }
         return value.asExpr(sort)
     }
+
+    private fun <T : KSort> resolveFunctionInterpretation(
+        interpretation: KModel.KFuncInterp<T>
+    ): ResolvedFunctionInterpretation<T> {
+        var resolvedEntry: ResolvedFunctionEntry<T> = ResolvedFunctionDefaultEntry(interpretation.default)
+
+        for (entry in interpretation.entries.asReversed()) {
+            val isValueEntry = entry.args.all { isValueInModel(it) }
+
+            resolvedEntry = if (isValueEntry) {
+                resolvedEntry.addValueEntry(entry.args, entry.value)
+            } else {
+                resolvedEntry.addUninterpretedEntry(entry.args, entry.value)
+            }
+        }
+
+        return ResolvedFunctionInterpretation(interpretation, resolvedEntry)
+    }
+
+    private fun <T : KSort> KContext.applyResolvedInterpretation(
+        interpretation: ResolvedFunctionInterpretation<T>,
+        args: List<KExpr<*>>
+    ): KExpr<T> {
+        val argsAreConstants = args.all { isValueInModel(it) }
+
+        // Replace function parameters vars with actual arguments
+        val varSubstitution = createVariableSubstitution(interpretation, args)
+
+        val resultEntries = mutableListOf<Pair<List<KExpr<*>>, KExpr<T>>>()
+
+        var currentEntries = interpretation.rootEntry
+        while (true) {
+            when (currentEntries) {
+                is ResolvedFunctionUninterpretedEntry -> {
+                    currentEntries.tryResolveArgs(
+                        varSubstitution, args, resultEntries
+                    )?.let { return it }
+
+                    currentEntries = currentEntries.next
+                }
+
+                is ResolvedFunctionValuesEntry -> {
+                    currentEntries.tryResolveArgs(
+                        varSubstitution, args, argsAreConstants, resultEntries
+                    )?.let { return it }
+
+                    currentEntries = currentEntries.next
+                }
+
+                is ResolvedFunctionDefaultEntry -> return currentEntries.resolveArgs(
+                    interpretation.interpretation.sort,
+                    varSubstitution, args, resultEntries
+                )
+            }
+        }
+    }
+
+    private fun KContext.createVariableSubstitution(
+        interpretation: ResolvedFunctionInterpretation<*>,
+        args: List<KExpr<*>>
+    ) = KExprSubstitutor(this).apply {
+        interpretation.interpretation.vars.zip(args).forEach { (v, a) ->
+            val app: KExpr<KSort> = mkConstApp(v).uncheckedCast()
+            substitute(app, a.uncheckedCast())
+        }
+    }
+
+    private fun <T : KSort> rewriteFunctionAppAsIte(
+        base: KExpr<T>,
+        args: List<KExpr<*>>,
+        entries: List<Pair<List<KExpr<*>>, KExpr<T>>>
+    ): KExpr<T> = with(ctx) {
+        entries.foldRight(base) { entry, acc ->
+            val argBinding = entry.first.zip(args) { ea, a ->
+                val entryArg: KExpr<KSort> = ea.uncheckedCast()
+                val actualArg: KExpr<KSort> = a.uncheckedCast()
+                mkEq(entryArg, actualArg)
+            }
+            mkIte(mkAnd(argBinding), entry.second, acc)
+        }
+    }
+
+    private fun <T : KSort> ResolvedFunctionDefaultEntry<T>.resolveArgs(
+        sort: T,
+        varSubstitution: KExprSubstitutor,
+        args: List<KExpr<*>>,
+        resultEntries: List<Pair<List<KExpr<*>>, KExpr<T>>>
+    ): KExpr<T> {
+        val resolvedDefault = expr?.let { varSubstitution.apply(it) }
+
+        // in case of partial interpretation we can generate any default expr to preserve expression correctness
+        val defaultExpr = resolvedDefault ?: completeModelValue(sort)
+
+        return rewriteFunctionAppAsIte(defaultExpr, args, resultEntries)
+    }
+
+    private fun <T : KSort> ResolvedFunctionValuesEntry<T>.tryResolveArgs(
+        varSubstitution: KExprSubstitutor,
+        args: List<KExpr<*>>,
+        argsAreConstants: Boolean,
+        resultEntries: MutableList<Pair<List<KExpr<*>>, KExpr<T>>>
+    ): KExpr<T>? {
+        if (argsAreConstants) {
+            val entryValue = entries[args]?.let { varSubstitution.apply(it) }
+            if (entryValue != null) {
+                // We have no possibly matching entries and we found a matched entry
+                if (resultEntries.isEmpty()) return entryValue
+
+                // We don't need to process next entries but we need to handle parent entries
+                return rewriteFunctionAppAsIte(entryValue, args, resultEntries)
+            }
+            return null
+        } else {
+            // Args are not values, entry args are values -> args are definitely not in current entry
+            for ((entryArgs, entryValue) in entries) {
+                addEntryIfArgsAreNotDistinct(resultEntries, args, entryArgs) {
+                    varSubstitution.apply(entryValue)
+                }
+            }
+            return null
+        }
+    }
+
+    private fun <T : KSort> ResolvedFunctionUninterpretedEntry<T>.tryResolveArgs(
+        varSubstitution: KExprSubstitutor,
+        args: List<KExpr<*>>,
+        resultEntries: MutableList<Pair<List<KExpr<*>>, KExpr<T>>>
+    ): KExpr<T>? {
+        for (entry in reversedEntries.asReversed()) {
+            val entryArgs = entry.first.map { varSubstitution.apply(it) }
+            val entryValue = varSubstitution.apply(entry.second)
+
+            if (entryArgs == args) {
+                // We have no possibly matching entries and we found a matched entry
+                if (resultEntries.isEmpty()) return entryValue
+
+                // We don't need to process next entries but we need to handle parent entries
+                return rewriteFunctionAppAsIte(entryValue, args, resultEntries)
+            }
+
+            addEntryIfArgsAreNotDistinct(resultEntries, args, entryArgs) { entryValue }
+        }
+        return null
+    }
+
+    private inline fun <T : KSort> addEntryIfArgsAreNotDistinct(
+        entries: MutableList<Pair<List<KExpr<*>>, KExpr<T>>>,
+        args: List<KExpr<*>>,
+        entryArgs: List<KExpr<*>>,
+        entryValue: () -> KExpr<T>
+    ) {
+        if (areDefinitelyDistinct(args, entryArgs)) return
+
+        val value = entryValue()
+        entries.add(entryArgs to value)
+    }
+
+    private class ResolvedFunctionInterpretation<T : KSort>(
+        val interpretation: KModel.KFuncInterp<T>,
+        val rootEntry: ResolvedFunctionEntry<T>
+    )
+
+    private sealed interface ResolvedFunctionEntry<T : KSort> {
+        fun addUninterpretedEntry(args: List<KExpr<*>>, value: KExpr<T>): ResolvedFunctionEntry<T> =
+            ResolvedFunctionUninterpretedEntry(arrayListOf(args to value), this)
+
+        fun addValueEntry(args: List<KExpr<*>>, value: KExpr<T>): ResolvedFunctionEntry<T> =
+            ResolvedFunctionValuesEntry(hashMapOf(args to value), this)
+    }
+
+    private class ResolvedFunctionUninterpretedEntry<T : KSort>(
+        val reversedEntries: MutableList<Pair<List<KExpr<*>>, KExpr<T>>>,
+        val next: ResolvedFunctionEntry<T>
+    ) : ResolvedFunctionEntry<T>{
+        override fun addUninterpretedEntry(args: List<KExpr<*>>, value: KExpr<T>): ResolvedFunctionEntry<T> {
+            reversedEntries.add(args to value)
+            return this
+        }
+    }
+
+    private class ResolvedFunctionValuesEntry<T : KSort>(
+        val entries: MutableMap<List<KExpr<*>>, KExpr<T>>,
+        val next: ResolvedFunctionEntry<T>
+    ) : ResolvedFunctionEntry<T> {
+        override fun addValueEntry(args: List<KExpr<*>>, value: KExpr<T>): ResolvedFunctionEntry<T> {
+            entries[args] = value
+            return this
+        }
+    }
+
+    private class ResolvedFunctionDefaultEntry<T : KSort>(
+        val expr: KExpr<T>?
+    ) : ResolvedFunctionEntry<T>
 }

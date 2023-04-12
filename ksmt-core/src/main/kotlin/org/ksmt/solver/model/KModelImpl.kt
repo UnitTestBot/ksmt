@@ -3,6 +3,7 @@ package org.ksmt.solver.model
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.solver.KModel
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
@@ -11,7 +12,7 @@ import org.ksmt.utils.uncheckedCast
 open class KModelImpl(
     val ctx: KContext,
     private val interpretations: Map<KDecl<*>, KModel.KFuncInterp<*>>,
-    private val uninterpretedSortsUniverses: Map<KUninterpretedSort, Set<KExpr<KUninterpretedSort>>>
+    private val uninterpretedSortsUniverses: Map<KUninterpretedSort, Set<KUninterpretedSortValue>>
 ) : KModel {
     override val declarations: Set<KDecl<*>>
         get() = interpretations.keys
@@ -19,13 +20,16 @@ open class KModelImpl(
     override val uninterpretedSorts: Set<KUninterpretedSort>
         get() = uninterpretedSortsUniverses.keys
 
+    private val evaluatorWithModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = true) }
+    private val evaluatorWithoutModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = false) }
+
     override fun <T : KSort> eval(
         expr: KExpr<T>,
         isComplete: Boolean
     ): KExpr<T> {
         ctx.ensureContextMatch(expr)
 
-        val evaluator = KModelEvaluator(ctx, this, isComplete)
+        val evaluator = if (isComplete) evaluatorWithModelCompletion else evaluatorWithoutModelCompletion
         return evaluator.apply(expr)
     }
 
@@ -37,7 +41,7 @@ open class KModelImpl(
         return interpretations[decl]?.uncheckedCast()
     }
 
-    override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KExpr<KUninterpretedSort>>? {
+    override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KUninterpretedSortValue>? {
         ctx.ensureContextMatch(sort)
 
         return uninterpretedSortsUniverses[sort]

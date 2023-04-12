@@ -140,4 +140,5 @@ enum class ExprKind {
     RealNumExpr,
     ExistentialQuantifier,
     UniversalQuantifier,
+    UninterpretedSortValue,
 }

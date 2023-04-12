@@ -107,8 +107,8 @@ class ArrayTest {
 
         val ctx = this
         Context().use { z3Native ->
-            val z3InternCtx = KZ3Context(z3Native)
-            val z3ConvertCtx = KZ3Context(z3Native)
+            val z3InternCtx = KZ3Context(this, z3Native)
+            val z3ConvertCtx = KZ3Context(this, z3Native)
 
             with(KZ3ExprInternalizer(ctx, z3InternCtx)) {
                 val iConst = const.internalizeExpr()

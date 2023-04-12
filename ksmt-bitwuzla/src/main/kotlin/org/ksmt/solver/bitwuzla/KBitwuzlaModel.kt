@@ -4,6 +4,7 @@ import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
@@ -30,11 +31,15 @@ open class KBitwuzlaModel(
     override val declarations: Set<KDecl<*>>
         get() = modelDeclarations.toHashSet()
 
-    override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
-        ctx.ensureContextMatch(expr)
-        bitwuzlaCtx.ensureActive()
+    private val evaluatorWithModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = true) }
+    private val evaluatorWithoutModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = false) }
 
-        return KModelEvaluator(ctx, this, isComplete).apply(expr)
+    override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
+        bitwuzlaCtx.ensureActive()
+        ctx.ensureContextMatch(expr)
+
+        val evaluator = if (isComplete) evaluatorWithModelCompletion else evaluatorWithoutModelCompletion
+        return evaluator.apply(expr)
     }
 
     private val uninterpretedSortValueContext = KBitwuzlaUninterpretedSortValueContext(ctx)
@@ -42,9 +47,9 @@ open class KBitwuzlaModel(
     override val uninterpretedSorts: Set<KUninterpretedSort>
         get() = uninterpretedSortDependency.keys
 
-    private val uninterpretedSortsUniverses = hashMapOf<KUninterpretedSort, Set<KExpr<KUninterpretedSort>>>()
+    private val uninterpretedSortsUniverses = hashMapOf<KUninterpretedSort, Set<KUninterpretedSortValue>>()
 
-    override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KExpr<KUninterpretedSort>>? =
+    override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KUninterpretedSortValue>? =
         uninterpretedSortsUniverses.getOrPut(sort) {
             ctx.ensureContextMatch(sort)
 

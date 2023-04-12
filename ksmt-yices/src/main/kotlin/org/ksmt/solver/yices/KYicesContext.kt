@@ -10,6 +10,7 @@ import org.ksmt.decl.KDecl
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KInterpretedValue
+import org.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.util.KExprIntInternalizerBase.Companion.NOT_INTERNALIZED
 import org.ksmt.solver.yices.TermUtils.addTerm
 import org.ksmt.solver.yices.TermUtils.andTerm
@@ -291,6 +292,39 @@ open class KYicesContext : AutoCloseable {
     fun exists(bounds: YicesTermArray, body: YicesTerm) = mkTerm { Terms.exists(bounds, body) }
     fun forall(bounds: YicesTermArray, body: YicesTerm) = mkTerm { Terms.forall(bounds, body) }
 
+    fun uninterpretedSortConst(sort: YicesSort, idx: Int) = mkTerm { Terms.mkConst(sort, idx) }
+
+    private var maxValueIndex = 0
+
+    /**
+     * Yices can produce different values with the same index.
+     * This situation happens if we create a value with index I (e.g. 2)
+     * and Yices generates a value in the model with index I.
+     * To overcome this, we shift our indices by some very huge value.
+     * Since Yices generates values with a small indices (e.g. 0, 1, 2, ...)
+     * this trick solves the issue.
+     * */
+    fun uninterpretedSortValueIndex(idx: Int): Int {
+        if (idx !in UNINTERPRETED_SORT_VALUE_INDEX_RANGE) {
+            throw KSolverUnsupportedFeatureException(
+                "Yices solver requires value index to be in range: $UNINTERPRETED_SORT_VALUE_INDEX_RANGE"
+            )
+        }
+
+        maxValueIndex = maxOf(maxValueIndex, idx)
+        return idx + UNINTERPRETED_SORT_VALUE_SHIFT
+    }
+
+    fun convertUninterpretedSortValueIndex(internalIndex: Int): Int {
+        // User provided value index
+        if (internalIndex >= UNINTERPRETED_SORT_VALUE_SHIFT) {
+            return internalIndex - UNINTERPRETED_SORT_VALUE_SHIFT
+        }
+
+        // Create a new index that doesn't overlap with any other indices
+        return ++maxValueIndex
+    }
+
     fun substitute(term: YicesTerm, substituteFrom: YicesTermArray, substituteTo: YicesTermArray): YicesTerm =
         mkTerm { Terms.subst(term, substituteFrom, substituteTo) }
 
@@ -318,6 +352,11 @@ open class KYicesContext : AutoCloseable {
                 Yices.setReadyFlag(true)
             }
         }
+
+        private const val UNINTERPRETED_SORT_VALUE_SHIFT = (1 shl 30) - 1
+
+        internal val UNINTERPRETED_SORT_VALUE_INDEX_RANGE =
+            0 until UNINTERPRETED_SORT_VALUE_SHIFT
 
         internal fun <K> mkTermCache() = Object2IntOpenHashMap<K>().apply {
             defaultReturnValue(NOT_INTERNALIZED)

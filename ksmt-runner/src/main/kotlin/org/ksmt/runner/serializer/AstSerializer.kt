@@ -144,6 +144,7 @@ import org.ksmt.expr.KToIntRealExpr
 import org.ksmt.expr.KToRealIntExpr
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.solver.util.KExprIntInternalizerBase
@@ -1124,6 +1125,16 @@ class AstSerializer(
             writeExpr {
                 writeAst(sortIdx)
                 writeAst(funcIdx)
+            }
+        }
+    }
+
+    override fun transform(expr: KUninterpretedSortValue) = with(expr) {
+        transform {
+            val sortIdx = sort.serializeSort()
+            writeExpr {
+                writeAst(sortIdx)
+                writeAst(valueIdx)
             }
         }
     }

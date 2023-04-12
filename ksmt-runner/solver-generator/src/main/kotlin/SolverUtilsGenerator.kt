@@ -30,15 +30,17 @@ data class SolverDescription(
 
 private const val SOLVER_TYPE = "SolverType"
 private const val SOLVER_TYPE_QUALIFIED_NAME = "org.ksmt.runner.generated.models.SolverType"
+private const val CUSTOM_SOLVER_TYPE = "${SOLVER_TYPE}.Custom"
 
 private val kSolverTypeName = "${KSolver::class.simpleName}<*>"
 private val kContextTypeName = "${KContext::class.simpleName}"
 private val kSolverConfigTypeName = "${KSolverConfiguration::class.simpleName}"
 private val kSolverConfigBuilderTypeName = "${KSolverUniversalConfigurationBuilder::class.simpleName}"
-private const val DOLLAR = "$"
 
 private const val CONFIG_CONSTRUCTOR = "configConstructor"
 private const val SOLVER_CONSTRUCTOR = "solverConstructor"
+private const val CONFIG_CONSTRUCTOR_CREATOR = "createConfigConstructor"
+private const val SOLVER_CONSTRUCTOR_CREATOR = "createSolverConstructor"
 
 private fun generateHeader(packageName: String) = """
     /**
@@ -74,17 +76,33 @@ private fun checkHasSuitableConfigConstructor(solver: SolverDescription) {
     check(constructor != null) { "No constructor for solver $solver" }
 }
 
+private fun generateSolverConstructor(): String = """
+        internal fun $SOLVER_CONSTRUCTOR_CREATOR(solverQualifiedName: String): ($kContextTypeName) -> $kSolverTypeName {
+            val cls = Class.forName(solverQualifiedName)
+            val ctor = cls.getConstructor($kContextTypeName::class.java)
+            return { ctx: $kContextTypeName -> ctor.newInstance(ctx) as $kSolverTypeName }
+        }
+    """.trimIndent()
+
 private fun generateSolverConstructor(solver: SolverDescription): String {
     checkHasSuitableSolverConstructor(solver)
 
     return """
         private val $SOLVER_CONSTRUCTOR${solver.solverType}: ($kContextTypeName) -> $kSolverTypeName by lazy {
-            val cls = Class.forName("${solver.solverCls.qualifiedName}")
-            val ctor = cls.getConstructor($kContextTypeName::class.java)
-            ({ ctx: $kContextTypeName -> ctor.newInstance(ctx) as $kSolverTypeName })
+            $SOLVER_CONSTRUCTOR_CREATOR("${solver.solverCls.qualifiedName}")
         }
     """.trimIndent()
 }
+
+private fun generateConfigConstructor(): String = """
+        internal fun $CONFIG_CONSTRUCTOR_CREATOR(
+            configQualifiedName: String
+        ): ($kSolverConfigBuilderTypeName) -> $kSolverConfigTypeName {
+            val cls = Class.forName(configQualifiedName)
+            val ctor = cls.getConstructor($kSolverConfigBuilderTypeName::class.java)
+            return { builder: $kSolverConfigBuilderTypeName -> ctor.newInstance(builder) as $kSolverConfigTypeName }
+        }
+    """.trimIndent()
 
 @Suppress("MaxLineLength")
 private fun generateConfigConstructor(solver: SolverDescription): String {
@@ -92,9 +110,7 @@ private fun generateConfigConstructor(solver: SolverDescription): String {
 
     return """
         private val $CONFIG_CONSTRUCTOR${solver.solverType}: ($kSolverConfigBuilderTypeName) -> $kSolverConfigTypeName by lazy {
-            val cls = Class.forName("${solver.solverUniversalConfig.qualifiedName}")
-            val ctor = cls.getConstructor($kSolverConfigBuilderTypeName::class.java)
-            ({ builder: $kSolverConfigBuilderTypeName -> ctor.newInstance(builder) as $kSolverConfigTypeName })
+            $CONFIG_CONSTRUCTOR_CREATOR("${solver.solverUniversalConfig.qualifiedName}")
         }
     """.trimIndent()
 }
@@ -109,7 +125,7 @@ private fun generateSolverTypeGetter(): String = """
     |)
     |
     |val KClass<out ${kSolverTypeName}>.solverType: $SOLVER_TYPE
-    |    get() = solverTypes[qualifiedName] ?: error("Unsupported solver: $DOLLAR{qualifiedName}")
+    |    get() = solverTypes[qualifiedName] ?: $CUSTOM_SOLVER_TYPE
 """.trimMargin()
 
 private fun generateSolverInstanceCreation(prefix: String) = solvers.joinToString("\n") {
@@ -119,6 +135,7 @@ private fun generateSolverInstanceCreation(prefix: String) = solvers.joinToStrin
 private fun generateSolverCreateInstance(): String = """
     |fun $SOLVER_TYPE.createInstance(ctx: $kContextTypeName): $kSolverTypeName = when (this) {
     ${generateSolverInstanceCreation(prefix = "|    ")}
+    |    $CUSTOM_SOLVER_TYPE -> error("User defined solvers should not be created with this builder")
     |}
 """.trimMargin()
 
@@ -130,6 +147,7 @@ private fun generateConfigCreateInstance(): String = """
     |@Suppress("UNCHECKED_CAST")
     |fun <C : $kSolverConfigTypeName> $SOLVER_TYPE.createConfigurationBuilder(): ConfigurationBuilder<C> = when (this) {
     ${generateConfigInstanceCreation(prefix = "|    ")}
+    |    $CUSTOM_SOLVER_TYPE -> error("User defined solver config builders should not be created with this builder")
     |}
 """.trimMargin()
 
@@ -138,6 +156,12 @@ fun main(args: Array<String>) {
 
     Path(generatedFilePath, "SolverUtils.kt").bufferedWriter().use {
         it.appendLine(generateHeader(generatedFilePackage))
+        it.newLine()
+
+        it.appendLine(generateSolverConstructor())
+        it.newLine()
+
+        it.appendLine(generateConfigConstructor())
         it.newLine()
 
         solvers.forEach { solver ->

@@ -33,7 +33,7 @@ class KZ3SMTLibParser(private val ctx: KContext) : KSMTLibParser {
     }
 
     private fun parse(parser: Context.() -> Array<BoolExpr>) = try {
-        KZ3Context().use {
+        KZ3Context(ctx).use {
             it.convertAssertions(it.nativeContext.parser().toList())
         }
     } catch (ex: Z3Exception) {

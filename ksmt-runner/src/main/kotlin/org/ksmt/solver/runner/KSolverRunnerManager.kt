@@ -7,6 +7,8 @@ import org.ksmt.runner.core.KsmtWorkerFactory
 import org.ksmt.runner.core.KsmtWorkerPool
 import org.ksmt.runner.core.RdServer
 import org.ksmt.runner.core.WorkerInitializationFailedException
+import org.ksmt.runner.generated.ConfigurationBuilder
+import org.ksmt.runner.generated.createConfigConstructor
 import org.ksmt.runner.generated.createConfigurationBuilder
 import org.ksmt.runner.generated.models.SolverProtocolModel
 import org.ksmt.runner.generated.models.SolverType
@@ -34,6 +36,9 @@ open class KSolverRunnerManager(
         }
     )
 
+    private val customSolvers = hashMapOf<String, CustomSolverInfo>()
+    private val customSolversConfiguration = hashMapOf<CustomSolverInfo, ConfigurationBuilder<KSolverConfiguration>>()
+
     override fun close() {
         workers.terminate()
     }
@@ -46,10 +51,60 @@ open class KSolverRunnerManager(
             throw KSolverException("Solver runner manager is terminated")
         }
         val solverType = solver.solverType
-        return KSolverRunner(this, ctx, solverType.createConfigurationBuilder(), solverType)
+        if (solverType != SolverType.Custom) {
+            return KSolverRunner(this, ctx, solverType.createConfigurationBuilder(), solverType)
+        }
+
+        return createCustomSolver(ctx, solver)
     }
 
-    internal suspend fun createSolverExecutor(ctx: KContext, solverType: SolverType): KSolverRunnerExecutor {
+    private fun <C : KSolverConfiguration> createCustomSolver(
+        ctx: KContext,
+        solver: KClass<out KSolver<C>>
+    ): KSolverRunner<C> {
+        val solverInfo = customSolvers[solver.java.name]
+            ?: error("Solver $solver was not registered")
+
+        val configurationBuilderCreator = customSolversConfiguration.getOrPut(solverInfo) {
+            createConfigConstructor(solverInfo.configurationQualifiedName)
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        return KSolverRunner(
+            manager = this,
+            ctx = ctx,
+            configurationBuilder = configurationBuilderCreator as ConfigurationBuilder<C>,
+            solverType = SolverType.Custom,
+            customSolverInfo = solverInfo
+        )
+    }
+
+    /**
+     * Register the user-defined solver in runner and allow
+     * the custom solver to run in a separate process / portfolio.
+     *
+     * Requirements:
+     * 1. The [solver] class must have a constructor with a single parameter of type [KContext].
+     * See [org.ksmt.solver.z3.KZ3Solver] from 'ksmt-z3' as an example.
+     * 2. The [configurationBuilder] class must have a constructor with a single
+     * parameter of type [org.ksmt.solver.KSolverUniversalConfigurationBuilder].
+     * See [org.ksmt.solver.z3.KZ3SolverUniversalConfiguration] from 'ksmt-z3' as an example.
+     * */
+    fun <C : KSolverConfiguration> registerSolver(
+        solver: KClass<out KSolver<C>>,
+        configurationBuilder: KClass<out C>
+    ) {
+        val solverQualifiedName = solver.java.name
+        val configBuilderQualifiedName = configurationBuilder.java.name
+
+        customSolvers[solverQualifiedName] = CustomSolverInfo(solverQualifiedName, configBuilderQualifiedName)
+    }
+
+    internal suspend fun createSolverExecutor(
+        ctx: KContext,
+        solverType: SolverType,
+        customSolverInfo: CustomSolverInfo?
+    ): KSolverRunnerExecutor {
         val worker = try {
             workers.getOrCreateFreeWorker()
         } catch (ex: WorkerInitializationFailedException) {
@@ -58,9 +113,14 @@ open class KSolverRunnerManager(
         worker.astSerializationCtx.initCtx(ctx)
         worker.lifetime.onTermination { worker.astSerializationCtx.resetCtx() }
         return KSolverRunnerExecutor(hardTimeout, worker).also {
-            it.initSolver(solverType)
+            it.initSolver(solverType, customSolverInfo)
         }
     }
+
+    data class CustomSolverInfo(
+        val solverQualifiedName: String,
+        val configurationQualifiedName: String
+    )
 
     companion object {
         const val DEFAULT_WORKER_POOL_SIZE = 1

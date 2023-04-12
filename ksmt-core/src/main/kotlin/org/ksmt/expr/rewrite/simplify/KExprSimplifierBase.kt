@@ -3,6 +3,7 @@ package org.ksmt.expr.rewrite.simplify
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.transformer.KTransformer
 import org.ksmt.sort.KSort
+import org.ksmt.utils.uncheckedCast
 
 interface KExprSimplifierBase : KTransformer {
     /**
@@ -58,3 +59,16 @@ internal fun <T : KSort> KExprSimplifierBase.boundedRewrite(
     expr: SimplifierAuxExpression<T>,
     depth: Int = SIMPLIFIER_DEFAULT_BOUNDED_REWRITE_DEPTH
 ): KExpr<T> = boundedRewrite(depth, expr.expr)
+
+/**
+ * [left] and [right] are definitely distinct if there
+ * is at least one distinct pair of expressions.
+ * */
+fun KExprSimplifierBase.areDefinitelyDistinct(left: List<KExpr<*>>, right: List<KExpr<*>>): Boolean {
+    for (i in left.indices) {
+        val lhs: KExpr<KSort> = left[i].uncheckedCast()
+        val rhs: KExpr<KSort> = right[i].uncheckedCast()
+        if (areDefinitelyDistinct(lhs, rhs)) return true
+    }
+    return false
+}

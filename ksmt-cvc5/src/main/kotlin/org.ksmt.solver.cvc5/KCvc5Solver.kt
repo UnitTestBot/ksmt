@@ -59,6 +59,8 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
 
         val cvc5Expr = with(exprInternalizer) { expr.internalizeExpr() }
         solver.assertFormula(cvc5Expr)
+
+        cvc5Ctx.assertPendingAxioms(solver)
     }
 
     override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) {
@@ -125,10 +127,9 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         return KCvc5Model(
             ctx,
             cvc5Ctx,
-            exprConverter,
             exprInternalizer,
-            cvc5Ctx.declarations().flatten().toSet(),
-            cvc5Ctx.uninterpretedSorts().flatten().toSet()
+            cvc5Ctx.declarations().flatMapTo(hashSetOf()) { it },
+            cvc5Ctx.uninterpretedSorts().flatMapTo(hashSetOf()) { it },
         )
     }
 

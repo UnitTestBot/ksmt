@@ -140,6 +140,7 @@ import org.ksmt.decl.KSignExtDecl
 import org.ksmt.decl.KTrueDecl
 import org.ksmt.decl.KUninterpretedConstDecl
 import org.ksmt.decl.KUninterpretedFuncDecl
+import org.ksmt.decl.KUninterpretedSortValueDecl
 import org.ksmt.decl.KXorDecl
 import org.ksmt.decl.KZeroExtDecl
 import org.ksmt.expr.KAddArithExpr
@@ -160,6 +161,7 @@ import org.ksmt.expr.KArrayNSelect
 import org.ksmt.expr.KArrayNStore
 import org.ksmt.expr.KArraySelect
 import org.ksmt.expr.KArrayStore
+import org.ksmt.expr.KArrayStoreBase
 import org.ksmt.expr.KBitVec16Value
 import org.ksmt.expr.KBitVec1Value
 import org.ksmt.expr.KBitVec32Value
@@ -288,6 +290,7 @@ import org.ksmt.expr.KToIntRealExpr
 import org.ksmt.expr.KToRealIntExpr
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.expr.printer.PrinterParams
@@ -997,12 +1000,47 @@ open class KContext(
         array: KExpr<KArraySort<D, R>>,
         index: KExpr<D>,
         value: KExpr<R>
+    ): KArrayStore<D, R> =
+        mkArrayStoreNoSimplifyNoAnalyze(array, index, value)
+            .analyzeIfSimplificationEnabled()
+
+    open fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayStoreNoSimplify(
+        array: KExpr<KArray2Sort<D0, D1, R>>,
+        index0: KExpr<D0>,
+        index1: KExpr<D1>,
+        value: KExpr<R>
+    ): KArray2Store<D0, D1, R> =
+        mkArrayStoreNoSimplifyNoAnalyze(array, index0, index1, value)
+            .analyzeIfSimplificationEnabled()
+
+    open fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayStoreNoSimplify(
+        array: KExpr<KArray3Sort<D0, D1, D2, R>>,
+        index0: KExpr<D0>,
+        index1: KExpr<D1>,
+        index2: KExpr<D2>,
+        value: KExpr<R>
+    ): KArray3Store<D0, D1, D2, R> =
+        mkArrayStoreNoSimplifyNoAnalyze(array, index0, index1, index2, value)
+            .analyzeIfSimplificationEnabled()
+
+    open fun <R : KSort> mkArrayNStoreNoSimplify(
+        array: KExpr<KArrayNSort<R>>,
+        indices: List<KExpr<*>>,
+        value: KExpr<R>
+    ): KArrayNStore<R> =
+        mkArrayNStoreNoSimplifyNoAnalyze(array, indices, value)
+            .analyzeIfSimplificationEnabled()
+
+    open fun <D : KSort, R : KSort> mkArrayStoreNoSimplifyNoAnalyze(
+        array: KExpr<KArraySort<D, R>>,
+        index: KExpr<D>,
+        value: KExpr<R>
     ): KArrayStore<D, R> = arrayStoreCache.createIfContextActive {
         ensureContextMatch(array, index, value)
         KArrayStore(this, array, index, value)
     }.cast()
 
-    open fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayStoreNoSimplify(
+    open fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayStoreNoSimplifyNoAnalyze(
         array: KExpr<KArray2Sort<D0, D1, R>>,
         index0: KExpr<D0>,
         index1: KExpr<D1>,
@@ -1012,7 +1050,7 @@ open class KContext(
         KArray2Store(this, array, index0, index1, value)
     }.cast()
 
-    open fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayStoreNoSimplify(
+    open fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayStoreNoSimplifyNoAnalyze(
         array: KExpr<KArray3Sort<D0, D1, D2, R>>,
         index0: KExpr<D0>,
         index1: KExpr<D1>,
@@ -1023,7 +1061,7 @@ open class KContext(
         KArray3Store(this, array, index0, index1, index2, value)
     }.cast()
 
-    open fun <R : KSort> mkArrayNStoreNoSimplify(
+    open fun <R : KSort> mkArrayNStoreNoSimplifyNoAnalyze(
         array: KExpr<KArrayNSort<R>>,
         indices: List<KExpr<*>>,
         value: KExpr<R>
@@ -1033,6 +1071,18 @@ open class KContext(
 
         KArrayNStore(this, array, indices.uncheckedCast(), value)
     }.cast()
+
+    private fun <S : KArrayStoreBase<*, *>> S.analyzeIfSimplificationEnabled(): S {
+        /**
+         * Analyze store indices only when simplification is enabled since
+         * we don't expect any benefit from the analyzed stores
+         * if we don't use simplifications.
+         * */
+        if (simplificationMode == SIMPLIFY) {
+            analyzeStore()
+        }
+        return this
+    }
 
     private val arraySelectCache = mkAstInterner<KArraySelect<out KSort, out KSort>>()
     private val array2SelectCache = mkAstInterner<KArray2Select<out KSort, out KSort, out KSort>>()
@@ -3004,14 +3054,16 @@ open class KContext(
             KUniversalQuantifier(this, body, bounds)
         }
 
-    private val uninterpretedSortDefaultValueCache =
-        mkCache<KUninterpretedSort, KExpr<KUninterpretedSort>>(operationMode)
+    private val uninterpretedSortValueCache = mkAstInterner<KUninterpretedSortValue>()
 
-    open fun uninterpretedSortDefaultValue(sort: KUninterpretedSort): KExpr<KUninterpretedSort> =
-        uninterpretedSortDefaultValueCache.computeIfAbsent(sort) {
-            ensureContextMatch(it)
-            mkFreshConst("${it.name}_default_value", it)
+    open fun mkUninterpretedSortValue(sort: KUninterpretedSort, valueIdx: Int): KUninterpretedSortValue =
+        uninterpretedSortValueCache.createIfContextActive {
+            ensureContextMatch(sort)
+            KUninterpretedSortValue(this, sort, valueIdx)
         }
+
+    open fun uninterpretedSortDefaultValue(sort: KUninterpretedSort): KUninterpretedSortValue =
+        mkUninterpretedSortValue(sort, valueIdx = 0)
 
     /*
     * declarations
@@ -3548,6 +3600,9 @@ open class KContext(
 
     fun <T : KFpSort> mkBvToFpDecl(sort: T, rm: KFpRoundingModeSort, value: KBvSort, signed: Boolean): KBvToFpDecl<T> =
         KBvToFpDecl(this, sort, rm, value, signed)
+
+    fun mkUninterpretedSortValueDecl(sort: KUninterpretedSort, valueIdx: Int): KUninterpretedSortValueDecl =
+        KUninterpretedSortValueDecl(this, sort, valueIdx)
 
     /*
     * KAst

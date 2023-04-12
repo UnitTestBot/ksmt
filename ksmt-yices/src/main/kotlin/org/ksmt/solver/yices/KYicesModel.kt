@@ -8,6 +8,7 @@ import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.KModelEvaluator
 import org.ksmt.solver.model.KModelImpl
@@ -31,6 +32,7 @@ import org.ksmt.utils.uncheckedCast
 class KYicesModel(
     private val model: Model,
     private val ctx: KContext,
+    private val yicesCtx: KYicesContext,
     private val internalizer: KYicesExprInternalizer,
     private val converter: KYicesExprConverter
 ) : KModel, AutoCloseable {
@@ -49,16 +51,18 @@ class KYicesModel(
         sortsWithDependencies
     }
 
-    private val uninterpretedSortUniverse = hashMapOf<KUninterpretedSort, MutableSet<KExpr<KUninterpretedSort>>>()
+    private val uninterpretedSortUniverse =
+        hashMapOf<KUninterpretedSort, Set<KUninterpretedSortValue>>()
+
     private val knownUninterpretedSortValues =
-        hashMapOf<KUninterpretedSort, MutableMap<Int, KExpr<KUninterpretedSort>>>()
+        hashMapOf<KUninterpretedSort, MutableMap<Int, KUninterpretedSortValue>>()
 
     private val interpretations = hashMapOf<KDecl<*>, KModel.KFuncInterp<*>>()
     private val funcInterpretationsToDo = arrayListOf<Pair<YVal, KFuncDecl<*>>>()
 
     override fun uninterpretedSortUniverse(
         sort: KUninterpretedSort
-    ): Set<KExpr<KUninterpretedSort>>? = uninterpretedSortUniverse.getOrPut(sort) {
+    ): Set<KUninterpretedSortValue>? = uninterpretedSortUniverse.getOrPut(sort) {
         val sortDependencies = uninterpretedSortDependencies[sort] ?: return null
 
         sortDependencies.forEach { interpretation(it) }
@@ -66,8 +70,14 @@ class KYicesModel(
         knownUninterpretedSortValues[sort]?.values?.toHashSet() ?: hashSetOf()
     }
 
+    private val evaluatorWithModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = true) }
+    private val evaluatorWithoutModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = false) }
+
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
-        return KModelEvaluator(ctx, this, isComplete).apply(expr)
+        ctx.ensureContextMatch(expr)
+
+        val evaluator = if (isComplete) evaluatorWithModelCompletion else evaluatorWithoutModelCompletion
+        return evaluator.apply(expr)
     }
 
     private fun getValue(yval: YVal, sort: KSort): KExpr<*> = with(ctx) {
@@ -80,7 +90,8 @@ class KYicesModel(
                 val uninterpretedSortValueId = model.scalarValue(yval)[0]
                 val sortValues = knownUninterpretedSortValues.getOrPut(sort) { hashMapOf() }
                 sortValues.getOrPut(uninterpretedSortValueId) {
-                    mkFreshConst("value_${uninterpretedSortValueId}", sort)
+                    val valueIndex = yicesCtx.convertUninterpretedSortValueIndex(uninterpretedSortValueId)
+                    mkUninterpretedSortValue(sort, valueIndex)
                 }
             }
             is KArraySortBase<*> -> {

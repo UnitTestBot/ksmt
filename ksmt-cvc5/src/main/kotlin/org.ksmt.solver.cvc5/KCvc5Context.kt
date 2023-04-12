@@ -1,5 +1,6 @@
 package org.ksmt.solver.cvc5
 
+import io.github.cvc5.Kind
 import io.github.cvc5.Solver
 import io.github.cvc5.Sort
 import io.github.cvc5.Term
@@ -11,6 +12,7 @@ import org.ksmt.expr.KExistentialQuantifier
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KFunctionAsArray
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.rewrite.KExprUninterpretedDeclCollector
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
@@ -79,7 +81,10 @@ class KCvc5Context(
      */
     fun uninterpretedSorts(): List<Set<KUninterpretedSort>> = uninterpretedSorts
 
-    fun addDeclaration(decl: KDecl<*>) { currentLevelDeclarations += decl }
+    fun addDeclaration(decl: KDecl<*>) {
+        currentLevelDeclarations += decl
+        uninterpretedSortCollector.collect(decl)
+    }
 
     /**
      * declarations of active push-levels
@@ -97,12 +102,16 @@ class KCvc5Context(
         declarations.add(currentLevelDeclarations)
         currentLevelUninterpretedSorts = hashSetOf()
         uninterpretedSorts.add(currentLevelUninterpretedSorts)
+
+        pushAssertionLevel()
     }
 
     fun pop(n: UInt) {
         repeat(n.toInt()) {
             declarations.removeLast()
             uninterpretedSorts.removeLast()
+
+            popAssertionLevel()
         }
 
         currentLevelDeclarations = declarations.last()
@@ -184,6 +193,105 @@ class KCvc5Context(
         return save(key, computeValue())
     }
 
+
+    @Suppress("ForbiddenComment")
+    /**
+     * Uninterpreted sort values distinct constraints management.
+     *
+     * 1. save/register uninterpreted value.
+     * See [KUninterpretedSortValue] internalization for the details.
+     * 2. Assert distinct constraints ([assertPendingAxioms]) that may be introduced during internalization.
+     * Currently, we assert constraints for all the values we have ever internalized.
+     *
+     * todo: precise uninterpreted sort values tracking
+     * */
+    private data class UninterpretedSortValueDescriptor(
+        val value: KUninterpretedSortValue,
+        val nativeUniqueValueDescriptor: Term,
+        val nativeValueTerm: Term
+    )
+
+    private var currentValueConstraintsLevel = 0
+    private val assertedConstraintLevels = arrayListOf<Int>()
+    private val uninterpretedSortValueDescriptors = arrayListOf<UninterpretedSortValueDescriptor>()
+    private val uninterpretedSortValueInterpreter = hashMapOf<KUninterpretedSort, Term>()
+
+    private val uninterpretedSortValues =
+        hashMapOf<KUninterpretedSort, MutableList<Pair<Term, KUninterpretedSortValue>>>()
+
+    fun saveUninterpretedSortValue(nativeValue: Term, value: KUninterpretedSortValue): Term {
+        val sortValues = uninterpretedSortValues.getOrPut(value.sort) { arrayListOf() }
+        sortValues.add(nativeValue to value)
+        return nativeValue
+    }
+
+    inline fun registerUninterpretedSortValue(
+        value: KUninterpretedSortValue,
+        uniqueValueDescriptorTerm: Term,
+        uninterpretedValueTerm: Term,
+        mkInterpreter: () -> Term
+    ) {
+        val interpreter = getUninterpretedSortValueInterpreter(value.sort)
+        if (interpreter == null) {
+            registerUninterpretedSortValueInterpreter(value.sort, mkInterpreter())
+        }
+
+        registerUninterpretedSortValue(value, uniqueValueDescriptorTerm, uninterpretedValueTerm)
+    }
+
+    fun assertPendingAxioms(solver: Solver) {
+        assertPendingUninterpretedValueConstraints(solver)
+    }
+
+    fun getUninterpretedSortValueInterpreter(sort: KUninterpretedSort): Term? =
+        uninterpretedSortValueInterpreter[sort]
+
+    fun registerUninterpretedSortValueInterpreter(sort: KUninterpretedSort, interpreter: Term) {
+        uninterpretedSortValueInterpreter[sort] = interpreter
+    }
+
+    fun registerUninterpretedSortValue(
+        value: KUninterpretedSortValue,
+        uniqueValueDescriptorTerm: Term,
+        uninterpretedValueTerm: Term
+    ) {
+        uninterpretedSortValueDescriptors += UninterpretedSortValueDescriptor(
+            value = value,
+            nativeUniqueValueDescriptor = uniqueValueDescriptorTerm,
+            nativeValueTerm = uninterpretedValueTerm
+        )
+    }
+
+    fun getRegisteredSortValues(sort: KUninterpretedSort): List<Pair<Term, KUninterpretedSortValue>> =
+        uninterpretedSortValues[sort] ?: emptyList()
+
+    private fun pushAssertionLevel() {
+        assertedConstraintLevels.add(currentValueConstraintsLevel)
+    }
+
+    private fun popAssertionLevel() {
+        currentValueConstraintsLevel = assertedConstraintLevels.removeLast()
+    }
+
+    private fun assertPendingUninterpretedValueConstraints(solver: Solver) {
+        while (currentValueConstraintsLevel < uninterpretedSortValueDescriptors.size) {
+            assertUninterpretedSortValueConstraint(
+                solver,
+                uninterpretedSortValueDescriptors[currentValueConstraintsLevel]
+            )
+            currentValueConstraintsLevel++
+        }
+    }
+
+    private fun assertUninterpretedSortValueConstraint(solver: Solver, value: UninterpretedSortValueDescriptor) {
+        val interpreter = uninterpretedSortValueInterpreter[value.value.sort]
+            ?: error("Interpreter was not registered for sort: ${value.value.sort}")
+
+        val constraintLhs = solver.mkTerm(Kind.APPLY_UF, arrayOf(interpreter, value.nativeValueTerm))
+        val constraint = constraintLhs.eqTerm(value.nativeUniqueValueDescriptor)
+
+        solver.assertFormula(constraint)
+    }
 
     private inline fun <K> internalizeAst(
         cache: MutableMap<K, Term>,
