@@ -14,52 +14,50 @@ import kotlin.reflect.KClass
 
 typealias ConfigurationBuilder<C> = (KSolverUniversalConfigurationBuilder) -> C
 
-private val solverConstructorZ3: (KContext) -> KSolver<*> by lazy {
-    val cls = Class.forName("org.ksmt.solver.z3.KZ3Solver")
+internal fun createSolverConstructor(solverQualifiedName: String): (KContext) -> KSolver<*> {
+    val cls = Class.forName(solverQualifiedName)
     val ctor = cls.getConstructor(KContext::class.java)
-    ({ ctx: KContext -> ctor.newInstance(ctx) as KSolver<*> })
+    return { ctx: KContext -> ctor.newInstance(ctx) as KSolver<*> }
+}
+
+internal fun createConfigConstructor(
+    configQualifiedName: String
+): (KSolverUniversalConfigurationBuilder) -> KSolverConfiguration {
+    val cls = Class.forName(configQualifiedName)
+    val ctor = cls.getConstructor(KSolverUniversalConfigurationBuilder::class.java)
+    return { builder: KSolverUniversalConfigurationBuilder -> ctor.newInstance(builder) as KSolverConfiguration }
+}
+
+private val solverConstructorZ3: (KContext) -> KSolver<*> by lazy {
+    createSolverConstructor("org.ksmt.solver.z3.KZ3Solver")
 }
 
 private val configConstructorZ3: (KSolverUniversalConfigurationBuilder) -> KSolverConfiguration by lazy {
-    val cls = Class.forName("org.ksmt.solver.z3.KZ3SolverUniversalConfiguration")
-    val ctor = cls.getConstructor(KSolverUniversalConfigurationBuilder::class.java)
-    ({ builder: KSolverUniversalConfigurationBuilder -> ctor.newInstance(builder) as KSolverConfiguration })
+    createConfigConstructor("org.ksmt.solver.z3.KZ3SolverUniversalConfiguration")
 }
 
 private val solverConstructorBitwuzla: (KContext) -> KSolver<*> by lazy {
-    val cls = Class.forName("org.ksmt.solver.bitwuzla.KBitwuzlaSolver")
-    val ctor = cls.getConstructor(KContext::class.java)
-    ({ ctx: KContext -> ctor.newInstance(ctx) as KSolver<*> })
+    createSolverConstructor("org.ksmt.solver.bitwuzla.KBitwuzlaSolver")
 }
 
 private val configConstructorBitwuzla: (KSolverUniversalConfigurationBuilder) -> KSolverConfiguration by lazy {
-    val cls = Class.forName("org.ksmt.solver.bitwuzla.KBitwuzlaSolverUniversalConfiguration")
-    val ctor = cls.getConstructor(KSolverUniversalConfigurationBuilder::class.java)
-    ({ builder: KSolverUniversalConfigurationBuilder -> ctor.newInstance(builder) as KSolverConfiguration })
+    createConfigConstructor("org.ksmt.solver.bitwuzla.KBitwuzlaSolverUniversalConfiguration")
 }
 
 private val solverConstructorYices: (KContext) -> KSolver<*> by lazy {
-    val cls = Class.forName("org.ksmt.solver.yices.KYicesSolver")
-    val ctor = cls.getConstructor(KContext::class.java)
-    ({ ctx: KContext -> ctor.newInstance(ctx) as KSolver<*> })
+    createSolverConstructor("org.ksmt.solver.yices.KYicesSolver")
 }
 
 private val configConstructorYices: (KSolverUniversalConfigurationBuilder) -> KSolverConfiguration by lazy {
-    val cls = Class.forName("org.ksmt.solver.yices.KYicesSolverUniversalConfiguration")
-    val ctor = cls.getConstructor(KSolverUniversalConfigurationBuilder::class.java)
-    ({ builder: KSolverUniversalConfigurationBuilder -> ctor.newInstance(builder) as KSolverConfiguration })
+    createConfigConstructor("org.ksmt.solver.yices.KYicesSolverUniversalConfiguration")
 }
 
 private val solverConstructorCvc5: (KContext) -> KSolver<*> by lazy {
-    val cls = Class.forName("org.ksmt.solver.cvc5.KCvc5Solver")
-    val ctor = cls.getConstructor(KContext::class.java)
-    ({ ctx: KContext -> ctor.newInstance(ctx) as KSolver<*> })
+    createSolverConstructor("org.ksmt.solver.cvc5.KCvc5Solver")
 }
 
 private val configConstructorCvc5: (KSolverUniversalConfigurationBuilder) -> KSolverConfiguration by lazy {
-    val cls = Class.forName("org.ksmt.solver.cvc5.KCvc5SolverUniversalConfiguration")
-    val ctor = cls.getConstructor(KSolverUniversalConfigurationBuilder::class.java)
-    ({ builder: KSolverUniversalConfigurationBuilder -> ctor.newInstance(builder) as KSolverConfiguration })
+    createConfigConstructor("org.ksmt.solver.cvc5.KCvc5SolverUniversalConfiguration")
 }
 
 private val solverTypes = mapOf(
@@ -70,13 +68,14 @@ private val solverTypes = mapOf(
 )
 
 val KClass<out KSolver<*>>.solverType: SolverType
-    get() = solverTypes[qualifiedName] ?: error("Unsupported solver: ${qualifiedName}")
+    get() = solverTypes[qualifiedName] ?: SolverType.Custom
 
 fun SolverType.createInstance(ctx: KContext): KSolver<*> = when (this) {
     SolverType.Z3 -> solverConstructorZ3(ctx)
     SolverType.Bitwuzla -> solverConstructorBitwuzla(ctx)
     SolverType.Yices -> solverConstructorYices(ctx)
     SolverType.Cvc5 -> solverConstructorCvc5(ctx)
+    SolverType.Custom -> error("User defined solvers should not be created with this builder")
 }
 
 @Suppress("UNCHECKED_CAST")
@@ -85,5 +84,6 @@ fun <C : KSolverConfiguration> SolverType.createConfigurationBuilder(): Configur
     SolverType.Bitwuzla -> { builder -> configConstructorBitwuzla(builder) as C }
     SolverType.Yices -> { builder -> configConstructorYices(builder) as C }
     SolverType.Cvc5 -> { builder -> configConstructorCvc5(builder) as C }
+    SolverType.Custom -> error("User defined solver config builders should not be created with this builder")
 }
 

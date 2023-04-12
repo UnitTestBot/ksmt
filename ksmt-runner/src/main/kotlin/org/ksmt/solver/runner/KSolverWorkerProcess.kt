@@ -7,13 +7,16 @@ import org.ksmt.expr.KExpr
 import org.ksmt.runner.core.ChildProcessBase
 import org.ksmt.runner.core.KsmtWorkerArgs
 import org.ksmt.runner.generated.createInstance
+import org.ksmt.runner.generated.createSolverConstructor
 import org.ksmt.runner.generated.models.CheckResult
+import org.ksmt.runner.generated.models.ContextSimplificationMode
 import org.ksmt.runner.generated.models.ModelEntry
 import org.ksmt.runner.generated.models.ModelFuncInterpEntry
 import org.ksmt.runner.generated.models.ModelResult
 import org.ksmt.runner.generated.models.ModelUninterpretedSortUniverse
 import org.ksmt.runner.generated.models.ReasonUnknownResult
 import org.ksmt.runner.generated.models.SolverProtocolModel
+import org.ksmt.runner.generated.models.SolverType
 import org.ksmt.runner.generated.models.UnsatCoreResult
 import org.ksmt.runner.generated.models.solverProtocolModel
 import org.ksmt.runner.serializer.AstSerializationCtx
@@ -24,6 +27,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
     private var workerCtx: KContext? = null
     private var workerSolver: KSolver<*>? = null
+    private val customSolverCreators = hashMapOf<String, (KContext) -> KSolver<*>>()
 
     private val ctx: KContext
         get() = workerCtx ?: error("Solver is not initialized")
@@ -40,9 +44,27 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
     override fun SolverProtocolModel.setup(astSerializationCtx: AstSerializationCtx) {
         initSolver.measureExecutionForTermination { params ->
             check(workerCtx == null) { "Solver is initialized" }
-            workerCtx = KContext()
+
+            val simplificationMode = when (params.contextSimplificationMode) {
+                ContextSimplificationMode.SIMPLIFY -> KContext.SimplificationMode.SIMPLIFY
+                ContextSimplificationMode.NO_SIMPLIFY -> KContext.SimplificationMode.NO_SIMPLIFY
+            }
+            workerCtx = KContext(simplificationMode = simplificationMode)
+
             astSerializationCtx.initCtx(ctx)
-            workerSolver = params.type.createInstance(ctx)
+
+            workerSolver = if (params.type != SolverType.Custom) {
+                params.type.createInstance(ctx)
+            } else {
+                val solverName = params.customSolverQualifiedName
+                    ?: error("Custom solver name was not provided")
+
+                val solverCreator = customSolverCreators.getOrPut(solverName) {
+                    createSolverConstructor(solverName)
+                }
+
+                solverCreator(ctx)
+            }
         }
         deleteSolver.measureExecutionForTermination {
             solver.close()
