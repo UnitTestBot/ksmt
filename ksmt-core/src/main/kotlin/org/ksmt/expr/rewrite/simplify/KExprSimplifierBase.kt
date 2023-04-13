@@ -65,6 +65,10 @@ internal fun <T : KSort> KExprSimplifierBase.boundedRewrite(
  * is at least one distinct pair of expressions.
  * */
 fun KExprSimplifierBase.areDefinitelyDistinct(left: List<KExpr<*>>, right: List<KExpr<*>>): Boolean {
+    check(left.size == right.size) {
+        "Pairwise distinct check requires both lists to be the same size"
+    }
+
     for (i in left.indices) {
         val lhs: KExpr<KSort> = left[i].uncheckedCast()
         val rhs: KExpr<KSort> = right[i].uncheckedCast()
