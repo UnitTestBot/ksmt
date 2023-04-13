@@ -371,7 +371,7 @@ class KSolverRunnerExecutor(
 
     private val rpcHardTimout = RpcTimeouts(
         // We don't need any warnings
-        warnAwaitTimeMs = Duration.INFINITE.inWholeMilliseconds,
+        warnAwaitTimeMs = RPC_TIMEOUT_MAX_VALUE_MS,
         errorAwaitTimeMs = hardTimeout.inWholeMilliseconds
     )
 
@@ -381,40 +381,35 @@ class KSolverRunnerExecutor(
     private suspend fun <TReq, Tres> RdCall<TReq, Tres>.queryAsync(request: TReq): Tres =
         startSuspending(worker.lifetime, request)
 
-    @Suppress(
-        "TooGenericExceptionCaught",
-        "SwallowedException",
-        "ThrowsCount"
-    )
     private suspend inline fun <T> queryWithTimeoutAndExceptionHandlingAsync(
         crossinline body: suspend SolverProtocolModel.() -> T
-    ): T {
-        try {
-            return withTimeout(hardTimeout) {
-                worker.protocolModel.body()
-            }
-        } catch (ex: RdFault) {
-            throwSolverException(ex)
-        } catch (ex: Throwable) {
-            terminate()
-            if (ex is TimeoutCancellationException) {
-                throw KSolverExecutorTimeoutException(ex.message)
-            } else {
-                throw KSolverExecutorOtherException(ex)
-            }
+    ): T = queryWithTimeoutAndExceptionHandling<T, TimeoutCancellationException> {
+        withTimeout(hardTimeout) {
+            worker.protocolModel.body()
         }
     }
 
     private inline fun <T> queryWithTimeoutAndExceptionHandlingSync(
         crossinline body: SolverProtocolModel.() -> T
+    ): T = queryWithTimeoutAndExceptionHandling<T, TimeoutException> {
+        worker.protocolModel.body()
+    }
+
+    @Suppress(
+        "TooGenericExceptionCaught",
+        "SwallowedException",
+        "ThrowsCount"
+    )
+    private inline fun <T, reified Timeout> queryWithTimeoutAndExceptionHandling(
+        body: () -> T
     ): T {
         try {
-            return worker.protocolModel.body()
+            return body()
         } catch (ex: RdFault) {
             throwSolverException(ex)
         } catch (ex: Throwable) {
             terminate()
-            if (ex is TimeoutException) {
+            if (ex is Timeout) {
                 throw KSolverExecutorTimeoutException(ex.message)
             } else {
                 throw KSolverExecutorOtherException(ex)
@@ -433,5 +428,9 @@ class KSolverRunnerExecutor(
             throw KSolverUnsupportedParameterException(reason.reasonMessage)
 
         else -> throw KSolverException(reason)
+    }
+
+    companion object {
+        private const val RPC_TIMEOUT_MAX_VALUE_MS = Long.MAX_VALUE / 1_000_000
     }
 }
