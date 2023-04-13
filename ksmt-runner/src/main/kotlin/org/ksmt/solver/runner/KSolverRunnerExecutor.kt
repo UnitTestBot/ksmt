@@ -1,10 +1,13 @@
 package org.ksmt.solver.runner
 
+import com.jetbrains.rd.framework.IRdTask
+import com.jetbrains.rd.framework.RdTaskResult
 import com.jetbrains.rd.framework.impl.RdCall
-import com.jetbrains.rd.framework.impl.RpcTimeouts
 import com.jetbrains.rd.util.AtomicInteger
 import com.jetbrains.rd.util.TimeoutException
+import com.jetbrains.rd.util.lifetime.Lifetime
 import com.jetbrains.rd.util.reactive.RdFault
+import com.jetbrains.rd.util.threading.SynchronousScheduler
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 import org.ksmt.KContext
@@ -34,6 +37,8 @@ import org.ksmt.solver.runner.KSolverRunnerManager.CustomSolverInfo
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
 
 class KSolverRunnerExecutor(
@@ -369,17 +374,26 @@ class KSolverRunnerExecutor(
         }
     }
 
-    private val rpcHardTimout = RpcTimeouts(
-        // We don't need any warnings
-        warnAwaitTimeMs = RPC_TIMEOUT_MAX_VALUE_MS,
-        errorAwaitTimeMs = hardTimeout.inWholeMilliseconds
-    )
-
     private fun <TReq, Tres> RdCall<TReq, Tres>.querySync(request: TReq): Tres =
-        sync(request, rpcHardTimout)
+        fastSync(worker.lifetime, request)
 
     private suspend fun <TReq, Tres> RdCall<TReq, Tres>.queryAsync(request: TReq): Tres =
         startSuspending(worker.lifetime, request)
+
+    private fun <TReq, Tres> RdCall<TReq, Tres>.fastSync(
+        lifetime: Lifetime, request: TReq
+    ): Tres {
+        val task = start(lifetime, request, SynchronousScheduler)
+        return task.wait(hardTimeout.inWholeMilliseconds).unwrap()
+    }
+
+    private fun <T> IRdTask<T>.wait(timeoutMs: Long): RdTaskResult<T> {
+        val future = CompletableFuture<RdTaskResult<T>>()
+        result.advise(worker.lifetime) {
+            future.complete(it)
+        }
+        return future.get(timeoutMs, TimeUnit.MILLISECONDS)
+    }
 
     private suspend inline fun <T> queryWithTimeoutAndExceptionHandlingAsync(
         crossinline body: suspend SolverProtocolModel.() -> T
@@ -428,9 +442,5 @@ class KSolverRunnerExecutor(
             throw KSolverUnsupportedParameterException(reason.reasonMessage)
 
         else -> throw KSolverException(reason)
-    }
-
-    companion object {
-        private const val RPC_TIMEOUT_MAX_VALUE_MS = Long.MAX_VALUE / 1_000_000
     }
 }
