@@ -423,7 +423,9 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KSortVisitor
 import org.ksmt.sort.KUninterpretedSort
+import org.ksmt.utils.DefaultValueSampler
 import org.ksmt.utils.FpUtils.biasFpExponent
 import org.ksmt.utils.FpUtils.fpInfExponentBiased
 import org.ksmt.utils.FpUtils.fpInfSignificand
@@ -440,6 +442,7 @@ import org.ksmt.utils.extractSignificand
 import org.ksmt.utils.getHalfPrecisionExponent
 import org.ksmt.utils.halfPrecisionSignificand
 import org.ksmt.utils.normalizeValue
+import org.ksmt.utils.sampleValue
 import org.ksmt.utils.signBit
 import org.ksmt.utils.toBigInteger
 import org.ksmt.utils.toULongValue
@@ -3073,6 +3076,30 @@ open class KContext(
             ensureContextMatch(sort)
             KUninterpretedSortValue(this, sort, valueIdx)
         }
+
+    // default values
+    val defaultValueSampler: KSortVisitor<KExpr<*>> by lazy {
+        mkDefaultValueSampler()
+    }
+
+    open fun mkDefaultValueSampler(): KSortVisitor<KExpr<*>> =
+        DefaultValueSampler(this)
+
+    open fun boolSortDefaultValue(): KExpr<KBoolSort> = trueExpr
+
+    open fun intSortDefaultValue(): KExpr<KIntSort> = mkIntNum(0)
+
+    open fun realSortDefaultValue(): KExpr<KRealSort> = mkRealNum(0)
+
+    open fun <S : KBvSort> bvSortDefaultValue(sort: S): KExpr<S> = mkBv(0, sort)
+
+    open fun <S : KFpSort> fpSortDefaultValue(sort: S): KExpr<S> = mkFpZero(signBit = false, sort)
+
+    open fun fpRoundingModeSortDefaultValue(): KExpr<KFpRoundingModeSort> =
+        mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven)
+
+    open fun <A : KArraySortBase<R>, R : KSort> arraySortDefaultValue(sort: A): KExpr<A> =
+        mkArrayConst(sort, sort.range.sampleValue())
 
     open fun uninterpretedSortDefaultValue(sort: KUninterpretedSort): KUninterpretedSortValue =
         mkUninterpretedSortValue(sort, valueIdx = 0)

@@ -24,3 +24,6 @@ fun <T : KSort> KExpr<*>.asExpr(sort: T): KExpr<T> = with(ctx) {
     @Suppress("UNCHECKED_CAST")
     this@asExpr as KExpr<T>
 }
+
+fun <T : KSort> T.sampleValue(): KExpr<T> =
+    accept(ctx.defaultValueSampler).asExpr(this)
