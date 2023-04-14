@@ -689,14 +689,6 @@ open class KContext(
         createNoSimplify = ::mkAndNoSimplify
     )
 
-    @Deprecated(
-        "NoFlat builders are deprecated",
-        replaceWith = ReplaceWith("mkAnd(args, flat = false)"),
-        level = DeprecationLevel.ERROR
-    )
-    open fun mkAndNoFlat(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
-        mkAnd(args, flat = false)
-
     /**
      * Create boolean binary AND expression.
      *
@@ -714,14 +706,6 @@ open class KContext(
         simplifier = { a, b -> simplifyAnd(a, b, flat, order) },
         createNoSimplify = ::mkAndNoSimplify
     )
-
-    @Deprecated(
-        "NoFlat builders are deprecated",
-        replaceWith = ReplaceWith("mkAnd(lhs, rhs, flat = false)"),
-        level = DeprecationLevel.ERROR
-    )
-    open fun mkAndNoFlat(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
-        mkAnd(lhs, rhs, flat = false)
 
     open fun mkAndNoSimplify(args: List<KExpr<KBoolSort>>): KAndExpr =
         if (args.size == 2) {
@@ -759,14 +743,6 @@ open class KContext(
         createNoSimplify = ::mkOrNoSimplify
     )
 
-    @Deprecated(
-        "NoFlat builders are deprecated",
-        replaceWith = ReplaceWith("mkOr(args, flat = false)"),
-        level = DeprecationLevel.ERROR
-    )
-    open fun mkOrNoFlat(args: List<KExpr<KBoolSort>>): KExpr<KBoolSort> =
-        mkOr(args, flat = false)
-
     /**
      * Create boolean binary OR expression.
      *
@@ -784,14 +760,6 @@ open class KContext(
         simplifier = { a, b -> simplifyOr(a, b, flat, order) },
         createNoSimplify = ::mkOrNoSimplify
     )
-
-    @Deprecated(
-        "NoFlat builders are deprecated",
-        replaceWith = ReplaceWith("mkOr(lhs, rhs, flat = false)"),
-        level = DeprecationLevel.ERROR
-    )
-    open fun mkOrNoFlat(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KExpr<KBoolSort> =
-        mkOr(lhs, rhs, flat = false)
 
     open fun mkOrNoSimplify(args: List<KExpr<KBoolSort>>): KOrExpr =
         if (args.size == 2) {
