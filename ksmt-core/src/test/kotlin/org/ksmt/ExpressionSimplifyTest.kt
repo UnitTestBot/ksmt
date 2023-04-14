@@ -11,21 +11,35 @@ open class ExpressionSimplifyTest {
     internal fun <S : KSort> runTest(mkSort: KContext.() -> S, test: KContext.(S, TestRunner) -> Unit) {
         val ctx = KContext(simplificationMode = KContext.SimplificationMode.SIMPLIFY)
         val sort: S = ctx.mkSort()
-        val checker = TestRunner(ctx)
-        ctx.test(sort, checker)
+        TestRunner(ctx).use { checker ->
+            ctx.test(sort, checker)
+        }
     }
 
-    internal class TestRunner(private val ctx: KContext) {
+    internal class TestRunner(private val ctx: KContext): AutoCloseable {
+        private val solver = KZ3Solver(ctx)
+
+        override fun close() {
+            solver.close()
+        }
+
         fun <T : KSort> check(
             unsimplifiedExpr: KExpr<T>,
             simplifiedExpr: KExpr<T>,
             printArgs: () -> String
-        ) = KZ3Solver(ctx).use { solver ->
+        ) = solverScope {
             val equivalenceCheck = ctx.mkEq(simplifiedExpr, unsimplifiedExpr)
             solver.assert(ctx.mkNot(equivalenceCheck))
 
             val status = solver.check()
             kotlin.test.assertEquals(KSolverStatus.UNSAT, status, printArgs())
+        }
+
+        private inline fun solverScope(body: () -> Unit) = try {
+            solver.push()
+            body()
+        } finally {
+            solver.pop()
         }
     }
 

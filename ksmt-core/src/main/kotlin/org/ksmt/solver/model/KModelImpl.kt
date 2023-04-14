@@ -19,13 +19,16 @@ open class KModelImpl(
     override val uninterpretedSorts: Set<KUninterpretedSort>
         get() = uninterpretedSortsUniverses.keys
 
+    private val evaluatorWithModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = true) }
+    private val evaluatorWithoutModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = false) }
+
     override fun <T : KSort> eval(
         expr: KExpr<T>,
         isComplete: Boolean
     ): KExpr<T> {
         ctx.ensureContextMatch(expr)
 
-        val evaluator = KModelEvaluator(ctx, this, isComplete)
+        val evaluator = if (isComplete) evaluatorWithModelCompletion else evaluatorWithoutModelCompletion
         return evaluator.apply(expr)
     }
 

@@ -15,6 +15,7 @@ import org.ksmt.sort.KRealSort
 import org.ksmt.utils.ArithUtils.RealValue
 import org.ksmt.utils.ArithUtils.bigIntegerValue
 import org.ksmt.utils.ArithUtils.compareTo
+import org.ksmt.utils.ArithUtils.modWithNegativeNumbers
 import org.ksmt.utils.ArithUtils.numericValue
 import org.ksmt.utils.ArithUtils.toRealValue
 import org.ksmt.utils.uncheckedCast
@@ -198,7 +199,7 @@ fun KContext.simplifyIntMod(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): KExpr<K
         }
 
         if (rValue != BigInteger.ZERO && lhs is KIntNumExpr) {
-            return mkIntNum(lhs.bigIntegerValue.mod(rValue))
+            return mkIntNum(modWithNegativeNumbers(lhs.bigIntegerValue, rValue))
         }
     }
     return mkIntModNoSimplify(lhs, rhs)
