@@ -387,6 +387,16 @@ class KSolverRunnerExecutor(
         return task.wait(hardTimeout.inWholeMilliseconds).unwrap()
     }
 
+    /**
+     * We use future instead of internal rd SpinWait based implementation
+     * because usually requests don't fit into the `fast` time window, but
+     * the response time is still much faster than `wait` time.
+     *
+     * For example, we usually see the following pattern:
+     * 1. SpinWait performs 100 spins in less than 10us and forces the thread to sleep for the next 1ms.
+     * 2. We receive a response in 80us.
+     * 3. We are waiting for the processing of the response for the next 920us.
+     * */
     private fun <T> IRdTask<T>.wait(timeoutMs: Long): RdTaskResult<T> {
         val future = CompletableFuture<RdTaskResult<T>>()
         result.advise(worker.lifetime) {
