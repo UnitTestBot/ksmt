@@ -18,7 +18,7 @@ repositories {
 ```kotlin
 dependencies {
     // core 
-    implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.4.6")    
+    implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.5.0")    
 }
 ```
 
@@ -26,9 +26,9 @@ dependencies {
 ```kotlin
 dependencies {
     // z3 
-    implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.4.6")
+    implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.5.0")
     // bitwuzla
-    implementation("com.github.UnitTestBot.ksmt:ksmt-bitwuzla:0.4.6")
+    implementation("com.github.UnitTestBot.ksmt:ksmt-bitwuzla:0.5.0")
 }
 ```
 SMT solver specific packages are provided with solver native binaries. 
