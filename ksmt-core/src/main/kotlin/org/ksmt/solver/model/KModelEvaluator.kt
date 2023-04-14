@@ -19,7 +19,6 @@ import org.ksmt.expr.rewrite.simplify.KExprSimplifier
 import org.ksmt.expr.rewrite.simplify.areDefinitelyDistinct
 import org.ksmt.expr.rewrite.simplify.simplifyExpr
 import org.ksmt.solver.KModel
-import org.ksmt.solver.model.DefaultValueSampler.Companion.sampleValue
 import org.ksmt.sort.KArray2Sort
 import org.ksmt.sort.KArray3Sort
 import org.ksmt.sort.KArrayNSort
@@ -29,6 +28,7 @@ import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.asExpr
+import org.ksmt.utils.sampleValue
 import org.ksmt.utils.uncheckedCast
 
 open class KModelEvaluator(
