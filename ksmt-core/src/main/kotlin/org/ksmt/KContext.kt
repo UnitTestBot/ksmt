@@ -1055,18 +1055,6 @@ open class KContext(
         return this
     }
 
-    private fun <S : KArrayStoreBase<*, *>> S.analyzeIfSimplificationEnabled(): S {
-        /**
-         * Analyze store indices only when simplification is enabled since
-         * we don't expect any benefit from the analyzed stores
-         * if we don't use simplifications.
-         * */
-        if (simplificationMode == SIMPLIFY) {
-            analyzeStore()
-        }
-        return this
-    }
-
     private val arraySelectCache = mkAstInterner<KArraySelect<out KSort, out KSort>>()
     private val array2SelectCache = mkAstInterner<KArray2Select<out KSort, out KSort, out KSort>>()
     private val array3SelectCache = mkAstInterner<KArray3Select<out KSort, out KSort, out KSort, out KSort>>()
