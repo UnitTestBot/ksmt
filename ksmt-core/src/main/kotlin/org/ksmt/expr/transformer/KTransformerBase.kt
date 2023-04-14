@@ -138,6 +138,7 @@ import org.ksmt.expr.KToIntRealExpr
 import org.ksmt.expr.KToRealIntExpr
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.sort.KArithSort
@@ -162,6 +163,7 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 
 
 interface KTransformerBase {
@@ -342,4 +344,7 @@ interface KTransformerBase {
     // quantifier transformers
     fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort>
     fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort>
+
+    // uninterpreted sort value
+    fun transform(expr: KUninterpretedSortValue): KExpr<KUninterpretedSort>
 }

@@ -687,7 +687,7 @@ class FloatingPointTest {
         sort: S,
         operation: (S) -> KExpr<S>,
         solverInternal: Context.(FPSort) -> Expr<*>
-    ) = KZ3Context().use { solverInternalCtx ->
+    ) = KZ3Context(context).use { solverInternalCtx ->
         val internalizer = KZ3ExprInternalizer(context, solverInternalCtx)
 
         val solverInternalSort = with(internalizer) { sort.internalizeSort() }

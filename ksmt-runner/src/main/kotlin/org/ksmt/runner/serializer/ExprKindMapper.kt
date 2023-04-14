@@ -138,6 +138,7 @@ import org.ksmt.expr.KToIntRealExpr
 import org.ksmt.expr.KToRealIntExpr
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.expr.transformer.KTransformerBase
@@ -163,6 +164,7 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 
 class ExprKindMapper: KTransformerBase {
 
@@ -630,4 +632,6 @@ class ExprKindMapper: KTransformerBase {
 
     override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> = expr.kind(ExprKind.UniversalQuantifier)
 
+    override fun transform(expr: KUninterpretedSortValue): KExpr<KUninterpretedSort> =
+        expr.kind(ExprKind.UninterpretedSortValue)
 }

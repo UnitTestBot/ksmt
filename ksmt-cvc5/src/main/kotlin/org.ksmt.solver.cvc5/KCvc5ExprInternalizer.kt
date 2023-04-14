@@ -154,6 +154,7 @@ import org.ksmt.expr.KToIntRealExpr
 import org.ksmt.expr.KToRealIntExpr
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.expr.rewrite.simplify.rewriteBvAddNoOverflowExpr
@@ -183,6 +184,7 @@ import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.utils.powerOfTwo
 import java.math.BigInteger
 
@@ -211,6 +213,8 @@ class KCvc5ExprInternalizer(
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>) = with(expr) {
         transformArray(args) { args: Array<Term> ->
+            cvc5Ctx.addDeclaration(decl)
+
             // args[0] is a function declaration
             val decl = decl.internalizeDecl()
 
@@ -224,6 +228,8 @@ class KCvc5ExprInternalizer(
 
     override fun <T : KSort> transform(expr: KConst<T>) = with(expr) {
         transform {
+            cvc5Ctx.addDeclaration(decl)
+
             decl.internalizeDecl()
         }
     }
@@ -1108,6 +1114,31 @@ class KCvc5ExprInternalizer(
         throw KSolverUnsupportedFeatureException(
             "No direct impl in cvc5 (as-array is CONST_ARRAY term with base array element)"
         )
+    }
+
+    /**
+     * There is no way in cvc5 API to mark uninterpreted constant as value.
+     *
+     * To overcome this we apply the following scheme:
+     * 1. Internalize value `x` of a sort T as normal constant.
+     * 2. Associate unique interpreted value `i` with this constant.
+     * Currently, we use integer values.
+     * 3. Introduce `interpreter` function `F` of type T -> Int.
+     * We introduce one function for each uninterpreted sort.
+     * 4. Assert expression `(= i (F x))` to the solver.
+     * Since all Int values are known to be distinct, this
+     * assertion forces that all values of T are also distinct.
+     * */
+    override fun transform(expr: KUninterpretedSortValue): KExpr<KUninterpretedSort> = with(expr) {
+        transform(ctx.mkIntNum(expr.valueIdx)) { intValueExpr: Term ->
+            val exprSort = sort.internalizeSort()
+            cvc5Ctx.saveUninterpretedSortValue(nsolver.mkConst(exprSort), expr).also {
+                cvc5Ctx.registerUninterpretedSortValue(expr, intValueExpr, it) {
+                    val descriptorSort = ctx.intSort.internalizeSort()
+                    nsolver.declareFun("${sort.name}!interpreter", arrayOf(exprSort), descriptorSort)
+                }
+            }
+        }
     }
 
     private fun <E : KExpr<*>> E.transformQuantifiedExpression(

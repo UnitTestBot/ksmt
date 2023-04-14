@@ -334,8 +334,8 @@ class MultiIndexedArrayTest {
     }
 
     private fun <T : KSort> KContext.internalizeAndConvertZ3(nativeCtx: Context, expr: KExpr<T>): KExpr<T> {
-        val z3InternCtx = KZ3Context(nativeCtx)
-        val z3ConvertCtx = KZ3Context(nativeCtx)
+        val z3InternCtx = KZ3Context(this, nativeCtx)
+        val z3ConvertCtx = KZ3Context(this, nativeCtx)
 
         val internalized = with(KZ3ExprInternalizer(this, z3InternCtx)) {
             expr.internalizeExpr()

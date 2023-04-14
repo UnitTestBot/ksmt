@@ -146,6 +146,7 @@ import org.ksmt.expr.KToIntRealExpr
 import org.ksmt.expr.KToRealIntExpr
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.solver.util.KExprLongInternalizerBase
@@ -165,6 +166,7 @@ import org.ksmt.sort.KFpRoundingModeSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 
 open class KZ3ExprInternalizer(
     val ctx: KContext,
@@ -836,6 +838,41 @@ open class KZ3ExprInternalizer(
 
     override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KFunctionAsArray<A, R>): KExpr<A> = with(expr) {
         transform { Native.mkAsArray(nCtx, function.internalizeDecl()) }
+    }
+
+    /**
+     * There is no way in Z3 API to mark uninterpreted constant as value.
+     *
+     * To overcome this we apply the following scheme:
+     * 1. Internalize value `x` of a sort T as normal constant.
+     * 2. Associate unique interpreted value `i` with this constant.
+     * Currently, we use integer values.
+     * 3. Introduce `interpreter` function `F` of type T -> Int.
+     * We introduce one function for each uninterpreted sort.
+     * 4. Assert expression `(= i (F x))` to the solver.
+     * Since all Int values are known to be distinct, this
+     * assertion forces that all values of T are also distinct.
+     * */
+    override fun transform(expr: KUninterpretedSortValue): KExpr<KUninterpretedSort> = with(expr) {
+        transform(ctx.mkIntNum(expr.valueIdx)) { intValueExpr ->
+            val nativeSort = sort.internalizeSort()
+            val valueDecl = z3InternCtx.saveUninterpretedSortValueDecl(
+                Native.mkFreshFuncDecl(nCtx, "value", 0, null, nativeSort),
+                expr
+            )
+
+            Native.mkApp(nCtx, valueDecl, 0, null).also {
+                // Force expression save to perform `incRef` and prevent possible reference counting issues
+                saveInternalizedExpr(expr, it)
+
+                z3InternCtx.registerUninterpretedSortValue(expr, intValueExpr, it) {
+                    val descriptorSort = ctx.intSort.internalizeSort()
+                    z3InternCtx.saveUninterpretedSortValueInterpreter(
+                        Native.mkFreshFuncDecl(nCtx, "interpreter", 1, longArrayOf(nativeSort), descriptorSort)
+                    )
+                }
+            }
+        }
     }
 
     inline fun <S : KExpr<*>> S.transform(

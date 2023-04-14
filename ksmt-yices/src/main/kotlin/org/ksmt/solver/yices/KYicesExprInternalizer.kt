@@ -142,6 +142,7 @@ import org.ksmt.expr.KToIntRealExpr
 import org.ksmt.expr.KToRealIntExpr
 import org.ksmt.expr.KTrue
 import org.ksmt.expr.KUnaryMinusArithExpr
+import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.KXorExpr
 import org.ksmt.solver.KSolverUnsupportedFeatureException
@@ -168,6 +169,7 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KIntSort
 import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
+import org.ksmt.sort.KUninterpretedSort
 import java.math.BigInteger
 
 @Suppress("LargeClass")
@@ -926,6 +928,15 @@ open class KYicesExprInternalizer(
     override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> = with(expr) {
         internalizeQuantifiedBody(bounds, body) { vars, body ->
             yicesCtx.forall(vars, body)
+        }
+    }
+
+    override fun transform(expr: KUninterpretedSortValue): KExpr<KUninterpretedSort> = with(expr) {
+        transform {
+            yicesCtx.uninterpretedSortConst(
+                sort.internalizeSort(),
+                yicesCtx.uninterpretedSortValueIndex(valueIdx)
+            )
         }
     }
 
