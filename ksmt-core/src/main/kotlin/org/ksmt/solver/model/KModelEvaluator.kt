@@ -39,7 +39,7 @@ open class KModelEvaluator(
 ) : KExprSimplifier(ctx) {
     private val evaluatedFunctionApp = hashMapOf<Pair<KDecl<*>, List<KExpr<*>>>, KExpr<*>>()
     private val evaluatedFunctionArray = hashMapOf<KDecl<*>, KExpr<*>>()
-    private val resolvedFunctionInterpretations = hashMapOf<KModel.KFuncInterp<*>, ResolvedFunctionInterpretation<*>>()
+    private val resolvedFunctionInterpretations = hashMapOf<KFuncInterp<*>, ResolvedFunctionInterpretation<*>>()
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> =
         simplifyExpr(expr, expr.args) { args ->
@@ -184,7 +184,7 @@ open class KModelEvaluator(
     @Suppress("USELESS_CAST") // Exhaustive when
     private fun <A : KArraySortBase<R>, R : KSort> evalArrayInterpretation(
         sort: A,
-        interpretation: KModel.KFuncInterp<R>
+        interpretation: KFuncInterp<R>
     ): KExpr<A> = when (sort as KArraySortBase<R>) {
         is KArraySort<*, R> -> sort.evalArrayInterpretation(
             interpretation
@@ -212,7 +212,7 @@ open class KModelEvaluator(
     }
 
     private inline fun <A : KArraySortBase<R>, R : KSort, reified S : KArraySortBase<R>> A.evalArrayInterpretation(
-        interpretation: KModel.KFuncInterp<R>,
+        interpretation: KFuncInterp<R>,
         mkEntryStore: KContext.(KExpr<S>, List<KExpr<KSort>>, KExpr<R>) -> KExpr<S>
     ): KExpr<A> = with(ctx) {
         val defaultValue = interpretation.default ?: completeModelValue(range)
@@ -223,7 +223,7 @@ open class KModelEvaluator(
         }
     }
 
-    private fun KModel.KFuncInterp<*>.usedDeclarations(): Set<KDecl<*>> {
+    private fun KFuncInterp<*>.usedDeclarations(): Set<KDecl<*>> {
         val result = hashSetOf<KDecl<*>>()
         entries.forEach { entry ->
             result += collectUninterpretedDeclarations(entry.value)
@@ -280,7 +280,7 @@ open class KModelEvaluator(
     }
 
     private fun <T : KSort> resolveFunctionInterpretation(
-        interpretation: KModel.KFuncInterp<T>
+        interpretation: KFuncInterp<T>
     ): ResolvedFunctionInterpretation<T> {
         var resolvedEntry: ResolvedFunctionEntry<T> = ResolvedFunctionDefaultEntry(interpretation.default)
 
@@ -436,7 +436,7 @@ open class KModelEvaluator(
     }
 
     private class ResolvedFunctionInterpretation<T : KSort>(
-        val interpretation: KModel.KFuncInterp<T>,
+        val interpretation: KFuncInterp<T>,
         val rootEntry: ResolvedFunctionEntry<T>
     )
 

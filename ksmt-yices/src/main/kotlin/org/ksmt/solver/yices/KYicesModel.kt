@@ -9,6 +9,9 @@ import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KUninterpretedSortValue
+import org.ksmt.solver.model.KFuncInterp
+import org.ksmt.solver.model.KFuncInterpEntryVarsFree
+import org.ksmt.solver.model.KFuncInterpVarsFree
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.KModelEvaluator
 import org.ksmt.solver.model.KModelImpl
@@ -56,7 +59,7 @@ class KYicesModel(
     private val knownUninterpretedSortValues =
         hashMapOf<KUninterpretedSort, MutableMap<Int, KUninterpretedSortValue>>()
 
-    private val interpretations = hashMapOf<KDecl<*>, KModel.KFuncInterp<*>>()
+    private val interpretations = hashMapOf<KDecl<*>, KFuncInterp<*>>()
     private val funcInterpretationsToDo = arrayListOf<Pair<YVal, KFuncDecl<*>>>()
 
     override fun uninterpretedSortUniverse(
@@ -104,7 +107,7 @@ class KYicesModel(
         }
     }
 
-    private fun <T: KSort> functionInterpretation(yval: YVal, decl: KFuncDecl<T>): KModel.KFuncInterp<T> {
+    private fun <T: KSort> functionInterpretation(yval: YVal, decl: KFuncDecl<T>): KFuncInterp<T> {
         val functionChildren = model.expandFunction(yval)
         val default = if (yval.tag != YValTag.UNKNOWN) {
             getValue(functionChildren.value, decl.sort).uncheckedCast<_, KExpr<T>>()
@@ -119,17 +122,17 @@ class KYicesModel(
             }
             val res = getValue(entry.value, decl.sort).uncheckedCast<_, KExpr<T>>()
 
-            KModel.KFuncInterpEntryVarsFree.create(args, res)
+            KFuncInterpEntryVarsFree.create(args, res)
         }
 
-        return KModel.KFuncInterpVarsFree(
+        return KFuncInterpVarsFree(
             decl = decl,
             entries = entries,
             default = default
         )
     }
 
-    override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? = with(ctx) {
+    override fun <T : KSort> interpretation(decl: KDecl<T>): KFuncInterp<T>? = with(ctx) {
         interpretations.getOrPut(decl) {
             if (decl !in declarations) return@with null
 
@@ -137,7 +140,7 @@ class KYicesModel(
             val yval = model.getValue(yicesDecl)
 
             val result = when (decl) {
-                is KConstDecl<T> -> KModel.KFuncInterpVarsFree(
+                is KConstDecl<T> -> KFuncInterpVarsFree(
                     decl = decl,
                     entries = emptyList(),
                     default = getValue(yval, decl.sort).uncheckedCast()
@@ -153,7 +156,7 @@ class KYicesModel(
             }
 
             result
-        }.uncheckedCast<_, KModel.KFuncInterp<T>?>()
+        }.uncheckedCast<_, KFuncInterp<T>?>()
     }
 
     override fun detach(): KModel {

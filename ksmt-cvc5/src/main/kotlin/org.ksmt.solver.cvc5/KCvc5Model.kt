@@ -7,6 +7,9 @@ import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KUninterpretedSortValue
+import org.ksmt.solver.model.KFuncInterp
+import org.ksmt.solver.model.KFuncInterpVarsFree
+import org.ksmt.solver.model.KFuncInterpWithVars
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.KModelEvaluator
 import org.ksmt.solver.model.KModelImpl
@@ -24,7 +27,7 @@ open class KCvc5Model(
 ) : KModel {
     private val converter: KCvc5ExprConverter by lazy { KCvc5ExprConverter(ctx, cvc5Ctx, this) }
 
-    private val interpretations = hashMapOf<KDecl<*>, KModel.KFuncInterp<*>?>()
+    private val interpretations = hashMapOf<KDecl<*>, KFuncInterp<*>?>()
     private val uninterpretedSortValues = hashMapOf<KUninterpretedSort, UninterpretedSortValueContext>()
 
     private val evaluatorWithCompletion by lazy { KModelEvaluator(ctx, this, isComplete = true) }
@@ -39,7 +42,7 @@ open class KCvc5Model(
     }
 
     @Suppress("UNCHECKED_CAST")
-    override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? = interpretations.getOrPut(decl) {
+    override fun <T : KSort> interpretation(decl: KDecl<T>): KFuncInterp<T>? = interpretations.getOrPut(decl) {
         ctx.ensureContextMatch(decl)
         ensureContextActive()
 
@@ -52,14 +55,14 @@ open class KCvc5Model(
             is KFuncDecl<T> -> funcInterp(decl, cvc5Decl)
             else -> error("Unknown declaration")
         }
-    } as? KModel.KFuncInterp<T>
+    } as? KFuncInterp<T>
 
 
     // cvc5 function interpretation - declaration is Term of kind Lambda
     private fun <T : KSort> funcInterp(
         decl: KDecl<T>,
         internalizedDecl: Term
-    ): KModel.KFuncInterp<T> = with(converter) {
+    ): KFuncInterp<T> = with(converter) {
         val cvc5Interp = cvc5Ctx.nativeSolver.getValue(internalizedDecl)
 
         val vars = decl.argSorts.map { it.mkFreshConst("x") }
@@ -70,14 +73,14 @@ open class KCvc5Model(
 
         val defaultBody = cvc5FreshVarsInterp.getChild(1).convertExpr<T>()
 
-        KModel.KFuncInterpWithVars(decl, vars.map { it.decl }, emptyList(), defaultBody)
+        KFuncInterpWithVars(decl, vars.map { it.decl }, emptyList(), defaultBody)
     }
 
-    private fun <T : KSort> constInterp(decl: KDecl<T>, const: Term): KModel.KFuncInterp<T> = with(converter) {
+    private fun <T : KSort> constInterp(decl: KDecl<T>, const: Term): KFuncInterp<T> = with(converter) {
         val cvc5Interp = cvc5Ctx.nativeSolver.getValue(const)
         val interp = cvc5Interp.convertExpr<T>()
 
-        KModel.KFuncInterpVarsFree(decl = decl, entries = emptyList(), default = interp)
+        KFuncInterpVarsFree(decl = decl, entries = emptyList(), default = interp)
     }
 
     override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KUninterpretedSortValue>? =

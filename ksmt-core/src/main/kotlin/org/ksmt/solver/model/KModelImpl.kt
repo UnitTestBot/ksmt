@@ -11,7 +11,7 @@ import org.ksmt.utils.uncheckedCast
 
 open class KModelImpl(
     val ctx: KContext,
-    private val interpretations: Map<KDecl<*>, KModel.KFuncInterp<*>>,
+    private val interpretations: Map<KDecl<*>, KFuncInterp<*>>,
     private val uninterpretedSortsUniverses: Map<KUninterpretedSort, Set<KUninterpretedSortValue>>
 ) : KModel {
     override val declarations: Set<KDecl<*>>
@@ -35,7 +35,7 @@ open class KModelImpl(
 
     override fun <T : KSort> interpretation(
         decl: KDecl<T>
-    ): KModel.KFuncInterp<T>? {
+    ): KFuncInterp<T>? {
         ctx.ensureContextMatch(decl)
 
         return interpretations[decl]?.uncheckedCast()

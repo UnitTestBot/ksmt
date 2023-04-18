@@ -32,6 +32,12 @@ import org.ksmt.runner.generated.models.SolverConfigurationParam
 import org.ksmt.runner.generated.models.SolverProtocolModel
 import org.ksmt.runner.generated.models.SolverType
 import org.ksmt.runner.generated.models.UnsatCoreResult
+import org.ksmt.solver.model.KFuncInterp
+import org.ksmt.solver.model.KFuncInterpEntry
+import org.ksmt.solver.model.KFuncInterpEntryVarsFree
+import org.ksmt.solver.model.KFuncInterpEntryWithVars
+import org.ksmt.solver.model.KFuncInterpVarsFree
+import org.ksmt.solver.model.KFuncInterpWithVars
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
@@ -222,7 +228,6 @@ class KSolverRunnerExecutor(
         return deserializeModel(result)
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun deserializeModel(result: ModelResult): KModel {
         val interpretations = result.declarations.zip(result.interpretations) { decl, interp ->
             val functionInterp = deserializeFunctionInterpretation(interp)
@@ -235,7 +240,7 @@ class KSolverRunnerExecutor(
         return KModelImpl(worker.astSerializationCtx.ctx, interpretations.toMap(), uninterpretedSortUniverse)
     }
 
-    private fun deserializeFunctionInterpretation(interp: ModelEntry): KModel.KFuncInterp<*> {
+    private fun deserializeFunctionInterpretation(interp: ModelEntry): KFuncInterp<*> {
         val decl: KDecl<KSort> = interp.decl.uncheckedCast()
         val vars: List<KDecl<*>>? = interp.vars?.uncheckedCast()
         val default: KExpr<KSort>? = interp.default?.uncheckedCast()
@@ -248,7 +253,7 @@ class KSolverRunnerExecutor(
         }
     }
 
-    private fun deserializeFunctionInterpretationEntry(entry: ModelFuncInterpEntry): KModel.KFuncInterpEntry<KSort> {
+    private fun deserializeFunctionInterpretationEntry(entry: ModelFuncInterpEntry): KFuncInterpEntry<KSort> {
         val args: List<KExpr<*>> = entry.args.uncheckedCast()
         val value: KExpr<KSort> = entry.value.uncheckedCast()
         return if (entry.hasVars) {

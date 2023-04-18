@@ -20,7 +20,9 @@ import org.ksmt.runner.generated.models.SolverType
 import org.ksmt.runner.generated.models.UnsatCoreResult
 import org.ksmt.runner.generated.models.solverProtocolModel
 import org.ksmt.runner.serializer.AstSerializationCtx
-import org.ksmt.solver.KModel
+import org.ksmt.solver.model.KFuncInterp
+import org.ksmt.solver.model.KFuncInterpEntry
+import org.ksmt.solver.model.KFuncInterpEntryWithVars
 import org.ksmt.solver.KSolver
 import org.ksmt.sort.KBoolSort
 import kotlin.time.Duration.Companion.milliseconds
@@ -133,15 +135,15 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
         }
     }
 
-    private fun serializeFunctionInterpretation(interp: KModel.KFuncInterp<*>): ModelEntry {
+    private fun serializeFunctionInterpretation(interp: KFuncInterp<*>): ModelEntry {
         val interpEntries = interp.entries.map { serializeFunctionInterpretationEntry(it) }
-        val interpVars = if (interp is KModel.KFuncInterpEntryWithVars<*>) interp.vars else null
+        val interpVars = if (interp is KFuncInterpEntryWithVars<*>) interp.vars else null
         return ModelEntry(interp.decl, interpVars, interpEntries, interp.default)
     }
 
-    private fun serializeFunctionInterpretationEntry(entry: KModel.KFuncInterpEntry<*>) =
+    private fun serializeFunctionInterpretationEntry(entry: KFuncInterpEntry<*>) =
         ModelFuncInterpEntry(
-            hasVars = entry is KModel.KFuncInterpEntryWithVars<*>,
+            hasVars = entry is KFuncInterpEntryWithVars<*>,
             args = entry.args,
             value = entry.value
         )
