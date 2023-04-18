@@ -20,6 +20,7 @@ import org.ksmt.runner.generated.models.SolverType
 import org.ksmt.runner.generated.models.UnsatCoreResult
 import org.ksmt.runner.generated.models.solverProtocolModel
 import org.ksmt.runner.serializer.AstSerializationCtx
+import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
 import org.ksmt.sort.KBoolSort
 import kotlin.time.Duration.Companion.milliseconds
@@ -110,8 +111,7 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
             val declarations = model.declarations.toList()
             val interpretations = declarations.map {
                 val interp = model.interpretation(it) ?: error("No interpretation for model declaration $it")
-                val interpEntries = interp.entries.map { ModelFuncInterpEntry(it.args, it.value) }
-                ModelEntry(interp.decl, interp.vars, interpEntries, interp.default)
+                serializeFunctionInterpretation(interp)
             }
             val uninterpretedSortUniverse = model.uninterpretedSorts.map { sort ->
                 val universe = model.uninterpretedSortUniverse(sort)
@@ -132,6 +132,19 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
             solver.interrupt()
         }
     }
+
+    private fun serializeFunctionInterpretation(interp: KModel.KFuncInterp<*>): ModelEntry {
+        val interpEntries = interp.entries.map { serializeFunctionInterpretationEntry(it) }
+        val interpVars = if (interp is KModel.KFuncInterpEntryWithVars<*>) interp.vars else null
+        return ModelEntry(interp.decl, interpVars, interpEntries, interp.default)
+    }
+
+    private fun serializeFunctionInterpretationEntry(entry: KModel.KFuncInterpEntry<*>) =
+        ModelFuncInterpEntry(
+            hasVars = entry is KModel.KFuncInterpEntryWithVars<*>,
+            args = entry.args,
+            value = entry.value
+        )
 
     companion object {
         @JvmStatic

@@ -24,6 +24,8 @@ import org.ksmt.runner.generated.models.CheckWithAssumptionsParams
 import org.ksmt.runner.generated.models.ContextSimplificationMode
 import org.ksmt.runner.generated.models.CreateSolverParams
 import org.ksmt.runner.generated.models.ModelResult
+import org.ksmt.runner.generated.models.ModelEntry
+import org.ksmt.runner.generated.models.ModelFuncInterpEntry
 import org.ksmt.runner.generated.models.PopParams
 import org.ksmt.runner.generated.models.ReasonUnknownResult
 import org.ksmt.runner.generated.models.SolverConfigurationParam
@@ -42,6 +44,7 @@ import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
+import org.ksmt.utils.uncheckedCast
 import kotlin.time.Duration
 
 class KSolverRunnerExecutor(
@@ -222,16 +225,7 @@ class KSolverRunnerExecutor(
     @Suppress("UNCHECKED_CAST")
     private fun deserializeModel(result: ModelResult): KModel {
         val interpretations = result.declarations.zip(result.interpretations) { decl, interp ->
-            val interpEntries = interp.entries.map {
-                KModel.KFuncInterpEntry(it.args as List<KExpr<*>>, it.value as KExpr<KSort>)
-            }
-
-            val functionInterp = KModel.KFuncInterp(
-                interp.decl as KDecl<KSort>,
-                interp.vars as List<KDecl<*>>,
-                interpEntries,
-                interp.default as? KExpr<KSort>?
-            )
+            val functionInterp = deserializeFunctionInterpretation(interp)
             (decl as KDecl<*>) to functionInterp
         }
         val uninterpretedSortUniverse = result.uninterpretedSortUniverse.associateBy(
@@ -239,6 +233,29 @@ class KSolverRunnerExecutor(
             { entry -> entry.universe.mapTo(hashSetOf()) { it as KUninterpretedSortValue } }
         )
         return KModelImpl(worker.astSerializationCtx.ctx, interpretations.toMap(), uninterpretedSortUniverse)
+    }
+
+    private fun deserializeFunctionInterpretation(interp: ModelEntry): KModel.KFuncInterp<*> {
+        val decl: KDecl<KSort> = interp.decl.uncheckedCast()
+        val vars: List<KDecl<*>>? = interp.vars?.uncheckedCast()
+        val default: KExpr<KSort>? = interp.default?.uncheckedCast()
+
+        val entries = interp.entries.map { deserializeFunctionInterpretationEntry(it) }
+        return if (vars != null) {
+            KFuncInterpWithVars(decl, vars, entries, default)
+        } else {
+            KFuncInterpVarsFree(decl, entries.uncheckedCast(), default)
+        }
+    }
+
+    private fun deserializeFunctionInterpretationEntry(entry: ModelFuncInterpEntry): KModel.KFuncInterpEntry<KSort> {
+        val args: List<KExpr<*>> = entry.args.uncheckedCast()
+        val value: KExpr<KSort> = entry.value.uncheckedCast()
+        return if (entry.hasVars) {
+            KFuncInterpEntryWithVars.create(args, value)
+        } else {
+            KFuncInterpEntryVarsFree.create(args, value)
+        }
     }
 
     fun unsatCoreSync(): List<KExpr<KBoolSort>> = unsatCore {

@@ -26,7 +26,6 @@ import org.ksmt.sort.KRealSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KSortVisitor
 import org.ksmt.sort.KUninterpretedSort
-import org.ksmt.utils.mkFreshConstDecl
 import org.ksmt.utils.uncheckedCast
 
 class KYicesModel(
@@ -120,12 +119,11 @@ class KYicesModel(
             }
             val res = getValue(entry.value, decl.sort).uncheckedCast<_, KExpr<T>>()
 
-            KModel.KFuncInterpEntry(args, res)
+            KModel.KFuncInterpEntryVarsFree.create(args, res)
         }
 
-        return KModel.KFuncInterp(
+        return KModel.KFuncInterpVarsFree(
             decl = decl,
-            vars = decl.argSorts.map { it.mkFreshConstDecl("x") },
             entries = entries,
             default = default
         )
@@ -139,9 +137,8 @@ class KYicesModel(
             val yval = model.getValue(yicesDecl)
 
             val result = when (decl) {
-                is KConstDecl<T> -> KModel.KFuncInterp(
+                is KConstDecl<T> -> KModel.KFuncInterpVarsFree(
                     decl = decl,
-                    vars = emptyList(),
                     entries = emptyList(),
                     default = getValue(yval, decl.sort).uncheckedCast()
                 )

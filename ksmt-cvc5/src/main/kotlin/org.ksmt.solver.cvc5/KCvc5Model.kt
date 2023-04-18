@@ -70,14 +70,14 @@ open class KCvc5Model(
 
         val defaultBody = cvc5FreshVarsInterp.getChild(1).convertExpr<T>()
 
-        KModel.KFuncInterp(decl, vars.map { it.decl }, emptyList(), defaultBody)
+        KModel.KFuncInterpWithVars(decl, vars.map { it.decl }, emptyList(), defaultBody)
     }
 
     private fun <T : KSort> constInterp(decl: KDecl<T>, const: Term): KModel.KFuncInterp<T> = with(converter) {
         val cvc5Interp = cvc5Ctx.nativeSolver.getValue(const)
         val interp = cvc5Interp.convertExpr<T>()
 
-        KModel.KFuncInterp(decl = decl, vars = emptyList(), entries = emptyList(), default = interp)
+        KModel.KFuncInterpVarsFree(decl = decl, entries = emptyList(), default = interp)
     }
 
     override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KUninterpretedSortValue>? =

@@ -24,9 +24,8 @@ class ModelEvaluationTest {
         val model = KModelImpl(
             this,
             interpretations = mapOf(
-                array.decl to KModel.KFuncInterp(
+                array.decl to KModel.KFuncInterpVarsFree(
                     decl = array.decl,
-                    vars = emptyList(),
                     entries = emptyList(),
                     default = arrayInterp
                 ),
@@ -49,11 +48,10 @@ class ModelEvaluationTest {
         val exprBase = array.select(99.toBv(bv32Sort))
 
         val tmpDecl = mkFreshFuncDecl("array", bv32Sort, listOf(bv32Sort))
-        val tmpInterp = KModel.KFuncInterp(
+        val tmpInterp = KModel.KFuncInterpVarsFree(
             decl = tmpDecl,
-            vars = listOf(mkFreshConstDecl("idx", bv32Sort)),
             entries = listOf(
-                KModel.KFuncInterpEntry(
+                KModel.KFuncInterpEntryVarsFree.create(
                     args = listOf(idx),
                     value = value
                 )
@@ -67,9 +65,8 @@ class ModelEvaluationTest {
         val model = KModelImpl(
             this,
             interpretations = mapOf(
-                array.decl to KModel.KFuncInterp(
+                array.decl to KModel.KFuncInterpVarsFree(
                     decl = array.decl,
-                    vars = emptyList(),
                     entries = listOf(),
                     default = arrayInterp
                 ),
@@ -95,11 +92,10 @@ class ModelEvaluationTest {
         val arrayEquality = array1 eq array2
 
         val tmpDecl1 = mkFreshFuncDecl("array1", bv32Sort, listOf(bv32Sort))
-        val tmpInterp1 = KModel.KFuncInterp(
+        val tmpInterp1 = KModel.KFuncInterpVarsFree(
             decl = tmpDecl1,
-            vars = listOf(mkFreshConstDecl("x", bv32Sort)),
             entries = listOf(
-                KModel.KFuncInterpEntry(
+                KModel.KFuncInterpEntryVarsFree.create(
                     args = listOf(idx),
                     value = value
                 )
@@ -108,11 +104,10 @@ class ModelEvaluationTest {
         )
 
         val tmpDecl2 = mkFreshFuncDecl("array2", bv32Sort, listOf(bv32Sort))
-        val tmpInterp2 = KModel.KFuncInterp(
+        val tmpInterp2 = KModel.KFuncInterpVarsFree(
             decl = tmpDecl2,
-            vars = listOf(mkFreshConstDecl("x", bv32Sort)),
             entries = listOf(
-                KModel.KFuncInterpEntry(
+                KModel.KFuncInterpEntryVarsFree.create(
                     args = listOf(idx),
                     value = value
                 )
@@ -127,15 +122,13 @@ class ModelEvaluationTest {
         val model = KModelImpl(
             this,
             interpretations = mapOf(
-                array1.decl to KModel.KFuncInterp(
+                array1.decl to KModel.KFuncInterpVarsFree(
                     decl = array1.decl,
-                    vars = emptyList(),
                     entries = listOf(),
                     default = array1Interp
                 ),
-                array2.decl to KModel.KFuncInterp(
+                array2.decl to KModel.KFuncInterpVarsFree(
                     decl = array2.decl,
-                    vars = emptyList(),
                     entries = listOf(),
                     default = array2Interp
                 ),
