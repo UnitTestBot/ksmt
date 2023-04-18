@@ -22,7 +22,7 @@ sealed interface KFuncInterp<T : KSort> {
         }
 
         fun checkEntriesArity(entries: List<KFuncInterpEntry<*>>, arity: Int) {
-            require(entries.all { it.args.size == arity }) {
+            require(entries.all { it.arity == arity }) {
                 "Function interpretation arguments mismatch"
             }
         }

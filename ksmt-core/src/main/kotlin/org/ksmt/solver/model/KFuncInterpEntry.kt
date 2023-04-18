@@ -6,6 +6,7 @@ import org.ksmt.sort.KSort
 sealed interface KFuncInterpEntry<T : KSort> {
     val args: List<KExpr<*>>
     val value: KExpr<T>
+    val arity: Int
 
     companion object {
         fun printEntry(args: List<KExpr<*>>, value: KExpr<*>): String =
@@ -65,6 +66,9 @@ sealed interface KFuncInterpEntryOneAry<T : KSort> : KFuncInterpEntry<T> {
     override val args: List<KExpr<*>>
         get() = listOf(arg)
 
+    override val arity: Int
+        get() = ARITY
+
     companion object {
         const val ARITY = 1
     }
@@ -77,6 +81,9 @@ sealed interface KFuncInterpEntryTwoAry<T : KSort> : KFuncInterpEntry<T> {
 
     override val args: List<KExpr<*>>
         get() = listOf(arg0, arg1)
+
+    override val arity: Int
+        get() = ARITY
 
     companion object {
         const val ARITY = 2
@@ -91,12 +98,18 @@ sealed interface KFuncInterpEntryThreeAry<T : KSort> : KFuncInterpEntry<T> {
     override val args: List<KExpr<*>>
         get() = listOf(arg0, arg1, arg2)
 
+    override val arity: Int
+        get() = ARITY
+
     companion object {
         const val ARITY = 3
     }
 }
 
-sealed interface KFuncInterpEntryNAry<T : KSort> : KFuncInterpEntry<T>
+sealed interface KFuncInterpEntryNAry<T : KSort> : KFuncInterpEntry<T> {
+    override val arity: Int
+        get() = args.size
+}
 
 data class KFuncInterpEntryVarsFreeOneAry<T : KSort>(
     override val arg: KExpr<*>,
