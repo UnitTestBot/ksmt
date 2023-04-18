@@ -40,8 +40,18 @@ open class KBitwuzlaModel(
     private val evaluatorWithModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = true) }
     private val evaluatorWithoutModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = false) }
 
-    override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
+    private var isValid: Boolean = true
+
+    fun markInvalid() {
+        isValid = false
+    }
+
+    private fun ensureModelValid() {
         bitwuzlaCtx.ensureActive()
+        check(isValid) { "The model is no longer valid" }
+    }
+
+    override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
         ctx.ensureContextMatch(expr)
 
         val evaluator = if (isComplete) evaluatorWithModelCompletion else evaluatorWithoutModelCompletion
@@ -75,8 +85,8 @@ open class KBitwuzlaModel(
     private val interpretations: MutableMap<KDecl<*>, KFuncInterp<*>> = hashMapOf()
 
     override fun <T : KSort> interpretation(decl: KDecl<T>): KFuncInterp<T>? {
+        ensureModelValid()
         ctx.ensureContextMatch(decl)
-        bitwuzlaCtx.ensureActive()
 
         if (decl !in modelDeclarations) return null
 

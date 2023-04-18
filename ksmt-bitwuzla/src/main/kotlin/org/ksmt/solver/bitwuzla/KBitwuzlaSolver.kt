@@ -99,6 +99,7 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
         bitwuzlaCtx.bitwuzlaTry {
             ctx.ensureContextMatch(assumptions)
 
+            invalidatePreviousModel()
             lastAssumptions.clear()
 
             trackVars.forEach {
@@ -119,13 +120,22 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
         Native.bitwuzlaCheckSatTimeoutResult(bitwuzlaCtx.bitwuzla, timeout.inWholeMilliseconds)
     }
 
+    private var lastModel: KBitwuzlaModel? = null
+
+    private fun invalidatePreviousModel() {
+        lastModel?.markInvalid()
+        lastModel = null
+    }
+
     override fun model(): KModel = bitwuzlaCtx.bitwuzlaTry {
         require(lastCheckStatus == KSolverStatus.SAT) { "Model are only available after SAT checks" }
-        return KBitwuzlaModel(
+        val model = lastModel ?: KBitwuzlaModel(
             ctx, bitwuzlaCtx, exprConverter,
             bitwuzlaCtx.declarations(),
             bitwuzlaCtx.uninterpretedSortsWithRelevantDecls()
         )
+        lastModel = model
+        model
     }
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = bitwuzlaCtx.bitwuzlaTry {

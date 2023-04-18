@@ -33,9 +33,19 @@ open class KCvc5Model(
     private val evaluatorWithCompletion by lazy { KModelEvaluator(ctx, this, isComplete = true) }
     private val evaluatorWithoutCompletion by lazy { KModelEvaluator(ctx, this, isComplete = false) }
 
+    private var isValid: Boolean = true
+
+    fun markInvalid() {
+        isValid = false
+    }
+
+    private fun ensureModelValid() {
+        ensureContextActive()
+        check(isValid) { "The model is no longer valid" }
+    }
+
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> {
         ctx.ensureContextMatch(expr)
-        ensureContextActive()
 
         val evaluator = if (isComplete) evaluatorWithCompletion else evaluatorWithoutCompletion
         return evaluator.apply(expr)
@@ -43,8 +53,8 @@ open class KCvc5Model(
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : KSort> interpretation(decl: KDecl<T>): KFuncInterp<T>? = interpretations.getOrPut(decl) {
+        ensureModelValid()
         ctx.ensureContextMatch(decl)
-        ensureContextActive()
 
         if (decl !in declarations) return@getOrPut null
 
@@ -141,6 +151,8 @@ open class KCvc5Model(
             if (sort !in uninterpretedSorts) {
                 return
             }
+
+            ensureModelValid()
 
             initializeModelValues()
 
