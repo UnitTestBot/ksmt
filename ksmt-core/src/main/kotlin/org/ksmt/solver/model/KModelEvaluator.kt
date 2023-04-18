@@ -310,12 +310,12 @@ open class KModelEvaluator(
         var resolvedEntry: ResolvedFunctionEntry<T> = ResolvedFunctionDefaultEntry(interpretation.default)
 
         for (entry in interpretation.entries.asReversed()) {
-            val isValueEntry = entry.args.all { isValueInModel(it) }
+            val isValueEntry = entry.isValueEntry()
 
             resolvedEntry = if (isValueEntry) {
-                resolvedEntry.addValueEntry(entry.args, entry.value)
+                resolvedEntry.addValueEntry(entry)
             } else {
-                resolvedEntry.addUninterpretedEntry(entry.args, entry.value)
+                resolvedEntry.addUninterpretedEntry(entry)
             }
         }
 
@@ -335,15 +335,15 @@ open class KModelEvaluator(
     private fun <T : KSort> rewriteFunctionAppAsIte(
         base: KExpr<T>,
         args: List<KExpr<*>>,
-        entries: List<Pair<List<KExpr<*>>, KExpr<T>>>
+        entries: List<KFuncInterpEntry<T>>
     ): KExpr<T> = with(ctx) {
         entries.foldRight(base) { entry, acc ->
-            val argBinding = entry.first.zip(args) { ea, a ->
+            val argBinding = entry.args.zip(args) { ea, a ->
                 val entryArg: KExpr<KSort> = ea.uncheckedCast()
                 val actualArg: KExpr<KSort> = a.uncheckedCast()
                 mkEq(entryArg, actualArg)
             }
-            mkIte(mkAnd(argBinding), entry.second, acc)
+            mkIte(mkAnd(argBinding), entry.value, acc)
         }
     }
 
@@ -359,7 +359,7 @@ open class KModelEvaluator(
             ctx.createVariableSubstitution(interpretation.vars, args)
         }
 
-        private val resultEntries = mutableListOf<Pair<List<KExpr<*>>, KExpr<T>>>()
+        private val resultEntries = mutableListOf<KFuncInterpEntry<T>>()
 
         fun resolve(): KExpr<T> {
             var currentEntries = rootEntry
@@ -394,7 +394,7 @@ open class KModelEvaluator(
 
         private fun ResolvedFunctionValuesEntry<T>.tryResolveArgs(): KExpr<T>? {
             if (argsAreConstants) {
-                val entryValue = entries[args]?.substituteVars()
+                val entryValue = findValueEntry(args)?.substituteVars()?.value
                 if (entryValue != null) {
                     // We have no possibly matching entries and we found a matched entry
                     if (resultEntries.isEmpty()) return entryValue
@@ -405,44 +405,96 @@ open class KModelEvaluator(
                 return null
             } else {
                 // Args are not values, entry args are values -> args are definitely not in current entry
-                for ((entryArgs, entryValue) in entries) {
-                    addEntryIfArgsAreNotDistinct(resultEntries, args, entryArgs) {
-                        entryValue.substituteVars()
-                    }
+                for (entry in entries) {
+                    addEntryIfArgsAreNotDistinct(entry) { entry.substituteVars() }
                 }
                 return null
             }
         }
 
         private fun ResolvedFunctionUninterpretedEntry<T>.tryResolveArgs(): KExpr<T>? {
-            for (entry in reversedEntries.asReversed()) {
-                val entryArgs = entry.first.map { it.substituteVars() }
-                val entryValue = entry.second.substituteVars()
+            for (entry in entries) {
+                val resolvedEntry = entry.substituteVars()
 
-                if (entryArgs == args) {
+                if (resolvedEntry.argsAreEqual(args)) {
                     // We have no possibly matching entries and we found a matched entry
-                    if (resultEntries.isEmpty()) return entryValue
+                    if (resultEntries.isEmpty()) return resolvedEntry.value
 
                     // We don't need to process next entries but we need to handle parent entries
-                    return rewriteFunctionAppAsIte(entryValue, args, resultEntries)
+                    return rewriteFunctionAppAsIte(resolvedEntry.value, args, resultEntries)
                 }
 
-                addEntryIfArgsAreNotDistinct(resultEntries, args, entryArgs) { entryValue }
+                addEntryIfArgsAreNotDistinct(resolvedEntry) { resolvedEntry }
             }
             return null
         }
 
-        private inline fun <T : KSort> addEntryIfArgsAreNotDistinct(
-            entries: MutableList<Pair<List<KExpr<*>>, KExpr<T>>>,
-            args: List<KExpr<*>>,
-            entryArgs: List<KExpr<*>>,
-            entryValue: () -> KExpr<T>
+        private inline fun addEntryIfArgsAreNotDistinct(
+            entry: KFuncInterpEntry<T>,
+            resolveEntry: () -> KFuncInterpEntry<T>
         ) {
-            if (areDefinitelyDistinct(args, entryArgs)) return
-
-            val value = entryValue()
-            entries.add(entryArgs to value)
+            if (entry.argsAreDistinct(args)) return
+            val resolvedEntry = resolveEntry()
+            resultEntries.add(resolvedEntry)
         }
+
+        private fun KFuncInterpEntry<T>.substituteVars(): KFuncInterpEntry<T> {
+            if (this is KFuncInterpEntryVarsFree) return this
+            return when (this) {
+                is KFuncInterpEntryOneAry<T> -> modify(
+                    arg.substituteVars(),
+                    value.substituteVars()
+                )
+
+                is KFuncInterpEntryTwoAry<T> -> modify(
+                    arg0.substituteVars(),
+                    arg1.substituteVars(),
+                    value.substituteVars()
+                )
+
+                is KFuncInterpEntryThreeAry<T> -> modify(
+                    arg0.substituteVars(),
+                    arg1.substituteVars(),
+                    arg2.substituteVars(),
+                    value.substituteVars()
+                )
+
+                is KFuncInterpEntryNAry<T> -> modify(
+                    args.map { it.substituteVars() },
+                    value.substituteVars()
+                )
+            }
+        }
+
+        private fun KFuncInterpEntry<T>.argsAreEqual(args: List<KExpr<*>>): Boolean = when (this) {
+            is KFuncInterpEntryOneAry<*> -> arg == args.single()
+            is KFuncInterpEntryTwoAry<*> -> arg0 == args.first() && arg1 == args.last()
+            is KFuncInterpEntryThreeAry<*> -> {
+                val (a0, a1, a2) = args
+                arg0 == a0 && arg1 == a1 && arg2 == a2
+            }
+            is KFuncInterpEntryNAry<*> -> this.args == args
+        }
+
+        private fun KFuncInterpEntry<T>.argsAreDistinct(args: List<KExpr<*>>): Boolean = when (this) {
+            is KFuncInterpEntryOneAry<*> ->
+                areDistinct(arg, args.single())
+
+            is KFuncInterpEntryTwoAry<*> -> {
+                val (a0, a1) = args
+                areDistinct(arg0, a0) || areDistinct(arg1, a1)
+            }
+
+            is KFuncInterpEntryThreeAry<*> -> {
+                val (a0, a1, a2) = args
+                areDistinct(arg0, a0) || areDistinct(arg1, a1) || areDistinct(arg2, a2)
+            }
+
+            is KFuncInterpEntryNAry<*> -> areDefinitelyDistinct(this.args, args)
+        }
+
+        private fun areDistinct(lhs: KExpr<*>, rhs: KExpr<*>): Boolean =
+            areDefinitelyDistinct(lhs.uncheckedCast<_, KExpr<KSort>>(), rhs.uncheckedCast())
     }
 
     private inner class ResolvedFunctionInterpretation<T : KSort>(
@@ -455,34 +507,76 @@ open class KModelEvaluator(
     }
 
     private sealed interface ResolvedFunctionEntry<T : KSort> {
-        fun addUninterpretedEntry(args: List<KExpr<*>>, value: KExpr<T>): ResolvedFunctionEntry<T> =
-            ResolvedFunctionUninterpretedEntry(arrayListOf(args to value), this)
+        val entries: Iterable<KFuncInterpEntry<T>>
 
-        fun addValueEntry(args: List<KExpr<*>>, value: KExpr<T>): ResolvedFunctionEntry<T> =
-            ResolvedFunctionValuesEntry(hashMapOf(args to value), this)
+        fun addUninterpretedEntry(entry: KFuncInterpEntry<T>): ResolvedFunctionEntry<T> =
+            ResolvedFunctionUninterpretedEntry(arrayListOf(), this).addUninterpretedEntry(entry)
+
+        fun addValueEntry(entry: KFuncInterpEntry<T>): ResolvedFunctionEntry<T> =
+            ResolvedFunctionValuesEntry(entry.arity, hashMapOf(), this).addValueEntry(entry)
     }
 
     private class ResolvedFunctionUninterpretedEntry<T : KSort>(
-        val reversedEntries: MutableList<Pair<List<KExpr<*>>, KExpr<T>>>,
+        private val reversedEntries: MutableList<KFuncInterpEntry<T>>,
         val next: ResolvedFunctionEntry<T>
-    ) : ResolvedFunctionEntry<T>{
-        override fun addUninterpretedEntry(args: List<KExpr<*>>, value: KExpr<T>): ResolvedFunctionEntry<T> {
-            reversedEntries.add(args to value)
+    ) : ResolvedFunctionEntry<T> {
+        override val entries: Iterable<KFuncInterpEntry<T>>
+            get() = reversedEntries.asReversed()
+
+        override fun addUninterpretedEntry(entry: KFuncInterpEntry<T>): ResolvedFunctionEntry<T> {
+            reversedEntries.add(entry)
             return this
         }
     }
 
     private class ResolvedFunctionValuesEntry<T : KSort>(
-        val entries: MutableMap<List<KExpr<*>>, KExpr<T>>,
+        private val arity: Int,
+        private val entriesMap: MutableMap<Any, KFuncInterpEntry<T>>,
         val next: ResolvedFunctionEntry<T>
     ) : ResolvedFunctionEntry<T> {
-        override fun addValueEntry(args: List<KExpr<*>>, value: KExpr<T>): ResolvedFunctionEntry<T> {
-            entries[args] = value
+        override val entries: Iterable<KFuncInterpEntry<T>>
+            get() = entriesMap.values
+
+        override fun addValueEntry(entry: KFuncInterpEntry<T>): ResolvedFunctionEntry<T> {
+            check(entry.arity == arity) { "Incorrect model: entry arity mismatch" }
+            entriesMap[entry.argsSearchKey()] = entry
             return this
+        }
+
+        fun findValueEntry(args: List<KExpr<*>>): KFuncInterpEntry<T>? {
+            check(args.size == arity) { "Incorrect model: args arity mismatch" }
+            return entriesMap[argsSearchKey(args)]
+        }
+
+        private fun KFuncInterpEntry<*>.argsSearchKey(): Any = when (this) {
+            is KFuncInterpEntryOneAry<*> -> arg
+            is KFuncInterpEntryTwoAry<*> -> Pair(arg0, arg1)
+            is KFuncInterpEntryThreeAry<*> -> Triple(arg0, arg1, arg2)
+            is KFuncInterpEntryNAry<*> -> args
+        }
+
+        private fun argsSearchKey(args: List<KExpr<*>>): Any = when (arity) {
+            KFuncInterpEntryOneAry.ARITY -> args.single()
+            KFuncInterpEntryTwoAry.ARITY -> Pair(args.first(), args.last())
+            KFuncInterpEntryThreeAry.ARITY -> {
+                val (a0, a1, a2) = args
+                Triple(a0, a1, a2)
+            }
+            else -> args
         }
     }
 
     private class ResolvedFunctionDefaultEntry<T : KSort>(
         val expr: KExpr<T>?
-    ) : ResolvedFunctionEntry<T>
+    ) : ResolvedFunctionEntry<T> {
+        override val entries: Iterable<KFuncInterpEntry<T>>
+            get() = emptyList()
+    }
+
+    private fun KFuncInterpEntry<*>.isValueEntry(): Boolean = when (this) {
+        is KFuncInterpEntryOneAry<*> -> isValueInModel(arg)
+        is KFuncInterpEntryTwoAry<*> -> isValueInModel(arg0) && isValueInModel(arg1)
+        is KFuncInterpEntryThreeAry<*> -> isValueInModel(arg0) && isValueInModel(arg1) && isValueInModel(arg2)
+        is KFuncInterpEntryNAry<*> -> args.all { isValueInModel(it) }
+    }
 }

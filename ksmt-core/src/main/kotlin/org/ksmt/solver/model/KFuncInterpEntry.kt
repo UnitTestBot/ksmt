@@ -69,6 +69,8 @@ sealed interface KFuncInterpEntryOneAry<T : KSort> : KFuncInterpEntry<T> {
     override val arity: Int
         get() = ARITY
 
+    fun modify(arg: KExpr<*>, value: KExpr<T>): KFuncInterpEntryOneAry<T>
+
     companion object {
         const val ARITY = 1
     }
@@ -84,6 +86,8 @@ sealed interface KFuncInterpEntryTwoAry<T : KSort> : KFuncInterpEntry<T> {
 
     override val arity: Int
         get() = ARITY
+
+    fun modify(arg0: KExpr<*>, arg1: KExpr<*>, value: KExpr<T>): KFuncInterpEntryTwoAry<T>
 
     companion object {
         const val ARITY = 2
@@ -101,6 +105,8 @@ sealed interface KFuncInterpEntryThreeAry<T : KSort> : KFuncInterpEntry<T> {
     override val arity: Int
         get() = ARITY
 
+    fun modify(arg0: KExpr<*>, arg1: KExpr<*>, arg2: KExpr<*>, value: KExpr<T>): KFuncInterpEntryThreeAry<T>
+
     companion object {
         const val ARITY = 3
     }
@@ -109,6 +115,8 @@ sealed interface KFuncInterpEntryThreeAry<T : KSort> : KFuncInterpEntry<T> {
 sealed interface KFuncInterpEntryNAry<T : KSort> : KFuncInterpEntry<T> {
     override val arity: Int
         get() = args.size
+
+    fun modify(args: List<KExpr<*>>, value: KExpr<T>): KFuncInterpEntryNAry<T>
 }
 
 data class KFuncInterpEntryVarsFreeOneAry<T : KSort>(
@@ -116,6 +124,8 @@ data class KFuncInterpEntryVarsFreeOneAry<T : KSort>(
     override val value: KExpr<T>
 ) : KFuncInterpEntryVarsFree<T>, KFuncInterpEntryOneAry<T> {
     override fun toString(): String = KFuncInterpEntry.printEntry(args, value)
+    override fun modify(arg: KExpr<*>, value: KExpr<T>): KFuncInterpEntryOneAry<T> =
+        KFuncInterpEntryVarsFreeOneAry(arg, value)
 }
 
 data class KFuncInterpEntryVarsFreeTwoAry<T : KSort>(
@@ -124,6 +134,8 @@ data class KFuncInterpEntryVarsFreeTwoAry<T : KSort>(
     override val value: KExpr<T>
 ) : KFuncInterpEntryVarsFree<T>, KFuncInterpEntryTwoAry<T> {
     override fun toString(): String = KFuncInterpEntry.printEntry(args, value)
+    override fun modify(arg0: KExpr<*>, arg1: KExpr<*>, value: KExpr<T>): KFuncInterpEntryTwoAry<T> =
+        KFuncInterpEntryVarsFreeTwoAry(arg0, arg1, value)
 }
 
 data class KFuncInterpEntryVarsFreeThreeAry<T : KSort>(
@@ -133,6 +145,8 @@ data class KFuncInterpEntryVarsFreeThreeAry<T : KSort>(
     override val value: KExpr<T>
 ) : KFuncInterpEntryVarsFree<T>, KFuncInterpEntryThreeAry<T> {
     override fun toString(): String = KFuncInterpEntry.printEntry(args, value)
+    override fun modify(arg0: KExpr<*>, arg1: KExpr<*>, arg2: KExpr<*>, value: KExpr<T>): KFuncInterpEntryThreeAry<T> =
+        KFuncInterpEntryVarsFreeThreeAry(arg0, arg1, arg2, value)
 }
 
 data class KFuncInterpEntryVarsFreeNAry<T : KSort> internal constructor(
@@ -140,6 +154,8 @@ data class KFuncInterpEntryVarsFreeNAry<T : KSort> internal constructor(
     override val value: KExpr<T>
 ) : KFuncInterpEntryVarsFree<T>, KFuncInterpEntryNAry<T> {
     override fun toString(): String = KFuncInterpEntry.printEntry(args, value)
+    override fun modify(args: List<KExpr<*>>, value: KExpr<T>): KFuncInterpEntryNAry<T> =
+        KFuncInterpEntryVarsFreeNAry(args, value)
 }
 
 data class KFuncInterpEntryWithVarsOneAry<T : KSort>(
@@ -147,6 +163,8 @@ data class KFuncInterpEntryWithVarsOneAry<T : KSort>(
     override val value: KExpr<T>
 ) : KFuncInterpEntryWithVars<T>, KFuncInterpEntryOneAry<T> {
     override fun toString(): String = KFuncInterpEntry.printEntry(args, value)
+    override fun modify(arg: KExpr<*>, value: KExpr<T>): KFuncInterpEntryOneAry<T> =
+        KFuncInterpEntryWithVarsOneAry(arg, value)
 }
 
 data class KFuncInterpEntryWithVarsTwoAry<T : KSort>(
@@ -155,6 +173,8 @@ data class KFuncInterpEntryWithVarsTwoAry<T : KSort>(
     override val value: KExpr<T>
 ) : KFuncInterpEntryWithVars<T>, KFuncInterpEntryTwoAry<T> {
     override fun toString(): String = KFuncInterpEntry.printEntry(args, value)
+    override fun modify(arg0: KExpr<*>, arg1: KExpr<*>, value: KExpr<T>): KFuncInterpEntryTwoAry<T> =
+        KFuncInterpEntryWithVarsTwoAry(arg0, arg1, value)
 }
 
 data class KFuncInterpEntryWithVarsThreeAry<T : KSort>(
@@ -164,6 +184,8 @@ data class KFuncInterpEntryWithVarsThreeAry<T : KSort>(
     override val value: KExpr<T>
 ) : KFuncInterpEntryWithVars<T>, KFuncInterpEntryThreeAry<T> {
     override fun toString(): String = KFuncInterpEntry.printEntry(args, value)
+    override fun modify(arg0: KExpr<*>, arg1: KExpr<*>, arg2: KExpr<*>, value: KExpr<T>): KFuncInterpEntryThreeAry<T> =
+        KFuncInterpEntryWithVarsThreeAry(arg0, arg1, arg2, value)
 }
 
 data class KFuncInterpEntryWithVarsNAry<T : KSort> internal constructor(
@@ -171,4 +193,6 @@ data class KFuncInterpEntryWithVarsNAry<T : KSort> internal constructor(
     override val value: KExpr<T>
 ) : KFuncInterpEntryWithVars<T>, KFuncInterpEntryNAry<T> {
     override fun toString(): String = KFuncInterpEntry.printEntry(args, value)
+    override fun modify(args: List<KExpr<*>>, value: KExpr<T>): KFuncInterpEntryNAry<T> =
+        KFuncInterpEntryWithVarsNAry(args, value)
 }
