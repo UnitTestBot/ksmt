@@ -24,6 +24,7 @@ import org.ksmt.solver.model.KFuncInterp
 import org.ksmt.solver.model.KFuncInterpEntry
 import org.ksmt.solver.model.KFuncInterpEntryWithVars
 import org.ksmt.solver.KSolver
+import org.ksmt.solver.model.KFuncInterpWithVars
 import org.ksmt.sort.KBoolSort
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -137,7 +138,7 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
 
     private fun serializeFunctionInterpretation(interp: KFuncInterp<*>): ModelEntry {
         val interpEntries = interp.entries.map { serializeFunctionInterpretationEntry(it) }
-        val interpVars = if (interp is KFuncInterpEntryWithVars<*>) interp.vars else null
+        val interpVars = if (interp is KFuncInterpWithVars) interp.vars else null
         return ModelEntry(interp.decl, interpVars, interpEntries, interp.default)
     }
 
