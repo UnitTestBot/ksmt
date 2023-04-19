@@ -4,6 +4,7 @@ import org.ksmt.KContext
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KBvToFpExpr
 import org.ksmt.expr.KConst
+import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpAbsExpr
 import org.ksmt.expr.KFpAddExpr
@@ -34,11 +35,13 @@ import org.ksmt.expr.KFpToBvExpr
 import org.ksmt.expr.KFpToFpExpr
 import org.ksmt.expr.KFpToIEEEBvExpr
 import org.ksmt.expr.KFpValue
+import org.ksmt.expr.KIteExpr
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
+import org.ksmt.symfpu.UnpackedFp.Companion.iteOp
 import org.ksmt.utils.FpUtils
 import org.ksmt.utils.asExpr
 import org.ksmt.utils.cast
@@ -58,6 +61,35 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     inner class AdapterTermsRewriter : KNonRecursiveTransformer(ctx) {
         fun <T : KFpSort> transform(expr: UnpackedFp<T>): KExpr<KBvSort> = with(ctx) {
             return packToBv(expr)
+        }
+    }
+
+    override fun <T : KSort> transform(expr: KEqExpr<T>): KExpr<KBoolSort> = with(ctx) {
+        transformExprAfterTransformed(expr, expr.lhs, expr.rhs) { l, r ->
+            if (l is UnpackedFp<*> && r is UnpackedFp<*>) {
+                val flags = mkAnd(l.isNaN eq r.isNaN, l.isInf eq r.isInf, l.isZero eq r.isZero)
+                if (l.packedBv is UnpackedFp.PackedFp.Exists && r.packedBv is UnpackedFp.PackedFp.Exists)
+                    flags and (l.packedBv eq r.packedBv)
+                else mkAnd(
+                    flags,
+                    l.sign eq r.sign,
+                    l.unbiasedExponent eq r.unbiasedExponent,
+                    l.normalizedSignificand eq r.normalizedSignificand,
+                )
+            } else {
+                mkEq(l, r)
+            }
+        }
+    }
+
+    override fun <T : KSort> transform(expr: KIteExpr<T>): KExpr<T> = with(ctx) {
+        transformExprAfterTransformed(expr, expr.condition, expr.trueBranch, expr.falseBranch) { c, l, r ->
+            if (l is UnpackedFp<*> && r is UnpackedFp<*>) {
+                val lTyped: UnpackedFp<KFpSort> = l.cast()
+                iteOp(c, lTyped, r.cast()).cast()
+            } else {
+                mkIte(c, l, r)
+            }
         }
     }
 

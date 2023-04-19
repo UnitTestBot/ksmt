@@ -494,6 +494,15 @@ class FpToBvTransformerTest {
             mapOf("a" to a),
         )
     }
+    @Test
+    fun testIteExpr() = with(createContext()) {
+        val a by mkFp32Sort()
+        val b by mkFp32Sort()
+        testFpExpr(
+            mkIteNoSimplify(trueExpr, a, b),
+            mapOf("a" to a),
+        )
+    }
 
     @Test
     fun testBvBoolFormulaExpr() = withContextAndFp64Variables { a, b ->
