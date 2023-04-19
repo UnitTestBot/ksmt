@@ -3,7 +3,6 @@ package org.ksmt.symfpu
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KBoolSort
-import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.symfpu.UnpackedFp.Companion.iteOp
 
@@ -75,20 +74,14 @@ private fun <Fp : KFpSort> KContext.lessHelper(
     // Both zero are equal
     val eitherZero = left.isZero or right.isZero
 
-    val exponentLessExpr = { a: KExpr<KBvSort>, b: KExpr<KBvSort> ->
-        if (packedExists)
-            mkBvUnsignedLessExpr(a, b)
-        else
-            mkBvSignedLessExpr(a, b)
-    }
     // Normal and subnormal
     val negativeLessThanPositive = left.isNegative and !right.isNegative
-    val positiveCase = !left.isNegative and !right.isNegative and (exponentLessExpr(
+    val positiveCase = !left.isNegative and !right.isNegative and (mkBvSignedLessExpr(
         left.getExponent(packedExists), right.getExponent(packedExists)
     ) or (left.getExponent(packedExists) eq right.getExponent(packedExists) and positiveCaseSignificandComparison))
 
 
-    val negativeCase = left.isNegative and right.isNegative and (exponentLessExpr(
+    val negativeCase = left.isNegative and right.isNegative and (mkBvSignedLessExpr(
         right.getExponent(packedExists), left.getExponent(packedExists)
     ) or (left.getExponent(packedExists) eq right.getExponent(packedExists) and negativeCaseSignificandComparison))
 

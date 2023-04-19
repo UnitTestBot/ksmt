@@ -9,6 +9,16 @@ import org.ksmt.expr.transformer.KTransformerBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
+import org.ksmt.symfpu.UnpackedFp.PackedFp.Companion.makeBvInf
+import org.ksmt.symfpu.UnpackedFp.PackedFp.Companion.makeBvNaN
+import org.ksmt.symfpu.UnpackedFp.PackedFp.Companion.makeBvZero
+import org.ksmt.utils.FpUtils
+import org.ksmt.utils.FpUtils.fpInfExponentBiased
+import org.ksmt.utils.FpUtils.fpInfSignificand
+import org.ksmt.utils.FpUtils.fpNaNExponentBiased
+import org.ksmt.utils.FpUtils.fpNaNSignificand
+import org.ksmt.utils.FpUtils.fpZeroExponentBiased
+import org.ksmt.utils.FpUtils.fpZeroSignificand
 import org.ksmt.utils.cast
 
 
@@ -77,12 +87,18 @@ class UnpackedFp<Fp : KFpSort> private constructor(
             infix fun eq(packedBv: Exists): KExpr<KBoolSort> = with(sign.ctx) {
                 mkAnd(sign eq packedBv.sign, exponent eq packedBv.exponent, significand eq packedBv.significand)
             }
+
+            private val ctx = sign.ctx
+            val sort = ctx.mkFpSort(exponent.sort.sizeBits, significand.sort.sizeBits + 1u)
         }
 
         object None : PackedFp()
 
         fun toIEEE() = if (this is Exists) {
-            with(sign.ctx) { mkBvConcatExpr(boolToBv(sign), exponent, significand) }
+            with(sign.ctx) {
+                val bias = mkBv(sort.exponentShiftSize(), exponent.sort.sizeBits)
+                mkBvConcatExpr(boolToBv(sign), mkBvAddExpr(exponent, bias), significand)
+            }
         } else null
 
         fun setSign(sign: KExpr<KBoolSort>) = when (this) {
@@ -107,6 +123,30 @@ class UnpackedFp<Fp : KFpSort> private constructor(
 
                     else -> None
                 }
+            }
+
+            fun KContext.makeBvNaN(sort: KFpSort): Exists {
+                return Exists(
+                    sign = falseExpr,
+                    exponent = FpUtils.unbiasFpExponent(fpNaNExponentBiased(sort), sort.exponentBits).cast(),
+                    significand = fpNaNSignificand(sort).cast()
+                )
+            }
+
+            fun KContext.makeBvInf(sort: KFpSort, sign: KExpr<KBoolSort>): Exists {
+                return Exists(
+                    sign = sign,
+                    exponent = FpUtils.unbiasFpExponent(fpInfExponentBiased(sort), sort.exponentBits).cast(),
+                    significand = fpInfSignificand(sort).cast()
+                )
+            }
+
+            fun KContext.makeBvZero(sort: KFpSort, sign: KExpr<KBoolSort>): Exists {
+                return Exists(
+                    sign = sign,
+                    exponent = FpUtils.unbiasFpExponent(fpZeroExponentBiased(sort), sort.exponentBits).cast(),
+                    significand = fpZeroSignificand(sort).cast()
+                )
             }
         }
     }
@@ -239,19 +279,19 @@ class UnpackedFp<Fp : KFpSort> private constructor(
 
         fun <Fp : KFpSort> KContext.makeNaN(sort: Fp) = UnpackedFp(
             this, sort, sign = falseExpr, unbiasedExponent = defaultExponent(sort),
-            normalizedSignificand = defaultSignificand(sort), isNaN = trueExpr,
+            normalizedSignificand = defaultSignificand(sort), isNaN = trueExpr, packedBv = makeBvNaN(sort)
         )
 
         fun <Fp : KFpSort> KContext.makeInf(
             sort: Fp, sign: KExpr<KBoolSort>
         ) = UnpackedFp(
             this, sort, sign, unbiasedExponent = defaultExponent(sort),
-            normalizedSignificand = defaultSignificand(sort), isInf = trueExpr,
+            normalizedSignificand = defaultSignificand(sort), isInf = trueExpr, packedBv = makeBvInf(sort, sign)
         )
 
         fun <Fp : KFpSort> KContext.makeZero(sort: Fp, sign: KExpr<KBoolSort>) = UnpackedFp(
             this, sort, sign, unbiasedExponent = defaultExponent(sort),
-            normalizedSignificand = defaultSignificand(sort), isZero = trueExpr,
+            normalizedSignificand = defaultSignificand(sort), isZero = trueExpr, packedBv = makeBvZero(sort, sign)
         )
 
         fun <T : KFpSort> KContext.iteOp(
