@@ -13,11 +13,12 @@ import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KUninterpretedSortValue
+import org.ksmt.solver.KModel
 import org.ksmt.solver.model.KFuncInterp
+import org.ksmt.solver.model.KFuncInterpEntryVarsFree
 import org.ksmt.solver.model.KFuncInterpEntryWithVars
 import org.ksmt.solver.model.KFuncInterpVarsFree
 import org.ksmt.solver.model.KFuncInterpWithVars
-import org.ksmt.solver.KModel
 import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
@@ -122,16 +123,40 @@ open class KZ3Model(
             with(internalizer) { vars[it].internalizeExpr() }
         }
 
+        var interpretationVarsFree = true
+
         val entries = z3Interp.entries.map { entry ->
-            val args = entry.args.map { it.substituteVarsAndConvert<KSort>(z3Vars) }
-            val value = entry.value.substituteVarsAndConvert<T>(z3Vars)
-            KFuncInterpEntryWithVars.create(args, value)
+            var entryVarsFree = true
+
+            val args = entry.args.map {
+                it.substituteVarsAndConvert<KSort>(z3Vars) { varsFree ->
+                    entryVarsFree = entryVarsFree && varsFree
+                }
+            }
+
+            val value = entry.value.substituteVarsAndConvert<T>(z3Vars) { varsFree ->
+                entryVarsFree = entryVarsFree && varsFree
+            }
+
+            interpretationVarsFree = interpretationVarsFree && entryVarsFree
+
+            if (entryVarsFree) {
+                KFuncInterpEntryVarsFree.create(args, value)
+            } else {
+                KFuncInterpEntryWithVars.create(args, value)
+            }
         }
 
-        val default = z3Interp.elseExpr.substituteVarsAndConvert<T>(z3Vars)
-        val varDecls = vars.map { it.decl }
+        val default = z3Interp.elseExpr.substituteVarsAndConvert<T>(z3Vars) { varsFree ->
+            interpretationVarsFree = interpretationVarsFree && varsFree
+        }
 
-        return KFuncInterpWithVars(decl, varDecls, entries, default)
+        return if (interpretationVarsFree) {
+            KFuncInterpVarsFree(decl, entries.uncheckedCast(), default)
+        } else {
+            val varDecls = vars.map { it.decl }
+            KFuncInterpWithVars(decl, varDecls, entries, default)
+        }
     }
 
     override fun detach(): KModel {
@@ -167,10 +192,17 @@ open class KZ3Model(
         return result
     }
 
-    private fun <T : KSort> Long.substituteVarsAndConvert(vars: LongArray): KExpr<T> {
+    private inline fun <T : KSort> Long.substituteVarsAndConvert(
+        vars: LongArray,
+        expressionHasNoVars: (Boolean) -> Unit
+    ): KExpr<T> {
         val preparedExpr = z3Ctx.temporaryAst(
             Native.substituteVars(z3Ctx.nCtx, this, vars.size, vars)
         )
+
+        // Expression remain unchanged -> no vars were substituted
+        expressionHasNoVars(this == preparedExpr)
+
         val convertedExpr = with(converter) {
             preparedExpr.convertExpr<T>()
         }
