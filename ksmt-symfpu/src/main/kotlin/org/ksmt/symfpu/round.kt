@@ -174,7 +174,7 @@ fun <Fp : KFpSort, S : KFpSort> KContext.round(
     )
     val extractedSignificandWidth = extractedSignificand.sort.sizeBits.toInt()
     val subnormalShiftPrepared = if (extractedSignificandWidth >= expWidth + 1) {
-        subnormalAmount.matchWidthUnsigned(this, extractedSignificand)
+        subnormalAmount.matchWidthUnsigned(extractedSignificand)
     } else {
         mkBvExtractExpr(extractedSignificandWidth - 1, 0, subnormalAmount)
     }
@@ -219,7 +219,7 @@ fun <Fp : KFpSort, S : KFpSort> KContext.round(
 
 
     val leadingOne = leadingOne(targetSignificandWidth)
-    val normalRoundUpAmount = boolToBv(roundUp).matchWidthUnsigned(this, extractedSignificand)
+    val normalRoundUpAmount = boolToBv(roundUp).matchWidthUnsigned(extractedSignificand)
 
     val subnormalRoundUpMask = mkBvArithShiftRightExpr(
         mkBvConcatExpr(
@@ -299,7 +299,7 @@ fun KContext.variablePositionRound(
 
     val incrementLocation = mkBvShiftLeftExpr(
         mkBv(1 shl 2, exsigWidth),
-        roundPosition.matchWidthUnsigned(this, expandedSignificand)
+        roundPosition.matchWidthUnsigned(expandedSignificand)
     )
 
     val guardLocation = mkBvLogicalShiftRightExpr(incrementLocation, mkBv(1, exsigWidth))

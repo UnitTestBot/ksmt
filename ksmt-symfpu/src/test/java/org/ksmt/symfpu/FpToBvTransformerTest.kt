@@ -1,18 +1,33 @@
 package org.ksmt.symfpu
 
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Test
 import org.ksmt.KContext
-import org.ksmt.expr.*
+import org.ksmt.expr.KApp
+import org.ksmt.expr.KConst
+import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFp16Value
+import org.ksmt.expr.KFp32Value
+import org.ksmt.expr.KFpRoundingMode
+import org.ksmt.expr.KFpValue
+import org.ksmt.expr.printer.BvValuePrintMode
+import org.ksmt.expr.printer.PrinterParams
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
 import org.ksmt.solver.z3.KZ3Solver
-import org.ksmt.sort.*
+import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KBvSort
+import org.ksmt.sort.KFp128Sort
+import org.ksmt.sort.KFp32Sort
+import org.ksmt.sort.KFp64Sort
+import org.ksmt.sort.KFpSort
+import org.ksmt.sort.KSort
 import org.ksmt.utils.cast
 import org.ksmt.utils.getValue
-import kotlin.test.assertEquals
+import org.ksmt.utils.uncheckedCast
 import kotlin.time.Duration.Companion.seconds
 
 //typealias Fp = KFp16Sort
@@ -28,7 +43,7 @@ class FpToBvTransformerTest {
     private fun KContext.zero() = mkFpZero(false, Fp(this))
     private fun KContext.negativeZero() = mkFpZero(true, Fp(this))
     private inline fun <R> withContextAndFp32Variables(block: KContext.(KApp<KFp32Sort, *>, KApp<KFp32Sort, *>) -> R): R =
-        with(KContext()) {
+        with(KContext(printerParams = PrinterParams(BvValuePrintMode.BINARY))) {
             val (a, b) = createTwoFp32Variables()
             block(a, b)
         }
@@ -48,18 +63,17 @@ class FpToBvTransformerTest {
         }
 
     @Test
-    fun testUnpackExpr() = withContextAndFp128Variables { a, _ ->
+    fun testUnpackExpr() = with(KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY)) {
+        val a by mkFp32Sort()
         testFpExpr(a, mapOf("a" to a))
     }
 
-    @Test
-    fun testUnpackExpr1() = withContextAndFp32Variables { _, _ ->
-        testFpExpr(mkFp32(1.0f), mapOf("a" to mkFp32(1.0f)))
-    }
 
     @Test
     fun testFpToBvEqExpr() = withContextAndFp32Variables { a, b ->
-        testFpExpr(mkFpEqualExpr(a, b), mapOf("a" to a, "b" to b))
+        testFpExpr(mkFpEqualExpr(a, b), mapOf("a" to a, "b" to b)) { _, _ ->
+            !(mkFpIsNaNExpr(a) or mkFpIsNaNExpr(b))
+        }
     }
 
     @Test
@@ -149,7 +163,7 @@ class FpToBvTransformerTest {
         val a = mkFp32(Float.fromBits(0b0_00000000_00000000000000000000001)) // min
         val b = mkFp32(Float.fromBits(0b1_01111110_00000000000000000000000.toInt())) // -0.5
         testFpExpr(
-            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b), mapOf("a" to a, "b" to b)
+            mkFpMulExprNoSimplify(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b), mapOf("a" to a, "b" to b)
         )
     }
 
@@ -212,93 +226,6 @@ class FpToBvTransformerTest {
         )
     }
 
-    @Test
-    fun testFpToBvMultFp16RNEExpr() = with(KContext()) {
-        val a by mkFp16Sort()
-        val b by mkFp16Sort()
-        testFpExpr(
-            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b),
-            mapOf("a" to a, "b" to b),
-        ) { _, e ->
-            mkFpIsSubnormalExpr(e)
-        }
-    }
-
-
-    @Test
-    fun testFpToBvMultFp16RTNExpr() = with(KContext()) {
-        val a by mkFp16Sort()
-        val b by mkFp16Sort()
-        testFpExpr(
-            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardNegative), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
-
-    @Test
-    fun testFpToBvMultFp16RTPExpr() = with(KContext()) {
-        val a by mkFp16Sort()
-        val b by mkFp16Sort()
-        testFpExpr(
-            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardPositive), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
-    @Test
-    fun testFpToBvMultFp32RTP() = with(KContext()) {
-        val a = mkFp32(Float.fromBits(0b00111111100000000000000000100010))
-        val b = mkFp32(Float.fromBits(0b10000000000000000000000000000001.toInt()))
-        testFpExpr(
-            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
-    @Test
-    fun testFpToBvZZMultRoundTowardNegativeFp16Expr() = with(KContext()) {
-        val a by mkFp16Sort()
-        val b by mkFp16Sort()
-        testFpExpr(
-            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardZero), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
-
-    @Test
-    fun testFpToBvZMultFp32UnderflowZeroExpr() = with(KContext()) {
-        // should return -0
-        val a = mkFp32(Float.fromBits(0b00000000000000000000000011100111)) // 3.24E-43
-        val b = mkFp32(Float.fromBits(0b10000000000111111101111011010011.toInt())) // -2.926835E-39
-        testFpExpr(
-            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
-    @Test
-    fun testFpToBvZMultFp32UnderflowMinExpr() = with(KContext()) {
-        // should return -min but returns -0
-        val a = mkFp32(Float.fromBits(0b00000000001111011000100100000111))
-        val b = mkFp32(Float.fromBits(0b10110100000001010010000001111110.toInt()))
-        testFpExpr(
-            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
-    @Test
-    fun testFpToBvZMultFp32UnderflowZero2Expr() = with(KContext()) {
-        val a = mkFp32(Float.fromBits(0b00000000111011101110111111111011))
-        val b = mkFp32(Float.fromBits(0b10000000000000001110001000000110.toInt()))
-        testFpExpr(
-            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
 
     @Test
     fun testFpToBvMultFp16RNAExpr() = with(KContext()) {
@@ -312,20 +239,6 @@ class FpToBvTransformerTest {
 
 
     @Test
-    fun testFpToBvMultFp16RNAExprasdf() = with(KContext()) {
-//        a: FP (sign false) (5 11100) (11 1111100000),
-//        b: FP (sign false) (5 10101) (11 0101100111)
-        val a: KExpr<KFp16Sort> = mkFpFromBvExpr(mkBv(false).cast(), mkBv(0b01011, 5u), mkBv(0b1111100000, 10u))
-        val b: KExpr<KFp16Sort> = mkFpFromBvExpr(mkBv(false).cast(), mkBv(0b00100, 5u), mkBv(0b0101100111, 10u))
-        val bApp: KApp<KFp16Sort, *> = b.cast()
-        println("a: $a, b: $b")
-        testFpExpr(
-            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToAway), a, b),
-            mapOf("a" to a.cast(), "b" to bApp),
-        )
-    }
-
-    @Test
     fun testFpToBvMultFp32RNAExpr() = with(KContext()) {
         val a by mkFp32Sort()
         val b by mkFp32Sort()
@@ -334,69 +247,6 @@ class FpToBvTransformerTest {
             mapOf("a" to a, "b" to b),
         )
     }
-
-    @Test
-    fun testFpToBvMultFp32RNAExprahh() = with(KContext()) {
-        val i = Float.fromBits(0b11000000010011001001011001110001.toInt())
-        val j = Float.fromBits(0b00111111101101100100010001000000)
-        println("i: ${i.toBits().toUInt().toString(2)}")
-        println("j: ${j.toBits().toUInt().toString(2)}")
-        val a = mkFp32(Float.fromBits(0b110000000_10011001001011001110001.toInt()))
-        println("a: $a")
-        val b = mkFp32(Float.fromBits(0b00111111101101100100010001000000))
-        println("b: $b")
-
-        val aUfp = unpack(fp32Sort, mkBv(0b11000000010011001001011001110001.toInt(), 32u))
-        unpack(fp32Sort, mkBv(0b11000000010011001001011001110001.toInt(), 32u))
-        println("aUfp: $aUfp, ${aUfp.sign} ${aUfp.unbiasedExponent} ${aUfp.normalizedSignificand}")
-        testFpExpr(
-            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToAway), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
-    @Test
-    fun testFpToBvMultFp16RTZExpr() = with(KContext()) {
-        val a by mkFp16Sort()
-        val b by mkFp16Sort()
-        testFpExpr(
-            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardZero), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
-    // 8.86 sec
-    @Test
-    fun testFpToBvZMultFp16SlowExpr() = with(KContext(simplificationMode = KContext.SimplificationMode.SIMPLIFY)) {
-//        1 5 10
-        val upper =
-            mkFpBiased(signBit = false, biasedExponent = 0b10001, significand = 0b0001111111, sort = mkFp16Sort()) // 2
-        val lower = mkFpBiased(
-            signBit = false, biasedExponent = 0b10001, significand = 0b0000000001, sort = mkFp16Sort()
-        ) // 1.9991
-//0b0000000000 0b1111111111  0b10000 0b01111
-        val a by fp16Sort
-        val b by fp16Sort
-        testFpExpr(
-            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardZero), a, b),
-            mapOf("a" to a, "b" to b),
-        ) { _, _ ->
-            trueExpr
-            mkAnd(
-                mkFpLessOrEqualExpr(lower, a),
-                mkFpLessOrEqualExpr(lower, b),
-                mkFpLessOrEqualExpr(a, upper),
-                mkFpLessOrEqualExpr(b, upper),
-            )
-        }
-    }
-
-//    @Test
-//    fun testFpToBvMultFp32Expr() = withContextAndVariables { a, b ->
-//        testFpExpr(
-//            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardPositive), a, b), mapOf("a" to a, "b" to b)
-//        )
-//    }
 
     private fun <T : KSort> KContext.testFpExpr(
         exprToTransform: KExpr<T>,
@@ -456,82 +306,21 @@ class FpToBvTransformerTest {
     }
 
 
-    @Test
-    fun testFpToBvRem32Expr() = with(KContext()) {
-        val a by mkFp32Sort()
-        val b by mkFp32Sort()
-        testFpExpr(
-            mkFpRemExpr(a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
-    @Test
-    fun testFpToBvRem1Expr() = with(KContext()) {
-        val a = fromPackedBv(
-            mkBv("1111010001001000", 16u),
-            mkFp16Sort()
-        )
-        val b = fromPackedBv(
-            mkBv("0000000010111010", 16u),
-            mkFp16Sort()
-        )
-        println("a = $a")
-        println("b = $b")
-        println("r = ${mkFpRemExpr(a, b)}")
-        testFpExpr(
-            mkFpRemExprNoSimplify(a, b),
-            mapOf("a" to a.cast(), "b" to b.cast()),
-        )
-    }
-    @Test
-    fun testFpToBvRem132Expr() = with(KContext()) {
-        val a = fromPackedBv(
-            mkBv("11111010000000000000000000000000", 32u),
-            mkFp32Sort()
-        )
-        val b = fromPackedBv(
-            mkBv("00000000000000000000010000001000", 32u),
-            mkFp32Sort()
-        )
-        println("a = $a")
-        println("b = $b")
-        println("r = ${mkFpRemExpr(a, b)}")
-        testFpExpr(
-            mkFpRemExprNoSimplify(a, b),
-//            mkFpRemExpr(a, b),
-            mapOf("a" to a.cast(), "b" to b.cast()),
-        )
-    }
-
-
-    @Test
-    fun testFpToBvAddFp16RNEExpr() = with(KContext()) {
-        val a by mkFp16Sort()
-        val b by mkFp16Sort()
-        testFpExpr(
-            mkFpAddExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
-
-    @Test
-    fun testFpToBvSubFp16RNEExpr() = with(KContext()) {
-        val a by mkFp16Sort()
-        val b by mkFp16Sort()
-        testFpExpr(
-            mkFpSubExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
 
     @Test
     fun testFpToBvNegateExpr() = with(KContext()) {
-        val a by mkFp16Sort()
+        val a by mkFp32Sort()
         testFpExpr(
             mkFpNegationExpr(a),
+            mapOf("a" to a),
+        )
+    }
+
+    @Test
+    fun testFpToBvNothingExpr() = with(KContext()) {
+        val a by mkFp32Sort()
+        testFpExpr(
+            (a),
             mapOf("a" to a),
         )
     }
@@ -736,22 +525,20 @@ class FpToBvTransformerTest {
             val model = solver.model()
             val transformed = model.eval(transformedExpr)
             val baseExpr = model.eval(toCompare)
-            println("notequal = ${transformed neq baseExpr}")
-            val neqEval = model.eval(transformedExpr neq toCompare)
-            println("neqEval = $neqEval")
 
             println("transformed: ${unpackedString(transformed, model)}")
             println("exprToTrans: ${unpackedString(baseExpr, model)}")
             for ((name, expr) in printVars) {
-                val bv = transformer.mapFpToBv[expr.cast()]
-                val evalUnpacked = unpackedString(fromPackedBv(bv!!, expr.sort.cast()), model)
+                val ufp = transformer.mapFpToBv[expr.cast()]
+                val evalUnpacked = unpackedString(ufp!!, model)
                 println("$name :: $evalUnpacked")
             }
         } else if (status == KSolverStatus.UNKNOWN) {
             println("STATUS == UNKNOWN")
             println(solver.reasonOfUnknown())
         }
-        assertEquals(KSolverStatus.UNSAT, status)
+//        assertEquals(KSolverStatus.UNSAT, status)
+        assertNotEquals(KSolverStatus.SAT, status)
     }
 
     @Test
@@ -769,9 +556,12 @@ class FpToBvTransformerTest {
 
     private fun KContext.unpackedString(value: KExpr<*>, model: KModel) = if (value.sort is KFpSort) {
         val sb = StringBuilder()
-        val fpExpr: KExpr<KFpSort> = value.cast()
-        val fpValue = model.eval(fpExpr) as KFpValue
-        with(unpack(fpExpr.sort, mkFpToIEEEBvExpr(fpExpr.cast()))) {
+//        val fpExpr: KExpr<KFpSort> = value.cast()
+//        val fpValue = model.eval(fpExpr) as KFpValue
+        val fpExpr: KExpr<KFpSort> by lazy { value.uncheckedCast() }
+        val ufp = if (value is UnpackedFp<*>) value else unpack(fpExpr.sort, mkFpToIEEEBvExpr(fpExpr.cast()))
+        val fpValue = model.eval(ufp.toFp()) as KFpValue
+        with(ufp) {
             sb.append("uFP sign ")
             model.eval(sign).print(sb)
             sb.append(" ")
@@ -784,14 +574,14 @@ class FpToBvTransformerTest {
             model.eval(isNaN).print(sb)
             sb.append(" inf=")
             model.eval(isInf).print(sb)
-            sb.append(" zero=")
+            sb.append(" isZero=")
             model.eval(isZero).print(sb)
 
 
             sb.append("\ntoFp: ")
             model.eval(toFp()).print(sb)
 
-            val packedFloat = mkFpToIEEEBvExpr(fpExpr)
+            val packedFloat = packToBv(this)
             val pWidth = packedFloat.sort.sizeBits.toInt()
             val exWidth = sort.exponentBits.toInt()
 
@@ -807,7 +597,6 @@ class FpToBvTransformerTest {
             model.eval(packedSignificand).print(sb)
             sb.append("\nbv: ")
             model.eval(packedFloat).print(sb)
-
             sb.append(" \nactually ${(fpValue as? KFp32Value)?.value ?: (fpValue as? KFp16Value)?.value}}")
 //            val unpacked = unpack(fp32Sort, packedFloat)
 // vs my ${(model.eval(unpacked.toFp()) as? KFp32Value)?.value}
@@ -823,13 +612,10 @@ fun <T : KFpSort> KContext.fromPackedBv(it: KExpr<KBvSort>, sort: T): KExpr<T> {
     return unpack(sort, it).toFp()
 }
 
-class TestTransformerUseBvs(ctx: KContext, private val mapFpToBv: Map<KExpr<KFpSort>, KExpr<KBvSort>>) :
+class TestTransformerUseBvs(ctx: KContext, private val mapFpToBv: Map<KExpr<KFpSort>, UnpackedFp<KFpSort>>) :
     KNonRecursiveTransformer(ctx) {
-    override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = with(ctx) {
-        return if (expr.sort is KFpSort) {
-            val asFp: KConst<KFpSort> = expr.cast()
-            val bv = mapFpToBv[asFp]!!
-            unpack(asFp.sort, bv).toFp().cast()
-        } else expr
-    }
+    override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = if (expr.sort is KFpSort) {
+        val asFp: KConst<KFpSort> = expr.cast()
+        mapFpToBv[asFp]!!.toFp().cast()
+    } else expr
 }

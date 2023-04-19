@@ -11,6 +11,7 @@ import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.utils.FpUtils.fpInfExponentBiased
 import org.ksmt.utils.FpUtils.fpInfSignificand
+import org.ksmt.utils.cast
 
 
 fun KExpr<KBvSort>.extendUnsigned(ext: Int): KExpr<KBvSort> {
@@ -99,8 +100,10 @@ class UnpackedFp<Fp : KFpSort> private constructor(
 
     fun signBv() = ctx.boolToBv(sign)
 
-    override fun accept(transformer: KTransformerBase): KExpr<Fp> =
-        throw IllegalArgumentException("Leaked unpackedFp: $this")
+    override fun accept(transformer: KTransformerBase): KExpr<Fp> {
+        check(transformer is FpToBvTransformer.AdapterTermsRewriter) { "Leaked unpackedFp: $this" }
+        return transformer.transform(this).cast()
+    }
 
     override fun print(printer: ExpressionPrinter) = with(printer) {
         append("(unpackedFp ")
@@ -199,6 +202,7 @@ class UnpackedFp<Fp : KFpSort> private constructor(
             null,
         )
     }
+
 
     companion object {
 

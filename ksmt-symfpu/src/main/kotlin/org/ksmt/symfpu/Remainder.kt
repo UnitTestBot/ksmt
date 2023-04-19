@@ -157,6 +157,6 @@ private fun KContext.divideStep(x: KExpr<KBvSort>, y: KExpr<KBvSort>): ResultWit
     return ResultWithRemainderBit(mkBvShiftLeftExpr(step, mkBv(1, xWidth)), canSubtract)
 }
 
-private fun KExpr<KBvSort>.extract(high: Int, low: Int) = ctx.mkBvExtractExpr(high, low, this)
-private fun KExpr<KBvSort>.isAllZeros() = ctx.mkEq(this, ctx.mkBv(0, sort.sizeBits))
+fun KExpr<KBvSort>.extract(high: Int, low: Int) = ctx.mkBvExtractExpr(high, low, this)
+fun KExpr<KBvSort>.isAllZeros() = ctx.mkEq(this, ctx.mkBv(0, sort.sizeBits))
 

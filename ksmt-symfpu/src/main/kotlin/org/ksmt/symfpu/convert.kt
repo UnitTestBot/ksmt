@@ -120,7 +120,7 @@ fun <T : KFpSort> roundToIntegral(
     val significand = input.getSignificand()
     val significandWidth = input.significandWidth().toInt()
     val roundingPoint = if (significandWidth.toUInt() >= exponentWidth) {
-        collaredRoundingPoint.matchWidthUnsigned(this, significand)
+        collaredRoundingPoint.matchWidthUnsigned(significand)
     } else {
         mkBvExtractExpr(significandWidth - 1, 0, collaredRoundingPoint)
     }
@@ -269,7 +269,7 @@ private fun fpToBvCommon(
 
 
         val convertedShiftAmount = shiftAmount.resizeSigned(bitsToRepresent(maxShift).toUInt() + 1u)
-            .matchWidthUnsigned(this, expandedSignificand)
+            .matchWidthUnsigned(expandedSignificand)
 
         val aligned = mkBvShiftLeftExpr(expandedSignificand, convertedShiftAmount)
 

@@ -44,15 +44,22 @@ import org.ksmt.utils.asExpr
 import org.ksmt.utils.cast
 
 class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
-    private val mapFpToBvImpl = mutableMapOf<KExpr<KFpSort>, KExpr<KBvSort>>()
-    val mapFpToBv: Map<KExpr<KFpSort>, KExpr<KBvSort>> get() = mapFpToBvImpl
+    private val mapFpToBvImpl = mutableMapOf<KExpr<KFpSort>, UnpackedFp<KFpSort>>()
+    val mapFpToBv: Map<KExpr<KFpSort>, UnpackedFp<KFpSort>> get() = mapFpToBvImpl
     // use this function instead of apply as it may return UnpackedFp wrapper
 
-//    fun <T : KSort> applyAndGetBvExpr(expr: KExpr<T>): KExpr<KBvSort> {
-//        val transformed = apply(expr)
-//        val unpacked = (transformed as? UnpackedFp)
-//        return unpacked ?: transformed.cast()
-//    }
+    fun <T : KSort> applyAndGetExpr(expr: KExpr<T>): KExpr<T> {
+        val applied = apply(expr)
+        // it might have UnpackedFp inside, so
+        // transform them to bvs
+        return AdapterTermsRewriter().apply(applied)
+    }
+
+    inner class AdapterTermsRewriter : KNonRecursiveTransformer(ctx) {
+        fun <T : KFpSort> transform(expr: UnpackedFp<T>): KExpr<KBvSort> = with(ctx) {
+            return packToBv(expr)
+        }
+    }
 
     override fun <Fp : KFpSort> transform(expr: KFpEqualExpr<Fp>): KExpr<KBoolSort> = with(ctx) {
         transformHelper(expr, ::equal)
@@ -157,11 +164,10 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = with(ctx) {
         return if (expr.sort is KFpSort) {
             val asFp: KConst<KFpSort> = expr.cast()
-            val bv = mapFpToBvImpl.getOrPut(asFp) {
-                mkConst(asFp.decl.name + "!tobv!", mkBvSort(asFp.sort.exponentBits + asFp.sort.significandBits))
-            }
-            unpack(asFp.sort, bv).cast()
-
+            mapFpToBvImpl.getOrPut(asFp) {
+                unpack(asFp.sort,
+                    mkConst(asFp.decl.name + "!tobv!", mkBvSort(asFp.sort.exponentBits + asFp.sort.significandBits)))
+            }.cast()
         } else expr
     }
 

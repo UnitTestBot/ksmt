@@ -105,7 +105,7 @@ fun <Fp : KFpSort> KContext.packToBv(uf: UnpackedFp<Fp>): KExpr<KBvSort> {
 
 
     val shiftAmount = if (subnormalShiftAmount.sort.sizeBits.toInt() <= unpackedSignificandWidth) {
-        subnormalShiftAmount.matchWidthUnsigned(this, unpackedSignificand)
+        subnormalShiftAmount.matchWidthUnsigned(unpackedSignificand)
     } else {
         mkBvExtractExpr(unpackedSignificandWidth - 1, 0, subnormalShiftAmount)
     }
@@ -142,10 +142,10 @@ fun <Fp : KFpSort> KContext.pack(uf: UnpackedFp<Fp>): KExpr<Fp> {
     return mkFpFromBvExpr(sign.cast(), packedExponent, packedSignificand)
 }
 
-fun KExpr<KBvSort>.matchWidthUnsigned(ctx: KContext, expr: KExpr<KBvSort>): KExpr<KBvSort> {
+fun KExpr<KBvSort>.matchWidthUnsigned(expr: KExpr<KBvSort>): KExpr<KBvSort> {
     check(sort.sizeBits.toInt() <= expr.sort.sizeBits.toInt())
     if (sort.sizeBits.toInt() == expr.sort.sizeBits.toInt()) return this
-    return ctx.mkBvZeroExtensionExpr(expr.sort.sizeBits.toInt() - sort.sizeBits.toInt(), this)
+    return expr.ctx.mkBvZeroExtensionExpr(expr.sort.sizeBits.toInt() - sort.sizeBits.toInt(), this)
 }
 
 fun KExpr<KBvSort>.matchWidthSigned(ctx: KContext, expr: KExpr<KBvSort>): KExpr<KBvSort> {
