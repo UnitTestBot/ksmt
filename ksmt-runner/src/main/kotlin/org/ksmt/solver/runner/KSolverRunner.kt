@@ -183,10 +183,8 @@ class KSolverRunner<Config : KSolverConfiguration>(
     override suspend fun checkWithAssumptionsAsync(
         assumptions: List<KExpr<KBoolSort>>,
         timeout: Duration
-    ): KSolverStatus {
-        ctx.ensureContextMatch(assumptions)
-
-        return handleCheckSatExceptionAsUnknownAsync {
+    ): KSolverStatus = checkWithAssumptions(assumptions) {
+        handleCheckSatExceptionAsUnknownAsync {
             checkWithAssumptionsAsync(assumptions, timeout)
         }
     }
@@ -194,12 +192,19 @@ class KSolverRunner<Config : KSolverConfiguration>(
     override fun checkWithAssumptions(
         assumptions: List<KExpr<KBoolSort>>,
         timeout: Duration
+    ): KSolverStatus = checkWithAssumptions(assumptions) {
+        handleCheckSatExceptionAsUnknownSync {
+            checkWithAssumptionsSync(assumptions, timeout)
+        }
+    }
+
+    private inline fun checkWithAssumptions(
+        assumptions: List<KExpr<KBoolSort>>,
+        execute: () -> KSolverStatus
     ): KSolverStatus {
         ctx.ensureContextMatch(assumptions)
 
-        return handleCheckSatExceptionAsUnknownSync {
-            checkWithAssumptionsSync(assumptions, timeout)
-        }
+        return execute()
     }
 
     override suspend fun modelAsync(): KModel = model { modelAsync() }
@@ -329,22 +334,25 @@ class KSolverRunner<Config : KSolverConfiguration>(
         return runOnExecutor(freshExecutor, onException) { body() }
     }
 
-    private suspend fun initExecutorAsync(): KSolverRunnerExecutor {
-        if (!isActive.get()) {
-            throw KSolverExecutorNotAliveException()
+    private suspend fun initExecutorAsync(): KSolverRunnerExecutor = initExecutor {
+        manager.createSolverExecutorAsync(ctx, solverType, customSolverInfo).also {
+            solverState.applyAsync(it)
         }
-        val executor = manager.createSolverExecutorAsync(ctx, solverType, customSolverInfo)
-        solverState.applyAsync(executor)
-        return executor
     }
 
-    private fun initExecutorSync(): KSolverRunnerExecutor {
+    private fun initExecutorSync(): KSolverRunnerExecutor = initExecutor {
+        manager.createSolverExecutorSync(ctx, solverType, customSolverInfo).also {
+            solverState.applySync(it)
+        }
+    }
+
+    private inline fun initExecutor(
+        createAndInitExecutor: () -> KSolverRunnerExecutor
+    ): KSolverRunnerExecutor {
         if (!isActive.get()) {
             throw KSolverExecutorNotAliveException()
         }
-        val executor = manager.createSolverExecutorSync(ctx, solverType, customSolverInfo)
-        solverState.applySync(executor)
-        return executor
+        return createAndInitExecutor()
     }
 
     private suspend inline fun handleCheckSatExceptionAsUnknownAsync(

@@ -19,14 +19,17 @@ import org.ksmt.runner.core.KsmtWorkerSession
 import org.ksmt.runner.generated.models.AssertAndTrackParams
 import org.ksmt.runner.generated.models.AssertParams
 import org.ksmt.runner.generated.models.CheckParams
+import org.ksmt.runner.generated.models.CheckResult
 import org.ksmt.runner.generated.models.CheckWithAssumptionsParams
 import org.ksmt.runner.generated.models.ContextSimplificationMode
 import org.ksmt.runner.generated.models.CreateSolverParams
 import org.ksmt.runner.generated.models.ModelResult
 import org.ksmt.runner.generated.models.PopParams
+import org.ksmt.runner.generated.models.ReasonUnknownResult
 import org.ksmt.runner.generated.models.SolverConfigurationParam
 import org.ksmt.runner.generated.models.SolverProtocolModel
 import org.ksmt.runner.generated.models.SolverType
+import org.ksmt.runner.generated.models.UnsatCoreResult
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
@@ -45,161 +48,174 @@ class KSolverRunnerExecutor(
     private val hardTimeout: Duration,
     private val worker: KsmtWorkerSession<SolverProtocolModel>,
 ) {
-    fun configureSync(config: List<SolverConfigurationParam>) {
-        ensureActive()
-
+    fun configureSync(config: List<SolverConfigurationParam>) = configure(config) { cfg ->
         queryWithTimeoutAndExceptionHandlingSync {
-            configure.querySync(config)
+            configure.querySync(cfg)
         }
     }
 
-    suspend fun configureAsync(config: List<SolverConfigurationParam>) {
-        ensureActive()
-
+    suspend fun configureAsync(config: List<SolverConfigurationParam>) = configure(config) { cfg ->
         queryWithTimeoutAndExceptionHandlingAsync {
-            configure.queryAsync(config)
+            configure.queryAsync(cfg)
         }
     }
 
-    fun assertSync(expr: KExpr<KBoolSort>) {
+    private inline fun configure(
+        config: List<SolverConfigurationParam>,
+        query: (List<SolverConfigurationParam>) -> Unit
+    ) {
         ensureActive()
+        query(config)
+    }
 
-        val params = AssertParams(expr)
+    fun assertSync(expr: KExpr<KBoolSort>) = assert(expr) { params ->
         queryWithTimeoutAndExceptionHandlingSync {
             assert.querySync(params)
         }
     }
 
-    suspend fun assertAsync(expr: KExpr<KBoolSort>) {
-        ensureActive()
-
-        val params = AssertParams(expr)
+    suspend fun assertAsync(expr: KExpr<KBoolSort>) = assert(expr) { params ->
         queryWithTimeoutAndExceptionHandlingAsync {
             assert.queryAsync(params)
         }
     }
 
-    fun assertAndTrackSync(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) {
+    private inline fun assert(expr: KExpr<KBoolSort>, query: (AssertParams) -> Unit) {
         ensureActive()
-
-        val params = AssertAndTrackParams(expr, trackVar)
-        queryWithTimeoutAndExceptionHandlingSync {
-            assertAndTrack.querySync(params)
-        }
+        query(AssertParams(expr))
     }
 
-    suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) {
-        ensureActive()
-
-        val params = AssertAndTrackParams(expr, trackVar)
-        queryWithTimeoutAndExceptionHandlingAsync {
-            assertAndTrack.queryAsync(params)
+    fun assertAndTrackSync(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) =
+        assertAndTrack(expr, trackVar) { params ->
+            queryWithTimeoutAndExceptionHandlingSync {
+                assertAndTrack.querySync(params)
+            }
         }
+
+    suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) =
+        assertAndTrack(expr, trackVar) { params ->
+            queryWithTimeoutAndExceptionHandlingAsync {
+                assertAndTrack.queryAsync(params)
+            }
+        }
+
+    private inline fun assertAndTrack(
+        expr: KExpr<KBoolSort>,
+        trackVar: KConstDecl<KBoolSort>,
+        query: (AssertAndTrackParams) -> Unit
+    ) {
+        ensureActive()
+        query(AssertAndTrackParams(expr, trackVar))
     }
 
-    fun pushSync() {
-        ensureActive()
-
+    fun pushSync() = push {
         queryWithTimeoutAndExceptionHandlingSync {
             push.querySync(Unit)
         }
     }
 
-    suspend fun pushAsync() {
-        ensureActive()
-
+    suspend fun pushAsync() = push {
         queryWithTimeoutAndExceptionHandlingAsync {
             push.queryAsync(Unit)
         }
     }
 
-    fun popSync(n: UInt) {
+    private inline fun push(query: () -> Unit) {
         ensureActive()
+        query()
+    }
 
-        val params = PopParams(n)
+    fun popSync(n: UInt) = pop(n) { params ->
         queryWithTimeoutAndExceptionHandlingSync {
             pop.querySync(params)
         }
     }
 
-    suspend fun popAsync(n: UInt) {
-        ensureActive()
-
-        val params = PopParams(n)
+    suspend fun popAsync(n: UInt) = pop(n) { params ->
         queryWithTimeoutAndExceptionHandlingAsync {
             pop.queryAsync(params)
         }
     }
 
-    fun checkSync(timeout: Duration): KSolverStatus {
+    private inline fun pop(n: UInt, query: (PopParams) -> Unit) {
         ensureActive()
+        query(PopParams(n))
+    }
 
-        val params = CheckParams(timeout.inWholeMilliseconds)
-        val result = queryWithTimeoutAndExceptionHandlingSync {
+    fun checkSync(timeout: Duration): KSolverStatus = check(timeout) { params ->
+        queryWithTimeoutAndExceptionHandlingSync {
             runCheckSatQuery {
                 check.querySync(params)
             }
         }
-        return result.status
     }
 
-    suspend fun checkAsync(timeout: Duration): KSolverStatus {
-        ensureActive()
-
-        val params = CheckParams(timeout.inWholeMilliseconds)
-        val result = queryWithTimeoutAndExceptionHandlingAsync {
+    suspend fun checkAsync(timeout: Duration): KSolverStatus = check(timeout) { params ->
+        queryWithTimeoutAndExceptionHandlingAsync {
             runCheckSatQuery {
                 check.queryAsync(params)
             }
         }
+    }
+
+    private inline fun check(timeout: Duration, query: (CheckParams) -> CheckResult): KSolverStatus {
+        ensureActive()
+
+        val params = CheckParams(timeout.inWholeMilliseconds)
+        val result = query(params)
         return result.status
     }
 
     fun checkWithAssumptionsSync(
         assumptions: List<KExpr<KBoolSort>>,
         timeout: Duration
-    ): KSolverStatus {
-        ensureActive()
-
-        val params = CheckWithAssumptionsParams(assumptions, timeout.inWholeMilliseconds)
-        val result = queryWithTimeoutAndExceptionHandlingSync {
+    ): KSolverStatus = checkWithAssumptions(assumptions, timeout) { params ->
+        queryWithTimeoutAndExceptionHandlingSync {
             runCheckSatQuery {
                 checkWithAssumptions.querySync(params)
             }
         }
-        return result.status
     }
 
     suspend fun checkWithAssumptionsAsync(
         assumptions: List<KExpr<KBoolSort>>,
         timeout: Duration
-    ): KSolverStatus {
-        ensureActive()
-
-        val params = CheckWithAssumptionsParams(assumptions, timeout.inWholeMilliseconds)
-        val result = queryWithTimeoutAndExceptionHandlingAsync {
+    ): KSolverStatus = checkWithAssumptions(assumptions, timeout) { params ->
+        queryWithTimeoutAndExceptionHandlingAsync {
             runCheckSatQuery {
                 checkWithAssumptions.queryAsync(params)
             }
         }
+    }
+
+    private inline fun checkWithAssumptions(
+        assumptions: List<KExpr<KBoolSort>>,
+        timeout: Duration,
+        query: (CheckWithAssumptionsParams) -> CheckResult
+    ): KSolverStatus {
+        ensureActive()
+
+        val params = CheckWithAssumptionsParams(assumptions, timeout.inWholeMilliseconds)
+        val result = query(params)
         return result.status
     }
 
-    fun modelSync(): KModel {
-        ensureActive()
-
-        val result = queryWithTimeoutAndExceptionHandlingSync {
+    fun modelSync(): KModel = model {
+        queryWithTimeoutAndExceptionHandlingSync {
             model.querySync(Unit)
         }
-        return deserializeModel(result)
     }
 
-    suspend fun modelAsync(): KModel {
-        ensureActive()
-
-        val result = queryWithTimeoutAndExceptionHandlingAsync {
+    suspend fun modelAsync(): KModel = model {
+        queryWithTimeoutAndExceptionHandlingAsync {
             model.queryAsync(Unit)
         }
+    }
+
+    private inline fun model(query: () -> ModelResult): KModel {
+        ensureActive()
+
+        val result = query()
         return deserializeModel(result)
     }
 
@@ -225,60 +241,59 @@ class KSolverRunnerExecutor(
         return KModelImpl(worker.astSerializationCtx.ctx, interpretations.toMap(), uninterpretedSortUniverse)
     }
 
-    fun unsatCoreSync(): List<KExpr<KBoolSort>> {
-        ensureActive()
-
-        val result = queryWithTimeoutAndExceptionHandlingSync {
+    fun unsatCoreSync(): List<KExpr<KBoolSort>> = unsatCore {
+        queryWithTimeoutAndExceptionHandlingSync {
             unsatCore.querySync(Unit)
         }
-
-        @Suppress("UNCHECKED_CAST")
-        return result.core as List<KExpr<KBoolSort>>
     }
 
-    suspend fun unsatCoreAsync(): List<KExpr<KBoolSort>> {
-        ensureActive()
-
-        val result = queryWithTimeoutAndExceptionHandlingAsync {
+    suspend fun unsatCoreAsync(): List<KExpr<KBoolSort>> = unsatCore {
+        queryWithTimeoutAndExceptionHandlingAsync {
             unsatCore.queryAsync(Unit)
         }
+    }
+
+    private inline fun unsatCore(query: () -> UnsatCoreResult): List<KExpr<KBoolSort>> {
+        ensureActive()
+
+        val result = query()
 
         @Suppress("UNCHECKED_CAST")
         return result.core as List<KExpr<KBoolSort>>
     }
 
-    fun reasonOfUnknownSync(): String {
-        ensureActive()
-
-        val result = queryWithTimeoutAndExceptionHandlingSync {
+    fun reasonOfUnknownSync(): String = reasonOfUnknown {
+        queryWithTimeoutAndExceptionHandlingSync {
             reasonOfUnknown.querySync(Unit)
         }
-        return result.reasonUnknown
     }
 
-    suspend fun reasonOfUnknownAsync(): String {
-        ensureActive()
-
-        val result = queryWithTimeoutAndExceptionHandlingAsync {
+    suspend fun reasonOfUnknownAsync(): String = reasonOfUnknown {
+        queryWithTimeoutAndExceptionHandlingAsync {
             reasonOfUnknown.queryAsync(Unit)
         }
+    }
+
+    private inline fun reasonOfUnknown(query: () -> ReasonUnknownResult): String {
+        ensureActive()
+
+        val result = query()
         return result.reasonUnknown
     }
 
-    fun interruptSync() {
-        ensureActive()
-
-        // No queries to interrupt
-        if (!hasOngoingCheckSatQueries) {
-            return
-        }
-
+    fun interruptSync() = interrupt {
         queryWithTimeoutAndExceptionHandlingSync {
             interrupt.querySync(Unit)
         }
     }
 
-    suspend fun interruptAsync() {
+    suspend fun interruptAsync() = interrupt {
+        queryWithTimeoutAndExceptionHandlingAsync {
+            interrupt.queryAsync(Unit)
+        }
+    }
+
+    private inline fun interrupt(query: () -> Unit) {
         ensureActive()
 
         // No queries to interrupt
@@ -286,27 +301,32 @@ class KSolverRunnerExecutor(
             return
         }
 
-        queryWithTimeoutAndExceptionHandlingAsync {
-            interrupt.queryAsync(Unit)
-        }
+        query()
     }
 
-    fun initSolverSync(solverType: SolverType, customSolverInfo: CustomSolverInfo?) {
+    fun initSolverSync(solverType: SolverType, customSolverInfo: CustomSolverInfo?) =
+        initSolver(solverType, customSolverInfo) { params ->
+            queryWithTimeoutAndExceptionHandlingSync {
+                initSolver.querySync(params)
+            }
+        }
+
+    internal suspend fun initSolverAsync(solverType: SolverType, customSolverInfo: CustomSolverInfo?) =
+        initSolver(solverType, customSolverInfo) { params ->
+            queryWithTimeoutAndExceptionHandlingAsync {
+                initSolver.queryAsync(params)
+            }
+        }
+
+    private inline fun initSolver(
+        solverType: SolverType,
+        customSolverInfo: CustomSolverInfo?,
+        query: (CreateSolverParams) -> Unit
+    ) {
         ensureActive()
 
         val params = serializeSolverInitParams(solverType, customSolverInfo)
-        queryWithTimeoutAndExceptionHandlingSync {
-            initSolver.querySync(params)
-        }
-    }
-
-    internal suspend fun initSolverAsync(solverType: SolverType, customSolverInfo: CustomSolverInfo?) {
-        ensureActive()
-
-        val params = serializeSolverInitParams(solverType, customSolverInfo)
-        queryWithTimeoutAndExceptionHandlingAsync {
-            initSolver.queryAsync(params)
-        }
+        query(params)
     }
 
     private fun serializeSolverInitParams(
@@ -326,21 +346,22 @@ class KSolverRunnerExecutor(
         )
     }
 
-    fun deleteSolverSync() {
-        ensureActive()
-
+    fun deleteSolverSync() = deleteSolver {
         queryWithTimeoutAndExceptionHandlingSync {
             deleteSolver.querySync(Unit)
         }
-        worker.release()
     }
 
-    internal suspend fun deleteSolverAsync() {
-        ensureActive()
-
+    internal suspend fun deleteSolverAsync() = deleteSolver {
         queryWithTimeoutAndExceptionHandlingAsync {
             deleteSolver.queryAsync(Unit)
         }
+    }
+
+    private inline fun deleteSolver(query: () -> Unit) {
+        ensureActive()
+
+        query()
         worker.release()
     }
 
