@@ -20,7 +20,7 @@ fun <Fp : KFpSort> KContext.unpack(sort: Fp, packedFloat: KExpr<KBvSort>): Unpac
     val packedSignificand = mkBvExtractExpr(pWidth - exWidth - 2, 0, packedFloat)
     val packedExponent = mkBvExtractExpr(pWidth - 2, pWidth - exWidth - 1, packedFloat)
     val sign = bvToBool(mkBvExtractExpr(pWidth - 1, pWidth - 1, packedFloat))
-    return unpack(sort, sign, packedExponent, packedSignificand, packedFloat)
+    return unpack(sort, sign, packedExponent, packedSignificand)
 }
 
 fun <Fp : KFpSort> KContext.unpack(
@@ -28,7 +28,7 @@ fun <Fp : KFpSort> KContext.unpack(
     sign: KExpr<KBoolSort>,
     packedExponent: KExpr<KBvSort>,
     packedSignificand: KExpr<KBvSort>,
-    packedFloat: KExpr<KBvSort> = mkBvConcatExpr(boolToBv(sign), packedExponent, packedSignificand)
+//    packedFloat: KExpr<KBvSort> = mkBvConcatExpr(boolToBv(sign), packedExponent, packedSignificand)
 ): UnpackedFp<Fp> {
     val unpackedExWidth = exponentWidth(sort)
 
@@ -36,17 +36,22 @@ fun <Fp : KFpSort> KContext.unpack(
         mkBvZeroExtensionExpr(unpackedExWidth - sort.exponentBits.toInt(), packedExponent),
         mkBv(sort.exponentShiftSize(), unpackedExWidth.toUInt())
     )
+//    val exponent = mkBvZeroExtensionExpr(unpackedExWidth - sort.exponentBits.toInt(), packedExponent)
 
     val significandWithLeadingZero = mkBvConcatExpr(bvZero(), packedSignificand)
     val significandWithLeadingOne = mkBvConcatExpr(bvOne(), packedSignificand)
 
-    val ufNormal = UnpackedFp(this, sort, sign, exponent, significandWithLeadingOne, packedFloat)
-    val ufSubnormalBase = UnpackedFp(this, sort, sign, minNormalExponent(sort), significandWithLeadingZero, packedFloat)
+    val packedFp = UnpackedFp.PackedFp.Exists(sign, packedExponent, packedSignificand)
+    val ufNormal = UnpackedFp(this, sort, sign, exponent, significandWithLeadingOne, packedFp)
+    val ufSubnormalBase = UnpackedFp(this, sort, sign, minNormalExponent(sort), significandWithLeadingZero, packedFp)
 
+//    bias = 01111111111
+//    0-bias =
+//    (-1)-bias = 10000000000
     // Analyse
     val zeroExponent = isAllZeros(packedExponent)
     val onesExponent = isAllOnes(packedExponent)
-    val zeroSignificand = isAllZeros(significandWithLeadingZero)
+    val zeroSignificand = isAllZeros(packedSignificand)
 
     // Identify the cases
     val isZero = zeroExponent and zeroSignificand
@@ -67,9 +72,8 @@ fun <Fp : KFpSort> KContext.unpack(
 }
 
 fun <Fp : KFpSort> KContext.packToBv(uf: UnpackedFp<Fp>): KExpr<KBvSort> {
-    if (uf.packedBv != null) {
-        return uf.packedBv
-    }
+    uf.packedBv.toIEEE()?.let { return it }
+
 
     // Sign
     val packedSign = uf.signBv()

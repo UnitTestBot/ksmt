@@ -177,7 +177,6 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
             expr.signBit.expr,
             expr.biasedExponent.asExpr(mkBvSort(expr.sort.exponentBits)),
             expr.significand.asExpr(mkBvSort(expr.sort.significandBits - 1u)),
-            simplifyFpToIEEEBvExpr(expr)
         )
     }
 
@@ -207,7 +206,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>) =
         transformExprAfterTransformed(expr, expr.value) { value ->
             (value as UnpackedFp<T>).let {
-                it.packedBv ?: ctx.packToBv(it)
+                it.packedBv.toIEEE() ?: ctx.packToBv(it)
             }
         }
 

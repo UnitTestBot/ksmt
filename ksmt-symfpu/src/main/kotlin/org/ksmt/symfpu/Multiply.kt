@@ -87,7 +87,7 @@ fun <Fp : KFpSort> KContext.arithmeticMultiply(
 
     val sort = mkFpSort(left.sort.exponentBits + 1u, left.sort.significandBits * 2u)
     return UnpackedFp(
-        this, sort, multiplySign, alignedExponent, alignedSignificand, packedBv = null
+        this, sort, multiplySign, alignedExponent, alignedSignificand
     )
 }
 
