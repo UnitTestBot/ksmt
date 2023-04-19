@@ -23,7 +23,14 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
             +"Bitwuzla"
             +"Yices"
             +"Cvc5"
+            +"Custom"
         })
+        field("contextSimplificationMode", enum("ContextSimplificationMode") {
+            +"SIMPLIFY"
+            +"NO_SIMPLIFY"
+        })
+        field("customSolverQualifiedName", PredefinedType.string.nullable)
+        field("customSolverConfigBuilderQualifiedName", PredefinedType.string.nullable)
     }
 
     private val solverConfigurationParam = structdef {

@@ -99,6 +99,53 @@ class KPortfolioSolver(
      * */
     fun solverPortfolioStats(): List<SolverStatistic> = solverStats.toList()
 
+    override fun configure(configurator: KSolverConfiguration.() -> Unit) = runBlocking {
+        configureAsync(configurator)
+    }
+
+    override fun assert(expr: KExpr<KBoolSort>) = runBlocking {
+        assertAsync(expr)
+    }
+
+    override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) = runBlocking {
+        assertAndTrackAsync(expr, trackVar)
+    }
+
+    override fun push() = runBlocking {
+        pushAsync()
+    }
+
+    override fun pop(n: UInt) = runBlocking {
+        popAsync(n)
+    }
+
+    override fun check(timeout: Duration): KSolverStatus = runBlocking {
+        checkAsync(timeout)
+    }
+
+    override fun checkWithAssumptions(
+        assumptions: List<KExpr<KBoolSort>>,
+        timeout: Duration
+    ): KSolverStatus = runBlocking {
+        checkWithAssumptionsAsync(assumptions, timeout)
+    }
+
+    override fun model(): KModel = runBlocking {
+        modelAsync()
+    }
+
+    override fun unsatCore(): List<KExpr<KBoolSort>> = runBlocking {
+        unsatCoreAsync()
+    }
+
+    override fun reasonOfUnknown(): String = runBlocking {
+        reasonOfUnknownAsync()
+    }
+
+    override fun interrupt() = runBlocking {
+        interruptAsync()
+    }
+
     override suspend fun configureAsync(configurator: KSolverConfiguration.() -> Unit) = solverOperation {
         configureAsync(configurator)
     }

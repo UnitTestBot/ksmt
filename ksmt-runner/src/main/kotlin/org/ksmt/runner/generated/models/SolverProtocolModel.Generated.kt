@@ -52,6 +52,7 @@ class SolverProtocolModel private constructor(
             serializers.register(ModelUninterpretedSortUniverse)
             serializers.register(ModelResult)
             serializers.register(SolverType.marshaller)
+            serializers.register(ContextSimplificationMode.marshaller)
             serializers.register(ConfigurationParamKind.marshaller)
         }
         
@@ -77,7 +78,7 @@ class SolverProtocolModel private constructor(
         
         private val __SolverConfigurationParamListSerializer = SolverConfigurationParam.list()
         
-        const val serializationHash = -9087877748912357384L
+        const val serializationHash = -5238880835174060064L
         
     }
     override val serializersOwner: ISerializersOwner get() = SolverProtocolModel
@@ -248,7 +249,7 @@ val IProtocol.solverProtocolModel get() = getOrCreateExtension(SolverProtocolMod
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:44]
+ * #### Generated from [SolverProtocolModel.kt:51]
  */
 data class AssertAndTrackParams (
     val expression: org.ksmt.KAst,
@@ -311,7 +312,7 @@ data class AssertAndTrackParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:40]
+ * #### Generated from [SolverProtocolModel.kt:47]
  */
 data class AssertParams (
     val expression: org.ksmt.KAst
@@ -368,7 +369,7 @@ data class AssertParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:53]
+ * #### Generated from [SolverProtocolModel.kt:60]
  */
 data class CheckParams (
     val timeout: Long
@@ -425,7 +426,7 @@ data class CheckParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:57]
+ * #### Generated from [SolverProtocolModel.kt:64]
  */
 data class CheckResult (
     val status: org.ksmt.solver.KSolverStatus
@@ -482,7 +483,7 @@ data class CheckResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:61]
+ * #### Generated from [SolverProtocolModel.kt:68]
  */
 data class CheckWithAssumptionsParams (
     val assumptions: List<org.ksmt.KAst>,
@@ -545,7 +546,7 @@ data class CheckWithAssumptionsParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:30]
+ * #### Generated from [SolverProtocolModel.kt:37]
  */
 enum class ConfigurationParamKind {
     String, 
@@ -561,10 +562,27 @@ enum class ConfigurationParamKind {
 
 
 /**
+ * #### Generated from [SolverProtocolModel.kt:28]
+ */
+enum class ContextSimplificationMode {
+    SIMPLIFY, 
+    NO_SIMPLIFY;
+    
+    companion object {
+        val marshaller = FrameworkMarshallers.enum<ContextSimplificationMode>()
+        
+    }
+}
+
+
+/**
  * #### Generated from [SolverProtocolModel.kt:20]
  */
 data class CreateSolverParams (
-    val type: SolverType
+    val type: SolverType,
+    val contextSimplificationMode: ContextSimplificationMode,
+    val customSolverQualifiedName: String?,
+    val customSolverConfigBuilderQualifiedName: String?
 ) : IPrintable {
     //companion
     
@@ -574,11 +592,17 @@ data class CreateSolverParams (
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): CreateSolverParams  {
             val type = buffer.readEnum<SolverType>()
-            return CreateSolverParams(type)
+            val contextSimplificationMode = buffer.readEnum<ContextSimplificationMode>()
+            val customSolverQualifiedName = buffer.readNullable { buffer.readString() }
+            val customSolverConfigBuilderQualifiedName = buffer.readNullable { buffer.readString() }
+            return CreateSolverParams(type, contextSimplificationMode, customSolverQualifiedName, customSolverConfigBuilderQualifiedName)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: CreateSolverParams)  {
             buffer.writeEnum(value.type)
+            buffer.writeEnum(value.contextSimplificationMode)
+            buffer.writeNullable(value.customSolverQualifiedName) { buffer.writeString(it) }
+            buffer.writeNullable(value.customSolverConfigBuilderQualifiedName) { buffer.writeString(it) }
         }
         
         
@@ -595,6 +619,9 @@ data class CreateSolverParams (
         other as CreateSolverParams
         
         if (type != other.type) return false
+        if (contextSimplificationMode != other.contextSimplificationMode) return false
+        if (customSolverQualifiedName != other.customSolverQualifiedName) return false
+        if (customSolverConfigBuilderQualifiedName != other.customSolverConfigBuilderQualifiedName) return false
         
         return true
     }
@@ -602,6 +629,9 @@ data class CreateSolverParams (
     override fun hashCode(): Int  {
         var __r = 0
         __r = __r*31 + type.hashCode()
+        __r = __r*31 + contextSimplificationMode.hashCode()
+        __r = __r*31 + if (customSolverQualifiedName != null) customSolverQualifiedName.hashCode() else 0
+        __r = __r*31 + if (customSolverConfigBuilderQualifiedName != null) customSolverConfigBuilderQualifiedName.hashCode() else 0
         return __r
     }
     //pretty print
@@ -609,6 +639,9 @@ data class CreateSolverParams (
         printer.println("CreateSolverParams (")
         printer.indent {
             print("type = "); type.print(printer); println()
+            print("contextSimplificationMode = "); contextSimplificationMode.print(printer); println()
+            print("customSolverQualifiedName = "); customSolverQualifiedName.print(printer); println()
+            print("customSolverConfigBuilderQualifiedName = "); customSolverConfigBuilderQualifiedName.print(printer); println()
         }
         printer.print(")")
     }
@@ -618,7 +651,7 @@ data class CreateSolverParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:79]
+ * #### Generated from [SolverProtocolModel.kt:86]
  */
 data class ModelEntry (
     val decl: org.ksmt.KAst,
@@ -693,7 +726,7 @@ data class ModelEntry (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:74]
+ * #### Generated from [SolverProtocolModel.kt:81]
  */
 data class ModelFuncInterpEntry (
     val args: List<org.ksmt.KAst>,
@@ -756,7 +789,7 @@ data class ModelFuncInterpEntry (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:91]
+ * #### Generated from [SolverProtocolModel.kt:98]
  */
 data class ModelResult (
     val declarations: List<org.ksmt.KAst>,
@@ -825,7 +858,7 @@ data class ModelResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:86]
+ * #### Generated from [SolverProtocolModel.kt:93]
  */
 data class ModelUninterpretedSortUniverse (
     val sort: org.ksmt.KAst,
@@ -888,7 +921,7 @@ data class ModelUninterpretedSortUniverse (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:49]
+ * #### Generated from [SolverProtocolModel.kt:56]
  */
 data class PopParams (
     val levels: UInt
@@ -945,7 +978,7 @@ data class PopParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:70]
+ * #### Generated from [SolverProtocolModel.kt:77]
  */
 data class ReasonUnknownResult (
     val reasonUnknown: String
@@ -1002,7 +1035,7 @@ data class ReasonUnknownResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:29]
+ * #### Generated from [SolverProtocolModel.kt:36]
  */
 data class SolverConfigurationParam (
     val kind: ConfigurationParamKind,
@@ -1077,7 +1110,8 @@ enum class SolverType {
     Z3, 
     Bitwuzla, 
     Yices, 
-    Cvc5;
+    Cvc5, 
+    Custom;
     
     companion object {
         val marshaller = FrameworkMarshallers.enum<SolverType>()
@@ -1087,7 +1121,7 @@ enum class SolverType {
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:66]
+ * #### Generated from [SolverProtocolModel.kt:73]
  */
 data class UnsatCoreResult (
     val core: List<org.ksmt.KAst>
