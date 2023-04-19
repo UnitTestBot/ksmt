@@ -126,6 +126,9 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
 
     private var lastModel: KCvc5Model? = null
 
+    /**
+     * Cvc5 model is only valid until the next check-sat call.
+     * */
     private fun invalidatePreviousModel() {
         lastModel?.markInvalid()
         lastModel = null

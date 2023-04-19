@@ -14,6 +14,10 @@ sealed interface KFuncInterpEntry<T : KSort> {
     }
 }
 
+/**
+ * Function interpretation entry, that may contain variables in
+ * arguments or in a value.
+ * */
 sealed interface KFuncInterpEntryWithVars<T : KSort> : KFuncInterpEntry<T> {
     companion object {
         fun <T : KSort> create(
@@ -37,6 +41,11 @@ sealed interface KFuncInterpEntryWithVars<T : KSort> : KFuncInterpEntry<T> {
     }
 }
 
+/**
+ * Function interpretation entry, that does NOT contain variables in
+ * arguments and in a value.
+ * For example, arguments and a value are interpreted values.
+ * */
 sealed interface KFuncInterpEntryVarsFree<T : KSort> : KFuncInterpEntry<T> {
     companion object {
         fun <T : KSort> create(
@@ -75,7 +84,6 @@ sealed interface KFuncInterpEntryOneAry<T : KSort> : KFuncInterpEntry<T> {
         const val ARITY = 1
     }
 }
-
 
 sealed interface KFuncInterpEntryTwoAry<T : KSort> : KFuncInterpEntry<T> {
     val arg0: KExpr<*>

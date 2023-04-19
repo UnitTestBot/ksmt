@@ -50,6 +50,10 @@ sealed interface KFuncInterp<T : KSort> {
     }
 }
 
+/**
+ * Function interpretation, that contains variables in the body.
+ * For example, F(x) with default value (+ x 1).
+ * */
 data class KFuncInterpWithVars<T : KSort>(
     override val decl: KDecl<T>,
     override val vars: List<KDecl<*>>,
@@ -64,6 +68,10 @@ data class KFuncInterpWithVars<T : KSort>(
     override fun toString(): String = KFuncInterp.printEntries(entries, default)
 }
 
+/**
+ * Function interpretation, that does NOT contain variables in the body.
+ * For example, F(x) with interpreted values in entries and in a default branch.
+ * */
 data class KFuncInterpVarsFree<T : KSort>(
     override val decl: KDecl<T>,
     override val entries: List<KFuncInterpEntryVarsFree<T>>,

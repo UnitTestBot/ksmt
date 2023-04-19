@@ -122,6 +122,9 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
 
     private var lastModel: KBitwuzlaModel? = null
 
+    /**
+     * Bitwuzla model is only valid until the next check-sat call.
+     * */
     private fun invalidatePreviousModel() {
         lastModel?.markInvalid()
         lastModel = null
