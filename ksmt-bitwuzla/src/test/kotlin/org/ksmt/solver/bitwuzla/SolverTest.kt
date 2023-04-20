@@ -6,6 +6,7 @@ import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
 import org.ksmt.solver.bitwuzla.bindings.Native
+import org.ksmt.sort.KArray2Sort
 import org.ksmt.sort.KArraySort
 import org.ksmt.sort.KBv32Sort
 import org.ksmt.utils.getValue
@@ -222,4 +223,42 @@ class SolverTest {
 
         assertEquals(KSolverStatus.UNSAT, solver.check())
     }
+
+    @Test
+    fun testArray2Model(): Unit = with(ctx) {
+        val sort = mkArraySort(bv32Sort, bv32Sort, bv32Sort)
+        val a by sort
+        val b by sort
+
+        var expr: KExpr<KArray2Sort<KBv32Sort, KBv32Sort, KBv32Sort>> = a
+        for (i in 0 until 10) {
+            expr = expr.store(mkBv(i), mkBv(i), mkBv(i))
+        }
+
+        solver.assert(b eq expr)
+        assertEquals(KSolverStatus.SAT, solver.check())
+
+        val model = solver.model()
+        val bValue = model.eval(b)
+
+        for (i in 0 until 10) {
+            assertEquals(expr.select(mkBv(i), mkBv(i)), bValue.select(mkBv(i), mkBv(i)))
+        }
+    }
+
+    @Test
+    fun testFunModel(): Unit = with(ctx) {
+        val f = mkFuncDecl("f", bv32Sort, listOf(bv32Sort, bv32Sort))
+
+        for (i in 0 until 10) {
+            solver.assert(f.apply(listOf(mkBv(i), mkBv(i))) eq mkBv(i))
+        }
+
+        assertEquals(KSolverStatus.SAT, solver.check())
+
+        val model = solver.model()
+
+        assertEquals(10, model.interpretation(f)?.entries?.size)
+    }
+
 }

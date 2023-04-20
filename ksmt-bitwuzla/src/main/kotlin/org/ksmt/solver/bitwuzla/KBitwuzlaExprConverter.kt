@@ -741,7 +741,7 @@ open class KBitwuzlaExprConverter(
         ).uncheckedCast()
     }
 
-    private fun <A : KArraySortBase<*>> KContext.mkAnyArraySelect(
+    fun <A : KArraySortBase<*>> KContext.mkAnyArraySelect(
         array: KExpr<A>,
         indices: List<KExpr<KSort>>
     ): KExpr<KSort> = mkAnyArrayOperation(
@@ -790,7 +790,7 @@ open class KBitwuzlaExprConverter(
             { mkArrayNLambda(it, body) }
         )
 
-    private fun KContext.mkAnyArraySort(domain: List<KSort>, range: KSort): KArraySortBase<KSort> =
+    fun KContext.mkAnyArraySort(domain: List<KSort>, range: KSort): KArraySortBase<KSort> =
         mkAnyArrayOperation(
             domain,
             { d0 -> mkArraySort(d0, range) },
