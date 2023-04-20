@@ -2,6 +2,9 @@ package org.ksmt.symfpu
 
 import org.ksmt.KContext
 import org.ksmt.expr.KApp
+import org.ksmt.expr.KArrayConst
+import org.ksmt.expr.KArraySelect
+import org.ksmt.expr.KArrayStore
 import org.ksmt.expr.KBvToFpExpr
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KEqExpr
@@ -37,6 +40,8 @@ import org.ksmt.expr.KFpToIEEEBvExpr
 import org.ksmt.expr.KFpValue
 import org.ksmt.expr.KIteExpr
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
+import org.ksmt.sort.KArraySort
+import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
@@ -47,8 +52,11 @@ import org.ksmt.utils.asExpr
 import org.ksmt.utils.cast
 
 class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
-    private val mapFpToBvImpl = mutableMapOf<KExpr<KFpSort>, UnpackedFp<KFpSort>>()
+    private val mapFpToBvImpl =
+        mutableMapOf<KExpr<KFpSort>, UnpackedFp<KFpSort>>()
     val mapFpToBv: Map<KExpr<KFpSort>, UnpackedFp<KFpSort>> get() = mapFpToBvImpl
+    private val mapFpArrayToBvImpl =
+        mutableMapOf<KConst<KArraySort<*, *>>, KApp<KArraySort<KSort, KSort>, *>>()
     // use this function instead of apply as it may return UnpackedFp wrapper
 
     fun <T : KSort> applyAndGetExpr(expr: KExpr<T>): KExpr<T> {
@@ -64,6 +72,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         }
     }
 
+
     override fun <T : KSort> transform(expr: KEqExpr<T>): KExpr<KBoolSort> = with(ctx) {
         transformExprAfterTransformed(expr, expr.lhs, expr.rhs) { l, r ->
             if (l is UnpackedFp<*> && r is UnpackedFp<*>) {
@@ -77,7 +86,8 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
                     l.normalizedSignificand eq r.normalizedSignificand,
                 )
             } else {
-                mkEq(l, r)
+//                mkEq(packToBvIfUnpacked(l), packToBvIfUnpacked(r)).cast()
+                l eq r
             }
         }
     }
@@ -88,7 +98,8 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
                 val lTyped: UnpackedFp<KFpSort> = l.cast()
                 iteOp(c, lTyped, r.cast()).cast()
             } else {
-                mkIte(c, l, r)
+//                mkIte(c, packToBvIfUnpacked(l), packToBvIfUnpacked(r)).cast()
+                mkIte(c, l, r).cast()
             }
         }
     }
@@ -108,6 +119,44 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
             multiply(left, right, args[0].cast())
         }
     }
+
+    override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KArrayConst<A, R>): KExpr<A> = with(ctx) {
+        transformExprAfterTransformed(expr, expr.value) { value ->
+            if (value is UnpackedFp<*>) {
+                val valueTyped: UnpackedFp<KFpSort> = value.cast()
+                mkArrayConst(expr.sort, packToBv(valueTyped).cast())
+            } else {
+                mkArrayConst(expr.sort, value)
+            }
+        }
+    }
+
+    override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> {
+        return transformExprAfterTransformed(expr, expr.array, expr.index) { array, index ->
+            with(ctx) {
+                val res = array.select(packToBvIfUnpacked(index).cast())
+                val sort = expr.sort
+                if (sort is KFpSort) {
+                    val resTyped: KExpr<KBvSort> = res.cast()
+                    unpackBiased(sort, resTyped).cast()
+                } else {
+                    res
+                }
+            }
+        }
+    }
+
+    private fun <D : KSort> KContext.packToBvIfUnpacked(index: KExpr<D>): KExpr<KSort> =
+        ((index as? UnpackedFp<*>)?.let { packToBv(index) } ?: index).cast()
+
+    override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> {
+        return transformExprAfterTransformed(expr, expr.array, expr.index, expr.value) { array, index, value ->
+            with(ctx) {
+                array.store(packToBvIfUnpacked(index).cast(), packToBvIfUnpacked(value).cast())
+            }
+        }
+    }
+
 
     override fun <Fp : KFpSort> transform(expr: KFpAddExpr<Fp>): KExpr<Fp> = with(ctx) {
         val args1: List<KExpr<Fp>> = expr.args.cast()
@@ -194,13 +243,40 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         }
 
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = with(ctx) {
-        return if (expr.sort is KFpSort) {
-            val asFp: KConst<KFpSort> = expr.cast()
-            mapFpToBvImpl.getOrPut(asFp) {
-                unpackUnbiased(asFp.sort,
-                    mkConst(asFp.decl.name + "!tobv!", mkBvSort(asFp.sort.exponentBits + asFp.sort.significandBits)))
-            }.cast()
-        } else expr
+        return when (expr.sort) {
+            is KFpSort -> {
+                val asFp: KConst<KFpSort> = expr.cast()
+                mapFpToBvImpl.getOrPut(asFp) {
+                    unpackUnbiased(asFp.sort,
+                        mkConst(asFp.decl.name + "!tobv!", mkBvSort(
+                            asFp.sort.exponentBits + asFp.sort.significandBits)))
+                }.cast()
+            }
+
+            is KArraySort<*, *> -> {
+                val asArray: KConst<KArraySort<*, *>> = expr.cast()
+                if (!(asArray.sort.domain is KFpSort || asArray.sort.range is KFpSort)) {
+                    return expr
+                }
+
+                val domain = if (asArray.sort.domain is KFpSort) {
+                    val fpSort: KFpSort = asArray.sort.domain.cast()
+                    mkBvSort(fpSort.exponentBits + fpSort.significandBits)
+                } else asArray.sort.domain
+
+                val range = if (asArray.sort.range is KFpSort) {
+                    val fpSort: KFpSort = asArray.sort.range.cast()
+                    mkBvSort(fpSort.exponentBits + fpSort.significandBits)
+                } else asArray.sort.range
+
+                val resSort = mkArraySort(domain, range)
+                mapFpArrayToBvImpl.getOrPut(asArray) {
+                    mkFreshConst(asArray.decl.name + "!tobvArr!", resSort)
+                }.cast()
+            }
+
+            else -> expr
+        }
     }
 
     override fun <Fp : KFpSort> transformFpValue(expr: KFpValue<Fp>): KExpr<Fp> = with(ctx) {
