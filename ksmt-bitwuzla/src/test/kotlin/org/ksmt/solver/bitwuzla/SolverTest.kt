@@ -239,11 +239,9 @@ class SolverTest {
         assertEquals(KSolverStatus.SAT, solver.check())
 
         val model = solver.model()
-        val bValue = model.eval(b)
 
-        for (i in 0 until 10) {
-            assertEquals(expr.select(mkBv(i), mkBv(i)), bValue.select(mkBv(i), mkBv(i)))
-        }
+        val modelValue = model.eval(b eq expr)
+        assertEquals(trueExpr, modelValue)
     }
 
     @Test
