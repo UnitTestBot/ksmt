@@ -179,6 +179,7 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
     override fun close() {
         nativeContext.close()
         yicesCtx.close()
+        timer.cancel()
     }
 
     private inner class StopSearchTask : TimerTask() {
