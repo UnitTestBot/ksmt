@@ -48,19 +48,6 @@ internal fun KContext.mkArrayAnyLambda(
         else -> mkArrayNLambda(indices, body)
     }
 
-internal fun <D : KArraySortBase<R>, R : KSort> FpToBvTransformer.transformLambda(
-    expr: KArrayLambdaBase<D, R>,
-): KArrayLambdaBase<D, R> =
-    transformExprAfterTransformed(expr, expr.body) { body ->
-        val newDecl = expr.indexVarDeclarations.map {
-            if (it.sort is KFpSort) {
-                mapFpToBvDecl[it] ?: throw IllegalStateException("No mapping for $expr")
-            } else it
-        }
-
-        ctx.mkArrayAnyLambda(newDecl, packToBvIfUnpacked(body)).cast()
-    }.cast()
-
 internal fun <D : KSort> packToBvIfUnpacked(expr: KExpr<D>): KExpr<KSort> = with(expr.ctx) {
     ((expr as? UnpackedFp<*>)?.let { packToBv(expr) } ?: expr).cast()
 }

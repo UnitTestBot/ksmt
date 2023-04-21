@@ -78,6 +78,25 @@ class ArraySymfpuTest {
     }
 
     @Test
+    fun testArrayLambdaUnusedDeclEq(): Unit = with(KContext()) {
+        val sort = mkArraySort(fp32Sort, fp32Sort)
+        val arrayVar by sort
+
+        val bias by fp32Sort
+        val idx by fp32Sort
+        val lambdaBody = mkFpAbsExpr(bias)
+
+        val lambda = mkArrayLambda(idx.decl, lambdaBody)
+
+        SymfpuZ3Solver(this).use { solver ->
+            solver.assert(arrayVar eq lambda)
+            val status = solver.check()
+
+            assertEquals(KSolverStatus.SAT, status)
+        }
+    }
+
+    @Test
     fun testArrayLambdaSelect(): Unit = with(KContext()) {
         val sort = mkArraySort(fp32Sort, fp32Sort)
         val arrayVar by sort

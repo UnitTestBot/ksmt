@@ -11,6 +11,7 @@ import org.ksmt.expr.KArray3Select
 import org.ksmt.expr.KArray3Store
 import org.ksmt.expr.KArrayConst
 import org.ksmt.expr.KArrayLambda
+import org.ksmt.expr.KArrayLambdaBase
 import org.ksmt.expr.KArrayNLambda
 import org.ksmt.expr.KArrayNSelect
 import org.ksmt.expr.KArrayNStore
@@ -73,7 +74,6 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
 
     private val mapFpToBvDeclImpl =
         mutableMapOf<KDecl<KFpSort>, KDecl<KBvSort>>()
-    val mapFpToBvDecl: MutableMap<KDecl<KFpSort>, KDecl<KBvSort>> get() = mapFpToBvDeclImpl
 
     private val mapFpArrayToBvImpl =
         mutableMapOf<KConst<KArraySort<*, *>>, KApp<KArraySort<KSort, KSort>, *>>()
@@ -193,6 +193,24 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
                 arraySelectUnpacked(expr.sort, mkArrayNSelect(array, indices.map(::packToBvIfUnpacked)))
             }
         }
+
+    private fun <D : KArraySortBase<R>, R : KSort> FpToBvTransformer.transformLambda(
+        expr: KArrayLambdaBase<D, R>,
+    ): KArrayLambdaBase<D, R> = with(ctx) {
+        transformExprAfterTransformed(expr, expr.body) { body ->
+            val newDecl = expr.indexVarDeclarations.map {
+                if (it.sort is KFpSort) {
+                    val asFp: KDecl<KFpSort> = it.cast()
+                    mapFpToBvDeclImpl.getOrPut(asFp) {
+                        mkConst(asFp.name + "!tobv!", mkBvSort(
+                            asFp.sort.exponentBits + asFp.sort.significandBits)).decl
+                    }
+                } else it
+            }
+
+            ctx.mkArrayAnyLambda(newDecl, packToBvIfUnpacked(body)).cast()
+        }.cast()
+    }
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> =
         transformLambda(expr)
@@ -341,7 +359,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         }
 
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = with(ctx) {
-        return when (expr.sort) {
+        when (expr.sort) {
             is KFpSort -> {
                 val asFp: KConst<KFpSort> = expr.cast()
                 mapFpToUnpackedFpImpl.getOrPut(asFp) {
