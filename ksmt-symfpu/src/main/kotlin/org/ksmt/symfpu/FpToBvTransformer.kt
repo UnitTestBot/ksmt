@@ -354,7 +354,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
                 }.cast()
             }
 
-            is KArraySort<*, *> -> {
+            is KArraySortBase<*> -> {
                 val asArray: KConst<KArraySort<*, *>> = expr.cast()
                 if (!(asArray.sort.domain is KFpSort || asArray.sort.range is KFpSort)) {
                     return expr
