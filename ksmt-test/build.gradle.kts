@@ -16,6 +16,7 @@ dependencies {
     implementation(project(":ksmt-runner"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     implementation(kotlin("reflect"))
+    implementation(project(mapOf("path" to ":ksmt-symfpu")))
 
     testImplementation("org.junit.jupiter", "junit-jupiter-params", "5.8.2")
 

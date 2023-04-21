@@ -27,7 +27,7 @@ open class SymfpuSolver<Config : KSolverConfiguration>(val solver: KSolver<Confi
         solver.configure(configurator)
     }
 
-    override fun assert(expr: KExpr<KBoolSort>) = solver.assert(transformer.apply(expr)) // AndGetExpr
+    override fun assert(expr: KExpr<KBoolSort>) = solver.assert(transformer.applyAndGetExpr(expr)) // AndGetExpr
 
     override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) =
         solver.assertAndTrack(transformer.applyAndGetExpr(expr), trackVar)
