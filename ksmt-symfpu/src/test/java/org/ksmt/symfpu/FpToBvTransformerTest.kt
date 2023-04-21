@@ -419,7 +419,6 @@ class FpToBvTransformerTest {
         )
     }
 
-    private fun KContext.defaultRounding() = mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven)
 
     @Test
     fun testFpToFpUpExpr() = with(createContext()) {
@@ -473,6 +472,7 @@ class FpToBvTransformerTest {
             mapOf("a" to a),
         )
     }
+
 
 
     @Test
@@ -529,7 +529,7 @@ class FpToBvTransformerTest {
         val applied = transformer.apply(exprToTransform)
         val transformedExpr: KExpr<T> = ((applied as? UnpackedFp<*>)?.toFp() ?: applied).cast()
 
-        val testTransformer = TestTransformerUseBvs(this, transformer.mapFpToBv)
+        val testTransformer = TestTransformerUseBvs(this, transformer.mapFpToUnpackedFp)
         val toCompare = testTransformer.apply(exprToTransform)
 
 
@@ -551,7 +551,7 @@ class FpToBvTransformerTest {
             println("transformed: ${unpackedString(transformed, model)}")
             println("exprToTrans: ${unpackedString(baseExpr, model)}")
             for ((name, expr) in printVars) {
-                val ufp = transformer.mapFpToBv[expr.cast()]
+                val ufp = transformer.mapFpToUnpackedFp[expr.cast()]
                 val evalUnpacked = unpackedString(ufp ?: expr, model)
                 println("$name :: $evalUnpacked")
             }
@@ -577,7 +577,7 @@ class FpToBvTransformerTest {
         }
     }
 
-    private fun createContext() = KContext(printerParams = PrinterParams(BvValuePrintMode.BINARY))
+
 
     private fun KContext.unpackedString(value: KExpr<*>, model: KModel) = if (value.sort is KFpSort) {
         val sb = StringBuilder()
@@ -633,14 +633,13 @@ class FpToBvTransformerTest {
 }
 
 
-fun <T : KFpSort> KContext.fromPackedBv(it: KExpr<KBvSort>, sort: T): KExpr<T> {
-    return unpackBiased(sort, it).toFp()
-}
-
-class TestTransformerUseBvs(ctx: KContext, private val mapFpToBv: Map<KExpr<KFpSort>, UnpackedFp<KFpSort>>) :
+internal class TestTransformerUseBvs(ctx: KContext, private val mapFpToBv: Map<KConst<KFpSort>, UnpackedFp<KFpSort>>) :
     KNonRecursiveTransformer(ctx) {
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = if (expr.sort is KFpSort) {
         val asFp: KConst<KFpSort> = expr.cast()
         mapFpToBv[asFp]!!.toFp().cast()
     } else expr
 }
+
+internal fun createContext() = KContext(printerParams = PrinterParams(BvValuePrintMode.BINARY))
+internal fun KContext.defaultRounding() = mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven)

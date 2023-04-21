@@ -27,7 +27,7 @@ open class SymfpuSolver<Config : KSolverConfiguration>(val solver: KSolver<Confi
         solver.configure(configurator)
     }
 
-    override fun assert(expr: KExpr<KBoolSort>) = solver.assert(transformer.applyAndGetExpr(expr))
+    override fun assert(expr: KExpr<KBoolSort>) = solver.assert(transformer.apply(expr)) // AndGetExpr
 
     override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) =
         solver.assertAndTrack(transformer.applyAndGetExpr(expr), trackVar)
@@ -52,7 +52,7 @@ open class SymfpuSolver<Config : KSolverConfiguration>(val solver: KSolver<Confi
 
     override fun close() = solver.close()
 
-    inner class Model(val kModel: KModel) : KModel {
+    inner class Model(private val kModel: KModel) : KModel {
         override val declarations: Set<KDecl<*>>
             get() = kModel.declarations
 
@@ -60,11 +60,13 @@ open class SymfpuSolver<Config : KSolverConfiguration>(val solver: KSolver<Confi
             get() = kModel.uninterpretedSorts
 
         override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> = with(expr.ctx) {
+            ctx.ensureContextMatch(expr)
+            println("is complete = $isComplete")
             val eval = kModel.eval(transformer.applyAndGetExpr(expr), isComplete)
             val sort = expr.sort
             if (sort is KFpSort) {
                 val bv: KExpr<KBvSort> = eval.cast()
-                return unpackBiased(sort, bv).toFp().cast()
+                return kModel.eval(unpackBiased(sort, bv).toFp()).cast() // todo doesnt always work for FP
             } else eval
         }
 
@@ -77,7 +79,7 @@ open class SymfpuSolver<Config : KSolverConfiguration>(val solver: KSolver<Confi
         }
 
         override fun detach(): KModel {
-            return kModel.detach()
+            return Model(kModel.detach())
         }
     }
 }
