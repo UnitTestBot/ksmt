@@ -6,12 +6,17 @@ import org.ksmt.cache.structurallyEqual
 import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
+import org.ksmt.expr.KAndExpr
 import org.ksmt.expr.KArrayConst
+import org.ksmt.expr.KArraySelectBase
 import org.ksmt.expr.KBitVec32Value
 import org.ksmt.expr.KBitVecValue
+import org.ksmt.expr.KConst
+import org.ksmt.expr.KEqExpr
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KFpRoundingMode
 import org.ksmt.expr.KInterpretedValue
+import org.ksmt.expr.KIteExpr
 import org.ksmt.expr.printer.ExpressionPrinter
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
 import org.ksmt.expr.transformer.KTransformerBase
@@ -671,11 +676,67 @@ open class KBitwuzlaExprConverter(
 
             BitwuzlaKind.BITWUZLA_KIND_LAMBDA -> {
                 val convertedBody = bodyConverter.convertFromNative<KSort>(body)
-                ctx.mkAnyArrayLambda(convertedBounds, convertedBody)
+                ctx.convertArrayLambdaSimplified(convertedBounds, convertedBody)
             }
 
             else -> error("Unexpected quantifier: $kind")
         }
+    }
+
+    private fun KContext.convertArrayLambdaSimplified(
+        bounds: List<KDecl<*>>,
+        body: KExpr<*>
+    ): KExpr<*> {
+        if (body is KInterpretedValue<*>) {
+            val sort = mkAnyArraySort(bounds.map { it.sort }, body.sort)
+            return mkArrayConst(sort, body.uncheckedCast())
+        }
+
+        if (body is KIteExpr<*>) {
+            tryRecognizeArrayStore(body, bounds)?.let { return it }
+        }
+
+        return mkAnyArrayLambda(bounds, body)
+    }
+
+    /**
+     * In a case of multidimensional array store expressions in model are represented as:
+     * (lambda (i0 ... in) (ite (and (= i0 c0) .. (= in cn)) value (select array i0...in)))
+     * We try to recognize this pattern and rewrite such lambda expressions as normal
+     * array stores.
+     * */
+    private fun KContext.tryRecognizeArrayStore(
+        body: KIteExpr<*>,
+        bounds: List<KDecl<*>>
+    ): KExpr<*>? {
+        val storedValue = body.trueBranch as? KInterpretedValue<*> ?: return null
+        val conditionArgs = (body.condition as? KAndExpr)?.args ?: return null
+
+        val boundConsts = bounds.map { it.apply(emptyList()) }
+
+        val indexBindings = conditionArgs.associate {
+            val binding = it as? KEqExpr<*> ?: return null
+            val lhs = binding.lhs
+            val rhs = binding.rhs
+
+            when {
+                lhs is KInterpretedValue<*> && rhs is KConst<*> -> rhs to lhs
+                lhs is KConst<*> && rhs is KInterpretedValue<*> -> lhs to rhs
+                else -> return null
+            }
+        }
+
+        val indices = boundConsts.map { indexBindings[it] ?: return null }
+
+        val nestedValue = body.falseBranch
+        if (nestedValue is KArraySelectBase<*, *>) {
+            if (boundConsts != nestedValue.indices) return null
+
+            val nestedArray = nestedValue.array
+            return mkAnyArrayStore(nestedArray, indices.uncheckedCast(), storedValue.uncheckedCast())
+        }
+
+        return null
     }
 
     fun convertEqExpr(lhs: KExpr<KSort>, rhs: KExpr<KSort>): KExpr<KBoolSort> = with(ctx) {
@@ -741,7 +802,7 @@ open class KBitwuzlaExprConverter(
         ).uncheckedCast()
     }
 
-    private fun <A : KArraySortBase<*>> KContext.mkAnyArraySelect(
+    fun <A : KArraySortBase<*>> KContext.mkAnyArraySelect(
         array: KExpr<A>,
         indices: List<KExpr<KSort>>
     ): KExpr<KSort> = mkAnyArrayOperation(
@@ -790,7 +851,7 @@ open class KBitwuzlaExprConverter(
             { mkArrayNLambda(it, body) }
         )
 
-    private fun KContext.mkAnyArraySort(domain: List<KSort>, range: KSort): KArraySortBase<KSort> =
+    fun KContext.mkAnyArraySort(domain: List<KSort>, range: KSort): KArraySortBase<KSort> =
         mkAnyArrayOperation(
             domain,
             { d0 -> mkArraySort(d0, range) },
