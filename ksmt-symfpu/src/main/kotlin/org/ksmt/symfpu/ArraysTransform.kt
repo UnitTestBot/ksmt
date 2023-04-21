@@ -2,6 +2,7 @@ package org.ksmt.symfpu
 
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
+import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KArrayLambdaBase
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KArray2Sort
@@ -56,17 +57,28 @@ class ArraysTransform(val ctx: KContext) {
 
     fun transformDeclList(
         decls: List<KDecl<*>>,
-    ): List<KDecl<*>> = with(ctx) {
-        decls.map {
-            if (it.sort is KFpSort) {
-                val asFp: KDecl<KFpSort> = it.cast()
-                mapFpToBvDeclImpl.getOrPut(asFp) {
-                    mkConst(asFp.name + "!tobv!", mkBvSort(
-                        asFp.sort.exponentBits + asFp.sort.significandBits)).decl
-                }
-            } else it
-        }
+    ): List<KDecl<*>> = decls.map {
+        transformDecl(it)
     }
+
+
+    fun transformDecl(it: KDecl<*>) = with(ctx) {
+        val sort = it.sort
+        if (sort is KFpSort) {
+            val asFp: KDecl<KFpSort> = it.cast()
+            mapFpToBvDeclImpl.getOrPut(asFp) {
+                mkConst(asFp.name + "!tobv!", mkBvSort(
+                    sort.exponentBits + sort.significandBits)).decl
+            }
+        } else if (it is KFuncDecl) {
+            mkFreshFuncDecl(it.name, it.sort.transformFpToBvSort(), it.argSorts.fpToBvSorts())
+        } else it
+    }
+
+    private fun List<KSort>.fpToBvSorts() = map { it.transformFpToBvSort() }
+
+    private fun KSort.transformFpToBvSort() = if (this is KFpSort) ctx.mkBvSort(
+        exponentBits + significandBits) else this
 
     fun <R : KSort> arraySelectUnpacked(sort: R, res: KExpr<R>): KExpr<R> = with(ctx) {
         if (sort is KFpSort) {

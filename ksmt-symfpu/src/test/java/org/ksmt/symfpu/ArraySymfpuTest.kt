@@ -8,6 +8,7 @@ import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.solver.z3.KZ3SolverConfiguration
 import org.ksmt.utils.getValue
+import org.ksmt.utils.mkConst
 import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.seconds
 
@@ -120,6 +121,22 @@ class ArraySymfpuTest {
             solver.assert(lambdaSelectValue neq selectValue)
 
             assertEquals(KSolverStatus.SAT, solver.check()) // due to fp rounding
+        }
+    }
+
+
+    @Test
+    fun testUniversal(): Unit = with(KContext()) {
+        val b = mkFuncDecl("b", boolSort, listOf(fp32Sort))
+        val c = fp32Sort.mkConst("c")
+        SymfpuZ3Solver(this).use { solver ->
+            solver.assert(
+                mkUniversalQuantifier(
+                    !(mkFpGreaterExpr(c, 0.0f.expr) and !(c eq 17.0f.expr)) or b.apply(listOf(c)), listOf(c.decl)
+                )
+            )
+
+            assertEquals(KSolverStatus.SAT, solver.check())
         }
     }
 

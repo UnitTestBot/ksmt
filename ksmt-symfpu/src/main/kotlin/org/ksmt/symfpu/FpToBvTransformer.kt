@@ -50,6 +50,7 @@ import org.ksmt.expr.KFpToBvExpr
 import org.ksmt.expr.KFpToFpExpr
 import org.ksmt.expr.KFpToIEEEBvExpr
 import org.ksmt.expr.KFpValue
+import org.ksmt.expr.KFunctionApp
 import org.ksmt.expr.KIteExpr
 import org.ksmt.expr.KUniversalQuantifier
 import org.ksmt.expr.transformer.KNonRecursiveTransformer
@@ -360,6 +361,14 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     override fun <Fp : KFpSort> transform(expr: KFpRoundToIntegralExpr<Fp>): KExpr<Fp> =
         transformExprAfterTransformed(expr, expr.roundingMode, expr.value) { roundingMode, value ->
             roundToIntegral(roundingMode, (value as UnpackedFp<Fp>))
+        }
+
+    // function transformers
+    override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> =
+        transformExprAfterTransformed(expr, expr.args) { args ->
+            val decl = arraysTransform.transformDecl(expr.decl)
+            val argsTransformed = args.map(::packToBvIfUnpacked)
+            decl.apply(argsTransformed).cast()
         }
 
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = with(ctx) {
