@@ -24,17 +24,18 @@ class ArraySymfpuTest {
         val x by fp32Sort
         val y by fp32Sort
         val expr = (array.select(index) eq x) and (array.store(index, y) eq array)
+        KZ3Solver(this).use { z3Solver->
         SymfpuZ3Solver(this).use { solver ->
             solver.assert(expr)
-            // check assertions satisfiability with timeout
-            println("checking satisfiability...")
+            z3Solver.assert(expr)
             val status = solver.check(timeout = 200.seconds)
+            val z3status = z3Solver.check(timeout = 200.seconds)
             assertEquals(KSolverStatus.SAT, status)
-            println(status)
+            assertEquals(KSolverStatus.SAT, z3status)
 
             val model = solver.model()
-            println("x= ${model.eval(x)}")
-            println("y= ${model.eval(y)}")
+            println("array= ${model.eval(array)}")
+        }
         }
     }
 

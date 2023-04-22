@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import org.ksmt.KContext
+import org.ksmt.decl.KDecl
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KExpr
@@ -551,7 +552,7 @@ class FpToBvTransformerTest {
             println("transformed: ${unpackedString(transformed, model)}")
             println("exprToTrans: ${unpackedString(baseExpr, model)}")
             for ((name, expr) in printVars) {
-                val ufp = transformer.mapFpToUnpackedFp[expr.cast()]
+                val ufp = transformer.mapFpToUnpackedFp[expr.decl]
                 val evalUnpacked = unpackedString(ufp ?: expr, model)
                 println("$name :: $evalUnpacked")
             }
@@ -633,11 +634,11 @@ class FpToBvTransformerTest {
 }
 
 
-internal class TestTransformerUseBvs(ctx: KContext, private val mapFpToBv: Map<KConst<KFpSort>, UnpackedFp<KFpSort>>) :
+internal class TestTransformerUseBvs(ctx: KContext, private val mapFpToBv: Map<KDecl<KFpSort>, UnpackedFp<KFpSort>>) :
     KNonRecursiveTransformer(ctx) {
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = if (expr.sort is KFpSort) {
         val asFp: KConst<KFpSort> = expr.cast()
-        mapFpToBv[asFp]!!.toFp().cast()
+        mapFpToBv[asFp.decl]!!.toFp().cast()
     } else expr
 }
 

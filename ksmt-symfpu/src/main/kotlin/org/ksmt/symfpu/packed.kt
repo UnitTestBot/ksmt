@@ -2,6 +2,8 @@ package org.ksmt.symfpu
 
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.rewrite.simplify.simplifyBvExtractExpr
+import org.ksmt.expr.rewrite.simplify.simplifyFpFromBvExpr
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
@@ -141,19 +143,18 @@ fun <Fp : KFpSort> KContext.packToBv(uf: UnpackedFp<Fp>): KExpr<KBvSort> {
     return mkBvConcatExpr(packedSign, packedExp, packedSig)
 }
 
-fun <Fp : KFpSort> KContext.pack(uf: UnpackedFp<Fp>): KExpr<Fp> {
-    val packed = packToBv(uf)
-    check(packed.sort.sizeBits == uf.sort.exponentBits + uf.sort.significandBits)
+fun <Fp : KFpSort> KContext.pack(packed: KExpr<KBvSort>, sort: Fp): KExpr<Fp> {
+    check(packed.sort.sizeBits == sort.exponentBits + sort.significandBits)
 
     val pWidth = packed.sort.sizeBits.toInt()
-    val exWidth = uf.sort.exponentBits.toInt()
+    val exWidth = sort.exponentBits.toInt()
 
     // Extract
-    val packedSignificand = mkBvExtractExpr(pWidth - exWidth - 2, 0, packed)
-    val packedExponent = mkBvExtractExpr(pWidth - 2, pWidth - exWidth - 1, packed)
-    val sign = (mkBvExtractExpr(pWidth - 1, pWidth - 1, packed))
+    val packedSignificand = simplifyBvExtractExpr(pWidth - exWidth - 2, 0, packed)
+    val packedExponent = simplifyBvExtractExpr(pWidth - 2, pWidth - exWidth - 1, packed)
+    val sign = simplifyBvExtractExpr(pWidth - 1, pWidth - 1, packed)
 
-    return mkFpFromBvExpr(sign.cast(), packedExponent, packedSignificand)
+    return simplifyFpFromBvExpr(sign.cast(), packedExponent, packedSignificand)
 }
 
 fun KExpr<KBvSort>.matchWidthUnsigned(expr: KExpr<KBvSort>): KExpr<KBvSort> {

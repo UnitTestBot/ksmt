@@ -207,7 +207,7 @@ class UnpackedFp<Fp : KFpSort> private constructor(
     }
 
     // for tests
-    internal fun toFp() = ctx.pack(this)
+    internal fun toFp() = ctx.pack(ctx.packToBv(this), sort)
 
     // Moves the leading 1 up to the correct position, adjusting the
     // exponent as required.

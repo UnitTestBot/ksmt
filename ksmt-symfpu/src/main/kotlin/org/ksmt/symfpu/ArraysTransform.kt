@@ -3,7 +3,9 @@ package org.ksmt.symfpu
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
+import org.ksmt.expr.KApp
 import org.ksmt.expr.KArrayLambdaBase
+import org.ksmt.expr.KConst
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KArray2Sort
 import org.ksmt.sort.KArray3Sort
@@ -16,24 +18,9 @@ import org.ksmt.utils.cast
 
 class ArraysTransform(val ctx: KContext) {
 
-    val mapFpToBvDeclImpl = mutableMapOf<KDecl<KFpSort>, KDecl<KBvSort>>()
-
-    fun mkArrayAnySort(domain: List<KSort>, range: KSort): KArraySortBase<KSort> = with(ctx) {
-        when (domain.size) {
-            KArraySort.DOMAIN_SIZE -> mkArraySort(domain.single(), range)
-            KArray2Sort.DOMAIN_SIZE -> {
-                val (d0, d1) = domain
-                mkArraySort(d0, d1, range)
-            }
-
-            KArray3Sort.DOMAIN_SIZE -> {
-                val (d0, d1, d2) = domain
-                mkArraySort(d0, d1, d2, range)
-            }
-
-            else -> mkArrayNSort(domain, range)
-        }
-    }
+    val mapFpToBvDeclImpl = mutableMapOf<KDecl<KFpSort>, KConst<KBvSort>>()
+    val mapFpArrayToBvImpl =
+        mutableMapOf<KDecl<KArraySortBase<*>>, KApp<KArraySortBase<KSort>, *>>()
 
     fun mkArrayAnyLambda(
         indices: List<KDecl<*>>,
@@ -68,8 +55,8 @@ class ArraysTransform(val ctx: KContext) {
             val asFp: KDecl<KFpSort> = it.cast()
             mapFpToBvDeclImpl.getOrPut(asFp) {
                 mkConst(asFp.name + "!tobv!", mkBvSort(
-                    sort.exponentBits + sort.significandBits)).decl
-            }
+                    sort.exponentBits + sort.significandBits)).cast()
+            }.decl
         } else if (it is KFuncDecl) {
             mkFreshFuncDecl(it.name, it.sort.transformFpToBvSort(), it.argSorts.fpToBvSorts())
         } else it
@@ -92,6 +79,76 @@ class ArraysTransform(val ctx: KContext) {
     companion object {
         internal fun <D : KSort> packToBvIfUnpacked(expr: KExpr<D>): KExpr<KSort> = with(expr.ctx) {
             ((expr as? UnpackedFp<*>)?.let { packToBv(expr) } ?: expr).cast()
+        }
+
+        fun KContext.mkAnyArraySort(domain: List<KSort>, range: KSort): KArraySortBase<KSort> =
+            mkAnyArrayOperation(
+                domain,
+                { d0 -> mkArraySort(d0, range) },
+                { d0, d1 -> mkArraySort(d0, d1, range) },
+                { d0, d1, d2 -> mkArraySort(d0, d1, d2, range) },
+                { mkArrayNSort(it, range) }
+            )
+
+        fun <A : KArraySortBase<*>> KContext.mkAnyArraySelect(
+            array: KExpr<A>,
+            indices: List<KExpr<KSort>>
+        ): KExpr<KSort> {
+            val domain = array.sort.domainSorts
+            return when (domain.size) {
+                KArraySort.DOMAIN_SIZE -> mkArraySelect(array.cast(), indices.single())
+                KArray2Sort.DOMAIN_SIZE -> mkArraySelect(array.cast(), indices.first(), indices.last())
+                KArray3Sort.DOMAIN_SIZE -> {
+                    val (d0, d1, d2) = indices
+                    mkArraySelect(array.cast(), d0, d1, d2)
+                }
+
+                else -> mkArrayNSelect(array.cast(), indices)
+            }
+        }
+
+        fun KContext.mkAnyArrayLambda(domain: List<KDecl<*>>, body: KExpr<*>) =
+            mkAnyArrayOperation(
+                domain,
+                { d0 -> mkArrayLambda(d0, body) },
+                { d0, d1 -> mkArrayLambda(d0, d1, body) },
+                { d0, d1, d2 -> mkArrayLambda(d0, d1, d2, body) },
+                { mkArrayNLambda(it, body) }
+            )
+
+        private inline fun <T, R> mkAnyArrayOperation(
+            domain: List<T>,
+            array1: (T) -> R,
+            array2: (T, T) -> R,
+            array3: (T, T, T) -> R,
+            arrayN: (List<T>) -> R,
+        ): R = when (domain.size) {
+            KArraySort.DOMAIN_SIZE -> array1(domain.single())
+            KArray2Sort.DOMAIN_SIZE -> array2(domain.first(), domain.last())
+            KArray3Sort.DOMAIN_SIZE -> {
+                val (d0, d1, d2) = domain
+                array3(d0, d1, d2)
+            }
+
+            else -> arrayN(domain)
+        }
+
+
+        fun transformedArraySort(
+            expr: KExpr<KArraySortBase<*>>,
+        ): KArraySortBase<KSort> = with(expr.ctx) {
+            val domains = expr.sort.domainSorts.map {
+                if (it is KFpSort) {
+                    mkBvSort(it.exponentBits + it.significandBits)
+                } else it
+            }
+
+            val prevRange = expr.sort.range
+            val range = if (prevRange is KFpSort) {
+                mkBvSort(prevRange.exponentBits + prevRange.significandBits)
+            } else prevRange
+
+            return mkAnyArraySort(domains, range)
         }
     }
 }

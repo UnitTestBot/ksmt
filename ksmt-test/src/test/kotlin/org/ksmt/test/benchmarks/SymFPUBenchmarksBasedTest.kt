@@ -27,6 +27,15 @@ class SymFPUBenchmarksBasedTest : BenchmarksBasedTest() {
             createSolver(ctx, SymfpuZ3Solver::class)
         }
     }
+    @ParameterizedTest(name = "{0}")
+    @Execution(ExecutionMode.CONCURRENT)
+    @MethodSource("symfpuTestData")
+    fun testModelZ3Transformed(name: String, samplePath: Path) = testModelConversion(name, samplePath) { ctx ->
+        solverManager.run {
+            registerSolver(SymfpuZ3Solver::class, KZ3SolverUniversalConfiguration::class)
+            createSolver(ctx, SymfpuZ3Solver::class)
+        }
+    }
 
 
     @Execution(ExecutionMode.CONCURRENT)
@@ -70,20 +79,12 @@ class SymFPUBenchmarksBasedTest : BenchmarksBasedTest() {
         @JvmStatic
         fun symfpuTestData(): List<BenchmarkTestArguments> {
             println("Running benchmarks for SymFPU")
-            return testData.skipUnsupportedTheories().filter {
-                ("QF" in it.name) and ("FP" in it.name) and ("ABV" in it.name)
+            return testData.filter {
+                "FP" in it.name && "QF" in it.name
             }.ensureNotEmpty().apply {
                 println("Running $size benchmarks")
             }
         }
-
-
-        private fun List<BenchmarkTestArguments>.skipUnsupportedTheories() = filterNot {
-//            "LIA" in it.name || "LRA" in it.name || "LIRA" in it.name
-            false
-        }
-//        .filterNot { "NIA" in it.name || "NRA" in it.name || "NIRA" in it.name }
-
     }
 }
 
