@@ -3,6 +3,7 @@ package org.ksmt.symfpu
 import org.ksmt.KContext
 import org.ksmt.expr.KExpr
 import org.ksmt.sort.KBoolSort
+import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.symfpu.UnpackedFp.Companion.iteOp
 
@@ -74,14 +75,20 @@ private fun <Fp : KFpSort> KContext.lessHelper(
     // Both zero are equal
     val eitherZero = left.isZero or right.isZero
 
+    val exponentLessExpr = { a: KExpr<KBvSort>, b: KExpr<KBvSort> ->
+        if (packedExists)
+            mkBvUnsignedLessExpr(a, b)
+        else
+            mkBvSignedLessExpr(a, b)
+    }
     // Normal and subnormal
     val negativeLessThanPositive = left.isNegative and !right.isNegative
-    val positiveCase = !left.isNegative and !right.isNegative and (mkBvSignedLessExpr(
+    val positiveCase = !left.isNegative and !right.isNegative and (exponentLessExpr(
         left.getExponent(packedExists), right.getExponent(packedExists)
     ) or (left.getExponent(packedExists) eq right.getExponent(packedExists) and positiveCaseSignificandComparison))
 
 
-    val negativeCase = left.isNegative and right.isNegative and (mkBvSignedLessExpr(
+    val negativeCase = left.isNegative and right.isNegative and (exponentLessExpr(
         right.getExponent(packedExists), left.getExponent(packedExists)
     ) or (left.getExponent(packedExists) eq right.getExponent(packedExists) and negativeCaseSignificandComparison))
 
@@ -116,8 +123,10 @@ internal fun <Fp : KFpSort> KContext.equal(
             and (left.unbiasedExponent eq right.unbiasedExponent))))
 
     if (left.packedBv is UnpackedFp.PackedFp.Exists && right.packedBv is UnpackedFp.PackedFp.Exists) {
+        println("packed bv path")
         return neitherNan and (bothZero or (left.packedBv eq right.packedBv))
     }
+    println("not .. packed bv path")
 
     return flagsAndExponent and (left.normalizedSignificand eq right.normalizedSignificand)
 }

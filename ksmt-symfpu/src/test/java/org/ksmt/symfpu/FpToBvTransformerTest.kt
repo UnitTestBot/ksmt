@@ -9,6 +9,7 @@ import org.ksmt.decl.KDecl
 import org.ksmt.expr.KApp
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KExpr
+import org.ksmt.expr.KFp128Value
 import org.ksmt.expr.KFp16Value
 import org.ksmt.expr.KFp32Value
 import org.ksmt.expr.KFpRoundingMode
@@ -22,7 +23,6 @@ import org.ksmt.solver.KSolverStatus
 import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
 import org.ksmt.solver.z3.KZ3Solver
 import org.ksmt.sort.KBoolSort
-import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFp128Sort
 import org.ksmt.sort.KFp32Sort
 import org.ksmt.sort.KFp64Sort
@@ -579,13 +579,12 @@ class FpToBvTransformerTest {
     }
 
 
-
     private fun KContext.unpackedString(value: KExpr<*>, model: KModel) = if (value.sort is KFpSort) {
         val sb = StringBuilder()
 //        val fpExpr: KExpr<KFpSort> = value.cast()
 //        val fpValue = model.eval(fpExpr) as KFpValue
         val fpExpr: KExpr<KFpSort> by lazy { value.uncheckedCast() }
-        val ufp = if (value is UnpackedFp<*>) value else unpackBiased(fpExpr.sort, mkFpToIEEEBvExpr(fpExpr.cast()))
+        val ufp = if (value is UnpackedFp<*>) value else unpack(fpExpr.sort, mkFpToIEEEBvExpr(fpExpr.cast()))
         val fpValue = model.eval(ufp.toFp()) as KFpValue
         with(ufp) {
             sb.append("uFP sign ")
@@ -623,7 +622,7 @@ class FpToBvTransformerTest {
             model.eval(packedSignificand).print(sb)
             sb.append("\nbv: ")
             model.eval(packedFloat).print(sb)
-            sb.append(" \nactually ${(fpValue as? KFp32Value)?.value ?: (fpValue as? KFp16Value)?.value}}")
+            sb.append(" \nactually ${(fpValue as? KFp32Value)?.value ?: (fpValue as? KFp16Value)?.value ?: (fpValue as? KFp128Value)}))}}")
 //            val unpacked = unpack(fp32Sort, packedFloat)
 // vs my ${(model.eval(unpacked.toFp()) as? KFp32Value)?.value}
             sb.toString()

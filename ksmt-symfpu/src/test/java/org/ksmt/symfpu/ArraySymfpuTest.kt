@@ -184,7 +184,6 @@ class ArraySymfpuTest {
 
                 val model = solver.model()
                 val ev = model.eval(lambda)
-                val model3 = z3.model()
                 println("symfpu:\n ${ev} ${ev.sort}")
 //            println("z3: ${model3.eval(lambda)}")
             }
@@ -252,21 +251,15 @@ class ArraySymfpuTest {
     fun testFromBench() = with(createContext()) {
         val name = "QF_FP_abs-has-solution-10870.smt2"
         val path = Path.of("/Users/Mark.Vavilov/ksmt/ksmt-test/build/resources/test/testData").resolve(name)
-//        val path = Path.of("/Users/Mark.Vavilov/ksmt/ksmt-test/build/resources/test/testData/QF_ABVFP_filter2_iterated_true-unreach-call.c_0.smt2")
-//        val path = Path.of("/Users/Mark.Vavilov/ksmt/ksmt-test/build/resources/test/testData/QF_FP_abs-has-solution-10879.smt2")
         val content = Files.readString(path)
         val assertionsAll = KZ3SMTLibParser(this).parse(content)
-//        [2] as KAndNaryExpr
-//        val assertions = assertionsAll.args.subList(0,1)
         SymfpuZ3Solver(this).use { solver ->
-            println(assertionsAll)
             assertionsAll.forEach { solver.assert(it) }
             solver.check()
             val model = solver.model()
-//            val assertions = (assertionsAll[2] as KAndNaryExpr).args
 
-            val res = assertionsAll.map { model.eval(it) }
-            println("results: ${res}")
+            val res = assertionsAll.map { model.eval(it, true) }
+            println(res)
             assert(res.all { it == trueExpr })
         }
     }

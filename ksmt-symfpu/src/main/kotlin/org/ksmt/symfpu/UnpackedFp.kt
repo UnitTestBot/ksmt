@@ -95,10 +95,7 @@ class UnpackedFp<Fp : KFpSort> private constructor(
         object None : PackedFp()
 
         fun toIEEE() = if (this is Exists) {
-            with(sign.ctx) {
-                val bias = mkBv(sort.exponentShiftSize(), exponent.sort.sizeBits)
-                mkBvConcatExpr(boolToBv(sign), mkBvAddExpr(exponent, bias), significand)
-            }
+            with(sign.ctx) { mkBvConcatExpr(boolToBv(sign), exponent, significand) }
         } else null
 
         fun setSign(sign: KExpr<KBoolSort>) = when (this) {
@@ -128,7 +125,7 @@ class UnpackedFp<Fp : KFpSort> private constructor(
             fun KContext.makeBvNaN(sort: KFpSort): Exists {
                 return Exists(
                     sign = falseExpr,
-                    exponent = FpUtils.unbiasFpExponent(fpNaNExponentBiased(sort), sort.exponentBits).cast(),
+                    exponent = fpNaNExponentBiased(sort).cast(),
                     significand = fpNaNSignificand(sort).cast()
                 )
             }
@@ -136,7 +133,7 @@ class UnpackedFp<Fp : KFpSort> private constructor(
             fun KContext.makeBvInf(sort: KFpSort, sign: KExpr<KBoolSort>): Exists {
                 return Exists(
                     sign = sign,
-                    exponent = FpUtils.unbiasFpExponent(fpInfExponentBiased(sort), sort.exponentBits).cast(),
+                    exponent = fpInfExponentBiased(sort).cast(),
                     significand = fpInfSignificand(sort).cast()
                 )
             }
@@ -144,23 +141,13 @@ class UnpackedFp<Fp : KFpSort> private constructor(
             fun KContext.makeBvZero(sort: KFpSort, sign: KExpr<KBoolSort>): Exists {
                 return Exists(
                     sign = sign,
-                    exponent = FpUtils.unbiasFpExponent(fpZeroExponentBiased(sort), sort.exponentBits).cast(),
+                    exponent = fpZeroExponentBiased(sort).cast(),
                     significand = fpZeroSignificand(sort).cast()
                 )
             }
         }
     }
 
-//    private val expWidth = sort.exponentBits.toInt()
-//    private val packedSignificand =
-//        packedBv?.let { ctx.mkBvExtractExpr(packedBv.sort.sizeBits.toInt() - expWidth - 2, 0, packedBv) }
-//    private val packedExponent = packedBv?.let {
-//        ctx.mkBvExtractExpr(
-//            packedBv.sort.sizeBits.toInt() - 2,
-//            packedBv.sort.sizeBits.toInt() - expWidth - 1,
-//            packedBv
-//        )
-//    }
 
     fun getSignificand(packed: Boolean = false) = if (packed) {
         check(packedBv is PackedFp.Exists)

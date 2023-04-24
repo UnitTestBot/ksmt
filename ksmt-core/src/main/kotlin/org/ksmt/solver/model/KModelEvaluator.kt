@@ -35,36 +35,37 @@ open class KModelEvaluator(
     ctx: KContext,
     private val model: KModel,
     private val isComplete: Boolean,
-    private val quantifiedVars: Set<KDecl<*>> = emptySet()
+    private val quantifiedVars: Set<KDecl<*>> = emptySet(),
 ) : KExprSimplifier(ctx) {
     private val evaluatedFunctionApp = hashMapOf<Pair<KDecl<*>, List<KExpr<*>>>, KExpr<*>>()
     private val evaluatedFunctionArray = hashMapOf<KDecl<*>, KExpr<*>>()
     private val resolvedFunctionInterpretations = hashMapOf<KModel.KFuncInterp<*>, ResolvedFunctionInterpretation<*>>()
 
-    override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> {
-        println("S transform(expr KFunctionApp $expr ")
-        return simplifyExpr(expr, expr.args) { args ->
-            /**
-             * Don't evaluate expr when it is quantified since
-             * it is definitely not present in the model.
-             * */
-            if (expr.decl in quantifiedVars) {
-                return@simplifyExpr expr.decl.apply(args)
-            }
+    override fun <T : KSort> transform(expr: KFunctionApp<T>) = simplifyExpr(expr, expr.args) { args ->
+        /**
+         * Don't evaluate expr when it is quantified since
+         * it is definitely not present in the model.
+         * */
+        /**
+         * Don't evaluate expr when it is quantified since
+         * it is definitely not present in the model.
+         * */
+        if (expr.decl in quantifiedVars) {
+            return@simplifyExpr expr.decl.apply(args)
+        }
 
-            evalFunction(expr.decl, args).also { rewrite(it) }
-        }.also { println("E transform(expr KFunctionApp $expr ====> $it" ) }
+        evalFunction(expr.decl, args).also { rewrite(it) }
     }
 
     override fun <D : KSort, R : KSort> transformSelect(array: KExpr<KArraySort<D, R>>, index: KExpr<D>): KExpr<R> =
         super.transformSelect(tryEvalArrayConst(array), index)
 
     override fun <D0 : KSort, D1 : KSort, R : KSort> transformSelect(
-        array: KExpr<KArray2Sort<D0, D1, R>>, index0: KExpr<D0>, index1: KExpr<D1>
+        array: KExpr<KArray2Sort<D0, D1, R>>, index0: KExpr<D0>, index1: KExpr<D1>,
     ): KExpr<R> = super.transformSelect(tryEvalArrayConst(array), index0, index1)
 
     override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transformSelect(
-        array: KExpr<KArray3Sort<D0, D1, D2, R>>, index0: KExpr<D0>, index1: KExpr<D1>, index2: KExpr<D2>
+        array: KExpr<KArray3Sort<D0, D1, D2, R>>, index0: KExpr<D0>, index1: KExpr<D1>, index2: KExpr<D2>,
     ): KExpr<R> = super.transformSelect(tryEvalArrayConst(array), index0, index1, index2)
 
     override fun <R : KSort> transformSelect(array: KExpr<KArrayNSort<R>>, indices: List<KExpr<KSort>>): KExpr<R> =
@@ -139,14 +140,14 @@ open class KModelEvaluator(
         }
 
     override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
-        expr: KArray2Lambda<D0, D1, R>
+        expr: KArray2Lambda<D0, D1, R>,
     ): KExpr<KArray2Sort<D0, D1, R>> =
         transformQuantifiedExpression(setOf(expr.indexVar0Decl, expr.indexVar1Decl), expr.body) { body ->
             ctx.simplifyArrayLambda(expr.indexVar0Decl, expr.indexVar1Decl, body)
         }
 
     override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
-        expr: KArray3Lambda<D0, D1, D2, R>
+        expr: KArray3Lambda<D0, D1, D2, R>,
     ): KExpr<KArray3Sort<D0, D1, D2, R>> =
         transformQuantifiedExpression(
             setOf(expr.indexVar0Decl, expr.indexVar1Decl, expr.indexVar2Decl),
@@ -173,7 +174,7 @@ open class KModelEvaluator(
     private inline fun <B : KSort, T : KSort> transformQuantifiedExpression(
         quantifiedVars: Set<KDecl<*>>,
         body: KExpr<B>,
-        crossinline quantifierBuilder: (KExpr<B>) -> KExpr<T>
+        crossinline quantifierBuilder: (KExpr<B>) -> KExpr<T>,
     ): KExpr<T> {
         val allQuantifiedVars = this.quantifiedVars.union(quantifiedVars)
         val quantifierBodyEvaluator = KModelEvaluator(ctx, model, isComplete, allQuantifiedVars)
@@ -186,7 +187,7 @@ open class KModelEvaluator(
     @Suppress("USELESS_CAST") // Exhaustive when
     private fun <A : KArraySortBase<R>, R : KSort> evalArrayInterpretation(
         sort: A,
-        interpretation: KModel.KFuncInterp<R>
+        interpretation: KModel.KFuncInterp<R>,
     ): KExpr<A> = when (sort as KArraySortBase<R>) {
         is KArraySort<*, R> -> sort.evalArrayInterpretation(
             interpretation
@@ -215,7 +216,7 @@ open class KModelEvaluator(
 
     private inline fun <A : KArraySortBase<R>, R : KSort, reified S : KArraySortBase<R>> A.evalArrayInterpretation(
         interpretation: KModel.KFuncInterp<R>,
-        mkEntryStore: KContext.(KExpr<S>, List<KExpr<KSort>>, KExpr<R>) -> KExpr<S>
+        mkEntryStore: KContext.(KExpr<S>, List<KExpr<KSort>>, KExpr<R>) -> KExpr<S>,
     ): KExpr<A> = with(ctx) {
         val defaultValue = interpretation.default ?: completeModelValue(range)
         val defaultArray: KExpr<A> = mkArrayConst(this@evalArrayInterpretation, defaultValue)
@@ -282,7 +283,7 @@ open class KModelEvaluator(
     }
 
     private fun <T : KSort> resolveFunctionInterpretation(
-        interpretation: KModel.KFuncInterp<T>
+        interpretation: KModel.KFuncInterp<T>,
     ): ResolvedFunctionInterpretation<T> {
         var resolvedEntry: ResolvedFunctionEntry<T> = ResolvedFunctionDefaultEntry(interpretation.default)
 
@@ -301,7 +302,7 @@ open class KModelEvaluator(
 
     private fun <T : KSort> KContext.applyResolvedInterpretation(
         interpretation: ResolvedFunctionInterpretation<T>,
-        args: List<KExpr<*>>
+        args: List<KExpr<*>>,
     ): KExpr<T> {
         val argsAreConstants = args.all { isValueInModel(it) }
 
@@ -339,7 +340,7 @@ open class KModelEvaluator(
 
     private fun KContext.createVariableSubstitution(
         interpretation: ResolvedFunctionInterpretation<*>,
-        args: List<KExpr<*>>
+        args: List<KExpr<*>>,
     ) = KExprSubstitutor(this).apply {
         interpretation.interpretation.vars.zip(args).forEach { (v, a) ->
             val app: KExpr<KSort> = mkConstApp(v).uncheckedCast()
@@ -350,7 +351,7 @@ open class KModelEvaluator(
     private fun <T : KSort> rewriteFunctionAppAsIte(
         base: KExpr<T>,
         args: List<KExpr<*>>,
-        entries: List<Pair<List<KExpr<*>>, KExpr<T>>>
+        entries: List<Pair<List<KExpr<*>>, KExpr<T>>>,
     ): KExpr<T> = with(ctx) {
         entries.foldRight(base) { entry, acc ->
             val argBinding = entry.first.zip(args) { ea, a ->
@@ -366,7 +367,7 @@ open class KModelEvaluator(
         sort: T,
         varSubstitution: KExprSubstitutor,
         args: List<KExpr<*>>,
-        resultEntries: List<Pair<List<KExpr<*>>, KExpr<T>>>
+        resultEntries: List<Pair<List<KExpr<*>>, KExpr<T>>>,
     ): KExpr<T> {
         val resolvedDefault = expr?.let { varSubstitution.apply(it) }
 
@@ -380,7 +381,7 @@ open class KModelEvaluator(
         varSubstitution: KExprSubstitutor,
         args: List<KExpr<*>>,
         argsAreConstants: Boolean,
-        resultEntries: MutableList<Pair<List<KExpr<*>>, KExpr<T>>>
+        resultEntries: MutableList<Pair<List<KExpr<*>>, KExpr<T>>>,
     ): KExpr<T>? {
         if (argsAreConstants) {
             val entryValue = entries[args]?.let { varSubstitution.apply(it) }
@@ -406,7 +407,7 @@ open class KModelEvaluator(
     private fun <T : KSort> ResolvedFunctionUninterpretedEntry<T>.tryResolveArgs(
         varSubstitution: KExprSubstitutor,
         args: List<KExpr<*>>,
-        resultEntries: MutableList<Pair<List<KExpr<*>>, KExpr<T>>>
+        resultEntries: MutableList<Pair<List<KExpr<*>>, KExpr<T>>>,
     ): KExpr<T>? {
         for (entry in reversedEntries.asReversed()) {
             val entryArgs = entry.first.map { varSubstitution.apply(it) }
@@ -429,7 +430,7 @@ open class KModelEvaluator(
         entries: MutableList<Pair<List<KExpr<*>>, KExpr<T>>>,
         args: List<KExpr<*>>,
         entryArgs: List<KExpr<*>>,
-        entryValue: () -> KExpr<T>
+        entryValue: () -> KExpr<T>,
     ) {
         if (areDefinitelyDistinct(args, entryArgs)) return
 
@@ -439,7 +440,7 @@ open class KModelEvaluator(
 
     private class ResolvedFunctionInterpretation<T : KSort>(
         val interpretation: KModel.KFuncInterp<T>,
-        val rootEntry: ResolvedFunctionEntry<T>
+        val rootEntry: ResolvedFunctionEntry<T>,
     )
 
     private sealed interface ResolvedFunctionEntry<T : KSort> {
@@ -452,8 +453,8 @@ open class KModelEvaluator(
 
     private class ResolvedFunctionUninterpretedEntry<T : KSort>(
         val reversedEntries: MutableList<Pair<List<KExpr<*>>, KExpr<T>>>,
-        val next: ResolvedFunctionEntry<T>
-    ) : ResolvedFunctionEntry<T>{
+        val next: ResolvedFunctionEntry<T>,
+    ) : ResolvedFunctionEntry<T> {
         override fun addUninterpretedEntry(args: List<KExpr<*>>, value: KExpr<T>): ResolvedFunctionEntry<T> {
             reversedEntries.add(args to value)
             return this
@@ -462,7 +463,7 @@ open class KModelEvaluator(
 
     private class ResolvedFunctionValuesEntry<T : KSort>(
         val entries: MutableMap<List<KExpr<*>>, KExpr<T>>,
-        val next: ResolvedFunctionEntry<T>
+        val next: ResolvedFunctionEntry<T>,
     ) : ResolvedFunctionEntry<T> {
         override fun addValueEntry(args: List<KExpr<*>>, value: KExpr<T>): ResolvedFunctionEntry<T> {
             entries[args] = value
@@ -471,6 +472,6 @@ open class KModelEvaluator(
     }
 
     private class ResolvedFunctionDefaultEntry<T : KSort>(
-        val expr: KExpr<T>?
+        val expr: KExpr<T>?,
     ) : ResolvedFunctionEntry<T>
 }

@@ -73,7 +73,7 @@ class ArraysTransform(val ctx: KContext) {
     fun <R : KSort> arraySelectUnpacked(sort: R, res: KExpr<R>): KExpr<R> = with(ctx) {
         if (sort is KFpSort) {
             val resTyped: KExpr<KBvSort> = res.cast()
-            unpackBiased(sort, resTyped).cast()
+            unpack(sort, resTyped).cast()
         } else {
             res
         }

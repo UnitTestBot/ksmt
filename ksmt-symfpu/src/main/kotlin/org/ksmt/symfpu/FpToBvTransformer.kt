@@ -67,7 +67,6 @@ import org.ksmt.sort.KSort
 import org.ksmt.symfpu.ArraysTransform.Companion.packToBvIfUnpacked
 import org.ksmt.symfpu.ArraysTransform.Companion.transformedArraySort
 import org.ksmt.symfpu.UnpackedFp.Companion.iteOp
-import org.ksmt.utils.FpUtils
 import org.ksmt.utils.asExpr
 import org.ksmt.utils.cast
 
@@ -368,7 +367,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
                 val asFp: KConst<KFpSort> = expr.cast()
 
                 mapFpToUnpackedFpImpl.getOrPut(asFp.decl) {
-                    unpackUnbiased(asFp.sort,
+                    unpack(asFp.sort,
                         mkConst(asFp.decl.name + "!tobv!", mkBvSort(
                             asFp.sort.exponentBits + asFp.sort.significandBits)).also {
                             arraysTransform.mapFpToBvDeclImpl[asFp.decl] = (it as KConst<KBvSort>)
@@ -394,7 +393,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         return unpack(
             expr.sort,
             expr.signBit.expr,
-            FpUtils.unbiasFpExponent(expr.biasedExponent, expr.sort.exponentBits).cast(),
+            expr.biasedExponent.asExpr(mkBvSort(expr.sort.exponentBits)),
             expr.significand.asExpr(mkBvSort(expr.sort.significandBits - 1u)),
         )
     }
@@ -431,7 +430,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
 
     override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>) =
         transformExprAfterTransformed(expr, expr.sign, expr.biasedExponent, expr.significand) { s, e, sig ->
-            ctx.unpack(expr.sort, ctx.bvToBool(s.cast()), ctx.unbiased(e.cast(), expr.sort), sig.cast())
+            ctx.unpack(expr.sort, ctx.bvToBool(s.cast()), e.cast(), sig.cast())
         }
 
 
