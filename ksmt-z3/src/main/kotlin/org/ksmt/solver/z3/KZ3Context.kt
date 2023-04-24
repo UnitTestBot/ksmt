@@ -6,6 +6,7 @@ import com.microsoft.z3.decRefUnsafe
 import com.microsoft.z3.incRefUnsafe
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet
+import it.unimi.dsi.fastutil.longs.LongSet
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
@@ -259,24 +260,29 @@ class KZ3Context(
         return cached
     }
 
-    /**
-     * Note: we don't invoke decRef for each remaining expression/sort/...
-     * because native context releases all memory on close.
-     * */
     override fun close() {
         isClosed = true
 
+        z3Expressions.keys.decRefAll()
         expressions.clear()
         z3Expressions.clear()
 
+        tmpNativeObjects.decRefAll()
         tmpNativeObjects.clear()
 
-        sorts.clear()
-        z3Sorts.clear()
-
+        z3Decls.keys.decRefAll()
         decls.clear()
         z3Decls.clear()
 
+        z3Sorts.keys.decRefAll()
+        sorts.clear()
+        z3Sorts.clear()
+
         ctx.close()
     }
+
+    private fun LongSet.decRefAll() =
+        longIterator().forEachRemaining {
+            decRefUnsafe(nCtx, it)
+        }
 }
