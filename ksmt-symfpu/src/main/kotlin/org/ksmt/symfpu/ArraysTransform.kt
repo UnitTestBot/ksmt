@@ -18,9 +18,7 @@ import org.ksmt.utils.cast
 
 class ArraysTransform(val ctx: KContext) {
 
-    val mapFpToBvDeclImpl = mutableMapOf<KDecl<KFpSort>, KConst<KBvSort>>()
-    val mapFpArrayToBvImpl =
-        mutableMapOf<KDecl<KArraySortBase<*>>, KApp<KArraySortBase<KSort>, *>>()
+    val mapFpToBvDeclImpl = mutableMapOf<KDecl<*>, KConst<*>>()
 
     fun mkArrayAnyLambda(
         indices: List<KDecl<*>>,
@@ -81,7 +79,7 @@ class ArraysTransform(val ctx: KContext) {
             ((expr as? UnpackedFp<*>)?.let { packToBv(expr) } ?: expr).cast()
         }
 
-        fun KContext.mkAnyArraySort(domain: List<KSort>, range: KSort): KArraySortBase<KSort> =
+        private fun KContext.mkAnyArraySort(domain: List<KSort>, range: KSort): KArraySortBase<KSort> =
             mkAnyArrayOperation(
                 domain,
                 { d0 -> mkArraySort(d0, range) },

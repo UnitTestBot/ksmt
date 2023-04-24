@@ -381,8 +381,8 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
                 println("in transform KConst<KArraySortBase<*>>")
                 val asArray: KConst<KArraySortBase<*>> = expr.cast()
                 val resSort = transformedArraySort(asArray)
-                arraysTransform.mapFpArrayToBvImpl.getOrPut(asArray.decl) {
-                    mkFreshConst(asArray.decl.name + "!tobvArr!", resSort)
+                arraysTransform.mapFpToBvDeclImpl.getOrPut(asArray.decl) {
+                    mkFreshConst(asArray.decl.name + "!tobvArr!", resSort).cast()
                 }.cast()
             }
 
