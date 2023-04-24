@@ -32,7 +32,10 @@ class SymFPUModel(private val kModel: KModel, val ctx: KContext, val transformer
         ctx.ensureContextMatch(expr)
 
         val evaluator = if (isComplete) evaluatorWithModelCompletion else evaluatorWithoutModelCompletion
-        return evaluator.apply(expr)
+        println("eval $expr")
+        val res = evaluator.apply(expr)
+        println("eval $expr done: $res")
+        return res
     }
 
     private fun <T : KSort> getConst(decl: KDecl<T>): KExpr<*>? = with(ctx) {
@@ -44,11 +47,14 @@ class SymFPUModel(private val kModel: KModel, val ctx: KContext, val transformer
     }
 
     override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? {
+        println("DECL::$decl")
         ctx.ensureContextMatch(decl)
-        if (!sortContainsFP(decl.sort)) return kModel.interpretation(decl)
+        if (!sortContainsFP(decl.sort)) return kModel.interpretation(decl).also { println("INTERP::$decl ==>> $it") }
         // todo (it is KFuncDecl) works ??, quantifier, lambda
         val const = getConst(decl) ?: return kModel.interpretation(decl)
-        return getInterpretation(decl, const).cast()
+        val interp = getInterpretation(decl, const)
+        println("INTERP::$decl ==>> $interp")
+        return interp.cast()
     }
 
     private fun transformArray(

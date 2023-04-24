@@ -115,7 +115,7 @@ abstract class BenchmarksBasedTest {
 
                     val status = testSolver.checkAsync(SOLVER_CHECK_SAT_TIMEOUT)
                     if (status != KSolverStatus.SAT) {
-                        ignoreTest { "No model to check" }
+                        ignoreTest { "No model to check $status" }
                     }
 
                     testSolver.modelAsync()

@@ -41,8 +41,9 @@ open class KModelEvaluator(
     private val evaluatedFunctionArray = hashMapOf<KDecl<*>, KExpr<*>>()
     private val resolvedFunctionInterpretations = hashMapOf<KModel.KFuncInterp<*>, ResolvedFunctionInterpretation<*>>()
 
-    override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> =
-        simplifyExpr(expr, expr.args) { args ->
+    override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> {
+        println("S transform(expr KFunctionApp $expr ")
+        return simplifyExpr(expr, expr.args) { args ->
             /**
              * Don't evaluate expr when it is quantified since
              * it is definitely not present in the model.
@@ -52,7 +53,8 @@ open class KModelEvaluator(
             }
 
             evalFunction(expr.decl, args).also { rewrite(it) }
-        }
+        }.also { println("E transform(expr KFunctionApp $expr ====> $it" ) }
+    }
 
     override fun <D : KSort, R : KSort> transformSelect(array: KExpr<KArraySort<D, R>>, index: KExpr<D>): KExpr<R> =
         super.transformSelect(tryEvalArrayConst(array), index)
