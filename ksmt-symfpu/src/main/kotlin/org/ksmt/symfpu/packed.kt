@@ -143,6 +143,22 @@ fun <Fp : KFpSort> KContext.packToBv(uf: UnpackedFp<Fp>): KExpr<KBvSort> {
     return mkBvConcatExpr(packedSign, packedExp, packedSig)
 }
 
+
+fun <Fp : KFpSort> KContext.packUnbiased(packed: KExpr<KBvSort>, sort: Fp): KExpr<Fp> {
+    check(packed.sort.sizeBits == sort.exponentBits + sort.significandBits)
+
+    val pWidth = packed.sort.sizeBits.toInt()
+    val exWidth = sort.exponentBits.toInt()
+
+    // Extract
+    val packedSignificand = simplifyBvExtractExpr(pWidth - exWidth - 2, 0, packed)
+    val packedExponent = simplifyBvExtractExpr(pWidth - 2, pWidth - exWidth - 1, packed)
+    val sign = simplifyBvExtractExpr(pWidth - 1, pWidth - 1, packed)
+    val bias = mkBv(sort.exponentShiftSize(), packedExponent.sort.sizeBits)
+
+    return simplifyFpFromBvExpr(sign.cast(), mkBvAddExpr(packedExponent, bias), packedSignificand)
+}
+
 fun <Fp : KFpSort> KContext.pack(packed: KExpr<KBvSort>, sort: Fp): KExpr<Fp> {
     check(packed.sort.sizeBits == sort.exponentBits + sort.significandBits)
 

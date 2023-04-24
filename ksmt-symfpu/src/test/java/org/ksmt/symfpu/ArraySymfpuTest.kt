@@ -2,7 +2,6 @@ package org.ksmt.symfpu
 
 import org.junit.jupiter.api.Test
 import org.ksmt.KContext
-import org.ksmt.expr.KAndNaryExpr
 import org.ksmt.expr.printer.BvValuePrintMode
 import org.ksmt.expr.printer.PrinterParams
 import org.ksmt.solver.KSolverStatus
@@ -273,16 +272,19 @@ class ArraySymfpuTest {
     }
 
     @Test
-    fun testFromBench2() = with(KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY)) {
+    fun testFromBench2() = with(KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY,
+        printerParams = PrinterParams(bvValuePrintMode = BvValuePrintMode.BINARY))) {
         val x by fp32Sort // = mkFp(mkBv(0b0100010101001011011111111010010010001110010101011010, 52u), mkBv(0b00010000100, 11u), false, fp64Sort)
         SymfpuZ3Solver(this).use { solver ->
             val a = x eq 3.0f.expr
             solver.assert(x eq 3.0f.expr)
             solver.check()
             val model = solver.model()
-            println(model.eval(a))
+            println("results:")
+            println("a: ${model.eval(a)}")
 
+            println("x: ${model.eval(x)}")
+            println("3.0f: ${model.eval(3.0f.expr)}")
         }
     }
-
 }

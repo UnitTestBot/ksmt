@@ -51,7 +51,8 @@ class SymFPUModel(private val kModel: KModel, val ctx: KContext, val transformer
         ctx.ensureContextMatch(decl)
         if (!sortContainsFP(decl.sort)) return kModel.interpretation(decl).also { println("INTERP::$decl ==>> $it") }
         // todo (it is KFuncDecl) works ??, quantifier, lambda
-        val const = getConst(decl) ?: return kModel.interpretation(decl)
+//        0_00000001_10000000000000000000000
+        val const = kModel.eval(getConst(decl)!!) //?: return kModel.interpretation(decl)
         val interp = getInterpretation(decl, const)
         println("INTERP::$decl ==>> $interp")
         return interp.cast()
@@ -103,7 +104,7 @@ class SymFPUModel(private val kModel: KModel, val ctx: KContext, val transformer
                 KModel.KFuncInterp(decl = decl,
                     vars = emptyList(),
                     entries = emptyList(),
-                    default = ctx.pack(const.cast(), sort).cast())
+                    default = ctx.packUnbiased(const.cast(), sort).cast())
             }
 
             is KArraySortBase<*> -> {
