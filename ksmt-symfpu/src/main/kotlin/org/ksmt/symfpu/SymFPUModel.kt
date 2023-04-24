@@ -13,6 +13,7 @@ import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.symfpu.ArraysTransform.Companion.mkAnyArrayLambda
 import org.ksmt.symfpu.ArraysTransform.Companion.mkAnyArraySelect
+import org.ksmt.symfpu.ArraysTransform.Companion.transformSortRemoveFP
 import org.ksmt.utils.cast
 import org.ksmt.utils.uncheckedCast
 
@@ -34,14 +35,18 @@ class SymFPUModel(private val kModel: KModel, val ctx: KContext, val transformer
         return evaluator.apply(expr)
     }
 
-    private fun <T : KSort> getConst(decl: KDecl<T>): KExpr<*>? =
-        transformer.arraysTransform.mapFpToBvDeclImpl[decl.cast()]
-
+    private fun <T : KSort> getConst(decl: KDecl<T>): KExpr<*>? = with(ctx) {
+        if (sortContainsFP(decl.sort)) {
+            transformer.arraysTransform.mapFpToBvDeclImpl.getOrPut(decl) {
+                mkFreshConst(decl.name + "!tobv_transform!", transformSortRemoveFP(decl.sort)).cast()
+            }.cast()
+        } else null
+    }
 
     override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? {
         ctx.ensureContextMatch(decl)
-        if (!ctx.sortContainsFP(decl.sort)) return kModel.interpretation(decl)
-
+        if (!sortContainsFP(decl.sort)) return kModel.interpretation(decl)
+        // todo (it is KFuncDecl) works ??, quantifier, lambda
         val const = getConst(decl) ?: return kModel.interpretation(decl)
         return getInterpretation(decl, const).cast()
     }
@@ -77,7 +82,7 @@ class SymFPUModel(private val kModel: KModel, val ctx: KContext, val transformer
         replacement
     }
 
-    private fun KContext.getConstOfNonFPSort(curSort: KSort, idx: KConst<KSort>, bvSort: KSort): KConst<KSort> =
+    fun KContext.getConstOfNonFPSort(curSort: KSort, idx: KConst<KSort>, bvSort: KSort): KConst<KSort> =
         if (sortContainsFP(curSort)) {
             transformer.arraysTransform.mapFpToBvDeclImpl.getOrPut(idx.decl.cast()) {
                 mkFreshConst(idx.decl.name + "!tobv_transform!", bvSort).cast()
@@ -96,7 +101,7 @@ class SymFPUModel(private val kModel: KModel, val ctx: KContext, val transformer
             }
 
             is KArraySortBase<*> -> {
-                val array: KConst<KArraySortBase<*>> = const.cast()
+                val array: KExpr<KArraySortBase<*>> = const.cast()
                 val origDecl: KDecl<KArraySortBase<*>> = decl.cast()
                 val transformed = transformArray(array, origDecl.sort)
                 KModel.KFuncInterp(decl = decl,
@@ -131,7 +136,7 @@ class SymFPUModel(private val kModel: KModel, val ctx: KContext, val transformer
     }
 
     companion object {
-        fun KContext.sortContainsFP(curSort: KSort): Boolean {
+        fun sortContainsFP(curSort: KSort): Boolean {
             return when (curSort) {
                 is KFpSort -> true
                 is KArraySortBase<*> -> curSort.domainSorts.any { sortContainsFP(it) } || sortContainsFP(curSort.range)

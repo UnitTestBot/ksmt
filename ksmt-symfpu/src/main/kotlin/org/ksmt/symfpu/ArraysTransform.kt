@@ -3,7 +3,6 @@ package org.ksmt.symfpu
 import org.ksmt.KContext
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
-import org.ksmt.expr.KApp
 import org.ksmt.expr.KArrayLambdaBase
 import org.ksmt.expr.KConst
 import org.ksmt.expr.KExpr
@@ -14,6 +13,7 @@ import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
+import org.ksmt.symfpu.SymFPUModel.Companion.sortContainsFP
 import org.ksmt.utils.cast
 
 class ArraysTransform(val ctx: KContext) {
@@ -49,21 +49,26 @@ class ArraysTransform(val ctx: KContext) {
 
     fun transformDecl(it: KDecl<*>) = with(ctx) {
         val sort = it.sort
-        if (sort is KFpSort) {
-            val asFp: KDecl<KFpSort> = it.cast()
-            mapFpToBvDeclImpl.getOrPut(asFp) {
-                mkConst(asFp.name + "!tobv!", mkBvSort(
-                    sort.exponentBits + sort.significandBits)).cast()
-            }.decl
-        } else if (it is KFuncDecl) {
-            mkFreshFuncDecl(it.name, it.sort.transformFpToBvSort(), it.argSorts.fpToBvSorts())
-        } else it
+        when {
+            it is KFuncDecl -> {
+                mkFreshFuncDecl(it.name, transformSortRemoveFP(it.sort), it.argSorts.fpToBvSorts())
+            }
+
+            !sortContainsFP(sort) -> {
+                it
+            }
+
+            else -> {
+                val newSort = transformSortRemoveFP(sort)
+                mapFpToBvDeclImpl.getOrPut(it) {
+                    mkConst(it.name + "!tobv!", newSort).cast()
+                }.decl
+            }
+        }
     }
 
-    private fun List<KSort>.fpToBvSorts() = map { it.transformFpToBvSort() }
+    private fun List<KSort>.fpToBvSorts() = map { ctx.transformSortRemoveFP(it) }
 
-    private fun KSort.transformFpToBvSort() = if (this is KFpSort) ctx.mkBvSort(
-        exponentBits + significandBits) else this
 
     fun <R : KSort> arraySelectUnpacked(sort: R, res: KExpr<R>): KExpr<R> = with(ctx) {
         if (sort is KFpSort) {
@@ -132,7 +137,6 @@ class ArraysTransform(val ctx: KContext) {
         }
 
 
-        // todo recursive array support
         fun transformedArraySort(
             expr: KExpr<KArraySortBase<*>>,
         ): KArraySortBase<KSort> = with(expr.ctx) {
@@ -150,7 +154,7 @@ class ArraysTransform(val ctx: KContext) {
             return mkAnyArraySort(domains, range)
         }
 
-        private fun KContext.transformSortRemoveFP(it: KSort) = when (it) {
+        fun KContext.transformSortRemoveFP(it: KSort) = when (it) {
             is KFpSort -> {
                 mkBvSort(it.exponentBits + it.significandBits)
             }

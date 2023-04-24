@@ -359,7 +359,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         transformExprAfterTransformed(expr, expr.args) { args ->
             val decl = arraysTransform.transformDecl(expr.decl)
             val argsTransformed = args.map(::packToBvIfUnpacked)
-            decl.apply(argsTransformed).cast()
+            decl.apply(argsTransformed).cast() // todo
         }
 
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = with(ctx) {
