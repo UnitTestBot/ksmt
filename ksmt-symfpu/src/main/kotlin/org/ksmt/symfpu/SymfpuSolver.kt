@@ -95,35 +95,30 @@ open class SymfpuSolver<Config : KSolverConfiguration>(
             return getInterpretation(decl, const).cast()
         }
 
-        fun <FromSort : KArraySortBase<*>> transform(
-            bvArray: KConst<FromSort>, declTo: KDecl<KArraySortBase<*>>,
+        private fun transformArray(
+            bvArray: KExpr<KArraySortBase<*>>, toSort: KArraySortBase<*>,
         ): KExpr<*> = with(ctx) {
             val fromSort = bvArray.sort
-            val toSort = declTo.sort
 
             if (fromSort == toSort) {
                 return@with bvArray.uncheckedCast()
             }
 
-            // possibly fp indices
+            // fp indices
             val indices: List<KConst<KSort>> = toSort.domainSorts.map {
                 mkFreshConst("i", it).cast()
             }
-            val fromIndices: List<KConst<KSort>> = indices.map { idx: KConst<KSort> ->
-                val curSort = idx.sort
-                if (curSort is KFpSort) {
-                    transformer.arraysTransform.mapFpToBvDeclImpl.getOrPut(idx.decl.cast()) {
-                        mkFreshConst(idx.decl.name + "!tobv!", mkBvSort(
-                            curSort.exponentBits + curSort.significandBits)).cast()
-                    }.cast()
-                } else idx
-            }
-
+            //bv indices
+            val fromIndices: List<KConst<KSort>> =
+                indices.zip(fromSort.domainSorts) { idx: KConst<KSort>, bvSort: KSort ->
+                    val curSort = idx.sort
+                    getConstOfNonFPSort(curSort, idx, bvSort)
+                }
             // bv value
             val value = mkAnyArraySelect(bvArray, fromIndices)
-            val toValue = if (toSort.range is KFpSort) {
-                ctx.pack(value.cast(), toSort.range.cast())
-            } else value
+            //fp value
+            val targetFpSort = toSort.range
+            val toValue = transformToFpSort(targetFpSort, value)
 
             val replacement: KExpr<KArraySortBase<*>> = mkAnyArrayLambda(
                 indices.map { it.decl }, toValue
@@ -145,7 +140,7 @@ open class SymfpuSolver<Config : KSolverConfiguration>(
                 is KArraySortBase<*> -> {
                     val array: KConst<KArraySortBase<*>> = const.cast()
                     val origDecl: KDecl<KArraySortBase<*>> = decl.cast()
-                    val transformed = transform(array, origDecl)
+                    val transformed = transformArray(array, origDecl.sort)
                     KModel.KFuncInterp(decl = decl,
                         vars = emptyList(),
                         entries = emptyList(),
@@ -155,6 +150,16 @@ open class SymfpuSolver<Config : KSolverConfiguration>(
                 else -> throw IllegalArgumentException("Unsupported sort: $sort")
             }
         }
+        private fun transformToFpSort(targetFpSort: KSort, value: KExpr<KSort>) =
+            when (targetFpSort) {
+                is KFpSort -> {
+                    ctx.pack(value.cast(), targetFpSort.cast())
+                }
+                is KArraySortBase<*> -> {
+                    transformArray(value.cast(), targetFpSort)
+                }
+                else -> value
+            }
 
         override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KUninterpretedSortValue>? {
             return kModel.uninterpretedSortUniverse(sort)
@@ -164,4 +169,22 @@ open class SymfpuSolver<Config : KSolverConfiguration>(
             return Model(kModel.detach())
         }
     }
+
+
+
+    private fun KContext.getConstOfNonFPSort(curSort: KSort, idx: KConst<KSort>, bvSort: KSort): KConst<KSort> =
+        if (sortContainsFP(curSort)) {
+            transformer.arraysTransform.mapFpToBvDeclImpl.getOrPut(idx.decl.cast()) {
+                mkFreshConst(idx.decl.name + "!tobv_transform!", bvSort).cast()
+            }.cast()
+        } else idx
+
+    private fun KContext.sortContainsFP(curSort: KSort): Boolean {
+        return when (curSort) {
+            is KFpSort -> true
+            is KArraySortBase<*> -> curSort.domainSorts.any { sortContainsFP(it) } || sortContainsFP(curSort.range)
+            else -> false
+        }
+    }
+
 }

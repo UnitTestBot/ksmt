@@ -92,7 +92,7 @@ class ArraysTransform(val ctx: KContext) {
 
         fun <A : KArraySortBase<*>> KContext.mkAnyArraySelect(
             array: KExpr<A>,
-            indices: List<KExpr<KSort>>
+            indices: List<KExpr<KSort>>,
         ): KExpr<KSort> {
             val domain = array.sort.domainSorts
             return when (domain.size) {
@@ -134,21 +134,32 @@ class ArraysTransform(val ctx: KContext) {
         }
 
 
+        // todo recursive array support
         fun transformedArraySort(
             expr: KExpr<KArraySortBase<*>>,
         ): KArraySortBase<KSort> = with(expr.ctx) {
-            val domains = expr.sort.domainSorts.map {
-                if (it is KFpSort) {
-                    mkBvSort(it.exponentBits + it.significandBits)
-                } else it
+            return transformArraySort(expr.sort)
+        }
+
+        private fun KContext.transformArraySort(sort: KArraySortBase<*>): KArraySortBase<KSort> {
+            val domains = sort.domainSorts.map {
+                transformSortRemoveFP(it)
             }
 
-            val prevRange = expr.sort.range
-            val range = if (prevRange is KFpSort) {
-                mkBvSort(prevRange.exponentBits + prevRange.significandBits)
-            } else prevRange
+            val prevRange = sort.range
+            val range = transformSortRemoveFP(prevRange)
 
             return mkAnyArraySort(domains, range)
+        }
+
+        private fun KContext.transformSortRemoveFP(it: KSort) = when (it) {
+            is KFpSort -> {
+                mkBvSort(it.exponentBits + it.significandBits)
+            }
+
+            is KArraySortBase<*> -> transformArraySort(it)
+
+            else -> it
         }
     }
 }

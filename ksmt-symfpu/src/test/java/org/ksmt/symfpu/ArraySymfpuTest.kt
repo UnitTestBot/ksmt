@@ -34,7 +34,56 @@ class ArraySymfpuTest {
             assertEquals(KSolverStatus.SAT, z3status)
 
             val model = solver.model()
-            println("array= ${model.eval(array)}")
+            val arrayEval = model.eval(array)
+            println("array= ${arrayEval}")
+        }
+        }
+    }
+
+    @Test
+    fun testFpRecursiveArrayExpr() = with(KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY)) {
+        val aSort = mkArraySort(fp32Sort, fp32Sort)
+        val sort = mkArraySort(fp32Sort, aSort)
+
+        val array by sort
+        val aIndex by aSort
+        val index by fp32Sort
+        val expr = (array.select(index) eq aIndex)
+//        and (array.store(index, aIndex) eq array)
+        KZ3Solver(this).use { z3Solver->
+        SymfpuZ3Solver(this).use { solver ->
+            solver.assert(expr)
+            val status = solver.check(timeout = 200.seconds)
+            assertEquals(KSolverStatus.SAT, status)
+
+            val model = solver.model()
+            val arrayEval = model.eval(array)
+            println("array= ${arrayEval}")
+        }
+        }
+    }
+
+    @Test
+    fun testFpArrayModelExpr() = with(KContext(simplificationMode = KContext.SimplificationMode.SIMPLIFY)) {
+        val sort = mkArraySort(fp32Sort, fp32Sort)
+
+        val array by sort
+        val expr = (array.select(0.0f.expr) eq 15.0f.expr) and (array.select(1.0f.expr) eq 30.0f.expr)
+        KZ3Solver(this).use { z3Solver->
+        SymfpuZ3Solver(this).use { solver ->
+            solver.assert(expr)
+            val status = solver.check(timeout = 200.seconds)
+            assertEquals(KSolverStatus.SAT, status)
+
+            val model = solver.model()
+            val arrayEval = model.eval(array)
+            val zeroVal = model.eval(arrayEval.select(0.0f.expr))
+            val oneVal = model.eval(arrayEval.select(1.0f.expr))
+            val randVal = model.eval(arrayEval.select(2.0f.expr))
+            println("array= ${arrayEval}")
+            println("zero= ${zeroVal}")
+            println("one= ${oneVal}")
+            println("rand= ${randVal}")
         }
         }
     }
