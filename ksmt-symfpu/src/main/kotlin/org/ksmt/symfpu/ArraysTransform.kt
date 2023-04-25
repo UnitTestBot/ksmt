@@ -1,6 +1,7 @@
 package org.ksmt.symfpu
 
 import org.ksmt.KContext
+import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.decl.KFuncDecl
 import org.ksmt.expr.KArrayLambdaBase
@@ -13,7 +14,7 @@ import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
-import org.ksmt.symfpu.SymFPUModel.Companion.sortContainsFP
+import org.ksmt.symfpu.SymFPUModel.Companion.declContainsFp
 import org.ksmt.utils.cast
 
 class ArraysTransform(val ctx: KContext) {
@@ -50,20 +51,23 @@ class ArraysTransform(val ctx: KContext) {
     fun transformDecl(it: KDecl<*>) = with(ctx) {
         val sort = it.sort
         when {
-            it is KFuncDecl -> {
-                mkFreshFuncDecl(it.name, transformSortRemoveFP(it.sort), it.argSorts.fpToBvSorts())
-            }
-
-            !sortContainsFP(sort) -> {
+            !declContainsFp(it) -> {
                 it
             }
 
-            else -> {
+            it is KConstDecl<*> -> {
                 val newSort = transformSortRemoveFP(sort)
                 mapFpToBvDeclImpl.getOrPut(it) {
                     mkConst(it.name + "!tobv!", newSort).cast()
                 }.decl
             }
+
+            // todo
+            it is KFuncDecl -> {
+                mkFreshFuncDecl(it.name, transformSortRemoveFP(it.sort), it.argSorts.fpToBvSorts())
+            }
+
+            else -> throw IllegalStateException("Unexpected decl type: $it")
         }
     }
 

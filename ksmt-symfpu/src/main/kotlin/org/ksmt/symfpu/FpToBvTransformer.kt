@@ -66,7 +66,7 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
 import org.ksmt.symfpu.ArraysTransform.Companion.packToBvIfUnpacked
 import org.ksmt.symfpu.ArraysTransform.Companion.transformedArraySort
-import org.ksmt.symfpu.SymFPUModel.Companion.sortContainsFP
+import org.ksmt.symfpu.SymFPUModel.Companion.declContainsFp
 import org.ksmt.symfpu.UnpackedFp.Companion.iteOp
 import org.ksmt.utils.asExpr
 import org.ksmt.utils.cast
@@ -364,7 +364,7 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
 
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = with(ctx) {
         when {
-            !sortContainsFP(expr.sort) -> expr
+            !declContainsFp(expr.decl) -> expr
 
             expr.sort is KFpSort -> {
                 val asFp: KConst<KFpSort> = expr.cast()
