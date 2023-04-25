@@ -7,22 +7,24 @@ import org.ksmt.expr.KExpr
 import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.solver.KModel
 import org.ksmt.solver.model.KModelEvaluator
+import org.ksmt.solver.model.KModelImpl
 import org.ksmt.sort.KArraySortBase
 import org.ksmt.sort.KFpSort
 import org.ksmt.sort.KSort
 import org.ksmt.sort.KUninterpretedSort
 import org.ksmt.symfpu.ArraysTransform.Companion.mkAnyArrayLambda
 import org.ksmt.symfpu.ArraysTransform.Companion.mkAnyArraySelect
-import org.ksmt.symfpu.ArraysTransform.Companion.transformSortRemoveFP
 import org.ksmt.utils.cast
 import org.ksmt.utils.uncheckedCast
 
 class SymFPUModel(private val kModel: KModel, val ctx: KContext, val transformer: FpToBvTransformer) : KModel {
     override val declarations: Set<KDecl<*>>
-        get() = kModel.declarations
+        get() = kModel.declarations + transformer.arraysTransform.mapFpToBvDeclImpl.keys
+
 
     override val uninterpretedSorts: Set<KUninterpretedSort>
         get() = kModel.uninterpretedSorts
+
 
     private val evaluatorWithModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = true) }
     private val evaluatorWithoutModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = false) }
@@ -36,22 +38,23 @@ class SymFPUModel(private val kModel: KModel, val ctx: KContext, val transformer
         return res
     }
 
-    private fun <T : KSort> getConst(decl: KDecl<T>): KExpr<*>? = with(ctx) {
-        if (sortContainsFP(decl.sort)) {
-            transformer.arraysTransform.mapFpToBvDeclImpl.getOrPut(decl) {
-                mkFreshConst(decl.name + "!tobv_transform!", transformSortRemoveFP(decl.sort)).cast()
-            }.cast()
-        } else null
-    }
+    private fun <T : KSort> getConst(decl: KDecl<T>): KExpr<*>? =
+        transformer.arraysTransform.mapFpToBvDeclImpl.get(decl)
 
-    override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? {
-        ctx.ensureContextMatch(decl)
-        if (!sortContainsFP(decl.sort)) return kModel.interpretation(decl).also { println("INTERP::$decl ==>> $it") }
-        // todo (it is KFuncDecl) works ??, quantifier, lambda
-//        0_00000001_10000000000000000000000
-        val const = kModel.eval(getConst(decl)!!) //?: return kModel.interpretation(decl)
-        val interp = getInterpretation(decl, const)
-        return interp.cast()
+    override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? = with(ctx) {
+        ensureContextMatch(decl)
+        return interpretations.getOrPut(decl) {
+            if (!sortContainsFP(decl.sort)) {
+                val interpretation = kModel.interpretation(decl)
+                if (interpretation != null) {
+                    return@getOrPut interpretation
+                } else return@with null
+            }
+
+            val const = getConst(decl) ?: return@with null
+            val interp = getInterpretation(decl, kModel.eval(const))
+            interp.cast()
+        }.cast()
     }
 
     private fun transformArray(
@@ -94,28 +97,27 @@ class SymFPUModel(private val kModel: KModel, val ctx: KContext, val transformer
 
     private fun <T : KSort> getInterpretation(
         decl: KDecl<T>, const: KExpr<*>,
-    ): KModel.KFuncInterp<*> = interpretations.getOrPut(decl) {
-        return when (val sort = decl.sort) {
-            is KFpSort -> {
-                KModel.KFuncInterp(decl = decl,
-                    vars = emptyList(),
-                    entries = emptyList(),
-                    default = ctx.pack(const.cast(), sort).cast())
-            }
-
-            is KArraySortBase<*> -> {
-                val array: KExpr<KArraySortBase<*>> = const.cast()
-                val origDecl: KDecl<KArraySortBase<*>> = decl.cast()
-                val transformed = transformArray(array, origDecl.sort)
-                KModel.KFuncInterp(decl = decl,
-                    vars = emptyList(),
-                    entries = emptyList(),
-                    default = transformed.cast())
-            }
-
-            else -> throw IllegalArgumentException("Unsupported sort: $sort")
+    ): KModel.KFuncInterp<*> = when (val sort = decl.sort) {
+        is KFpSort -> {
+            KModel.KFuncInterp(decl = decl,
+                vars = emptyList(),
+                entries = emptyList(),
+                default = ctx.pack(const.cast(), sort).cast())
         }
+
+        is KArraySortBase<*> -> {
+            val array: KExpr<KArraySortBase<*>> = const.cast()
+            val origDecl: KDecl<KArraySortBase<*>> = decl.cast()
+            val transformed = transformArray(array, origDecl.sort)
+            KModel.KFuncInterp(decl = decl,
+                vars = emptyList(),
+                entries = emptyList(),
+                default = transformed.cast())
+        }
+
+        else -> throw IllegalArgumentException("Unsupported sort: $sort")
     }
+
 
     private fun transformToFpSort(targetFpSort: KSort, value: KExpr<KSort>) =
         when (targetFpSort) {
@@ -135,7 +137,15 @@ class SymFPUModel(private val kModel: KModel, val ctx: KContext, val transformer
     }
 
     override fun detach(): KModel {
-        return SymFPUModel(kModel.detach(), ctx, transformer)
+        declarations.forEach {
+            interpretation(it)
+        }
+
+        val uninterpretedSortsUniverses = uninterpretedSorts.associateWith {
+            uninterpretedSortUniverse(it) ?: error("missed sort universe for $it")
+        }
+
+        return KModelImpl(ctx, interpretations.toMap(), uninterpretedSortsUniverses)
     }
 
     companion object {
