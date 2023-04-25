@@ -12,7 +12,6 @@ import org.ksmt.sort.KFpSort
 import org.ksmt.symfpu.UnpackedFp.PackedFp.Companion.makeBvInf
 import org.ksmt.symfpu.UnpackedFp.PackedFp.Companion.makeBvNaN
 import org.ksmt.symfpu.UnpackedFp.PackedFp.Companion.makeBvZero
-import org.ksmt.utils.FpUtils
 import org.ksmt.utils.FpUtils.fpInfExponentBiased
 import org.ksmt.utils.FpUtils.fpInfSignificand
 import org.ksmt.utils.FpUtils.fpNaNExponentBiased
