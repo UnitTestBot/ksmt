@@ -4,153 +4,82 @@ import io.ksmt.KContext
 import io.ksmt.expr.KAndExpr
 import io.ksmt.expr.KApp
 import io.ksmt.expr.KExpr
-import io.ksmt.expr.KInterpretedValue
-import io.ksmt.expr.KIteExpr
 import io.ksmt.expr.KNotExpr
 import io.ksmt.expr.KOrExpr
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KSort
-import io.ksmt.utils.uncheckedCast
 
-fun KContext.simplifyNot(arg: KExpr<KBoolSort>): KExpr<KBoolSort> = when (arg) {
-    trueExpr -> falseExpr
-    falseExpr -> trueExpr
-    // (not (not x)) ==> x
-    is KNotExpr -> arg.arg
-    else -> mkNotNoSimplify(arg)
-}
+fun KContext.simplifyNot(arg: KExpr<KBoolSort>): KExpr<KBoolSort> =
+    simplifyNotLight(arg, ::mkNotNoSimplify)
 
 fun KContext.simplifyImplies(p: KExpr<KBoolSort>, q: KExpr<KBoolSort>): KExpr<KBoolSort> =
-    simplifyOr(simplifyNot(p), q)
+    rewriteImplies(p, q, KContext::simplifyNot, KContext::simplifyOr)
 
 fun KContext.simplifyXor(a: KExpr<KBoolSort>, b: KExpr<KBoolSort>): KExpr<KBoolSort> =
-    simplifyEq(simplifyNot(a), b)
+    rewriteXor(a, b, KContext::simplifyNot, KContext::simplifyEq)
 
 fun <T : KSort> KContext.simplifyEq(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
     order: Boolean = true
-): KExpr<KBoolSort> = when {
-    lhs == rhs -> trueExpr
-    lhs is KInterpretedValue<T> && rhs is KInterpretedValue<T> && lhs != rhs -> falseExpr
-    lhs.sort == boolSort -> simplifyEqBool(lhs.uncheckedCast(), rhs.uncheckedCast(), order)
-    order -> withExpressionsOrdered(lhs, rhs, ::mkEqNoSimplify)
-    else -> mkEqNoSimplify(lhs, rhs)
-}
+): KExpr<KBoolSort> =
+    simplifyEqLight(lhs, rhs) { lhs2, rhs2 ->
+        simplifyEqBool(lhs2, rhs2, { l, r -> simplifyEqBool(l, r, order) }) { lhs3, rhs3 ->
+            if (order) {
+                withExpressionsOrdered(lhs3, rhs3, ::mkEqNoSimplify)
+            } else {
+                mkEqNoSimplify(lhs3, rhs3)
+            }
+        }
+    }
 
 fun <T : KSort> KContext.simplifyDistinct(
     args: List<KExpr<T>>,
     order: Boolean = true
-): KExpr<KBoolSort> {
-    if (args.isEmpty() || args.size == 1) return trueExpr
-
-    // (distinct a b) ==> (not (= a b))
-    if (args.size == 2) return simplifyNot(simplifyEq(args[0], args[1], order))
-
-    // (distinct a b a) ==> false
-    val distinctArgs = args.toSet()
-    if (distinctArgs.size < args.size) return falseExpr
-
-    // All arguments are not equal and all are interpreted values ==> all are distinct
-    if (args.all { it is KInterpretedValue<*> }) return trueExpr
-
-    return if (order) {
-        val orderedArgs = args.toMutableList().apply {
-            ensureExpressionsOrder()
+): KExpr<KBoolSort> =
+    simplifyDistinctLight(args, KContext::simplifyNot, { l, r -> simplifyEq(l, r, order) }) { args2 ->
+        if (order) {
+            val orderedArgs = args2.toMutableList().apply {
+                ensureExpressionsOrder()
+            }
+            mkDistinctNoSimplify(orderedArgs)
+        } else {
+            mkDistinctNoSimplify(args2)
         }
-        mkDistinctNoSimplify(orderedArgs)
-    } else {
-        mkDistinctNoSimplify(args)
     }
-}
 
 fun <T : KSort> KContext.simplifyIte(
     condition: KExpr<KBoolSort>,
     trueBranch: KExpr<T>,
     falseBranch: KExpr<T>
-): KExpr<T> {
-    var c = condition
-    var t = trueBranch
-    var e = falseBranch
-
-    // (ite (not c) a b) ==> (ite c b a)
-    if (c is KNotExpr) {
-        c = c.arg
-        val tmp = t
-        t = e
-        e = tmp
+): KExpr<T> =
+    simplifyIteNotCondition(condition, trueBranch, falseBranch) { condition2, trueBranch2, falseBranch2 ->
+        simplifyIteLight(condition2, trueBranch2, falseBranch2) { condition3, trueBranch3, falseBranch3 ->
+            simplifyIteSameBranches(condition3, trueBranch3, falseBranch3, KContext::simplifyIte, KContext::simplifyOr) { condition4,
+                                                                                                                          trueBranch4,
+                                                                                                                          falseBranch4 ->
+                simplifyIteBool(condition4, trueBranch4, falseBranch4, KContext::simplifyBoolIte, ::mkIteNoSimplify)
+            }
+        }
     }
-
-    // (ite true t e) ==> t
-    if (c == trueExpr) {
-        return t
-    }
-
-    // (ite false t e) ==> e
-    if (c == falseExpr) {
-        return e
-    }
-
-    // (ite c (ite c t1 t2) t3)  ==> (ite c t1 t3)
-    if (t is KIteExpr<T> && t.condition == c) {
-        t = t.trueBranch
-    }
-
-    // (ite c t1 (ite c t2 t3))  ==> (ite c t1 t3)
-    if (e is KIteExpr<T> && e.condition == c) {
-        e = e.falseBranch
-    }
-
-    // (ite c t t) ==> t
-    if (t == e) {
-        return t
-    }
-
-    // (ite c t1 (ite c2 t1 t2)) ==> (ite (or c c2) t1 t2)
-    if (e is KIteExpr<T> && e.trueBranch == t) {
-        val simplifiedCondition = simplifyOr(c, e.condition)
-        return simplifyIte(simplifiedCondition, t, e.falseBranch)
-    }
-
-    if (t.sort == boolSort) {
-        return simplifyBoolIte(c, t.uncheckedCast(), e.uncheckedCast()).uncheckedCast()
-    }
-
-    return mkIteNoSimplify(c, t, e)
-}
 
 
 fun KContext.simplifyEqBool(
     lhs: KExpr<KBoolSort>,
     rhs: KExpr<KBoolSort>,
     order: Boolean = true
-): KExpr<KBoolSort> {
-    // (= (not a) (not b)) ==> (= a b)
-    if (lhs is KNotExpr && rhs is KNotExpr) {
-        return simplifyEq(lhs.arg, rhs.arg, order)
+): KExpr<KBoolSort> =
+    simplifyEqBoolLight(lhs, rhs) { lhs2, rhs2 ->
+        simplifyEqBoolEvalConst(lhs2, rhs2) { lhs3, rhs3 ->
+            simplifyEqBoolNot(lhs3, rhs3, KContext::simplifyEq) { lhs4, rhs4 ->
+                if (order) {
+                    withExpressionsOrdered(lhs4, rhs4, ::mkEqNoSimplify)
+                } else {
+                    mkEqNoSimplify(lhs4, rhs4)
+                }
+            }
+        }
     }
-
-    when (lhs) {
-        trueExpr -> return rhs
-        falseExpr -> return simplifyNot(rhs)
-    }
-
-    when (rhs) {
-        trueExpr -> return lhs
-        falseExpr -> return simplifyNot(lhs)
-    }
-
-    // (= a (not a)) ==> false
-    if (lhs.isComplement(rhs)) {
-        return falseExpr
-    }
-
-    return if (order) {
-        withExpressionsOrdered(lhs, rhs, ::mkEqNoSimplify)
-    } else {
-        mkEqNoSimplify(lhs, rhs)
-    }
-}
 
 fun KExpr<KBoolSort>.isComplement(other: KExpr<KBoolSort>) =
     ctx.isComplementCore(this, other) || ctx.isComplementCore(other, this)
@@ -367,44 +296,23 @@ private fun trySimplifyAndOrElement(
 
 private fun KContext.simplifyBoolIte(
     condition: KExpr<KBoolSort>,
-    thenBranch: KExpr<KBoolSort>,
-    elseBranch: KExpr<KBoolSort>
-): KExpr<KBoolSort> {
-    // (ite c true e) ==> (or c e)
-    if (thenBranch == trueExpr) {
-        if (elseBranch == falseExpr) {
-            return condition
-        }
-        return simplifyOr(condition, elseBranch)
+    trueBranch: KExpr<KBoolSort>,
+    falseBranch: KExpr<KBoolSort>
+): KExpr<KBoolSort> =
+    simplifyBoolIteConstBranches(
+        condition = condition,
+        trueBranch = trueBranch,
+        falseBranch = falseBranch,
+        rewriteOr = KContext::simplifyOr,
+        rewriteAnd = KContext::simplifyAnd,
+        rewriteNot = KContext::simplifyNot
+    ) { condition2, trueBranch2, falseBranch2 ->
+        simplifyBoolIteSameConditionBranch(
+            condition = condition2,
+            trueBranch = trueBranch2,
+            falseBranch = falseBranch2,
+            rewriteAnd = KContext::simplifyAnd,
+            rewriteOr = KContext::simplifyOr,
+            cont = ::mkIteNoSimplify
+        )
     }
-
-    // (ite c false e) ==> (and (not c) e)
-    if (thenBranch == falseExpr) {
-        if (elseBranch == trueExpr) {
-            return simplifyNot(condition)
-        }
-        return simplifyAnd(simplifyNot(condition), elseBranch)
-    }
-
-    // (ite c t true) ==> (or (not c) t)
-    if (elseBranch == trueExpr) {
-        return simplifyOr(simplifyNot(condition), thenBranch)
-    }
-
-    // (ite c t false) ==> (and c t)
-    if (elseBranch == falseExpr) {
-        return simplifyAnd(condition, thenBranch)
-    }
-
-    // (ite c t c) ==> (and c t)
-    if (condition == elseBranch) {
-        return simplifyAnd(condition, thenBranch)
-    }
-
-    // (ite c c e) ==> (or c e)
-    if (condition == thenBranch) {
-        return simplifyOr(condition, elseBranch)
-    }
-
-    return mkIteNoSimplify(condition, thenBranch, elseBranch)
-}

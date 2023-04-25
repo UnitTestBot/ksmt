@@ -160,11 +160,11 @@ import io.ksmt.expr.KXorExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvAddNoOverflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvAddNoUnderflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvDivNoOverflowExpr
-import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoOverflowExpr
-import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoUnderflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvNegNoOverflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvSubNoOverflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvSubNoUnderflowExpr
+import io.ksmt.expr.rewrite.simplify.simplifyBvMulNoOverflowExprLight
+import io.ksmt.expr.rewrite.simplify.simplifyBvMulNoUnderflowExprLight
 import io.ksmt.expr.rewrite.simplify.simplifyBvRotateLeftExpr
 import io.ksmt.expr.rewrite.simplify.simplifyBvRotateRightExpr
 import io.ksmt.solver.KSolverUnsupportedFeatureException
@@ -533,34 +533,24 @@ class KCvc5ExprInternalizer(
      * otherwise we can't process rotate expr on expression
      */
     override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>) = with(expr) {
-        transform {
-            val simplifiedExpr = ctx.simplifyBvRotateLeftExpr(arg, rotation)
+        val simplifiedExpr = ctx.simplifyBvRotateLeftExpr(arg, rotation)
 
-            if (simplifiedExpr is KBvRotateLeftExpr<*>) {
-                throw KSolverUnsupportedFeatureException(
-                    "Rotate expr with expression argument is not supported by cvc5"
-                )
-            }
+        if (simplifiedExpr is KBvRotateLeftExpr<*>)
+            throw KSolverUnsupportedFeatureException("Rotate expr with expression argument is not supported by cvc5")
 
-            simplifiedExpr.internalizeExpr()
-        }
+        simplifiedExpr.accept(this@KCvc5ExprInternalizer)
     }
 
     /*
      * @see transform(expr: KBvRotateLeftExpr<T>)
      */
     override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>) = with(expr) {
-        transform {
-            val simplifiedExpr = ctx.simplifyBvRotateRightExpr(arg, rotation)
+        val simplifiedExpr = ctx.simplifyBvRotateRightExpr(arg, rotation)
 
-            if (simplifiedExpr is KBvRotateRightExpr<*>) {
-                throw KSolverUnsupportedFeatureException(
-                    "Rotate expr with expression argument is not supported by cvc5"
-                )
-            }
+        if (simplifiedExpr is KBvRotateRightExpr<*>)
+            throw KSolverUnsupportedFeatureException("Rotate expr with expression argument is not supported by cvc5")
 
-            simplifiedExpr.internalizeExpr()
-        }
+        simplifiedExpr.accept(this@KCvc5ExprInternalizer)
     }
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftIndexedExpr<T>) = with(expr) {
@@ -602,51 +592,49 @@ class KCvc5ExprInternalizer(
     }
 
     override fun <T : KBvSort> transform(expr: KBvAddNoOverflowExpr<T>) = with(expr) {
-        transform {
-            ctx.rewriteBvAddNoOverflowExpr(arg0, arg1, isSigned).internalizeExpr()
-        }
+        val simplifiedExpr = ctx.rewriteBvAddNoOverflowExpr(expr.arg0, expr.arg1, isSigned)
+        simplifiedExpr.accept(this@KCvc5ExprInternalizer)
     }
 
     override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>) = with(expr) {
-        transform {
-            ctx.rewriteBvAddNoUnderflowExpr(arg0, arg1).internalizeExpr()
-        }
+        val simplifiedExpr = ctx.rewriteBvAddNoUnderflowExpr(expr.arg0, expr.arg1)
+        simplifiedExpr.accept(this@KCvc5ExprInternalizer)
     }
 
     override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>) = with(expr) {
-        transform {
-            ctx.rewriteBvSubNoOverflowExpr(arg0, arg1).internalizeExpr()
-        }
+        val simplifiedExpr = ctx.rewriteBvSubNoOverflowExpr(expr.arg0, expr.arg1)
+        simplifiedExpr.accept(this@KCvc5ExprInternalizer)
     }
 
     override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>) = with(expr) {
-        transform {
-            ctx.rewriteBvSubNoUnderflowExpr(arg0, arg1, isSigned).internalizeExpr()
-        }
+        val simplifiedExpr = ctx.rewriteBvSubNoUnderflowExpr(expr.arg0, expr.arg1, isSigned)
+        simplifiedExpr.accept(this@KCvc5ExprInternalizer)
     }
 
     override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>) = with(expr) {
-        transform {
-            ctx.rewriteBvDivNoOverflowExpr(arg0, arg1).internalizeExpr()
-        }
+        val simplifiedExpr = ctx.rewriteBvDivNoOverflowExpr(expr.arg0, expr.arg1)
+        simplifiedExpr.accept(this@KCvc5ExprInternalizer)
     }
 
     override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>) = with(expr) {
-        transform {
-            ctx.rewriteBvNegNoOverflowExpr(value).internalizeExpr()
-        }
+        val simplifiedExpr = ctx.rewriteBvNegNoOverflowExpr(expr.value)
+        simplifiedExpr.accept(this@KCvc5ExprInternalizer)
     }
 
     override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>) = with(expr) {
-        transform {
-            ctx.rewriteBvMulNoOverflowExpr(arg0, arg1, isSigned).internalizeExpr()
+        val simplifiedExpr = ctx.simplifyBvMulNoOverflowExprLight(expr.arg0, expr.arg1, isSigned) { _, _, _ ->
+            throw KSolverUnsupportedFeatureException("no direct support in cvc5")
         }
+
+        simplifiedExpr.accept(this@KCvc5ExprInternalizer)
     }
 
     override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) = with(expr) {
-        transform {
-            ctx.rewriteBvMulNoUnderflowExpr(arg0, arg1).internalizeExpr()
+        val simplifiedExpr = ctx.simplifyBvMulNoUnderflowExprLight(expr.arg0, expr.arg1) { _, _ ->
+            throw KSolverUnsupportedFeatureException("no direct support in cvc5")
         }
+
+        simplifiedExpr.accept(this@KCvc5ExprInternalizer)
     }
 
     private fun fpToBvTerm(signBit: Boolean, biasedExp: KBitVecValue<*>, significand: KBitVecValue<*>): Term {

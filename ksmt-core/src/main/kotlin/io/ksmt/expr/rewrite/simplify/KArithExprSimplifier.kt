@@ -1,5 +1,6 @@
 package io.ksmt.expr.rewrite.simplify
 
+import io.ksmt.KContext
 import io.ksmt.expr.KAddArithExpr
 import io.ksmt.expr.KDivArithExpr
 import io.ksmt.expr.KExpr
@@ -28,13 +29,9 @@ import io.ksmt.utils.ArithUtils.toRealValue
 interface KArithExprSimplifier : KExprSimplifierBase {
 
     fun simplifyEqInt(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): KExpr<KBoolSort> = with(ctx) {
-        if (lhs == rhs) return trueExpr
-
-        if (lhs is KIntNumExpr && rhs is KIntNumExpr) {
-            return (lhs.compareTo(rhs) == 0).expr
+        simplifyEqIntLight(lhs, rhs) { lhs2, rhs2 ->
+            withExpressionsOrdered(lhs2, rhs2, ::mkEqNoSimplify)
         }
-
-        withExpressionsOrdered(lhs, rhs, ::mkEqNoSimplify)
     }
 
     fun areDefinitelyDistinctInt(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): Boolean {
@@ -45,13 +42,9 @@ interface KArithExprSimplifier : KExprSimplifierBase {
     }
 
     fun simplifyEqReal(lhs: KExpr<KRealSort>, rhs: KExpr<KRealSort>): KExpr<KBoolSort> = with(ctx) {
-        if (lhs == rhs) return trueExpr
-
-        if (lhs is KRealNumExpr && rhs is KRealNumExpr) {
-            return (lhs.toRealValue().compareTo(rhs.toRealValue()) == 0).expr
+        simplifyEqRealLight(lhs, rhs) { lhs2, rhs2 ->
+            withExpressionsOrdered(lhs2, rhs2, ::mkEqNoSimplify)
         }
-
-        return withExpressionsOrdered(lhs, rhs, ::mkEqNoSimplify)
     }
 
     fun areDefinitelyDistinctReal(lhs: KExpr<KRealSort>, rhs: KExpr<KRealSort>): Boolean {
@@ -61,83 +54,204 @@ interface KArithExprSimplifier : KExprSimplifierBase {
         return false
     }
 
+    fun <T : KArithSort> KContext.preprocess(expr: KLtArithExpr<T>): KExpr<KBoolSort> = expr
+    fun <T : KArithSort> KContext.postRewriteArithLt(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
+        simplifyArithLt(lhs, rhs)
+
     override fun <T : KArithSort> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> =
-        simplifyExpr(expr, expr.lhs, expr.rhs) { lhs, rhs ->
-            simplifyArithLt(lhs, rhs)
-        }
+        simplifyExpr(
+            expr = expr,
+            a0 = expr.lhs,
+            a1 = expr.rhs,
+            preprocess = { preprocess(it) },
+            simplifier = { lhs, rhs -> postRewriteArithLt(lhs, rhs) }
+        )
+
+    fun <T : KArithSort> KContext.preprocess(expr: KLeArithExpr<T>): KExpr<KBoolSort> = expr
+    fun <T : KArithSort> KContext.postRewriteArithLe(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
+        simplifyArithLe(lhs, rhs)
 
     override fun <T : KArithSort> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> =
-        simplifyExpr(expr, expr.lhs, expr.rhs) { lhs, rhs ->
-            simplifyArithLe(lhs, rhs)
-        }
+        simplifyExpr(
+            expr = expr,
+            a0 = expr.lhs,
+            a1 = expr.rhs,
+            preprocess = { preprocess(it) },
+            simplifier = { lhs, rhs -> postRewriteArithLe(lhs, rhs) }
+        )
+
+    fun <T : KArithSort> KContext.preprocess(expr: KGtArithExpr<T>): KExpr<KBoolSort> = expr
+    fun <T : KArithSort> KContext.postRewriteArithGt(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
+        simplifyArithGt(lhs, rhs)
 
     override fun <T : KArithSort> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> =
-        simplifyExpr(expr, expr.lhs, expr.rhs) { lhs, rhs ->
-            simplifyArithGt(lhs, rhs)
-        }
+        simplifyExpr(
+            expr = expr,
+            a0 = expr.lhs,
+            a1 = expr.rhs,
+            preprocess = { preprocess(it) },
+            simplifier = { lhs, rhs -> postRewriteArithGt(lhs, rhs) }
+        )
+
+    fun <T : KArithSort> KContext.preprocess(expr: KGeArithExpr<T>): KExpr<KBoolSort> = expr
+    fun <T : KArithSort> KContext.postRewriteArithGe(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
+        simplifyArithGe(lhs, rhs)
 
     override fun <T : KArithSort> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> =
-        simplifyExpr(expr, expr.lhs, expr.rhs) { lhs, rhs ->
-            simplifyArithGe(lhs, rhs)
-        }
+        simplifyExpr(
+            expr = expr,
+            a0 = expr.lhs,
+            a1 = expr.rhs,
+            preprocess = { preprocess(it) },
+            simplifier = { lhs, rhs -> postRewriteArithGe(lhs, rhs) }
+        )
 
-    override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> = simplifyExpr(expr, expr.args) { args ->
+    fun <T : KArithSort> KContext.preprocess(expr: KAddArithExpr<T>): KExpr<T> = expr
+    fun <T : KArithSort> KContext.postRewriteArithAdd(args: List<KExpr<T>>): KExpr<T> =
         simplifyArithAdd(args)
+
+    override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> =
+        simplifyExpr(
+            expr = expr,
+            args = expr.args,
+            preprocess = { preprocess(it) },
+            simplifier = { args -> postRewriteArithAdd(args) }
+        )
+
+    fun <T : KArithSort> KContext.preprocess(expr: KMulArithExpr<T>): KExpr<T> = expr
+    fun <T : KArithSort> KContext.postRewriteArithMul(args: List<KExpr<T>>): KExpr<T> =
+        simplifyArithMul(args)
+
+    override fun <T : KArithSort> transform(expr: KMulArithExpr<T>): KExpr<T> =
+        simplifyExpr(
+            expr = expr,
+            args = expr.args,
+            preprocess = { preprocess(it) },
+            simplifier = { args -> postRewriteArithMul(args) }
+        )
+
+    fun <T : KArithSort> KContext.preprocess(expr: KSubArithExpr<T>): KExpr<T> {
+        val args = expr.args
+
+        return if (args.size == 1) {
+            args.single()
+        } else {
+            val simplifiedArgs = arrayListOf(args.first())
+            for (arg in args.drop(1)) {
+                simplifiedArgs += KUnaryMinusArithExpr(this, arg)
+            }
+            KAddArithExpr(this, simplifiedArgs)
+        }
     }
 
-    override fun <T : KArithSort> transform(expr: KMulArithExpr<T>): KExpr<T> = simplifyExpr(expr, expr.args) { args ->
-        simplifyArithMul(args)
-    }
+    fun <T : KArithSort> KContext.postRewriteArithSub(args: List<KExpr<T>>): KExpr<T> =
+        error("Always preprocessed")
 
     override fun <T : KArithSort> transform(expr: KSubArithExpr<T>): KExpr<T> =
         simplifyExpr(
             expr = expr,
-            preprocess = {
-                val args = expr.args
-                if (args.size == 1) {
-                    args.single()
-                } else {
-                    val simplifiedArgs = arrayListOf(args.first())
-                    for (arg in args.drop(1)) {
-                        simplifiedArgs += KUnaryMinusArithExpr(this, arg)
-                    }
-                    KAddArithExpr(this, simplifiedArgs)
-                }
-            }
+            args = expr.args,
+            preprocess = { preprocess(it) },
+            simplifier = { args -> postRewriteArithSub(args) }
         )
 
+    fun <T : KArithSort> KContext.preprocess(expr: KUnaryMinusArithExpr<T>): KExpr<T> = expr
+    fun <T : KArithSort> KContext.postRewriteArithUnaryMinus(arg: KExpr<T>): KExpr<T> =
+        simplifyArithUnaryMinus(arg)
+
     override fun <T : KArithSort> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> =
-        simplifyExpr(expr, expr.arg) { arg ->
-            simplifyArithUnaryMinus(arg)
-        }
+        simplifyExpr(
+            expr = expr,
+            a0 = expr.arg,
+            preprocess = { preprocess(it) },
+            simplifier = { arg -> postRewriteArithUnaryMinus(arg) }
+        )
+
+    fun <T : KArithSort> KContext.preprocess(expr: KDivArithExpr<T>): KExpr<T> = expr
+    fun <T : KArithSort> KContext.postRewriteArithDiv(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
+        simplifyArithDiv(lhs, rhs)
 
     override fun <T : KArithSort> transform(expr: KDivArithExpr<T>): KExpr<T> =
-        simplifyExpr(expr, expr.lhs, expr.rhs) { lhs, rhs ->
-            simplifyArithDiv(lhs, rhs)
-        }
+        simplifyExpr(
+            expr = expr,
+            a0 = expr.lhs,
+            a1 = expr.rhs,
+            preprocess = { preprocess(it) },
+            simplifier = { lhs, rhs -> postRewriteArithDiv(lhs, rhs) }
+        )
+
+    fun <T : KArithSort> KContext.preprocess(expr: KPowerArithExpr<T>): KExpr<T> = expr
+    fun <T : KArithSort> KContext.postRewriteArithPower(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
+        simplifyArithPower(lhs, rhs)
 
     override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>): KExpr<T> =
-        simplifyExpr(expr, expr.lhs, expr.rhs) { base, power ->
-            simplifyArithPower(base, power)
-        }
+        simplifyExpr(
+            expr = expr,
+            a0 = expr.lhs,
+            a1 = expr.rhs,
+            preprocess = { preprocess(it) },
+            simplifier = { lhs, rhs -> postRewriteArithPower(lhs, rhs) }
+        )
 
-    override fun transform(expr: KModIntExpr): KExpr<KIntSort> = simplifyExpr(expr, expr.lhs, expr.rhs) { lhs, rhs ->
+    fun KContext.preprocess(expr: KModIntExpr): KExpr<KIntSort> = expr
+    fun KContext.postRewriteIntMod(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): KExpr<KIntSort> =
         simplifyIntMod(lhs, rhs)
-    }
 
-    override fun transform(expr: KRemIntExpr): KExpr<KIntSort> = simplifyExpr(expr, expr.lhs, expr.rhs) { lhs, rhs ->
+    override fun transform(expr: KModIntExpr): KExpr<KIntSort> =
+        simplifyExpr(
+            expr = expr,
+            a0 = expr.lhs,
+            a1 = expr.rhs,
+            preprocess = { preprocess(it) },
+            simplifier = { lhs, rhs -> postRewriteIntMod(lhs, rhs) }
+        )
+
+    fun KContext.preprocess(expr: KRemIntExpr): KExpr<KIntSort> = expr
+    fun KContext.postRewriteIntRem(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): KExpr<KIntSort> =
         simplifyIntRem(lhs, rhs)
-    }
 
-    override fun transform(expr: KToIntRealExpr): KExpr<KIntSort> = simplifyExpr(expr, expr.arg) { arg ->
+    override fun transform(expr: KRemIntExpr): KExpr<KIntSort> =
+        simplifyExpr(
+            expr = expr,
+            a0 = expr.lhs,
+            a1 = expr.rhs,
+            preprocess = { preprocess(it) },
+            simplifier = { lhs, rhs -> postRewriteIntRem(lhs, rhs) }
+        )
+
+    fun KContext.preprocess(expr: KToIntRealExpr): KExpr<KIntSort> = expr
+    fun KContext.postRewriteRealToInt(arg: KExpr<KRealSort>): KExpr<KIntSort> =
         simplifyRealToInt(arg)
-    }
 
-    override fun transform(expr: KIsIntRealExpr): KExpr<KBoolSort> = simplifyExpr(expr, expr.arg) { arg ->
+    override fun transform(expr: KToIntRealExpr): KExpr<KIntSort> =
+        simplifyExpr(
+            expr = expr,
+            a0 = expr.arg,
+            preprocess = { preprocess(it) },
+            simplifier = { arg -> postRewriteRealToInt(arg) }
+        )
+
+    fun KContext.preprocess(expr: KIsIntRealExpr): KExpr<KBoolSort> = expr
+    fun KContext.postRewriteRealIsInt(arg: KExpr<KRealSort>): KExpr<KBoolSort> =
         simplifyRealIsInt(arg)
-    }
 
-    override fun transform(expr: KToRealIntExpr): KExpr<KRealSort> = simplifyExpr(expr, expr.arg) { arg ->
+    override fun transform(expr: KIsIntRealExpr): KExpr<KBoolSort> =
+        simplifyExpr(
+            expr = expr,
+            a0 = expr.arg,
+            preprocess = { preprocess(it) },
+            simplifier = { arg -> postRewriteRealIsInt(arg) }
+        )
+
+    fun KContext.preprocess(expr: KToRealIntExpr): KExpr<KRealSort> = expr
+    fun KContext.postRewriteIntToReal(arg: KExpr<KIntSort>): KExpr<KRealSort> =
         simplifyIntToReal(arg)
-    }
+
+    override fun transform(expr: KToRealIntExpr): KExpr<KRealSort> =
+        simplifyExpr(
+            expr = expr,
+            a0 = expr.arg,
+            preprocess = { preprocess(it) },
+            simplifier = { arg -> postRewriteIntToReal(arg) }
+        )
 }
