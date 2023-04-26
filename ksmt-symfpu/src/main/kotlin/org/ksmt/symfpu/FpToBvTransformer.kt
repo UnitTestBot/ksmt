@@ -73,6 +73,7 @@ import org.ksmt.utils.cast
 
 class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     val arraysTransform = ArraysTransform(ctx)
+    val lambdasVariables = mutableMapOf<List<KSort>, List<KConst<KSort>?>>()
     private val mapFpToUnpackedFpImpl =
         mutableMapOf<KDecl<KFpSort>, UnpackedFp<KFpSort>>()
     val mapFpToUnpackedFp: Map<KDecl<KFpSort>, UnpackedFp<KFpSort>> get() = mapFpToUnpackedFpImpl
@@ -148,7 +149,6 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     }
 
 
-
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> {
         return transformExprAfterTransformed(expr, expr.array, expr.index) { array, index ->
             with(ctx) {
@@ -189,6 +189,8 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     ): KArrayLambdaBase<D, R> =
         transformExprAfterTransformed(expr, expr.body) { body ->
             val newDecl = arraysTransform.transformDeclList(expr.indexVarDeclarations)
+            lambdasVariables[expr.indexVarDeclarations.map { it.sort }] =
+                expr.indexVarDeclarations.map { arraysTransform.mapFpToBvDeclImpl.get(it) }.cast()
             arraysTransform.mkArrayAnyLambda(newDecl, packToBvIfUnpacked(body)).cast()
         }.cast()
 
@@ -380,7 +382,6 @@ class FpToBvTransformer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
             }
 
             expr.sort is KArraySortBase<*> -> {
-                println("in transform KConst<KArraySortBase<*>>")
                 val asArray: KConst<KArraySortBase<*>> = expr.cast()
                 val resSort = transformedArraySort(asArray)
                 arraysTransform.mapFpToBvDeclImpl.getOrPut(asArray.decl) {

@@ -55,50 +55,39 @@ class SymFPUModel(private val kModel: KModel, val ctx: KContext, val transformer
             }
 
             val const = getConst(decl) ?: return@with null
-            getInterpretation(decl, kModel.eval(const))
+            val eval = kModel.eval(const)
+            if (eval.sort is KArraySortBase<*>  && eval is KConst<*>) return null
+            getInterpretation(decl, eval)
         }.cast()
     }
 
 
     private fun transformArrayLambda(
-        bvArray: KExpr<KArraySortBase<*>>, toSort: KArraySortBase<*>,
+        bvLambda: KExpr<KArraySortBase<*>>, toSort: KArraySortBase<*>,
     ): KExpr<*> = with(ctx) {
-        val fromSort = bvArray.sort
+        val fromSort = bvLambda.sort
 
         if (fromSort == toSort) {
-            return@with bvArray.uncheckedCast()
+            return@with bvLambda.uncheckedCast()
         }
 
-        // fp indices
-        val indices: List<KConst<KSort>> = toSort.domainSorts.map {
-            mkFreshConst("i", it).cast()
-        }
-        //bv indices
-        // todo dont create variables
-        val fromIndices: List<KConst<KSort>> =
-            indices.zip(fromSort.domainSorts) { idx: KConst<KSort>, bvSort: KSort ->
-                val curSort = idx.sort
-                getConstOfNonFPSort(curSort, idx, bvSort).cast()
-            }
-        // bv value
-        val value = mkAnyArraySelect(bvArray, fromIndices)
-        //fp value
+
+        val (indices: List<KConst<KSort>>, fromIndices: List<KConst<KSort>>) = toSort.domainSorts.zip(
+            transformer.lambdasVariables[toSort.domainSorts]!!) { it: KSort, bvConst: KConst<KSort>? ->
+            val fpConst: KConst<KSort> = mkFreshConst("i", it).cast()
+            Pair(fpConst, (bvConst ?: fpConst))
+        }.unzip()
+
+        val bvValue = mkAnyArraySelect(bvLambda, fromIndices)
+
         val targetFpSort = toSort.range
-        val toValue = transformToFpSort(targetFpSort, value)
+        val fpValue = transformToFpSort(targetFpSort, bvValue)
 
         val replacement: KExpr<KArraySortBase<*>> = mkAnyArrayLambda(
-            indices.map { it.decl }, toValue
+            indices.map { it.decl }, fpValue
         ).uncheckedCast()
         replacement
     }
-
-    // todo dont create variables
-    private fun getConstOfNonFPSort(curSort: KSort, idx: KConst<KSort>, bvSort: KSort): KConst<*>? =
-        if (sortContainsFP(curSort)) {
-            transformer.arraysTransform.mapFpToBvDeclImpl.getOrPut(idx.decl.cast()) {
-                ctx.mkFreshConst(idx.decl.name + "!tobv_transform!", bvSort).cast()
-            }.cast()
-        } else idx
 
     private fun <T : KSort> getInterpretation(
         decl: KDecl<T>, const: KExpr<*>,
@@ -147,7 +136,7 @@ class SymFPUModel(private val kModel: KModel, val ctx: KContext, val transformer
                         ctx.mkAnyArrayStore(arrayInterpretation.cast(), indices, value)
                     }
 
-                    is KArrayLambdaBase<*, *>, is KConst<*> -> transformArrayLambda(array, targetFpSort)
+                    is KArrayLambdaBase<*, *> -> transformArrayLambda(array, targetFpSort)
 
                     else -> throw IllegalArgumentException(
                         "Unsupported array:  class: ${array.javaClass} array.sort ${array.sort}")
