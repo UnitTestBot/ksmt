@@ -55,8 +55,7 @@ class SymFPUModel(private val kModel: KModel, val ctx: KContext, val transformer
             }
 
             val const = getConst(decl) ?: return@with null
-            val interp = getInterpretation(decl, kModel.eval(const))
-            interp.cast()
+            getInterpretation(decl, kModel.eval(const))
         }.cast()
     }
 
@@ -148,9 +147,10 @@ class SymFPUModel(private val kModel: KModel, val ctx: KContext, val transformer
                         ctx.mkAnyArrayStore(arrayInterpretation.cast(), indices, value)
                     }
 
-                    is KArrayLambdaBase<*, *> -> transformArrayLambda(array, targetFpSort)
+                    is KArrayLambdaBase<*, *>, is KConst<*> -> transformArrayLambda(array, targetFpSort)
 
-                    else -> throw IllegalArgumentException("Unsupported array: $array")
+                    else -> throw IllegalArgumentException(
+                        "Unsupported array:  class: ${array.javaClass} array.sort ${array.sort}")
                 }.cast()
             }
 
