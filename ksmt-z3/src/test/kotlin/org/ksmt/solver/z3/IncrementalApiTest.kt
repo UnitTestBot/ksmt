@@ -23,12 +23,12 @@ class IncrementalApiTest {
         val e3 = !c
 
         solver.assert(e1)
-        val e2Track = solver.assertAndTrack(e2)
+        solver.assertAndTrack(e2)
         val status = solver.checkWithAssumptions(listOf(e3))
         assertEquals(KSolverStatus.UNSAT, status)
         val core = solver.unsatCore()
         assertEquals(2, core.size)
-        assertTrue(e2Track in core)
+        assertTrue(e2 in core)
         assertTrue(e3 in core)
     }
 
@@ -41,12 +41,12 @@ class IncrementalApiTest {
         val e2 = !(a and b)
 
         solver.assert(e1)
-        val e2Track = solver.assertAndTrack(e2)
+        solver.assertAndTrack(e2)
         val status = solver.check()
         assertEquals(KSolverStatus.UNSAT, status)
         val core = solver.unsatCore()
         assertEquals(1, core.size)
-        assertTrue(e2Track in core)
+        assertTrue(e2 in core)
     }
 
     @Test
@@ -54,12 +54,12 @@ class IncrementalApiTest {
         val a = boolSort.mkConst("a")
         solver.assert(a)
         solver.push()
-        val track = solver.assertAndTrack(!a)
+        solver.assertAndTrack(!a)
         var status = solver.check()
         assertEquals(KSolverStatus.UNSAT, status)
         val core = solver.unsatCore()
         assertEquals(1, core.size)
-        assertTrue(track in core)
+        assertTrue(!a in core)
         solver.pop()
         status = solver.check()
         assertEquals(KSolverStatus.SAT, status)

@@ -22,7 +22,7 @@ class SolverProtocolModel private constructor(
     private val _deleteSolver: RdCall<Unit, Unit>,
     private val _configure: RdCall<List<SolverConfigurationParam>, Unit>,
     private val _assert: RdCall<AssertParams, Unit>,
-    private val _assertAndTrack: RdCall<AssertAndTrackParams, Unit>,
+    private val _assertAndTrack: RdCall<AssertParams, Unit>,
     private val _push: RdCall<Unit, Unit>,
     private val _pop: RdCall<PopParams, Unit>,
     private val _check: RdCall<CheckParams, CheckResult>,
@@ -40,7 +40,6 @@ class SolverProtocolModel private constructor(
             serializers.register(CreateSolverParams)
             serializers.register(SolverConfigurationParam)
             serializers.register(AssertParams)
-            serializers.register(AssertAndTrackParams)
             serializers.register(PopParams)
             serializers.register(CheckParams)
             serializers.register(CheckResult)
@@ -78,7 +77,7 @@ class SolverProtocolModel private constructor(
         
         private val __SolverConfigurationParamListSerializer = SolverConfigurationParam.list()
         
-        const val serializationHash = 6654719566694323594L
+        const val serializationHash = 9141130720080102681L
         
     }
     override val serializersOwner: ISerializersOwner get() = SolverProtocolModel
@@ -109,7 +108,7 @@ class SolverProtocolModel private constructor(
     /**
      * Assert and track expression
      */
-    val assertAndTrack: RdCall<AssertAndTrackParams, Unit> get() = _assertAndTrack
+    val assertAndTrack: RdCall<AssertParams, Unit> get() = _assertAndTrack
     
     /**
      * Solver push
@@ -191,7 +190,7 @@ class SolverProtocolModel private constructor(
         RdCall<Unit, Unit>(FrameworkMarshallers.Void, FrameworkMarshallers.Void),
         RdCall<List<SolverConfigurationParam>, Unit>(__SolverConfigurationParamListSerializer, FrameworkMarshallers.Void),
         RdCall<AssertParams, Unit>(AssertParams, FrameworkMarshallers.Void),
-        RdCall<AssertAndTrackParams, Unit>(AssertAndTrackParams, FrameworkMarshallers.Void),
+        RdCall<AssertParams, Unit>(AssertParams, FrameworkMarshallers.Void),
         RdCall<Unit, Unit>(FrameworkMarshallers.Void, FrameworkMarshallers.Void),
         RdCall<PopParams, Unit>(PopParams, FrameworkMarshallers.Void),
         RdCall<CheckParams, CheckResult>(CheckParams, CheckResult),
@@ -246,69 +245,6 @@ class SolverProtocolModel private constructor(
 }
 val IProtocol.solverProtocolModel get() = getOrCreateExtension(SolverProtocolModel::class) { @Suppress("DEPRECATION") SolverProtocolModel.create(lifetime, this) }
 
-
-
-/**
- * #### Generated from [SolverProtocolModel.kt:51]
- */
-data class AssertAndTrackParams (
-    val expression: org.ksmt.KAst,
-    val trackVar: org.ksmt.KAst
-) : IPrintable {
-    //companion
-    
-    companion object : IMarshaller<AssertAndTrackParams> {
-        override val _type: KClass<AssertAndTrackParams> = AssertAndTrackParams::class
-        
-        @Suppress("UNCHECKED_CAST")
-        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): AssertAndTrackParams  {
-            val expression = (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer)
-            val trackVar = (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer)
-            return AssertAndTrackParams(expression, trackVar)
-        }
-        
-        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: AssertAndTrackParams)  {
-            (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, value.expression)
-            (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, value.trackVar)
-        }
-        
-        
-    }
-    //fields
-    //methods
-    //initializer
-    //secondary constructor
-    //equals trait
-    override fun equals(other: Any?): Boolean  {
-        if (this === other) return true
-        if (other == null || other::class != this::class) return false
-        
-        other as AssertAndTrackParams
-        
-        if (expression != other.expression) return false
-        if (trackVar != other.trackVar) return false
-        
-        return true
-    }
-    //hash code trait
-    override fun hashCode(): Int  {
-        var __r = 0
-        __r = __r*31 + expression.hashCode()
-        __r = __r*31 + trackVar.hashCode()
-        return __r
-    }
-    //pretty print
-    override fun print(printer: PrettyPrinter)  {
-        printer.println("AssertAndTrackParams (")
-        printer.indent {
-            print("expression = "); expression.print(printer); println()
-            print("trackVar = "); trackVar.print(printer); println()
-        }
-        printer.print(")")
-    }
-    //deepClone
-    //contexts
-}
 
 
 /**
@@ -369,7 +305,7 @@ data class AssertParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:60]
+ * #### Generated from [SolverProtocolModel.kt:55]
  */
 data class CheckParams (
     val timeout: Long
@@ -426,7 +362,7 @@ data class CheckParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:64]
+ * #### Generated from [SolverProtocolModel.kt:59]
  */
 data class CheckResult (
     val status: org.ksmt.solver.KSolverStatus
@@ -483,7 +419,7 @@ data class CheckResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:68]
+ * #### Generated from [SolverProtocolModel.kt:63]
  */
 data class CheckWithAssumptionsParams (
     val assumptions: List<org.ksmt.KAst>,
@@ -651,7 +587,7 @@ data class CreateSolverParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:87]
+ * #### Generated from [SolverProtocolModel.kt:82]
  */
 data class ModelEntry (
     val decl: org.ksmt.KAst,
@@ -726,7 +662,7 @@ data class ModelEntry (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:81]
+ * #### Generated from [SolverProtocolModel.kt:76]
  */
 data class ModelFuncInterpEntry (
     val hasVars: Boolean,
@@ -795,7 +731,7 @@ data class ModelFuncInterpEntry (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:99]
+ * #### Generated from [SolverProtocolModel.kt:94]
  */
 data class ModelResult (
     val declarations: List<org.ksmt.KAst>,
@@ -864,7 +800,7 @@ data class ModelResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:94]
+ * #### Generated from [SolverProtocolModel.kt:89]
  */
 data class ModelUninterpretedSortUniverse (
     val sort: org.ksmt.KAst,
@@ -927,7 +863,7 @@ data class ModelUninterpretedSortUniverse (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:56]
+ * #### Generated from [SolverProtocolModel.kt:51]
  */
 data class PopParams (
     val levels: UInt
@@ -984,7 +920,7 @@ data class PopParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:77]
+ * #### Generated from [SolverProtocolModel.kt:72]
  */
 data class ReasonUnknownResult (
     val reasonUnknown: String
@@ -1127,7 +1063,7 @@ enum class SolverType {
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:73]
+ * #### Generated from [SolverProtocolModel.kt:68]
  */
 data class UnsatCoreResult (
     val core: List<org.ksmt.KAst>

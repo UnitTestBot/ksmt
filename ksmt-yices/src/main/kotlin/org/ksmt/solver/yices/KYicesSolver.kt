@@ -4,8 +4,9 @@ import com.sri.yices.Config
 import com.sri.yices.Context
 import com.sri.yices.Status
 import com.sri.yices.YicesException
+import it.unimi.dsi.fastutil.ints.IntArrayList
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import org.ksmt.KContext
-import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
@@ -35,7 +36,7 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
 
     private var lastCheckStatus = KSolverStatus.UNKNOWN
 
-    private var currentLevelTrackedAssertions = mutableListOf<YicesTerm>()
+    private var currentLevelTrackedAssertions = mutableListOf<Pair<KExpr<KBoolSort>, YicesTerm>>()
     private val trackedAssertions = mutableListOf(currentLevelTrackedAssertions)
 
     private val timer = Timer()
@@ -55,16 +56,16 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
         nativeContext.assertFormula(yicesExpr)
     }
 
-    override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) = yicesTry {
+    override fun assertAndTrack(expr: KExpr<KBoolSort>) = yicesTry {
         ctx.ensureContextMatch(expr)
 
-        val trackVarExpr = ctx.mkConstApp(trackVar)
+        val trackVarExpr = ctx.mkFreshConst("track", ctx.boolSort)
         val trackedExpr = with(ctx) { !trackVarExpr or expr }
 
         assert(trackedExpr)
 
         val yicesTrackVar = with(exprInternalizer) { trackVarExpr.internalize() }
-        currentLevelTrackedAssertions += yicesTrackVar
+        currentLevelTrackedAssertions += expr to yicesTrackVar
     }
 
     override fun push(): Unit = yicesTry {
@@ -89,7 +90,14 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
         currentLevelTrackedAssertions = trackedAssertions.last()
     }
 
+    private var lastAssumptions: TrackedAssumptions? = null
+    private fun invalidateAssumptions() {
+        lastAssumptions = null
+    }
+
     override fun check(timeout: Duration): KSolverStatus {
+        invalidateAssumptions()
+
         if (trackedAssertions.any { it.isNotEmpty() }) {
             return checkWithAssumptions(emptyList(), timeout)
         }
@@ -105,14 +113,23 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
     ): KSolverStatus {
         ctx.ensureContextMatch(assumptions)
 
-        val yicesAssumptions = mutableListOf<YicesTerm>()
-        trackedAssertions.flatMapTo(yicesAssumptions) { it }
+        invalidateAssumptions()
+        val yicesAssumptions = TrackedAssumptions().also { lastAssumptions = it }
+
+        trackedAssertions.forEach { frame ->
+            frame.forEach { assertion ->
+                yicesAssumptions.assumeTrackedAssertion(assertion)
+            }
+        }
+
         with(exprInternalizer) {
-            assumptions.mapTo(yicesAssumptions) { it.internalize() }
+            assumptions.forEach { assumedExpr ->
+                yicesAssumptions.assumeAssumption(assumedExpr, assumedExpr.internalize())
+            }
         }
 
         return withTimer(timeout) {
-            nativeContext.checkWithAssumptions(yicesAssumptions.toIntArray())
+            nativeContext.checkWithAssumptions(yicesAssumptions.assumedTerms())
         }.processCheckResult()
     }
 
@@ -130,9 +147,7 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
             "Unsat cores are only available after UNSAT checks"
         }
 
-        val yicesCore = nativeContext.unsatCore
-
-        with(exprConverter) { yicesCore.map { it.convert(ctx.boolSort) } }
+        lastAssumptions?.resolveUnsatCore(nativeContext.unsatCore) ?: emptyList()
     }
 
     override fun reasonOfUnknown(): String {
@@ -185,6 +200,29 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
     private inner class StopSearchTask : TimerTask() {
         override fun run() {
             nativeContext.stopSearch()
+        }
+    }
+
+    private class TrackedAssumptions {
+        private val assumedExprs = arrayListOf<Pair<KExpr<KBoolSort>, YicesTerm>>()
+        private val assumedTerms = IntArrayList()
+
+        fun assumeTrackedAssertion(trackedAssertion: Pair<KExpr<KBoolSort>, YicesTerm>) {
+            assumedExprs.add(trackedAssertion)
+            assumedTerms.add(trackedAssertion.second)
+        }
+
+        fun assumeAssumption(expr: KExpr<KBoolSort>, term: YicesTerm) =
+            assumeTrackedAssertion(expr to term)
+
+        fun assumedTerms(): YicesTermArray {
+            assumedTerms.trim() // Elements length now equal to size
+            return assumedTerms.elements()
+        }
+
+        fun resolveUnsatCore(yicesUnsatCore: YicesTermArray): List<KExpr<KBoolSort>> {
+            val unsatCoreTerms = IntOpenHashSet(yicesUnsatCore)
+            return assumedExprs.mapNotNull { (expr, term) -> expr.takeIf { unsatCoreTerms.contains(term) } }
         }
     }
 }

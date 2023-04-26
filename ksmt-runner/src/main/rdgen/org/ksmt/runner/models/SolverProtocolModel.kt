@@ -48,11 +48,6 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
         field("expression", kastType)
     }
 
-    private val assertAndTrackParams = structdef {
-        field("expression", kastType)
-        field("trackVar", kastType)
-    }
-
     private val popParams = structdef {
         field("levels", PredefinedType.uint)
     }
@@ -119,7 +114,7 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
             async
             documentation = "Assert expression"
         }
-        call("assertAndTrack", assertAndTrackParams, PredefinedType.void).apply {
+        call("assertAndTrack", assertParams, PredefinedType.void).apply {
             async
             documentation = "Assert and track expression"
         }

@@ -39,12 +39,12 @@ class SolverTest {
         val e3 = !c
 
         solver.assert(e1)
-        val e2Track = solver.assertAndTrack(e2)
+        solver.assertAndTrack(e2)
         val status = solver.checkWithAssumptions(listOf(e3))
         assertEquals(KSolverStatus.UNSAT, status)
         val core = solver.unsatCore()
         assertEquals(2, core.size)
-        assertTrue(e2Track in core)
+        assertTrue(e2 in core)
         assertTrue(e3 in core)
     }
 
@@ -57,12 +57,12 @@ class SolverTest {
         val e2 = !(a and b)
 
         solver.assert(e1)
-        val e2Track = solver.assertAndTrack(e2)
+        solver.assertAndTrack(e2)
         val status = solver.check()
         assertEquals(KSolverStatus.UNSAT, status)
         val core = solver.unsatCore()
         assertEquals(1, core.size)
-        assertTrue(e2Track in core)
+        assertTrue(e2 in core)
     }
 
     @Test
@@ -76,17 +76,17 @@ class SolverTest {
 
         solver.push()
 
-        val track1 = solver.assertAndTrack(!a)
+        solver.assertAndTrack(!a)
 
         solver.push()
 
-        val track2 = solver.assertAndTrack(!b)
+        solver.assertAndTrack(!b)
 
         var status = solver.check()
         assertEquals(KSolverStatus.UNSAT, status)
         var core = solver.unsatCore()
         assertEquals(2, core.size)
-        assertTrue(track1 in core && track2 in core)
+        assertTrue(!a in core && !b in core)
 
         solver.pop()
 
@@ -96,7 +96,7 @@ class SolverTest {
         assertEquals(KSolverStatus.UNSAT, status)
         core = solver.unsatCore()
         assertEquals(1, core.size)
-        assertTrue(track1 in core)
+        assertTrue(!a in core)
 
         solver.pop()
 
@@ -109,12 +109,12 @@ class SolverTest {
         val a by boolSort
         solver.assert(a)
         solver.push()
-        val track = solver.assertAndTrack(!a)
+        solver.assertAndTrack(!a)
         var status = solver.checkWithAssumptions(listOf(a))
         assertEquals(KSolverStatus.UNSAT, status)
         val core = solver.unsatCore()
         assertEquals(1, core.size)
-        assertTrue(track in core || a in core)
+        assertTrue(!a in core || a in core)
         solver.pop()
         status = solver.check()
         assertEquals(KSolverStatus.SAT, status)

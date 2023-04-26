@@ -7,8 +7,8 @@ import com.microsoft.z3.solverAssert
 import com.microsoft.z3.solverAssertAndTrack
 import com.microsoft.z3.solverCheckAssumptions
 import com.microsoft.z3.solverGetUnsatCore
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import org.ksmt.KContext
-import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
@@ -77,11 +77,16 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
         z3Ctx.assertPendingAxioms(solver)
     }
 
-    override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) = z3Try {
-        ctx.ensureContextMatch(expr, trackVar)
+    private val trackedAssertions = Long2ObjectOpenHashMap<KExpr<KBoolSort>>()
 
+    override fun assertAndTrack(expr: KExpr<KBoolSort>) = z3Try {
+        ctx.ensureContextMatch(expr)
+
+        val trackExpr = ctx.mkFreshConst("track", ctx.boolSort)
         val z3Expr = with(exprInternalizer) { expr.internalizeExpr() }
-        val z3TrackVar = with(exprInternalizer) { trackVar.apply().internalizeExpr() }
+        val z3TrackVar = with(exprInternalizer) { trackExpr.internalizeExpr() }
+
+        trackedAssertions.put(z3TrackVar, expr)
 
         solver.solverAssertAndTrack(z3Expr, z3TrackVar)
     }
@@ -115,14 +120,13 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
         KZ3Model(model, ctx, z3Ctx, exprInternalizer)
     }
 
-    // TODO add mapping back from tracked variable into initial value
     override fun unsatCore(): List<KExpr<KBoolSort>> = z3Try {
         require(lastCheckStatus == KSolverStatus.UNSAT) { "Unsat cores are only available after UNSAT checks" }
 
         val unsatCore = solver.solverGetUnsatCore()
 
         with(exprConverter) {
-            unsatCore.map { it.convertExpr() }
+            unsatCore.map { trackedAssertions.get(it) ?: it.convertExpr() }
         }
     }
 

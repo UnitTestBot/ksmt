@@ -1,6 +1,5 @@
 package org.ksmt.solver.runner
 
-import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.runner.generated.models.SolverConfigurationParam
 import org.ksmt.sort.KBoolSort
@@ -21,10 +20,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 class KSolverState {
     private sealed interface AssertFrame
     private data class ExprAssertFrame(val expr: KExpr<KBoolSort>) : AssertFrame
-    private data class AssertAndTrackFrame(
-        val expr: KExpr<KBoolSort>,
-        val trackVar: KConstDecl<KBoolSort>
-    ) : AssertFrame
+    private data class AssertAndTrackFrame(val expr: KExpr<KBoolSort>) : AssertFrame
 
     private val configuration = ConcurrentLinkedQueue<SolverConfigurationParam>()
 
@@ -47,8 +43,8 @@ class KSolverState {
         assertFrames.last.add(ExprAssertFrame(expr))
     }
 
-    fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) {
-        assertFrames.last.add(AssertAndTrackFrame(expr, trackVar))
+    fun assertAndTrack(expr: KExpr<KBoolSort>) {
+        assertFrames.last.add(AssertAndTrackFrame(expr))
     }
 
     fun push() {
@@ -65,14 +61,14 @@ class KSolverState {
         configureSolver = { executor.configureAsync(it) },
         pushScope = { executor.pushAsync() },
         assertExpr = { executor.assertAsync(it) },
-        assertExprAndTrack = { expr, trackVar -> executor.assertAndTrackAsync(expr, trackVar) }
+        assertExprAndTrack = { expr -> executor.assertAndTrackAsync(expr) }
     )
 
     fun applySync(executor: KSolverRunnerExecutor) = replayState(
         configureSolver = { executor.configureSync(it) },
         pushScope = { executor.pushSync() },
         assertExpr = { executor.assertSync(it) },
-        assertExprAndTrack = { expr, trackVar -> executor.assertAndTrackSync(expr, trackVar) }
+        assertExprAndTrack = { expr -> executor.assertAndTrackSync(expr) }
     )
 
     /**
@@ -83,7 +79,7 @@ class KSolverState {
         configureSolver: (List<SolverConfigurationParam>) -> Unit,
         pushScope: () -> Unit,
         assertExpr: (KExpr<KBoolSort>) -> Unit,
-        assertExprAndTrack: (KExpr<KBoolSort>, KConstDecl<KBoolSort>) -> Unit
+        assertExprAndTrack: (KExpr<KBoolSort>) -> Unit
     ) {
         if (configuration.isNotEmpty()) {
             configureSolver(configuration.toList())
@@ -100,7 +96,7 @@ class KSolverState {
             for (assertion in frame) {
                 when (assertion) {
                     is ExprAssertFrame -> assertExpr(assertion.expr)
-                    is AssertAndTrackFrame -> assertExprAndTrack(assertion.expr, assertion.trackVar)
+                    is AssertAndTrackFrame -> assertExprAndTrack(assertion.expr)
                 }
             }
         }

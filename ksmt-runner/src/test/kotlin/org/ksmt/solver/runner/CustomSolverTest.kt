@@ -1,7 +1,6 @@
 package org.ksmt.solver.runner
 
 import org.ksmt.KContext
-import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
@@ -54,7 +53,7 @@ class CustomSolverTest {
         override fun assert(expr: KExpr<KBoolSort>) {
         }
 
-        override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) {
+        override fun assertAndTrack(expr: KExpr<KBoolSort>) {
         }
 
         override fun push() {

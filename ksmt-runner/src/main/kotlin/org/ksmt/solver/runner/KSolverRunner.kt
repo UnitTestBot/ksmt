@@ -4,7 +4,6 @@ import com.jetbrains.rd.util.AtomicReference
 import com.jetbrains.rd.util.threading.SpinWait
 import kotlinx.coroutines.sync.Mutex
 import org.ksmt.KContext
-import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.runner.generated.ConfigurationBuilder
 import org.ksmt.runner.generated.models.SolverConfigurationParam
@@ -102,31 +101,28 @@ class KSolverRunner<Config : KSolverConfiguration>(
         }
     }
 
-    override suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) =
-        assertAndTrack(expr, trackVar) { e, track ->
-            ensureInitializedAndExecuteAsync(onException = {}) {
-                assertAndTrackAsync(e, track)
-            }
+    override suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>) = assertAndTrack(expr) { e ->
+        ensureInitializedAndExecuteAsync(onException = {}) {
+            assertAndTrackAsync(e)
         }
+    }
 
-    override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) =
-        assertAndTrack(expr, trackVar) { e, track ->
-            ensureInitializedAndExecuteSync(onException = {}) {
-                assertAndTrackSync(e, track)
-            }
+    override fun assertAndTrack(expr: KExpr<KBoolSort>) = assertAndTrack(expr) { e ->
+        ensureInitializedAndExecuteSync(onException = {}) {
+            assertAndTrackSync(e)
         }
+    }
 
     private inline fun assertAndTrack(
         expr: KExpr<KBoolSort>,
-        trackVar: KConstDecl<KBoolSort>,
-        execute: (KExpr<KBoolSort>, KConstDecl<KBoolSort>) -> Unit
+        execute: (KExpr<KBoolSort>) -> Unit
     ) {
-        ctx.ensureContextMatch(expr, trackVar)
+        ctx.ensureContextMatch(expr)
 
         try {
-            execute(expr, trackVar)
+            execute(expr)
         } finally {
-            solverState.assertAndTrack(expr, trackVar)
+            solverState.assertAndTrack(expr)
         }
     }
 
