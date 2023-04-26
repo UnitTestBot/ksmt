@@ -490,7 +490,15 @@ inline fun <T : KSort, P : KExpr<T>, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KS
  * Specialized version of [simplifyExpr] for expressions with five arguments.
  * */
 @Suppress("LongParameterList")
-inline fun <T : KSort, P : KExpr<T>, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KSort, A4 : KSort> KExprSimplifierBase.simplifyExpr(
+inline fun <
+    T : KSort,
+    P : KExpr<T>,
+    A0 : KSort,
+    A1 : KSort,
+    A2 : KSort,
+    A3 : KSort,
+    A4 : KSort
+> KExprSimplifierBase.simplifyExpr(
     expr: P,
     a0: KExpr<A0>,
     a1: KExpr<A1>,
@@ -502,7 +510,9 @@ inline fun <T : KSort, P : KExpr<T>, A0 : KSort, A1 : KSort, A2 : KSort, A3 : KS
 ): KExpr<T> = simplifyExprBase(
     expr,
     { ctx.preprocess(expr) },
-    { transformExprAfterTransformed(expr, a0, a1, a2, a3, a4) { ta0, ta1, ta2, ta3, ta4 -> ctx.simplifier(ta0, ta1, ta2, ta3, ta4) } }
+    { transformExprAfterTransformed(expr, a0, a1, a2, a3, a4) { ta0, ta1, ta2, ta3, ta4 ->
+        ctx.simplifier(ta0, ta1, ta2, ta3, ta4)
+    } }
 )
 
 /**

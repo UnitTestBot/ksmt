@@ -42,7 +42,8 @@ fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> KContext.simplifyArrayStore(
     index1: KExpr<D1>,
     index2: KExpr<D2>,
     value: KExpr<R>
-): KExpr<KArray3Sort<D0, D1, D2, R>> = simplifyArrayStoreLight(array, index0, index1, index2, value, ::mkArrayStoreNoSimplify)
+): KExpr<KArray3Sort<D0, D1, D2, R>> =
+    simplifyArrayStoreLight(array, index0, index1, index2, value, ::mkArrayStoreNoSimplify)
 
 fun <R : KSort> KContext.simplifyArrayNStore(
     array: KExpr<KArrayNSort<R>>,

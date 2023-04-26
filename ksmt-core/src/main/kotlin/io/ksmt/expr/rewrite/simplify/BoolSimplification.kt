@@ -55,9 +55,13 @@ fun <T : KSort> KContext.simplifyIte(
 ): KExpr<T> =
     simplifyIteNotCondition(condition, trueBranch, falseBranch) { condition2, trueBranch2, falseBranch2 ->
         simplifyIteLight(condition2, trueBranch2, falseBranch2) { condition3, trueBranch3, falseBranch3 ->
-            simplifyIteSameBranches(condition3, trueBranch3, falseBranch3, KContext::simplifyIte, KContext::simplifyOr) { condition4,
-                                                                                                                          trueBranch4,
-                                                                                                                          falseBranch4 ->
+            simplifyIteSameBranches(
+                condition3,
+                trueBranch3,
+                falseBranch3,
+                KContext::simplifyIte,
+                KContext::simplifyOr)
+            { condition4, trueBranch4, falseBranch4 ->
                 simplifyIteBool(condition4, trueBranch4, falseBranch4, KContext::simplifyBoolIte, ::mkIteNoSimplify)
             }
         }

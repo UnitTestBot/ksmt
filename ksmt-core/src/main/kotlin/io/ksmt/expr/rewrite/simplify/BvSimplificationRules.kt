@@ -303,6 +303,7 @@ inline fun <T : KBvSort> KContext.simplifyBvXorExprMaxConst(
     return cont(lhs, rhs)
 }
 
+@Suppress("LongMethod", "ComplexMethod")
 inline fun <T : KBvSort> KContext.simplifyFlatBvXorExpr(
     args: List<KExpr<T>>,
     cont: (Boolean, List<KExpr<T>>) -> KExpr<T>
@@ -790,6 +791,7 @@ inline fun <T : KBvSort> KContext.simplifyEqBvLight(
     return cont(lhs, rhs)
 }
 
+@Suppress("LongParameterList")
 inline fun <T : KBvSort> KContext.simplifyEqBvConcat(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
@@ -925,6 +927,7 @@ inline fun <T : KBvSort> KContext.simplifyBvShiftLeftExprConstShift(
  * (bvshl (bvshl x nestedShift) shift) ==>
  *      (ite (bvule nestedShift (+ nestedShift shift)) (bvshl x (+ nestedShift shift)) 0)
  * */
+@Suppress("LongParameterList")
 inline fun <T : KBvSort> KContext.simplifyBvShiftLeftExprNestedShiftLeft(
     lhs: KExpr<T>,
     shift: KExpr<T>,
@@ -1114,6 +1117,7 @@ inline fun <T : KBvSort> KContext.simplifyBvExtractExprNestedExtract(
     cont(high, low, value)
 }
 
+@Suppress("LongParameterList")
 inline fun <T : KBvSort> KContext.simplifyBvExtractExprTryRewrite(
     high: Int,
     low: Int,
@@ -1131,7 +1135,13 @@ inline fun <T : KBvSort> KContext.simplifyBvExtractExprTryRewrite(
     when {
         // (extract (concat a b)) ==> (concat (extract a) (extract b))
         value is KBvConcatExpr -> {
-            distributeExtractOverConcat(high, low, value, { h, l, v -> rewriteBvExtractExpr(h, l, v) }, { args -> rewriteFlatBvConcatExpr(args) })
+            distributeExtractOverConcat(
+                high = high,
+                low = low,
+                concatenation = value,
+                rewriteBvExtractExpr = { h, l, v -> rewriteBvExtractExpr(h, l, v) },
+                rewriteFlatBvConcatExpr = { args -> rewriteFlatBvConcatExpr(args) }
+            )
         }
         // (extract [h:l] (bvnot x)) ==> (bvnot (extract [h:l] x))
         value is KBvNotExpr<*> -> {
@@ -1208,6 +1218,7 @@ inline fun <T : KBvSort, S : KBvSort> KContext.simplifyBvConcatExprNestedConcat(
     return cont(lhs, rhs)
 }
 
+@Suppress("LoopWithTooManyJumpStatements")
 inline fun KContext.simplifyFlatBvConcatExpr(
     args: List<KExpr<KBvSort>>,
     rewriteBvExtractExpr: KContext.(Int, Int, KExpr<KBvSort>) -> KExpr<KBvSort>,
@@ -1347,6 +1358,7 @@ inline fun <T : KBvSort> KContext.simplifyBv2IntExprLight(
     cont(value, isSigned)
 }
 
+@Suppress("LongParameterList")
 inline fun <T : KBvSort> KContext.rewriteBvAddNoOverflowExpr(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
@@ -1388,6 +1400,7 @@ inline fun <T : KBvSort> KContext.rewriteBvAddNoOverflowExpr(
     }
 }
 
+@Suppress("LongParameterList")
 inline fun <T : KBvSort> KContext.rewriteBvAddNoUnderflowExpr(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
@@ -1462,14 +1475,17 @@ inline fun <T : KBvSort> KContext.rewriteBvDivNoOverflowExpr(
     return rewriteNot(rewriteAnd(aIsMsb, bIsMinusOne))
 }
 
+@Suppress("LongParameterList")
 inline fun <T : KBvSort> KContext.rewriteBvSubNoOverflowExpr(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
     rewriteBvSignedLessExpr: KContext.(KExpr<T>, KExpr<T>) -> KExpr<KBoolSort> = KContext::simplifyBvSignedLessExpr,
-    rewriteBvAddNoOverflowExpr: (KExpr<T>, KExpr<T>, Boolean) -> KExpr<KBoolSort> = { l, r, isSigned -> simplifyBvAddNoOverflowExpr(l, r, isSigned) },
+    rewriteBvAddNoOverflowExpr: (KExpr<T>, KExpr<T>, Boolean) -> KExpr<KBoolSort> =
+        { l, r, isSigned -> simplifyBvAddNoOverflowExpr(l, r, isSigned) },
     rewriteBvEq: KContext.(KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBoolSort> = { l, r -> simplifyEq(l, r) },
     rewriteBvNegationExpr: KContext.(KExpr<T>) -> KExpr<T> = KContext::simplifyBvNegationExpr,
-    rewriteIte: (KExpr<KBoolSort>, KExpr<KBoolSort>, KExpr<KBoolSort>) -> KExpr<KBoolSort> = { c, t, f -> simplifyIte(c, t, f) }
+    rewriteIte: (KExpr<KBoolSort>, KExpr<KBoolSort>, KExpr<KBoolSort>) -> KExpr<KBoolSort> =
+        { c, t, f -> simplifyIte(c, t, f) }
 ): KExpr<KBoolSort> {
     /**
      * (bvsub no ovf a b) ==>
@@ -1487,13 +1503,16 @@ inline fun <T : KBvSort> KContext.rewriteBvSubNoOverflowExpr(
     return rewriteIte(bIsMin, aLtZero, noOverflow)
 }
 
+@Suppress("LongParameterList")
 inline fun <T : KBvSort> KContext.rewriteBvSubNoUnderflowExpr(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
     isSigned: Boolean,
     rewriteBvSignedLessExpr: KContext.(KExpr<T>, KExpr<T>) -> KExpr<KBoolSort> = KContext::simplifyBvSignedLessExpr,
-    rewriteBvUnsignedLessOrEqualExpr: KContext.(KExpr<T>, KExpr<T>) -> KExpr<KBoolSort> = KContext::simplifyBvUnsignedLessOrEqualExpr,
-    createBvAddNoUnderflowExpr: KContext.(KExpr<T>, KExpr<T>) -> KExpr<KBoolSort> = KContext::simplifyBvAddNoUnderflowExpr,
+    rewriteBvUnsignedLessOrEqualExpr: KContext.(KExpr<T>, KExpr<T>) -> KExpr<KBoolSort> =
+        KContext::simplifyBvUnsignedLessOrEqualExpr,
+    createBvAddNoUnderflowExpr: KContext.(KExpr<T>, KExpr<T>) -> KExpr<KBoolSort> =
+        KContext::simplifyBvAddNoUnderflowExpr,
     rewriteBvNegationExpr: KContext.(KExpr<T>) -> KExpr<T> = KContext::simplifyBvNegationExpr,
     rewriteImplies: KContext.(KExpr<KBoolSort>, KExpr<KBoolSort>) -> KExpr<KBoolSort> = KContext::simplifyImplies
 ): KExpr<KBoolSort> {
@@ -1542,7 +1561,7 @@ inline fun <T : KBvSort> KContext.distributeOperationOverConcat(
     return rewriteBvConcatExpr(mergedArgs1, mergedArgs2).uncheckedCast()
 }
 
-@Suppress("LoopWithTooManyJumpStatements")
+@Suppress("LongParameterList", "LoopWithTooManyJumpStatements")
 inline fun <T : KBvSort> KContext.simplifyBvAndOr(
     args: List<KExpr<T>>,
     neutralElement: KBitVecValue<T>,
@@ -1702,7 +1721,7 @@ inline fun <reified T> flatBinaryBvExpr(
 /**
  * (extract (concat a b)) ==> (concat (extract a) (extract b))
  * */
-@Suppress("LoopWithTooManyJumpStatements", "NestedBlockDepth")
+@Suppress("LoopWithTooManyJumpStatements", "NestedBlockDepth", "ComplexMethod")
 inline fun KContext.distributeExtractOverConcat(
     high: Int,
     low: Int,

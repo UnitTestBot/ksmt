@@ -74,13 +74,20 @@ inline fun <D0 : KSort, D1 : KSort, R : KSort> KContext.simplifyArrayStoreLight(
     default = { cont(array, index0, index1, value) }
 )
 
+@Suppress("LongParameterList")
 inline fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> KContext.simplifyArrayStoreLight(
     array: KExpr<KArray3Sort<D0, D1, D2, R>>,
     index0: KExpr<D0>,
     index1: KExpr<D1>,
     index2: KExpr<D2>,
     value: KExpr<R>,
-    cont: (KExpr<KArray3Sort<D0, D1, D2, R>>, KExpr<D0>, KExpr<D1>, KExpr<D2>, KExpr<R>) -> KExpr<KArray3Sort<D0, D1, D2, R>>
+    cont: (
+        KExpr<KArray3Sort<D0, D1, D2, R>>,
+        KExpr<D0>,
+        KExpr<D1>,
+        KExpr<D2>,
+        KExpr<R>
+    ) -> KExpr<KArray3Sort<D0, D1, D2, R>>
 ): KExpr<KArray3Sort<D0, D1, D2, R>> = simplifyArrayStoreLight(
     array,
     value,
@@ -168,6 +175,7 @@ inline fun <D : KSort, R : KSort> KContext.simplifySelectFromArrayStore(
         default = { cont(it, index) }
     )
 
+@Suppress("LongParameterList")
 inline fun <D0 : KSort, D1 : KSort, R : KSort> KContext.simplifySelectFromArrayStore(
     array: KExpr<KArray2Sort<D0, D1, R>>,
     index0: KExpr<D0>,
@@ -186,6 +194,7 @@ inline fun <D0 : KSort, D1 : KSort, R : KSort> KContext.simplifySelectFromArrayS
         default = { cont(it, index0, index1) }
     )
 
+@Suppress("LongParameterList")
 inline fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> KContext.simplifySelectFromArrayStore(
     array: KExpr<KArray3Sort<D0, D1, D2, R>>,
     index0: KExpr<D0>,
@@ -198,7 +207,9 @@ inline fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> KContext.simplifySele
     simplifySelectFromArrayStore(
         initialArray = array,
         storeIndicesMatch = { store: KArray3Store<D0, D1, D2, R> -> storeIndexMatch(store, index0, index1, index2) },
-        storeIndicesDistinct = { store: KArray3Store<D0, D1, D2, R> -> storeIndexDistinct(store, index0, index1, index2) },
+        storeIndicesDistinct = { store: KArray3Store<D0, D1, D2, R> ->
+            storeIndexDistinct(store, index0, index1, index2)
+                               },
         findArrayToSelectFrom = { s: KArray3Store<D0, D1, D2, R> ->
             s.findArrayToSelectFrom(index0, index1, index2)
         },
@@ -271,6 +282,7 @@ inline fun <D0 : KSort, D1 : KSort, R : KSort> KContext.simplifyArraySelectLambd
     default = { cont(it, index0, index1) }
 )
 
+@Suppress("LongParameterList")
 inline fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> KContext.simplifyArraySelectLambda(
     array: KExpr<KArray3Sort<D0, D1, D2, R>>,
     index0: KExpr<D0>,

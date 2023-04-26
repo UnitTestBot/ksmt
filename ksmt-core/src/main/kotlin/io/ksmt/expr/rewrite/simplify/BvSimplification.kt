@@ -40,7 +40,12 @@ fun <T : KBvSort> KContext.simplifyBvXNorExpr(lhs: KExpr<T>, rhs: KExpr<T>): KEx
 
 fun <T : KBvSort> KContext.simplifyBvNegationExpr(arg: KExpr<T>): KExpr<T> =
     simplifyBvNegationExprLight(arg) { arg2 ->
-        simplifyBvNegationExprAdd(arg2, KContext::simplifyBvAddExpr, KContext::simplifyBvNegationExpr, ::mkBvNegationExprNoSimplify)
+        simplifyBvNegationExprAdd(
+            arg = arg2,
+            rewriteBvAddExpr = KContext::simplifyBvAddExpr,
+            rewriteBvNegationExpr = KContext::simplifyBvNegationExpr,
+            cont = ::mkBvNegationExprNoSimplify
+        )
     }
 
 fun <T : KBvSort> KContext.simplifyBvAddExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
@@ -69,12 +74,23 @@ fun <T : KBvSort> KContext.simplifyBvSignedRemExpr(lhs: KExpr<T>, rhs: KExpr<T>)
 
 fun <T : KBvSort> KContext.simplifyBvUnsignedDivExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
     simplifyBvUnsignedDivExprLight(lhs, rhs) { lhs2, rhs2 ->
-        simplifyBvUnsignedDivExprPowerOfTwoDivisor(lhs2, rhs2, KContext::simplifyBvLogicalShiftRightExpr, ::mkBvUnsignedDivExprNoSimplify)
+        simplifyBvUnsignedDivExprPowerOfTwoDivisor(
+            lhs = lhs2,
+            rhs = rhs2,
+            rewriteBvLogicalShiftRightExpr = KContext::simplifyBvLogicalShiftRightExpr,
+            cont = ::mkBvUnsignedDivExprNoSimplify
+        )
     }
 
 fun <T : KBvSort> KContext.simplifyBvUnsignedRemExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
     simplifyBvUnsignedRemExprLight(lhs, rhs) { lhs2, rhs2 ->
-        simplifyBvUnsignedRemExprPowerOfTwoDivisor(lhs2, rhs2, KContext::simplifyBvExtractExpr, KContext::simplifyBvZeroExtensionExpr, ::mkBvUnsignedRemExprNoSimplify)
+        simplifyBvUnsignedRemExprPowerOfTwoDivisor(
+            lhs = lhs2,
+            rhs = rhs2,
+            rewriteBvExtractExpr = KContext::simplifyBvExtractExpr,
+            rewriteBvZeroExtensionExpr = KContext::simplifyBvZeroExtensionExpr,
+            cont = ::mkBvUnsignedRemExprNoSimplify
+        )
     }
 
 fun <T : KBvSort> KContext.simplifyBvReductionAndExpr(arg: KExpr<T>): KExpr<KBv1Sort> =
@@ -93,14 +109,24 @@ fun <T : KBvSort> KContext.simplifyBvShiftLeftExpr(lhs: KExpr<T>, shift: KExpr<T
     simplifyBvShiftLeftExprLight(lhs, shift, ::mkBvShiftLeftExprNoSimplify)
 
 fun <T : KBvSort> KContext.simplifyBvRotateLeftExpr(lhs: KExpr<T>, rotation: KExpr<T>): KExpr<T> =
-    simplifyBvRotateLeftExprConstRotation(lhs, rotation, KContext::simplifyBvRotateLeftIndexedExpr, ::mkBvRotateLeftExprNoSimplify)
+    simplifyBvRotateLeftExprConstRotation(
+        lhs = lhs,
+        rotation = rotation,
+        rewriteBvRotateLeftIndexedExpr = KContext::simplifyBvRotateLeftIndexedExpr,
+        cont = ::mkBvRotateLeftExprNoSimplify
+    )
 
 fun <T : KBvSort> KContext.simplifyBvRotateLeftIndexedExpr(rotation: Int, value: KExpr<T>): KExpr<T> =
     rewriteBvRotateLeftIndexedExpr(rotation, value, KContext::simplifyBvExtractExpr, KContext::simplifyBvConcatExpr)
 
 // (rotateRight a x) ==> (rotateLeft a (- size x))
 fun <T : KBvSort> KContext.simplifyBvRotateRightExpr(lhs: KExpr<T>, rotation: KExpr<T>): KExpr<T> =
-    simplifyBvRotateRightExprConstRotation(lhs, rotation, KContext::simplifyBvRotateRightIndexedExpr, ::mkBvRotateRightExprNoSimplify)
+    simplifyBvRotateRightExprConstRotation(
+        lhs = lhs,
+        rotation = rotation,
+        rewriteBvRotateRightIndexedExpr = KContext::simplifyBvRotateRightIndexedExpr,
+        cont = ::mkBvRotateRightExprNoSimplify
+    )
 
 fun <T : KBvSort> KContext.simplifyBvRotateRightIndexedExpr(rotation: Int, value: KExpr<T>): KExpr<T> =
     rewriteBvRotateRightIndexedExpr(rotation, value, KContext::simplifyBvExtractExpr, KContext::simplifyBvConcatExpr)
@@ -117,7 +143,13 @@ fun <T : KBvSort> KContext.simplifyBvSignExtensionExpr(extensionSize: Int, value
 
 fun <T : KBvSort> KContext.simplifyBvExtractExpr(high: Int, low: Int, value: KExpr<T>): KExpr<KBvSort> =
     simplifyBvExtractExprLight(high, low, value) { high2, low2, value2 ->
-        simplifyBvExtractExprNestedExtract(high2, low2, value2, KContext::simplifyBvExtractExpr, ::mkBvExtractExprNoSimplify)
+        simplifyBvExtractExprNestedExtract(
+            high = high2,
+            low = low2,
+            value = value2,
+            rewriteBvExtractExpr = KContext::simplifyBvExtractExpr,
+            cont = ::mkBvExtractExprNoSimplify
+        )
     }
 
 fun <T : KBvSort, S : KBvSort> KContext.simplifyBvConcatExpr(lhs: KExpr<T>, rhs: KExpr<S>): KExpr<KBvSort> =
@@ -171,8 +203,11 @@ fun <T : KBvSort> KContext.simplifyBvAddNoUnderflowExpr(lhs: KExpr<T>, rhs: KExp
     return mkBvAddNoUnderflowExprNoSimplify(lhs, rhs)
 }
 
-fun <T : KBvSort> KContext.simplifyBvMulNoOverflowExpr(lhs: KExpr<T>, rhs: KExpr<T>, isSigned: Boolean): KExpr<KBoolSort> =
-    simplifyBvMulNoOverflowExprLight(lhs, rhs, isSigned, ::mkBvMulNoOverflowExprNoSimplify)
+fun <T : KBvSort> KContext.simplifyBvMulNoOverflowExpr(
+    lhs: KExpr<T>,
+    rhs: KExpr<T>,
+    isSigned: Boolean
+): KExpr<KBoolSort> = simplifyBvMulNoOverflowExprLight(lhs, rhs, isSigned, ::mkBvMulNoOverflowExprNoSimplify)
 
 fun <T : KBvSort> KContext.simplifyBvMulNoUnderflowExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
     simplifyBvMulNoUnderflowExprLight(lhs, rhs, ::mkBvMulNoUnderflowExprNoSimplify)

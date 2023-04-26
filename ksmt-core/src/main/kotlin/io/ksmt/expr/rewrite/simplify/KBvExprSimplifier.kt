@@ -650,7 +650,9 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                         low = low3,
                         value = value3,
                         rewriteBvExtractExpr = { h, l, v -> boundedRewrite(KBvExtractExpr(ctx, h, l, v)) },
-                        rewriteFlatBvConcatExpr = { args -> boundedRewrite(SimplifierFlatBvConcatExpr(ctx, value3.sort, args)) },
+                        rewriteFlatBvConcatExpr = { args ->
+                            boundedRewrite(SimplifierFlatBvConcatExpr(ctx, value3.sort, args))
+                        },
                         rewriteBvNotExpr = { arg -> boundedRewrite(KBvNotExpr(ctx, arg)) },
                         rewriteBvOrExpr = { l, r -> boundedRewrite(KBvOrExpr(ctx, l, r)) },
                         rewriteBvAndExpr = { l, r -> boundedRewrite(KBvAndExpr(ctx, l, r)) },
@@ -851,8 +853,11 @@ interface KBvExprSimplifier : KExprSimplifierBase {
 
     fun <T : KBvSort> KContext.preprocess(expr: KBvAddNoOverflowExpr<T>): KExpr<KBoolSort> = expr
 
-    fun <T : KBvSort> KContext.postRewriteBvAddNoOverflowExpr(lhs: KExpr<T>, rhs: KExpr<T>, isSigned: Boolean): KExpr<KBoolSort> =
-        rewriteBvAddNoOverflowExpr(lhs, rhs, isSigned)
+    fun <T : KBvSort> KContext.postRewriteBvAddNoOverflowExpr(
+        lhs: KExpr<T>,
+        rhs: KExpr<T>,
+        isSigned: Boolean
+    ): KExpr<KBoolSort> = rewriteBvAddNoOverflowExpr(lhs, rhs, isSigned)
 
     override fun <T : KBvSort> transform(expr: KBvAddNoOverflowExpr<T>): KExpr<KBoolSort> =
         simplifyExpr(
@@ -893,8 +898,11 @@ interface KBvExprSimplifier : KExprSimplifierBase {
 
     fun <T : KBvSort> KContext.preprocess(expr: KBvSubNoUnderflowExpr<T>): KExpr<KBoolSort> = expr
 
-    fun <T : KBvSort> KContext.postRewriteBvSubNoUnderflowExpr(lhs: KExpr<T>, rhs: KExpr<T>, isSigned: Boolean): KExpr<KBoolSort> =
-        rewriteBvSubNoUnderflowExpr(lhs, rhs, isSigned)
+    fun <T : KBvSort> KContext.postRewriteBvSubNoUnderflowExpr(
+        lhs: KExpr<T>,
+        rhs: KExpr<T>,
+        isSigned: Boolean
+    ): KExpr<KBoolSort> = rewriteBvSubNoUnderflowExpr(lhs, rhs, isSigned)
 
     override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>): KExpr<KBoolSort> =
         simplifyExpr(

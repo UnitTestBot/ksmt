@@ -326,7 +326,11 @@ inline fun KContext.simplifyEqRealLight(
     return cont(lhs, rhs)
 }
 
-fun <T : KArithSort> addArithTerm(value: ArithUtils.RealValue, term: KExpr<T>, terms: MutableList<KExpr<T>>): ArithUtils.RealValue {
+fun <T : KArithSort> addArithTerm(
+    value: ArithUtils.RealValue,
+    term: KExpr<T>,
+    terms: MutableList<KExpr<T>>
+): ArithUtils.RealValue {
     if (term is KIntNumExpr) {
         return value.add(term.toRealValue())
     }
@@ -339,7 +343,11 @@ fun <T : KArithSort> addArithTerm(value: ArithUtils.RealValue, term: KExpr<T>, t
     return value
 }
 
-fun <T : KArithSort> mulArithTerm(value: ArithUtils.RealValue, term: KExpr<T>, terms: MutableList<KExpr<T>>): ArithUtils.RealValue {
+fun <T : KArithSort> mulArithTerm(
+    value: ArithUtils.RealValue,
+    term: KExpr<T>,
+    terms: MutableList<KExpr<T>>
+): ArithUtils.RealValue {
     if (term is KIntNumExpr) {
         return value.mul(term.toRealValue())
     }

@@ -130,6 +130,7 @@ inline fun <T : KSort> KContext.simplifyDistinctLight(
  * (ite c t true) ==> (or (not c) t)
  * (ite c t false) ==> (and c t)
  */
+@Suppress("LongParameterList")
 inline fun KContext.simplifyBoolIteConstBranches(
     condition: KExpr<KBoolSort>,
     trueBranch: KExpr<KBoolSort>,
@@ -152,6 +153,7 @@ inline fun KContext.simplifyBoolIteConstBranches(
  * (ite c t c) ==> (and c t)
  * (ite c c e) ==> (or c e)
  */
+@Suppress("LongParameterList")
 inline fun KContext.simplifyBoolIteSameConditionBranch(
     condition: KExpr<KBoolSort>,
     trueBranch: KExpr<KBoolSort>,
@@ -214,6 +216,7 @@ else
     cont(condition, trueBranch, falseBranch)
 
 /** (ite c t1 (ite c2 t1 t2)) ==> (ite (or c c2) t1 t2) */
+@Suppress("LongParameterList")
 inline fun <T : KSort> KContext.simplifyIteSameBranches(
     condition: KExpr<KBoolSort>,
     trueBranch: KExpr<T>,
