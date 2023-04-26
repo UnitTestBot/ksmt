@@ -23,7 +23,9 @@ import org.ksmt.utils.uncheckedCast
 
 class SymFPUModel(private val kModel: KModel, val ctx: KContext, val transformer: FpToBvTransformer) : KModel {
     override val declarations: Set<KDecl<*>>
-        get() = kModel.declarations + transformer.arraysTransform.mapFpToBvDeclImpl.keys
+        get() = kModel.declarations +
+            transformer.arraysTransform.mapFpToBvDeclImpl.keys -
+            transformer.arraysTransform.mapFpToBvDeclImpl.values.map { it.decl }.toSet()
 
 
     override val uninterpretedSorts: Set<KUninterpretedSort>
@@ -56,7 +58,7 @@ class SymFPUModel(private val kModel: KModel, val ctx: KContext, val transformer
 
             val const = getConst(decl) ?: return@with null
             val eval = kModel.eval(const)
-            if (eval.sort is KArraySortBase<*>  && eval is KConst<*>) return null
+            if (eval.sort is KArraySortBase<*> && eval is KConst<*>) return null
             getInterpretation(decl, eval)
         }.cast()
     }
