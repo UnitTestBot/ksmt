@@ -123,6 +123,24 @@ class ArraysTransform(val ctx: KContext) {
                 { mkArrayNLambda(it, body) }
             )
 
+        fun <A : KArraySortBase<*>> KContext.mkAnyArrayStore(
+            array: KExpr<A>,
+            indices: List<KExpr<KSort>>,
+            value: KExpr<KSort>,
+        ): KExpr<out KArraySortBase<KSort>> {
+            val domain = array.sort.domainSorts
+            return when (domain.size) {
+                KArraySort.DOMAIN_SIZE -> mkArrayStore(array.cast(), indices.single(), value)
+                KArray2Sort.DOMAIN_SIZE -> mkArrayStore(array.cast(), indices.first(), indices.last(), value)
+                KArray3Sort.DOMAIN_SIZE -> {
+                    val (d0, d1, d2) = indices
+                    mkArrayStore(array.cast(), d0, d1, d2, value)
+                }
+                else -> mkArrayNStore(array.cast(), indices, value)
+            }
+        }
+
+
         private inline fun <T, R> mkAnyArrayOperation(
             domain: List<T>,
             array1: (T) -> R,
