@@ -231,9 +231,9 @@ private fun unsatCoreGenerationExample(ctx: KContext) =
 
             /**
              * Assert and track e2
-             * Track variable e2Track will appear in unsat core
+             * e2 will appear in unsat core
              * */
-            val e2Track = solver.assertAndTrack(e2)
+            solver.assertAndTrack(e2)
 
             /**
              * Check satisfiability with e3 assumed.
@@ -244,18 +244,15 @@ private fun unsatCoreGenerationExample(ctx: KContext) =
 
             // retrieve unsat core
             val core = solver.unsatCore()
-            println("unsat core = $core") // [track!fresh!0, (not c)]
+            println("unsat core = $core") // [(not (and b a)), (not c)]
 
             // simply asserted expression cannot be in unsat core
             println("e1 in core = ${e1 in core}") // false
-            /**
-             * An expression added with assertAndTrack cannot be in unsat core.
-             * The corresponding track variable is used instead of the expression itself.
-             */
-            println("e2 in core = ${e2 in core}") // false
-            println("e2Track in core = ${e2Track in core}") // true
 
-            //the assumed expression appears in unsat core as is
+            // an expression added with assertAndTrack appears in unsat core as is.
+            println("e2 in core = ${e2 in core}") // true
+
+            // the assumed expression appears in unsat core as is
             println("e3 in core = ${e3 in core}") // true
         }
     }
