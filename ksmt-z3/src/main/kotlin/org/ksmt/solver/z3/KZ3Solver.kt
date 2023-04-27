@@ -26,6 +26,7 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
     private val z3Ctx = KZ3Context(ctx)
     private val solver = createSolver()
     private var lastCheckStatus = KSolverStatus.UNKNOWN
+    private var lastReasonOfUnknown: String? = null
     private var currentScope: UInt = 0u
 
     @Suppress("LeakingThis")
@@ -91,7 +92,7 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
         solver.solverAssertAndTrack(z3Expr, z3TrackVar)
     }
 
-    override fun check(timeout: Duration): KSolverStatus = z3Try {
+    override fun check(timeout: Duration): KSolverStatus = z3TryCheck {
         solver.updateTimeout(timeout)
         solver.check().processCheckResult()
     }
@@ -99,7 +100,7 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
     override fun checkWithAssumptions(
         assumptions: List<KExpr<KBoolSort>>,
         timeout: Duration
-    ): KSolverStatus = z3Try {
+    ): KSolverStatus = z3TryCheck {
         ctx.ensureContextMatch(assumptions)
 
         val z3Assumptions = with(exprInternalizer) {
@@ -132,7 +133,7 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
 
     override fun reasonOfUnknown(): String = z3Try {
         require(lastCheckStatus == KSolverStatus.UNKNOWN) { "Unknown reason is only available after UNKNOWN checks" }
-        solver.reasonUnknown
+        lastReasonOfUnknown ?: solver.reasonUnknown
     }
 
     override fun interrupt() = z3Try {
@@ -167,6 +168,19 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
         body()
     } catch (ex: Z3Exception) {
         throw KSolverException(ex)
+    }
+
+    private fun invalidateSolverState() {
+        lastReasonOfUnknown = null
+        lastCheckStatus = KSolverStatus.UNKNOWN
+    }
+
+    private inline fun z3TryCheck(body: () -> KSolverStatus): KSolverStatus = try {
+        invalidateSolverState()
+        body()
+    } catch (ex: Z3Exception) {
+        lastReasonOfUnknown = ex.message
+        KSolverStatus.UNKNOWN.also { lastCheckStatus = it }
     }
 
     companion object {

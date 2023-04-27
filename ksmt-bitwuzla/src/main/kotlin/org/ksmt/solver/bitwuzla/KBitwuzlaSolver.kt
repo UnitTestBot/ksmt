@@ -6,6 +6,7 @@ import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverStatus
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaOption
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaResult
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
@@ -22,7 +23,11 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
     open val exprConverter: KBitwuzlaExprConverter by lazy {
         KBitwuzlaExprConverter(ctx, bitwuzlaCtx)
     }
+
     private var lastCheckStatus = KSolverStatus.UNKNOWN
+    private var lastReasonOfUnknown: String? = null
+    private var lastAssumptions: TrackedAssumptions? = null
+    private var lastModel: KBitwuzlaModel? = null
 
     init {
         Native.bitwuzlaSetOption(bitwuzlaCtx.bitwuzla, BitwuzlaOption.BITWUZLA_OPT_INCREMENTAL, value = 1)
@@ -89,17 +94,9 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
     override fun check(timeout: Duration): KSolverStatus =
         checkWithAssumptions(emptyList(), timeout)
 
-    private var lastAssumptions: TrackedAssumptions? = null
-    private fun invalidateAssumptions() {
-        lastAssumptions = null
-    }
-
     override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus =
-        bitwuzlaCtx.bitwuzlaTry {
+        bitwuzlaTryCheck {
             ctx.ensureContextMatch(assumptions)
-
-            invalidatePreviousModel()
-            invalidateAssumptions()
 
             val currentAssumptions = TrackedAssumptions().also { lastAssumptions = it }
 
@@ -120,16 +117,6 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
         Native.bitwuzlaCheckSatResult(bitwuzlaCtx.bitwuzla)
     } else {
         Native.bitwuzlaCheckSatTimeoutResult(bitwuzlaCtx.bitwuzla, timeout.inWholeMilliseconds)
-    }
-
-    private var lastModel: KBitwuzlaModel? = null
-
-    /**
-     * Bitwuzla model is only valid until the next check-sat call.
-     * */
-    private fun invalidatePreviousModel() {
-        lastModel?.markInvalid()
-        lastModel = null
     }
 
     override fun model(): KModel = bitwuzlaCtx.bitwuzlaTry {
@@ -155,7 +142,7 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
         }
 
         // There is no way to retrieve reason of unknown from Bitwuzla in general case.
-        return "unknown"
+        return lastReasonOfUnknown ?: "unknown"
     }
 
     override fun interrupt() = bitwuzlaCtx.bitwuzlaTry {
@@ -171,6 +158,27 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
         BitwuzlaResult.BITWUZLA_UNSAT -> KSolverStatus.UNSAT
         BitwuzlaResult.BITWUZLA_UNKNOWN -> KSolverStatus.UNKNOWN
     }.also { lastCheckStatus = it }
+
+    private fun invalidateSolverState() {
+        /**
+         * Bitwuzla model is only valid until the next check-sat call.
+         * */
+        lastModel?.markInvalid()
+        lastModel = null
+
+        lastCheckStatus = KSolverStatus.UNKNOWN
+        lastReasonOfUnknown = null
+
+        lastAssumptions = null
+    }
+
+    private inline fun bitwuzlaTryCheck(body: () -> KSolverStatus): KSolverStatus = try {
+        invalidateSolverState()
+        body()
+    } catch (ex: BitwuzlaNativeException) {
+        lastReasonOfUnknown = ex.message
+        KSolverStatus.UNKNOWN.also { lastCheckStatus = it }
+    }
 
     private inner class TrackedAssumptions {
         private val assumedExprs = arrayListOf<Pair<KExpr<KBoolSort>, BitwuzlaTerm>>()

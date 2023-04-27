@@ -34,7 +34,9 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
         KYicesExprConverter(ctx, yicesCtx)
     }
 
+    private var lastAssumptions: TrackedAssumptions? = null
     private var lastCheckStatus = KSolverStatus.UNKNOWN
+    private var lastReasonOfUnknown: String? = null
 
     private var currentLevelTrackedAssertions = mutableListOf<Pair<KExpr<KBoolSort>, YicesTerm>>()
     private val trackedAssertions = mutableListOf(currentLevelTrackedAssertions)
@@ -90,19 +92,12 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
         currentLevelTrackedAssertions = trackedAssertions.last()
     }
 
-    private var lastAssumptions: TrackedAssumptions? = null
-    private fun invalidateAssumptions() {
-        lastAssumptions = null
-    }
-
-    override fun check(timeout: Duration): KSolverStatus {
-        invalidateAssumptions()
-
+    override fun check(timeout: Duration): KSolverStatus = yicesTryCheck {
         if (trackedAssertions.any { it.isNotEmpty() }) {
             return checkWithAssumptions(emptyList(), timeout)
         }
 
-        return withTimer(timeout) {
+        checkWithTimer(timeout) {
             nativeContext.check()
         }.processCheckResult()
     }
@@ -110,10 +105,9 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
     override fun checkWithAssumptions(
         assumptions: List<KExpr<KBoolSort>>,
         timeout: Duration
-    ): KSolverStatus {
+    ): KSolverStatus = yicesTryCheck {
         ctx.ensureContextMatch(assumptions)
 
-        invalidateAssumptions()
         val yicesAssumptions = TrackedAssumptions().also { lastAssumptions = it }
 
         trackedAssertions.forEach { frame ->
@@ -128,7 +122,7 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
             }
         }
 
-        return withTimer(timeout) {
+        checkWithTimer(timeout) {
             nativeContext.checkWithAssumptions(yicesAssumptions.assumedTerms())
         }.processCheckResult()
     }
@@ -156,14 +150,14 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
         }
 
         // There is no way to retrieve reason of unknown from Yices in general case.
-        return "unknown"
+        return lastReasonOfUnknown ?: "unknown"
     }
 
     override fun interrupt() = yicesTry {
         nativeContext.stopSearch()
     }
 
-    private inline fun <T> withTimer(timeout: Duration, body: () -> T): T {
+    private inline fun <T> checkWithTimer(timeout: Duration, body: () -> T): T {
         val task = StopSearchTask()
 
         if (timeout.isFinite()) {
@@ -172,8 +166,6 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
 
         return try {
             body()
-        } catch (ex: YicesException) {
-            throw KSolverException(ex)
         } finally {
             task.cancel()
         }
@@ -183,6 +175,20 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
         body()
     } catch (ex: YicesException) {
         throw KSolverException(ex)
+    }
+
+    private inline fun yicesTryCheck(body: () -> KSolverStatus): KSolverStatus = try {
+        invalidateSolverState()
+        body()
+    } catch (ex: YicesException) {
+        lastReasonOfUnknown = ex.message
+        KSolverStatus.UNKNOWN.also { lastCheckStatus = it }
+    }
+
+    private fun invalidateSolverState() {
+        lastCheckStatus = KSolverStatus.UNKNOWN
+        lastReasonOfUnknown = null
+        lastAssumptions = null
     }
 
     private fun Status.processCheckResult() = when (this) {
