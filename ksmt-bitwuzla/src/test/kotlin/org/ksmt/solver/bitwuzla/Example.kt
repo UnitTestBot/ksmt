@@ -63,7 +63,7 @@ class Example {
 
         solver.close()
 
-        assertFailsWith(IllegalStateException::class) { model.eval(a) }
+        assertFailsWith(IllegalStateException::class) { model.interpretation(b) }
         assertEquals(aValue, detachedModel.eval(a))
         assertEquals(cValue, detachedModel.eval(c))
     }

@@ -78,7 +78,7 @@ class SolverProtocolModel private constructor(
         
         private val __SolverConfigurationParamListSerializer = SolverConfigurationParam.list()
         
-        const val serializationHash = -5238880835174060064L
+        const val serializationHash = 6654719566694323594L
         
     }
     override val serializersOwner: ISerializersOwner get() = SolverProtocolModel
@@ -651,11 +651,11 @@ data class CreateSolverParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:86]
+ * #### Generated from [SolverProtocolModel.kt:87]
  */
 data class ModelEntry (
     val decl: org.ksmt.KAst,
-    val vars: List<org.ksmt.KAst>,
+    val vars: List<org.ksmt.KAst>?,
     val entries: List<ModelFuncInterpEntry>,
     val default: org.ksmt.KAst?
 ) : IPrintable {
@@ -667,7 +667,7 @@ data class ModelEntry (
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ModelEntry  {
             val decl = (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer)
-            val vars = buffer.readList { (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer) }
+            val vars = buffer.readNullable { buffer.readList { (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer) } }
             val entries = buffer.readList { ModelFuncInterpEntry.read(ctx, buffer) }
             val default = buffer.readNullable { (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer) }
             return ModelEntry(decl, vars, entries, default)
@@ -675,7 +675,7 @@ data class ModelEntry (
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ModelEntry)  {
             (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, value.decl)
-            buffer.writeList(value.vars) { v -> (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, v) }
+            buffer.writeNullable(value.vars) { buffer.writeList(it) { v -> (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, v) } }
             buffer.writeList(value.entries) { v -> ModelFuncInterpEntry.write(ctx, buffer, v) }
             buffer.writeNullable(value.default) { (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, it) }
         }
@@ -704,7 +704,7 @@ data class ModelEntry (
     override fun hashCode(): Int  {
         var __r = 0
         __r = __r*31 + decl.hashCode()
-        __r = __r*31 + vars.hashCode()
+        __r = __r*31 + if (vars != null) vars.hashCode() else 0
         __r = __r*31 + entries.hashCode()
         __r = __r*31 + if (default != null) default.hashCode() else 0
         return __r
@@ -729,6 +729,7 @@ data class ModelEntry (
  * #### Generated from [SolverProtocolModel.kt:81]
  */
 data class ModelFuncInterpEntry (
+    val hasVars: Boolean,
     val args: List<org.ksmt.KAst>,
     val value: org.ksmt.KAst
 ) : IPrintable {
@@ -739,12 +740,14 @@ data class ModelFuncInterpEntry (
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): ModelFuncInterpEntry  {
+            val hasVars = buffer.readBool()
             val args = buffer.readList { (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer) }
             val value = (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).read(ctx, buffer)
-            return ModelFuncInterpEntry(args, value)
+            return ModelFuncInterpEntry(hasVars, args, value)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: ModelFuncInterpEntry)  {
+            buffer.writeBool(value.hasVars)
             buffer.writeList(value.args) { v -> (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, v) }
             (ctx.serializers.get(org.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<org.ksmt.KAst>).write(ctx,buffer, value.value)
         }
@@ -762,6 +765,7 @@ data class ModelFuncInterpEntry (
         
         other as ModelFuncInterpEntry
         
+        if (hasVars != other.hasVars) return false
         if (args != other.args) return false
         if (value != other.value) return false
         
@@ -770,6 +774,7 @@ data class ModelFuncInterpEntry (
     //hash code trait
     override fun hashCode(): Int  {
         var __r = 0
+        __r = __r*31 + hasVars.hashCode()
         __r = __r*31 + args.hashCode()
         __r = __r*31 + value.hashCode()
         return __r
@@ -778,6 +783,7 @@ data class ModelFuncInterpEntry (
     override fun print(printer: PrettyPrinter)  {
         printer.println("ModelFuncInterpEntry (")
         printer.indent {
+            print("hasVars = "); hasVars.print(printer); println()
             print("args = "); args.print(printer); println()
             print("value = "); value.print(printer); println()
         }
@@ -789,7 +795,7 @@ data class ModelFuncInterpEntry (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:98]
+ * #### Generated from [SolverProtocolModel.kt:99]
  */
 data class ModelResult (
     val declarations: List<org.ksmt.KAst>,
@@ -858,7 +864,7 @@ data class ModelResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:93]
+ * #### Generated from [SolverProtocolModel.kt:94]
  */
 data class ModelUninterpretedSortUniverse (
     val sort: org.ksmt.KAst,

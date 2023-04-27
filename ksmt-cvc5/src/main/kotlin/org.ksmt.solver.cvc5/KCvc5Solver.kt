@@ -100,6 +100,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     }
 
     override fun check(timeout: Duration): KSolverStatus = cvc5Try {
+        invalidatePreviousModel()
         cvc5LastAssumptions = TreeSet()
         solver.updateTimeout(timeout)
         solver.checkSat().processCheckResult()
@@ -112,6 +113,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
 
     override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus = cvc5Try {
         ctx.ensureContextMatch(assumptions)
+        invalidatePreviousModel()
 
         val cvc5Assumptions = with(exprInternalizer) {
             assumptions.map { it.internalizeExpr() }
@@ -122,15 +124,28 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         solver.checkSatAssuming(cvc5Assumptions).processCheckResult()
     }
 
+    private var lastModel: KCvc5Model? = null
+
+    /**
+     * Cvc5 model is only valid until the next check-sat call.
+     * */
+    private fun invalidatePreviousModel() {
+        lastModel?.markInvalid()
+        lastModel = null
+    }
+
     override fun model(): KModel = cvc5Try {
         require(lastCheckStatus == KSolverStatus.SAT) { "Models are only available after SAT checks" }
-        return KCvc5Model(
+        val model = lastModel ?: KCvc5Model(
             ctx,
             cvc5Ctx,
             exprInternalizer,
             cvc5Ctx.declarations().flatMapTo(hashSetOf()) { it },
             cvc5Ctx.uninterpretedSorts().flatMapTo(hashSetOf()) { it },
         )
+        lastModel = model
+
+        model
     }
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = cvc5Try {

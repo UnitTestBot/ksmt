@@ -79,13 +79,14 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
     }
 
     private val modelFuncInterpEntry = structdef {
+        field("hasVars", PredefinedType.bool)
         field("args", immutableList(kastType))
         field("value", kastType)
     }
 
     private val modelEntry = structdef {
         field("decl", kastType)
-        field("vars", immutableList(kastType))
+        field("vars", immutableList(kastType).nullable)
         field("entries", immutableList(modelFuncInterpEntry))
         field("default", kastType.nullable)
     }
