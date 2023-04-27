@@ -7,8 +7,8 @@ import com.microsoft.z3.solverAssert
 import com.microsoft.z3.solverAssertAndTrack
 import com.microsoft.z3.solverCheckAssumptions
 import com.microsoft.z3.solverGetUnsatCore
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import org.ksmt.KContext
-import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
@@ -26,6 +26,7 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
     private val z3Ctx = KZ3Context(ctx)
     private val solver = createSolver()
     private var lastCheckStatus = KSolverStatus.UNKNOWN
+    private var lastReasonOfUnknown: String? = null
     private var currentScope: UInt = 0u
 
     @Suppress("LeakingThis")
@@ -77,16 +78,21 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
         z3Ctx.assertPendingAxioms(solver)
     }
 
-    override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) = z3Try {
-        ctx.ensureContextMatch(expr, trackVar)
+    private val trackedAssertions = Long2ObjectOpenHashMap<KExpr<KBoolSort>>()
 
+    override fun assertAndTrack(expr: KExpr<KBoolSort>) = z3Try {
+        ctx.ensureContextMatch(expr)
+
+        val trackExpr = ctx.mkFreshConst("track", ctx.boolSort)
         val z3Expr = with(exprInternalizer) { expr.internalizeExpr() }
-        val z3TrackVar = with(exprInternalizer) { trackVar.apply().internalizeExpr() }
+        val z3TrackVar = with(exprInternalizer) { trackExpr.internalizeExpr() }
+
+        trackedAssertions.put(z3TrackVar, expr)
 
         solver.solverAssertAndTrack(z3Expr, z3TrackVar)
     }
 
-    override fun check(timeout: Duration): KSolverStatus = z3Try {
+    override fun check(timeout: Duration): KSolverStatus = z3TryCheck {
         solver.updateTimeout(timeout)
         solver.check().processCheckResult()
     }
@@ -94,7 +100,7 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
     override fun checkWithAssumptions(
         assumptions: List<KExpr<KBoolSort>>,
         timeout: Duration
-    ): KSolverStatus = z3Try {
+    ): KSolverStatus = z3TryCheck {
         ctx.ensureContextMatch(assumptions)
 
         val z3Assumptions = with(exprInternalizer) {
@@ -115,20 +121,19 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
         KZ3Model(model, ctx, z3Ctx, exprInternalizer)
     }
 
-    // TODO add mapping back from tracked variable into initial value
     override fun unsatCore(): List<KExpr<KBoolSort>> = z3Try {
         require(lastCheckStatus == KSolverStatus.UNSAT) { "Unsat cores are only available after UNSAT checks" }
 
         val unsatCore = solver.solverGetUnsatCore()
 
         with(exprConverter) {
-            unsatCore.map { it.convertExpr() }
+            unsatCore.map { trackedAssertions.get(it) ?: it.convertExpr() }
         }
     }
 
     override fun reasonOfUnknown(): String = z3Try {
         require(lastCheckStatus == KSolverStatus.UNKNOWN) { "Unknown reason is only available after UNKNOWN checks" }
-        solver.reasonUnknown
+        lastReasonOfUnknown ?: solver.reasonUnknown
     }
 
     override fun interrupt() = z3Try {
@@ -163,6 +168,19 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
         body()
     } catch (ex: Z3Exception) {
         throw KSolverException(ex)
+    }
+
+    private fun invalidateSolverState() {
+        lastReasonOfUnknown = null
+        lastCheckStatus = KSolverStatus.UNKNOWN
+    }
+
+    private inline fun z3TryCheck(body: () -> KSolverStatus): KSolverStatus = try {
+        invalidateSolverState()
+        body()
+    } catch (ex: Z3Exception) {
+        lastReasonOfUnknown = ex.message
+        KSolverStatus.UNKNOWN.also { lastCheckStatus = it }
     }
 
     companion object {

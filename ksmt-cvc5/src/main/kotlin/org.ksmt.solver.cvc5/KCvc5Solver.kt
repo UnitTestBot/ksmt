@@ -4,9 +4,7 @@ import io.github.cvc5.CVC5ApiException
 import io.github.cvc5.Result
 import io.github.cvc5.Solver
 import io.github.cvc5.Term
-import io.github.cvc5.UnknownExplanation
 import org.ksmt.KContext
-import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
@@ -14,7 +12,7 @@ import org.ksmt.solver.KSolverException
 import org.ksmt.solver.KSolverStatus
 import org.ksmt.sort.KBoolSort
 import org.ksmt.utils.NativeLibraryLoader
-import java.util.TreeSet
+import java.util.TreeMap
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 
@@ -23,18 +21,18 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     private val cvc5Ctx = KCvc5Context(solver, ctx)
 
     private val exprInternalizer by lazy { createExprInternalizer(cvc5Ctx) }
-    private val exprConverter: KCvc5ExprConverter by lazy { createExprConverter(cvc5Ctx) }
 
     private val currentScope: UInt
         get() = cvc5TrackedAssertions.lastIndex.toUInt()
 
     private var lastCheckStatus = KSolverStatus.UNKNOWN
-    private var cvc5LastUnknownExplanation: UnknownExplanation? = null
+    private var lastReasonOfUnknown: String? = null
+    private var lastModel: KCvc5Model? = null
+    // we need TreeMap here (hashcode not implemented in Term)
+    private var cvc5LastAssumptions: TreeMap<Term, KExpr<KBoolSort>>? = null
 
-    private var cvc5CurrentLevelTrackedAssertions = mutableListOf<Term>()
+    private var cvc5CurrentLevelTrackedAssertions = TreeMap<Term, KExpr<KBoolSort>>()
     private val cvc5TrackedAssertions = mutableListOf(cvc5CurrentLevelTrackedAssertions)
-
-    private var cvc5LastAssumptions = TreeSet<Term>()
 
     init {
         solver.setOption("produce-models", "true")
@@ -47,8 +45,6 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     }
 
     open fun createExprInternalizer(cvc5Ctx: KCvc5Context): KCvc5ExprInternalizer = KCvc5ExprInternalizer(cvc5Ctx)
-
-    open fun createExprConverter(cvc5Ctx: KCvc5Context): KCvc5ExprConverter = KCvc5ExprConverter(ctx, cvc5Ctx)
 
     override fun configure(configurator: KCvc5SolverConfiguration.() -> Unit) {
         KCvc5SolverConfigurationImpl(solver).configurator()
@@ -63,21 +59,21 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         cvc5Ctx.assertPendingAxioms(solver)
     }
 
-    override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) {
-        ctx.ensureContextMatch(expr, trackVar)
+    override fun assertAndTrack(expr: KExpr<KBoolSort>) {
+        ctx.ensureContextMatch(expr)
 
-        val trackVarApp = trackVar.apply()
+        val trackVarApp = ctx.mkFreshConst("track", ctx.boolSort)
         val cvc5TrackVar = with(exprInternalizer) { trackVarApp.internalizeExpr() }
         val trackedExpr = with(ctx) { trackVarApp implies expr }
 
-        cvc5CurrentLevelTrackedAssertions.add(cvc5TrackVar)
+        cvc5CurrentLevelTrackedAssertions[cvc5TrackVar] = expr
 
         assert(trackedExpr)
         solver.assertFormula(cvc5TrackVar)
     }
 
     override fun push() = solver.push().also {
-        cvc5CurrentLevelTrackedAssertions = mutableListOf()
+        cvc5CurrentLevelTrackedAssertions = TreeMap()
         cvc5TrackedAssertions.add(cvc5CurrentLevelTrackedAssertions)
 
         cvc5Ctx.push()
@@ -99,39 +95,36 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         solver.pop(n.toInt())
     }
 
-    override fun check(timeout: Duration): KSolverStatus = cvc5Try {
-        invalidatePreviousModel()
-        cvc5LastAssumptions = TreeSet()
+    override fun check(timeout: Duration): KSolverStatus = cvc5TryCheck {
         solver.updateTimeout(timeout)
         solver.checkSat().processCheckResult()
     }
 
-    override fun reasonOfUnknown(): String = cvc5Try {
-        require(lastCheckStatus == KSolverStatus.UNKNOWN) { "Unknown reason is only available after UNKNOWN checks" }
-        cvc5LastUnknownExplanation?.name ?: "no explanation"
-    }
-
-    override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus = cvc5Try {
+    override fun checkWithAssumptions(
+        assumptions: List<KExpr<KBoolSort>>,
+        timeout: Duration
+    ): KSolverStatus = cvc5TryCheck {
         ctx.ensureContextMatch(assumptions)
-        invalidatePreviousModel()
 
-        val cvc5Assumptions = with(exprInternalizer) {
-            assumptions.map { it.internalizeExpr() }
-        }.toTypedArray()
+        val lastAssumptions = TreeMap<Term, KExpr<KBoolSort>>().also { cvc5LastAssumptions = it }
+        val cvc5Assumptions = Array(assumptions.size) { idx ->
+            val assumedExpr = assumptions[idx]
+            with(exprInternalizer) {
+                assumedExpr.internalizeExpr().also {
+                    lastAssumptions[it] = assumedExpr
+                }
+            }
+        }
 
-        cvc5LastAssumptions = cvc5Assumptions.toCollection(TreeSet())
         solver.updateTimeout(timeout)
         solver.checkSatAssuming(cvc5Assumptions).processCheckResult()
     }
 
-    private var lastModel: KCvc5Model? = null
-
-    /**
-     * Cvc5 model is only valid until the next check-sat call.
-     * */
-    private fun invalidatePreviousModel() {
-        lastModel?.markInvalid()
-        lastModel = null
+    override fun reasonOfUnknown(): String = cvc5Try {
+        require(lastCheckStatus == KSolverStatus.UNKNOWN) {
+            "Unknown reason is only available after UNKNOWN checks"
+        }
+        lastReasonOfUnknown ?: "no explanation"
     }
 
     override fun model(): KModel = cvc5Try {
@@ -150,12 +143,16 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = cvc5Try {
         require(lastCheckStatus == KSolverStatus.UNSAT) { "Unsat cores are only available after UNSAT checks" }
-        // we need TreeSet here (hashcode not implemented in Term)
-        val cvc5TrackedVars = cvc5TrackedAssertions.flatten().toSortedSet()
-        val cvc5FullCore = solver.unsatCore
-        val cvc5UnsatCore = cvc5FullCore.filter { it in cvc5TrackedVars || it in cvc5LastAssumptions }
 
-        with(exprConverter) { cvc5UnsatCore.map { it.convertExpr() } }
+        val cvc5FullCore = solver.unsatCore
+
+        val trackedTerms = TreeMap<Term, KExpr<KBoolSort>>()
+        cvc5TrackedAssertions.forEach { frame ->
+            trackedTerms.putAll(frame)
+        }
+        cvc5LastAssumptions?.also { trackedTerms.putAll(it) }
+
+        cvc5FullCore.mapNotNull { trackedTerms[it] }
     }
 
     override fun close() {
@@ -179,7 +176,9 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         else -> KSolverStatus.UNKNOWN
     }.also {
         lastCheckStatus = it
-        if (it == KSolverStatus.UNKNOWN) cvc5LastUnknownExplanation = this.unknownExplanation
+        if (it == KSolverStatus.UNKNOWN) {
+            lastReasonOfUnknown = this.unknownExplanation?.name
+        }
     }
 
     private fun Solver.updateTimeout(timeout: Duration) {
@@ -191,6 +190,27 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         body()
     } catch (ex: CVC5ApiException) {
         throw KSolverException(ex)
+    }
+
+    private inline fun cvc5TryCheck(body: () -> KSolverStatus): KSolverStatus = try {
+        invalidateSolverState()
+        body()
+    } catch (ex: CVC5ApiException) {
+        lastReasonOfUnknown = ex.message
+        KSolverStatus.UNKNOWN.also { lastCheckStatus = it }
+    }
+
+    private fun invalidateSolverState() {
+        /**
+         * Cvc5 model is only valid until the next check-sat call.
+         * */
+        lastModel?.markInvalid()
+        lastModel = null
+
+        lastCheckStatus = KSolverStatus.UNKNOWN
+        lastReasonOfUnknown = null
+
+        cvc5LastAssumptions = null
     }
 
     companion object {

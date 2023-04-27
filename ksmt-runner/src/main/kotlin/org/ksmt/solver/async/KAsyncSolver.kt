@@ -1,6 +1,5 @@
 package org.ksmt.solver.async
 
-import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
@@ -15,7 +14,7 @@ interface KAsyncSolver<Config : KSolverConfiguration> : KSolver<Config> {
 
     suspend fun assertAsync(expr: KExpr<KBoolSort>)
 
-    suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>)
+    suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>)
 
     suspend fun pushAsync()
 

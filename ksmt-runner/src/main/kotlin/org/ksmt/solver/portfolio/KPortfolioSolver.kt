@@ -11,7 +11,6 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.runBlocking
-import org.ksmt.decl.KConstDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
@@ -107,8 +106,8 @@ class KPortfolioSolver(
         assertAsync(expr)
     }
 
-    override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) = runBlocking {
-        assertAndTrackAsync(expr, trackVar)
+    override fun assertAndTrack(expr: KExpr<KBoolSort>) = runBlocking {
+        assertAndTrackAsync(expr)
     }
 
     override fun push() = runBlocking {
@@ -154,10 +153,9 @@ class KPortfolioSolver(
         assertAsync(expr)
     }
 
-    override suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) =
-        solverOperation {
-            assertAndTrackAsync(expr, trackVar)
-        }
+    override suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>) = solverOperation {
+        assertAndTrackAsync(expr)
+    }
 
     override suspend fun pushAsync() = solverOperation {
         pushAsync()

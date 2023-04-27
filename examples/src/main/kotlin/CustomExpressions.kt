@@ -1,7 +1,6 @@
 import org.ksmt.KContext
 import org.ksmt.cache.hash
 import org.ksmt.cache.structurallyEqual
-import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KUninterpretedSortValue
@@ -13,6 +12,7 @@ import org.ksmt.solver.KModel
 import org.ksmt.solver.KSolver
 import org.ksmt.solver.KSolverConfiguration
 import org.ksmt.solver.KSolverStatus
+import org.ksmt.solver.model.KFuncInterp
 import org.ksmt.sort.KBoolSort
 import org.ksmt.sort.KBvSort
 import org.ksmt.sort.KSort
@@ -174,8 +174,8 @@ class CustomSolver<C : KSolverConfiguration>(
         solver.assert(transformer.apply(expr))
 
     // expr can contain custom expressions -> rewrite
-    override fun assertAndTrack(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) =
-        solver.assertAndTrack(transformer.apply(expr), trackVar)
+    override fun assertAndTrack(expr: KExpr<KBoolSort>) =
+        solver.assertAndTrack(transformer.apply(expr))
 
     // assumptions can contain custom expressions -> rewrite
     override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus =
@@ -219,7 +219,7 @@ class CustomModel(
     override val uninterpretedSorts: Set<KUninterpretedSort>
         get() = model.uninterpretedSorts
 
-    override fun <T : KSort> interpretation(decl: KDecl<T>): KModel.KFuncInterp<T>? =
+    override fun <T : KSort> interpretation(decl: KDecl<T>): KFuncInterp<T>? =
         model.interpretation(decl)
 
     override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KUninterpretedSortValue>? =

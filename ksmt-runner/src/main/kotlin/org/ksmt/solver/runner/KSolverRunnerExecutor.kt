@@ -11,12 +11,10 @@ import com.jetbrains.rd.util.threading.SynchronousScheduler
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 import org.ksmt.KContext
-import org.ksmt.decl.KConstDecl
 import org.ksmt.decl.KDecl
 import org.ksmt.expr.KExpr
 import org.ksmt.expr.KUninterpretedSortValue
 import org.ksmt.runner.core.KsmtWorkerSession
-import org.ksmt.runner.generated.models.AssertAndTrackParams
 import org.ksmt.runner.generated.models.AssertParams
 import org.ksmt.runner.generated.models.CheckParams
 import org.ksmt.runner.generated.models.CheckResult
@@ -94,27 +92,21 @@ class KSolverRunnerExecutor(
         query(AssertParams(expr))
     }
 
-    fun assertAndTrackSync(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) =
-        assertAndTrack(expr, trackVar) { params ->
-            queryWithTimeoutAndExceptionHandlingSync {
-                assertAndTrack.querySync(params)
-            }
+    fun assertAndTrackSync(expr: KExpr<KBoolSort>) = assertAndTrack(expr) { params ->
+        queryWithTimeoutAndExceptionHandlingSync {
+            assertAndTrack.querySync(params)
         }
+    }
 
-    suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>, trackVar: KConstDecl<KBoolSort>) =
-        assertAndTrack(expr, trackVar) { params ->
-            queryWithTimeoutAndExceptionHandlingAsync {
-                assertAndTrack.queryAsync(params)
-            }
+    suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>) = assertAndTrack(expr) { params ->
+        queryWithTimeoutAndExceptionHandlingAsync {
+            assertAndTrack.queryAsync(params)
         }
+    }
 
-    private inline fun assertAndTrack(
-        expr: KExpr<KBoolSort>,
-        trackVar: KConstDecl<KBoolSort>,
-        query: (AssertAndTrackParams) -> Unit
-    ) {
+    private inline fun assertAndTrack(expr: KExpr<KBoolSort>, query: (AssertParams) -> Unit) {
         ensureActive()
-        query(AssertAndTrackParams(expr, trackVar))
+        query(AssertParams(expr))
     }
 
     fun pushSync() = push {
