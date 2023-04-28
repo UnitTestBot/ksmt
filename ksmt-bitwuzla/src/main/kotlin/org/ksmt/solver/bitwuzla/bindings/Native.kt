@@ -1,6 +1,6 @@
 package org.ksmt.solver.bitwuzla.bindings
 
-import org.ksmt.utils.NativeLibraryLoader
+import io.ksmt.utils.NativeLibraryLoader
 
 
 typealias Bitwuzla = Long

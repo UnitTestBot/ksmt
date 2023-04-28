@@ -51,7 +51,7 @@ In this example, we want to create an expression
 over Boolean variable `a` and integer variables `b` and `c`.
 
 ```kotlin
-import org.ksmt.utils.getValue
+import io.ksmt.utils.getValue
 
 with(ctx) {
     // create symbolic variables

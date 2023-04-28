@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    id("org.ksmt.ksmt-base")
+    id("io.ksmt.ksmt-base")
 }
 
 dependencies {

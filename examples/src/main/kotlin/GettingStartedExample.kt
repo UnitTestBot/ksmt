@@ -1,6 +1,6 @@
-import org.ksmt.KContext
-import org.ksmt.solver.z3.KZ3Solver
-import org.ksmt.utils.getValue
+import io.ksmt.KContext
+import io.ksmt.solver.z3.KZ3Solver
+import io.ksmt.utils.getValue
 import kotlin.time.Duration.Companion.seconds
 
 fun main() {
