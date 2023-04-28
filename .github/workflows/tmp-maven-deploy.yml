@@ -1,6 +1,6 @@
 name: tmp-maven-deploy
 
-on: workflow_dispatch
+on: push
 
 jobs:
   mvn-deploy:
@@ -25,8 +25,8 @@ jobs:
             -PmavenDeployUrl="https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
             -PmavenDeployUser="${{ secrets.MAVEN_CENTRAL_USER }}"
             -PmavenDeployPassword="${{ secrets.MAVEN_CENTRAL_PASSWORD }}"
-            -PmavenSignGpgKey="${{ secrets.MAVEN_SIGN_GPG_KEY }}"
-            -PmavenSignGpgPassword="${{ secrets.MAVEN_SIGN_GPG_PASSWORD }}"
+#            -PmavenSignGpgKey="${{ secrets.MAVEN_SIGN_GPG_KEY }}"
+#            -PmavenSignGpgPassword="${{ secrets.MAVEN_SIGN_GPG_PASSWORD }}"
 
 #      - name: Upload release artifacts
 #        uses: softprops/action-gh-release@v1
