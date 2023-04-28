@@ -6,6 +6,7 @@ plugins {
     id("de.undercouch.download")
     `java-library`
     `maven-publish`
+    signing
 }
 
 group = "io.ksmt"
@@ -51,7 +52,7 @@ publishing {
 
         maven {
             name = "central"
-            url = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
 
             credentials {
                 username = project.stringProperty("mavenCentralUser") ?: ""

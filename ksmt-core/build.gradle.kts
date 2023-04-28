@@ -18,6 +18,9 @@ publishing {
         create<MavenPublication>("maven") {
             from(components["java"])
             artifact(tasks["kotlinSourcesJar"])
+
+            addKsmtPom()
+            signKsmtPublication(project)
         }
     }
 }
