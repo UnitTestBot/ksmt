@@ -8,7 +8,7 @@ plugins {
     `maven-publish`
 }
 
-group = "org.ksmt"
+group = "io.ksmt"
 version = "0.5.1"
 
 repositories {
@@ -47,6 +47,16 @@ publishing {
         maven {
             name = "releaseDir"
             url = uri(layout.buildDirectory.dir("release"))
+        }
+
+        maven {
+            name = "central"
+            url = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+
+            credentials {
+                username = project.stringProperty("mavenCentralUser") ?: ""
+                password = project.stringProperty("mavenCentralPassword") ?: ""
+            }
         }
     }
 }
