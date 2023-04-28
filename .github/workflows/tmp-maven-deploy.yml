@@ -21,7 +21,7 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: |
-            :ksmt-core:publishAllPublicationsToCentralRepository
+            publishAllPublicationsToCentralRepository
             -PmavenDeployUrl=https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/
             -PmavenDeployUser=${{ secrets.MAVEN_CENTRAL_USER }}
             -PmavenDeployPassword=${{ secrets.MAVEN_CENTRAL_PASSWORD }}
