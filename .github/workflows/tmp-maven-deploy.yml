@@ -1,6 +1,6 @@
 name: tmp-maven-deploy
 
-on: push
+on: workflow_dispatch
 
 jobs:
   mvn-deploy:
