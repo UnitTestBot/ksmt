@@ -3,8 +3,8 @@ name: tmp-maven-deploy
 on: workflow_dispatch
 
 jobs:
-  publish:
-    name: Publish
+  mvn-deploy:
+    name: Mvn deploy
     runs-on: ubuntu-latest
 
     steps:
