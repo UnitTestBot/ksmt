@@ -44,8 +44,8 @@ fun MavenPublication.addKsmtPom() {
 
 fun MavenPublication.signKsmtPublication(project: Project) = with(project) {
     signing {
-        val gpgKey = project.stringProperty("mavenGpgKey")
-        val gpgPassword = project.stringProperty("mavenGpgPassword")
+        val gpgKey = project.stringProperty("mavenSignGpgKey")
+        val gpgPassword = project.stringProperty("mavenSignGpgPassword")
 
         if (gpgKey != null && gpgPassword != null) {
             useInMemoryPgpKeys(gpgKey, gpgPassword)

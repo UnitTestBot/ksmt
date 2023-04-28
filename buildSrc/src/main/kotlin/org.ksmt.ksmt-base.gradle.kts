@@ -50,13 +50,16 @@ publishing {
             url = uri(layout.buildDirectory.dir("release"))
         }
 
-        maven {
-            name = "central"
-            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+        val mavenDeployUrl = project.stringProperty("mavenDeployUrl")
+        if (mavenDeployUrl != null) {
+            maven {
+                name = "central"
+                url = uri(mavenDeployUrl)
 
-            credentials {
-                username = project.stringProperty("mavenCentralUser") ?: ""
-                password = project.stringProperty("mavenCentralPassword") ?: ""
+                credentials {
+                    username = project.stringProperty("mavenDeployUser") ?: ""
+                    password = project.stringProperty("mavenDeployPassword") ?: ""
+                }
             }
         }
     }
