@@ -21,10 +21,10 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: |
-            publishAllPublicationsToCentralRepository
+            :ksmt-core:publishAllPublicationsToCentralRepository
             -PmavenDeployUrl="https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
-            -PmavenDeployUser="${{ secrets.MAVEN_CENTRAL_USER }}"
-            -PmavenDeployPassword="${{ secrets.MAVEN_CENTRAL_PASSWORD }}"
+            -PmavenDeployUser=${{ secrets.MAVEN_CENTRAL_USER }}
+            -PmavenDeployPassword=${{ secrets.MAVEN_CENTRAL_PASSWORD }}
 #            -PmavenSignGpgKey="${{ secrets.MAVEN_SIGN_GPG_KEY }}"
 #            -PmavenSignGpgPassword="${{ secrets.MAVEN_SIGN_GPG_PASSWORD }}"
 
