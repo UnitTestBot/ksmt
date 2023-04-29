@@ -1,5 +1,5 @@
 plugins {
-    id("org.ksmt.ksmt-base")
+    id("io.ksmt.ksmt-base")
 }
 
 dependencies {

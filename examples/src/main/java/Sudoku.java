@@ -1,12 +1,12 @@
-import org.ksmt.KContext;
-import org.ksmt.expr.KExpr;
-import org.ksmt.expr.KInt32NumExpr;
-import org.ksmt.solver.KModel;
-import org.ksmt.solver.KSolver;
-import org.ksmt.solver.KSolverStatus;
-import org.ksmt.solver.z3.KZ3Solver;
-import org.ksmt.sort.KBoolSort;
-import org.ksmt.sort.KIntSort;
+import io.ksmt.KContext;
+import io.ksmt.expr.KExpr;
+import io.ksmt.expr.KInt32NumExpr;
+import io.ksmt.solver.KModel;
+import io.ksmt.solver.KSolver;
+import io.ksmt.solver.KSolverStatus;
+import io.ksmt.solver.z3.KZ3Solver;
+import io.ksmt.sort.KBoolSort;
+import io.ksmt.sort.KIntSort;
 
 import java.util.ArrayList;
 import java.util.Collection;

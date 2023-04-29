@@ -1,5 +1,5 @@
 plugins {
-    id("org.ksmt.ksmt-base")
+    id("io.ksmt.ksmt-base")
     id("me.champeau.jmh") version "0.6.8"
 }
 
@@ -110,7 +110,7 @@ tasks.withType<Test> {
         environment("benchmarkChunkMaxSize", benchmarkChunkMaxSize)
         environment("benchmarkChunk", benchmarkChunk)
     } else {
-        exclude("org/ksmt/test/benchmarks/**")
+        exclude("io/ksmt/test/benchmarks/**")
 
         testLogging {
             showStandardStreams = true

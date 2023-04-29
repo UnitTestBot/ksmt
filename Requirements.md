@@ -14,7 +14,7 @@
 | [External process runner](#external-process-runner)                              | Done           |
 | [Portfolio solver](#portfolio-solver)                                            | Done           |
 | [Solver configuration API](#solver-configuration-api)                            | Done           |
-| [Deployment](#deployment)                                                        | Done partially |
+| [Deployment](#deployment)                                                        | Done           |
 | [Expression simplification / evaluation](#expression-simplification--evaluation) | Done           |
 | [Performance tests](#performance-tests)                                          | TODO           |
 | [Better Z3 API](#better-z3-api)                                                  | Done partially |
@@ -34,7 +34,7 @@
 Provide a solver-independent formula representation
 with back and forth transformations to the solver's native representation.
 Such representation allows introspection of formulas and transformation of formulas
-independent of the solver. Check out [KASt](ksmt-core/src/main/kotlin/org/ksmt/KAst.kt) and its inheritors
+independent of the solver. Check out [KASt](ksmt-core/src/main/kotlin/io/ksmt/KAst.kt) and its inheritors
 for implementation details.
 
 ### Expression interning
@@ -44,7 +44,7 @@ Interning (aka [hash consing](https://en.wikipedia.org/wiki/Hash_consing)) is ne
 1. **Constant time ast comparison.** Otherwise, we need to compare trees.
 2. **Ast deduplication.** We can have many duplicate nodes (e.g. constants).
 
-Currently, interning is implemented via [KContext](ksmt-core/src/main/kotlin/org/ksmt/KContext.kt) which
+Currently, interning is implemented via [KContext](ksmt-core/src/main/kotlin/io/ksmt/KContext.kt) which
 manages all created asts.
 
 ### Basic theories support
@@ -52,11 +52,11 @@ manages all created asts.
 Support theories in KSMT expressions system. Each theory consists of:
 
 1. **Expressions.** Theory specific operations over terms.
-   All implementations are in [expr](ksmt-core/src/main/kotlin/org/ksmt/expr) package.
+   All implementations are in [expr](ksmt-core/src/main/kotlin/io/ksmt/expr) package.
 2. **Sorts.** Theory specific types.
-   All implementations are in [sort](ksmt-core/src/main/kotlin/org/ksmt/sort) package.
+   All implementations are in [sort](ksmt-core/src/main/kotlin/io/ksmt/sort) package.
 3. **Declarations.** Declarations (name, argument sorts, result sort) of theory specific functions.
-   All implementations are in [decl](ksmt-core/src/main/kotlin/org/ksmt/decl) package.
+   All implementations are in [decl](ksmt-core/src/main/kotlin/io/ksmt/decl) package.
 
 KSMT expression system supports following theories and their combinations:
 
@@ -78,7 +78,7 @@ Main goals are:
 1. Allow the user to instantiate KSMT expressions from SMT-LIB.
 2. Provide us the opportunity to use a rich database of [benchmarks](https://smtlib.cs.uiowa.edu/benchmarks.shtml).
 
-Currently, [implemented](ksmt-z3/src/main/kotlin/org/ksmt/solver/z3/KZ3SMTLibParser.kt) on top of Z3 SMT solver.
+Currently, [implemented](ksmt-z3/src/main/kotlin/io/ksmt/solver/z3/KZ3SMTLibParser.kt) on top of Z3 SMT solver.
 A solver-agnostic implementation may be done in the future.
 
 ### SMT-LIB2 serializer
@@ -96,7 +96,7 @@ Can be implemented on top of the Z3 SMT solver (easy version) or in a solver-ind
 
 If some solver doesn't support some theory (e.g. BV) or some feature (e.g. unsat-core generation) we need to throw
 specialized exception.
-Currently, [KSolverUnsupportedFeatureException](ksmt-core/src/main/kotlin/org/ksmt/solver/KSolverUnsupportedFeatureException.kt)
+Currently, [KSolverUnsupportedFeatureException](ksmt-core/src/main/kotlin/io/ksmt/solver/KSolverUnsupportedFeatureException.kt)
 is thrown.
 
 To simplify the user experience, the exception may contain a recommendation to switch to another solver.
@@ -114,7 +114,7 @@ Features:
 5. Incremental solving via push/pop.
 6. Incremental solving via assumptions.
 
-For implementation details, check out [KSolver](ksmt-core/src/main/kotlin/org/ksmt/solver/KSolver.kt).
+For implementation details, check out [KSolver](ksmt-core/src/main/kotlin/io/ksmt/solver/KSolver.kt).
 
 ### Z3 solver support
 
@@ -124,7 +124,7 @@ Z3 has native support for all theories,
 listed in [KSMT supported theories](#basic-theories-support)
 and provides all the functionality, listed in [SMT solver features](#smt-solver-support).
 
-For implementation details, check out [KZ3Solver](ksmt-z3/src/main/kotlin/org/ksmt/solver/z3/KZ3Solver.kt).
+For implementation details, check out [KZ3Solver](ksmt-z3/src/main/kotlin/io/ksmt/solver/z3/KZ3Solver.kt).
 
 ### Bitwuzla solver support
 
@@ -147,7 +147,7 @@ For the solver features, listed in [SMT solver features](#smt-solver-support),
 Bitwuzla provides full native support.
 
 For implementation details, check
-out [KBitwuzlaSolver](ksmt-bitwuzla/src/main/kotlin/org/ksmt/solver/bitwuzla/KBitwuzlaSolver.kt).
+out [KBitwuzlaSolver](ksmt-bitwuzla/src/main/kotlin/io/ksmt/solver/bitwuzla/KBitwuzlaSolver.kt).
 
 ### Yices2 solver support
 
@@ -204,11 +204,9 @@ For implementation details, check out [corresponding PR](https://github.com/Unit
 
 ### Deployment
 
-Deliver KSMT to end users. 
+Deliver KSMT to end users.
 
-Currently, we use [JitPack](https://jitpack.io) for deployment.
-
-Use Maven Central in the future.
+Released on [Maven Central](https://central.sonatype.com/namespace/io.ksmt).
 
 ### Expression simplification / evaluation
 
@@ -218,7 +216,7 @@ Implement simplification rules for KSMT expressions, and apply it to:
 3. Expression evaluation wrt model (special case of simplification)
 
 List of currently implemented simplification
-rules: [simplification rules](ksmt-core/src/main/kotlin/org/ksmt/expr/rewrite/simplify/Rules.md)
+rules: [simplification rules](ksmt-core/src/main/kotlin/io/ksmt/expr/rewrite/simplify/Rules.md)
 
 ### Performance tests
 

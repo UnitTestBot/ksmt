@@ -2,21 +2,16 @@
 Kotlin API for various SMT solvers.
 
 [![KSMT: build](https://github.com/UnitTestBot/ksmt/actions/workflows/build-and-run-tests.yml/badge.svg)](https://github.com/UnitTestBot/ksmt/workflows/build-and-run-tests.yml)
-[![JitPack](https://jitpack.io/v/UnitTestBot/ksmt.svg)](https://jitpack.io/#UnitTestBot/ksmt)
+![Maven Central](https://img.shields.io/maven-central/v/io.ksmt/ksmt-core)
 
 # Getting started
-Install via [JitPack](https://jitpack.io/) and [Gradle](https://gradle.org/).
+Install via [Gradle](https://gradle.org/).
 
 ```kotlin
-// JitPack repository
-repositories {
-    maven { url = uri("https://jitpack.io") }
-}
-
 // core 
-implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.5.1")
+implementation("io.ksmt:ksmt-core:0.5.2")
 // z3 solver
-implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.5.1")
+implementation("io.ksmt:ksmt-z3:0.5.2")
 ```
 
 ## Usage

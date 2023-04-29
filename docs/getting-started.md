@@ -4,13 +4,12 @@ For code examples, please check out our [project](/examples).
 
 ## Installation
 
-Installation via [JitPack](https://jitpack.io/) and [Gradle](https://gradle.org/).
+Install via [Gradle](https://gradle.org/).
 
-#### 1. Enable JitPack repository in your build configuration:
+#### 1. Enable Maven Central repository in your build configuration:
 ```kotlin
-// JitPack repository
 repositories {
-    maven { url = uri("https://jitpack.io") }
+    mavenCentral()
 }
 ```
 
@@ -18,7 +17,7 @@ repositories {
 ```kotlin
 dependencies {
     // core 
-    implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.5.1")    
+    implementation("io.ksmt:ksmt-core:0.5.2")    
 }
 ```
 
@@ -26,9 +25,9 @@ dependencies {
 ```kotlin
 dependencies {
     // z3 
-    implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.5.1")
+    implementation("io.ksmt:ksmt-z3:0.5.2")
     // bitwuzla
-    implementation("com.github.UnitTestBot.ksmt:ksmt-bitwuzla:0.5.1")
+    implementation("io.ksmt:ksmt-bitwuzla:0.5.2")
 }
 ```
 SMT solver specific packages are provided with solver native binaries. 
@@ -51,7 +50,7 @@ In this example, we want to create an expression
 over Boolean variable `a` and integer variables `b` and `c`.
 
 ```kotlin
-import org.ksmt.utils.getValue
+import io.ksmt.utils.getValue
 
 with(ctx) {
     // create symbolic variables

@@ -1,15 +1,15 @@
-import org.ksmt.KContext
-import org.ksmt.solver.KSolver
-import org.ksmt.solver.KSolverConfiguration
-import org.ksmt.solver.KSolverUniversalConfigurationBuilder
-import org.ksmt.solver.bitwuzla.KBitwuzlaSolver
-import org.ksmt.solver.bitwuzla.KBitwuzlaSolverUniversalConfiguration
-import org.ksmt.solver.cvc5.KCvc5Solver
-import org.ksmt.solver.cvc5.KCvc5SolverUniversalConfiguration
-import org.ksmt.solver.yices.KYicesSolver
-import org.ksmt.solver.yices.KYicesSolverUniversalConfiguration
-import org.ksmt.solver.z3.KZ3Solver
-import org.ksmt.solver.z3.KZ3SolverUniversalConfiguration
+import io.ksmt.KContext
+import io.ksmt.solver.KSolver
+import io.ksmt.solver.KSolverConfiguration
+import io.ksmt.solver.KSolverUniversalConfigurationBuilder
+import io.ksmt.solver.bitwuzla.KBitwuzlaSolver
+import io.ksmt.solver.bitwuzla.KBitwuzlaSolverUniversalConfiguration
+import io.ksmt.solver.cvc5.KCvc5Solver
+import io.ksmt.solver.cvc5.KCvc5SolverUniversalConfiguration
+import io.ksmt.solver.yices.KYicesSolver
+import io.ksmt.solver.yices.KYicesSolverUniversalConfiguration
+import io.ksmt.solver.z3.KZ3Solver
+import io.ksmt.solver.z3.KZ3SolverUniversalConfiguration
 import kotlin.io.path.Path
 import kotlin.io.path.bufferedWriter
 import kotlin.reflect.KClass
@@ -29,7 +29,7 @@ data class SolverDescription(
 )
 
 private const val SOLVER_TYPE = "SolverType"
-private const val SOLVER_TYPE_QUALIFIED_NAME = "org.ksmt.runner.generated.models.SolverType"
+private const val SOLVER_TYPE_QUALIFIED_NAME = "io.ksmt.runner.generated.models.SolverType"
 private const val CUSTOM_SOLVER_TYPE = "${SOLVER_TYPE}.Custom"
 
 private val kSolverTypeName = "${KSolver::class.simpleName}<*>"

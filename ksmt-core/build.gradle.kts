@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    id("org.ksmt.ksmt-base")
+    id("io.ksmt.ksmt-base")
 }
 
 dependencies {
@@ -17,7 +17,10 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             from(components["java"])
-            artifact(tasks["kotlinSourcesJar"])
+
+            addKsmtPom()
+            addSourcesAndJavadoc(project)
+            signKsmtPublication(project)
         }
     }
 }

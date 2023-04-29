@@ -1,7 +1,7 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
-    id("org.ksmt.ksmt-base")
+    id("io.ksmt.ksmt-base")
     id("com.github.johnrengelman.shadow") version "7.1.2"
 }
 
@@ -75,7 +75,10 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             project.shadow.component(this)
-            artifact(tasks["kotlinSourcesJar"])
+
+            addKsmtPom()
+            addSourcesAndJavadoc(project)
+            signKsmtPublication(project)
         }
     }
 }
