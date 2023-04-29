@@ -22,6 +22,8 @@ jobs:
         with:
           arguments: |
             publishAllPublicationsToCentralRepository
+            --no-daemon
+            -Dorg.gradle.jvmargs=-XX:MaxMetaspaceSize=2G
             -PmavenDeployUrl=https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/
             -PmavenDeployUser=${{ secrets.MAVEN_CENTRAL_USER }}
             -PmavenDeployPassword=${{ secrets.MAVEN_CENTRAL_PASSWORD }}
