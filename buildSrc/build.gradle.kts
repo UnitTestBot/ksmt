@@ -14,6 +14,7 @@ val versions = loadProperties(rootDir.parentFile.resolve("version.properties").a
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:${versions["kotlin"]}")
+    implementation("org.jetbrains.dokka:dokka-gradle-plugin:${versions["kotlin"]}")
     implementation("io.gitlab.arturbosch.detekt:detekt-gradle-plugin:${versions["detekt"]}")
     implementation("de.undercouch.download:de.undercouch.download.gradle.plugin:5.1.0")
 }

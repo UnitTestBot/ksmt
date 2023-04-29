@@ -4,6 +4,7 @@ plugins {
     kotlin("jvm")
     id("io.gitlab.arturbosch.detekt")
     id("de.undercouch.download")
+    id("org.jetbrains.dokka")
     `java-library`
     `maven-publish`
     signing
@@ -41,6 +42,12 @@ tasks.getByName<KotlinCompile>("compileKotlin") {
 tasks.withType<Test> {
     useJUnitPlatform()
     systemProperty("junit.jupiter.execution.parallel.enabled", true)
+}
+
+tasks.register<Jar>("dokkaJavadocJar") {
+    dependsOn(tasks.dokkaJavadoc)
+    from(tasks.dokkaJavadoc.flatMap { it.outputDirectory })
+    archiveClassifier.set("javadoc")
 }
 
 publishing {

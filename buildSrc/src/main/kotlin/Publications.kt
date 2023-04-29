@@ -1,6 +1,7 @@
-import gradle.kotlin.dsl.accessors._ae88b9d82f8aca71ffa5505af25c0c3d.signing
+import gradle.kotlin.dsl.accessors._87b80c14bf1c4d505c7a71d7741e0994.signing
 import org.gradle.api.Project
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.kotlin.dsl.get
 
 fun MavenPublication.addKsmtPom() {
     pom {
@@ -52,4 +53,9 @@ fun MavenPublication.signKsmtPublication(project: Project) = with(project) {
             sign(this@signKsmtPublication)
         }
     }
+}
+
+fun MavenPublication.addSourcesAndJavadoc(project: Project) {
+    artifact(project.tasks["kotlinSourcesJar"])
+    artifact(project.tasks["dokkaJavadocJar"])
 }

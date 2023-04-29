@@ -52,9 +52,9 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             project.shadow.component(this)
-            artifact(tasks["kotlinSourcesJar"])
 
             addKsmtPom()
+            addSourcesAndJavadoc(project)
             signKsmtPublication(project)
         }
     }
