@@ -14,7 +14,7 @@
 | [External process runner](#external-process-runner)                              | Done           |
 | [Portfolio solver](#portfolio-solver)                                            | Done           |
 | [Solver configuration API](#solver-configuration-api)                            | Done           |
-| [Deployment](#deployment)                                                        | Done partially |
+| [Deployment](#deployment)                                                        | Done           |
 | [Expression simplification / evaluation](#expression-simplification--evaluation) | Done           |
 | [Performance tests](#performance-tests)                                          | TODO           |
 | [Better Z3 API](#better-z3-api)                                                  | Done partially |
@@ -204,11 +204,9 @@ For implementation details, check out [corresponding PR](https://github.com/Unit
 
 ### Deployment
 
-Deliver KSMT to end users. 
+Deliver KSMT to end users.
 
-Currently, we use [JitPack](https://jitpack.io) for deployment.
-
-Use Maven Central in the future.
+Released on [Maven Central](https://central.sonatype.com/namespace/io.ksmt).
 
 ### Expression simplification / evaluation
 

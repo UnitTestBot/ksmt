@@ -5,14 +5,13 @@ plugins {
 
 repositories {
     mavenCentral()
-    maven { url = uri("https://jitpack.io") }
 }
 
 dependencies {
     // core
-    implementation("com.github.UnitTestBot.ksmt:ksmt-core:0.5.1")
+    implementation("io.ksmt:ksmt-core:0.5.1")
     // z3 solver
-    implementation("com.github.UnitTestBot.ksmt:ksmt-z3:0.5.1")
+    implementation("io.ksmt:ksmt-z3:0.5.1")
 }
 
 java {
