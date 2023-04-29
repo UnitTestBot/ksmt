@@ -9,9 +9,9 @@ Install via [Gradle](https://gradle.org/).
 
 ```kotlin
 // core 
-implementation("io.ksmt:ksmt-core:0.5.1")
+implementation("io.ksmt:ksmt-core:0.5.2")
 // z3 solver
-implementation("io.ksmt:ksmt-z3:0.5.1")
+implementation("io.ksmt:ksmt-z3:0.5.2")
 ```
 
 ## Usage
