@@ -2,16 +2,11 @@ package io.ksmt.expr.rewrite.simplify
 
 import io.ksmt.KContext
 import io.ksmt.decl.KDecl
-import io.ksmt.expr.KArray2Lambda
 import io.ksmt.expr.KArray2Select
 import io.ksmt.expr.KArray2Store
-import io.ksmt.expr.KArray3Lambda
 import io.ksmt.expr.KArray3Select
 import io.ksmt.expr.KArray3Store
 import io.ksmt.expr.KArrayConst
-import io.ksmt.expr.KArrayLambda
-import io.ksmt.expr.KArrayLambdaBase
-import io.ksmt.expr.KArrayNLambda
 import io.ksmt.expr.KArrayNSelect
 import io.ksmt.expr.KArrayNStore
 import io.ksmt.expr.KArraySelect
@@ -24,7 +19,6 @@ import io.ksmt.expr.KFunctionApp
 import io.ksmt.expr.KFunctionAsArray
 import io.ksmt.expr.KInterpretedValue
 import io.ksmt.expr.printer.ExpressionPrinter
-import io.ksmt.expr.rewrite.KExprSubstitutor
 import io.ksmt.expr.transformer.KTransformerBase
 import io.ksmt.sort.KArray2Sort
 import io.ksmt.sort.KArray3Sort

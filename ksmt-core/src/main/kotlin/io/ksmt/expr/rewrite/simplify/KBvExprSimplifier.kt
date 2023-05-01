@@ -403,6 +403,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
             if (canPerformBoundedRewrite()) {
                 simplifyBvNotExprConcat(
                     arg = arg2,
+                    rewriteBvNotExpr = { boundedRewrite(KBvNotExpr(ctx, it)) },
                     rewriteBvConcatExpr = { args -> boundedRewrite(SimplifierFlatBvConcatExpr(ctx, arg2.sort, args)) }
                 ) { arg3 ->
                     simplifyBvNotExprIte(
@@ -714,7 +715,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
                 arg = arg2,
                 shift = shift2,
                 rewriteBvExtractExpr = { high, low, arg -> rewrite(KBvExtractExpr(ctx, high, low, arg)) },
-                rewriteBvConcatExpr = { l, r, -> rewrite(KBvConcatExpr(ctx, l, r)) },
+                rewriteBvConcatExpr = { l, r -> rewrite(KBvConcatExpr(ctx, l, r)) },
                 cont = ::mkBvLogicalShiftRightExprNoSimplify
             )
         }

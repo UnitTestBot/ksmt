@@ -76,12 +76,14 @@ inline fun <T : KBvSort> KContext.simplifyBvNotExprLight(
 /** (bvnot (concat a b)) ==> (concat (bvnot a) (bvnot b)) */
 inline fun <T : KBvSort> KContext.simplifyBvNotExprConcat(
     arg: KExpr<T>,
+    rewriteBvNotExpr: KContext.(KExpr<KBvSort>) -> KExpr<KBvSort>,
     rewriteBvConcatExpr: KContext.(List<KExpr<KBvSort>>) -> KExpr<KBvSort>,
     cont: (KExpr<T>) -> KExpr<T>
 ): KExpr<T> =
     if (arg is KBvConcatExpr) {
         val concatParts = flatConcatArgs(arg)
-        rewriteBvConcatExpr(concatParts).uncheckedCast()
+        val negatedParts = concatParts.map { rewriteBvNotExpr(it) }
+        rewriteBvConcatExpr(negatedParts).uncheckedCast()
     } else {
         cont(arg)
     }
