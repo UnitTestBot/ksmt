@@ -905,16 +905,7 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
 
     override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KArrayConst<A, R>) = with(expr) {
         transform(value) { value: BitwuzlaTerm ->
-            /**
-             * Note: don't use [Native.bitwuzlaMkConstArray] due to bitwuzla internal issues.
-             *
-             * Constant arrays are represented as lambdas with `isArray` flag.
-             * Bitwuzla doesn't distinguish between lambda with `isArray` and without
-             * and therefore may use them interchangeably.
-             * In some cases, constant arrays are replaced with lambda expressions without
-             * `isArray` flag which leads to internal errors.
-             * */
-            mkArrayLambdaTerm(sort.domainSorts) { value }
+            mkArrayConstTerm(sort, value)
         }
     }
 
@@ -935,9 +926,28 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
     ) = expr.transformArrayLambda()
 
     private fun <E : KArrayLambdaBase<*, *>> E.transformArrayLambda(): E =
-        internalizeQuantifierBody(indexVarDeclarations, body) { internalizedBounds, internalizedBody ->
-            mkLambdaTerm(internalizedBounds, internalizedBody)
+        internalizeQuantifierBody(
+            bounds = indexVarDeclarations,
+            body = body,
+            transformInternalizedWithoutQuantifiedVars = { internalizedBody ->
+                mkArrayConstTerm(sort, internalizedBody)
+            },
+            transformInternalizedWithQuantifiedVars = { internalizedBounds, internalizedBody ->
+                mkLambdaTerm(internalizedBounds, internalizedBody)
+            }
+        )
+
+    private fun mkArrayConstTerm(
+        sort: KArraySortBase<*>,
+        value: BitwuzlaTerm
+    ): BitwuzlaTerm {
+        if (sort is KArraySort<*, *>) {
+            val internalizedSort = sort.internalizeSort()
+            return Native.bitwuzlaMkConstArray(bitwuzla, internalizedSort, value)
         }
+
+        return mkArrayLambdaTerm(sort.domainSorts) { value }
+    }
 
     private inline fun mkArrayLambdaTerm(
         boundVarSort: KSort,
@@ -1268,14 +1278,19 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
             throw KSolverUnsupportedFeatureException("Bitwuzla doesn't support quantifiers with uninterpreted sorts")
         }
 
-        return internalizeQuantifierBody(bounds, body) { internalizedBounds, internalizedBody ->
-            if (internalizedBounds.isEmpty()) {
-                internalizedBody
-            } else {
-                val args = internalizedBounds.addLast(internalizedBody)
-                mkQuantifierTerm(args)
+        return internalizeQuantifierBody(
+            bounds = bounds,
+            body = body,
+            transformInternalizedWithoutQuantifiedVars = { internalizedBody -> internalizedBody },
+            transformInternalizedWithQuantifiedVars = { internalizedBounds, internalizedBody ->
+                if (internalizedBounds.isEmpty()) {
+                    internalizedBody
+                } else {
+                    val args = internalizedBounds.addLast(internalizedBody)
+                    mkQuantifierTerm(args)
+                }
             }
-        }
+        )
     }
 
     private fun pushQuantifiedDeclScope(owner: KExpr<*>, quantifiedDecls: List<KDecl<*>>) {
@@ -1297,7 +1312,8 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
     private inline fun <T : KExpr<*>> T.internalizeQuantifierBody(
         bounds: List<KDecl<*>>,
         body: KExpr<*>,
-        crossinline transformInternalized: (LongArray, BitwuzlaTerm) -> BitwuzlaTerm
+        crossinline transformInternalizedWithoutQuantifiedVars: (BitwuzlaTerm) -> BitwuzlaTerm,
+        crossinline transformInternalizedWithQuantifiedVars: (LongArray, BitwuzlaTerm) -> BitwuzlaTerm
     ): T {
         pushQuantifiedDeclScope(this, bounds)
         return transform(body) { internalizedBody ->
@@ -1317,7 +1333,11 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
                 bitwuzla, internalizedBody, boundConstants, boundVars
             )
 
-            transformInternalized(boundVars, internalizedBodyWithVars)
+            if (internalizedBodyWithVars == internalizedBody) {
+                transformInternalizedWithoutQuantifiedVars(internalizedBodyWithVars)
+            } else {
+                transformInternalizedWithQuantifiedVars(boundVars, internalizedBodyWithVars)
+            }
         }
     }
 
