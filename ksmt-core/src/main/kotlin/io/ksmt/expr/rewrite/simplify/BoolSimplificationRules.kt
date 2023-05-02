@@ -210,10 +210,12 @@ inline fun <T : KSort> KContext.simplifyIteNotCondition(
     trueBranch: KExpr<T>,
     falseBranch: KExpr<T>,
     cont: (KExpr<KBoolSort>, KExpr<T>, KExpr<T>) -> KExpr<T>
-): KExpr<T> = if (condition is KNotExpr)
-    cont(condition.arg, falseBranch, trueBranch)
-else
-    cont(condition, trueBranch, falseBranch)
+): KExpr<T> =
+    if (condition is KNotExpr) {
+        cont(condition.arg, falseBranch, trueBranch)
+    } else {
+        cont(condition, trueBranch, falseBranch)
+    }
 
 /** (ite c t1 (ite c2 t1 t2)) ==> (ite (or c c2) t1 t2) */
 @Suppress("LongParameterList")
@@ -224,10 +226,12 @@ inline fun <T : KSort> KContext.simplifyIteSameBranches(
     rewriteIte: KContext.(KExpr<KBoolSort>, KExpr<T>, KExpr<T>) -> KExpr<T>,
     rewriteOr: KContext.(KExpr<KBoolSort>, KExpr<KBoolSort>) -> KExpr<KBoolSort>,
     cont: (KExpr<KBoolSort>, KExpr<T>, KExpr<T>) -> KExpr<T>
-): KExpr<T> = if (falseBranch is KIteExpr<T> && falseBranch.trueBranch == trueBranch)
-    rewriteIte(rewriteOr(condition, falseBranch.condition), trueBranch, falseBranch.falseBranch)
-else
-    cont(condition, trueBranch, falseBranch)
+): KExpr<T> =
+    if (falseBranch is KIteExpr<T> && falseBranch.trueBranch == trueBranch) {
+        rewriteIte(rewriteOr(condition, falseBranch.condition), trueBranch, falseBranch.falseBranch)
+    } else {
+        cont(condition, trueBranch, falseBranch)
+    }
 
 inline fun <T : KSort> KContext.simplifyIteBool(
     condition: KExpr<KBoolSort>,

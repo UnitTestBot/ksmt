@@ -110,11 +110,8 @@ inline fun <T : KBvSort> KContext.simplifyBvOrExprLight(
     cont: (KExpr<T>, KExpr<T>) -> KExpr<T>
 ): KExpr<T> = evalBvOperation(lhs, rhs, { a, b -> a.bitwiseOr(b) }) {
     executeIfValue(lhs, rhs) { value, other ->
-        if (value.isBvMaxValueUnsigned())
-            return value
-
-        if (value.isBvZero())
-            return other
+        if (value.isBvMaxValueUnsigned()) return value
+        if (value.isBvZero()) return other
     }
 
     return cont(lhs, rhs)
@@ -188,11 +185,8 @@ inline fun <T : KBvSort> KContext.simplifyBvAndExprLight(
     cont: (KExpr<T>, KExpr<T>) -> KExpr<T>
 ): KExpr<T> = evalBvOperation(lhs, rhs, { a, b -> a.bitwiseAnd(b) }) {
     executeIfValue(lhs, rhs) { value, other ->
-        if (value.isBvMaxValueUnsigned())
-            return other
-
-        if (value.isBvZero())
-            return value
+        if (value.isBvMaxValueUnsigned()) return other
+        if (value.isBvZero()) return value
     }
 
     return cont(lhs, rhs)
@@ -265,8 +259,7 @@ inline fun <T : KBvSort> KContext.simplifyBvXorExprLight(
     cont: (KExpr<T>, KExpr<T>) -> KExpr<T>
 ): KExpr<T> = evalBvOperation(lhs, rhs, { a, b -> a.bitwiseXor(b) }) {
     executeIfValue(lhs, rhs) { value, other ->
-        if (value.isBvZero())
-            return other
+        if (value.isBvZero()) return other
     }
 
     return cont(lhs, rhs)
@@ -298,8 +291,7 @@ inline fun <T : KBvSort> KContext.simplifyBvXorExprMaxConst(
     cont: (KExpr<T>, KExpr<T>) -> KExpr<T>
 ): KExpr<T> {
     executeIfValue(lhs, rhs) { value, other ->
-        if (value.isBvMaxValueUnsigned())
-            return rewriteBvNotExpr(other)
+        if (value.isBvMaxValueUnsigned()) return rewriteBvNotExpr(other)
     }
 
     return cont(lhs, rhs)
@@ -472,8 +464,7 @@ inline fun <T : KBvSort> KContext.simplifyBvAddExprLight(
     cont: (KExpr<T>, KExpr<T>) -> KExpr<T>
 ): KExpr<T> = evalBvOperation(lhs, rhs, { a, b -> a + b }) {
     executeIfValue(lhs, rhs) { value, other ->
-        if (value.isBvZero())
-            return other
+        if (value.isBvZero()) return other
     }
 
     return cont(lhs, rhs)
@@ -534,11 +525,8 @@ inline fun <T : KBvSort> KContext.simplifyBvMulExprLight(
     cont: (KExpr<T>, KExpr<T>) -> KExpr<T>
 ): KExpr<T> = evalBvOperation(lhs, rhs, { a, b -> a * b }) {
     executeIfValue(lhs, rhs) { value, other ->
-        if (value.isBvZero())
-            return value
-
-        if (value.isBvOne())
-            return other
+        if (value.isBvZero()) return value
+        if (value.isBvOne()) return other
     }
 
     return cont(lhs, rhs)
@@ -570,8 +558,7 @@ inline fun <T : KBvSort> KContext.simplifyBvMulExprMinusOneConst(
     cont: (KExpr<T>, KExpr<T>) -> KExpr<T>
 ): KExpr<T> {
     executeIfValue(lhs, rhs) { value, other ->
-        if (value.bvValueIs(-1))
-            return rewriteBvNegationExpr(other)
+        if (value.bvValueIs(-1)) return rewriteBvNegationExpr(other)
     }
 
     return cont(lhs, rhs)
@@ -762,22 +749,24 @@ inline fun <T : KBvSort> KContext.simplifyBvUnsignedRemExprPowerOfTwoDivisor(
 inline fun <T : KBvSort> KContext.simplifyBvReductionAndExprLight(
     arg: KExpr<T>,
     cont: (KExpr<T>) -> KExpr<KBv1Sort>
-): KExpr<KBv1Sort> = if (arg is KBitVecValue<T>) {
-    // 0xFFFFF -> 1 and 0 otherwise
-    mkBv(arg.isBvMaxValueUnsigned())
-} else {
-    cont(arg)
-}
+): KExpr<KBv1Sort> =
+    if (arg is KBitVecValue<T>) {
+        // 0xFFFFF -> 1 and 0 otherwise
+        mkBv(arg.isBvMaxValueUnsigned())
+    } else {
+        cont(arg)
+    }
 
 inline fun <T : KBvSort> KContext.simplifyBvReductionOrExprLight(
     arg: KExpr<T>,
     cont: (KExpr<T>) -> KExpr<KBv1Sort>
-): KExpr<KBv1Sort> = if (arg is KBitVecValue<T>) {
-    // 0x00000 -> 0 and 1 otherwise
-    mkBv(!arg.isBvZero())
-} else {
-    cont(arg)
-}
+): KExpr<KBv1Sort> =
+    if (arg is KBitVecValue<T>) {
+        // 0x00000 -> 0 and 1 otherwise
+        mkBv(!arg.isBvZero())
+    } else {
+        cont(arg)
+    }
 
 inline fun <T : KBvSort> KContext.simplifyEqBvLight(
     lhs: KExpr<T>,
@@ -1820,10 +1809,11 @@ inline fun <T : KBvSort> executeIfValue(
     rhs: KExpr<T>,
     body: (KBitVecValue<T>, KExpr<T>) -> Unit
 ) {
-    if (lhs is KBitVecValue<T>)
+    if (lhs is KBitVecValue<T>) {
         body(lhs, rhs)
-    else if (rhs is KBitVecValue<T>)
+    } else if (rhs is KBitVecValue<T>) {
         body(rhs, lhs)
+    }
 }
 
 inline fun <T : KBvSort> KContext.rotateLeft(
