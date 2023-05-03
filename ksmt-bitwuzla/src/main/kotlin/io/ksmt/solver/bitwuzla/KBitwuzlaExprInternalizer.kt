@@ -151,6 +151,10 @@ import io.ksmt.expr.KUnaryMinusArithExpr
 import io.ksmt.expr.KUninterpretedSortValue
 import io.ksmt.expr.KUniversalQuantifier
 import io.ksmt.expr.KXorExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvAddNoUnderflowExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoUnderflowExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvNegNoOverflowExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvSubNoUnderflowExpr
 import io.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.bitwuzla.bindings.Bitwuzla
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
@@ -724,22 +728,31 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
         transform(arg0, arg1, kind)
     }
 
-    override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>) =
-        TODO("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>) = with(expr) {
+        transform {
+            ctx.rewriteBvAddNoUnderflowExpr(arg0, arg1).internalizeExpr()
+        }
+    }
 
     override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>) = with(expr) {
         transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SSUB_OVERFLOW)
     }
 
-    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>) =
-        TODO("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>) = with(expr) {
+        transform {
+            ctx.rewriteBvSubNoUnderflowExpr(arg0, arg1, isSigned).internalizeExpr()
+        }
+    }
 
     override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>) = with(expr) {
         transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SDIV_OVERFLOW)
     }
 
-    override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>) =
-        TODO("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>) = with(expr) {
+        transform {
+            ctx.rewriteBvNegNoOverflowExpr(value).internalizeExpr()
+        }
+    }
 
     override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>) = with(expr) {
         val kind = if (isSigned) {
@@ -751,8 +764,17 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
         transform(arg0, arg1, kind)
     }
 
-    override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) =
-        TODO("no direct support for $expr")
+    override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) = with(expr) {
+        transform {
+            val rewritten = ctx.rewriteBvMulNoUnderflowExpr(arg0, arg1)
+
+            if (rewritten is KBvMulNoUnderflowExpr<*>) {
+                throw KSolverUnsupportedFeatureException("Unsupported expr $expr")
+            }
+
+            rewritten.internalizeExpr()
+        }
+    }
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) = with(expr) {
         transform(array, index, value) { a: BitwuzlaTerm, i: BitwuzlaTerm, v: BitwuzlaTerm ->
