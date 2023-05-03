@@ -390,7 +390,7 @@ open class KBitwuzlaExprConverter(
                 }
                 else -> {
                     val intBits = Native.bitwuzlaBvConstNodeGetBitsUIntArray(bitwuzla, expr)
-                    val bits = bvBitsToBigInteger(intBits)
+                    val bits = io.ksmt.solver.bitwuzla.bvBitsToBigInteger(intBits)
                     mkBv(bits, size.toUInt())
                 }
             }
@@ -422,7 +422,7 @@ open class KBitwuzlaExprConverter(
                 }
                 else -> {
                     val fpBitsArray = Native.bitwuzlaFpConstNodeGetBitsUIntArray(bitwuzla, expr)
-                    val fpBits = bvBitsToBigInteger(fpBitsArray)
+                    val fpBits = io.ksmt.solver.bitwuzla.bvBitsToBigInteger(fpBitsArray)
 
                     val significandMask = powerOfTwo(sort.significandBits - 1u) - BigInteger.ONE
                     val exponentMask = powerOfTwo(sort.exponentBits) - BigInteger.ONE

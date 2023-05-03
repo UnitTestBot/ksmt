@@ -1,4 +1,4 @@
-package org.ksmt.solver.bitwuzla.bindings
+package io.ksmt.solver.bitwuzla.bindings
 
 import io.ksmt.utils.NativeLibraryLoader
 

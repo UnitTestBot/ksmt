@@ -531,7 +531,7 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
         if (size <= Long.SIZE_BITS) {
             transformBvLongNumber(value.toLong(), size)
         } else {
-            val intParts = bigIntegerToBvBits(value, size)
+            val intParts = io.ksmt.solver.bitwuzla.bigIntegerToBvBits(value, size)
             Native.bitwuzlaMkBvValueUint32Array(bitwuzla, size, intParts)
         }
 

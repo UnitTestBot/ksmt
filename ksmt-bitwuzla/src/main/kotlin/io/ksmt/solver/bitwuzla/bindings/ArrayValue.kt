@@ -1,4 +1,4 @@
-package org.ksmt.solver.bitwuzla.bindings
+package io.ksmt.solver.bitwuzla.bindings
 
 /**
  * @param indices List of indices of size `size`. 1:1 mapping to `values`,

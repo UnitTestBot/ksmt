@@ -1,4 +1,4 @@
-package org.ksmt.solver.bitwuzla.bindings
+package io.ksmt.solver.bitwuzla.bindings
 
 /**
  * @param args List of argument lists (nested lists) of size `size`. Each

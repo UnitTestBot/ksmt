@@ -1,6 +1,6 @@
 @file:Suppress("MagicNumber")
 
-package org.ksmt.solver.bitwuzla.bindings
+package io.ksmt.solver.bitwuzla.bindings
 
 /**
  * Rounding mode for floating-point operations.

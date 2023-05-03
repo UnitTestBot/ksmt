@@ -1,4 +1,4 @@
-package org.ksmt.solver.bitwuzla.bindings
+package io.ksmt.solver.bitwuzla.bindings
 
 /**
  * @param sign Binary string representation of the sign bit.
