@@ -1333,6 +1333,9 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
                 bitwuzla, internalizedBody, boundConstants, boundVars
             )
 
+            /**
+             * Body has not changed after substitution => quantified vars do not occur in the body
+             * */
             if (internalizedBodyWithVars == internalizedBody) {
                 transformInternalizedWithoutQuantifiedVars(internalizedBodyWithVars)
             } else {
