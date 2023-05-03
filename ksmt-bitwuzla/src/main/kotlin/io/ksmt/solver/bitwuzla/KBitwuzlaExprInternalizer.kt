@@ -186,6 +186,7 @@ import io.ksmt.sort.KRealSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KSortVisitor
 import io.ksmt.sort.KUninterpretedSort
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTermArray
 import java.math.BigInteger
 
 @Suppress("LargeClass")
@@ -313,7 +314,7 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
     }
 
     override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = with(expr) {
-        transformList(args) { args: LongArray ->
+        transformList(args) { args: BitwuzlaTermArray ->
             val const = mkConstant(decl) { decl.bitwuzlaFunctionSort() }
 
             val termArgs = args.addFirst(const)
@@ -329,7 +330,7 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
         transformList(args, ::mkAndTerm)
     }
 
-    fun mkAndTerm(args: LongArray): BitwuzlaTerm = when (args.size) {
+    fun mkAndTerm(args: BitwuzlaTermArray): BitwuzlaTerm = when (args.size) {
         0 -> bitwuzlaCtx.trueTerm
         1 -> args[0]
         else -> Native.bitwuzlaMkTerm(
@@ -345,7 +346,7 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
         transformList(args, ::mkOrTerm)
     }
 
-    fun mkOrTerm(args: LongArray): BitwuzlaTerm = when (args.size) {
+    fun mkOrTerm(args: BitwuzlaTermArray): BitwuzlaTerm = when (args.size) {
         0 -> bitwuzlaCtx.falseTerm
         1 -> args[0]
         else -> Native.bitwuzlaMkTerm(
@@ -358,8 +359,11 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
     }
 
     override fun transform(expr: KNotExpr) = with(expr) {
-        transform(arg, BitwuzlaKind.BITWUZLA_KIND_NOT)
+        transform(arg, ::mkNotTerm)
     }
+
+    fun mkNotTerm(arg: BitwuzlaTerm): BitwuzlaTerm =
+        Native.bitwuzlaMkTerm1(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_NOT, arg)
 
     override fun transform(expr: KImpliesExpr) = with(expr) {
         transform(p, q, BitwuzlaKind.BITWUZLA_KIND_IMPLIES)
@@ -720,32 +724,47 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
     }
 
     override fun <T : KBvSort> transform(expr: KBvAddNoOverflowExpr<T>) = with(expr) {
-        val kind = if (isSigned) {
-            BitwuzlaKind.BITWUZLA_KIND_BV_SADD_OVERFLOW
-        } else {
-            BitwuzlaKind.BITWUZLA_KIND_BV_UADD_OVERFLOW
+        transform(arg0, arg1) { a0: BitwuzlaTerm, a1: BitwuzlaTerm ->
+            if (isSigned) {
+                mkBvAddSignedNoOverflowTerm(arg0.sort.sizeBits.toInt(), a0, a1, isOverflow = true)
+            } else {
+                val overflowCheck = Native.bitwuzlaMkTerm2(
+                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_UADD_OVERFLOW, a0, a1
+                )
+                mkNotTerm(overflowCheck)
+            }
         }
-        transform(arg0, arg1, kind)
     }
 
     override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>) = with(expr) {
-        transform {
-            ctx.rewriteBvAddNoUnderflowExpr(arg0, arg1).internalizeExpr()
+        transform(arg0, arg1) { a0: BitwuzlaTerm, a1: BitwuzlaTerm ->
+            mkBvAddSignedNoOverflowTerm(arg0.sort.sizeBits.toInt(), a0, a1, isOverflow = false)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>) = with(expr) {
-        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SSUB_OVERFLOW)
+        transform(arg0, arg1) { a0: BitwuzlaTerm, a1: BitwuzlaTerm ->
+            mkBvSubSignedNoOverflowTerm(arg0.sort.sizeBits.toInt(), a0, a1, isOverflow = true)
+        }
     }
 
     override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>) = with(expr) {
-        transform {
-            ctx.rewriteBvSubNoUnderflowExpr(arg0, arg1, isSigned).internalizeExpr()
+        if (isSigned) {
+            transform(arg0, arg1) { a0: BitwuzlaTerm, a1: BitwuzlaTerm ->
+                mkBvSubSignedNoOverflowTerm(arg0.sort.sizeBits.toInt(), a0, a1, isOverflow = false)
+            }
+        } else {
+            transform {
+                ctx.rewriteBvSubNoUnderflowExpr(arg0, arg1, isSigned = false).internalizeExpr()
+            }
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>) = with(expr) {
-        transform(arg0, arg1, BitwuzlaKind.BITWUZLA_KIND_BV_SDIV_OVERFLOW)
+        transform(arg0, arg1) { a0: BitwuzlaTerm, a1: BitwuzlaTerm ->
+            val overflowCheck = Native.bitwuzlaMkTerm2(bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_SDIV_OVERFLOW, a0, a1)
+            mkNotTerm(overflowCheck)
+        }
     }
 
     override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>) = with(expr) {
@@ -755,25 +774,111 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
     }
 
     override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>) = with(expr) {
-        val kind = if (isSigned) {
-            BitwuzlaKind.BITWUZLA_KIND_BV_SMUL_OVERFLOW
-        } else {
-            BitwuzlaKind.BITWUZLA_KIND_BV_UMUL_OVERFLOW
+        transform(arg0, arg1) { a0: BitwuzlaTerm, a1: BitwuzlaTerm ->
+            if (isSigned) {
+                mkBvMulSignedNoOverflowTerm(arg0.sort.sizeBits.toInt(), a0, a1, isOverflow = true)
+            } else {
+                val overflowCheck = Native.bitwuzlaMkTerm2(
+                    bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_UMUL_OVERFLOW, a0, a1
+                )
+                mkNotTerm(overflowCheck)
+            }
         }
-
-        transform(arg0, arg1, kind)
     }
 
     override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) = with(expr) {
-        transform {
-            val rewritten = ctx.rewriteBvMulNoUnderflowExpr(arg0, arg1)
-
-            if (rewritten is KBvMulNoUnderflowExpr<*>) {
-                throw KSolverUnsupportedFeatureException("Unsupported expr $expr")
-            }
-
-            rewritten.internalizeExpr()
+        transform(arg0, arg1) { a0: BitwuzlaTerm, a1: BitwuzlaTerm ->
+            mkBvMulSignedNoOverflowTerm(arg0.sort.sizeBits.toInt(), a0, a1, isOverflow = false)
         }
+    }
+
+    private fun mkBvAddSignedNoOverflowTerm(
+        sizeBits: Int,
+        a0: BitwuzlaTerm,
+        a1: BitwuzlaTerm,
+        isOverflow: Boolean
+    ): BitwuzlaTerm = mkBvSignedOverflowCheck(
+        sizeBits,
+        a0,
+        a1,
+        BitwuzlaKind.BITWUZLA_KIND_BV_SADD_OVERFLOW
+    ) { a0Sign, a1Sign ->
+        if (isOverflow) {
+            // Both positive
+            mkAndTerm(longArrayOf(mkNotTerm(a0Sign), mkNotTerm(a1Sign)))
+        } else {
+            // Both negative
+            mkAndTerm(longArrayOf(a0Sign, a1Sign))
+        }
+    }
+
+    private fun mkBvSubSignedNoOverflowTerm(
+        sizeBits: Int,
+        a0: BitwuzlaTerm,
+        a1: BitwuzlaTerm,
+        isOverflow: Boolean
+    ): BitwuzlaTerm = mkBvSignedOverflowCheck(
+        sizeBits,
+        a0,
+        a1,
+        BitwuzlaKind.BITWUZLA_KIND_BV_SSUB_OVERFLOW
+    ) { a0Sign, a1Sign ->
+        if (isOverflow) {
+            // Positive sub negative
+            mkAndTerm(longArrayOf(mkNotTerm(a0Sign), a1Sign))
+        } else {
+            // Negative sub positive
+            mkAndTerm(longArrayOf(a0Sign, mkNotTerm(a1Sign)))
+        }
+    }
+
+    private fun mkBvMulSignedNoOverflowTerm(
+        sizeBits: Int,
+        a0: BitwuzlaTerm,
+        a1: BitwuzlaTerm,
+        isOverflow: Boolean
+    ): BitwuzlaTerm = mkBvSignedOverflowCheck(
+        sizeBits,
+        a0,
+        a1,
+        BitwuzlaKind.BITWUZLA_KIND_BV_SMUL_OVERFLOW
+    ) { a0Sign, a1Sign ->
+        if (isOverflow) {
+            // Overflow is possible when sign bits are equal
+            mkEqTerm(bitwuzlaCtx.ctx.boolSort, a0Sign, a1Sign)
+        } else {
+            // Underflow is possible when sign bits are different
+            mkNotTerm(mkEqTerm(bitwuzlaCtx.ctx.boolSort, a0Sign, a1Sign))
+        }
+    }
+
+    /**
+     * Bitwuzla doesn't distinguish between signed overflow and underflow.
+     * We perform sign check to cancel out false overflows.
+     * */
+    private inline fun mkBvSignedOverflowCheck(
+        sizeBits: Int,
+        a0: BitwuzlaTerm,
+        a1: BitwuzlaTerm,
+        checkKind: BitwuzlaKind,
+        checkSign: (BitwuzlaTerm, BitwuzlaTerm) -> BitwuzlaTerm
+    ): BitwuzlaTerm {
+        val overflowCheck = Native.bitwuzlaMkTerm2(bitwuzla, checkKind, a0, a1)
+
+        val a0Sign = mkBvSignTerm(sizeBits, a0)
+        val a1Sign = mkBvSignTerm(sizeBits, a1)
+        val signCheck = checkSign(a0Sign, a1Sign)
+
+        val overflow = mkAndTerm(longArrayOf(overflowCheck, signCheck))
+        return mkNotTerm(overflow)
+    }
+
+    private fun mkBvSignTerm(sizeBits: Int, bvExpr: BitwuzlaTerm): BitwuzlaTerm {
+        return Native.bitwuzlaMkTerm1Indexed2(
+            bitwuzla, BitwuzlaKind.BITWUZLA_KIND_BV_EXTRACT,
+            bvExpr,
+            sizeBits - 1, sizeBits - 1
+        )
     }
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>) = with(expr) {
