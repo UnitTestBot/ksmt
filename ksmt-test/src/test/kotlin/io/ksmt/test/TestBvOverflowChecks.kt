@@ -6,6 +6,7 @@ import io.ksmt.expr.KExpr
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.bitwuzla.KBitwuzlaSolver
+import io.ksmt.solver.cvc5.KCvc5Solver
 import io.ksmt.solver.yices.KYicesSolver
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.sort.KBoolSort
@@ -220,6 +221,76 @@ class TestBvOverflowChecks {
 
     @Test
     fun testBvDivNoOverflowSignedYices() = testBoolOperation({ KYicesSolver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvDivNoOverflowExpr(l, r)
+        }
+    }
+
+    @Test
+    fun testBvAddNoOverflowSignedCvc() = testBoolOperation({ KCvc5Solver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvAddNoOverflowExpr(l, r, isSigned = true)
+        }
+    }
+
+    @Test
+    fun testBvAddNoUnderflowSignedCvc() = testBoolOperation({ KCvc5Solver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvAddNoUnderflowExpr(l, r)
+        }
+    }
+
+    @Test
+    fun testBvAddNoOverflowUnsignedCvc() = testBoolOperation({ KCvc5Solver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvAddNoOverflowExpr(l, r, isSigned = false)
+        }
+    }
+
+    @Test
+    fun testBvSubNoOverflowSignedCvc() = testBoolOperation({ KCvc5Solver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvSubNoOverflowExpr(l, r)
+        }
+    }
+
+    @Test
+    fun testBvSubNoUnderflowSignedCvc() = testBoolOperation({ KCvc5Solver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvSubNoUnderflowExpr(l, r, isSigned = true)
+        }
+    }
+
+    @Test
+    fun testBvSubNoUnderflowUnsignedCvc() = testBoolOperation({ KCvc5Solver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvSubNoUnderflowExpr(l, r, isSigned = false)
+        }
+    }
+
+    @Test
+    fun testBvMulNoOverflowSignedCvc() = testBoolOperation({ KCvc5Solver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvMulNoOverflowExpr(l, r, isSigned = true)
+        }
+    }
+
+    @Test
+    fun testBvMulNoUnderflowSignedCvc() = testBoolOperation({ KCvc5Solver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvMulNoUnderflowExpr(l, r)
+        }
+    }
+
+    @Test
+    fun testBvMulNoOverflowUnsignedCvc() = testBoolOperation({ KCvc5Solver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvMulNoOverflowExpr(l, r, isSigned = false)
+        }
+    }
+
+    @Test
+    fun testBvDivNoOverflowSignedCvc() = testBoolOperation({ KCvc5Solver(it) }) {
         z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
             mkBvDivNoOverflowExpr(l, r)
         }
