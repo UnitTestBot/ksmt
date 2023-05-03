@@ -15,6 +15,76 @@ import kotlin.test.assertEquals
 class TestBvOverflowChecks {
 
     @Test
+    fun testBvAddNoOverflowSignedZ3() = testBoolOperation({ KZ3Solver(it) }) {
+        bitwuzlaSampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvAddNoOverflowExpr(l, r, isSigned = true)
+        }
+    }
+
+    @Test
+    fun testBvAddNoUnderflowSignedZ3() = testBoolOperation({ KZ3Solver(it) }) {
+        bitwuzlaSampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvAddNoUnderflowExpr(l, r)
+        }
+    }
+
+    @Test
+    fun testBvAddNoOverflowUnsignedZ3() = testBoolOperation({ KZ3Solver(it) }) {
+        bitwuzlaSampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvAddNoOverflowExpr(l, r, isSigned = false)
+        }
+    }
+
+    @Test
+    fun testBvSubNoOverflowSignedZ3() = testBoolOperation({ KZ3Solver(it) }) {
+        bitwuzlaSampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvSubNoOverflowExpr(l, r)
+        }
+    }
+
+    @Test
+    fun testBvSubNoUnderflowSignedZ3() = testBoolOperation({ KZ3Solver(it) }) {
+        bitwuzlaSampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvSubNoUnderflowExpr(l, r, isSigned = true)
+        }
+    }
+
+    @Test
+    fun testBvSubNoUnderflowUnsignedZ3() = testBoolOperation({ KZ3Solver(it) }) {
+        bitwuzlaSampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvSubNoUnderflowExpr(l, r, isSigned = false)
+        }
+    }
+
+    @Test
+    fun testBvMulNoOverflowSignedZ3() = testBoolOperation({ KZ3Solver(it) }) {
+        bitwuzlaSampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvMulNoOverflowExpr(l, r, isSigned = true)
+        }
+    }
+
+    @Test
+    fun testBvMulNoUnderflowSignedZ3() = testBoolOperation({ KZ3Solver(it) }) {
+        bitwuzlaSampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvMulNoUnderflowExpr(l, r)
+        }
+    }
+
+    @Test
+    fun testBvMulNoOverflowUnsignedZ3() = testBoolOperation({ KZ3Solver(it) }) {
+        bitwuzlaSampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvMulNoOverflowExpr(l, r, isSigned = false)
+        }
+    }
+
+    @Test
+    fun testBvDivNoOverflowSignedZ3() = testBoolOperation({ KZ3Solver(it) }) {
+        bitwuzlaSampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvDivNoOverflowExpr(l, r)
+        }
+    }
+
+    @Test
     fun testBvAddNoOverflowSignedBitwuzla() = testBoolOperation({ KBitwuzlaSolver(it) }) {
         z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
             mkBvAddNoOverflowExpr(l, r, isSigned = true)
