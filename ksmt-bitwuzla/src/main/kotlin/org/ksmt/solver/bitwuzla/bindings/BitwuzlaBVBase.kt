@@ -1,6 +1,6 @@
 @file:Suppress("MagicNumber")
 
-package io.ksmt.solver.bitwuzla.bindings
+package org.ksmt.solver.bitwuzla.bindings
 
 /**
  * The base for strings representing bit-vector values.

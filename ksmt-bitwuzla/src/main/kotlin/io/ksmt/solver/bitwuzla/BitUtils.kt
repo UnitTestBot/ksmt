@@ -14,7 +14,7 @@ fun bvBitsToBigInteger(bvBits: IntArray): BigInteger {
         val byteIdx = Int.SIZE_BYTES - 1 - it % Int.SIZE_BYTES
 
         val bytes = bvBits[arrayIdx]
-        (bytes ushr (byteIdx * Byte.SIZE_BITS) and io.ksmt.solver.bitwuzla.BYTE_MASK).toByte()
+        (bytes ushr (byteIdx * Byte.SIZE_BITS) and BYTE_MASK).toByte()
     }
     return BigInteger(1, valueByteArray)
 }
@@ -39,7 +39,7 @@ fun bigIntegerToBvBits(value: BigInteger, sizeBits: Int): IntArray {
         val reversedIdx = valueByteArray.lastIndex - byteIdx
         val arrayIdx = valueIntArray.lastIndex - reversedIdx / Int.SIZE_BYTES
         val shift = reversedIdx % Int.SIZE_BYTES
-        val byteValue = valueByteArray[byteIdx].toInt() and io.ksmt.solver.bitwuzla.BYTE_MASK
+        val byteValue = valueByteArray[byteIdx].toInt() and BYTE_MASK
         valueIntArray[arrayIdx] = valueIntArray[arrayIdx] or (byteValue shl (shift * Byte.SIZE_BITS))
     }
 

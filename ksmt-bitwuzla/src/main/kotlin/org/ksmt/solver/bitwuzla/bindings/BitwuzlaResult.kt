@@ -1,6 +1,6 @@
 @file:Suppress("MagicNumber")
 
-package io.ksmt.solver.bitwuzla.bindings
+package org.ksmt.solver.bitwuzla.bindings
 
 /**
  * A satisfiability result.
