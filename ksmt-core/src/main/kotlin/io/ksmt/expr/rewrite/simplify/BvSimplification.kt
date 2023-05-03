@@ -1013,6 +1013,19 @@ private fun <T : KBvSort> KContext.rewriteBvSignedMulNoOverflow(
     return !(overflowSignCheck and overflow)
 }
 
+/**
+ * Mul overflow check.
+ *
+ * lhs = [l_s, l_s-1, ..., l_1, l_0]
+ * rhs = [r_s, r_s-1, ..., r_1, r_0]
+ *
+ * lhs * rhs will overflow when
+ *
+ * l_s = 1 and r_1 = 1
+ * or
+ * (l_s = 1 or l_s-1 = 1) and r_2 = 1
+ * ...
+ * */
 private fun <T : KBvSort> KContext.bvUnsignedMulBitOverflowCheck(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
