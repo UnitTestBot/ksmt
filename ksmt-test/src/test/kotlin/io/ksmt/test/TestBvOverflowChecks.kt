@@ -6,6 +6,7 @@ import io.ksmt.expr.KExpr
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.bitwuzla.KBitwuzlaSolver
+import io.ksmt.solver.yices.KYicesSolver
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KSort
@@ -149,6 +150,76 @@ class TestBvOverflowChecks {
 
     @Test
     fun testBvDivNoOverflowSignedBitwuzla() = testBoolOperation({ KBitwuzlaSolver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvDivNoOverflowExpr(l, r)
+        }
+    }
+
+    @Test
+    fun testBvAddNoOverflowSignedYices() = testBoolOperation({ KYicesSolver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvAddNoOverflowExpr(l, r, isSigned = true)
+        }
+    }
+
+    @Test
+    fun testBvAddNoUnderflowSignedYices() = testBoolOperation({ KYicesSolver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvAddNoUnderflowExpr(l, r)
+        }
+    }
+
+    @Test
+    fun testBvAddNoOverflowUnsignedYices() = testBoolOperation({ KYicesSolver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvAddNoOverflowExpr(l, r, isSigned = false)
+        }
+    }
+
+    @Test
+    fun testBvSubNoOverflowSignedYices() = testBoolOperation({ KYicesSolver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvSubNoOverflowExpr(l, r)
+        }
+    }
+
+    @Test
+    fun testBvSubNoUnderflowSignedYices() = testBoolOperation({ KYicesSolver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvSubNoUnderflowExpr(l, r, isSigned = true)
+        }
+    }
+
+    @Test
+    fun testBvSubNoUnderflowUnsignedYices() = testBoolOperation({ KYicesSolver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvSubNoUnderflowExpr(l, r, isSigned = false)
+        }
+    }
+
+    @Test
+    fun testBvMulNoOverflowSignedYices() = testBoolOperation({ KYicesSolver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvMulNoOverflowExpr(l, r, isSigned = true)
+        }
+    }
+
+    @Test
+    fun testBvMulNoUnderflowSignedYices() = testBoolOperation({ KYicesSolver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvMulNoUnderflowExpr(l, r)
+        }
+    }
+
+    @Test
+    fun testBvMulNoOverflowUnsignedYices() = testBoolOperation({ KYicesSolver(it) }) {
+        z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
+            mkBvMulNoOverflowExpr(l, r, isSigned = false)
+        }
+    }
+
+    @Test
+    fun testBvDivNoOverflowSignedYices() = testBoolOperation({ KYicesSolver(it) }) {
         z3SampleBinaryBoolExprValues(bv32Sort) { l, r ->
             mkBvDivNoOverflowExpr(l, r)
         }
