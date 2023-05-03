@@ -9,21 +9,28 @@ inline fun <T> KTransformerBase.internalizationLoop(
     notInternalized: T,
     findInternalized: (KExpr<*>) -> T
 ): T {
-    exprStack.add(initialExpr)
+    val initialStackSize = exprStack.size
+    try {
+        exprStack.add(initialExpr)
+        while (exprStack.size > initialStackSize) {
+            val expr = exprStack.removeLast()
 
-    while (exprStack.isNotEmpty()) {
-        val expr = exprStack.removeLast()
+            val internalized = findInternalized(expr)
+            if (internalized != notInternalized) continue
 
-        val internalized = findInternalized(expr)
-        if (internalized != notInternalized) continue
-
-        /**
-         * Internalize expression non-recursively.
-         * 1. Ensure all expression arguments are internalized.
-         * If not so, internalize arguments first
-         * 2. Internalize expression if all arguments are available
-         * */
-        expr.accept(this)
+            /**
+             * Internalize expression non-recursively.
+             * 1. Ensure all expression arguments are internalized.
+             * If not so, internalize arguments first
+             * 2. Internalize expression if all arguments are available
+             * */
+            expr.accept(this)
+        }
+    } finally {
+        // cleanup stack after exceptions
+        while (exprStack.size > initialStackSize) {
+            exprStack.removeLast()
+        }
     }
 
     return findInternalized(initialExpr).also {
