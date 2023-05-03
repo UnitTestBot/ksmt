@@ -639,23 +639,13 @@ class KCvc5ExprInternalizer(
 
     override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>) = with(expr) {
         transform {
-            val simplifiedExpr = ctx.rewriteBvMulNoOverflowExpr(arg0, arg1, isSigned)
-
-            if (simplifiedExpr is KBvMulNoOverflowExpr<*>) // can't rewrite
-                throw KSolverUnsupportedFeatureException("no direct support in cvc5")
-
-            simplifiedExpr.internalizeExpr()
+            ctx.rewriteBvMulNoOverflowExpr(arg0, arg1, isSigned).internalizeExpr()
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) = with(expr) {
         transform {
-            val simplifiedExpr = ctx.rewriteBvMulNoUnderflowExpr(arg0, arg1)
-
-            if (simplifiedExpr is KBvMulNoUnderflowExpr<*>) // can't rewrite
-                throw KSolverUnsupportedFeatureException("no direct support in cvc5")
-
-            simplifiedExpr.internalizeExpr()
+            ctx.rewriteBvMulNoUnderflowExpr(arg0, arg1).internalizeExpr()
         }
     }
 

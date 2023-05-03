@@ -580,25 +580,13 @@ open class KYicesExprInternalizer(
 
     override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>): KExpr<KBoolSort> = with(expr) {
         transform {
-            val rewritten = ctx.rewriteBvMulNoOverflowExpr(arg0, arg1, isSigned)
-
-            if (rewritten is KBvMulNoOverflowExpr<*>) {
-                throw KSolverUnsupportedFeatureException("Unsupported expr $expr")
-            }
-
-            rewritten.internalizeExpr()
+            ctx.rewriteBvMulNoOverflowExpr(arg0, arg1, isSigned).internalizeExpr()
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>): KExpr<KBoolSort> = with(expr) {
         transform {
-            val rewritten = ctx.rewriteBvMulNoUnderflowExpr(arg0, arg1)
-
-            if (rewritten is KBvMulNoUnderflowExpr<*>) {
-                throw KSolverUnsupportedFeatureException("Unsupported expr $expr")
-            }
-
-            rewritten.internalizeExpr()
+            ctx.rewriteBvMulNoUnderflowExpr(arg0, arg1).internalizeExpr()
         }
     }
 
