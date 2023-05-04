@@ -168,6 +168,7 @@ class RandomExpressionGenerator {
     companion object {
 
         val noFreshConstants: (KFunction<*>) -> Boolean = {  it != freshConstGen }
+        val noFpRem: (KFunction<*>) -> Boolean = {  it != fpRemExpr }
 
         private val ctxFunctions by lazy {
             KContext::class.members
@@ -203,6 +204,7 @@ class RandomExpressionGenerator {
         }
 
         private val freshConstGen: KFunction<KExpr<KSort>> by lazy { KContext::mkFreshConst }
+        private val fpRemExpr: KFunction<KExpr<KFpSort>> by lazy { KContext::mkFpRemExpr }
 
         /**
          * Filter out generators that require a string with special format.
