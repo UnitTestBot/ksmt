@@ -25,6 +25,7 @@ import io.ksmt.utils.BvUtils.minus
 import io.ksmt.utils.BvUtils.subMaxValueSigned
 import io.ksmt.utils.BvUtils.unsignedLessOrEqual
 import java.math.BigInteger
+import kotlin.math.IEEErem
 import kotlin.math.absoluteValue
 import kotlin.math.round
 import kotlin.math.sqrt
@@ -136,6 +137,9 @@ object FpUtils {
 
     fun fpDiv(rm: KFpRoundingMode, lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> =
         lhs.ctx.fpDiv(rm, lhs, rhs)
+
+    fun fpRem(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> =
+        lhs.ctx.fpRem(lhs, rhs)
 
     fun fpSqrt(rm: KFpRoundingMode, value: KFpValue<*>): KFpValue<*> =
         value.ctx.fpSqrt(rm, value)
@@ -395,6 +399,17 @@ object FpUtils {
         else -> fpUnpackAndDiv(rm, lhs, rhs)
     }
 
+    private fun KContext.fpRem(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> = when {
+        lhs is KFp32Value -> mkFp(lhs.value.IEEErem((rhs as KFp32Value).value), lhs.sort)
+        lhs is KFp64Value -> mkFp(lhs.value.IEEErem((rhs as KFp64Value).value), lhs.sort)
+        lhs.isNaN() || rhs.isNaN() -> mkFpNaN(lhs.sort)
+        lhs.isInfinity() -> mkFpNaN(lhs.sort)
+        rhs.isInfinity() -> lhs
+        rhs.isZero() -> mkFpNaN(lhs.sort)
+        lhs.isZero() -> lhs
+        else -> fpUnpackAndRem(lhs, rhs)
+    }
+
     private fun KContext.fpSqrt(rm: KFpRoundingMode, value: KFpValue<*>): KFpValue<*> = when {
         // RNE is JVM default rounding mode ==> use JVM Float sqrt
         rm == KFpRoundingMode.RoundNearestTiesToEven && value is KFp32Value -> {
@@ -574,6 +589,17 @@ object FpUtils {
         val unpackedRhs = rhs.unpack(normalizeSignificand = true)
 
         return fpDivUnpacked(rm, unpackedLhs, unpackedRhs)
+    }
+
+    private fun KContext.fpUnpackAndRem(
+        lhs: KFpValue<*>,
+        rhs: KFpValue<*>
+    ): KFpValue<*> {
+        // Unpack lhs/rhs, this inserts the hidden bit and adjusts the exponent.
+        val unpackedLhs = lhs.unpack(normalizeSignificand = true)
+        val unpackedRhs = rhs.unpack(normalizeSignificand = true)
+
+        return fpRemUnpacked(unpackedLhs, unpackedRhs)
     }
 
     private fun KContext.fpUnpackAndSqrt(
@@ -803,7 +829,31 @@ object FpUtils {
         return fpRound(rm, unpackedResult)
     }
 
-    private fun KContext.fpDivUnpacked(rm: KFpRoundingMode, lhs: UnpackedFp, rhs: UnpackedFp): KFpValue<*> {
+    private fun KContext.fpDivUnpacked(rm: KFpRoundingMode, lhs: UnpackedFp, rhs: UnpackedFp): KFpValue<*> =
+        fpRound(rm, fpDivUnpackedDenormalized(lhs, rhs))
+
+    private fun fpDivUnpackedDenormalized(lhs: UnpackedFp, rhs: UnpackedFp): UnpackedFp {
+        val unRoundedDivisionResult = fpDivUnpackedNoRounding(lhs, rhs)
+
+        /**
+         *  Remove the extra bits, keeping a sticky bit.
+         *  [normalizedResultSignificand] will have at least 4 bits as required for rounding.
+         *  */
+        var (normalizedSignificand, stickyRem) = unRoundedDivisionResult.significand.divAndRem2k(lhs.significandSize)
+        if (!stickyRem.isZero() && normalizedSignificand.isEven()) {
+            normalizedSignificand++
+        }
+
+        return UnpackedFp(
+            lhs.exponentSize,
+            lhs.significandSize,
+            unRoundedDivisionResult.sign,
+            unRoundedDivisionResult.unbiasedExponent,
+            normalizedSignificand
+        )
+    }
+
+    private fun fpDivUnpackedNoRounding(lhs: UnpackedFp, rhs: UnpackedFp): UnpackedFp {
         val resultSign = lhs.sign xor rhs.sign
         val resultExponent = lhs.unbiasedExponent - rhs.unbiasedExponent
 
@@ -816,20 +866,161 @@ object FpUtils {
          * */
         val divisionResultSignificand = lhsSignificandWithExtraBits.divide(rhs.significand)
 
-        /**
-         *  Remove the extra bits, keeping a sticky bit.
-         *  [normalizedResultSignificand] will have at least 4 bits as required for rounding.
-         *  */
-        var (normalizedResultSignificand, stickyRem) = divisionResultSignificand.divAndRem2k(lhs.significandSize)
-        if (!stickyRem.isZero() && normalizedResultSignificand.isEven()) {
-            normalizedResultSignificand++
+        return UnpackedFp(
+            lhs.exponentSize,
+            lhs.significandSize + extraBits,
+            resultSign,
+            resultExponent,
+            divisionResultSignificand
+        )
+    }
+
+    /**
+     * Floating point IEEE rem algorithm described in
+     * Intel® 64 and IA-32 Architectures Software Developer’s Manual
+     * Section Vol. 2A 3-407 FPREM1—Partial Remainder
+     * */
+    private fun KContext.fpRemUnpacked(lhs: UnpackedFp, rhs: UnpackedFp): KFpValue<*> {
+        val maxExponentDiff = lhs.significandSize.toInt().toBigInteger()
+
+        var st0 = lhs
+        do {
+            var expDiff: BigInteger
+            if (st0.unbiasedExponent < (rhs.unbiasedExponent - BigInteger.ONE)) {
+                expDiff = BigInteger.ZERO
+            } else {
+                expDiff = st0.unbiasedExponent - rhs.unbiasedExponent
+                st0 = fpPartialRemainder(st0, rhs, expDiff >= maxExponentDiff)
+            }
+        } while (expDiff >= maxExponentDiff && !st0.isZero())
+
+        val unpackedResult = st0.copy(significand = st0.significand.mul2k(3u))
+        return fpRound(KFpRoundingMode.RoundNearestTiesToEven, unpackedResult)
+    }
+
+    private fun fpPartialRemainder(x: UnpackedFp, y: UnpackedFp, partial: Boolean): UnpackedFp {
+        // 1. Compute x/y
+        val xDividedByY = fpDivUnpackedNoRounding(x, y)
+
+        // 2. Round x/y to integer Q/QQ
+        val q = fpPartialRemainderRoundToIntegral(xDividedByY, partial, x.exponentSize, x.significandSize)
+
+        // Integer part is zero ->  x % y = x
+        if ((xDividedByY.unbiasedExponent == (-BigInteger.ONE) || partial) && q.significand.isZero()) {
+            return x
         }
 
-        val unpackedResult = UnpackedFp(
-            lhs.exponentSize, lhs.significandSize, resultSign, resultExponent, normalizedResultSignificand
+        // 3. Compute Y*Q / Y*QQ*2^{D-N}
+        val denormalizedYQ = UnpackedFp(
+            exponentSize = x.exponentSize,
+            significandSize = 2u * x.significandSize - 1u,
+            sign = x.sign,
+            unbiasedExponent = q.unbiasedExponent + y.unbiasedExponent,
+            significand = q.significand.multiply(y.significand)
         )
+        val yq = fpNormalize(denormalizedYQ)
 
-        return fpRound(rm, unpackedResult)
+        // 4. Compute X-Y*Q
+        val denormalizedXMinusYQ = fpPartialRemainderSubtractIntegerQuotient(x, yq)
+        if (denormalizedXMinusYQ.significand.isZero()) {
+            return UnpackedFp(
+                x.exponentSize,
+                x.significandSize,
+                x.sign,
+                fpMinExponentValue(x.exponentSize) - BigInteger.ONE,
+                BigInteger.ZERO
+            )
+        }
+        val xMinusYQ = fpNormalize(denormalizedXMinusYQ)
+
+        // 5. Rounding
+        return fpPartialRemainderRound(xMinusYQ, x.exponentSize, x.significandSize)
+    }
+
+    private fun fpPartialRemainderRoundToIntegral(
+        value: UnpackedFp,
+        partial: Boolean,
+        exponentSize: UInt,
+        significandSize: UInt
+    ): UnpackedFp {
+        val rm = if (partial) KFpRoundingMode.RoundTowardZero else KFpRoundingMode.RoundNearestTiesToEven
+        val shift = if (partial) {
+            (value.significandSize - (significandSize - 1u)).toInt().toBigInteger()
+        } else {
+            value.significandSize.toInt().toBigInteger() - value.unbiasedExponent
+        }
+
+        val significand = fpRoundSignificandToIntegral(value, shift, rm).div2k(significandSize + 3u)
+        val denormalizedResult = UnpackedFp(
+            exponentSize, significandSize, value.sign, value.unbiasedExponent, significand
+        )
+        return fpNormalize(denormalizedResult)
+    }
+
+    private fun fpPartialRemainderSubtractIntegerQuotient(dividend: UnpackedFp, quotient: UnpackedFp): UnpackedFp {
+        val extraBits = dividend.significandSize - 1u
+        val expDelta = dividend.unbiasedExponent - quotient.unbiasedExponent
+        val minuend = dividend.significand.mul2k(extraBits)
+
+        var subtrahend = quotient.significand
+        if (!expDelta.isZero()) {
+            var stickyRem = BigInteger.ZERO
+            if (expDelta > (dividend.significandSize + 5u).toInt().toBigInteger()) {
+                stickyRem = subtrahend
+                subtrahend = BigInteger.ZERO
+            } else if (expDelta > BigInteger.ZERO) {
+                val (quot, rem) = subtrahend.divAndRem2k(expDelta)
+                subtrahend = quot
+                stickyRem = rem
+            } else {
+                subtrahend = subtrahend.mul2k(-expDelta)
+            }
+            if (!stickyRem.isZero() && subtrahend.isEven()) {
+                subtrahend++
+            }
+        }
+
+        var significand = minuend.subtract(subtrahend)
+
+        val neg = significand.signum() < 0
+        if (neg) {
+            significand = significand.negate()
+        }
+
+        return UnpackedFp(
+            exponentSize = dividend.exponentSize,
+            significandSize = dividend.significandSize + extraBits,
+            sign = dividend.sign xor neg,
+            unbiasedExponent = dividend.unbiasedExponent,
+            significand = significand
+        )
+    }
+
+    private fun fpPartialRemainderRound(
+        value: UnpackedFp,
+        exponentSize: UInt,
+        significandSize: UInt
+    ): UnpackedFp {
+        var (significand, rndBits) = value.significand.divAndRem2k(significandSize - 1u)
+
+        // Round to nearest, ties to even
+        val mask = powerOfTwo(5u)
+        if (rndBits == mask) {
+            // tie
+            if (!significand.isEven()) {
+                significand++
+            }
+        } else if (rndBits > mask) {
+            significand++
+        }
+
+        return UnpackedFp(exponentSize, significandSize, value.sign, value.unbiasedExponent, significand)
+    }
+
+    private fun UnpackedFp.isZero(): Boolean {
+        if (!significand.isZero()) return false
+        val botExp = fpMinExponentValue(exponentSize) - BigInteger.ONE
+        return unbiasedExponent == botExp
     }
 
     private fun KContext.fpSqrtUnpacked(rm: KFpRoundingMode, value: UnpackedFp): KFpValue<*> {
@@ -891,6 +1082,27 @@ object FpUtils {
         return mkRoundedValue(
             rm, resultExponent, resultSignificand, value.sign, value.exponentSize, value.significandSize
         )
+    }
+
+    private fun fpNormalize(value: UnpackedFp): UnpackedFp {
+        if (value.significand.isZero()) return value
+
+        var sig = value.significand
+        var exp = value.unbiasedExponent
+
+        val normalizeUpperBound = sig.log2() - value.significandSize.toInt() + 1
+        if (normalizeUpperBound > 0) {
+            sig = sig.div2k(normalizeUpperBound.toUInt())
+            exp += normalizeUpperBound.toBigInteger()
+        }
+
+        val normalizeLowerBound = value.significandSize.toInt() - 1 - sig.log2()
+        if (normalizeLowerBound > 0){
+            sig = sig.mul2k(normalizeLowerBound.toUInt())
+            exp -= normalizeLowerBound.toBigInteger()
+        }
+
+        return UnpackedFp(value.exponentSize, value.significandSize, value.sign, exp, sig)
     }
 
     private fun fpRoundSignificandToIntegral(

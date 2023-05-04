@@ -29,6 +29,7 @@ import io.ksmt.utils.FpUtils.fpMin
 import io.ksmt.utils.FpUtils.fpMul
 import io.ksmt.utils.FpUtils.fpNegate
 import io.ksmt.utils.FpUtils.fpRealValueOrNull
+import io.ksmt.utils.FpUtils.fpRem
 import io.ksmt.utils.FpUtils.fpRoundToIntegral
 import io.ksmt.utils.FpUtils.fpSqrt
 import io.ksmt.utils.FpUtils.fpToFp
@@ -108,8 +109,8 @@ fun <T : KFpSort> KContext.simplifyFpDivExpr(
 
 fun <T : KFpSort> KContext.simplifyFpRemExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> {
     if (lhs is KFpValue<T> && rhs is KFpValue<T>) {
-        val result = tryEvalFpRem(lhs, rhs)
-        result?.let { return it.uncheckedCast() }
+        val result = fpRem(lhs, rhs)
+        return result.uncheckedCast()
     }
     return mkFpRemExprNoSimplify(lhs, rhs)
 }
@@ -377,19 +378,6 @@ private fun KContext.tryEvalFpFma(
     }
 
     // todo: eval fp fma
-    else -> null
-}
-
-@Suppress("ForbiddenComment")
-private fun KContext.tryEvalFpRem(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*>? = when {
-    lhs is KFp32Value -> mkFp(lhs.value.IEEErem((rhs as KFp32Value).value), lhs.sort)
-    lhs is KFp64Value -> mkFp(lhs.value.IEEErem((rhs as KFp64Value).value), lhs.sort)
-    lhs.isNaN() || rhs.isNaN() -> mkFpNaN(lhs.sort)
-    lhs.isInfinity() -> mkFpNaN(lhs.sort)
-    rhs.isInfinity() -> lhs
-    rhs.isZero() -> mkFpNaN(lhs.sort)
-    lhs.isZero() -> lhs
-    // todo: eval fp rem
     else -> null
 }
 
