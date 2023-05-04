@@ -121,6 +121,15 @@ object ArithUtils {
         fun div(other: RealValue): RealValue =
             RealValue(numerator * other.denominator, denominator * other.numerator).normalize()
 
+        fun pow(power: Int): RealValue =
+            RealValue(numerator.pow(power), denominator.pow(power)).normalize()
+
+        fun smallIntValue(): Int? {
+            if (denominator != BigInteger.ONE) return null
+            if (numerator.bitLength() >= Int.SIZE_BITS) return null
+            return numerator.intValueExact()
+        }
+
         override fun compareTo(other: RealValue): Int = when {
             this.eq(other) -> 0
             this.lt(other) -> -1
