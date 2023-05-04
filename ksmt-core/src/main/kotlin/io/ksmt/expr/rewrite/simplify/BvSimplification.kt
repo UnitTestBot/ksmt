@@ -119,7 +119,6 @@ fun <T : KBvSort> KContext.simplifyBvRotateLeftExpr(lhs: KExpr<T>, rotation: KEx
 fun <T : KBvSort> KContext.simplifyBvRotateLeftIndexedExpr(rotation: Int, value: KExpr<T>): KExpr<T> =
     rewriteBvRotateLeftIndexedExpr(rotation, value, KContext::simplifyBvExtractExpr, KContext::simplifyBvConcatExpr)
 
-// (rotateRight a x) ==> (rotateLeft a (- size x))
 fun <T : KBvSort> KContext.simplifyBvRotateRightExpr(lhs: KExpr<T>, rotation: KExpr<T>): KExpr<T> =
     simplifyBvRotateRightExprConstRotation(
         lhs = lhs,
@@ -131,7 +130,6 @@ fun <T : KBvSort> KContext.simplifyBvRotateRightExpr(lhs: KExpr<T>, rotation: KE
 fun <T : KBvSort> KContext.simplifyBvRotateRightIndexedExpr(rotation: Int, value: KExpr<T>): KExpr<T> =
     rewriteBvRotateRightIndexedExpr(rotation, value, KContext::simplifyBvExtractExpr, KContext::simplifyBvConcatExpr)
 
-// (repeat a x) ==> (concat a a ..[x].. a)
 fun <T : KBvSort> KContext.simplifyBvRepeatExpr(repeatNumber: Int, value: KExpr<T>): KExpr<KBvSort> =
     simplifyBvRepeatExprLight(repeatNumber, value, ::mkBvRepeatExprNoSimplify)
 

@@ -969,6 +969,7 @@ inline fun <T : KBvSort> KContext.rewriteBvRotateLeftIndexedExpr(
     )
 }
 
+/** (rotateRight a x) ==> (rotateLeft a (- size x)) */
 inline fun <T : KBvSort> KContext.simplifyBvRotateRightExprConstRotation(
     lhs: KExpr<T>,
     rotation: KExpr<T>,
@@ -1001,6 +1002,7 @@ inline fun <T : KBvSort> KContext.rewriteBvRotateRightIndexedExpr(
     )
 }
 
+/** (repeat a x) ==> (concat a a ..[x].. a) */
 inline fun <T : KBvSort> KContext.simplifyBvRepeatExprLight(
     repeatNumber: Int,
     value: KExpr<T>,
@@ -1600,7 +1602,7 @@ inline fun <T : KBvSort> KContext.simplifyBvAndOr(
 
     // (bvop zero a) ==> zero
     if (isZeroElement(constantValue)) {
-        return buildZeroElement()
+        return constantValue
     }
 
     if (resultParts.isEmpty()) {

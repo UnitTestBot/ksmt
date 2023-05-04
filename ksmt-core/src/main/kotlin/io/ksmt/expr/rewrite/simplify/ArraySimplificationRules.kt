@@ -209,7 +209,7 @@ inline fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> KContext.simplifySele
         storeIndicesMatch = { store: KArray3Store<D0, D1, D2, R> -> storeIndexMatch(store, index0, index1, index2) },
         storeIndicesDistinct = { store: KArray3Store<D0, D1, D2, R> ->
             storeIndexDistinct(store, index0, index1, index2)
-                               },
+        },
         findArrayToSelectFrom = { s: KArray3Store<D0, D1, D2, R> ->
             s.findArrayToSelectFrom(index0, index1, index2)
         },
@@ -231,7 +231,6 @@ inline fun <R : KSort> KContext.simplifyArrayNSelectFromArrayStore(
         default = { cont(it, indices) }
     )
 
-@Suppress("LongParameterList")
 inline fun <
     reified A : KArraySortBase<R>,
     R : KSort,

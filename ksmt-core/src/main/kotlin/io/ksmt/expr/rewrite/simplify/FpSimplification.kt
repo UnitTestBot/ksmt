@@ -42,7 +42,6 @@ fun <T : KFpSort> KContext.simplifyFpDivExpr(
 fun <T : KFpSort> KContext.simplifyFpRemExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
     simplifyFpRemExprLight(lhs, rhs, ::mkFpRemExprNoSimplify)
 
-@Suppress("ComplexCondition")
 fun <T : KFpSort> KContext.simplifyFpFusedMulAddExpr(
     roundingMode: KExpr<KFpRoundingModeSort>,
     arg0: KExpr<T>,
