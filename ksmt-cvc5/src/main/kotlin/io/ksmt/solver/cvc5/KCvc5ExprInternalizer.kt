@@ -163,8 +163,8 @@ import io.ksmt.expr.rewrite.simplify.rewriteBvDivNoOverflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvNegNoOverflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvSubNoOverflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvSubNoUnderflowExpr
-import io.ksmt.expr.rewrite.simplify.simplifyBvMulNoOverflowExprLight
-import io.ksmt.expr.rewrite.simplify.simplifyBvMulNoUnderflowExprLight
+import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoOverflowExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoUnderflowExpr
 import io.ksmt.expr.rewrite.simplify.simplifyBvRotateLeftExpr
 import io.ksmt.expr.rewrite.simplify.simplifyBvRotateRightExpr
 import io.ksmt.solver.KSolverUnsupportedFeatureException
@@ -622,7 +622,7 @@ class KCvc5ExprInternalizer(
     }
 
     override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>) = with(expr) {
-        val simplifiedExpr = ctx.simplifyBvMulNoOverflowExprLight(expr.arg0, expr.arg1, isSigned) { _, _, _ ->
+        val simplifiedExpr = ctx.rewriteBvMulNoOverflowExpr(expr.arg0, expr.arg1, isSigned) { _, _, _ ->
             throw KSolverUnsupportedFeatureException("no direct support in cvc5")
         }
 
@@ -630,7 +630,7 @@ class KCvc5ExprInternalizer(
     }
 
     override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>) = with(expr) {
-        val simplifiedExpr = ctx.simplifyBvMulNoUnderflowExprLight(expr.arg0, expr.arg1) { _, _ ->
+        val simplifiedExpr = ctx.rewriteBvMulNoUnderflowExpr(expr.arg0, expr.arg1) { _, _ ->
             throw KSolverUnsupportedFeatureException("no direct support in cvc5")
         }
 

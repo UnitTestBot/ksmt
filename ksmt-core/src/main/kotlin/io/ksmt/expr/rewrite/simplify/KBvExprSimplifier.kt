@@ -947,7 +947,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         lhs: KExpr<T>,
         rhs: KExpr<T>,
         isSigned: Boolean
-    ): KExpr<KBoolSort> = simplifyBvMulNoOverflowExprLight(lhs, rhs, isSigned, ::mkBvMulNoOverflowExprNoSimplify)
+    ): KExpr<KBoolSort> = rewriteBvMulNoOverflowExpr(lhs, rhs, isSigned, ::mkBvMulNoOverflowExprNoSimplify)
 
     override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>): KExpr<KBoolSort> =
         simplifyExpr(
@@ -961,7 +961,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     fun <T : KBvSort> KContext.preprocess(expr: KBvMulNoUnderflowExpr<T>): KExpr<KBoolSort> = expr
 
     fun <T : KBvSort> KContext.postRewriteBvMulNoUnderflowExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
-        simplifyBvMulNoUnderflowExprLight(lhs, rhs, ::mkBvMulNoUnderflowExprNoSimplify)
+        rewriteBvMulNoUnderflowExpr(lhs, rhs, ::mkBvMulNoUnderflowExprNoSimplify)
 
     override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>): KExpr<KBoolSort> =
         simplifyExpr(

@@ -1413,7 +1413,7 @@ inline fun <T : KBvSort> KContext.rewriteBvAddNoUnderflowExpr(
     return rewriteImplies(rewriteAnd(aLtZero, bLtZero), sumLtZero)
 }
 
-inline fun <T : KBvSort> KContext.simplifyBvMulNoOverflowExprLight(
+inline fun <T : KBvSort> KContext.rewriteBvMulNoOverflowExpr(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
     isSigned: Boolean,
@@ -1427,7 +1427,7 @@ inline fun <T : KBvSort> KContext.simplifyBvMulNoOverflowExprLight(
     return simplified ?: cont(lhs, rhs, isSigned)
 }
 
-inline fun <T : KBvSort> KContext.simplifyBvMulNoUnderflowExprLight(
+inline fun <T : KBvSort> KContext.rewriteBvMulNoUnderflowExpr(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
     cont: (KExpr<T>, KExpr<T>) -> KExpr<KBoolSort>
