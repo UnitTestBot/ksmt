@@ -141,6 +141,9 @@ object FpUtils {
     fun fpRem(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*> =
         lhs.ctx.fpRem(lhs, rhs)
 
+    fun fpFma(rm: KFpRoundingMode, x: KFpValue<*>, y: KFpValue<*>, z: KFpValue<*>): KFpValue<*> =
+        x.ctx.fpFma(rm, x, y, z)
+
     fun fpSqrt(rm: KFpRoundingMode, value: KFpValue<*>): KFpValue<*> =
         value.ctx.fpSqrt(rm, value)
 
@@ -410,6 +413,50 @@ object FpUtils {
         else -> fpUnpackAndRem(lhs, rhs)
     }
 
+    @Suppress("ComplexMethod")
+    private fun KContext.fpFma(
+        rm: KFpRoundingMode,
+        x: KFpValue<*>,
+        y: KFpValue<*>,
+        z: KFpValue<*>
+    ): KFpValue<*> = when {
+        x.isNaN() || y.isNaN() || z.isNaN() -> mkFpNaN(x.sort)
+
+        x.isInfinity() && x.isPositive() -> when {
+            y.isZero() -> mkFpNaN(x.sort)
+            z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
+            else -> mkFpInf(y.signBit, x.sort)
+        }
+
+        y.isInfinity() && y.isPositive() -> when {
+            x.isZero() -> mkFpNaN(x.sort)
+            z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
+            else -> mkFpInf(x.signBit, x.sort)
+        }
+
+        x.isInfinity() && x.isNegative() -> when {
+            y.isZero() -> mkFpNaN(x.sort)
+            z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
+            else -> mkFpInf(!y.signBit, x.sort)
+        }
+
+        y.isInfinity() && y.isNegative() -> when {
+            x.isZero() -> mkFpNaN(x.sort)
+            z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
+            else -> mkFpInf(!x.signBit, x.sort)
+        }
+
+        z.isInfinity() -> z
+
+        x.isZero() || y.isZero() -> if (z.isZero() && (x.signBit xor y.signBit xor z.signBit)) {
+            mkFpZero(signBit = rm == KFpRoundingMode.RoundTowardNegative, sort = x.sort)
+        } else {
+            z
+        }
+
+        else -> fpUnpackAndFma(rm, x, y, z)
+    }
+
     private fun KContext.fpSqrt(rm: KFpRoundingMode, value: KFpValue<*>): KFpValue<*> = when {
         // RNE is JVM default rounding mode ==> use JVM Float sqrt
         rm == KFpRoundingMode.RoundNearestTiesToEven && value is KFp32Value -> {
@@ -600,6 +647,20 @@ object FpUtils {
         val unpackedRhs = rhs.unpack(normalizeSignificand = true)
 
         return fpRemUnpacked(unpackedLhs, unpackedRhs)
+    }
+
+    private fun KContext.fpUnpackAndFma(
+        rm: KFpRoundingMode,
+        x: KFpValue<*>,
+        y: KFpValue<*>,
+        z: KFpValue<*>
+    ): KFpValue<*> {
+        // Unpack x/y/z, this inserts the hidden bit and adjusts the exponent.
+        val unpackedX = x.unpack(normalizeSignificand = true)
+        val unpackedY = y.unpack(normalizeSignificand = true)
+        val unpackedZ = z.unpack(normalizeSignificand = true)
+
+        return fpFmaUnpacked(rm, unpackedX, unpackedY, unpackedZ)
     }
 
     private fun KContext.fpUnpackAndSqrt(
@@ -1022,6 +1083,145 @@ object FpUtils {
         val botExp = fpMinExponentValue(exponentSize) - BigInteger.ONE
         return unbiasedExponent == botExp
     }
+
+    private fun KContext.fpFmaUnpacked(rm: KFpRoundingMode, x: UnpackedFp, y: UnpackedFp, z: UnpackedFp): KFpValue<*> {
+        val multiplicationResult = UnpackedFp(
+            exponentSize = x.exponentSize + 2u,
+            significandSize = 2u * x.significandSize - 1u,
+            sign = x.sign != y.sign,
+            unbiasedExponent = x.unbiasedExponent + y.unbiasedExponent,
+            significand = x.significand.multiply(y.significand)
+        )
+
+        // Extend z significand size to match `multiplicationResult` size
+        val extendedZ = z.addSignificandExtraBits(x.significandSize - 1u)
+        val res = fpFmaUnpackedAdd(multiplicationResult, extendedZ)
+
+        return fpFmaRound(rm, res, x.exponentSize, x.significandSize)
+    }
+
+    private fun fpFmaUnpackedAdd(a: UnpackedFp, b: UnpackedFp): UnpackedFp {
+        // Introduce 3 extra bits
+        val extendedA = a.addSignificandExtraBits(3u)
+        val extendedB = b.addSignificandExtraBits(3u)
+
+        return if (extendedB.unbiasedExponent > extendedA.unbiasedExponent) {
+            fpFmaUnpackedAddExtended(extendedB, extendedA)
+        } else {
+            fpFmaUnpackedAddExtended(extendedA, extendedB)
+        }
+    }
+
+    private fun fpFmaUnpackedAddExtended(a: UnpackedFp, b: UnpackedFp): UnpackedFp {
+        // Alignment shift with sticky bit computation.
+        val expDeltaW = a.unbiasedExponent - b.unbiasedExponent
+        val maxExprDelta = (b.significandSize + 1u).toInt().toBigInteger()
+        val expDelta = expDeltaW.coerceAtMost(maxExprDelta)
+
+        val (alignedBSignificand, stickyRem) = b.significand.divAndRem2k(expDelta)
+        val alignmentSticky = !stickyRem.isZero()
+
+        // Significand addition
+        return if (a.sign != b.sign) {
+            var resSignificand = a.significand - alignedBSignificand
+
+            if (alignmentSticky && resSignificand.isEven()) {
+                resSignificand--
+            }
+
+            var sign = a.sign
+            if (resSignificand.signum() < 0) {
+                resSignificand = resSignificand.abs()
+                sign = !sign
+            }
+
+            a.copy(sign = sign, significand = resSignificand)
+        } else {
+            var resSignificand = a.significand + alignedBSignificand
+
+            if (alignmentSticky && resSignificand.isEven()) {
+                resSignificand++
+            }
+
+            a.copy(significand = resSignificand)
+        }
+    }
+
+    private fun KContext.fpFmaRound(
+        rm: KFpRoundingMode,
+        value: UnpackedFp,
+        exponentSize: UInt,
+        significandSize: UInt
+    ): KFpValue<*> {
+       val (normalizedValue, normalizationStickyBit) = fpFmaRoundNormalizeSignificand(value, exponentSize)
+
+        if (normalizedValue.unbiasedExponent > fpMaxExponentValue(exponentSize)) {
+            return mkFpInf(value.sign, mkFpSort(exponentSize, significandSize))
+        }
+
+        val valueWithoutExtraBits = fpFmaRoundRemoveExtraBits(normalizedValue, normalizationStickyBit, significandSize)
+
+        if (valueWithoutExtraBits.significand.isZero()) {
+            val sign = rm == KFpRoundingMode.RoundTowardNegative
+            return mkFpZero(sign, mkFpSort(exponentSize, significandSize))
+        }
+
+        val unpackedRes = valueWithoutExtraBits.copy(exponentSize = exponentSize, significandSize = significandSize)
+        return fpRound(rm, unpackedRes)
+    }
+
+    private fun fpFmaRoundNormalizeSignificand(value: UnpackedFp, exponentSize: UInt): Pair<UnpackedFp, Boolean> {
+        var stickyBit = false
+        var resSignificand = value.significand
+        var resExponent = value.unbiasedExponent
+
+        if (resSignificand >= powerOfTwo(value.significandSize + 1u)) {
+            resExponent++
+            stickyBit = !resSignificand.isEven()
+            resSignificand = resSignificand.div2k(1u)
+        }
+
+        // Actual significand width.
+        val sigWidth = value.significand.log2() + 1
+
+        // Significand bits to add or remove
+        val significandExtraBits = (value.significandSize + 1u).toInt() - sigWidth
+
+        val maxExponentShift = resExponent - fpMinExponentValue(exponentSize)
+        val exponentShift = minOf(maxExponentShift, significandExtraBits.toBigInteger())
+
+        val normalizationShift = maxOf(BigInteger.ZERO, exponentShift)
+
+        resExponent -= normalizationShift
+        resSignificand = resSignificand.mul2k(normalizationShift)
+
+        val normalizedValue = value.copy(unbiasedExponent = resExponent, significand = resSignificand)
+        return normalizedValue to stickyBit
+    }
+
+    private fun fpFmaRoundRemoveExtraBits(
+        value: UnpackedFp,
+        stickyBit: Boolean,
+        significandSize: UInt
+    ): UnpackedFp {
+        var (significand, resultStickyBit) = if (significandSize >= 4u) {
+            val (quot, rem) = value.significand.divAndRem2k(significandSize - 4u + 3u)
+            quot to (stickyBit || !rem.isZero())
+        } else {
+            value.significand.mul2k(4u - significandSize + 3u) to false
+        }
+
+        if (resultStickyBit && significand.isEven()) {
+            significand++
+        }
+
+        return value.copy(significand = significand)
+    }
+
+    private fun UnpackedFp.addSignificandExtraBits(bits: UInt) = copy(
+        significandSize = significandSize + bits,
+        significand = significand.mul2k(bits)
+    )
 
     private fun KContext.fpSqrtUnpacked(rm: KFpRoundingMode, value: UnpackedFp): KFpValue<*> {
         /**

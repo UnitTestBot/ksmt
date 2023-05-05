@@ -4,11 +4,8 @@ import io.ksmt.KContext
 import io.ksmt.expr.KBitVec1Value
 import io.ksmt.expr.KBitVecValue
 import io.ksmt.expr.KExpr
-import io.ksmt.expr.KFp32Value
-import io.ksmt.expr.KFp64Value
 import io.ksmt.expr.KFpNegationExpr
 import io.ksmt.expr.KFpRoundingMode
-import io.ksmt.expr.KFpRoundingMode.RoundTowardNegative
 import io.ksmt.expr.KFpRoundingModeExpr
 import io.ksmt.expr.KFpValue
 import io.ksmt.expr.KRealNumExpr
@@ -22,6 +19,7 @@ import io.ksmt.utils.FpUtils.fpAdd
 import io.ksmt.utils.FpUtils.fpBvValueOrNull
 import io.ksmt.utils.FpUtils.fpDiv
 import io.ksmt.utils.FpUtils.fpEq
+import io.ksmt.utils.FpUtils.fpFma
 import io.ksmt.utils.FpUtils.fpLeq
 import io.ksmt.utils.FpUtils.fpLt
 import io.ksmt.utils.FpUtils.fpMax
@@ -43,7 +41,6 @@ import io.ksmt.utils.FpUtils.isPositive
 import io.ksmt.utils.FpUtils.isSubnormal
 import io.ksmt.utils.FpUtils.isZero
 import io.ksmt.utils.uncheckedCast
-import kotlin.math.IEEErem
 
 fun <T : KFpSort> KContext.simplifyFpAbsExpr(value: KExpr<T>): KExpr<T> {
     if (value is KFpValue<T>) {
@@ -123,8 +120,8 @@ fun <T : KFpSort> KContext.simplifyFpFusedMulAddExpr(
     arg2: KExpr<T>
 ): KExpr<T> {
     if (roundingMode is KFpRoundingModeExpr && arg0 is KFpValue<T> && arg1 is KFpValue<T> && arg2 is KFpValue<T>) {
-        val result = tryEvalFpFma(roundingMode.value, arg0, arg1, arg2)
-        result?.let { return it.uncheckedCast() }
+        val result = fpFma(roundingMode.value, arg0, arg1, arg2)
+        return result.uncheckedCast()
     }
     return mkFpFusedMulAddExprNoSimplify(roundingMode, arg0, arg1, arg2)
 }
@@ -333,53 +330,6 @@ fun <T : KFpSort> KContext.simplifyFpIsSubnormalExpr(arg: KExpr<T>): KExpr<KBool
 
 fun <T : KFpSort> KContext.simplifyFpIsZeroExpr(arg: KExpr<T>): KExpr<KBoolSort> =
     evalFpPredicateOr(arg, { it.isZero() }) { mkFpIsZeroExprNoSimplify(arg) }
-
-
-// Eval x * y + z
-@Suppress("ComplexMethod", "ForbiddenComment")
-private fun KContext.tryEvalFpFma(
-    rm: KFpRoundingMode,
-    x: KFpValue<*>,
-    y: KFpValue<*>,
-    z: KFpValue<*>
-): KFpValue<*>? = when {
-    x.isNaN() || y.isNaN() || z.isNaN() -> mkFpNaN(x.sort)
-
-    x.isInfinity() && x.isPositive() -> when {
-        y.isZero() -> mkFpNaN(x.sort)
-        z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
-        else -> mkFpInf(y.signBit, x.sort)
-    }
-
-    y.isInfinity() && y.isPositive() -> when {
-        x.isZero() -> mkFpNaN(x.sort)
-        z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
-        else -> mkFpInf(x.signBit, x.sort)
-    }
-
-    x.isInfinity() && x.isNegative() -> when {
-        y.isZero() -> mkFpNaN(x.sort)
-        z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
-        else -> mkFpInf(!y.signBit, x.sort)
-    }
-
-    y.isInfinity() && y.isNegative() -> when {
-        x.isZero() -> mkFpNaN(x.sort)
-        z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
-        else -> mkFpInf(!x.signBit, x.sort)
-    }
-
-    z.isInfinity() -> z
-
-    x.isZero() || y.isZero() -> if (z.isZero() && (x.signBit xor y.signBit xor z.signBit)) {
-        mkFpZero(signBit = rm == RoundTowardNegative, sort = x.sort)
-    } else {
-        z
-    }
-
-    // todo: eval fp fma
-    else -> null
-}
 
 private inline fun <T : KFpSort> evalBinaryOpOr(
     roundingMode: KExpr<KFpRoundingModeSort>,
