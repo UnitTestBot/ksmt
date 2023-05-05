@@ -1170,6 +1170,9 @@ object FpUtils {
         return fpRound(rm, unpackedRes)
     }
 
+    /**
+     * Normalize exponent and significand after addition similar to [fpRoundExponent].
+     * */
     private fun fpFmaRoundNormalizeSignificand(value: UnpackedFp, exponentSize: UInt): Pair<UnpackedFp, Boolean> {
         var stickyBit = false
         var resSignificand = value.significand
@@ -1199,6 +1202,9 @@ object FpUtils {
         return normalizedValue to stickyBit
     }
 
+    /**
+     * Remove extra bits as in [fpMulUnpacked].
+     * */
     private fun fpFmaRoundRemoveExtraBits(
         value: UnpackedFp,
         stickyBit: Boolean,
