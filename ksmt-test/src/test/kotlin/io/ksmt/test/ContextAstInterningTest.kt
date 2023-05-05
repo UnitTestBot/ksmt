@@ -70,11 +70,7 @@ class ContextAstInterningTest {
                 generators += RandomExpressionGenerator().apply {
                     generate(
                         10000, generationCtx, random,
-                        generatorFilter = {
-                            RandomExpressionGenerator.noFreshConstants(it)
-                                // Disabled because can be slow on fp with big exponent
-                                && RandomExpressionGenerator.noFpRem(it)
-                        }
+                        generatorFilter = RandomExpressionGenerator.noFreshConstants
                     )
                 }
             }
