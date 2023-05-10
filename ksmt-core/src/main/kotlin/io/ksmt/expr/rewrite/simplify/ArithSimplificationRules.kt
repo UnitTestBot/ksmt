@@ -12,14 +12,15 @@ import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRealSort
-import io.ksmt.utils.ArithUtils
 import io.ksmt.utils.ArithUtils.bigIntegerValue
 import io.ksmt.utils.ArithUtils.compareTo
 import io.ksmt.utils.ArithUtils.modWithNegativeNumbers
 import io.ksmt.utils.ArithUtils.numericValue
 import io.ksmt.utils.ArithUtils.toRealValue
+import io.ksmt.utils.ArithUtils.RealValue
 import io.ksmt.utils.uncheckedCast
 import java.math.BigInteger
+import kotlin.math.absoluteValue
 
 inline fun <T : KArithSort> KContext.simplifyArithUnaryMinusLight(
     arg: KExpr<T>,
@@ -52,7 +53,7 @@ inline fun <T : KArithSort> KContext.simplifyArithAddLight(
     }
 
     val simplifiedArgs = ArrayList<KExpr<T>>(args.size)
-    var constantTerm = ArithUtils.RealValue.zero
+    var constantTerm = RealValue.zero
 
     for (arg in args) {
         // flat one level
@@ -111,7 +112,7 @@ inline fun <T : KArithSort> KContext.simplifyArithMulLight(
     }
 
     val simplifiedArgs = ArrayList<KExpr<T>>(args.size)
-    var constantTerm = ArithUtils.RealValue.one
+    var constantTerm = RealValue.one
 
     for (arg in args) {
         // flat one level
@@ -128,7 +129,7 @@ inline fun <T : KArithSort> KContext.simplifyArithMulLight(
         return numericValue(constantTerm, args.first().sort)
     }
 
-    if (constantTerm != ArithUtils.RealValue.one) {
+    if (constantTerm != RealValue.one) {
         // prefer constant to be the first argument
         val firstArg = simplifiedArgs.first()
         simplifiedArgs[0] = numericValue(constantTerm, firstArg.sort)
@@ -162,18 +163,14 @@ inline fun <T : KArithSort> KContext.simplifyArithDivLight(
     rewriteArithUnaryMinus: KContext.(KExpr<T>) -> KExpr<T>,
     cont: (KExpr<T>, KExpr<T>) -> KExpr<T>
 ): KExpr<T> {
-    val rValue = when (rhs) {
-        is KIntNumExpr -> rhs.toRealValue()
-        is KRealNumExpr -> rhs.toRealValue()
-        else -> null
-    }
+    val rValue = rhs.toRealValue()
 
     if (rValue != null && !rValue.isZero()) {
-        if (rValue == ArithUtils.RealValue.one) {
+        if (rValue == RealValue.one) {
             return lhs
         }
 
-        if (rValue == ArithUtils.RealValue.minusOne) {
+        if (rValue == RealValue.minusOne) {
             return rewriteArithUnaryMinus(lhs)
         }
 
@@ -186,6 +183,29 @@ inline fun <T : KArithSort> KContext.simplifyArithDivLight(
             return numericValue(value, lhs.sort).uncheckedCast()
         }
     }
+    return cont(lhs, rhs)
+}
+
+inline fun <T : KArithSort> KContext.simplifyArithPowerLight(
+    lhs: KExpr<T>,
+    rhs: KExpr<T>,
+    cont: (KExpr<T>, KExpr<T>) -> KExpr<T>
+): KExpr<T> {
+    val lValue = lhs.toRealValue()
+    val rValue = rhs.toRealValue()
+
+    if (lValue != null && rValue != null) {
+        tryEvalArithPower(lValue, rValue)?.let { return castRealValue(it, lhs.sort) }
+    }
+
+    if (lValue == RealValue.one) {
+        return lhs
+    }
+
+    if (rValue == RealValue.one) {
+        return lhs
+    }
+
     return cont(lhs, rhs)
 }
 
@@ -327,10 +347,10 @@ inline fun KContext.simplifyEqRealLight(
 }
 
 fun <T : KArithSort> addArithTerm(
-    value: ArithUtils.RealValue,
+    value: RealValue,
     term: KExpr<T>,
     terms: MutableList<KExpr<T>>
-): ArithUtils.RealValue {
+): RealValue {
     if (term is KIntNumExpr) {
         return value.add(term.toRealValue())
     }
@@ -344,10 +364,10 @@ fun <T : KArithSort> addArithTerm(
 }
 
 fun <T : KArithSort> mulArithTerm(
-    value: ArithUtils.RealValue,
+    value: RealValue,
     term: KExpr<T>,
     terms: MutableList<KExpr<T>>
-): ArithUtils.RealValue {
+): RealValue {
     if (term is KIntNumExpr) {
         return value.mul(term.toRealValue())
     }
@@ -358,4 +378,32 @@ fun <T : KArithSort> mulArithTerm(
 
     terms += term
     return value
+}
+
+fun tryEvalArithPower(base: RealValue, power: RealValue): RealValue? = when {
+    base.isZero() && power.isZero() -> null
+    power.isZero() -> RealValue.one
+    base.isZero() -> RealValue.zero
+    base == RealValue.one -> RealValue.one
+    power == RealValue.one -> base
+    power == RealValue.minusOne -> base.inverse()
+    else -> power.smallIntValue()?.let { powerIntValue ->
+        if (powerIntValue >= 0) {
+            base.pow(powerIntValue)
+        } else {
+            base.inverse().pow(powerIntValue.absoluteValue)
+        }
+    }
+}
+
+fun <T : KArithSort> KContext.castRealValue(value: RealValue, sort: T): KExpr<T> = when (sort) {
+    realSort -> numericValue(value, sort)
+    intSort -> mkIntNum(value.numerator / value.denominator).uncheckedCast()
+    else -> error("Unexpected arith sort: $sort")
+}
+
+fun <T : KArithSort> KExpr<T>.toRealValue(): RealValue? = when (this) {
+    is KIntNumExpr -> toRealValue()
+    is KRealNumExpr -> toRealValue()
+    else -> null
 }

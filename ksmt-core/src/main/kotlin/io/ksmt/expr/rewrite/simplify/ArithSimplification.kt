@@ -23,10 +23,8 @@ fun <T : KArithSort> KContext.simplifyArithDiv(lhs: KExpr<T>, rhs: KExpr<T>): KE
     simplifyArithDivLight(lhs, rhs, KContext::simplifyArithUnaryMinus, ::mkArithDivNoSimplify)
 
 @Suppress("ForbiddenComment")
-fun <T : KArithSort> KContext.simplifyArithPower(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> {
-    // todo: evaluate arith power
-    return mkArithPowerNoSimplify(lhs, rhs)
-}
+fun <T : KArithSort> KContext.simplifyArithPower(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
+    simplifyArithPowerLight(lhs, rhs, ::mkArithPowerNoSimplify)
 
 fun <T : KArithSort> KContext.simplifyArithLe(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
     simplifyArithLeLight(lhs, rhs, ::mkArithLeNoSimplify)

@@ -4,8 +4,6 @@ import io.ksmt.KContext
 import io.ksmt.expr.KBitVec1Value
 import io.ksmt.expr.KBitVecValue
 import io.ksmt.expr.KExpr
-import io.ksmt.expr.KFp32Value
-import io.ksmt.expr.KFp64Value
 import io.ksmt.expr.KFpNegationExpr
 import io.ksmt.expr.KFpRoundingMode
 import io.ksmt.expr.KFpRoundingModeExpr
@@ -19,6 +17,8 @@ import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KRealSort
 import io.ksmt.utils.BvUtils
 import io.ksmt.utils.FpUtils
+import io.ksmt.utils.FpUtils.fpFma
+import io.ksmt.utils.FpUtils.fpRem
 import io.ksmt.utils.FpUtils.isInfinity
 import io.ksmt.utils.FpUtils.isNaN
 import io.ksmt.utils.FpUtils.isNegative
@@ -27,7 +27,6 @@ import io.ksmt.utils.FpUtils.isPositive
 import io.ksmt.utils.FpUtils.isSubnormal
 import io.ksmt.utils.FpUtils.isZero
 import io.ksmt.utils.uncheckedCast
-import kotlin.math.IEEErem
 
 inline fun <T : KFpSort> KContext.simplifyFpAbsExprLight(
     value: KExpr<T>,
@@ -109,8 +108,8 @@ inline fun <T : KFpSort> KContext.simplifyFpRemExprLight(
     cont: (KExpr<T>, KExpr<T>) -> KExpr<T>
 ): KExpr<T> {
     if (lhs is KFpValue<T> && rhs is KFpValue<T>) {
-        val result = tryEvalFpRem(lhs, rhs)
-        result?.let { return it.uncheckedCast() }
+        val result = fpRem(lhs, rhs)
+        return result.uncheckedCast()
     }
     return cont(lhs, rhs)
 }
@@ -124,8 +123,8 @@ inline fun <T : KFpSort> KContext.simplifyFpFusedMulAddExprLight(
     cont: (KExpr<KFpRoundingModeSort>, KExpr<T>, KExpr<T>, KExpr<T>) -> KExpr<T>
 ): KExpr<T> {
     if (roundingMode is KFpRoundingModeExpr && arg0 is KFpValue<T> && arg1 is KFpValue<T> && arg2 is KFpValue<T>) {
-        val result = tryEvalFpFma(roundingMode.value, arg0, arg1, arg2)
-        result?.let { return it.uncheckedCast() }
+        val result = fpFma(roundingMode.value, arg0, arg1, arg2)
+        return result.uncheckedCast()
     }
     return cont(roundingMode, arg0, arg1, arg2)
 }
@@ -410,65 +409,6 @@ inline fun <T : KFpSort> KContext.evalFpPredicateOr(
         return predicate(value).expr
     }
     return cont(value)
-}
-
-@Suppress("ForbiddenComment")
-fun KContext.tryEvalFpRem(lhs: KFpValue<*>, rhs: KFpValue<*>): KFpValue<*>? = when {
-    lhs is KFp32Value -> mkFp(lhs.value.IEEErem((rhs as KFp32Value).value), lhs.sort)
-    lhs is KFp64Value -> mkFp(lhs.value.IEEErem((rhs as KFp64Value).value), lhs.sort)
-    lhs.isNaN() || rhs.isNaN() -> mkFpNaN(lhs.sort)
-    lhs.isInfinity() -> mkFpNaN(lhs.sort)
-    rhs.isInfinity() -> lhs
-    rhs.isZero() -> mkFpNaN(lhs.sort)
-    lhs.isZero() -> lhs
-    // todo: eval fp rem
-    else -> null
-}
-
-// Eval x * y + z
-@Suppress("ComplexMethod", "ForbiddenComment")
-fun KContext.tryEvalFpFma(
-    rm: KFpRoundingMode,
-    x: KFpValue<*>,
-    y: KFpValue<*>,
-    z: KFpValue<*>
-): KFpValue<*>? = when {
-    x.isNaN() || y.isNaN() || z.isNaN() -> mkFpNaN(x.sort)
-
-    x.isInfinity() && x.isPositive() -> when {
-        y.isZero() -> mkFpNaN(x.sort)
-        z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
-        else -> mkFpInf(y.signBit, x.sort)
-    }
-
-    y.isInfinity() && y.isPositive() -> when {
-        x.isZero() -> mkFpNaN(x.sort)
-        z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
-        else -> mkFpInf(x.signBit, x.sort)
-    }
-
-    x.isInfinity() && x.isNegative() -> when {
-        y.isZero() -> mkFpNaN(x.sort)
-        z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
-        else -> mkFpInf(!y.signBit, x.sort)
-    }
-
-    y.isInfinity() && y.isNegative() -> when {
-        x.isZero() -> mkFpNaN(x.sort)
-        z.isInfinity() && (x.signBit xor y.signBit xor z.signBit) -> mkFpNaN(x.sort)
-        else -> mkFpInf(!x.signBit, x.sort)
-    }
-
-    z.isInfinity() -> z
-
-    x.isZero() || y.isZero() -> if (z.isZero() && (x.signBit xor y.signBit xor z.signBit)) {
-        mkFpZero(signBit = rm == KFpRoundingMode.RoundTowardNegative, sort = x.sort)
-    } else {
-        z
-    }
-
-    // todo: eval fp fma
-    else -> null
 }
 
 inline fun <T : KFpSort> evalBinaryOpOr(

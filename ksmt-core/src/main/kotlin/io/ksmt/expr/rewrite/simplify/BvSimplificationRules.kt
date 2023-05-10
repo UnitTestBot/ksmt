@@ -1415,26 +1415,24 @@ inline fun <T : KBvSort> KContext.rewriteBvAddNoUnderflowExpr(
     return rewriteImplies(rewriteAnd(aLtZero, bLtZero), sumLtZero)
 }
 
-inline fun <T : KBvSort> KContext.rewriteBvMulNoOverflowExpr(
+fun <T : KBvSort> KContext.rewriteBvMulNoOverflowExpr(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
     isSigned: Boolean,
-    cont: (KExpr<T>, KExpr<T>, Boolean) -> KExpr<KBoolSort>
-): KExpr<KBoolSort> {
-    val simplified = if (isSigned) {
-        trySimplifyBvSignedMulNoOverflow(lhs, rhs, isOverflow = true)
-    } else {
-        trySimplifyBvUnsignedMulNoOverflow(lhs, rhs)
-    }
-    return simplified ?: cont(lhs, rhs, isSigned)
+): KExpr<KBoolSort> = if (isSigned) {
+    trySimplifyBvSignedMulNoOverflow(lhs, rhs, isOverflow = true)
+        ?: rewriteBvSignedMulNoOverflow(lhs, rhs, isOverflow = true)
+} else {
+    trySimplifyBvUnsignedMulNoOverflow(lhs, rhs)
+        ?: rewriteBvUnsignedMulNoOverflow(lhs, rhs)
 }
 
-inline fun <T : KBvSort> KContext.rewriteBvMulNoUnderflowExpr(
+fun <T : KBvSort> KContext.rewriteBvMulNoUnderflowExpr(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
-    cont: (KExpr<T>, KExpr<T>) -> KExpr<KBoolSort>
 ): KExpr<KBoolSort> =
-    trySimplifyBvSignedMulNoOverflow(lhs, rhs, isOverflow = false) ?: cont(lhs, rhs)
+    trySimplifyBvSignedMulNoOverflow(lhs, rhs, isOverflow = false)
+        ?: rewriteBvSignedMulNoOverflow(lhs, rhs, isOverflow = false)
 
 inline fun <T : KBvSort> KContext.rewriteBvNegNoOverflowExpr(
     arg: KExpr<T>,
@@ -1927,6 +1925,117 @@ fun <T : KBvSort> KContext.trySimplifyBvUnsignedMulNoOverflow(
     }
 
     return null
+}
+
+private fun <T : KBvSort> KContext.rewriteBvUnsignedMulNoOverflow(
+    lhs: KExpr<T>,
+    rhs: KExpr<T>
+): KExpr<KBoolSort> {
+    val size = lhs.sort.sizeBits.toInt()
+
+    val extLhs = mkBvZeroExtensionExpr(value = lhs, extensionSize = 1)
+    val extRhs = mkBvZeroExtensionExpr(value = rhs, extensionSize = 1)
+
+    val multiplicationResult = mkBvMulExpr(extLhs, extRhs)
+    val overflowBit = mkBvExtractExpr(value = multiplicationResult, high = size, low = size)
+    val overflow1 = mkBv(true) eq overflowBit.uncheckedCast()
+
+    val overflow2 = bvUnsignedMulBitOverflowCheck(lhs, rhs, size)
+
+    return !(overflow1 or overflow2)
+}
+
+private fun <T : KBvSort> KContext.rewriteBvSignedMulNoOverflow(
+    lhs: KExpr<T>,
+    rhs: KExpr<T>,
+    isOverflow: Boolean
+): KExpr<KBoolSort> {
+    val size = lhs.sort.sizeBits.toInt()
+
+    val signBitIdx = size - 1
+    val lhsSign = mkBvExtractExpr(value = lhs, high = signBitIdx, low = signBitIdx)
+    val rhsSign = mkBvExtractExpr(value = rhs, high = signBitIdx, low = signBitIdx)
+
+    val overflowSignCheck = if (isOverflow) {
+        // Overflow is possible when sign bits are equal
+        lhsSign eq rhsSign
+    } else {
+        // Underflow is possible when sign bits are different
+        lhsSign neq rhsSign
+    }
+
+    val extLhs = mkBvConcatExpr(lhsSign, lhs)
+    val extRhs = mkBvConcatExpr(rhsSign, rhs)
+    val multiplicationResult = mkBvMulExpr(extLhs, extRhs)
+
+    // The two most significant bits are different
+    val msb0 = mkBvExtractExpr(value = multiplicationResult, high = size, low = size)
+    val msb1 = mkBvExtractExpr(value = multiplicationResult, high = size - 1, low = size - 1)
+    val overflow1 = mkBv(true) eq mkBvXorExpr(msb0, msb1).uncheckedCast()
+
+    val lhsSignBitSet = mkBv(true) eq lhsSign.uncheckedCast()
+    val overflow2 = if (isOverflow) {
+        // Overflow is possible when sign bits are equal
+        // lhsSign = 1, rhsSign = 0 -> false
+        // lhsSign = 0, rhsSign = 1 -> false
+
+        mkIte(
+            lhsSignBitSet, // lhsSign = 1, rhsSign = 1
+            bvUnsignedMulBitOverflowCheck(mkBvNotExpr(lhs), mkBvNotExpr(rhs), size - 1),
+            // lhsSign = 0, rhsSign = 0
+            bvUnsignedMulBitOverflowCheck(lhs, rhs, size - 1)
+        )
+    } else {
+        // Underflow is possible when sign bits are different
+        // lhsSign = 1, rhsSign = 1 -> false
+        // lhsSign = 0, rhsSign = 0 -> false
+
+        mkIte(
+            lhsSignBitSet, // lhsSign = 1, rhsSign = 0
+            bvUnsignedMulBitOverflowCheck(mkBvNotExpr(lhs), rhs, size - 1),
+            // lhsSign = 0, rhsSign = 1
+            bvUnsignedMulBitOverflowCheck(lhs, mkBvNotExpr(rhs), size - 1),
+        )
+    }
+
+    val overflow = overflow1 or overflow2
+    return !(overflowSignCheck and overflow)
+}
+
+/**
+ * Mul overflow check.
+ *
+ * lhs = [l_s, l_s-1, ..., l_1, l_0]
+ * rhs = [r_s, r_s-1, ..., r_1, r_0]
+ *
+ * lhs * rhs will overflow when
+ *
+ * l_s = 1 and r_1 = 1
+ * or
+ * (l_s = 1 or l_s-1 = 1) and r_2 = 1
+ * ...
+ * */
+private fun <T : KBvSort> KContext.bvUnsignedMulBitOverflowCheck(
+    lhs: KExpr<T>,
+    rhs: KExpr<T>,
+    size: Int
+): KExpr<KBoolSort> {
+    val bitChecks = arrayListOf<KExpr<KBoolSort>>()
+    var ovf: KExpr<KBoolSort> = falseExpr
+    for (i in 1 until size) {
+        val lhsBitIdx = size - i
+        val lhsBit = mkBvExtractExpr(value = lhs, high = lhsBitIdx, low = lhsBitIdx)
+
+        val rhsBitIdx = i
+        val rhsBit = mkBvExtractExpr(value = rhs, high = rhsBitIdx, low = rhsBitIdx)
+
+        val lhsBitValue = mkBv(true) eq lhsBit.uncheckedCast()
+        val rhsBitValue = mkBv(true) eq rhsBit.uncheckedCast()
+
+        ovf = mkOr(ovf, lhsBitValue, flat = false, order = false)
+        bitChecks += ovf and rhsBitValue
+    }
+    return mkOr(bitChecks)
 }
 
 inline fun <T : KBvSort> KContext.bvLessOrEqual(
