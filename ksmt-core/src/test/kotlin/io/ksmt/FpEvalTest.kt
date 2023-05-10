@@ -1,7 +1,6 @@
 package io.ksmt
 
 import org.junit.jupiter.api.Assumptions
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
@@ -9,7 +8,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import io.ksmt.expr.KExpr
-import io.ksmt.sort.KFp32Sort
 import io.ksmt.sort.KFp64Sort
 import io.ksmt.sort.KFpRoundingModeSort
 import io.ksmt.sort.KFpSort
@@ -285,22 +283,20 @@ class FpEvalTest : ExpressionEvalTest() {
     @ParameterizedTest
     @MethodSource("fpSizes")
     fun testFpRem(exponent: Int, significand: Int) {
-        val isFp32 = exponent.toUInt() == KFp32Sort.exponentBits && significand.toUInt() == KFp32Sort.significandBits
-        val isFp64 = exponent.toUInt() == KFp64Sort.exponentBits && significand.toUInt() == KFp64Sort.significandBits
-        Assumptions.assumeTrue(isFp32 || isFp64) {
-            "Fp rem eval is implemented only for Fp32 and Fp64"
+        Assumptions.assumeTrue(exponent < 20) {
+            "Current fp.rem eval implementation requires too many iterations on big exponents"
         }
         testOperation(exponent, significand, KContext::mkFpRemExpr, KContext::mkFpRemExprNoSimplify)
     }
 
-    @Disabled // We have no eval fo FMA
     @ParameterizedTest
     @MethodSource("fpSizes")
     fun testFpFusedMulAdd(exponent: Int, significand: Int) = runTest(exponent, significand) { sort: KFpSort, checker ->
         roundingModeValues().forEach { rm ->
-            randomFpValues(sort).forEach { a ->
-                randomFpValues(sort).forEach { b ->
-                    randomFpValues(sort).forEach { c ->
+            randomFpValues(sort).take(20).forEach { a ->
+                randomFpValues(sort).take(20).forEach { b ->
+                    // Skip special values to reduce test runtime
+                    randomFpValues(sort).drop(10).take(10).forEach { c ->
                         val expr = mkFpFusedMulAddExpr(rm, a, b, c)
                         val exprNoSimplify = mkFpFusedMulAddExprNoSimplify(rm, a, b, c)
                         checker.check(simplifiedExpr = expr, unsimplifiedExpr = exprNoSimplify) { "$rm, $a, $b, $c" }

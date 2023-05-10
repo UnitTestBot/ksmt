@@ -317,7 +317,7 @@ open class KYicesContext : AutoCloseable {
 
     fun convertUninterpretedSortValueIndex(internalIndex: Int): Int {
         // User provided value index
-        if (internalIndex >= UNINTERPRETED_SORT_VALUE_SHIFT) {
+        if (internalIndex >= UNINTERPRETED_SORT_MIN_SHIFTED_VALUE) {
             return internalIndex - UNINTERPRETED_SORT_VALUE_SHIFT
         }
 
@@ -353,10 +353,13 @@ open class KYicesContext : AutoCloseable {
             }
         }
 
-        private const val UNINTERPRETED_SORT_VALUE_SHIFT = (1 shl 30) - 1
+        private const val UNINTERPRETED_SORT_VALUE_SHIFT = 1 shl 30
+        private const val UNINTERPRETED_SORT_MAX_ALLOWED_VALUE = UNINTERPRETED_SORT_VALUE_SHIFT / 2
+        private const val UNINTERPRETED_SORT_MIN_ALLOWED_VALUE = -UNINTERPRETED_SORT_MAX_ALLOWED_VALUE
+        private const val UNINTERPRETED_SORT_MIN_SHIFTED_VALUE = UNINTERPRETED_SORT_MAX_ALLOWED_VALUE
 
         internal val UNINTERPRETED_SORT_VALUE_INDEX_RANGE =
-            0 until UNINTERPRETED_SORT_VALUE_SHIFT
+            UNINTERPRETED_SORT_MIN_ALLOWED_VALUE..UNINTERPRETED_SORT_MAX_ALLOWED_VALUE
 
         internal fun <K> mkTermCache() = Object2IntOpenHashMap<K>().apply {
             defaultReturnValue(NOT_INTERNALIZED)

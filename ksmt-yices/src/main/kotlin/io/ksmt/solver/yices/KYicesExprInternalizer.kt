@@ -145,6 +145,14 @@ import io.ksmt.expr.KUnaryMinusArithExpr
 import io.ksmt.expr.KUninterpretedSortValue
 import io.ksmt.expr.KUniversalQuantifier
 import io.ksmt.expr.KXorExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvAddNoOverflowExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvAddNoUnderflowExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvDivNoOverflowExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoOverflowExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoUnderflowExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvNegNoOverflowExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvSubNoOverflowExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvSubNoUnderflowExpr
 import io.ksmt.solver.KSolverUnsupportedFeatureException
 import io.ksmt.solver.util.KExprIntInternalizerBase
 import io.ksmt.sort.KArithSort
@@ -534,36 +542,52 @@ open class KYicesExprInternalizer(
         }
     }
 
-    override fun <T : KBvSort> transform(expr: KBvAddNoOverflowExpr<T>): KExpr<KBoolSort> {
-        TODO("Not yet implemented")
+    override fun <T : KBvSort> transform(expr: KBvAddNoOverflowExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform {
+            ctx.rewriteBvAddNoOverflowExpr(arg0, arg1, isSigned).internalizeExpr()
+        }
     }
 
-    override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>): KExpr<KBoolSort> {
-        TODO("Not yet implemented")
+    override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform {
+            ctx.rewriteBvAddNoUnderflowExpr(arg0, arg1).internalizeExpr()
+        }
     }
 
-    override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>): KExpr<KBoolSort> {
-        TODO("Not yet implemented")
+    override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform {
+            ctx.rewriteBvSubNoOverflowExpr(arg0, arg1).internalizeExpr()
+        }
     }
 
-    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>): KExpr<KBoolSort> {
-        TODO("Not yet implemented")
+    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform {
+            ctx.rewriteBvSubNoUnderflowExpr(arg0, arg1, isSigned).internalizeExpr()
+        }
     }
 
-    override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>): KExpr<KBoolSort> {
-        TODO("Not yet implemented")
+    override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform {
+            ctx.rewriteBvDivNoOverflowExpr(arg0, arg1).internalizeExpr()
+        }
     }
 
-    override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>): KExpr<KBoolSort> {
-        TODO("Not yet implemented")
+    override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform {
+            ctx.rewriteBvNegNoOverflowExpr(value).internalizeExpr()
+        }
     }
 
-    override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>): KExpr<KBoolSort> {
-        TODO("Not yet implemented")
+    override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform {
+            ctx.rewriteBvMulNoOverflowExpr(arg0, arg1, isSigned).internalizeExpr()
+        }
     }
 
-    override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>): KExpr<KBoolSort> {
-        TODO("Not yet implemented")
+    override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>): KExpr<KBoolSort> = with(expr) {
+        transform {
+            ctx.rewriteBvMulNoUnderflowExpr(arg0, arg1).internalizeExpr()
+        }
     }
 
     override fun transform(expr: KFp16Value): KExpr<KFp16Sort> {

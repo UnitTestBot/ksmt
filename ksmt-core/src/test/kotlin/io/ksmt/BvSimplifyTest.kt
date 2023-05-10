@@ -1,9 +1,8 @@
 package io.ksmt
 
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
 import io.ksmt.expr.KExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoOverflowExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoUnderflowExpr
 import io.ksmt.sort.KBvSort
 import io.ksmt.sort.KSort
 import io.ksmt.utils.BvUtils.bvMaxValueUnsigned
@@ -11,7 +10,11 @@ import io.ksmt.utils.BvUtils.bvOne
 import io.ksmt.utils.BvUtils.bvValue
 import io.ksmt.utils.BvUtils.bvZero
 import io.ksmt.utils.uncheckedCast
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.parallel.Execution
+import org.junit.jupiter.api.parallel.ExecutionMode
 import kotlin.random.nextInt
+import kotlin.test.Ignore
 
 @Execution(ExecutionMode.CONCURRENT)
 class BvSimplifyTest: ExpressionSimplifyTest() {
@@ -145,6 +148,29 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
     @Test
     fun testBvMulNoUnderflow() =
         testOperation(KContext::mkBvMulNoUnderflowExpr, KContext::mkBvMulNoUnderflowExprNoSimplify)
+
+    @Test
+    fun testBvMulNoOverflowUnsignedRewrite() =
+        testOperation(
+            { l, r -> rewriteBvMulNoOverflowExpr(l, r, isSigned = false) },
+            KContext::mkBvMulNoOverflowUnsignedExprNoSimplify
+        )
+
+    @Ignore // Slow on Z3 solver. Check manually with Bitwuzla.
+    @Test
+    fun testBvMulNoOverflowSignedRewrite() =
+        testOperation(
+            { l, r -> rewriteBvMulNoOverflowExpr(l, r, isSigned = true) },
+            KContext::mkBvMulNoOverflowSignedExprNoSimplify
+        )
+
+    @Ignore // Slow on Z3 solver. Check manually with Bitwuzla.
+    @Test
+    fun testBvMulNoUnderflowRewrite() =
+        testOperation(
+            { l, r -> rewriteBvMulNoUnderflowExpr(l, r) },
+            KContext::mkBvMulNoUnderflowExprNoSimplify
+        )
 
     @Test
     fun testBvNAnd() =
@@ -509,3 +535,13 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
         const val BV_SIZE = 77u
     }
 }
+
+private fun <T : KBvSort> KContext.mkBvMulNoOverflowSignedExprNoSimplify(
+    arg0: KExpr<T>,
+    arg1: KExpr<T>
+) = mkBvMulNoOverflowExprNoSimplify(arg0, arg1, isSigned = true)
+
+private fun <T : KBvSort> KContext.mkBvMulNoOverflowUnsignedExprNoSimplify(
+    arg0: KExpr<T>,
+    arg1: KExpr<T>
+) = mkBvMulNoOverflowExprNoSimplify(arg0, arg1, isSigned = false)

@@ -17,7 +17,7 @@ repositories {
 ```kotlin
 dependencies {
     // core 
-    implementation("io.ksmt:ksmt-core:0.5.2")    
+    implementation("io.ksmt:ksmt-core:0.5.3")    
 }
 ```
 
@@ -25,9 +25,9 @@ dependencies {
 ```kotlin
 dependencies {
     // z3 
-    implementation("io.ksmt:ksmt-z3:0.5.2")
+    implementation("io.ksmt:ksmt-z3:0.5.3")
     // bitwuzla
-    implementation("io.ksmt:ksmt-bitwuzla:0.5.2")
+    implementation("io.ksmt:ksmt-bitwuzla:0.5.3")
 }
 ```
 SMT solver specific packages are provided with solver native binaries. 

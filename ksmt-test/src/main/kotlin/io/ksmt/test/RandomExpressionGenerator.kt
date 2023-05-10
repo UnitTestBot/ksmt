@@ -12,6 +12,8 @@ import io.ksmt.sort.KArraySort
 import io.ksmt.sort.KArraySortBase
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KBvSort
+import io.ksmt.sort.KFp128Sort
+import io.ksmt.sort.KFp64Sort
 import io.ksmt.sort.KFpRoundingModeSort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KIntSort
@@ -285,6 +287,29 @@ class RandomExpressionGenerator {
                         SimpleArgument(((args[0] as SimpleArgument).value as Int) % 3 + 1),
                         args[1]
                     )
+
+                    "mkFpRemExpr" -> {
+                        val argSort = (args[0] as? ExprArgument)?.value?.sort as? KFpSort
+                        if (argSort != null && argSort.exponentBits > KFp128Sort.exponentBits) {
+                            generationFailed(
+                                "Exponent size ${argSort.exponentBits} can result in slow fp.rem computation"
+                            )
+                        }
+                        args
+                    }
+
+                    /**
+                     * Avoid floating point with extremely large exponents since
+                     * such expression creation may involve slow computations.
+                     * */
+                    "mkFpSort" -> {
+                        val exponentSize = (args[0] as SimpleArgument).value as UInt
+                        val significandSize = (args[1] as SimpleArgument).value as UInt
+                        listOf(
+                            SimpleArgument(exponentSize.coerceAtMost(KFp128Sort.exponentBits)),
+                            SimpleArgument(significandSize)
+                        )
+                    }
 
                     else -> args
                 }

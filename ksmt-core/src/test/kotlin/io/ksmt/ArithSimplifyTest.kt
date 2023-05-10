@@ -67,6 +67,17 @@ class ArithSimplifyTest : ExpressionSimplifyTest() {
     }
 
     @Test
+    fun testPow() {
+        testOperation(isInt = true, KContext::mkArithPower, KContext::mkArithPowerNoSimplify) {
+            listOf(mkIntNum(0), mkIntNum(1), mkIntNum(-1)).uncheckedCast()
+        }
+
+        testOperation(isInt = false, KContext::mkArithPower, KContext::mkArithPowerNoSimplify) {
+            listOf(mkRealNum(0), mkRealNum(1), mkRealNum(-1)).uncheckedCast()
+        }
+    }
+
+    @Test
     fun testIntMod() {
         testOperation(isInt = true, KContext::mkIntMod, KContext::mkIntModNoSimplify) {
             listOf(mkIntNum(0), mkIntNum(1), mkIntNum(-1)).uncheckedCast()
