@@ -5,6 +5,13 @@ Kotlin/Java API for various SMT solvers.
 ![Maven Central](https://img.shields.io/maven-central/v/io.ksmt/ksmt-core)
 [![javadoc](https://javadoc.io/badge2/io.ksmt/ksmt-core/javadoc.svg)](https://javadoc.io/doc/io.ksmt/ksmt-core)
 
+# Overview
+
+`KSMT` provides a simple and unified way to work with SMT:
+* Define formulas in a simple and solver-independent way
+* Simplify and transform formulas without involving the SMT solver
+* Solve SMT formulas using various SMT solvers through a unified API
+
 # Getting started
 Install via [Gradle](https://gradle.org/).
 
