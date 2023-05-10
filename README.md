@@ -65,3 +65,10 @@ independent of the solver.
 KSMT provides a high-performant API for running SMT solvers in separate processes.
 This feature is important for implementing hard timeouts and 
 solving using multiple solvers in portfolio mode.
+
+### Formula simplification and manipulation utils
+KSMT provides a simplification engine that can simplify and especially evaluate all supported expressions in all
+supported theories.
+Also, KSMT provides utilities for performing formula transformation, visiting and expression substitution.
+
+Check out our [advanced features tutorial](docs/advanced-usage.md) for the examples.
