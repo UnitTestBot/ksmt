@@ -1,5 +1,5 @@
 # KSMT
-Kotlin API for various SMT solvers.
+Kotlin/Java API for various SMT solvers.
 
 [![KSMT: build](https://github.com/UnitTestBot/ksmt/actions/workflows/build-and-run-tests.yml/badge.svg)](https://github.com/UnitTestBot/ksmt/workflows/build-and-run-tests.yml)
 ![Maven Central](https://img.shields.io/maven-central/v/io.ksmt/ksmt-core)
