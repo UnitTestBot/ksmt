@@ -12,6 +12,8 @@ dependencies {
     implementation("io.ksmt:ksmt-core:0.5.3")
     // z3 solver
     implementation("io.ksmt:ksmt-z3:0.5.3")
+    // Runner and portfolio solver
+    implementation("io.ksmt:ksmt-runner:0.5.3")
 }
 
 java {
