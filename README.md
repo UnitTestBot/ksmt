@@ -63,8 +63,7 @@ You can also use SMT solvers across multiple theories:
 ### Kotlin-based DSL for SMT formulas
 
 Various scenarios are available for using SMT solvers: you can use a single solver to determine whether a formula is
-satisfiable, or you can apply several solvers to the same expression successively (i.e., use solvers in a _joint_
-mode). In the latter case, you need a _solver-agnostic formula representation_.
+satisfiable, or you can apply several solvers to the same expression successively. In the latter case, you need a _solver-agnostic formula representation_.
 
 KSMT provides you with a unified DSL for SMT expressions:
 
@@ -80,7 +79,6 @@ val expr = (array.select(index - 1.expr) lt value) and
 With this DSL, you can
 * transform expressions from the solver native representation to KSMT representation and vice versa,
 * use _formula introspection_,
-* manipulate expressions without involving a solver,
 * use expressions even if the solver is freed.
 
 Expression interning (hash consing) affords faster expression comparison: we do not need to compare the expression
@@ -88,8 +86,7 @@ trees. Expressions are deduplicated, so we avoid redundant memory allocation.
 
 ### Utilities to simplify and transform expressions
 
-KSMT provides a simplification engine applicable to all supported expressions for all supported theories in a
-solver-agnostic model:
+KSMT provides a simplification engine applicable to all supported expressions for all supported theories:
 
 * reduce expression size and complexity
 * evaluate expressions (including those with free variables) — reduce your expression to a constant
@@ -124,5 +121,5 @@ portfolio mode.
 
 Many solvers do not have prebuilt binaries, or binaries are for Linux only.
 
-KSMT is distributed as JVM library with solver binaries provided.
-SMT-LIB benchmarks based test environment as well as documentation and examples are also available.
+KSMT is distributed as JVM library with solver binaries provided. The library has been tested against the SMT-LIB 
+benchmarks. Documentation and examples are also available.
