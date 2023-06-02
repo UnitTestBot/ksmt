@@ -1,18 +1,32 @@
 # Advanced usage
 
-Advanced features usage tutorial.
-If you are new to KSMT, please check out our [getting started guide](/docs/getting-started.md) first.
+For basic KSMT usage, please refer to [Getting started](/docs/getting-started.md) guide.
 
-For complete code examples, see our [example project](/examples) and
-particularly [`AdvancedExamples.kt`](/examples/src/main/kotlin/AdvancedExamples.kt)
+Having tried the essential scenarios, find the [advanced example](/examples/src/main/kotlin/AdvancedExamples.kt) and proceed to advanced usage:
+
+<!-- TOC -->
+  * [Working with SMT formulas](#working-with-smt-formulas)
+    * [Parsing formulas in SMT-LIB2 format](#parsing-formulas-in-smt-lib2-format)
+    * [Default simplification](#default-simplification)
+    * [Manual simplification](#manual-simplification)
+    * [Expression substitution](#expression-substitution)
+  * [Working with SMT solvers](#working-with-smt-solvers)
+    * [Solver configuration](#solver-configuration)
+    * [Solver-independent models](#solver-independent-models)
+    * [Solver runner](#solver-runner)
+    * [Using custom solvers in a runner](#using-custom-solvers-in-a-runner)
+    * [Solver portfolio](#solver-portfolio)
+<!-- TOC -->
 
 ## Working with SMT formulas
+
+Learn how to parse, simplify, and substitute expressions.
 
 ### Parsing formulas in SMT-LIB2 format
 
 KSMT provides an API for parsing formulas in the SMT-LIB2 format.
-Currently, KSMT provides a parser implemented on top of the Z3 solver API
-and therefore `ksmt-z3` module is required for parsing.
+Currently, KSMT provides a parser implemented on top of the Z3 solver API, and therefore `ksmt-z3` module is 
+required for parsing.
 
 ```kotlin
 val formula = """
@@ -26,10 +40,10 @@ with(ctx) {
 }
 ```
 
-### Simplification during expressions creation
+### Default simplification
 
-By default, `KContext` will attempt to apply lightweight simplifications during expression creation. If simplifications
-are not suitable for your use cases you can disable them using the `KContext.simplificationMode` parameter.
+By default, `KContext` attempts to apply lightweight simplifications when you create an expression. If you do not 
+need simplifications, disable them using the `KContext.simplificationMode` parameter.
 
 ```kotlin
 // Simplification is enabled by default
@@ -52,12 +66,12 @@ println(nonSimplifiedExpr) // (not (and a false))
 println(simplifiedExpr) // true
 ```
 
-### Manual expression simplification
+### Manual simplification
 
-KSMT provides a `KExprSimplifier` which allows you to manually perform simplification of an arbitrary expression.
+KSMT provides `KExprSimplifier`, so you can manually simplify an arbitrary expression.
 
 ```kotlin
-// Context do not simplify expressions during creation
+// Context does not simplify expressions during creation
 val ctx = KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY)
 
 with(ctx) {
@@ -74,7 +88,7 @@ with(ctx) {
 
 ### Expression substitution
 
-KSMT provides a `KExprSubstitutor` which allows you to replace all occurrences of one expression with another
+KSMT provides `KExprSubstitutor`, so you can replace all the expression occurrences with another
 expression.
 
 ```kotlin
@@ -95,30 +109,32 @@ println(exprAfterSubstitution) // true
 
 ## Working with SMT solvers
 
+Learn how to configure and run solvers, get models, and switch to portfolio mode. 
+
 ### Solver configuration
 
 KSMT provides an API for modifying solver-specific parameters.
-Since the parameters and their correct values are solver-specific
+Since the parameters and their correct values are solver-specific,
 KSMT does not perform any checks.
-See the corresponding solver documentation for a list of available options.
+See corresponding solver documentation for a list of available options.
 
 ```kotlin
 with(ctx) {
    KZ3Solver(this).use { solver ->
       solver.configure {
-         // set Z3 solver parameter random_seed to 42 
+         // set Z3 solver `random_seed` parameter to 42 
          setZ3Option("random_seed", 42)
       }
    }
 }
 ```
 
-### Solver independent models
+### Solver-independent models
 
-By default, SMT solver models lazily initialized.
-The values of the declared variables are loaded from the underlying solver's native model on demand.
-Therefore, models become invalid after solver close. Also, solvers like `Bitwuzla` invalidate their models every
-time `check-sat` is called.
+By default, SMT solver models are lazily initialized.
+The values of the declared variables are loaded from the underlying solver native model on demand.
+Therefore, models become invalid as soon as the solver closes. Moreover, solvers like Bitwuzla invalidate their models 
+each time `check-sat` is called.
 To overcome these problems, KSMT provides the `KModel.detach` function that allows you to make the model independent of
 the underlying native representation.
 
@@ -147,19 +163,12 @@ try {
 println(detachedModel.eval(expr)) // true
 ```
 
-Note: it is usually a good idea to use `KModel.detach` when you need to keep model e.g. in a `List`.
+Note: it is recommended to use `KModel.detach` when you need to keep the model in a `List`, for example.
 
 ### Solver runner
 
-SMT solvers are implemented via native libraries and usually have the following issues:
-
-1. Timeout ignore. SMT solver may hang in a long-running operation before reaching a checkpoint.
-   Since solver is a native library, there is no way to interrupt it.
-2. Solvers are usually research projects with a bunch of bugs, e.g. pointer issues. Such
-   errors lead to the interruption of the entire process, including the user's app.
-
-To overcome these problems KSMT provides a solver runner that runs solvers in separate processes to preserve your
-application stability.
+SMT solvers may ignore timeouts, or they suddenly crash, thus interrupting the entire application process.
+KSMT provides a process-based solver runner: it runs each solver in a separate process.
 
 ```kotlin
 // Create a long-lived solver manager that manages a pool of solver workers
@@ -182,13 +191,12 @@ KSolverRunnerManager().use { solverManager ->
 
 ### Using custom solvers in a runner
 
-Solver runner also supports user defined solvers. Custom solvers must be registered before being used in the runner
-using `registerSolver`.
+Solver runner also supports user-defined solvers. Custom solvers must be registered via `registerSolver` before being used in the runner.
 
 ```kotlin
 // Create a long-lived solver manager that manages a pool of solver workers
 KSolverRunnerManager().use { solverManager ->
-   // Register user-defined solver in a current manager
+   // Register the user-defined solver in a current manager
    solverManager.registerSolver(CustomZ3BasedSolver::class, KZ3SolverUniversalConfiguration::class)
 
    // Use solver API as usual
@@ -208,11 +216,8 @@ KSolverRunnerManager().use { solverManager ->
 
 ### Solver portfolio
 
-Various SMT solvers usually show different performance on a same SMT formula.
-[Portfolio solving](https://arxiv.org/abs/1505.03340) is a simple idea of
-running different solvers on the same formula simultaneously and waiting only
-for the first result.
-The portfolio solver workflow in KSMT is similar to the solver runner.
+To run solvers in portfolio mode, i.e., to run them in parallel until you get the first result, try the following 
+workflow, which is similar to using the solver runner:
 
 ```kotlin
 // Create a long-lived portfolio solver manager that manages a pool of solver workers
@@ -220,7 +225,7 @@ KPortfolioSolverManager(
    // Solvers to include in portfolio
    listOf(KZ3Solver::class, CustomZ3BasedSolver::class)
 ).use { solverManager ->
-   // Since we use user-defined solver in our portfolio we must register it in the current manager
+   // Since we use the user-defined solver in our portfolio, we must register it in the current manager
    solverManager.registerSolver(CustomZ3BasedSolver::class, KZ3SolverUniversalConfiguration::class)
 
    // Use solver API as usual

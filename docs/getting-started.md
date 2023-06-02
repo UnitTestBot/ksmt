@@ -1,19 +1,36 @@
 # Getting started
 
-For code examples, please check out our [project](/examples).
+For your first steps with KSMT, try our [code examples](/examples).
+
+To check OS compatibility, see [Supported solvers and theories](../README.md#supported-solvers-and-theories).
+
+Find basic instructions to get use of KSMT:
+
+<!-- TOC -->
+* [Installation](#installation)
+* [Usage](#usage)
+    * [Working with SMT formulas](#working-with-smt-formulas)
+    * [Working with SMT solvers](#working-with-smt-solvers)
+    * [Incremental solving: API](#incremental-solving--api)
+        * [Incremental solving with push/pop operations](#incremental-solving-with-pushpop-operations)
+        * [Incremental solving with assumptions](#incremental-solving-with-assumptions)
+    * [Solver unsatisfiable cores](#solver-unsatisfiable-cores)
+<!-- TOC -->
 
 ## Installation
 
-Install via [Gradle](https://gradle.org/).
+Install KSMT via [Gradle](https://gradle.org/).
 
-#### 1. Enable Maven Central repository in your build configuration:
+1. Enable Maven Central repository in your build configuration:
+
 ```kotlin
 repositories {
     mavenCentral()
 }
 ```
 
-#### 2. Add KSMT core dependency:
+2. Add KSMT core dependency:
+
 ```kotlin
 dependencies {
     // core 
@@ -21,7 +38,8 @@ dependencies {
 }
 ```
 
-#### 3. Add one or more SMT solver dependencies:
+3. Add one or more SMT solver dependencies:
+
 ```kotlin
 dependencies {
     // z3 
@@ -30,24 +48,26 @@ dependencies {
     implementation("io.ksmt:ksmt-bitwuzla:0.5.3")
 }
 ```
-SMT solver specific packages are provided with solver native binaries. 
-Check OS compatibility [here](https://github.com/UnitTestBot/ksmt/tree/docs#features).
 
-## KSMT usage
+SMT solver specific packages are provided with solver native binaries.
 
-First, create a KSMT context that manages all expressions and solvers.
+## Usage
+
+Create a KSMT context that manages expressions and solvers:
+
 ```kotlin
 val ctx = KContext()
 ```
 
 ### Working with SMT formulas
 
-Once the context is initialized, we can create expressions. 
-In this example, we want to create an expression 
+Once the context is initialized, you can create expressions.
+
+In the example below, we create an expression 
 
 `a && (b >= c + 3)`
 
-over Boolean variable `a` and integer variables `b` and `c`.
+over Boolean variable `a` and integer variables `b` and `c`:
 
 ```kotlin
 import io.ksmt.utils.getValue
@@ -58,25 +78,25 @@ with(ctx) {
     val b by intSort
     val c by intSort
 
-    // create expression
+    // create an expression
     val constraint = a and (b ge c + 3.expr)
 }
 ```
-All KSMT expressions are typed and incorrect terms (e.g. `and` with integer arguments) 
+
+KSMT expressions are typed, and incorrect terms (e.g., `and` with integer arguments) 
 result in a compile-time error.
 
-Note the use of `import getValue`, which is required for the `by` syntax.
-Alternatively, `mkConst(name, sort)` can be used. 
+Note: `import getValue` is required when using the `by` keyword.
+Alternatively, use `mkConst(name, sort)`. 
 
 ### Working with SMT solvers
 
-To check SMT formula satisfiability we need to instantiate an SMT solver. 
-In this example, we use `constraint` from a previous step as an SMT formula 
-and we use Z3 as an SMT solver.
+To check SMT formula satisfiability, we need to instantiate an SMT solver. 
+In this example, we use `constraint` from the previous step as an SMT formula. We use Z3 as an SMT solver.
 
 ```kotlin
 with(ctx) {
-    KZ3Solver(this).use { solver -> // create s Z3 SMT solver instance
+    KZ3Solver(this).use { solver -> // create a Z3 SMT solver instance
         // assert expression
         solver.assert(constraint)
         
@@ -93,23 +113,22 @@ with(ctx) {
     }
 }
 ```
-The formula in the example above is satisfiable and we can obtain a model.
-The model contains concrete values of our symbolic variables `a`, `b` and `c`
-which evaluate our formula to `true`.
 
-Note the use of kotlin `.use { }` construction 
-which is useful for releasing all native resources acquired by the solver.
+The formula in the example above is satisfiable, so we can get a model.
+The model contains concrete values of the symbolic variables `a`, `b`, and `c`, which evaluate the formula to `true`.
 
-### Solver incremental API
+Note: the Kotlin `.use { }` construction allows releasing the solver-consumed resources.
 
-KSMT solver API provides two approaches to incremental formula solving: push/pop
-and assumptions. 
+### Incremental solving: API
 
-#### Incremental solving with push/pop
+KSMT solver API provides two approaches to incremental formula solving: using _push/pop_ operations and using 
+_assumptions_. 
 
-The push and pop operations in the solver allow us to work with assertions in the same way as with a stack.
-The push operation saves the currently asserted expressions onto the stack,  
-while the pop operation removes previously pushed assertions.
+#### Incremental solving with push/pop operations
+
+_Push_ and _pop_ operations in the solver allow us to work with assertions as if we deal with a stack.
+The _push_ operation puts the asserted expressions onto the stack, while the _pop_ operation removes the pushed 
+assertions.
 
 ```kotlin
 with(ctx) {
@@ -127,7 +146,7 @@ with(ctx) {
         // goal == 2
         solver.assert(goal eq mkBv(value = 2))
 
-        // push assertions stack
+        // push assertions onto stack
         solver.push()
 
         // a == goal
@@ -140,7 +159,7 @@ with(ctx) {
         val check0 = solver.check(timeout = 1.seconds)
         println("check0 = $check0") // UNSAT
 
-        // pop assertions stack. a == goal is removed
+        // pop assertions from stack; a == goal is removed
         solver.pop()
 
         /**
@@ -153,7 +172,7 @@ with(ctx) {
         // b == if (cond1) a + 1 else a
         solver.assert(b eq mkIte(cond1, mkBvAddExpr(a, mkBv(value = 1)), a))
 
-        // push assertions stack
+        // push assertions onto stack
         solver.push()
 
         // b == goal
@@ -169,7 +188,7 @@ with(ctx) {
         val check2 = solver.check(timeout = 1.seconds)
         println("check2 = $check2") // UNSAT
 
-        // pop assertions stack. b == goal is removed
+        // pop assertions from stack. b == goal is removed
         solver.pop()
 
         /**
@@ -206,8 +225,7 @@ with(ctx) {
 
 #### Incremental solving with assumptions
 
-Assumption mechanism allows us to assert an expression for a single check 
-without actually adding it to the assertions.
+Assumption mechanism allows us to assert an expression for a single check without actually adding it to assertions.
 The following example shows how to implement the previous example using assumptions
 instead of push and pop operations.
 
@@ -292,10 +310,10 @@ with(ctx) {
 }
 ```
 
-### Solver unsat cores
+### Solver unsatisfiable cores
 
-If the asserted SMT formula is unsatisfiable, we can extract the [unsat core](https://en.wikipedia.org/wiki/Unsatisfiable_core). 
-The unsat core is a subset of inconsistent assertions and assumptions.
+If the asserted SMT formula is unsatisfiable, we can extract the unsatisfiable core. 
+The unsatisfiable core is a subset of inconsistent assertions and assumptions.
 
 ```kotlin
 with(ctx) {
@@ -332,7 +350,7 @@ with(ctx) {
         // simply asserted expression cannot be in unsat core
         println("e1 in core = ${e1 in core}") // false
 
-        // an expression added with assertAndTrack appears in unsat core as is.
+        // an expression added with `assertAndTrack` appears in unsat core as is
         println("e2 in core = ${e2 in core}") // true
 
         // the assumed expression appears in unsat core as is

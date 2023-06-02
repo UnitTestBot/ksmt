@@ -1,23 +1,28 @@
-# Custom expressions
+# Usage scenario: custom expressions
 
-In some cases, it is convenient to extend the KSMT expression 
-system with user defined (custom) expressions.
-Here we will describe the key points of creating custom expressions.
+To extend the KSMT expression system with the user-defined expressions, try 
+[custom expression example](/examples/src/main/kotlin/CustomExpressions.kt) and follow the scenarios below:
 
-See [CustomExpressions.kt](/examples/src/main/kotlin/CustomExpressions.kt) for a complete example. 
+<!-- TOC -->
+  * [Defining expressions](#defining-expressions)
+    * [Base expression and transformer](#base-expression-and-transformer)
+    * [Defining a custom expression](#defining-a-custom-expression)
+  * [Rewriting expressions](#rewriting-expressions)
+  * [Managing expressions](#managing-expressions)
+  * [Misc: wrappers](#misc--wrappers)
+<!-- TOC -->
 
-### Expressions definition
+## Defining expressions
 
-As an example, we will consider the following custom expressions structure: 
-a base `CustomExpr` expression and two custom expressions. 
-The  `CustomAndExpr` expression  that acts like `n-ary logical and` 
-and `CustomBvAddExpr` that acts like `n-ary bvadd`.
+As an example, we consider the following expression structure:
+* `CustomExpr` — a base expression;
+* `CustomAndExpr` — a custom expression that acts like `n-ary logical and`;
+* `CustomBvAddExpr` — a custom expression that acts like `n-ary bvadd`.
 
-#### Base expression and transformer
+### Base expression and transformer
 
-The important thing is that we must not only define our new custom expression, 
-but also define an extended `KTransformer`, because KSMT transformers are 
-unaware of our custom expressions.
+We must not only define the new custom expression but also define an extended `KTransformer`, because KSMT 
+transformers are unaware of our custom expressions.
 
 ```kotlin
 interface CustomTransformer : KTransformer {
@@ -26,8 +31,8 @@ interface CustomTransformer : KTransformer {
 }
 ```
 
-For the base expression, we can override accept with our `CustomTransformer`, 
-since all of our custom expressions can only be correctly transformed  with this transformer.
+For the base expression, we override the `accept` function with our `CustomTransformer`, 
+since all our custom expressions can only be correctly transformed with this transformer.
 
 ```kotlin
 abstract class CustomExpr<T : KSort>(ctx: KContext) : KExpr<T>(ctx) {
@@ -36,10 +41,10 @@ abstract class CustomExpr<T : KSort>(ctx: KContext) : KExpr<T>(ctx) {
          * Since KSMT transformers are unaware of our custom expressions
          * we must use our own extended transformer.
          *
-         * Note: it's a good idea to throw an exception when our
-         * custom expression is visited by non our transformer,
+         * Note: it is a good idea to throw an exception when our
+         * custom expression is visited by the other transformer,
          * because this usually means that our custom expression
-         * has leaked into KSMT core and will be processed incorrectly.
+         * has leaked into the KSMT core and will be processed incorrectly.
          * */
         transformer as? CustomTransformer ?: error("Leaked custom expression")
         return accept(transformer)
@@ -49,11 +54,11 @@ abstract class CustomExpr<T : KSort>(ctx: KContext) : KExpr<T>(ctx) {
 }
 ```
 
-#### Custom expressions
+### Defining a custom expression
 
 Important notes on defining custom expressions are provided as comments in the examples.
-Also, see [expression management](#expressions-management) for the details about `equals`, `hashCode`, 
-`internEquals` and `internHashCode`.
+See [expression management](#expression-management) for details about `equals`, `hashCode`, 
+`internEquals`, and `internHashCode`.
 
 ```kotlin
 class CustomAndExpr(
@@ -65,7 +70,7 @@ class CustomAndExpr(
 
     /**
      * Expression printer, suitable for deeply nested expressions.
-     * Mainly used in toString.
+     * Mainly used in `toString`.
      * */
     override fun print(printer: ExpressionPrinter) {
         printer.append("(customAnd")
@@ -73,7 +78,7 @@ class CustomAndExpr(
             printer.append(" ")
 
             /**
-             * Note the use of append with KExpr argument.
+             * Note the use of `append` with `KExpr` argument.
              * */
             printer.append(it)
         }
@@ -81,23 +86,23 @@ class CustomAndExpr(
     }
 
     /**
-     * Analogues of equals and hashCode.
+     * Analogues of `equals` and `hashCode`.
      * */
     override fun internHashCode(): Int = hash(args)
 
     /**
-     * Note the use of [structurallyEqual] utility, which check
-     * that types are the same and all fields specified in `{ }` are equal.
+     * Note the `structurallyEqual` utility checking
+     * if types are the same and all the fields specified in `{ }` are equal.
      * */
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { args }
 
     /**
      * The expression is visited by the transformer.
-     * Normally, we should invoke the corresponding transform
+     * Normally, we invoke the corresponding `transform`
      * method of the transformer and return the invocation result.
      *
-     * It is usually a bad idea to return something without transform
-     * invocation, or to invoke transform on some other expression.
+     * It is usually a bad idea to return something without `transform`
+     * invocation, or to invoke `transform` on some other expression.
      * It is better to perform any expression transformation with the
      * corresponding transformer.
      * */
@@ -137,12 +142,11 @@ class CustomBvAddExpr<T : KBvSort>(
 }
 ```
 
-### Expressions rewriting
+## Rewriting expressions 
 
-Since KSMT is unaware of our custom expressions, 
-we must ensure that the expressions that will be processed 
-by the various KSMT facilities do not contain any custom parts.
-For such purposes we can define a transformer for our custom expressions that rewrites 
+Since KSMT is unaware of custom expressions, we must ensure that the expressions to be processed 
+by the KSMT facilities do not contain custom parts.
+Regarding this, we define a transformer for the custom expressions that rewrites 
 them with the appropriate KSMT expressions.
 
 ```kotlin
@@ -150,7 +154,7 @@ class CustomExprRewriter(
     override val ctx: KContext
 ) : KNonRecursiveTransformer(ctx), CustomTransformer {
     /**
-     * Here we use [transformExprAfterTransformed] function of [KNonRecursiveTransformer]
+     * Here we use `transformExprAfterTransformed` function of `KNonRecursiveTransformer`
      * that implements bottom-up transformation (transform arguments first).
      * */
     override fun <T : KBvSort> transform(expr: CustomBvAddExpr<T>): KExpr<T> =
@@ -166,17 +170,18 @@ class CustomExprRewriter(
 
 ```
 
-Note the use of `KNonRecursiveTransformer` that allows transformation of deeply nested expressions without recursion.
+Note the `KNonRecursiveTransformer` that allows transformation of deeply nested expressions without recursion.
 
-### Expressions management
+## Managing expressions
 
-In KSMT we use expression interning and guarantee that any 
-two equal expressions are equal by reference (same object).
-We use `internEquals` and `internHashCode` as a replacement for `equals` and `hashCode`,
-and we use reference equality for the `equals` method.
-To apply interning for custom expressions you need to create an interner and ensure that
-all created expressions are managed by this interner.
-For such purposes it is convenient to define an extended context that manages all custom expressions.
+In KSMT, we use expression interning and guarantee that two of equal expressions are _equal by reference_ (i.e., are 
+the same object).
+
+We use `internEquals` and `internHashCode` to replace `equals` and `hashCode`,
+and we use _reference equality_ for the `equals` method.
+
+To apply interning for custom expressions, you need to create an _interner_ and ensure that it manages all the created 
+expressions. For this purpose, it is convenient to define an extended context that manages all custom expressions.
 
 ```kotlin
 class CustomContext : KContext() {
@@ -184,7 +189,7 @@ class CustomContext : KContext() {
     private val customAndInterner = mkAstInterner<CustomAndExpr>()
     private val customBvInterner = mkAstInterner<CustomBvAddExpr<*>>()
 
-    // Expression builder, that performs interning of created expression
+    // Expression builder that performs interning of a created expression
     fun mkCustomAnd(args: List<KExpr<KBoolSort>>): CustomAndExpr =
         customAndInterner.createIfContextActive {
             CustomAndExpr(args, this)
@@ -193,14 +198,13 @@ class CustomContext : KContext() {
     fun <T : KBvSort> mkCustomBvAdd(args: List<KExpr<T>>): CustomBvAddExpr<T> =
         customBvInterner.createIfContextActive {
             CustomBvAddExpr(args, this)
-        }.uncheckedCast() // Unchecked cast is used here because [customBvInterner] has erased sort.
+        }.uncheckedCast() // Unchecked cast is used here because 'customBvInterner' has erased sort.
 }
 ```
 
-### Misc: wrappers
+## Misc: wrappers
 
-Since it is required to eliminate all our custom expressions 
-before interaction with any KSMT feature, 
+Since it is required to eliminate all the custom expressions before interacting with any KSMT feature, 
 it is convenient to create wrappers.
 
 For example, we can wrap `KSolver` and eliminate custom expressions on each query.
@@ -211,22 +215,22 @@ class CustomSolver<C : KSolverConfiguration>(
     private val transformer: CustomExprRewriter
 ) : KSolver<C> {
 
-    // expr can contain custom expressions -> rewrite
+    // `expr` can contain custom expressions -> rewrite
     override fun assert(expr: KExpr<KBoolSort>) =
         solver.assert(transformer.apply(expr))
 
-    // expr can contain custom expressions -> rewrite
+    // `expr` can contain custom expressions -> rewrite
     override fun assertAndTrack(expr: KExpr<KBoolSort>) =
         solver.assertAndTrack(transformer.apply(expr))
 
-    // assumptions can contain custom expressions -> rewrite
+    // `assumptions` can contain custom expressions -> rewrite
     override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus =
         solver.checkWithAssumptions(assumptions.map { transformer.apply(it) }, timeout)
 
-    // wrap model for correct handling of eval method
+    // wrap model for correct `eval` method handling
     override fun model(): KModel = CustomModel(solver.model(), transformer)
 
-    // Other methods don't suffer from custom expressions
+    // Other methods do not suffer from custom expressions
 
     override fun check(timeout: Duration): KSolverStatus =
         solver.check(timeout)
@@ -243,18 +247,18 @@ class CustomSolver<C : KSolverConfiguration>(
 }
 ```
 
-Also, we can wrap `KModel` and eliminate custom expressions before eval.
+We can wrap `KModel` and eliminate custom expressions before `eval`.
 
 ```kotlin
 class CustomModel(
     private val model: KModel,
     private val transformer: CustomExprRewriter
 ) : KModel {
-    // expr can contain custom expressions -> rewrite
+    // `expr` can contain custom expressions -> rewrite
     override fun <T : KSort> eval(expr: KExpr<T>, isComplete: Boolean): KExpr<T> =
         model.eval(transformer.apply(expr), isComplete)
 
-    // Other methods don't suffer from custom expressions
+    // Other methods do not suffer from custom expressions
 
     override val declarations: Set<KDecl<*>>
         get() = model.declarations
