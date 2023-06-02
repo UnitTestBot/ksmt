@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>KSolver</title>
+    <link href="../../../images/logo-icon.svg" rel="icon" type="image/svg">
+    <script>var pathToRoot = "../../../";</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async="async"></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/jetbrains-mono.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/clipboard.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer="defer"></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/symbol-parameters-wrapper_deferred.js" defer="defer"></script>
+</head>
+<body>
+<div class="navigation-wrapper" id="navigation-wrapper">
+    <div id="leftToggler"><span class="icon-toggler"></span></div>
+    <div class="library-name">
+            <a href="../../../index.html">
+                    <span>ksmt-core</span>
+            </a>
+    </div>
+    <div>
+0.5.3    </div>
+    <div class="pull-right d-flex">
+        <button id="theme-toggle-button"><span id="theme-toggle"></span></button>
+        <div id="searchBar"></div>
+    </div>
+</div>
+<div id="container">
+    <div id="leftColumn">
+        <div id="sideMenu"></div>
+    </div>
+    <div id="main">
+<div class="main-content" id="content" pageIds="ksmt-core::io.ksmt.solver/KSolver///PointingToDeclaration//1151356786">
+  <div class="breadcrumbs"><a href="../../../index.html">ksmt-core</a><span class="delimiter">/</span><a href="../index.html">io.ksmt.solver</a><span class="delimiter">/</span><span class="current">KSolver</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span><span>KSolver</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="index.html">KSolver</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="index.html">Config</a><span class="token operator"> : </span><a href="../-k-solver-configuration/index.html">KSolverConfiguration</a><span class="token operator">&gt;</span> : <a href="https://docs.oracle.com/javase/8/docs/api/java/lang/AutoCloseable.html">AutoCloseable</a></div></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="Functions">Functions</button></div>
+    <div class="tabs-section-body">
+      <h2 class="">Functions</h2>
+      <div class="table" data-togglable="Functions"><a data-name="-2007414437%2FFunctions%2F1151356786" anchor-label="assert" id="-2007414437%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="assert.html"><span><span>assert</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2007414437%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.jvm/-jvm-name/index.html"><span class="token annotation builtin">JvmName</span></a><span class="token punctuation">(</span><span>name<span class="token operator"> = </span><span class="breakable-word"><span class="token string">&quot;assertExpr&quot;</span></span></span><wbr></wbr><span class="token punctuation">)</span></div></div><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="assert.html"><span class="token function">assert</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">expr<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-expr/index.html">KExpr</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../io.ksmt.sort/-k-bool-sort/index.html">KBoolSort</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Assert an expression into solver.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1076933881%2FFunctions%2F1151356786" anchor-label="assertAndTrack" id="-1076933881%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="assert-and-track.html"><span>assert</span><wbr></wbr><span>And</span><wbr></wbr><span><span>Track</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1076933881%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="assert-and-track.html"><span class="token function">assertAndTrack</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">expr<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-expr/index.html">KExpr</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../io.ksmt.sort/-k-bool-sort/index.html">KBoolSort</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Assert an expression into solver and track it in unsat cores.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1551800515%2FFunctions%2F1151356786" anchor-label="check" id="1551800515%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="check.html"><span><span>check</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1551800515%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.jvm/-jvm-overloads/index.html"><span class="token annotation builtin">JvmOverloads</span></a></div><div class="block"><span class="token annotation builtin">@</span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.jvm/-jvm-name/index.html"><span class="token annotation builtin">JvmName</span></a><span class="token punctuation">(</span><span>name<span class="token operator"> = </span><span class="breakable-word"><span class="token string">&quot;check&quot;</span></span></span><wbr></wbr><span class="token punctuation">)</span></div></div><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="check.html"><span class="token function">check</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">timeout<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.time/-duration/index.html">Duration</a><span class="token operator"> = </span>Duration.INFINITE</span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-k-solver-status/index.html">KSolverStatus</a></div><div class="brief "><p class="paragraph">Performs satisfiability check of currently asserted expressions.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="293221314%2FFunctions%2F1151356786" anchor-label="checkWithAssumptions" id="293221314%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="check-with-assumptions.html"><span>check</span><wbr></wbr><span>With</span><wbr></wbr><span><span>Assumptions</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="293221314%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.jvm/-jvm-overloads/index.html"><span class="token annotation builtin">JvmOverloads</span></a></div><div class="block"><span class="token annotation builtin">@</span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.jvm/-jvm-name/index.html"><span class="token annotation builtin">JvmName</span></a><span class="token punctuation">(</span><span>name<span class="token operator"> = </span><span class="breakable-word"><span class="token string">&quot;checkWithAssumptions&quot;</span></span></span><wbr></wbr><span class="token punctuation">)</span></div></div><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="check-with-assumptions.html"><span class="token function">checkWithAssumptions</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">assumptions<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../io.ksmt.expr/-k-expr/index.html">KExpr</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../io.ksmt.sort/-k-bool-sort/index.html">KBoolSort</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">timeout<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.time/-duration/index.html">Duration</a><span class="token operator"> = </span>Duration.INFINITE</span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-k-solver-status/index.html">KSolverStatus</a></div><div class="brief "><p class="paragraph">Performs satisfiability check of currently asserted expressions and provided assumptions.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="604949851%2FFunctions%2F1151356786" anchor-label="close" id="604949851%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="close.html"><span><span>close</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="604949851%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="close.html"><span class="token function">close</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Close solver and release acquired native resources.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="454122062%2FFunctions%2F1151356786" anchor-label="configure" id="454122062%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="configure.html"><span><span>configure</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="454122062%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="configure.html"><span class="token function">configure</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">configurator<span class="token operator">: </span><span class="token keyword"></span><a href="index.html">Config</a><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html">Unit</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Set solver specific options.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-780468144%2FFunctions%2F1151356786" anchor-label="interrupt" id="-780468144%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="interrupt.html"><span><span>interrupt</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-780468144%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="interrupt.html"><span class="token function">interrupt</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Cancel currently performing check-sat.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="943995210%2FFunctions%2F1151356786" anchor-label="model" id="943995210%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="model.html"><span><span>model</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="943995210%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="model.html"><span class="token function">model</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-k-model/index.html">KModel</a></div><div class="brief "><p class="paragraph">Retrieve the model for the last <a href="check.html">check</a> or <a href="check-with-assumptions.html">checkWithAssumptions</a>.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-2100332839%2FFunctions%2F1151356786" anchor-label="pop" id="-2100332839%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="pop.html"><span><span>pop</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2100332839%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.jvm/-jvm-overloads/index.html"><span class="token annotation builtin">JvmOverloads</span></a></div><div class="block"><span class="token annotation builtin">@</span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.jvm/-jvm-name/index.html"><span class="token annotation builtin">JvmName</span></a><span class="token punctuation">(</span><span>name<span class="token operator"> = </span><span class="breakable-word"><span class="token string">&quot;pop&quot;</span></span></span><wbr></wbr><span class="token punctuation">)</span></div></div><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="pop.html"><span class="token function">pop</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">n<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-u-int/index.html">UInt</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Revert solver assertions state to previously created backtracking point.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-877856115%2FFunctions%2F1151356786" anchor-label="push" id="-877856115%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="push.html"><span><span>push</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-877856115%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="push.html"><span class="token function">push</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Create a backtracking point for assertion stack.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1377399004%2FFunctions%2F1151356786" anchor-label="reasonOfUnknown" id="-1377399004%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="reason-of-unknown.html"><span>reason</span><wbr></wbr><span>Of</span><wbr></wbr><span><span>Unknown</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1377399004%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="reason-of-unknown.html"><span class="token function">reasonOfUnknown</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a></div><div class="brief "><p class="paragraph">Retrieve a brief explanation of an <a href="../-k-solver-status/-u-n-k-n-o-w-n/index.html">KSolverStatus.UNKNOWN</a> result. The format of resulting string is solver implementation dependent.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-254588185%2FFunctions%2F1151356786" anchor-label="unsatCore" id="-254588185%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="unsat-core.html"><span>unsat</span><wbr></wbr><span><span>Core</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-254588185%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">fun </span><a href="unsat-core.html"><span class="token function">unsatCore</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../io.ksmt.expr/-k-expr/index.html">KExpr</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../io.ksmt.sort/-k-bool-sort/index.html">KBoolSort</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Retrieve the unsat core for the last <a href="check.html">check</a> or <a href="check-with-assumptions.html">checkWithAssumptions</a>.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      <div class="footer">
+        <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2023 Copyright</span><span
+                class="pull-right"><span>Generated by </span><a
+                href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
+      </div>
+    </div>
+</div>
+</body>
+</html>
