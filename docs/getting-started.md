@@ -1,8 +1,12 @@
+---
+layout: default
+title: Getting started
+---
 # Getting started
 
-For your first steps with KSMT, try our [code examples](/examples).
+For your first steps with KSMT, try our [code examples](https://github.com/UnitTestBot/ksmt/tree/main/examples).
 
-To check OS compatibility, see [Supported solvers and theories](../README.md#supported-solvers-and-theories).
+To check OS compatibility, see [Supported solvers and theories](https://ksmt.io/#supported-solvers-and-theories).
 
 Find basic instructions to get use of KSMT:
 
@@ -11,7 +15,7 @@ Find basic instructions to get use of KSMT:
 * [Usage](#usage)
     * [Working with SMT formulas](#working-with-smt-formulas)
     * [Working with SMT solvers](#working-with-smt-solvers)
-    * [Incremental solving: API](#incremental-solving--api)
+    * [Incremental solving: API](#incremental-solving-api)
         * [Incremental solving with push/pop operations](#incremental-solving-with-pushpop-operations)
         * [Incremental solving with assumptions](#incremental-solving-with-assumptions)
     * [Solver unsatisfiable cores](#solver-unsatisfiable-cores)

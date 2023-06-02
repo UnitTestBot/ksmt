@@ -1,7 +1,11 @@
+---
+layout: default
+title: Custom expressions
+---
 # Usage scenario: custom expressions
 
 To extend the KSMT expression system with the user-defined expressions, try 
-[custom expression example](/examples/src/main/kotlin/CustomExpressions.kt) and follow the scenarios below:
+[custom expression example](https://github.com/UnitTestBot/ksmt/tree/main/examples/src/main/kotlin/CustomExpressions.kt) and follow the scenarios below:
 
 <!-- TOC -->
   * [Defining expressions](#defining-expressions)
