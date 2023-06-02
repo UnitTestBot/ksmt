@@ -4,7 +4,7 @@ Meet the unified Kotlin/Java API for various SMT solvers.
 
 Get the most out of SMT solving with KSMT features:
 * Supporting more [solvers and theories](#supported-solvers-and-theories) — for all popular operating systems
-* Easy-to-use [DSL](#kotlin-based-dsl-for-smt-formulas) for representing SMT formulas in a solver-independent way
+* [Solver-agnostic formula representation](#solver-agnostic-formula-representation) and easy-to-use [DSL](#kotlin-based-dsl-for-smt-formulas)
 * Utilities to [simplify and transform](#utilities-to-simplify-and-transform-expressions) your expressions
 * Switching between solvers and support for [portfolio mode](#using-multiple-solvers--portfolio-mode-)
 * Running solvers in a [separate process](#running-solvers-in-separate-processes) to reduce timeout-related crashes
@@ -60,10 +60,21 @@ You can also use SMT solvers across multiple theories:
 | Uninterpreted Functions | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | Arithmetic              | :heavy_check_mark: |                    | :heavy_check_mark: | :heavy_check_mark: |
 
-### Kotlin-based DSL for SMT formulas
+### Solver-agnostic formula representation
 
 Various scenarios are available for using SMT solvers: you can use a single solver to determine whether a formula is
 satisfiable, or you can apply several solvers to the same expression successively. In the latter case, you need a _solver-agnostic formula representation_.
+
+We implemented it in KSMT, so you can
+* transform expressions from the solver native representation to KSMT representation and vice versa,
+* use _formula introspection_,
+* manipulate expressions without involving a solver,
+* use expressions even if the solver is freed.
+
+Expression interning (hash consing) affords faster expression comparison: we do not need to compare the expression
+trees. Expressions are deduplicated, so we avoid redundant memory allocation.
+
+### Kotlin-based DSL for SMT formulas
 
 KSMT provides you with a unified DSL for SMT expressions:
 
@@ -75,14 +86,6 @@ val value by intSort
 val expr = (array.select(index - 1.expr) lt value) and
         (array.select(index + 1.expr) gt value)
 ```
-
-With this DSL, you can
-* transform expressions from the solver native representation to KSMT representation and vice versa,
-* use _formula introspection_,
-* use expressions even if the solver is freed.
-
-Expression interning (hash consing) affords faster expression comparison: we do not need to compare the expression
-trees. Expressions are deduplicated, so we avoid redundant memory allocation.
 
 ### Utilities to simplify and transform expressions
 
