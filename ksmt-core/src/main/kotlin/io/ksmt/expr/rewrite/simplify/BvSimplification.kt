@@ -207,14 +207,14 @@ fun <T : KBvSort> KContext.simplifyBvMulNoOverflowExpr(
     isSigned: Boolean
 ): KExpr<KBoolSort> {
     if (lhs is KBitVecValue<T> && rhs is KBitVecValue<T>) {
-        return rewriteBvMulNoOverflowExpr(lhs, rhs, isSigned, ::mkBvMulNoOverflowExprNoSimplify)
+        return rewriteBvMulNoOverflowExpr(lhs, rhs, isSigned)
     }
     return mkBvMulNoOverflowExprNoSimplify(lhs, rhs, isSigned)
 }
 
 fun <T : KBvSort> KContext.simplifyBvMulNoUnderflowExpr(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> {
     if (lhs is KBitVecValue<T> && rhs is KBitVecValue<T>) {
-        return rewriteBvMulNoUnderflowExpr(lhs, rhs, ::mkBvMulNoUnderflowExprNoSimplify)
+        return rewriteBvMulNoUnderflowExpr(lhs, rhs)
     }
     return mkBvMulNoUnderflowExprNoSimplify(lhs, rhs)
 }

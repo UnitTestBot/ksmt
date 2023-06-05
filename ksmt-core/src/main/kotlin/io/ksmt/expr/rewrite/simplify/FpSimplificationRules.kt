@@ -71,7 +71,7 @@ inline fun <T : KFpSort> KContext.simplifyFpAddExprLight(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
     cont: (KExpr<KFpRoundingModeSort>, KExpr<T>, KExpr<T>) -> KExpr<T>
-): KExpr<T> = evalBinaryOpOr(roundingMode, lhs, rhs, FpUtils::fpAdd) {
+): KExpr<T> = evalBinaryOp(roundingMode, lhs, rhs, FpUtils::fpAdd) {
     cont(roundingMode, lhs, rhs)
 }
 
@@ -89,7 +89,7 @@ inline fun <T : KFpSort> KContext.simplifyFpMulExprLight(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
     cont: (KExpr<KFpRoundingModeSort>, KExpr<T>, KExpr<T>) -> KExpr<T>
-): KExpr<T> = evalBinaryOpOr(roundingMode, lhs, rhs, FpUtils::fpMul) {
+): KExpr<T> = evalBinaryOp(roundingMode, lhs, rhs, FpUtils::fpMul) {
     cont(roundingMode, lhs, rhs)
 }
 
@@ -98,7 +98,7 @@ inline fun <T : KFpSort> KContext.simplifyFpDivExprLight(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
     cont: (KExpr<KFpRoundingModeSort>, KExpr<T>, KExpr<T>) -> KExpr<T>
-): KExpr<T> = evalBinaryOpOr(roundingMode, lhs, rhs, FpUtils::fpDiv) {
+): KExpr<T> = evalBinaryOp(roundingMode, lhs, rhs, FpUtils::fpDiv) {
     cont(roundingMode, lhs, rhs)
 }
 
@@ -411,16 +411,16 @@ inline fun <T : KFpSort> KContext.evalFpPredicateOr(
     return cont(value)
 }
 
-inline fun <T : KFpSort> evalBinaryOpOr(
+inline fun <T : KFpSort> evalBinaryOp(
     roundingMode: KExpr<KFpRoundingModeSort>,
     lhs: KExpr<T>,
     rhs: KExpr<T>,
     operation: (KFpRoundingMode, KFpValue<*>, KFpValue<*>) -> KFpValue<*>,
-    default: () -> KExpr<T>
+    cont: () -> KExpr<T>
 ): KExpr<T> {
     if (lhs is KFpValue<T> && rhs is KFpValue<T> && roundingMode is KFpRoundingModeExpr) {
         val result = operation(roundingMode.value, lhs, rhs)
         return result.uncheckedCast()
     }
-    return default()
+    return cont()
 }

@@ -22,7 +22,6 @@ fun <T : KArithSort> KContext.simplifyArithMul(args: List<KExpr<T>>): KExpr<T> =
 fun <T : KArithSort> KContext.simplifyArithDiv(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
     simplifyArithDivLight(lhs, rhs, KContext::simplifyArithUnaryMinus, ::mkArithDivNoSimplify)
 
-@Suppress("ForbiddenComment")
 fun <T : KArithSort> KContext.simplifyArithPower(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
     simplifyArithPowerLight(lhs, rhs, ::mkArithPowerNoSimplify)
 
