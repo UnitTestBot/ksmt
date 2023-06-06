@@ -38,6 +38,18 @@ class CheckWithAssumptionsTest {
     @Test
     fun testUnsatCoreGenerationCvc() = testUnsatCoreGeneration { KCvc5Solver(it) }
 
+    @Test
+    fun testTrivialUnsatCoreZ3() = testTrivialUnsatCore { KZ3Solver(it) }
+
+    @Test
+    fun testTrivialUnsatCoreBitwuzla() = testTrivialUnsatCore { KBitwuzlaSolver(it) }
+
+    @Test
+    fun testTrivialUnsatCoreYices() = testTrivialUnsatCore { KYicesSolver(it) }
+
+    @Test
+    fun testTrivialUnsatCoreCvc() = testTrivialUnsatCore { KCvc5Solver(it) }
+
     private fun testComplexAssumption(mkSolver: (KContext) -> KSolver<*>) = with(KContext()) {
         mkSolver(this).use { solver ->
             val a by bv32Sort
@@ -74,6 +86,17 @@ class CheckWithAssumptionsTest {
 
             assertTrue(e2 in core)
             assertTrue(e3 in core)
+        }
+    }
+
+    private fun testTrivialUnsatCore(mkSolver: (KContext) -> KSolver<*>) = with(KContext()) {
+        mkSolver(this).use { solver ->
+            val status = solver.checkWithAssumptions(listOf(falseExpr))
+            assertEquals(KSolverStatus.UNSAT, status)
+
+            val core = solver.unsatCore()
+            assertEquals(1, core.size)
+            assertTrue(falseExpr in core)
         }
     }
 }
