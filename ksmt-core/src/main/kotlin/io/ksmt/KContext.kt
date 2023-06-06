@@ -3030,7 +3030,7 @@ open class KContext(
     private val fpCustomSizeCache = mkAstInterner<KFpCustomSizeValue>()
 
     /**
-     * Creates FP16 from the [value].
+     * Create FP16 from the [value].
      *
      * Important: we suppose that [value] has biased exponent, but FP16 will be created from the unbiased one.
      * So, at first, we'll subtract [KFp16Sort.exponentShiftSize] from the [value]'s exponent,
@@ -3048,20 +3048,41 @@ open class KContext(
         }
     }
 
+    /**
+     * Create FP16 NaN value.
+     * */
     fun mkFp16NaN(): KFp16Value = mkFp16WithoutNaNCheck(Float.NaN)
     private fun mkFp16WithoutNaNCheck(value: Float): KFp16Value =
         fp16Cache.createIfContextActive { KFp16Value(this, value) }
 
+    /**
+     * Create FP32 from the [value].
+     * */
     fun mkFp32(value: Float): KFp32Value = if (value.isNaN()) mkFp32NaN() else mkFp32WithoutNaNCheck(value)
+
+    /**
+     * Create FP32 NaN value.
+     * */
     fun mkFp32NaN(): KFp32Value = mkFp32WithoutNaNCheck(Float.NaN)
     private fun mkFp32WithoutNaNCheck(value: Float): KFp32Value =
         fp32Cache.createIfContextActive { KFp32Value(this, value) }
 
+    /**
+     * Create FP64 from the [value].
+     * */
     fun mkFp64(value: Double): KFp64Value = if (value.isNaN()) mkFp64NaN() else mkFp64WithoutNaNCheck(value)
+
+    /**
+     * Create FP64 NaN value.
+     * */
     fun mkFp64NaN(): KFp64Value = mkFp64WithoutNaNCheck(Double.NaN)
     private fun mkFp64WithoutNaNCheck(value: Double): KFp64Value =
         fp64Cache.createIfContextActive { KFp64Value(this, value) }
 
+    /**
+     * Create FP128 from the IEEE binary representation.
+     * Note: [biasedExponent] here is biased, i.e. unsigned.
+     * */
     fun mkFp128Biased(significand: KBitVecValue<*>, biasedExponent: KBitVecValue<*>, signBit: Boolean): KFp128Value =
         if (KFp128Value(this, significand, biasedExponent, signBit).isNaN()) {
             mkFp128NaN()
@@ -3069,6 +3090,9 @@ open class KContext(
             mkFp128BiasedWithoutNaNCheck(significand, biasedExponent, signBit)
         }
 
+    /**
+     * Create FP128 NaN value.
+     * */
     fun mkFp128NaN(): KFp128Value = mkFpNaN(mkFp128Sort()).cast()
     private fun mkFp128BiasedWithoutNaNCheck(
         significand: KBitVecValue<*>,
@@ -3079,6 +3103,10 @@ open class KContext(
         KFp128Value(this, significand, biasedExponent, signBit)
     }
 
+    /**
+     * Create FP128 from the IEEE binary representation.
+     * Note: [unbiasedExponent] here is unbiased, i.e. signed.
+     * */
     fun mkFp128(significand: KBitVecValue<*>, unbiasedExponent: KBitVecValue<*>, signBit: Boolean): KFp128Value =
         mkFp128Biased(
             significand = significand,
@@ -3086,6 +3114,10 @@ open class KContext(
             signBit = signBit
         )
 
+    /**
+     * Create FP128 from the IEEE binary representation.
+     * Note: [unbiasedExponent] here is unbiased, i.e. signed.
+     * */
     fun mkFp128(significand: Long, unbiasedExponent: Long, signBit: Boolean): KFp128Value =
         mkFp128(
             significand = mkBvUnsigned(significand, KFp128Sort.significandBits - 1u),
@@ -3100,7 +3132,7 @@ open class KContext(
         get() = mkFp64(this)
 
     /**
-     * Creates FP with a custom size.
+     * Create FP with a custom size from the IEEE binary representation.
      * Important: [unbiasedExponent] here is an **unbiased** value.
      */
     fun <T : KFpSort> mkFpCustomSize(
@@ -3140,7 +3172,7 @@ open class KContext(
     }
 
     /**
-     * Creates FP with a custom size.
+     * Create FP with a custom size from the IEEE binary representation.
      * Important: [biasedExponent] here is an **biased** value.
      */
     fun <T : KFpSort> mkFpCustomSizeBiased(
@@ -3224,6 +3256,10 @@ open class KContext(
         }
     }
 
+    /**
+     * Create FP with a custom size from the IEEE binary representation.
+     * Important: [unbiasedExponent] here is an **unbiased** value.
+     */
     fun <T : KFpSort> mkFpCustomSize(
         unbiasedExponent: KBitVecValue<out KBvSort>,
         significand: KBitVecValue<out KBvSort>,
@@ -3421,7 +3457,7 @@ open class KContext(
     )
 
     /**
-     * Special Fp values
+     * Create Fp zero value with [signBit] sign.
      * */
     @Suppress("MagicNumber")
     fun <T : KFpSort> mkFpZero(signBit: Boolean, sort: T): KFpValue<T> = when (sort) {
@@ -3437,6 +3473,9 @@ open class KContext(
         )
     }
 
+    /**
+     * Create Fp Inf value with [signBit] sign.
+     * */
     fun <T : KFpSort> mkFpInf(signBit: Boolean, sort: T): KFpValue<T> = when (sort) {
         is KFp16Sort -> mkFp16(if (signBit) Float.NEGATIVE_INFINITY else Float.POSITIVE_INFINITY).cast()
         is KFp32Sort -> mkFp32(if (signBit) Float.NEGATIVE_INFINITY else Float.POSITIVE_INFINITY).cast()
@@ -3450,6 +3489,9 @@ open class KContext(
         )
     }
 
+    /**
+     * Create Fp NaN value.
+     * */
     fun <T : KFpSort> mkFpNaN(sort: T): KFpValue<T> = when (sort) {
         is KFp16Sort -> mkFp16NaN().cast()
         is KFp32Sort -> mkFp32NaN().cast()
@@ -3464,6 +3506,11 @@ open class KContext(
 
     private val roundingModeCache = mkAstInterner<KFpRoundingModeExpr>()
 
+    /**
+     * Create Fp rounding mode.
+     *
+     * @see [KFpRoundingMode]
+     * */
     fun mkFpRoundingModeExpr(
         value: KFpRoundingMode
     ): KFpRoundingModeExpr = roundingModeCache.createIfContextActive {
@@ -3472,9 +3519,15 @@ open class KContext(
 
     private val fpAbsExprCache = mkAstInterner<KFpAbsExpr<out KFpSort>>()
 
+    /**
+     * Create Fp absolute value (`fp.abs`) expression.
+     * */
     open fun <T : KFpSort> mkFpAbsExpr(value: KExpr<T>): KExpr<T> =
         mkSimplified(value, KContext::simplifyFpAbsExpr, ::mkFpAbsExprNoSimplify)
 
+    /**
+     * Create Fp absolute value (`fp.abs`) expression.
+     * */
     open fun <T : KFpSort> mkFpAbsExprNoSimplify(
         value: KExpr<T>
     ): KFpAbsExpr<T> = fpAbsExprCache.createIfContextActive {
@@ -3484,9 +3537,15 @@ open class KContext(
 
     private val fpNegationExprCache = mkAstInterner<KFpNegationExpr<out KFpSort>>()
 
+    /**
+     * Create Fp negation (`fp.neg`) expression.
+     * */
     open fun <T : KFpSort> mkFpNegationExpr(value: KExpr<T>): KExpr<T> =
         mkSimplified(value, KContext::simplifyFpNegationExpr, ::mkFpNegationExprNoSimplify)
 
+    /**
+     * Create Fp negation (`fp.neg`) expression.
+     * */
     open fun <T : KFpSort> mkFpNegationExprNoSimplify(
         value: KExpr<T>
     ): KFpNegationExpr<T> = fpNegationExprCache.createIfContextActive {
@@ -3496,11 +3555,19 @@ open class KContext(
 
     private val fpAddExprCache = mkAstInterner<KFpAddExpr<out KFpSort>>()
 
+    /**
+     * Create Fp addition (`fp.add`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpAddExpr(
         roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<T>, arg1: KExpr<T>
     ): KExpr<T> =
         mkSimplified(roundingMode, arg0, arg1, KContext::simplifyFpAddExpr, ::mkFpAddExprNoSimplify)
 
+    /**
+     * Create Fp addition (`fp.add`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpAddExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
@@ -3512,11 +3579,19 @@ open class KContext(
 
     private val fpSubExprCache = mkAstInterner<KFpSubExpr<out KFpSort>>()
 
+    /**
+     * Create Fp subtraction (`fp.sub`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpSubExpr(
         roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<T>, arg1: KExpr<T>
     ): KExpr<T> =
         mkSimplified(roundingMode, arg0, arg1, KContext::simplifyFpSubExpr, ::mkFpSubExprNoSimplify)
 
+    /**
+     * Create Fp subtraction (`fp.sub`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpSubExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
@@ -3528,11 +3603,19 @@ open class KContext(
 
     private val fpMulExprCache = mkAstInterner<KFpMulExpr<out KFpSort>>()
 
+    /**
+     * Create Fp multiplication (`fp.mul`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpMulExpr(
         roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<T>, arg1: KExpr<T>
     ): KExpr<T> =
         mkSimplified(roundingMode, arg0, arg1, KContext::simplifyFpMulExpr, ::mkFpMulExprNoSimplify)
 
+    /**
+     * Create Fp multiplication (`fp.mul`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpMulExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
@@ -3544,11 +3627,19 @@ open class KContext(
 
     private val fpDivExprCache = mkAstInterner<KFpDivExpr<out KFpSort>>()
 
+    /**
+     * Create Fp division (`fp.div`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpDivExpr(
         roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<T>, arg1: KExpr<T>
     ): KExpr<T> =
         mkSimplified(roundingMode, arg0, arg1, KContext::simplifyFpDivExpr, ::mkFpDivExprNoSimplify)
 
+    /**
+     * Create Fp division (`fp.div`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpDivExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
@@ -3560,6 +3651,11 @@ open class KContext(
 
     private val fpFusedMulAddExprCache = mkAstInterner<KFpFusedMulAddExpr<out KFpSort>>()
 
+    /**
+     * Create Fp fused multiplication and addition (`fp.fma`) expression.
+     * Computes ([arg0] * [arg1]) + [arg2].
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpFusedMulAddExpr(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
@@ -3574,6 +3670,12 @@ open class KContext(
         ::mkFpFusedMulAddExprNoSimplify
     )
 
+
+    /**
+     * Create Fp fused multiplication and addition (`fp.fma`) expression.
+     * Computes ([arg0] * [arg1]) + [arg2].
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpFusedMulAddExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
@@ -3586,9 +3688,17 @@ open class KContext(
 
     private val fpSqrtExprCache = mkAstInterner<KFpSqrtExpr<out KFpSort>>()
 
+    /**
+     * Create Fp square root (`fp.sqrt`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpSqrtExpr(roundingMode: KExpr<KFpRoundingModeSort>, value: KExpr<T>): KExpr<T> =
         mkSimplified(roundingMode, value, KContext::simplifyFpSqrtExpr, ::mkFpSqrtExprNoSimplify)
 
+    /**
+     * Create Fp square root (`fp.sqrt`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpSqrtExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<T>
@@ -3599,9 +3709,15 @@ open class KContext(
 
     private val fpRemExprCache = mkAstInterner<KFpRemExpr<out KFpSort>>()
 
+    /**
+     * Create Fp IEEE remainder (`fp.IEEERem`) expression.
+     * */
     open fun <T : KFpSort> mkFpRemExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyFpRemExpr, ::mkFpRemExprNoSimplify)
 
+    /**
+     * Create Fp IEEE remainder (`fp.IEEERem`) expression.
+     * */
     open fun <T : KFpSort> mkFpRemExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpRemExpr<T> =
         fpRemExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -3610,11 +3726,19 @@ open class KContext(
 
     private val fpRoundToIntegralExprCache = mkAstInterner<KFpRoundToIntegralExpr<out KFpSort>>()
 
+    /**
+     * Create Fp round to integral (`fp.roundToIntegral`) expression.
+     * The rounding is performed according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpRoundToIntegralExpr(
         roundingMode: KExpr<KFpRoundingModeSort>, value: KExpr<T>
     ): KExpr<T> =
         mkSimplified(roundingMode, value, KContext::simplifyFpRoundToIntegralExpr, ::mkFpRoundToIntegralExprNoSimplify)
 
+    /**
+     * Create Fp round to integral (`fp.roundToIntegral`) expression.
+     * The rounding is performed according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpRoundToIntegralExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<T>
@@ -3625,9 +3749,15 @@ open class KContext(
 
     private val fpMinExprCache = mkAstInterner<KFpMinExpr<out KFpSort>>()
 
+    /**
+     * Create Fp minimum (`fp.min`) expression.
+     * */
     open fun <T : KFpSort> mkFpMinExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyFpMinExpr, ::mkFpMinExprNoSimplify)
 
+    /**
+     * Create Fp minimum (`fp.min`) expression.
+     * */
     open fun <T : KFpSort> mkFpMinExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpMinExpr<T> =
         fpMinExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -3636,9 +3766,15 @@ open class KContext(
 
     private val fpMaxExprCache = mkAstInterner<KFpMaxExpr<out KFpSort>>()
 
+    /**
+     * Create Fp maximum (`fp.max`) expression.
+     * */
     open fun <T : KFpSort> mkFpMaxExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyFpMaxExpr, ::mkFpMaxExprNoSimplify)
 
+    /**
+     * Create Fp maximum (`fp.max`) expression.
+     * */
     open fun <T : KFpSort> mkFpMaxExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpMaxExpr<T> =
         fpMaxExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -3647,9 +3783,15 @@ open class KContext(
 
     private val fpLessOrEqualExprCache = mkAstInterner<KFpLessOrEqualExpr<out KFpSort>>()
 
+    /**
+     * Create Fp less-or-equal comparison (`fp.leq`) expression.
+     * */
     open fun <T : KFpSort> mkFpLessOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyFpLessOrEqualExpr, ::mkFpLessOrEqualExprNoSimplify)
 
+    /**
+     * Create Fp less-or-equal comparison (`fp.leq`) expression.
+     * */
     open fun <T : KFpSort> mkFpLessOrEqualExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpLessOrEqualExpr<T> =
         fpLessOrEqualExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -3658,9 +3800,15 @@ open class KContext(
 
     private val fpLessExprCache = mkAstInterner<KFpLessExpr<out KFpSort>>()
 
+    /**
+     * Create Fp less comparison (`fp.lt`) expression.
+     * */
     open fun <T : KFpSort> mkFpLessExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyFpLessExpr, ::mkFpLessExprNoSimplify)
 
+    /**
+     * Create Fp less comparison (`fp.lt`) expression.
+     * */
     open fun <T : KFpSort> mkFpLessExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpLessExpr<T> =
         fpLessExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -3669,9 +3817,15 @@ open class KContext(
 
     private val fpGreaterOrEqualExprCache = mkAstInterner<KFpGreaterOrEqualExpr<out KFpSort>>()
 
+    /**
+     * Create Fp greater-or-equal comparison (`fp.geq`) expression.
+     * */
     open fun <T : KFpSort> mkFpGreaterOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyFpGreaterOrEqualExpr, ::mkFpGreaterOrEqualExprNoSimplify)
 
+    /**
+     * Create Fp greater-or-equal comparison (`fp.geq`) expression.
+     * */
     open fun <T : KFpSort> mkFpGreaterOrEqualExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpGreaterOrEqualExpr<T> =
         fpGreaterOrEqualExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -3680,9 +3834,15 @@ open class KContext(
 
     private val fpGreaterExprCache = mkAstInterner<KFpGreaterExpr<out KFpSort>>()
 
+    /**
+     * Create Fp greater comparison (`fp.gt`) expression.
+     * */
     open fun <T : KFpSort> mkFpGreaterExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyFpGreaterExpr, ::mkFpGreaterExprNoSimplify)
 
+    /**
+     * Create Fp greater comparison (`fp.gt`) expression.
+     * */
     open fun <T : KFpSort> mkFpGreaterExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpGreaterExpr<T> =
         fpGreaterExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -3691,9 +3851,21 @@ open class KContext(
 
     private val fpEqualExprCache = mkAstInterner<KFpEqualExpr<out KFpSort>>()
 
+    /**
+     * Create Fp equality comparison (`fp.eq`) expression.
+     * Checks arguments equality using IEEE 754-2008 rules.
+     *
+     * @see [mkEq] for smt equality.
+     * */
     open fun <T : KFpSort> mkFpEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyFpEqualExpr, ::mkFpEqualExprNoSimplify)
 
+    /**
+     * Create Fp equality comparison (`fp.eq`) expression.
+     * Checks arguments equality using IEEE 754-2008 rules.
+     *
+     * @see [mkEq] for smt equality.
+     * */
     open fun <T : KFpSort> mkFpEqualExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpEqualExpr<T> =
         fpEqualExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -3702,9 +3874,15 @@ open class KContext(
 
     private val fpIsNormalExprCache = mkAstInterner<KFpIsNormalExpr<out KFpSort>>()
 
+    /**
+     * Create Fp is-normal check (`fp.isNormal`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsNormalExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsNormalExpr, ::mkFpIsNormalExprNoSimplify)
 
+    /**
+     * Create Fp is-normal check (`fp.isNormal`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsNormalExprNoSimplify(value: KExpr<T>): KFpIsNormalExpr<T> =
         fpIsNormalExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -3713,9 +3891,15 @@ open class KContext(
 
     private val fpIsSubnormalExprCache = mkAstInterner<KFpIsSubnormalExpr<out KFpSort>>()
 
+    /**
+     * Create Fp is-subnormal check (`fp.isSubnormal`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsSubnormalExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsSubnormalExpr, ::mkFpIsSubnormalExprNoSimplify)
 
+    /**
+     * Create Fp is-subnormal check (`fp.isSubnormal`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsSubnormalExprNoSimplify(value: KExpr<T>): KFpIsSubnormalExpr<T> =
         fpIsSubnormalExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -3724,9 +3908,15 @@ open class KContext(
 
     private val fpIsZeroExprCache = mkAstInterner<KFpIsZeroExpr<out KFpSort>>()
 
+    /**
+     * Create Fp is-zero check (`fp.isZero`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsZeroExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsZeroExpr, ::mkFpIsZeroExprNoSimplify)
 
+    /**
+     * Create Fp is-zero check (`fp.isZero`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsZeroExprNoSimplify(value: KExpr<T>): KFpIsZeroExpr<T> =
         fpIsZeroExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -3735,9 +3925,15 @@ open class KContext(
 
     private val fpIsInfiniteExprCache = mkAstInterner<KFpIsInfiniteExpr<out KFpSort>>()
 
+    /**
+     * Create Fp is-inf check (`fp.isInfinite`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsInfiniteExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsInfiniteExpr, ::mkFpIsInfiniteExprNoSimplify)
 
+    /**
+     * Create Fp is-inf check (`fp.isInfinite`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsInfiniteExprNoSimplify(value: KExpr<T>): KFpIsInfiniteExpr<T> =
         fpIsInfiniteExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -3746,9 +3942,15 @@ open class KContext(
 
     private val fpIsNaNExprCache = mkAstInterner<KFpIsNaNExpr<out KFpSort>>()
 
+    /**
+     * Create Fp is-nan check (`fp.isNaN`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsNaNExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsNaNExpr, ::mkFpIsNaNExprNoSimplify)
 
+    /**
+     * Create Fp is-nan check (`fp.isNaN`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsNaNExprNoSimplify(value: KExpr<T>): KFpIsNaNExpr<T> =
         fpIsNaNExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -3757,9 +3959,15 @@ open class KContext(
 
     private val fpIsNegativeExprCache = mkAstInterner<KFpIsNegativeExpr<out KFpSort>>()
 
+    /**
+     * Create Fp is-negative check (`fp.isNegative`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsNegativeExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsNegativeExpr, ::mkFpIsNegativeExprNoSimplify)
 
+    /**
+     * Create Fp is-negative check (`fp.isNegative`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsNegativeExprNoSimplify(value: KExpr<T>): KFpIsNegativeExpr<T> =
         fpIsNegativeExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -3768,9 +3976,15 @@ open class KContext(
 
     private val fpIsPositiveExprCache = mkAstInterner<KFpIsPositiveExpr<out KFpSort>>()
 
+    /**
+     * Create Fp is-positive check (`fp.isPositive`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsPositiveExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsPositiveExpr, ::mkFpIsPositiveExprNoSimplify)
 
+    /**
+     * Create Fp is-positive check (`fp.isPositive`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsPositiveExprNoSimplify(value: KExpr<T>): KFpIsPositiveExpr<T> =
         fpIsPositiveExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -3779,6 +3993,12 @@ open class KContext(
 
     private val fpToBvExprCache = mkAstInterner<KFpToBvExpr<out KFpSort>>()
 
+    /**
+     * Create Fp to BitVec conversion (`fp.to_sbv`, `fp.to_ubv`) expression.
+     * Provided Fp [value] is rounded to the nearest integral according to the [roundingMode].
+     *
+     * @see [mkFpToIEEEBvExpr] for binary conversion.
+     * */
     open fun <T : KFpSort> mkFpToBvExpr(
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<T>,
@@ -3787,6 +4007,12 @@ open class KContext(
     ): KExpr<KBvSort> =
         mkSimplified(roundingMode, value, bvSize, isSigned, KContext::simplifyFpToBvExpr, ::mkFpToBvExprNoSimplify)
 
+    /**
+     * Create Fp to BitVec conversion (`fp.to_sbv`, `fp.to_ubv`) expression.
+     * Provided Fp [value] is rounded to the nearest integral according to the [roundingMode].
+     *
+     * @see [mkFpToIEEEBvExpr] for binary conversion.
+     * */
     open fun <T : KFpSort> mkFpToBvExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<T>,
@@ -3799,9 +4025,15 @@ open class KContext(
 
     private val fpToRealExprCache = mkAstInterner<KFpToRealExpr<out KFpSort>>()
 
+    /**
+     * Create Fp to Real conversion (`fp.to_real`) expression.
+     * */
     open fun <T : KFpSort> mkFpToRealExpr(value: KExpr<T>): KExpr<KRealSort> =
         mkSimplified(value, KContext::simplifyFpToRealExpr, ::mkFpToRealExprNoSimplify)
 
+    /**
+     * Create Fp to Real conversion (`fp.to_real`) expression.
+     * */
     open fun <T : KFpSort> mkFpToRealExprNoSimplify(value: KExpr<T>): KFpToRealExpr<T> =
         fpToRealExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -3810,9 +4042,21 @@ open class KContext(
 
     private val fpToIEEEBvExprCache = mkAstInterner<KFpToIEEEBvExpr<out KFpSort>>()
 
+    /**
+     * Create Fp to IEEE BitVec conversion expression.
+     * Converts Fp value to the corresponding IEEE 754-2008 binary format.
+     *
+     * Note: conversion is unspecified for NaN values.
+     * */
     open fun <T : KFpSort> mkFpToIEEEBvExpr(value: KExpr<T>): KExpr<KBvSort> =
         mkSimplified(value, KContext::simplifyFpToIEEEBvExpr, ::mkFpToIEEEBvExprNoSimplify)
 
+    /**
+     * Create Fp to IEEE BitVec conversion expression.
+     * Converts Fp value to the corresponding IEEE 754-2008 binary format.
+     *
+     * Note: conversion is unspecified for NaN values.
+     * */
     open fun <T : KFpSort> mkFpToIEEEBvExprNoSimplify(value: KExpr<T>): KFpToIEEEBvExpr<T> =
         fpToIEEEBvExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -3821,6 +4065,9 @@ open class KContext(
 
     private val fpFromBvExprCache = mkAstInterner<KFpFromBvExpr<out KFpSort>>()
 
+    /**
+     * Create Fp from IEEE BitVec expressions.
+     * */
     open fun <T : KFpSort> mkFpFromBvExpr(
         sign: KExpr<KBv1Sort>,
         biasedExponent: KExpr<out KBvSort>,
@@ -3833,6 +4080,9 @@ open class KContext(
         ::mkFpFromBvExprNoSimplify
     )
 
+    /**
+     * Create Fp from IEEE BitVec expressions.
+     * */
     open fun <T : KFpSort> mkFpFromBvExprNoSimplify(
         sign: KExpr<KBv1Sort>,
         biasedExponent: KExpr<out KBvSort>,
@@ -3852,12 +4102,20 @@ open class KContext(
     private val realToFpExprCache = mkAstInterner<KRealToFpExpr<out KFpSort>>()
     private val bvToFpExprCache = mkAstInterner<KBvToFpExpr<out KFpSort>>()
 
+    /**
+     * Create Fp to another Fp.
+     * Rounding is performed according to the [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpToFpExpr(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<out KFpSort>
     ): KExpr<T> = mkSimplified(sort, roundingMode, value, KContext::simplifyFpToFpExpr, ::mkFpToFpExprNoSimplify)
 
+    /**
+     * Create Fp to another Fp.
+     * Rounding is performed according to the [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpToFpExprNoSimplify(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
@@ -3867,12 +4125,20 @@ open class KContext(
         KFpToFpExpr(this, sort, roundingMode, value)
     }.cast()
 
+    /**
+     * Create Fp from Real expression.
+     * Rounding is performed according to the [roundingMode].
+     * */
     open fun <T : KFpSort> mkRealToFpExpr(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<KRealSort>
     ): KExpr<T> = mkSimplified(sort, roundingMode, value, KContext::simplifyRealToFpExpr, ::mkRealToFpExprNoSimplify)
 
+    /**
+     * Create Fp from Real expression.
+     * Rounding is performed according to the [roundingMode].
+     * */
     open fun <T : KFpSort> mkRealToFpExprNoSimplify(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
@@ -3882,6 +4148,12 @@ open class KContext(
         KRealToFpExpr(this, sort, roundingMode, value)
     }.cast()
 
+    /**
+     * Create Fp from BitVec value.
+     * Rounding is performed according to the [roundingMode].
+     *
+     * @see [mkFpFromBvExpr] for IEEE binary conversion.
+     * */
     open fun <T : KFpSort> mkBvToFpExpr(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
@@ -3890,6 +4162,12 @@ open class KContext(
     ): KExpr<T> =
         mkSimplified(sort, roundingMode, value, signed, KContext::simplifyBvToFpExpr, ::mkBvToFpExprNoSimplify)
 
+    /**
+     * Create Fp from BitVec value.
+     * Rounding is performed according to the [roundingMode].
+     *
+     * @see [mkFpFromBvExpr] for IEEE binary conversion.
+     * */
     open fun <T : KFpSort> mkBvToFpExprNoSimplify(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
@@ -3903,6 +4181,9 @@ open class KContext(
     // quantifiers
     private val existentialQuantifierCache = mkAstInterner<KExistentialQuantifier>()
 
+    /**
+     * Create existential quantifier (`exists`).
+     * */
     open fun mkExistentialQuantifier(body: KExpr<KBoolSort>, bounds: List<KDecl<*>>) =
         existentialQuantifierCache.createIfContextActive {
             ensureContextMatch(body)
@@ -3912,6 +4193,9 @@ open class KContext(
 
     private val universalQuantifierCache = mkAstInterner<KUniversalQuantifier>()
 
+    /**
+     * Create universal quantifier (`forall`).
+     * */
     open fun mkUniversalQuantifier(body: KExpr<KBoolSort>, bounds: List<KDecl<*>>) =
         universalQuantifierCache.createIfContextActive {
             ensureContextMatch(body)
@@ -3921,6 +4205,11 @@ open class KContext(
 
     private val uninterpretedSortValueCache = mkAstInterner<KUninterpretedSortValue>()
 
+    /**
+     * Create uninterpreted sort value.
+     *
+     * Note: uninterpreted sort values with different [valueIdx] are distinct.
+     * */
     open fun mkUninterpretedSortValue(sort: KUninterpretedSort, valueIdx: Int): KUninterpretedSortValue =
         uninterpretedSortValueCache.createIfContextActive {
             ensureContextMatch(sort)
