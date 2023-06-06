@@ -298,7 +298,9 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
     }
 
     override fun close() {
+        if (isClosed) return
         isClosed = true
+
         sorts.clear()
         bitwuzlaSorts.clear()
 
