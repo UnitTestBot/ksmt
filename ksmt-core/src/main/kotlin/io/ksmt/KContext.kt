@@ -1521,12 +1521,28 @@ open class KContext(
 
     /**
      * Create an Int/Real arithmetic division expression.
+     *
+     * Note for Int division:
+     *
+     *   when [rhs] is positive, (div [lhs] [rhs]) is the floor (round toward zero)
+     *   of the rational number [lhs]/[rhs]
+     *
+     *   when [rhs] is negative, (div [lhs] [rhs]) is the ceiling (round toward positive infinity)
+     *   of the rational number [lhs]/[rhs]
+     *
+     *   For example:
+     *    `47 div 13 = 3`
+     *    `47 div -13 = -3`
+     *    `-47 div 13 = -4`
+     *    `-47 div -13 = 4`
      * */
     open fun <T : KArithSort> mkArithDiv(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
         mkSimplified(lhs, rhs, KContext::simplifyArithDiv, ::mkArithDivNoSimplify)
 
     /**
      * Create an Int/Real arithmetic division expression.
+     *
+     * @see mkArithDiv for the operation details.
      * */
     open fun <T : KArithSort> mkArithDivNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KDivArithExpr<T> =
         arithDivCache.createIfContextActive {
@@ -1637,7 +1653,16 @@ open class KContext(
     /**
      * Create an Int mod expression.
      *
-     * todo: clarify
+     * The result value is a number `r` such that
+     * [lhs] = `r` + ([rhs] * (div [lhs] [rhs]))
+     * where `div` is an Int division that works according to the [mkArithDiv] rules.
+     * The result value is always positive or zero.
+     *
+     * For example:
+     *   `47 mod 13 = 8`
+     *   `47 mod -13 = 8`
+     *   `-47 mod 13 = 5`
+     *   `-47 mod -13 = 5`
      * */
     open fun mkIntMod(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): KExpr<KIntSort> =
         mkSimplified(lhs, rhs, KContext::simplifyIntMod, ::mkIntModNoSimplify)
@@ -1645,7 +1670,7 @@ open class KContext(
     /**
      * Create an Int mod expression.
      *
-     * @see mkIntMod
+     * @see mkIntMod for the operation details.
      * */
     open fun mkIntModNoSimplify(
         lhs: KExpr<KIntSort>,
@@ -1659,8 +1684,10 @@ open class KContext(
 
     /**
      * Create an Int rem expression.
+     * The result value is either (mod lhs rhs) when rhs >= 0 and (neg (mod lhs rhs)) otherwise.
+     * The result sign matches the [rhs] sign.
      *
-     * todo: clarify
+     * @see mkIntMod
      * */
     open fun mkIntRem(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): KExpr<KIntSort> =
         mkSimplified(lhs, rhs, KContext::simplifyIntRem, ::mkIntRemNoSimplify)
@@ -1668,7 +1695,7 @@ open class KContext(
     /**
      * Create an Int rem expression.
      *
-     * @see mkIntRem
+     * @see mkIntRem for the operation details.
      * */
     open fun mkIntRemNoSimplify(
         lhs: KExpr<KIntSort>,
@@ -2366,7 +2393,14 @@ open class KContext(
     /**
      * Create BitVec arithmetic signed reminder (`bvsrem`) expression.
      *
-     * todo: clarify
+     * Computes remainder of a `truncate` (round toward zero) division.
+     * The result sign matches the [arg0] sign.
+     *
+     * For example:
+     *  `47 bvsrem 13 = 8`
+     *  `47 bvsrem -13 = 8`
+     *  `-47 bvsrem 13 = -8`
+     *  `-47 bvsrem -13 = -8`
      *
      * @see mkBvUnsignedRemExpr for the unsigned remainder.
      * */
@@ -2375,9 +2409,7 @@ open class KContext(
 
     /**
      * Create BitVec arithmetic signed reminder (`bvsrem`) expression.
-     *
-     * todo: clarify
-     *
+     * @see [mkBvSignedRemExpr] for the operation details.
      * @see mkBvUnsignedRemExpr for the unsigned remainder.
      * */
     open fun <T : KBvSort> mkBvSignedRemExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedRemExpr<T> =
@@ -2391,15 +2423,21 @@ open class KContext(
     /**
      * Create BitVec arithmetic signed mod (`bvsmod`) expression.
      *
-     * todo: clarify
+     * Computes remainder of a `floor` (round toward negative infinity) division.
+     * The result sign matches the [arg1] sign.
+     *
+     * For example:
+     *  `47 bvsmod 13 = 8`
+     *  `47 bvsmod -13 = -5`
+     *  `-47 bvsmod 13 = 5`
+     *  `-47 bvsmod -13 = -8`
      * */
     open fun <T : KBvSort> mkBvSignedModExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSignedModExpr, ::mkBvSignedModExprNoSimplify)
 
     /**
      * Create BitVec arithmetic signed mod (`bvsmod`) expression.
-     *
-     * todo: clarify
+     * @see [mkBvSignedModExpr] for the operation details.
      * */
     open fun <T : KBvSort> mkBvSignedModExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedModExpr<T> =
         bvSignedModExprCache.createIfContextActive {
