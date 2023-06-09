@@ -80,14 +80,22 @@ class ArithSimplifyTest : ExpressionSimplifyTest() {
     @Test
     fun testIntMod() {
         testOperation(isInt = true, KContext::mkIntMod, KContext::mkIntModNoSimplify) {
-            listOf(mkIntNum(0), mkIntNum(1), mkIntNum(-1)).uncheckedCast()
+            listOf(
+                mkIntNum(0), mkIntNum(1), mkIntNum(-1),
+                // Values with non-trivial remainder
+                mkIntNum(47), mkIntNum(-47), mkIntNum(13), mkIntNum(-13),
+            ).uncheckedCast()
         }
     }
 
     @Test
     fun testIntRem() {
         testOperation(isInt = true, KContext::mkIntRem, KContext::mkIntRemNoSimplify) {
-            listOf(mkIntNum(0), mkIntNum(1), mkIntNum(-1)).uncheckedCast()
+            listOf(
+                mkIntNum(0), mkIntNum(1), mkIntNum(-1),
+                // Values with non-trivial remainder
+                mkIntNum(47), mkIntNum(-47), mkIntNum(13), mkIntNum(-13),
+            ).uncheckedCast()
         }
     }
 

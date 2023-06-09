@@ -15,7 +15,6 @@ import io.ksmt.sort.KRealSort
 import io.ksmt.utils.ArithUtils.RealValue
 import io.ksmt.utils.ArithUtils.bigIntegerValue
 import io.ksmt.utils.ArithUtils.compareTo
-import io.ksmt.utils.ArithUtils.modWithNegativeNumbers
 import io.ksmt.utils.ArithUtils.numericValue
 import io.ksmt.utils.ArithUtils.toRealValue
 import io.ksmt.utils.uncheckedCast
@@ -231,10 +230,19 @@ fun KContext.simplifyIntMod(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): KExpr<K
         }
 
         if (rValue != BigInteger.ZERO && lhs is KIntNumExpr) {
-            return mkIntNum(modWithNegativeNumbers(lhs.bigIntegerValue, rValue))
+            return mkIntNum(evalIntMod(lhs.bigIntegerValue, rValue))
         }
     }
     return mkIntModNoSimplify(lhs, rhs)
+}
+
+/**
+ * Eval integer mod wrt Int theory rules.
+ * */
+private fun evalIntMod(a: BigInteger, b: BigInteger): BigInteger {
+    val remainder = a.rem(b)
+    if (remainder >= BigInteger.ZERO) return remainder
+    return if (b >= BigInteger.ZERO) remainder + b else remainder - b
 }
 
 fun KContext.simplifyIntRem(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): KExpr<KIntSort> {
@@ -246,10 +254,18 @@ fun KContext.simplifyIntRem(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): KExpr<K
         }
 
         if (rValue != BigInteger.ZERO && lhs is KIntNumExpr) {
-            return mkIntNum(lhs.bigIntegerValue.rem(rValue))
+            return mkIntNum(evalIntRem(lhs.bigIntegerValue, rValue))
         }
     }
     return mkIntRemNoSimplify(lhs, rhs)
+}
+
+/**
+ * Eval integer rem wrt Int theory rules.
+ * */
+private fun evalIntRem(a: BigInteger, b: BigInteger): BigInteger {
+    val mod = evalIntMod(a, b)
+    return if (b >= BigInteger.ZERO) mod else -mod
 }
 
 fun KContext.simplifyIntToReal(arg: KExpr<KIntSort>): KExpr<KRealSort> {
