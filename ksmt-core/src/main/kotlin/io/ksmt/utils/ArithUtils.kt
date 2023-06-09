@@ -44,24 +44,6 @@ object ArithUtils {
             else -> decl.value.toBigInteger()
         }
 
-    /**
-     * BigInteger doesn't support mod operation with negative modulus.
-     * We use the mod operation with absolute values and then manually
-     * recover the result depending on the arguments signs.
-     * */
-    fun modWithNegativeNumbers(a: BigInteger, b: BigInteger): BigInteger {
-        val aAbs = a.abs()
-        val bAbs = b.abs()
-        val u = aAbs.mod(bAbs)
-        return when {
-            u == BigInteger.ZERO -> BigInteger.ZERO
-            a >= BigInteger.ZERO && b >= BigInteger.ZERO -> u
-            a < BigInteger.ZERO && b >= BigInteger.ZERO -> -u + b
-            a >= BigInteger.ZERO && b < BigInteger.ZERO -> u + b
-            else -> -u
-        }
-    }
-
     class RealValue private constructor(
         numerator: BigInteger,
         denominator: BigInteger
