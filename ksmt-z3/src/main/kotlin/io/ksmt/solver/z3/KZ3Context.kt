@@ -261,6 +261,7 @@ class KZ3Context(
     }
 
     override fun close() {
+        if (isClosed) return
         isClosed = true
 
         z3Expressions.keys.decRefAll()

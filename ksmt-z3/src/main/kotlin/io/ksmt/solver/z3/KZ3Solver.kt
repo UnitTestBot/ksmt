@@ -25,8 +25,12 @@ import kotlin.time.DurationUnit
 open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration> {
     private val z3Ctx = KZ3Context(ctx)
     private val solver = createSolver()
+
     private var lastCheckStatus = KSolverStatus.UNKNOWN
     private var lastReasonOfUnknown: String? = null
+    private var lastModel: KZ3Model? = null
+    private var lastUnsatCore: List<KExpr<KBoolSort>>? = null
+
     private var currentScope: UInt = 0u
 
     @Suppress("LeakingThis")
@@ -104,7 +108,20 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
         ctx.ensureContextMatch(assumptions)
 
         val z3Assumptions = with(exprInternalizer) {
-            LongArray(assumptions.size) { assumptions[it].internalizeExpr() }
+            LongArray(assumptions.size) {
+                val assumption = assumptions[it]
+
+                /**
+                 * Assumptions are trivially unsat and no check-sat is required.
+                 * */
+                if (assumption == ctx.falseExpr) {
+                    lastUnsatCore = listOf(ctx.falseExpr)
+                    lastCheckStatus = KSolverStatus.UNSAT
+                    return KSolverStatus.UNSAT
+                }
+
+                assumption.internalizeExpr()
+            }
         }
 
         solver.updateTimeout(timeout)
@@ -116,19 +133,28 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
         require(lastCheckStatus == KSolverStatus.SAT) {
             "Model are only available after SAT checks, current solver status: $lastCheckStatus"
         }
-        val model = solver.model
 
-        KZ3Model(model, ctx, z3Ctx, exprInternalizer)
+        val model = lastModel ?: KZ3Model(
+            model = solver.model,
+            ctx = ctx,
+            z3Ctx = z3Ctx,
+            internalizer = exprInternalizer
+        )
+        lastModel = model
+
+        model
     }
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = z3Try {
         require(lastCheckStatus == KSolverStatus.UNSAT) { "Unsat cores are only available after UNSAT checks" }
 
-        val unsatCore = solver.solverGetUnsatCore()
-
-        with(exprConverter) {
-            unsatCore.map { trackedAssertions.get(it) ?: it.convertExpr() }
+        val unsatCore = lastUnsatCore ?: with(exprConverter) {
+            val solverUnsatCore = solver.solverGetUnsatCore()
+            solverUnsatCore.map { trackedAssertions.get(it) ?: it.convertExpr() }
         }
+        lastUnsatCore = unsatCore
+
+        unsatCore
     }
 
     override fun reasonOfUnknown(): String = z3Try {
@@ -173,6 +199,8 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
     private fun invalidateSolverState() {
         lastReasonOfUnknown = null
         lastCheckStatus = KSolverStatus.UNKNOWN
+        lastModel = null
+        lastUnsatCore = null
     }
 
     private inline fun z3TryCheck(body: () -> KSolverStatus): KSolverStatus = try {

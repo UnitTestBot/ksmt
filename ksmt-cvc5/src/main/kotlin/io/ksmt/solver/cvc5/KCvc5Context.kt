@@ -351,6 +351,7 @@ class KCvc5Context(
 
 
     override fun close() {
+        if (isClosed) return
         isClosed = true
 
         currentScopeExpressions.clear()
