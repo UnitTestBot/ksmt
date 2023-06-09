@@ -1161,8 +1161,10 @@ open class KContext(
 
     /**
      * Create an array store expression (store [array] [index] [value]) without cache.
+     * Cache is used to speed up [mkArraySelect] operation simplification 
+     * but can result in a huge memory consumption.
      *
-     * @see [KArrayStoreBase]
+     * @see [KArrayStoreBase] for the cache details.
      * */
     open fun <D : KSort, R : KSort> mkArrayStoreNoSimplifyNoAnalyze(
         array: KExpr<KArraySort<D, R>>,
@@ -1174,9 +1176,11 @@ open class KContext(
     }.cast()
 
     /**
-     * Create an array store expression (store [array] [index0] [index1] [value]).
+     * Create an array store expression (store [array] [index0] [index1] [value]) without cache.
+     * Cache is used to speed up [mkArraySelect] operation simplification 
+     * but can result in a huge memory consumption.
      *
-     * @see [KArrayStoreBase]
+     * @see [KArrayStoreBase] for the cache details.
      * */
     open fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayStoreNoSimplifyNoAnalyze(
         array: KExpr<KArray2Sort<D0, D1, R>>,
@@ -1189,9 +1193,11 @@ open class KContext(
     }.cast()
 
     /**
-     * Create an array store expression (store [array] [index0] [index1] [index2] [value]).
+     * Create an array store expression (store [array] [index0] [index1] [index2] [value]) without cache.
+     * Cache is used to speed up [mkArraySelect] operation simplification 
+     * but can result in a huge memory consumption.
      *
-     * @see [KArrayStoreBase]
+     * @see [KArrayStoreBase] for the cache details.
      * */
     open fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayStoreNoSimplifyNoAnalyze(
         array: KExpr<KArray3Sort<D0, D1, D2, R>>,
@@ -1206,8 +1212,10 @@ open class KContext(
 
     /**
      * Create n-ary array store expression (store [array] [indices]_0 ... [indices]_n [value]) without cache.
+     * Cache is used to speed up [mkArrayNSelect] operation simplification
+     * but can result in a huge memory consumption.
      *
-     * @see [KArrayStoreBase]
+     * @see [KArrayStoreBase] for the cache details.
      * */
     open fun <R : KSort> mkArrayNStoreNoSimplifyNoAnalyze(
         array: KExpr<KArrayNSort<R>>,
@@ -1996,10 +2004,10 @@ open class KContext(
     /**
      * Create a BitVec value with [sizeBits] bit length.
      *
-     * Note: if [sizeBits] is less than 32,
+     * Note: if [sizeBits] is less than 64,
      * the last [sizeBits] bits of the [value] will be taken.
      *
-     * At the same time, if [sizeBits] is greater than 32,
+     * At the same time, if [sizeBits] is greater than 64,
      * binary representation of the [value] will be padded from the start with its sign bit.
      * */
     fun mkBv(value: Long, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
@@ -2059,13 +2067,13 @@ open class KContext(
     private fun Number.toBv(sizeBits: UInt) = mkBv(this, sizeBits)
 
     /**
-     * Create a BitVec value with [sizeBits] bit length from the given binary stirng [value].
+     * Create a BitVec value with [sizeBits] bit length from the given binary string [value].
      * */
     fun mkBv(value: String, sizeBits: UInt): KBitVecValue<KBvSort> =
         mkBv(value.toBigInteger(radix = 2), sizeBits)
 
     /**
-     * Create a BitVec value with [sizeBits] bit length from the given hex stirng [value].
+     * Create a BitVec value with [sizeBits] bit length from the given hex string [value].
      * */
     fun mkBvHex(value: String, sizeBits: UInt): KBitVecValue<KBvSort> =
         mkBv(value.toBigInteger(radix = 16), sizeBits)
@@ -2763,6 +2771,8 @@ open class KContext(
     /**
      * Create BitVec rotate left (`rotateleft`) expression.
      * The result expression is rotated left [rotation] times.
+     *
+     * @see [mkBvRotateLeftIndexedExpr] for the rotation by a known number of bits.
      * */
     open fun <T : KBvSort> mkBvRotateLeftExpr(arg: KExpr<T>, rotation: KExpr<T>): KExpr<T> =
         mkSimplified(arg, rotation, KContext::simplifyBvRotateLeftExpr, ::mkBvRotateLeftExprNoSimplify)
@@ -2770,6 +2780,8 @@ open class KContext(
     /**
      * Create BitVec rotate left (`rotateleft`) expression.
      * The result expression is rotated left [rotation] times.
+     *
+     * @see [mkBvRotateLeftIndexedExpr] for the rotation by a known number of bits.
      * */
     open fun <T : KBvSort> mkBvRotateLeftExprNoSimplify(arg: KExpr<T>, rotation: KExpr<T>): KBvRotateLeftExpr<T> =
         bvRotateLeftExprCache.createIfContextActive {
@@ -2782,6 +2794,8 @@ open class KContext(
     /**
      * Create BitVec rotate left (`rotateleft`) expression.
      * The result expression is rotated left [rotation] times.
+     *
+     * @see [mkBvRotateLeftExpr] for the rotation by a symbolic (any BitVec expression) number of bits.
      * */
     open fun <T : KBvSort> mkBvRotateLeftIndexedExpr(rotation: Int, value: KExpr<T>): KExpr<T> =
         mkSimplified(rotation, value, KContext::simplifyBvRotateLeftIndexedExpr, ::mkBvRotateLeftIndexedExprNoSimplify)
@@ -2789,6 +2803,8 @@ open class KContext(
     /**
      * Create BitVec rotate left (`rotateleft`) expression.
      * The result expression is rotated left [rotation] times.
+     *
+     * @see [mkBvRotateLeftExpr] for the rotation by a symbolic (any BitVec expression) number of bits.
      * */
     open fun <T : KBvSort> mkBvRotateLeftIndexedExprNoSimplify(
         rotation: Int, value: KExpr<T>
@@ -2803,6 +2819,8 @@ open class KContext(
     /**
      * Create BitVec rotate right (`rotateright`) expression.
      * The result expression is rotated right [rotation] times.
+     *
+     * @see [mkBvRotateRightExpr] for the rotation by a symbolic (any BitVec expression) number of bits.
      * */
     open fun <T : KBvSort> mkBvRotateRightIndexedExpr(rotation: Int, value: KExpr<T>): KExpr<T> =
         mkSimplified(
@@ -2815,6 +2833,8 @@ open class KContext(
     /**
      * Create BitVec rotate right (`rotateright`) expression.
      * The result expression is rotated right [rotation] times.
+     *
+     * @see [mkBvRotateRightExpr] for the rotation by a symbolic (any BitVec expression) number of bits.
      * */
     open fun <T : KBvSort> mkBvRotateRightIndexedExprNoSimplify(
         rotation: Int,
@@ -2830,6 +2850,8 @@ open class KContext(
     /**
      * Create BitVec rotate right (`rotateright`) expression.
      * The result expression is rotated right [rotation] times.
+     *
+     * @see [mkBvRotateRightIndexedExpr] for the rotation by a known number of bits.
      * */
     open fun <T : KBvSort> mkBvRotateRightExpr(arg: KExpr<T>, rotation: KExpr<T>): KExpr<T> =
         mkSimplified(arg, rotation, KContext::simplifyBvRotateRightExpr, ::mkBvRotateRightExprNoSimplify)
@@ -2837,6 +2859,8 @@ open class KContext(
     /**
      * Create BitVec rotate right (`rotateright`) expression.
      * The result expression is rotated right [rotation] times.
+     *
+     * @see [mkBvRotateRightIndexedExpr] for the rotation by a known number of bits.
      * */
     open fun <T : KBvSort> mkBvRotateRightExprNoSimplify(arg: KExpr<T>, rotation: KExpr<T>): KBvRotateRightExpr<T> =
         bvRotateRightExprCache.createIfContextActive {
