@@ -264,6 +264,14 @@ class KZ3Context(
         if (isClosed) return
         isClosed = true
 
+        uninterpretedSortValueInterpreter.clear()
+
+        uninterpretedSortValueDecls.keys.decRefAll()
+        uninterpretedSortValueDecls.clear()
+
+        uninterpretedSortValueInterpreters.decRefAll()
+        uninterpretedSortValueInterpreters.clear()
+
         converterNativeObjects.decRefAll()
         converterNativeObjects.clear()
 
