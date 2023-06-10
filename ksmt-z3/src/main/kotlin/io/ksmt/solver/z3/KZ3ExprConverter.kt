@@ -212,6 +212,8 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_MUL -> expr.convertList(::mkArithMul)
             Z3_decl_kind.Z3_OP_UMINUS -> expr.convert(::mkArithUnaryMinus)
             Z3_decl_kind.Z3_OP_DIV -> expr.convert(::mkArithDiv)
+            // Special case when arguments are integers
+            Z3_decl_kind.Z3_OP_IDIV -> expr.convert(::mkArithDiv)
             Z3_decl_kind.Z3_OP_POWER -> expr.convert(::mkArithPower)
             Z3_decl_kind.Z3_OP_REM -> expr.convert(::mkIntRem)
             Z3_decl_kind.Z3_OP_MOD -> expr.convert(::mkIntMod)
@@ -280,7 +282,9 @@ open class KZ3ExprConverter(
             }
             Z3_decl_kind.Z3_OP_BREDOR -> expr.convert(::mkBvReductionOrExpr)
             Z3_decl_kind.Z3_OP_BREDAND -> expr.convert(::mkBvReductionAndExpr)
-            Z3_decl_kind.Z3_OP_BCOMP -> TODO("bcomp conversion is not supported")
+            Z3_decl_kind.Z3_OP_BCOMP -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+                mkIte(arg0 eq arg1, mkBv(true), mkBv(false))
+            }
             Z3_decl_kind.Z3_OP_BSHL -> expr.convert(::mkBvShiftLeftExpr)
             Z3_decl_kind.Z3_OP_BLSHR -> expr.convert(::mkBvLogicalShiftRightExpr)
             Z3_decl_kind.Z3_OP_BASHR -> expr.convert(::mkBvArithShiftRightExpr)
