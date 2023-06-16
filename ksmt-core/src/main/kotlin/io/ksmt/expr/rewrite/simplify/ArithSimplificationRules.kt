@@ -14,7 +14,6 @@ import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRealSort
 import io.ksmt.utils.ArithUtils.bigIntegerValue
 import io.ksmt.utils.ArithUtils.compareTo
-import io.ksmt.utils.ArithUtils.modWithNegativeNumbers
 import io.ksmt.utils.ArithUtils.numericValue
 import io.ksmt.utils.ArithUtils.toRealValue
 import io.ksmt.utils.ArithUtils.RealValue
@@ -250,7 +249,7 @@ inline fun KContext.simplifyIntModLight(
         }
 
         if (rValue != BigInteger.ZERO && lhs is KIntNumExpr) {
-            return mkIntNum(modWithNegativeNumbers(lhs.bigIntegerValue, rValue))
+            return mkIntNum(evalIntMod(lhs.bigIntegerValue, rValue))
         }
     }
     return cont(lhs, rhs)
@@ -269,7 +268,7 @@ inline fun KContext.simplifyIntRemLight(
         }
 
         if (rValue != BigInteger.ZERO && lhs is KIntNumExpr) {
-            return mkIntNum(lhs.bigIntegerValue.rem(rValue))
+            return mkIntNum(evalIntRem(lhs.bigIntegerValue, rValue))
         }
     }
     return cont(lhs, rhs)
@@ -406,4 +405,21 @@ fun <T : KArithSort> KExpr<T>.toRealValue(): RealValue? = when (this) {
     is KIntNumExpr -> toRealValue()
     is KRealNumExpr -> toRealValue()
     else -> null
+}
+
+/**
+ * Eval integer mod wrt Int theory rules.
+ * */
+fun evalIntMod(a: BigInteger, b: BigInteger): BigInteger {
+    val remainder = a.rem(b)
+    if (remainder >= BigInteger.ZERO) return remainder
+    return if (b >= BigInteger.ZERO) remainder + b else remainder - b
+}
+
+/**
+ * Eval integer rem wrt Int theory rules.
+ * */
+fun evalIntRem(a: BigInteger, b: BigInteger): BigInteger {
+    val mod = evalIntMod(a, b)
+    return if (b >= BigInteger.ZERO) mod else -mod
 }

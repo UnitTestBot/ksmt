@@ -1415,24 +1415,86 @@ inline fun <T : KBvSort> KContext.rewriteBvAddNoUnderflowExpr(
     return rewriteImplies(rewriteAnd(aLtZero, bLtZero), sumLtZero)
 }
 
+@Suppress("LongParameterList")
 fun <T : KBvSort> KContext.rewriteBvMulNoOverflowExpr(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
     isSigned: Boolean,
+    rewriteBvZeroExtensionExpr: KContext.(Int, KExpr<T>) -> KExpr<KBvSort> = KContext::mkBvZeroExtensionExpr,
+    rewriteBvExtractExpr: KContext.(Int, Int, KExpr<KBvSort>) -> KExpr<KBvSort> = KContext::mkBvExtractExpr,
+    rewriteBvConcatExpr: KContext.(KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBvSort> = KContext::mkBvConcatExpr,
+    rewriteBvMulExpr: KContext.(KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBvSort> = KContext::mkBvMulExpr,
+    rewriteBvXorExpr: KContext.(KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBvSort> = KContext::mkBvXorExpr,
+    rewriteBvEq: KContext.(KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBoolSort> = { l, r -> mkEq(l, r) },
+    rewriteBvNotExpr: KContext.(KExpr<T>) -> KExpr<T> = KContext::mkBvNotExpr,
+    rewriteOr: KContext.(KExpr<KBoolSort>, KExpr<KBoolSort>, Boolean, Boolean) -> KExpr<KBoolSort> = KContext::mkOr,
+    rewriteFlatOr: KContext.(List<KExpr<KBoolSort>>) -> KExpr<KBoolSort> = { mkOr(it) },
+    rewriteAnd: KContext.(KExpr<KBoolSort>, KExpr<KBoolSort>) -> KExpr<KBoolSort> = { l, r -> mkAnd(l, r) },
+    rewriteNot: KContext.(KExpr<KBoolSort>) -> KExpr<KBoolSort> = KContext::mkNot
 ): KExpr<KBoolSort> = if (isSigned) {
     trySimplifyBvSignedMulNoOverflow(lhs, rhs, isOverflow = true)
-        ?: rewriteBvSignedMulNoOverflow(lhs, rhs, isOverflow = true)
+        ?: rewriteBvSignedMulNoOverflow(
+            lhs = lhs,
+            rhs = rhs,
+            isOverflow = true,
+            rewriteBvExtractExpr = rewriteBvExtractExpr,
+            rewriteBvConcatExpr = rewriteBvConcatExpr,
+            rewriteBvMulExpr = rewriteBvMulExpr,
+            rewriteBvXorExpr = rewriteBvXorExpr,
+            rewriteBvEq = rewriteBvEq,
+            rewriteBvNotExpr = rewriteBvNotExpr,
+            rewriteOr = rewriteOr,
+            rewriteFlatOr = rewriteFlatOr,
+            rewriteAnd = rewriteAnd,
+            rewriteNot = rewriteNot
+        )
 } else {
     trySimplifyBvUnsignedMulNoOverflow(lhs, rhs)
-        ?: rewriteBvUnsignedMulNoOverflow(lhs, rhs)
+        ?: rewriteBvUnsignedMulNoOverflow(
+            lhs = lhs,
+            rhs = rhs,
+            rewriteBvZeroExtensionExpr = rewriteBvZeroExtensionExpr,
+            rewriteBvMulExpr = rewriteBvMulExpr,
+            rewriteBvExtractExpr = rewriteBvExtractExpr,
+            rewriteBvEq = rewriteBvEq,
+            rewriteOr = rewriteOr,
+            rewriteFlatOr = rewriteFlatOr,
+            rewriteAnd = rewriteAnd,
+            rewriteNot = rewriteNot
+        )
 }
 
+@Suppress("LongParameterList")
 fun <T : KBvSort> KContext.rewriteBvMulNoUnderflowExpr(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
+    rewriteBvExtractExpr: KContext.(Int, Int, KExpr<KBvSort>) -> KExpr<KBvSort> = KContext::mkBvExtractExpr,
+    rewriteBvConcatExpr: KContext.(KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBvSort> = KContext::mkBvConcatExpr,
+    rewriteBvMulExpr: KContext.(KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBvSort> = KContext::mkBvMulExpr,
+    rewriteBvXorExpr: KContext.(KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBvSort> = KContext::mkBvXorExpr,
+    rewriteBvEq: KContext.(KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBoolSort> = { l, r -> mkEq(l, r) },
+    rewriteBvNotExpr: KContext.(KExpr<T>) -> KExpr<T> = KContext::mkBvNotExpr,
+    rewriteOr: KContext.(KExpr<KBoolSort>, KExpr<KBoolSort>, Boolean, Boolean) -> KExpr<KBoolSort> = KContext::mkOr,
+    rewriteFlatOr: KContext.(List<KExpr<KBoolSort>>) -> KExpr<KBoolSort> = { mkOr(it) },
+    rewriteAnd: KContext.(KExpr<KBoolSort>, KExpr<KBoolSort>) -> KExpr<KBoolSort> = { l, r -> mkAnd(l, r) },
+    rewriteNot: KContext.(KExpr<KBoolSort>) -> KExpr<KBoolSort> = KContext::mkNot
 ): KExpr<KBoolSort> =
     trySimplifyBvSignedMulNoOverflow(lhs, rhs, isOverflow = false)
-        ?: rewriteBvSignedMulNoOverflow(lhs, rhs, isOverflow = false)
+        ?: rewriteBvSignedMulNoOverflow(
+            lhs = lhs,
+            rhs = rhs,
+            isOverflow = false,
+            rewriteBvExtractExpr = rewriteBvExtractExpr,
+            rewriteBvConcatExpr = rewriteBvConcatExpr,
+            rewriteBvMulExpr = rewriteBvMulExpr,
+            rewriteBvXorExpr = rewriteBvXorExpr,
+            rewriteBvEq = rewriteBvEq,
+            rewriteBvNotExpr = rewriteBvNotExpr,
+            rewriteOr = rewriteOr,
+            rewriteFlatOr = rewriteFlatOr,
+            rewriteAnd = rewriteAnd,
+            rewriteNot = rewriteNot
+        )
 
 inline fun <T : KBvSort> KContext.rewriteBvNegNoOverflowExpr(
     arg: KExpr<T>,
@@ -1927,53 +1989,82 @@ fun <T : KBvSort> KContext.trySimplifyBvUnsignedMulNoOverflow(
     return null
 }
 
+@Suppress("LongParameterList")
 private fun <T : KBvSort> KContext.rewriteBvUnsignedMulNoOverflow(
     lhs: KExpr<T>,
-    rhs: KExpr<T>
+    rhs: KExpr<T>,
+    rewriteBvZeroExtensionExpr: KContext.(Int, KExpr<T>) -> KExpr<KBvSort>,
+    rewriteBvMulExpr: KContext.(KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBvSort>,
+    rewriteBvExtractExpr: KContext.(Int, Int, KExpr<KBvSort>) -> KExpr<KBvSort>,
+    rewriteBvEq: KContext.(KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBoolSort>,
+    rewriteOr: KContext.(KExpr<KBoolSort>, KExpr<KBoolSort>, Boolean, Boolean) -> KExpr<KBoolSort>,
+    rewriteFlatOr: KContext.(List<KExpr<KBoolSort>>) -> KExpr<KBoolSort>,
+    rewriteAnd: KContext.(KExpr<KBoolSort>, KExpr<KBoolSort>) -> KExpr<KBoolSort>,
+    rewriteNot: KContext.(KExpr<KBoolSort>) -> KExpr<KBoolSort>
 ): KExpr<KBoolSort> {
     val size = lhs.sort.sizeBits.toInt()
 
-    val extLhs = mkBvZeroExtensionExpr(value = lhs, extensionSize = 1)
-    val extRhs = mkBvZeroExtensionExpr(value = rhs, extensionSize = 1)
+    val extLhs = rewriteBvZeroExtensionExpr(1, lhs)
+    val extRhs = rewriteBvZeroExtensionExpr(1, rhs)
 
-    val multiplicationResult = mkBvMulExpr(extLhs, extRhs)
-    val overflowBit = mkBvExtractExpr(value = multiplicationResult, high = size, low = size)
-    val overflow1 = mkBv(true) eq overflowBit.uncheckedCast()
+    val multiplicationResult = rewriteBvMulExpr(extLhs, extRhs)
+    val overflowBit = rewriteBvExtractExpr(size, size, multiplicationResult)
+    val overflow1 = rewriteBvEq(mkBv(true).uncheckedCast(), overflowBit.uncheckedCast())
 
-    val overflow2 = bvUnsignedMulBitOverflowCheck(lhs, rhs, size)
+    val overflow2 = bvUnsignedMulBitOverflowCheck(
+        lhs = lhs,
+        rhs = rhs,
+        size = size,
+        rewriteBvExtractExpr = rewriteBvExtractExpr,
+        rewriteBvEq = rewriteBvEq,
+        rewriteOr = rewriteOr,
+        rewriteFlatOr = rewriteFlatOr,
+        rewriteAnd = rewriteAnd
+    )
 
-    return !(overflow1 or overflow2)
+    return rewriteNot(rewriteOr(overflow1, overflow2, true, true))
 }
 
+@Suppress("LongParameterList", "LongMethod")
 private fun <T : KBvSort> KContext.rewriteBvSignedMulNoOverflow(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
-    isOverflow: Boolean
+    isOverflow: Boolean,
+    rewriteBvExtractExpr: KContext.(Int, Int, KExpr<KBvSort>) -> KExpr<KBvSort>,
+    rewriteBvConcatExpr: KContext.(KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBvSort>,
+    rewriteBvMulExpr: KContext.(KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBvSort>,
+    rewriteBvXorExpr: KContext.(KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBvSort>,
+    rewriteBvEq: KContext.(KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBoolSort>,
+    rewriteBvNotExpr: KContext.(KExpr<T>) -> KExpr<T>,
+    rewriteOr: KContext.(KExpr<KBoolSort>, KExpr<KBoolSort>, Boolean, Boolean) -> KExpr<KBoolSort>,
+    rewriteFlatOr: KContext.(List<KExpr<KBoolSort>>) -> KExpr<KBoolSort>,
+    rewriteAnd: KContext.(KExpr<KBoolSort>, KExpr<KBoolSort>) -> KExpr<KBoolSort>,
+    rewriteNot: KContext.(KExpr<KBoolSort>) -> KExpr<KBoolSort>
 ): KExpr<KBoolSort> {
     val size = lhs.sort.sizeBits.toInt()
 
     val signBitIdx = size - 1
-    val lhsSign = mkBvExtractExpr(value = lhs, high = signBitIdx, low = signBitIdx)
-    val rhsSign = mkBvExtractExpr(value = rhs, high = signBitIdx, low = signBitIdx)
+    val lhsSign = rewriteBvExtractExpr(signBitIdx, signBitIdx, lhs.uncheckedCast())
+    val rhsSign = rewriteBvExtractExpr(signBitIdx, signBitIdx, rhs.uncheckedCast())
 
     val overflowSignCheck = if (isOverflow) {
         // Overflow is possible when sign bits are equal
-        lhsSign eq rhsSign
+        rewriteBvEq(lhsSign, rhsSign)
     } else {
         // Underflow is possible when sign bits are different
-        lhsSign neq rhsSign
+        rewriteNot(rewriteBvEq(lhsSign, rhsSign))
     }
 
-    val extLhs = mkBvConcatExpr(lhsSign, lhs)
-    val extRhs = mkBvConcatExpr(rhsSign, rhs)
-    val multiplicationResult = mkBvMulExpr(extLhs, extRhs)
+    val extLhs = rewriteBvConcatExpr(lhsSign, lhs.uncheckedCast())
+    val extRhs = rewriteBvConcatExpr(rhsSign, rhs.uncheckedCast())
+    val multiplicationResult = rewriteBvMulExpr(extLhs, extRhs)
 
     // The two most significant bits are different
-    val msb0 = mkBvExtractExpr(value = multiplicationResult, high = size, low = size)
-    val msb1 = mkBvExtractExpr(value = multiplicationResult, high = size - 1, low = size - 1)
-    val overflow1 = mkBv(true) eq mkBvXorExpr(msb0, msb1).uncheckedCast()
+    val msb0 = rewriteBvExtractExpr(size, size, multiplicationResult)
+    val msb1 = rewriteBvExtractExpr(size - 1, size - 1, multiplicationResult)
+    val overflow1 = rewriteBvEq(mkBv(true).uncheckedCast(), rewriteBvXorExpr(msb0, msb1).uncheckedCast())
 
-    val lhsSignBitSet = mkBv(true) eq lhsSign.uncheckedCast()
+    val lhsSignBitSet = rewriteBvEq(mkBv(true).uncheckedCast(), lhsSign.uncheckedCast())
     val overflow2 = if (isOverflow) {
         // Overflow is possible when sign bits are equal
         // lhsSign = 1, rhsSign = 0 -> false
@@ -1981,9 +2072,27 @@ private fun <T : KBvSort> KContext.rewriteBvSignedMulNoOverflow(
 
         mkIte(
             lhsSignBitSet, // lhsSign = 1, rhsSign = 1
-            bvUnsignedMulBitOverflowCheck(mkBvNotExpr(lhs), mkBvNotExpr(rhs), size - 1),
+            bvUnsignedMulBitOverflowCheck(
+                lhs = rewriteBvNotExpr(lhs),
+                rhs = rewriteBvNotExpr(rhs),
+                size = size - 1,
+                rewriteBvExtractExpr = rewriteBvExtractExpr,
+                rewriteBvEq = rewriteBvEq,
+                rewriteOr = rewriteOr,
+                rewriteFlatOr = rewriteFlatOr,
+                rewriteAnd = rewriteAnd
+            ),
             // lhsSign = 0, rhsSign = 0
-            bvUnsignedMulBitOverflowCheck(lhs, rhs, size - 1)
+            bvUnsignedMulBitOverflowCheck(
+                lhs = lhs,
+                rhs = rhs,
+                size = size - 1,
+                rewriteBvExtractExpr = rewriteBvExtractExpr,
+                rewriteBvEq = rewriteBvEq,
+                rewriteOr = rewriteOr,
+                rewriteFlatOr = rewriteFlatOr,
+                rewriteAnd = rewriteAnd
+            )
         )
     } else {
         // Underflow is possible when sign bits are different
@@ -1992,14 +2101,32 @@ private fun <T : KBvSort> KContext.rewriteBvSignedMulNoOverflow(
 
         mkIte(
             lhsSignBitSet, // lhsSign = 1, rhsSign = 0
-            bvUnsignedMulBitOverflowCheck(mkBvNotExpr(lhs), rhs, size - 1),
+            bvUnsignedMulBitOverflowCheck(
+                lhs = rewriteBvNotExpr(lhs),
+                rhs = rhs,
+                size = size - 1,
+                rewriteBvExtractExpr = rewriteBvExtractExpr,
+                rewriteBvEq = rewriteBvEq,
+                rewriteOr = rewriteOr,
+                rewriteFlatOr = rewriteFlatOr,
+                rewriteAnd = rewriteAnd
+            ),
             // lhsSign = 0, rhsSign = 1
-            bvUnsignedMulBitOverflowCheck(lhs, mkBvNotExpr(rhs), size - 1),
+            bvUnsignedMulBitOverflowCheck(
+                lhs = lhs,
+                rhs = rewriteBvNotExpr(rhs),
+                size = size - 1,
+                rewriteBvExtractExpr = rewriteBvExtractExpr,
+                rewriteBvEq = rewriteBvEq,
+                rewriteOr = rewriteOr,
+                rewriteFlatOr = rewriteFlatOr,
+                rewriteAnd = rewriteAnd
+            ),
         )
     }
 
-    val overflow = overflow1 or overflow2
-    return !(overflowSignCheck and overflow)
+    val overflow = rewriteOr(overflow1, overflow2, true, true)
+    return rewriteNot(rewriteAnd(overflowSignCheck, overflow))
 }
 
 /**
@@ -2015,27 +2142,33 @@ private fun <T : KBvSort> KContext.rewriteBvSignedMulNoOverflow(
  * (l_s = 1 or l_s-1 = 1) and r_2 = 1
  * ...
  * */
+@Suppress("LongParameterList")
 private fun <T : KBvSort> KContext.bvUnsignedMulBitOverflowCheck(
     lhs: KExpr<T>,
     rhs: KExpr<T>,
-    size: Int
+    size: Int,
+    rewriteBvExtractExpr: KContext.(Int, Int, KExpr<KBvSort>) -> KExpr<KBvSort>,
+    rewriteBvEq: KContext.(KExpr<KBvSort>, KExpr<KBvSort>) -> KExpr<KBoolSort>,
+    rewriteOr: KContext.(KExpr<KBoolSort>, KExpr<KBoolSort>, Boolean, Boolean) -> KExpr<KBoolSort>,
+    rewriteFlatOr: KContext.(List<KExpr<KBoolSort>>) -> KExpr<KBoolSort>,
+    rewriteAnd: KContext.(KExpr<KBoolSort>, KExpr<KBoolSort>) -> KExpr<KBoolSort>
 ): KExpr<KBoolSort> {
     val bitChecks = arrayListOf<KExpr<KBoolSort>>()
     var ovf: KExpr<KBoolSort> = falseExpr
     for (i in 1 until size) {
         val lhsBitIdx = size - i
-        val lhsBit = mkBvExtractExpr(value = lhs, high = lhsBitIdx, low = lhsBitIdx)
+        val lhsBit = rewriteBvExtractExpr(lhsBitIdx, lhsBitIdx, lhs.uncheckedCast())
 
         val rhsBitIdx = i
-        val rhsBit = mkBvExtractExpr(value = rhs, high = rhsBitIdx, low = rhsBitIdx)
+        val rhsBit = rewriteBvExtractExpr(rhsBitIdx, rhsBitIdx, rhs.uncheckedCast())
 
-        val lhsBitValue = mkBv(true) eq lhsBit.uncheckedCast()
-        val rhsBitValue = mkBv(true) eq rhsBit.uncheckedCast()
+        val lhsBitValue = rewriteBvEq(mkBv(true).uncheckedCast(), lhsBit.uncheckedCast())
+        val rhsBitValue = rewriteBvEq(mkBv(true).uncheckedCast(), rhsBit.uncheckedCast())
 
-        ovf = mkOr(ovf, lhsBitValue, flat = false, order = false)
-        bitChecks += ovf and rhsBitValue
+        ovf = rewriteOr(ovf, lhsBitValue, false, false)
+        bitChecks += rewriteAnd(ovf, rhsBitValue)
     }
-    return mkOr(bitChecks)
+    return rewriteFlatOr(bitChecks)
 }
 
 inline fun <T : KBvSort> KContext.bvLessOrEqual(
