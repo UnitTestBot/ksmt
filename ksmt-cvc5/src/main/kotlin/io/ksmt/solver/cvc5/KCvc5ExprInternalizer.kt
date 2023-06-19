@@ -160,11 +160,11 @@ import io.ksmt.expr.KXorExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvAddNoOverflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvAddNoUnderflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvDivNoOverflowExpr
-import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoOverflowExpr
-import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoUnderflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvNegNoOverflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvSubNoOverflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvSubNoUnderflowExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoOverflowExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoUnderflowExpr
 import io.ksmt.expr.rewrite.simplify.simplifyBvRotateLeftExpr
 import io.ksmt.expr.rewrite.simplify.simplifyBvRotateRightExpr
 import io.ksmt.solver.KSolverUnsupportedFeatureException
