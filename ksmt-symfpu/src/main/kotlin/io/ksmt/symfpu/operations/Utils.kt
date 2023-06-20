@@ -144,7 +144,7 @@ data class NormaliseShiftResult(
 fun KContext.normaliseShift(input: KExpr<KBvSort>): NormaliseShiftResult {
     val inputWidth = input.sort.sizeBits
     val startingMask = inputWidth.takeHighestOneBit()
-    check(startingMask < inputWidth)
+    check(startingMask < inputWidth) { "Start has to be less than width" }
 
 
     // We need to shift the input to the left until the first bit is set
@@ -174,7 +174,9 @@ fun KContext.normaliseShift(input: KExpr<KBvSort>): NormaliseShiftResult {
 
     val shiftAmountWidth = res.shiftAmount.sort.sizeBits
     val widthBits = bitsToRepresent(inputWidth.toInt())
-    check(shiftAmountWidth.toInt() == widthBits || shiftAmountWidth.toInt() == widthBits - 1)
+    check(shiftAmountWidth.toInt() == widthBits || shiftAmountWidth.toInt() == widthBits - 1) {
+        "Shift amount width should be $widthBits or ${widthBits - 1} but was ${shiftAmountWidth.toInt()}"
+    }
 
     return res
 
@@ -205,7 +207,7 @@ fun <Fp : KFpSort> KContext.makeMaxValue(sort: Fp, sign: KExpr<KBoolSort>) = Unp
 )
 
 fun KContext.expandingSubtractUnsigned(op1: KExpr<KBvSort>, op2: KExpr<KBvSort>): KExpr<KBvSort> {
-    check(op1.sort.sizeBits == op2.sort.sizeBits)
+    check(op1.sort.sizeBits == op2.sort.sizeBits) { "Operands must be the same size" }
     val x = mkBvZeroExtensionExpr(1, op1)
     val y = mkBvZeroExtensionExpr(1, op2)
     return mkBvSubExpr(x, y)
@@ -213,7 +215,7 @@ fun KContext.expandingSubtractUnsigned(op1: KExpr<KBvSort>, op2: KExpr<KBvSort>)
 
 
 fun KContext.expandingSubtractSigned(op1: KExpr<KBvSort>, op2: KExpr<KBvSort>): KExpr<KBvSort> {
-    check(op1.sort.sizeBits == op2.sort.sizeBits)
+    check(op1.sort.sizeBits == op2.sort.sizeBits) { "Operands must be the same size" }
     val x = mkBvSignExtensionExpr(1, op1)
     val y = mkBvSignExtensionExpr(1, op2)
     return mkBvSubExpr(x, y)

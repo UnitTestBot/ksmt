@@ -103,7 +103,9 @@ fun <Fp : KFpSort> KContext.packToBv(uf: UnpackedFp<Fp>): KExpr<KBvSort> {
     val unpackedSignificand = uf.normalizedSignificand
     val unpackedSignificandWidth = uf.normalizedSignificand.sort.sizeBits.toInt()
 
-    check(packedSigWidth == unpackedSignificandWidth - 1)
+    check(packedSigWidth == unpackedSignificandWidth - 1) {
+        "Significand width mismatch: $packedSigWidth != $unpackedSignificandWidth"
+    }
     val dropLeadingOne = mkBvExtractExpr(packedSigWidth - 1, 0, unpackedSignificand)
 
     // The amount needed to normalise the number
@@ -138,7 +140,9 @@ fun <Fp : KFpSort> KContext.packToBv(uf: UnpackedFp<Fp>): KExpr<KBvSort> {
 
 
 fun <Fp : KFpSort> KContext.pack(packed: KExpr<KBvSort>, sort: Fp): KExpr<Fp> {
-    check(packed.sort.sizeBits == sort.exponentBits + sort.significandBits)
+    check(packed.sort.sizeBits == sort.exponentBits + sort.significandBits) {
+        "Packed expression sort size (${packed.sort.sizeBits}) does not match the sort size (${sort.exponentBits} + ${sort.significandBits})"
+    }
 
     val pWidth = packed.sort.sizeBits.toInt()
     val exWidth = sort.exponentBits.toInt()
@@ -152,13 +156,13 @@ fun <Fp : KFpSort> KContext.pack(packed: KExpr<KBvSort>, sort: Fp): KExpr<Fp> {
 }
 
 fun KExpr<KBvSort>.matchWidthUnsigned(expr: KExpr<KBvSort>): KExpr<KBvSort> {
-    check(sort.sizeBits.toInt() <= expr.sort.sizeBits.toInt())
+    check(sort.sizeBits.toInt() <= expr.sort.sizeBits.toInt()) { "Width mismatch: ${sort.sizeBits} <= ${expr.sort.sizeBits}""}
     if (sort.sizeBits.toInt() == expr.sort.sizeBits.toInt()) return this
     return expr.ctx.mkBvZeroExtensionExpr(expr.sort.sizeBits.toInt() - sort.sizeBits.toInt(), this)
 }
 
 fun KExpr<KBvSort>.matchWidthSigned(ctx: KContext, expr: KExpr<KBvSort>): KExpr<KBvSort> {
-    check(sort.sizeBits.toInt() <= expr.sort.sizeBits.toInt())
+    check(sort.sizeBits.toInt() <= expr.sort.sizeBits.toInt()) { "Width mismatch: ${sort.sizeBits} <= ${expr.sort.sizeBits}""}
     if (sort.sizeBits.toInt() == expr.sort.sizeBits.toInt()) return this
     return ctx.mkBvSignExtensionExpr(expr.sort.sizeBits.toInt() - sort.sizeBits.toInt(), this)
 }

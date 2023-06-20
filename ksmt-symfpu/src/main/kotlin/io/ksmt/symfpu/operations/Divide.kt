@@ -86,7 +86,7 @@ data class ResultWithRemainderBit(val result: KExpr<KBvSort>, val remainderBit: 
 private fun KContext.fixedPointDivide(x: KExpr<KBvSort>, y: KExpr<KBvSort>): ResultWithRemainderBit {
     val w = x.sort.sizeBits
 
-    check(y.sort.sizeBits == w)
+    check(y.sort.sizeBits == w) { "Divisor must have same width as dividend" }
     // contract: first bits are ones
 
     val ex = mkBvConcatExpr(x, bvZero(w - 1u))

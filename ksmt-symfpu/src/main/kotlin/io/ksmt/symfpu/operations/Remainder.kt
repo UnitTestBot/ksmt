@@ -154,8 +154,8 @@ private fun KContext.divideStep(x: KExpr<KBvSort>, y: KExpr<KBvSort>): ResultWit
     val xWidth = x.sort.sizeBits
     val yWidth = y.sort.sizeBits
 
-    check(xWidth == yWidth)
-    check(yWidth >= 2u)
+    check(xWidth == yWidth) { "Divide step requires equal width arguments $xWidth != $yWidth" }
+    check(yWidth >= 2u) { "Divide step requires at least 2 bits width" }
     val canSubtract = mkBvUnsignedGreaterOrEqualExpr(x, y)
     val sub = mkBvAddExpr(x, mkBvNegationExpr(y))
     val step = mkIte(canSubtract, sub, x)

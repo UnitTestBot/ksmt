@@ -1,4 +1,5 @@
 @file:Suppress("LongParameterList")
+
 package io.ksmt.symfpu.operations
 
 import io.ksmt.KContext
@@ -23,7 +24,7 @@ private fun <Fp : KFpSort> KContext.rounderSpecialCases(
     roundedResult: UnpackedFp<Fp>,
     overflow: KExpr<KBoolSort>,
     underflow: KExpr<KBoolSort>,
-    isZero: KExpr<KBoolSort>
+    isZero: KExpr<KBoolSort>,
 ): UnpackedFp<Fp> {
     /*** Underflow and overflow ***/
 
@@ -61,8 +62,8 @@ private fun <Fp : KFpSort> KContext.rounderSpecialCases(
 
     return iteOp(
         isZero, zero, iteOp(
-            underflow, iteOp(returnZero, zero, min), iteOp(overflow, iteOp(returnInf, inf, max), roundedResult)
-        )
+        underflow, iteOp(returnZero, zero, min), iteOp(overflow, iteOp(returnInf, inf, max), roundedResult)
+    )
     )
 }
 
@@ -72,7 +73,7 @@ fun KContext.roundingDecision(
     significandEven: KExpr<KBoolSort>,
     guardBit: KExpr<KBoolSort>,
     stickyBit: KExpr<KBoolSort>,
-    knownRoundDown: KExpr<KBoolSort>
+    knownRoundDown: KExpr<KBoolSort>,
 ): KExpr<KBoolSort> {
     val roundUpRNE = mkAnd(
         roundingEq(roundingMode, KFpRoundingMode.RoundNearestTiesToEven), guardBit, mkOr(stickyBit, !significandEven)
@@ -104,7 +105,7 @@ data class CustomRounderInfo(
     val noUnderflow: KExpr<KBoolSort>,
     val exact: KExpr<KBoolSort>,
     val subnormalExact: KExpr<KBoolSort>,
-    val noSignificandOverflow: KExpr<KBoolSort>
+    val noSignificandOverflow: KExpr<KBoolSort>,
 ) {
     companion object {
         fun KContext.defaultRounderInfo() = CustomRounderInfo(
@@ -126,18 +127,18 @@ fun <Fp : KFpSort, S : KFpSort> KContext.round(
     uf: UnpackedFp<S>,
     roundingMode: KExpr<KFpRoundingModeSort>,
     format: Fp,
-    known: CustomRounderInfo = defaultRounderInfo()
+    known: CustomRounderInfo = defaultRounderInfo(),
 ): UnpackedFp<Fp> {
     val sigWidth = uf.normalizedSignificand.sort.sizeBits.toInt()
     val sig = mkBvOrExpr(uf.normalizedSignificand, leadingOne(sigWidth))
 
     val targetSignificandWidth = format.significandBits.toInt()
-    check(sigWidth >= targetSignificandWidth + 2)
+    check(sigWidth >= targetSignificandWidth + 2) { "Significand width is too small" }
 
     val exp = uf.unbiasedExponent
     val expWidth = exp.sort.sizeBits.toInt()
     val targetExponentWidth = unpackedExponentWidth(format)
-    check(expWidth >= targetExponentWidth)
+    check(expWidth >= targetExponentWidth) { "Exponent width is too small" }
 
     /*** Early underflow and overflow detection ***/
     val exponentExtension = expWidth - targetExponentWidth
@@ -272,8 +273,8 @@ fun <Fp : KFpSort, S : KFpSort> KContext.round(
 fun KContext.collar(op: KExpr<KBvSort>, lower: KExpr<KBvSort>, upper: KExpr<KBvSort>): KExpr<KBvSort> {
     return mkIte(
         mkBvSignedLessExpr(op, lower), lower, mkIte(
-            mkBvSignedLessExpr(upper, op), upper, op
-        )
+        mkBvSignedLessExpr(upper, op), upper, op
+    )
     )
 }
 
@@ -286,7 +287,7 @@ fun KContext.variablePositionRound(
     significand: KExpr<KBvSort>,
     roundPosition: KExpr<KBvSort>,
     knownLeadingOne: KFalse,
-    knownRoundDown: KExpr<KBoolSort>
+    knownRoundDown: KExpr<KBoolSort>,
 ): SignificandRounderResult {
 
 
@@ -351,10 +352,12 @@ fun KContext.fixedPositionRound(
     significand: KExpr<KBvSort>,
     targetWidth: Int,
     knownLeadingOne: KFalse,
-    knownRoundDown: KExpr<KBoolSort>
+    knownRoundDown: KExpr<KBoolSort>,
 ): SignificandRounderResult {
     val sigWidth = significand.sort.sizeBits.toInt()
-    check(sigWidth >= targetWidth + 2)
+    check(sigWidth >= targetWidth + 2) {
+        "Significand width ($sigWidth) must be at least target width + 2 = ${targetWidth + 2}"
+    }
     // Extract
     val extractedSignificand =
         mkBvZeroExtensionExpr(1, mkBvExtractExpr(sigWidth - 1, sigWidth - targetWidth, significand))

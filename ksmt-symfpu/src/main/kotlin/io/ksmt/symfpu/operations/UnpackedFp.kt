@@ -95,7 +95,7 @@ class UnpackedFp<Fp : KFpSort> private constructor(
     //same for exponent
     fun getExponent(packed: Boolean = false) =
         if (packed) {
-            check(packedBv is PackedFp.Exists)
+            check(packedBv is PackedFp.Exists) { "Cannot get packed exponent from unpackedFp: $this" }
             packedBv.exponent
         } else unbiasedExponent
 
@@ -135,9 +135,7 @@ class UnpackedFp<Fp : KFpSort> private constructor(
         val normal = normaliseShift(normalizedSignificand)
 
         val exponentWidth = unbiasedExponent.sort.sizeBits
-        check(
-            normal.shiftAmount.sort.sizeBits < exponentWidth
-        ) // May lose data / be incorrect for very small exponents and very large significands
+        check(normal.shiftAmount.sort.sizeBits < exponentWidth) { "Exponent shift is too large" }
 
         val signedAlignAmount = normal.shiftAmount.resizeUnsigned(exponentWidth)
         val correctedExponent = mkBvSubExpr(unbiasedExponent, signedAlignAmount)
@@ -151,7 +149,7 @@ class UnpackedFp<Fp : KFpSort> private constructor(
         val normal = normaliseShift(normalizedSignificand)
 
         // May lose data / be incorrect for very small exponents and very large significands
-        check(normal.shiftAmount.sort.sizeBits < exponentWidth())
+        check(normal.shiftAmount.sort.sizeBits < exponentWidth()) { "Exponent shift is too large" }
 
         val signedAlignAmount = normal.shiftAmount.resizeUnsigned(exponentWidth())
         val correctedExponent = ctx.mkBvSubExpr(unbiasedExponent, signedAlignAmount)
