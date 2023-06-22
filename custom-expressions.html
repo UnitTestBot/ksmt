@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+
+  <link rel="stylesheet" href="/assets/css/just-the-docs-default.css">
+
+  
+
+  
+    <script src="/assets/js/vendor/lunr.min.js"></script>
+  
+
+  <script src="/assets/js/just-the-docs.js"></script>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  
+
+  <!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Custom expressions | KSMT</title>
+<meta name="generator" content="Jekyll v4.3.2" />
+<meta property="og:title" content="Custom expressions" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Kotlin API for SMT solvers" />
+<meta property="og:description" content="Kotlin API for SMT solvers" />
+<link rel="canonical" href="https://ksmt.io//custom-expressions.html" />
+<meta property="og:url" content="https://ksmt.io//custom-expressions.html" />
+<meta property="og:site_name" content="KSMT" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Custom expressions" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","description":"Kotlin API for SMT solvers","headline":"Custom expressions","publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://ksmt.io//assets/img/ksmt-logo-black6.png"}},"url":"https://ksmt.io//custom-expressions.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+  
+
+</head>
+
+<body>
+<a class="skip-to-main" href="#main-content">Skip to main content</a>
+<svg xmlns="http://www.w3.org/2000/svg" class="d-none">
+  <symbol id="svg-link" viewBox="0 0 24 24">
+  <title>Link</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-link">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+  </svg>
+</symbol>
+
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+  <title>Menu</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu">
+    <line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>
+  </svg>
+</symbol>
+
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+  <title>Expand</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-right">
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </svg>
+</symbol>
+
+  <!-- Feather. MIT License: https://github.com/feathericons/feather/blob/master/LICENSE -->
+<symbol id="svg-external-link" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-external-link">
+  <title id="svg-external-link-title">(external link)</title>
+  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line>
+</symbol>
+
+  
+    <symbol id="svg-doc" viewBox="0 0 24 24">
+  <title>Document</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file">
+    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline>
+  </svg>
+</symbol>
+
+    <symbol id="svg-search" viewBox="0 0 24 24">
+  <title>Search</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search">
+    <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+  </svg>
+</symbol>
+
+  
+  
+    <!-- Bootstrap Icons. MIT License: https://github.com/twbs/icons/blob/main/LICENSE.md -->
+<symbol id="svg-copy" viewBox="0 0 16 16">
+  <title>Copy</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+  </svg>
+</symbol>
+<symbol id="svg-copied" viewBox="0 0 16 16">
+  <title>Copied</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard-check-fill" viewBox="0 0 16 16">
+    <path d="M6.5 0A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3Zm3 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3Z"/>
+    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1A2.5 2.5 0 0 1 9.5 5h-3A2.5 2.5 0 0 1 4 2.5v-1Zm6.854 7.354-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 0 1 .708-.708L7.5 10.793l2.646-2.647a.5.5 0 0 1 .708.708Z"/>
+  </svg>
+</symbol>
+
+  
+</svg>
+
+<div class="side-bar">
+    <div class="site-header" role="banner">
+        <a href="/" class="site-title lh-tight"><!--<img src="/assets/img/ksmt-logo-black2.png" width="60">-->
+<!--<pre> </pre>-->
+
+<!---->
+<!--<div class="site-logo" role="img" aria-label="KSMT"></div>-->
+<!--<img src="/docs/assets/img/ksmt-logo-black2.png">-->
+<!---->
+
+
+    <div class="site-logo"></div>
+</a>
+        <button id="menu-button" class="site-button btn-reset" aria-label="Toggle menu" aria-pressed="false">
+            <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><use xlink:href="#svg-menu"></use></svg>
+            </a>
+    </div>
+    <nav aria-label="Main" id="site-nav" class="site-nav">
+        
+        
+        <ul class="nav-list"><li class="nav-list-item"><a href="/" class="nav-list-link">Overview</a></li><li class="nav-list-item"><a href="/getting-started.html" class="nav-list-link">Getting started</a></li><li class="nav-list-item"><a href="/advanced-usage.html" class="nav-list-link">Advanced usage</a></li><li class="nav-list-item active"><a href="/custom-expressions.html" class="nav-list-link active">Custom expressions</a></li><li class="nav-list-item"><a href="/api/" class="nav-list-link">API reference</a></li></ul>
+        
+    </nav>
+
+    
+    
+<!--    <footer class="site-footer">-->
+<!--        This site uses <a href="https://github.com/just-the-docs/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.-->
+<!--    </footer>-->
+    
+</div>
+
+<div class="main" id="top">
+    <div id="main-header" class="main-header">
+  
+    
+
+<div class="search" role="search">
+  <div class="search-input-wrap">
+    <input type="text" id="search-input" class="search-input" tabindex="0" placeholder="Search KSMT" aria-label="Search KSMT" autocomplete="off">
+    <label for="search-input" class="search-label"><svg viewBox="0 0 24 24" class="search-icon"><use xlink:href="#svg-search"></use></svg></label>
+  </div>
+  <div id="search-results" class="search-results"></div>
+</div>
+
+  
+  
+  
+    <nav aria-label="Auxiliary" class="aux-nav">
+  <ul class="aux-nav-list">
+    
+      <li class="aux-nav-list-item">
+        <a href="https://github.com/ksmt" class="site-button"
+          
+          target="_blank" rel="noopener noreferrer"
+          
+        >
+          KSMT on GitHub
+        </a>
+      </li>
+    
+  </ul>
+</nav>
+
+  
+</div>
+
+    <div id="main-content-wrap" class="main-content-wrap">
+        
+        <div id="main-content" class="main-content">
+            <main>
+                
+                <h1 class="no_toc" id="usage-scenario-custom-expressions">
+  
+  
+    <a href="#usage-scenario-custom-expressions" class="anchor-heading" aria-labelledby="usage-scenario-custom-expressions"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Usage scenario: custom expressions
+  
+  
+</h1>
+    
+
+<p>To extend the KSMT expression system with the user-defined expressions, try 
+<a href="https://github.com/UnitTestBot/ksmt/tree/main/examples/src/main/kotlin/CustomExpressions.kt">custom expression example</a> 
+and follow the instructions below.</p><hr />
+<details open="">
+  <summary class="text-delta">
+    Table of contents:
+  </summary>
+<ol id="markdown-toc">
+  <li><a href="#defining-expressions" id="markdown-toc-defining-expressions">Defining expressions</a>    <ol>
+      <li><a href="#base-expression-and-transformer" id="markdown-toc-base-expression-and-transformer">Base expression and transformer</a></li>
+      <li><a href="#defining-a-custom-expression" id="markdown-toc-defining-a-custom-expression">Defining a custom expression</a></li>
+    </ol>
+  </li>
+  <li><a href="#rewriting-expressions" id="markdown-toc-rewriting-expressions">Rewriting expressions</a></li>
+  <li><a href="#managing-expressions" id="markdown-toc-managing-expressions">Managing expressions</a></li>
+  <li><a href="#misc-wrappers" id="markdown-toc-misc-wrappers">Misc: wrappers</a></li>
+</ol>
+
+</details><hr />
+<h2 id="defining-expressions">
+  
+  
+    <a href="#defining-expressions" class="anchor-heading" aria-labelledby="defining-expressions"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Defining expressions
+  
+  
+</h2>
+    
+
+<p>As an example, we consider the following expression structure:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">CustomExpr</code> — a base expression;</li>
+  <li><code class="language-plaintext highlighter-rouge">CustomAndExpr</code> — a custom expression that acts like <code class="language-plaintext highlighter-rouge">n-ary logical and</code>;</li>
+  <li><code class="language-plaintext highlighter-rouge">CustomBvAddExpr</code> — a custom expression that acts like <code class="language-plaintext highlighter-rouge">n-ary bvadd</code>.</li>
+</ul><hr />
+<h3 id="base-expression-and-transformer">
+  
+  
+    <a href="#base-expression-and-transformer" class="anchor-heading" aria-labelledby="base-expression-and-transformer"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Base expression and transformer
+  
+  
+</h3>
+    
+
+<p>We must not only define the new custom expression but also define an extended <code class="language-plaintext highlighter-rouge">KTransformer</code>, because KSMT 
+transformers are unaware of our custom expressions.</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">interface</span> <span class="nc">CustomTransformer</span> <span class="p">:</span> <span class="nc">KTransformer</span> <span class="p">{</span>
+    <span class="k">fun</span> <span class="nf">transform</span><span class="p">(</span><span class="n">expr</span><span class="p">:</span> <span class="nc">CustomAndExpr</span><span class="p">):</span> <span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">KBoolSort</span><span class="p">&gt;</span>
+    <span class="k">fun</span> <span class="p">&lt;</span><span class="nc">T</span> <span class="p">:</span> <span class="nc">KBvSort</span><span class="p">&gt;</span> <span class="nf">transform</span><span class="p">(</span><span class="n">expr</span><span class="p">:</span> <span class="nc">CustomBvAddExpr</span><span class="p">&lt;</span><span class="nc">T</span><span class="p">&gt;):</span> <span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">T</span><span class="p">&gt;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>For the base expression, we override the <code class="language-plaintext highlighter-rouge">accept</code> function with our <code class="language-plaintext highlighter-rouge">CustomTransformer</code>, 
+since all our custom expressions can only be correctly transformed with this transformer.</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">abstract</span> <span class="kd">class</span> <span class="nc">CustomExpr</span><span class="p">&lt;</span><span class="nc">T</span> <span class="p">:</span> <span class="nc">KSort</span><span class="p">&gt;(</span><span class="n">ctx</span><span class="p">:</span> <span class="nc">KContext</span><span class="p">)</span> <span class="p">:</span> <span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">T</span><span class="p">&gt;(</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">accept</span><span class="p">(</span><span class="n">transformer</span><span class="p">:</span> <span class="nc">KTransformerBase</span><span class="p">):</span> <span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">T</span><span class="p">&gt;</span> <span class="p">{</span>
+        <span class="cm">/**
+         * Since KSMT transformers are unaware of our custom expressions
+         * we must use our own extended transformer.
+         *
+         * Note: it is a good idea to throw an exception when our
+         * custom expression is visited by the other transformer,
+         * because this usually means that our custom expression
+         * has leaked into the KSMT core and will be processed incorrectly.
+         * */</span>
+        <span class="n">transformer</span> <span class="k">as</span><span class="p">?</span> <span class="nc">CustomTransformer</span> <span class="o">?:</span> <span class="nf">error</span><span class="p">(</span><span class="s">"Leaked custom expression"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nf">accept</span><span class="p">(</span><span class="n">transformer</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="k">abstract</span> <span class="k">fun</span> <span class="nf">accept</span><span class="p">(</span><span class="n">transformer</span><span class="p">:</span> <span class="nc">CustomTransformer</span><span class="p">):</span> <span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">T</span><span class="p">&gt;</span>
+<span class="p">}</span>
+</code></pre></div></div><hr />
+<h3 id="defining-a-custom-expression">
+  
+  
+    <a href="#defining-a-custom-expression" class="anchor-heading" aria-labelledby="defining-a-custom-expression"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Defining a custom expression
+  
+  
+</h3>
+    
+
+<p>Important notes on defining custom expressions are provided as comments in the examples.
+See <a href="#managing-expressions">Managing expressions</a> for details about <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, 
+<code class="language-plaintext highlighter-rouge">internEquals</code>, and <code class="language-plaintext highlighter-rouge">internHashCode</code>.</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nc">CustomAndExpr</span><span class="p">(</span>
+    <span class="kd">val</span> <span class="py">args</span><span class="p">:</span> <span class="nc">List</span><span class="p">&lt;</span><span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">KBoolSort</span><span class="p">&gt;&gt;,</span>
+    <span class="n">ctx</span><span class="p">:</span> <span class="nc">KContext</span>
+<span class="p">)</span> <span class="p">:</span> <span class="nc">CustomExpr</span><span class="p">&lt;</span><span class="nc">KBoolSort</span><span class="p">&gt;(</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">override</span> <span class="kd">val</span> <span class="py">sort</span><span class="p">:</span> <span class="nc">KBoolSort</span>
+        <span class="k">get</span><span class="p">()</span> <span class="p">=</span> <span class="n">ctx</span><span class="p">.</span><span class="n">boolSort</span>
+
+    <span class="cm">/**
+     * Expression printer, suitable for deeply nested expressions.
+     * Mainly used in `toString`.
+     * */</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">print</span><span class="p">(</span><span class="n">printer</span><span class="p">:</span> <span class="nc">ExpressionPrinter</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">printer</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="s">"(customAnd"</span><span class="p">)</span>
+        <span class="n">args</span><span class="p">.</span><span class="nf">forEach</span> <span class="p">{</span>
+            <span class="n">printer</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="s">" "</span><span class="p">)</span>
+
+            <span class="cm">/**
+             * Note the use of `append` with `KExpr` argument.
+             * */</span>
+            <span class="n">printer</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="n">it</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="n">printer</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="s">")"</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="cm">/**
+     * Analogues of `equals` and `hashCode`.
+     * */</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">internHashCode</span><span class="p">():</span> <span class="nc">Int</span> <span class="p">=</span> <span class="nf">hash</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="cm">/**
+     * Note the `structurallyEqual` utility checking
+     * if types are the same and all the fields specified in `{ }` are equal.
+     * */</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">internEquals</span><span class="p">(</span><span class="n">other</span><span class="p">:</span> <span class="nc">Any</span><span class="p">):</span> <span class="nc">Boolean</span> <span class="p">=</span> <span class="nf">structurallyEqual</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="p">{</span> <span class="n">args</span> <span class="p">}</span>
+
+    <span class="cm">/**
+     * The expression is visited by the transformer.
+     * Normally, we invoke the corresponding `transform`
+     * method of the transformer and return the invocation result.
+     *
+     * It is usually a bad idea to return something without `transform`
+     * invocation, or to invoke `transform` on some other expression.
+     * It is better to perform any expression transformation with the
+     * corresponding transformer.
+     * */</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">accept</span><span class="p">(</span><span class="n">transformer</span><span class="p">:</span> <span class="nc">CustomTransformer</span><span class="p">):</span> <span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">KBoolSort</span><span class="p">&gt;</span> <span class="p">=</span>
+        <span class="n">transformer</span><span class="p">.</span><span class="nf">transform</span><span class="p">(</span><span class="k">this</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>The definition of <code class="language-plaintext highlighter-rouge">CustomBvAddExpr</code> is actually the same as for <code class="language-plaintext highlighter-rouge">CustomAndExpr</code>.</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nc">CustomBvAddExpr</span><span class="p">&lt;</span><span class="nc">T</span> <span class="p">:</span> <span class="nc">KBvSort</span><span class="p">&gt;(</span>
+    <span class="kd">val</span> <span class="py">args</span><span class="p">:</span> <span class="nc">List</span><span class="p">&lt;</span><span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">T</span><span class="p">&gt;&gt;,</span>
+    <span class="n">ctx</span><span class="p">:</span> <span class="nc">KContext</span>
+<span class="p">)</span> <span class="p">:</span> <span class="nc">CustomExpr</span><span class="p">&lt;</span><span class="nc">T</span><span class="p">&gt;(</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="cm">/**
+     * The sort of this expression is parametric and
+     * depends on the sorts of arguments.
+     * */</span>
+    <span class="k">override</span> <span class="kd">val</span> <span class="py">sort</span><span class="p">:</span> <span class="nc">T</span> <span class="k">by</span> <span class="nf">lazy</span> <span class="p">{</span> <span class="n">args</span><span class="p">.</span><span class="nf">first</span><span class="p">().</span><span class="n">sort</span> <span class="p">}</span>
+
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">print</span><span class="p">(</span><span class="n">printer</span><span class="p">:</span> <span class="nc">ExpressionPrinter</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">printer</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="s">"(customBvAdd"</span><span class="p">)</span>
+        <span class="n">args</span><span class="p">.</span><span class="nf">forEach</span> <span class="p">{</span>
+            <span class="n">printer</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="s">" "</span><span class="p">)</span>
+            <span class="n">printer</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="n">it</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="n">printer</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="s">")"</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">internHashCode</span><span class="p">():</span> <span class="nc">Int</span> <span class="p">=</span> <span class="nf">hash</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">internEquals</span><span class="p">(</span><span class="n">other</span><span class="p">:</span> <span class="nc">Any</span><span class="p">):</span> <span class="nc">Boolean</span> <span class="p">=</span> <span class="nf">structurallyEqual</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="p">{</span> <span class="n">args</span> <span class="p">}</span>
+
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">accept</span><span class="p">(</span><span class="n">transformer</span><span class="p">:</span> <span class="nc">CustomTransformer</span><span class="p">):</span> <span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">T</span><span class="p">&gt;</span> <span class="p">=</span>
+        <span class="n">transformer</span><span class="p">.</span><span class="nf">transform</span><span class="p">(</span><span class="k">this</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div></div><hr />
+<h2 id="rewriting-expressions">
+  
+  
+    <a href="#rewriting-expressions" class="anchor-heading" aria-labelledby="rewriting-expressions"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Rewriting expressions
+  
+  
+</h2>
+    
+
+<p>Since KSMT is unaware of custom expressions, we must ensure that the expressions to be processed 
+by the KSMT facilities do not contain custom parts.
+Regarding this, we define a transformer for the custom expressions that rewrites 
+them with the appropriate KSMT expressions.</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nc">CustomExprRewriter</span><span class="p">(</span>
+    <span class="k">override</span> <span class="kd">val</span> <span class="py">ctx</span><span class="p">:</span> <span class="nc">KContext</span>
+<span class="p">)</span> <span class="p">:</span> <span class="nc">KNonRecursiveTransformer</span><span class="p">(</span><span class="n">ctx</span><span class="p">),</span> <span class="nc">CustomTransformer</span> <span class="p">{</span>
+    <span class="cm">/**
+     * Here we use `transformExprAfterTransformed` function of `KNonRecursiveTransformer`
+     * that implements bottom-up transformation (transform arguments first).
+     * */</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="p">&lt;</span><span class="nc">T</span> <span class="p">:</span> <span class="nc">KBvSort</span><span class="p">&gt;</span> <span class="nf">transform</span><span class="p">(</span><span class="n">expr</span><span class="p">:</span> <span class="nc">CustomBvAddExpr</span><span class="p">&lt;</span><span class="nc">T</span><span class="p">&gt;):</span> <span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">T</span><span class="p">&gt;</span> <span class="p">=</span>
+        <span class="nf">transformExprAfterTransformed</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="n">expr</span><span class="p">.</span><span class="n">args</span><span class="p">)</span> <span class="p">{</span> <span class="n">transformedArgs</span> <span class="p">-&gt;</span>
+            <span class="n">transformedArgs</span><span class="p">.</span><span class="nf">reduce</span> <span class="p">{</span> <span class="n">acc</span><span class="p">,</span> <span class="n">e</span> <span class="p">-&gt;</span> <span class="n">ctx</span><span class="p">.</span><span class="nf">mkBvAddExpr</span><span class="p">(</span><span class="n">acc</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span> <span class="p">}</span>
+        <span class="p">}</span>
+
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">transform</span><span class="p">(</span><span class="n">expr</span><span class="p">:</span> <span class="nc">CustomAndExpr</span><span class="p">):</span> <span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">KBoolSort</span><span class="p">&gt;</span> <span class="p">=</span>
+        <span class="nf">transformExprAfterTransformed</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="n">expr</span><span class="p">.</span><span class="n">args</span><span class="p">)</span> <span class="p">{</span> <span class="n">transformedArgs</span> <span class="p">-&gt;</span>
+            <span class="n">ctx</span><span class="p">.</span><span class="nf">mkAnd</span><span class="p">(</span><span class="n">transformedArgs</span><span class="p">)</span>
+        <span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>Note the <code class="language-plaintext highlighter-rouge">KNonRecursiveTransformer</code> that allows transformation of deeply nested expressions without recursion.</p><hr />
+<h2 id="managing-expressions">
+  
+  
+    <a href="#managing-expressions" class="anchor-heading" aria-labelledby="managing-expressions"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Managing expressions
+  
+  
+</h2>
+    
+
+<p>In KSMT, we use expression interning and guarantee that two of equal expressions are <em>equal by reference</em> (i.e., are 
+the same object).</p>
+
+<p>We use <code class="language-plaintext highlighter-rouge">internEquals</code> and <code class="language-plaintext highlighter-rouge">internHashCode</code> to replace <code class="language-plaintext highlighter-rouge">equals</code> and <code class="language-plaintext highlighter-rouge">hashCode</code>,
+and we use <em>reference equality</em> for the <code class="language-plaintext highlighter-rouge">equals</code> method.</p>
+
+<p>To apply interning for custom expressions, you need to create an <em>interner</em> and ensure that it manages all the created 
+expressions. For this purpose, it is convenient to define an extended context that manages all custom expressions.</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nc">CustomContext</span> <span class="p">:</span> <span class="nc">KContext</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c1">// Interners for custom expressions.</span>
+    <span class="k">private</span> <span class="kd">val</span> <span class="py">customAndInterner</span> <span class="p">=</span> <span class="n">mkAstInterner</span><span class="p">&lt;</span><span class="nc">CustomAndExpr</span><span class="p">&gt;()</span>
+    <span class="k">private</span> <span class="kd">val</span> <span class="py">customBvInterner</span> <span class="p">=</span> <span class="n">mkAstInterner</span><span class="p">&lt;</span><span class="nc">CustomBvAddExpr</span><span class="p">&lt;</span><span class="err">*</span><span class="p">&gt;&gt;()</span>
+
+    <span class="c1">// Expression builder that performs interning of a created expression</span>
+    <span class="k">fun</span> <span class="nf">mkCustomAnd</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="nc">List</span><span class="p">&lt;</span><span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">KBoolSort</span><span class="p">&gt;&gt;):</span> <span class="nc">CustomAndExpr</span> <span class="p">=</span>
+        <span class="n">customAndInterner</span><span class="p">.</span><span class="nf">createIfContextActive</span> <span class="p">{</span>
+            <span class="nc">CustomAndExpr</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="k">this</span><span class="p">)</span>
+        <span class="p">}</span>
+
+    <span class="k">fun</span> <span class="p">&lt;</span><span class="nc">T</span> <span class="p">:</span> <span class="nc">KBvSort</span><span class="p">&gt;</span> <span class="nf">mkCustomBvAdd</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="nc">List</span><span class="p">&lt;</span><span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">T</span><span class="p">&gt;&gt;):</span> <span class="nc">CustomBvAddExpr</span><span class="p">&lt;</span><span class="nc">T</span><span class="p">&gt;</span> <span class="p">=</span>
+        <span class="n">customBvInterner</span><span class="p">.</span><span class="nf">createIfContextActive</span> <span class="p">{</span>
+            <span class="nc">CustomBvAddExpr</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="k">this</span><span class="p">)</span>
+        <span class="p">}.</span><span class="nf">uncheckedCast</span><span class="p">()</span> <span class="c1">// Unchecked cast is used here because 'customBvInterner' has erased sort.</span>
+<span class="p">}</span>
+</code></pre></div></div><hr />
+<h2 id="misc-wrappers">
+  
+  
+    <a href="#misc-wrappers" class="anchor-heading" aria-labelledby="misc-wrappers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Misc: wrappers
+  
+  
+</h2>
+    
+
+<p>Since it is required to eliminate all the custom expressions before interacting with any KSMT feature, 
+it is convenient to create wrappers.</p>
+
+<p>For example, we can wrap <code class="language-plaintext highlighter-rouge">KSolver</code> and eliminate custom expressions on each query.</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nc">CustomSolver</span><span class="p">&lt;</span><span class="nc">C</span> <span class="p">:</span> <span class="nc">KSolverConfiguration</span><span class="p">&gt;(</span>
+    <span class="k">private</span> <span class="kd">val</span> <span class="py">solver</span><span class="p">:</span> <span class="nc">KSolver</span><span class="p">&lt;</span><span class="nc">C</span><span class="p">&gt;,</span>
+    <span class="k">private</span> <span class="kd">val</span> <span class="py">transformer</span><span class="p">:</span> <span class="nc">CustomExprRewriter</span>
+<span class="p">)</span> <span class="p">:</span> <span class="nc">KSolver</span><span class="p">&lt;</span><span class="nc">C</span><span class="p">&gt;</span> <span class="p">{</span>
+
+    <span class="c1">// `expr` can contain custom expressions -&gt; rewrite</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">assert</span><span class="p">(</span><span class="n">expr</span><span class="p">:</span> <span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">KBoolSort</span><span class="p">&gt;)</span> <span class="p">=</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">assert</span><span class="p">(</span><span class="n">transformer</span><span class="p">.</span><span class="nf">apply</span><span class="p">(</span><span class="n">expr</span><span class="p">))</span>
+
+    <span class="c1">// `expr` can contain custom expressions -&gt; rewrite</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">assertAndTrack</span><span class="p">(</span><span class="n">expr</span><span class="p">:</span> <span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">KBoolSort</span><span class="p">&gt;)</span> <span class="p">=</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">assertAndTrack</span><span class="p">(</span><span class="n">transformer</span><span class="p">.</span><span class="nf">apply</span><span class="p">(</span><span class="n">expr</span><span class="p">))</span>
+
+    <span class="c1">// `assumptions` can contain custom expressions -&gt; rewrite</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">checkWithAssumptions</span><span class="p">(</span><span class="n">assumptions</span><span class="p">:</span> <span class="nc">List</span><span class="p">&lt;</span><span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">KBoolSort</span><span class="p">&gt;&gt;,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nc">Duration</span><span class="p">):</span> <span class="nc">KSolverStatus</span> <span class="p">=</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">checkWithAssumptions</span><span class="p">(</span><span class="n">assumptions</span><span class="p">.</span><span class="nf">map</span> <span class="p">{</span> <span class="n">transformer</span><span class="p">.</span><span class="nf">apply</span><span class="p">(</span><span class="n">it</span><span class="p">)</span> <span class="p">},</span> <span class="n">timeout</span><span class="p">)</span>
+
+    <span class="c1">// wrap model for correct `eval` method handling</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">model</span><span class="p">():</span> <span class="nc">KModel</span> <span class="p">=</span> <span class="nc">CustomModel</span><span class="p">(</span><span class="n">solver</span><span class="p">.</span><span class="nf">model</span><span class="p">(),</span> <span class="n">transformer</span><span class="p">)</span>
+
+    <span class="c1">// Other methods do not suffer from custom expressions</span>
+
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">check</span><span class="p">(</span><span class="n">timeout</span><span class="p">:</span> <span class="nc">Duration</span><span class="p">):</span> <span class="nc">KSolverStatus</span> <span class="p">=</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">check</span><span class="p">(</span><span class="n">timeout</span><span class="p">)</span>
+
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">pop</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="nc">UInt</span><span class="p">)</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">pop</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">push</span><span class="p">()</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">push</span><span class="p">()</span>
+
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">reasonOfUnknown</span><span class="p">():</span> <span class="nc">String</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">reasonOfUnknown</span><span class="p">()</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">unsatCore</span><span class="p">():</span> <span class="nc">List</span><span class="p">&lt;</span><span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">KBoolSort</span><span class="p">&gt;&gt;</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">unsatCore</span><span class="p">()</span>
+
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">close</span><span class="p">()</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">close</span><span class="p">()</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">configure</span><span class="p">(</span><span class="n">configurator</span><span class="p">:</span> <span class="nc">C</span><span class="p">.()</span> <span class="p">-&gt;</span> <span class="nc">Unit</span><span class="p">)</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">configure</span><span class="p">(</span><span class="n">configurator</span><span class="p">)</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">interrupt</span><span class="p">()</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">interrupt</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>We can wrap <code class="language-plaintext highlighter-rouge">KModel</code> and eliminate custom expressions before <code class="language-plaintext highlighter-rouge">eval</code>.</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nc">CustomModel</span><span class="p">(</span>
+    <span class="k">private</span> <span class="kd">val</span> <span class="py">model</span><span class="p">:</span> <span class="nc">KModel</span><span class="p">,</span>
+    <span class="k">private</span> <span class="kd">val</span> <span class="py">transformer</span><span class="p">:</span> <span class="nc">CustomExprRewriter</span>
+<span class="p">)</span> <span class="p">:</span> <span class="nc">KModel</span> <span class="p">{</span>
+    <span class="c1">// `expr` can contain custom expressions -&gt; rewrite</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="p">&lt;</span><span class="nc">T</span> <span class="p">:</span> <span class="nc">KSort</span><span class="p">&gt;</span> <span class="nf">eval</span><span class="p">(</span><span class="n">expr</span><span class="p">:</span> <span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">T</span><span class="p">&gt;,</span> <span class="n">isComplete</span><span class="p">:</span> <span class="nc">Boolean</span><span class="p">):</span> <span class="nc">KExpr</span><span class="p">&lt;</span><span class="nc">T</span><span class="p">&gt;</span> <span class="p">=</span>
+        <span class="n">model</span><span class="p">.</span><span class="nf">eval</span><span class="p">(</span><span class="n">transformer</span><span class="p">.</span><span class="nf">apply</span><span class="p">(</span><span class="n">expr</span><span class="p">),</span> <span class="n">isComplete</span><span class="p">)</span>
+
+    <span class="c1">// Other methods do not suffer from custom expressions</span>
+
+    <span class="k">override</span> <span class="kd">val</span> <span class="py">declarations</span><span class="p">:</span> <span class="nc">Set</span><span class="p">&lt;</span><span class="nc">KDecl</span><span class="p">&lt;</span><span class="err">*</span><span class="p">&gt;&gt;</span>
+        <span class="k">get</span><span class="p">()</span> <span class="p">=</span> <span class="n">model</span><span class="p">.</span><span class="n">declarations</span>
+
+    <span class="k">override</span> <span class="kd">val</span> <span class="py">uninterpretedSorts</span><span class="p">:</span> <span class="nc">Set</span><span class="p">&lt;</span><span class="nc">KUninterpretedSort</span><span class="p">&gt;</span>
+        <span class="k">get</span><span class="p">()</span> <span class="p">=</span> <span class="n">model</span><span class="p">.</span><span class="n">uninterpretedSorts</span>
+
+    <span class="k">override</span> <span class="k">fun</span> <span class="p">&lt;</span><span class="nc">T</span> <span class="p">:</span> <span class="nc">KSort</span><span class="p">&gt;</span> <span class="nf">interpretation</span><span class="p">(</span><span class="n">decl</span><span class="p">:</span> <span class="nc">KDecl</span><span class="p">&lt;</span><span class="nc">T</span><span class="p">&gt;):</span> <span class="nc">KFuncInterp</span><span class="p">&lt;</span><span class="nc">T</span><span class="p">&gt;?</span> <span class="p">=</span>
+        <span class="n">model</span><span class="p">.</span><span class="nf">interpretation</span><span class="p">(</span><span class="n">decl</span><span class="p">)</span>
+
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">uninterpretedSortUniverse</span><span class="p">(</span><span class="n">sort</span><span class="p">:</span> <span class="nc">KUninterpretedSort</span><span class="p">):</span> <span class="nc">Set</span><span class="p">&lt;</span><span class="nc">KUninterpretedSortValue</span><span class="p">&gt;?</span> <span class="p">=</span>
+        <span class="n">model</span><span class="p">.</span><span class="nf">uninterpretedSortUniverse</span><span class="p">(</span><span class="n">sort</span><span class="p">)</span>
+
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">detach</span><span class="p">():</span> <span class="nc">KModel</span> <span class="p">=</span> <span class="nc">CustomModel</span><span class="p">(</span><span class="n">model</span><span class="p">.</span><span class="nf">detach</span><span class="p">(),</span> <span class="n">transformer</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+                
+
+                
+            </main>
+            
+
+<hr>
+<footer>
+<!--    -->
+<!--    <p><a href="#top" id="back-to-top">Back to top</a></p>-->
+<!--    -->
+
+    
+<p><a href="#top" id="back-to-top">Back to top</a></p>
+
+
+    
+</footer>
+
+        </div>
+    </div>
+    
+    
+
+<div class="search-overlay"></div>
+
+    
+</div>
+
+
+</body>
+</html>

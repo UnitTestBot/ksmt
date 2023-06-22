@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>FpUtils</title>
+    <link href="../../../images/logo-icon.svg" rel="icon" type="image/svg">
+    <script>var pathToRoot = "../../../";</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async="async"></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/jetbrains-mono.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/clipboard.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer="defer"></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/symbol-parameters-wrapper_deferred.js" defer="defer"></script>
+</head>
+<body>
+<div class="navigation-wrapper" id="navigation-wrapper">
+    <div id="leftToggler"><span class="icon-toggler"></span></div>
+    <div class="library-name">
+            <a href="../../../index.html">
+                    <span>ksmt-core</span>
+            </a>
+    </div>
+    <div>
+0.5.3    </div>
+    <div class="pull-right d-flex">
+        <button id="theme-toggle-button"><span id="theme-toggle"></span></button>
+        <div id="searchBar"></div>
+    </div>
+</div>
+<div id="container">
+    <div id="leftColumn">
+        <div id="sideMenu"></div>
+    </div>
+    <div id="main">
+<div class="main-content" id="content" pageIds="ksmt-core::io.ksmt.utils/FpUtils///PointingToDeclaration//1151356786">
+  <div class="breadcrumbs"><a href="../../../index.html">ksmt-core</a><span class="delimiter">/</span><a href="../index.html">io.ksmt.utils</a><span class="delimiter">/</span><span class="current">FpUtils</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Fp</span><wbr></wbr><span><span>Utils</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">object </span><a href="index.html">FpUtils</a></div></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="Functions">Functions</button></div>
+    <div class="tabs-section-body">
+      <h2 class="">Functions</h2>
+      <div class="table" data-togglable="Functions"><a data-name="464733789%2FFunctions%2F1151356786" anchor-label="biasFpExponent" id="464733789%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="bias-fp-exponent.html"><span>bias</span><wbr></wbr><span>Fp</span><wbr></wbr><span><span>Exponent</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="464733789%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="bias-fp-exponent.html"><span class="token function">biasFpExponent</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">exponent<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-bit-vec-value/index.html">KBitVecValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">exponentSize<span class="token operator">: </span><span data-unresolved-link="kotlin/UInt///PointingToDeclaration/">UInt</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-bit-vec-value/index.html">KBitVecValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1007609689%2FFunctions%2F1151356786" anchor-label="fpAdd" id="1007609689%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-add.html"><span>fp</span><wbr></wbr><span><span>Add</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1007609689%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="fp-add.html"><span class="token function">fpAdd</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">rm<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-rounding-mode/index.html">KFpRoundingMode</a><span class="token punctuation">, </span></span><span class="parameter ">lhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">rhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1528377019%2FFunctions%2F1151356786" anchor-label="fpBvValueOrNull" id="-1528377019%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-bv-value-or-null.html"><span>fp</span><wbr></wbr><span>Bv</span><wbr></wbr><span>Value</span><wbr></wbr><span>Or</span><wbr></wbr><span><span>Null</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1528377019%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="fp-bv-value-or-null.html">T</a><span class="token operator"> : </span><a href="../../io.ksmt.sort/-k-bv-sort/index.html">KBvSort</a><span class="token operator">&gt; </span><a href="fp-bv-value-or-null.html"><span class="token function">fpBvValueOrNull</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">value<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">rm<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-rounding-mode/index.html">KFpRoundingMode</a><span class="token punctuation">, </span></span><span class="parameter ">bvSort<span class="token operator">: </span><a href="fp-bv-value-or-null.html">T</a><span class="token punctuation">, </span></span><span class="parameter ">signed<span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-bit-vec-value/index.html">KBitVecValue</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="fp-bv-value-or-null.html">T</a><span class="token operator">&gt;</span><span class="token operator">?</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="2135018857%2FFunctions%2F1151356786" anchor-label="fpDiv" id="2135018857%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-div.html"><span>fp</span><wbr></wbr><span><span>Div</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2135018857%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="fp-div.html"><span class="token function">fpDiv</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">rm<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-rounding-mode/index.html">KFpRoundingMode</a><span class="token punctuation">, </span></span><span class="parameter ">lhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">rhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1593153269%2FFunctions%2F1151356786" anchor-label="fpEq" id="1593153269%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-eq.html"><span>fp</span><wbr></wbr><span><span>Eq</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1593153269%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="fp-eq.html"><span class="token function">fpEq</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">lhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">rhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1465726513%2FFunctions%2F1151356786" anchor-label="fpFma" id="-1465726513%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-fma.html"><span>fp</span><wbr></wbr><span><span>Fma</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1465726513%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="fp-fma.html"><span class="token function">fpFma</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">rm<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-rounding-mode/index.html">KFpRoundingMode</a><span class="token punctuation">, </span></span><span class="parameter ">x<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">y<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">z<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1476033006%2FFunctions%2F1151356786" anchor-label="fpGeq" id="1476033006%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-geq.html"><span>fp</span><wbr></wbr><span><span>Geq</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1476033006%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="fp-geq.html"><span class="token function">fpGeq</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">lhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">rhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="2116973046%2FFunctions%2F1151356786" anchor-label="fpGt" id="2116973046%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-gt.html"><span>fp</span><wbr></wbr><span><span>Gt</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2116973046%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="fp-gt.html"><span class="token function">fpGt</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">lhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">rhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-99349699%2FFunctions%2F1151356786" anchor-label="fpInfExponentBiased" id="-99349699%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-inf-exponent-biased.html"><span>fp</span><wbr></wbr><span>Inf</span><wbr></wbr><span>Exponent</span><wbr></wbr><span><span>Biased</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-99349699%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../../io.ksmt/-k-context/index.html">KContext</a><span class="token punctuation">.</span><a href="fp-inf-exponent-biased.html"><span class="token function">fpInfExponentBiased</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">sort<span class="token operator">: </span><a href="../../io.ksmt.sort/-k-fp-sort/index.html">KFpSort</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-bit-vec-value/index.html">KBitVecValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1834221323%2FFunctions%2F1151356786" anchor-label="fpInfSignificand" id="-1834221323%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-inf-significand.html"><span>fp</span><wbr></wbr><span>Inf</span><wbr></wbr><span><span>Significand</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1834221323%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../../io.ksmt/-k-context/index.html">KContext</a><span class="token punctuation">.</span><a href="fp-inf-significand.html"><span class="token function">fpInfSignificand</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">sort<span class="token operator">: </span><a href="../../io.ksmt.sort/-k-fp-sort/index.html">KFpSort</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-bit-vec-value/index.html">KBitVecValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1543697011%2FFunctions%2F1151356786" anchor-label="fpLeq" id="1543697011%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-leq.html"><span>fp</span><wbr></wbr><span><span>Leq</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1543697011%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="fp-leq.html"><span class="token function">fpLeq</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">lhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">rhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-928885551%2FFunctions%2F1151356786" anchor-label="fpLt" id="-928885551%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-lt.html"><span>fp</span><wbr></wbr><span><span>Lt</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-928885551%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="fp-lt.html"><span class="token function">fpLt</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">lhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">rhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1103632705%2FFunctions%2F1151356786" anchor-label="fpMax" id="-1103632705%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-max.html"><span>fp</span><wbr></wbr><span><span>Max</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1103632705%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="fp-max.html"><span class="token function">fpMax</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">lhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">rhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-903633363%2FFunctions%2F1151356786" anchor-label="fpMin" id="-903633363%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-min.html"><span>fp</span><wbr></wbr><span><span>Min</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-903633363%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="fp-min.html"><span class="token function">fpMin</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">lhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">rhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-463118634%2FFunctions%2F1151356786" anchor-label="fpMul" id="-463118634%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-mul.html"><span>fp</span><wbr></wbr><span><span>Mul</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-463118634%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="fp-mul.html"><span class="token function">fpMul</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">rm<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-rounding-mode/index.html">KFpRoundingMode</a><span class="token punctuation">, </span></span><span class="parameter ">lhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">rhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="980547043%2FFunctions%2F1151356786" anchor-label="fpNaNExponentBiased" id="980547043%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-na-n-exponent-biased.html"><span>fp</span><wbr></wbr><span>Na</span><wbr></wbr><span>NExponent</span><wbr></wbr><span><span>Biased</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="980547043%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../../io.ksmt/-k-context/index.html">KContext</a><span class="token punctuation">.</span><a href="fp-na-n-exponent-biased.html"><span class="token function">fpNaNExponentBiased</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">sort<span class="token operator">: </span><a href="../../io.ksmt.sort/-k-fp-sort/index.html">KFpSort</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-bit-vec-value/index.html">KBitVecValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1808234481%2FFunctions%2F1151356786" anchor-label="fpNaNSignificand" id="-1808234481%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-na-n-significand.html"><span>fp</span><wbr></wbr><span>Na</span><wbr></wbr><span><span>NSignificand</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1808234481%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../../io.ksmt/-k-context/index.html">KContext</a><span class="token punctuation">.</span><a href="fp-na-n-significand.html"><span class="token function">fpNaNSignificand</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">sort<span class="token operator">: </span><a href="../../io.ksmt.sort/-k-fp-sort/index.html">KFpSort</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-bit-vec-value/index.html">KBitVecValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1198015132%2FFunctions%2F1151356786" anchor-label="fpNegate" id="-1198015132%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-negate.html"><span>fp</span><wbr></wbr><span><span>Negate</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1198015132%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="fp-negate.html"><span class="token function">fpNegate</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">expr<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1292497943%2FFunctions%2F1151356786" anchor-label="fpRealValueOrNull" id="1292497943%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-real-value-or-null.html"><span>fp</span><wbr></wbr><span>Real</span><wbr></wbr><span>Value</span><wbr></wbr><span>Or</span><wbr></wbr><span><span>Null</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1292497943%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="fp-real-value-or-null.html"><span class="token function">fpRealValueOrNull</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">value<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-real-num-expr/index.html">KRealNumExpr</a><span class="token operator">?</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1843315083%2FFunctions%2F1151356786" anchor-label="fpRem" id="-1843315083%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-rem.html"><span>fp</span><wbr></wbr><span><span>Rem</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1843315083%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="fp-rem.html"><span class="token function">fpRem</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">lhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">rhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="496221418%2FFunctions%2F1151356786" anchor-label="fpRoundToIntegral" id="496221418%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-round-to-integral.html"><span>fp</span><wbr></wbr><span>Round</span><wbr></wbr><span>To</span><wbr></wbr><span><span>Integral</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="496221418%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="fp-round-to-integral.html"><span class="token function">fpRoundToIntegral</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">rm<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-rounding-mode/index.html">KFpRoundingMode</a><span class="token punctuation">, </span></span><span class="parameter ">value<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="487970051%2FFunctions%2F1151356786" anchor-label="fpSqrt" id="487970051%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-sqrt.html"><span>fp</span><wbr></wbr><span><span>Sqrt</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="487970051%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="fp-sqrt.html"><span class="token function">fpSqrt</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">rm<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-rounding-mode/index.html">KFpRoundingMode</a><span class="token punctuation">, </span></span><span class="parameter ">value<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="474529861%2FFunctions%2F1151356786" anchor-label="fpStructurallyEqual" id="474529861%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-structurally-equal.html"><span>fp</span><wbr></wbr><span>Structurally</span><wbr></wbr><span><span>Equal</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="474529861%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="fp-structurally-equal.html"><span class="token function">fpStructurallyEqual</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">lhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">rhs<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="835765385%2FFunctions%2F1151356786" anchor-label="fpToFp" id="835765385%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-to-fp.html"><span>fp</span><wbr></wbr><span>To</span><wbr></wbr><span><span>Fp</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="835765385%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="fp-to-fp.html">T</a><span class="token operator"> : </span><a href="../../io.ksmt.sort/-k-fp-sort/index.html">KFpSort</a><span class="token operator">&gt; </span><a href="fp-to-fp.html"><span class="token function">fpToFp</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">rm<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-rounding-mode/index.html">KFpRoundingMode</a><span class="token punctuation">, </span></span><span class="parameter ">value<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">toFpSort<span class="token operator">: </span><a href="fp-to-fp.html">T</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="fp-to-fp.html">T</a><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-215718636%2FFunctions%2F1151356786" anchor-label="fpValueFromBv" id="-215718636%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-value-from-bv.html"><span>fp</span><wbr></wbr><span>Value</span><wbr></wbr><span>From</span><wbr></wbr><span><span>Bv</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-215718636%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="fp-value-from-bv.html">T</a><span class="token operator"> : </span><a href="../../io.ksmt.sort/-k-fp-sort/index.html">KFpSort</a><span class="token operator">&gt; </span><a href="fp-value-from-bv.html"><span class="token function">fpValueFromBv</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">rm<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-rounding-mode/index.html">KFpRoundingMode</a><span class="token punctuation">, </span></span><span class="parameter ">value<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-bit-vec-value/index.html">KBitVecValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">signed<span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span><span class="token punctuation">, </span></span><span class="parameter ">sort<span class="token operator">: </span><a href="fp-value-from-bv.html">T</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="fp-value-from-bv.html">T</a><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1105057055%2FFunctions%2F1151356786" anchor-label="fpValueFromReal" id="-1105057055%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-value-from-real.html"><span>fp</span><wbr></wbr><span>Value</span><wbr></wbr><span>From</span><wbr></wbr><span><span>Real</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1105057055%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="fp-value-from-real.html">T</a><span class="token operator"> : </span><a href="../../io.ksmt.sort/-k-fp-sort/index.html">KFpSort</a><span class="token operator">&gt; </span><a href="fp-value-from-real.html"><span class="token function">fpValueFromReal</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">rm<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-rounding-mode/index.html">KFpRoundingMode</a><span class="token punctuation">, </span></span><span class="parameter ">value<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-real-num-expr/index.html">KRealNumExpr</a><span class="token punctuation">, </span></span><span class="parameter ">sort<span class="token operator">: </span><a href="fp-value-from-real.html">T</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="fp-value-from-real.html">T</a><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1064970920%2FFunctions%2F1151356786" anchor-label="fpZeroExponentBiased" id="1064970920%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-zero-exponent-biased.html"><span>fp</span><wbr></wbr><span>Zero</span><wbr></wbr><span>Exponent</span><wbr></wbr><span><span>Biased</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1064970920%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../../io.ksmt/-k-context/index.html">KContext</a><span class="token punctuation">.</span><a href="fp-zero-exponent-biased.html"><span class="token function">fpZeroExponentBiased</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">sort<span class="token operator">: </span><a href="../../io.ksmt.sort/-k-fp-sort/index.html">KFpSort</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-bit-vec-value/index.html">KBitVecValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="346100074%2FFunctions%2F1151356786" anchor-label="fpZeroSignificand" id="346100074%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="fp-zero-significand.html"><span>fp</span><wbr></wbr><span>Zero</span><wbr></wbr><span><span>Significand</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="346100074%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../../io.ksmt/-k-context/index.html">KContext</a><span class="token punctuation">.</span><a href="fp-zero-significand.html"><span class="token function">fpZeroSignificand</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">sort<span class="token operator">: </span><a href="../../io.ksmt.sort/-k-fp-sort/index.html">KFpSort</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-bit-vec-value/index.html">KBitVecValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-2071385090%2FFunctions%2F1151356786" anchor-label="isInfinity" id="-2071385090%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="is-infinity.html"><span>is</span><wbr></wbr><span><span>Infinity</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2071385090%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="is-infinity.html"><span class="token function">isInfinity</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1086230457%2FFunctions%2F1151356786" anchor-label="isNaN" id="1086230457%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="is-na-n.html"><span>is</span><wbr></wbr><span>Na</span><wbr></wbr><span><span>N</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1086230457%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="is-na-n.html"><span class="token function">isNaN</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-2093860463%2FFunctions%2F1151356786" anchor-label="isNegative" id="-2093860463%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="is-negative.html"><span>is</span><wbr></wbr><span><span>Negative</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2093860463%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="is-negative.html"><span class="token function">isNegative</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-425919137%2FFunctions%2F1151356786" anchor-label="isNormal" id="-425919137%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="is-normal.html"><span>is</span><wbr></wbr><span><span>Normal</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-425919137%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="is-normal.html"><span class="token function">isNormal</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1689682867%2FFunctions%2F1151356786" anchor-label="isPositive" id="-1689682867%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="is-positive.html"><span>is</span><wbr></wbr><span><span>Positive</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1689682867%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="is-positive.html"><span class="token function">isPositive</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1761536461%2FFunctions%2F1151356786" anchor-label="isSubnormal" id="1761536461%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="is-subnormal.html"><span>is</span><wbr></wbr><span><span>Subnormal</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1761536461%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="is-subnormal.html"><span class="token function">isSubnormal</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="282434558%2FFunctions%2F1151356786" anchor-label="isZero" id="282434558%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="is-zero.html"><span>is</span><wbr></wbr><span><span>Zero</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="282434558%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="is-zero.html"><span class="token function">isZero</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-395795860%2FFunctions%2F1151356786" anchor-label="mkFpMaxValue" id="-395795860%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="mk-fp-max-value.html"><span>mk</span><wbr></wbr><span>Fp</span><wbr></wbr><span>Max</span><wbr></wbr><span><span>Value</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-395795860%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="mk-fp-max-value.html">T</a><span class="token operator"> : </span><a href="../../io.ksmt.sort/-k-fp-sort/index.html">KFpSort</a><span class="token operator">&gt; </span><a href="../../io.ksmt/-k-context/index.html">KContext</a><span class="token punctuation">.</span><a href="mk-fp-max-value.html"><span class="token function">mkFpMaxValue</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">sort<span class="token operator">: </span><a href="mk-fp-max-value.html">T</a><span class="token punctuation">, </span></span><span class="parameter ">signBit<span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="mk-fp-max-value.html">T</a><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="270503547%2FFunctions%2F1151356786" anchor-label="mkFpOne" id="270503547%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="mk-fp-one.html"><span>mk</span><wbr></wbr><span>Fp</span><wbr></wbr><span><span>One</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="270503547%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="mk-fp-one.html">T</a><span class="token operator"> : </span><a href="../../io.ksmt.sort/-k-fp-sort/index.html">KFpSort</a><span class="token operator">&gt; </span><a href="../../io.ksmt/-k-context/index.html">KContext</a><span class="token punctuation">.</span><a href="mk-fp-one.html"><span class="token function">mkFpOne</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">sort<span class="token operator">: </span><a href="mk-fp-one.html">T</a><span class="token punctuation">, </span></span><span class="parameter ">signBit<span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-fp-value/index.html">KFpValue</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="mk-fp-one.html">T</a><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="520584676%2FFunctions%2F1151356786" anchor-label="unbiasFpExponent" id="520584676%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="unbias-fp-exponent.html"><span>unbias</span><wbr></wbr><span>Fp</span><wbr></wbr><span><span>Exponent</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="520584676%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="unbias-fp-exponent.html"><span class="token function">unbiasFpExponent</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">exponent<span class="token operator">: </span><a href="../../io.ksmt.expr/-k-bit-vec-value/index.html">KBitVecValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">exponentSize<span class="token operator">: </span><span data-unresolved-link="kotlin/UInt///PointingToDeclaration/">UInt</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../io.ksmt.expr/-k-bit-vec-value/index.html">KBitVecValue</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      <div class="footer">
+        <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2023 Copyright</span><span
+                class="pull-right"><span>Generated by </span><a
+                href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
+      </div>
+    </div>
+</div>
+</body>
+</html>

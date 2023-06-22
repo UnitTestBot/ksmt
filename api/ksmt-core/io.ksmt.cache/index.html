@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>io.ksmt.cache</title>
+    <link href="../../images/logo-icon.svg" rel="icon" type="image/svg">
+    <script>var pathToRoot = "../../";</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
+<script type="text/javascript" src="../../scripts/sourceset_dependencies.js" async="async"></script>
+<link href="../../styles/style.css" rel="Stylesheet">
+<link href="../../styles/jetbrains-mono.css" rel="Stylesheet">
+<link href="../../styles/main.css" rel="Stylesheet">
+<link href="../../styles/prism.css" rel="Stylesheet">
+<link href="../../styles/logo-styles.css" rel="Stylesheet">
+<script type="text/javascript" src="../../scripts/clipboard.js" async="async"></script>
+<script type="text/javascript" src="../../scripts/navigation-loader.js" async="async"></script>
+<script type="text/javascript" src="../../scripts/platform-content-handler.js" async="async"></script>
+<script type="text/javascript" src="../../scripts/main.js" defer="defer"></script>
+<script type="text/javascript" src="../../scripts/prism.js" async="async"></script>
+<script type="text/javascript" src="../../scripts/symbol-parameters-wrapper_deferred.js" defer="defer"></script>
+</head>
+<body>
+<div class="navigation-wrapper" id="navigation-wrapper">
+    <div id="leftToggler"><span class="icon-toggler"></span></div>
+    <div class="library-name">
+            <a href="../../index.html">
+                    <span>ksmt-core</span>
+            </a>
+    </div>
+    <div>
+0.5.3    </div>
+    <div class="pull-right d-flex">
+        <button id="theme-toggle-button"><span id="theme-toggle"></span></button>
+        <div id="searchBar"></div>
+    </div>
+</div>
+<div id="container">
+    <div id="leftColumn">
+        <div id="sideMenu"></div>
+    </div>
+    <div id="main">
+<div class="main-content" id="content" pageIds="ksmt-core::io.ksmt.cache////PointingToDeclaration//1151356786">
+  <div class="breadcrumbs"><a href="../../index.html">ksmt-core</a><span class="delimiter">/</span><span class="current">io.ksmt.cache</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span><span>Package-level</span></span> <span><span>declarations</span></span></h1>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="Types">Types</button><button class="section-tab" data-togglable="Functions">Functions</button></div>
+    <div class="tabs-section-body">
+      <h2 class="">Types</h2>
+      <div class="table" data-togglable="Types"><a data-name="1602289293%2FClasslikes%2F1151356786" anchor-label="AstCache" id="1602289293%2FClasslikes%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-ast-cache/index.html"><span>Ast</span><wbr></wbr><span><span>Cache</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1602289293%2FClasslikes%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="-ast-cache/index.html">AstCache</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-ast-cache/index.html">K</a><span class="token operator"> : </span><a href="../io.ksmt/-k-ast/index.html">KAst</a>, <a href="-k-interned-object/index.html">KInternedObject</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="-ast-cache/index.html">V</a><span class="token operator"> : </span><span data-unresolved-link="kotlin/Any///PointingToDeclaration/">Any</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">A cache specialized to use <a href="../io.ksmt/-k-ast/index.html">KAst</a> as a key.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1565534860%2FClasslikes%2F1151356786" anchor-label="AstInterner" id="-1565534860%2FClasslikes%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-ast-interner/index.html"><span>Ast</span><wbr></wbr><span><span>Interner</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1565534860%2FClasslikes%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="-ast-interner/index.html">AstInterner</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-ast-interner/index.html">T</a><span class="token operator"> : </span><a href="../io.ksmt/-k-ast/index.html">KAst</a>, <a href="-k-interned-object/index.html">KInternedObject</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Interner for <a href="../io.ksmt/-k-ast/index.html">KAst</a>. Ensures that if any two objects are equals according to <a href="-k-interned-object/intern-equals.html">KInternedObject.internEquals</a>, they are equal by reference (actually the same object).</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="670719081%2FClasslikes%2F1151356786" anchor-label="CacheRemoveHandler" id="670719081%2FClasslikes%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-cache-remove-handler/index.html"><span>Cache</span><wbr></wbr><span>Remove</span><wbr></wbr><span><span>Handler</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="670719081%2FClasslikes%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="-cache-remove-handler/index.html">CacheRemoveHandler</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-cache-remove-handler/index.html">K</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="-cache-remove-handler/index.html">V</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The onRemove event handler in <a href="-ast-cache/index.html">AstCache</a>.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-437849638%2FClasslikes%2F1151356786" anchor-label="ConcurrentGcAstCache" id="-437849638%2FClasslikes%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-concurrent-gc-ast-cache/index.html"><span>Concurrent</span><wbr></wbr><span>Gc</span><wbr></wbr><span>Ast</span><wbr></wbr><span><span>Cache</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-437849638%2FClasslikes%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-concurrent-gc-ast-cache/index.html">ConcurrentGcAstCache</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-concurrent-gc-ast-cache/index.html">K</a><span class="token operator"> : </span><a href="../io.ksmt/-k-ast/index.html">KAst</a>, <a href="-k-interned-object/index.html">KInternedObject</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="-concurrent-gc-ast-cache/index.html">V</a><span class="token operator"> : </span><span data-unresolved-link="kotlin/Any///PointingToDeclaration/">Any</span><span class="token operator">&gt;</span> : <a href="-ast-cache/index.html">AstCache</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-concurrent-gc-ast-cache/index.html">K</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="-concurrent-gc-ast-cache/index.html">V</a><span class="token operator">&gt; </span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1262222585%2FClasslikes%2F1151356786" anchor-label="ConcurrentGcAstInterner" id="-1262222585%2FClasslikes%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-concurrent-gc-ast-interner/index.html"><span>Concurrent</span><wbr></wbr><span>Gc</span><wbr></wbr><span>Ast</span><wbr></wbr><span><span>Interner</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1262222585%2FClasslikes%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-concurrent-gc-ast-interner/index.html">ConcurrentGcAstInterner</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-concurrent-gc-ast-interner/index.html">T</a><span class="token operator"> : </span><a href="../io.ksmt/-k-ast/index.html">KAst</a>, <a href="-k-interned-object/index.html">KInternedObject</a><span class="token operator">&gt;</span> : <a href="-ast-interner/index.html">AstInterner</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-concurrent-gc-ast-interner/index.html">T</a><span class="token operator">&gt; </span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1551011609%2FClasslikes%2F1151356786" anchor-label="ConcurrentNoGcAstCache" id="1551011609%2FClasslikes%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-concurrent-no-gc-ast-cache/index.html"><span>Concurrent</span><wbr></wbr><span>No</span><wbr></wbr><span>Gc</span><wbr></wbr><span>Ast</span><wbr></wbr><span><span>Cache</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1551011609%2FClasslikes%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-concurrent-no-gc-ast-cache/index.html">ConcurrentNoGcAstCache</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-concurrent-no-gc-ast-cache/index.html">K</a><span class="token operator"> : </span><a href="../io.ksmt/-k-ast/index.html">KAst</a>, <a href="-k-interned-object/index.html">KInternedObject</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="-concurrent-no-gc-ast-cache/index.html">V</a><span class="token operator"> : </span><span data-unresolved-link="kotlin/Any///PointingToDeclaration/">Any</span><span class="token operator">&gt;</span> : <a href="-ast-cache/index.html">AstCache</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-concurrent-no-gc-ast-cache/index.html">K</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="-concurrent-no-gc-ast-cache/index.html">V</a><span class="token operator">&gt; </span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-170661528%2FClasslikes%2F1151356786" anchor-label="ConcurrentNoGcAstInterner" id="-170661528%2FClasslikes%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-concurrent-no-gc-ast-interner/index.html"><span>Concurrent</span><wbr></wbr><span>No</span><wbr></wbr><span>Gc</span><wbr></wbr><span>Ast</span><wbr></wbr><span><span>Interner</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-170661528%2FClasslikes%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-concurrent-no-gc-ast-interner/index.html">ConcurrentNoGcAstInterner</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-concurrent-no-gc-ast-interner/index.html">T</a><span class="token operator"> : </span><a href="../io.ksmt/-k-ast/index.html">KAst</a>, <a href="-k-interned-object/index.html">KInternedObject</a><span class="token operator">&gt;</span> : <a href="-ast-interner/index.html">AstInterner</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-concurrent-no-gc-ast-interner/index.html">T</a><span class="token operator">&gt; </span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-4437638%2FClasslikes%2F1151356786" anchor-label="KInternedObject" id="-4437638%2FClasslikes%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-k-interned-object/index.html"><span>KInterned</span><wbr></wbr><span><span>Object</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-4437638%2FClasslikes%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="-k-interned-object/index.html">KInternedObject</a></div><div class="brief "><p class="paragraph">An object which can be interned and requires a special implementation of equals and hashCode methods for the interning purposes.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1762094655%2FClasslikes%2F1151356786" anchor-label="SingleThreadGcAstCache" id="1762094655%2FClasslikes%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-single-thread-gc-ast-cache/index.html"><span>Single</span><wbr></wbr><span>Thread</span><wbr></wbr><span>Gc</span><wbr></wbr><span>Ast</span><wbr></wbr><span><span>Cache</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1762094655%2FClasslikes%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-single-thread-gc-ast-cache/index.html">SingleThreadGcAstCache</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-single-thread-gc-ast-cache/index.html">K</a><span class="token operator"> : </span><a href="../io.ksmt/-k-ast/index.html">KAst</a>, <a href="-k-interned-object/index.html">KInternedObject</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="-single-thread-gc-ast-cache/index.html">V</a><span class="token operator"> : </span><span data-unresolved-link="kotlin/Any///PointingToDeclaration/">Any</span><span class="token operator">&gt;</span> : <a href="-ast-cache/index.html">AstCache</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-single-thread-gc-ast-cache/index.html">K</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="-single-thread-gc-ast-cache/index.html">V</a><span class="token operator">&gt; </span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="372240514%2FClasslikes%2F1151356786" anchor-label="SingleThreadGcAstInterner" id="372240514%2FClasslikes%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-single-thread-gc-ast-interner/index.html"><span>Single</span><wbr></wbr><span>Thread</span><wbr></wbr><span>Gc</span><wbr></wbr><span>Ast</span><wbr></wbr><span><span>Interner</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="372240514%2FClasslikes%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-single-thread-gc-ast-interner/index.html">SingleThreadGcAstInterner</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-single-thread-gc-ast-interner/index.html">T</a><span class="token operator"> : </span><a href="../io.ksmt/-k-ast/index.html">KAst</a>, <a href="-k-interned-object/index.html">KInternedObject</a><span class="token operator">&gt;</span> : <a href="-ast-interner/index.html">AstInterner</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-single-thread-gc-ast-interner/index.html">T</a><span class="token operator">&gt; </span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1721399746%2FClasslikes%2F1151356786" anchor-label="SingleThreadNoGcAstCache" id="-1721399746%2FClasslikes%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-single-thread-no-gc-ast-cache/index.html"><span>Single</span><wbr></wbr><span>Thread</span><wbr></wbr><span>No</span><wbr></wbr><span>Gc</span><wbr></wbr><span>Ast</span><wbr></wbr><span><span>Cache</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1721399746%2FClasslikes%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-single-thread-no-gc-ast-cache/index.html">SingleThreadNoGcAstCache</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-single-thread-no-gc-ast-cache/index.html">K</a><span class="token operator"> : </span><a href="../io.ksmt/-k-ast/index.html">KAst</a>, <a href="-k-interned-object/index.html">KInternedObject</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="-single-thread-no-gc-ast-cache/index.html">V</a><span class="token operator"> : </span><span data-unresolved-link="kotlin/Any///PointingToDeclaration/">Any</span><span class="token operator">&gt;</span> : <a href="-ast-cache/index.html">AstCache</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-single-thread-no-gc-ast-cache/index.html">K</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="-single-thread-no-gc-ast-cache/index.html">V</a><span class="token operator">&gt; </span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1409653725%2FClasslikes%2F1151356786" anchor-label="SingleThreadNoGcAstInterner" id="-1409653725%2FClasslikes%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-single-thread-no-gc-ast-interner/index.html"><span>Single</span><wbr></wbr><span>Thread</span><wbr></wbr><span>No</span><wbr></wbr><span>Gc</span><wbr></wbr><span>Ast</span><wbr></wbr><span><span>Interner</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1409653725%2FClasslikes%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-single-thread-no-gc-ast-interner/index.html">SingleThreadNoGcAstInterner</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-single-thread-no-gc-ast-interner/index.html">T</a><span class="token operator"> : </span><a href="../io.ksmt/-k-ast/index.html">KAst</a>, <a href="-k-interned-object/index.html">KInternedObject</a><span class="token operator">&gt;</span> : <a href="-ast-interner/index.html">AstInterner</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-single-thread-no-gc-ast-interner/index.html">T</a><span class="token operator">&gt; </span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h2 class="">Functions</h2>
+      <div class="table" data-togglable="Functions"><a data-name="1664660736%2FFunctions%2F1151356786" anchor-label="hash" id="1664660736%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="hash.html"><span><span>hash</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1664660736%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="hash.html"><span class="token function">hash</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Int///PointingToDeclaration/">Int</span></div><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="hash.html">A0</a><span class="token operator">&gt; </span><a href="hash.html"><span class="token function">hash</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">a0<span class="token operator">: </span><a href="hash.html">A0</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Int///PointingToDeclaration/">Int</span></div><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="hash.html">A0</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="hash.html">A1</a><span class="token operator">&gt; </span><a href="hash.html"><span class="token function">hash</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">a0<span class="token operator">: </span><a href="hash.html">A0</a><span class="token punctuation">, </span></span><span class="parameter ">a1<span class="token operator">: </span><a href="hash.html">A1</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Int///PointingToDeclaration/">Int</span></div><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="hash.html">A0</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="hash.html">A1</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="hash.html">A2</a><span class="token operator">&gt; </span><a href="hash.html"><span class="token function">hash</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">a0<span class="token operator">: </span><a href="hash.html">A0</a><span class="token punctuation">, </span></span><span class="parameter ">a1<span class="token operator">: </span><a href="hash.html">A1</a><span class="token punctuation">, </span></span><span class="parameter ">a2<span class="token operator">: </span><a href="hash.html">A2</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Int///PointingToDeclaration/">Int</span></div><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="hash.html">A0</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="hash.html">A1</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="hash.html">A2</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="hash.html">A3</a><span class="token operator">&gt; </span><a href="hash.html"><span class="token function">hash</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">a0<span class="token operator">: </span><a href="hash.html">A0</a><span class="token punctuation">, </span></span><span class="parameter ">a1<span class="token operator">: </span><a href="hash.html">A1</a><span class="token punctuation">, </span></span><span class="parameter ">a2<span class="token operator">: </span><a href="hash.html">A2</a><span class="token punctuation">, </span></span><span class="parameter ">a3<span class="token operator">: </span><a href="hash.html">A3</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Int///PointingToDeclaration/">Int</span></div><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="hash.html">A0</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="hash.html">A1</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="hash.html">A2</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="hash.html">A3</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="hash.html">A4</a><span class="token operator">&gt; </span><a href="hash.html"><span class="token function">hash</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">a0<span class="token operator">: </span><a href="hash.html">A0</a><span class="token punctuation">, </span></span><span class="parameter ">a1<span class="token operator">: </span><a href="hash.html">A1</a><span class="token punctuation">, </span></span><span class="parameter ">a2<span class="token operator">: </span><a href="hash.html">A2</a><span class="token punctuation">, </span></span><span class="parameter ">a3<span class="token operator">: </span><a href="hash.html">A3</a><span class="token punctuation">, </span></span><span class="parameter ">a4<span class="token operator">: </span><a href="hash.html">A4</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Int///PointingToDeclaration/">Int</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="613641453%2FFunctions%2F1151356786" anchor-label="mkAstCache" id="613641453%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="mk-ast-cache.html"><span>mk</span><wbr></wbr><span>Ast</span><wbr></wbr><span><span>Cache</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="613641453%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="mk-ast-cache.html">K</a><span class="token operator"> : </span><a href="../io.ksmt/-k-ast/index.html">KAst</a>, <a href="-k-interned-object/index.html">KInternedObject</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="mk-ast-cache.html">V</a><span class="token operator"> : </span><span data-unresolved-link="kotlin/Any///PointingToDeclaration/">Any</span><span class="token operator">&gt; </span><a href="mk-ast-cache.html"><span class="token function">mkAstCache</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">operationMode<span class="token operator">: </span><a href="../io.ksmt/-k-context/-operation-mode/index.html">KContext.OperationMode</a><span class="token punctuation">, </span></span><span class="parameter ">astManagementMode<span class="token operator">: </span><a href="../io.ksmt/-k-context/-ast-management-mode/index.html">KContext.AstManagementMode</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-ast-cache/index.html">AstCache</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="mk-ast-cache.html">K</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="mk-ast-cache.html">V</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Select the proper <a href="-ast-cache/index.html">AstCache</a> implementation according to required <a href="mk-ast-cache.html">operationMode</a> and <a href="mk-ast-cache.html">astManagementMode</a>.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1686694980%2FFunctions%2F1151356786" anchor-label="mkAstInterner" id="-1686694980%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="mk-ast-interner.html"><span>mk</span><wbr></wbr><span>Ast</span><wbr></wbr><span><span>Interner</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1686694980%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="mk-ast-interner.html">T</a><span class="token operator"> : </span><a href="../io.ksmt/-k-ast/index.html">KAst</a>, <a href="-k-interned-object/index.html">KInternedObject</a><span class="token operator">&gt; </span><a href="mk-ast-interner.html"><span class="token function">mkAstInterner</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">operationMode<span class="token operator">: </span><a href="../io.ksmt/-k-context/-operation-mode/index.html">KContext.OperationMode</a><span class="token punctuation">, </span></span><span class="parameter ">astManagementMode<span class="token operator">: </span><a href="../io.ksmt/-k-context/-ast-management-mode/index.html">KContext.AstManagementMode</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="-ast-interner/index.html">AstInterner</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="mk-ast-interner.html">T</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Select the proper <a href="-ast-interner/index.html">AstInterner</a> implementation according to required <a href="mk-ast-interner.html">operationMode</a> and <a href="mk-ast-interner.html">astManagementMode</a>.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1352708205%2FFunctions%2F1151356786" anchor-label="mkCache" id="1352708205%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="mk-cache.html"><span>mk</span><wbr></wbr><span><span>Cache</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1352708205%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="mk-cache.html">K</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="mk-cache.html">V</a><span class="token operator">&gt; </span><a href="mk-cache.html"><span class="token function">mkCache</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">operationMode<span class="token operator">: </span><a href="../io.ksmt/-k-context/-operation-mode/index.html">KContext.OperationMode</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin.collections/MutableMap///PointingToDeclaration/">MutableMap</span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="mk-cache.html">K</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="mk-cache.html">V</a><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1488036467%2FFunctions%2F1151356786" anchor-label="structurallyEqual" id="1488036467%2FFunctions%2F1151356786" data-filterable-set=":ksmt-core:dokkaHtml/main"></a>
+        <div class="table-row" data-filterable-current=":ksmt-core:dokkaHtml/main" data-filterable-set=":ksmt-core:dokkaHtml/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="structurally-equal.html"><span>structurally</span><wbr></wbr><span><span>Equal</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1488036467%2FFunctions%2F1151356786"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":ksmt-core:dokkaHtml/main"><div class="symbol monospace"><span class="token keyword">inline </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token operator">&gt; </span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><a href="structurally-equal.html"><span class="token function">structurallyEqual</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">other<span class="token operator">: </span><span data-unresolved-link="kotlin/Any///PointingToDeclaration/">Any</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div><div class="symbol monospace"><span class="token keyword">inline </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="structurally-equal.html">A0</a><span class="token operator">&gt; </span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><a href="structurally-equal.html"><span class="token function">structurallyEqual</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">other<span class="token operator">: </span><span data-unresolved-link="kotlin/Any///PointingToDeclaration/">Any</span><span class="token punctuation">, </span></span><span class="parameter ">a0<span class="token operator">: </span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="structurally-equal.html">A0</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div><div class="symbol monospace"><span class="token keyword">inline </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="structurally-equal.html">A0</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="structurally-equal.html">A1</a><span class="token operator">&gt; </span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><a href="structurally-equal.html"><span class="token function">structurallyEqual</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">other<span class="token operator">: </span><span data-unresolved-link="kotlin/Any///PointingToDeclaration/">Any</span><span class="token punctuation">, </span></span><span class="parameter ">a0<span class="token operator">: </span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="structurally-equal.html">A0</a><span class="token punctuation">, </span></span><span class="parameter ">a1<span class="token operator">: </span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="structurally-equal.html">A1</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div><div class="symbol monospace"><span class="token keyword">inline </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="structurally-equal.html">A0</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="structurally-equal.html">A1</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="structurally-equal.html">A2</a><span class="token operator">&gt; </span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><a href="structurally-equal.html"><span class="token function">structurallyEqual</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">other<span class="token operator">: </span><span data-unresolved-link="kotlin/Any///PointingToDeclaration/">Any</span><span class="token punctuation">, </span></span><span class="parameter ">a0<span class="token operator">: </span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="structurally-equal.html">A0</a><span class="token punctuation">, </span></span><span class="parameter ">a1<span class="token operator">: </span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="structurally-equal.html">A1</a><span class="token punctuation">, </span></span><span class="parameter ">a2<span class="token operator">: </span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="structurally-equal.html">A2</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div><div class="symbol monospace"><span class="token keyword">inline </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="structurally-equal.html">A0</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="structurally-equal.html">A1</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="structurally-equal.html">A2</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="structurally-equal.html">A3</a><span class="token operator">&gt; </span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><a href="structurally-equal.html"><span class="token function">structurallyEqual</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">other<span class="token operator">: </span><span data-unresolved-link="kotlin/Any///PointingToDeclaration/">Any</span><span class="token punctuation">, </span></span><span class="parameter ">a0<span class="token operator">: </span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="structurally-equal.html">A0</a><span class="token punctuation">, </span></span><span class="parameter ">a1<span class="token operator">: </span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="structurally-equal.html">A1</a><span class="token punctuation">, </span></span><span class="parameter ">a2<span class="token operator">: </span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="structurally-equal.html">A2</a><span class="token punctuation">, </span></span><span class="parameter ">a3<span class="token operator">: </span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="structurally-equal.html">A3</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div><div class="symbol monospace"><span class="token keyword">inline </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="structurally-equal.html">A0</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="structurally-equal.html">A1</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="structurally-equal.html">A2</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="structurally-equal.html">A3</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="structurally-equal.html">A4</a><span class="token operator">&gt; </span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><a href="structurally-equal.html"><span class="token function">structurallyEqual</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">other<span class="token operator">: </span><span data-unresolved-link="kotlin/Any///PointingToDeclaration/">Any</span><span class="token punctuation">, </span></span><span class="parameter ">a0<span class="token operator">: </span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="structurally-equal.html">A0</a><span class="token punctuation">, </span></span><span class="parameter ">a1<span class="token operator">: </span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="structurally-equal.html">A1</a><span class="token punctuation">, </span></span><span class="parameter ">a2<span class="token operator">: </span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="structurally-equal.html">A2</a><span class="token punctuation">, </span></span><span class="parameter ">a3<span class="token operator">: </span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="structurally-equal.html">A3</a><span class="token punctuation">, </span></span><span class="parameter ">a4<span class="token operator">: </span><span class="token keyword"></span><a href="structurally-equal.html">T</a><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="structurally-equal.html">A4</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlin/Boolean///PointingToDeclaration/">Boolean</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      <div class="footer">
+        <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2023 Copyright</span><span
+                class="pull-right"><span>Generated by </span><a
+                href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
+      </div>
+    </div>
+</div>
+</body>
+</html>
