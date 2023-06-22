@@ -8,4 +8,4 @@ docs:
   - title: Custom expressions
     url: custom-expressions.html
   - title: API reference
-    url: api/index.html
+    url: api/ksmt-core/io.ksmt/-k-context/index.html
