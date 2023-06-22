@@ -3269,7 +3269,6 @@ $dokka.location:io.ksmt.utils/ArithUtils.RealValue/sub/#io.ksmt.utils.ArithUtils
 $dokka.location:io.ksmt.utils/ArithUtils///PointingToDeclaration/ksmt-core/io.ksmt.utils/-arith-utils/index.html
 $dokka.location:io.ksmt.utils/ArithUtils/bigIntegerValue/io.ksmt.expr.KIntNumExpr#/PointingToDeclaration/ksmt-core/io.ksmt.utils/-arith-utils/big-integer-value.html
 $dokka.location:io.ksmt.utils/ArithUtils/compareTo/io.ksmt.expr.KIntNumExpr#io.ksmt.expr.KIntNumExpr/PointingToDeclaration/ksmt-core/io.ksmt.utils/-arith-utils/compare-to.html
-$dokka.location:io.ksmt.utils/ArithUtils/modWithNegativeNumbers/#java.math.BigInteger#java.math.BigInteger/PointingToDeclaration/ksmt-core/io.ksmt.utils/-arith-utils/mod-with-negative-numbers.html
 $dokka.location:io.ksmt.utils/ArithUtils/numericValue/io.ksmt.KContext#io.ksmt.utils.ArithUtils.RealValue#TypeParam(bounds=[io.ksmt.sort.KArithSort])/PointingToDeclaration/ksmt-core/io.ksmt.utils/-arith-utils/numeric-value.html
 $dokka.location:io.ksmt.utils/ArithUtils/toRealValue/io.ksmt.expr.KIntNumExpr#/PointingToDeclaration/ksmt-core/io.ksmt.utils/-arith-utils/to-real-value.html
 $dokka.location:io.ksmt.utils/ArithUtils/toRealValue/io.ksmt.expr.KRealNumExpr#/PointingToDeclaration/ksmt-core/io.ksmt.utils/-arith-utils/to-real-value.html
