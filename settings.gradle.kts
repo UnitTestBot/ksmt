@@ -7,6 +7,7 @@ include("ksmt-runner")
 include("ksmt-runner:solver-generator")
 include("ksmt-test")
 include("ksmt-cvc5")
+include("ksmt-maxsmt")
 
 pluginManagement {
     resolutionStrategy {
@@ -17,3 +18,7 @@ pluginManagement {
         }
     }
 }
+include("ksmt-maxsmt:src:test:kotlin")
+findProject(":ksmt-maxsmt:src:test:kotlin")?.name = "kotlin"
+include("ksmt-maxsmt:src:test")
+findProject(":ksmt-maxsmt:src:test")?.name = "test"

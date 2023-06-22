@@ -64,7 +64,7 @@ abstract class KOrExpr(ctx: KContext) : KApp<KBoolSort, KBoolSort>(ctx) {
     override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> = transformer.transform(this)
 }
 
-class KOrBinaryExpr internal constructor(
+class KOrBinaryExpr(
     ctx: KContext,
     val lhs: KExpr<KBoolSort>,
     val rhs: KExpr<KBoolSort>
@@ -78,7 +78,7 @@ class KOrBinaryExpr internal constructor(
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
 }
 
-class KOrNaryExpr internal constructor(
+class KOrNaryExpr(
     ctx: KContext,
     override val args: List<KExpr<KBoolSort>>
 ) : KOrExpr(ctx) {
@@ -92,7 +92,7 @@ class KOrNaryExpr internal constructor(
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { args }
 }
 
-class KNotExpr internal constructor(
+class KNotExpr(
     ctx: KContext,
     val arg: KExpr<KBoolSort>
 ) : KApp<KBoolSort, KBoolSort>(ctx) {
@@ -108,6 +108,7 @@ class KNotExpr internal constructor(
 
     override fun internHashCode(): Int = hash(arg)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
+    override fun toString(): String = ""
 }
 
 class KImpliesExpr internal constructor(
@@ -148,7 +149,7 @@ class KXorExpr internal constructor(
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { a }, { b })
 }
 
-class KEqExpr<T : KSort> internal constructor(
+class KEqExpr<T : KSort>(
     ctx: KContext,
     val lhs: KExpr<T>, val rhs: KExpr<T>
 ) : KApp<KBoolSort, T>(ctx) {
