@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+
+  <link rel="stylesheet" href="/pseudoksmt-website/assets/css/just-the-docs-default.css">
+
+  
+
+  
+    <script src="/pseudoksmt-website/assets/js/vendor/lunr.min.js"></script>
+  
+
+  <script src="/pseudoksmt-website/assets/js/just-the-docs.js"></script>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  
+
+  <!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Getting started | KSMT</title>
+<meta name="generator" content="Jekyll v4.3.2" />
+<meta property="og:title" content="Getting started" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Kotlin API for SMT solvers" />
+<meta property="og:description" content="Kotlin API for SMT solvers" />
+<link rel="canonical" href="http://localhost:4000/pseudoksmt-website/getting-started.html" />
+<meta property="og:url" content="http://localhost:4000/pseudoksmt-website/getting-started.html" />
+<meta property="og:site_name" content="KSMT" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Getting started" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","description":"Kotlin API for SMT solvers","headline":"Getting started","publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"http://localhost:4000/pseudoksmt-website/assets/img/ksmt-logo-black6.png"}},"url":"http://localhost:4000/pseudoksmt-website/getting-started.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+  
+
+</head>
+
+<body>
+<a class="skip-to-main" href="#main-content">Skip to main content</a>
+<svg xmlns="http://www.w3.org/2000/svg" class="d-none">
+  <symbol id="svg-link" viewBox="0 0 24 24">
+  <title>Link</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-link">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+  </svg>
+</symbol>
+
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+  <title>Menu</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu">
+    <line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>
+  </svg>
+</symbol>
+
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+  <title>Expand</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-right">
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </svg>
+</symbol>
+
+  <!-- Feather. MIT License: https://github.com/feathericons/feather/blob/master/LICENSE -->
+<symbol id="svg-external-link" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-external-link">
+  <title id="svg-external-link-title">(external link)</title>
+  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line>
+</symbol>
+
+  
+    <symbol id="svg-doc" viewBox="0 0 24 24">
+  <title>Document</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file">
+    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline>
+  </svg>
+</symbol>
+
+    <symbol id="svg-search" viewBox="0 0 24 24">
+  <title>Search</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search">
+    <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+  </svg>
+</symbol>
+
+  
+  
+    <!-- Bootstrap Icons. MIT License: https://github.com/twbs/icons/blob/main/LICENSE.md -->
+<symbol id="svg-copy" viewBox="0 0 16 16">
+  <title>Copy</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+  </svg>
+</symbol>
+<symbol id="svg-copied" viewBox="0 0 16 16">
+  <title>Copied</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard-check-fill" viewBox="0 0 16 16">
+    <path d="M6.5 0A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3Zm3 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3Z"/>
+    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1A2.5 2.5 0 0 1 9.5 5h-3A2.5 2.5 0 0 1 4 2.5v-1Zm6.854 7.354-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 0 1 .708-.708L7.5 10.793l2.646-2.647a.5.5 0 0 1 .708.708Z"/>
+  </svg>
+</symbol>
+
+  
+</svg>
+
+<div class="side-bar">
+    <div class="site-header" role="banner">
+        <a href="/pseudoksmt-website/" class="site-title lh-tight"><!--<img src="/assets/img/ksmt-logo-black2.png" width="60">-->
+<!--<pre> </pre>-->
+
+<!---->
+<!--<div class="site-logo" role="img" aria-label="KSMT"></div>-->
+<!--<img src="/docs/assets/img/ksmt-logo-black2.png">-->
+<!---->
+
+
+    <div class="site-logo"></div>
+</a>
+        <button id="menu-button" class="site-button btn-reset" aria-label="Toggle menu" aria-pressed="false">
+            <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><use xlink:href="#svg-menu"></use></svg>
+            </a>
+    </div>
+    <nav aria-label="Main" id="site-nav" class="site-nav">
+        
+        
+        <ul class="nav-list"><li class="nav-list-item"><a href="/pseudoksmt-website/" class="nav-list-link">Overview</a></li><li class="nav-list-item active"><a href="/pseudoksmt-website/getting-started.html" class="nav-list-link active">Getting started</a></li><li class="nav-list-item"><a href="/pseudoksmt-website/advanced-usage.html" class="nav-list-link">Advanced usage</a></li><li class="nav-list-item"><a href="/pseudoksmt-website/custom-expressions.html" class="nav-list-link">Custom expressions</a></li><li class="nav-list-item"><a href="/pseudoksmt-website/api/" class="nav-list-link">API reference</a></li></ul>
+        
+    </nav>
+
+    
+    
+<!--    <footer class="site-footer">-->
+<!--        This site uses <a href="https://github.com/just-the-docs/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.-->
+<!--    </footer>-->
+    
+</div>
+
+<div class="main" id="top">
+    <div id="main-header" class="main-header">
+  
+    
+
+<div class="search" role="search">
+  <div class="search-input-wrap">
+    <input type="text" id="search-input" class="search-input" tabindex="0" placeholder="Search KSMT" aria-label="Search KSMT" autocomplete="off">
+    <label for="search-input" class="search-label"><svg viewBox="0 0 24 24" class="search-icon"><use xlink:href="#svg-search"></use></svg></label>
+  </div>
+  <div id="search-results" class="search-results"></div>
+</div>
+
+  
+  
+  
+    <nav aria-label="Auxiliary" class="aux-nav">
+  <ul class="aux-nav-list">
+    
+      <li class="aux-nav-list-item">
+        <a href="https://github.com/ksmt" class="site-button"
+          
+          target="_blank" rel="noopener noreferrer"
+          
+        >
+          KSMT on GitHub
+        </a>
+      </li>
+    
+  </ul>
+</nav>
+
+  
+</div>
+
+    <div id="main-content-wrap" class="main-content-wrap">
+        
+        <div id="main-content" class="main-content">
+            <main>
+                
+                <h1 class="no_toc" id="getting-started">
+  
+  
+    <a href="#getting-started" class="anchor-heading" aria-labelledby="getting-started"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Getting started
+  
+  
+</h1>
+    
+
+<p>For your first steps with KSMT, try our <a href="https://github.com/UnitTestBot/ksmt/tree/main/examples">code examples</a>.</p>
+
+<p>To check OS compatibility, see <a href="index#supported-solvers-and-theories">Supported solvers and theories</a>.</p><hr />
+<details open="">
+  <summary class="text-delta">
+    Table of contents:
+  </summary>
+<ol id="markdown-toc">
+  <li><a href="#installation" id="markdown-toc-installation">Installation</a></li>
+  <li><a href="#usage" id="markdown-toc-usage">Usage</a>    <ol>
+      <li><a href="#working-with-smt-formulas" id="markdown-toc-working-with-smt-formulas">Working with SMT formulas</a></li>
+      <li><a href="#working-with-smt-solvers" id="markdown-toc-working-with-smt-solvers">Working with SMT solvers</a></li>
+      <li><a href="#incremental-solving-api" id="markdown-toc-incremental-solving-api">Incremental solving: API</a>        <ol>
+          <li><a href="#incremental-solving-with-pushpop-operations" id="markdown-toc-incremental-solving-with-pushpop-operations">Incremental solving with push/pop operations</a></li>
+          <li><a href="#incremental-solving-with-assumptions" id="markdown-toc-incremental-solving-with-assumptions">Incremental solving with assumptions</a></li>
+        </ol>
+      </li>
+      <li><a href="#solver-unsatisfiable-cores" id="markdown-toc-solver-unsatisfiable-cores">Solver unsatisfiable cores</a></li>
+    </ol>
+  </li>
+</ol>
+
+</details><hr />
+<h2 id="installation">
+  
+  
+    <a href="#installation" class="anchor-heading" aria-labelledby="installation"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Installation
+  
+  
+</h2>
+    
+
+<p>Install KSMT via <a href="https://gradle.org/">Gradle</a>.</p>
+
+<p>1. Enable Maven Central repository in your build configuration:</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">repositories</span> <span class="p">{</span>
+    <span class="nf">mavenCentral</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>2. Add KSMT core dependency:</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">dependencies</span> <span class="p">{</span>
+    <span class="c1">// core </span>
+    <span class="nf">implementation</span><span class="p">(</span><span class="s">"io.ksmt:ksmt-core:0.5.3"</span><span class="p">)</span>    
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>3. Add one or more SMT solver dependencies:</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">dependencies</span> <span class="p">{</span>
+    <span class="c1">// z3 </span>
+    <span class="nf">implementation</span><span class="p">(</span><span class="s">"io.ksmt:ksmt-z3:0.5.3"</span><span class="p">)</span>
+    <span class="c1">// bitwuzla</span>
+    <span class="nf">implementation</span><span class="p">(</span><span class="s">"io.ksmt:ksmt-bitwuzla:0.5.3"</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>SMT solver specific packages are provided with solver native binaries.</p><hr />
+<h2 id="usage">
+  
+  
+    <a href="#usage" class="anchor-heading" aria-labelledby="usage"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Usage
+  
+  
+</h2>
+    
+
+<p>Create a KSMT context that manages expressions and solvers:</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">val</span> <span class="py">ctx</span> <span class="p">=</span> <span class="nc">KContext</span><span class="p">()</span>
+</code></pre></div></div><hr />
+<h3 id="working-with-smt-formulas">
+  
+  
+    <a href="#working-with-smt-formulas" class="anchor-heading" aria-labelledby="working-with-smt-formulas"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Working with SMT formulas
+  
+  
+</h3>
+    
+
+<p>Once the context is initialized, you can create expressions.</p>
+
+<p>In the example below, we create an expression</p>
+
+<p><code class="language-plaintext highlighter-rouge">a &amp;&amp; (b &gt;= c + 3)</code></p>
+
+<p>over Boolean variable <code class="language-plaintext highlighter-rouge">a</code> and integer variables <code class="language-plaintext highlighter-rouge">b</code> and <code class="language-plaintext highlighter-rouge">c</code>:</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">io.ksmt.utils.getValue</span>
+
+<span class="nf">with</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// create symbolic variables</span>
+    <span class="kd">val</span> <span class="py">a</span> <span class="k">by</span> <span class="n">boolSort</span>
+    <span class="kd">val</span> <span class="py">b</span> <span class="k">by</span> <span class="n">intSort</span>
+    <span class="kd">val</span> <span class="py">c</span> <span class="k">by</span> <span class="n">intSort</span>
+
+    <span class="c1">// create an expression</span>
+    <span class="kd">val</span> <span class="py">constraint</span> <span class="p">=</span> <span class="n">a</span> <span class="nf">and</span> <span class="p">(</span><span class="n">b</span> <span class="n">ge</span> <span class="n">c</span> <span class="p">+</span> <span class="mi">3</span><span class="p">.</span><span class="n">expr</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>KSMT expressions are typed, and incorrect terms (e.g., <code class="language-plaintext highlighter-rouge">and</code> with integer arguments) 
+result in a compile-time error.</p>
+
+<p>Note: <code class="language-plaintext highlighter-rouge">import getValue</code> is required when using the <code class="language-plaintext highlighter-rouge">by</code> keyword.
+Alternatively, use <code class="language-plaintext highlighter-rouge">mkConst(name, sort)</code>.</p><hr />
+<h3 id="working-with-smt-solvers">
+  
+  
+    <a href="#working-with-smt-solvers" class="anchor-heading" aria-labelledby="working-with-smt-solvers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Working with SMT solvers
+  
+  
+</h3>
+    
+
+<p>To check SMT formula satisfiability, we need to instantiate an SMT solver. 
+In this example, we use <code class="language-plaintext highlighter-rouge">constraint</code> from the previous step as an SMT formula. We use Z3 as an SMT solver.</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">with</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nc">KZ3Solver</span><span class="p">(</span><span class="k">this</span><span class="p">).</span><span class="nf">use</span> <span class="p">{</span> <span class="n">solver</span> <span class="p">-&gt;</span> <span class="c1">// create a Z3 SMT solver instance</span>
+        <span class="c1">// assert expression</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">assert</span><span class="p">(</span><span class="n">constraint</span><span class="p">)</span>
+        
+        <span class="c1">// check assertions satisfiability with timeout</span>
+        <span class="kd">val</span> <span class="py">satisfiability</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">check</span><span class="p">(</span><span class="n">timeout</span> <span class="p">=</span> <span class="mi">1</span><span class="p">.</span><span class="n">seconds</span><span class="p">)</span>
+        <span class="nf">println</span><span class="p">(</span><span class="n">satisfiability</span><span class="p">)</span> <span class="c1">// SAT</span>
+        
+        <span class="c1">// obtain model</span>
+        <span class="kd">val</span> <span class="py">model</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">model</span><span class="p">()</span>
+        
+        <span class="nf">println</span><span class="p">(</span><span class="s">"$a = ${model.eval(a)}"</span><span class="p">)</span> <span class="c1">// a = true</span>
+        <span class="nf">println</span><span class="p">(</span><span class="s">"$b = ${model.eval(b)}"</span><span class="p">)</span> <span class="c1">// b = 0</span>
+        <span class="nf">println</span><span class="p">(</span><span class="s">"$c = ${model.eval(c)}"</span><span class="p">)</span> <span class="c1">// c = -3</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>The formula in the example above is satisfiable, so we can get a model.
+The model contains concrete values of the symbolic variables <code class="language-plaintext highlighter-rouge">a</code>, <code class="language-plaintext highlighter-rouge">b</code>, and <code class="language-plaintext highlighter-rouge">c</code>, which evaluate the formula to <code class="language-plaintext highlighter-rouge">true</code>.</p>
+
+<p>Note: the Kotlin <code class="language-plaintext highlighter-rouge">.use { }</code> construction allows releasing the solver-consumed resources.</p><hr />
+<h3 id="incremental-solving-api">
+  
+  
+    <a href="#incremental-solving-api" class="anchor-heading" aria-labelledby="incremental-solving-api"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Incremental solving: API
+  
+  
+</h3>
+    
+
+<p>KSMT solver API provides two approaches to incremental formula solving: using <em>push/pop</em> operations and using 
+<em>assumptions</em>.</p><hr />
+<h4 id="incremental-solving-with-pushpop-operations">
+  
+  
+    <a href="#incremental-solving-with-pushpop-operations" class="anchor-heading" aria-labelledby="incremental-solving-with-pushpop-operations"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Incremental solving with push/pop operations
+  
+  
+</h4>
+    
+
+<p><em>Push</em> and <em>pop</em> operations in the solver allow us to work with assertions as if we deal with a stack.
+The <em>push</em> operation puts the asserted expressions onto the stack, while the <em>pop</em> operation removes the pushed 
+assertions.</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">with</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// create symbolic variables</span>
+    <span class="kd">val</span> <span class="py">cond1</span> <span class="k">by</span> <span class="n">boolSort</span>
+    <span class="kd">val</span> <span class="py">cond2</span> <span class="k">by</span> <span class="n">boolSort</span>
+    <span class="kd">val</span> <span class="py">a</span> <span class="k">by</span> <span class="n">bv32Sort</span>
+    <span class="kd">val</span> <span class="py">b</span> <span class="k">by</span> <span class="n">bv32Sort</span>
+    <span class="kd">val</span> <span class="py">c</span> <span class="k">by</span> <span class="n">bv32Sort</span>
+    <span class="kd">val</span> <span class="py">goal</span> <span class="k">by</span> <span class="n">bv32Sort</span>
+
+    <span class="nc">KZ3Solver</span><span class="p">(</span><span class="k">this</span><span class="p">).</span><span class="nf">use</span> <span class="p">{</span> <span class="n">solver</span> <span class="p">-&gt;</span>
+        <span class="c1">// a == 0</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">assert</span><span class="p">(</span><span class="n">a</span> <span class="n">eq</span> <span class="nf">mkBv</span><span class="p">(</span><span class="n">value</span> <span class="p">=</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="c1">// goal == 2</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">assert</span><span class="p">(</span><span class="n">goal</span> <span class="n">eq</span> <span class="nf">mkBv</span><span class="p">(</span><span class="n">value</span> <span class="p">=</span> <span class="mi">2</span><span class="p">))</span>
+
+        <span class="c1">// push assertions onto stack</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">push</span><span class="p">()</span>
+
+        <span class="c1">// a == goal</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">assert</span><span class="p">(</span><span class="n">a</span> <span class="n">eq</span> <span class="n">goal</span><span class="p">)</span>
+
+        <span class="cm">/**
+         * Formula is unsatisfiable because we have
+         * a == 0 &amp;&amp; goal == 2 &amp;&amp; a == goal
+         */</span>
+        <span class="kd">val</span> <span class="py">check0</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">check</span><span class="p">(</span><span class="n">timeout</span> <span class="p">=</span> <span class="mi">1</span><span class="p">.</span><span class="n">seconds</span><span class="p">)</span>
+        <span class="nf">println</span><span class="p">(</span><span class="s">"check0 = $check0"</span><span class="p">)</span> <span class="c1">// UNSAT</span>
+
+        <span class="c1">// pop assertions from stack; a == goal is removed</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">pop</span><span class="p">()</span>
+
+        <span class="cm">/**
+         * Formula is satisfiable now because we have
+         * a == 0 &amp;&amp; goal == 2
+         */</span>
+        <span class="kd">val</span> <span class="py">check1</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">check</span><span class="p">(</span><span class="n">timeout</span> <span class="p">=</span> <span class="mi">1</span><span class="p">.</span><span class="n">seconds</span><span class="p">)</span>
+        <span class="nf">println</span><span class="p">(</span><span class="s">"check1 = $check1"</span><span class="p">)</span> <span class="c1">// SAT</span>
+
+        <span class="c1">// b == if (cond1) a + 1 else a</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">assert</span><span class="p">(</span><span class="n">b</span> <span class="n">eq</span> <span class="nf">mkIte</span><span class="p">(</span><span class="n">cond1</span><span class="p">,</span> <span class="nf">mkBvAddExpr</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="nf">mkBv</span><span class="p">(</span><span class="n">value</span> <span class="p">=</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">a</span><span class="p">))</span>
+
+        <span class="c1">// push assertions onto stack</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">push</span><span class="p">()</span>
+
+        <span class="c1">// b == goal</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">assert</span><span class="p">(</span><span class="n">b</span> <span class="n">eq</span> <span class="n">goal</span><span class="p">)</span>
+
+        <span class="cm">/**
+         * Formula is unsatisfiable because we have
+         * a == 0 &amp;&amp; goal == 2 
+         *      &amp;&amp; b == if (cond1) a + 1 else a 
+         *      &amp;&amp; goal == b
+         * where all possible values for b are only 0 and 1
+         */</span>
+        <span class="kd">val</span> <span class="py">check2</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">check</span><span class="p">(</span><span class="n">timeout</span> <span class="p">=</span> <span class="mi">1</span><span class="p">.</span><span class="n">seconds</span><span class="p">)</span>
+        <span class="nf">println</span><span class="p">(</span><span class="s">"check2 = $check2"</span><span class="p">)</span> <span class="c1">// UNSAT</span>
+
+        <span class="c1">// pop assertions from stack. b == goal is removed</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">pop</span><span class="p">()</span>
+
+        <span class="cm">/**
+         * Formula is satisfiable now because we have
+         * a == 0 &amp;&amp; goal == 2 
+         *      &amp;&amp; b == if (cond1) a + 1 else a
+         */</span>
+        <span class="kd">val</span> <span class="py">check3</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">check</span><span class="p">(</span><span class="n">timeout</span> <span class="p">=</span> <span class="mi">1</span><span class="p">.</span><span class="n">seconds</span><span class="p">)</span>
+        <span class="nf">println</span><span class="p">(</span><span class="s">"check3 = $check3"</span><span class="p">)</span> <span class="c1">// SAT</span>
+
+        <span class="c1">// c == if (cond2) b + 1 else b</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">assert</span><span class="p">(</span><span class="n">c</span> <span class="n">eq</span> <span class="nf">mkIte</span><span class="p">(</span><span class="n">cond2</span><span class="p">,</span> <span class="nf">mkBvAddExpr</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="nf">mkBv</span><span class="p">(</span><span class="n">value</span> <span class="p">=</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">b</span><span class="p">))</span>
+
+        <span class="c1">// push assertions stack</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">push</span><span class="p">()</span>
+
+        <span class="c1">// c == goal</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">assert</span><span class="p">(</span><span class="n">c</span> <span class="n">eq</span> <span class="n">goal</span><span class="p">)</span>
+
+        <span class="cm">/**
+         * Formula is satisfiable because we have
+         * a == 0 &amp;&amp; goal == 2 
+         *      &amp;&amp; b == if (cond1) a + 1 else a
+         *      &amp;&amp; c == if (cond2) b + 1 else b 
+         *      &amp;&amp; goal == c
+         * where all possible values for b are 0 and 1
+         * and for c we have 0, 1 and 2
+         */</span>
+        <span class="kd">val</span> <span class="py">check4</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">check</span><span class="p">(</span><span class="n">timeout</span> <span class="p">=</span> <span class="mi">1</span><span class="p">.</span><span class="n">seconds</span><span class="p">)</span>
+        <span class="nf">println</span><span class="p">(</span><span class="s">"check4 = $check4"</span><span class="p">)</span> <span class="c1">// SAT</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div><hr />
+<h4 id="incremental-solving-with-assumptions">
+  
+  
+    <a href="#incremental-solving-with-assumptions" class="anchor-heading" aria-labelledby="incremental-solving-with-assumptions"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Incremental solving with assumptions
+  
+  
+</h4>
+    
+
+<p>Assumption mechanism allows us to assert an expression for a single check without actually adding it to assertions.
+The following example shows how to implement the previous example using assumptions
+instead of push and pop operations.</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">with</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// create symbolic variables</span>
+    <span class="kd">val</span> <span class="py">cond1</span> <span class="k">by</span> <span class="n">boolSort</span>
+    <span class="kd">val</span> <span class="py">cond2</span> <span class="k">by</span> <span class="n">boolSort</span>
+    <span class="kd">val</span> <span class="py">a</span> <span class="k">by</span> <span class="n">bv32Sort</span>
+    <span class="kd">val</span> <span class="py">b</span> <span class="k">by</span> <span class="n">bv32Sort</span>
+    <span class="kd">val</span> <span class="py">c</span> <span class="k">by</span> <span class="n">bv32Sort</span>
+    <span class="kd">val</span> <span class="py">goal</span> <span class="k">by</span> <span class="n">bv32Sort</span>
+
+    <span class="nc">KZ3Solver</span><span class="p">(</span><span class="k">this</span><span class="p">).</span><span class="nf">use</span> <span class="p">{</span> <span class="n">solver</span> <span class="p">-&gt;</span>
+        <span class="c1">// a == 0</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">assert</span><span class="p">(</span><span class="n">a</span> <span class="n">eq</span> <span class="nf">mkBv</span><span class="p">(</span><span class="n">value</span> <span class="p">=</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="c1">// goal == 2</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">assert</span><span class="p">(</span><span class="n">goal</span> <span class="n">eq</span> <span class="nf">mkBv</span><span class="p">(</span><span class="n">value</span> <span class="p">=</span> <span class="mi">2</span><span class="p">))</span>
+
+        <span class="cm">/**
+         * Formula is unsatisfiable because we have
+         * a == 0 &amp;&amp; goal == 2 &amp;&amp; a == goal
+         * Expression a == goal is assumed for current check
+         */</span>
+        <span class="kd">val</span> <span class="py">check0</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">checkWithAssumptions</span><span class="p">(</span>
+            <span class="n">assumptions</span> <span class="p">=</span> <span class="nf">listOf</span><span class="p">(</span><span class="n">a</span> <span class="n">eq</span> <span class="n">goal</span><span class="p">),</span>
+            <span class="n">timeout</span> <span class="p">=</span> <span class="mi">1</span><span class="p">.</span><span class="n">seconds</span>
+        <span class="p">)</span>
+        <span class="nf">println</span><span class="p">(</span><span class="s">"check0 = $check0"</span><span class="p">)</span> <span class="c1">// UNSAT</span>
+
+        <span class="cm">/**
+         * Formula is satisfiable because we have
+         * a == 0 &amp;&amp; goal == 2
+         */</span>
+        <span class="kd">val</span> <span class="py">check1</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">check</span><span class="p">(</span><span class="n">timeout</span> <span class="p">=</span> <span class="mi">1</span><span class="p">.</span><span class="n">seconds</span><span class="p">)</span>
+        <span class="nf">println</span><span class="p">(</span><span class="s">"check1 = $check1"</span><span class="p">)</span> <span class="c1">// SAT</span>
+
+        <span class="c1">// b == if (cond1) a + 1 else a</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">assert</span><span class="p">(</span><span class="n">b</span> <span class="n">eq</span> <span class="nf">mkIte</span><span class="p">(</span><span class="n">cond1</span><span class="p">,</span> <span class="nf">mkBvAddExpr</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="nf">mkBv</span><span class="p">(</span><span class="n">value</span> <span class="p">=</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">a</span><span class="p">))</span>
+
+        <span class="cm">/**
+         * Formula is unsatisfiable because we have
+         * a == 0 &amp;&amp; goal == 2
+         *      &amp;&amp; b == if (cond1) a + 1 else a
+         *      &amp;&amp; goal == b
+         * where all possible values for b are only 0 and 1
+         * Expression goal == b is assumed for current check
+         */</span>
+        <span class="kd">val</span> <span class="py">check2</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">checkWithAssumptions</span><span class="p">(</span>
+            <span class="n">assumptions</span> <span class="p">=</span> <span class="nf">listOf</span><span class="p">(</span><span class="n">b</span> <span class="n">eq</span> <span class="n">goal</span><span class="p">),</span>
+            <span class="n">timeout</span> <span class="p">=</span> <span class="mi">1</span><span class="p">.</span><span class="n">seconds</span>
+        <span class="p">)</span>
+        <span class="nf">println</span><span class="p">(</span><span class="s">"check2 = $check2"</span><span class="p">)</span> <span class="c1">// UNSAT</span>
+
+        <span class="cm">/**
+         * Formula is satisfiable now because we have
+         * a == 0 &amp;&amp; goal == 2
+         *      &amp;&amp; b == if (cond1) a + 1 else a
+         */</span>
+        <span class="kd">val</span> <span class="py">check3</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">check</span><span class="p">(</span><span class="n">timeout</span> <span class="p">=</span> <span class="mi">1</span><span class="p">.</span><span class="n">seconds</span><span class="p">)</span>
+        <span class="nf">println</span><span class="p">(</span><span class="s">"check3 = $check3"</span><span class="p">)</span> <span class="c1">// SAT</span>
+
+        <span class="c1">// c == if (cond2) b + 1 else b</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">assert</span><span class="p">(</span><span class="n">c</span> <span class="n">eq</span> <span class="nf">mkIte</span><span class="p">(</span><span class="n">cond2</span><span class="p">,</span> <span class="nf">mkBvAddExpr</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="nf">mkBv</span><span class="p">(</span><span class="n">value</span> <span class="p">=</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">b</span><span class="p">))</span>
+
+        <span class="cm">/**
+         * Formula is satisfiable because we have
+         * a == 0 &amp;&amp; goal == 2
+         *      &amp;&amp; b == if (cond1) a + 1 else a
+         *      &amp;&amp; c == if (cond2) b + 1 else b
+         *      &amp;&amp; goal == c
+         * where all possible values for b are 0 and 1
+         * and for c we have 0, 1 and 2
+         * Expression goal == c is assumed for current check
+         */</span>
+        <span class="kd">val</span> <span class="py">check4</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">checkWithAssumptions</span><span class="p">(</span>
+            <span class="n">assumptions</span> <span class="p">=</span> <span class="nf">listOf</span><span class="p">(</span><span class="n">c</span> <span class="n">eq</span> <span class="n">goal</span><span class="p">),</span>
+            <span class="n">timeout</span> <span class="p">=</span> <span class="mi">1</span><span class="p">.</span><span class="n">seconds</span>
+        <span class="p">)</span>
+        <span class="nf">println</span><span class="p">(</span><span class="s">"check4 = $check4"</span><span class="p">)</span> <span class="c1">// SAT</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div><hr />
+<h3 id="solver-unsatisfiable-cores">
+  
+  
+    <a href="#solver-unsatisfiable-cores" class="anchor-heading" aria-labelledby="solver-unsatisfiable-cores"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Solver unsatisfiable cores
+  
+  
+</h3>
+    
+
+<p>If the asserted SMT formula is unsatisfiable, we can extract the unsatisfiable core. 
+The unsatisfiable core is a subset of inconsistent assertions and assumptions.</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">with</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// create symbolic variables</span>
+    <span class="kd">val</span> <span class="py">a</span> <span class="k">by</span> <span class="n">boolSort</span>
+    <span class="kd">val</span> <span class="py">b</span> <span class="k">by</span> <span class="n">boolSort</span>
+    <span class="kd">val</span> <span class="py">c</span> <span class="k">by</span> <span class="n">boolSort</span>
+
+    <span class="kd">val</span> <span class="py">e1</span> <span class="p">=</span> <span class="p">(</span><span class="n">a</span> <span class="n">and</span> <span class="n">b</span><span class="p">)</span> <span class="n">or</span> <span class="n">c</span>
+    <span class="kd">val</span> <span class="py">e2</span> <span class="p">=</span> <span class="p">!(</span><span class="n">a</span> <span class="n">and</span> <span class="n">b</span><span class="p">)</span>
+    <span class="kd">val</span> <span class="py">e3</span> <span class="p">=</span> <span class="p">!</span><span class="n">c</span>
+
+    <span class="nc">KZ3Solver</span><span class="p">(</span><span class="k">this</span><span class="p">).</span><span class="nf">use</span> <span class="p">{</span> <span class="n">solver</span> <span class="p">-&gt;</span>
+        <span class="c1">// simply assert e1</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">assert</span><span class="p">(</span><span class="n">e1</span><span class="p">)</span>
+
+        <span class="cm">/**
+         * Assert and track e2
+         * e2 will appear in unsat core
+         * */</span>
+        <span class="n">solver</span><span class="p">.</span><span class="nf">assertAndTrack</span><span class="p">(</span><span class="n">e2</span><span class="p">)</span>
+
+        <span class="cm">/**
+         * Check satisfiability with e3 assumed.
+         * Formula is unsatisfiable because e1 is inconsistent with e2 and e3
+         * */</span>
+        <span class="kd">val</span> <span class="py">check</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">checkWithAssumptions</span><span class="p">(</span><span class="n">assumptions</span> <span class="p">=</span> <span class="nf">listOf</span><span class="p">(</span><span class="n">e3</span><span class="p">))</span>
+        <span class="nf">println</span><span class="p">(</span><span class="s">"check = $check"</span><span class="p">)</span>
+
+        <span class="c1">// retrieve unsat core</span>
+        <span class="kd">val</span> <span class="py">core</span> <span class="p">=</span> <span class="n">solver</span><span class="p">.</span><span class="nf">unsatCore</span><span class="p">()</span>
+        <span class="nf">println</span><span class="p">(</span><span class="s">"unsat core = $core"</span><span class="p">)</span> <span class="c1">// [(not (and b a)), (not c)]</span>
+
+        <span class="c1">// simply asserted expression cannot be in unsat core</span>
+        <span class="nf">println</span><span class="p">(</span><span class="s">"e1 in core = ${e1 in core}"</span><span class="p">)</span> <span class="c1">// false</span>
+
+        <span class="c1">// an expression added with `assertAndTrack` appears in unsat core as is</span>
+        <span class="nf">println</span><span class="p">(</span><span class="s">"e2 in core = ${e2 in core}"</span><span class="p">)</span> <span class="c1">// true</span>
+
+        <span class="c1">// the assumed expression appears in unsat core as is</span>
+        <span class="nf">println</span><span class="p">(</span><span class="s">"e3 in core = ${e3 in core}"</span><span class="p">)</span> <span class="c1">// true</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+                
+
+                
+            </main>
+            
+
+<hr>
+<footer>
+<!--    -->
+<!--    <p><a href="#top" id="back-to-top">Back to top</a></p>-->
+<!--    -->
+
+    
+<p><a href="#top" id="back-to-top">Back to top</a></p>
+
+
+    
+</footer>
+
+        </div>
+    </div>
+    
+    
+
+<div class="search-overlay"></div>
+
+    
+</div>
+
+
+</body>
+</html>

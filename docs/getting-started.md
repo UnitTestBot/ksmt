@@ -1,31 +1,32 @@
 ---
 layout: default
 title: Getting started
+nav_order: 2
 ---
+
 # Getting started
+{: .no_toc }
 
 For your first steps with KSMT, try our [code examples](https://github.com/UnitTestBot/ksmt/tree/main/examples).
 
-To check OS compatibility, see [Supported solvers and theories](https://ksmt.io/#supported-solvers-and-theories).
+To check OS compatibility, see [Supported solvers and theories](index#supported-solvers-and-theories).
 
-Find basic instructions to get use of KSMT:
+---
+<details open markdown="block">
+  <summary>
+    Table of contents:
+  </summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
 
-<!-- TOC -->
-* [Installation](#installation)
-* [Usage](#usage)
-    * [Working with SMT formulas](#working-with-smt-formulas)
-    * [Working with SMT solvers](#working-with-smt-solvers)
-    * [Incremental solving: API](#incremental-solving-api)
-        * [Incremental solving with push/pop operations](#incremental-solving-with-pushpop-operations)
-        * [Incremental solving with assumptions](#incremental-solving-with-assumptions)
-    * [Solver unsatisfiable cores](#solver-unsatisfiable-cores)
-<!-- TOC -->
-
+---
 ## Installation
 
 Install KSMT via [Gradle](https://gradle.org/).
 
-1. Enable Maven Central repository in your build configuration:
+1\. Enable Maven Central repository in your build configuration:
 
 ```kotlin
 repositories {
@@ -33,28 +34,29 @@ repositories {
 }
 ```
 
-2. Add KSMT core dependency:
+2\. Add KSMT core dependency:
 
 ```kotlin
 dependencies {
     // core 
-    implementation("io.ksmt:ksmt-core:0.5.4")    
+    implementation("io.ksmt:ksmt-core:0.5.3")    
 }
 ```
 
-3. Add one or more SMT solver dependencies:
+3\. Add one or more SMT solver dependencies:
 
 ```kotlin
 dependencies {
     // z3 
-    implementation("io.ksmt:ksmt-z3:0.5.4")
+    implementation("io.ksmt:ksmt-z3:0.5.3")
     // bitwuzla
-    implementation("io.ksmt:ksmt-bitwuzla:0.5.4")
+    implementation("io.ksmt:ksmt-bitwuzla:0.5.3")
 }
 ```
 
 SMT solver specific packages are provided with solver native binaries.
 
+---
 ## Usage
 
 Create a KSMT context that manages expressions and solvers:
@@ -63,6 +65,7 @@ Create a KSMT context that manages expressions and solvers:
 val ctx = KContext()
 ```
 
+---
 ### Working with SMT formulas
 
 Once the context is initialized, you can create expressions.
@@ -93,6 +96,7 @@ result in a compile-time error.
 Note: `import getValue` is required when using the `by` keyword.
 Alternatively, use `mkConst(name, sort)`. 
 
+---
 ### Working with SMT solvers
 
 To check SMT formula satisfiability, we need to instantiate an SMT solver. 
@@ -123,11 +127,13 @@ The model contains concrete values of the symbolic variables `a`, `b`, and `c`, 
 
 Note: the Kotlin `.use { }` construction allows releasing the solver-consumed resources.
 
+---
 ### Incremental solving: API
 
 KSMT solver API provides two approaches to incremental formula solving: using _push/pop_ operations and using 
 _assumptions_. 
 
+---
 #### Incremental solving with push/pop operations
 
 _Push_ and _pop_ operations in the solver allow us to work with assertions as if we deal with a stack.
@@ -227,6 +233,7 @@ with(ctx) {
 }
 ```
 
+---
 #### Incremental solving with assumptions
 
 Assumption mechanism allows us to assert an expression for a single check without actually adding it to assertions.
@@ -314,6 +321,7 @@ with(ctx) {
 }
 ```
 
+---
 ### Solver unsatisfiable cores
 
 If the asserted SMT formula is unsatisfiable, we can extract the unsatisfiable core. 

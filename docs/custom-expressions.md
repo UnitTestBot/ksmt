@@ -1,21 +1,27 @@
 ---
 layout: default
 title: Custom expressions
+
+nav_order: 4
 ---
 # Usage scenario: custom expressions
+{: .no_toc }
 
 To extend the KSMT expression system with the user-defined expressions, try 
-[custom expression example](https://github.com/UnitTestBot/ksmt/tree/main/examples/src/main/kotlin/CustomExpressions.kt) and follow the scenarios below:
+[custom expression example](https://github.com/UnitTestBot/ksmt/tree/main/examples/src/main/kotlin/CustomExpressions.kt) 
+and follow the instructions below.
 
-<!-- TOC -->
-  * [Defining expressions](#defining-expressions)
-    * [Base expression and transformer](#base-expression-and-transformer)
-    * [Defining a custom expression](#defining-a-custom-expression)
-  * [Rewriting expressions](#rewriting-expressions)
-  * [Managing expressions](#managing-expressions)
-  * [Misc: wrappers](#misc--wrappers)
-<!-- TOC -->
+---
+<details open markdown="block">
+  <summary>
+    Table of contents:
+  </summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
 
+---
 ## Defining expressions
 
 As an example, we consider the following expression structure:
@@ -23,6 +29,7 @@ As an example, we consider the following expression structure:
 * `CustomAndExpr` — a custom expression that acts like `n-ary logical and`;
 * `CustomBvAddExpr` — a custom expression that acts like `n-ary bvadd`.
 
+---
 ### Base expression and transformer
 
 We must not only define the new custom expression but also define an extended `KTransformer`, because KSMT 
@@ -58,10 +65,11 @@ abstract class CustomExpr<T : KSort>(ctx: KContext) : KExpr<T>(ctx) {
 }
 ```
 
+---
 ### Defining a custom expression
 
 Important notes on defining custom expressions are provided as comments in the examples.
-See [expression management](#expression-management) for details about `equals`, `hashCode`, 
+See [Managing expressions](#managing-expressions) for details about `equals`, `hashCode`, 
 `internEquals`, and `internHashCode`.
 
 ```kotlin
@@ -146,6 +154,7 @@ class CustomBvAddExpr<T : KBvSort>(
 }
 ```
 
+---
 ## Rewriting expressions 
 
 Since KSMT is unaware of custom expressions, we must ensure that the expressions to be processed 
@@ -176,6 +185,7 @@ class CustomExprRewriter(
 
 Note the `KNonRecursiveTransformer` that allows transformation of deeply nested expressions without recursion.
 
+---
 ## Managing expressions
 
 In KSMT, we use expression interning and guarantee that two of equal expressions are _equal by reference_ (i.e., are 
@@ -206,6 +216,7 @@ class CustomContext : KContext() {
 }
 ```
 
+---
 ## Misc: wrappers
 
 Since it is required to eliminate all the custom expressions before interacting with any KSMT feature, 

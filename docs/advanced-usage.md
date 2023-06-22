@@ -1,31 +1,33 @@
 ---
 layout: default
 title: Advanced usage
+nav_order: 3
 ---
 # Advanced usage
+{: .no_toc }
 
-For basic KSMT usage, please refer to [Getting started](https://ksmt.io/getting-started) guide.
+For basic KSMT usage, please refer to [Getting started](getting-started) guide.
 
-Having tried the essential scenarios, find the [advanced example](https://github.com/UnitTestBot/ksmt/tree/main/examples/src/main/kotlin/AdvancedExamples.kt) and proceed to advanced usage:
+Having tried the essential scenarios, find the 
+[advanced example](https://github.com/UnitTestBot/ksmt/tree/main/examples/src/main/kotlin/AdvancedExamples.kt) and 
+proceed to advanced usage.
 
-<!-- TOC -->
-  * [Working with SMT formulas](#working-with-smt-formulas)
-    * [Parsing formulas in SMT-LIB2 format](#parsing-formulas-in-smt-lib2-format)
-    * [Default simplification](#default-simplification)
-    * [Manual simplification](#manual-simplification)
-    * [Expression substitution](#expression-substitution)
-  * [Working with SMT solvers](#working-with-smt-solvers)
-    * [Solver configuration](#solver-configuration)
-    * [Solver-independent models](#solver-independent-models)
-    * [Solver runner](#solver-runner)
-    * [Using custom solvers in a runner](#using-custom-solvers-in-a-runner)
-    * [Solver portfolio](#solver-portfolio)
-<!-- TOC -->
+---
+<details open markdown="block">
+  <summary>
+    Table of contents:
+  </summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
 
+---
 ## Working with SMT formulas
 
 Learn how to parse, simplify, and substitute expressions.
 
+---
 ### Parsing formulas in SMT-LIB2 format
 
 KSMT provides an API for parsing formulas in the SMT-LIB2 format.
@@ -44,6 +46,7 @@ with(ctx) {
 }
 ```
 
+---
 ### Default simplification
 
 By default, `KContext` attempts to apply lightweight simplifications when you create an expression. If you do not 
@@ -70,6 +73,7 @@ println(nonSimplifiedExpr) // (not (and a false))
 println(simplifiedExpr) // true
 ```
 
+---
 ### Manual simplification
 
 KSMT provides `KExprSimplifier`, so you can manually simplify an arbitrary expression.
@@ -90,6 +94,7 @@ with(ctx) {
 }
 ```
 
+---
 ### Expression substitution
 
 KSMT provides `KExprSubstitutor`, so you can replace all the expression occurrences with another
@@ -111,10 +116,12 @@ println(expr) // (not (and a b))
 println(exprAfterSubstitution) // true
 ```
 
+---
 ## Working with SMT solvers
 
 Learn how to configure and run solvers, get models, and switch to portfolio mode. 
 
+---
 ### Solver configuration
 
 KSMT provides an API for modifying solver-specific parameters.
@@ -133,6 +140,7 @@ with(ctx) {
 }
 ```
 
+---
 ### Solver-independent models
 
 By default, SMT solver models are lazily initialized.
@@ -169,6 +177,7 @@ println(detachedModel.eval(expr)) // true
 
 Note: it is recommended to use `KModel.detach` when you need to keep the model in a `List`, for example.
 
+---
 ### Solver runner
 
 SMT solvers may ignore timeouts, or they suddenly crash, thus interrupting the entire application process.
@@ -193,6 +202,7 @@ KSolverRunnerManager().use { solverManager ->
 }
 ```
 
+---
 ### Using custom solvers in a runner
 
 Solver runner also supports user-defined solvers. Custom solvers must be registered via `registerSolver` before being used in the runner.
@@ -218,6 +228,7 @@ KSolverRunnerManager().use { solverManager ->
 }
 ```
 
+---
 ### Solver portfolio
 
 To run solvers in portfolio mode, i.e., to run them in parallel until you get the first result, try the following 
