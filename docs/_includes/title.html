@@ -1,0 +1,15 @@
+<!--<img src="/assets/img/ksmt-logo-black2.png" width="60">-->
+<!--<pre> </pre>-->
+
+<!--{% if site.logo %}-->
+<!--<div class="site-logo" role="img" aria-label="{{ site.title }}"></div>-->
+<!--<img src="/docs/assets/img/ksmt-logo-black2.png">-->
+<!--{% else %}-->
+<!--{{ site.title }}-->
+<!--{% endif %}-->
+
+{% if site.logo %}
+    <div class="site-logo"></div>
+{% else %}
+    {{ site.title }}
+{% endif %}
