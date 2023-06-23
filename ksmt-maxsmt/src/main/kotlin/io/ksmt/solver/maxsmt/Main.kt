@@ -13,15 +13,7 @@ fun main() {
 
 fun test() = with(KContext()) {
     val z3Solver = KZ3Solver(this)
-    val a = boolSort.mkConst("a")
-    val notA = mkNot(a)
-    z3Solver.assert(a)
-    //z3Solver.assert(mkNot(a))
-    println(z3Solver.checkWithAssumptions(listOf(notA)))
-    println(z3Solver.unsatCore())
-
-/*    val z3Solver = KZ3Solver(this)
-    val maxSMTSolver = KMaxSMTSolver(z3Solver)
+    val maxSMTSolver = KMaxSMTSolver(this, z3Solver)
     val a = boolSort.mkConst("a")
     val b = boolSort.mkConst("b")
     val c = boolSort.mkConst("c")
@@ -31,8 +23,8 @@ fun test() = with(KContext()) {
     maxSMTSolver.assertSoft(mkAnd(a, mkNot(c)), 1)
     maxSMTSolver.assertSoft(mkNot(a), 1)
     val (model, iter) = maxSMTSolver.checkMaxSMT()
-    println("Model: $model")
-    println("Finished on $iter iteration")*/
+    println("Model:\n$model")
+    println("Finished on $iter iteration")
 
 /*    val aIsTrue = mkEq(a, mkTrue())
     val bIsTrue = mkEq(b, mkTrue())
