@@ -46,7 +46,7 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
         var formula = softConstraints.toMutableList()
 
         while (true) {
-            val (solverStatus, unsatCore, model) = solveSMT(softConstraints)
+            val (solverStatus, unsatCore, model) = solveSMT(formula)
 
             if (solverStatus == KSolverStatus.SAT) {
                 return Pair(model, i)
@@ -55,11 +55,10 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
             }
 
             val (formulaReified, reificationVariables) =
-                reifyCore(formula, getUnsatCoreOfConstraints(unsatCore), i)
+                reifyCore(formula, getUnsatCoreOfConstraints(formula, unsatCore), i)
 
-            // TODO, FIX: Для одного странно использовать KOrNAryExpr
-            val reifiedVariablesDisjunction = KOrNaryExpr(ctx, reificationVariables)
-            this.assert(reifiedVariablesDisjunction)
+            // TODO, FIX: Для одного странно использовать KOrNaryExpr
+            this.assert(KOrNaryExpr(ctx, reificationVariables))
 
             formula = applyMaxRes(formulaReified, reificationVariables)
 
@@ -73,10 +72,6 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
             val reificationVar = reificationVariables[i]
 
             formula.removeIf { x ->
-                x.constraint.internEquals(KNotExpr(ctx, reificationVar)) &&
-                    x.weight == 1
-            }
-            softConstraints.removeIf { x ->
                 x.constraint.internEquals(KNotExpr(ctx, reificationVar)) &&
                     x.weight == 1
             }
@@ -122,11 +117,11 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
         return formula
     }
 
-    private fun getUnsatCoreOfConstraints(unsatCore: List<KExpr<KBoolSort>>): List<SoftConstraint> {
+    private fun getUnsatCoreOfConstraints(formula: MutableList<SoftConstraint>, unsatCore: List<KExpr<KBoolSort>>): List<SoftConstraint> {
         val unsatCoreOfConstraints = mutableListOf<SoftConstraint>()
 
         for (coreElement in unsatCore) {
-            val softConstraint = softConstraints.find { x -> x.constraint == coreElement }
+            val softConstraint = formula.find { x -> x.constraint == coreElement }
             softConstraint?.let { unsatCoreOfConstraints.add(it) }
         }
 
@@ -139,10 +134,8 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
         for (coreElement in unsatCore.withIndex()) {
             if (coreElement.value.weight == 1) {
                 formula.remove(coreElement.value)
-                softConstraints.remove(coreElement.value)
 
                 val coreElementConstraint = coreElement.value.constraint
-                // TODO: какой тут должен быть контекст?
                 // TODO: как реализовать переобозначение? Что если формула встречается как подформула в других формулах?
                 val reificationVariable =
                     ctx.boolSort.mkConst("b$i${coreElement.index}")
@@ -156,7 +149,6 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
                 this.assert(reificationConstraint)
 
                 formula.add(SoftConstraint(KNotExpr(ctx, reificationVariable), 1))
-                softConstraints.add(SoftConstraint(KNotExpr(ctx, reificationVariable), 1))
 
                 unitConstraintExpressions.add(reificationVariable)
 
@@ -168,9 +160,8 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
     }
 
     // Returns issat, unsat core (?) and assignment
-    private fun solveSMT(softConstraints: List<SoftConstraint>): Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> {
-        // Здесь нужно очистить и заполнить солвер assert-ами.
-        val solverStatus = solver.checkWithAssumptions(softConstraints.map { x -> x.constraint })
+    private fun solveSMT(assumptions: List<SoftConstraint>): Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> {
+        val solverStatus = solver.checkWithAssumptions(assumptions.map { x -> x.constraint })
 
         if (solverStatus == KSolverStatus.SAT) {
             return Triple(solverStatus, listOf(), solver.model())
@@ -186,7 +177,6 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
     }
 
     override fun assert(expr: KExpr<KBoolSort>) {
-        // hardConstraints.add(HardConstraint(expr))
         solver.assert(expr)
     }
 
