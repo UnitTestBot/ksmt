@@ -1025,7 +1025,17 @@ class KCvc5ExprInternalizer(
     }
 
     override fun <T : KArithSort> transform(expr: KDivArithExpr<T>) = with(expr) {
-        transform(lhs, rhs) { lhs: Term, rhs: Term -> nsolver.mkTerm(Kind.DIVISION, lhs, rhs) }
+        transform(lhs, rhs) { lhs: Term, rhs: Term ->
+            arithDivide(sort, lhs, rhs)
+        }
+    }
+
+    private fun arithDivide(sort: KArithSort, lhs: Term, rhs: Term): Term = with(sort.ctx) {
+        when (sort) {
+            realSort -> nsolver.mkTerm(Kind.DIVISION, lhs, rhs)
+            intSort -> nsolver.mkTerm(Kind.INTS_DIVISION, lhs, rhs)
+            else -> throw KSolverUnsupportedFeatureException("Arith sort $sort is unsupported")
+        }
     }
 
     override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>) = with(expr) {

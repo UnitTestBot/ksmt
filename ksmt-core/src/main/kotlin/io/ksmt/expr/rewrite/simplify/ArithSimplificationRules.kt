@@ -174,7 +174,7 @@ inline fun <T : KArithSort> KContext.simplifyArithDivLight(
         }
 
         if (lhs is KIntNumExpr) {
-            return mkIntNum(lhs.bigIntegerValue / rValue.numerator).uncheckedCast()
+            return mkIntNum(evalIntDiv(lhs.bigIntegerValue, rValue.numerator)).uncheckedCast()
         }
 
         if (lhs is KRealNumExpr) {
@@ -405,6 +405,26 @@ fun <T : KArithSort> KExpr<T>.toRealValue(): RealValue? = when (this) {
     is KIntNumExpr -> toRealValue()
     is KRealNumExpr -> toRealValue()
     else -> null
+}
+
+/**
+ * Eval integer div wrt Int theory rules.
+ * */
+fun evalIntDiv(a: BigInteger, b: BigInteger): BigInteger {
+    if (a >= BigInteger.ZERO) {
+        return a / b
+    }
+    val (divisionRes, rem) = a.divideAndRemainder(b)
+    if (rem == BigInteger.ZERO) {
+        return divisionRes
+    }
+
+    // round toward zero
+    return if (b >= BigInteger.ZERO) {
+        divisionRes - BigInteger.ONE
+    } else {
+        divisionRes + BigInteger.ONE
+    }
 }
 
 /**
