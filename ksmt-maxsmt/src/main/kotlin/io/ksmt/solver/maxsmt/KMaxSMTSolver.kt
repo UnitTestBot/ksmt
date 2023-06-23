@@ -28,7 +28,7 @@ class KMaxSMTSolver(private val solver: KZ3Solver) : KSolver<KSolverConfiguratio
         softConstraints.add(SoftConstraint(expr, weight))
     }
 
-    // TODO: what to return?
+    // TODO: return soft constraints
     // TODO: add timeout?
     fun checkMaxSMT(): Pair<KModel?, Int> {
         require(softConstraints.isNotEmpty()) { "Soft constraints list should not be empty" }
@@ -61,7 +61,6 @@ class KMaxSMTSolver(private val solver: KZ3Solver) : KSolver<KSolverConfiguratio
         var formula = (hardConstraints + softConstraints).toMutableList()
 
         while (true) {
-            // TD: remove empty disjunction.
             val (solverStatus, unsatCore, model) = solveSMT(softConstraints)
 
             if (solverStatus == KSolverStatus.SAT) {
@@ -74,13 +73,10 @@ class KMaxSMTSolver(private val solver: KZ3Solver) : KSolver<KSolverConfiguratio
             val (formulaReified, reificationVariables) =
                     reifyCore(formula, getUnsatCoreOfConstraints(unsatCore), i)
 
-            for (reificationVar in reificationVariables) {
-                val reificationVarConstraint = HardConstraint(reificationVar)
-                if (!formulaReified.contains(reificationVarConstraint)) {
-                    // TODO: не уверена, что это сравнение работает корректно
-                    formulaReified.add(reificationVarConstraint)
-                }
-            }
+            // TODO, FIX: Для одного странно использовать KOrNaryExpr
+            val reifiedVariablesDisjunction = KOrNaryExpr(reificationVariables[0].ctx, reificationVariables)
+            formulaReified.add(HardConstraint(reifiedVariablesDisjunction))
+            this.assert(reifiedVariablesDisjunction)
 
             formula = applyMaxRes(formulaReified, reificationVariables)
 
@@ -93,10 +89,16 @@ class KMaxSMTSolver(private val solver: KZ3Solver) : KSolver<KSolverConfiguratio
         for (i in reificationVariables.indices) {
             // TODO: here we should use restrictions from the article for MaxRes
             val reificationVar = reificationVariables[i]
-            formula.remove(SoftConstraint(KNotExpr(reificationVar.ctx, reificationVar), 1))
 
+            formula.removeIf { x -> x is SoftConstraint && x.constraint.internEquals(KNotExpr(reificationVar.ctx, reificationVar))
+                    && x.weight == 1 }
+            softConstraints.removeIf { x -> x.constraint.internEquals(KNotExpr(reificationVar.ctx, reificationVar))
+                    && x.weight == 1 }
+
+
+            // TODO: fix hard/soft constraints sets!
             if (i < reificationVariables.size - 1) {
-                var reifiedLiteralsDisjunction = KOrNaryExpr(reificationVar.ctx,
+                val reifiedLiteralsDisjunction = KOrNaryExpr(reificationVar.ctx,
                         reificationVariables.subList(i + 1, reificationVariables.size - 1))
 
                 val reifiedVar = reificationVar.ctx.boolSort.mkConst("d$i")
@@ -145,6 +147,7 @@ class KMaxSMTSolver(private val solver: KZ3Solver) : KSolver<KSolverConfiguratio
             // для soft constraints
             if (element is SoftConstraint && element.weight == 1) {
                 formula.remove(element)
+                softConstraints.remove(element)
                 val constraint = element.constraint
                 // TODO: какой тут должен быть контекст?
                 // TODO: как реализовать переобозначение? Что если формула встречается как подформула в других формулах?
@@ -153,7 +156,10 @@ class KMaxSMTSolver(private val solver: KZ3Solver) : KSolver<KSolverConfiguratio
                         KNotExpr(constraint.ctx, reificationVariable))
                 // TODO: Переобозначить и остальные элементы в b_i_j
                 formula.add(HardConstraint(reificationConstraint))
-                formula.add(SoftConstraint(reificationVariable, 1))
+                this.assert(reificationConstraint)
+
+                formula.add(SoftConstraint(KNotExpr(constraint.ctx, reificationVariable), 1))
+                softConstraints.add(SoftConstraint(KNotExpr(constraint.ctx, reificationVariable), 1))
 
                 unitConstraintExpressions.add(reificationVariable)
 
@@ -168,8 +174,6 @@ class KMaxSMTSolver(private val solver: KZ3Solver) : KSolver<KSolverConfiguratio
     private fun solveSMT(softConstraints: List<Constraint>): Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> {
         // Здесь нужно очистить и заполнить солвер assert-ами.
         val solverStatus = solver.checkWithAssumptions(softConstraints.map { x -> x.constraint })
-
-        // Сейчас в unsatCore содержатся hard constraints
 
         if (solverStatus == KSolverStatus.SAT) {
             return Triple(solverStatus, listOf(), solver.model())

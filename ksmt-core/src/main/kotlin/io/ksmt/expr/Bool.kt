@@ -108,7 +108,7 @@ class KNotExpr(
 
     override fun internHashCode(): Int = hash(arg)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
-    override fun toString(): String = ""
+    //override fun toString(): String = ""
 }
 
 class KImpliesExpr internal constructor(
