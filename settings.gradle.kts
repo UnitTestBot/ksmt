@@ -18,7 +18,3 @@ pluginManagement {
         }
     }
 }
-include("ksmt-maxsmt:src:test:kotlin")
-findProject(":ksmt-maxsmt:src:test:kotlin")?.name = "kotlin"
-include("ksmt-maxsmt:src:test")
-findProject(":ksmt-maxsmt:src:test")?.name = "test"

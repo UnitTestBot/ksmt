@@ -79,7 +79,8 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
         return Triple(status, listOf(), null)
     }
 
-    private fun reifyCore(formula: MutableList<SoftConstraint>, unsatCore: List<SoftConstraint>, i: Int): Pair<MutableList<SoftConstraint>, List<KExpr<KBoolSort>>> {
+    private fun reifyCore(formula: MutableList<SoftConstraint>, unsatCore: List<SoftConstraint>, i: Int)
+            : Pair<MutableList<SoftConstraint>, List<KExpr<KBoolSort>>> {
         val literalsToReify = mutableListOf<KExpr<KBoolSort>>()
 
         for (coreElement in unsatCore.withIndex()) {
@@ -110,7 +111,8 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
         return Pair(formula, emptyList())
     }
 
-    private fun applyMaxRes(formula: MutableList<SoftConstraint>, literalsToReify: List<KExpr<KBoolSort>>): MutableList<SoftConstraint> {
+    private fun applyMaxRes(formula: MutableList<SoftConstraint>, literalsToReify: List<KExpr<KBoolSort>>)
+            : MutableList<SoftConstraint> {
         for (indexedLiteral in literalsToReify.withIndex()) {
             // TODO: here we should use restrictions from the article for MaxRes
 
@@ -156,7 +158,8 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
         return formula
     }
 
-    private fun getUnsatCoreOfConstraints(formula: MutableList<SoftConstraint>, unsatCore: List<KExpr<KBoolSort>>): List<SoftConstraint> {
+    private fun getUnsatCoreOfConstraints(formula: MutableList<SoftConstraint>, unsatCore: List<KExpr<KBoolSort>>)
+            : List<SoftConstraint> {
         val unsatCoreOfConstraints = mutableListOf<SoftConstraint>()
 
         for (coreElement in unsatCore) {
