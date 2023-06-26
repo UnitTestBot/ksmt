@@ -66,45 +66,40 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
         }
     }
 
-    private fun applyMaxRes(formula: MutableList<SoftConstraint>, reificationVariables: List<KExpr<KBoolSort>>): MutableList<SoftConstraint> {
-        for (i in reificationVariables.indices) {
+    private fun applyMaxRes(formula: MutableList<SoftConstraint>, literalsToReify: List<KExpr<KBoolSort>>): MutableList<SoftConstraint> {
+        for (indexedLiteral in literalsToReify.withIndex()) {
             // TODO: here we should use restrictions from the article for MaxRes
-            val reificationVar = reificationVariables[i]
 
             formula.removeIf { x ->
-                x.constraint.internEquals(KNotExpr(ctx, reificationVar)) &&
+                x.constraint.internEquals(KNotExpr(ctx, indexedLiteral.value)) &&
                     x.weight == 1
             }
 
-            // TODO: fix hard/soft constraints sets!
-            if (i < reificationVariables.size - 1) {
-                // TODO: uncommented, commented in order to build
-/*
-                val reifiedLiteralsDisjunction = KOrNaryExpr(
+            val index = indexedLiteral.index
+            val indexLast = literalsToReify.size - 1
+
+            if (index < indexLast) {
+                val disjunction = KOrNaryExpr(
                     ctx,
-                    reificationVariables.subList(i + 1, reificationVariables.size - 1),
+                    literalsToReify.subList(index + 1, indexLast),
                 )
-*/
 
-                val reifiedVar = ctx.boolSort.mkConst("d$i")
+                val literalToReifyDisjunction = ctx.boolSort.mkConst("d$indexedLiteral")
 
-                // TODO: assert it.
-/*                formula.add(
-                    HardConstraint(
-                        KEqExpr(
-                            ctx,
-                            reifiedVar,
-                            reifiedLiteralsDisjunction,
-                        ),
+                this.assert(
+                    KEqExpr(
+                        ctx,
+                        literalToReifyDisjunction,
+                        disjunction,
                     ),
-                )*/
+                )
 
                 formula.add(
                     SoftConstraint(
                         KOrBinaryExpr(
                             ctx,
-                            KNotExpr(ctx, reificationVar),
-                            KNotExpr(ctx, reifiedVar),
+                            KNotExpr(ctx, indexedLiteral.value),
+                            KNotExpr(ctx, literalToReifyDisjunction),
                         ),
                         1,
                     ),
@@ -129,7 +124,7 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
     }
 
     private fun reifyCore(formula: MutableList<SoftConstraint>, unsatCore: List<SoftConstraint>, i: Int): Pair<MutableList<SoftConstraint>, List<KExpr<KBoolSort>>> {
-        val unitConstraintExpressions = mutableListOf<KExpr<KBoolSort>>()
+        val literalsToReify = mutableListOf<KExpr<KBoolSort>>()
 
         for (coreElement in unsatCore.withIndex()) {
             if (coreElement.value.weight == 1) {
@@ -137,39 +132,39 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
 
                 val coreElementConstraint = coreElement.value.constraint
                 // TODO: как реализовать переобозначение? Что если формула встречается как подформула в других формулах?
-                val reificationVariable =
+                val literalToReify =
                     ctx.boolSort.mkConst("b$i${coreElement.index}")
 
-                val reificationConstraint = KEqExpr(
+                val constraintToReify = KEqExpr(
                     ctx,
                     coreElementConstraint,
-                    KNotExpr(ctx, reificationVariable),
+                    KNotExpr(ctx, literalToReify),
                 )
                 // TODO: Переобозначить и остальные элементы в b_i_j
-                this.assert(reificationConstraint)
+                this.assert(constraintToReify)
 
-                formula.add(SoftConstraint(KNotExpr(ctx, reificationVariable), 1))
+                formula.add(SoftConstraint(KNotExpr(ctx, literalToReify), 1))
 
-                unitConstraintExpressions.add(reificationVariable)
+                literalsToReify.add(literalToReify)
 
-                return Pair(formula, unitConstraintExpressions)
+                return Pair(formula, literalsToReify)
             }
         }
 
-        error("reify core method, not implemented part")
+        return Pair(formula, emptyList())
     }
 
     // Returns issat, unsat core (?) and assignment
     private fun solveSMT(assumptions: List<SoftConstraint>): Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> {
-        val solverStatus = solver.checkWithAssumptions(assumptions.map { x -> x.constraint })
+        val status = solver.checkWithAssumptions(assumptions.map { x -> x.constraint })
 
-        if (solverStatus == KSolverStatus.SAT) {
-            return Triple(solverStatus, listOf(), solver.model())
-        } else if (solverStatus == KSolverStatus.UNSAT) {
-            return Triple(solverStatus, solver.unsatCore(), null)
+        if (status == KSolverStatus.SAT) {
+            return Triple(status, listOf(), solver.model())
+        } else if (status == KSolverStatus.UNSAT) {
+            return Triple(status, solver.unsatCore(), null)
         }
 
-        return Triple(solverStatus, listOf(), null)
+        return Triple(status, listOf(), null)
     }
 
     override fun configure(configurator: KSolverConfiguration.() -> Unit) {
