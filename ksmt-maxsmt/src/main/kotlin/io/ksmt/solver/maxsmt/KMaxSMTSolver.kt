@@ -66,6 +66,50 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
         }
     }
 
+    // Returns issat, unsat core (?) and assignment
+    private fun solveSMT(assumptions: List<SoftConstraint>): Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> {
+        val status = solver.checkWithAssumptions(assumptions.map { x -> x.constraint })
+
+        if (status == KSolverStatus.SAT) {
+            return Triple(status, listOf(), solver.model())
+        } else if (status == KSolverStatus.UNSAT) {
+            return Triple(status, solver.unsatCore(), null)
+        }
+
+        return Triple(status, listOf(), null)
+    }
+
+    private fun reifyCore(formula: MutableList<SoftConstraint>, unsatCore: List<SoftConstraint>, i: Int): Pair<MutableList<SoftConstraint>, List<KExpr<KBoolSort>>> {
+        val literalsToReify = mutableListOf<KExpr<KBoolSort>>()
+
+        for (coreElement in unsatCore.withIndex()) {
+            if (coreElement.value.weight == 1) {
+                formula.remove(coreElement.value)
+
+                val coreElementConstraint = coreElement.value.constraint
+                // TODO: как реализовать переобозначение? Что если формула встречается как подформула в других формулах?
+                val literalToReify =
+                    ctx.boolSort.mkConst("b$i${coreElement.index}")
+
+                val constraintToReify = KEqExpr(
+                    ctx,
+                    coreElementConstraint,
+                    KNotExpr(ctx, literalToReify),
+                )
+                // TODO: Переобозначить и остальные элементы в b_i_j
+                this.assert(constraintToReify)
+
+                formula.add(SoftConstraint(KNotExpr(ctx, literalToReify), 1))
+
+                literalsToReify.add(literalToReify)
+
+                return Pair(formula, literalsToReify)
+            }
+        }
+
+        return Pair(formula, emptyList())
+    }
+
     private fun applyMaxRes(formula: MutableList<SoftConstraint>, literalsToReify: List<KExpr<KBoolSort>>): MutableList<SoftConstraint> {
         for (indexedLiteral in literalsToReify.withIndex()) {
             // TODO: here we should use restrictions from the article for MaxRes
@@ -121,50 +165,6 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
         }
 
         return unsatCoreOfConstraints
-    }
-
-    private fun reifyCore(formula: MutableList<SoftConstraint>, unsatCore: List<SoftConstraint>, i: Int): Pair<MutableList<SoftConstraint>, List<KExpr<KBoolSort>>> {
-        val literalsToReify = mutableListOf<KExpr<KBoolSort>>()
-
-        for (coreElement in unsatCore.withIndex()) {
-            if (coreElement.value.weight == 1) {
-                formula.remove(coreElement.value)
-
-                val coreElementConstraint = coreElement.value.constraint
-                // TODO: как реализовать переобозначение? Что если формула встречается как подформула в других формулах?
-                val literalToReify =
-                    ctx.boolSort.mkConst("b$i${coreElement.index}")
-
-                val constraintToReify = KEqExpr(
-                    ctx,
-                    coreElementConstraint,
-                    KNotExpr(ctx, literalToReify),
-                )
-                // TODO: Переобозначить и остальные элементы в b_i_j
-                this.assert(constraintToReify)
-
-                formula.add(SoftConstraint(KNotExpr(ctx, literalToReify), 1))
-
-                literalsToReify.add(literalToReify)
-
-                return Pair(formula, literalsToReify)
-            }
-        }
-
-        return Pair(formula, emptyList())
-    }
-
-    // Returns issat, unsat core (?) and assignment
-    private fun solveSMT(assumptions: List<SoftConstraint>): Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> {
-        val status = solver.checkWithAssumptions(assumptions.map { x -> x.constraint })
-
-        if (status == KSolverStatus.SAT) {
-            return Triple(status, listOf(), solver.model())
-        } else if (status == KSolverStatus.UNSAT) {
-            return Triple(status, solver.unsatCore(), null)
-        }
-
-        return Triple(status, listOf(), null)
     }
 
     override fun configure(configurator: KSolverConfiguration.() -> Unit) {
