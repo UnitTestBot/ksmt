@@ -103,12 +103,10 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
                 formula.add(SoftConstraint(KNotExpr(ctx, literalToReify), 1))
 
                 literalsToReify.add(literalToReify)
-
-                return Pair(formula, literalsToReify)
             }
         }
 
-        return Pair(formula, emptyList())
+        return Pair(formula, literalsToReify)
     }
 
     private fun applyMaxRes(formula: MutableList<SoftConstraint>, literalsToReify: List<KExpr<KBoolSort>>)

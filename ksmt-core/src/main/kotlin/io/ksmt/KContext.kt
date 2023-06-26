@@ -518,6 +518,9 @@ open class KContext(
 
     val boolSort: KBoolSort = KBoolSort(this)
 
+    /**
+     * Create a Bool sort.
+     * */
     fun mkBoolSort(): KBoolSort = boolSort
 
     private val arraySortCache = mkCache<KArraySort<*, *>, KArraySort<*, *>>(operationMode)
@@ -525,6 +528,9 @@ open class KContext(
     private val array3SortCache = mkCache<KArray3Sort<*, *, *, *>, KArray3Sort<*, *, *, *>>(operationMode)
     private val arrayNSortCache = mkCache<KArrayNSort<*>, KArrayNSort<*>>(operationMode)
 
+    /**
+     * Create an array sort (Array [domain] [range]).
+     * */
     fun <D : KSort, R : KSort> mkArraySort(domain: D, range: R): KArraySort<D, R> =
         ensureContextActive {
             ensureContextMatch(domain, range)
@@ -532,6 +538,9 @@ open class KContext(
             (arraySortCache.putIfAbsent(sort, sort) ?: sort).uncheckedCast()
         }
 
+    /**
+     * Create an array sort (Array [domain0] [domain1] [range]).
+     * */
     fun <D0 : KSort, D1 : KSort, R : KSort> mkArraySort(domain0: D0, domain1: D1, range: R): KArray2Sort<D0, D1, R> =
         ensureContextActive {
             ensureContextMatch(domain0, domain1, range)
@@ -539,6 +548,9 @@ open class KContext(
             (array2SortCache.putIfAbsent(sort, sort) ?: sort).uncheckedCast()
         }
 
+    /**
+     * Create an array sort (Array [domain0] [domain1] [domain2] [range]).
+     * */
     fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArraySort(
         domain0: D0, domain1: D1, domain2: D2, range: R
     ): KArray3Sort<D0, D1, D2, R> =
@@ -548,6 +560,10 @@ open class KContext(
             (array3SortCache.putIfAbsent(sort, sort) ?: sort).uncheckedCast()
         }
 
+
+    /**
+     * Create a n-ary array sort (Array [domain]_0 ... [domain]_n [range]).
+     * */
     fun <R : KSort> mkArrayNSort(domain: List<KSort>, range: R): KArrayNSort<R> =
         ensureContextActive {
             ensureContextMatch(range)
@@ -561,12 +577,18 @@ open class KContext(
         ensureContextActive { KIntSort(this) }
     }
 
+    /**
+     * Create an Int sort.
+     * */
     fun mkIntSort(): KIntSort = intSortCache
 
     private val realSortCache by lazy {
         ensureContextActive { KRealSort(this) }
     }
 
+    /**
+     * Create a Real sort.
+     * */
     fun mkRealSort(): KRealSort = realSortCache
 
     // bit-vec
@@ -577,12 +599,34 @@ open class KContext(
     private val bv64SortCache: KBv64Sort by lazy { KBv64Sort(this) }
     private val bvCustomSizeSortCache = mkCache<UInt, KBvSort>(operationMode)
 
+    /**
+     * Create a BitVec sort with 1 bit length (_ BitVec 1).
+     * */
     fun mkBv1Sort(): KBv1Sort = bv1SortCache
+
+    /**
+     * Create a BitVec sort with 8 bits length (_ BitVec 8).
+     * */
     fun mkBv8Sort(): KBv8Sort = bv8SortCache
+
+    /**
+     * Create a BitVec sort with 16 bits length (_ BitVec 16).
+     * */
     fun mkBv16Sort(): KBv16Sort = bv16SortCache
+
+    /**
+     * Create a BitVec sort with 32 bits length (_ BitVec 32).
+     * */
     fun mkBv32Sort(): KBv32Sort = bv32SortCache
+
+    /**
+     * Create a BitVec sort with 64 bits length (_ BitVec 64).
+     * */
     fun mkBv64Sort(): KBv64Sort = bv64SortCache
 
+    /**
+     * Create a BitVec sort with [sizeBits] bits length (_ BitVec [sizeBits]).
+     * */
     fun mkBvSort(sizeBits: UInt): KBvSort = ensureContextActive {
         when (sizeBits.toInt()) {
             1 -> mkBv1Sort()
@@ -596,6 +640,9 @@ open class KContext(
         }
     }
 
+    /**
+     * Create an uninterpreted sort named [name].
+     * */
     fun mkUninterpretedSort(name: String): KUninterpretedSort =
         ensureContextActive {
             KUninterpretedSort(name, this)
@@ -608,11 +655,29 @@ open class KContext(
     private val fp128SortCache: KFp128Sort by lazy { KFp128Sort(this) }
     private val fpCustomSizeSortCache = mkCache<Pair<UInt, UInt>, KFpSort>(operationMode)
 
+    /**
+     * Create a 16-bit IEEE floating point sort (_ FloatingPoint 5 11).
+     * */
     fun mkFp16Sort(): KFp16Sort = fp16SortCache
+
+    /**
+     * Create a 32-bit IEEE floating point sort (_ FloatingPoint 8 24).
+     * */
     fun mkFp32Sort(): KFp32Sort = fp32SortCache
+
+    /**
+     * Create a 64-bit IEEE floating point sort (_ FloatingPoint 11 53).
+     * */
     fun mkFp64Sort(): KFp64Sort = fp64SortCache
+
+    /**
+     * Create a 128-bit IEEE floating point sort (_ FloatingPoint 15 113).
+     * */
     fun mkFp128Sort(): KFp128Sort = fp128SortCache
 
+    /**
+     * Create an arbitrary precision IEEE floating point sort (_ FloatingPoint [exponentBits] [significandBits]).
+     * */
     fun mkFpSort(exponentBits: UInt, significandBits: UInt): KFpSort =
         ensureContextActive {
             val eb = exponentBits
@@ -632,6 +697,9 @@ open class KContext(
         ensureContextActive { KFpRoundingModeSort(this) }
     }
 
+    /**
+     * Create a floating point rounding mode sort.
+     * */
     fun mkFpRoundingModeSort(): KFpRoundingModeSort = roundingModeSortCache
 
     // utils
@@ -707,6 +775,9 @@ open class KContext(
         createNoSimplify = ::mkAndNoSimplify
     )
 
+    /**
+     * Create boolean AND expression.
+     * */
     open fun mkAndNoSimplify(args: List<KExpr<KBoolSort>>): KAndExpr =
         if (args.size == 2) {
             mkAndNoSimplify(args.first(), args.last())
@@ -717,6 +788,9 @@ open class KContext(
             }
         }
 
+    /**
+     * Create boolean binary AND expression.
+     * */
     open fun mkAndNoSimplify(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KAndBinaryExpr =
         andBinaryCache.createIfContextActive {
             ensureContextMatch(lhs, rhs)
@@ -761,6 +835,9 @@ open class KContext(
         createNoSimplify = ::mkOrNoSimplify
     )
 
+    /**
+     * Create boolean OR expression.
+     * */
     open fun mkOrNoSimplify(args: List<KExpr<KBoolSort>>): KOrExpr =
         if (args.size == 2) {
             mkOrNoSimplify(args.first(), args.last())
@@ -771,6 +848,9 @@ open class KContext(
             }
         }
 
+    /**
+     * Create boolean binary OR expression.
+     * */
     open fun mkOrNoSimplify(lhs: KExpr<KBoolSort>, rhs: KExpr<KBoolSort>): KOrBinaryExpr =
         orBinaryCache.createIfContextActive {
             ensureContextMatch(lhs, rhs)
@@ -779,9 +859,15 @@ open class KContext(
 
     private val notCache = mkAstInterner<KNotExpr>()
 
+    /**
+     * Create boolean NOT expression.
+     * */
     open fun mkNot(arg: KExpr<KBoolSort>): KExpr<KBoolSort> =
         mkSimplified(arg, KContext::simplifyNot, ::mkNotNoSimplify)
 
+    /**
+     * Create boolean NOT expression.
+     * */
     open fun mkNotNoSimplify(arg: KExpr<KBoolSort>): KNotExpr = notCache.createIfContextActive {
         ensureContextMatch(arg)
         KNotExpr(this, arg)
@@ -789,9 +875,15 @@ open class KContext(
 
     private val impliesCache = mkAstInterner<KImpliesExpr>()
 
+    /**
+     * Create boolean `=>` (implication) expression.
+     * */
     open fun mkImplies(p: KExpr<KBoolSort>, q: KExpr<KBoolSort>): KExpr<KBoolSort> =
         mkSimplified(p, q, KContext::simplifyImplies, ::mkImpliesNoSimplify)
 
+    /**
+     * Create boolean `=>` (implication) expression.
+     * */
     open fun mkImpliesNoSimplify(
         p: KExpr<KBoolSort>,
         q: KExpr<KBoolSort>
@@ -802,9 +894,15 @@ open class KContext(
 
     private val xorCache = mkAstInterner<KXorExpr>()
 
+    /**
+     * Create boolean XOR expression.
+     * */
     open fun mkXor(a: KExpr<KBoolSort>, b: KExpr<KBoolSort>): KExpr<KBoolSort> =
         mkSimplified(a, b, KContext::simplifyXor, ::mkXorNoSimplify)
 
+    /**
+     * Create boolean XOR expression.
+     * */
     open fun mkXorNoSimplify(a: KExpr<KBoolSort>, b: KExpr<KBoolSort>): KXorExpr =
         xorCache.createIfContextActive {
             ensureContextMatch(a, b)
@@ -814,7 +912,14 @@ open class KContext(
     val trueExpr: KTrue = KTrue(this)
     val falseExpr: KFalse = KFalse(this)
 
+    /**
+     * Create boolean True constant.
+     * */
     fun mkTrue(): KTrue = trueExpr
+
+    /**
+     * Create boolean False constant.
+     * */
     fun mkFalse(): KFalse = falseExpr
 
     private val eqCache = mkAstInterner<KEqExpr<out KSort>>()
@@ -835,6 +940,9 @@ open class KContext(
         createNoSimplify = ::mkEqNoSimplify
     )
 
+    /**
+     * Create EQ expression.
+     * */
     open fun <T : KSort> mkEqNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KEqExpr<T> =
         eqCache.createIfContextActive {
             ensureContextMatch(lhs, rhs)
@@ -858,6 +966,9 @@ open class KContext(
         createNoSimplify = ::mkDistinctNoSimplify
     )
 
+    /**
+     * Create DISTINCT expression.
+     * */
     open fun <T : KSort> mkDistinctNoSimplify(args: List<KExpr<T>>): KDistinctExpr<T> =
         distinctCache.createIfContextActive {
             ensureContextMatch(args)
@@ -866,12 +977,18 @@ open class KContext(
 
     private val iteCache = mkAstInterner<KIteExpr<out KSort>>()
 
+    /**
+     * Create ITE (if-then-else) expression.
+     * */
     open fun <T : KSort> mkIte(
         condition: KExpr<KBoolSort>,
         trueBranch: KExpr<T>,
         falseBranch: KExpr<T>
     ): KExpr<T> = mkSimplified(condition, trueBranch, falseBranch, KContext::simplifyIte, ::mkIteNoSimplify)
 
+    /**
+     * Create ITE (if-then-else) expression.
+     * */
     open fun <T : KSort> mkIteNoSimplify(
         condition: KExpr<KBoolSort>,
         trueBranch: KExpr<T>,
@@ -899,11 +1016,14 @@ open class KContext(
         get() = mkBool(this)
 
     // functions
-    /*
-    * For builtin declarations e.g. KAndDecl, mkApp must return the same object as a corresponding builder.
-    * For example, mkApp(KAndDecl, a, b) and mkAnd(a, b) must end up with the same KAndExpr object.
-    * To achieve such behaviour we override apply for all builtin declarations.
-    */
+
+    /**
+     * Create function app expression.
+     *
+     * For builtin declarations e.g. KAndDecl, mkApp must return the same object as a corresponding builder.
+     * For example, mkApp(KAndDecl, a, b) and mkAnd(a, b) must end up with the same KAndExpr object.
+     * To achieve such behaviour we override apply for all builtin declarations.
+     */
     open fun <T : KSort> mkApp(decl: KDecl<T>, args: List<KExpr<*>>) = with(decl) { apply(args) }
 
     private val functionAppCache = mkAstInterner<KFunctionApp<out KSort>>()
@@ -921,13 +1041,26 @@ open class KContext(
 
     private val constAppCache = mkAstInterner<KConst<out KSort>>()
 
+    /**
+     * Create constant (function without arguments) app expression.
+     *
+     * @see [mkApp]
+     * */
     open fun <T : KSort> mkConstApp(decl: KDecl<T>): KConst<T> = constAppCache.createIfContextActive {
         ensureContextMatch(decl)
         KConst(this, decl)
     }.cast()
 
+    /**
+     * Create a constant named [name] with sort [sort].
+     * */
     fun <T : KSort> mkConst(name: String, sort: T): KApp<T, *> = with(mkConstDecl(name, sort)) { apply() }
 
+    /**
+     * Create a fresh constant with name prefix [name] and sort [sort].
+     *
+     * It is guaranteed that a fresh constant is not equal by `==` to any other constant.
+     * */
     fun <T : KSort> mkFreshConst(name: String, sort: T): KApp<T, *> = with(mkFreshConstDecl(name, sort)) { apply() }
 
     // array
@@ -936,6 +1069,9 @@ open class KContext(
     private val array3StoreCache = mkAstInterner<KArray3Store<out KSort, out KSort, out KSort, out KSort>>()
     private val arrayNStoreCache = mkAstInterner<KArrayNStore<out KSort>>()
 
+    /**
+     * Create an array store expression (store [array] [index] [value]).
+     * */
     open fun <D : KSort, R : KSort> mkArrayStore(
         array: KExpr<KArraySort<D, R>>,
         index: KExpr<D>,
@@ -943,6 +1079,9 @@ open class KContext(
     ): KExpr<KArraySort<D, R>> =
         mkSimplified(array, index, value, KContext::simplifyArrayStore, ::mkArrayStoreNoSimplify)
 
+    /**
+     * Create an array store expression (store [array] [index0] [index1] [value]).
+     * */
     open fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayStore(
         array: KExpr<KArray2Sort<D0, D1, R>>,
         index0: KExpr<D0>,
@@ -951,6 +1090,9 @@ open class KContext(
     ): KExpr<KArray2Sort<D0, D1, R>> =
         mkSimplified(array, index0, index1, value, KContext::simplifyArrayStore, ::mkArrayStoreNoSimplify)
 
+    /**
+     * Create an array store expression (store [array] [index0] [index1] [index2] [value]).
+     * */
     open fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayStore(
         array: KExpr<KArray3Sort<D0, D1, D2, R>>,
         index0: KExpr<D0>,
@@ -960,6 +1102,9 @@ open class KContext(
     ): KExpr<KArray3Sort<D0, D1, D2, R>> =
         mkSimplified(array, index0, index1, index2, value, KContext::simplifyArrayStore, ::mkArrayStoreNoSimplify)
 
+    /**
+     * Create n-ary array store expression (store [array] [indices]_0 ... [indices]_n [value]).
+     * */
     open fun <R : KSort> mkArrayNStore(
         array: KExpr<KArrayNSort<R>>,
         indices: List<KExpr<*>>,
@@ -967,6 +1112,9 @@ open class KContext(
     ): KExpr<KArrayNSort<R>> =
         mkSimplified(array, indices, value, KContext::simplifyArrayNStore, ::mkArrayNStoreNoSimplify)
 
+    /**
+     * Create an array store expression (store [array] [index] [value]).
+     * */
     open fun <D : KSort, R : KSort> mkArrayStoreNoSimplify(
         array: KExpr<KArraySort<D, R>>,
         index: KExpr<D>,
@@ -975,6 +1123,9 @@ open class KContext(
         mkArrayStoreNoSimplifyNoAnalyze(array, index, value)
             .analyzeIfSimplificationEnabled()
 
+    /**
+     * Create an array store expression (store [array] [index0] [index1] [value]).
+     * */
     open fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayStoreNoSimplify(
         array: KExpr<KArray2Sort<D0, D1, R>>,
         index0: KExpr<D0>,
@@ -984,6 +1135,9 @@ open class KContext(
         mkArrayStoreNoSimplifyNoAnalyze(array, index0, index1, value)
             .analyzeIfSimplificationEnabled()
 
+    /**
+     * Create an array store expression (store [array] [index0] [index1] [index2] [value]).
+     * */
     open fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayStoreNoSimplify(
         array: KExpr<KArray3Sort<D0, D1, D2, R>>,
         index0: KExpr<D0>,
@@ -994,6 +1148,9 @@ open class KContext(
         mkArrayStoreNoSimplifyNoAnalyze(array, index0, index1, index2, value)
             .analyzeIfSimplificationEnabled()
 
+    /**
+     * Create n-ary array store expression (store [array] [indices]_0 ... [indices]_n [value]).
+     * */
     open fun <R : KSort> mkArrayNStoreNoSimplify(
         array: KExpr<KArrayNSort<R>>,
         indices: List<KExpr<*>>,
@@ -1002,6 +1159,13 @@ open class KContext(
         mkArrayNStoreNoSimplifyNoAnalyze(array, indices, value)
             .analyzeIfSimplificationEnabled()
 
+    /**
+     * Create an array store expression (store [array] [index] [value]) without cache.
+     * Cache is used to speed up [mkArraySelect] operation simplification 
+     * but can result in a huge memory consumption.
+     *
+     * @see [KArrayStoreBase] for the cache details.
+     * */
     open fun <D : KSort, R : KSort> mkArrayStoreNoSimplifyNoAnalyze(
         array: KExpr<KArraySort<D, R>>,
         index: KExpr<D>,
@@ -1011,6 +1175,13 @@ open class KContext(
         KArrayStore(this, array, index, value)
     }.cast()
 
+    /**
+     * Create an array store expression (store [array] [index0] [index1] [value]) without cache.
+     * Cache is used to speed up [mkArraySelect] operation simplification 
+     * but can result in a huge memory consumption.
+     *
+     * @see [KArrayStoreBase] for the cache details.
+     * */
     open fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayStoreNoSimplifyNoAnalyze(
         array: KExpr<KArray2Sort<D0, D1, R>>,
         index0: KExpr<D0>,
@@ -1021,6 +1192,13 @@ open class KContext(
         KArray2Store(this, array, index0, index1, value)
     }.cast()
 
+    /**
+     * Create an array store expression (store [array] [index0] [index1] [index2] [value]) without cache.
+     * Cache is used to speed up [mkArraySelect] operation simplification 
+     * but can result in a huge memory consumption.
+     *
+     * @see [KArrayStoreBase] for the cache details.
+     * */
     open fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayStoreNoSimplifyNoAnalyze(
         array: KExpr<KArray3Sort<D0, D1, D2, R>>,
         index0: KExpr<D0>,
@@ -1032,6 +1210,13 @@ open class KContext(
         KArray3Store(this, array, index0, index1, index2, value)
     }.cast()
 
+    /**
+     * Create n-ary array store expression (store [array] [indices]_0 ... [indices]_n [value]) without cache.
+     * Cache is used to speed up [mkArrayNSelect] operation simplification
+     * but can result in a huge memory consumption.
+     *
+     * @see [KArrayStoreBase] for the cache details.
+     * */
     open fun <R : KSort> mkArrayNStoreNoSimplifyNoAnalyze(
         array: KExpr<KArrayNSort<R>>,
         indices: List<KExpr<*>>,
@@ -1060,17 +1245,26 @@ open class KContext(
     private val array3SelectCache = mkAstInterner<KArray3Select<out KSort, out KSort, out KSort, out KSort>>()
     private val arrayNSelectCache = mkAstInterner<KArrayNSelect<out KSort>>()
 
+    /**
+     * Create an array select expression (select [array] [index]).
+     * */
     open fun <D : KSort, R : KSort> mkArraySelect(
         array: KExpr<KArraySort<D, R>>,
         index: KExpr<D>
     ): KExpr<R> = mkSimplified(array, index, KContext::simplifyArraySelect, ::mkArraySelectNoSimplify)
 
+    /**
+     * Create an array select expression (select [array] [index0] [index1]).
+     * */
     open fun <D0 : KSort, D1 : KSort, R : KSort> mkArraySelect(
         array: KExpr<KArray2Sort<D0, D1, R>>,
         index0: KExpr<D0>,
         index1: KExpr<D1>
     ): KExpr<R> = mkSimplified(array, index0, index1, KContext::simplifyArraySelect, ::mkArraySelectNoSimplify)
 
+    /**
+     * Create an array select expression (select [array] [index0] [index1] [index2]).
+     * */
     open fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArraySelect(
         array: KExpr<KArray3Sort<D0, D1, D2, R>>,
         index0: KExpr<D0>,
@@ -1078,11 +1272,17 @@ open class KContext(
         index2: KExpr<D2>
     ): KExpr<R> = mkSimplified(array, index0, index1, index2, KContext::simplifyArraySelect, ::mkArraySelectNoSimplify)
 
+    /**
+     * Create n-ary array select expression (select [array] [indices]_0 ... [indices]_n).
+     * */
     open fun <R : KSort> mkArrayNSelect(
         array: KExpr<KArrayNSort<R>>,
         indices: List<KExpr<*>>
     ): KExpr<R> = mkSimplified(array, indices, KContext::simplifyArrayNSelect, ::mkArrayNSelectNoSimplify)
 
+    /**
+     * Create an array select expression (select [array] [index]).
+     * */
     open fun <D : KSort, R : KSort> mkArraySelectNoSimplify(
         array: KExpr<KArraySort<D, R>>,
         index: KExpr<D>
@@ -1091,6 +1291,9 @@ open class KContext(
         KArraySelect(this, array, index)
     }.cast()
 
+    /**
+     * Create an array select expression (select [array] [index0] [index1]).
+     * */
     open fun <D0 : KSort, D1 : KSort, R : KSort> mkArraySelectNoSimplify(
         array: KExpr<KArray2Sort<D0, D1, R>>,
         index0: KExpr<D0>,
@@ -1100,6 +1303,9 @@ open class KContext(
         KArray2Select(this, array, index0, index1)
     }.cast()
 
+    /**
+     * Create an array select expression (select [array] [index0] [index1] [index2]).
+     * */
     open fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArraySelectNoSimplify(
         array: KExpr<KArray3Sort<D0, D1, D2, R>>,
         index0: KExpr<D0>,
@@ -1110,6 +1316,9 @@ open class KContext(
         KArray3Select(this, array, index0, index1, index2)
     }.cast()
 
+    /**
+     * Create n-ary array select expression (select [array] [indices]_0 ... [indices]_n).
+     * */
     open fun <R : KSort> mkArrayNSelectNoSimplify(
         array: KExpr<KArrayNSort<R>>,
         indices: List<KExpr<*>>
@@ -1122,6 +1331,13 @@ open class KContext(
 
     private val arrayConstCache = mkAstInterner<KArrayConst<out KArraySortBase<out KSort>, out KSort>>()
 
+    /**
+     * Create a constant array expression ((as const [arraySort]) [value]).
+     *
+     * Maps all indices to some fixed [value].
+     * If `(= C ((as const (Array D R)) value))`
+     * then `(forall (i D) (= (select C i) value))`.
+     * */
     open fun <A : KArraySortBase<R>, R : KSort> mkArrayConst(
         arraySort: A,
         value: KExpr<R>
@@ -1132,6 +1348,13 @@ open class KContext(
 
     private val functionAsArrayCache = mkAstInterner<KFunctionAsArray<out KArraySortBase<out KSort>, out KSort>>()
 
+    /**
+     * Create a function-as-array expression (_ as-array [function]).
+     *
+     * Maps all array indices to the corresponding value of [function].
+     * If `(= A (_ as-array f))`
+     * then `(forall (i (domain f)) (= (select A i) (f i)))`
+     * */
     open fun <A : KArraySortBase<R>, R : KSort> mkFunctionAsArray(
         sort: A, function: KFuncDecl<R>
     ): KFunctionAsArray<A, R> =
@@ -1145,6 +1368,16 @@ open class KContext(
     private val array3LambdaCache = mkAstInterner<KArray3Lambda<out KSort, out KSort, out KSort, out KSort>>()
     private val arrayNLambdaCache = mkAstInterner<KArrayNLambda<out KSort>>()
 
+    /**
+     * Create an array lambda expression (lambda ([indexVar]) [body]).
+     *
+     * The sort of the lambda expression is an array
+     * where the domain is the array are the [indexVar] sort and
+     * the range is the sort of the [body] of the lambda expression.
+     *
+     * If `(= L (lambda (i D)) (body i))`
+     * then `(forall (i D) (= (select L i) (body i)))`.
+     * */
     open fun <D : KSort, R : KSort> mkArrayLambda(
         indexVar: KDecl<D>, body: KExpr<R>
     ): KArrayLambda<D, R> = arrayLambdaCache.createIfContextActive {
@@ -1152,6 +1385,11 @@ open class KContext(
         KArrayLambda(this, indexVar, body)
     }.cast()
 
+    /**
+     * Create an array lambda expression (lambda ([indexVar0] [indexVar1]) [body]).
+     *
+     * @see [mkArrayLambda]
+     * */
     open fun <D0 : KSort, D1 : KSort, R : KSort> mkArrayLambda(
         indexVar0: KDecl<D0>, indexVar1: KDecl<D1>, body: KExpr<R>
     ): KArray2Lambda<D0, D1, R> = array2LambdaCache.createIfContextActive {
@@ -1159,6 +1397,11 @@ open class KContext(
         KArray2Lambda(this, indexVar0, indexVar1, body)
     }.cast()
 
+    /**
+     * Create an array lambda expression (lambda ([indexVar0] [indexVar1] [indexVar2]) [body]).
+     *
+     * @see [mkArrayLambda]
+     * */
     open fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> mkArrayLambda(
         indexVar0: KDecl<D0>, indexVar1: KDecl<D1>, indexVar2: KDecl<D2>, body: KExpr<R>
     ): KArray3Lambda<D0, D1, D2, R> = array3LambdaCache.createIfContextActive {
@@ -1166,6 +1409,11 @@ open class KContext(
         KArray3Lambda(this, indexVar0, indexVar1, indexVar2, body)
     }.cast()
 
+    /**
+     * Create n-ary array lambda expression (lambda ([indices]_0 ... [indices]_n) [body]).
+     *
+     * @see [mkArrayLambda]
+     * */
     open fun <R : KSort> mkArrayNLambda(
         indices: List<KDecl<*>>, body: KExpr<R>
     ): KArrayNLambda<R> = arrayNLambdaCache.createIfContextActive {
@@ -1202,9 +1450,15 @@ open class KContext(
     // arith
     private val arithAddCache = mkAstInterner<KAddArithExpr<out KArithSort>>()
 
+    /**
+     * Create an Int/Real arithmetic addition expression.
+     * */
     open fun <T : KArithSort> mkArithAdd(args: List<KExpr<T>>): KExpr<T> =
         mkSimplified(args, KContext::simplifyArithAdd, ::mkArithAddNoSimplify)
 
+    /**
+     * Create an Int/Real arithmetic addition expression.
+     * */
     open fun <T : KArithSort> mkArithAddNoSimplify(args: List<KExpr<T>>): KAddArithExpr<T> =
         arithAddCache.createIfContextActive {
             ensureContextMatch(args)
@@ -1213,9 +1467,15 @@ open class KContext(
 
     private val arithMulCache = mkAstInterner<KMulArithExpr<out KArithSort>>()
 
+    /**
+     * Create an Int/Real arithmetic multiplication expression.
+     * */
     open fun <T : KArithSort> mkArithMul(args: List<KExpr<T>>): KExpr<T> =
         mkSimplified(args, KContext::simplifyArithMul, ::mkArithMulNoSimplify)
 
+    /**
+     * Create an Int/Real arithmetic multiplication expression.
+     * */
     open fun <T : KArithSort> mkArithMulNoSimplify(args: List<KExpr<T>>): KMulArithExpr<T> =
         arithMulCache.createIfContextActive {
             ensureContextMatch(args)
@@ -1224,9 +1484,15 @@ open class KContext(
 
     private val arithSubCache = mkAstInterner<KSubArithExpr<out KArithSort>>()
 
+    /**
+     * Create an Int/Real arithmetic subtraction expression.
+     * */
     open fun <T : KArithSort> mkArithSub(args: List<KExpr<T>>): KExpr<T> =
         mkSimplified(args, KContext::simplifyArithSub, ::mkArithSubNoSimplify)
 
+    /**
+     * Create an Int/Real arithmetic subtraction expression.
+     * */
     open fun <T : KArithSort> mkArithSubNoSimplify(args: List<KExpr<T>>): KSubArithExpr<T> =
         arithSubCache.createIfContextActive {
             ensureContextMatch(args)
@@ -1244,9 +1510,15 @@ open class KContext(
 
     private val arithUnaryMinusCache = mkAstInterner<KUnaryMinusArithExpr<out KArithSort>>()
 
+    /**
+     * Create an Int/Real arithmetic negation expression.
+     * */
     open fun <T : KArithSort> mkArithUnaryMinus(arg: KExpr<T>): KExpr<T> =
         mkSimplified(arg, KContext::simplifyArithUnaryMinus, ::mkArithUnaryMinusNoSimplify)
 
+    /**
+     * Create an Int/Real arithmetic negation expression.
+     * */
     open fun <T : KArithSort> mkArithUnaryMinusNoSimplify(arg: KExpr<T>): KUnaryMinusArithExpr<T> =
         arithUnaryMinusCache.createIfContextActive {
             ensureContextMatch(arg)
@@ -1255,9 +1527,31 @@ open class KContext(
 
     private val arithDivCache = mkAstInterner<KDivArithExpr<out KArithSort>>()
 
+    /**
+     * Create an Int/Real arithmetic division expression.
+     *
+     * Note for Int division:
+     *
+     *   when [rhs] is positive, (div [lhs] [rhs]) is the floor (round toward zero)
+     *   of the rational number [lhs]/[rhs]
+     *
+     *   when [rhs] is negative, (div [lhs] [rhs]) is the ceiling (round toward positive infinity)
+     *   of the rational number [lhs]/[rhs]
+     *
+     *   For example:
+     *    `47 div 13 = 3`
+     *    `47 div -13 = -3`
+     *    `-47 div 13 = -4`
+     *    `-47 div -13 = 4`
+     * */
     open fun <T : KArithSort> mkArithDiv(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
         mkSimplified(lhs, rhs, KContext::simplifyArithDiv, ::mkArithDivNoSimplify)
 
+    /**
+     * Create an Int/Real arithmetic division expression.
+     *
+     * @see mkArithDiv for the operation details.
+     * */
     open fun <T : KArithSort> mkArithDivNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KDivArithExpr<T> =
         arithDivCache.createIfContextActive {
             ensureContextMatch(lhs, rhs)
@@ -1266,9 +1560,15 @@ open class KContext(
 
     private val arithPowerCache = mkAstInterner<KPowerArithExpr<out KArithSort>>()
 
+    /**
+     * Create an Int/Real arithmetic power expression.
+     * */
     open fun <T : KArithSort> mkArithPower(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<T> =
         mkSimplified(lhs, rhs, KContext::simplifyArithPower, ::mkArithPowerNoSimplify)
 
+    /**
+     * Create an Int/Real arithmetic power expression.
+     * */
     open fun <T : KArithSort> mkArithPowerNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KPowerArithExpr<T> =
         arithPowerCache.createIfContextActive {
             ensureContextMatch(lhs, rhs)
@@ -1277,9 +1577,15 @@ open class KContext(
 
     private val arithLtCache = mkAstInterner<KLtArithExpr<out KArithSort>>()
 
+    /**
+     * Create an Int/Real arithmetic `<` (less) expression.
+     * */
     open fun <T : KArithSort> mkArithLt(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(lhs, rhs, KContext::simplifyArithLt, ::mkArithLtNoSimplify)
 
+    /**
+     * Create an Int/Real arithmetic `<` (less) expression.
+     * */
     open fun <T : KArithSort> mkArithLtNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KLtArithExpr<T> =
         arithLtCache.createIfContextActive {
             ensureContextMatch(lhs, rhs)
@@ -1288,9 +1594,15 @@ open class KContext(
 
     private val arithLeCache = mkAstInterner<KLeArithExpr<out KArithSort>>()
 
+    /**
+     * Create an Int/Real arithmetic `<=` (less-or-equal) expression.
+     * */
     open fun <T : KArithSort> mkArithLe(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(lhs, rhs, KContext::simplifyArithLe, ::mkArithLeNoSimplify)
 
+    /**
+     * Create an Int/Real arithmetic `<=` (less-or-equal) expression.
+     * */
     open fun <T : KArithSort> mkArithLeNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KLeArithExpr<T> =
         arithLeCache.createIfContextActive {
             ensureContextMatch(lhs, rhs)
@@ -1299,9 +1611,15 @@ open class KContext(
 
     private val arithGtCache = mkAstInterner<KGtArithExpr<out KArithSort>>()
 
+    /**
+     * Create an Int/Real arithmetic `>` (greater) expression.
+     * */
     open fun <T : KArithSort> mkArithGt(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(lhs, rhs, KContext::simplifyArithGt, ::mkArithGtNoSimplify)
 
+    /**
+     * Create an Int/Real arithmetic `>` (greater) expression.
+     * */
     open fun <T : KArithSort> mkArithGtNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KGtArithExpr<T> =
         arithGtCache.createIfContextActive {
             ensureContextMatch(lhs, rhs)
@@ -1310,9 +1628,15 @@ open class KContext(
 
     private val arithGeCache = mkAstInterner<KGeArithExpr<out KArithSort>>()
 
+    /**
+     * Create an Int/Real arithmetic `>=` (greater-or-equal) expression.
+     * */
     open fun <T : KArithSort> mkArithGe(lhs: KExpr<T>, rhs: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(lhs, rhs, KContext::simplifyArithGe, ::mkArithGeNoSimplify)
 
+    /**
+     * Create an Int/Real arithmetic `>=` (greater-or-equal) expression.
+     * */
     open fun <T : KArithSort> mkArithGeNoSimplify(lhs: KExpr<T>, rhs: KExpr<T>): KGeArithExpr<T> =
         arithGeCache.createIfContextActive {
             ensureContextMatch(lhs, rhs)
@@ -1334,9 +1658,28 @@ open class KContext(
     // integer
     private val intModCache = mkAstInterner<KModIntExpr>()
 
+    /**
+     * Create an Int mod expression.
+     *
+     * The result value is a number `r` such that
+     * [lhs] = `r` + ([rhs] * (div [lhs] [rhs]))
+     * where `div` is an Int division that works according to the [mkArithDiv] rules.
+     * The result value is always positive or zero.
+     *
+     * For example:
+     *   `47 mod 13 = 8`
+     *   `47 mod -13 = 8`
+     *   `-47 mod 13 = 5`
+     *   `-47 mod -13 = 5`
+     * */
     open fun mkIntMod(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): KExpr<KIntSort> =
         mkSimplified(lhs, rhs, KContext::simplifyIntMod, ::mkIntModNoSimplify)
 
+    /**
+     * Create an Int mod expression.
+     *
+     * @see mkIntMod for the operation details.
+     * */
     open fun mkIntModNoSimplify(
         lhs: KExpr<KIntSort>,
         rhs: KExpr<KIntSort>
@@ -1347,9 +1690,21 @@ open class KContext(
 
     private val intRemCache = mkAstInterner<KRemIntExpr>()
 
+    /**
+     * Create an Int rem expression.
+     * The result value is either (mod lhs rhs) when rhs >= 0 and (neg (mod lhs rhs)) otherwise.
+     * The result sign matches the [rhs] sign.
+     *
+     * @see mkIntMod
+     * */
     open fun mkIntRem(lhs: KExpr<KIntSort>, rhs: KExpr<KIntSort>): KExpr<KIntSort> =
         mkSimplified(lhs, rhs, KContext::simplifyIntRem, ::mkIntRemNoSimplify)
 
+    /**
+     * Create an Int rem expression.
+     *
+     * @see mkIntRem for the operation details.
+     * */
     open fun mkIntRemNoSimplify(
         lhs: KExpr<KIntSort>,
         rhs: KExpr<KIntSort>
@@ -1360,9 +1715,15 @@ open class KContext(
 
     private val intToRealCache = mkAstInterner<KToRealIntExpr>()
 
+    /**
+     * Convert an Int expression to a corresponding Real expression.
+     * */
     open fun mkIntToReal(arg: KExpr<KIntSort>): KExpr<KRealSort> =
         mkSimplified(arg, KContext::simplifyIntToReal, ::mkIntToRealNoSimplify)
 
+    /**
+     * Convert an Int expression to a corresponding Real expression.
+     * */
     open fun mkIntToRealNoSimplify(arg: KExpr<KIntSort>): KToRealIntExpr = intToRealCache.createIfContextActive {
         ensureContextMatch(arg)
         KToRealIntExpr(this, arg)
@@ -1372,10 +1733,16 @@ open class KContext(
     private val int64NumCache = mkAstInterner<KInt64NumExpr>()
     private val intBigNumCache = mkAstInterner<KIntBigNumExpr>()
 
+    /**
+     * Create an Int value.
+     * */
     fun mkIntNum(value: Int): KIntNumExpr = int32NumCache.createIfContextActive {
         KInt32NumExpr(this, value)
     }
 
+    /**
+     * Create an Int value.
+     * */
     fun mkIntNum(value: Long): KIntNumExpr = if (value.toInt().toLong() == value) {
         mkIntNum(value.toInt())
     } else {
@@ -1384,6 +1751,9 @@ open class KContext(
         }
     }
 
+    /**
+     * Create an Int value.
+     * */
     fun mkIntNum(value: BigInteger): KIntNumExpr = if (value.toLong().toBigInteger() == value) {
         mkIntNum(value.toLong())
     } else {
@@ -1392,6 +1762,9 @@ open class KContext(
         }
     }
 
+    /**
+     * Create an Int value.
+     * */
     fun mkIntNum(value: String): KIntNumExpr =
         mkIntNum(value.toBigInteger())
 
@@ -1409,9 +1782,15 @@ open class KContext(
     // real
     private val realToIntCache = mkAstInterner<KToIntRealExpr>()
 
+    /**
+     * Convert Real expression to an Int expression (floor division).
+     * */
     open fun mkRealToInt(arg: KExpr<KRealSort>): KExpr<KIntSort> =
         mkSimplified(arg, KContext::simplifyRealToInt, ::mkRealToIntNoSimplify)
 
+    /**
+     * Convert Real expression to an Int expression (floor division).
+     * */
     open fun mkRealToIntNoSimplify(arg: KExpr<KRealSort>): KToIntRealExpr = realToIntCache.createIfContextActive {
         ensureContextMatch(arg)
         KToIntRealExpr(this, arg)
@@ -1419,9 +1798,15 @@ open class KContext(
 
     private val realIsIntCache = mkAstInterner<KIsIntRealExpr>()
 
+    /**
+     * Check whether the given Real expression has an integer value.
+     * */
     open fun mkRealIsInt(arg: KExpr<KRealSort>): KExpr<KBoolSort> =
         mkSimplified(arg, KContext::simplifyRealIsInt, ::mkRealIsIntNoSimplify)
 
+    /**
+     * Check whether the given Real expression has an integer value.
+     * */
     open fun mkRealIsIntNoSimplify(arg: KExpr<KRealSort>): KIsIntRealExpr = realIsIntCache.createIfContextActive {
         ensureContextMatch(arg)
         KIsIntRealExpr(this, arg)
@@ -1429,18 +1814,43 @@ open class KContext(
 
     private val realNumCache = mkAstInterner<KRealNumExpr>()
 
+    /**
+     * Create a Real value.
+     * */
     fun mkRealNum(numerator: KIntNumExpr, denominator: KIntNumExpr): KRealNumExpr =
         realNumCache.createIfContextActive {
             ensureContextMatch(numerator, denominator)
             KRealNumExpr(this, numerator, denominator)
         }
 
-    @Suppress("MemberVisibilityCanBePrivate")
+    /**
+     * Create a Real value.
+     * */
     fun mkRealNum(numerator: KIntNumExpr) = mkRealNum(numerator, 1.expr)
+
+    /**
+     * Create a Real value.
+     * */
     fun mkRealNum(numerator: Int) = mkRealNum(mkIntNum(numerator))
+
+    /**
+     * Create a Real value.
+     * */
     fun mkRealNum(numerator: Int, denominator: Int) = mkRealNum(mkIntNum(numerator), mkIntNum(denominator))
+
+    /**
+     * Create a Real value.
+     * */
     fun mkRealNum(numerator: Long) = mkRealNum(mkIntNum(numerator))
+
+    /**
+     * Create a Real value.
+     * */
     fun mkRealNum(numerator: Long, denominator: Long) = mkRealNum(mkIntNum(numerator), mkIntNum(denominator))
+
+    /**
+     * Create a Real value from a string of the form `"123/456"`.
+     * */
     fun mkRealNum(value: String): KRealNumExpr {
         val parts = value.split('/')
 
@@ -1462,12 +1872,27 @@ open class KContext(
     private val bv64Cache = mkAstInterner<KBitVec64Value>()
     private val bvCache = mkAstInterner<KBitVecCustomValue>()
 
+
+    /**
+     * Create a BitVec value with 1 bit length.
+     * */
     fun mkBv(value: Boolean): KBitVec1Value = bv1Cache.createIfContextActive { KBitVec1Value(this, value) }
+
+    /**
+     * Create a BitVec value with [sizeBits] bit length.
+     *
+     * Note: if [sizeBits] is greater than 1, the [value] bit will be repeated.
+     * */
     fun mkBv(value: Boolean, sizeBits: UInt): KBitVecValue<KBvSort> {
         val intValue = (if (value) 1 else 0) as Number
         return mkBv(intValue, sizeBits)
     }
 
+    /**
+     * Create a BitVec value of the BitVec [sort].
+     *
+     * Note: if [sort] size is greater than 1, the [value] bit will be repeated.
+     * */
     fun <T : KBvSort> mkBv(value: Boolean, sort: T): KBitVecValue<T> =
         mkBv(value, sort.sizeBits).cast()
 
@@ -1475,39 +1900,142 @@ open class KContext(
     fun Boolean.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
     fun <T : KBvSort> Boolean.toBv(sort: T): KBitVecValue<T> = mkBv(this, sort)
 
+    /**
+     * Create a BitVec value with 8 bit length.
+     * */
     fun mkBv(value: Byte): KBitVec8Value = bv8Cache.createIfContextActive { KBitVec8Value(this, value) }
+
+    /**
+     * Create a BitVec value with [sizeBits] bit length.
+     *
+     * Note: if [sizeBits] is less than 8,
+     * the last [sizeBits] bits of the [value] will be taken.
+     *
+     * At the same time, if [sizeBits] is greater than 8,
+     * binary representation of the [value] will be padded from the start with its sign bit.
+     * */
     fun mkBv(value: Byte, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
+
+    /**
+     * Create a BitVec value of the BitVec [sort].
+     *
+     * Note: if [sort] size is less than 8,
+     * the last [sort] size bits of the [value] will be taken.
+     *
+     * At the same time, if [sort] size is greater than 8,
+     * binary representation of the [value] will be padded from the start with its sign bit.
+     * */
     fun <T : KBvSort> mkBv(value: Byte, sort: T): KBitVecValue<T> = mkBv(value as Number, sort)
+
     fun Byte.toBv(): KBitVec8Value = mkBv(this)
     fun Byte.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
     fun <T : KBvSort> Byte.toBv(sort: T): KBitVecValue<T> = mkBv(this, sort)
     fun UByte.toBv(): KBitVec8Value = mkBv(toByte())
 
+    /**
+     * Create a BitVec value with 16 bit length.
+     * */
     fun mkBv(value: Short): KBitVec16Value = bv16Cache.createIfContextActive { KBitVec16Value(this, value) }
+
+    /**
+     * Create a BitVec value with [sizeBits] bit length.
+     *
+     * Note: if [sizeBits] is less than 16,
+     * the last [sizeBits] bits of the [value] will be taken.
+     *
+     * At the same time, if [sizeBits] is greater than 16,
+     * binary representation of the [value] will be padded from the start with its sign bit.
+     * */
     fun mkBv(value: Short, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
+
+    /**
+     * Create a BitVec value of the BitVec [sort].
+     *
+     * Note: if [sort] size is less than 16,
+     * the last [sort] size bits of the [value] will be taken.
+     *
+     * At the same time, if [sort] size is greater than 16,
+     * binary representation of the [value] will be padded from the start with its sign bit.
+     * */
     fun <T : KBvSort> mkBv(value: Short, sort: T): KBitVecValue<T> = mkBv(value as Number, sort)
+
     fun Short.toBv(): KBitVec16Value = mkBv(this)
     fun Short.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
     fun <T : KBvSort> Short.toBv(sort: T): KBitVecValue<T> = mkBv(this, sort)
     fun UShort.toBv(): KBitVec16Value = mkBv(toShort())
 
+    /**
+     * Create a BitVec value with 32 bit length.
+     * */
     fun mkBv(value: Int): KBitVec32Value = bv32Cache.createIfContextActive { KBitVec32Value(this, value) }
+
+    /**
+     * Create a BitVec value with [sizeBits] bit length.
+     *
+     * Note: if [sizeBits] is less than 32,
+     * the last [sizeBits] bits of the [value] will be taken.
+     *
+     * At the same time, if [sizeBits] is greater than 32,
+     * binary representation of the [value] will be padded from the start with its sign bit.
+     * */
     fun mkBv(value: Int, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
+
+    /**
+     * Create a BitVec value of the BitVec [sort].
+     *
+     * Note: if [sort] size is less than 32,
+     * the last [sort] size bits of the [value] will be taken.
+     *
+     * At the same time, if [sort] size is greater than 32,
+     * binary representation of the [value] will be padded from the start with its sign bit.
+     * */
     fun <T : KBvSort> mkBv(value: Int, sort: T): KBitVecValue<T> = mkBv(value as Number, sort)
+
     fun Int.toBv(): KBitVec32Value = mkBv(this)
     fun Int.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
     fun <T : KBvSort> Int.toBv(sort: T): KBitVecValue<T> = mkBv(this, sort)
     fun UInt.toBv(): KBitVec32Value = mkBv(toInt())
 
+    /**
+     * Create a BitVec value with 64 bit length.
+     * */
     fun mkBv(value: Long): KBitVec64Value = bv64Cache.createIfContextActive { KBitVec64Value(this, value) }
+
+    /**
+     * Create a BitVec value with [sizeBits] bit length.
+     *
+     * Note: if [sizeBits] is less than 64,
+     * the last [sizeBits] bits of the [value] will be taken.
+     *
+     * At the same time, if [sizeBits] is greater than 64,
+     * binary representation of the [value] will be padded from the start with its sign bit.
+     * */
     fun mkBv(value: Long, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
+
+    /**
+     * Create a BitVec value of the BitVec [sort].
+     *
+     * Note: if [sort] size is less than 64,
+     * the last [sort] size bits of the [value] will be taken.
+     *
+     * At the same time, if [sort] size is greater than 64,
+     * binary representation of the [value] will be padded from the start with its sign bit.
+     * */
     fun <T : KBvSort> mkBv(value: Long, sort: T): KBitVecValue<T> = mkBv(value as Number, sort)
+
     fun Long.toBv(): KBitVec64Value = mkBv(this)
     fun Long.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
     fun <T : KBvSort> Long.toBv(sort: T): KBitVecValue<T> = mkBv(this, sort)
     fun ULong.toBv(): KBitVec64Value = mkBv(toLong())
 
+    /**
+     * Create a BitVec value with [sizeBits] bit length.
+     * */
     fun mkBv(value: BigInteger, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
+
+    /**
+     * Create a BitVec value of the BitVec [sort].
+     * */
     fun <T : KBvSort> mkBv(value: BigInteger, sort: T): KBitVecValue<T> = mkBv(value as Number, sort)
 
     /**
@@ -1538,9 +2066,15 @@ open class KContext(
 
     private fun Number.toBv(sizeBits: UInt) = mkBv(this, sizeBits)
 
+    /**
+     * Create a BitVec value with [sizeBits] bit length from the given binary string [value].
+     * */
     fun mkBv(value: String, sizeBits: UInt): KBitVecValue<KBvSort> =
         mkBv(value.toBigInteger(radix = 2), sizeBits)
 
+    /**
+     * Create a BitVec value with [sizeBits] bit length from the given hex string [value].
+     * */
     fun mkBvHex(value: String, sizeBits: UInt): KBitVecValue<KBvSort> =
         mkBv(value.toBigInteger(radix = 16), sizeBits)
 
@@ -1565,9 +2099,15 @@ open class KContext(
 
     private val bvNotExprCache = mkAstInterner<KBvNotExpr<out KBvSort>>()
 
+    /**
+     * Create bitwise NOT (`bvnot`) expression.
+     * */
     open fun <T : KBvSort> mkBvNotExpr(value: KExpr<T>): KExpr<T> =
         mkSimplified(value, KContext::simplifyBvNotExpr, ::mkBvNotExprNoSimplify)
 
+    /**
+     * Create bitwise NOT (`bvnot`) expression.
+     * */
     open fun <T : KBvSort> mkBvNotExprNoSimplify(value: KExpr<T>): KBvNotExpr<T> =
         bvNotExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -1576,9 +2116,17 @@ open class KContext(
 
     private val bvRedAndExprCache = mkAstInterner<KBvReductionAndExpr<out KBvSort>>()
 
+    /**
+     * Create bitwise AND reduction (`bvredand`) expression.
+     * Reduce all bits to a single bit with AND operation.
+     * */
     open fun <T : KBvSort> mkBvReductionAndExpr(value: KExpr<T>): KExpr<KBv1Sort> =
         mkSimplified(value, KContext::simplifyBvReductionAndExpr, ::mkBvReductionAndExprNoSimplify)
 
+    /**
+     * Create bitwise AND reduction (`bvredand`) expression.
+     * Reduce all bits to a single bit with AND operation.
+     * */
     open fun <T : KBvSort> mkBvReductionAndExprNoSimplify(value: KExpr<T>): KBvReductionAndExpr<T> =
         bvRedAndExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -1589,9 +2137,17 @@ open class KContext(
 
     private val bvRedOrExprCache = mkAstInterner<KBvReductionOrExpr<out KBvSort>>()
 
+    /**
+     * Create bitwise OR reduction (`bvredor`) expression.
+     * Reduce all bits to a single bit with OR operation.
+     * */
     open fun <T : KBvSort> mkBvReductionOrExpr(value: KExpr<T>): KExpr<KBv1Sort> =
         mkSimplified(value, KContext::simplifyBvReductionOrExpr, ::mkBvReductionOrExprNoSimplify)
 
+    /**
+     * Create bitwise OR reduction (`bvredor`) expression.
+     * Reduce all bits to a single bit with OR operation.
+     * */
     open fun <T : KBvSort> mkBvReductionOrExprNoSimplify(value: KExpr<T>): KBvReductionOrExpr<T> =
         bvRedOrExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -1602,9 +2158,15 @@ open class KContext(
 
     private val bvAndExprCache = mkAstInterner<KBvAndExpr<out KBvSort>>()
 
+    /**
+     * Create bitwise AND (`bvand`) expression.
+     * */
     open fun <T : KBvSort> mkBvAndExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvAndExpr, ::mkBvAndExprNoSimplify)
 
+    /**
+     * Create bitwise AND (`bvand`) expression.
+     * */
     open fun <T : KBvSort> mkBvAndExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvAndExpr<T> =
         bvAndExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -1613,9 +2175,16 @@ open class KContext(
 
     private val bvOrExprCache = mkAstInterner<KBvOrExpr<out KBvSort>>()
 
+
+    /**
+     * Create bitwise OR (`bvor`) expression.
+     * */
     open fun <T : KBvSort> mkBvOrExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvOrExpr, ::mkBvOrExprNoSimplify)
 
+    /**
+     * Create bitwise OR (`bvor`) expression.
+     * */
     open fun <T : KBvSort> mkBvOrExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvOrExpr<T> =
         bvOrExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -1624,9 +2193,15 @@ open class KContext(
 
     private val bvXorExprCache = mkAstInterner<KBvXorExpr<out KBvSort>>()
 
+    /**
+     * Create bitwise XOR (`bvxor`) expression.
+     * */
     open fun <T : KBvSort> mkBvXorExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvXorExpr, ::mkBvXorExprNoSimplify)
 
+    /**
+     * Create bitwise XOR (`bvxor`) expression.
+     * */
     open fun <T : KBvSort> mkBvXorExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvXorExpr<T> =
         bvXorExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -1635,9 +2210,15 @@ open class KContext(
 
     private val bvNAndExprCache = mkAstInterner<KBvNAndExpr<out KBvSort>>()
 
+    /**
+     * Create bitwise NAND (`bvnand`) expression.
+     * */
     open fun <T : KBvSort> mkBvNAndExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvNAndExpr, ::mkBvNAndExprNoSimplify)
 
+    /**
+     * Create bitwise NAND (`bvnand`) expression.
+     * */
     open fun <T : KBvSort> mkBvNAndExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvNAndExpr<T> =
         bvNAndExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -1646,9 +2227,15 @@ open class KContext(
 
     private val bvNorExprCache = mkAstInterner<KBvNorExpr<out KBvSort>>()
 
+    /**
+     * Create bitwise NOR (`bvnor`) expression.
+     * */
     open fun <T : KBvSort> mkBvNorExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvNorExpr, ::mkBvNorExprNoSimplify)
 
+    /**
+     * Create bitwise NOR (`bvnor`) expression.
+     * */
     open fun <T : KBvSort> mkBvNorExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvNorExpr<T> =
         bvNorExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -1657,9 +2244,15 @@ open class KContext(
 
     private val bvXNorExprCache = mkAstInterner<KBvXNorExpr<out KBvSort>>()
 
+    /**
+     * Create bitwise XNOR (`bvxnor`) expression.
+     * */
     open fun <T : KBvSort> mkBvXNorExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvXNorExpr, ::mkBvXNorExprNoSimplify)
 
+    /**
+     * Create bitwise XNOR (`bvxnor`) expression.
+     * */
     open fun <T : KBvSort> mkBvXNorExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvXNorExpr<T> =
         bvXNorExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -1668,9 +2261,19 @@ open class KContext(
 
     private val bvNegationExprCache = mkAstInterner<KBvNegationExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec arithmetic negation (`bvneg`) expression.
+     *
+     * @see mkBvNotExpr for bitwise not.
+     * */
     open fun <T : KBvSort> mkBvNegationExpr(value: KExpr<T>): KExpr<T> =
         mkSimplified(value, KContext::simplifyBvNegationExpr, ::mkBvNegationExprNoSimplify)
 
+    /**
+     * Create BitVec arithmetic negation (`bvneg`) expression.
+     *
+     * @see mkBvNotExpr for bitwise not.
+     * */
     open fun <T : KBvSort> mkBvNegationExprNoSimplify(value: KExpr<T>): KBvNegationExpr<T> =
         bvNegationExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -1679,9 +2282,15 @@ open class KContext(
 
     private val bvAddExprCache = mkAstInterner<KBvAddExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec arithmetic addition (`bvadd`) expression.
+     * */
     open fun <T : KBvSort> mkBvAddExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvAddExpr, ::mkBvAddExprNoSimplify)
 
+    /**
+     * Create BitVec arithmetic addition (`bvadd`) expression.
+     * */
     open fun <T : KBvSort> mkBvAddExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvAddExpr<T> =
         bvAddExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -1690,9 +2299,15 @@ open class KContext(
 
     private val bvSubExprCache = mkAstInterner<KBvSubExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec arithmetic subtraction (`bvsub`) expression.
+     * */
     open fun <T : KBvSort> mkBvSubExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSubExpr, ::mkBvSubExprNoSimplify)
 
+    /**
+     * Create BitVec arithmetic subtraction (`bvsub`) expression.
+     * */
     open fun <T : KBvSort> mkBvSubExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSubExpr<T> =
         bvSubExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -1701,9 +2316,15 @@ open class KContext(
 
     private val bvMulExprCache = mkAstInterner<KBvMulExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec arithmetic multiplication (`bvmul`) expression.
+     * */
     open fun <T : KBvSort> mkBvMulExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvMulExpr, ::mkBvMulExprNoSimplify)
 
+    /**
+     * Create BitVec arithmetic multiplication (`bvmul`) expression.
+     * */
     open fun <T : KBvSort> mkBvMulExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvMulExpr<T> =
         bvMulExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -1712,9 +2333,19 @@ open class KContext(
 
     private val bvUnsignedDivExprCache = mkAstInterner<KBvUnsignedDivExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec arithmetic unsigned division (`bvudiv`) expression.
+     *
+     * @see mkBvSignedDivExpr for the signed division.
+     * */
     open fun <T : KBvSort> mkBvUnsignedDivExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvUnsignedDivExpr, ::mkBvUnsignedDivExprNoSimplify)
 
+    /**
+     * Create BitVec arithmetic unsigned division (`bvudiv`) expression.
+     *
+     * @see mkBvSignedDivExpr for the signed division.
+     * */
     open fun <T : KBvSort> mkBvUnsignedDivExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvUnsignedDivExpr<T> =
         bvUnsignedDivExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -1723,9 +2354,21 @@ open class KContext(
 
     private val bvSignedDivExprCache = mkAstInterner<KBvSignedDivExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec arithmetic signed division (`bvsdiv`) expression.
+     * The division result sign depends on the arguments signs.
+     *
+     * @see mkBvUnsignedDivExpr for the unsigned division.
+     * */
     open fun <T : KBvSort> mkBvSignedDivExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSignedDivExpr, ::mkBvSignedDivExprNoSimplify)
 
+    /**
+     * Create BitVec arithmetic signed division (`bvsdiv`) expression.
+     * The division result sign depends on the arguments signs.
+     *
+     * @see mkBvUnsignedDivExpr for the unsigned division.
+     * */
     open fun <T : KBvSort> mkBvSignedDivExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedDivExpr<T> =
         bvSignedDivExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -1734,9 +2377,19 @@ open class KContext(
 
     private val bvUnsignedRemExprCache = mkAstInterner<KBvUnsignedRemExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec arithmetic unsigned reminder (`bvurem`) expression.
+     *
+     * @see mkBvSignedRemExpr for the signed remainder.
+     * */
     open fun <T : KBvSort> mkBvUnsignedRemExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvUnsignedRemExpr, ::mkBvUnsignedRemExprNoSimplify)
 
+    /**
+     * Create BitVec arithmetic unsigned reminder (`bvurem`) expression.
+     *
+     * @see mkBvSignedRemExpr for the signed remainder.
+     * */
     open fun <T : KBvSort> mkBvUnsignedRemExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvUnsignedRemExpr<T> =
         bvUnsignedRemExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -1745,9 +2398,28 @@ open class KContext(
 
     private val bvSignedRemExprCache = mkAstInterner<KBvSignedRemExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec arithmetic signed reminder (`bvsrem`) expression.
+     *
+     * Computes remainder of a `truncate` (round toward zero) division.
+     * The result sign matches the [arg0] sign.
+     *
+     * For example:
+     *  `47 bvsrem 13 = 8`
+     *  `47 bvsrem -13 = 8`
+     *  `-47 bvsrem 13 = -8`
+     *  `-47 bvsrem -13 = -8`
+     *
+     * @see mkBvUnsignedRemExpr for the unsigned remainder.
+     * */
     open fun <T : KBvSort> mkBvSignedRemExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSignedRemExpr, ::mkBvSignedRemExprNoSimplify)
 
+    /**
+     * Create BitVec arithmetic signed reminder (`bvsrem`) expression.
+     * @see [mkBvSignedRemExpr] for the operation details.
+     * @see mkBvUnsignedRemExpr for the unsigned remainder.
+     * */
     open fun <T : KBvSort> mkBvSignedRemExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedRemExpr<T> =
         bvSignedRemExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -1756,9 +2428,25 @@ open class KContext(
 
     private val bvSignedModExprCache = mkAstInterner<KBvSignedModExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec arithmetic signed mod (`bvsmod`) expression.
+     *
+     * Computes remainder of a `floor` (round toward negative infinity) division.
+     * The result sign matches the [arg1] sign.
+     *
+     * For example:
+     *  `47 bvsmod 13 = 8`
+     *  `47 bvsmod -13 = -5`
+     *  `-47 bvsmod 13 = 5`
+     *  `-47 bvsmod -13 = -8`
+     * */
     open fun <T : KBvSort> mkBvSignedModExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSignedModExpr, ::mkBvSignedModExprNoSimplify)
 
+    /**
+     * Create BitVec arithmetic signed mod (`bvsmod`) expression.
+     * @see [mkBvSignedModExpr] for the operation details.
+     * */
     open fun <T : KBvSort> mkBvSignedModExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedModExpr<T> =
         bvSignedModExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -1767,9 +2455,15 @@ open class KContext(
 
     private val bvUnsignedLessExprCache = mkAstInterner<KBvUnsignedLessExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec unsigned less (`bvult`) expression.
+     * */
     open fun <T : KBvSort> mkBvUnsignedLessExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvUnsignedLessExpr, ::mkBvUnsignedLessExprNoSimplify)
 
+    /**
+     * Create BitVec unsigned less (`bvult`) expression.
+     * */
     open fun <T : KBvSort> mkBvUnsignedLessExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvUnsignedLessExpr<T> =
         bvUnsignedLessExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -1778,9 +2472,15 @@ open class KContext(
 
     private val bvSignedLessExprCache = mkAstInterner<KBvSignedLessExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec signed less (`bvslt`) expression.
+     * */
     open fun <T : KBvSort> mkBvSignedLessExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSignedLessExpr, ::mkBvSignedLessExprNoSimplify)
 
+    /**
+     * Create BitVec signed less (`bvslt`) expression.
+     * */
     open fun <T : KBvSort> mkBvSignedLessExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedLessExpr<T> =
         bvSignedLessExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -1789,9 +2489,15 @@ open class KContext(
 
     private val bvSignedLessOrEqualExprCache = mkAstInterner<KBvSignedLessOrEqualExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec signed less-or-equal (`bvsle`) expression.
+     * */
     open fun <T : KBvSort> mkBvSignedLessOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSignedLessOrEqualExpr, ::mkBvSignedLessOrEqualExprNoSimplify)
 
+    /**
+     * Create BitVec signed less-or-equal (`bvsle`) expression.
+     * */
     open fun <T : KBvSort> mkBvSignedLessOrEqualExprNoSimplify(
         arg0: KExpr<T>, arg1: KExpr<T>
     ): KBvSignedLessOrEqualExpr<T> =
@@ -1802,9 +2508,15 @@ open class KContext(
 
     private val bvUnsignedLessOrEqualExprCache = mkAstInterner<KBvUnsignedLessOrEqualExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec unsigned less-or-equal (`bvule`) expression.
+     * */
     open fun <T : KBvSort> mkBvUnsignedLessOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvUnsignedLessOrEqualExpr, ::mkBvUnsignedLessOrEqualExprNoSimplify)
 
+    /**
+     * Create BitVec unsigned less-or-equal (`bvule`) expression.
+     * */
     open fun <T : KBvSort> mkBvUnsignedLessOrEqualExprNoSimplify(
         arg0: KExpr<T>,
         arg1: KExpr<T>
@@ -1815,6 +2527,9 @@ open class KContext(
 
     private val bvUnsignedGreaterOrEqualExprCache = mkAstInterner<KBvUnsignedGreaterOrEqualExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec unsigned greater-or-equal (`bvuge`) expression.
+     * */
     open fun <T : KBvSort> mkBvUnsignedGreaterOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(
             arg0,
@@ -1823,6 +2538,9 @@ open class KContext(
             ::mkBvUnsignedGreaterOrEqualExprNoSimplify
         )
 
+    /**
+     * Create BitVec unsigned greater-or-equal (`bvuge`) expression.
+     * */
     open fun <T : KBvSort> mkBvUnsignedGreaterOrEqualExprNoSimplify(
         arg0: KExpr<T>,
         arg1: KExpr<T>
@@ -1833,9 +2551,15 @@ open class KContext(
 
     private val bvSignedGreaterOrEqualExprCache = mkAstInterner<KBvSignedGreaterOrEqualExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec signed greater-or-equal (`bvsge`) expression.
+     * */
     open fun <T : KBvSort> mkBvSignedGreaterOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSignedGreaterOrEqualExpr, ::mkBvSignedGreaterOrEqualExprNoSimplify)
 
+    /**
+     * Create BitVec signed greater-or-equal (`bvsge`) expression.
+     * */
     open fun <T : KBvSort> mkBvSignedGreaterOrEqualExprNoSimplify(
         arg0: KExpr<T>,
         arg1: KExpr<T>
@@ -1846,9 +2570,15 @@ open class KContext(
 
     private val bvUnsignedGreaterExprCache = mkAstInterner<KBvUnsignedGreaterExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec unsigned greater (`bvugt`) expression.
+     * */
     open fun <T : KBvSort> mkBvUnsignedGreaterExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvUnsignedGreaterExpr, ::mkBvUnsignedGreaterExprNoSimplify)
 
+    /**
+     * Create BitVec unsigned greater (`bvugt`) expression.
+     * */
     open fun <T : KBvSort> mkBvUnsignedGreaterExprNoSimplify(
         arg0: KExpr<T>, arg1: KExpr<T>
     ): KBvUnsignedGreaterExpr<T> =
@@ -1859,9 +2589,15 @@ open class KContext(
 
     private val bvSignedGreaterExprCache = mkAstInterner<KBvSignedGreaterExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec signed greater (`bvsgt`) expression.
+     * */
     open fun <T : KBvSort> mkBvSignedGreaterExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSignedGreaterExpr, ::mkBvSignedGreaterExprNoSimplify)
 
+    /**
+     * Create BitVec signed greater (`bvsgt`) expression.
+     * */
     open fun <T : KBvSort> mkBvSignedGreaterExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSignedGreaterExpr<T> =
         bvSignedGreaterExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -1870,9 +2606,15 @@ open class KContext(
 
     private val concatExprCache = mkAstInterner<KBvConcatExpr>()
 
+    /**
+     * Create BitVec concatenation (`concat`) expression.
+     * */
     open fun <T : KBvSort, S : KBvSort> mkBvConcatExpr(arg0: KExpr<T>, arg1: KExpr<S>): KExpr<KBvSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvConcatExpr, ::mkBvConcatExprNoSimplify)
 
+    /**
+     * Create BitVec concatenation (`concat`) expression.
+     * */
     open fun <T : KBvSort, S : KBvSort> mkBvConcatExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<S>): KBvConcatExpr =
         concatExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -1881,9 +2623,17 @@ open class KContext(
 
     private val extractExprCache = mkAstInterner<KBvExtractExpr>()
 
+    /**
+     * Create BitVec extract (`extract`) expression.
+     * Extract bits from [low] (including) to [high] (including) as a new BitVec.
+     * */
     open fun <T : KBvSort> mkBvExtractExpr(high: Int, low: Int, value: KExpr<T>): KExpr<KBvSort> =
         mkSimplified(high, low, value, KContext::simplifyBvExtractExpr, ::mkBvExtractExprNoSimplify)
 
+    /**
+     * Create BitVec extract (`extract`) expression.
+     * Extract bits from [low] (including) to [high] (including) as a new BitVec.
+     * */
     open fun <T : KBvSort> mkBvExtractExprNoSimplify(high: Int, low: Int, value: KExpr<T>): KBvExtractExpr =
         extractExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -1892,9 +2642,19 @@ open class KContext(
 
     private val signExtensionExprCache = mkAstInterner<KBvSignExtensionExpr>()
 
+    /**
+     * Create BitVec signed extension (`signext`) expression.
+     * Returns a BitVec expression with [extensionSize] extra sign (leftmost, highest) bits.
+     * The extra bits are prepended to the provided [value].
+     * */
     open fun <T : KBvSort> mkBvSignExtensionExpr(extensionSize: Int, value: KExpr<T>): KExpr<KBvSort> =
         mkSimplified(extensionSize, value, KContext::simplifyBvSignExtensionExpr, ::mkBvSignExtensionExprNoSimplify)
 
+    /**
+     * Create BitVec signed extension (`signext`) expression.
+     * Returns a BitVec expression with [extensionSize] extra sign (leftmost, highest) bits.
+     * The extra bits are prepended to the provided [value].
+     * */
     open fun <T : KBvSort> mkBvSignExtensionExprNoSimplify(
         extensionSize: Int,
         value: KExpr<T>
@@ -1905,9 +2665,19 @@ open class KContext(
 
     private val zeroExtensionExprCache = mkAstInterner<KBvZeroExtensionExpr>()
 
+    /**
+     * Create BitVec signed extension (`signext`) expression.
+     * Returns a BitVec expression with [extensionSize] extra sign (leftmost, highest) bits.
+     * The extra bits are prepended to the provided [value].
+     * */
     open fun <T : KBvSort> mkBvZeroExtensionExpr(extensionSize: Int, value: KExpr<T>): KExpr<KBvSort> =
         mkSimplified(extensionSize, value, KContext::simplifyBvZeroExtensionExpr, ::mkBvZeroExtensionExprNoSimplify)
 
+    /**
+     * Create BitVec signed extension (`signext`) expression.
+     * Returns a BitVec expression with [extensionSize] extra sign (leftmost, highest) bits.
+     * The extra bits are prepended to the provided [value].
+     * */
     open fun <T : KBvSort> mkBvZeroExtensionExprNoSimplify(
         extensionSize: Int,
         value: KExpr<T>
@@ -1918,9 +2688,17 @@ open class KContext(
 
     private val repeatExprCache = mkAstInterner<KBvRepeatExpr>()
 
+    /*
+     * Create BitVec repeat (`repeat`) expression.
+     * Returns a BitVec expression with [repeatNumber] concatenated copies of [value].
+     * */
     open fun <T : KBvSort> mkBvRepeatExpr(repeatNumber: Int, value: KExpr<T>): KExpr<KBvSort> =
         mkSimplified(repeatNumber, value, KContext::simplifyBvRepeatExpr, ::mkBvRepeatExprNoSimplify)
 
+    /**
+     * Create BitVec repeat (`repeat`) expression.
+     * Returns a BitVec expression with [repeatNumber] concatenated copies of [value].
+     * */
     open fun <T : KBvSort> mkBvRepeatExprNoSimplify(
         repeatNumber: Int,
         value: KExpr<T>
@@ -1931,9 +2709,15 @@ open class KContext(
 
     private val bvShiftLeftExprCache = mkAstInterner<KBvShiftLeftExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec shift left (`bvshl`) expression.
+     * */
     open fun <T : KBvSort> mkBvShiftLeftExpr(arg: KExpr<T>, shift: KExpr<T>): KExpr<T> =
         mkSimplified(arg, shift, KContext::simplifyBvShiftLeftExpr, ::mkBvShiftLeftExprNoSimplify)
 
+    /**
+     * Create BitVec shift left (`bvshl`) expression.
+     * */
     open fun <T : KBvSort> mkBvShiftLeftExprNoSimplify(arg: KExpr<T>, shift: KExpr<T>): KBvShiftLeftExpr<T> =
         bvShiftLeftExprCache.createIfContextActive {
             ensureContextMatch(arg, shift)
@@ -1942,9 +2726,17 @@ open class KContext(
 
     private val bvLogicalShiftRightExprCache = mkAstInterner<KBvLogicalShiftRightExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec logical shift right (`bvlshr`) expression.
+     * The shifted expressions is padded with zero bits.
+     * */
     open fun <T : KBvSort> mkBvLogicalShiftRightExpr(arg: KExpr<T>, shift: KExpr<T>): KExpr<T> =
         mkSimplified(arg, shift, KContext::simplifyBvLogicalShiftRightExpr, ::mkBvLogicalShiftRightExprNoSimplify)
 
+    /**
+     * Create BitVec logical shift right (`bvlshr`) expression.
+     * The shifted expressions is padded with zero bits.
+     * */
     open fun <T : KBvSort> mkBvLogicalShiftRightExprNoSimplify(
         arg: KExpr<T>, shift: KExpr<T>
     ): KBvLogicalShiftRightExpr<T> =
@@ -1955,9 +2747,17 @@ open class KContext(
 
     private val bvArithShiftRightExprCache = mkAstInterner<KBvArithShiftRightExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec arithmetic shift right (`bvashr`) expression.
+     * The shifted expressions is padded with sign (leftmost, highest) bits.
+     * */
     open fun <T : KBvSort> mkBvArithShiftRightExpr(arg: KExpr<T>, shift: KExpr<T>): KExpr<T> =
         mkSimplified(arg, shift, KContext::simplifyBvArithShiftRightExpr, ::mkBvArithShiftRightExprNoSimplify)
 
+    /**
+     * Create BitVec arithmetic shift right (`bvashr`) expression.
+     * The shifted expressions is padded with sign (leftmost, highest) bits.
+     * */
     open fun <T : KBvSort> mkBvArithShiftRightExprNoSimplify(
         arg: KExpr<T>, shift: KExpr<T>
     ): KBvArithShiftRightExpr<T> =
@@ -1968,9 +2768,21 @@ open class KContext(
 
     private val bvRotateLeftExprCache = mkAstInterner<KBvRotateLeftExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec rotate left (`rotateleft`) expression.
+     * The result expression is rotated left [rotation] times.
+     *
+     * @see [mkBvRotateLeftIndexedExpr] for the rotation by a known number of bits.
+     * */
     open fun <T : KBvSort> mkBvRotateLeftExpr(arg: KExpr<T>, rotation: KExpr<T>): KExpr<T> =
         mkSimplified(arg, rotation, KContext::simplifyBvRotateLeftExpr, ::mkBvRotateLeftExprNoSimplify)
 
+    /**
+     * Create BitVec rotate left (`rotateleft`) expression.
+     * The result expression is rotated left [rotation] times.
+     *
+     * @see [mkBvRotateLeftIndexedExpr] for the rotation by a known number of bits.
+     * */
     open fun <T : KBvSort> mkBvRotateLeftExprNoSimplify(arg: KExpr<T>, rotation: KExpr<T>): KBvRotateLeftExpr<T> =
         bvRotateLeftExprCache.createIfContextActive {
             ensureContextMatch(arg, rotation)
@@ -1979,9 +2791,21 @@ open class KContext(
 
     private val bvRotateLeftIndexedExprCache = mkAstInterner<KBvRotateLeftIndexedExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec rotate left (`rotateleft`) expression.
+     * The result expression is rotated left [rotation] times.
+     *
+     * @see [mkBvRotateLeftExpr] for the rotation by a symbolic (any BitVec expression) number of bits.
+     * */
     open fun <T : KBvSort> mkBvRotateLeftIndexedExpr(rotation: Int, value: KExpr<T>): KExpr<T> =
         mkSimplified(rotation, value, KContext::simplifyBvRotateLeftIndexedExpr, ::mkBvRotateLeftIndexedExprNoSimplify)
 
+    /**
+     * Create BitVec rotate left (`rotateleft`) expression.
+     * The result expression is rotated left [rotation] times.
+     *
+     * @see [mkBvRotateLeftExpr] for the rotation by a symbolic (any BitVec expression) number of bits.
+     * */
     open fun <T : KBvSort> mkBvRotateLeftIndexedExprNoSimplify(
         rotation: Int, value: KExpr<T>
     ): KBvRotateLeftIndexedExpr<T> =
@@ -1992,6 +2816,12 @@ open class KContext(
 
     private val bvRotateRightIndexedExprCache = mkAstInterner<KBvRotateRightIndexedExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec rotate right (`rotateright`) expression.
+     * The result expression is rotated right [rotation] times.
+     *
+     * @see [mkBvRotateRightExpr] for the rotation by a symbolic (any BitVec expression) number of bits.
+     * */
     open fun <T : KBvSort> mkBvRotateRightIndexedExpr(rotation: Int, value: KExpr<T>): KExpr<T> =
         mkSimplified(
             rotation,
@@ -2000,6 +2830,12 @@ open class KContext(
             ::mkBvRotateRightIndexedExprNoSimplify
         )
 
+    /**
+     * Create BitVec rotate right (`rotateright`) expression.
+     * The result expression is rotated right [rotation] times.
+     *
+     * @see [mkBvRotateRightExpr] for the rotation by a symbolic (any BitVec expression) number of bits.
+     * */
     open fun <T : KBvSort> mkBvRotateRightIndexedExprNoSimplify(
         rotation: Int,
         value: KExpr<T>
@@ -2011,9 +2847,21 @@ open class KContext(
 
     private val bvRotateRightExprCache = mkAstInterner<KBvRotateRightExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec rotate right (`rotateright`) expression.
+     * The result expression is rotated right [rotation] times.
+     *
+     * @see [mkBvRotateRightIndexedExpr] for the rotation by a known number of bits.
+     * */
     open fun <T : KBvSort> mkBvRotateRightExpr(arg: KExpr<T>, rotation: KExpr<T>): KExpr<T> =
         mkSimplified(arg, rotation, KContext::simplifyBvRotateRightExpr, ::mkBvRotateRightExprNoSimplify)
 
+    /**
+     * Create BitVec rotate right (`rotateright`) expression.
+     * The result expression is rotated right [rotation] times.
+     *
+     * @see [mkBvRotateRightIndexedExpr] for the rotation by a known number of bits.
+     * */
     open fun <T : KBvSort> mkBvRotateRightExprNoSimplify(arg: KExpr<T>, rotation: KExpr<T>): KBvRotateRightExpr<T> =
         bvRotateRightExprCache.createIfContextActive {
             ensureContextMatch(arg, rotation)
@@ -2022,9 +2870,17 @@ open class KContext(
 
     private val bv2IntExprCache = mkAstInterner<KBv2IntExpr>()
 
+    /**
+     * Convert BitVec expressions [value] to the arithmetic Int expressions.
+     * When [isSigned] is set, the sign (highest, leftmost) bit is treated as the [value] sign.
+     * */
     open fun <T : KBvSort> mkBv2IntExpr(value: KExpr<T>, isSigned: Boolean): KExpr<KIntSort> =
         mkSimplified(value, isSigned, KContext::simplifyBv2IntExpr, ::mkBv2IntExprNoSimplify)
 
+    /**
+     * Convert BitVec expressions [value] to the arithmetic Int expressions.
+     * When [isSigned] is set, the sign (highest, leftmost) bit is treated as the [value] sign.
+     * */
     open fun <T : KBvSort> mkBv2IntExprNoSimplify(value: KExpr<T>, isSigned: Boolean): KBv2IntExpr =
         bv2IntExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -2033,9 +2889,23 @@ open class KContext(
 
     private val bvAddNoOverflowExprCache = mkAstInterner<KBvAddNoOverflowExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec add-no-overflow check expression.
+     * Determines that BitVec arithmetic addition does not overflow.
+     * An overflow occurs when the addition result value is greater than max supported value.
+     *
+     * @see mkBvAddNoUnderflowExpr for the underflow check.
+     * */
     open fun <T : KBvSort> mkBvAddNoOverflowExpr(arg0: KExpr<T>, arg1: KExpr<T>, isSigned: Boolean): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, isSigned, KContext::simplifyBvAddNoOverflowExpr, ::mkBvAddNoOverflowExprNoSimplify)
 
+    /**
+     * Create BitVec add-no-overflow check expression.
+     * Determines that BitVec arithmetic addition does not overflow.
+     * An overflow occurs when the addition result value is greater than max supported value.
+     *
+     * @see mkBvAddNoUnderflowExpr for the underflow check.
+     * */
     open fun <T : KBvSort> mkBvAddNoOverflowExprNoSimplify(
         arg0: KExpr<T>,
         arg1: KExpr<T>,
@@ -2047,9 +2917,23 @@ open class KContext(
 
     private val bvAddNoUnderflowExprCache = mkAstInterner<KBvAddNoUnderflowExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec add-no-underflow check expression.
+     * Determines that BitVec arithmetic addition does not underflow.
+     * An underflow occurs when the addition result value is lower than min supported value.
+     *
+     * @see mkBvAddNoOverflowExpr for the overflow check.
+     * */
     open fun <T : KBvSort> mkBvAddNoUnderflowExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvAddNoUnderflowExpr, ::mkBvAddNoUnderflowExprNoSimplify)
 
+    /**
+     * Create BitVec add-no-underflow check expression.
+     * Determines that BitVec arithmetic addition does not underflow.
+     * An underflow occurs when the addition result value is lower than min supported value.
+     *
+     * @see mkBvAddNoOverflowExpr for the overflow check.
+     * */
     open fun <T : KBvSort> mkBvAddNoUnderflowExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvAddNoUnderflowExpr<T> =
         bvAddNoUnderflowExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -2058,9 +2942,23 @@ open class KContext(
 
     private val bvSubNoOverflowExprCache = mkAstInterner<KBvSubNoOverflowExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec sub-no-overflow check expression.
+     * Determines that BitVec arithmetic subtraction does not overflow.
+     * An overflow occurs when the subtraction result value is greater than max supported value.
+     *
+     * @see mkBvSubNoUnderflowExpr for the underflow check.
+     * */
     open fun <T : KBvSort> mkBvSubNoOverflowExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvSubNoOverflowExpr, ::mkBvSubNoOverflowExprNoSimplify)
 
+    /**
+     * Create BitVec sub-no-overflow check expression.
+     * Determines that BitVec arithmetic subtraction does not overflow.
+     * An overflow occurs when the subtraction result value is greater than max supported value.
+     *
+     * @see mkBvSubNoUnderflowExpr for the underflow check.
+     * */
     open fun <T : KBvSort> mkBvSubNoOverflowExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvSubNoOverflowExpr<T> =
         bvSubNoOverflowExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -2069,9 +2967,23 @@ open class KContext(
 
     private val bvSubNoUnderflowExprCache = mkAstInterner<KBvSubNoUnderflowExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec sub-no-underflow check expression.
+     * Determines that BitVec arithmetic subtraction does not underflow.
+     * An underflow occurs when the subtraction result value is lower than min supported value.
+     *
+     * @see mkBvSubNoOverflowExpr for the overflow check.
+     * */
     open fun <T : KBvSort> mkBvSubNoUnderflowExpr(arg0: KExpr<T>, arg1: KExpr<T>, isSigned: Boolean): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, isSigned, KContext::simplifyBvSubNoUnderflowExpr, ::mkBvSubNoUnderflowExprNoSimplify)
 
+    /**
+     * Create BitVec sub-no-underflow check expression.
+     * Determines that BitVec arithmetic subtraction does not underflow.
+     * An underflow occurs when the subtraction result value is lower than min supported value.
+     *
+     * @see mkBvSubNoOverflowExpr for the overflow check.
+     * */
     open fun <T : KBvSort> mkBvSubNoUnderflowExprNoSimplify(
         arg0: KExpr<T>,
         arg1: KExpr<T>,
@@ -2083,9 +2995,17 @@ open class KContext(
 
     private val bvDivNoOverflowExprCache = mkAstInterner<KBvDivNoOverflowExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec div-no-overflow check expression.
+     * Determines that BitVec arithmetic signed division does not overflow.
+     * */
     open fun <T : KBvSort> mkBvDivNoOverflowExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvDivNoOverflowExpr, ::mkBvDivNoOverflowExprNoSimplify)
 
+    /**
+     * Create BitVec div-no-overflow check expression.
+     * Determines that BitVec arithmetic signed division does not overflow.
+     * */
     open fun <T : KBvSort> mkBvDivNoOverflowExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvDivNoOverflowExpr<T> =
         bvDivNoOverflowExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -2094,9 +3014,17 @@ open class KContext(
 
     private val bvNegNoOverflowExprCache = mkAstInterner<KBvNegNoOverflowExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec neg-no-overflow check expression.
+     * Determines that BitVec arithmetic negation does not overflow.
+     * */
     open fun <T : KBvSort> mkBvNegationNoOverflowExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyBvNegationNoOverflowExpr, ::mkBvNegationNoOverflowExprNoSimplify)
 
+    /**
+     * Create BitVec neg-no-overflow check expression.
+     * Determines that BitVec arithmetic negation does not overflow.
+     * */
     open fun <T : KBvSort> mkBvNegationNoOverflowExprNoSimplify(value: KExpr<T>): KBvNegNoOverflowExpr<T> =
         bvNegNoOverflowExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -2105,9 +3033,23 @@ open class KContext(
 
     private val bvMulNoOverflowExprCache = mkAstInterner<KBvMulNoOverflowExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec mul-no-overflow check expression.
+     * Determines that BitVec arithmetic multiplication does not overflow.
+     * An overflow occurs when the multiplication result value is greater than max supported value.
+     *
+     * @see mkBvMulNoUnderflowExpr for the underflow check.
+     * */
     open fun <T : KBvSort> mkBvMulNoOverflowExpr(arg0: KExpr<T>, arg1: KExpr<T>, isSigned: Boolean): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, isSigned, KContext::simplifyBvMulNoOverflowExpr, ::mkBvMulNoOverflowExprNoSimplify)
 
+    /**
+     * Create BitVec mul-no-overflow check expression.
+     * Determines that BitVec arithmetic multiplication does not overflow.
+     * An overflow occurs when the multiplication result value is greater than max supported value.
+     *
+     * @see mkBvMulNoUnderflowExpr for the underflow check.
+     * */
     open fun <T : KBvSort> mkBvMulNoOverflowExprNoSimplify(
         arg0: KExpr<T>,
         arg1: KExpr<T>,
@@ -2119,9 +3061,23 @@ open class KContext(
 
     private val bvMulNoUnderflowExprCache = mkAstInterner<KBvMulNoUnderflowExpr<out KBvSort>>()
 
+    /**
+     * Create BitVec mul-no-underflow check expression.
+     * Determines that BitVec arithmetic multiplication does not underflow.
+     * An underflow occurs when the multiplication result value is lower than min supported value.
+     *
+     * @see mkBvMulNoOverflowExpr for the overflow check.
+     * */
     open fun <T : KBvSort> mkBvMulNoUnderflowExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyBvMulNoUnderflowExpr, ::mkBvMulNoUnderflowExprNoSimplify)
 
+    /**
+     * Create BitVec mul-no-underflow check expression.
+     * Determines that BitVec arithmetic multiplication does not underflow.
+     * An underflow occurs when the multiplication result value is lower than min supported value.
+     *
+     * @see mkBvMulNoOverflowExpr for the overflow check.
+     * */
     open fun <T : KBvSort> mkBvMulNoUnderflowExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KBvMulNoUnderflowExpr<T> =
         bvMulNoUnderflowExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -2136,7 +3092,7 @@ open class KContext(
     private val fpCustomSizeCache = mkAstInterner<KFpCustomSizeValue>()
 
     /**
-     * Creates FP16 from the [value].
+     * Create FP16 from the [value].
      *
      * Important: we suppose that [value] has biased exponent, but FP16 will be created from the unbiased one.
      * So, at first, we'll subtract [KFp16Sort.exponentShiftSize] from the [value]'s exponent,
@@ -2154,20 +3110,41 @@ open class KContext(
         }
     }
 
+    /**
+     * Create FP16 NaN value.
+     * */
     fun mkFp16NaN(): KFp16Value = mkFp16WithoutNaNCheck(Float.NaN)
     private fun mkFp16WithoutNaNCheck(value: Float): KFp16Value =
         fp16Cache.createIfContextActive { KFp16Value(this, value) }
 
+    /**
+     * Create FP32 from the [value].
+     * */
     fun mkFp32(value: Float): KFp32Value = if (value.isNaN()) mkFp32NaN() else mkFp32WithoutNaNCheck(value)
+
+    /**
+     * Create FP32 NaN value.
+     * */
     fun mkFp32NaN(): KFp32Value = mkFp32WithoutNaNCheck(Float.NaN)
     private fun mkFp32WithoutNaNCheck(value: Float): KFp32Value =
         fp32Cache.createIfContextActive { KFp32Value(this, value) }
 
+    /**
+     * Create FP64 from the [value].
+     * */
     fun mkFp64(value: Double): KFp64Value = if (value.isNaN()) mkFp64NaN() else mkFp64WithoutNaNCheck(value)
+
+    /**
+     * Create FP64 NaN value.
+     * */
     fun mkFp64NaN(): KFp64Value = mkFp64WithoutNaNCheck(Double.NaN)
     private fun mkFp64WithoutNaNCheck(value: Double): KFp64Value =
         fp64Cache.createIfContextActive { KFp64Value(this, value) }
 
+    /**
+     * Create FP128 from the IEEE binary representation.
+     * Note: [biasedExponent] here is biased, i.e. unsigned.
+     * */
     fun mkFp128Biased(significand: KBitVecValue<*>, biasedExponent: KBitVecValue<*>, signBit: Boolean): KFp128Value =
         if (KFp128Value(this, significand, biasedExponent, signBit).isNaN()) {
             mkFp128NaN()
@@ -2175,6 +3152,9 @@ open class KContext(
             mkFp128BiasedWithoutNaNCheck(significand, biasedExponent, signBit)
         }
 
+    /**
+     * Create FP128 NaN value.
+     * */
     fun mkFp128NaN(): KFp128Value = mkFpNaN(mkFp128Sort()).cast()
     private fun mkFp128BiasedWithoutNaNCheck(
         significand: KBitVecValue<*>,
@@ -2185,6 +3165,10 @@ open class KContext(
         KFp128Value(this, significand, biasedExponent, signBit)
     }
 
+    /**
+     * Create FP128 from the IEEE binary representation.
+     * Note: [unbiasedExponent] here is unbiased, i.e. signed.
+     * */
     fun mkFp128(significand: KBitVecValue<*>, unbiasedExponent: KBitVecValue<*>, signBit: Boolean): KFp128Value =
         mkFp128Biased(
             significand = significand,
@@ -2192,6 +3176,10 @@ open class KContext(
             signBit = signBit
         )
 
+    /**
+     * Create FP128 from the IEEE binary representation.
+     * Note: [unbiasedExponent] here is unbiased, i.e. signed.
+     * */
     fun mkFp128(significand: Long, unbiasedExponent: Long, signBit: Boolean): KFp128Value =
         mkFp128(
             significand = mkBvUnsigned(significand, KFp128Sort.significandBits - 1u),
@@ -2206,7 +3194,7 @@ open class KContext(
         get() = mkFp64(this)
 
     /**
-     * Creates FP with a custom size.
+     * Create FP with a custom size from the IEEE binary representation.
      * Important: [unbiasedExponent] here is an **unbiased** value.
      */
     fun <T : KFpSort> mkFpCustomSize(
@@ -2246,7 +3234,7 @@ open class KContext(
     }
 
     /**
-     * Creates FP with a custom size.
+     * Create FP with a custom size from the IEEE binary representation.
      * Important: [biasedExponent] here is an **biased** value.
      */
     fun <T : KFpSort> mkFpCustomSizeBiased(
@@ -2330,6 +3318,10 @@ open class KContext(
         }
     }
 
+    /**
+     * Create FP with a custom size from the IEEE binary representation.
+     * Important: [unbiasedExponent] here is an **unbiased** value.
+     */
     fun <T : KFpSort> mkFpCustomSize(
         unbiasedExponent: KBitVecValue<out KBvSort>,
         significand: KBitVecValue<out KBvSort>,
@@ -2527,7 +3519,7 @@ open class KContext(
     )
 
     /**
-     * Special Fp values
+     * Create Fp zero value with [signBit] sign.
      * */
     @Suppress("MagicNumber")
     fun <T : KFpSort> mkFpZero(signBit: Boolean, sort: T): KFpValue<T> = when (sort) {
@@ -2543,6 +3535,9 @@ open class KContext(
         )
     }
 
+    /**
+     * Create Fp Inf value with [signBit] sign.
+     * */
     fun <T : KFpSort> mkFpInf(signBit: Boolean, sort: T): KFpValue<T> = when (sort) {
         is KFp16Sort -> mkFp16(if (signBit) Float.NEGATIVE_INFINITY else Float.POSITIVE_INFINITY).cast()
         is KFp32Sort -> mkFp32(if (signBit) Float.NEGATIVE_INFINITY else Float.POSITIVE_INFINITY).cast()
@@ -2556,6 +3551,9 @@ open class KContext(
         )
     }
 
+    /**
+     * Create Fp NaN value.
+     * */
     fun <T : KFpSort> mkFpNaN(sort: T): KFpValue<T> = when (sort) {
         is KFp16Sort -> mkFp16NaN().cast()
         is KFp32Sort -> mkFp32NaN().cast()
@@ -2570,6 +3568,11 @@ open class KContext(
 
     private val roundingModeCache = mkAstInterner<KFpRoundingModeExpr>()
 
+    /**
+     * Create Fp rounding mode.
+     *
+     * @see [KFpRoundingMode]
+     * */
     fun mkFpRoundingModeExpr(
         value: KFpRoundingMode
     ): KFpRoundingModeExpr = roundingModeCache.createIfContextActive {
@@ -2578,9 +3581,15 @@ open class KContext(
 
     private val fpAbsExprCache = mkAstInterner<KFpAbsExpr<out KFpSort>>()
 
+    /**
+     * Create Fp absolute value (`fp.abs`) expression.
+     * */
     open fun <T : KFpSort> mkFpAbsExpr(value: KExpr<T>): KExpr<T> =
         mkSimplified(value, KContext::simplifyFpAbsExpr, ::mkFpAbsExprNoSimplify)
 
+    /**
+     * Create Fp absolute value (`fp.abs`) expression.
+     * */
     open fun <T : KFpSort> mkFpAbsExprNoSimplify(
         value: KExpr<T>
     ): KFpAbsExpr<T> = fpAbsExprCache.createIfContextActive {
@@ -2590,9 +3599,15 @@ open class KContext(
 
     private val fpNegationExprCache = mkAstInterner<KFpNegationExpr<out KFpSort>>()
 
+    /**
+     * Create Fp negation (`fp.neg`) expression.
+     * */
     open fun <T : KFpSort> mkFpNegationExpr(value: KExpr<T>): KExpr<T> =
         mkSimplified(value, KContext::simplifyFpNegationExpr, ::mkFpNegationExprNoSimplify)
 
+    /**
+     * Create Fp negation (`fp.neg`) expression.
+     * */
     open fun <T : KFpSort> mkFpNegationExprNoSimplify(
         value: KExpr<T>
     ): KFpNegationExpr<T> = fpNegationExprCache.createIfContextActive {
@@ -2602,11 +3617,19 @@ open class KContext(
 
     private val fpAddExprCache = mkAstInterner<KFpAddExpr<out KFpSort>>()
 
+    /**
+     * Create Fp addition (`fp.add`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpAddExpr(
         roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<T>, arg1: KExpr<T>
     ): KExpr<T> =
         mkSimplified(roundingMode, arg0, arg1, KContext::simplifyFpAddExpr, ::mkFpAddExprNoSimplify)
 
+    /**
+     * Create Fp addition (`fp.add`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpAddExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
@@ -2618,11 +3641,19 @@ open class KContext(
 
     private val fpSubExprCache = mkAstInterner<KFpSubExpr<out KFpSort>>()
 
+    /**
+     * Create Fp subtraction (`fp.sub`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpSubExpr(
         roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<T>, arg1: KExpr<T>
     ): KExpr<T> =
         mkSimplified(roundingMode, arg0, arg1, KContext::simplifyFpSubExpr, ::mkFpSubExprNoSimplify)
 
+    /**
+     * Create Fp subtraction (`fp.sub`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpSubExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
@@ -2634,11 +3665,19 @@ open class KContext(
 
     private val fpMulExprCache = mkAstInterner<KFpMulExpr<out KFpSort>>()
 
+    /**
+     * Create Fp multiplication (`fp.mul`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpMulExpr(
         roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<T>, arg1: KExpr<T>
     ): KExpr<T> =
         mkSimplified(roundingMode, arg0, arg1, KContext::simplifyFpMulExpr, ::mkFpMulExprNoSimplify)
 
+    /**
+     * Create Fp multiplication (`fp.mul`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpMulExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
@@ -2650,11 +3689,19 @@ open class KContext(
 
     private val fpDivExprCache = mkAstInterner<KFpDivExpr<out KFpSort>>()
 
+    /**
+     * Create Fp division (`fp.div`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpDivExpr(
         roundingMode: KExpr<KFpRoundingModeSort>, arg0: KExpr<T>, arg1: KExpr<T>
     ): KExpr<T> =
         mkSimplified(roundingMode, arg0, arg1, KContext::simplifyFpDivExpr, ::mkFpDivExprNoSimplify)
 
+    /**
+     * Create Fp division (`fp.div`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpDivExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
@@ -2666,6 +3713,11 @@ open class KContext(
 
     private val fpFusedMulAddExprCache = mkAstInterner<KFpFusedMulAddExpr<out KFpSort>>()
 
+    /**
+     * Create Fp fused multiplication and addition (`fp.fma`) expression.
+     * Computes ([arg0] * [arg1]) + [arg2].
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpFusedMulAddExpr(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
@@ -2680,6 +3732,12 @@ open class KContext(
         ::mkFpFusedMulAddExprNoSimplify
     )
 
+
+    /**
+     * Create Fp fused multiplication and addition (`fp.fma`) expression.
+     * Computes ([arg0] * [arg1]) + [arg2].
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpFusedMulAddExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         arg0: KExpr<T>,
@@ -2692,9 +3750,17 @@ open class KContext(
 
     private val fpSqrtExprCache = mkAstInterner<KFpSqrtExpr<out KFpSort>>()
 
+    /**
+     * Create Fp square root (`fp.sqrt`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpSqrtExpr(roundingMode: KExpr<KFpRoundingModeSort>, value: KExpr<T>): KExpr<T> =
         mkSimplified(roundingMode, value, KContext::simplifyFpSqrtExpr, ::mkFpSqrtExprNoSimplify)
 
+    /**
+     * Create Fp square root (`fp.sqrt`) expression.
+     * The result is rounded according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpSqrtExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<T>
@@ -2705,9 +3771,15 @@ open class KContext(
 
     private val fpRemExprCache = mkAstInterner<KFpRemExpr<out KFpSort>>()
 
+    /**
+     * Create Fp IEEE remainder (`fp.IEEERem`) expression.
+     * */
     open fun <T : KFpSort> mkFpRemExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyFpRemExpr, ::mkFpRemExprNoSimplify)
 
+    /**
+     * Create Fp IEEE remainder (`fp.IEEERem`) expression.
+     * */
     open fun <T : KFpSort> mkFpRemExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpRemExpr<T> =
         fpRemExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -2716,11 +3788,19 @@ open class KContext(
 
     private val fpRoundToIntegralExprCache = mkAstInterner<KFpRoundToIntegralExpr<out KFpSort>>()
 
+    /**
+     * Create Fp round to integral (`fp.roundToIntegral`) expression.
+     * The rounding is performed according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpRoundToIntegralExpr(
         roundingMode: KExpr<KFpRoundingModeSort>, value: KExpr<T>
     ): KExpr<T> =
         mkSimplified(roundingMode, value, KContext::simplifyFpRoundToIntegralExpr, ::mkFpRoundToIntegralExprNoSimplify)
 
+    /**
+     * Create Fp round to integral (`fp.roundToIntegral`) expression.
+     * The rounding is performed according to the provided [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpRoundToIntegralExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<T>
@@ -2731,9 +3811,15 @@ open class KContext(
 
     private val fpMinExprCache = mkAstInterner<KFpMinExpr<out KFpSort>>()
 
+    /**
+     * Create Fp minimum (`fp.min`) expression.
+     * */
     open fun <T : KFpSort> mkFpMinExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyFpMinExpr, ::mkFpMinExprNoSimplify)
 
+    /**
+     * Create Fp minimum (`fp.min`) expression.
+     * */
     open fun <T : KFpSort> mkFpMinExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpMinExpr<T> =
         fpMinExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -2742,9 +3828,15 @@ open class KContext(
 
     private val fpMaxExprCache = mkAstInterner<KFpMaxExpr<out KFpSort>>()
 
+    /**
+     * Create Fp maximum (`fp.max`) expression.
+     * */
     open fun <T : KFpSort> mkFpMaxExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<T> =
         mkSimplified(arg0, arg1, KContext::simplifyFpMaxExpr, ::mkFpMaxExprNoSimplify)
 
+    /**
+     * Create Fp maximum (`fp.max`) expression.
+     * */
     open fun <T : KFpSort> mkFpMaxExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpMaxExpr<T> =
         fpMaxExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -2753,9 +3845,15 @@ open class KContext(
 
     private val fpLessOrEqualExprCache = mkAstInterner<KFpLessOrEqualExpr<out KFpSort>>()
 
+    /**
+     * Create Fp less-or-equal comparison (`fp.leq`) expression.
+     * */
     open fun <T : KFpSort> mkFpLessOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyFpLessOrEqualExpr, ::mkFpLessOrEqualExprNoSimplify)
 
+    /**
+     * Create Fp less-or-equal comparison (`fp.leq`) expression.
+     * */
     open fun <T : KFpSort> mkFpLessOrEqualExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpLessOrEqualExpr<T> =
         fpLessOrEqualExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -2764,9 +3862,15 @@ open class KContext(
 
     private val fpLessExprCache = mkAstInterner<KFpLessExpr<out KFpSort>>()
 
+    /**
+     * Create Fp less comparison (`fp.lt`) expression.
+     * */
     open fun <T : KFpSort> mkFpLessExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyFpLessExpr, ::mkFpLessExprNoSimplify)
 
+    /**
+     * Create Fp less comparison (`fp.lt`) expression.
+     * */
     open fun <T : KFpSort> mkFpLessExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpLessExpr<T> =
         fpLessExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -2775,9 +3879,15 @@ open class KContext(
 
     private val fpGreaterOrEqualExprCache = mkAstInterner<KFpGreaterOrEqualExpr<out KFpSort>>()
 
+    /**
+     * Create Fp greater-or-equal comparison (`fp.geq`) expression.
+     * */
     open fun <T : KFpSort> mkFpGreaterOrEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyFpGreaterOrEqualExpr, ::mkFpGreaterOrEqualExprNoSimplify)
 
+    /**
+     * Create Fp greater-or-equal comparison (`fp.geq`) expression.
+     * */
     open fun <T : KFpSort> mkFpGreaterOrEqualExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpGreaterOrEqualExpr<T> =
         fpGreaterOrEqualExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -2786,9 +3896,15 @@ open class KContext(
 
     private val fpGreaterExprCache = mkAstInterner<KFpGreaterExpr<out KFpSort>>()
 
+    /**
+     * Create Fp greater comparison (`fp.gt`) expression.
+     * */
     open fun <T : KFpSort> mkFpGreaterExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyFpGreaterExpr, ::mkFpGreaterExprNoSimplify)
 
+    /**
+     * Create Fp greater comparison (`fp.gt`) expression.
+     * */
     open fun <T : KFpSort> mkFpGreaterExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpGreaterExpr<T> =
         fpGreaterExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -2797,9 +3913,21 @@ open class KContext(
 
     private val fpEqualExprCache = mkAstInterner<KFpEqualExpr<out KFpSort>>()
 
+    /**
+     * Create Fp equality comparison (`fp.eq`) expression.
+     * Checks arguments equality using IEEE 754-2008 rules.
+     *
+     * @see [mkEq] for smt equality.
+     * */
     open fun <T : KFpSort> mkFpEqualExpr(arg0: KExpr<T>, arg1: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(arg0, arg1, KContext::simplifyFpEqualExpr, ::mkFpEqualExprNoSimplify)
 
+    /**
+     * Create Fp equality comparison (`fp.eq`) expression.
+     * Checks arguments equality using IEEE 754-2008 rules.
+     *
+     * @see [mkEq] for smt equality.
+     * */
     open fun <T : KFpSort> mkFpEqualExprNoSimplify(arg0: KExpr<T>, arg1: KExpr<T>): KFpEqualExpr<T> =
         fpEqualExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
@@ -2808,9 +3936,15 @@ open class KContext(
 
     private val fpIsNormalExprCache = mkAstInterner<KFpIsNormalExpr<out KFpSort>>()
 
+    /**
+     * Create Fp is-normal check (`fp.isNormal`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsNormalExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsNormalExpr, ::mkFpIsNormalExprNoSimplify)
 
+    /**
+     * Create Fp is-normal check (`fp.isNormal`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsNormalExprNoSimplify(value: KExpr<T>): KFpIsNormalExpr<T> =
         fpIsNormalExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -2819,9 +3953,15 @@ open class KContext(
 
     private val fpIsSubnormalExprCache = mkAstInterner<KFpIsSubnormalExpr<out KFpSort>>()
 
+    /**
+     * Create Fp is-subnormal check (`fp.isSubnormal`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsSubnormalExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsSubnormalExpr, ::mkFpIsSubnormalExprNoSimplify)
 
+    /**
+     * Create Fp is-subnormal check (`fp.isSubnormal`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsSubnormalExprNoSimplify(value: KExpr<T>): KFpIsSubnormalExpr<T> =
         fpIsSubnormalExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -2830,9 +3970,15 @@ open class KContext(
 
     private val fpIsZeroExprCache = mkAstInterner<KFpIsZeroExpr<out KFpSort>>()
 
+    /**
+     * Create Fp is-zero check (`fp.isZero`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsZeroExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsZeroExpr, ::mkFpIsZeroExprNoSimplify)
 
+    /**
+     * Create Fp is-zero check (`fp.isZero`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsZeroExprNoSimplify(value: KExpr<T>): KFpIsZeroExpr<T> =
         fpIsZeroExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -2841,9 +3987,15 @@ open class KContext(
 
     private val fpIsInfiniteExprCache = mkAstInterner<KFpIsInfiniteExpr<out KFpSort>>()
 
+    /**
+     * Create Fp is-inf check (`fp.isInfinite`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsInfiniteExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsInfiniteExpr, ::mkFpIsInfiniteExprNoSimplify)
 
+    /**
+     * Create Fp is-inf check (`fp.isInfinite`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsInfiniteExprNoSimplify(value: KExpr<T>): KFpIsInfiniteExpr<T> =
         fpIsInfiniteExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -2852,9 +4004,15 @@ open class KContext(
 
     private val fpIsNaNExprCache = mkAstInterner<KFpIsNaNExpr<out KFpSort>>()
 
+    /**
+     * Create Fp is-nan check (`fp.isNaN`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsNaNExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsNaNExpr, ::mkFpIsNaNExprNoSimplify)
 
+    /**
+     * Create Fp is-nan check (`fp.isNaN`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsNaNExprNoSimplify(value: KExpr<T>): KFpIsNaNExpr<T> =
         fpIsNaNExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -2863,9 +4021,15 @@ open class KContext(
 
     private val fpIsNegativeExprCache = mkAstInterner<KFpIsNegativeExpr<out KFpSort>>()
 
+    /**
+     * Create Fp is-negative check (`fp.isNegative`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsNegativeExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsNegativeExpr, ::mkFpIsNegativeExprNoSimplify)
 
+    /**
+     * Create Fp is-negative check (`fp.isNegative`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsNegativeExprNoSimplify(value: KExpr<T>): KFpIsNegativeExpr<T> =
         fpIsNegativeExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -2874,9 +4038,15 @@ open class KContext(
 
     private val fpIsPositiveExprCache = mkAstInterner<KFpIsPositiveExpr<out KFpSort>>()
 
+    /**
+     * Create Fp is-positive check (`fp.isPositive`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsPositiveExpr(value: KExpr<T>): KExpr<KBoolSort> =
         mkSimplified(value, KContext::simplifyFpIsPositiveExpr, ::mkFpIsPositiveExprNoSimplify)
 
+    /**
+     * Create Fp is-positive check (`fp.isPositive`) expression.
+     * */
     open fun <T : KFpSort> mkFpIsPositiveExprNoSimplify(value: KExpr<T>): KFpIsPositiveExpr<T> =
         fpIsPositiveExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -2885,6 +4055,12 @@ open class KContext(
 
     private val fpToBvExprCache = mkAstInterner<KFpToBvExpr<out KFpSort>>()
 
+    /**
+     * Create Fp to BitVec conversion (`fp.to_sbv`, `fp.to_ubv`) expression.
+     * Provided Fp [value] is rounded to the nearest integral according to the [roundingMode].
+     *
+     * @see [mkFpToIEEEBvExpr] for binary conversion.
+     * */
     open fun <T : KFpSort> mkFpToBvExpr(
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<T>,
@@ -2893,6 +4069,12 @@ open class KContext(
     ): KExpr<KBvSort> =
         mkSimplified(roundingMode, value, bvSize, isSigned, KContext::simplifyFpToBvExpr, ::mkFpToBvExprNoSimplify)
 
+    /**
+     * Create Fp to BitVec conversion (`fp.to_sbv`, `fp.to_ubv`) expression.
+     * Provided Fp [value] is rounded to the nearest integral according to the [roundingMode].
+     *
+     * @see [mkFpToIEEEBvExpr] for binary conversion.
+     * */
     open fun <T : KFpSort> mkFpToBvExprNoSimplify(
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<T>,
@@ -2905,9 +4087,15 @@ open class KContext(
 
     private val fpToRealExprCache = mkAstInterner<KFpToRealExpr<out KFpSort>>()
 
+    /**
+     * Create Fp to Real conversion (`fp.to_real`) expression.
+     * */
     open fun <T : KFpSort> mkFpToRealExpr(value: KExpr<T>): KExpr<KRealSort> =
         mkSimplified(value, KContext::simplifyFpToRealExpr, ::mkFpToRealExprNoSimplify)
 
+    /**
+     * Create Fp to Real conversion (`fp.to_real`) expression.
+     * */
     open fun <T : KFpSort> mkFpToRealExprNoSimplify(value: KExpr<T>): KFpToRealExpr<T> =
         fpToRealExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -2916,9 +4104,21 @@ open class KContext(
 
     private val fpToIEEEBvExprCache = mkAstInterner<KFpToIEEEBvExpr<out KFpSort>>()
 
+    /**
+     * Create Fp to IEEE BitVec conversion expression.
+     * Converts Fp value to the corresponding IEEE 754-2008 binary format.
+     *
+     * Note: conversion is unspecified for NaN values.
+     * */
     open fun <T : KFpSort> mkFpToIEEEBvExpr(value: KExpr<T>): KExpr<KBvSort> =
         mkSimplified(value, KContext::simplifyFpToIEEEBvExpr, ::mkFpToIEEEBvExprNoSimplify)
 
+    /**
+     * Create Fp to IEEE BitVec conversion expression.
+     * Converts Fp value to the corresponding IEEE 754-2008 binary format.
+     *
+     * Note: conversion is unspecified for NaN values.
+     * */
     open fun <T : KFpSort> mkFpToIEEEBvExprNoSimplify(value: KExpr<T>): KFpToIEEEBvExpr<T> =
         fpToIEEEBvExprCache.createIfContextActive {
             ensureContextMatch(value)
@@ -2927,6 +4127,9 @@ open class KContext(
 
     private val fpFromBvExprCache = mkAstInterner<KFpFromBvExpr<out KFpSort>>()
 
+    /**
+     * Create Fp from IEEE BitVec expressions.
+     * */
     open fun <T : KFpSort> mkFpFromBvExpr(
         sign: KExpr<KBv1Sort>,
         biasedExponent: KExpr<out KBvSort>,
@@ -2939,6 +4142,9 @@ open class KContext(
         ::mkFpFromBvExprNoSimplify
     )
 
+    /**
+     * Create Fp from IEEE BitVec expressions.
+     * */
     open fun <T : KFpSort> mkFpFromBvExprNoSimplify(
         sign: KExpr<KBv1Sort>,
         biasedExponent: KExpr<out KBvSort>,
@@ -2958,12 +4164,20 @@ open class KContext(
     private val realToFpExprCache = mkAstInterner<KRealToFpExpr<out KFpSort>>()
     private val bvToFpExprCache = mkAstInterner<KBvToFpExpr<out KFpSort>>()
 
+    /**
+     * Create Fp to another Fp.
+     * Rounding is performed according to the [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpToFpExpr(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<out KFpSort>
     ): KExpr<T> = mkSimplified(sort, roundingMode, value, KContext::simplifyFpToFpExpr, ::mkFpToFpExprNoSimplify)
 
+    /**
+     * Create Fp to another Fp.
+     * Rounding is performed according to the [roundingMode].
+     * */
     open fun <T : KFpSort> mkFpToFpExprNoSimplify(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
@@ -2973,12 +4187,20 @@ open class KContext(
         KFpToFpExpr(this, sort, roundingMode, value)
     }.cast()
 
+    /**
+     * Create Fp from Real expression.
+     * Rounding is performed according to the [roundingMode].
+     * */
     open fun <T : KFpSort> mkRealToFpExpr(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
         value: KExpr<KRealSort>
     ): KExpr<T> = mkSimplified(sort, roundingMode, value, KContext::simplifyRealToFpExpr, ::mkRealToFpExprNoSimplify)
 
+    /**
+     * Create Fp from Real expression.
+     * Rounding is performed according to the [roundingMode].
+     * */
     open fun <T : KFpSort> mkRealToFpExprNoSimplify(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
@@ -2988,6 +4210,12 @@ open class KContext(
         KRealToFpExpr(this, sort, roundingMode, value)
     }.cast()
 
+    /**
+     * Create Fp from BitVec value.
+     * Rounding is performed according to the [roundingMode].
+     *
+     * @see [mkFpFromBvExpr] for IEEE binary conversion.
+     * */
     open fun <T : KFpSort> mkBvToFpExpr(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
@@ -2996,6 +4224,12 @@ open class KContext(
     ): KExpr<T> =
         mkSimplified(sort, roundingMode, value, signed, KContext::simplifyBvToFpExpr, ::mkBvToFpExprNoSimplify)
 
+    /**
+     * Create Fp from BitVec value.
+     * Rounding is performed according to the [roundingMode].
+     *
+     * @see [mkFpFromBvExpr] for IEEE binary conversion.
+     * */
     open fun <T : KFpSort> mkBvToFpExprNoSimplify(
         sort: T,
         roundingMode: KExpr<KFpRoundingModeSort>,
@@ -3009,6 +4243,9 @@ open class KContext(
     // quantifiers
     private val existentialQuantifierCache = mkAstInterner<KExistentialQuantifier>()
 
+    /**
+     * Create existential quantifier (`exists`).
+     * */
     open fun mkExistentialQuantifier(body: KExpr<KBoolSort>, bounds: List<KDecl<*>>) =
         existentialQuantifierCache.createIfContextActive {
             ensureContextMatch(body)
@@ -3018,6 +4255,9 @@ open class KContext(
 
     private val universalQuantifierCache = mkAstInterner<KUniversalQuantifier>()
 
+    /**
+     * Create universal quantifier (`forall`).
+     * */
     open fun mkUniversalQuantifier(body: KExpr<KBoolSort>, bounds: List<KDecl<*>>) =
         universalQuantifierCache.createIfContextActive {
             ensureContextMatch(body)
@@ -3027,6 +4267,11 @@ open class KContext(
 
     private val uninterpretedSortValueCache = mkAstInterner<KUninterpretedSortValue>()
 
+    /**
+     * Create uninterpreted sort value.
+     *
+     * Note: uninterpreted sort values with different [valueIdx] are distinct.
+     * */
     open fun mkUninterpretedSortValue(sort: KUninterpretedSort, valueIdx: Int): KUninterpretedSortValue =
         uninterpretedSortValueCache.createIfContextActive {
             ensureContextMatch(sort)

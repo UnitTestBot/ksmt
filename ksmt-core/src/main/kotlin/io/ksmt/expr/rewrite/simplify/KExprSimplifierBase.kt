@@ -76,3 +76,8 @@ fun KExprSimplifierBase.areDefinitelyDistinct(left: List<KExpr<*>>, right: List<
     }
     return false
 }
+
+internal fun <T : KSort> KExprSimplifierBase.boundedRewrite(
+    expr: KExpr<T>,
+    depth: Int = SIMPLIFIER_DEFAULT_BOUNDED_REWRITE_DEPTH
+): KExpr<T> = boundedRewrite(depth, expr)

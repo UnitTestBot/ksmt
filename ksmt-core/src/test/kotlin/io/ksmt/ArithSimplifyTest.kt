@@ -58,7 +58,11 @@ class ArithSimplifyTest : ExpressionSimplifyTest() {
     @Test
     fun testDiv() {
         testOperation(isInt = true, KContext::mkArithDiv, KContext::mkArithDivNoSimplify) {
-            listOf(mkIntNum(0), mkIntNum(1), mkIntNum(-1)).uncheckedCast()
+            listOf(
+                mkIntNum(0), mkIntNum(1), mkIntNum(-1),
+                // Values with non-trivial rounding
+                mkIntNum(47), mkIntNum(-47), mkIntNum(13), mkIntNum(-13)
+            ).uncheckedCast()
         }
 
         testOperation(isInt = false, KContext::mkArithDiv, KContext::mkArithDivNoSimplify) {
@@ -80,14 +84,22 @@ class ArithSimplifyTest : ExpressionSimplifyTest() {
     @Test
     fun testIntMod() {
         testOperation(isInt = true, KContext::mkIntMod, KContext::mkIntModNoSimplify) {
-            listOf(mkIntNum(0), mkIntNum(1), mkIntNum(-1)).uncheckedCast()
+            listOf(
+                mkIntNum(0), mkIntNum(1), mkIntNum(-1),
+                // Values with non-trivial remainder
+                mkIntNum(47), mkIntNum(-47), mkIntNum(13), mkIntNum(-13),
+            ).uncheckedCast()
         }
     }
 
     @Test
     fun testIntRem() {
         testOperation(isInt = true, KContext::mkIntRem, KContext::mkIntRemNoSimplify) {
-            listOf(mkIntNum(0), mkIntNum(1), mkIntNum(-1)).uncheckedCast()
+            listOf(
+                mkIntNum(0), mkIntNum(1), mkIntNum(-1),
+                // Values with non-trivial remainder
+                mkIntNum(47), mkIntNum(-47), mkIntNum(13), mkIntNum(-13),
+            ).uncheckedCast()
         }
     }
 

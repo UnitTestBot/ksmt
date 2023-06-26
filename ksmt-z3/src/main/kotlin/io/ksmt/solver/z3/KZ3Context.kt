@@ -4,10 +4,6 @@ import com.microsoft.z3.Context
 import com.microsoft.z3.Solver
 import com.microsoft.z3.decRefUnsafe
 import com.microsoft.z3.incRefUnsafe
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet
-import it.unimi.dsi.fastutil.longs.LongSet
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
 import io.ksmt.KContext
 import io.ksmt.decl.KDecl
 import io.ksmt.expr.KExpr
@@ -15,6 +11,10 @@ import io.ksmt.expr.KUninterpretedSortValue
 import io.ksmt.solver.util.KExprLongInternalizerBase.Companion.NOT_INTERNALIZED
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet
+import it.unimi.dsi.fastutil.longs.LongSet
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
 
 @Suppress("TooManyFunctions")
 class KZ3Context(
@@ -261,7 +261,19 @@ class KZ3Context(
     }
 
     override fun close() {
+        if (isClosed) return
         isClosed = true
+
+        uninterpretedSortValueInterpreter.clear()
+
+        uninterpretedSortValueDecls.keys.decRefAll()
+        uninterpretedSortValueDecls.clear()
+
+        uninterpretedSortValueInterpreters.decRefAll()
+        uninterpretedSortValueInterpreters.clear()
+
+        converterNativeObjects.decRefAll()
+        converterNativeObjects.clear()
 
         z3Expressions.keys.decRefAll()
         expressions.clear()
