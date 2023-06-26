@@ -43,4 +43,21 @@ class KMaxSMTSolverTest {
             println("Finished on $iter iteration")
         }
     }
+
+    @Test
+    fun smokeTest3() {
+        with (KContext()) {
+            val z3Solver = KZ3Solver(this)
+            val maxSMTSolver = KMaxSMTSolver(this, z3Solver)
+            val a = boolSort.mkConst("a")
+            val b = boolSort.mkConst("b")
+            maxSMTSolver.assert(KOrBinaryExpr(this, a, b))
+            maxSMTSolver.assertSoft(KOrBinaryExpr(this, KNotExpr(this, a), b), 1)
+            maxSMTSolver.assertSoft(KOrBinaryExpr(this, a, KNotExpr(this, b)), 1)
+            maxSMTSolver.assertSoft(KOrBinaryExpr(this, KNotExpr(this, a), KNotExpr(this, b)), 1)
+            val (model, iter) = maxSMTSolver.checkMaxSMT()
+            println("Model:\n$model")
+            println("Finished on $iter iteration")
+        }
+    }
 }

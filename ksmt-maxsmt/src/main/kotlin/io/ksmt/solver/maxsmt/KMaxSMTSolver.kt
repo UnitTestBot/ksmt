@@ -57,8 +57,12 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
             val (formulaReified, reificationVariables) =
                 reifyCore(formula, getUnsatCoreOfConstraints(formula, unsatCore), i)
 
-            // TODO, FIX: Для одного странно использовать KOrNaryExpr
-            this.assert(KOrNaryExpr(ctx, reificationVariables))
+            // TODO: а если их 0, может ли быть такое?
+            when (reificationVariables.size) {
+                1 -> this.assert(reificationVariables.first())
+                2 -> this.assert(KOrBinaryExpr(ctx, reificationVariables[0], reificationVariables[1]))
+                else -> this.assert(KOrNaryExpr(ctx, reificationVariables))
+            }
 
             formula = applyMaxRes(formulaReified, reificationVariables)
 
@@ -123,12 +127,19 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
             val indexLast = literalsToReify.size - 1
 
             if (index < indexLast) {
-                val disjunction = KOrNaryExpr(
-                    ctx,
-                    literalsToReify.subList(index + 1, indexLast),
-                )
+                val disjunction =
+                    // We do not take the current element (from the next to the last)
+                    when (indexLast - index) {
+                        1 -> literalsToReify[index + 1]
+                        2 -> KOrBinaryExpr(ctx, literalsToReify[index + 1], literalsToReify[index + 2])
+                        else -> KOrNaryExpr(
+                            ctx,
+                            literalsToReify.subList(index + 1, indexLast + 1),
+                        )
 
-                val literalToReifyDisjunction = ctx.boolSort.mkConst("d$indexedLiteral")
+                    }
+
+                val literalToReifyDisjunction = ctx.boolSort.mkConst("d$index")
 
                 this.assert(
                     KEqExpr(
