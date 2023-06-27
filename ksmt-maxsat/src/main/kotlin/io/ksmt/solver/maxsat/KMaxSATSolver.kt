@@ -1,4 +1,4 @@
-package io.ksmt.solver.maxsmt
+package io.ksmt.solver.maxsat
 
 import io.ksmt.KContext
 import io.ksmt.expr.KEqExpr
@@ -6,6 +6,7 @@ import io.ksmt.expr.KExpr
 import io.ksmt.expr.KNotExpr
 import io.ksmt.expr.KOrBinaryExpr
 import io.ksmt.expr.KOrNaryExpr
+import io.ksmt.expr.KTrue
 import io.ksmt.solver.KModel
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverConfiguration
@@ -16,79 +17,113 @@ import io.ksmt.utils.mkConst
 import kotlin.time.Duration
 
 // TODO: solver type must be KSolver<KSolverConfiguration> but the code does not work with it
-class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : KSolver<KSolverConfiguration> {
+class KMaxSATSolver(private val ctx: KContext, private val solver: KZ3Solver) : KSolver<KSolverConfiguration> {
     private val softConstraints = mutableListOf<SoftConstraint>()
 
-    // Enum checking max SAT state (last check status, was not checked, invalid (soft assertions changed))
-    // Should I support push/pop for soft constraints?
-
     fun assertSoft(expr: KExpr<KBoolSort>, weight: Int) {
+        require(weight > 0) { "Soft constraint weight must be greater than 0" }
         softConstraints.add(SoftConstraint(expr, weight))
     }
 
-    // TODO: return soft constraints
     // TODO: add timeout?
-    fun checkMaxSMT(): Pair<KModel?, Int> {
-        require(softConstraints.isNotEmpty()) { "Soft constraints list should not be empty" }
+    fun checkMaxSMT(): Pair<KSolverStatus, List<SoftConstraint>> {
+        if (softConstraints.isEmpty()) {
+            return Pair(solver.check(), listOf())
+        }
 
-        // Should I check every time on satisfiability?
-        // У них в солверах есть last checked status.
-        // Should I add timeout?
         val status = solver.check()
 
         if (status == KSolverStatus.UNSAT) {
             error("Conjunction of asserted formulas is UNSAT")
         } else if (status == KSolverStatus.UNKNOWN) {
-            // TODO: handle this case
+            // TODO: implement
         }
 
         var i = 0
         var formula = softConstraints.toMutableList()
 
         while (true) {
-            val (solverStatus, unsatCore, model) = solveSMT(formula)
+            val (solverStatus, unsatCore, model) = solveSAT(formula)
 
             if (solverStatus == KSolverStatus.SAT) {
-                return Pair(model, i)
+                // TODO: can I simplify this expression?
+                val satSoftConstraints =
+                        softConstraints.filter { model?.eval(it.constraint)?.internEquals(KTrue(ctx)) == true }
+                return Pair(solverStatus, satSoftConstraints)
             } else if (solverStatus == KSolverStatus.UNKNOWN) {
                 // TODO: implement
             }
 
+            val (weight, splitUnsatCore) = splitCoreSoftConstraints(formula, unsatCore)
+
             val (formulaReified, reificationVariables) =
-                reifyCore(formula, getUnsatCoreOfConstraints(formula, unsatCore), i)
+                reifyCore(formula, splitUnsatCore, i, weight)
 
             // TODO: а если их 0, может ли быть такое?
             when (reificationVariables.size) {
-                1 -> this.assert(reificationVariables.first())
-                2 -> this.assert(KOrBinaryExpr(ctx, reificationVariables[0], reificationVariables[1]))
-                else -> this.assert(KOrNaryExpr(ctx, reificationVariables))
+                1 -> assert(reificationVariables.first())
+                2 -> assert(KOrBinaryExpr(ctx, reificationVariables[0], reificationVariables[1]))
+                else -> assert(KOrNaryExpr(ctx, reificationVariables))
             }
 
-            formula = applyMaxRes(formulaReified, reificationVariables)
+            formula = applyMaxRes(formulaReified, reificationVariables, weight)
 
             ++i
         }
     }
 
-    // Returns issat, unsat core (?) and assignment
-    private fun solveSMT(assumptions: List<SoftConstraint>): Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> {
-        val status = solver.checkWithAssumptions(assumptions.map { x -> x.constraint })
+    private fun splitCoreSoftConstraints(formula: MutableList<SoftConstraint>, unsatCore: List<KExpr<KBoolSort>>)
+            : Pair<Int, List<SoftConstraint>> {
+        val coreSoftConstraints  = formula.filter { x -> unsatCore.find { x.constraint.internEquals(it) } != null }
+        // Here we union soft constraints from core with the same expr
 
-        if (status == KSolverStatus.SAT) {
-            return Triple(status, listOf(), solver.model())
-        } else if (status == KSolverStatus.UNSAT) {
-            return Triple(status, solver.unsatCore(), null)
+        val coreSoftConstraintsUnioned = coreSoftConstraints.toMutableList()
+
+        var i = 0
+        while (i < coreSoftConstraintsUnioned.size) {
+            val currentConstraint = coreSoftConstraintsUnioned[i].constraint
+
+            val sameConstraints =
+                    coreSoftConstraintsUnioned.filter { it.constraint.internEquals(currentConstraint) }
+
+            if (sameConstraints.size > 1) {
+                val sameConstraintsWeightSum = sameConstraints.sumOf { it.weight }
+                coreSoftConstraintsUnioned.removeAll(sameConstraints)
+                coreSoftConstraintsUnioned.add(SoftConstraint(currentConstraint, sameConstraintsWeightSum))
+
+                formula.removeAll(sameConstraints)
+                formula.add(SoftConstraint(currentConstraint, sameConstraintsWeightSum))
+            }
+
+            ++i
         }
 
-        return Triple(status, listOf(), null)
+        val minWeight = coreSoftConstraintsUnioned.minBy { it.weight }.weight
+
+        coreSoftConstraintsUnioned.forEach { x ->
+            if (x.weight > minWeight) {
+                formula.add(SoftConstraint(x.constraint, minWeight))
+                formula.add(SoftConstraint(x.constraint, x.weight - minWeight))
+                formula.removeIf { it.weight == x.weight && it.constraint == x.constraint }
+            }
+        }
+
+        return Pair(minWeight, formula.filter { x -> x.weight == minWeight && unsatCore.find { x.constraint.internEquals(it) } != null })
     }
 
-    private fun reifyCore(formula: MutableList<SoftConstraint>, unsatCore: List<SoftConstraint>, i: Int)
+    private fun solveSAT(assumptions: List<SoftConstraint>): Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> =
+        when (val status = solver.checkWithAssumptions(assumptions.map { x -> x.constraint })) {
+            KSolverStatus.SAT -> Triple(status, listOf(), solver.model())
+            KSolverStatus.UNSAT -> Triple(status, solver.unsatCore(), null)
+            KSolverStatus.UNKNOWN -> Triple(status, listOf(), null)
+        }
+
+    private fun reifyCore(formula: MutableList<SoftConstraint>, unsatCore: List<SoftConstraint>, i: Int, weight: Int)
             : Pair<MutableList<SoftConstraint>, List<KExpr<KBoolSort>>> {
         val literalsToReify = mutableListOf<KExpr<KBoolSort>>()
 
         for (coreElement in unsatCore.withIndex()) {
-            if (coreElement.value.weight == 1) {
+            if (coreElement.value.weight == weight) {
                 formula.remove(coreElement.value)
 
                 val coreElementConstraint = coreElement.value.constraint
@@ -102,9 +137,9 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
                     KNotExpr(ctx, literalToReify),
                 )
                 // TODO: Переобозначить и остальные элементы в b_i_j
-                this.assert(constraintToReify)
+                assert(constraintToReify)
 
-                formula.add(SoftConstraint(KNotExpr(ctx, literalToReify), 1))
+                formula.add(SoftConstraint(KNotExpr(ctx, literalToReify), weight))
 
                 literalsToReify.add(literalToReify)
             }
@@ -113,18 +148,17 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
         return Pair(formula, literalsToReify)
     }
 
-    private fun applyMaxRes(formula: MutableList<SoftConstraint>, literalsToReify: List<KExpr<KBoolSort>>)
+    private fun applyMaxRes(formula: MutableList<SoftConstraint>, literalsToReify: List<KExpr<KBoolSort>>, weight: Int)
             : MutableList<SoftConstraint> {
         for (indexedLiteral in literalsToReify.withIndex()) {
             // TODO: here we should use restrictions from the article for MaxRes
 
-            formula.removeIf { x ->
-                x.constraint.internEquals(KNotExpr(ctx, indexedLiteral.value)) &&
-                    x.weight == 1
+            formula.removeIf { it.constraint.internEquals(KNotExpr(ctx, indexedLiteral.value)) &&
+                    it.weight == weight
             }
 
             val index = indexedLiteral.index
-            val indexLast = literalsToReify.size - 1
+            val indexLast = literalsToReify.lastIndex
 
             if (index < indexLast) {
                 val disjunction =
@@ -136,12 +170,12 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
                             ctx,
                             literalsToReify.subList(index + 1, indexLast + 1),
                         )
-
                     }
 
+                // TODO, FIX: не будет ли коллизии при последующих запусках?
                 val literalToReifyDisjunction = ctx.boolSort.mkConst("d$index")
 
-                this.assert(
+                assert(
                     KEqExpr(
                         ctx,
                         literalToReifyDisjunction,
@@ -156,27 +190,13 @@ class KMaxSMTSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
                             KNotExpr(ctx, indexedLiteral.value),
                             KNotExpr(ctx, literalToReifyDisjunction),
                         ),
-                        1,
+                        weight,
                     ),
                 )
-            } else {
-                // Здесь добавляем пустой дизъюнкт, но по факту это не нужно делать (т.к. потом его удалим)
             }
         }
 
         return formula
-    }
-
-    private fun getUnsatCoreOfConstraints(formula: MutableList<SoftConstraint>, unsatCore: List<KExpr<KBoolSort>>)
-            : List<SoftConstraint> {
-        val unsatCoreOfConstraints = mutableListOf<SoftConstraint>()
-
-        for (coreElement in unsatCore) {
-            val softConstraint = formula.find { x -> x.constraint == coreElement }
-            softConstraint?.let { unsatCoreOfConstraints.add(it) }
-        }
-
-        return unsatCoreOfConstraints
     }
 
     override fun configure(configurator: KSolverConfiguration.() -> Unit) {

@@ -1,11 +1,8 @@
-package io.ksmt.solver.maxsmt
+package io.ksmt.solver.maxsat
 
 import io.ksmt.KContext
-import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.z3.KZ3Solver
-import io.ksmt.utils.asExpr
 import io.ksmt.utils.mkConst
-import java.io.Console
 
 fun main() {
     test()
@@ -13,16 +10,16 @@ fun main() {
 
 fun test() = with(KContext()) {
     val z3Solver = KZ3Solver(this)
-    val maxSMTSolver = KMaxSMTSolver(this, z3Solver)
+    val maxSATSolver = KMaxSATSolver(this, z3Solver)
     val a = boolSort.mkConst("a")
     val b = boolSort.mkConst("b")
     val c = boolSort.mkConst("c")
-    maxSMTSolver.assert(a)
-    maxSMTSolver.assert(b)
-    maxSMTSolver.assert(c)
-    maxSMTSolver.assertSoft(mkAnd(a, mkNot(c)), 1)
-    maxSMTSolver.assertSoft(mkNot(a), 1)
-    val (model, iter) = maxSMTSolver.checkMaxSMT()
+    maxSATSolver.assert(a)
+    maxSATSolver.assert(b)
+    maxSATSolver.assert(c)
+    maxSATSolver.assertSoft(mkAnd(a, mkNot(c)), 1)
+    maxSATSolver.assertSoft(mkNot(a), 1)
+    val (model, iter) = maxSATSolver.checkMaxSMT()
     println("Model:\n$model")
     println("Finished on $iter iteration")
 
