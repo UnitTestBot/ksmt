@@ -24,7 +24,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         softConstraints.add(SoftConstraint(expr, weight))
     }
 
-    // TODO: add timeout
+    // TODO: add timeout support
     fun checkMaxSAT(): MaxSATResult {
         if (softConstraints.isEmpty()) {
             return MaxSATResult(listOf(), solver.check(), true)
@@ -41,6 +41,8 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         var i = 0
         var formula = softConstraints.toMutableList()
 
+        unionSoftConstraintsWithSameExpressions(formula)
+
         while (true) {
             val (solverStatus, unsatCore, model) = solveSAT(formula)
 
@@ -53,10 +55,10 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
                 // TODO: implement
             }
 
-            val (weight, splitUnsatCore) = splitCoreSoftConstraints(formula, unsatCore)
+            val (weight, splitUnsatCore) = splitUnsatCoreSoftConstraints(formula, unsatCore)
 
             val (formulaReified, reificationVariables) =
-                reifyCore(formula, splitUnsatCore, i, weight)
+                    reifyCore(formula, splitUnsatCore, i, weight)
 
             when (reificationVariables.size) {
                 1 -> assert(reificationVariables.first())
@@ -70,24 +72,50 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         }
     }
 
-    private fun splitCoreSoftConstraints(formula: MutableList<SoftConstraint>, unsatCore: List<KExpr<KBoolSort>>)
+    /**
+     * Splits all soft constraints from the unsat core into two groups:
+     * - constraints with the weight equal to the minimum from the unsat core soft constraint weight
+     * - constraints with the weight equal to old weight - minimum weight
+     *
+     * Returns a pair of minimum weight and a list of unsat core soft constraints with minimum weight.
+     */
+    private fun splitUnsatCoreSoftConstraints(formula: MutableList<SoftConstraint>, unsatCore: List<KExpr<KBoolSort>>)
             : Pair<Int, List<SoftConstraint>> {
-        val coreSoftConstraints  = formula.filter { x -> unsatCore.find { x.constraint.internEquals(it) } != null }
-        // Here we union soft constraints from core with the same expr
+        // Filters soft constraints from the unsat core.
+        val unsatCoreSoftConstraints  =
+                formula.filter { x -> unsatCore.any { x.constraint.internEquals(it) } }.toMutableList()
 
-        val coreSoftConstraintsUnioned = coreSoftConstraints.toMutableList()
+        val minWeight = unsatCoreSoftConstraints.minBy { it.weight }.weight
 
+        // Splits every soft constraint from the unsat core with the weight greater than
+        // minimum weight into two soft constraints with the same expression: with minimum weight and
+        // with the weight equal to old weight - minimum weight.
+        unsatCoreSoftConstraints.forEach { x ->
+            if (x.weight > minWeight) {
+                formula.add(SoftConstraint(x.constraint, minWeight))
+                formula.add(SoftConstraint(x.constraint, x.weight - minWeight))
+                formula.removeIf { it.weight == x.weight && it.constraint.internEquals(x.constraint) }
+            }
+        }
+
+        return Pair(minWeight, formula.filter { x -> x.weight == minWeight && unsatCore.any { x.constraint.internEquals(it) } })
+    }
+
+    /**
+     * Unions soft constraints with same expressions into a single soft constraint. The soft constraint weight will be
+     * equal to the sum of old soft constraints weights.
+     */
+    private fun unionSoftConstraintsWithSameExpressions(formula: MutableList<SoftConstraint>) {
         var i = 0
-        while (i < coreSoftConstraintsUnioned.size) {
-            val currentConstraint = coreSoftConstraintsUnioned[i].constraint
 
-            val sameConstraints =
-                    coreSoftConstraintsUnioned.filter { it.constraint.internEquals(currentConstraint) }
+        while (i < formula.size) {
+            val currentConstraint = formula[i].constraint
 
+            val sameConstraints = formula.filter { it.constraint.internEquals(currentConstraint) }
+
+            // Unions soft constraints with same expressions into a single soft constraint.
             if (sameConstraints.size > 1) {
                 val sameConstraintsWeightSum = sameConstraints.sumOf { it.weight }
-                coreSoftConstraintsUnioned.removeAll(sameConstraints)
-                coreSoftConstraintsUnioned.add(SoftConstraint(currentConstraint, sameConstraintsWeightSum))
 
                 formula.removeAll(sameConstraints)
                 formula.add(SoftConstraint(currentConstraint, sameConstraintsWeightSum))
@@ -95,18 +123,6 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
             ++i
         }
-
-        val minWeight = coreSoftConstraintsUnioned.minBy { it.weight }.weight
-
-        coreSoftConstraintsUnioned.forEach { x ->
-            if (x.weight > minWeight) {
-                formula.add(SoftConstraint(x.constraint, minWeight))
-                formula.add(SoftConstraint(x.constraint, x.weight - minWeight))
-                formula.removeIf { it.weight == x.weight && it.constraint == x.constraint }
-            }
-        }
-
-        return Pair(minWeight, formula.filter { x -> x.weight == minWeight && unsatCore.find { x.constraint.internEquals(it) } != null })
     }
 
     private fun solveSAT(assumptions: List<SoftConstraint>): Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> =

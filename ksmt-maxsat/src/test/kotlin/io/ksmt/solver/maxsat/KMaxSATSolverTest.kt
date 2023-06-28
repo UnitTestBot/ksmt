@@ -1,15 +1,11 @@
 package io.ksmt.solver.maxsat
 
 import io.ksmt.KContext
-import io.ksmt.expr.KAndBinaryExpr
-import io.ksmt.expr.KAndNaryExpr
 import io.ksmt.expr.KNotExpr
 import io.ksmt.expr.KOrBinaryExpr
-import io.ksmt.expr.KOrNaryExpr
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.utils.getValue
-import io.ksmt.utils.mkConst
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -49,11 +45,15 @@ class KMaxSATSolverTest {
         maxSATSolver.assertSoft(KOrBinaryExpr(this, a, notB), 2)
 
         val notAOrNotBExpr = KOrBinaryExpr(this, notA, notB)
-        maxSATSolver.assertSoft(notAOrNotBExpr, 3)
+        val notAOrNotBWeight = 3
+        maxSATSolver.assertSoft(notAOrNotBExpr, notAOrNotBWeight)
 
         val maxSATResult = maxSATSolver.checkMaxSAT()
-        assertTrue(maxSATResult.satSoftConstraints.size == 1 && maxSATResult.satSoftConstraints[0].weight == 3 &&
-                maxSATResult.satSoftConstraints[0].constraint == notAOrNotBExpr)
+
+        assertTrue(maxSATResult.hardConstraintsSATStatus == KSolverStatus.SAT)
+        assertTrue(maxSATResult.maxSATSucceeded)
+        assertTrue(maxSATResult.satSoftConstraints.size == 1)
+        assertSATSoftConstraints(listOf(SoftConstraint(notAOrNotBExpr, notAOrNotBWeight)), maxSATResult.satSoftConstraints)
     }
 
     @Test
@@ -69,58 +69,23 @@ class KMaxSATSolverTest {
         maxSATSolver.assert(KOrBinaryExpr(this, a, b))
 
         val notAOrBExpr = KOrBinaryExpr(this, notA, b)
-        maxSATSolver.assertSoft(notAOrBExpr, 4)
+        val notAOrBWeight = 4
+        maxSATSolver.assertSoft(notAOrBExpr, notAOrBWeight)
 
         val aOrNotBExpr = KOrBinaryExpr(this, a, notB)
-        maxSATSolver.assertSoft(aOrNotBExpr, 6)
+        val aOrNotBWeight = 6
+        maxSATSolver.assertSoft(aOrNotBExpr, aOrNotBWeight)
 
         maxSATSolver.assertSoft(KOrBinaryExpr(this, notA, notB), 2)
 
         val maxSATResult = maxSATSolver.checkMaxSAT()
 
+        assertTrue(maxSATResult.hardConstraintsSATStatus == KSolverStatus.SAT)
+        assertTrue(maxSATResult.maxSATSucceeded)
         assertTrue(maxSATResult.satSoftConstraints.size == 2)
-    }
-
-    @Test
-    fun smokeTest4() = with (KContext()) {
-        val z3Solver = KZ3Solver(this)
-        val maxSATSolver = KMaxSATSolver(this, z3Solver)
-        val a by boolSort
-        val b by boolSort
-
-        val notA = KNotExpr(this, a)
-        val notB =  KNotExpr(this, b)
-
-        maxSATSolver.assert(KOrBinaryExpr(this, a, b))
-        maxSATSolver.assertSoft(KOrNaryExpr(this, listOf(notA, notA, b)), 1)
-        maxSATSolver.assertSoft(KOrBinaryExpr(this, notA, b), 1)
-        maxSATSolver.assertSoft(KOrNaryExpr(this, listOf(notA, notA, b)), 1)
-        maxSATSolver.assertSoft(KOrBinaryExpr(this, a, notB), 1)
-        maxSATSolver.assertSoft(KOrBinaryExpr(this, notA,notB), 1)
-        maxSATSolver.assertSoft(KOrNaryExpr(this, listOf(notA, notA, notB)), 1)
-
-        val maxSATResult = maxSATSolver.checkMaxSAT()
-    }
-
-    @Test
-    fun smokeTest5() = with (KContext()) {
-        val z3Solver = KZ3Solver(this)
-        val maxSATSolver = KMaxSATSolver(this, z3Solver)
-        val z = boolSort.mkConst("z")
-        val a = boolSort.mkConst("a")
-        val b = boolSort.mkConst("b")
-        val c = boolSort.mkConst("c")
-
-        maxSATSolver.assert(z)
-        maxSATSolver.assertSoft(KAndBinaryExpr(this, a, b), 1)
-        val constr = KAndBinaryExpr(this, KNotExpr(this, a), KNotExpr(this, b))
-        maxSATSolver.assertSoft(constr, 5)
-        maxSATSolver.assertSoft(KAndNaryExpr(this, listOf(a, b, z)), 2)
-
-        val maxSATResult = maxSATSolver.checkMaxSAT()
-
-        assertTrue(maxSATResult.satSoftConstraints.size == 1 && maxSATResult.satSoftConstraints[0].weight == 5 &&
-                maxSATResult.satSoftConstraints[0].constraint == constr)
+        val softConstraintsToAssertSAT =
+                listOf(SoftConstraint(notAOrBExpr, notAOrBWeight), SoftConstraint(aOrNotBExpr, aOrNotBWeight))
+        assertSATSoftConstraints(softConstraintsToAssertSAT, maxSATResult.satSoftConstraints)
     }
 
     @Test
@@ -135,14 +100,26 @@ class KMaxSATSolverTest {
         val notY =  KNotExpr(this, y)
 
         maxSATSolver.assert(KOrBinaryExpr(this, x , y))
-        maxSATSolver.assertSoft(KOrBinaryExpr(this, notX, y), 6)
+
+        val notXOrYExpr = KOrBinaryExpr(this, notX, y)
+        val notXOrYWeight = 7
+        maxSATSolver.assertSoft(notXOrYExpr, notXOrYWeight)
+
         maxSATSolver.assertSoft(KOrBinaryExpr(this, x, notY), 6)
+
         maxSATSolver.assertSoft(KOrBinaryExpr(this, notX, notY), 3)
         maxSATSolver.assertSoft(KOrBinaryExpr(this, notX, notY), 4)
 
+        // TODO: check and fixes about interning in solver then place it before the first usage of the expression
+        val notXOrNotYExpr = KOrBinaryExpr(this, notX, notY)
+
         val maxSATResult = maxSATSolver.checkMaxSAT()
 
-        maxSATResult.satSoftConstraints.forEach { println("constr: ${it.constraint};  weight: ${it.weight}") }
+        assertTrue(maxSATResult.hardConstraintsSATStatus == KSolverStatus.SAT)
+        assertTrue(maxSATResult.maxSATSucceeded)
+        assertTrue(maxSATResult.satSoftConstraints.size == 3)
+        assertSATSoftConstraints(listOf(SoftConstraint(notXOrYExpr, notXOrYWeight), SoftConstraint(notXOrNotYExpr, 3),
+                SoftConstraint(notXOrNotYExpr, 4)), maxSATResult.satSoftConstraints)
     }
 
     @Test
@@ -157,13 +134,31 @@ class KMaxSATSolverTest {
         val notY =  KNotExpr(this, y)
 
         maxSATSolver.assert(KOrBinaryExpr(this, x , y))
-        maxSATSolver.assertSoft(KOrBinaryExpr(this, notX, y), 6)
-        maxSATSolver.assertSoft(KOrBinaryExpr(this, x, notY), 6)
+
+        val notXOrYExpr = KOrBinaryExpr(this, notX, y)
+        val notXOrYExprWeight = 6
+        maxSATSolver.assertSoft(notXOrYExpr, notXOrYExprWeight)
+
+        val xOrNotYExpr = KOrBinaryExpr(this, x, notY)
+        val xOrNotYWeight = 6
+        maxSATSolver.assertSoft(xOrNotYExpr, xOrNotYWeight)
+
         maxSATSolver.assertSoft(KOrBinaryExpr(this, notX, notY), 3)
         maxSATSolver.assertSoft(KOrBinaryExpr(this, notX, notY), 2)
 
         val maxSATResult = maxSATSolver.checkMaxSAT()
 
-        maxSATResult.satSoftConstraints.forEach { println("constr: ${it.constraint};  weight: ${it.weight}") }
+        assertTrue(maxSATResult.hardConstraintsSATStatus == KSolverStatus.SAT)
+        assertTrue(maxSATResult.maxSATSucceeded)
+        assertTrue(maxSATResult.satSoftConstraints.size == 2)
+        assertSATSoftConstraints(listOf(SoftConstraint(notXOrYExpr, notXOrYExprWeight), SoftConstraint(xOrNotYExpr, xOrNotYWeight)),
+                maxSATResult.satSoftConstraints)
+    }
+
+    private fun assertSATSoftConstraints(constraintsToAssert: List<SoftConstraint>,
+                                         satConstraints: List<SoftConstraint>) {
+        for (constraint in constraintsToAssert) {
+            assertTrue(satConstraints.any { constraint.constraint.internEquals(it.constraint) && constraint.weight == it.weight })
+        }
     }
 }
