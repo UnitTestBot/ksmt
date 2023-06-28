@@ -107,11 +107,9 @@ class KMaxSATSolverTest {
 
         maxSATSolver.assertSoft(KOrBinaryExpr(this, x, notY), 6)
 
-        maxSATSolver.assertSoft(KOrBinaryExpr(this, notX, notY), 3)
-        maxSATSolver.assertSoft(KOrBinaryExpr(this, notX, notY), 4)
-
-        // TODO: check and fixes about interning in solver then place it before the first usage of the expression
         val notXOrNotYExpr = KOrBinaryExpr(this, notX, notY)
+        maxSATSolver.assertSoft(notXOrNotYExpr, 3)
+        maxSATSolver.assertSoft(notXOrNotYExpr, 4)
 
         val maxSATResult = maxSATSolver.checkMaxSAT()
 

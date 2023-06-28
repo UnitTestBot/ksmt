@@ -44,7 +44,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         unionSoftConstraintsWithSameExpressions(formula)
 
         while (true) {
-            val (solverStatus, unsatCore, model) = solveSAT(formula)
+            val (solverStatus, unsatCore, model) = checkSAT(formula)
 
             if (solverStatus == KSolverStatus.SAT) {
                 // TODO: can I simplify this expression?
@@ -58,7 +58,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
             val (weight, splitUnsatCore) = splitUnsatCoreSoftConstraints(formula, unsatCore)
 
             val (formulaReified, reificationVariables) =
-                    reifyCore(formula, splitUnsatCore, i, weight)
+                    reifyUnsatCore(formula, splitUnsatCore, i, weight)
 
             when (reificationVariables.size) {
                 1 -> assert(reificationVariables.first())
@@ -87,14 +87,11 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
         val minWeight = unsatCoreSoftConstraints.minBy { it.weight }.weight
 
-        // Splits every soft constraint from the unsat core with the weight greater than
-        // minimum weight into two soft constraints with the same expression: with minimum weight and
-        // with the weight equal to old weight - minimum weight.
         unsatCoreSoftConstraints.forEach { x ->
             if (x.weight > minWeight) {
                 formula.add(SoftConstraint(x.constraint, minWeight))
                 formula.add(SoftConstraint(x.constraint, x.weight - minWeight))
-                formula.removeIf { it.weight == x.weight && it.constraint.internEquals(x.constraint) }
+                formula.removeIf { it.weight == x.weight && it.constraint == x.constraint }
             }
         }
 
@@ -125,14 +122,23 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         }
     }
 
-    private fun solveSAT(assumptions: List<SoftConstraint>): Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> =
+    /**
+     * Checks on satisfiability hard constraints with assumed soft constraints.
+     *
+     * Returns a triple of solver status, unsat core (if exists, empty list otherwise) and model
+     * (if exists, otherwise null).
+     */
+    private fun checkSAT(assumptions: List<SoftConstraint>): Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> =
         when (val status = solver.checkWithAssumptions(assumptions.map { x -> x.constraint })) {
             KSolverStatus.SAT -> Triple(status, listOf(), solver.model())
             KSolverStatus.UNSAT -> Triple(status, solver.unsatCore(), null)
             KSolverStatus.UNKNOWN -> Triple(status, listOf(), null)
         }
 
-    private fun reifyCore(formula: MutableList<SoftConstraint>, unsatCore: List<SoftConstraint>, i: Int, weight: Int)
+    /**
+     * Reifies unsat core soft constraints with literals.
+     */
+    private fun reifyUnsatCore(formula: MutableList<SoftConstraint>, unsatCore: List<SoftConstraint>, i: Int, weight: Int)
             : Pair<MutableList<SoftConstraint>, List<KExpr<KBoolSort>>> {
         val literalsToReify = mutableListOf<KExpr<KBoolSort>>()
 
