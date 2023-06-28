@@ -53,7 +53,7 @@ class KMaxSATSolverTest {
         assertTrue(maxSATResult.hardConstraintsSATStatus == KSolverStatus.SAT)
         assertTrue(maxSATResult.maxSATSucceeded)
         assertTrue(maxSATResult.satSoftConstraints.size == 1)
-        assertSATSoftConstraints(listOf(SoftConstraint(notAOrNotBExpr, notAOrNotBWeight)), maxSATResult.satSoftConstraints)
+        assertSoftConstraintsSAT(listOf(SoftConstraint(notAOrNotBExpr, notAOrNotBWeight)), maxSATResult.satSoftConstraints)
     }
 
     @Test
@@ -85,7 +85,7 @@ class KMaxSATSolverTest {
         assertTrue(maxSATResult.satSoftConstraints.size == 2)
         val softConstraintsToAssertSAT =
                 listOf(SoftConstraint(notAOrBExpr, notAOrBWeight), SoftConstraint(aOrNotBExpr, aOrNotBWeight))
-        assertSATSoftConstraints(softConstraintsToAssertSAT, maxSATResult.satSoftConstraints)
+        assertSoftConstraintsSAT(softConstraintsToAssertSAT, maxSATResult.satSoftConstraints)
     }
 
     @Test
@@ -116,7 +116,7 @@ class KMaxSATSolverTest {
         assertTrue(maxSATResult.hardConstraintsSATStatus == KSolverStatus.SAT)
         assertTrue(maxSATResult.maxSATSucceeded)
         assertTrue(maxSATResult.satSoftConstraints.size == 3)
-        assertSATSoftConstraints(listOf(SoftConstraint(notXOrYExpr, notXOrYWeight), SoftConstraint(notXOrNotYExpr, 3),
+        assertSoftConstraintsSAT(listOf(SoftConstraint(notXOrYExpr, notXOrYWeight), SoftConstraint(notXOrNotYExpr, 3),
                 SoftConstraint(notXOrNotYExpr, 4)), maxSATResult.satSoftConstraints)
     }
 
@@ -149,11 +149,11 @@ class KMaxSATSolverTest {
         assertTrue(maxSATResult.hardConstraintsSATStatus == KSolverStatus.SAT)
         assertTrue(maxSATResult.maxSATSucceeded)
         assertTrue(maxSATResult.satSoftConstraints.size == 2)
-        assertSATSoftConstraints(listOf(SoftConstraint(notXOrYExpr, notXOrYExprWeight), SoftConstraint(xOrNotYExpr, xOrNotYWeight)),
+        assertSoftConstraintsSAT(listOf(SoftConstraint(notXOrYExpr, notXOrYExprWeight), SoftConstraint(xOrNotYExpr, xOrNotYWeight)),
                 maxSATResult.satSoftConstraints)
     }
 
-    private fun assertSATSoftConstraints(constraintsToAssert: List<SoftConstraint>,
+    private fun assertSoftConstraintsSAT(constraintsToAssert: List<SoftConstraint>,
                                          satConstraints: List<SoftConstraint>) {
         for (constraint in constraintsToAssert) {
             assertTrue(satConstraints.any { constraint.constraint.internEquals(it.constraint) && constraint.weight == it.weight })
