@@ -11,13 +11,12 @@ import io.ksmt.solver.KModel
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverStatus
-import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.sort.KBoolSort
 import io.ksmt.utils.mkConst
 import kotlin.time.Duration
 
-// TODO: solver type must be KSolver<KSolverConfiguration> but the code does not work with it
-class KMaxSATSolver(private val ctx: KContext, private val solver: KZ3Solver) : KSolver<KSolverConfiguration> {
+class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>) : KSolver<KSolverConfiguration>
+        where T : KSolverConfiguration {
     private val softConstraints = mutableListOf<SoftConstraint>()
 
     fun assertSoft(expr: KExpr<KBoolSort>, weight: Int) {
@@ -25,18 +24,18 @@ class KMaxSATSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
         softConstraints.add(SoftConstraint(expr, weight))
     }
 
-    // TODO: add timeout?
-    fun checkMaxSMT(): Pair<KSolverStatus, List<SoftConstraint>> {
+    // TODO: add timeout
+    fun checkMaxSAT(): MaxSATResult {
         if (softConstraints.isEmpty()) {
-            return Pair(solver.check(), listOf())
+            return MaxSATResult(listOf(), solver.check(), true)
         }
 
         val status = solver.check()
 
         if (status == KSolverStatus.UNSAT) {
-            error("Conjunction of asserted formulas is UNSAT")
+            return MaxSATResult(listOf(), status, true)
         } else if (status == KSolverStatus.UNKNOWN) {
-            // TODO: implement
+            return MaxSATResult(listOf(), status, false)
         }
 
         var i = 0
@@ -49,7 +48,7 @@ class KMaxSATSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
                 // TODO: can I simplify this expression?
                 val satSoftConstraints =
                         softConstraints.filter { model?.eval(it.constraint)?.internEquals(KTrue(ctx)) == true }
-                return Pair(solverStatus, satSoftConstraints)
+                return MaxSATResult(satSoftConstraints, solverStatus, true)
             } else if (solverStatus == KSolverStatus.UNKNOWN) {
                 // TODO: implement
             }
@@ -59,7 +58,6 @@ class KMaxSATSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
             val (formulaReified, reificationVariables) =
                 reifyCore(formula, splitUnsatCore, i, weight)
 
-            // TODO: а если их 0, может ли быть такое?
             when (reificationVariables.size) {
                 1 -> assert(reificationVariables.first())
                 2 -> assert(KOrBinaryExpr(ctx, reificationVariables[0], reificationVariables[1]))
@@ -127,7 +125,6 @@ class KMaxSATSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
                 formula.remove(coreElement.value)
 
                 val coreElementConstraint = coreElement.value.constraint
-                // TODO: как реализовать переобозначение? Что если формула встречается как подформула в других формулах?
                 val literalToReify =
                     ctx.boolSort.mkConst("b$i${coreElement.index}")
 
@@ -136,7 +133,7 @@ class KMaxSATSolver(private val ctx: KContext, private val solver: KZ3Solver) : 
                     coreElementConstraint,
                     KNotExpr(ctx, literalToReify),
                 )
-                // TODO: Переобозначить и остальные элементы в b_i_j
+
                 assert(constraintToReify)
 
                 formula.add(SoftConstraint(KNotExpr(ctx, literalToReify), weight))
