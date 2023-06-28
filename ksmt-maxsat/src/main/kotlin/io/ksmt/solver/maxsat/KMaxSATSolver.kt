@@ -51,15 +51,19 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
         unionSoftConstraintsWithSameExpressions(formula)
 
+        solver.push()
+
         while (true) {
             val (solverStatus, unsatCore, model) = checkSAT(formula)
 
             if (solverStatus == KSolverStatus.SAT) {
+                solver.pop()
                 val satSoftConstraints =
                         softConstraints.filter { model!!.eval(it.constraint).internEquals(KTrue(ctx)) }
                 return MaxSATResult(satSoftConstraints, solverStatus, true)
             } else if (solverStatus == KSolverStatus.UNKNOWN) {
                 // TODO: implement
+                solver.pop()
             }
 
             val (weight, splitUnsatCore) = splitUnsatCore(formula, unsatCore)
