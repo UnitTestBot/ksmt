@@ -47,9 +47,8 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
             val (solverStatus, unsatCore, model) = checkSAT(formula)
 
             if (solverStatus == KSolverStatus.SAT) {
-                // TODO: can I simplify this expression?
                 val satSoftConstraints =
-                        softConstraints.filter { model?.eval(it.constraint)?.internEquals(KTrue(ctx)) == true }
+                        softConstraints.filter { model!!.eval(it.constraint).internEquals(KTrue(ctx)) }
                 return MaxSATResult(satSoftConstraints, solverStatus, true)
             } else if (solverStatus == KSolverStatus.UNKNOWN) {
                 // TODO: implement
@@ -138,17 +137,17 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
     /**
      * Reifies unsat core soft constraints with literals.
      */
-    private fun reifyUnsatCore(formula: MutableList<SoftConstraint>, unsatCore: List<SoftConstraint>, i: Int, weight: Int)
+    private fun reifyUnsatCore(formula: MutableList<SoftConstraint>, unsatCore: List<SoftConstraint>, iter: Int, weight: Int)
             : Pair<MutableList<SoftConstraint>, List<KExpr<KBoolSort>>> {
         val literalsToReify = mutableListOf<KExpr<KBoolSort>>()
 
         for (coreElement in unsatCore.withIndex()) {
+            // TODO: оба с минимальным весом?
             if (coreElement.value.weight == weight) {
                 formula.remove(coreElement.value)
 
                 val coreElementConstraint = coreElement.value.constraint
-                val literalToReify =
-                    ctx.boolSort.mkConst("b$i${coreElement.index}")
+                val literalToReify = ctx.boolSort.mkConst("b$iter${coreElement.index}")
 
                 val constraintToReify = KEqExpr(
                     ctx,
@@ -167,6 +166,9 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         return Pair(formula, literalsToReify)
     }
 
+    /**
+     * Applies MaxRes rule.
+     */
     private fun applyMaxRes(formula: MutableList<SoftConstraint>, literalsToReify: List<KExpr<KBoolSort>>, weight: Int)
             : MutableList<SoftConstraint> {
         for (indexedLiteral in literalsToReify.withIndex()) {
