@@ -17,7 +17,9 @@ import kotlin.time.Duration
 
 class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>) : KSolver<KSolverConfiguration>
         where T : KSolverConfiguration {
-    private val softConstraints = mutableListOf<SoftConstraint>()
+    private val scopeManager = MaxSATScopeManager()
+
+    private var softConstraints = mutableListOf<SoftConstraint>()
 
     /**
      * Assert softly an expression with weight (aka soft constraint) into solver.
@@ -26,24 +28,27 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
      * */
     fun assertSoft(expr: KExpr<KBoolSort>, weight: Int) {
         require(weight > 0) { "Soft constraint weight must be greater than 0" }
-        softConstraints.add(SoftConstraint(expr, weight))
+
+        val softConstraint = SoftConstraint(expr, weight)
+        softConstraints.add(softConstraint)
+        scopeManager.incrementSoft()
     }
 
     // TODO: add timeout support
     /**
      * Solve maximum satisfiability problem.
      */
-    fun checkMaxSAT(): MaxSATResult {
+    fun checkMaxSAT(): KMaxSATResult {
         if (softConstraints.isEmpty()) {
-            return MaxSATResult(listOf(), solver.check(), true)
+            return KMaxSATResult(listOf(), solver.check(), true)
         }
 
         val status = solver.check()
 
         if (status == KSolverStatus.UNSAT) {
-            return MaxSATResult(listOf(), status, true)
+            return KMaxSATResult(listOf(), status, true)
         } else if (status == KSolverStatus.UNKNOWN) {
-            return MaxSATResult(listOf(), status, false)
+            return KMaxSATResult(listOf(), status, false)
         }
 
         var i = 0
@@ -60,7 +65,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
                 solver.pop()
                 val satSoftConstraints =
                         softConstraints.filter { model!!.eval(it.constraint).internEquals(KTrue(ctx)) }
-                return MaxSATResult(satSoftConstraints, solverStatus, true)
+                return KMaxSATResult(satSoftConstraints, solverStatus, true)
             } else if (solverStatus == KSolverStatus.UNKNOWN) {
                 // TODO: implement
                 solver.pop()
@@ -77,9 +82,9 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
                 else -> assert(KOrNaryExpr(ctx, reificationVariables))
             }
 
-            formula = applyMaxRes(formulaReified, reificationVariables, weight)
+            formula = applyMaxRes(formulaReified, reificationVariables, i, weight)
 
-            ++i
+            i++
         }
     }
 
@@ -130,7 +135,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
                 formula.add(SoftConstraint(currentConstraint, sameConstraintsWeightSum))
             }
 
-            ++i
+            i++
         }
     }
 
@@ -155,11 +160,12 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         val literalsToReify = mutableListOf<KExpr<KBoolSort>>()
 
         for (coreElement in unsatCore.withIndex()) {
+            // TODO: FIX, удалим оба!!!
             if (coreElement.value.weight == weight) {
                 formula.remove(coreElement.value)
 
                 val coreElementConstraint = coreElement.value.constraint
-                val literalToReify = ctx.boolSort.mkConst("b$iter${coreElement.index}")
+                val literalToReify = coreElementConstraint.sort.mkConst("b$iter${coreElement.index}")
 
                 val constraintToReify = KEqExpr(
                     ctx,
@@ -181,7 +187,8 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
     /**
      * Apply MaxRes rule.
      */
-    private fun applyMaxRes(formula: MutableList<SoftConstraint>, literalsToReify: List<KExpr<KBoolSort>>, weight: Int)
+    private fun applyMaxRes(formula: MutableList<SoftConstraint>, literalsToReify: List<KExpr<KBoolSort>>,
+                            iter: Int, weight: Int)
             : MutableList<SoftConstraint> {
         for (indexedLiteral in literalsToReify.withIndex()) {
             // TODO: here we should use restrictions from the article for MaxRes
@@ -206,7 +213,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
                     }
 
                 // TODO, FIX: не будет ли коллизии при последующих запусках?
-                val literalToReifyDisjunction = ctx.boolSort.mkConst("d$index")
+                val literalToReifyDisjunction = ctx.boolSort.mkConst("d$iter$index")
 
                 assert(
                     KEqExpr(
@@ -246,10 +253,12 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
     override fun push() {
         solver.push()
+        scopeManager.push()
     }
 
     override fun pop(n: UInt) {
         solver.pop(n)
+        softConstraints = scopeManager.pop(n, softConstraints)
     }
 
     override fun check(timeout: Duration): KSolverStatus {
