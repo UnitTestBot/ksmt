@@ -64,7 +64,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
             if (solverStatus == KSolverStatus.SAT) {
                 solver.pop()
                 val satSoftConstraints =
-                        softConstraints.filter { model!!.eval(it.constraint).internEquals(KTrue(ctx)) }
+                    softConstraints.filter { model!!.eval(it.constraint).internEquals(KTrue(ctx)) }
                 return KMaxSATResult(satSoftConstraints, solverStatus, true)
             } else if (solverStatus == KSolverStatus.UNKNOWN) {
                 // TODO: implement
@@ -74,7 +74,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
             val (weight, splitUnsatCore) = splitUnsatCore(formula, unsatCore)
 
             val (formulaReified, reificationVariables) =
-                    reifyUnsatCore(formula, splitUnsatCore, i, weight)
+                reifyUnsatCore(formula, splitUnsatCore, i, weight)
 
             when (reificationVariables.size) {
                 1 -> assert(reificationVariables.first())
@@ -82,7 +82,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
                 else -> assert(KOrNaryExpr(ctx, reificationVariables))
             }
 
-            formula = applyMaxRes(formulaReified, reificationVariables, i, weight)
+            formula = applyMaxRes(formulaReified, reificationVariables, i)
 
             i++
         }
@@ -103,16 +103,23 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
         val minWeight = unsatCoreSoftConstraints.minBy { it.weight }.weight
 
+        val unsatCoreSoftConstraintsSplit = mutableListOf<SoftConstraint>()
+
         unsatCoreSoftConstraints.forEach { x ->
             if (x.weight > minWeight) {
-                formula.add(SoftConstraint(x.constraint, minWeight))
+                val minWeightSoftConstraint = SoftConstraint(x.constraint, minWeight)
+                formula.add(minWeightSoftConstraint)
                 formula.add(SoftConstraint(x.constraint, x.weight - minWeight))
                 formula.removeIf { it.weight == x.weight && it.constraint == x.constraint }
+
+                unsatCoreSoftConstraintsSplit.add(minWeightSoftConstraint)
+            }
+            else {
+                unsatCoreSoftConstraintsSplit.add(x)
             }
         }
 
-        return Pair(minWeight,
-                formula.filter { x -> x.weight == minWeight && unsatCore.any { x.constraint.internEquals(it) } })
+        return Pair(minWeight, unsatCoreSoftConstraintsSplit)
     }
 
     /**
@@ -175,8 +182,6 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
                 assert(constraintToReify)
 
-                formula.add(SoftConstraint(KNotExpr(ctx, literalToReify), weight))
-
                 literalsToReify.add(literalToReify)
             }
         }
@@ -188,14 +193,10 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
      * Apply MaxRes rule.
      */
     private fun applyMaxRes(formula: MutableList<SoftConstraint>, literalsToReify: List<KExpr<KBoolSort>>,
-                            iter: Int, weight: Int)
+                            iter: Int)
             : MutableList<SoftConstraint> {
         for (indexedLiteral in literalsToReify.withIndex()) {
             // TODO: here we should use restrictions from the article for MaxRes
-
-            formula.removeIf { it.constraint.internEquals(KNotExpr(ctx, indexedLiteral.value)) &&
-                    it.weight == weight
-            }
 
             val index = indexedLiteral.index
             val indexLast = literalsToReify.lastIndex
@@ -212,7 +213,6 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
                         )
                     }
 
-                // TODO, FIX: не будет ли коллизии при последующих запусках?
                 val literalToReifyDisjunction = ctx.boolSort.mkConst("d$iter$index")
 
                 assert(
@@ -220,17 +220,6 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
                         ctx,
                         literalToReifyDisjunction,
                         disjunction,
-                    ),
-                )
-
-                formula.add(
-                    SoftConstraint(
-                        KOrBinaryExpr(
-                            ctx,
-                            KNotExpr(ctx, indexedLiteral.value),
-                            KNotExpr(ctx, literalToReifyDisjunction),
-                        ),
-                        weight,
                     ),
                 )
             }

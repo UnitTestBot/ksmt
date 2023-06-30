@@ -12,6 +12,7 @@ repositories {
 dependencies {
     implementation(project(":ksmt-core"))
     implementation(project(":ksmt-z3"))
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.1")
 
     testImplementation(project(":ksmt-core"))
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
