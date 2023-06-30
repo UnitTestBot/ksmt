@@ -61,10 +61,11 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         while (true) {
             val (solverStatus, unsatCore, model) = checkSAT(formula)
 
+
             if (solverStatus == KSolverStatus.SAT) {
                 solver.pop()
                 val satSoftConstraints =
-                    softConstraints.filter { model!!.eval(it.constraint).internEquals(KTrue(ctx)) }
+                    softConstraints.filter { model!!.eval(it.expression).internEquals(KTrue(ctx)) }
                 return KMaxSATResult(satSoftConstraints, solverStatus, true)
             } else if (solverStatus == KSolverStatus.UNKNOWN) {
                 // TODO: implement
@@ -74,7 +75,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
             val (weight, splitUnsatCore) = splitUnsatCore(formula, unsatCore)
 
             val (formulaReified, reificationVariables) =
-                reifyUnsatCore(formula, splitUnsatCore, i, weight)
+                    reifyUnsatCore(formula, splitUnsatCore, i, weight)
 
             when (reificationVariables.size) {
                 1 -> assert(reificationVariables.first())
@@ -90,7 +91,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
     /**
      * Split all soft constraints from the unsat core into two groups:
-     * - constraints with the weight equal to the minimum from the unsat core soft constraint weights
+     * - constraints with the weight equal to the minimum of the unsat core soft constraint weights
      * - constraints with the weight equal to old weight - minimum weight
      *
      * Returns a pair of minimum weight and a list of unsat core soft constraints with minimum weight.
@@ -99,7 +100,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
             : Pair<Int, List<SoftConstraint>> {
         // Filters soft constraints from the unsat core.
         val unsatCoreSoftConstraints  =
-                formula.filter { x -> unsatCore.any { x.constraint.internEquals(it) } }
+                formula.filter { x -> unsatCore.any { x.expression.internEquals(it) } }
 
         val minWeight = unsatCoreSoftConstraints.minBy { it.weight }.weight
 
@@ -107,10 +108,10 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
         unsatCoreSoftConstraints.forEach { x ->
             if (x.weight > minWeight) {
-                val minWeightSoftConstraint = SoftConstraint(x.constraint, minWeight)
+                val minWeightSoftConstraint = SoftConstraint(x.expression, minWeight)
                 formula.add(minWeightSoftConstraint)
-                formula.add(SoftConstraint(x.constraint, x.weight - minWeight))
-                formula.removeIf { it.weight == x.weight && it.constraint == x.constraint }
+                formula.add(SoftConstraint(x.expression, x.weight - minWeight))
+                formula.removeIf { it.weight == x.weight && it.expression == x.expression }
 
                 unsatCoreSoftConstraintsSplit.add(minWeightSoftConstraint)
             }
@@ -123,23 +124,23 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
     }
 
     /**
-     * Union soft constraints with same expressions into a single soft constraint. The soft constraint weight will be
+     * Union soft constraints with same expressions into a single soft constraint. The new soft constraint weight will be
      * equal to the sum of old soft constraints weights.
      */
     private fun unionSoftConstraintsWithSameExpressions(formula: MutableList<SoftConstraint>) {
         var i = 0
 
         while (i < formula.size) {
-            val currentConstraint = formula[i].constraint
+            val currentExpr = formula[i].expression
 
-            val sameConstraints = formula.filter { it.constraint.internEquals(currentConstraint) }
+            val similarConstraints = formula.filter { it.expression.internEquals(currentExpr) }
 
             // Unions soft constraints with same expressions into a single soft constraint.
-            if (sameConstraints.size > 1) {
-                val sameConstraintsWeightSum = sameConstraints.sumOf { it.weight }
+            if (similarConstraints.size > 1) {
+                val similarConstraintsWeightsSum = similarConstraints.sumOf { it.weight }
 
-                formula.removeAll(sameConstraints)
-                formula.add(SoftConstraint(currentConstraint, sameConstraintsWeightSum))
+                formula.removeAll(similarConstraints)
+                formula.add(SoftConstraint(currentExpr, similarConstraintsWeightsSum))
             }
 
             i++
@@ -150,10 +151,10 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
      * Check on satisfiability hard constraints with assumed soft constraints.
      *
      * Returns a triple of solver status, unsat core (if exists, empty list otherwise) and model
-     * (if exists, otherwise null).
+     * (if exists, null otherwise).
      */
     private fun checkSAT(assumptions: List<SoftConstraint>): Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> =
-        when (val status = solver.checkWithAssumptions(assumptions.map { x -> x.constraint })) {
+        when (val status = solver.checkWithAssumptions(assumptions.map { x -> x.expression })) {
             KSolverStatus.SAT -> Triple(status, listOf(), solver.model())
             KSolverStatus.UNSAT -> Triple(status, solver.unsatCore(), null)
             KSolverStatus.UNKNOWN -> Triple(status, listOf(), null)
@@ -170,12 +171,12 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
             if (coreElement.value.weight == weight) {
                 formula.remove(coreElement.value)
 
-                val coreElementConstraint = coreElement.value.constraint
-                val literalToReify = coreElementConstraint.sort.mkConst("b$iter${coreElement.index}")
+                val coreElementExpr = coreElement.value.expression
+                val literalToReify = coreElementExpr.sort.mkConst("*$iter${coreElement.index}")
 
                 val constraintToReify = KEqExpr(
                     ctx,
-                    coreElementConstraint,
+                    coreElementExpr,
                     KNotExpr(ctx, literalToReify),
                 )
 
@@ -202,7 +203,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
             if (index < indexLast) {
                 val disjunction =
-                    // We do not take the current element (from the next to the last)
+                    // We do not take the current literal to reify (from the next to the last)
                     when (indexLast - index) {
                         1 -> literalsToReify[index + 1]
                         2 -> KOrBinaryExpr(ctx, literalsToReify[index + 1], literalsToReify[index + 2])
@@ -212,7 +213,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
                         )
                     }
 
-                val literalToReifyDisjunction = ctx.boolSort.mkConst("d$iter$index")
+                val literalToReifyDisjunction = ctx.boolSort.mkConst("#$iter$index")
 
                 assert(
                     KEqExpr(

@@ -232,7 +232,7 @@ class KMaxSATSolverTest {
     private fun assertSoftConstraintsSAT(constraintsToAssert: List<SoftConstraint>,
                                          satConstraints: List<SoftConstraint>) {
         for (constraint in constraintsToAssert) {
-            assertTrue(satConstraints.any { constraint.constraint.internEquals(it.constraint) &&
+            assertTrue(satConstraints.any { constraint.expression.internEquals(it.expression) &&
                         constraint.weight == it.weight })
         }
     }
