@@ -167,7 +167,6 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         val literalsToReify = mutableListOf<KExpr<KBoolSort>>()
 
         for (coreElement in unsatCore.withIndex()) {
-            // TODO: FIX, удалим оба!!!
             if (coreElement.value.weight == weight) {
                 formula.remove(coreElement.value)
 

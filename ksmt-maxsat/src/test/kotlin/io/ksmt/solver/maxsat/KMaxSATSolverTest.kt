@@ -1,9 +1,6 @@
 package io.ksmt.solver.maxsat
 
 import io.ksmt.KContext
-import io.ksmt.expr.KAndBinaryExpr
-import io.ksmt.expr.KAndNaryExpr
-import io.ksmt.expr.KNotExpr
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.utils.getValue
@@ -125,7 +122,7 @@ class KMaxSATSolverTest {
     }
 
     @Test
-    fun smokeTest5() = with (KContext()) {
+    fun chooseOneConstraintByWeightTest() = with (KContext()) {
         val z3Solver = KZ3Solver(this)
         val maxSATSolver = KMaxSATSolver(this, z3Solver)
         val z = boolSort.mkConst("z")
@@ -141,6 +138,33 @@ class KMaxSATSolverTest {
 
         assertTrue(maxSATResult.satSoftConstraints.size == 1)
         assertSoftConstraintsSAT(listOf(SoftConstraint(!a and !b, 5)), maxSATResult.satSoftConstraints)
+    }
+
+    @Test
+    fun inequalitiesTest() = with (KContext()) {
+        val z3Solver = KZ3Solver(this)
+        val maxSATSolver = KMaxSATSolver(this, z3Solver)
+
+        val x by intSort
+        val y by intSort
+
+        val a1 = x gt 0.expr
+        val a2 = x lt y
+        val a3 = x + y le 0.expr
+
+        maxSATSolver.assert(a3 eq a1)
+        maxSATSolver.assert(a3 or a2)
+
+        maxSATSolver.assertSoft(a3, 3)
+        maxSATSolver.assertSoft(!a3, 5)
+        maxSATSolver.assertSoft(!a1, 10)
+        maxSATSolver.assertSoft(!a2, 3)
+
+        val maxSATResult = maxSATSolver.checkMaxSAT()
+
+        assertTrue(maxSATResult.satSoftConstraints.size == 2)
+        assertSoftConstraintsSAT(listOf(SoftConstraint(!a3, 5), SoftConstraint(!a1, 10)),
+                maxSATResult.satSoftConstraints)
     }
 
     @Test
