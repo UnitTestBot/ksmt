@@ -5,12 +5,13 @@ import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.utils.getValue
 import io.ksmt.utils.mkConst
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class KMaxSATSolverTest {
     @Test
-    fun noSoftConstraintsSATTest() = with (KContext()) {
+    fun noSoftConstraintsSatTest() = with (KContext()) {
         val z3Solver = KZ3Solver(this)
         val maxSATSolver = KMaxSATSolver(this, z3Solver)
         val a by boolSort
@@ -22,15 +23,17 @@ class KMaxSATSolverTest {
         maxSATSolver.assertSoft(a and !c, 3)
         maxSATSolver.assertSoft(!a, 5)
 
-        val maxSATResult = maxSATSolver.checkMaxSAT()
+        runBlocking {
+            val maxSATResult = maxSATSolver.checkMaxSAT()
 
-        assertTrue(maxSATResult.hardConstraintsSATStatus == KSolverStatus.SAT)
-        assertTrue(maxSATResult.maxSATSucceeded)
-        assertTrue(maxSATResult.satSoftConstraints.isEmpty())
+            assertTrue(maxSATResult.hardConstraintsSATStatus == KSolverStatus.SAT)
+            assertTrue(maxSATResult.maxSATSucceeded)
+            assertTrue(maxSATResult.satSoftConstraints.isEmpty())
+        }
     }
 
     @Test
-    fun oneOfTwoSoftConstraintsSATTest() = with (KContext()) {
+    fun oneOfTwoSoftConstraintsSatTest() = with (KContext()) {
         val z3Solver = KZ3Solver(this)
         val maxSATSolver = KMaxSATSolver(this, z3Solver)
         val a by boolSort
@@ -42,16 +45,18 @@ class KMaxSATSolverTest {
         maxSATSolver.assertSoft(a or !b, 2)
         maxSATSolver.assertSoft(!a or !b, 3)
 
-        val maxSATResult = maxSATSolver.checkMaxSAT()
+        runBlocking {
+            val maxSATResult = maxSATSolver.checkMaxSAT()
 
-        assertTrue(maxSATResult.hardConstraintsSATStatus == KSolverStatus.SAT)
-        assertTrue(maxSATResult.maxSATSucceeded)
-        assertTrue(maxSATResult.satSoftConstraints.size == 1)
-        assertSoftConstraintsSAT(listOf(SoftConstraint(!a or !b, 3)), maxSATResult.satSoftConstraints)
+            assertTrue(maxSATResult.hardConstraintsSATStatus == KSolverStatus.SAT)
+            assertTrue(maxSATResult.maxSATSucceeded)
+            assertTrue(maxSATResult.satSoftConstraints.size == 1)
+            assertSoftConstraintsSat(listOf(SoftConstraint(!a or !b, 3)), maxSATResult.satSoftConstraints)
+        }
     }
 
     @Test
-    fun twoOfThreeSoftConstraintsSATTest() = with (KContext()) {
+    fun twoOfThreeSoftConstraintsSatTest() = with (KContext()) {
         val z3Solver = KZ3Solver(this)
         val maxSATSolver = KMaxSATSolver(this, z3Solver)
         val a by boolSort
@@ -63,18 +68,20 @@ class KMaxSATSolverTest {
         maxSATSolver.assertSoft(a or !b, 6)
         maxSATSolver.assertSoft(!a or !b, 2)
 
-        val maxSATResult = maxSATSolver.checkMaxSAT()
+        runBlocking {
+            val maxSATResult = maxSATSolver.checkMaxSAT()
 
-        assertTrue(maxSATResult.hardConstraintsSATStatus == KSolverStatus.SAT)
-        assertTrue(maxSATResult.maxSATSucceeded)
-        assertTrue(maxSATResult.satSoftConstraints.size == 2)
-        val softConstraintsToAssertSAT =
+            assertTrue(maxSATResult.hardConstraintsSATStatus == KSolverStatus.SAT)
+            assertTrue(maxSATResult.maxSATSucceeded)
+            assertTrue(maxSATResult.satSoftConstraints.size == 2)
+            val softConstraintsToAssertSAT =
                 listOf(SoftConstraint(!a or b, 4), SoftConstraint(a or !b, 6))
-        assertSoftConstraintsSAT(softConstraintsToAssertSAT, maxSATResult.satSoftConstraints)
+            assertSoftConstraintsSat(softConstraintsToAssertSAT, maxSATResult.satSoftConstraints)
+        }
     }
 
     @Test
-    fun sameExpressionSoftConstraintsSATTest() = with (KContext()) {
+    fun sameExpressionSoftConstraintsSatTest() = with (KContext()) {
         val z3Solver = KZ3Solver(this)
         val maxSATSolver = KMaxSATSolver(this, z3Solver)
 
@@ -88,17 +95,19 @@ class KMaxSATSolverTest {
         maxSATSolver.assertSoft(!x or !y, 3)
         maxSATSolver.assertSoft(!x or !y, 4)
 
-        val maxSATResult = maxSATSolver.checkMaxSAT()
+        runBlocking {
+            val maxSATResult = maxSATSolver.checkMaxSAT()
 
-        assertTrue(maxSATResult.hardConstraintsSATStatus == KSolverStatus.SAT)
-        assertTrue(maxSATResult.maxSATSucceeded)
-        assertTrue(maxSATResult.satSoftConstraints.size == 3)
-        assertSoftConstraintsSAT(listOf(SoftConstraint(!x or y, 7), SoftConstraint(!x or !y, 3),
+            assertTrue(maxSATResult.hardConstraintsSATStatus == KSolverStatus.SAT)
+            assertTrue(maxSATResult.maxSATSucceeded)
+            assertTrue(maxSATResult.satSoftConstraints.size == 3)
+            assertSoftConstraintsSat(listOf(SoftConstraint(!x or y, 7), SoftConstraint(!x or !y, 3),
                 SoftConstraint(!x or !y, 4)), maxSATResult.satSoftConstraints)
+        }
     }
 
     @Test
-    fun sameExpressionSoftConstraintsUNSATTest() = with (KContext()) {
+    fun sameExpressionSoftConstraintsUnsatTest() = with (KContext()) {
         val z3Solver = KZ3Solver(this)
         val maxSATSolver = KMaxSATSolver(this, z3Solver)
 
@@ -112,13 +121,15 @@ class KMaxSATSolverTest {
         maxSATSolver.assertSoft(!x or !y, 3)
         maxSATSolver.assertSoft(!x or !y, 2)
 
-        val maxSATResult = maxSATSolver.checkMaxSAT()
+        runBlocking {
+            val maxSATResult = maxSATSolver.checkMaxSAT()
 
-        assertTrue(maxSATResult.hardConstraintsSATStatus == KSolverStatus.SAT)
-        assertTrue(maxSATResult.maxSATSucceeded)
-        assertTrue(maxSATResult.satSoftConstraints.size == 2)
-        assertSoftConstraintsSAT(listOf(SoftConstraint(!x or y, 6), SoftConstraint(x or !y, 6)),
+            assertTrue(maxSATResult.hardConstraintsSATStatus == KSolverStatus.SAT)
+            assertTrue(maxSATResult.maxSATSucceeded)
+            assertTrue(maxSATResult.satSoftConstraints.size == 2)
+            assertSoftConstraintsSat(listOf(SoftConstraint(!x or y, 6), SoftConstraint(x or !y, 6)),
                 maxSATResult.satSoftConstraints)
+        }
     }
 
     @Test
@@ -134,10 +145,12 @@ class KMaxSATSolverTest {
         maxSATSolver.assertSoft(!a and !b, 5)
         maxSATSolver.assertSoft(a and b and z, 2)
 
-        val maxSATResult = maxSATSolver.checkMaxSAT()
+        runBlocking {
+            val maxSATResult = maxSATSolver.checkMaxSAT()
 
-        assertTrue(maxSATResult.satSoftConstraints.size == 1)
-        assertSoftConstraintsSAT(listOf(SoftConstraint(!a and !b, 5)), maxSATResult.satSoftConstraints)
+            assertTrue(maxSATResult.satSoftConstraints.size == 1)
+            assertSoftConstraintsSat(listOf(SoftConstraint(!a and !b, 5)), maxSATResult.satSoftConstraints)
+        }
     }
 
     @Test
@@ -160,11 +173,13 @@ class KMaxSATSolverTest {
         maxSATSolver.assertSoft(!a1, 10)
         maxSATSolver.assertSoft(!a2, 3)
 
-        val maxSATResult = maxSATSolver.checkMaxSAT()
+        runBlocking {
+            val maxSATResult = maxSATSolver.checkMaxSAT()
 
-        assertTrue(maxSATResult.satSoftConstraints.size == 2)
-        assertSoftConstraintsSAT(listOf(SoftConstraint(!a3, 5), SoftConstraint(!a1, 10)),
+            assertTrue(maxSATResult.satSoftConstraints.size == 2)
+            assertSoftConstraintsSat(listOf(SoftConstraint(!a3, 5), SoftConstraint(!a1, 10)),
                 maxSATResult.satSoftConstraints)
+        }
     }
 
     @Test
@@ -178,23 +193,25 @@ class KMaxSATSolverTest {
 
         maxSATSolver.assertSoft(!a or b, 1)
 
-        val maxSATResult = maxSATSolver.checkMaxSAT()
-        assertSoftConstraintsSAT(listOf(SoftConstraint(!a or b, 1)), maxSATResult.satSoftConstraints)
+        runBlocking {
+            val maxSATResult = maxSATSolver.checkMaxSAT()
+            assertSoftConstraintsSat(listOf(SoftConstraint(!a or b, 1)), maxSATResult.satSoftConstraints)
 
-        maxSATSolver.push()
+            maxSATSolver.push()
 
-        maxSATSolver.assertSoft(a or !b, 1)
-        maxSATSolver.assertSoft(!a or !b, 1)
-        val maxSATResultScoped = maxSATSolver.checkMaxSAT()
-        assertTrue(maxSATResultScoped.satSoftConstraints.size == 2)
+            maxSATSolver.assertSoft(a or !b, 1)
+            maxSATSolver.assertSoft(!a or !b, 1)
+            val maxSATResultScoped = maxSATSolver.checkMaxSAT()
+            assertTrue(maxSATResultScoped.satSoftConstraints.size == 2)
 
-        maxSATSolver.pop()
+            maxSATSolver.pop()
 
-        assertSoftConstraintsSAT(listOf(SoftConstraint(!a or b, 1)), maxSATResult.satSoftConstraints)
+            assertSoftConstraintsSat(listOf(SoftConstraint(!a or b, 1)), maxSATResult.satSoftConstraints)
+        }
     }
 
     @Test
-    fun threeScopesPushPopTests() = with (KContext()) {
+    fun threeScopesPushPopTest() = with (KContext()) {
         val z3Solver = KZ3Solver(this)
         val maxSATSolver = KMaxSATSolver(this, z3Solver)
 
@@ -207,29 +224,32 @@ class KMaxSATSolverTest {
         maxSATSolver.push()
         maxSATSolver.assertSoft(a or b, 1)
         maxSATSolver.assertSoft(c or b, 1)
-        val maxSATResult = maxSATSolver.checkMaxSAT()
-        assertTrue(maxSATResult.satSoftConstraints.size == 2)
 
-        maxSATSolver.push()
-        maxSATSolver.assertSoft(!b and !c, 2)
-        val maxSATResult2 = maxSATSolver.checkMaxSAT()
-        assertTrue(maxSATResult2.satSoftConstraints.size == 2)
+        runBlocking {
+            val maxSATResult = maxSATSolver.checkMaxSAT()
+            assertTrue(maxSATResult.satSoftConstraints.size == 2)
 
-        maxSATSolver.push()
-        maxSATSolver.assertSoft(a or c, 1)
-        val maxSATResult3 = maxSATSolver.checkMaxSAT()
-        assertTrue(maxSATResult3.satSoftConstraints.size == 3)
+            maxSATSolver.push()
+            maxSATSolver.assertSoft(!b and !c, 2)
+            val maxSATResult2 = maxSATSolver.checkMaxSAT()
+            assertTrue(maxSATResult2.satSoftConstraints.size == 2)
 
-        maxSATSolver.pop(2u)
-        val maxSATResult4 = maxSATSolver.checkMaxSAT()
-        assertTrue(maxSATResult4.satSoftConstraints.size == 2)
+            maxSATSolver.push()
+            maxSATSolver.assertSoft(a or c, 1)
+            val maxSATResult3 = maxSATSolver.checkMaxSAT()
+            assertTrue(maxSATResult3.satSoftConstraints.size == 3)
 
-        maxSATSolver.pop()
-        val maxSATResult5 = maxSATSolver.checkMaxSAT()
-        assertTrue(maxSATResult5.satSoftConstraints.isEmpty())
+            maxSATSolver.pop(2u)
+            val maxSATResult4 = maxSATSolver.checkMaxSAT()
+            assertTrue(maxSATResult4.satSoftConstraints.size == 2)
+
+            maxSATSolver.pop()
+            val maxSATResult5 = maxSATSolver.checkMaxSAT()
+            assertTrue(maxSATResult5.satSoftConstraints.isEmpty())
+        }
     }
 
-    private fun assertSoftConstraintsSAT(constraintsToAssert: List<SoftConstraint>,
+    private fun assertSoftConstraintsSat(constraintsToAssert: List<SoftConstraint>,
                                          satConstraints: List<SoftConstraint>) {
         for (constraint in constraintsToAssert) {
             assertTrue(satConstraints.any { constraint.expression.internEquals(it.expression) &&

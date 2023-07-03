@@ -2,26 +2,36 @@ package io.ksmt.solver.maxsat
 
 import io.ksmt.KContext
 import io.ksmt.solver.z3.KZ3Solver
-import io.ksmt.utils.mkConst
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.withTimeout
+import io.ksmt.utils.getValue
+import kotlin.time.Duration.Companion.microseconds
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.nanoseconds
 
 suspend fun main() {
-    withTimeout(100) {
-        while (isActive) println("Hi")
-    }
-
-/*    with (KContext()) {
+    with (KContext()) {
         val z3Solver = KZ3Solver(this)
         val maxSATSolver = KMaxSATSolver(this, z3Solver)
-        val a = boolSort.mkConst("a")
-        val b = boolSort.mkConst("b")
-        val c = boolSort.mkConst("c")
-        maxSATSolver.assert(a)
-        maxSATSolver.assert(b)
-        maxSATSolver.assert(c)
-        maxSATSolver.assertSoft(mkAnd(a, mkNot(c)), 1)
-        maxSATSolver.assertSoft(mkNot(a), 1)
-        //val maxSATResult = maxSATSolver.checkMaxSMT()
-    }*/
+
+        val x by intSort
+        val y by intSort
+
+        val a1 = x gt 0.expr
+        val a2 = x lt y
+        val a3 = x + y le 0.expr
+
+        maxSATSolver.assert(a3 eq a1)
+        maxSATSolver.assert(a3 or a2)
+
+        maxSATSolver.assertSoft(a3, 3)
+        maxSATSolver.assertSoft(!a3, 5)
+        maxSATSolver.assertSoft(!a1, 10)
+        maxSATSolver.assertSoft(!a2, 3)
+
+        val result = maxSATSolver.checkMaxSAT(1L.milliseconds)
+        println("Max SAT succeeded: ${result.maxSATSucceeded}")
+        println("Hard constraints SAT status: ${result.hardConstraintsSATStatus}")
+        println("Size SAT soft constraints: ${result.satSoftConstraints.size}")
+        println("Soft constraints:\n${result.satSoftConstraints.forEach { println(it.expression) }}")
+        println("Timeout exceeded:\n${result.timeoutExceeded}")
+    }
 }
