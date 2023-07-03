@@ -35,7 +35,6 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         scopeManager.incrementSoft()
     }
 
-    // TODO: add timeout support
     /**
      * Solve maximum satisfiability problem.
      */
@@ -234,23 +233,20 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
             val indexLast = literalsToReify.lastIndex
 
             if (index < indexLast) {
-                val disjunction =
-                    // We do not take the current literal to reify (from the next to the last)
-                    when (indexLast - index) {
-                        1 -> literalsToReify[index + 1]
-                        2 -> KOrBinaryExpr(ctx, literalsToReify[index + 1], literalsToReify[index + 2])
-                        else -> KOrNaryExpr(
-                            ctx,
-                            literalsToReify.subList(index + 1, indexLast + 1),
-                        )
-                    }
+                val currentLiteralToReifyDisjunction = ctx.boolSort.mkConst("#$iter$index")
+                val nextLiteralToReifyDisjunction = ctx.boolSort.mkConst("#$iter${index + 1}")
 
-                val literalToReifyDisjunction = ctx.boolSort.mkConst("#$iter$index")
+                val disjunction =
+                    when (indexLast - index) {
+                        // The second element is omitted as it is an empty disjunction.
+                        1 -> literalsToReify[index + 1]
+                        else -> KOrBinaryExpr(ctx, literalsToReify[index + 1], nextLiteralToReifyDisjunction)
+                    }
 
                 assert(
                     KEqExpr(
                         ctx,
-                        literalToReifyDisjunction,
+                        currentLiteralToReifyDisjunction,
                         disjunction,
                     ),
                 )
