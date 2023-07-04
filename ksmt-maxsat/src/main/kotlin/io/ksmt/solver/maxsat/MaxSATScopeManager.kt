@@ -1,18 +1,24 @@
 package io.ksmt.solver.maxsat
 
-class MaxSATScopeManager {
+internal class MaxSATScopeManager {
     private var currentScope = 0u
 
     private val prevScopes = mutableListOf<MaxSATScope>()
 
     private var scopeAddedSoftConstraints = 0
 
+    /**
+     * Increment scope added soft constraints number.
+     */
     fun incrementSoft() {
         if (currentScope != 0u) {
             scopeAddedSoftConstraints++
         }
     }
 
+    /**
+     * Push a new scope.
+     */
     fun push() {
         if (currentScope != 0u) {
             prevScopes.add(MaxSATScope(scopeAddedSoftConstraints))
@@ -22,6 +28,9 @@ class MaxSATScopeManager {
         currentScope++
     }
 
+    /**
+     * Pop n scopes removing soft constraints added in these scopes.
+     */
     fun pop(n: UInt, softConstraints: MutableList<SoftConstraint>): MutableList<SoftConstraint> {
         require(n <= currentScope) {
             "Can not pop $n scope levels because current scope level is $currentScope"
