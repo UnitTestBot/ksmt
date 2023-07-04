@@ -23,7 +23,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
      * @see checkMaxSAT
      * */
     fun assertSoft(expr: KExpr<KBoolSort>, weight: Int) {
-        require(weight > 0) { "Soft constraint weight must be greater than 0" }
+        require(weight > 0) { "Soft constraint weight cannot be equal to $weight as it must be greater than 0" }
 
         val softConstraint = SoftConstraint(expr, weight)
         softConstraints.add(softConstraint)
@@ -32,8 +32,11 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
     /**
      * Solve maximum satisfiability problem.
+     *
+     * @throws NotImplementedError
      */
     suspend fun checkMaxSAT(timeout: Duration = Duration.INFINITE): KMaxSATResult {
+        var hardConstraintsSatStatus = KSolverStatus.UNKNOWN
         var currentMaxSATResult: Triple<KSolverStatus?, List<KExpr<KBoolSort>>, KModel?> =
             Triple(null, listOf(), null)
 
@@ -50,6 +53,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
             }
 
             val status = solver.check()
+            hardConstraintsSatStatus = status
 
             if (status == KSolverStatus.UNSAT) {
                 return@withTimeoutOrNull KMaxSATResult(
@@ -74,8 +78,9 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
             while (true) {
                 val (solverStatus, unsatCore, model) = checkSAT(formula)
+
                 if (solverStatus == KSolverStatus.UNKNOWN) {
-                    return@withTimeoutOrNull handleUnknown(timeoutExceeded = false)
+                    throw NotImplementedError()
                 }
 
                 currentMaxSATResult = Triple(solverStatus, unsatCore, model)
@@ -103,10 +108,15 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
             val (solverStatus, _, model) = currentMaxSATResult
 
             return when (solverStatus) {
-                null -> KMaxSATResult(listOf(), KSolverStatus.UNKNOWN, maxSATSucceeded = false, timeoutExceeded = true)
+                null -> KMaxSATResult(
+                    listOf(),
+                    hardConstraintsSatStatus,
+                    maxSATSucceeded = false,
+                    timeoutExceeded = true,
+                )
                 KSolverStatus.SAT -> handleSat(model!!)
                 KSolverStatus.UNSAT -> throw NotImplementedError()
-                KSolverStatus.UNKNOWN -> handleUnknown(timeoutExceeded = true)
+                KSolverStatus.UNKNOWN -> throw NotImplementedError()
             }
         }
 
@@ -132,12 +142,12 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
         unsatCoreSoftConstraints.forEach { x ->
             if (x.weight > minWeight) {
-                val minWeightSoftConstraint = SoftConstraint(x.expression, minWeight)
-                formula.add(minWeightSoftConstraint)
+                val minWeightedSoftConstraint = SoftConstraint(x.expression, minWeight)
+                formula.add(minWeightedSoftConstraint)
                 formula.add(SoftConstraint(x.expression, x.weight - minWeight))
                 formula.removeIf { it.weight == x.weight && it.expression == x.expression }
 
-                unsatCoreSoftConstraintsSplit.add(minWeightSoftConstraint)
+                unsatCoreSoftConstraintsSplit.add(minWeightedSoftConstraint)
             } else {
                 unsatCoreSoftConstraintsSplit.add(x)
             }
@@ -152,22 +162,24 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
      * The new soft constraint weight will be equal to the sum of old soft constraints weights.
      */
     private fun unionSoftConstraintsWithSameExpressions(formula: MutableList<SoftConstraint>) {
-        var i = 0
+        val exprToRepetitionsMap = mutableMapOf<KExpr<KBoolSort>, Int>()
 
-        while (i < formula.size) {
-            val currentExpr = formula[i].expression
-
-            val similarConstraints = formula.filter { it.expression.internEquals(currentExpr) }
-
-            // Unions soft constraints with same expressions into a single soft constraint.
-            if (similarConstraints.size > 1) {
-                val similarConstraintsWeightsSum = similarConstraints.sumOf { it.weight }
-
-                formula.removeAll(similarConstraints)
-                formula.add(SoftConstraint(currentExpr, similarConstraintsWeightsSum))
+        formula.forEach {
+            if (exprToRepetitionsMap.containsKey(it.expression)) {
+                exprToRepetitionsMap[it.expression] = exprToRepetitionsMap[it.expression]!! + 1
+            } else {
+                exprToRepetitionsMap[it.expression] = 1
             }
+        }
 
-            i++
+        exprToRepetitionsMap.forEach { (expr, repetitions) ->
+            if (repetitions > 1) {
+                val repeatedExpressions = formula.filter { it.expression == expr }
+
+                formula.removeAll(repeatedExpressions)
+                val repeatedExpressionsWeightsSum = repeatedExpressions.sumOf { it.weight }
+                formula.add(SoftConstraint(expr, repeatedExpressionsWeightsSum))
+            }
         }
     }
 
@@ -195,12 +207,12 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
     ): Pair<MutableList<SoftConstraint>, List<KExpr<KBoolSort>>> = with(ctx) {
         val literalsToReify = mutableListOf<KExpr<KBoolSort>>()
 
-        for (coreElement in unsatCore.withIndex()) {
-            if (coreElement.value.weight == weight) {
-                formula.remove(coreElement.value)
+        unsatCore.forEachIndexed { index, coreElement ->
+            if (coreElement.weight == weight) {
+                formula.remove(coreElement)
 
-                val coreElementExpr = coreElement.value.expression
-                val literalToReify = coreElementExpr.sort.mkConst("*$iter${coreElement.index}")
+                val coreElementExpr = coreElement.expression
+                val literalToReify = coreElementExpr.sort.mkConst("*$iter$index")
 
                 val constraintToReify = coreElementExpr eq !literalToReify
 
@@ -231,12 +243,11 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         weight: Int,
     )
     : MutableList<SoftConstraint> = with(ctx) {
-        for (indexedLiteral in literalsToReify.withIndex()) {
-            val index = indexedLiteral.index
+        literalsToReify.forEachIndexed { index, literal ->
             val indexLast = literalsToReify.lastIndex
 
             if (index < indexLast) {
-                val sort = indexedLiteral.value.sort
+                val sort = literal.sort
                 val currentLiteralToReifyDisjunction = sort.mkConst("#$iter$index")
                 val nextLiteralToReifyDisjunction = sort.mkConst("#$iter${index + 1}")
 
@@ -249,7 +260,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
                 assert(currentLiteralToReifyDisjunction eq disjunction)
 
-                formula.add(SoftConstraint(!currentLiteralToReifyDisjunction or !indexedLiteral.value, weight))
+                formula.add(SoftConstraint(!currentLiteralToReifyDisjunction or !literal, weight))
             }
         }
 
@@ -263,10 +274,6 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
     private fun getSatSoftConstraintsByModel(model: KModel): List<SoftConstraint> {
         return softConstraints.filter { model.eval(it.expression).internEquals(KTrue(ctx)) }
-    }
-
-    private fun handleUnknown(timeoutExceeded: Boolean): KMaxSATResult {
-        return KMaxSATResult(listOf(), KSolverStatus.SAT, maxSATSucceeded = false, timeoutExceeded)
     }
 
     override fun configure(configurator: KSolverConfiguration.() -> Unit) {

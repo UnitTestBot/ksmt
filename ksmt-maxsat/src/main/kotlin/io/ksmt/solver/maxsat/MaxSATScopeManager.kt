@@ -17,7 +17,9 @@ internal class MaxSATScopeManager {
     }
 
     /**
-     * Push a new scope.
+     * Push a new scope level.
+     *
+     * @see pop
      */
     fun push() {
         if (currentScope != 0u) {
@@ -29,7 +31,9 @@ internal class MaxSATScopeManager {
     }
 
     /**
-     * Pop n scopes removing soft constraints added in these scopes.
+     * Pop scope levels with removing soft constraints added in these scope levels.
+     *
+     * @see push
      */
     fun pop(n: UInt = 1u, softConstraints: MutableList<SoftConstraint>): MutableList<SoftConstraint> {
         require(n <= currentScope) {

@@ -500,7 +500,7 @@ style:
     values:
       - 'FIXME:'
       - 'STOPSHIP:'
-      #- 'TODO:'
+      - 'TODO:'
     allowedPatterns: ''
     customMessage: ''
   ForbiddenImport:
@@ -538,7 +538,7 @@ style:
     maxJumpCount: 1
   MagicNumber:
     active: true
-    excludes: ['**/test/**', '**/example/**', '**/Main.kt']
+    excludes: ['**/test/**', '**/example/**']
     ignoreNumbers:
       - '-1'
       - '0'
