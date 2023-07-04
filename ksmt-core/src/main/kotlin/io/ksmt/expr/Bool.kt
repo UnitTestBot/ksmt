@@ -41,7 +41,7 @@ class KAndBinaryExpr internal constructor(
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
 }
 
-class KAndNaryExpr(
+class KAndNaryExpr internal constructor(
     ctx: KContext,
     override val args: List<KExpr<KBoolSort>>
 ) : KAndExpr(ctx) {
@@ -78,7 +78,7 @@ class KOrBinaryExpr internal constructor(
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
 }
 
-class KOrNaryExpr(
+class KOrNaryExpr internal constructor(
     ctx: KContext,
     override val args: List<KExpr<KBoolSort>>
 ) : KOrExpr(ctx) {

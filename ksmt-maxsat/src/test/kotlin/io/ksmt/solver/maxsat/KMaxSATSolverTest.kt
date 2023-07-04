@@ -4,7 +4,6 @@ import io.ksmt.KContext
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.utils.getValue
-import io.ksmt.utils.mkConst
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -144,9 +143,9 @@ class KMaxSATSolverTest {
     fun chooseOneConstraintByWeightTest() = with(KContext()) {
         val z3Solver = KZ3Solver(this)
         val maxSATSolver = KMaxSATSolver(this, z3Solver)
-        val z = boolSort.mkConst("z")
-        val a = boolSort.mkConst("a")
-        val b = boolSort.mkConst("b")
+        val z by boolSort
+        val a by boolSort
+        val b by boolSort
 
         maxSATSolver.assert(z)
         maxSATSolver.assertSoft(a and b, 1)

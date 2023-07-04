@@ -2,7 +2,6 @@ package io.ksmt.solver.maxsat
 
 import io.ksmt.KContext
 import io.ksmt.expr.KExpr
-import io.ksmt.expr.KOrNaryExpr
 import io.ksmt.expr.KTrue
 import io.ksmt.solver.KModel
 import io.ksmt.solver.KSolver
@@ -218,7 +217,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         when (reificationVariables.size) {
             1 -> assert(reificationVariables.first())
             2 -> assert(reificationVariables[0] or reificationVariables[1])
-            else -> assert(KOrNaryExpr(this, reificationVariables))
+            else -> assert(reificationVariables.reduce { x, y -> x or y })
         }
     }
 
@@ -233,8 +232,6 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
     )
     : MutableList<SoftConstraint> = with(ctx) {
         for (indexedLiteral in literalsToReify.withIndex()) {
-            // TODO: here we should use restrictions from the article for MaxRes
-
             val index = indexedLiteral.index
             val indexLast = literalsToReify.lastIndex
 
@@ -252,7 +249,6 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
                 assert(currentLiteralToReifyDisjunction eq disjunction)
 
-                // What weight?
                 formula.add(SoftConstraint(!currentLiteralToReifyDisjunction or !indexedLiteral.value, weight))
             }
         }
