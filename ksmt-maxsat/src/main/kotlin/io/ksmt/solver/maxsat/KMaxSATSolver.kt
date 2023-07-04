@@ -15,7 +15,6 @@ import kotlin.time.Duration
 class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>) : KSolver<KSolverConfiguration>
     where T : KSolverConfiguration {
     private val scopeManager = MaxSATScopeManager()
-
     private var softConstraints = mutableListOf<SoftConstraint>()
 
     /**
@@ -87,12 +86,12 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
                 val (weight, splitUnsatCore) = splitUnsatCore(formula, unsatCore)
 
-                val (formulaReified, reificationVariables) =
+                val (formulaReified, reificationLiterals) =
                     reifyUnsatCore(formula, splitUnsatCore, i, weight)
 
-                unionReificationVariables(reificationVariables)
+                unionReificationLiterals(reificationLiterals)
 
-                formula = applyMaxRes(formulaReified, reificationVariables, i, weight)
+                formula = applyMaxRes(formulaReified, reificationLiterals, i, weight)
 
                 i++
             }
@@ -119,7 +118,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
      * - constraints with the weight equal to the minimum of the unsat core soft constraint weights
      * - constraints with the weight equal to old weight - minimum weight
      *
-     * Returns a pair of minimum weight and a list of unsat core soft constraints with minimum weight.
+     * @return a pair of minimum weight and a list of unsat core soft constraints with minimum weight.
      */
     private fun splitUnsatCore(formula: MutableList<SoftConstraint>, unsatCore: List<KExpr<KBoolSort>>)
     : Pair<Int, List<SoftConstraint>> {
@@ -148,8 +147,9 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
     }
 
     /**
-     * Union soft constraints with same expressions into a single soft constraint. The new soft constraint weight
-     * will be equal to the sum of old soft constraints weights.
+     * Union soft constraints with same expressions into a single soft constraint.
+     *
+     * The new soft constraint weight will be equal to the sum of old soft constraints weights.
      */
     private fun unionSoftConstraintsWithSameExpressions(formula: MutableList<SoftConstraint>) {
         var i = 0
@@ -174,7 +174,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
     /**
      * Check on satisfiability hard constraints with assumed soft constraints.
      *
-     * Returns a triple of solver status, unsat core (if exists, empty list otherwise) and model
+     * @return a triple of solver status, unsat core (if exists, empty list otherwise) and model
      * (if exists, null otherwise).
      */
     private fun checkSAT(assumptions: List<SoftConstraint>): Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> =
@@ -213,11 +213,11 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         return Pair(formula, literalsToReify)
     }
 
-    private fun unionReificationVariables(reificationVariables: List<KExpr<KBoolSort>>) = with(ctx) {
-        when (reificationVariables.size) {
-            1 -> assert(reificationVariables.first())
-            2 -> assert(reificationVariables[0] or reificationVariables[1])
-            else -> assert(reificationVariables.reduce { x, y -> x or y })
+    private fun unionReificationLiterals(reificationLiterals: List<KExpr<KBoolSort>>) = with(ctx) {
+        when (reificationLiterals.size) {
+            1 -> assert(reificationLiterals.first())
+            2 -> assert(reificationLiterals[0] or reificationLiterals[1])
+            else -> assert(reificationLiterals.reduce { x, y -> x or y })
         }
     }
 

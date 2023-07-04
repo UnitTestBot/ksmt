@@ -31,7 +31,7 @@ internal class MaxSATScopeManager {
     /**
      * Pop n scopes removing soft constraints added in these scopes.
      */
-    fun pop(n: UInt, softConstraints: MutableList<SoftConstraint>): MutableList<SoftConstraint> {
+    fun pop(n: UInt = 1u, softConstraints: MutableList<SoftConstraint>): MutableList<SoftConstraint> {
         require(n <= currentScope) {
             "Can not pop $n scope levels because current scope level is $currentScope"
         }
