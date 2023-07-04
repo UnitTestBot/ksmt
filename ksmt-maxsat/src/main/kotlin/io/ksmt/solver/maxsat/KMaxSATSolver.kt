@@ -17,7 +17,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration
 
 class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>) : KSolver<KSolverConfiguration>
-        where T : KSolverConfiguration {
+    where T : KSolverConfiguration {
     private val scopeManager = MaxSATScopeManager()
 
     private var softConstraints = mutableListOf<SoftConstraint>()
@@ -40,29 +40,35 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
      */
     suspend fun checkMaxSAT(timeout: Duration = Duration.INFINITE): KMaxSATResult {
         var currentMaxSATResult: Triple<KSolverStatus?, List<KExpr<KBoolSort>>, KModel?> =
-                Triple(null, listOf(), null)
+            Triple(null, listOf(), null)
 
         solver.push()
 
         val maxSATResult = withTimeoutOrNull(timeout.inWholeMilliseconds) {
             if (softConstraints.isEmpty()) {
-                return@withTimeoutOrNull KMaxSATResult(listOf(), solver.check(),
+                return@withTimeoutOrNull KMaxSATResult(
+                    listOf(),
+                    solver.check(),
                     maxSATSucceeded = true,
-                    timeoutExceeded = false
+                    timeoutExceeded = false,
                 )
             }
 
             val status = solver.check()
 
             if (status == KSolverStatus.UNSAT) {
-                return@withTimeoutOrNull KMaxSATResult(listOf(), status,
+                return@withTimeoutOrNull KMaxSATResult(
+                    listOf(),
+                    status,
                     maxSATSucceeded = true,
-                    timeoutExceeded = false
+                    timeoutExceeded = false,
                 )
             } else if (status == KSolverStatus.UNKNOWN) {
-                return@withTimeoutOrNull KMaxSATResult(listOf(), status,
+                return@withTimeoutOrNull KMaxSATResult(
+                    listOf(),
+                    status,
                     maxSATSucceeded = false,
-                    timeoutExceeded = false
+                    timeoutExceeded = false,
                 )
             }
 
@@ -86,11 +92,11 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
                 val (weight, splitUnsatCore) = splitUnsatCore(formula, unsatCore)
 
                 val (formulaReified, reificationVariables) =
-                        reifyUnsatCore(formula, splitUnsatCore, i, weight)
+                    reifyUnsatCore(formula, splitUnsatCore, i, weight)
 
                 unionReificationVariables(reificationVariables)
 
-                formula = applyMaxRes(formulaReified, reificationVariables, i)
+                formula = applyMaxRes(formulaReified, reificationVariables, i, weight)
 
                 i++
             }
@@ -120,10 +126,10 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
      * Returns a pair of minimum weight and a list of unsat core soft constraints with minimum weight.
      */
     private fun splitUnsatCore(formula: MutableList<SoftConstraint>, unsatCore: List<KExpr<KBoolSort>>)
-            : Pair<Int, List<SoftConstraint>> {
+    : Pair<Int, List<SoftConstraint>> {
         // Filters soft constraints from the unsat core.
-        val unsatCoreSoftConstraints  =
-                formula.filter { x -> unsatCore.any { x.expression.internEquals(it) } }
+        val unsatCoreSoftConstraints =
+            formula.filter { x -> unsatCore.any { x.expression.internEquals(it) } }
 
         val minWeight = unsatCoreSoftConstraints.minBy { it.weight }.weight
 
@@ -137,8 +143,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
                 formula.removeIf { it.weight == x.weight && it.expression == x.expression }
 
                 unsatCoreSoftConstraintsSplit.add(minWeightSoftConstraint)
-            }
-            else {
+            } else {
                 unsatCoreSoftConstraintsSplit.add(x)
             }
         }
@@ -186,8 +191,12 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
     /**
      * Reify unsat core soft constraints with literals.
      */
-    private fun reifyUnsatCore(formula: MutableList<SoftConstraint>, unsatCore: List<SoftConstraint>,
-                               iter: Int, weight: Int): Pair<MutableList<SoftConstraint>, List<KExpr<KBoolSort>>> {
+    private fun reifyUnsatCore(
+        formula: MutableList<SoftConstraint>,
+        unsatCore: List<SoftConstraint>,
+        iter: Int,
+        weight: Int,
+    ): Pair<MutableList<SoftConstraint>, List<KExpr<KBoolSort>>> {
         val literalsToReify = mutableListOf<KExpr<KBoolSort>>()
 
         for (coreElement in unsatCore.withIndex()) {
@@ -223,9 +232,13 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
     /**
      * Apply MaxRes rule.
      */
-    private fun applyMaxRes(formula: MutableList<SoftConstraint>, literalsToReify: List<KExpr<KBoolSort>>,
-                            iter: Int)
-            : MutableList<SoftConstraint> {
+    private fun applyMaxRes(
+        formula: MutableList<SoftConstraint>,
+        literalsToReify: List<KExpr<KBoolSort>>,
+        iter: Int,
+        weight: Int,
+    )
+    : MutableList<SoftConstraint> {
         for (indexedLiteral in literalsToReify.withIndex()) {
             // TODO: here we should use restrictions from the article for MaxRes
 
@@ -248,6 +261,18 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
                         ctx,
                         currentLiteralToReifyDisjunction,
                         disjunction,
+                    ),
+                )
+
+                // What weight?
+                formula.add(
+                    SoftConstraint(
+                        KOrBinaryExpr(
+                            ctx,
+                            KNotExpr(ctx, currentLiteralToReifyDisjunction),
+                            KNotExpr(ctx, indexedLiteral.value),
+                        ),
+                        weight,
                     ),
                 )
             }

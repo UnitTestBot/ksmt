@@ -37,8 +37,7 @@ class MaxSATScopeManager {
             if (prevScopes.isNotEmpty()) {
                 scopeAddedSoftConstraints = prevScopes.last().scopeAddedSoftConstraints
                 prevScopes.removeLast()
-            }
-            else {
+            } else {
                 scopeAddedSoftConstraints = 0
             }
         }

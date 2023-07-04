@@ -3,12 +3,10 @@ package io.ksmt.solver.maxsat
 import io.ksmt.KContext
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.utils.getValue
-import kotlin.time.Duration.Companion.microseconds
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.nanoseconds
 
 suspend fun main() {
-    with (KContext()) {
+    with(KContext()) {
         val z3Solver = KZ3Solver(this)
         val maxSATSolver = KMaxSATSolver(this, z3Solver)
 
