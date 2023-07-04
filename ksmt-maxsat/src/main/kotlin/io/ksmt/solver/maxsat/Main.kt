@@ -25,7 +25,7 @@ suspend fun main() {
         maxSATSolver.assertSoft(!a1, 10)
         maxSATSolver.assertSoft(!a2, 3)
 
-        val result = maxSATSolver.checkMaxSAT(1L.milliseconds)
+        val result = maxSATSolver.checkMaxSAT(50.milliseconds)
         println("Max SAT succeeded: ${result.maxSATSucceeded}")
         println("Hard constraints SAT status: ${result.hardConstraintsSATStatus}")
         println("Size SAT soft constraints: ${result.satSoftConstraints.size}")

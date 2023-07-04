@@ -1,10 +1,7 @@
 package io.ksmt.solver.maxsat
 
 import io.ksmt.KContext
-import io.ksmt.expr.KEqExpr
 import io.ksmt.expr.KExpr
-import io.ksmt.expr.KNotExpr
-import io.ksmt.expr.KOrBinaryExpr
 import io.ksmt.expr.KOrNaryExpr
 import io.ksmt.expr.KTrue
 import io.ksmt.solver.KModel
@@ -44,7 +41,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
         solver.push()
 
-        val maxSATResult = withTimeoutOrNull(timeout.inWholeMilliseconds) {
+        val maxSATResult = withTimeoutOrNull(timeout) {
             if (softConstraints.isEmpty()) {
                 return@withTimeoutOrNull KMaxSATResult(
                     listOf(),
@@ -196,7 +193,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         unsatCore: List<SoftConstraint>,
         iter: Int,
         weight: Int,
-    ): Pair<MutableList<SoftConstraint>, List<KExpr<KBoolSort>>> {
+    ): Pair<MutableList<SoftConstraint>, List<KExpr<KBoolSort>>> = with(ctx) {
         val literalsToReify = mutableListOf<KExpr<KBoolSort>>()
 
         for (coreElement in unsatCore.withIndex()) {
@@ -206,11 +203,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
                 val coreElementExpr = coreElement.value.expression
                 val literalToReify = coreElementExpr.sort.mkConst("*$iter${coreElement.index}")
 
-                val constraintToReify = KEqExpr(
-                    ctx,
-                    coreElementExpr,
-                    KNotExpr(ctx, literalToReify),
-                )
+                val constraintToReify = coreElementExpr eq !literalToReify
 
                 assert(constraintToReify)
 
@@ -221,11 +214,11 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         return Pair(formula, literalsToReify)
     }
 
-    private fun unionReificationVariables(reificationVariables: List<KExpr<KBoolSort>>) {
+    private fun unionReificationVariables(reificationVariables: List<KExpr<KBoolSort>>) = with(ctx) {
         when (reificationVariables.size) {
             1 -> assert(reificationVariables.first())
-            2 -> assert(KOrBinaryExpr(ctx, reificationVariables[0], reificationVariables[1]))
-            else -> assert(KOrNaryExpr(ctx, reificationVariables))
+            2 -> assert(reificationVariables[0] or reificationVariables[1])
+            else -> assert(KOrNaryExpr(this, reificationVariables))
         }
     }
 
@@ -238,7 +231,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         iter: Int,
         weight: Int,
     )
-    : MutableList<SoftConstraint> {
+    : MutableList<SoftConstraint> = with(ctx) {
         for (indexedLiteral in literalsToReify.withIndex()) {
             // TODO: here we should use restrictions from the article for MaxRes
 
@@ -246,35 +239,21 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
             val indexLast = literalsToReify.lastIndex
 
             if (index < indexLast) {
-                val currentLiteralToReifyDisjunction = ctx.boolSort.mkConst("#$iter$index")
-                val nextLiteralToReifyDisjunction = ctx.boolSort.mkConst("#$iter${index + 1}")
+                val sort = indexedLiteral.value.sort
+                val currentLiteralToReifyDisjunction = sort.mkConst("#$iter$index")
+                val nextLiteralToReifyDisjunction = sort.mkConst("#$iter${index + 1}")
 
                 val disjunction =
                     when (indexLast - index) {
                         // The second element is omitted as it is an empty disjunction.
                         1 -> literalsToReify[index + 1]
-                        else -> KOrBinaryExpr(ctx, literalsToReify[index + 1], nextLiteralToReifyDisjunction)
+                        else -> literalsToReify[index + 1] or nextLiteralToReifyDisjunction
                     }
 
-                assert(
-                    KEqExpr(
-                        ctx,
-                        currentLiteralToReifyDisjunction,
-                        disjunction,
-                    ),
-                )
+                assert(currentLiteralToReifyDisjunction eq disjunction)
 
                 // What weight?
-                formula.add(
-                    SoftConstraint(
-                        KOrBinaryExpr(
-                            ctx,
-                            KNotExpr(ctx, currentLiteralToReifyDisjunction),
-                            KNotExpr(ctx, indexedLiteral.value),
-                        ),
-                        weight,
-                    ),
-                )
+                formula.add(SoftConstraint(!currentLiteralToReifyDisjunction or !indexedLiteral.value, weight))
             }
         }
 
