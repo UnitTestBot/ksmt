@@ -101,12 +101,12 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         solver.pop()
 
         if (maxSATResult == null) {
-            val (solverStatus, unsatCore, model) = currentMaxSATResult
+            val (solverStatus, _, model) = currentMaxSATResult
 
             return when (solverStatus) {
                 null -> KMaxSATResult(listOf(), KSolverStatus.UNKNOWN, maxSATSucceeded = false, timeoutExceeded = true)
                 KSolverStatus.SAT -> handleSat(model!!)
-                KSolverStatus.UNSAT -> handleUnsat(unsatCore)
+                KSolverStatus.UNSAT -> throw NotImplementedError()
                 KSolverStatus.UNKNOWN -> handleUnknown(timeoutExceeded = true)
             }
         }
@@ -263,11 +263,6 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
     private fun getSatSoftConstraintsByModel(model: KModel): List<SoftConstraint> {
         return softConstraints.filter { model.eval(it.expression).internEquals(KTrue(ctx)) }
-    }
-
-    private fun handleUnsat(unsatCore: List<KExpr<KBoolSort>>): KMaxSATResult {
-        val satSoftConstraints = softConstraints.filter { x -> unsatCore.any { x.expression.internEquals(it) } }
-        return KMaxSATResult(satSoftConstraints, KSolverStatus.SAT, maxSATSucceeded = false, timeoutExceeded = true)
     }
 
     private fun handleUnknown(timeoutExceeded: Boolean): KMaxSATResult {
