@@ -265,8 +265,7 @@ class KMaxSATSolverTest {
         for (constraint in constraintsToAssert) {
             assertTrue(
                 satConstraints.any {
-                    constraint.expression.internEquals(it.expression) &&
-                        constraint.weight == it.weight
+                    constraint.expression.internEquals(it.expression) && constraint.weight == it.weight
                 },
             )
         }
