@@ -17,3 +17,5 @@ pluginManagement {
         }
     }
 }
+include("ksmt-neurosmt")
+include("sandbox")
