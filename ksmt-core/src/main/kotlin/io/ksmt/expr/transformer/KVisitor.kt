@@ -179,7 +179,7 @@ interface KVisitor<V> : KTransformer {
 
     fun <T : KSort> visitExpr(expr: KExpr<T>): V
 
-    override fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> = applyVisitor(expr, ::visitExpr)
+    override fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> = visitExpr(expr, ::visitExpr)
 
     // function visitors
     fun <T : KSort, A : KSort> visitApp(expr: KApp<T, A>): V = visitExpr(expr)
@@ -187,10 +187,10 @@ interface KVisitor<V> : KTransformer {
     fun <T : KSort> visit(expr: KConst<T>): V = visit(expr as KFunctionApp<T>)
     fun <T : KSort> visitValue(expr: KInterpretedValue<T>): V = visitApp(expr)
 
-    override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> = applyVisitor(expr, ::visitApp)
-    override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KSort> transformValue(expr: KInterpretedValue<T>): KExpr<T> = applyVisitor(expr, ::visitValue)
+    override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> = visitExpr(expr, ::visitApp)
+    override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KSort> transformValue(expr: KInterpretedValue<T>): KExpr<T> = visitExpr(expr, ::visitValue)
 
     // bool visitors
     fun visit(expr: KAndExpr): V = visitApp(expr)
@@ -206,18 +206,18 @@ interface KVisitor<V> : KTransformer {
     fun <T : KSort> visit(expr: KDistinctExpr<T>): V = visitApp(expr)
     fun <T : KSort> visit(expr: KIteExpr<T>): V = visitApp(expr)
 
-    override fun transform(expr: KAndExpr): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KAndBinaryExpr): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KOrExpr): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KOrBinaryExpr): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KNotExpr): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KImpliesExpr): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KXorExpr): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KTrue): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KFalse): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KSort> transform(expr: KEqExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KSort> transform(expr: KDistinctExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KSort> transform(expr: KIteExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
+    override fun transform(expr: KAndExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KAndBinaryExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KOrExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KOrBinaryExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KNotExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KImpliesExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KXorExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KTrue): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KFalse): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KSort> transform(expr: KEqExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KSort> transform(expr: KDistinctExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KSort> transform(expr: KIteExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
 
     // bit-vec visitors
     fun <T : KBvSort> visitBitVecValue(expr: KBitVecValue<T>): V = visitValue(expr)
@@ -229,14 +229,14 @@ interface KVisitor<V> : KTransformer {
     fun visit(expr: KBitVecCustomValue): V = visitBitVecValue(expr)
 
     override fun <T : KBvSort> transformBitVecValue(expr: KBitVecValue<T>): KExpr<T> =
-        applyVisitor(expr, ::visitBitVecValue)
+        visitExpr(expr, ::visitBitVecValue)
 
-    override fun transform(expr: KBitVec1Value): KExpr<KBv1Sort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KBitVec8Value): KExpr<KBv8Sort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KBitVec16Value): KExpr<KBv16Sort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KBitVec32Value): KExpr<KBv32Sort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KBitVec64Value): KExpr<KBv64Sort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KBitVecCustomValue): KExpr<KBvSort> = applyVisitor(expr, ::visit)
+    override fun transform(expr: KBitVec1Value): KExpr<KBv1Sort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KBitVec8Value): KExpr<KBv8Sort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KBitVec16Value): KExpr<KBv16Sort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KBitVec32Value): KExpr<KBv32Sort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KBitVec64Value): KExpr<KBv64Sort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KBitVecCustomValue): KExpr<KBvSort> = visitExpr(expr, ::visit)
 
     // bit-vec expressions visitors
     fun <T : KBvSort> visit(expr: KBvNotExpr<T>): V = visitApp(expr)
@@ -287,71 +287,71 @@ interface KVisitor<V> : KTransformer {
     fun <T : KBvSort> visit(expr: KBvMulNoOverflowExpr<T>): V = visitApp(expr)
     fun <T : KBvSort> visit(expr: KBvMulNoUnderflowExpr<T>): V = visitApp(expr)
 
-    override fun <T : KBvSort> transform(expr: KBvNotExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvReductionAndExpr<T>): KExpr<KBv1Sort> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvReductionOrExpr<T>): KExpr<KBv1Sort> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvAndExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvOrExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvXorExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvNAndExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvNorExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvXNorExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvNegationExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvAddExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvSubExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvMulExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvUnsignedDivExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvSignedDivExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvUnsignedRemExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvSignedRemExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvSignedModExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvUnsignedLessExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvSignedLessExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvUnsignedLessOrEqualExpr<T>): KExpr<KBoolSort> = applyVisitor(
+    override fun <T : KBvSort> transform(expr: KBvNotExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvReductionAndExpr<T>): KExpr<KBv1Sort> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvReductionOrExpr<T>): KExpr<KBv1Sort> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvAndExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvOrExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvXorExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvNAndExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvNorExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvXNorExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvNegationExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvAddExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvSubExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvMulExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvUnsignedDivExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvSignedDivExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvUnsignedRemExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvSignedRemExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvSignedModExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvUnsignedLessExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvSignedLessExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvUnsignedLessOrEqualExpr<T>): KExpr<KBoolSort> = visitExpr(
         expr,
         ::visit
     )
 
-    override fun <T : KBvSort> transform(expr: KBvSignedLessOrEqualExpr<T>): KExpr<KBoolSort> = applyVisitor(
+    override fun <T : KBvSort> transform(expr: KBvSignedLessOrEqualExpr<T>): KExpr<KBoolSort> = visitExpr(
         expr,
         ::visit
     )
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterOrEqualExpr<T>): KExpr<KBoolSort> =
-        applyVisitor(expr, ::visit)
+        visitExpr(expr, ::visit)
 
-    override fun <T : KBvSort> transform(expr: KBvSignedGreaterOrEqualExpr<T>): KExpr<KBoolSort> = applyVisitor(
+    override fun <T : KBvSort> transform(expr: KBvSignedGreaterOrEqualExpr<T>): KExpr<KBoolSort> = visitExpr(
         expr,
         ::visit
     )
 
-    override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterExpr<T>): KExpr<KBoolSort> = applyVisitor(
+    override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterExpr<T>): KExpr<KBoolSort> = visitExpr(
         expr,
         ::visit
     )
 
-    override fun <T : KBvSort> transform(expr: KBvSignedGreaterExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KBvConcatExpr): KExpr<KBvSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KBvExtractExpr): KExpr<KBvSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KBvSignExtensionExpr): KExpr<KBvSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KBvZeroExtensionExpr): KExpr<KBvSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KBvRepeatExpr): KExpr<KBvSort> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvShiftLeftExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvLogicalShiftRightExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvArithShiftRightExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvRotateLeftIndexedExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvRotateRightIndexedExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KBv2IntExpr): KExpr<KIntSort> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvAddNoOverflowExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvSignedGreaterExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KBvConcatExpr): KExpr<KBvSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KBvExtractExpr): KExpr<KBvSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KBvSignExtensionExpr): KExpr<KBvSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KBvZeroExtensionExpr): KExpr<KBvSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KBvRepeatExpr): KExpr<KBvSort> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvShiftLeftExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvLogicalShiftRightExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvArithShiftRightExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvRotateLeftExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvRotateLeftIndexedExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvRotateRightExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvRotateRightIndexedExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun transform(expr: KBv2IntExpr): KExpr<KIntSort> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvAddNoOverflowExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvAddNoUnderflowExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvSubNoOverflowExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvSubNoUnderflowExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvDivNoOverflowExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvNegNoOverflowExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvMulNoOverflowExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KBvSort> transform(expr: KBvMulNoUnderflowExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
 
     // fp value visitors
     fun <T : KFpSort> visitFpValue(expr: KFpValue<T>): V = visitValue(expr)
@@ -362,19 +362,19 @@ interface KVisitor<V> : KTransformer {
     fun visit(expr: KFpCustomSizeValue): V = visitFpValue(expr)
 
     override fun <T : KFpSort> transformFpValue(expr: KFpValue<T>): KExpr<T> =
-        applyVisitor(expr, ::visitFpValue)
+        visitExpr(expr, ::visitFpValue)
 
-    override fun transform(expr: KFp16Value): KExpr<KFp16Sort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KFp32Value): KExpr<KFp32Sort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KFp64Value): KExpr<KFp64Sort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KFp128Value): KExpr<KFp128Sort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KFpCustomSizeValue): KExpr<KFpSort> = applyVisitor(expr, ::visit)
+    override fun transform(expr: KFp16Value): KExpr<KFp16Sort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KFp32Value): KExpr<KFp32Sort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KFp64Value): KExpr<KFp64Sort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KFp128Value): KExpr<KFp128Sort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KFpCustomSizeValue): KExpr<KFpSort> = visitExpr(expr, ::visit)
 
     // fp rounding mode
     fun visit(expr: KFpRoundingModeExpr): V = visitValue(expr)
 
     override fun transform(expr: KFpRoundingModeExpr): KExpr<KFpRoundingModeSort> =
-        applyVisitor(expr, ::visit)
+        visitExpr(expr, ::visit)
 
     // fp operations visit
     fun <T : KFpSort> visit(expr: KFpAbsExpr<T>): V = visitApp(expr)
@@ -410,38 +410,38 @@ interface KVisitor<V> : KTransformer {
     fun <T : KFpSort> visit(expr: KRealToFpExpr<T>): V = visitApp(expr)
     fun <T : KFpSort> visit(expr: KBvToFpExpr<T>): V = visitApp(expr)
 
-    override fun <T : KFpSort> transform(expr: KFpAbsExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpNegationExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpAddExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpSubExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpMulExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpDivExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpFusedMulAddExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpSqrtExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpRemExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpAbsExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpNegationExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpAddExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpSubExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpMulExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpDivExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpFusedMulAddExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpSqrtExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpRemExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
 
-    override fun <T : KFpSort> transform(expr: KFpRoundToIntegralExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpMinExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpMaxExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpLessOrEqualExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpLessExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpGreaterOrEqualExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpGreaterExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpEqualExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpIsNormalExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpIsSubnormalExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpIsZeroExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpIsInfiniteExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpIsNaNExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpIsNegativeExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpIsPositiveExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>): KExpr<KBvSort> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpToRealExpr<T>): KExpr<KRealSort> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KRealToFpExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KFpSort> transform(expr: KBvToFpExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpRoundToIntegralExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpMinExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpMaxExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpLessOrEqualExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpLessExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpGreaterOrEqualExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpGreaterExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpEqualExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpIsNormalExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpIsSubnormalExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpIsZeroExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpIsInfiniteExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpIsNaNExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpIsNegativeExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpIsPositiveExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpToBvExpr<T>): KExpr<KBvSort> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpToRealExpr<T>): KExpr<KRealSort> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpToIEEEBvExpr<T>): KExpr<KBvSort> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KRealToFpExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KFpSort> transform(expr: KBvToFpExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
 
     // array visitors
     fun <A : KArraySortBase<R>, R : KSort> visitArrayStore(expr: KArrayStoreBase<A, R>): V =
@@ -497,71 +497,71 @@ interface KVisitor<V> : KTransformer {
 
     override fun <A : KArraySortBase<R>, R : KSort> transformArrayStore(
         expr: KArrayStoreBase<A, R>
-    ): KExpr<A> = applyVisitor(expr, ::visitArrayStore)
+    ): KExpr<A> = visitExpr(expr, ::visitArrayStore)
 
     override fun <D : KSort, R : KSort> transform(
         expr: KArrayStore<D, R>
-    ): KExpr<KArraySort<D, R>> = applyVisitor(expr, ::visit)
+    ): KExpr<KArraySort<D, R>> = visitExpr(expr, ::visit)
 
     override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
         expr: KArray2Store<D0, D1, R>
-    ): KExpr<KArray2Sort<D0, D1, R>> = applyVisitor(expr, ::visit)
+    ): KExpr<KArray2Sort<D0, D1, R>> = visitExpr(expr, ::visit)
 
     override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
         expr: KArray3Store<D0, D1, D2, R>
-    ): KExpr<KArray3Sort<D0, D1, D2, R>> = applyVisitor(expr, ::visit)
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> = visitExpr(expr, ::visit)
 
     override fun <R : KSort> transform(
         expr: KArrayNStore<R>
-    ): KExpr<KArrayNSort<R>> = applyVisitor(expr, ::visit)
+    ): KExpr<KArrayNSort<R>> = visitExpr(expr, ::visit)
 
     override fun <A : KArraySortBase<R>, R : KSort> transformArraySelect(
         expr: KArraySelectBase<A, R>
-    ): KExpr<R> = applyVisitor(expr, ::visitArraySelect)
+    ): KExpr<R> = visitExpr(expr, ::visitArraySelect)
 
     override fun <D : KSort, R : KSort> transform(
         expr: KArraySelect<D, R>
-    ): KExpr<R> = applyVisitor(expr, ::visit)
+    ): KExpr<R> = visitExpr(expr, ::visit)
 
     override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
         expr: KArray2Select<D0, D1, R>
-    ): KExpr<R> = applyVisitor(expr, ::visit)
+    ): KExpr<R> = visitExpr(expr, ::visit)
 
     override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
         expr: KArray3Select<D0, D1, D2, R>
-    ): KExpr<R> = applyVisitor(expr, ::visit)
+    ): KExpr<R> = visitExpr(expr, ::visit)
 
     override fun <R : KSort> transform(
         expr: KArrayNSelect<R>
-    ): KExpr<R> = applyVisitor(expr, ::visit)
+    ): KExpr<R> = visitExpr(expr, ::visit)
 
     override fun <A : KArraySortBase<R>, R : KSort> transform(
         expr: KArrayConst<A, R>
-    ): KExpr<A> = applyVisitor(expr, ::visit)
+    ): KExpr<A> = visitExpr(expr, ::visit)
 
     override fun <A : KArraySortBase<R>, R : KSort> transform(
         expr: KFunctionAsArray<A, R>
-    ): KExpr<A> = applyVisitor(expr, ::visit)
+    ): KExpr<A> = visitExpr(expr, ::visit)
 
     override fun <A : KArraySortBase<R>, R : KSort> transformArrayLambda(
         expr: KArrayLambdaBase<A, R>
-    ): KExpr<A> = applyVisitor(expr, ::visitArrayLambda)
+    ): KExpr<A> = visitExpr(expr, ::visitArrayLambda)
 
     override fun <D : KSort, R : KSort> transform(
         expr: KArrayLambda<D, R>
-    ): KExpr<KArraySort<D, R>> = applyVisitor(expr, ::visit)
+    ): KExpr<KArraySort<D, R>> = visitExpr(expr, ::visit)
 
     override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
         expr: KArray2Lambda<D0, D1, R>
-    ): KExpr<KArray2Sort<D0, D1, R>> = applyVisitor(expr, ::visit)
+    ): KExpr<KArray2Sort<D0, D1, R>> = visitExpr(expr, ::visit)
 
     override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
         expr: KArray3Lambda<D0, D1, D2, R>
-    ): KExpr<KArray3Sort<D0, D1, D2, R>> = applyVisitor(expr, ::visit)
+    ): KExpr<KArray3Sort<D0, D1, D2, R>> = visitExpr(expr, ::visit)
 
     override fun <R : KSort> transform(
         expr: KArrayNLambda<R>
-    ): KExpr<KArrayNSort<R>> = applyVisitor(expr, ::visit)
+    ): KExpr<KArrayNSort<R>> = visitExpr(expr, ::visit)
 
     // arith visitors
     fun <T : KArithSort> visit(expr: KAddArithExpr<T>): V = visitApp(expr)
@@ -575,60 +575,61 @@ interface KVisitor<V> : KTransformer {
     fun <T : KArithSort> visit(expr: KGtArithExpr<T>): V = visitApp(expr)
     fun <T : KArithSort> visit(expr: KGeArithExpr<T>): V = visitApp(expr)
 
-    override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KArithSort> transform(expr: KMulArithExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KArithSort> transform(expr: KSubArithExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KArithSort> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KArithSort> transform(expr: KDivArithExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>): KExpr<T> = applyVisitor(expr, ::visit)
-    override fun <T : KArithSort> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KArithSort> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KArithSort> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun <T : KArithSort> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
+    override fun <T : KArithSort> transform(expr: KAddArithExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KArithSort> transform(expr: KMulArithExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KArithSort> transform(expr: KSubArithExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KArithSort> transform(expr: KUnaryMinusArithExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KArithSort> transform(expr: KDivArithExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>): KExpr<T> = visitExpr(expr, ::visit)
+    override fun <T : KArithSort> transform(expr: KLtArithExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KArithSort> transform(expr: KLeArithExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KArithSort> transform(expr: KGtArithExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun <T : KArithSort> transform(expr: KGeArithExpr<T>): KExpr<KBoolSort> = visitExpr(expr, ::visit)
 
     // integer visitors
     fun visit(expr: KModIntExpr): V = visitApp(expr)
     fun visit(expr: KRemIntExpr): V = visitApp(expr)
     fun visit(expr: KToRealIntExpr): V = visitApp(expr)
 
-    override fun transform(expr: KModIntExpr): KExpr<KIntSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KRemIntExpr): KExpr<KIntSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KToRealIntExpr): KExpr<KRealSort> = applyVisitor(expr, ::visit)
+    override fun transform(expr: KModIntExpr): KExpr<KIntSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KRemIntExpr): KExpr<KIntSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KToRealIntExpr): KExpr<KRealSort> = visitExpr(expr, ::visit)
 
     fun visitIntNum(expr: KIntNumExpr): V = visitValue(expr)
     fun visit(expr: KInt32NumExpr): V = visitIntNum(expr)
     fun visit(expr: KInt64NumExpr): V = visitIntNum(expr)
     fun visit(expr: KIntBigNumExpr): V = visitIntNum(expr)
 
-    override fun transformIntNum(expr: KIntNumExpr): KExpr<KIntSort> = applyVisitor(expr, ::visitIntNum)
-    override fun transform(expr: KInt32NumExpr): KExpr<KIntSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KInt64NumExpr): KExpr<KIntSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KIntBigNumExpr): KExpr<KIntSort> = applyVisitor(expr, ::visit)
+    override fun transformIntNum(expr: KIntNumExpr): KExpr<KIntSort> = visitExpr(expr, ::visitIntNum)
+    override fun transform(expr: KInt32NumExpr): KExpr<KIntSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KInt64NumExpr): KExpr<KIntSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KIntBigNumExpr): KExpr<KIntSort> = visitExpr(expr, ::visit)
 
     // real visitors
     fun visit(expr: KToIntRealExpr): V = visitApp(expr)
     fun visit(expr: KIsIntRealExpr): V = visitApp(expr)
     fun visit(expr: KRealNumExpr): V = visitValue(expr)
 
-    override fun transform(expr: KToIntRealExpr): KExpr<KIntSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KIsIntRealExpr): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KRealNumExpr): KExpr<KRealSort> = applyVisitor(expr, ::visit)
+    override fun transform(expr: KToIntRealExpr): KExpr<KIntSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KIsIntRealExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KRealNumExpr): KExpr<KRealSort> = visitExpr(expr, ::visit)
 
     // quantifier visitors
     fun visit(expr: KExistentialQuantifier): V = visitExpr(expr)
     fun visit(expr: KUniversalQuantifier): V = visitExpr(expr)
 
-    override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
-    override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> = applyVisitor(expr, ::visit)
+    override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> = visitExpr(expr, ::visit)
 
     // uninterpreted sort value
     fun visit(expr: KUninterpretedSortValue): V = visitValue(expr)
 
-    override fun transform(expr: KUninterpretedSortValue): KExpr<KUninterpretedSort> = applyVisitor(expr, ::visit)
+    override fun transform(expr: KUninterpretedSortValue): KExpr<KUninterpretedSort> = visitExpr(expr, ::visit)
 
-    private inline fun <E : KExpr<*>> applyVisitor(expr: E, visitor: (E) -> V): E {
-        val result = visitor(expr)
-        exprVisitResult(expr, result)
-        return expr
-    }
+}
+
+inline fun <V, E : KExpr<*>> KVisitor<V>.visitExpr(expr: E, visitor: (E) -> V): E {
+    val result = visitor(expr)
+    exprVisitResult(expr, result)
+    return expr
 }
