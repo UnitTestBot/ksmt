@@ -356,6 +356,9 @@ value class KExprVisitResult<out V> internal constructor(private val value: Any?
     val isNotEmpty: Boolean
         get() = value !== empty
 
+    val dependencyVisitRequired: Boolean
+        get() = value === visitDependency
+
     val hasResult: Boolean
         get() = value !== empty && value !== visitDependency
 

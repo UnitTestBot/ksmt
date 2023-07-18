@@ -26,25 +26,25 @@ class ExpressionVisitorTest {
         val visitor = TracingVisitor(this, trace)
 
         val leafs = visitor.applyVisitor(expr)
-        assertEquals(6, leafs.size)
         assertEquals(setOf(x, y), leafs.toSet())
 
         val expectedTrace = listOf(
-            VisitEvent(VisitTraceKind.APP, expr),
-            VisitEvent(VisitTraceKind.EXPR, expr),
-            VisitEvent(VisitTraceKind.APP, e2),
-            VisitEvent(VisitTraceKind.EXPR, e2),
             VisitEvent(VisitTraceKind.APP, x),
             VisitEvent(VisitTraceKind.EXPR, x),
             VisitEvent(VisitTraceKind.DEFAULT, x),
+
             VisitEvent(VisitTraceKind.APP, e2),
             VisitEvent(VisitTraceKind.EXPR, e2),
+
             VisitEvent(VisitTraceKind.EQ_ENTER, e1),
             VisitEvent(VisitTraceKind.EQ_VISIT, e1),
-            VisitEvent(VisitTraceKind.APP, e0),
+
             VisitEvent(VisitTraceKind.APP, y),
             VisitEvent(VisitTraceKind.EXPR, y),
             VisitEvent(VisitTraceKind.DEFAULT, y),
+
+            VisitEvent(VisitTraceKind.APP, e0),
+
             VisitEvent(VisitTraceKind.APP, expr),
             VisitEvent(VisitTraceKind.EXPR, expr),
         )

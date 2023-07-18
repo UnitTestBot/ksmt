@@ -133,12 +133,6 @@ import io.ksmt.sort.KSort
 /**
  * Apply specialized non-recursive visit for all KSMT expressions.
  * See [KNonRecursiveVisitorBase] for details.
- *
- * The result of visiting an expression depends on the set of overridden methods.
- * The visitors are applied in the following order and the first non-empty result is taken.
- * 1. Specific visitor, e.g. specific visit for [KEqExpr].
- * 2. Generic visitor, e.g. [visitApp] or [visitExpr].
- * 3. Default visitor [visitExprAfterVisitedDefault].
  * */
 abstract class KNonRecursiveVisitor<V : Any>(
     override val ctx: KContext
@@ -643,25 +637,34 @@ abstract class KNonRecursiveVisitor<V : Any>(
         visitExprAfterVisitedDefault(expr, expr.body, ::visitExpr)
 
     /**
-     * 1. Invoke [visitDefault] on the original expression.
-     * If it returns non-empty result, return this result and don't process dependencies.
-     * Note: we have no special visit for current expression and default visit is provided.
-     *
-     * 2. We have no special or default visit for current expression.
-     * Visit [dependencies] and merge their results.
+     * 1. Visit [dependencies] and merge their results.
+     * 2. Visit [expr] with generic visitor [visitDefault].
+     * Merge result with dependencies visit results.
+     * 3. If merged result is empty return [defaultValue].
      * */
     inline fun <E : KExpr<*>> visitExprAfterVisitedDefault(
         expr: E,
         dependencies: List<KExpr<*>>,
         visitDefault: (E) -> KExprVisitResult<V>
-    ): KExprVisitResult<V> {
+    ): KExprVisitResult<V> = visitExprAfterVisited(expr, dependencies) { visitedDependencies ->
         val defaultRes = visitDefault(expr)
-        if (defaultRes.isNotEmpty) {
+        if (defaultRes.dependencyVisitRequired) {
             return defaultRes
         }
 
-        return visitExprAfterVisited(expr, dependencies) { visitedDependencies ->
-            visitedDependencies.reduceOrNull(::mergeResults) ?: defaultValue(expr)
+        val dependenciesResults = visitedDependencies.reduceOrNull(::mergeResults)
+        if (dependenciesResults == null) {
+            if (defaultRes.hasResult) {
+                defaultRes.result
+            } else {
+                defaultValue(expr)
+            }
+        } else {
+            if (defaultRes.hasResult) {
+                mergeResults(dependenciesResults, defaultRes.result)
+            } else {
+                dependenciesResults
+            }
         }
     }
 
@@ -687,13 +690,14 @@ abstract class KNonRecursiveVisitor<V : Any>(
         expr: E,
         dependency: KExpr<*>,
         visitDefault: (E) -> KExprVisitResult<V>
-    ): KExprVisitResult<V> {
+    ): KExprVisitResult<V> = visitExprAfterVisited(expr, dependency) { dr ->
         val defaultRes = visitDefault(expr)
-        if (defaultRes.isNotEmpty) {
+        if (defaultRes.dependencyVisitRequired) {
             return defaultRes
         }
-
-        return visitExprAfterVisited(expr, dependency) { dr ->
+        if (defaultRes.hasResult) {
+            mergeResults(dr, defaultRes.result)
+        } else {
             dr
         }
     }
@@ -706,14 +710,17 @@ abstract class KNonRecursiveVisitor<V : Any>(
         dependency0: KExpr<*>,
         dependency1: KExpr<*>,
         visitDefault: (E) -> KExprVisitResult<V>
-    ): KExprVisitResult<V> {
+    ): KExprVisitResult<V> = visitExprAfterVisited(expr, dependency0, dependency1) { dr0, dr1 ->
         val defaultRes = visitDefault(expr)
-        if (defaultRes.isNotEmpty) {
+        if (defaultRes.dependencyVisitRequired) {
             return defaultRes
         }
 
-        return visitExprAfterVisited(expr, dependency0, dependency1) { dr0, dr1 ->
-            mergeResults(dr0, dr1)
+        val dependencyResults = mergeResults(dr0, dr1)
+        if (defaultRes.hasResult) {
+            mergeResults(dependencyResults, defaultRes.result)
+        } else {
+            dependencyResults
         }
     }
 
@@ -727,14 +734,17 @@ abstract class KNonRecursiveVisitor<V : Any>(
         dependency1: KExpr<*>,
         dependency2: KExpr<*>,
         visitDefault: (E) -> KExprVisitResult<V>
-    ): KExprVisitResult<V> {
+    ): KExprVisitResult<V> = visitExprAfterVisited(expr, dependency0, dependency1, dependency2) { dr0, dr1, dr2 ->
         val defaultRes = visitDefault(expr)
-        if (defaultRes.isNotEmpty) {
+        if (defaultRes.dependencyVisitRequired) {
             return defaultRes
         }
 
-        return visitExprAfterVisited(expr, dependency0, dependency1, dependency2) { dr0, dr1, dr2 ->
-            mergeResults(mergeResults(dr0, dr1), dr2)
+        val dependencyResults = mergeResults(mergeResults(dr0, dr1), dr2)
+        if (defaultRes.hasResult) {
+            mergeResults(dependencyResults, defaultRes.result)
+        } else {
+            dependencyResults
         }
     }
 
@@ -749,16 +759,20 @@ abstract class KNonRecursiveVisitor<V : Any>(
         dependency2: KExpr<*>,
         dependency3: KExpr<*>,
         visitDefault: (E) -> KExprVisitResult<V>
-    ): KExprVisitResult<V> {
-        val defaultRes = visitDefault(expr)
-        if (defaultRes.isNotEmpty) {
-            return defaultRes
-        }
+    ): KExprVisitResult<V> =
+        visitExprAfterVisited(expr, dependency0, dependency1, dependency2, dependency3) { dr0, dr1, dr2, dr3 ->
+            val defaultRes = visitDefault(expr)
+            if (defaultRes.dependencyVisitRequired) {
+                return defaultRes
+            }
 
-        return visitExprAfterVisited(expr, dependency0, dependency1, dependency2, dependency3) { dr0, dr1, dr2, dr3 ->
-            mergeResults(mergeResults(dr0, dr1), mergeResults(dr2, dr3))
+            val dependencyResults = mergeResults(mergeResults(dr0, dr1), mergeResults(dr2, dr3))
+            if (defaultRes.hasResult) {
+                mergeResults(dependencyResults, defaultRes.result)
+            } else {
+                dependencyResults
+            }
         }
-    }
 
     /**
      * Specialized version of [visitExprAfterVisitedDefault] for expression with five arguments.
@@ -772,16 +786,22 @@ abstract class KNonRecursiveVisitor<V : Any>(
         d3: KExpr<*>,
         d4: KExpr<*>,
         visitDefault: (E) -> KExprVisitResult<V>
-    ): KExprVisitResult<V> {
+    ): KExprVisitResult<V> = visitExprAfterVisited(
+        expr, d0, d1, d2, d3, d4
+    ) { dr0, dr1, dr2, dr3, dr4 ->
         val defaultRes = visitDefault(expr)
-        if (defaultRes.isNotEmpty) {
+        if (defaultRes.dependencyVisitRequired) {
             return defaultRes
         }
 
-        return visitExprAfterVisited(
-            expr, d0, d1, d2, d3, d4
-        ) { dr0, dr1, dr2, dr3, dr4 ->
-            mergeResults(mergeResults(mergeResults(dr0, dr1), mergeResults(dr2, dr3)), dr4)
+        val dependencyResults = mergeResults(
+            mergeResults(mergeResults(dr0, dr1), mergeResults(dr2, dr3)),
+            dr4
+        )
+        if (defaultRes.hasResult) {
+            mergeResults(dependencyResults, defaultRes.result)
+        } else {
+            dependencyResults
         }
     }
 }
