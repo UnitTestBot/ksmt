@@ -1,37 +1,45 @@
 package io.ksmt.expr.rewrite.simplify
 
 import io.ksmt.KContext
-import io.ksmt.expr.KExistentialQuantifier
-import io.ksmt.expr.KExpr
 import io.ksmt.solver.z3.KZ3SMTLibParser
-import io.ksmt.sort.KBoolSort
 import kotlin.test.Test
 
 class BvQETest {
     private val ctx = KContext()
 
     @Test
-    fun mainTest() {
+    fun simplestTest() {
+        val formula =
+            """
+            (declare-fun y () (_ BitVec 4))
+            (assert  (exists ((x (_ BitVec 4))) (bvult x y)))
+            """
+        val assertions = KZ3SMTLibParser(ctx).parse(formula)
+        val qfAssertions = quantifierElimination(ctx, assertions)
+        println(qfAssertions)
+    }
 
+    @Test
+    fun linTest() {
         val formula =
             """
             (declare-fun y () (_ BitVec 4))
             (assert  (exists ((x (_ BitVec 4))) (not (not (bvult (bvmul x #b0111) y)))))
             (assert  (bvult (bvnot y) #b1000))
             """
-
         val assertions = KZ3SMTLibParser(ctx).parse(formula)
+        val qfAssertions = quantifierElimination(ctx, assertions)
+        println(qfAssertions)
+    }
 
-        val boundAssertions = arrayListOf<KExistentialQuantifier>()
-        val notAssertions = arrayListOf<Boolean>()
-        val freeAssertions = arrayListOf<KExpr<KBoolSort>>()
-
-        qePreprocess(ctx, assertions, boundAssertions, notAssertions, freeAssertions)
-        var qfAssertions = arrayListOf<KExpr<KBoolSort>>()
-        for (assert in boundAssertions)
-        {
-            val qfAssertion = qeProcess(ctx, assert)
-            qfAssertions.add(qfAssertion)
-        }
+    @Test
+    fun expTest() {
+        val formula =
+            """
+            (declare-fun y () (_ BitVec 4))
+            (assert (exists ((x (_ BitVec 4))) (or (bvult (bvshl #b0001 x) y) (= (bvshl #b0001 x) y))))
+            """
+        val assertions = KZ3SMTLibParser(ctx).parse(formula)
+        quantifierElimination(ctx, assertions)
     }
 }
