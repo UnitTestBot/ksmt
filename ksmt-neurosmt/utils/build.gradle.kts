@@ -13,6 +13,8 @@ repositories {
 dependencies {
     implementation(project(":ksmt-core"))
     implementation(project(":ksmt-z3"))
+
+    implementation("me.tongfei:progressbar:0.9.4")
 }
 
 application {
