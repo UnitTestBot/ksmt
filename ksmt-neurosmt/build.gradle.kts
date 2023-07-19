@@ -1,6 +1,5 @@
 plugins {
     id("io.ksmt.ksmt-base")
-    id("com.github.johnrengelman.shadow") version "7.1.2"
 }
 
 repositories {
@@ -9,4 +8,5 @@ repositories {
 
 dependencies {
     implementation(project(":ksmt-core"))
+    // implementation(project(":ksmt-z3"))
 }

@@ -11,28 +11,19 @@ repositories {
 }
 
 dependencies {
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
-
     implementation(project(":ksmt-core"))
     implementation(project(":ksmt-z3"))
-    implementation(project(":ksmt-neurosmt"))
-    implementation(project(":ksmt-neurosmt:utils"))
-}
-
-tasks.getByName<Test>("test") {
-    useJUnitPlatform()
 }
 
 application {
-    mainClass.set("MainKt")
+    mainClass.set("io.ksmt.solver.neurosmt.smt2converter.SMT2ConverterKt")
 }
 
 tasks {
     val fatJar = register<Jar>("fatJar") {
         dependsOn.addAll(listOf("compileJava", "compileKotlin", "processResources"))
 
-        archiveFileName.set("sandbox.jar")
+        archiveFileName.set("convert-smt2.jar")
         destinationDirectory.set(File("."))
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
