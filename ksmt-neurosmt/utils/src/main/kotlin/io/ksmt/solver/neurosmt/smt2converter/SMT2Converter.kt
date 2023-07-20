@@ -46,7 +46,7 @@ fun main(args: Array<String>) {
                 return@forEach
             }
 
-            val outputStream = FileOutputStream("$outputRoot/$answer/$curIdx")
+            val outputStream = FileOutputStream("$outputRoot/$curIdx-${answer.toString().lowercase()}")
             outputStream.write("; $it\n".encodeToByteArray())
 
             val extractor = FormulaGraphExtractor(ctx, formula, outputStream)
