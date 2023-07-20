@@ -18,7 +18,7 @@ fun main(args: Array<String>) {
     val files = Files.walk(Path.of(inputRoot)).filter { it.isRegularFile() }
 
     var ok = 0; var fail = 0
-    var sat = 0; var unsat = 0; var unknown = 0
+    var sat = 0; var unsat = 0; var skipped = 0
 
     val ctx = KContext()
 
@@ -30,32 +30,39 @@ fun main(args: Array<String>) {
 
         val answer = getAnswerForTest(it)
 
-        when (answer) {
-            KSolverStatus.SAT -> sat++
-            KSolverStatus.UNSAT -> unsat++
-            KSolverStatus.UNKNOWN -> {
-                unknown++
-                return@forEach
-            }
+        if (answer == KSolverStatus.UNKNOWN) {
+            skipped++
+            return@forEach
         }
 
         with(ctx) {
             val formula = try {
+                val assertList = KZ3SMTLibParser(ctx).parse(it)
                 ok++
-                mkAnd(KZ3SMTLibParser(ctx).parse(it))
+                mkAnd(assertList)
             } catch (e: KSMTLibParseException) {
                 fail++
+                e.printStackTrace()
                 return@forEach
             }
 
-            val extractor = FormulaGraphExtractor(ctx, formula, FileOutputStream("$outputRoot/$answer/$curIdx"))
+            val outputStream = FileOutputStream("$outputRoot/$answer/$curIdx")
+            outputStream.write("; $it\n".encodeToByteArray())
+
+            val extractor = FormulaGraphExtractor(ctx, formula, outputStream)
             extractor.extractGraph()
+        }
+
+        when (answer) {
+            KSolverStatus.SAT -> sat++
+            KSolverStatus.UNSAT -> unsat++
+            else -> { /* can't happen */ }
         }
 
         curIdx++
     }
 
     println()
-    println("parsed: $ok; failed: $fail")
-    println("sat: $sat; unsat: $unsat; unknown: $unknown")
+    println("processed: $ok; failed: $fail")
+    println("sat: $sat; unsat: $unsat; skipped: $skipped")
 }
