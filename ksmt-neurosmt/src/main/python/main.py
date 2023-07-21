@@ -44,7 +44,7 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
 
     model.train()
-    for epoch in trange(100):
+    for epoch in trange(50):
         for batch in tqdm(tr):
             optimizer.zero_grad()
             out = model(batch)

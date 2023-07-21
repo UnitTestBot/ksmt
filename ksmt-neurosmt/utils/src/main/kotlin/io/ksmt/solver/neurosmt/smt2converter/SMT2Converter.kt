@@ -20,7 +20,7 @@ fun main(args: Array<String>) {
     var ok = 0; var fail = 0
     var sat = 0; var unsat = 0; var skipped = 0
 
-    val ctx = KContext()
+    val ctx = KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY)
 
     var curIdx = 0
     ProgressBar.wrap(files, "converting smt2 files").forEach {
@@ -38,8 +38,20 @@ fun main(args: Array<String>) {
         with(ctx) {
             val formula = try {
                 val assertList = KZ3SMTLibParser(ctx).parse(it)
-                ok++
-                mkAnd(assertList)
+                when (assertList.size) {
+                    0 -> {
+                        skipped++
+                        return@forEach
+                    }
+                    1 -> {
+                        ok++
+                        assertList[0]
+                    }
+                    else -> {
+                        ok++
+                        mkAnd(assertList)
+                    }
+                }
             } catch (e: KSMTLibParseException) {
                 fail++
                 e.printStackTrace()

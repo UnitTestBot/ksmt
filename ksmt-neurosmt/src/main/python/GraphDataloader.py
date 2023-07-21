@@ -17,13 +17,16 @@ from GraphReader import read_graph_from_file
 from utils import train_val_test_indices
 
 
+BATCH_SIZE = 32
+
+
 class GraphDataset(Dataset):
     def __init__(self, node_sets, edge_sets, labels):
         assert(len(node_sets) == len(edge_sets) and len(node_sets) == len(labels))
 
         self.graphs = [Graph(
             x=torch.tensor(nodes, dtype=torch.float),
-            edge_index=torch.tensor(edges).T if len(edges) else torch.tensor([[], []]),
+            edge_index=torch.tensor(edges).T,
             y=torch.tensor([[label]], dtype=torch.float)
         ) for nodes, edges, label in zip(node_sets, edge_sets, labels)]
 
@@ -44,6 +47,7 @@ def load_data(path_to_data):
             operators, edges = read_graph_from_file(cur_path)
 
             if len(edges) == 0:
+                print(f"w: formula with no edges; file '{cur_path}'")
                 continue
 
             all_operators.append(operators)
@@ -99,7 +103,7 @@ def load_data(path_to_data):
     test_ds = GraphDataset(test_operators, test_edges, test_labels)
 
     return (
-        DataLoader(train_ds.graphs, batch_size=8),
-        DataLoader(val_ds.graphs, batch_size=8),
-        DataLoader(test_ds.graphs, batch_size=8)
+        DataLoader(train_ds.graphs, batch_size=BATCH_SIZE),
+        DataLoader(val_ds.graphs, batch_size=BATCH_SIZE),
+        DataLoader(test_ds.graphs, batch_size=BATCH_SIZE)
     )
