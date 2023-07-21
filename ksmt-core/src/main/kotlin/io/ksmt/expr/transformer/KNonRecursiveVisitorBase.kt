@@ -70,11 +70,6 @@ abstract class KNonRecursiveVisitorBase<V : Any> : KVisitor<KExprVisitResult<V>>
         visitResult(expr) ?: error("Expr $expr was not properly visited")
 
     override fun <T : KSort> apply(expr: KExpr<T>): KExpr<T> {
-        val cachedResult = visitResult(expr)
-        if (cachedResult != null) {
-            return expr
-        }
-
         val initialStackSize = exprStack.size
         try {
             exprStack.add(expr)
