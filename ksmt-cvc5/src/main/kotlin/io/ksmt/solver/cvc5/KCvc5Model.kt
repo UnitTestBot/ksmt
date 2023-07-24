@@ -93,6 +93,10 @@ open class KCvc5Model(
         KFuncInterpVarsFree(decl = decl, entries = emptyList(), default = interp)
     }
 
+    /**
+     * In case of [KCvc5ForkingSolver.model] call, uninterpreted sort universe extends values of whole forking hierarchy
+     * @see KCvc5Context.getRegisteredSortValues
+     */
     override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KUninterpretedSortValue>? =
         getUninterpretedSortContext(sort).getSortUniverse()
 
