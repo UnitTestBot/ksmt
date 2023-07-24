@@ -17,24 +17,26 @@ def get_vertex_type(name):
     return VertexType.APP
 
 
-def process_line(line, v, operators, edges):
+def process_line(line, v, operators, edges, depth):
     name, info = line.split(";")
     info = info.strip()
     vertex_type = get_vertex_type(name)
+    depth.append(0)
+    assert (len(depth) == v + 1)
 
     if vertex_type == VertexType.APP:
         operators.append(name)
 
         children = map(int, info.split(" "))
         for u in children:
-            edges.append([v, u])
-
+            edges.append([u, v])
+            depth[v] = max(depth[v], depth[u] + 1)
     else:
         operators.append(name + ";" + info)
 
 
 def read_graph_from_file(path):
-    operators, edges = [], []
+    operators, edges, depth = [], [], []
 
     with open(path, "r") as inf:
         v = 0
@@ -45,7 +47,7 @@ def read_graph_from_file(path):
                 continue
 
             try:
-                process_line(line, v, operators, edges)
+                process_line(line, v, operators, edges, depth)
             except Exception as e:
                 print(e, "\n")
                 print(path, "\n")
@@ -54,4 +56,4 @@ def read_graph_from_file(path):
 
             v += 1
 
-    return operators, edges
+    return operators, edges, max(depth)
