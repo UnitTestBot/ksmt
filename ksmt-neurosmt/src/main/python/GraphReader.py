@@ -35,25 +35,32 @@ def process_line(line, v, operators, edges, depth):
         operators.append(name + ";" + info)
 
 
-def read_graph_from_file(path):
+def read_graph_from_file(inf, max_depth):
     operators, edges, depth = [], [], []
 
-    with open(path, "r") as inf:
-        v = 0
-        for line in inf.readlines():
-            line = line.strip()
+    v = 0
+    for line in inf.readlines():
+        line = line.strip()
 
-            if line.startswith(";"):
-                continue
+        if line.startswith(";"):
+            continue
 
-            try:
-                process_line(line, v, operators, edges, depth)
-            except Exception as e:
-                print(e, "\n")
-                print(path, "\n")
-                print(v, line, "\n")
-                raise e
+        try:
+            process_line(line, v, operators, edges, depth)
+        except Exception as e:
+            print(e, "\n")
+            print(inf.name, "\n")
+            print(v, line, "\n")
+            raise e
 
-            v += 1
+        if depth[v] > max_depth:
+            return None, None, depth[v]
+
+        v += 1
 
     return operators, edges, max(depth)
+
+
+def read_graph_by_path(path, max_depth):
+    with open(path, "r") as inf:
+        return read_graph_from_file(inf, max_depth)

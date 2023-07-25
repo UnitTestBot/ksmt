@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import sys
-import os
+import os; os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 import time
 
 from tqdm import tqdm, trange
@@ -23,6 +23,12 @@ from torch.nn import Linear, Parameter
 from torch_geometric.nn import MessagePassing
 from torch_geometric.utils import add_self_loops, degree
 
+from Encoder import Encoder
+from Decoder import Decoder
+from Model import Model
+
+
+"""
 class GCNConv1(MessagePassing):
     def __init__(self, in_channels, out_channels):
         super().__init__(aggr='add', flow="source_to_target")  # "Add" aggregation (Step 5).
@@ -89,14 +95,62 @@ class GCN(torch.nn.Module):
         x = self.conv2(x, edge_index)
 
         return x
+"""
 
 
 if __name__ == "__main__":
     tr, va, te = load_data(sys.argv[1])
-    for batch in tr:
-        print(batch.num_graphs, batch)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = Model().to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
+
+    for epoch in trange(100):
+        model.train()
+        for batch in tqdm(tr):
+            optimizer.zero_grad()
+            batch = batch.to(device)
+
+            out = model(batch)
+            out = out[batch.ptr[:-1]]
+
+            loss = F.binary_cross_entropy_with_logits(out, batch.y)
+            loss.backward()
+
+            optimizer.step()
+
+        model.eval()
+        for batch in tqdm(va):
+
+
+            with torch.no_grad():
+                batch = batch.to(device)
+
+                out = model(batch)
+                out = out[batch.ptr[:-1]]
+                out = F.sigmoid(out)
+                print(out)
+                #loss = F.binary_cross_entropy_with_logits(out, batch.y)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    #for batch in tr:
+    #    print(batch.num_graphs, batch)
         #print(batch.ptr)
 
+    """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = GCN().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
@@ -114,6 +168,7 @@ if __name__ == "__main__":
             #loss.backward()
             #optimizer.step()
 
+    """
 
     #print(all_edges, all_expressions)
     #print("\n\n\nFINISHED\n\n\n")
