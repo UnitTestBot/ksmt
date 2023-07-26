@@ -121,7 +121,7 @@ With KSMT portfolio solving, you can run multiple solvers in parallel on the sam
 For detailed instructions on running multiple solvers, see [Advanced usage](advanced-usage).
 
 ---
-## Running solvers in a separate processes
+## Running solvers in separate processes
 
 Most of the SMT solvers are research projects — they are implemented via native libraries and are sometimes not 
 production ready:
