@@ -17,7 +17,7 @@ nav_order: 1
 > * [Solver-agnostic formula representation](#solver-agnostic-formula-representation) and easy-to-use [DSL](#kotlin-based-dsl-for-smt-formulas)
 > * Utilities to [simplify and transform](#utilities-to-simplify-and-transform-expressions) your expressions
 > * Switching between solvers and support for [portfolio mode](#using-multiple-solvers-portfolio-mode)
-> * Running solvers in a [separate process](#running-solvers-in-a-separate-processes) to reduce timeout-related crashes
+> * Running solvers in a [separate process](#running-solvers-in-separate-processes) to reduce timeout-related crashes
 > * Streamlined [solver delivery](#ksmt-distribution) with no need for building a solver or implementing JVM bindings
 
 ---
