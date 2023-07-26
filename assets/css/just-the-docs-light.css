@@ -582,6 +582,10 @@ template {
   display: none;
 }
 
+:root {
+  color-scheme: light;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -1452,8 +1456,8 @@ h6,
   text-align: right !important;
 }
 
-.label,
-.label-blue {
+.label:not(g),
+.label-blue:not(g) {
   display: inline-block;
   padding: 0.16em 0.56em;
   margin-right: 0.5rem;
@@ -1466,25 +1470,25 @@ h6,
   border-radius: 12px;
 }
 @media (min-width: 31.25rem) {
-  .label,
-  .label-blue {
+  .label:not(g),
+  .label-blue:not(g) {
     font-size: 0.75rem !important;
   }
 }
 
-.label-green {
+.label-green:not(g) {
   background-color: #009c7b;
 }
 
-.label-purple {
+.label-purple:not(g) {
   background-color: #5e41d0;
 }
 
-.label-red {
+.label-red:not(g) {
   background-color: #e94c4c;
 }
 
-.label-yellow {
+.label-yellow:not(g) {
   color: #44434d;
   background-color: #f7d12e;
 }

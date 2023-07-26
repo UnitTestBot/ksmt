@@ -154,11 +154,11 @@
     "relUrl": "/#using-multiple-solvers-portfolio-mode"
   },"22": {
     "doc": "Overview",
-    "title": "Running solvers in a separate processes",
+    "title": "Running solvers in separate processes",
     "content": "Most of the SMT solvers are research projects — they are implemented via native libraries and are sometimes not production ready: . | they may ignore timeouts — they sometimes hang in a long-running operation, and you cannot interrupt it; | they may suddenly crash interrupting the entire process — because of a pointer issue, for example. | . KSMT runs each solver in a separate process, which adds to stability of your application and provides support for portfolio mode. ",
-    "url": "/#running-solvers-in-a-separate-processes",
+    "url": "/#running-solvers-in-separate-processes",
     
-    "relUrl": "/#running-solvers-in-a-separate-processes"
+    "relUrl": "/#running-solvers-in-separate-processes"
   },"23": {
     "doc": "Overview",
     "title": "KSMT distribution",
