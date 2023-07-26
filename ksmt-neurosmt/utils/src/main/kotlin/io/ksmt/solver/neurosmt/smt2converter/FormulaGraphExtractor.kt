@@ -1,12 +1,12 @@
 package io.ksmt.solver.neurosmt.smt2converter
 
 import io.ksmt.KContext
-import io.ksmt.expr.KApp
-import io.ksmt.expr.KConst
-import io.ksmt.expr.KExpr
-import io.ksmt.expr.KInterpretedValue
+import io.ksmt.decl.KBitVecCustomSizeValueDecl
+import io.ksmt.expr.*
 import io.ksmt.expr.transformer.KNonRecursiveTransformer
 import io.ksmt.sort.KBoolSort
+import io.ksmt.sort.KBvCustomSizeSort
+import io.ksmt.sort.KBvSort
 import io.ksmt.sort.KSort
 import java.io.OutputStream
 import java.util.IdentityHashMap
@@ -47,11 +47,19 @@ class FormulaGraphExtractor(
     }
 
     fun <T : KSort> writeSymbolicVariable(symbol: KConst<T>) {
-        writer.write("SYMBOLIC; ${symbol.sort}\n")
+        when (symbol.sort) {
+            is KBoolSort -> writer.write("SYMBOLIC; Bool\n")
+            is KBvSort -> writer.write("SYMBOLIC; BitVec\n")
+            else -> error("unknown symbolic sort: ${symbol.sort}")
+        }
     }
 
     fun <T : KSort> writeValue(value: KInterpretedValue<T>) {
-        writer.write("VALUE; ${value.decl.sort}\n")
+        when (value.decl.sort) {
+            is KBoolSort -> writer.write("VALUE; Bool\n")
+            is KBvSort -> writer.write("VALUE; BitVec\n")
+            else -> error("unknown value sort: ${value.decl.sort}")
+        }
     }
 
     fun <T : KSort, A : KSort> writeApp(expr: KApp<T, A>) {

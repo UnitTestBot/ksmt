@@ -2,6 +2,8 @@
 
 import sys
 import os; os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+
+import numpy as np
 import time
 
 from tqdm import tqdm, trange
@@ -26,6 +28,8 @@ from torch_geometric.utils import add_self_loops, degree
 from Encoder import Encoder
 from Decoder import Decoder
 from Model import Model
+
+from sklearn.metrics import accuracy_score, classification_report
 
 
 """
@@ -103,7 +107,28 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = Model().to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
+    optimizer = torch.optim.Adam([p for p in model.parameters() if p is not None and p.requires_grad], lr=1e-4)
+
+    def calc_grad_norm():
+        grads = [
+            p.grad.detach().flatten() for p in model.parameters() if p.grad is not None and p.requires_grad
+        ]
+        return torch.cat(grads).norm().item()
+
+    for p in model.parameters():
+        assert (p.requires_grad)
+
+    criterion = nn.BCEWithLogitsLoss()
+
+    """
+    for i, batch in enumerate(tr):
+        print(batch.y)
+
+        if i >= 1000:
+            break
+
+    print(flush=True)
+    """
 
     for epoch in trange(100):
         model.train()
@@ -115,22 +140,56 @@ if __name__ == "__main__":
             out = out[batch.ptr[:-1]]
 
             loss = F.binary_cross_entropy_with_logits(out, batch.y)
+            #loss = criterion(out, batch.y)
             loss.backward()
 
             optimizer.step()
 
-        model.eval()
-        for batch in tqdm(va):
+        print("\n", flush=True)
+        print(f"grad norm: {calc_grad_norm()}")
 
+        def validate(dl):
+            model.eval()
 
+            #all_ans, correct_ans = 0, 0
+            answers, targets = torch.tensor([]).to(device), torch.tensor([]).to(device)
+            losses = []
             with torch.no_grad():
-                batch = batch.to(device)
+                for batch in tqdm(dl):
+                    batch = batch.to(device)
 
-                out = model(batch)
-                out = out[batch.ptr[:-1]]
-                out = F.sigmoid(out)
-                print(out)
-                #loss = F.binary_cross_entropy_with_logits(out, batch.y)
+                    out = model(batch)
+                    out = out[batch.ptr[:-1]]
+                    loss = F.binary_cross_entropy_with_logits(out, batch.y)
+
+                    out = F.sigmoid(out)
+                    out = (out > 0.5)
+
+                    answers = torch.cat((answers, out))
+                    targets = torch.cat((targets, batch.y.to(torch.int).to(torch.bool)))
+                    losses.append(loss.item())
+
+                    #all_ans += len(batch.y)
+                    #out: torch.Tensor = (batch.y.to(torch.int) == out.to(torch.bool))
+                    #correct_ans += out.int().sum().item()
+
+            answers = torch.flatten(answers).detach().cpu().numpy()
+            targets = torch.flatten(targets).detach().cpu().numpy()
+
+            #print(f"\n{correct_ans / all_ans}")
+            print(flush=True)
+            print(f"mean loss: {np.mean(losses)}")
+            print(f"acc: {accuracy_score(targets, answers)}", flush=True)
+            print(classification_report(targets, answers, digits=3, zero_division=0.0), flush=True)
+
+        print()
+        print("train:")
+        validate(tr)
+        print("val:")
+        validate(va)
+        print()
+
+
 
 
 

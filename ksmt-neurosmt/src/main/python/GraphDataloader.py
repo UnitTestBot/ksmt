@@ -17,8 +17,9 @@ from GraphReader import read_graph_by_path
 from utils import train_val_test_indices, align_sat_unsat_sizes
 
 
-BATCH_SIZE = 1  # 32
+BATCH_SIZE = 1
 MAX_FORMULA_DEPTH = 2408
+NUM_WORKERS = 4
 
 
 class GraphDataset(Dataset):
@@ -57,18 +58,7 @@ def load_data(path_to_data):
             else:
                 raise Exception(f"strange file path '{cur_path}'")
 
-    if len(sat_paths) > 5000:
-        sat_paths = sat_paths[:5000]
-
-    if len(unsat_paths) > 5000:
-        sat_paths = unsat_paths[:5000]
-
-    np.random.seed(24)
-    sat_paths, unsat_paths = align_sat_unsat_sizes(sat_paths, unsat_paths)
-
-    graph_data = []
-
-    def process_paths(paths, label):
+    def process_paths(paths, label, data):
         for path in tqdm(paths):
             operators, edges, depth = read_graph_by_path(path, max_depth=MAX_FORMULA_DEPTH)
 
@@ -79,10 +69,21 @@ def load_data(path_to_data):
                 print(f"w: formula with no edges; file '{path}'")
                 continue
 
-            graph_data.append((operators, edges, label, depth))
+            data.append((operators, edges, label, depth))
 
-    process_paths(sat_paths, 1)
-    process_paths(unsat_paths, 0)
+    sat_data, unsat_data = [], []
+    process_paths(sat_paths, 1, sat_data)
+    process_paths(unsat_paths, 0, unsat_data)
+
+    np.random.seed(24)
+    sat_data, unsat_data = align_sat_unsat_sizes(sat_data, unsat_data)
+
+    graph_data = sat_data + unsat_data
+    del sat_data, unsat_data
+    gc.collect()
+
+    print("\nstats:")
+    print(f"overall: {sum(it[2] for it in graph_data) / len(graph_data)} | {len(graph_data)}")
 
     """
     assert (
@@ -97,6 +98,11 @@ def load_data(path_to_data):
     train_data = [graph_data[i] for i in train_ind]
     val_data = [graph_data[i] for i in val_ind]
     test_data = [graph_data[i] for i in test_ind]
+
+    print(f"train: {sum(it[2] for it in train_data) / len(train_data)} | {len(train_data)}")
+    print(f"val:   {sum(it[2] for it in val_data) / len(val_data)} | {len(val_data)}")
+    print(f"test:  {sum(it[2] for it in test_data) / len(test_data)} | {len(test_data)}")
+    print(flush=True)
 
     """
     train_operators = [all_operators[i] for i in train_ind]
@@ -170,7 +176,7 @@ def load_data(path_to_data):
     #test_ds = GraphDataset(test_operators, test_edges, test_labels, test_depths)
 
     return (
-        DataLoader(train_ds.graphs, batch_size=BATCH_SIZE),
-        DataLoader(val_ds.graphs, batch_size=BATCH_SIZE),
-        DataLoader(test_ds.graphs, batch_size=BATCH_SIZE)
+        DataLoader(train_ds.graphs, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS),
+        DataLoader(val_ds.graphs, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS),
+        DataLoader(test_ds.graphs, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS)
     )
