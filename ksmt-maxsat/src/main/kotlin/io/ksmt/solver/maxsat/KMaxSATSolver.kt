@@ -22,8 +22,8 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
      *
      * @see checkMaxSAT
      * */
-    fun assertSoft(expr: KExpr<KBoolSort>, weight: Int) {
-        require(weight > 0) { "Soft constraint weight cannot be equal to $weight as it must be greater than 0" }
+    fun assertSoft(expr: KExpr<KBoolSort>, weight: UInt) {
+        require(weight > 0u) { "Soft constraint weight cannot be equal to $weight as it must be greater than 0" }
 
         val softConstraint = SoftConstraint(expr, weight)
         softConstraints.add(softConstraint)
@@ -131,7 +131,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
      * @return a pair of minimum weight and a list of unsat core soft constraints with minimum weight.
      */
     private fun splitUnsatCore(formula: MutableList<SoftConstraint>, unsatCore: List<KExpr<KBoolSort>>)
-    : Pair<Int, List<SoftConstraint>> {
+    : Pair<UInt, List<SoftConstraint>> {
         // Filters soft constraints from the unsat core.
         val unsatCoreSoftConstraints =
             formula.filter { x -> unsatCore.any { x.expression.internEquals(it) } }
@@ -203,7 +203,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         formula: MutableList<SoftConstraint>,
         unsatCore: List<SoftConstraint>,
         iter: Int,
-        weight: Int,
+        weight: UInt,
     ): Pair<MutableList<SoftConstraint>, List<KExpr<KBoolSort>>> = with(ctx) {
         val literalsToReify = mutableListOf<KExpr<KBoolSort>>()
 
@@ -212,7 +212,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
                 formula.remove(coreElement)
 
                 val coreElementExpr = coreElement.expression
-                val literalToReify = coreElementExpr.sort.mkConst("*$iter$index")
+                val literalToReify = coreElementExpr.sort.mkConst("*$iter:$index")
 
                 val constraintToReify = coreElementExpr eq !literalToReify
 
@@ -240,7 +240,7 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         formula: MutableList<SoftConstraint>,
         literalsToReify: List<KExpr<KBoolSort>>,
         iter: Int,
-        weight: Int,
+        weight: UInt,
     )
     : MutableList<SoftConstraint> = with(ctx) {
         literalsToReify.forEachIndexed { index, literal ->
@@ -248,8 +248,8 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
             if (index < indexLast) {
                 val sort = literal.sort
-                val currentLiteralToReifyDisjunction = sort.mkConst("#$iter$index")
-                val nextLiteralToReifyDisjunction = sort.mkConst("#$iter${index + 1}")
+                val currentLiteralToReifyDisjunction = sort.mkConst("#$iter:$index")
+                val nextLiteralToReifyDisjunction = sort.mkConst("#$iter:${index + 1}")
 
                 val disjunction =
                     when (indexLast - index) {
