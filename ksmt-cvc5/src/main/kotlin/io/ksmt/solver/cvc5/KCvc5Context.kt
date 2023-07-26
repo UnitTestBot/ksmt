@@ -34,14 +34,18 @@ import java.util.TreeMap
 
 class KCvc5Context private constructor(
     private val solver: Solver,
+    val mkExprSolver: Solver,
     private val ctx: KContext,
     parent: KCvc5Context?,
-    isForking: Boolean
+    val isForking: Boolean
 ) : AutoCloseable {
-    constructor(solver: Solver, ctx: KContext, isForking: Boolean = false) : this(solver, ctx, null, isForking)
+    constructor(solver: Solver, mkExprSolver: Solver, ctx: KContext, isForking: Boolean = false)
+        : this(solver, mkExprSolver, ctx, null, isForking)
+
+    constructor(solver: Solver, ctx: KContext, isForking: Boolean = false)
+        : this(solver, solver, ctx, null, isForking)
 
     private var isClosed = false
-    private val isChild = parent != null
 
     private val uninterpretedSortCollector = KUninterpretedSortCollector(this)
     private var exprCurrentLevelCacheRestorer = KCurrentScopeExprCacheRestorer(uninterpretedSortCollector, ctx)
@@ -71,7 +75,12 @@ class KCvc5Context private constructor(
     private val currentAccumulatedScopeExpressions: HashMap<KExpr<*>, Term>
     private val expressions: HashMap<KExpr<*>, Term>
 
-    // we can't use HashMap with Term and Sort (hashcode is not implemented)
+    /**
+     * We can't use HashMap with Term and Sort (hashcode is not implemented)
+     *
+     * Avoid to close cache explicitly due to its sharing between forking hierarchy.
+     * It will be garbage collected on last solver close in forking hierarchy
+     */
     private val cvc5Expressions: TreeMap<Term, KExpr<*>>
     private val sorts: HashMap<KSort, Sort>
     private val cvc5Sorts: TreeMap<Sort, KSort>
@@ -146,11 +155,12 @@ class KCvc5Context private constructor(
     val isActive: Boolean
         get() = !isClosed
 
-    fun fork(solver: Solver): KCvc5Context = KCvc5Context(solver, ctx, this, true).also { forkCtx ->
-        repeat(assertedConstraintLevels.size) {
-            forkCtx.pushAssertionLevel()
+    fun fork(solver: Solver, mkExprSolver: Solver): KCvc5Context =
+        KCvc5Context(solver, mkExprSolver, ctx, this, true).also { forkCtx ->
+            repeat(assertedConstraintLevels.size) {
+                forkCtx.pushAssertionLevel()
+            }
         }
-    }
 
     fun push() {
         declarations.push()
@@ -399,23 +409,11 @@ class KCvc5Context private constructor(
         return converted
     }
 
-
     override fun close() {
         if (isClosed) return
         isClosed = true
 
         currentAccumulatedScopeExpressions.clear()
-
-        if (isChild) {
-            expressions.clear()
-            cvc5Expressions.clear()
-
-            sorts.clear()
-            cvc5Sorts.clear()
-
-            decls.clear()
-            cvc5Decls.clear()
-        }
     }
 
     class KUninterpretedSortCollector(private val cvc5Ctx: KCvc5Context) : KSortVisitor<Unit> {

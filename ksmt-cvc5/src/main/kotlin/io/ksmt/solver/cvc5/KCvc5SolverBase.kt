@@ -21,10 +21,7 @@ abstract class KCvc5SolverBase internal constructor(
     protected val ctx: KContext
 ) : KSolver<KCvc5SolverConfiguration> {
 
-    protected abstract val trackedAssertions: ScopedFrame<TreeMap<Term, KExpr<KBoolSort>>>
-
-    protected open val currentScope: UInt
-        get() = trackedAssertions.currentScope
+    protected abstract val currentScope: UInt
 
     protected val solver = Solver().apply { configureInitially() }
     protected abstract val cvc5Ctx: KCvc5Context
@@ -61,6 +58,9 @@ abstract class KCvc5SolverBase internal constructor(
         cvc5Ctx.assertPendingAxioms(solver)
     }
 
+    protected abstract fun saveTrackedAssertion(track: Term, trackedExpr: KExpr<KBoolSort>)
+    protected abstract fun findTrackedExprByTrack(track: Term): KExpr<KBoolSort>?
+
     override fun assertAndTrack(expr: KExpr<KBoolSort>) = cvc5Try {
         ctx.ensureContextMatch(expr)
 
@@ -69,13 +69,12 @@ abstract class KCvc5SolverBase internal constructor(
         val trackedExpr = with(ctx) { trackVarApp implies expr }
         assert(trackedExpr)
         solver.assertFormula(cvc5TrackVar)
-        trackedAssertions.currentFrame[cvc5TrackVar] = expr
+        saveTrackedAssertion(cvc5TrackVar, expr)
     }
 
     override fun push() = cvc5Try {
         solver.push()
         cvc5Ctx.push()
-        trackedAssertions.push()
     }
 
     override fun pop(n: UInt) = cvc5Try {
@@ -86,7 +85,6 @@ abstract class KCvc5SolverBase internal constructor(
         if (n == 0u) return
         solver.pop(n.toInt())
         cvc5Ctx.pop(n)
-        trackedAssertions.pop(n)
     }
 
     override fun check(timeout: Duration): KSolverStatus = cvc5TryCheck {
@@ -142,9 +140,7 @@ abstract class KCvc5SolverBase internal constructor(
 
         cvc5FullCore.forEach { unsatCoreTerm ->
             lastCvc5Assumptions?.get(unsatCoreTerm)?.also { unsatCore += it }
-                ?: trackedAssertions.find { trackedAssertion ->
-                    trackedAssertion[unsatCoreTerm]?.also { unsatCore += it } != null
-                }
+                ?: findTrackedExprByTrack(unsatCoreTerm)?.also { unsatCore += it }
         }
         return unsatCore
     }
@@ -209,7 +205,7 @@ abstract class KCvc5SolverBase internal constructor(
     }
 
     companion object {
-        init {
+        internal fun ensureCvc5LibLoaded() {
             if (System.getProperty("cvc5.skipLibraryLoad") != "true") {
                 NativeLibraryLoader.load { os ->
                     when (os) {
@@ -220,6 +216,10 @@ abstract class KCvc5SolverBase internal constructor(
                 }
                 System.setProperty("cvc5.skipLibraryLoad", "true")
             }
+        }
+
+        init {
+            ensureCvc5LibLoaded()
         }
     }
 }

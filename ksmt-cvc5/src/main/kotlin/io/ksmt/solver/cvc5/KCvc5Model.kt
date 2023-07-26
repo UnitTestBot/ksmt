@@ -81,14 +81,18 @@ open class KCvc5Model(
         val cvc5InterpArgs = cvc5Interp.getChild(0).getChildren()
         val cvc5FreshVarsInterp = cvc5Interp.substitute(cvc5InterpArgs, cvc5Vars)
 
-        val defaultBody = cvc5FreshVarsInterp.getChild(1).convertExpr<T>()
+        // in case of forking solver, save in cache mkExprSolver's terms
+        val defaultBody = cvc5FreshVarsInterp.getChild(1).let {
+            if (cvc5Ctx.isForking) it.convertExprWithMkExprSolver() else it.convertExpr<T>()
+        }
 
         KFuncInterpWithVars(decl, vars.map { it.decl }, emptyList(), defaultBody)
     }
 
     private fun <T : KSort> constInterp(decl: KDecl<T>, const: Term): KFuncInterp<T> = with(converter) {
         val cvc5Interp = cvc5Ctx.nativeSolver.getValue(const)
-        val interp = cvc5Interp.convertExpr<T>()
+        // in case of forking solver, save in cache mkExprSolver's terms
+        val interp = if (cvc5Ctx.isForking) cvc5Interp.convertExprWithMkExprSolver() else cvc5Interp.convertExpr<T>()
 
         KFuncInterpVarsFree(decl = decl, entries = emptyList(), default = interp)
     }

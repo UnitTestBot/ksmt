@@ -1,11 +1,15 @@
 package io.ksmt.solver.cvc5
 
-interface ScopedFrame<T> {
+internal interface ScopedFrame<T> {
     val currentScope: UInt
     val currentFrame: T
 
     fun flatten(collect: T.(T) -> Unit): T
-    fun find(predicate: (T) -> Boolean): T?
+
+    /**
+     * find value [V] in frame [T], and return it or null
+     */
+    fun <V> find(predicate: (T) -> V?): V?
 
     fun push()
     fun pop(n: UInt = 1u)
@@ -29,7 +33,12 @@ internal class ScopedArrayFrame<T>(
         frames.forEach { newFrame.collect(it) }
     }
 
-    override fun find(predicate: (T) -> Boolean) = frames.find(predicate)
+    override fun <V> find(predicate: (T) -> V?): V? {
+        frames.forEach { frame ->
+            predicate(frame)?.let { return it }
+        }
+        return null
+    }
 
     override fun push() {
         currentFrame = createNewFrame()
@@ -76,9 +85,9 @@ internal class ScopedLinkedFrame<T> private constructor(
         }
     }
 
-    override fun find(predicate: (T) -> Boolean): T? {
+    override fun <V> find(predicate: (T) -> V?): V? {
         forEachReversed { frame ->
-            if (predicate(frame)) return frame
+            predicate(frame)?.let { return it }
         }
         return null
     }

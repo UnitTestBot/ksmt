@@ -1,5 +1,6 @@
 package io.ksmt.solver.cvc5
 
+import io.github.cvc5.Solver
 import io.github.cvc5.Term
 import io.ksmt.KContext
 import io.ksmt.expr.KExpr
@@ -14,34 +15,39 @@ import kotlin.time.Duration
 open class KCvc5ForkingSolver internal constructor(
     ctx: KContext,
     private val manager: KCvc5ForkingSolverManager,
-    parent: KCvc5ForkingSolver?
+    /** store reference on Solver to separate lifetime of native expressions */
+    private val mkExprSolver: Solver,
+    parent: KCvc5ForkingSolver? = null
 ) : KCvc5SolverBase(ctx), KForkingSolver<KCvc5SolverConfiguration>, KSolver<KCvc5SolverConfiguration> {
 
     final override val cvc5Ctx: KCvc5Context
     private val isChild = parent != null
     private var assertionsInitiated = !isChild
 
-    private val _trackedAssertions: ScopedLinkedFrame<TreeMap<Term, KExpr<KBoolSort>>>
-
-    override val trackedAssertions: ScopedFrame<TreeMap<Term, KExpr<KBoolSort>>>
-        get() = _trackedAssertions
-
+    private val trackedAssertions: ScopedLinkedFrame<TreeMap<Term, KExpr<KBoolSort>>>
     private val cvc5Assertions: ScopedLinkedFrame<TreeSet<Term>>
+
+    override val currentScope: UInt
+        get() = trackedAssertions.currentScope
 
     init {
         if (parent != null) {
-            cvc5Ctx = parent.cvc5Ctx.fork(solver)
-            _trackedAssertions = parent._trackedAssertions.fork()
+            cvc5Ctx = parent.cvc5Ctx.fork(solver, this.mkExprSolver)
+            trackedAssertions = parent.trackedAssertions.fork()
             cvc5Assertions = parent.cvc5Assertions.fork()
         } else {
-            cvc5Ctx = KCvc5Context(solver, ctx, true)
-            _trackedAssertions = ScopedLinkedFrame(::TreeMap, ::TreeMap)
+            cvc5Ctx = KCvc5Context(solver, this.mkExprSolver, ctx, true)
+            trackedAssertions = ScopedLinkedFrame(::TreeMap, ::TreeMap)
             cvc5Assertions = ScopedLinkedFrame(::TreeSet, ::TreeSet)
         }
     }
 
     private val config: KCvc5ForkingSolverConfigurationImpl by lazy {
         parent?.config?.fork(solver) ?: KCvc5ForkingSolverConfigurationImpl(solver)
+    }
+
+    init {
+        if (isChild) config // initialize child config
     }
 
     override fun configure(configurator: KCvc5SolverConfiguration.() -> Unit) {
@@ -54,7 +60,7 @@ open class KCvc5ForkingSolver internal constructor(
         if (assertionsInitiated) return
 
         cvc5Assertions.stacked()
-            .zip(_trackedAssertions.stacked())
+            .zip(trackedAssertions.stacked())
             .asReversed()
             .forEachIndexed { scope, (cvc5AssertionFrame, trackedFrame) ->
                 if (scope > 0) solver.push()
@@ -65,6 +71,12 @@ open class KCvc5ForkingSolver internal constructor(
 
         assertionsInitiated = true
     }
+
+    override fun saveTrackedAssertion(track: Term, trackedExpr: KExpr<KBoolSort>) {
+        trackedAssertions.currentFrame[track] = trackedExpr
+    }
+
+    override fun findTrackedExprByTrack(track: Term): KExpr<KBoolSort>? = trackedAssertions.find { it[track] }
 
     override fun assert(expr: KExpr<KBoolSort>): Unit = cvc5Try {
         ctx.ensureContextMatch(expr)
@@ -84,12 +96,14 @@ open class KCvc5ForkingSolver internal constructor(
     override fun push() {
         cvc5Try { ensureAssertionsInitiated() }
         super.push()
+        trackedAssertions.push()
         cvc5Assertions.push()
     }
 
     override fun pop(n: UInt) {
         cvc5Try { ensureAssertionsInitiated() }
         super.pop(n)
+        trackedAssertions.pop(n)
         cvc5Assertions.pop(n)
     }
 
@@ -105,22 +119,9 @@ open class KCvc5ForkingSolver internal constructor(
         return super.checkWithAssumptions(assumptions, timeout)
     }
 
-    override fun unsatCore(): List<KExpr<KBoolSort>> {
-        val cvc5FullCore = cvc5UnsatCore()
-
-        val unsatCore = mutableListOf<KExpr<KBoolSort>>()
-
-        cvc5FullCore.forEach { unsatCoreTerm ->
-            lastCvc5Assumptions?.get(unsatCoreTerm)?.also { unsatCore += it }
-                ?: trackedAssertions.find { trackedAssertion ->
-                    trackedAssertion[unsatCoreTerm]?.let { unsatCore += it; true } ?: false
-                }
-        }
-        return unsatCore
-    }
-
     override fun close() {
         manager.close(this)
-        super.close()
+        solver.close()
+        cvc5Ctx.close()
     }
 }

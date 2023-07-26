@@ -18,7 +18,7 @@ open class KCvc5DeclInternalizer(
         val domainSorts = decl.argSorts.map { it.accept(sortInternalizer) }
         val rangeSort = decl.sort.accept(sortInternalizer)
 
-        cvc5Ctx.nativeSolver.declareFun(
+        cvc5Ctx.mkExprSolver.declareFun(
             decl.name,
             domainSorts.toTypedArray(),
             rangeSort
@@ -29,6 +29,6 @@ open class KCvc5DeclInternalizer(
         cvc5Ctx.addDeclaration(decl)
 
         val sort = decl.sort.accept(sortInternalizer)
-        cvc5Ctx.nativeSolver.mkConst(sort, decl.name)
+        cvc5Ctx.mkExprSolver.mkConst(sort, decl.name)
     }
 }

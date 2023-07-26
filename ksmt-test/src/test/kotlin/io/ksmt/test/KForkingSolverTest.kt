@@ -29,6 +29,9 @@ class KForkingSolverTest {
         @Test
         fun testScopedAssertions() = testScopedAssertions(::mkCvc5ForkingSolver)
 
+        @Test
+        fun testLifeTime() = testLifeTime(::mkCvc5ForkingSolver)
+
         private fun mkCvc5ForkingSolver(ctx: KContext) = KCvc5ForkingSolverManager(ctx).mkForkingSolver()
     }
 
@@ -274,5 +277,27 @@ class KForkingSolverTest {
 
                 }
             }
+        }
+
+    fun testLifeTime(mkSolver: (KContext) -> KForkingSolver<*>): Unit =
+        KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY).use { ctx ->
+            with(ctx) {
+                val parent = mkSolver(ctx)
+                val x by intSort
+                val f = x ge 100.expr
+
+                parent.assert(f)
+                parent.check().also { require(it == KSolverStatus.SAT) }
+
+                val xVal = parent.model().eval(x)
+
+                val fork = parent.fork().fork().fork()
+                parent.close()
+
+                fork.assert(f and (x eq xVal))
+                fork.check().also { assertEquals(KSolverStatus.SAT, it) }
+                assertEquals(fork.model().eval(x), xVal)
+            }
+
         }
 }
