@@ -32,20 +32,24 @@ import io.ksmt.sort.KSortVisitor
 import io.ksmt.sort.KUninterpretedSort
 import java.util.TreeMap
 
-class KCvc5Context private constructor(
+class KCvc5Context internal constructor(
     private val solver: Solver,
+    /**
+     * Used as context for expressions lifetime separation.
+     * Exprs which stored in [KCvc5Context], created with [mkExprSolver]
+     */
     val mkExprSolver: Solver,
     private val ctx: KContext,
-    parent: KCvc5Context?,
-    val isForking: Boolean
+    forkingSolverManager: KCvc5ForkingSolverManager? = null
 ) : AutoCloseable {
-    constructor(solver: Solver, mkExprSolver: Solver, ctx: KContext, isForking: Boolean = false)
-        : this(solver, mkExprSolver, ctx, null, isForking)
+    constructor(solver: Solver, mkExprSolver: Solver, ctx: KContext)
+        : this(solver, mkExprSolver, ctx, null)
 
-    constructor(solver: Solver, ctx: KContext, isForking: Boolean = false)
-        : this(solver, solver, ctx, null, isForking)
+    constructor(solver: Solver, ctx: KContext)
+        : this(solver, solver, ctx, null)
 
     private var isClosed = false
+    val isForking = forkingSolverManager != null
 
     private val uninterpretedSortCollector = KUninterpretedSortCollector(this)
     private var exprCurrentLevelCacheRestorer = KCurrentScopeExprCacheRestorer(uninterpretedSortCollector, ctx)
@@ -72,14 +76,11 @@ class KCvc5Context private constructor(
      *  that is in global cache, but whose sorts / decls have been erased after pop()
      *  (and put this expr to the cache of current accumulated scope)
      */
-    private val currentAccumulatedScopeExpressions: HashMap<KExpr<*>, Term>
+    private val currentAccumulatedScopeExpressions = HashMap<KExpr<*>, Term>()
     private val expressions: HashMap<KExpr<*>, Term>
 
     /**
      * We can't use HashMap with Term and Sort (hashcode is not implemented)
-     *
-     * Avoid to close cache explicitly due to its sharing between forking hierarchy.
-     * It will be garbage collected on last solver close in forking hierarchy
      */
     private val cvc5Expressions: TreeMap<Term, KExpr<*>>
     private val sorts: HashMap<KSort, Sort>
@@ -102,28 +103,26 @@ class KCvc5Context private constructor(
 
     init {
         if (isForking) {
-            uninterpretedSorts = (parent?.uninterpretedSorts as? ScopedLinkedFrame)?.fork()
-                ?: ScopedLinkedFrame(::HashSet, ::HashSet)
-            declarations = (parent?.declarations as? ScopedLinkedFrame)?.fork()
-                ?: ScopedLinkedFrame(::HashSet, ::HashSet)
+            uninterpretedSorts = ScopedLinkedFrame(::HashSet, ::HashSet)
+            declarations = ScopedLinkedFrame(::HashSet, ::HashSet)
         } else {
             uninterpretedSorts = ScopedArrayFrame(::HashSet)
             declarations = ScopedArrayFrame(::HashSet)
         }
 
-        if (parent != null) {
-            currentAccumulatedScopeExpressions = parent.currentAccumulatedScopeExpressions.toMap(HashMap())
-            expressions = parent.expressions
-            cvc5Expressions = parent.cvc5Expressions
-            sorts = parent.sorts
-            cvc5Sorts = parent.cvc5Sorts
-            decls = parent.decls
-            cvc5Decls = parent.cvc5Decls
-            uninterpretedSortValueDescriptors = parent.uninterpretedSortValueDescriptors
-            uninterpretedSortValueInterpreter = parent.uninterpretedSortValueInterpreter
-            uninterpretedSortValues = parent.uninterpretedSortValues
+        if (forkingSolverManager != null) {
+            with(forkingSolverManager) {
+                expressions = findExpressionsCache()
+                cvc5Expressions = findExpressionsReversedCache()
+                sorts = findSortsCache()
+                cvc5Sorts = findSortsReversedCache()
+                decls = findDeclsCache()
+                cvc5Decls = findDeclsReversedCache()
+                uninterpretedSortValueDescriptors = findUninterpretedSortsValueDescriptors()
+                uninterpretedSortValueInterpreter = findUninterpretedSortsValueInterpretersCache()
+                uninterpretedSortValues = findUninterpretedSortValues()
+            }
         } else {
-            currentAccumulatedScopeExpressions = HashMap()
             expressions = HashMap()
             cvc5Expressions = TreeMap()
             sorts = HashMap()
@@ -155,12 +154,18 @@ class KCvc5Context private constructor(
     val isActive: Boolean
         get() = !isClosed
 
-    fun fork(solver: Solver, mkExprSolver: Solver): KCvc5Context =
-        KCvc5Context(solver, mkExprSolver, ctx, this, true).also { forkCtx ->
+    fun fork(solver: Solver, forkingSolverManager: KCvc5ForkingSolverManager): KCvc5Context {
+        require(isForking) { "Can't fork non-forking context" }
+        return KCvc5Context(solver, mkExprSolver, ctx, forkingSolverManager).also { forkCtx ->
+            forkCtx.currentAccumulatedScopeExpressions += currentAccumulatedScopeExpressions
+            (forkCtx.uninterpretedSorts as ScopedLinkedFrame).fork(uninterpretedSorts as ScopedLinkedFrame)
+            (forkCtx.declarations as ScopedLinkedFrame).fork(declarations as ScopedLinkedFrame)
+
             repeat(assertedConstraintLevels.size) {
                 forkCtx.pushAssertionLevel()
             }
         }
+    }
 
     fun push() {
         declarations.push()
@@ -262,7 +267,7 @@ class KCvc5Context private constructor(
      *
      * todo: precise uninterpreted sort values tracking
      * */
-    private data class UninterpretedSortValueDescriptor(
+    internal data class UninterpretedSortValueDescriptor(
         val value: KUninterpretedSortValue,
         val nativeUniqueValueDescriptor: Term,
         val nativeValueTerm: Term
@@ -414,6 +419,18 @@ class KCvc5Context private constructor(
         isClosed = true
 
         currentAccumulatedScopeExpressions.clear()
+
+        if (!isForking) {
+            expressions.clear()
+            cvc5Expressions.clear()
+            sorts.clear()
+            cvc5Sorts.clear()
+            decls.clear()
+            cvc5Decls.clear()
+            uninterpretedSortValueDescriptors.clear()
+            uninterpretedSortValueInterpreter.clear()
+            uninterpretedSortValues.clear()
+        }
     }
 
     class KUninterpretedSortCollector(private val cvc5Ctx: KCvc5Context) : KSortVisitor<Unit> {

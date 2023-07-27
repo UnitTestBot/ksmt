@@ -16,7 +16,7 @@ open class KCvc5ForkingSolver internal constructor(
     ctx: KContext,
     private val manager: KCvc5ForkingSolverManager,
     /** store reference on Solver to separate lifetime of native expressions */
-    private val mkExprSolver: Solver,
+    mkExprSolver: Solver,
     parent: KCvc5ForkingSolver? = null
 ) : KCvc5SolverBase(ctx), KForkingSolver<KCvc5SolverConfiguration>, KSolver<KCvc5SolverConfiguration> {
 
@@ -24,21 +24,19 @@ open class KCvc5ForkingSolver internal constructor(
     private val isChild = parent != null
     private var assertionsInitiated = !isChild
 
-    private val trackedAssertions: ScopedLinkedFrame<TreeMap<Term, KExpr<KBoolSort>>>
-    private val cvc5Assertions: ScopedLinkedFrame<TreeSet<Term>>
+    private val trackedAssertions = ScopedLinkedFrame<TreeMap<Term, KExpr<KBoolSort>>>(::TreeMap, ::TreeMap)
+    private val cvc5Assertions = ScopedLinkedFrame<TreeSet<Term>>(::TreeSet, ::TreeSet)
 
     override val currentScope: UInt
         get() = trackedAssertions.currentScope
 
     init {
         if (parent != null) {
-            cvc5Ctx = parent.cvc5Ctx.fork(solver, this.mkExprSolver)
-            trackedAssertions = parent.trackedAssertions.fork()
-            cvc5Assertions = parent.cvc5Assertions.fork()
+            cvc5Ctx = parent.cvc5Ctx.fork(solver, manager)
+            trackedAssertions.fork(parent.trackedAssertions)
+            cvc5Assertions.fork(parent.cvc5Assertions)
         } else {
-            cvc5Ctx = KCvc5Context(solver, this.mkExprSolver, ctx, true)
-            trackedAssertions = ScopedLinkedFrame(::TreeMap, ::TreeMap)
-            cvc5Assertions = ScopedLinkedFrame(::TreeSet, ::TreeSet)
+            cvc5Ctx = KCvc5Context(solver, mkExprSolver, ctx, manager)
         }
     }
 

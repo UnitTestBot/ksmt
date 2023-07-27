@@ -106,11 +106,10 @@ internal class ScopedLinkedFrame<T> private constructor(
         current = LinkedFrame(newTopFrame, current.previous)
     }
 
-    fun fork(): ScopedLinkedFrame<T> = ScopedLinkedFrame(
-        current,
-        createNewFrame,
-        copyFrame
-    ).also { it.recreateTopFrame() }
+    fun fork(parent: ScopedLinkedFrame<T>) {
+        current = parent.current
+        recreateTopFrame()
+    }
 
     private inline fun forEachReversed(action: (T) -> Unit) {
         var cur: LinkedFrame<T>? = current

@@ -284,7 +284,7 @@ class KForkingSolverTest {
             with(ctx) {
                 val parent = mkSolver(ctx)
                 val x by intSort
-                val f = x ge 100.expr
+                val f = x gt 100.expr
 
                 parent.assert(f)
                 parent.check().also { require(it == KSolverStatus.SAT) }
@@ -296,7 +296,7 @@ class KForkingSolverTest {
 
                 fork.assert(f and (x eq xVal))
                 fork.check().also { assertEquals(KSolverStatus.SAT, it) }
-                assertEquals(fork.model().eval(x), xVal)
+                assertEquals(xVal, fork.model().eval(x))
             }
 
         }
