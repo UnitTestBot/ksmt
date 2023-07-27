@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 from torch_geometric.nn import GCNConv, GatedGraphConv, GATConv
@@ -18,7 +19,13 @@ class Encoder(nn.Module):
         x = self.embedding(x.squeeze())
 
         depth = depth.max()
+        #print(depth)
         for i in range(depth):
             x = self.conv(x, edge_index)
+            #x = self.conv(x, torch.tensor([[1, 2], [0, 0]], dtype=torch.long))
+
+        #print(x)
+
+        x = x[data.ptr[1:] - 1]
 
         return x

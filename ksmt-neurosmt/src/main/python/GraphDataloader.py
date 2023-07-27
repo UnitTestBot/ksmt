@@ -17,9 +17,10 @@ from GraphReader import read_graph_by_path
 from utils import train_val_test_indices, align_sat_unsat_sizes
 
 
-BATCH_SIZE = 1
-MAX_FORMULA_DEPTH = 2408
-NUM_WORKERS = 4
+BATCH_SIZE = 32
+MAX_FORMULA_SIZE = 10000
+MAX_FORMULA_DEPTH = 2500 # 2408
+NUM_WORKERS = 16
 
 
 class GraphDataset(Dataset):
@@ -58,11 +59,19 @@ def load_data(path_to_data):
             else:
                 raise Exception(f"strange file path '{cur_path}'")
 
+    SHRINK = 10 ** 10  # 1000
+
+    if len(sat_paths) > SHRINK:
+        sat_paths = sat_paths[:SHRINK]
+
+    if len(unsat_paths) > SHRINK:
+        unsat_paths = unsat_paths[:SHRINK]
+
     def process_paths(paths, label, data):
         for path in tqdm(paths):
-            operators, edges, depth = read_graph_by_path(path, max_depth=MAX_FORMULA_DEPTH)
+            operators, edges, depth = read_graph_by_path(path, max_size=MAX_FORMULA_SIZE, max_depth=MAX_FORMULA_DEPTH)
 
-            if depth > MAX_FORMULA_DEPTH:
+            if depth is None:
                 continue
 
             if len(edges) == 0:
@@ -176,7 +185,7 @@ def load_data(path_to_data):
     #test_ds = GraphDataset(test_operators, test_edges, test_labels, test_depths)
 
     return (
-        DataLoader(train_ds.graphs, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS),
+        DataLoader(train_ds.graphs, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, shuffle=True, drop_last=True),
         DataLoader(val_ds.graphs, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS),
         DataLoader(test_ds.graphs, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS)
     )

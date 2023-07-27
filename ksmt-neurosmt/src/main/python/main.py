@@ -130,14 +130,18 @@ if __name__ == "__main__":
     print(flush=True)
     """
 
-    for epoch in trange(100):
+    with open("log.txt", "a") as f:
+        f.write("\n" + "=" * 12 + "\n")
+
+    for epoch in trange(200):
         model.train()
         for batch in tqdm(tr):
             optimizer.zero_grad()
             batch = batch.to(device)
 
             out = model(batch)
-            out = out[batch.ptr[:-1]]
+            #out = out[batch.ptr[:-1]]
+            #out = out[batch.ptr[1:] - 1]
 
             loss = F.binary_cross_entropy_with_logits(out, batch.y)
             #loss = criterion(out, batch.y)
@@ -159,10 +163,14 @@ if __name__ == "__main__":
                     batch = batch.to(device)
 
                     out = model(batch)
-                    out = out[batch.ptr[:-1]]
+                    #print(batch.ptr[1:] - 1)
+                    #out = out[batch.ptr[:-1]]
+                    #out = out[batch.ptr[1:] - 1]
                     loss = F.binary_cross_entropy_with_logits(out, batch.y)
 
                     out = F.sigmoid(out)
+                    #print(out.detach().item(), batch.depth, batch.x.shape, batch.edge_index.shape)
+                    #print(out.detach().item())
                     out = (out > 0.5)
 
                     answers = torch.cat((answers, out))
@@ -177,17 +185,23 @@ if __name__ == "__main__":
             targets = torch.flatten(targets).detach().cpu().numpy()
 
             #print(f"\n{correct_ans / all_ans}")
-            print(flush=True)
-            print(f"mean loss: {np.mean(losses)}")
+            mean_loss = np.mean(losses)
+            print("\n", flush=True)
+            print(f"mean loss: {mean_loss}")
             print(f"acc: {accuracy_score(targets, answers)}", flush=True)
             print(classification_report(targets, answers, digits=3, zero_division=0.0), flush=True)
 
+            return mean_loss
+
         print()
         print("train:")
-        validate(tr)
+        tr_loss = validate(tr)
         print("val:")
-        validate(va)
+        va_loss = validate(va)
         print()
+
+        with open("log.txt", "a") as f:
+            f.write(f"{epoch}: {tr_loss} | {va_loss}\n")
 
 
 

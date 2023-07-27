@@ -35,7 +35,7 @@ def process_line(line, v, operators, edges, depth):
         operators.append(name + ";" + info)
 
 
-def read_graph_from_file(inf, max_depth):
+def read_graph_from_file(inf, max_size, max_depth):
     operators, edges, depth = [], [], []
 
     v = 0
@@ -53,14 +53,14 @@ def read_graph_from_file(inf, max_depth):
             print(v, line, "\n")
             raise e
 
-        if depth[v] > max_depth:
-            return None, None, depth[v]
+        if v >= max_size or depth[v] > max_depth:
+            return None, None, None
 
         v += 1
 
     return operators, edges, max(depth)
 
 
-def read_graph_by_path(path, max_depth):
+def read_graph_by_path(path, max_size, max_depth):
     with open(path, "r") as inf:
-        return read_graph_from_file(inf, max_depth)
+        return read_graph_from_file(inf, max_size, max_depth)

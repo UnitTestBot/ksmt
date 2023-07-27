@@ -10,8 +10,13 @@ class Decoder(nn.Module):
         self.lin2 = nn.Linear(hidden_dim, 1)
 
     def forward(self, data):
+        #print("=" * 12)
+        #print(data.shape)
+
         data = self.lin1(data)
         data = self.act(data)
         data = self.lin2(data)
+
+        #print(data.shape)
 
         return data
