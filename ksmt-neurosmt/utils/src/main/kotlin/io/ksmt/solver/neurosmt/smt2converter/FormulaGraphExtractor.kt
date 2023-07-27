@@ -1,15 +1,16 @@
 package io.ksmt.solver.neurosmt.smt2converter
 
 import io.ksmt.KContext
-import io.ksmt.decl.KBitVecCustomSizeValueDecl
-import io.ksmt.expr.*
+import io.ksmt.expr.KApp
+import io.ksmt.expr.KConst
+import io.ksmt.expr.KExpr
+import io.ksmt.expr.KInterpretedValue
 import io.ksmt.expr.transformer.KNonRecursiveTransformer
 import io.ksmt.sort.KBoolSort
-import io.ksmt.sort.KBvCustomSizeSort
 import io.ksmt.sort.KBvSort
 import io.ksmt.sort.KSort
 import java.io.OutputStream
-import java.util.IdentityHashMap
+import java.util.*
 
 class FormulaGraphExtractor(
     override val ctx: KContext,
@@ -30,18 +31,6 @@ class FormulaGraphExtractor(
             is KConst<*> -> writeSymbolicVariable(expr)
             else -> writeApp(expr)
         }
-
-        //println(expr::class)
-        //println("${expr.decl.name} ${expr.args.size}")
-        //outputStream.writer().write("${expr.decl.name} ${expr.args.size}\n")
-        //outputStream.writer().flush()
-        /*
-        println(expr.args)
-        println("${expr.decl} ${expr.decl.name} ${expr.decl.argSorts} ${expr.sort}")
-        for (child in expr.args) {
-            println((child as KApp<*, *>).decl.name)
-        }
-        */
 
         return expr
     }

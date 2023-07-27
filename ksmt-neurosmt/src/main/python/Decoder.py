@@ -10,15 +10,10 @@ class Decoder(nn.Module):
         self.out = nn.Linear(hidden_dim, 1)
 
     def forward(self, x):
-        #print("=" * 12)
-        #print(data.shape)
-
         for layer in self.linears:
             x = layer(x)
             x = self.act(x)
 
         x = self.out(x)
-
-        #print(data.shape)
 
         return x

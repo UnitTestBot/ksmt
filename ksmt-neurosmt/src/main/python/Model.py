@@ -13,8 +13,8 @@ class Model(nn.Module):
         self.encoder = Encoder(hidden_dim=EMBEDDING_DIM)
         self.decoder = Decoder(hidden_dim=EMBEDDING_DIM)
 
-    def forward(self, data):
-        data = self.encoder(data)
-        data = self.decoder(data)
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.decoder(x)
 
-        return data
+        return x

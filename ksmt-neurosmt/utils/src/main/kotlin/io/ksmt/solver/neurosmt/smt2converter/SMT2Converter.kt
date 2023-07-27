@@ -3,7 +3,7 @@ package io.ksmt.solver.neurosmt.smt2converter
 import io.ksmt.KContext
 import io.ksmt.parser.KSMTLibParseException
 import io.ksmt.solver.KSolverStatus
-import io.ksmt.solver.z3.*
+import io.ksmt.solver.z3.KZ3SMTLibParser
 import me.tongfei.progressbar.ProgressBar
 import java.io.FileOutputStream
 import java.nio.file.Files

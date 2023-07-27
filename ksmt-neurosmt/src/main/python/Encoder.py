@@ -9,8 +9,8 @@ class Encoder(nn.Module):
         super().__init__()
 
         self.embedding = nn.Embedding(2000, hidden_dim)
-        #self.conv = GatedGraphConv(64, num_layers=1, aggr="mean")
         self.conv = GCNConv(hidden_dim, hidden_dim, add_self_loops=False)
+
         #self.conv = GATConv(64, 64, add_self_loops=False)
 
     def forward(self, data):
@@ -19,12 +19,9 @@ class Encoder(nn.Module):
         x = self.embedding(x.squeeze())
 
         depth = depth.max()
-        #print(depth)
         for i in range(depth):
             x = self.conv(x, edge_index)
             #x = self.conv(x, torch.tensor([[1, 2], [0, 0]], dtype=torch.long))
-
-        #print(x)
 
         x = x[data.ptr[1:] - 1]
 
