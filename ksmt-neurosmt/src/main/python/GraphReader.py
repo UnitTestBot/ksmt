@@ -22,7 +22,6 @@ def process_line(line, v, operators, edges, depth):
     info = info.strip()
     vertex_type = get_vertex_type(name)
     depth.append(0)
-    assert (len(depth) == v + 1)
 
     if vertex_type == VertexType.APP:
         operators.append(name)

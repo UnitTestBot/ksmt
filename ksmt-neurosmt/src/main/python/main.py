@@ -29,7 +29,7 @@ from Encoder import Encoder
 from Decoder import Decoder
 from Model import Model
 
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, roc_auc_score, classification_report
 
 
 """
@@ -152,12 +152,16 @@ if __name__ == "__main__":
         print("\n", flush=True)
         print(f"grad norm: {calc_grad_norm()}")
 
-        def validate(dl):
+        def validate(dl, val=False):
             model.eval()
 
             #all_ans, correct_ans = 0, 0
-            answers, targets = torch.tensor([]).to(device), torch.tensor([]).to(device)
+
+            probas = torch.tensor([]).to(device)
+            answers = torch.tensor([]).to(device)
+            targets = torch.tensor([]).to(device)
             losses = []
+
             with torch.no_grad():
                 for batch in tqdm(dl):
                     batch = batch.to(device)
@@ -169,6 +173,8 @@ if __name__ == "__main__":
                     loss = F.binary_cross_entropy_with_logits(out, batch.y)
 
                     out = F.sigmoid(out)
+
+                    probas = torch.cat((probas, out))
                     #print(out.detach().item(), batch.depth, batch.x.shape, batch.edge_index.shape)
                     #print(out.detach().item())
                     out = (out > 0.5)
@@ -181,27 +187,35 @@ if __name__ == "__main__":
                     #out: torch.Tensor = (batch.y.to(torch.int) == out.to(torch.bool))
                     #correct_ans += out.int().sum().item()
 
-            answers = torch.flatten(answers).detach().cpu().numpy()
-            targets = torch.flatten(targets).detach().cpu().numpy()
+            probas = torch.flatten(probas).cpu().numpy()
+            answers = torch.flatten(answers).cpu().numpy()
+            targets = torch.flatten(targets).cpu().numpy()
 
-            #print(f"\n{correct_ans / all_ans}")
             mean_loss = np.mean(losses)
+            roc_auc = roc_auc_score(targets, probas) if val else None
+
             print("\n", flush=True)
             print(f"mean loss: {mean_loss}")
-            print(f"acc: {accuracy_score(targets, answers)}", flush=True)
+            print(f"acc: {accuracy_score(targets, answers)}")
+            print(f"roc-auc: {roc_auc}")
             print(classification_report(targets, answers, digits=3, zero_division=0.0), flush=True)
 
-            return mean_loss
+            if val:
+                return mean_loss, roc_auc
+            else:
+                return mean_loss
 
         print()
         print("train:")
         tr_loss = validate(tr)
         print("val:")
-        va_loss = validate(va)
+        va_loss, roc_auc = validate(va, val=True)
         print()
 
         with open("log.txt", "a") as f:
-            f.write(f"{epoch}: {tr_loss} | {va_loss}\n")
+            f.write(
+                f"{str(epoch).rjust(3)}: {'{:.9f}'.format(tr_loss)} | {'{:.9f}'.format(va_loss)} | {'{:.9f}'.format(roc_auc)}\n"
+            )
 
 
 
