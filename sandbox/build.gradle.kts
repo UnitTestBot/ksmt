@@ -18,6 +18,7 @@ dependencies {
     implementation(project(":ksmt-z3"))
     implementation(project(":ksmt-neurosmt"))
     implementation(project(":ksmt-neurosmt:utils"))
+    implementation(project(":ksmt-runner"))
 }
 
 tasks.getByName<Test>("test") {

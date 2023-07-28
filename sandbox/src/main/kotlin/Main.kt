@@ -1,43 +1,97 @@
+import com.jetbrains.rd.framework.SerializationCtx
+import com.jetbrains.rd.framework.Serializers
+import com.jetbrains.rd.framework.UnsafeBuffer
 import io.ksmt.KContext
 import io.ksmt.expr.*
-import io.ksmt.expr.transformer.KNonRecursiveTransformer
+import io.ksmt.runner.serializer.AstSerializationCtx
+import io.ksmt.solver.KModel
+import io.ksmt.solver.KSolver
+import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.neurosmt.KNeuroSMTSolver
-import io.ksmt.solver.neurosmt.smt2converter.FormulaGraphExtractor
-import io.ksmt.solver.neurosmt.smt2converter.getAnswerForTest
 import io.ksmt.solver.z3.*
 import io.ksmt.sort.*
 import io.ksmt.utils.getValue
+import io.ksmt.utils.uncheckedCast
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.FileOutputStream
-import java.nio.file.Files
-import java.nio.file.Path
-import kotlin.io.path.isRegularFile
-import kotlin.io.path.name
+import java.io.InputStream
+import java.io.OutputStream
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-fun lol(a: Any) {
-    if (a is KConst<*>) {
-        println("const: ${a.decl.name}")
+fun serialize(ctx: KContext, expressions: List<KExpr<KBoolSort>>, outputStream: OutputStream) {
+    val serializationCtx = AstSerializationCtx().apply { initCtx(ctx) }
+    val marshaller = AstSerializationCtx.marshaller(serializationCtx)
+    val emptyRdSerializationCtx = SerializationCtx(Serializers())
+
+    val buffer = UnsafeBuffer(ByteArray(10_000))
+
+    expressions.forEach { expr ->
+        marshaller.write(emptyRdSerializationCtx, buffer, expr)
     }
-    if (a is KInterpretedValue<*>) {
-        println("val: ${a.decl.name}")
-    }
+
+    outputStream.write(buffer.getArray())
+    outputStream.flush()
 }
 
-class Kek(override val ctx: KContext) : KNonRecursiveTransformer(ctx) {
-    override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> {
-        println("===")
-        //println(expr::class)
-        //lol(expr)
-        //println(expr)
-        /*
-        println(expr.args)
-        println("${expr.decl} ${expr.decl.name} ${expr.decl.argSorts} ${expr.sort}")
-        for (child in expr.args) {
-            println((child as KApp<*, *>).decl.name)
+fun deserialize(ctx: KContext, inputStream: InputStream): List<KExpr<KBoolSort>> {
+    val srcSerializationCtx = AstSerializationCtx().apply { initCtx(ctx) }
+    val srcMarshaller = AstSerializationCtx.marshaller(srcSerializationCtx)
+    val emptyRdSerializationCtx = SerializationCtx(Serializers())
+
+    val buffer = UnsafeBuffer(inputStream.readBytes())
+    val expressions: MutableList<KExpr<KBoolSort>> = mutableListOf()
+
+    while (true) {
+        try {
+            expressions.add(srcMarshaller.read(emptyRdSerializationCtx, buffer).uncheckedCast())
+        } catch (e : IllegalStateException) {
+            break
         }
-        */
-        return expr
+    }
+
+    return expressions
+}
+
+class LogSolver<C : KSolverConfiguration>(val ctx: KContext, val baseSolver: KSolver<C>) : KSolver<C> by baseSolver {
+    companion object {
+        var counter = 0L
+    }
+
+    val stack = mutableListOf<MutableList<KExpr<KBoolSort>>>(mutableListOf())
+
+    override fun assert(expr: KExpr<KBoolSort>) {
+        stack.last().add(expr)
+        baseSolver.assert(expr)
+    }
+
+    override fun assertAndTrack(expr: KExpr<KBoolSort>) {
+        stack.last().add(expr)
+        baseSolver.assertAndTrack(expr)
+    }
+
+    override fun push() {
+        stack.add(mutableListOf())
+        baseSolver.push()
+    }
+
+    override fun pop(n: UInt) {
+        repeat(n.toInt()) {
+            stack.removeLast()
+        }
+        baseSolver.pop(n)
+    }
+
+    override fun check(timeout: Duration): KSolverStatus {
+        serialize(ctx, stack.flatten(), FileOutputStream("formulas/f-${counter++}.bin"))
+        return baseSolver.check(timeout)
+    }
+
+    override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus {
+        serialize(ctx, stack.flatten() + assumptions, FileOutputStream("formulas/f-${counter++}.bin"))
+        return baseSolver.checkWithAssumptions(assumptions, timeout)
     }
 }
 
@@ -45,43 +99,6 @@ fun main() {
     val ctx = KContext()
 
     with(ctx) {
-        val files = Files.walk(Path.of("../../neurosmt-benchmark/non-incremental/QF_BV")).filter { it.isRegularFile() }
-        var ok = 0; var fail = 0
-        var sat = 0; var unsat = 0; var unk = 0
-
-        files.forEach {
-            println(it)
-            if (it.name.endsWith(".txt")) {
-                return@forEach
-            }
-
-            when (getAnswerForTest(it)) {
-                KSolverStatus.SAT -> sat++
-                KSolverStatus.UNSAT -> unsat++
-                KSolverStatus.UNKNOWN -> unk++
-            }
-
-            return@forEach
-
-            val formula = try {
-                val assertList = KZ3SMTLibParser(this).parse(it)
-                ok++
-                mkAnd(assertList)
-            } catch (e: Exception) {
-                fail++
-                return@forEach
-            }
-
-            val extractor = FormulaGraphExtractor(this, formula, FileOutputStream("kek2.txt"))
-            extractor.extractGraph()
-
-            println("$ok : $fail")
-        }
-
-        println("$sat/$unsat/$unk")
-
-        return@with
-
         // create symbolic variables
         val a by boolSort
         val b by intSort
@@ -103,27 +120,50 @@ fun main() {
                 (mkArraySelect(g, d + mkRealNum(1)) neq a) and
                 (mkArraySelect(g, d - mkRealNum(1)) eq a) and
                 (d * d eq mkRealNum(4)) and
-                (mkBvMulExpr(e, e) eq mkBv(9.toByte())) // and (mkExistentialQuantifier(x eq 2.expr, listOf()))
-                //(mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardZero), h, h) eq 2.0.expr)
+                (mkBvMulExpr(e, e) eq mkBv(9.toByte()))
 
-        //val constraint = mkBvXorExpr(mkBvShiftLeftExpr(e, mkBv(1.toByte())), mkBvNotExpr(e)) eq
-        //        mkBvLogicalShiftRightExpr(e, mkBv(1.toByte()))
+        val formula = """
+            (declare-fun x () Real)
+            (declare-fun y () Real)
+            (declare-fun z () Real)
+            (declare-fun a () Int)
+            (assert (or (and (= y (+ x z)) (= x (+ y z))) (= 2.71 x)))
+            (assert (= a 2))
+            (check-sat)
+        """
 
-        // (constraint as KAndExpr)
+        val assertions = mkAnd(KZ3SMTLibParser(this).parse(formula))
 
-        //constraint.accept(Kek(this))
-        //Kek(this).apply(constraint)
-        val extractor = FormulaGraphExtractor(this, constraint, FileOutputStream("kek.txt"))
-        //val extractor = io.ksmt.solver.neurosmt.preprocessing.FormulaGraphExtractor(this, constraint, System.err)
-        extractor.extractGraph()
+        val bvExpr = mkBvXorExpr(mkBvShiftLeftExpr(e, mkBv(1.toByte())), mkBvNotExpr(e)) eq
+                mkBvLogicalShiftRightExpr(e, mkBv(1.toByte()))
 
-        /*println("========")
-        constraint.apply {
-            println(this.args)
-        }*/
+        val buf = ByteArrayOutputStream()
+        serialize(ctx, listOf(constraint, assertions, bvExpr), buf)
+        deserialize(ctx, ByteArrayInputStream(buf.toByteArray())).forEach {
+            println("nxt: $it")
+        }
 
-        return@with
+        /*
+        KExprUninterpretedDeclCollector.collectUninterpretedDeclarations(mkAnd(assertions)).forEach {
+            println("${it.name} | ${it.argSorts} | ${it.sort}")
+        }
+        */
 
+        KZ3Solver(this).use { solver ->
+            LogSolver(this, solver).use { solver ->
+                solver.assert(constraint)
+
+                val satisfiability = solver.check(timeout = 180.seconds)
+                println(satisfiability)
+
+                if (satisfiability == KSolverStatus.SAT) {
+                    val model = solver.model()
+                    println(model)
+                }
+            }
+        }
+
+        /*
         KNeuroSMTSolver(this).use { solver -> // create a Stub SMT solver instance
             // assert expression
             solver.assert(constraint)
@@ -132,29 +172,6 @@ fun main() {
             val satisfiability = solver.check(timeout = 1.seconds)
             // println(satisfiability) // SAT
         }
-
-        KZ3Solver(this).use { solver ->
-            solver.assert(constraint)
-
-            val satisfiability = solver.check(timeout = 180.seconds)
-            println(satisfiability)
-
-            if (satisfiability == KSolverStatus.SAT) {
-                val model = solver.model()
-                println(model)
-            }
-        }
-
-        val formula = """
-            (declare-fun x () Real)
-            (declare-fun y () Real)
-            (declare-fun z () Real)
-            (assert (or (and (= y (+ x z)) (= x (+ y z))) (= 2.71 x)))
-            (check-sat)
-        """
-        val assertions = KZ3SMTLibParser(this).parse(formula)
-
-        println(assertions)
-        println(assertions[0].stringRepr)
+        */
     }
 }
