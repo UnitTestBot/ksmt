@@ -19,7 +19,18 @@ import io.ksmt.sort.KUninterpretedSort
  * 2. Assert distinct constraints ([assertPendingUninterpretedValueConstraints])
  * that may be introduced during internalization.
  * */
-class ExpressionUninterpretedValuesTracker(val ctx: KContext, val z3Ctx: KZ3Context) {
+class ExpressionUninterpretedValuesTracker private constructor(
+    val ctx: KContext,
+    val z3Ctx: KZ3Context,
+    private val registeredUninterpretedSortValues: HashMap<KUninterpretedSortValue, UninterpretedSortValueDescriptor>
+) {
+    constructor(ctx: KContext, z3Ctx: KZ3Context) : this(ctx, z3Ctx, hashMapOf())
+    constructor(ctx: KContext, z3Ctx: KZ3Context, forkingSolverManager: KZ3ForkingSolverManager) : this(
+        ctx,
+        z3Ctx,
+        with(forkingSolverManager) { z3Ctx.findRegisteredUninterpretedSortValues() }
+    )
+
     private val expressionLevels = Object2IntOpenHashMap<KExpr<*>>().apply {
         defaultReturnValue(Int.MAX_VALUE) // Level which is greater than any possible level
     }
@@ -31,9 +42,6 @@ class ExpressionUninterpretedValuesTracker(val ctx: KContext, val z3Ctx: KZ3Cont
     )
 
     private val valueTrackerFrames = arrayListOf(currentFrame)
-
-    private val registeredUninterpretedSortValues =
-        hashMapOf<KUninterpretedSortValue, UninterpretedSortValueDescriptor>()
 
     /**
      * Skip any value tracking related actions until
@@ -47,6 +55,11 @@ class ExpressionUninterpretedValuesTracker(val ctx: KContext, val z3Ctx: KZ3Cont
     private inline fun ifTrackingEnabled(body: () -> Unit) {
         if (registeredUninterpretedSortValues.isEmpty()) return
         body()
+    }
+
+    fun fork(parent: ExpressionUninterpretedValuesTracker) = also {
+        expressionLevels += parent.expressionLevels
+        repeat(parent.valueTrackerFrames.size - 1) { pushAssertionLevel() }
     }
 
     fun expressionUse(expr: KExpr<*>) = ifTrackingEnabled {
@@ -121,7 +134,7 @@ class ExpressionUninterpretedValuesTracker(val ctx: KContext, val z3Ctx: KZ3Cont
         z3Ctx.releaseTemporaryAst(constraintLhs)
     }
 
-    private data class UninterpretedSortValueDescriptor(
+    internal data class UninterpretedSortValueDescriptor(
         val value: KUninterpretedSortValue,
         val nativeUniqueValueDescriptor: Long,
         val nativeValueExpr: Long

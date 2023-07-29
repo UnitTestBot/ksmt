@@ -2,48 +2,88 @@ package io.ksmt.solver.z3
 
 import com.microsoft.z3.Context
 import com.microsoft.z3.Solver
+import com.microsoft.z3.Z3Exception
 import com.microsoft.z3.decRefUnsafe
+import com.microsoft.z3.decRefUnsafeAll
 import com.microsoft.z3.incRefUnsafe
 import io.ksmt.KContext
 import io.ksmt.decl.KDecl
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.KUninterpretedSortValue
+import io.ksmt.solver.KSolverException
 import io.ksmt.solver.util.KExprLongInternalizerBase.Companion.NOT_INTERNALIZED
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet
-import it.unimi.dsi.fastutil.longs.LongSet
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
 
 @Suppress("TooManyFunctions")
-class KZ3Context(
+class KZ3Context internal constructor(
     ksmtCtx: KContext,
-    private val ctx: Context
+    private val ctx: Context,
+    forkingSolverManager: KZ3ForkingSolverManager?,
 ) : AutoCloseable {
-    constructor(ksmtCtx: KContext) : this(ksmtCtx, Context())
+    constructor(ksmtCtx: KContext, ctx: Context) : this(ksmtCtx, ctx, null)
+    constructor(ksmtCtx: KContext) : this(ksmtCtx, Context(), null)
 
     private var isClosed = false
+    private val isForking = forkingSolverManager != null
 
-    private val expressions = Object2LongOpenHashMap<KExpr<*>>().apply {
-        defaultReturnValue(NOT_INTERNALIZED)
+    // common for parent and child structures
+    private val expressions: Object2LongOpenHashMap<KExpr<*>>
+    private val sorts: Object2LongOpenHashMap<KSort>
+    private val decls: Object2LongOpenHashMap<KDecl<*>>
+
+    private val z3Expressions: Long2ObjectOpenHashMap<KExpr<*>>
+    private val z3Sorts: Long2ObjectOpenHashMap<KSort>
+    private val z3Decls: Long2ObjectOpenHashMap<KDecl<*>>
+    private val tmpNativeObjects: LongOpenHashSet
+    private val converterNativeObjects: LongOpenHashSet
+
+    private val uninterpretedSortValueInterpreter: HashMap<KUninterpretedSort, Long>
+    private val uninterpretedSortValueDecls: Long2ObjectOpenHashMap<KUninterpretedSortValue>
+    private val uninterpretedSortValueInterpreters: LongOpenHashSet
+
+
+    val uninterpretedValuesTracker: ExpressionUninterpretedValuesTracker
+
+    init {
+        if (forkingSolverManager != null) {
+            with(forkingSolverManager) {
+                expressions = findExpressionsCache()
+                sorts = findSortsCache()
+                decls = findDeclsCache()
+
+                z3Expressions = findExpressionsReversedCache()
+                z3Sorts = findSortsReversedCache()
+                z3Decls = findDeclsReversedCache()
+                tmpNativeObjects = findTmpNativeObjectsCache()
+                converterNativeObjects = findConverterNativeObjectsCache()
+                uninterpretedSortValueInterpreter = findUninterpretedSortValueInterpreter()
+                uninterpretedSortValueDecls = findUninterpretedSortValueDecls()
+                uninterpretedSortValueInterpreters = findUninterpretedSortValueInterpreters()
+            }
+            uninterpretedValuesTracker = ExpressionUninterpretedValuesTracker(ksmtCtx, this, forkingSolverManager)
+        } else {
+            expressions = Object2LongOpenHashMap<KExpr<*>>().apply { defaultReturnValue(NOT_INTERNALIZED) }
+            sorts = Object2LongOpenHashMap<KSort>().apply { defaultReturnValue(NOT_INTERNALIZED) }
+            decls = Object2LongOpenHashMap<KDecl<*>>().apply { defaultReturnValue(NOT_INTERNALIZED) }
+
+            z3Expressions = Long2ObjectOpenHashMap<KExpr<*>>()
+            z3Sorts = Long2ObjectOpenHashMap<KSort>()
+            z3Decls = Long2ObjectOpenHashMap<KDecl<*>>()
+            tmpNativeObjects = LongOpenHashSet()
+            converterNativeObjects = LongOpenHashSet()
+
+            uninterpretedSortValueInterpreter = hashMapOf()
+            uninterpretedSortValueDecls = Long2ObjectOpenHashMap()
+            uninterpretedSortValueInterpreters = LongOpenHashSet()
+
+            uninterpretedValuesTracker = ExpressionUninterpretedValuesTracker(ksmtCtx, this)
+        }
     }
 
-    private val sorts = Object2LongOpenHashMap<KSort>().apply {
-        defaultReturnValue(NOT_INTERNALIZED)
-    }
-
-    private val decls = Object2LongOpenHashMap<KDecl<*>>().apply {
-        defaultReturnValue(NOT_INTERNALIZED)
-    }
-
-    private val z3Expressions = Long2ObjectOpenHashMap<KExpr<*>>()
-    private val z3Sorts = Long2ObjectOpenHashMap<KSort>()
-    private val z3Decls = Long2ObjectOpenHashMap<KDecl<*>>()
-    private val tmpNativeObjects = LongOpenHashSet()
-    private val converterNativeObjects = LongOpenHashSet()
-
-    val uninterpretedValuesTracker = ExpressionUninterpretedValuesTracker(ksmtCtx, this)
 
     @JvmField
     val nCtx: Long = ctx.nCtx()
@@ -54,17 +94,24 @@ class KZ3Context(
     val isActive: Boolean
         get() = !isClosed
 
+    internal fun fork(ksmtCtx: KContext, manager: KZ3ForkingSolverManager): KZ3Context {
+        require(isForking) { "Can't fork non-forking context" }
+        return KZ3Context(ksmtCtx, ctx, manager).also {
+            it.uninterpretedValuesTracker.fork(uninterpretedValuesTracker)
+        }
+    }
+
+    internal fun findInternalizedExprWithoutAnalysis(expr: KExpr<*>): Long {
+        val result = expressions.getLong(expr)
+        return if (result == NOT_INTERNALIZED) NOT_INTERNALIZED else result
+    }
+
     /**
      * Find internalized expr.
      * Returns [NOT_INTERNALIZED] if expression was not found.
      * */
-    fun findInternalizedExpr(expr: KExpr<*>): Long {
-        val result = expressions.getLong(expr)
-        if (result == NOT_INTERNALIZED) return NOT_INTERNALIZED
-
-        uninterpretedValuesTracker.expressionUse(expr)
-
-        return result
+    fun findInternalizedExpr(expr: KExpr<*>): Long = findInternalizedExprWithoutAnalysis(expr).also {
+        if (it != NOT_INTERNALIZED) uninterpretedValuesTracker.expressionUse(expr)
     }
 
     fun saveInternalizedExpr(expr: KExpr<*>, internalized: Long) {
@@ -147,11 +194,6 @@ class KZ3Context(
         }
         return ast
     }
-
-    private val uninterpretedSortValueInterpreter = hashMapOf<KUninterpretedSort, Long>()
-
-    private val uninterpretedSortValueDecls = Long2ObjectOpenHashMap<KUninterpretedSortValue>()
-    private val uninterpretedSortValueInterpreters = LongOpenHashSet()
 
     fun saveUninterpretedSortValueDecl(decl: Long, value: KUninterpretedSortValue): Long {
         if (uninterpretedSortValueDecls.putIfAbsent(decl, value) == null) {
@@ -264,37 +306,38 @@ class KZ3Context(
         if (isClosed) return
         isClosed = true
 
+        if (isForking) return
+
         uninterpretedSortValueInterpreter.clear()
 
-        uninterpretedSortValueDecls.keys.decRefAll()
+        uninterpretedSortValueDecls.keys.decRefUnsafeAll(nCtx)
         uninterpretedSortValueDecls.clear()
 
-        uninterpretedSortValueInterpreters.decRefAll()
+        uninterpretedSortValueInterpreters.decRefUnsafeAll(nCtx)
         uninterpretedSortValueInterpreters.clear()
 
-        converterNativeObjects.decRefAll()
+        converterNativeObjects.decRefUnsafeAll(nCtx)
         converterNativeObjects.clear()
 
-        z3Expressions.keys.decRefAll()
+        z3Expressions.keys.decRefUnsafeAll(nCtx)
         expressions.clear()
         z3Expressions.clear()
 
-        tmpNativeObjects.decRefAll()
+        tmpNativeObjects.decRefUnsafeAll(nCtx)
         tmpNativeObjects.clear()
 
-        z3Decls.keys.decRefAll()
+        z3Decls.keys.decRefUnsafeAll(nCtx)
         decls.clear()
         z3Decls.clear()
 
-        z3Sorts.keys.decRefAll()
+        z3Sorts.keys.decRefUnsafeAll(nCtx)
         sorts.clear()
         z3Sorts.clear()
 
-        ctx.close()
-    }
-
-    private fun LongSet.decRefAll() =
-        longIterator().forEachRemaining {
-            decRefUnsafe(nCtx, it)
+        try {
+            ctx.close()
+        } catch (e: Z3Exception) {
+            throw KSolverException(e)
         }
+    }
 }
