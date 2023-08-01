@@ -336,21 +336,30 @@ abstract class BenchmarksBasedTest {
             ?.let { Paths.get(it) }
             ?: error("No test data")
 
-        private fun prepareTestData(): List<BenchmarkTestArguments> {
+        private fun prepareTestData(filterCondition: (String) -> Boolean = { true }): List<BenchmarkTestArguments> {
             val testDataLocation = testDataLocation()
             return testDataLocation
                 .listDirectoryEntries("*.smt2")
+                .asSequence()
+                .filter {
+                    val name = it.relativeTo(testDataLocation).toString()
+                    filterCondition(name)
+                }
                 .sorted()
                 .drop(testDataChunk * testDataChunkSize)
                 .take(testDataChunkSize)
                 .map { BenchmarkTestArguments(it.relativeTo(testDataLocation).toString(), it) }
+                .toList()
                 .skipBadTestCases()
                 .ensureNotEmpty()
+
         }
 
         val testData by lazy {
             prepareTestData()
         }
+
+        fun testData(filterCondition: (String) -> Boolean) = prepareTestData(filterCondition)
 
         /**
          * Parametrized tests require at least one argument.
@@ -409,7 +418,7 @@ abstract class BenchmarksBasedTest {
 
     data class BenchmarkTestArguments(
         val name: String,
-        val samplePath: Path
+        val samplePath: Path,
     ) : Arguments {
         override fun get() = arrayOf(name, samplePath)
     }
