@@ -13,11 +13,11 @@ import io.ksmt.solver.z3.*
 import io.ksmt.sort.*
 import io.ksmt.utils.getValue
 import io.ksmt.utils.uncheckedCast
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.FileOutputStream
-import java.io.InputStream
-import java.io.OutputStream
+import java.io.*
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicLong
+import kotlin.io.path.isRegularFile
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -26,7 +26,7 @@ fun serialize(ctx: KContext, expressions: List<KExpr<KBoolSort>>, outputStream: 
     val marshaller = AstSerializationCtx.marshaller(serializationCtx)
     val emptyRdSerializationCtx = SerializationCtx(Serializers())
 
-    val buffer = UnsafeBuffer(ByteArray(10_000))
+    val buffer = UnsafeBuffer(ByteArray(100_000))
 
     expressions.forEach { expr ->
         marshaller.write(emptyRdSerializationCtx, buffer, expr)
@@ -55,9 +55,26 @@ fun deserialize(ctx: KContext, inputStream: InputStream): List<KExpr<KBoolSort>>
     return expressions
 }
 
-class LogSolver<C : KSolverConfiguration>(val ctx: KContext, val baseSolver: KSolver<C>) : KSolver<C> by baseSolver {
+class LogSolver<C : KSolverConfiguration>(
+    private val ctx: KContext, private val baseSolver: KSolver<C>
+) : KSolver<C> by baseSolver {
+
     companion object {
-        var counter = 0L
+        val counter = AtomicLong(0)
+    }
+
+    init {
+        File("formulas").mkdirs()
+    }
+
+    private fun getNewFileCounter(): Long {
+        return synchronized(counter) {
+            counter.getAndIncrement()
+        }
+    }
+
+    private fun getNewFileName(): String {
+        return "formulas/f-${getNewFileCounter()}.bin"
     }
 
     val stack = mutableListOf<MutableList<KExpr<KBoolSort>>>(mutableListOf())
@@ -85,12 +102,12 @@ class LogSolver<C : KSolverConfiguration>(val ctx: KContext, val baseSolver: KSo
     }
 
     override fun check(timeout: Duration): KSolverStatus {
-        serialize(ctx, stack.flatten(), FileOutputStream("formulas/f-${counter++}.bin"))
+        serialize(ctx, stack.flatten(), FileOutputStream(getNewFileName()))
         return baseSolver.check(timeout)
     }
 
     override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus {
-        serialize(ctx, stack.flatten() + assumptions, FileOutputStream("formulas/f-${counter++}.bin"))
+        serialize(ctx, stack.flatten() + assumptions, FileOutputStream(getNewFileName()))
         return baseSolver.checkWithAssumptions(assumptions, timeout)
     }
 }
@@ -98,6 +115,22 @@ class LogSolver<C : KSolverConfiguration>(val ctx: KContext, val baseSolver: KSo
 fun main() {
     val ctx = KContext()
 
+    with(ctx) {
+        val files = Files.walk(Path.of("/home/stephen/Desktop/formulas")).filter { it.isRegularFile() }
+
+        var ok = 0; var fail = 0
+        files.forEach {
+            try {
+                println(deserialize(ctx, FileInputStream(it.toFile())).size)
+                ok++
+            } catch (e: Exception) {
+                fail++
+            }
+        }
+        println("$ok / $fail")
+    }
+
+    /*
     with(ctx) {
         // create symbolic variables
         val a by boolSort
@@ -174,4 +207,5 @@ fun main() {
         }
         */
     }
+    */
 }
