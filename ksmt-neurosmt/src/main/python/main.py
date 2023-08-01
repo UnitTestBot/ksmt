@@ -48,7 +48,7 @@ if __name__ == "__main__":
             save_last=True, save_top_k=3, mode="max",
             auto_insert_metric_name=False, save_on_train_epoch_end=False
         )],
-        max_epochs=100,
+        max_epochs=200,
         log_every_n_steps=1,
         enable_checkpointing=True,
         barebones=False,
