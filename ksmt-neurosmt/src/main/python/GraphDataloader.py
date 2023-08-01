@@ -60,7 +60,7 @@ def load_data(path_to_data):
     if len(unsat_paths) > SHRINK:
         unsat_paths = unsat_paths[:SHRINK]
 
-    def process_paths(paths, label, data):
+    def process_paths(paths, data, label):
         for path in tqdm(paths):
             operators, edges, depth = read_graph_by_path(path, max_size=MAX_FORMULA_SIZE, max_depth=MAX_FORMULA_DEPTH)
 
@@ -74,11 +74,36 @@ def load_data(path_to_data):
             data.append((operators, edges, label, depth))
 
     sat_data, unsat_data = [], []
-    process_paths(sat_paths, 1, sat_data)
-    process_paths(unsat_paths, 0, unsat_data)
+    process_paths(sat_paths, sat_data, label=1)
+    process_paths(unsat_paths, unsat_data, label=0)
 
     sat_data, unsat_data = align_sat_unsat_sizes(sat_data, unsat_data)
 
+    def split_data(data):
+        train_ind, val_ind, test_ind = train_val_test_indices(len(data))
+
+        return [data[i] for i in train_ind], [data[i] for i in val_ind], [data[i] for i in test_ind]
+
+    print("train/val/test split start")
+
+    sat_train, sat_val, sat_test = split_data(sat_data)
+    unsat_train, unsat_val, unsat_test = split_data(unsat_data)
+    del sat_data, unsat_data
+    gc.collect()
+
+    train_data = sat_train + unsat_train
+    val_data = sat_val + unsat_val
+    test_data = sat_test + unsat_test
+    del sat_train, sat_val, sat_test, unsat_train, unsat_val, unsat_test
+    gc.collect()
+
+    np.random.shuffle(train_data)
+    np.random.shuffle(val_data)
+    np.random.shuffle(test_data)
+
+    print("train/val/test split end")
+
+    """
     graph_data = sat_data + unsat_data
     del sat_data, unsat_data
     gc.collect()
@@ -88,18 +113,13 @@ def load_data(path_to_data):
     train_data = [graph_data[i] for i in train_ind]
     val_data = [graph_data[i] for i in val_ind]
     test_data = [graph_data[i] for i in test_ind]
+    """
 
     print("\nstats:")
-    print(f"overall: {sum(it[2] for it in graph_data) / len(graph_data)} | {len(graph_data)}")
     print(f"train:   {sum(it[2] for it in train_data) / len(train_data)} | {len(train_data)}")
     print(f"val:     {sum(it[2] for it in val_data) / len(val_data)} | {len(val_data)}")
     print(f"test:    {sum(it[2] for it in test_data) / len(test_data)} | {len(test_data)}")
     print("\n", flush=True)
-
-    print("del start")
-    del graph_data
-    gc.collect()
-    print("del end")
 
     encoder = OrdinalEncoder(
         dtype=int,
