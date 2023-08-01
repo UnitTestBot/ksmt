@@ -21,7 +21,7 @@ BATCH_SIZE = 32
 MAX_FORMULA_SIZE = 10000
 MAX_FORMULA_DEPTH = 2500
 NUM_WORKERS = 16
-SHRINK = 10 ** 10  # 1000
+SHRINK = 10 ** (int(os.environ["SHRINK"]) if "SHRINK" in os.environ else 10)
 
 
 class GraphDataset(Dataset):

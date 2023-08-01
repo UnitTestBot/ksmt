@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import sys
-import os; os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+import os; os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"; os.environ["CUDA_VISIBLE_DEVICES"] = os.environ["GPU"]
 import time
 
 import numpy as np
@@ -23,14 +23,14 @@ from LightningModel import LightningModel
 
 if __name__ == "__main__":
     seed_everything(24, workers=True)
-    # torch.backends.cuda.matmul.allow_tf32 = True
+    torch.set_float32_matmul_precision("medium")
 
     tr, va, te = load_data(sys.argv[1])
 
     pl_model = LightningModel()
     trainer = Trainer(
         accelerator="auto",
-        # precision="16-mixed",
+        # precision="bf16-mixed",
         logger=TensorBoardLogger("../logs", name="neuro-smt"),
         max_epochs=100,
         log_every_n_steps=1,

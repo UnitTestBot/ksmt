@@ -42,7 +42,7 @@ class LightningModel(pl.LightningModule):
         out = F.sigmoid(out)
 
         self.log(
-            "train/loss", loss.item(),
+            "train/loss", loss.detach().float(),
             prog_bar=True, logger=True,
             on_step=True, on_epoch=True,
             batch_size=train_batch.num_graphs
@@ -63,7 +63,7 @@ class LightningModel(pl.LightningModule):
         out = F.sigmoid(out)
 
         self.log(
-            "val/loss", loss.item(),
+            "val/loss", loss.float(),
             prog_bar=True, logger=True,
             on_step=False, on_epoch=True,
             batch_size=val_batch.num_graphs
@@ -119,8 +119,8 @@ class LightningModel(pl.LightningModule):
         )
         logger.add_scalar("val/roc-auc", roc_auc, self.current_epoch)
 
-        all_outputs = all_outputs.cpu().numpy()
-        all_targets = all_targets.cpu().numpy()
+        all_outputs = all_outputs.float().cpu().numpy()
+        all_targets = all_targets.float().cpu().numpy()
 
         all_outputs = all_outputs > 0.5
         print(classification_report(all_targets, all_outputs, digits=3, zero_division=0.0))
