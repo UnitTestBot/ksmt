@@ -9,7 +9,7 @@ repositories {
     mavenCentral()
 }
 
-val z3Version = "4.11.2"
+val z3Version = "4.12.3"
 
 val z3JavaJar by lazy { mkZ3ReleaseDownloadTask("x64-win", "*.jar") }
 
@@ -17,7 +17,8 @@ val z3BinariesWithArch = listOf(
     "x64" to mkZ3ReleaseDownloadTask("x64-win", "*.dll"),
     "x64" to mkZ3ReleaseDownloadTask("x64-glibc-2.31", "*.so"),
     "x64" to mkZ3ReleaseDownloadTask("x64-osx-10.16", "*.dylib"),
-    "arm" to mkZ3ReleaseDownloadTask("arm64-osx-11.0", "*.dylib")
+    "arm" to mkZ3ReleaseDownloadTask("arm64-osx-11.0", "*.dylib"),
+    "arm" to mkZ3ReleaseDownloadTask("arm64-glibc-2.35", "*.so"),
 )
 
 dependencies {
@@ -41,7 +42,8 @@ tasks.withType<ProcessResources> {
 
 fun Project.mkZ3ReleaseDownloadTask(arch: String, artifactPattern: String): TaskProvider<Task> {
     val z3ReleaseBaseUrl = "https://github.com/Z3Prover/z3/releases/download"
-    val releaseName = "z3-${z3Version}"
+//    val releaseName = "z3-${z3Version}"
+    val releaseName = "Nightly"
     val packageName = "z3-${z3Version}-${arch}.zip"
     val packageDownloadTarget = buildDir.resolve("dist").resolve(releaseName).resolve(packageName)
     val downloadUrl = listOf(z3ReleaseBaseUrl, releaseName, packageName).joinToString("/")
