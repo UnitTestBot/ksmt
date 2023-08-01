@@ -12,15 +12,35 @@ from sklearn.metrics import accuracy_score, roc_auc_score, classification_report
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from pytorch_lightning import Trainer, seed_everything
+from pytorch_lightning.loggers import TensorBoardLogger
 
 from GraphDataloader import load_data
 
 from Model import Model
+from LightningModel import LightningModel
 
 
 if __name__ == "__main__":
+    seed_everything(24, workers=True)
+    # torch.backends.cuda.matmul.allow_tf32 = True
+
     tr, va, te = load_data(sys.argv[1])
 
+    pl_model = LightningModel()
+    trainer = Trainer(
+        accelerator="auto",
+        # precision="16-mixed",
+        logger=TensorBoardLogger("../logs", name="neuro-smt"),
+        max_epochs=100,
+        log_every_n_steps=1,
+        enable_checkpointing=False,
+        barebones=False
+    )
+
+    trainer.fit(pl_model, tr, va)
+
+    """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = Model().to(device)
     optimizer = torch.optim.Adam([p for p in model.parameters() if p is not None and p.requires_grad], lr=1e-4)
@@ -110,3 +130,5 @@ if __name__ == "__main__":
             roc_auc = "{:.9f}".format(roc_auc)
 
             f.write(f"{str(epoch).rjust(3)}: {tr_loss} | {va_loss} | {roc_auc}\n")
+    
+    """

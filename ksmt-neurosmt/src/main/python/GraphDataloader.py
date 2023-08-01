@@ -68,7 +68,7 @@ def load_data(path_to_data):
                 continue
 
             if len(edges) == 0:
-                print(f"w: formula with no edges; file '{path}'")
+                print(f"w: ignoring formula without edges; file '{path}'")
                 continue
 
             data.append((operators, edges, label, depth))
@@ -77,7 +77,6 @@ def load_data(path_to_data):
     process_paths(sat_paths, 1, sat_data)
     process_paths(unsat_paths, 0, unsat_data)
 
-    np.random.seed(24)
     sat_data, unsat_data = align_sat_unsat_sizes(sat_data, unsat_data)
 
     graph_data = sat_data + unsat_data
@@ -125,12 +124,19 @@ def load_data(path_to_data):
     test_data = list(map(transform, test_data))
     print("transform end")
 
+    print("create dataset start")
     train_ds = GraphDataset(train_data)
     val_ds = GraphDataset(val_data)
     test_ds = GraphDataset(test_data)
+    print("create dataset end")
 
-    return (
-        DataLoader(train_ds.graphs, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, shuffle=True, drop_last=True),
-        DataLoader(val_ds.graphs, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS),
-        DataLoader(test_ds.graphs, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS)
-    )
+    try:
+        print("create dataloader start")
+        return (
+            DataLoader(train_ds.graphs, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, shuffle=True, drop_last=True),
+            DataLoader(val_ds.graphs, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS),
+            DataLoader(test_ds.graphs, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS)
+        )
+
+    finally:
+        print("create dataloader end\n", flush=True)
