@@ -134,8 +134,8 @@ def load_data(path_to_data):
         print("create dataloader start")
         return (
             DataLoader(train_ds.graphs, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, shuffle=True, drop_last=True),
-            DataLoader(val_ds.graphs, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS),
-            DataLoader(test_ds.graphs, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS)
+            DataLoader(val_ds.graphs, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, shuffle=False, drop_last=False),
+            DataLoader(test_ds.graphs, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, shuffle=False, drop_last=False)
         )
 
     finally:

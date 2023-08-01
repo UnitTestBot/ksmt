@@ -22,10 +22,6 @@ class LightningModel(pl.LightningModule):
         self.acc = BinaryAccuracy()
         self.roc_auc = BinaryAUROC()
 
-        #self.train_dl = train_dl
-        #self.val_dl = val_dl
-        #self.test_dl = test_dl
-
     def forward(self, x):
         return self.model(x)
 
@@ -78,26 +74,6 @@ class LightningModel(pl.LightningModule):
         self.val_outputs.append(out)
         self.val_targets.append(val_batch.y)
 
-        """
-        probas = torch.flatten(probas).cpu().numpy()
-        answers = torch.flatten(answers).cpu().numpy()
-        targets = torch.flatten(targets).cpu().numpy()
-
-        mean_loss = np.mean(losses)
-        roc_auc = roc_auc_score(targets, probas) if val else None
-
-        print("\n", flush=True)
-        print(f"mean loss: {mean_loss}")
-        print(f"acc: {accuracy_score(targets, answers)}")
-        print(f"roc-auc: {roc_auc}")
-        print(classification_report(targets, answers, digits=3, zero_division=0.0), flush=True)
-
-        if val:
-            return mean_loss, roc_auc
-        else:
-            return mean_loss
-        """
-
         return loss
 
     def on_validation_epoch_end(self):
@@ -126,19 +102,3 @@ class LightningModel(pl.LightningModule):
         print(classification_report(all_targets, all_outputs, digits=3, zero_division=0.0))
 
         print("\n", flush=True)
-
-    """
-    def backward(self, trainer, loss, optimizer, optimizer_idx):
-        loss.backward()
-    """
-
-    """
-    def train_dataloader(self):
-        return self.train_dl
-
-    def val_dataloader(self):
-        return self.val_dl
-
-    def test_dataloader(self):
-        return self.test_dl
-    """
