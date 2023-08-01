@@ -1,13 +1,13 @@
 #!/usr/bin/python3
 
 import os; os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"; os.environ["CUDA_VISIBLE_DEVICES"] = os.environ["GPU"]
-import time
 from argparse import ArgumentParser
 
 import torch
 
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.callbacks import ModelCheckpoint
 
 from GraphDataloader import load_data
 
@@ -25,7 +25,6 @@ def get_args():
         print(arg, "=", getattr(args, arg))
 
     print()
-    time.sleep(5)
 
     return args
 
@@ -42,6 +41,13 @@ if __name__ == "__main__":
         accelerator="auto",
         # precision="bf16-mixed",
         logger=TensorBoardLogger("../logs", name="neuro-smt"),
+        callbacks=[ModelCheckpoint(
+            filename="epoch_{epoch:03d}_roc-auc_{val/roc-auc:.3f}",
+            monitor="val/roc-auc",
+            verbose=True,
+            save_last=True, save_top_k=3, mode="max",
+            auto_insert_metric_name=False, save_on_train_epoch_end=False
+        )],
         max_epochs=100,
         log_every_n_steps=1,
         enable_checkpointing=True,
