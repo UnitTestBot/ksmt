@@ -6,7 +6,6 @@ import io.ksmt.expr.KFpRoundingMode
 import io.ksmt.sort.KFpRoundingModeSort
 import io.ksmt.sort.KFpSort
 import io.ksmt.symfpu.operations.UnpackedFp.Companion.makeZero
-import io.ksmt.utils.cast
 
 internal fun <Fp : KFpSort> KContext.fma(
     leftMultiply: UnpackedFp<Fp>,
@@ -80,7 +79,7 @@ internal fun <Fp : KFpSort> KContext.fma(
         roundingMode,
         multiplyResultWithSpecialCases,
         fullMultiplyResult,
-        addArgument.cast<UnpackedFp<Fp>, UnpackedFp<Fp>>(),
+        addArgument,
         roundedResult,
         trueExpr
     )

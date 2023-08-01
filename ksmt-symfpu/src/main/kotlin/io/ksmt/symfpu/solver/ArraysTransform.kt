@@ -8,13 +8,11 @@ import io.ksmt.sort.KArray2Sort
 import io.ksmt.sort.KArray3Sort
 import io.ksmt.sort.KArraySort
 import io.ksmt.sort.KArraySortBase
-import io.ksmt.sort.KBvSort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KSort
 import io.ksmt.symfpu.operations.UnpackedFp
 import io.ksmt.symfpu.operations.packToBv
 import io.ksmt.symfpu.operations.unpack
-import io.ksmt.utils.cast
 import io.ksmt.utils.uncheckedCast
 
 class ArraysTransform(val ctx: KContext, private val packedBvOptimizationEnabled: Boolean) {
@@ -41,8 +39,7 @@ class ArraysTransform(val ctx: KContext, private val packedBvOptimizationEnabled
 
     fun <R : KSort> arraySelectUnpacked(sort: R, res: KExpr<R>): KExpr<R> = with(ctx) {
         if (sort is KFpSort) {
-            val resTyped: KExpr<KBvSort> = res.cast()
-            unpack(sort, resTyped, packedBvOptimizationEnabled).cast()
+            unpack(sort, res.uncheckedCast(), packedBvOptimizationEnabled).uncheckedCast()
         } else {
             res
         }
@@ -50,7 +47,7 @@ class ArraysTransform(val ctx: KContext, private val packedBvOptimizationEnabled
 
     companion object {
         internal fun <D : KSort> packToBvIfUnpacked(expr: KExpr<D>): KExpr<D> = with(expr.ctx) {
-            ((expr as? UnpackedFp<*>)?.let { packToBv(expr) } ?: expr).cast()
+            ((expr as? UnpackedFp<*>)?.let { packToBv(expr) } ?: expr).uncheckedCast()
         }
 
         private fun KContext.mkAnyArraySort(domain: List<KSort>, range: KSort): KArraySortBase<KSort> =
@@ -78,14 +75,14 @@ class ArraysTransform(val ctx: KContext, private val packedBvOptimizationEnabled
         ): KExpr<out KArraySortBase<KSort>> {
             val domain = array.sort.domainSorts
             return when (domain.size) {
-                KArraySort.DOMAIN_SIZE -> mkArrayStore(array.cast(), indices.single(), value)
-                KArray2Sort.DOMAIN_SIZE -> mkArrayStore(array.cast(), indices.first(), indices.last(), value)
+                KArraySort.DOMAIN_SIZE -> mkArrayStore(array.uncheckedCast(), indices.single(), value)
+                KArray2Sort.DOMAIN_SIZE -> mkArrayStore(array.uncheckedCast(), indices.first(), indices.last(), value)
                 KArray3Sort.DOMAIN_SIZE -> {
                     val (d0, d1, d2) = indices
-                    mkArrayStore(array.cast(), d0, d1, d2, value)
+                    mkArrayStore(array.uncheckedCast(), d0, d1, d2, value)
                 }
 
-                else -> mkArrayNStore(array.cast(), indices, value)
+                else -> mkArrayNStore(array.uncheckedCast(), indices, value)
             }
         }
 

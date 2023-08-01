@@ -35,7 +35,6 @@ import io.ksmt.symfpu.solver.FpToBvTransformer
 import io.ksmt.test.TestRunner
 import io.ksmt.test.TestWorker
 import io.ksmt.test.TestWorkerProcess
-import io.ksmt.utils.cast
 import io.ksmt.utils.getValue
 import io.ksmt.utils.uncheckedCast
 import kotlinx.coroutines.TimeoutCancellationException
@@ -469,7 +468,7 @@ class FpToBvTransformerTest {
     fun testBvToFpExpr() = with(createContext()) {
         val a by mkBv32Sort()
         testFpExpr(
-            mkBvToFpExprNoSimplify(fp32Sort, defaultRounding(), a.cast(), true),
+            mkBvToFpExprNoSimplify(fp32Sort, defaultRounding(), a.uncheckedCast(), true),
             mapOf("a" to a),
         )
     }
@@ -483,7 +482,7 @@ class FpToBvTransformerTest {
     fun testBvToFpUnsignedExpr() = with(createContext()) {
         val a by mkBv32Sort()
         testFpExpr(
-            mkBvToFpExprNoSimplify(fp32Sort, defaultRounding(), a.cast(), false),
+            mkBvToFpExprNoSimplify(fp32Sort, defaultRounding(), a.uncheckedCast(), false),
             mapOf("a" to a),
         )
     }
@@ -495,7 +494,7 @@ class FpToBvTransformerTest {
         val e by mkBv16Sort()
         val sig by mkBv16Sort()
         testFpExpr(
-            mkFpFromBvExpr(sign.cast(), e.cast(), sig.cast()),
+            mkFpFromBvExpr(sign.uncheckedCast(), e.uncheckedCast(), sig.uncheckedCast()),
             mapOf("sign" to sign, "e" to e, "sig" to sig),
         )
     }
@@ -546,13 +545,13 @@ class FpToBvTransformerTest {
     ) {
 
         val applied = transformer.apply(exprToTransform)
-        val transformedExpr: KExpr<T> = ((applied as? UnpackedFp<*>)?.toFp() ?: applied).cast()
+        val transformedExpr: KExpr<T> = ((applied as? UnpackedFp<*>)?.toFp() ?: applied).uncheckedCast()
 
         val testTransformer = TestTransformerUseBvs(this, transformer.mapFpToUnpackedFp)
         val toCompare = testTransformer.apply(exprToTransform)
 
 
-        solver.assert(!mkEqNoSimplify(transformedExpr, toCompare.cast()))
+        solver.assert(!mkEqNoSimplify(transformedExpr, toCompare))
 
         val status =
             solver.checkWithAssumptions(
@@ -597,8 +596,12 @@ class FpToBvTransformerTest {
 
     private fun KContext.unpackedString(value: KExpr<*>, model: KModel) = if (value.sort is KFpSort) {
         val sb = StringBuilder()
-        val fpExpr: KExpr<KFpSort> by lazy { value.uncheckedCast() }
-        val ufp = if (value is UnpackedFp<*>) value else unpack(fpExpr.sort, mkFpToIEEEBvExpr(fpExpr.cast()), true)
+        val ufp = if (value is UnpackedFp<*>) {
+            value
+        } else {
+            val fpExpr: KExpr<KFpSort> = value.uncheckedCast()
+            unpack(fpExpr.sort, mkFpToIEEEBvExpr(fpExpr), true)
+        }
         val fpValue = model.eval(ufp.toFp()) as KFpValue
         with(ufp) {
             sb.append("uFP sign ")
@@ -680,8 +683,8 @@ class FpToBvTransformerTest {
 internal class TestTransformerUseBvs(ctx: KContext, private val mapFpToBv: Map<KDecl<KFpSort>, UnpackedFp<KFpSort>>) :
     KNonRecursiveTransformer(ctx) {
     override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = if (expr.sort is KFpSort) {
-        val asFp: KConst<KFpSort> = expr.cast()
-        mapFpToBv[asFp.decl]!!.toFp().cast()
+        val asFp: KConst<KFpSort> = expr.uncheckedCast()
+        mapFpToBv[asFp.decl]!!.toFp().uncheckedCast()
     } else expr
 }
 

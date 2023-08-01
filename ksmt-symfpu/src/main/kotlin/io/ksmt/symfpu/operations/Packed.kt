@@ -5,6 +5,7 @@ import io.ksmt.expr.KExpr
 import io.ksmt.expr.rewrite.simplify.simplifyBvExtractExpr
 import io.ksmt.expr.rewrite.simplify.simplifyFpFromBvExpr
 import io.ksmt.sort.KBoolSort
+import io.ksmt.sort.KBv1Sort
 import io.ksmt.sort.KBvSort
 import io.ksmt.sort.KFpSort
 import io.ksmt.symfpu.operations.UnpackedFp.Companion.iteOp
@@ -12,7 +13,7 @@ import io.ksmt.symfpu.operations.UnpackedFp.Companion.makeInf
 import io.ksmt.symfpu.operations.UnpackedFp.Companion.makeNaN
 import io.ksmt.symfpu.operations.UnpackedFp.Companion.makeZero
 import io.ksmt.utils.BvUtils.bvZero
-import io.ksmt.utils.cast
+import io.ksmt.utils.uncheckedCast
 
 fun <Fp : KFpSort> KContext.unpack(
     sort: Fp,
@@ -65,10 +66,14 @@ fun <Fp : KFpSort> KContext.unpack(
     val isNaN = onesExponent and !zeroSignificand
 
 
-    return iteOp(isNaN, makeNaN(sort),
-        iteOp(isInf, makeInf(sort, sign),
-            iteOp(isZero, makeZero(sort, sign),
-                iteOp(!isSubnormal, ufNormal,
+    return iteOp(
+        isNaN, makeNaN(sort),
+        iteOp(
+            isInf, makeInf(sort, sign),
+            iteOp(
+                isZero, makeZero(sort, sign),
+                iteOp(
+                    !isSubnormal, ufNormal,
                     ufSubnormalBase.normaliseUp()
                 )
             )
@@ -90,13 +95,13 @@ fun <Fp : KFpSort> KContext.packToBv(uf: UnpackedFp<Fp>): KExpr<KBvSort> {
     // Will be correct for normal values only, subnormals may still be negative.
     val packedBiasedExp = mkBvExtractExpr(packedExWidth - 1, 0, biasedExp)
     val maxExp = ones(packedExWidth.toUInt())
-    val minExp = bvZero(packedExWidth.toUInt())
+    val minExp = bvZero<KBvSort>(packedExWidth.toUInt())
 
     val hasMaxExp = uf.isNaN or uf.isInf
     val hasMinExp = uf.isZero or inSubnormalRange
     val hasFixedExp = hasMaxExp or hasMinExp
 
-    val packedExp = mkIte(hasFixedExp, mkIte(hasMaxExp, maxExp, minExp.cast()), packedBiasedExp)
+    val packedExp = mkIte(hasFixedExp, mkIte(hasMaxExp, maxExp, minExp), packedBiasedExp)
 
     // Significand
     val packedSigWidth = uf.sort.significandBits.toInt() - 1
@@ -111,7 +116,7 @@ fun <Fp : KFpSort> KContext.packToBv(uf: UnpackedFp<Fp>): KExpr<KBvSort> {
     // The amount needed to normalise the number
     val subnormalShiftAmount = max(
         mkBvSubExpr(minNormalExponent(uf.sort), uf.unbiasedExponent), // minNormalExponent - exponent
-        bvZero(uf.unbiasedExponent.sort.sizeBits).cast()
+        bvZero(uf.unbiasedExponent.sort.sizeBits)
     )
 
 
@@ -129,10 +134,10 @@ fun <Fp : KFpSort> KContext.packToBv(uf: UnpackedFp<Fp>): KExpr<KBvSort> {
     val nanBv = leadingOne(packedSigWidth)
     val packedSig = mkIte(
         hasFixedSignificand, mkIte(
-        uf.isNaN, nanBv, bvZero(packedSigWidth.toUInt()).cast()
-    ), mkIte(
-        inNormalRange, dropLeadingOne, correctedSubnormal
-    )
+            uf.isNaN, nanBv, bvZero(packedSigWidth.toUInt())
+        ), mkIte(
+            inNormalRange, dropLeadingOne, correctedSubnormal
+        )
     )
 
     return mkBvConcatExpr(packedSign, packedExp, packedSig)
@@ -142,7 +147,7 @@ fun <Fp : KFpSort> KContext.packToBv(uf: UnpackedFp<Fp>): KExpr<KBvSort> {
 fun <Fp : KFpSort> KContext.pack(packed: KExpr<KBvSort>, sort: Fp): KExpr<Fp> {
     check(packed.sort.sizeBits == sort.exponentBits + sort.significandBits) {
         "Packed expression sort size (${packed.sort.sizeBits}) " +
-            "does not match the sort size (${sort.exponentBits} + ${sort.significandBits})"
+                "does not match the sort size (${sort.exponentBits} + ${sort.significandBits})"
     }
 
     val pWidth = packed.sort.sizeBits.toInt()
@@ -151,9 +156,9 @@ fun <Fp : KFpSort> KContext.pack(packed: KExpr<KBvSort>, sort: Fp): KExpr<Fp> {
     // Extract
     val packedSignificand = simplifyBvExtractExpr(pWidth - exWidth - 2, 0, packed)
     val packedExponent = simplifyBvExtractExpr(pWidth - 2, pWidth - exWidth - 1, packed)
-    val sign = simplifyBvExtractExpr(pWidth - 1, pWidth - 1, packed)
+    val sign: KExpr<KBv1Sort> = simplifyBvExtractExpr(pWidth - 1, pWidth - 1, packed).uncheckedCast()
 
-    return simplifyFpFromBvExpr(sign.cast(), packedExponent, packedSignificand)
+    return simplifyFpFromBvExpr(sign, packedExponent, packedSignificand)
 }
 
 fun KExpr<KBvSort>.matchWidthUnsigned(expr: KExpr<KBvSort>): KExpr<KBvSort> {

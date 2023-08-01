@@ -1,5 +1,3 @@
-@file:Suppress("LongParameterList")
-
 package io.ksmt.symfpu.operations
 
 import io.ksmt.KContext
@@ -16,8 +14,8 @@ import io.ksmt.symfpu.operations.UnpackedFp.Companion.makeInf
 import io.ksmt.symfpu.operations.UnpackedFp.Companion.makeZero
 import io.ksmt.utils.BvUtils.bvOne
 import io.ksmt.utils.BvUtils.bvZero
-import io.ksmt.utils.cast
 
+@Suppress("LongParameterList")
 private fun <Fp : KFpSort> KContext.rounderSpecialCases(
     format: Fp,
     roundingMode: KExpr<KFpRoundingModeSort>,
@@ -67,6 +65,7 @@ private fun <Fp : KFpSort> KContext.rounderSpecialCases(
     )
 }
 
+@Suppress("LongParameterList")
 fun KContext.roundingDecision(
     roundingMode: KExpr<KFpRoundingModeSort>,
     sign: KExpr<KBoolSort>,
@@ -118,8 +117,8 @@ data class CustomRounderInfo(
     }
 }
 
-fun KContext.decrement(expr: KExpr<KBvSort>): KExpr<KBvSort> = mkBvSubExpr(expr, bvOne(expr.sort.sizeBits).cast())
-fun KContext.increment(expr: KExpr<KBvSort>): KExpr<KBvSort> = mkBvAddExpr(expr, bvOne(expr.sort.sizeBits).cast())
+fun KContext.decrement(expr: KExpr<KBvSort>): KExpr<KBvSort> = mkBvSubExpr(expr, bvOne(expr.sort.sizeBits))
+fun KContext.increment(expr: KExpr<KBvSort>): KExpr<KBvSort> = mkBvAddExpr(expr, bvOne(expr.sort.sizeBits))
 
 
 @Suppress("LongMethod")
@@ -181,7 +180,7 @@ fun <Fp : KFpSort, S : KFpSort> KContext.round(
 
     val subnormalMask = orderEncode(subnormalShiftPrepared)
     val subnormalStickyMask =
-        mkBvLogicalShiftRightExpr(subnormalMask, bvOne(targetSignificandWidth.toUInt() + 1u).cast())
+        mkBvLogicalShiftRightExpr(subnormalMask, bvOne(targetSignificandWidth.toUInt() + 1u))
 
 
     val subnormalMaskedSignificand = mkBvAndExpr(extractedSignificand, mkBvNotExpr(subnormalMask))
@@ -193,7 +192,7 @@ fun <Fp : KFpSort, S : KFpSort> KContext.round(
         mkOr(guardBit, stickyBit, !isAllZeros(mkBvAndExpr(subnormalMaskRemoved, subnormalStickyMask)))
 
     val subnormalIncrementAmount = mkBvAndExpr(
-        mkBvShiftLeftExpr(subnormalMask, bvOne(targetSignificandWidth.toUInt() + 1u).cast()), mkBvNotExpr(subnormalMask)
+        mkBvShiftLeftExpr(subnormalMask, bvOne(targetSignificandWidth.toUInt() + 1u)), mkBvNotExpr(subnormalMask)
     )
 
 
@@ -281,6 +280,7 @@ fun KContext.collar(op: KExpr<KBvSort>, lower: KExpr<KBvSort>, upper: KExpr<KBvS
 
 data class SignificandRounderResult(val significand: KExpr<KBvSort>, val incrementExponent: KExpr<KBoolSort>)
 
+@Suppress("LongParameterList")
 fun KContext.variablePositionRound(
     roundingMode: KExpr<KFpRoundingModeSort>,
     sign: KExpr<KBoolSort>,
@@ -345,7 +345,7 @@ fun KContext.variablePositionRound(
     )
 }
 
-
+@Suppress("LongParameterList")
 fun KContext.fixedPositionRound(
     roundingMode: KExpr<KFpRoundingModeSort>,
     sign: KExpr<KBoolSort>,

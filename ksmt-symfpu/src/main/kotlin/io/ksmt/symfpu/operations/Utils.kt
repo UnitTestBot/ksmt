@@ -11,8 +11,6 @@ import io.ksmt.utils.BvUtils.bvOne
 import io.ksmt.utils.BvUtils.bvValue
 import io.ksmt.utils.BvUtils.bvZero
 import io.ksmt.utils.BvUtils.minus
-import io.ksmt.utils.cast
-
 
 fun KContext.bias(format: KFpSort): KBitVecValue<KBvSort> {
     val w = unpackedExponentWidth(format)
@@ -20,11 +18,10 @@ fun KContext.bias(format: KFpSort): KBitVecValue<KBvSort> {
     return mkBv(binaryValue, w.toUInt())
 }
 
-
 fun KContext.minNormalExponent(format: KFpSort): KBitVecValue<KBvSort> {
     // -(bias - 1)
     val w = unpackedExponentWidth(format).toUInt()
-    return (bvZero(w) - (bias(format) - bvOne(w))).cast()
+    return bvZero<KBvSort>(w) - (bias(format) - bvOne(w))
 }
 
 fun KContext.maxNormalExponent(format: KFpSort): KBitVecValue<KBvSort> {
@@ -32,14 +29,14 @@ fun KContext.maxNormalExponent(format: KFpSort): KBitVecValue<KBvSort> {
 }
 
 fun KContext.maxSubnormalExponent(format: KFpSort): KBitVecValue<KBvSort> {
-    return (bvZero(unpackedExponentWidth(format).toUInt()) - bias(format)).cast()
+    return bvZero<KBvSort>(unpackedExponentWidth(format).toUInt()) - bias(format)
 }
 
 fun KContext.minSubnormalExponent(format: KFpSort): KBitVecValue<KBvSort> {
-    return (maxSubnormalExponent(format) - bvValue(
+    return maxSubnormalExponent(format) - bvValue(
         unpackedExponentWidth(format).toUInt(),
         format.significandBits.toInt() - 2
-    )).cast()
+    )
 }
 
 fun KContext.boolToBv(expr: KExpr<KBoolSort>) = mkIte(expr, bvOne(), bvZero())
@@ -59,9 +56,8 @@ fun KContext.leadingOne(width: Int): KBitVecValue<KBvSort> {
 }
 
 fun <Fp : KFpSort> KContext.defaultSignificand(sort: Fp) = leadingOne(sort.significandBits.toInt())
-fun <Fp : KFpSort> KContext.defaultExponent(sort: Fp): KBitVecValue<KBvSort> {
-    return bvZero(unpackedExponentWidth(sort).toUInt()).cast()
-}
+fun <Fp : KFpSort> KContext.defaultExponent(sort: Fp): KBitVecValue<KBvSort> =
+    bvZero(unpackedExponentWidth(sort).toUInt())
 
 fun unpackedSignificandWidth(format: KFpSort): Int = format.significandBits.toInt()
 
@@ -131,8 +127,8 @@ fun bitsToRepresent(value: Int): Int {
     return i
 }
 
-fun KContext.ones(width: UInt): KExpr<KBvSort> = bvMaxValueUnsigned(width).cast()
-fun KContext.isAllZeros(expr: KExpr<KBvSort>) = expr eq bvZero(expr.sort.sizeBits).cast()
+fun KContext.ones(width: UInt): KExpr<KBvSort> = bvMaxValueUnsigned(width)
+fun KContext.isAllZeros(expr: KExpr<KBvSort>) = expr eq bvZero(expr.sort.sizeBits)
 fun KContext.isAllOnes(expr: KExpr<KBvSort>): KExpr<KBoolSort> = expr eq mkBv(-1, expr.sort.sizeBits)
 
 

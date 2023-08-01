@@ -12,7 +12,7 @@ internal fun <Fp : KFpSort> KContext.less(
     left: UnpackedFp<Fp>, right: UnpackedFp<Fp>,
 ): KExpr<KBoolSort> {
     val infCase = (left.isNegativeInfinity and !right.isNegativeInfinity) or
-        (!left.isPositiveInfinity and right.isPositiveInfinity)
+            (!left.isPositiveInfinity and right.isPositiveInfinity)
 
     val zeroCase =
         (left.isZero and !right.isZero and !right.isNegative) or (!left.isZero and left.isNegative and right.isZero)
@@ -21,10 +21,10 @@ internal fun <Fp : KFpSort> KContext.less(
 
     return lessHelper(
         left, right, infCase, zeroCase, packedExists, positiveCaseSignificandComparison = mkBvUnsignedLessExpr(
-        left.getSignificand(packedExists), right.getSignificand(packedExists)
-    ), negativeCaseSignificandComparison = mkBvUnsignedLessExpr(
-        right.getSignificand(packedExists), left.getSignificand(packedExists)
-    )
+            left.getSignificand(packedExists), right.getSignificand(packedExists)
+        ), negativeCaseSignificandComparison = mkBvUnsignedLessExpr(
+            right.getSignificand(packedExists), left.getSignificand(packedExists)
+        )
     )
 }
 
@@ -33,11 +33,11 @@ internal fun <Fp : KFpSort> KContext.lessOrEqual(
     left: UnpackedFp<Fp>, right: UnpackedFp<Fp>,
 ): KExpr<KBoolSort> {
     val infCase = (left.isInf and right.isInf and (left.isNegative eq right.isNegative)) or
-        left.isNegativeInfinity or right.isPositiveInfinity
+            left.isNegativeInfinity or right.isPositiveInfinity
 
 
     val zeroCase = (left.isZero and right.isZero) or
-        (left.isZero and right.isNegative.not()) or (left.isNegative and right.isZero)
+            (left.isZero and right.isNegative.not()) or (left.isNegative and right.isZero)
 
     val packedExists = left.packedBv.exists() && right.packedBv.exists()
 
@@ -95,8 +95,8 @@ private fun <Fp : KFpSort> KContext.lessHelper(
 
     return neitherNan and mkIte(
         eitherInf, infCase, mkIte(
-        eitherZero, zeroCase, negativeLessThanPositive or positiveCase or negativeCase
-    )
+            eitherZero, zeroCase, negativeLessThanPositive or positiveCase or negativeCase
+        )
     )
 }
 
@@ -119,11 +119,12 @@ internal fun <Fp : KFpSort> KContext.equal(
     val neitherZero = !left.isZero and !right.isZero
 
     val flagsAndExponent = neitherNan and (bothZero or
-        (neitherZero and (left.isInf eq right.isInf and (left.sign eq right.sign)
-            and (left.unbiasedExponent eq right.unbiasedExponent))))
+            (neitherZero and (left.isInf eq right.isInf and (left.sign eq right.sign)
+                    and (left.unbiasedExponent eq right.unbiasedExponent))))
 
     if (left.packedBv is UnpackedFp.Companion.PackedFp.Exists &&
-        right.packedBv is UnpackedFp.Companion.PackedFp.Exists) {
+        right.packedBv is UnpackedFp.Companion.PackedFp.Exists
+    ) {
         return neitherNan and (bothZero or (left.packedBv eq right.packedBv))
     }
 

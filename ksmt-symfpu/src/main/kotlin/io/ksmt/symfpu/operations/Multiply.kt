@@ -11,8 +11,6 @@ import io.ksmt.symfpu.operations.UnpackedFp.Companion.makeInf
 import io.ksmt.symfpu.operations.UnpackedFp.Companion.makeNaN
 import io.ksmt.symfpu.operations.UnpackedFp.Companion.makeZero
 import io.ksmt.utils.BvUtils.bvOne
-import io.ksmt.utils.cast
-
 
 internal fun <Fp : KFpSort> KContext.multiply(
     left: UnpackedFp<Fp>, right: UnpackedFp<Fp>, roundingMode: KExpr<KFpRoundingModeSort>
@@ -94,14 +92,14 @@ fun <Fp : KFpSort> KContext.arithmeticMultiply(
 fun KContext.conditionalLeftShiftOne(
     condition: KExpr<KBoolSort>, expr: KExpr<KBvSort>
 ) = mkIte(
-    condition, mkBvShiftLeftExpr(expr, bvOne(expr.sort.sizeBits).cast()), expr
+    condition, mkBvShiftLeftExpr(expr, bvOne(expr.sort.sizeBits)), expr
 )
 
 
 fun KContext.conditionalRightShiftOne(
     condition: KExpr<KBoolSort>, expr: KExpr<KBvSort>
 ) = mkIte(
-    condition, mkBvLogicalShiftRightExpr(expr, bvOne(expr.sort.sizeBits).cast()), expr
+    condition, mkBvLogicalShiftRightExpr(expr, bvOne(expr.sort.sizeBits)), expr
 )
 
 

@@ -101,7 +101,7 @@ import io.ksmt.symfpu.solver.ArraysTransform.Companion.transformSortRemoveFP
 import io.ksmt.symfpu.solver.ArraysTransform.Companion.transformedArraySort
 import io.ksmt.symfpu.solver.SymFPUModel.Companion.declContainsFp
 import io.ksmt.utils.asExpr
-import io.ksmt.utils.cast
+import io.ksmt.utils.uncheckedCast
 
 class FpToBvTransformer(ctx: KContext, private val packedBvOptimization: Boolean) : KNonRecursiveTransformer(ctx) {
     private val mapFpToBvDeclImpl = mutableMapOf<KDecl<*>, KConst<*>>()
@@ -136,10 +136,11 @@ class FpToBvTransformer(ctx: KContext, private val packedBvOptimization: Boolean
     override fun <T : KSort> transform(expr: KIteExpr<T>): KExpr<T> = with(ctx) {
         transformExprAfterTransformed(expr, expr.condition, expr.trueBranch, expr.falseBranch) { c, l, r ->
             if (l is UnpackedFp<*> && r is UnpackedFp<*>) {
-                val lTyped: UnpackedFp<KFpSort> = l.cast()
-                iteOp(c, lTyped, r.cast()).cast()
+                val lTyped: UnpackedFp<KFpSort> = l.uncheckedCast()
+                val rTyped: UnpackedFp<KFpSort> = r.uncheckedCast()
+                iteOp(c, lTyped, rTyped).uncheckedCast()
             } else {
-                mkIte(c, l, r).cast()
+                mkIte(c, l, r)
             }
         }
     }
@@ -149,7 +150,8 @@ class FpToBvTransformer(ctx: KContext, private val packedBvOptimization: Boolean
             if (l is UnpackedFp<*> && r is UnpackedFp<*>) {
                 val flags = mkAnd(l.isNaN eq r.isNaN, l.isInf eq r.isInf, l.isZero eq r.isZero)
                 if (l.packedBv is UnpackedFp.Companion.PackedFp.Exists &&
-                    r.packedBv is UnpackedFp.Companion.PackedFp.Exists) {
+                    r.packedBv is UnpackedFp.Companion.PackedFp.Exists
+                ) {
                     flags and (l.packedBv eq r.packedBv)
                 } else {
                     mkAnd(
@@ -226,19 +228,24 @@ class FpToBvTransformer(ctx: KContext, private val packedBvOptimization: Boolean
             expr.arg2,
             expr.roundingMode
         ) { arg0, arg1, arg2, roundingMode ->
-            fma(arg0.cast(), arg1.cast(), arg2.cast(), roundingMode.cast())
+            fma(
+                arg0 as UnpackedFp<Fp>,
+                arg1 as UnpackedFp<Fp>,
+                arg2 as UnpackedFp<Fp>,
+                roundingMode
+            )
         }
     }
 
     override fun <Fp : KFpSort> transform(expr: KFpSqrtExpr<Fp>): KExpr<Fp> = with(ctx) {
         transformExprAfterTransformed(expr, expr.value, expr.roundingMode) { value, roundingMode ->
-            sqrt(roundingMode, value.cast())
+            sqrt(roundingMode, value as UnpackedFp<Fp>)
         }
     }
 
     override fun <Fp : KFpSort> transform(expr: KFpRemExpr<Fp>): KExpr<Fp> =
         transformExprAfterTransformed(expr, expr.arg0, expr.arg1) { arg0, arg1 ->
-            remainder(arg0.cast(), arg1.cast())
+            remainder(arg0 as UnpackedFp<Fp>, arg1 as UnpackedFp<Fp>)
         }
 
 
@@ -260,25 +267,32 @@ class FpToBvTransformer(ctx: KContext, private val packedBvOptimization: Boolean
             !declContainsFp(expr.decl) -> expr
 
             expr.sort is KFpSort -> {
-                val asFp: KConst<KFpSort> = expr.cast()
+                val asFp: KConst<KFpSort> = expr.uncheckedCast()
 
-                mapFpToUnpackedFpImpl.getOrPut(asFp.decl) {
-                    unpack(asFp.sort,
-                        mkFreshConst(asFp.decl.name + "!tobv!", mkBvSort(
-                            asFp.sort.exponentBits + asFp.sort.significandBits)).also {
+                val unpacked = mapFpToUnpackedFpImpl.getOrPut(asFp.decl) {
+                    unpack(
+                        asFp.sort,
+                        mkFreshConst(
+                            asFp.decl.name + "!tobv!",
+                            mkBvSort(asFp.sort.exponentBits + asFp.sort.significandBits)
+                        ).also {
                             mapFpToBvDeclImpl[asFp.decl] = (it as KConst<KBvSort>)
                         },
                         packedBvOptimization
                     )
-                }.cast()
+                }
+
+                unpacked.uncheckedCast<_, KExpr<T>>()
             }
 
             expr.sort is KArraySortBase<*> -> {
-                val asArray: KConst<KArraySortBase<*>> = expr.cast()
+                val asArray: KConst<KArraySortBase<*>> = expr.uncheckedCast()
                 val resSort = transformedArraySort(asArray)
-                mapFpToBvDeclImpl.getOrPut(asArray.decl) {
-                    mkFreshConst(asArray.decl.name + "!tobvArr!", resSort).cast()
-                }.cast()
+                val transformed = mapFpToBvDeclImpl.getOrPut(asArray.decl) {
+                    mkFreshConst(asArray.decl.name + "!tobvArr!", resSort).uncheckedCast()
+                }
+
+                transformed.uncheckedCast<_, KExpr<T>>()
             }
 
             else -> expr
@@ -331,7 +345,13 @@ class FpToBvTransformer(ctx: KContext, private val packedBvOptimization: Boolean
 
     override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>) =
         transformExprAfterTransformed(expr, expr.sign, expr.biasedExponent, expr.significand) { s, e, sig ->
-            ctx.unpack(expr.sort, ctx.bvToBool(s.cast()), e.cast(), sig.cast(), packedBvOptimization)
+            ctx.unpack(
+                expr.sort,
+                ctx.bvToBool(s.uncheckedCast()),
+                e.uncheckedCast(),
+                sig.uncheckedCast(),
+                packedBvOptimization
+            )
         }
 
     override fun <Fp : KFpSort> transform(expr: KFpRoundToIntegralExpr<Fp>): KExpr<Fp> =
@@ -357,8 +377,10 @@ class FpToBvTransformer(ctx: KContext, private val packedBvOptimization: Boolean
     override fun <D : KSort, R : KSort> transform(expr: KArraySelect<D, R>): KExpr<R> {
         return transformExprAfterTransformed(expr, expr.array, expr.index) { array, index ->
             with(ctx) {
-                arraysTransform.arraySelectUnpacked(expr.sort,
-                    array.select(packToBvIfUnpacked(index)))
+                arraysTransform.arraySelectUnpacked(
+                    expr.sort,
+                    array.select(packToBvIfUnpacked(index))
+                )
             }
         }
     }
@@ -367,28 +389,36 @@ class FpToBvTransformer(ctx: KContext, private val packedBvOptimization: Boolean
     override fun <D : KSort, D1 : KSort, R : KSort> transform(expr: KArray2Select<D, D1, R>): KExpr<R> {
         return transformExprAfterTransformed(expr, expr.array, expr.index0, expr.index1) { array, index0, index1 ->
             with(ctx) {
-                arraysTransform.arraySelectUnpacked(expr.sort,
-                    array.select(packToBvIfUnpacked(index0), packToBvIfUnpacked(index1)))
+                arraysTransform.arraySelectUnpacked(
+                    expr.sort,
+                    array.select(packToBvIfUnpacked(index0), packToBvIfUnpacked(index1))
+                )
             }
         }
     }
 
     override fun <D : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(expr: KArray3Select<D, D1, D2, R>) =
         transformExprAfterTransformed(
-            expr, expr.array, expr.index0, expr.index1, expr.index2) { array, index0, index1, index2 ->
+            expr, expr.array, expr.index0, expr.index1, expr.index2
+        ) { array, index0, index1, index2 ->
             with(ctx) {
-                arraysTransform.arraySelectUnpacked(expr.sort,
-                    array.select(packToBvIfUnpacked(index0), packToBvIfUnpacked(index1), index2))
+                arraysTransform.arraySelectUnpacked(
+                    expr.sort,
+                    array.select(packToBvIfUnpacked(index0), packToBvIfUnpacked(index1), index2)
+                )
             }
         }
 
     override fun <R : KSort> transform(expr: KArrayNSelect<R>) =
         transformExprAfterTransformed(
-            expr, expr.args) { args ->
-            val array: KExpr<KArrayNSort<R>> = args[0].cast()
+            expr, expr.args
+        ) { args ->
+            val array: KExpr<KArrayNSort<R>> = args[0].uncheckedCast()
             val indices = args.drop(1)
-            arraysTransform.arraySelectUnpacked(expr.sort,
-                ctx.mkArrayNSelect(array, indices.map(::packToBvIfUnpacked)))
+            arraysTransform.arraySelectUnpacked(
+                expr.sort,
+                ctx.mkArrayNSelect(array, indices.map(::packToBvIfUnpacked))
+            )
         }
 
     private fun <D : KArraySortBase<R>, R : KSort> transformLambda(
@@ -396,9 +426,11 @@ class FpToBvTransformer(ctx: KContext, private val packedBvOptimization: Boolean
     ): KArrayLambdaBase<D, R> =
         transformExprAfterTransformed(expr, expr.body) { body ->
             val newDecl = transformDeclList(expr.indexVarDeclarations)
-            arraysTransform.mkArrayAnyLambda(newDecl,
-                packToBvIfUnpacked(body)).cast()
-        }.cast()
+            arraysTransform.mkArrayAnyLambda(
+                newDecl,
+                packToBvIfUnpacked(body)
+            ).uncheckedCast()
+        }.uncheckedCast()
 
 
     override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> =
@@ -431,23 +463,29 @@ class FpToBvTransformer(ctx: KContext, private val packedBvOptimization: Boolean
     override fun <D : KSort, D1 : KSort, R : KSort> transform(
         expr: KArray2Store<D, D1, R>,
     ): KExpr<KArray2Sort<D, D1, R>> = with(ctx) {
-        transformExprAfterTransformed(expr, expr.array, expr.index0, expr.index1,
-            expr.value) { array, index0, index1, value ->
+        transformExprAfterTransformed(
+            expr, expr.array, expr.index0, expr.index1,
+            expr.value
+        ) { array, index0, index1, value ->
             array.store(
                 packToBvIfUnpacked(index0),
                 packToBvIfUnpacked(index1),
-                packToBvIfUnpacked(value))
+                packToBvIfUnpacked(value)
+            )
         }
     }
 
     override fun <D : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
         expr: KArray3Store<D, D1, D2, R>,
     ): KExpr<KArray3Sort<D, D1, D2, R>> = with(ctx) {
-        transformExprAfterTransformed(expr, expr.array,
-            expr.index0, expr.index1, expr.index2, expr.value) { array, index0, index1, index2, value ->
+        transformExprAfterTransformed(
+            expr, expr.array,
+            expr.index0, expr.index1, expr.index2, expr.value
+        ) { array, index0, index1, index2, value ->
             array.store(
                 packToBvIfUnpacked(index0), packToBvIfUnpacked(index1),
-                packToBvIfUnpacked(index2), packToBvIfUnpacked(value))
+                packToBvIfUnpacked(index2), packToBvIfUnpacked(value)
+            )
         }
     }
 
@@ -455,9 +493,9 @@ class FpToBvTransformer(ctx: KContext, private val packedBvOptimization: Boolean
         expr: KArrayNStore<R>,
     ): KExpr<KArrayNSort<R>> = with(ctx) {
         transformExprAfterTransformed(expr, expr.args) { args ->
-            val array: KExpr<KArrayNSort<R>> = args.first().cast()
+            val array: KExpr<KArrayNSort<R>> = args.first().uncheckedCast()
             val indices = args.subList(fromIndex = 1, toIndex = args.size - 1)
-            val value: KExpr<R> = args.last().cast()
+            val value: KExpr<R> = args.last().uncheckedCast()
 
             mkArrayNStore(array, indices.map(::packToBvIfUnpacked), packToBvIfUnpacked(value))
         }
@@ -484,7 +522,7 @@ class FpToBvTransformer(ctx: KContext, private val packedBvOptimization: Boolean
         transformExprAfterTransformed(expr, expr.args) { args ->
             val decl = transformDecl(expr.decl)
             val argsTransformed = args.map(::packToBvIfUnpacked)
-            decl.apply(argsTransformed).cast()
+            decl.apply(argsTransformed).uncheckedCast()
         }
 
 
@@ -521,7 +559,7 @@ class FpToBvTransformer(ctx: KContext, private val packedBvOptimization: Boolean
             it is KConstDecl<*> -> {
                 val newSort = transformSortRemoveFP(sort)
                 mapFpToBvDeclImpl.getOrPut(it) {
-                    mkFreshConst(it.name + "!tobv!", newSort).cast()
+                    mkFreshConst(it.name + "!tobv!", newSort).uncheckedCast()
                 }.decl
             }
 

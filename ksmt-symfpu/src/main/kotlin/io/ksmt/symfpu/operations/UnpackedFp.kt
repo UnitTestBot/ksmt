@@ -19,7 +19,7 @@ import io.ksmt.utils.FpUtils.fpNaNExponentBiased
 import io.ksmt.utils.FpUtils.fpNaNSignificand
 import io.ksmt.utils.FpUtils.fpZeroExponentBiased
 import io.ksmt.utils.FpUtils.fpZeroSignificand
-import io.ksmt.utils.cast
+import io.ksmt.utils.uncheckedCast
 
 
 fun KExpr<KBvSort>.extendUnsigned(ext: Int): KExpr<KBvSort> {
@@ -104,7 +104,7 @@ class UnpackedFp<Fp : KFpSort> private constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<Fp> {
         check(transformer is FpToBvTransformer.AdapterTermsRewriter) { "Leaked unpackedFp: $this" }
-        return transformer.transform(this).cast()
+        return transformer.transform(this).uncheckedCast()
     }
 
     override fun print(printer: ExpressionPrinter) = with(printer) {
@@ -272,24 +272,24 @@ class UnpackedFp<Fp : KFpSort> private constructor(
                 fun KContext.makeBvNaN(sort: KFpSort): PackedFp {
                     return Exists(
                         sign = falseExpr,
-                        exponent = fpNaNExponentBiased(sort).cast(),
-                        significand = fpNaNSignificand(sort).cast()
+                        exponent = fpNaNExponentBiased(sort),
+                        significand = fpNaNSignificand(sort)
                     )
                 }
 
                 fun KContext.makeBvInf(sort: KFpSort, sign: KExpr<KBoolSort>): PackedFp {
                     return Exists(
                         sign = sign,
-                        exponent = fpInfExponentBiased(sort).cast(),
-                        significand = fpInfSignificand(sort).cast()
+                        exponent = fpInfExponentBiased(sort),
+                        significand = fpInfSignificand(sort)
                     )
                 }
 
                 fun KContext.makeBvZero(sort: KFpSort, sign: KExpr<KBoolSort>): PackedFp {
                     return Exists(
                         sign = sign,
-                        exponent = fpZeroExponentBiased(sort).cast(),
-                        significand = fpZeroSignificand(sort).cast()
+                        exponent = fpZeroExponentBiased(sort),
+                        significand = fpZeroSignificand(sort)
                     )
                 }
             }

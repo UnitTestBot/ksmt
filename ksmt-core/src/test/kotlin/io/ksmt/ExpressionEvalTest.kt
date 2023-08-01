@@ -30,11 +30,11 @@ open class ExpressionEvalTest {
     fun <S : KBvSort> KContext.randomBvValues(sort: S) = sequence<KBitVecValue<S>> {
         // special values
         with(BvUtils) {
-            yield(bvMaxValueSigned(sort.sizeBits).uncheckedCast())
-            yield(bvMaxValueUnsigned(sort.sizeBits).uncheckedCast())
-            yield(bvMinValueSigned(sort.sizeBits).uncheckedCast())
-            yield(bvZero(sort.sizeBits).uncheckedCast())
-            yield(bvOne(sort.sizeBits).uncheckedCast())
+            yield(bvMaxValueSigned(sort.sizeBits))
+            yield(bvMaxValueUnsigned(sort.sizeBits))
+            yield(bvMinValueSigned(sort.sizeBits))
+            yield(bvZero(sort.sizeBits))
+            yield(bvOne(sort.sizeBits))
         }
 
         // small positive values
