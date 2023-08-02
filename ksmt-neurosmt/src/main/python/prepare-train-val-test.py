@@ -9,8 +9,11 @@ from tqdm import tqdm
 from pytorch_lightning import seed_everything
 
 from GraphReader import read_graph_by_path
-from GraphDataloader import MAX_FORMULA_SIZE, MAX_FORMULA_DEPTH, SHRINK, METADATA_PATH
+from GraphDataloader import MAX_FORMULA_SIZE, MAX_FORMULA_DEPTH, METADATA_PATH
 from utils import train_val_test_indices, align_sat_unsat_sizes
+
+
+SHRINK = 10 ** (int(os.environ["SHRINK"]) if "SHRINK" in os.environ else 10)
 
 
 def create_split(path_to_dataset):
