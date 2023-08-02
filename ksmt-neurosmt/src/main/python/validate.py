@@ -5,16 +5,17 @@ from argparse import ArgumentParser
 
 import torch
 
-from pytorch_lightning import Trainer, seed_everything
+from pytorch_lightning import Trainer
 
-from GraphDataloader import load_data_from_scratch
+from GraphDataloader import get_dataloader
 
 from LightningModel import LightningModel
 
 
 def get_args():
     parser = ArgumentParser(description="validation script")
-    parser.add_argument("--ds", required=True)
+    parser.add_argument("--ds", required=True, nargs="+")
+    parser.add_argument("--oenc", required=True)
     parser.add_argument("--ckpt", required=True)
 
     args = parser.parse_args()
@@ -28,13 +29,15 @@ def get_args():
 
 
 if __name__ == "__main__":
-    seed_everything(24, workers=True)
+    # seed_everything(24, workers=True)
     torch.set_float32_matmul_precision("medium")
 
     args = get_args()
-    tr, va, te = load_data_from_scratch(args.ds)
+
+    val_dl = get_dataloader(args.ds, "val", args.oenc)
+    test_dl = get_dataloader(args.ds, "test", args.oenc)
 
     trainer = Trainer()
 
-    trainer.validate(LightningModel(), va, args.ckpt)
-    trainer.test(LightningModel(), te, args.ckpt)
+    trainer.validate(LightningModel(), val_dl, args.ckpt)
+    trainer.test(LightningModel(), test_dl, args.ckpt)

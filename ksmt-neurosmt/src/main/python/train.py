@@ -5,18 +5,19 @@ from argparse import ArgumentParser
 
 import torch
 
-from pytorch_lightning import Trainer, seed_everything
+from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 
-from GraphDataloader import load_data_from_scratch
+from GraphDataloader import get_dataloader
 
 from LightningModel import LightningModel
 
 
 def get_args():
     parser = ArgumentParser(description="main training script")
-    parser.add_argument("--ds", required=True)
+    parser.add_argument("--ds", required=True, nargs="+")
+    parser.add_argument("--oenc", required=True)
     parser.add_argument("--ckpt", required=False)
 
     args = parser.parse_args()
@@ -30,11 +31,13 @@ def get_args():
 
 
 if __name__ == "__main__":
-    seed_everything(24, workers=True)
+    # seed_everything(24, workers=True)
     torch.set_float32_matmul_precision("medium")
 
     args = get_args()
-    tr, va, te = load_data_from_scratch(args.ds)
+
+    train_dl = get_dataloader(args.ds, "train", args.oenc)
+    val_dl = get_dataloader(args.ds, "val", args.oenc)
 
     pl_model = LightningModel()
     trainer = Trainer(
@@ -55,7 +58,4 @@ if __name__ == "__main__":
         default_root_dir=".."
     )
 
-    if args.ckpt is None:
-        trainer.fit(pl_model, tr, va)
-    else:
-        trainer.fit(pl_model, tr, va, ckpt_path=args.ckpt)
+    trainer.fit(pl_model, train_dl, val_dl, ckpt_path=args.ckpt)
