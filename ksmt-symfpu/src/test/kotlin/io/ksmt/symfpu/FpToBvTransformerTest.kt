@@ -5,12 +5,9 @@ import io.ksmt.decl.KDecl
 import io.ksmt.expr.KConst
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.KFpRoundingMode
-import io.ksmt.expr.KFpValue
 import io.ksmt.expr.printer.BvValuePrintMode
 import io.ksmt.expr.printer.PrinterParams
-import io.ksmt.expr.rewrite.KExprUninterpretedDeclCollector
 import io.ksmt.expr.transformer.KNonRecursiveTransformer
-import io.ksmt.solver.KModel
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.runner.KSolverRunnerManager
@@ -23,10 +20,8 @@ import io.ksmt.sort.KFp64Sort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KSort
 import io.ksmt.symfpu.operations.UnpackedFp
-import io.ksmt.symfpu.operations.bvToBool
 import io.ksmt.symfpu.operations.pack
 import io.ksmt.symfpu.operations.packToBv
-import io.ksmt.symfpu.operations.unpack
 import io.ksmt.symfpu.solver.FpToBvTransformer
 import io.ksmt.utils.getValue
 import io.ksmt.utils.uncheckedCast
@@ -396,86 +391,7 @@ class FpToBvTransformerTest {
         solver.assert(transformedExpr neq expectedExpr)
 
         val status = solver.check()
-
-        if (status == KSolverStatus.SAT) {
-            printDebugInfo(solver, transformedExpr, expectedExpr, transformer)
-        }
-
         assertEquals(KSolverStatus.UNSAT, status)
-    }
-
-    private fun <T : KSort> KContext.printDebugInfo(
-        solver: KSolver<*>,
-        transformedExpr: KExpr<T>,
-        expectedExpr: KExpr<T>,
-        transformer: FpToBvTransformer
-    ) {
-        val model = solver.model()
-        val transformed = model.eval(transformedExpr)
-        val baseExpr = model.eval(expectedExpr)
-
-        println("transformed: ${unpackedString(transformed, model)}")
-        println("exprToTrans: ${unpackedString(baseExpr, model)}")
-
-        KExprUninterpretedDeclCollector.collectUninterpretedDeclarations(expectedExpr).forEach { decl ->
-            val ufp = transformer.mapFpToUnpackedFp[decl]
-            val evalUnpacked = unpackedString(ufp ?: decl.apply(emptyList()), model)
-            println("${decl.name} :: $evalUnpacked")
-        }
-    }
-
-    private fun KContext.unpackedString(value: KExpr<*>, model: KModel): String {
-        if (value.sort !is KFpSort) {
-            return "${model.eval(value)}"
-        }
-
-        val ufp = if (value is UnpackedFp<*>) {
-            value
-        } else {
-            val fpExpr: KExpr<KFpSort> = value.uncheckedCast()
-            unpack(fpExpr.sort, mkFpToIEEEBvExpr(fpExpr), true)
-        }
-        val fpValue = model.eval(ufp.packToFp()) as KFpValue
-
-        return buildString {
-            append("uFP sign ")
-            model.eval(ufp.sign).print(this)
-            append(" ")
-            model.eval(ufp.unbiasedExponent).print(this)
-            append(" ")
-            model.eval(ufp.normalizedSignificand).print(this)
-
-            //nan, inf, zero
-            append(" nan=")
-            model.eval(ufp.isNaN).print(this)
-            append(" inf=")
-            model.eval(ufp.isInf).print(this)
-            append(" isZero=")
-            model.eval(ufp.isZero).print(this)
-
-
-            append("\ntoFp: ")
-            fpValue.print(this)
-
-            val packedFloat = packToBv(ufp)
-            val pWidth = packedFloat.sort.sizeBits.toInt()
-            val exWidth = ufp.sort.exponentBits.toInt()
-
-            // Extract
-            val packedSignificand = mkBvExtractExpr(pWidth - exWidth - 2, 0, packedFloat)
-            val packedExponent = mkBvExtractExpr(pWidth - 2, pWidth - exWidth - 1, packedFloat)
-            val sign = bvToBool(mkBvExtractExpr(pWidth - 1, pWidth - 1, packedFloat))
-
-            append("\nFP sign ")
-            model.eval(sign).print(this)
-            append(" ")
-            model.eval(packedExponent).print(this)
-            append(" ")
-            model.eval(packedSignificand).print(this)
-            append("\nbv: ")
-            model.eval(packedFloat).print(this)
-            append(" \nactually $fpValue))}}")
-        }
     }
 
     private inline fun withContext(block: KContext.() -> Unit) {
