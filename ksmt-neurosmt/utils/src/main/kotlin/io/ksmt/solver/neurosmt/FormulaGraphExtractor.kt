@@ -1,4 +1,4 @@
-package io.ksmt.solver.neurosmt.smt2converter
+package io.ksmt.solver.neurosmt
 
 import io.ksmt.KContext
 import io.ksmt.expr.KApp
@@ -6,9 +6,7 @@ import io.ksmt.expr.KConst
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.KInterpretedValue
 import io.ksmt.expr.transformer.KNonRecursiveTransformer
-import io.ksmt.sort.KBoolSort
-import io.ksmt.sort.KBvSort
-import io.ksmt.sort.KSort
+import io.ksmt.sort.*
 import java.io.OutputStream
 import java.util.*
 
@@ -39,7 +37,11 @@ class FormulaGraphExtractor(
         when (symbol.sort) {
             is KBoolSort -> writer.write("SYMBOLIC; Bool\n")
             is KBvSort -> writer.write("SYMBOLIC; BitVec\n")
-            else -> error("unknown symbolic sort: ${symbol.sort}")
+            is KFpSort -> writer.write("SYMBOLIC; FP\n")
+            is KFpRoundingModeSort -> writer.write("SYMBOLIC; FP_RM\n")
+            is KArraySortBase<*> -> writer.write("SYMBOLIC; Array\n")
+            is KUninterpretedSort -> writer.write("SYMBOLIC; Unint\n")
+            else -> error("unknown symbolic sort: ${symbol.sort::class.simpleName}")
         }
     }
 
@@ -47,7 +49,11 @@ class FormulaGraphExtractor(
         when (value.decl.sort) {
             is KBoolSort -> writer.write("VALUE; Bool\n")
             is KBvSort -> writer.write("VALUE; BitVec\n")
-            else -> error("unknown value sort: ${value.decl.sort}")
+            is KFpSort -> writer.write("VALUE; FP\n")
+            is KFpRoundingModeSort -> writer.write("VALUE; FP_RM\n")
+            is KArraySortBase<*> -> writer.write("VALUE; Array\n")
+            is KUninterpretedSort -> writer.write("VALUE; Unint\n")
+            else -> error("unknown value sort: ${value.decl.sort::class.simpleName}")
         }
     }
 

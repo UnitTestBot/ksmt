@@ -1,8 +1,10 @@
-package io.ksmt.solver.neurosmt.smt2converter
+package io.ksmt.solver.neurosmt.smt2Converter
 
 import io.ksmt.KContext
 import io.ksmt.parser.KSMTLibParseException
 import io.ksmt.solver.KSolverStatus
+import io.ksmt.solver.neurosmt.FormulaGraphExtractor
+import io.ksmt.solver.neurosmt.getAnswerForTest
 import io.ksmt.solver.z3.KZ3SMTLibParser
 import me.tongfei.progressbar.ProgressBar
 import java.io.FileOutputStream
