@@ -1,6 +1,10 @@
 package io.ksmt.test.benchmarks
 
+import io.ksmt.KContext
+import io.ksmt.solver.z3.KZ3Solver
+import io.ksmt.solver.z3.KZ3SolverConfiguration
 import io.ksmt.solver.z3.KZ3SolverUniversalConfiguration
+import io.ksmt.symfpu.solver.SymfpuSolver
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import org.junit.jupiter.params.ParameterizedTest
@@ -8,7 +12,9 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.nio.file.Path
 
 @Execution(ExecutionMode.CONCURRENT)
-class FpBenchmarksBasedTest : BenchmarksBasedTest() {
+class SymFpuBenchmarksBasedTest : BenchmarksBasedTest() {
+
+    class SymfpuZ3Solver(ctx: KContext) : SymfpuSolver<KZ3SolverConfiguration>(KZ3Solver(ctx), ctx)
 
     @Execution(ExecutionMode.CONCURRENT)
     @ParameterizedTest(name = "{0}")
