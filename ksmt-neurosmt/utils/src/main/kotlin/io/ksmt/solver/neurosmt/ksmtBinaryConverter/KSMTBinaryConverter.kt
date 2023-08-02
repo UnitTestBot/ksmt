@@ -1,19 +1,16 @@
 package io.ksmt.solver.neurosmt.ksmtBinaryConverter
 
 import io.ksmt.KContext
-import io.ksmt.parser.KSMTLibParseException
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.neurosmt.FormulaGraphExtractor
 import io.ksmt.solver.neurosmt.deserialize
 import io.ksmt.solver.neurosmt.getAnswerForTest
-import io.ksmt.solver.z3.KZ3SMTLibParser
 import me.tongfei.progressbar.ProgressBar
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.isRegularFile
-import kotlin.io.path.name
 import kotlin.time.Duration.Companion.seconds
 
 fun main(args: Array<String>) {

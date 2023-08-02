@@ -15,7 +15,6 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.nio.file.Path
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 
 fun getAnswerForTest(path: Path): KSolverStatus {
     File(path.toUri()).useLines { lines ->
@@ -39,39 +38,6 @@ fun getAnswerForTest(ctx: KContext, formula: List<KExpr<KBoolSort>>, timeout: Du
 
         solver.check(timeout = timeout)
     }
-
-    /*
-    with(ctx) {
-        val yicesStatus = KYicesSolver(this).use { solver ->
-            for (clause in formula) {
-                solver.assert(clause)
-            }
-
-            solver.check(timeout = timeout)
-        }
-
-        val bitwuzlaStatus = KBitwuzlaSolver(this).use { solver ->
-            for (clause in formula) {
-                solver.assert(clause)
-            }
-
-            solver.check(timeout = timeout)
-        }
-
-        if (yicesStatus == KSolverStatus.UNKNOWN) {
-            return bitwuzlaStatus
-        }
-        if (bitwuzlaStatus == KSolverStatus.UNKNOWN) {
-            return yicesStatus
-        }
-
-        if (yicesStatus != bitwuzlaStatus) {
-            return KSolverStatus.UNKNOWN
-        } else {
-            return yicesStatus
-        }
-    }
-    */
 }
 
 fun serialize(ctx: KContext, expressions: List<KExpr<KBoolSort>>, outputStream: OutputStream) {
