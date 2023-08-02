@@ -97,14 +97,14 @@ fun <Fp : KFpSort> KContext.arithmeticRemainder(
     val rm1 = mkIte(lsbRoundActive, dsr.result, lsig)
     val dsrg = divideStep(rm1, rsig)
     val guardBit = guardRoundActive and dsrg.remainderBit
-    val stickyBit = !mkIte(guardRoundActive, dsrg.result, lsig).isAllZeros()
+    val stickyBit = !isAllZeros(mkIte(guardRoundActive, dsrg.result, lsig))
 
     // The base result if lsbRoundActive
     val reconstruct = UnpackedFp(
         this, left.sort,
         remainderSign,
         right.getExponent(),
-        dsr.result.extract(lsig.sort.sizeBits.toInt() - 1, 1)
+        mkBvExtractExpr(high = lsig.sort.sizeBits.toInt() - 1, low = 1, value = dsr.result)
     )
 
     val candidateResult = iteOp(lsbRoundActive, reconstruct.normaliseUpDetectZero(), left)
@@ -127,7 +127,7 @@ fun <Fp : KFpSort> KContext.arithmeticRemainder(
      *  For the integer part we handle this by working with absolutes (ignoring the sign) and
      *  adding it back in at the end.
      *  However, for the correction for the rounded part we need to take it into account
-    */
+     */
 
     val signCorrectedRight = right.setSign(left.sign)
 
@@ -162,7 +162,3 @@ private fun KContext.divideStep(x: KExpr<KBvSort>, y: KExpr<KBvSort>): ResultWit
 
     return ResultWithRemainderBit(mkBvShiftLeftExpr(step, mkBv(1, xWidth)), canSubtract)
 }
-
-fun KExpr<KBvSort>.extract(high: Int, low: Int) = ctx.mkBvExtractExpr(high, low, this)
-fun KExpr<KBvSort>.isAllZeros() = ctx.mkEq(this, ctx.mkBv(0, sort.sizeBits))
-
