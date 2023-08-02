@@ -14,9 +14,10 @@ dependencies {
     implementation(project(":ksmt-bitwuzla"))
     implementation(project(":ksmt-yices"))
     implementation(project(":ksmt-runner"))
+    implementation(project(":ksmt-symfpu"))
+
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     implementation(kotlin("reflect"))
-    implementation(project(":ksmt-symfpu"))
 
     testImplementation("org.junit.jupiter", "junit-jupiter-params", "5.8.2")
 
@@ -30,8 +31,6 @@ val runBenchmarksBasedTests = project.booleanProperty("runBenchmarksBasedTests")
 val benchmarkChunkMaxSize = project.intProperty("benchmarkChunkSize") ?: Int.MAX_VALUE
 // Use only a [benchmarkChunk] chunk of test data
 val benchmarkChunk = project.intProperty("benchmarkChunk") ?: 0
-
-val benchmarkSolver = project.stringProperty("benchmarkSolver") ?: "None"
 
 // use benchmarks from testData directory instead of downloading
 val usePreparedBenchmarks = project.booleanProperty("usePreparedBenchmarks") ?: true
@@ -100,7 +99,6 @@ val prepareTestData by tasks.registering {
     }
 }
 
-
 val testDataRevision = project.stringProperty("testDataRevision") ?: "no-revision"
 val downloadPreparedBenchmarksTestData = downloadPreparedSmtLibBenchmarkTestData(
     downloadPath = downloadedTestData,
@@ -113,7 +111,6 @@ tasks.withType<Test> {
         dependsOn.add(prepareTestData)
         environment("benchmarkChunkMaxSize", benchmarkChunkMaxSize)
         environment("benchmarkChunk", benchmarkChunk)
-        environment("solver", benchmarkSolver)
     } else {
         exclude("io/ksmt/test/benchmarks/**")
 
@@ -135,27 +132,6 @@ task<TestReport>("mergeTestReports") {
         destinationDir = rootDir.resolve(mergePrefix)
         val reports = rootDir.resolve("reports").listFiles { f: File -> f.name.startsWith(mergePrefix) }
         reportOn(*reports)
-    }
-}
-
-task("mergeCSVFiles") {
-    inputs.files(fileTree(rootDir.resolve("reports")))
-    outputs.file(rootDir.resolve("report.csv"))
-
-    println("reports path: ${rootDir.resolve("reports")}")
-    println("output path: ${rootDir.resolve("report.csv")}")
-    doLast {
-        val merged = rootDir.resolve("report.csv")
-        merged.writeText("sample name,theory,solver,assert time,check time,time,status\n")
-        println("files:")
-
-        rootDir.resolve("reports").walkTopDown().forEach { f ->
-            println("file:  ${f.name}")
-
-            if (f.name == "data.csv") {
-                merged.appendText(f.readText())
-            }
-        }
     }
 }
 

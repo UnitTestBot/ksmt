@@ -8,7 +8,7 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.nio.file.Path
 
 @Execution(ExecutionMode.CONCURRENT)
-class SymFPUBenchmarksBasedTest : BenchmarksBasedTest() {
+class FpBenchmarksBasedTest : BenchmarksBasedTest() {
 
     @Execution(ExecutionMode.CONCURRENT)
     @ParameterizedTest(name = "{0}")
@@ -32,9 +32,7 @@ class SymFPUBenchmarksBasedTest : BenchmarksBasedTest() {
 
     companion object {
         @JvmStatic
-        fun testData() = testData {
-            "FP" in it
-        }.ensureNotEmpty()
+        fun testData() = testData { "FP" in it }
     }
 }
 
