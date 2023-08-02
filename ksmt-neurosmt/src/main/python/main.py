@@ -9,7 +9,7 @@ from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 
-from GraphDataloader import load_data
+from GraphDataloader import load_data_from_scratch
 
 from LightningModel import LightningModel
 
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     torch.set_float32_matmul_precision("medium")
 
     args = get_args()
-    tr, va, te = load_data(args.ds)
+    tr, va, te = load_data_from_scratch(args.ds)
 
     pl_model = LightningModel()
     trainer = Trainer(
