@@ -1,4 +1,4 @@
-package io.ksmt.symfpu.operations
+package io.ksmt.symfpu
 
 import io.ksmt.KContext
 import io.ksmt.decl.KDecl
@@ -22,6 +22,11 @@ import io.ksmt.sort.KFp32Sort
 import io.ksmt.sort.KFp64Sort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KSort
+import io.ksmt.symfpu.operations.UnpackedFp
+import io.ksmt.symfpu.operations.bvToBool
+import io.ksmt.symfpu.operations.pack
+import io.ksmt.symfpu.operations.packToBv
+import io.ksmt.symfpu.operations.unpack
 import io.ksmt.symfpu.solver.FpToBvTransformer
 import io.ksmt.utils.getValue
 import io.ksmt.utils.uncheckedCast
@@ -33,7 +38,6 @@ import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 
 @Execution(ExecutionMode.CONCURRENT)
 class FpToBvTransformerTest {
@@ -152,6 +156,38 @@ class FpToBvTransformerTest {
     @Test
     fun testFpToBvAbsExpr() = withContextAndFp32Variables { a, _ ->
         testFpExpr(mkFpAbsExpr(a))
+    }
+
+    @EnabledIfEnvironmentVariable(named = "runLongSymFpuTests", matches = "true")
+    @Test
+    fun testFpToBvAddExpr() = withContextAndFp32Variables { a, b ->
+        testFpExpr(
+            mkFpAddExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b)
+        )
+    }
+
+    @EnabledIfEnvironmentVariable(named = "runLongSymFpuTests", matches = "true")
+    @Test
+    fun testFpToBvSubExpr() = withContextAndFp32Variables { a, b ->
+        testFpExpr(
+            mkFpSubExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b)
+        )
+    }
+
+    @EnabledIfEnvironmentVariable(named = "runLongSymFpuTests", matches = "true")
+    @Test
+    fun testFpToBvMulExpr() = withContextAndFp32Variables { a, b ->
+        testFpExpr(
+            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b)
+        )
+    }
+
+    @EnabledIfEnvironmentVariable(named = "runLongSymFpuTests", matches = "true")
+    @Test
+    fun testFpToBvDivExpr() = withContextAndFp32Variables { a, b ->
+        testFpExpr(
+            mkFpDivExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, b)
+        )
     }
 
     @Test
@@ -295,7 +331,7 @@ class FpToBvTransformerTest {
         testFpExpr(mkFpToFpExpr(mkFp16Sort(), mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a))
     }
 
-    @EnabledIfEnvironmentVariable(named = "runLongSymFPUTests", matches = "true")
+    @EnabledIfEnvironmentVariable(named = "runLongSymFpuTests", matches = "true")
     @Test
     fun testBvToFpUnsignedExpr() = withContext {
         val a by mkBv32Sort()
@@ -309,7 +345,7 @@ class FpToBvTransformerTest {
         )
     }
 
-    @EnabledIfEnvironmentVariable(named = "runLongSymFPUTests", matches = "true")
+    @EnabledIfEnvironmentVariable(named = "runLongSymFpuTests", matches = "true")
     @Test
     fun testFpToBvMultFp16RNAExpr() = withContextAndFp16Variables { a, b ->
         testFpExpr(
@@ -317,7 +353,7 @@ class FpToBvTransformerTest {
         )
     }
 
-    @EnabledIfEnvironmentVariable(named = "runLongSymFPUTests", matches = "true")
+    @EnabledIfEnvironmentVariable(named = "runLongSymFpuTests", matches = "true")
     @Test
     fun testFpToBvSqrtFp16RTNExpr() = withContextAndFp16Variables { a, _ ->
         testFpExpr(
@@ -325,7 +361,7 @@ class FpToBvTransformerTest {
         )
     }
 
-    @EnabledIfEnvironmentVariable(named = "runLongSymFPUTests", matches = "true")
+    @EnabledIfEnvironmentVariable(named = "runLongSymFpuTests", matches = "true")
     @Test
     fun testFpToBvAddFp16RNAExpr() = withContextAndFp16Variables { a, b ->
         testFpExpr(
@@ -360,7 +396,7 @@ class FpToBvTransformerTest {
 
         solver.assert(transformedExpr neq expectedExpr)
 
-        val status = solver.check(CHECK_TIMEOUT)
+        val status = solver.check()
 
         if (status == KSolverStatus.SAT) {
             printDebugInfo(solver, transformedExpr, expectedExpr, transformer)
@@ -472,8 +508,6 @@ class FpToBvTransformerTest {
         withContextAndFpVariables({ mkFp128Sort() }, block)
 
     companion object {
-        private val CHECK_TIMEOUT = 2.seconds
-
         lateinit var solverManager: KSolverRunnerManager
 
         @BeforeAll
@@ -481,8 +515,8 @@ class FpToBvTransformerTest {
         fun initWorkerPools() {
             solverManager = KSolverRunnerManager(
                 workerPoolSize = 4,
-                hardTimeout = 20.seconds,
-                workerProcessIdleTimeout = 10.minutes
+                hardTimeout = 10.minutes,
+                workerProcessIdleTimeout = 15.minutes
             )
         }
 
