@@ -331,7 +331,6 @@ class FpToBvTransformerTest {
         testFpExpr(mkFpToFpExpr(mkFp16Sort(), mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a))
     }
 
-    @EnabledIfEnvironmentVariable(named = "runLongSymFpuTests", matches = "true")
     @Test
     fun testBvToFpUnsignedExpr() = withContext {
         val a by mkBv32Sort()

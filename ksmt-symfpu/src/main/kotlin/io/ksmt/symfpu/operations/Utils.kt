@@ -136,17 +136,26 @@ data class NormaliseShiftResult(
     val normalised: KExpr<KBvSort>, val shiftAmount: KExpr<KBvSort>,
 )
 
+private fun previousPowerOfTwo(x: UInt): UInt {
+    var result = x.takeHighestOneBit()
+    // x is power of two
+    if (result == x) {
+        result /= 2u
+    }
+    return result
+}
+
 /* CLZ https://en.wikipedia.org/wiki/Find_first_set */
 fun KContext.normaliseShift(input: KExpr<KBvSort>): NormaliseShiftResult {
     val inputWidth = input.sort.sizeBits
-    val startingMask = inputWidth.takeHighestOneBit()
+    val startingMask = previousPowerOfTwo(inputWidth)
     check(startingMask < inputWidth) { "Start has to be less than width" }
 
 
     // We need to shift the input to the left until the first bit is set
     var currentMantissa = input
     var shiftAmount: KExpr<KBvSort>? = null
-    var curMaskLen = inputWidth.takeHighestOneBit()
+    var curMaskLen = startingMask
     while (curMaskLen > 0u) {
         val mask = mkBvConcatExpr(ones(curMaskLen), bvZero(inputWidth - curMaskLen))
         val shiftNeeded = isAllZeros(mkBvAndExpr(mask, currentMantissa))
