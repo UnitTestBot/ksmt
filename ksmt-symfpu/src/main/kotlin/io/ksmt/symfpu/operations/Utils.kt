@@ -113,20 +113,9 @@ fun unpackedExponentWidth(format: KFpSort): Int {
 
 /**
  * The number of bits required to represent a number
- * == the position of the leading 0 + 1
- * == ceil(log_2(value + 1))
  */
-fun bitsToRepresent(value: Int): Int {
-    var i = 0
-    var working = value
-
-    while (working != 0) {
-        ++i
-        working = working shr 1
-    }
-
-    return i
-}
+fun bitsToRepresent(value: Int): Int =
+    Int.SIZE_BITS - value.countLeadingZeroBits()
 
 fun KContext.ones(width: UInt): KBitVecValue<KBvSort> = bvMaxValueUnsigned(width)
 
