@@ -2,160 +2,119 @@ package io.ksmt.symfpu.operations
 
 import io.ksmt.KContext
 import io.ksmt.decl.KDecl
-import io.ksmt.expr.KApp
 import io.ksmt.expr.KConst
 import io.ksmt.expr.KExpr
-import io.ksmt.expr.KFp128Value
-import io.ksmt.expr.KFp16Value
-import io.ksmt.expr.KFp32Value
 import io.ksmt.expr.KFpRoundingMode
 import io.ksmt.expr.KFpValue
 import io.ksmt.expr.printer.BvValuePrintMode
 import io.ksmt.expr.printer.PrinterParams
+import io.ksmt.expr.rewrite.KExprUninterpretedDeclCollector
 import io.ksmt.expr.transformer.KNonRecursiveTransformer
-import io.ksmt.runner.core.KsmtWorkerArgs
-import io.ksmt.runner.core.KsmtWorkerFactory
-import io.ksmt.runner.core.KsmtWorkerPool
-import io.ksmt.runner.core.RdServer
-import io.ksmt.runner.core.WorkerInitializationFailedException
-import io.ksmt.runner.generated.models.TestProtocolModel
 import io.ksmt.solver.KModel
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverStatus
-import io.ksmt.solver.bitwuzla.KBitwuzlaSolver
 import io.ksmt.solver.runner.KSolverRunnerManager
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KFp128Sort
+import io.ksmt.sort.KFp16Sort
 import io.ksmt.sort.KFp32Sort
 import io.ksmt.sort.KFp64Sort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KSort
 import io.ksmt.symfpu.solver.FpToBvTransformer
-import io.ksmt.test.TestRunner
-import io.ksmt.test.TestWorker
-import io.ksmt.test.TestWorkerProcess
 import io.ksmt.utils.getValue
 import io.ksmt.utils.uncheckedCast
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.Assertions.assertNotEquals
-import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
+import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-typealias Fp = KFp32Sort
-
+@Execution(ExecutionMode.CONCURRENT)
 class FpToBvTransformerTest {
-
-    private fun KContext.createTwoFp32Variables(): Pair<KApp<Fp, *>, KApp<Fp, *>> {
-        val a by mkFp32Sort()
-        val b by mkFp32Sort()
-        return Pair(a, b)
-    }
-
-    private fun KContext.zero() = mkFpZero(false, Fp(this))
-    private fun KContext.negativeZero() = mkFpZero(true, Fp(this))
-    private inline fun <R> withContextAndFp32Variables(block: KContext.(KApp<KFp32Sort, *>, KApp<KFp32Sort, *>) -> R): R =
-        with(KContext(printerParams = PrinterParams(BvValuePrintMode.BINARY))) {
-            val (a, b) = createTwoFp32Variables()
-            block(a, b)
-        }
-
-    private inline fun <R> withContextAndFp128Variables(block: KContext.(KApp<KFp128Sort, *>, KApp<KFp128Sort, *>) -> R): R =
-        with(KContext(printerParams = PrinterParams(BvValuePrintMode.BINARY))) {
-            val a by mkFp128Sort()
-            val b by mkFp128Sort()
-            block(a, b)
-        }
-
-    private inline fun <R> withContextAndFp64Variables(block: KContext.(KApp<KFp64Sort, *>, KApp<KFp64Sort, *>) -> R): R =
-        with(KContext(printerParams = PrinterParams(BvValuePrintMode.BINARY))) {
-            val a by mkFp64Sort()
-            val b by mkFp64Sort()
-            block(a, b)
-        }
-
     @Test
-    fun testUnpackExpr() = with(KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY)) {
-        val a by mkFp32Sort()
-        testFpExpr(a, mapOf("a" to a))
+    fun testUnpackExpr() = withContextAndFp32Variables { a, _ ->
+        testFpExpr(a)
     }
-
 
     @Test
     fun testFpToBvEqExpr() = withContextAndFp32Variables { a, b ->
-        testFpExpr(mkFpEqualExpr(a, b), mapOf("a" to a, "b" to b)) { _, _ ->
+        testFpExpr(mkFpEqualExpr(a, b)) { _, _ ->
             !(mkFpIsNaNExpr(a) or mkFpIsNaNExpr(b))
         }
     }
 
     @Test
     fun testFpToBv32EqExpr() = withContextAndFp32Variables { a, b ->
-        testFpExpr(mkFpEqualExpr(a, b), mapOf("a" to a, "b" to b))
+        testFpExpr(mkFpEqualExpr(a, b))
     }
 
-    @Execution(ExecutionMode.CONCURRENT)
     @Test
     fun testFpToBv128EqExpr() = withContextAndFp128Variables { a, b ->
-        testFpExpr(mkFpEqualExpr(a, b), mapOf("a" to a, "b" to b))
+        testFpExpr(mkFpEqualExpr(a, b))
     }
 
     @Test
     fun testFpToBvLessExpr() = withContextAndFp32Variables { a, b ->
-        testFpExpr(mkFpLessExpr(a, b), mapOf("a" to a, "b" to b))
+        testFpExpr(mkFpLessExpr(a, b))
     }
 
     @Test
     fun testFpToBvLess32Expr() = withContextAndFp32Variables { a, b ->
-        testFpExpr(mkFpLessExpr(a, b), mapOf("a" to a, "b" to b))
+        testFpExpr(mkFpLessExpr(a, b))
     }
 
     @Test
     fun testFpToBvLess64Expr() = withContextAndFp64Variables { a, b ->
-        testFpExpr(mkFpLessExpr(a, b), mapOf("a" to a, "b" to b))
+        testFpExpr(mkFpLessExpr(a, b))
     }
 
     @Test
     fun testFpToBvLess128Expr() = withContextAndFp128Variables { a, b ->
-        testFpExpr(mkFpLessExpr(a, b), mapOf("a" to a, "b" to b))
+        testFpExpr(mkFpLessExpr(a, b))
     }
 
     @Test
     fun testFpToBvLessOrEqualExpr() = withContextAndFp32Variables { a, b ->
-        testFpExpr(mkFpLessOrEqualExpr(a, b), mapOf("a" to a, "b" to b))
+        testFpExpr(mkFpLessOrEqualExpr(a, b))
     }
 
     @Test
     fun testFpToBvGreaterExpr() = withContextAndFp32Variables { a, b ->
-        testFpExpr(mkFpGreaterExpr(a, b), mapOf("a" to a, "b" to b))
+        testFpExpr(mkFpGreaterExpr(a, b))
     }
 
     @Test
     fun testFpToBvGreaterOrEqualExpr() = withContextAndFp128Variables { a, b ->
-        testFpExpr(mkFpGreaterOrEqualExpr(a, b), mapOf("a" to a, "b" to b))
+        testFpExpr(mkFpGreaterOrEqualExpr(a, b))
     }
 
     // filter results for min(a,b) = ±0 as it is not a failure
-    private fun KContext.assertionForZeroResults() = { transformedExpr: KExpr<Fp>, exprToTransform: KExpr<Fp> ->
-        (transformedExpr eq zero() and (exprToTransform eq negativeZero())).not() and (transformedExpr eq negativeZero() and (exprToTransform eq zero())).not()
-    }
+    private fun <Fp : KFpSort> KContext.assertionForZeroResults(sort: Fp) =
+        { transformedExpr: KExpr<Fp>, exprToTransform: KExpr<Fp> ->
+            val zero = mkFpZero(signBit = false, sort)
+            val negativeZero = mkFpZero(signBit = true, sort)
+
+            mkAnd(
+                ((transformedExpr eq zero) and (exprToTransform eq negativeZero)).not(),
+                ((transformedExpr eq negativeZero) and (exprToTransform eq zero)).not()
+            )
+        }
 
     @Test
     fun testFpToBvMinExpr() = withContextAndFp32Variables { a, b ->
-        testFpExpr(mkFpMinExpr(a, b), mapOf("a" to a, "b" to b), extraAssert = assertionForZeroResults())
+        testFpExpr(mkFpMinExpr(a, b), assumption = assertionForZeroResults(a.sort))
     }
 
 
     @Test
     fun testFpToBvMaxExpr() = withContextAndFp32Variables { a, b ->
-        testFpExpr(mkFpMaxExpr(a, b), mapOf("a" to a, "b" to b), extraAssert = assertionForZeroResults())
+        testFpExpr(mkFpMaxExpr(a, b), assumption = assertionForZeroResults(a.sort))
     }
 
     @Test
@@ -165,490 +124,357 @@ class FpToBvTransformerTest {
 
         testFpExpr(
             mkFpMinExpr(exprToTransform1, exprToTransform2),
-            mapOf("a" to a, "b" to b),
-            extraAssert = assertionForZeroResults()
+            assumption = assertionForZeroResults(a.sort)
         )
     }
 
-
     @Test
     fun testFpToBvMin128Expr() = withContextAndFp128Variables { a, b ->
-        val sort = mkFp128Sort()
-        val zero = mkFpZero(false, sort)
-        val negativeZero = mkFpZero(true, sort)
-
         testFpExpr(
             mkFpMinExpr(a, b),
-            mapOf("a" to a, "b" to b),
-            extraAssert = { transformedExpr, exprToTransform ->
-                (transformedExpr eq zero and (exprToTransform eq negativeZero)).not() and (transformedExpr eq negativeZero and (exprToTransform eq zero)).not()
-            }
+            assumption = assertionForZeroResults(a.sort)
         )
     }
 
     @Test
     fun testFpToBvMin64Expr() = withContextAndFp64Variables { a, b ->
-        val sort = fp64Sort
-        val zero = mkFpZero(false, sort)
-        val negativeZero = mkFpZero(true, sort)
-
         testFpExpr(
             mkFpMinExpr(a, b),
-            mapOf("a" to a, "b" to b),
-            extraAssert = { transformedExpr, exprToTransform ->
-                (transformedExpr eq zero and (exprToTransform eq negativeZero)).not() and (transformedExpr eq negativeZero and (exprToTransform eq zero)).not()
-            }
-        )
-    }
-
-    @EnabledIfEnvironmentVariable(
-        named = "runLongSymFPUTests",
-        matches = "true",
-    )
-    @Execution(ExecutionMode.CONCURRENT)
-    @Test
-    fun testFpToBvMultFp16RNAExpr() = with(createContext()) {
-        val a by mkFp16Sort()
-        val b by mkFp16Sort()
-        testFpExpr(
-            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToAway), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
-    private fun <T : KSort> KContext.testFpExpr(
-        exprToTransform: KExpr<T>,
-        printVars: Map<String, KApp<*, *>> = emptyMap(),
-        extraAssert: ((KExpr<T>, KExpr<T>) -> KExpr<KBoolSort>) = { _, _ -> trueExpr },
-    ) {
-        val ctx = this
-        val transformer = FpToBvTransformer(this, true)
-
-        if (System.getProperty("os.name") == "Mac OS X") {
-            solverManager.createSolver(this, KZ3Solver::class)
-        } else {
-            solverManager.createSolver(this, KBitwuzlaSolver::class)
-        }.use { solver ->
-            with(testWorkers) {
-
-                runBlocking {
-                    val worker = try {
-                        getOrCreateFreeWorker()
-                    } catch (ex: WorkerInitializationFailedException) {
-                        System.err.println("worker initialization failed -- ${ex.message}")
-                        Assumptions.assumeTrue(false)
-                        return@runBlocking
-                    }
-                    worker.astSerializationCtx.initCtx(ctx)
-                    worker.lifetime.onTermination {
-                        worker.astSerializationCtx.resetCtx()
-                    }
-                    try {
-                        TestRunner(ctx, 20.seconds, worker).let {
-                            try {
-                                it.init()
-                                checkTransformer(transformer, solver, exprToTransform, printVars, extraAssert)
-                            } finally {
-                                it.delete()
-                            }
-                        }
-                    } catch (ex: TimeoutCancellationException) {
-                        System.err.println("worker timeout -- ${ex.message}")
-                        Assumptions.assumeTrue(false)
-                        return@runBlocking
-                    } finally {
-                        worker.release()
-                    }
-                }
-
-            }
-
-        }
-    }
-
-    @EnabledIfEnvironmentVariable(
-        named = "runLongSymFPUTests",
-        matches = "true",
-    )
-    @EnabledIfEnvironmentVariable(
-        named = "runLongSymFPUTests",
-        matches = "true",
-    )
-    @Execution(ExecutionMode.CONCURRENT)
-    @Test
-    fun testFpToBvSqrtFp16RTNExpr() = with(createContext()) {
-        val a by mkFp16Sort()
-        testFpExpr(
-            mkFpSqrtExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardNegative), a),
-            mapOf("a" to a),
-        )
-    }
-
-    @EnabledIfEnvironmentVariable(
-        named = "runLongSymFPUTests",
-        matches = "true",
-    )
-    @Execution(ExecutionMode.CONCURRENT)
-    @Test
-    fun testFpToBvAddFp16RNAExpr() = with(createContext()) {
-        val a by mkFp16Sort()
-        val b by mkFp16Sort()
-        testFpExpr(
-            mkFpAddExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToAway), a, b),
-            mapOf("a" to a, "b" to b),
-        )
-    }
-
-
-    @Test
-    fun testFpToBvNegateExpr() = with(createContext()) {
-        val a by mkFp32Sort()
-        testFpExpr(
-            mkFpNegationExpr(a),
-            mapOf("a" to a),
+            assumption = assertionForZeroResults(a.sort)
         )
     }
 
     @Test
-    fun testFpToBvNothingExpr() = with(createContext()) {
-        val a by mkFp32Sort()
-        testFpExpr(
-            (a),
-            mapOf("a" to a),
-        )
-    }
-
-
-    @Test
-    fun testFpToBvAbsExpr() = with(createContext()) {
-        val a by mkFp32Sort()
-        testFpExpr(
-            mkFpAbsExpr(a),
-            mapOf("a" to a),
-        )
+    fun testFpToBvNegateExpr() = withContextAndFp32Variables { a, _ ->
+        testFpExpr(mkFpNegationExpr(a))
     }
 
     @Test
-    fun testFpToBvIsNormalExpr() = with(createContext()) {
-        val a by mkFp32Sort()
-
-        testFpExpr(
-            mkFpIsNormalExpr(a),
-            mapOf("a" to a),
-        )
+    fun testFpToBvAbsExpr() = withContextAndFp32Variables { a, _ ->
+        testFpExpr(mkFpAbsExpr(a))
     }
 
     @Test
-    fun testFpToBvIsSubnormalExpr() = with(createContext()) {
-        val a by mkFp32Sort()
-
-        testFpExpr(
-            mkFpIsSubnormalExpr(a),
-            mapOf("a" to a),
-        )
+    fun testFpToBvIsNormalExpr() = withContextAndFp32Variables { a, _ ->
+        testFpExpr(mkFpIsNormalExpr(a))
     }
 
     @Test
-    fun testFpToBvIsZeroExpr() = with(createContext()) {
-        val a by mkFp32Sort()
+    fun testFpToBvIsSubnormalExpr() = withContextAndFp32Variables { a, _ ->
+        testFpExpr(mkFpIsSubnormalExpr(a))
+    }
 
+    @Test
+    fun testFpToBvIsZeroExpr() = withContextAndFp32Variables { a, _ ->
+        testFpExpr(mkFpIsZeroExpr(a))
+    }
+
+    @Test
+    fun testFpToBvIsInfExpr() = withContextAndFp32Variables { a, _ ->
+        testFpExpr(mkFpIsInfiniteExpr(a))
+    }
+
+    @Test
+    fun testFpToBvIsInfInfExpr() = withContextAndFp32Variables { a, _ ->
         testFpExpr(
-            mkFpIsZeroExpr(a),
-            mapOf("a" to a),
+            mkFpIsInfiniteExprNoSimplify(mkFpInf(signBit = true, a.sort))
         )
     }
 
     @Test
-    fun testFpToBvIsInfExpr() = with(createContext()) {
-        val a by mkFp32Sort()
-
+    fun testFpToBvIsZeroInfExpr() = withContextAndFp32Variables { a, _ ->
         testFpExpr(
-            mkFpIsInfiniteExpr(a),
-            mapOf("a" to a),
+            mkFpIsInfiniteExprNoSimplify(mkFpZero(signBit = false, a.sort))
         )
     }
 
     @Test
-    fun testFpToBvIsInfInfExpr() = with(KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY, printerParams = PrinterParams(BvValuePrintMode.BINARY))) {
+    fun testFpToBvIsNaNExpr() = withContextAndFp32Variables { a, _ ->
+        testFpExpr(mkFpIsNaNExpr(a))
+    }
+
+    @Test
+    fun testFpToBvIsPositiveExpr() = withContextAndFp32Variables { a, _ ->
+        testFpExpr(mkFpIsPositiveExpr(a))
+    }
+
+    @Test
+    fun testFpToBvIsPositiveNaNExpr() = withContextAndFp32Variables { a, _ ->
         testFpExpr(
-            mkFpIsInfiniteExprNoSimplify(mkFpInf(true, mkFp32Sort()))
+            mkFpIsPositiveExprNoSimplify(mkFpNaN(a.sort)),
         )
     }
 
     @Test
-    fun testFpToBvIsZeroInfExpr() = with(createContext()) {
-        testFpExpr(
-            mkFpIsInfiniteExprNoSimplify(mkFpZero(false, mkFp32Sort()))
-        )
+    fun testFpToBvIsNegativeExpr() = withContextAndFp32Variables { a, _ ->
+        testFpExpr(mkFpIsNegativeExpr(a))
     }
 
-
     @Test
-    fun testFpToBvIsNaNExpr() = with(createContext()) {
-        val a by mkFp32Sort()
-
+    fun testFpToFpUpExpr() = withContextAndFp16Variables { a, _ ->
         testFpExpr(
-            mkFpIsNaNExpr(a),
-            mapOf("a" to a),
+            mkFpToFpExpr(mkFp128Sort(), mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a),
         )
     }
 
     @Test
-    fun testFpToBvIsPositiveExpr() = with(createContext()) {
-        val a by mkFp32Sort()
-
+    fun testFpToUBvUpExpr() = withContextAndFp32Variables { a, _ ->
         testFpExpr(
-            mkFpIsPositiveExpr(a),
-            mapOf("a" to a),
+            mkFpToBvExprNoSimplify(
+                mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven),
+                a,
+                bvSize = 32,
+                isSigned = false
+            ),
+            assumption = { _, _ ->
+                mkFpLessExpr(a, mkFp32(UInt.MAX_VALUE.toFloat())) and mkFpIsPositiveExpr(a)
+            },
         )
     }
 
     @Test
-    fun testFpToBvIsPositiveNaNExpr() = with(KContext(printerParams = PrinterParams(BvValuePrintMode.BINARY))) {
-        testFpExpr(
-            mkFpIsPositiveExprNoSimplify(mkFpNaN(mkFp32Sort())),
-            mapOf(),
-        )
-    }
-
-    @Test
-    fun testFpToBvIsNegativeExpr() = with(createContext()) {
-        val a by mkFp32Sort()
-
-        testFpExpr(
-            mkFpIsNegativeExpr(a),
-            mapOf("a" to a),
-        )
-    }
-
-
-    @Test
-    fun testFpToFpUpExpr() = with(createContext()) {
-        val a by mkFp16Sort()
-        testFpExpr(
-            mkFpToFpExpr(mkFp128Sort(), defaultRounding(), a),
-            mapOf("a" to a),
-        )
-    }
-
-
-    @Test
-    fun testFpToUBvUpExpr() = with(createContext()) {
-        val a by mkFp32Sort()
-        testFpExpr(
-            mkFpToBvExprNoSimplify(defaultRounding(), a, 32, false),
-            mapOf("a" to a),
-        ) { _, _ ->
-            mkFpLessExpr(a, mkFp32(UInt.MAX_VALUE.toFloat())) and mkFpIsPositiveExpr(a)
-        }
-    }
-
-    @EnabledIfEnvironmentVariable(
-        named = "runLongSymFPUTests",
-        matches = "true",
-    )
-    @Execution(ExecutionMode.CONCURRENT)
-    @Test
-    fun testFpToSBvUpExpr() = with(createContext()) {
-        val a by mkFp32Sort()
-        testFpExpr(
-            mkFpToBvExprNoSimplify(defaultRounding(), a, 32, true),
-            mapOf("a" to a),
-        ) { _, _ ->
-            mkFpLessExpr(a, mkFp32(Int.MAX_VALUE.toFloat())) and mkFpLessExpr(mkFp32(Int.MIN_VALUE.toFloat()), a)
-        }
-    }
-
-    @EnabledIfEnvironmentVariable(
-        named = "runLongSymFPUTests",
-        matches = "true",
-    )
-    @Execution(ExecutionMode.CONCURRENT)
-    @Test
-    fun testBvToFpExpr() = with(createContext()) {
-        val a by mkBv32Sort()
-        testFpExpr(
-            mkBvToFpExprNoSimplify(fp32Sort, defaultRounding(), a.uncheckedCast(), true),
-            mapOf("a" to a),
-        )
-    }
-
-    @EnabledIfEnvironmentVariable(
-        named = "runLongSymFPUTests",
-        matches = "true",
-    )
-    @Execution(ExecutionMode.CONCURRENT)
-    @Test
-    fun testBvToFpUnsignedExpr() = with(createContext()) {
-        val a by mkBv32Sort()
-        testFpExpr(
-            mkBvToFpExprNoSimplify(fp32Sort, defaultRounding(), a.uncheckedCast(), false),
-            mapOf("a" to a),
-        )
-    }
-
-
-    @Test
-    fun testFpFromBvExpr() = with(createContext()) {
+    fun testFpFromBvExpr() = withContext {
         val sign by mkBv1Sort()
         val e by mkBv16Sort()
         val sig by mkBv16Sort()
         testFpExpr(
             mkFpFromBvExpr(sign.uncheckedCast(), e.uncheckedCast(), sig.uncheckedCast()),
-            mapOf("sign" to sign, "e" to e, "sig" to sig),
-        )
-    }
-
-    @EnabledIfEnvironmentVariable(
-        named = "runLongSymFPUTests",
-        matches = "true",
-    )
-    @Test
-    fun testFpToFpDownExpr() = with(createContext()) {
-        val a by mkFp128Sort()
-        testFpExpr(
-            mkFpToFpExpr(mkFp16Sort(), defaultRounding(), a),
-            mapOf("a" to a),
         )
     }
 
     @Test
-    fun testIteExpr() = with(createContext()) {
-        val a by mkFp32Sort()
-        val b by mkFp32Sort()
-        testFpExpr(
-            mkIteNoSimplify(trueExpr, a, b),
-            mapOf("a" to a),
-        )
+    fun testIteExpr() = withContextAndFp32Variables { a, b ->
+        val c by boolSort
+        testFpExpr(mkIteNoSimplify(c, a, b))
     }
 
     @Test
-    fun testBvBoolFormulaExpr() = withContextAndFp64Variables { a, b ->
-        val sort = fp64Sort
-        val zero = mkFpZero(false, sort)
-        mkFpZero(true, sort)
-
+    fun testBvBoolFormulaExpr() = withContextAndFp64Variables { a, _ ->
         val asq = mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a, a)
+        testFpExpr(mkFpGreaterOrEqualExpr(asq, mkFpZero(signBit = false, fp64Sort)))
+    }
 
+
+    @Test
+    fun testFpToBvRoundToIntegralExpr() = withContextAndFp32Variables { a, _ ->
+        KFpRoundingMode.values().forEach {
+            testFpExpr(mkFpRoundToIntegralExpr(mkFpRoundingModeExpr(it), a))
+        }
+    }
+
+    @Test
+    fun testFpToSBvUpExpr() = withContextAndFp32Variables { a, _ ->
         testFpExpr(
-            mkFpLessExpr(asq, zero),
-            mapOf("a" to a, "b" to b)
+            mkFpToBvExprNoSimplify(
+                mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven),
+                a,
+                bvSize = 32,
+                isSigned = true
+            ),
+            assumption = { _, _ ->
+                mkFpLessExpr(a, mkFp32(Int.MAX_VALUE.toFloat())) and mkFpLessExpr(mkFp32(Int.MIN_VALUE.toFloat()), a)
+            },
         )
+    }
+
+    @Test
+    fun testBvToFpExpr() = withContext {
+        val a by mkBv32Sort()
+        testFpExpr(
+            mkBvToFpExprNoSimplify(
+                fp32Sort,
+                mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven),
+                a.uncheckedCast(),
+                signed = true
+            )
+        )
+    }
+
+    @Test
+    fun testFpToFpDownExpr() = withContextAndFp128Variables { a, _ ->
+        testFpExpr(mkFpToFpExpr(mkFp16Sort(), mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven), a))
+    }
+
+    @EnabledIfEnvironmentVariable(named = "runLongSymFPUTests", matches = "true")
+    @Test
+    fun testBvToFpUnsignedExpr() = withContext {
+        val a by mkBv32Sort()
+        testFpExpr(
+            mkBvToFpExprNoSimplify(
+                fp32Sort,
+                mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven),
+                a.uncheckedCast(),
+                signed = false
+            )
+        )
+    }
+
+    @EnabledIfEnvironmentVariable(named = "runLongSymFPUTests", matches = "true")
+    @Test
+    fun testFpToBvMultFp16RNAExpr() = withContextAndFp16Variables { a, b ->
+        testFpExpr(
+            mkFpMulExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToAway), a, b),
+        )
+    }
+
+    @EnabledIfEnvironmentVariable(named = "runLongSymFPUTests", matches = "true")
+    @Test
+    fun testFpToBvSqrtFp16RTNExpr() = withContextAndFp16Variables { a, _ ->
+        testFpExpr(
+            mkFpSqrtExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundTowardNegative), a),
+        )
+    }
+
+    @EnabledIfEnvironmentVariable(named = "runLongSymFPUTests", matches = "true")
+    @Test
+    fun testFpToBvAddFp16RNAExpr() = withContextAndFp16Variables { a, b ->
+        testFpExpr(
+            mkFpAddExpr(mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToAway), a, b),
+        )
+    }
+
+    private fun <T : KSort> KContext.testFpExpr(
+        exprToTransform: KExpr<T>,
+        assumption: (KExpr<T>, KExpr<T>) -> KExpr<KBoolSort> = { _, _ -> trueExpr },
+    ) {
+        solverManager.createSolver(this, KZ3Solver::class).use { solver ->
+            checkTransformer(solver, exprToTransform, assumption)
+        }
     }
 
     private fun <T : KSort> KContext.checkTransformer(
-        transformer: FpToBvTransformer,
         solver: KSolver<*>,
-        exprToTransform: KExpr<T>,
-        printVars: Map<String, KApp<*, *>>,
-        extraAssert: ((KExpr<T>, KExpr<T>) -> KExpr<KBoolSort>),
+        originalExpr: KExpr<T>,
+        assumption: (KExpr<T>, KExpr<T>) -> KExpr<KBoolSort>,
     ) {
-
-        val applied = transformer.apply(exprToTransform)
-        val transformedExpr: KExpr<T> = ((applied as? UnpackedFp<*>)?.toFp() ?: applied).uncheckedCast()
+        val transformer = FpToBvTransformer(this, packedBvOptimization = true)
+        val transformedExpr = transformer.applyUnpackFp(originalExpr)
 
         val testTransformer = TestTransformerUseBvs(this, transformer.mapFpToUnpackedFp)
-        val toCompare = testTransformer.apply(exprToTransform)
+        val expectedExpr = testTransformer.apply(originalExpr)
 
+        // Check that expressions are equal under assumption
+        val exprAssumption = assumption(transformedExpr, expectedExpr)
+        val transformedAssumption = testTransformer.apply(exprAssumption)
+        solver.assert(transformedAssumption)
 
-        solver.assert(!mkEqNoSimplify(transformedExpr, toCompare))
+        solver.assert(transformedExpr neq expectedExpr)
 
-        val status =
-            solver.checkWithAssumptions(
-                listOf(testTransformer.apply(extraAssert(transformedExpr, toCompare))),
-                timeout = 2.seconds
-            )
+        val status = solver.check(CHECK_TIMEOUT)
+
         if (status == KSolverStatus.SAT) {
-            val model = solver.model()
-            val transformed = model.eval(transformedExpr)
-            val baseExpr = model.eval(toCompare)
-
-            println("transformed: ${unpackedString(transformed, model)}")
-            println("exprToTrans: ${unpackedString(baseExpr, model)}")
-            for ((name, expr) in printVars) {
-                val ufp = transformer.mapFpToUnpackedFp[expr.decl]
-                val evalUnpacked = unpackedString(ufp ?: expr, model)
-                println("$name :: $evalUnpacked")
-            }
+            printDebugInfo(solver, transformedExpr, expectedExpr, transformer)
         }
-        assertNotEquals(KSolverStatus.SAT, status)
+
+        assertEquals(KSolverStatus.UNSAT, status)
     }
 
+    private fun <T : KSort> KContext.printDebugInfo(
+        solver: KSolver<*>,
+        transformedExpr: KExpr<T>,
+        expectedExpr: KExpr<T>,
+        transformer: FpToBvTransformer
+    ) {
+        val model = solver.model()
+        val transformed = model.eval(transformedExpr)
+        val baseExpr = model.eval(expectedExpr)
 
-    @EnabledIfEnvironmentVariable(
-        named = "runLongSymFPUTests",
-        matches = "true",
-    )
-    @Execution(ExecutionMode.CONCURRENT)
-    @Test
-    fun testFpToBvRoundToIntegralExpr() = with(createContext()) {
-        val a by mkFp32Sort()
-        val roundingModes = KFpRoundingMode.values()
+        println("transformed: ${unpackedString(transformed, model)}")
+        println("exprToTrans: ${unpackedString(baseExpr, model)}")
 
-        roundingModes.forEach {
-            testFpExpr(
-                mkFpRoundToIntegralExpr(mkFpRoundingModeExpr(it), a),
-                mapOf("a" to a),
-            )
+        KExprUninterpretedDeclCollector.collectUninterpretedDeclarations(expectedExpr).forEach { decl ->
+            val ufp = transformer.mapFpToUnpackedFp[decl]
+            val evalUnpacked = unpackedString(ufp ?: decl.apply(emptyList()), model)
+            println("${decl.name} :: $evalUnpacked")
         }
     }
 
+    private fun KContext.unpackedString(value: KExpr<*>, model: KModel): String {
+        if (value.sort !is KFpSort) {
+            return "${model.eval(value)}"
+        }
 
-    private fun KContext.unpackedString(value: KExpr<*>, model: KModel) = if (value.sort is KFpSort) {
-        val sb = StringBuilder()
         val ufp = if (value is UnpackedFp<*>) {
             value
         } else {
             val fpExpr: KExpr<KFpSort> = value.uncheckedCast()
             unpack(fpExpr.sort, mkFpToIEEEBvExpr(fpExpr), true)
         }
-        val fpValue = model.eval(ufp.toFp()) as KFpValue
-        with(ufp) {
-            sb.append("uFP sign ")
-            model.eval(sign).print(sb)
-            sb.append(" ")
-            model.eval(unbiasedExponent).print(sb)
-            sb.append(" ")
-            model.eval(normalizedSignificand).print(sb)
+        val fpValue = model.eval(ufp.packToFp()) as KFpValue
+
+        return buildString {
+            append("uFP sign ")
+            model.eval(ufp.sign).print(this)
+            append(" ")
+            model.eval(ufp.unbiasedExponent).print(this)
+            append(" ")
+            model.eval(ufp.normalizedSignificand).print(this)
 
             //nan, inf, zero
-            sb.append(" nan=")
-            model.eval(isNaN).print(sb)
-            sb.append(" inf=")
-            model.eval(isInf).print(sb)
-            sb.append(" isZero=")
-            model.eval(isZero).print(sb)
+            append(" nan=")
+            model.eval(ufp.isNaN).print(this)
+            append(" inf=")
+            model.eval(ufp.isInf).print(this)
+            append(" isZero=")
+            model.eval(ufp.isZero).print(this)
 
 
-            sb.append("\ntoFp: ")
-            model.eval(toFp()).print(sb)
+            append("\ntoFp: ")
+            fpValue.print(this)
 
-            val packedFloat = packToBv(this)
+            val packedFloat = packToBv(ufp)
             val pWidth = packedFloat.sort.sizeBits.toInt()
-            val exWidth = sort.exponentBits.toInt()
+            val exWidth = ufp.sort.exponentBits.toInt()
 
             // Extract
             val packedSignificand = mkBvExtractExpr(pWidth - exWidth - 2, 0, packedFloat)
             val packedExponent = mkBvExtractExpr(pWidth - 2, pWidth - exWidth - 1, packedFloat)
             val sign = bvToBool(mkBvExtractExpr(pWidth - 1, pWidth - 1, packedFloat))
-            sb.append("\nFP sign ")
-            model.eval(sign).print(sb)
-            sb.append(" ")
-            model.eval(packedExponent).print(sb)
-            sb.append(" ")
-            model.eval(packedSignificand).print(sb)
-            sb.append("\nbv: ")
-            model.eval(packedFloat).print(sb)
-            sb.append(" \nactually ${(fpValue as? KFp32Value)?.value ?: (fpValue as? KFp16Value)?.value ?: (fpValue as? KFp128Value)}))}}")
-            sb.toString()
+
+            append("\nFP sign ")
+            model.eval(sign).print(this)
+            append(" ")
+            model.eval(packedExponent).print(this)
+            append(" ")
+            model.eval(packedSignificand).print(this)
+            append("\nbv: ")
+            model.eval(packedFloat).print(this)
+            append(" \nactually $fpValue))}}")
         }
-    } else {
-        "${model.eval(value)}"
     }
 
+    private inline fun withContext(block: KContext.() -> Unit) {
+        val ctx = KContext(
+            printerParams = PrinterParams(BvValuePrintMode.BINARY),
+            simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY
+        )
+        return ctx.block()
+    }
+
+    private inline fun <Fp : KFpSort> withContextAndFpVariables(
+        mkSort: KContext.() -> Fp,
+        block: KContext.(KExpr<Fp>, KExpr<Fp>) -> Unit
+    ) = withContext {
+        val sort = mkSort()
+        block(mkConst("a", sort), mkConst("b", sort))
+    }
+
+    private inline fun withContextAndFp16Variables(block: KContext.(KExpr<KFp16Sort>, KExpr<KFp16Sort>) -> Unit) =
+        withContextAndFpVariables({ fp16Sort }, block)
+
+    private inline fun withContextAndFp32Variables(block: KContext.(KExpr<KFp32Sort>, KExpr<KFp32Sort>) -> Unit) =
+        withContextAndFpVariables({ fp32Sort }, block)
+
+    private inline fun withContextAndFp64Variables(block: KContext.(KExpr<KFp64Sort>, KExpr<KFp64Sort>) -> Unit) =
+        withContextAndFpVariables({ fp64Sort }, block)
+
+    private inline fun withContextAndFp128Variables(block: KContext.(KExpr<KFp128Sort>, KExpr<KFp128Sort>) -> Unit) =
+        withContextAndFpVariables({ mkFp128Sort() }, block)
+
     companion object {
+        private val CHECK_TIMEOUT = 2.seconds
+
         lateinit var solverManager: KSolverRunnerManager
-        lateinit var testWorkers: KsmtWorkerPool<TestProtocolModel>
 
         @BeforeAll
         @JvmStatic
@@ -658,35 +484,34 @@ class FpToBvTransformerTest {
                 hardTimeout = 20.seconds,
                 workerProcessIdleTimeout = 10.minutes
             )
-            testWorkers = KsmtWorkerPool(
-                maxWorkerPoolSize = 4,
-                workerProcessIdleTimeout = 10.minutes,
-                workerFactory = object : KsmtWorkerFactory<TestProtocolModel> {
-                    override val childProcessEntrypoint = TestWorkerProcess::class
-                    override fun updateArgs(args: KsmtWorkerArgs): KsmtWorkerArgs = args
-                    override fun mkWorker(id: Int, process: RdServer) = TestWorker(id, process)
-                }
-            )
         }
 
         @AfterAll
         @JvmStatic
         fun closeWorkerPools() {
             solverManager.close()
-            testWorkers.terminate()
         }
-
     }
 }
 
+private class TestTransformerUseBvs(
+    ctx: KContext,
+    private val mapFpToBv: Map<KDecl<KFpSort>, UnpackedFp<KFpSort>>
+) : KNonRecursiveTransformer(ctx) {
+    override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> {
+        if (expr.sort !is KFpSort) return expr
 
-internal class TestTransformerUseBvs(ctx: KContext, private val mapFpToBv: Map<KDecl<KFpSort>, UnpackedFp<KFpSort>>) :
-    KNonRecursiveTransformer(ctx) {
-    override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = if (expr.sort is KFpSort) {
-        val asFp: KConst<KFpSort> = expr.uncheckedCast()
-        mapFpToBv[asFp.decl]!!.toFp().uncheckedCast()
-    } else expr
+        val asFp = expr.uncheckedCast<_, KConst<KFpSort>>()
+        val mappedExpr = mapFpToBv[asFp.decl]?.packToFp() ?: error("Expr was not mapped: $expr")
+        return mappedExpr.uncheckedCast()
+    }
 }
 
-internal fun createContext() = KContext(printerParams = PrinterParams(BvValuePrintMode.BINARY))
-internal fun KContext.defaultRounding() = mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven)
+private fun <T : KSort> FpToBvTransformer.applyUnpackFp(expr: KExpr<T>): KExpr<T> {
+    val result = apply(expr)
+    return if (result !is UnpackedFp<*>) result else result.packToFp().uncheckedCast()
+}
+
+private fun <Fp : KFpSort> UnpackedFp<Fp>.packToFp(): KExpr<Fp> =
+    ctx.pack(ctx.packToBv(this), sort)
+

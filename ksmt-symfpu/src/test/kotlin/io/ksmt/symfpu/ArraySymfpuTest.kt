@@ -1,12 +1,12 @@
 package io.ksmt.symfpu
 
 import io.ksmt.KContext
+import io.ksmt.expr.KFpRoundingMode
 import io.ksmt.expr.printer.BvValuePrintMode
 import io.ksmt.expr.printer.PrinterParams
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.solver.z3.KZ3SolverConfiguration
-import io.ksmt.symfpu.operations.defaultRounding
 import io.ksmt.symfpu.solver.SymfpuSolver
 import io.ksmt.utils.getValue
 import io.ksmt.utils.mkConst
@@ -205,4 +205,6 @@ class ArraySymfpuTest {
             assertEquals(KSolverStatus.SAT, solver.check())
         }
     }
+
+    private fun KContext.defaultRounding() = mkFpRoundingModeExpr(KFpRoundingMode.RoundNearestTiesToEven)
 }

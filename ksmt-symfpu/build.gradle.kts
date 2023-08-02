@@ -14,8 +14,6 @@ dependencies {
     testImplementation(project(":ksmt-bitwuzla"))
     testImplementation(project(":ksmt-yices"))
     testImplementation(project(":ksmt-runner"))
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
-    testImplementation(project(":ksmt-test"))
 }
 
 publishing {

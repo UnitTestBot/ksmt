@@ -126,9 +126,6 @@ class UnpackedFp<Fp : KFpSort> private constructor(
         !isNegative and isInf
     }
 
-    // for tests
-    internal fun toFp() = ctx.pack(ctx.packToBv(this), sort)
-
     // Moves the leading 1 up to the correct position, adjusting the
     // exponent as required.
     fun normaliseUp(): UnpackedFp<Fp> = with(ctx) {
