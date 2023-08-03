@@ -15,7 +15,7 @@ import io.ksmt.solver.z3.KZ3SMTLibParser
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.solver.z3.KZ3SolverConfiguration
 import io.ksmt.sort.KBoolSort
-import io.ksmt.symfpu.solver.SymfpuSolver
+import io.ksmt.symfpu.solver.SymFpuSolver
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import java.nio.file.Path
@@ -39,34 +39,34 @@ class BitwuzlaFpBenchmarks : FpBenchmarks() {
         measureKsmtAssertionTime(name, samplePath, "Bitwuzla") { ctx -> KBitwuzlaSolver(ctx) }
 }
 
-class SymfpuZ3Solver(ctx: KContext) : SymfpuSolver<KZ3SolverConfiguration>(KZ3Solver(ctx), ctx)
+class SymFpuZ3Solver(ctx: KContext) : SymFpuSolver<KZ3SolverConfiguration>(KZ3Solver(ctx), ctx)
 
 class Z3WithSymFpuFpBenchmarks : FpBenchmarks() {
     @Execution(ExecutionMode.SAME_THREAD)
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
     fun testSolver(name: String, samplePath: Path) =
-        measureKsmtAssertionTime(name, samplePath, "SymfpuZ3") { ctx -> SymfpuZ3Solver(ctx) }
+        measureKsmtAssertionTime(name, samplePath, "SymfpuZ3") { ctx -> SymFpuZ3Solver(ctx) }
 }
 
-class SymfpuBitwuzlaSolver(ctx: KContext) : SymfpuSolver<KBitwuzlaSolverConfiguration>(KBitwuzlaSolver(ctx), ctx)
+class SymFpuBitwuzlaSolver(ctx: KContext) : SymFpuSolver<KBitwuzlaSolverConfiguration>(KBitwuzlaSolver(ctx), ctx)
 
 class BitwuzlaWithSymFpuFpBenchmarks : FpBenchmarks() {
     @Execution(ExecutionMode.SAME_THREAD)
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
     fun testSolver(name: String, samplePath: Path) =
-        measureKsmtAssertionTime(name, samplePath, "SymfpuBitwuzla") { ctx -> SymfpuBitwuzlaSolver(ctx) }
+        measureKsmtAssertionTime(name, samplePath, "SymfpuBitwuzla") { ctx -> SymFpuBitwuzlaSolver(ctx) }
 }
 
-class SymfpuYicesSolver(ctx: KContext) : SymfpuSolver<KYicesSolverConfiguration>(KYicesSolver(ctx), ctx)
+class SymFpuYicesSolver(ctx: KContext) : SymFpuSolver<KYicesSolverConfiguration>(KYicesSolver(ctx), ctx)
 
 class YicesWithSymFpuFpBenchmarks : FpBenchmarks() {
     @Execution(ExecutionMode.SAME_THREAD)
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
     fun testSolver(name: String, samplePath: Path) =
-        measureKsmtAssertionTime(name, samplePath, "SymfpuYices") { ctx -> SymfpuYicesSolver(ctx) }
+        measureKsmtAssertionTime(name, samplePath, "SymfpuYices") { ctx -> SymFpuYicesSolver(ctx) }
 }
 
 abstract class FpBenchmarks : BenchmarksBasedTest() {

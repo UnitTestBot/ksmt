@@ -9,6 +9,7 @@ import io.ksmt.symfpu.operations.UnpackedFp.Companion.iteOp
 import io.ksmt.symfpu.operations.UnpackedFp.Companion.makeInf
 import io.ksmt.symfpu.operations.UnpackedFp.Companion.makeNaN
 import io.ksmt.symfpu.operations.UnpackedFp.Companion.makeZero
+import io.ksmt.utils.BvUtils.bvZero
 import kotlin.math.max
 
 fun <T : KFpSort> bvToFp(
@@ -59,7 +60,6 @@ fun <T : KFpSort> bvToFp(
     }
 }
 
-
 fun <T : KFpSort, S : KFpSort> fpToFp(
     targetFormat: T,
     roundingMode: KExpr<KFpRoundingModeSort>,
@@ -69,7 +69,6 @@ fun <T : KFpSort, S : KFpSort> fpToFp(
 
     val exponentIncreased = unpackedExponentWidth(sourceFormat) <= unpackedExponentWidth(targetFormat)
     val significandIncreased = unpackedSignificandWidth(sourceFormat) <= unpackedSignificandWidth(targetFormat)
-
 
     val expExpression = max(0, unpackedExponentWidth(targetFormat) - unpackedExponentWidth(sourceFormat))
     val sigExpression = max(0, unpackedSignificandWidth(targetFormat) - unpackedSignificandWidth(sourceFormat))
@@ -116,7 +115,6 @@ fun <T : KFpSort> roundToIntegral(
         increment(mkBvSignExtensionExpr(1, unpackedSigWidth))
     )
 
-
     val significand = input.getSignificand()
     val significandWidth = input.significandWidth().toInt()
     val roundingPoint = if (significandWidth.toUInt() >= exponentWidth) {
@@ -124,7 +122,6 @@ fun <T : KFpSort> roundToIntegral(
     } else {
         mkBvExtractExpr(significandWidth - 1, 0, collaredRoundingPoint)
     }
-
 
     val roundedResult = variablePositionRound(
         roundingMode, input.sign, significand, roundingPoint,
@@ -141,7 +138,6 @@ fun <T : KFpSort> roundToIntegral(
         ),
         roundedResult.significand
     )
-
 
     return iteOp(
         isID,
@@ -174,34 +170,31 @@ fun fpToBv(
     if (signed) {
         val earlyUndefinedResult = specialValue or tooLarge
         val roundSigWidth = rounded.significand.sort.sizeBits.toInt()
-        val undefinedResult = earlyUndefinedResult or rounded.incrementExponent or (isAllOnes(
-            mkBvExtractExpr(
-                roundSigWidth - 1,
-                roundSigWidth - 1,
-                rounded.significand
-            )
-        ) and !input.sign and !isAllZeros(
-            mkBvExtractExpr(
-                roundSigWidth - 2, 0, rounded.significand
-            )
-        ))
+
+        val lastRoundBitSet = isAllOnes(
+            mkBvExtractExpr(high = roundSigWidth - 1, low = roundSigWidth - 1, value = rounded.significand)
+        )
+        val anyRoundBitSet = !isAllZeros(
+            mkBvExtractExpr(high = roundSigWidth - 2, low = 0, value = rounded.significand)
+        )
+        val undefinedResult = earlyUndefinedResult or rounded.incrementExponent or
+                (lastRoundBitSet and !input.sign and anyRoundBitSet)
+
         mkIte(
             undefinedResult,
             unspecified,
-            conditionalNegate(
-                input.sign, rounded.significand
-            )
+            conditionalNegate(input.sign, rounded.significand)
         )
     } else {
-        val tooNegative = input.sign and !input.isZero and mkBvSignedLessOrEqualExpr(
-            mkBv(0, workingExponentWidth.toUInt()),
-            exponent
-        )
+        val tooNegative = input.sign and !input.isZero and
+                mkBvSignedLessOrEqualExpr(
+                    bvZero(workingExponentWidth.toUInt()),
+                    exponent
+                )
 
         val earlyUndefinedResult = specialValue or tooLarge or tooNegative
-        val undefinedResult = earlyUndefinedResult or rounded.incrementExponent or (input.sign and !isAllZeros(
-            rounded.significand
-        ))
+        val undefinedResult = earlyUndefinedResult or rounded.incrementExponent or
+                (input.sign and !isAllZeros(rounded.significand))
         mkIte(
             undefinedResult,
             unspecified,
@@ -214,71 +207,66 @@ private fun fpToBvCommon(
     roundingMode: KExpr<KFpRoundingModeSort>,
     input: UnpackedFp<*>,
     targetWidth: Int,
-): SignificandRounderResult =
-    with(input.ctx) {
+): SignificandRounderResult = with(input.ctx) {
+    val maxShift = targetWidth + 1
+    val maxShiftBits = bitsToRepresent(maxShift) + 1
 
-        val maxShift = targetWidth + 1
-        val maxShiftBits = bitsToRepresent(maxShift) + 1
-
-        val exponentWidth = input.exponentWidth().toInt()
-        val workingExponentWidth = if (exponentWidth >= maxShiftBits) {
-            exponentWidth
-        } else {
-            maxShiftBits
-        }
-
-        val maxShiftAmount = mkBv(maxShift, workingExponentWidth.toUInt())
-        val exponent = input.getExponent().matchWidthSigned(this, maxShiftAmount)
-
-
-        val inputSignificand = input.getSignificand()
-        val inputSignificandWidth = input.significandWidth().toInt()
-        val significand = if (targetWidth + 2 < inputSignificandWidth) {
-            val dataAndGuard =
-                mkBvExtractExpr(
-                    inputSignificandWidth - 1,
-                    (inputSignificandWidth - targetWidth) - 1,
-                    inputSignificand
-                )
-            val sticky =
-                !isAllZeros(mkBvExtractExpr((inputSignificandWidth - targetWidth) - 2, 0, inputSignificand))
-            mkBvConcatExpr(dataAndGuard, boolToBv(sticky))
-        } else {
-            inputSignificand
-        }
-        val significandWidth = significand.sort.sizeBits
-        val zeroedSignificand = mkBvAndExpr(
-            significand,
-            mkIte(
-                input.isZero,
-                mkBv(0, significandWidth),
-                ones(significandWidth)
-            )
-        )
-        val expandedSignificand = mkBvZeroExtensionExpr(maxShift, zeroedSignificand)
-
-
-        val shiftAmount = collar(
-            expandingAdd(
-                exponent,
-                mkBv(2, workingExponentWidth.toUInt())
-            ),
-            mkBv(0, workingExponentWidth.toUInt() + 1u),
-            mkBvSignExtensionExpr(1, maxShiftAmount)
-        )
-
-
-        val convertedShiftAmount = shiftAmount.resizeSigned(bitsToRepresent(maxShift).toUInt() + 1u)
-            .matchWidthUnsigned(expandedSignificand)
-
-        val aligned = mkBvShiftLeftExpr(expandedSignificand, convertedShiftAmount)
-
-        return fixedPositionRound(
-            roundingMode, input.sign, aligned, targetWidth,
-            mkFalse(), mkFalse()
-        )
+    val exponentWidth = input.exponentWidth().toInt()
+    val workingExponentWidth = if (exponentWidth >= maxShiftBits) {
+        exponentWidth
+    } else {
+        maxShiftBits
     }
 
+    val maxShiftAmount = mkBv(maxShift, workingExponentWidth.toUInt())
+    val exponent = input.getExponent().matchWidthSigned(this, maxShiftAmount)
+
+    val inputSignificand = input.getSignificand()
+    val inputSignificandWidth = input.significandWidth().toInt()
+    val significand = if (targetWidth + 2 < inputSignificandWidth) {
+        val dataAndGuard = mkBvExtractExpr(
+            high = inputSignificandWidth - 1,
+            low = (inputSignificandWidth - targetWidth) - 1,
+            value = inputSignificand
+        )
+        val sticky = !isAllZeros(
+            mkBvExtractExpr((inputSignificandWidth - targetWidth) - 2, 0, inputSignificand)
+        )
+        mkBvConcatExpr(dataAndGuard, boolToBv(sticky))
+    } else {
+        inputSignificand
+    }
+    val significandWidth = significand.sort.sizeBits
+    val zeroedSignificand = mkBvAndExpr(
+        significand,
+        mkIte(
+            input.isZero,
+            mkBv(0, significandWidth),
+            ones(significandWidth)
+        )
+    )
+    val expandedSignificand = mkBvZeroExtensionExpr(maxShift, zeroedSignificand)
+
+    val shiftAmount = collar(
+        expandingAdd(
+            exponent,
+            mkBv(2, workingExponentWidth.toUInt())
+        ),
+        mkBv(0, workingExponentWidth.toUInt() + 1u),
+        mkBvSignExtensionExpr(1, maxShiftAmount)
+    )
+
+    val convertedShiftAmount = shiftAmount
+        .resizeSigned(bitsToRepresent(maxShift).toUInt() + 1u)
+        .matchWidthUnsigned(expandedSignificand)
+
+    val aligned = mkBvShiftLeftExpr(expandedSignificand, convertedShiftAmount)
+
+    return fixedPositionRound(
+        roundingMode, input.sign, aligned, targetWidth,
+        mkFalse(), mkFalse()
+    )
+}
 
 private fun KContext.expandingAdd(
     left: KExpr<KBvSort>, right: KExpr<KBvSort>
@@ -288,11 +276,3 @@ private fun KContext.expandingAdd(
 
     return mkBvAddExpr(x, y)
 }
-
-
-
-
-
-
-
-

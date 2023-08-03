@@ -30,19 +30,14 @@ fun KContext.minNormalExponent(format: KFpSort): KBitVecValue<KBvSort> {
     return bvZero<KBvSort>(w) - (bias(format) - bvOne(w))
 }
 
-fun KContext.maxNormalExponent(format: KFpSort): KBitVecValue<KBvSort> {
-    return bias(format)
-}
+fun KContext.maxNormalExponent(format: KFpSort): KBitVecValue<KBvSort> = bias(format)
 
-fun KContext.maxSubnormalExponent(format: KFpSort): KBitVecValue<KBvSort> {
-    return bvZero<KBvSort>(unpackedExponentWidth(format).toUInt()) - bias(format)
-}
+fun KContext.maxSubnormalExponent(format: KFpSort): KBitVecValue<KBvSort> =
+    bvZero<KBvSort>(unpackedExponentWidth(format).toUInt()) - bias(format)
 
 fun KContext.minSubnormalExponent(format: KFpSort): KBitVecValue<KBvSort> {
-    return maxSubnormalExponent(format) - bvValue(
-        unpackedExponentWidth(format).toUInt(),
-        format.significandBits.toInt() - 2
-    )
+    val shift = bvValue<KBvSort>(unpackedExponentWidth(format).toUInt(), format.significandBits.toInt() - 2)
+    return maxSubnormalExponent(format) - shift
 }
 
 fun KContext.boolToBv(expr: KExpr<KBoolSort>) = mkIte(expr, bvOne(), bvZero())
@@ -50,7 +45,6 @@ fun KContext.bvToBool(expr: KExpr<KBvSort>) = mkIte(expr eq bvOne(), trueExpr, f
 
 fun KContext.bvOne() = mkBv(1, 1u)
 fun KContext.bvZero() = mkBv(0, 1u)
-
 
 fun <T : KBvSort, S : KBvSort, F : KBvSort> KContext.mkBvConcatExpr(
     arg0: KExpr<T>, arg1: KExpr<S>, arg2: KExpr<F>,
@@ -114,8 +108,7 @@ fun unpackedExponentWidth(format: KFpSort): Int {
 /**
  * The number of bits required to represent a number
  */
-fun bitsToRepresent(value: Int): Int =
-    Int.SIZE_BITS - value.countLeadingZeroBits()
+fun bitsToRepresent(value: Int): Int = Int.SIZE_BITS - value.countLeadingZeroBits()
 
 fun KContext.ones(width: UInt): KBitVecValue<KBvSort> = bvMaxValueUnsigned(width)
 
@@ -179,7 +172,6 @@ fun KContext.normaliseShift(input: KExpr<KBvSort>): NormaliseShiftResult {
     }
     val res = NormaliseShiftResult(currentMantissa, shiftAmount!!)
 
-
     val shiftAmountWidth = res.shiftAmount.sort.sizeBits
     val widthBits = bitsToRepresent(inputWidth.toInt())
     check(shiftAmountWidth.toInt() == widthBits || shiftAmountWidth.toInt() == widthBits - 1) {
@@ -187,14 +179,12 @@ fun KContext.normaliseShift(input: KExpr<KBvSort>): NormaliseShiftResult {
     }
 
     return res
-
 }
 
 fun KContext.max(op1: KExpr<KBvSort>, op2: KExpr<KBvSort>) = mkIte(mkBvSignedLessOrEqualExpr(op1, op2), op2, op1)
 
-fun KContext.conditionalNegate(cond: KExpr<KBoolSort>, bv: KExpr<KBvSort>): KExpr<KBvSort> {
-    return mkIte(cond, mkBvNegationExpr(bv), bv)
-}
+fun KContext.conditionalNegate(cond: KExpr<KBoolSort>, bv: KExpr<KBvSort>): KExpr<KBvSort> =
+    mkIte(cond, mkBvNegationExpr(bv), bv)
 
 fun KContext.conditionalIncrement(cond: KExpr<KBoolSort>, bv: KExpr<KBvSort>): KExpr<KBvSort> {
     val inc = mkIte(cond, mkBv(1, bv.sort.sizeBits), mkBv(0, bv.sort.sizeBits))
@@ -220,7 +210,6 @@ fun KContext.expandingSubtractUnsigned(op1: KExpr<KBvSort>, op2: KExpr<KBvSort>)
     val y = mkBvZeroExtensionExpr(1, op2)
     return mkBvSubExpr(x, y)
 }
-
 
 fun KContext.expandingSubtractSigned(op1: KExpr<KBvSort>, op2: KExpr<KBvSort>): KExpr<KBvSort> {
     check(op1.sort.sizeBits == op2.sort.sizeBits) { "Operands must be the same size" }

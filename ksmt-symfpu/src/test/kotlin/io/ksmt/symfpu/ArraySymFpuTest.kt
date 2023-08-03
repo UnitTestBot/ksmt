@@ -5,14 +5,14 @@ import io.ksmt.expr.KFpRoundingMode
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.solver.z3.KZ3SolverConfiguration
-import io.ksmt.symfpu.solver.SymfpuSolver
+import io.ksmt.symfpu.solver.SymFpuSolver
 import io.ksmt.utils.getValue
 import io.ksmt.utils.mkConst
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
-class ArraySymfpuTest {
-    class SymfpuZ3Solver(ctx: KContext) : SymfpuSolver<KZ3SolverConfiguration>(KZ3Solver(ctx), ctx)
+class ArraySymFpuTest {
+    class SymFpuZ3Solver(ctx: KContext) : SymFpuSolver<KZ3SolverConfiguration>(KZ3Solver(ctx), ctx)
 
     @Test
     fun testFpArrayExpr() = with(KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY)) {
@@ -24,7 +24,7 @@ class ArraySymfpuTest {
         val y by fp32Sort
         val expr = (array.select(index) eq x) and (array.store(index, y) eq array)
 
-        SymfpuZ3Solver(this).use { solver ->
+        SymFpuZ3Solver(this).use { solver ->
             solver.assert(expr)
             val status = solver.check()
             assertEquals(KSolverStatus.SAT, status)
@@ -40,7 +40,7 @@ class ArraySymfpuTest {
         val aIndex by aSort
         val index by fp32Sort
         val expr = (array.select(index) eq aIndex)
-        SymfpuZ3Solver(this).use { solver ->
+        SymFpuZ3Solver(this).use { solver ->
             solver.assert(expr)
             val status = solver.check()
             assertEquals(KSolverStatus.SAT, status)
@@ -53,7 +53,7 @@ class ArraySymfpuTest {
 
         val array by sort
         val expr = (array.select(0.0f.expr) eq 15.0f.expr) and (array.select(1.0f.expr) eq 30.0f.expr)
-        SymfpuZ3Solver(this).use { solver ->
+        SymFpuZ3Solver(this).use { solver ->
             solver.assert(expr)
             val status = solver.check()
             assertEquals(KSolverStatus.SAT, status)
@@ -70,7 +70,7 @@ class ArraySymfpuTest {
         val const = mkArrayConst(sort, value)
         val expr = const.select(index) neq value
 
-        SymfpuZ3Solver(this).use { solver ->
+        SymFpuZ3Solver(this).use { solver ->
             solver.assert(expr)
             val status = solver.check()
             assertEquals(KSolverStatus.UNSAT, status)
@@ -89,7 +89,7 @@ class ArraySymfpuTest {
 
         val lambda = mkArrayLambda(idx.decl, lambdaBody)
 
-        SymfpuZ3Solver(this).use { solver ->
+        SymFpuZ3Solver(this).use { solver ->
             solver.assert(arrayVar eq lambda)
             val status = solver.check()
 
@@ -108,7 +108,7 @@ class ArraySymfpuTest {
 
         val lambda = mkArrayLambda(idx.decl, lambdaBody)
 
-        SymfpuZ3Solver(this).use { solver ->
+        SymFpuZ3Solver(this).use { solver ->
             solver.assert(arrayVar eq lambda)
             val status = solver.check()
 
@@ -132,7 +132,7 @@ class ArraySymfpuTest {
         val selectValue by fp32Sort
         val lambdaSelectValue by fp32Sort
 
-        SymfpuZ3Solver(this).use { solver ->
+        SymFpuZ3Solver(this).use { solver ->
             solver.assert(bias neq mkFp32(0.0f))
             solver.assert(selectValue eq arrayVar.select(selectIdx))
             solver.assert(lambdaSelectValue eq lambda.select(mkFpSubExpr(rounding, selectIdx, bias)))
@@ -158,7 +158,7 @@ class ArraySymfpuTest {
         val selectValue by fp32Sort
         val lambdaSelectValue by fp32Sort
 
-        SymfpuZ3Solver(this).use { solver ->
+        SymFpuZ3Solver(this).use { solver ->
             solver.assert(lambdaSelectValue eq lambda.select(mkFpSubExpr(rounding, selectIdx, bias)))
 
             assertEquals(KSolverStatus.SAT, solver.check())
@@ -173,7 +173,7 @@ class ArraySymfpuTest {
     fun testUniversal(): Unit = with(KContext()) {
         val b = mkFuncDecl("b", boolSort, listOf(fp32Sort))
         val c = fp32Sort.mkConst("c")
-        SymfpuZ3Solver(this).use { solver ->
+        SymFpuZ3Solver(this).use { solver ->
             solver.assert(
                 mkUniversalQuantifier(
                     body = !(mkFpGreaterExpr(c, 0.0f.expr) and !(c eq 17.0f.expr)) or b.apply(listOf(c)),

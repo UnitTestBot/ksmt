@@ -13,7 +13,6 @@ internal fun <Fp : KFpSort> isSubnormal(
     uf: UnpackedFp<Fp>
 ): KExpr<KBoolSort> = with(uf.ctx) { !uf.isNaN and !uf.isInf and !uf.isZero and !uf.inNormalRange() }
 
-
 internal fun <Fp : KFpSort> isPositive(
     uf: UnpackedFp<Fp>
 ): KExpr<KBoolSort> = with(uf.ctx) { !uf.isNaN and !uf.isNegative }
@@ -21,6 +20,3 @@ internal fun <Fp : KFpSort> isPositive(
 internal fun <Fp : KFpSort> isNegative(
     uf: UnpackedFp<Fp>
 ): KExpr<KBoolSort> = with(uf.ctx) { !uf.isNaN and uf.isNegative }
-
-
-

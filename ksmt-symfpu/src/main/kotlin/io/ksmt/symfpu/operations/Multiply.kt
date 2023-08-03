@@ -16,16 +16,13 @@ internal fun <Fp : KFpSort> KContext.multiply(
     left: UnpackedFp<Fp>, right: UnpackedFp<Fp>, roundingMode: KExpr<KFpRoundingModeSort>
 ): KExpr<Fp> {
     val multiplyResult = arithmeticMultiply(left, right)
-
     val rounded = round(multiplyResult, roundingMode, left.sort)
-
     return addMultSpecialCases(rounded, left, right)
 }
 
-fun <Fp : KFpSort, T: KFpSort> KContext.addMultSpecialCases(
+fun <Fp : KFpSort, T : KFpSort> KContext.addMultSpecialCases(
     multiplyResult: UnpackedFp<Fp>, left: UnpackedFp<T>, right: UnpackedFp<T>
 ): UnpackedFp<Fp> {
-
     val eitherArgumentNan = left.isNaN or right.isNaN
 
     val generateNan = ((left.isInf and right.isZero) or (left.isZero and right.isInf))
@@ -36,9 +33,15 @@ fun <Fp : KFpSort, T: KFpSort> KContext.addMultSpecialCases(
     val isZero = left.isZero or right.isZero
 
     return iteOp(
-        isNan, makeNaN(multiplyResult.sort), iteOp(
-            isInf, makeInf(multiplyResult.sort, multiplyResult.sign), iteOp(
-                isZero, makeZero(multiplyResult.sort, multiplyResult.sign), multiplyResult
+        isNan,
+        makeNaN(multiplyResult.sort),
+        iteOp(
+            isInf,
+            makeInf(multiplyResult.sort, multiplyResult.sign),
+            iteOp(
+                isZero,
+                makeZero(multiplyResult.sort, multiplyResult.sign),
+                multiplyResult
             )
         )
     )
@@ -65,7 +68,6 @@ private fun KContext.expandingAddWithCarryIn(
 fun <Fp : KFpSort> KContext.arithmeticMultiply(
     left: UnpackedFp<Fp>, right: UnpackedFp<Fp>
 ): UnpackedFp<KFpSort> {
-
     // Compute sign
     val multiplySign = left.sign xor right.sign
 
@@ -76,12 +78,9 @@ fun <Fp : KFpSort> KContext.arithmeticMultiply(
     val topBit = mkBvExtractExpr(spWidth - 1, spWidth - 1, significandProduct)
     val topBitSet = isAllOnes(topBit)
 
-    val alignedSignificand =
-        conditionalLeftShiftOne(!topBitSet, significandProduct)
+    val alignedSignificand = conditionalLeftShiftOne(!topBitSet, significandProduct)
 
-    val alignedExponent =
-        expandingAddWithCarryIn(left.unbiasedExponent, right.unbiasedExponent, topBitSet)
-
+    val alignedExponent = expandingAddWithCarryIn(left.unbiasedExponent, right.unbiasedExponent, topBitSet)
 
     val sort = mkFpSort(left.sort.exponentBits + 1u, left.sort.significandBits * 2u)
     return UnpackedFp(
@@ -95,11 +94,8 @@ fun KContext.conditionalLeftShiftOne(
     condition, mkBvShiftLeftExpr(expr, bvOne(expr.sort.sizeBits)), expr
 )
 
-
 fun KContext.conditionalRightShiftOne(
     condition: KExpr<KBoolSort>, expr: KExpr<KBvSort>
 ) = mkIte(
     condition, mkBvLogicalShiftRightExpr(expr, bvOne(expr.sort.sizeBits)), expr
 )
-
-

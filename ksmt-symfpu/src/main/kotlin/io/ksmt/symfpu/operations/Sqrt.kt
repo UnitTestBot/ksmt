@@ -50,7 +50,6 @@ private fun <Fp : KFpSort> KContext.arithmeticSqrt(
 
     val sqrtd = fixedPointSqrt(alignedSignificand)
 
-
     val finishedSignificand = mkBvConcatExpr(sqrtd.result, boolToBv(sqrtd.remainderBit))
     val extendedFormat = mkFpSort(uf.sort.exponentBits, uf.sort.significandBits + 2u)
 
@@ -62,7 +61,6 @@ private fun <Fp : KFpSort> KContext.arithmeticSqrt(
         finishedSignificand,
     )
 }
-
 
 internal fun <Fp : KFpSort> KContext.sqrt(
     roundingMode: KExpr<KFpRoundingModeSort>,
@@ -76,13 +74,14 @@ internal fun <Fp : KFpSort> KContext.sqrt(
     // Round up (when the sign is positive) and round down (when the sign is negative --
     // the result will be computed but then discarded) are the only cases when this can increment the significand.
 
+    val rtp = roundingEq(roundingMode, KFpRoundingMode.RoundTowardPositive) and !sqrtResult.sign
+    val rtn = roundingEq(roundingMode, KFpRoundingMode.RoundTowardNegative) and sqrtResult.sign
     val cri = CustomRounderInfo(
-        trueExpr,
-        trueExpr,
-        falseExpr,
-        trueExpr,
-        !((roundingEq(roundingMode, KFpRoundingMode.RoundTowardPositive) and !sqrtResult.sign) or
-            (roundingEq(roundingMode, KFpRoundingMode.RoundTowardNegative) and sqrtResult.sign))
+        noOverflow = trueExpr,
+        noUnderflow = trueExpr,
+        exact = falseExpr,
+        subnormalExact = trueExpr,
+        noSignificandOverflow = !(rtp or rtn)
     )
     val roundedSqrtResult = round(sqrtResult, roundingMode, uf.sort, cri)
 

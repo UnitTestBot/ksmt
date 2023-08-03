@@ -35,8 +35,9 @@ internal fun <Fp : KFpSort> KContext.fma(
         falseExpr,
     )
 
-    val additionResult =
-        arithmeticAdd(roundingMode, arithmeticMultiplyResult, extendedAddArgument, trueExpr, falseExpr, ec).uf
+    val additionResult = arithmeticAdd(
+        roundingMode, arithmeticMultiplyResult, extendedAddArgument, trueExpr, falseExpr, ec
+    ).unpackedFp
 
 
     /* Then round */

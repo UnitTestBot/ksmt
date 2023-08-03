@@ -38,10 +38,9 @@ internal fun <Fp : KFpSort> KContext.add(
         roundingMode, left, right, isAdd, knownInCorrectOrder, ec
     )
 
-    val roundedAdditionResult = round(additionResult.uf, roundingMode, left.sort, additionResult.known)
+    val roundedAdditionResult = round(additionResult.unpackedFp, roundingMode, left.sort, additionResult.rounderInfo)
     return addAdditionSpecialCases(left.sort, roundingMode, left, right, roundedAdditionResult, isAdd)
 }
-
 
 data class ExponentCompareInfo(
     val leftIsMax: KExpr<KBoolSort>,
@@ -54,7 +53,6 @@ data class ExponentCompareInfo(
     val diffIsGreaterThanPrecisionPlusOne: KExpr<KBoolSort>
 )
 
-
 fun KContext.addExponentCompare(
     significandWidth: Int,
     leftExponent: KExpr<KBvSort>,
@@ -64,12 +62,10 @@ fun KContext.addExponentCompare(
     val exponentWidth = leftExponent.sort.sizeBits.toInt() + 1
     check(exponentWidth == rightExponent.sort.sizeBits.toInt() + 1) { "Exponent widths must be the same" }
 
-
-    val exponentDifference =
-        mkBvSubExpr(
-            mkBvSignExtensionExpr(1, leftExponent),
-            mkBvSignExtensionExpr(1, rightExponent)
-        )
+    val exponentDifference = mkBvSubExpr(
+        mkBvSignExtensionExpr(1, leftExponent),
+        mkBvSignExtensionExpr(1, rightExponent)
+    )
 
     val signBit = isAllOnes(mkBvExtractExpr(exponentWidth - 1, exponentWidth - 1, exponentDifference))
     val leftIsMax = knownInCorrectOrder or !signBit
@@ -85,14 +81,12 @@ fun KContext.addExponentCompare(
         mkBvNegationExpr(exponentDifference)
     )  // Largest negative value not obtainable so negate is safe
 
-
     val diffIsZero = absoluteExponentDifference eq bvZero(exponentWidth.toUInt())
     val diffIsOne = absoluteExponentDifference eq bvOne(exponentWidth.toUInt())
     val diffIsGreaterThanPrecision = mkBvSignedLessExpr(
         mkBv(significandWidth, exponentWidth.toUInt()),
         absoluteExponentDifference
     )  // Assumes this is representable
-
 
     val diffIsTwoToPrecision = mkAnd(
         !diffIsZero,
@@ -128,7 +122,6 @@ private fun <Fp : KFpSort> KContext.addAdditionSpecialCasesComplete(
     additionResult: UnpackedFp<Fp>,
     isAdd: KExpr<KBoolSort>
 ): UnpackedFp<Fp> {
-
     val eitherArgumentNan = left.isNaN or right.isNaN
     val bothInfinity = left.isInf and right.isInf
     val signsMatch = left.sign eq right.sign
@@ -140,7 +133,6 @@ private fun <Fp : KFpSort> KContext.addAdditionSpecialCasesComplete(
             (!left.isInf and right.isInf)
 
     val signOfInf = mkIte(left.isInf, left.sign, isAdd xor !right.sign)
-
 
     val bothZero = left.isZero and right.isZero
     val flipRightSign = !isAdd xor right.sign
@@ -188,19 +180,17 @@ private fun <Fp : KFpSort> KContext.addAdditionSpecialCases(
     right: UnpackedFp<Fp>,
     additionResult: UnpackedFp<Fp>,
     isAdd: KExpr<KBoolSort>
-): UnpackedFp<Fp> {
-    return addAdditionSpecialCasesComplete(
-        format,
-        roundingMode,
-        left,
-        left,
-        right,
-        falseExpr,
-        falseExpr,
-        additionResult,
-        isAdd
-    )
-}
+): UnpackedFp<Fp> = addAdditionSpecialCasesComplete(
+    format = format,
+    roundingMode = roundingMode,
+    left = left,
+    leftID = left,
+    right = right,
+    returnLeft = falseExpr,
+    returnRight = falseExpr,
+    additionResult = additionResult,
+    isAdd = isAdd
+)
 
 @Suppress("LongParameterList")
 fun <Fp : KFpSort> KContext.addAdditionSpecialCasesWithID(
@@ -211,26 +201,24 @@ fun <Fp : KFpSort> KContext.addAdditionSpecialCasesWithID(
     right: UnpackedFp<Fp>,
     additionResult: UnpackedFp<Fp>,
     isAdd: KExpr<KBoolSort>
-): UnpackedFp<Fp> {
-    return addAdditionSpecialCasesComplete(
-        format,
-        roundingMode,
-        left,
-        leftID,
-        right,
-        falseExpr,
-        falseExpr,
-        additionResult,
-        isAdd
-    )
-}
-
-data class FloatWithCustomRounderInfo<Fp : KFpSort>(
-    val uf: UnpackedFp<Fp>,
-    val known: CustomRounderInfo
+): UnpackedFp<Fp> = addAdditionSpecialCasesComplete(
+    format = format,
+    roundingMode = roundingMode,
+    left = left,
+    leftID = leftID,
+    right = right,
+    returnLeft = falseExpr,
+    returnRight = falseExpr,
+    additionResult = additionResult,
+    isAdd = isAdd
 )
 
-@Suppress("LongMethod", "LongParameterList")
+data class FloatWithCustomRounderInfo<Fp : KFpSort>(
+    val unpackedFp: UnpackedFp<Fp>,
+    val rounderInfo: CustomRounderInfo
+)
+
+@Suppress("LongMethod", "LongParameterList", "MagicNumber")
 fun <Fp : KFpSort> KContext.arithmeticAdd(
     roundingMode: KExpr<KFpRoundingModeSort>,
     left: UnpackedFp<Fp>,
@@ -255,19 +243,24 @@ fun <Fp : KFpSort> KContext.arithmeticAdd(
     val stickyBitIsZero = ec.diffIsZero or ec.diffIsOne
 
     // Work out ordering
-    val leftLarger = knownInCorrectOrder or
-            (ec.leftIsMax and
-                    mkIte(
-                        !ec.diffIsZero,
-                        trueExpr,
-                        mkBvUnsignedGreaterOrEqualExpr(left.getSignificand(), right.getSignificand())
-                    ))
+    val leftSigLarger = mkIte(
+        !ec.diffIsZero,
+        trueExpr,
+        mkBvUnsignedGreaterOrEqualExpr(left.getSignificand(), right.getSignificand())
+    )
+    val leftLarger = knownInCorrectOrder or (ec.leftIsMax and leftSigLarger)
 
     // Extend the significands to give room for carry plus guard and sticky bits
-    val largerSig =
-        mkBvConcatExpr(bvZero(), mkIte(leftLarger, left.getSignificand(), right.getSignificand()), bvZero(2u))
-    val smallerSig =
-        mkBvConcatExpr(bvZero(), mkIte(leftLarger, right.getSignificand(), left.getSignificand()), bvZero(2u))
+    val largerSig = mkBvConcatExpr(
+        bvZero(),
+        mkIte(leftLarger, left.getSignificand(), right.getSignificand()),
+        bvZero(2u)
+    )
+    val smallerSig = mkBvConcatExpr(
+        bvZero(),
+        mkIte(leftLarger, right.getSignificand(), left.getSignificand()),
+        bvZero(2u)
+    )
 
     val resultSign = mkIte(
         leftLarger,
@@ -297,6 +290,7 @@ fun <Fp : KFpSort> KContext.arithmeticAdd(
             ),
             shifted.signExtendedResult
         )
+
     val shiftedStickyBit = mkIte(
         ec.diffIsGreaterThanPrecision,
         bvOne(negatedSmaller.sort.sizeBits),
@@ -309,8 +303,6 @@ fun <Fp : KFpSort> KContext.arithmeticAdd(
     val sumWidth = sum.sort.sizeBits.toInt()
     val topBit = sum.nthBit(sumWidth - 1)
     val alignedBit = sum.nthBit(sumWidth - 2)
-
-    @Suppress("MagicNumber")
     val lowerBit = sum.nthBit(sumWidth - 3)
 
     val overflow = !isAllZeros(topBit)
@@ -389,13 +381,10 @@ fun <Fp : KFpSort> KContext.arithmeticAdd(
 private fun KExpr<KBvSort>.nthBit(pos: Int) =
     ctx.mkBvExtractExpr(pos, pos, this)
 
-
 data class StickyRightShiftResult(val signExtendedResult: KExpr<KBvSort>, val stickyBit: KExpr<KBvSort>)
 
-
-fun KContext.stickyRightShift(input: KExpr<KBvSort>, shiftAmount: KExpr<KBvSort>): StickyRightShiftResult {
-    return StickyRightShiftResult(mkBvArithShiftRightExpr(input, shiftAmount), rightShiftStickyBit(input, shiftAmount))
-}
+fun KContext.stickyRightShift(input: KExpr<KBvSort>, shiftAmount: KExpr<KBvSort>): StickyRightShiftResult =
+    StickyRightShiftResult(mkBvArithShiftRightExpr(input, shiftAmount), rightShiftStickyBit(input, shiftAmount))
 
 fun KContext.rightShiftStickyBit(op: KExpr<KBvSort>, shift: KExpr<KBvSort>): KExpr<KBvSort> = mkIte(
     isAllZeros(mkBvAndExpr(orderEncode(shift), op)),
@@ -403,13 +392,12 @@ fun KContext.rightShiftStickyBit(op: KExpr<KBvSort>, shift: KExpr<KBvSort>): KEx
     bvOne(op.sort.sizeBits)
 )
 
-
 fun KContext.orderEncode(op: KExpr<KBvSort>): KExpr<KBvSort> {
     val w = op.sort.sizeBits
     return mkBvExtractExpr(
-        (w - 1u).toInt(),
-        0,
-        decrement(
+        high = (w - 1u).toInt(),
+        low = 0,
+        value = decrement(
             mkBvShiftLeftExpr(
                 bvOne(w + 1u),
                 op.resizeUnsigned(w + 1u)

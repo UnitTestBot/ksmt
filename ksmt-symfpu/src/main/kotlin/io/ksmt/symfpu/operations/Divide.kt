@@ -42,7 +42,15 @@ fun <T : KFpSort> KContext.addDivideSpecialCases(
     return iteOp(
         isNaN,
         makeNaN(format),
-        iteOp(isInf, makeInf(format, sign), iteOp(isZero, makeZero(format, sign), divideResult))
+        iteOp(
+            isInf,
+            makeInf(format, sign),
+            iteOp(
+                isZero,
+                makeZero(format, sign),
+                divideResult
+            )
+        )
     )
 }
 
@@ -55,7 +63,6 @@ fun <T : KFpSort> KContext.arithmeticDivide(
 
     val exponentDiff = expandingSubtractSigned(left.getExponent(), right.getExponent())
 
-
     val extendedNumerator = mkBvConcatExpr(left.getSignificand(), bvZero(2u))
     val extendedDenominator = mkBvConcatExpr(right.getSignificand(), bvZero(2u))
 
@@ -67,19 +74,17 @@ fun <T : KFpSort> KContext.arithmeticDivide(
 
     val topBitSet = isAllOnes(topBit)
 
-
     val alignedExponent = conditionalDecrement(!topBitSet, exponentDiff)
     val alignedSignificand = conditionalLeftShiftOne(!topBitSet, divided.result)
 
-    val finishedSignificand =
-        mkBvOrExpr(alignedSignificand, mkBvZeroExtensionExpr(resWidth - 1, boolToBv(divided.remainderBit)))
+    val finishedSignificand = mkBvOrExpr(
+        alignedSignificand,
+        mkBvZeroExtensionExpr(resWidth - 1, boolToBv(divided.remainderBit))
+    )
 
     val extendedFormat = mkFpSort(format.exponentBits + 1u, format.significandBits + 2u)
-
-
     return UnpackedFp(this, extendedFormat, divideSign, alignedExponent, finishedSignificand)
 }
-
 
 data class ResultWithRemainderBit(val result: KExpr<KBvSort>, val remainderBit: KExpr<KBoolSort>)
 

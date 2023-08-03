@@ -59,9 +59,17 @@ private fun <Fp : KFpSort> KContext.rounderSpecialCases(
     val zero = makeZero(format, roundedResult.sign)
 
     return iteOp(
-        isZero, zero, iteOp(
-        underflow, iteOp(returnZero, zero, min), iteOp(overflow, iteOp(returnInf, inf, max), roundedResult)
-    )
+        isZero,
+        zero,
+        iteOp(
+            underflow,
+            iteOp(returnZero, zero, min),
+            iteOp(
+                overflow,
+                iteOp(returnInf, inf, max),
+                roundedResult
+            )
+        )
     )
 }
 
@@ -98,7 +106,6 @@ fun KContext.roundingDecision(
 fun KContext.roundingEq(roundingMode: KExpr<KFpRoundingModeSort>, other: KFpRoundingMode) =
     mkEq(roundingMode, mkFpRoundingModeExpr(other))
 
-
 data class CustomRounderInfo(
     val noOverflow: KExpr<KBoolSort>,
     val noUnderflow: KExpr<KBoolSort>,
@@ -120,13 +127,12 @@ data class CustomRounderInfo(
 fun KContext.decrement(expr: KExpr<KBvSort>): KExpr<KBvSort> = mkBvSubExpr(expr, bvOne(expr.sort.sizeBits))
 fun KContext.increment(expr: KExpr<KBvSort>): KExpr<KBvSort> = mkBvAddExpr(expr, bvOne(expr.sort.sizeBits))
 
-
 @Suppress("LongMethod")
 fun <Fp : KFpSort, S : KFpSort> KContext.round(
     uf: UnpackedFp<S>,
     roundingMode: KExpr<KFpRoundingModeSort>,
     format: Fp,
-    known: CustomRounderInfo = defaultRounderInfo(),
+    rounderInfo: CustomRounderInfo = defaultRounderInfo(),
 ): UnpackedFp<Fp> {
     val sigWidth = uf.normalizedSignificand.sort.sizeBits.toInt()
     val sig = mkBvOrExpr(uf.normalizedSignificand, leadingOne(sigWidth))
@@ -153,18 +159,19 @@ fun <Fp : KFpSort, S : KFpSort> KContext.round(
     /*** Normal or subnormal rounding? ***/
     val normalRoundingRange =
         mkBvSignedGreaterOrEqualExpr(exp, mkBvSignExtensionExpr(exponentExtension, minNormalExponent(format)))
-    val normalRounding = normalRoundingRange or known.subnormalExact
+    val normalRounding = normalRoundingRange or rounderInfo.subnormalExact
 
 
     /*** Round to correct significand. ***/
-    val extractedSignificand =
-        mkBvZeroExtensionExpr(1, mkBvExtractExpr(sigWidth - 1, sigWidth - targetSignificandWidth, sig))
+    val extractedSignificand = mkBvZeroExtensionExpr(
+        extensionSize = 1,
+        value = mkBvExtractExpr(high = sigWidth - 1, low = sigWidth - targetSignificandWidth, value = sig)
+    )
 
     // guard bit is the bit after the target significand, sticky bit is the rest
     val guardBitPosition = sigWidth - (targetSignificandWidth + 1)
     val guardBit = isAllOnes(mkBvExtractExpr(guardBitPosition, guardBitPosition, sig))
     val stickyBit = !isAllZeros(mkBvExtractExpr(guardBitPosition - 1, 0, sig))
-
 
     // For subnormals, locating the guard and stick bits is a bit more involved
     val subnormalAmount = expandingSubtractUnsigned(
@@ -177,24 +184,22 @@ fun <Fp : KFpSort, S : KFpSort> KContext.round(
         mkBvExtractExpr(extractedSignificandWidth - 1, 0, subnormalAmount)
     }
 
-
     val subnormalMask = orderEncode(subnormalShiftPrepared)
-    val subnormalStickyMask =
-        mkBvLogicalShiftRightExpr(subnormalMask, bvOne(targetSignificandWidth.toUInt() + 1u))
-
+    val subnormalStickyMask = mkBvLogicalShiftRightExpr(subnormalMask, bvOne(targetSignificandWidth.toUInt() + 1u))
 
     val subnormalMaskedSignificand = mkBvAndExpr(extractedSignificand, mkBvNotExpr(subnormalMask))
     val subnormalMaskRemoved = mkBvAndExpr(extractedSignificand, subnormalMask)
 
-
     val subnormalGuardBit = !isAllZeros(mkBvAndExpr(subnormalMaskRemoved, mkBvNotExpr(subnormalStickyMask)))
-    val subnormalStickyBit =
-        mkOr(guardBit, stickyBit, !isAllZeros(mkBvAndExpr(subnormalMaskRemoved, subnormalStickyMask)))
+    val subnormalStickyBit = mkOr(
+        guardBit,
+        stickyBit,
+        !isAllZeros(mkBvAndExpr(subnormalMaskRemoved, subnormalStickyMask))
+    )
 
     val subnormalIncrementAmount = mkBvAndExpr(
         mkBvShiftLeftExpr(subnormalMask, bvOne(targetSignificandWidth.toUInt() + 1u)), mkBvNotExpr(subnormalMask)
     )
-
 
     // Have to choose the right one dependent on rounding mode
     val chosenGuardBit = mkIte(normalRounding, guardBit, subnormalGuardBit)
@@ -212,33 +217,31 @@ fun <Fp : KFpSort, S : KFpSort> KContext.round(
         significandEven,
         chosenGuardBit,
         chosenStickyBit,
-        known.exact or (known.subnormalExact and !normalRoundingRange)
+        rounderInfo.exact or (rounderInfo.subnormalExact and !normalRoundingRange)
     )
-
 
     val leadingOne = leadingOne(targetSignificandWidth)
     val normalRoundUpAmount = boolToBv(roundUp).matchWidthUnsigned(extractedSignificand)
 
     val subnormalRoundUpMask = mkBvArithShiftRightExpr(
-        mkBvConcatExpr(
-            boolToBv(roundUp), bvZero(targetSignificandWidth.toUInt())
-        ), mkBv(targetSignificandWidth, targetSignificandWidth.toUInt() + 1u)
+        mkBvConcatExpr(boolToBv(roundUp), bvZero(targetSignificandWidth.toUInt())),
+        mkBv(targetSignificandWidth, targetSignificandWidth.toUInt() + 1u)
     )
     val subnormalRoundUpAmount = mkBvAndExpr(subnormalRoundUpMask, subnormalIncrementAmount)
-
 
     val rawRoundedSignificand = mkBvAddExpr(
         mkIte(normalRounding, extractedSignificand, subnormalMaskedSignificand),
         mkIte(normalRounding, normalRoundUpAmount, subnormalRoundUpAmount)
     )
-    val significandOverflow =
-        isAllOnes(mkBvExtractExpr(targetSignificandWidth, targetSignificandWidth, rawRoundedSignificand))
+    val significandOverflow = isAllOnes(
+        mkBvExtractExpr(targetSignificandWidth, targetSignificandWidth, rawRoundedSignificand)
+    )
     val extractedRoundedSignificand = mkBvExtractExpr(targetSignificandWidth - 1, 0, rawRoundedSignificand)
     val roundedSignificand = mkBvOrExpr(extractedRoundedSignificand, leadingOne)
 
     val extendedExponent = mkBvSignExtensionExpr(1, exp)
     val incrementExponentNeeded = (roundUp and significandOverflow)
-    val incrementExponent = !(known.noSignificandOverflow) and incrementExponentNeeded
+    val incrementExponent = !(rounderInfo.noSignificandOverflow) and incrementExponentNeeded
 
     val correctedExponent = conditionalIncrement(incrementExponent, extendedExponent)
 
@@ -251,15 +254,14 @@ fun <Fp : KFpSort, S : KFpSort> KContext.round(
         targetExponentWidth - 1, 0, correctedExponentInRange
     )
 
-
     val computedOverflow = potentialLateOverflow and incrementExponentNeeded
     val computedUnderflow = potentialLateUnderflow and !incrementExponentNeeded
 
     val lateOverflow = !earlyOverflow and computedOverflow
     val lateUnderflow = !earlyUnderflow and computedUnderflow
 
-    val overflow = !(known.noOverflow) and (lateOverflow or earlyOverflow)
-    val underflow = !(known.noUnderflow) and (lateUnderflow or earlyUnderflow)
+    val overflow = !(rounderInfo.noOverflow) and (lateOverflow or earlyOverflow)
+    val underflow = !(rounderInfo.noUnderflow) and (lateUnderflow or earlyUnderflow)
 
     val roundedResult = UnpackedFp(
         this, format, uf.sign, roundedExponent, roundedSignificand
@@ -269,14 +271,14 @@ fun <Fp : KFpSort, S : KFpSort> KContext.round(
     )
 }
 
-fun KContext.collar(op: KExpr<KBvSort>, lower: KExpr<KBvSort>, upper: KExpr<KBvSort>): KExpr<KBvSort> {
-    return mkIte(
-        mkBvSignedLessExpr(op, lower), lower, mkIte(
-        mkBvSignedLessExpr(upper, op), upper, op
+fun KContext.collar(op: KExpr<KBvSort>, lower: KExpr<KBvSort>, upper: KExpr<KBvSort>): KExpr<KBvSort> =
+    mkIte(
+        mkBvSignedLessExpr(op, lower),
+        lower,
+        mkIte(
+            mkBvSignedLessExpr(upper, op), upper, op
+        )
     )
-    )
-}
-
 
 data class SignificandRounderResult(val significand: KExpr<KBvSort>, val incrementExponent: KExpr<KBoolSort>)
 
@@ -289,8 +291,6 @@ fun KContext.variablePositionRound(
     knownLeadingOne: KFalse,
     knownRoundDown: KExpr<KBoolSort>,
 ): SignificandRounderResult {
-
-
     val sigWidth = significand.sort.sizeBits
 
     val expandedSignificand = mkBvConcatExpr(mkBv(0, 2u), significand, mkBv(0, 2u))
@@ -359,15 +359,15 @@ fun KContext.fixedPositionRound(
         "Significand width ($sigWidth) must be at least target width + 2 = ${targetWidth + 2}"
     }
     // Extract
-    val extractedSignificand =
-        mkBvZeroExtensionExpr(1, mkBvExtractExpr(sigWidth - 1, sigWidth - targetWidth, significand))
-
+    val extractedSignificand = mkBvZeroExtensionExpr(
+        extensionSize = 1,
+        value = mkBvExtractExpr(sigWidth - 1, sigWidth - targetWidth, significand)
+    )
 
     val significandEven = isAllZeros(mkBvExtractExpr(0, 0, extractedSignificand))
     // Normal guard and sticky bits
     val guardBitPosition = sigWidth - (targetWidth + 1)
     val guardBit = isAllOnes(mkBvExtractExpr(guardBitPosition, guardBitPosition, significand))
-
 
     val stickyBit = !isAllZeros(mkBvExtractExpr(guardBitPosition - 1, 0, significand))
     // Rounding decision

@@ -4,7 +4,7 @@ import io.ksmt.KContext
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.solver.z3.KZ3SolverConfiguration
 import io.ksmt.solver.z3.KZ3SolverUniversalConfiguration
-import io.ksmt.symfpu.solver.SymfpuSolver
+import io.ksmt.symfpu.solver.SymFpuSolver
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import org.junit.jupiter.params.ParameterizedTest
@@ -14,15 +14,15 @@ import java.nio.file.Path
 @Execution(ExecutionMode.CONCURRENT)
 class SymFpuBenchmarksBasedTest : BenchmarksBasedTest() {
 
-    class SymfpuZ3Solver(ctx: KContext) : SymfpuSolver<KZ3SolverConfiguration>(KZ3Solver(ctx), ctx)
+    class SymFpuZ3Solver(ctx: KContext) : SymFpuSolver<KZ3SolverConfiguration>(KZ3Solver(ctx), ctx)
 
     @Execution(ExecutionMode.CONCURRENT)
     @ParameterizedTest(name = "{0}")
     @MethodSource("testData")
     fun testModelConversion(name: String, samplePath: Path) = testModelConversion(name, samplePath) { ctx ->
         solverManager.run {
-            registerSolver(SymfpuZ3Solver::class, KZ3SolverUniversalConfiguration::class)
-            createSolver(ctx, SymfpuZ3Solver::class)
+            registerSolver(SymFpuZ3Solver::class, KZ3SolverUniversalConfiguration::class)
+            createSolver(ctx, SymFpuZ3Solver::class)
         }
     }
 
@@ -31,8 +31,8 @@ class SymFpuBenchmarksBasedTest : BenchmarksBasedTest() {
     @MethodSource("testData")
     fun testSolver(name: String, samplePath: Path) = testSolver(name, samplePath) { ctx ->
         solverManager.run {
-            registerSolver(SymfpuZ3Solver::class, KZ3SolverUniversalConfiguration::class)
-            createSolver(ctx, SymfpuZ3Solver::class)
+            registerSolver(SymFpuZ3Solver::class, KZ3SolverUniversalConfiguration::class)
+            createSolver(ctx, SymFpuZ3Solver::class)
         }
     }
 

@@ -76,6 +76,7 @@ fun <Fp : KFpSort> KContext.arithmeticRemainder(
         running = divideStep(r, rsig).result
         i -= ONE
     }
+
     /**
      * The zero exponent difference case is a little different
      * as we need the result bit for the even flag
@@ -85,11 +86,9 @@ fun <Fp : KFpSort> KContext.arithmeticRemainder(
     val needPrevious = mkBvSignedGreaterExpr(exponentDifference, mkBv(0, edWidth))
     val r0 = mkIte(needPrevious, running, lsig)
 
-
     val dsr = divideStep(r0, rsig)
 
     val integerEven = !lsbRoundActive or !dsr.remainderBit
-
 
     // The same to get the guard flag
     val guardRoundActive = mkBvSignedGreaterExpr(exponentDifference, mkBvNegationExpr(mkBv(2, edWidth)))
@@ -136,7 +135,6 @@ fun <Fp : KFpSort> KContext.arithmeticRemainder(
         sub(candidateResult, signCorrectedRight, roundingMode),
         candidateResult
     )
-
 }
 
 fun <Fp : KFpSort> maximumExponentDifference(sort: Fp): BigInteger {
