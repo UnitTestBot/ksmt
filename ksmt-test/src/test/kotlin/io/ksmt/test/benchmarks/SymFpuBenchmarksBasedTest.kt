@@ -11,7 +11,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.nio.file.Path
 
-@Execution(ExecutionMode.CONCURRENT)
 class SymFpuBenchmarksBasedTest : BenchmarksBasedTest() {
 
     class SymFpuZ3Solver(ctx: KContext) : SymFpuSolver<KZ3SolverConfiguration>(KZ3Solver(ctx), ctx)
