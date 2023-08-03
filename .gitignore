@@ -5,3 +5,6 @@
 build
 
 .idea
+
+# ignore ksmt test data
+ksmt-test/testData
