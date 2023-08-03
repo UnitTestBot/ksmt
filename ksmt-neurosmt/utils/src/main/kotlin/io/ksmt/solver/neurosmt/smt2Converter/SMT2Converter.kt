@@ -7,6 +7,7 @@ import io.ksmt.solver.neurosmt.FormulaGraphExtractor
 import io.ksmt.solver.neurosmt.getAnswerForTest
 import io.ksmt.solver.z3.KZ3SMTLibParser
 import me.tongfei.progressbar.ProgressBar
+import java.io.File
 import java.io.FileOutputStream
 import java.nio.file.Files
 import java.nio.file.Path
@@ -60,7 +61,8 @@ fun main(args: Array<String>) {
                 return@forEach
             }
 
-            val outputStream = FileOutputStream("$outputRoot/$curIdx-${answer.toString().lowercase()}")
+            val outputFile = File("$outputRoot/$curIdx-${answer.toString().lowercase()}")
+            val outputStream = FileOutputStream(outputFile)
             outputStream.write("; $it\n".encodeToByteArray())
 
             val extractor = FormulaGraphExtractor(ctx, formula, outputStream)
