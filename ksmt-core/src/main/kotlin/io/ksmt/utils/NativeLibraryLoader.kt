@@ -136,12 +136,13 @@ object NativeLibraryLoader {
             }
         }
 
-        private fun tryDeleteStaledDirectory(directory: Path): Boolean {
-            directory.forEachDirectoryEntry {
-                if (!it.safeDeleteFile()) return false
+        private fun tryDeleteStaledDirectory(directory: Path): Boolean =
+            withNoFileExceptions {
+                directory.forEachDirectoryEntry {
+                    if (!it.safeDeleteFile()) return false
+                }
+                return directory.safeDeleteFile()
             }
-            return directory.safeDeleteFile()
-        }
 
         private fun Path.safeDeleteFile(): Boolean = withNoFileExceptions {
             toFile().delete()
