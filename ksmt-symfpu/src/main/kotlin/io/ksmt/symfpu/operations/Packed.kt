@@ -8,6 +8,7 @@ import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KBv1Sort
 import io.ksmt.sort.KBvSort
 import io.ksmt.sort.KFpSort
+import io.ksmt.symfpu.operations.OptionalPackedFp.Companion.makeBvNaN
 import io.ksmt.symfpu.operations.UnpackedFp.Companion.iteOp
 import io.ksmt.symfpu.operations.UnpackedFp.Companion.makeInf
 import io.ksmt.symfpu.operations.UnpackedFp.Companion.makeNaN
@@ -137,7 +138,7 @@ fun <Fp : KFpSort> KContext.packToBv(uf: UnpackedFp<Fp>): KExpr<KBvSort> {
     )
     val hasFixedSignificand = uf.isNaN or uf.isInf or uf.isZero
 
-    val nanBv = leadingOne(packedSigWidth)
+    val nanBv = makeBvNaN(uf.sort).significand
     val packedSig = mkIte(
         hasFixedSignificand,
         mkIte(

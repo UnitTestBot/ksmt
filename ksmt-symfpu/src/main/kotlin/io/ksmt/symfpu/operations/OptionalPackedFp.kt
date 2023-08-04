@@ -38,19 +38,19 @@ sealed class OptionalPackedFp {
             }
         }
 
-        fun KContext.makeBvNaN(sort: KFpSort): OptionalPackedFp = PackedFp(
+        fun KContext.makeBvNaN(sort: KFpSort) = PackedFp(
             sign = falseExpr,
             exponent = fpNaNExponentBiased(sort),
             significand = fpNaNSignificand(sort)
         )
 
-        fun KContext.makeBvInf(sort: KFpSort, sign: KExpr<KBoolSort>): OptionalPackedFp = PackedFp(
+        fun KContext.makeBvInf(sort: KFpSort, sign: KExpr<KBoolSort>) = PackedFp(
             sign = sign,
             exponent = fpInfExponentBiased(sort),
             significand = fpInfSignificand(sort)
         )
 
-        fun KContext.makeBvZero(sort: KFpSort, sign: KExpr<KBoolSort>): OptionalPackedFp = PackedFp(
+        fun KContext.makeBvZero(sort: KFpSort, sign: KExpr<KBoolSort>) = PackedFp(
             sign = sign,
             exponent = fpZeroExponentBiased(sort),
             significand = fpZeroSignificand(sort)
