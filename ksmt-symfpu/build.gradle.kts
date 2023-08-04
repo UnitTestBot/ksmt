@@ -19,7 +19,7 @@ dependencies {
 publishing {
     publications {
         create<MavenPublication>("maven") {
-            project.shadow.component(this)
+            from(components["java"])
 
             addKsmtPom()
             addSourcesAndJavadoc(project)
