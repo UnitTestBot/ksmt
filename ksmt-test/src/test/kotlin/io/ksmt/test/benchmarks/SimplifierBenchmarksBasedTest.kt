@@ -27,7 +27,7 @@ class SimplifierBenchmarksBasedTest : BenchmarksBasedTest() {
 
     companion object {
         @JvmStatic
-        fun simplifierTestData() = testData
+        fun simplifierTestData() = testData()
     }
 
     class ContextConsistencyChecker(ctx: KContext) : KNonRecursiveTransformer(ctx) {

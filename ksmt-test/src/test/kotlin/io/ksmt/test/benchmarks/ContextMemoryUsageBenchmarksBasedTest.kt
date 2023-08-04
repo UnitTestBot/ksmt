@@ -40,7 +40,7 @@ class ContextMemoryUsageBenchmarksBasedTest : BenchmarksBasedTest() {
 
     companion object {
         @JvmStatic
-        fun testData() = testData.filter { it.name.startsWith("QF_") }
+        fun testData() = testData { name -> name.startsWith("QF_") }
 
         val sharedCtx: KContext
             get() = sharedCtxField ?: error("Context is not initialized")

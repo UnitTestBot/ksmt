@@ -9,6 +9,7 @@ import io.ksmt.expr.KBitVec8Value
 import io.ksmt.expr.KBitVecCustomValue
 import io.ksmt.expr.KBitVecNumberValue
 import io.ksmt.expr.KBitVecValue
+import io.ksmt.sort.KBvSort
 import java.math.BigInteger
 import kotlin.experimental.and
 import kotlin.experimental.inv
@@ -28,7 +29,9 @@ object BvUtils {
             powerOfTwo(size - 1u)
     }
 
-    fun KContext.bvMinValueSigned(size: UInt): KBitVecValue<*> = mkBvSpecialValue(size, bvMinValueSigned)
+    fun <T : KBvSort> KContext.bvMinValueSigned(size: UInt): KBitVecValue<T> =
+        mkBvSpecialValue(size, bvMinValueSigned)
+
     fun KBitVecValue<*>.isBvMinValueSigned(): Boolean = isBvSpecialValue(bvMinValueSigned)
 
     private val bvMaxValueSigned = object : BvSpecialValueSource {
@@ -42,7 +45,9 @@ object BvUtils {
             powerOfTwo(size - 1u) - BigInteger.ONE
     }
 
-    fun KContext.bvMaxValueSigned(size: UInt): KBitVecValue<*> = mkBvSpecialValue(size, bvMaxValueSigned)
+    fun <T : KBvSort> KContext.bvMaxValueSigned(size: UInt): KBitVecValue<T> =
+        mkBvSpecialValue(size, bvMaxValueSigned)
+
     fun KBitVecValue<*>.isBvMaxValueSigned(): Boolean = isBvSpecialValue(bvMaxValueSigned)
 
     private val bvMaxValueUnsigned = object : BvSpecialValueSource {
@@ -56,7 +61,9 @@ object BvUtils {
             powerOfTwo(size) - BigInteger.ONE
     }
 
-    fun KContext.bvMaxValueUnsigned(size: UInt): KBitVecValue<*> = mkBvSpecialValue(size, bvMaxValueUnsigned)
+    fun <T : KBvSort> KContext.bvMaxValueUnsigned(size: UInt): KBitVecValue<T> =
+        mkBvSpecialValue(size, bvMaxValueUnsigned)
+
     fun KBitVecValue<*>.isBvMaxValueUnsigned(): Boolean = isBvSpecialValue(bvMaxValueUnsigned)
 
     private val bvZeroValue = object : BvSpecialValueSource {
@@ -69,7 +76,9 @@ object BvUtils {
         override fun bvDefault(size: UInt): BigInteger = BigInteger.ZERO
     }
 
-    fun KContext.bvZero(size: UInt): KBitVecValue<*> = mkBvSpecialValue(size, bvZeroValue)
+    fun <T : KBvSort> KContext.bvZero(size: UInt): KBitVecValue<T> =
+        mkBvSpecialValue(size, bvZeroValue)
+
     fun KBitVecValue<*>.isBvZero(): Boolean = isBvSpecialValue(bvZeroValue)
 
     private val bvOneValue = object : BvSpecialValueSource {
@@ -82,7 +91,9 @@ object BvUtils {
         override fun bvDefault(size: UInt): BigInteger = BigInteger.ONE
     }
 
-    fun KContext.bvOne(size: UInt): KBitVecValue<*> = mkBvSpecialValue(size, bvOneValue)
+    fun <T : KBvSort> KContext.bvOne(size: UInt): KBitVecValue<T> =
+        mkBvSpecialValue(size, bvOneValue)
+
     fun KBitVecValue<*>.isBvOne(): Boolean = isBvSpecialValue(bvOneValue)
 
     private class BvIntValue(val value: Int) : BvSpecialValueSource {
@@ -96,7 +107,9 @@ object BvUtils {
             value.toBigInteger().normalizeValue(size)
     }
 
-    fun KContext.bvValue(size: UInt, value: Int): KBitVecValue<*> = mkBvSpecialValue(size, BvIntValue(value))
+    fun <T : KBvSort> KContext.bvValue(size: UInt, value: Int): KBitVecValue<T> =
+        mkBvSpecialValue(size, BvIntValue(value))
+
     fun KBitVecValue<*>.bvValueIs(value: Int): Boolean = isBvSpecialValue(BvIntValue(value))
 
     fun KBitVecValue<*>.getBit(bit: UInt): Boolean {
@@ -151,6 +164,7 @@ object BvUtils {
             val rhs = (other as KBitVecCustomValue).value.signedValue(sizeBits)
             lhs <= rhs
         }
+
         else -> {
             val lhs = stringValue.toBigInteger(radix = 2).signedValue(sort.sizeBits)
             val rhs = other.stringValue.toBigInteger(radix = 2).signedValue(sort.sizeBits)
@@ -187,7 +201,7 @@ object BvUtils {
     fun KBitVecValue<*>.unsignedGreater(other: KBitVecValue<*>): Boolean =
         other.unsignedLess(this)
 
-    operator fun KBitVecValue<*>.unaryMinus(): KBitVecValue<*> = bvOperation(
+    operator fun <T : KBvSort> KBitVecValue<T>.unaryMinus(): KBitVecValue<T> = bvOperation(
         other = this,
         bv1 = { a, _ -> a xor false },
         bv8 = { a, _ -> (-a).toByte() },
@@ -197,7 +211,7 @@ object BvUtils {
         bvDefault = { a, _ -> -a },
     )
 
-    operator fun KBitVecValue<*>.plus(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+    operator fun <T : KBvSort> KBitVecValue<T>.plus(other: KBitVecValue<T>): KBitVecValue<T> = bvOperation(
         other = other,
         bv1 = { a, b -> a xor b },
         bv8 = { a, b -> (a + b).toByte() },
@@ -207,7 +221,7 @@ object BvUtils {
         bvDefault = { a, b -> a + b },
     )
 
-    operator fun KBitVecValue<*>.minus(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+    operator fun <T : KBvSort> KBitVecValue<T>.minus(other: KBitVecValue<T>): KBitVecValue<T> = bvOperation(
         other = other,
         bv1 = { a, b -> a xor b },
         bv8 = { a, b -> (a - b).toByte() },
@@ -217,7 +231,7 @@ object BvUtils {
         bvDefault = { a, b -> a - b },
     )
 
-    operator fun KBitVecValue<*>.times(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+    operator fun <T : KBvSort> KBitVecValue<T>.times(other: KBitVecValue<T>): KBitVecValue<T> = bvOperation(
         other = other,
         bv1 = { a, b -> a && b },
         bv8 = { a, b -> (a * b).toByte() },
@@ -227,7 +241,7 @@ object BvUtils {
         bvDefault = { a, b -> a * b },
     )
 
-    fun KBitVecValue<*>.signedDivide(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+    fun <T : KBvSort> KBitVecValue<T>.signedDivide(other: KBitVecValue<T>): KBitVecValue<T> = bvOperation(
         other = other,
         signIsImportant = true,
         bv1 = { a, _ -> a },
@@ -238,7 +252,7 @@ object BvUtils {
         bvDefault = { a, b -> a / b },
     )
 
-    fun KBitVecValue<*>.unsignedDivide(other: KBitVecValue<*>): KBitVecValue<*> = bvUnsignedOperation(
+    fun <T : KBvSort> KBitVecValue<T>.unsignedDivide(other: KBitVecValue<T>): KBitVecValue<T> = bvUnsignedOperation(
         other = other,
         bv1 = { a, _ -> a },
         bv8 = { a, b -> (a / b).toUByte() },
@@ -248,7 +262,7 @@ object BvUtils {
         bvDefault = { a, b -> a / b },
     )
 
-    fun KBitVecValue<*>.signedRem(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+    fun <T : KBvSort> KBitVecValue<T>.signedRem(other: KBitVecValue<T>): KBitVecValue<T> = bvOperation(
         other = other,
         signIsImportant = true,
         bv1 = { _, _ -> false },
@@ -259,7 +273,7 @@ object BvUtils {
         bvDefault = { a, b -> a.rem(b) },
     )
 
-    fun KBitVecValue<*>.unsignedRem(other: KBitVecValue<*>): KBitVecValue<*> = bvUnsignedOperation(
+    fun <T : KBvSort> KBitVecValue<T>.unsignedRem(other: KBitVecValue<T>): KBitVecValue<T> = bvUnsignedOperation(
         other = other,
         bv1 = { _, _ -> false },
         bv8 = { a, b -> (a.rem(b)).toUByte() },
@@ -269,7 +283,7 @@ object BvUtils {
         bvDefault = { a, b -> a.rem(b) },
     )
 
-    fun KBitVecValue<*>.signedMod(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+    fun <T : KBvSort> KBitVecValue<T>.signedMod(other: KBitVecValue<T>): KBitVecValue<T> = bvOperation(
         other = other,
         signIsImportant = true,
         bv1 = { _, _ -> false },
@@ -292,7 +306,7 @@ object BvUtils {
         },
     )
 
-    fun KBitVecValue<*>.bitwiseNot(): KBitVecValue<*> = bvOperation(
+    fun <T : KBvSort> KBitVecValue<T>.bitwiseNot(): KBitVecValue<T> = bvOperation(
         other = this,
         bv1 = { a, _ -> a.not() },
         bv8 = { a, _ -> a.inv() },
@@ -302,7 +316,7 @@ object BvUtils {
         bvDefault = { a, _ -> a.inv() },
     )
 
-    fun KBitVecValue<*>.bitwiseOr(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+    fun <T : KBvSort> KBitVecValue<T>.bitwiseOr(other: KBitVecValue<T>): KBitVecValue<T> = bvOperation(
         other = other,
         bv1 = { a, b -> a || b },
         bv8 = { a, b -> a or b },
@@ -312,7 +326,7 @@ object BvUtils {
         bvDefault = { a, b -> a or b },
     )
 
-    fun KBitVecValue<*>.bitwiseXor(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+    fun <T : KBvSort> KBitVecValue<T>.bitwiseXor(other: KBitVecValue<T>): KBitVecValue<T> = bvOperation(
         other = other,
         bv1 = { a, b -> a xor b },
         bv8 = { a, b -> a xor b },
@@ -322,7 +336,7 @@ object BvUtils {
         bvDefault = { a, b -> a xor b },
     )
 
-    fun KBitVecValue<*>.bitwiseAnd(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+    fun <T : KBvSort> KBitVecValue<T>.bitwiseAnd(other: KBitVecValue<T>): KBitVecValue<T> = bvOperation(
         other = other,
         bv1 = { a, b -> a && b },
         bv8 = { a, b -> a and b },
@@ -337,7 +351,7 @@ object BvUtils {
     private val bv32PossibleShift = 0 until Int.SIZE_BITS
     private val bv64PossibleShift = 0 until Long.SIZE_BITS
 
-    fun KBitVecValue<*>.shiftLeft(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+    fun <T : KBvSort> KBitVecValue<T>.shiftLeft(other: KBitVecValue<T>): KBitVecValue<T> = bvOperation(
         other = other,
         bv1 = { a, b -> if (b) false else a },
         bv8 = { a, b -> if (b !in bv8PossibleShift) 0 else (a.toInt() shl b.toInt()).toByte() },
@@ -353,7 +367,7 @@ object BvUtils {
         },
     )
 
-    fun KBitVecValue<*>.shiftRightLogical(other: KBitVecValue<*>): KBitVecValue<*> = bvUnsignedOperation(
+    fun <T : KBvSort> KBitVecValue<T>.shiftRightLogical(other: KBitVecValue<T>): KBitVecValue<T> = bvUnsignedOperation(
         other = other,
         bv1 = { a, b -> if (b) false else a },
         bv8 = { a, b -> if (b.toInt() !in bv8PossibleShift) 0u else (a.toInt() ushr b.toInt()).toUByte() },
@@ -369,7 +383,7 @@ object BvUtils {
         },
     )
 
-    fun KBitVecValue<*>.shiftRightArith(other: KBitVecValue<*>): KBitVecValue<*> = bvOperation(
+    fun <T : KBvSort> KBitVecValue<T>.shiftRightArith(other: KBitVecValue<T>): KBitVecValue<T> = bvOperation(
         other = other,
         signIsImportant = true,
         bv1 = { a, _ -> a },
@@ -458,7 +472,7 @@ object BvUtils {
     }
 
     // Add max value without creation of Bv expr
-    fun KBitVecValue<*>.addMaxValueSigned(): KBitVecValue<*> = bvOperation(
+    fun <T : KBvSort> KBitVecValue<T>.addMaxValueSigned(): KBitVecValue<T> = bvOperation(
         other = this,
         bv1 = { a, _ -> a xor bvMaxValueSigned.bv1 },
         bv8 = { a, _ -> (a + bvMaxValueSigned.bv8).toByte() },
@@ -469,7 +483,7 @@ object BvUtils {
     )
 
     // Subtract max value without creation of Bv expr
-    fun KBitVecValue<*>.subMaxValueSigned(): KBitVecValue<*> = bvOperation(
+    fun <T : KBvSort> KBitVecValue<T>.subMaxValueSigned(): KBitVecValue<T> = bvOperation(
         other = this,
         bv1 = { a, _ -> a xor bvMaxValueSigned.bv1 },
         bv8 = { a, _ -> (a - bvMaxValueSigned.bv8).toByte() },
@@ -485,7 +499,7 @@ object BvUtils {
         lhs.shiftLeft(rhsSize.toInt()).or(rhs)
 
     @Suppress("LongParameterList")
-    private inline fun KBitVecValue<*>.bvUnsignedOperation(
+    private inline fun <T : KBvSort> KBitVecValue<*>.bvUnsignedOperation(
         other: KBitVecValue<*>,
         crossinline bv1: (Boolean, Boolean) -> Boolean,
         crossinline bv8: (UByte, UByte) -> UByte,
@@ -493,7 +507,7 @@ object BvUtils {
         crossinline bv32: (UInt, UInt) -> UInt,
         crossinline bv64: (ULong, ULong) -> ULong,
         crossinline bvDefault: (BigInteger, BigInteger) -> BigInteger,
-    ): KBitVecValue<*> = when (this@bvUnsignedOperation) {
+    ): KBitVecValue<T> = when (this@bvUnsignedOperation) {
         is KBitVec1Value -> bv1Operation(other, op = bv1)
         is KBitVec8Value -> bv8UnsignedOperation(other, op = bv8)
         is KBitVec16Value -> bv16UnsignedOperation(other, op = bv16)
@@ -501,10 +515,10 @@ object BvUtils {
         is KBitVec64Value -> bv64UnsignedOperation(other, op = bv64)
         is KBitVecCustomValue -> bvCustomOperation(other, signed = false, operation = bvDefault)
         else -> bvOperationDefault(other, signed = false, operation = bvDefault)
-    }
+    }.uncheckedCast()
 
     @Suppress("LongParameterList")
-    private inline fun KBitVecValue<*>.bvOperation(
+    private inline fun <T : KBvSort> KBitVecValue<*>.bvOperation(
         other: KBitVecValue<*>,
         signIsImportant: Boolean = false,
         crossinline bv1: (Boolean, Boolean) -> Boolean,
@@ -513,7 +527,7 @@ object BvUtils {
         crossinline bv32: (Int, Int) -> Int,
         crossinline bv64: (Long, Long) -> Long,
         crossinline bvDefault: (BigInteger, BigInteger) -> BigInteger,
-    ): KBitVecValue<*> = when (this@bvOperation) {
+    ): KBitVecValue<T> = when (this@bvOperation) {
         is KBitVec1Value -> bv1Operation(other, op = bv1)
         is KBitVec8Value -> bv8Operation(other, op = bv8)
         is KBitVec16Value -> bv16Operation(other, op = bv16)
@@ -521,7 +535,7 @@ object BvUtils {
         is KBitVec64Value -> bv64Operation(other, op = bv64)
         is KBitVecCustomValue -> bvCustomOperation(other, signed = signIsImportant, operation = bvDefault)
         else -> bvOperationDefault(other, signed = signIsImportant, operation = bvDefault)
-    }
+    }.uncheckedCast()
 
     private inline fun KBitVec1Value.bv1Operation(
         other: KBitVecValue<*>,
@@ -667,7 +681,7 @@ object BvUtils {
         fun bvDefault(size: UInt): BigInteger
     }
 
-    private fun KContext.mkBvSpecialValue(size: UInt, source: BvSpecialValueSource): KBitVecValue<*> =
+    private fun <T : KBvSort> KContext.mkBvSpecialValue(size: UInt, source: BvSpecialValueSource): KBitVecValue<T> =
         when (size.toInt()) {
             1 -> mkBv(source.bv1)
             Byte.SIZE_BITS -> mkBv(source.bv8)
@@ -675,7 +689,7 @@ object BvUtils {
             Int.SIZE_BITS -> mkBv(source.bv32)
             Long.SIZE_BITS -> mkBv(source.bv64)
             else -> mkBv(source.bvDefault(size), size)
-        }
+        }.uncheckedCast()
 
     private fun KBitVecValue<*>.isBvSpecialValue(source: BvSpecialValueSource) = when (this) {
         is KBitVec1Value -> value == source.bv1
@@ -684,7 +698,7 @@ object BvUtils {
         is KBitVec32Value -> numberValue == source.bv32
         is KBitVec64Value -> numberValue == source.bv64
         is KBitVecCustomValue -> value == source.bvDefault(sizeBits)
-        else -> this == ctx.mkBvSpecialValue(sort.sizeBits, source)
+        else -> this == ctx.mkBvSpecialValue<KBvSort>(sort.sizeBits, source)
     }
 
 }

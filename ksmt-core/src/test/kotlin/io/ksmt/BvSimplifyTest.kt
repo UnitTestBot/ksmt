@@ -25,8 +25,8 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
         KContext::mkBvAddExprNoSimplify,
         mkSpecialValues = {
             listOf(
-                bvZero(it.sizeBits).uncheckedCast(),
-                bvOne(it.sizeBits).uncheckedCast()
+                bvZero(it.sizeBits),
+                bvOne(it.sizeBits)
             )
         }
     )
@@ -45,9 +45,9 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
         KContext::mkBvAndExprNoSimplify,
         mkSpecialValues = {
             listOf(
-                bvZero(it.sizeBits).uncheckedCast(),
-                bvMaxValueUnsigned(it.sizeBits).uncheckedCast(),
-                bvOne(it.sizeBits).uncheckedCast()
+                bvZero(it.sizeBits),
+                bvMaxValueUnsigned(it.sizeBits),
+                bvOne(it.sizeBits)
             )
         }
     )
@@ -58,22 +58,21 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
         KContext::mkBvArithShiftRightExprNoSimplify,
         mkSpecialValues = {
             listOf(
-                bvValue(it.sizeBits, 3).uncheckedCast(),
-                bvValue(it.sizeBits, BV_SIZE.toInt() + 5).uncheckedCast(),
-                bvZero(it.sizeBits).uncheckedCast(),
+                bvValue(it.sizeBits, 3),
+                bvValue(it.sizeBits, BV_SIZE.toInt() + 5),
+                bvZero(it.sizeBits),
                 mkConst("a", it)  // same as lhs
             )
         }
     )
 
     @Test
-    @Suppress("UNCHECKED_CAST")
     fun testBvConcat() = testOperation(
         KContext::mkBvConcatExpr,
         KContext::mkBvConcatExprNoSimplify,
         mkSpecialValues = {
             listOf(
-                bvZero(BV_SIZE / 2u) as KExpr<KBvSort>,
+                bvZero(BV_SIZE / 2u),
                 mkBvConcatExprNoSimplify(
                     bvZero(BV_SIZE / 2u),
                     mkConst("c", mkBvSort(BV_SIZE / 2u))
@@ -119,9 +118,9 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
         KContext::mkBvLogicalShiftRightExprNoSimplify,
         mkSpecialValues = {
             listOf(
-                bvValue(it.sizeBits, 3).uncheckedCast(),
-                bvValue(it.sizeBits, BV_SIZE.toInt() + 5).uncheckedCast(),
-                bvZero(it.sizeBits).uncheckedCast(),
+                bvValue(it.sizeBits, 3),
+                bvValue(it.sizeBits, BV_SIZE.toInt() + 5),
+                bvZero(it.sizeBits),
                 mkConst("a", it)  // same as lhs
             )
         }
@@ -133,10 +132,10 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
         KContext::mkBvMulExprNoSimplify,
         mkSpecialValues = {
             listOf(
-                bvZero(it.sizeBits).uncheckedCast(),
-                bvOne(it.sizeBits).uncheckedCast(),
-                bvValue(it.sizeBits, 2).uncheckedCast(),
-                bvValue(it.sizeBits, -1).uncheckedCast(),
+                bvZero(it.sizeBits),
+                bvOne(it.sizeBits),
+                bvValue(it.sizeBits, 2),
+                bvValue(it.sizeBits, -1),
             )
         }
     )
@@ -184,7 +183,7 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
             listOf(
                 mkBvAddExprNoSimplify(
                     mkConst("y", it),
-                    bvOne(it.sizeBits).uncheckedCast()
+                    bvOne(it.sizeBits)
                 ),
                 mkBvAddExprNoSimplify(
                     mkBvNegationExprNoSimplify(mkConst("y", it)),
@@ -212,9 +211,9 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
         KContext::mkBvOrExprNoSimplify,
         mkSpecialValues = {
             listOf(
-                bvZero(it.sizeBits).uncheckedCast(),
-                bvMaxValueUnsigned(it.sizeBits).uncheckedCast(),
-                bvOne(it.sizeBits).uncheckedCast()
+                bvZero(it.sizeBits),
+                bvMaxValueUnsigned(it.sizeBits),
+                bvOne(it.sizeBits)
             )
         }
     )
@@ -274,9 +273,9 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
         KContext::mkBvShiftLeftExprNoSimplify,
         mkSpecialValues = {
             listOf(
-                bvValue(it.sizeBits, 3).uncheckedCast(),
-                bvValue(it.sizeBits, BV_SIZE.toInt() + 5).uncheckedCast(),
-                bvZero(it.sizeBits).uncheckedCast(),
+                bvValue(it.sizeBits, 3),
+                bvValue(it.sizeBits, BV_SIZE.toInt() + 5),
+                bvZero(it.sizeBits),
                 mkConst("a", it)  // same as lhs
             )
         }
@@ -288,10 +287,10 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
         KContext::mkBvSignedDivExprNoSimplify,
         mkSpecialValues = {
             listOf(
-                bvZero(it.sizeBits).uncheckedCast(),
-                bvOne(it.sizeBits).uncheckedCast(),
-                bvValue(it.sizeBits, -1).uncheckedCast(),
-                bvValue(it.sizeBits, 1024).uncheckedCast(),
+                bvZero(it.sizeBits),
+                bvOne(it.sizeBits),
+                bvValue(it.sizeBits, -1),
+                bvValue(it.sizeBits, 1024),
             )
         }
     )
@@ -321,10 +320,10 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
         KContext::mkBvSignedModExprNoSimplify,
         mkSpecialValues = {
             listOf(
-                bvZero(it.sizeBits).uncheckedCast(),
-                bvOne(it.sizeBits).uncheckedCast(),
-                bvValue(it.sizeBits, -1).uncheckedCast(),
-                bvValue(it.sizeBits, 1024).uncheckedCast(),
+                bvZero(it.sizeBits),
+                bvOne(it.sizeBits),
+                bvValue(it.sizeBits, -1),
+                bvValue(it.sizeBits, 1024),
             )
         }
     )
@@ -335,10 +334,10 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
         KContext::mkBvSignedRemExprNoSimplify,
         mkSpecialValues = {
             listOf(
-                bvZero(it.sizeBits).uncheckedCast(),
-                bvOne(it.sizeBits).uncheckedCast(),
-                bvValue(it.sizeBits, -1).uncheckedCast(),
-                bvValue(it.sizeBits, 1024).uncheckedCast(),
+                bvZero(it.sizeBits),
+                bvOne(it.sizeBits),
+                bvValue(it.sizeBits, -1),
+                bvValue(it.sizeBits, 1024),
             )
         }
     )
@@ -372,10 +371,10 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
         KContext::mkBvUnsignedDivExprNoSimplify,
         mkSpecialValues = {
             listOf(
-                bvZero(it.sizeBits).uncheckedCast(),
-                bvOne(it.sizeBits).uncheckedCast(),
-                bvValue(it.sizeBits, -1).uncheckedCast(),
-                bvValue(it.sizeBits, 1024).uncheckedCast(),
+                bvZero(it.sizeBits),
+                bvOne(it.sizeBits),
+                bvValue(it.sizeBits, -1),
+                bvValue(it.sizeBits, 1024),
             )
         }
     )
@@ -405,10 +404,10 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
         KContext::mkBvUnsignedRemExprNoSimplify,
         mkSpecialValues = {
             listOf(
-                bvZero(it.sizeBits).uncheckedCast(),
-                bvOne(it.sizeBits).uncheckedCast(),
-                bvValue(it.sizeBits, -1).uncheckedCast(),
-                bvValue(it.sizeBits, 1024).uncheckedCast(),
+                bvZero(it.sizeBits),
+                bvOne(it.sizeBits),
+                bvValue(it.sizeBits, -1),
+                bvValue(it.sizeBits, 1024),
             )
         }
     )
@@ -423,9 +422,9 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
         KContext::mkBvXorExprNoSimplify,
         mkSpecialValues = {
             listOf(
-                bvZero(it.sizeBits).uncheckedCast(),
-                bvMaxValueUnsigned(it.sizeBits).uncheckedCast(),
-                bvOne(it.sizeBits).uncheckedCast()
+                bvZero(it.sizeBits),
+                bvMaxValueUnsigned(it.sizeBits),
+                bvOne(it.sizeBits)
             )
         }
     )
@@ -477,7 +476,7 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
                     }
                 }
                 run {
-                    val someValue: KExpr<S> = bvValue(sort.sizeBits, 17).uncheckedCast()
+                    val someValue = bvValue<S>(sort.sizeBits, 17)
                     val nestedOperation = operationNoSimplify(someValue, rhs)
                     val unsimplifiedExpr = operationNoSimplify(lhs, nestedOperation)
                     val simplifiedExpr = operation(lhs, nestedOperation)

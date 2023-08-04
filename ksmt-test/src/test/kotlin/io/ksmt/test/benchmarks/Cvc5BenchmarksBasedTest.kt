@@ -34,9 +34,7 @@ class Cvc5BenchmarksBasedTest : BenchmarksBasedTest() {
 
     companion object {
         @JvmStatic
-        fun cvc5TestData() = testData
-            .filter { it.name !in KnownCvc5Issues.fp64CrashSamples }
-            .ensureNotEmpty()
+        fun cvc5TestData() = testData { name -> name !in KnownCvc5Issues.fp64CrashSamples }
 
         /**
          * Resource limit to prevent solver from consuming huge amounts of native memory.

@@ -33,9 +33,7 @@ class BitwuzlaBenchmarksBasedTest : BenchmarksBasedTest() {
 
     companion object {
         @JvmStatic
-        fun bitwuzlaTestData() = testData
-            .skipUnsupportedTheories()
-            .ensureNotEmpty()
+        fun bitwuzlaTestData() = testData(::skipUnsupportedTheories)
 
         @JvmStatic
         fun bitwuzlaModelConversionTestData() =
@@ -44,8 +42,10 @@ class BitwuzlaBenchmarksBasedTest : BenchmarksBasedTest() {
                 .filter { it.name.startsWith("QF_") }
                 .ensureNotEmpty()
 
-        private fun List<BenchmarkTestArguments>.skipUnsupportedTheories() =
-            filterNot { "LIA" in it.name || "LRA" in it.name || "LIRA" in it.name }
-                .filterNot { "NIA" in it.name || "NRA" in it.name || "NIRA" in it.name }
+        private fun skipUnsupportedTheories(name: String): Boolean {
+            if ("LIA" in name || "LRA" in name || "LIRA" in name) return false
+            if ("NIA" in name || "NRA" in name || "NIRA" in name) return false
+            return true
+        }
     }
 }
