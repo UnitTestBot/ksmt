@@ -9,8 +9,9 @@ import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.sort.KBoolSort
 import io.ksmt.utils.mkConst
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
 class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>) : KSolver<KSolverConfiguration>
     where T : KSolverConfiguration {
@@ -30,97 +31,104 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
         scopeManager.incrementSoft()
     }
 
+    private var currentMaxSATResult: Triple<KSolverStatus?, List<KExpr<KBoolSort>>, KModel?> =
+        Triple(null, listOf(), null)
+
     /**
      * Solve maximum satisfiability problem.
      *
      * @throws NotImplementedError
      */
-    suspend fun checkMaxSAT(timeout: Duration = Duration.INFINITE): KMaxSATResult {
-        var hardConstraintsSatStatus = KSolverStatus.UNKNOWN
-        var currentMaxSATResult: Triple<KSolverStatus?, List<KExpr<KBoolSort>>, KModel?> =
-            Triple(null, listOf(), null)
+    fun checkMaxSAT(timeout: Duration = Duration.INFINITE): KMaxSATResult {
+        if (timeout.isNegative() || timeout == Duration.ZERO) {
+            error("Timeout must be positive but was [${timeout.inWholeSeconds} s]")
+        }
 
         solver.push()
 
-        val maxSATResult = withTimeoutOrNull(timeout) {
-            if (softConstraints.isEmpty()) {
-                return@withTimeoutOrNull KMaxSATResult(
-                    listOf(),
-                    solver.check(),
-                    maxSATSucceeded = true,
-                    timeoutExceeded = false,
-                )
-            }
-
-            val status = solver.check()
-            hardConstraintsSatStatus = status
-
-            if (status == KSolverStatus.UNSAT) {
-                return@withTimeoutOrNull KMaxSATResult(
-                    listOf(),
-                    status,
-                    maxSATSucceeded = true,
-                    timeoutExceeded = false,
-                )
-            } else if (status == KSolverStatus.UNKNOWN) {
-                return@withTimeoutOrNull KMaxSATResult(
-                    listOf(),
-                    status,
-                    maxSATSucceeded = false,
-                    timeoutExceeded = false,
-                )
-            }
-
-            var i = 0
-            var formula = softConstraints.toMutableList()
-
-            unionSoftConstraintsWithSameExpressions(formula)
-
-            while (true) {
-                val (solverStatus, unsatCore, model) = checkSAT(formula)
-
-                if (solverStatus == KSolverStatus.UNKNOWN) {
-                    throw NotImplementedError()
-                }
-
-                currentMaxSATResult = Triple(solverStatus, unsatCore, model)
-
-                if (solverStatus == KSolverStatus.SAT) {
-                    return@withTimeoutOrNull handleSat(model!!)
-                }
-
-                val (weight, splitUnsatCore) = splitUnsatCore(formula, unsatCore)
-
-                val (formulaReified, reificationLiterals) =
-                    reifyUnsatCore(formula, splitUnsatCore, i, weight)
-
-                unionReificationLiterals(reificationLiterals)
-
-                formula = applyMaxRes(formulaReified, reificationLiterals, i, weight)
-
-                i++
-            }
-        }
+        val maxSATResult = runMaxSATLogic(timeout)
 
         solver.pop()
 
-        if (maxSATResult == null) {
+        currentMaxSATResult = Triple(KSolverStatus.UNKNOWN, listOf(), null)
+
+        if (softConstraints.isEmpty()) {
+            return maxSATResult
+        }
+
+        // TODO: get max SAT soft constraints subset
+        if (!maxSATResult.maxSATSucceeded) {
             val (solverStatus, _, model) = currentMaxSATResult
 
             return when (solverStatus) {
-                null -> KMaxSATResult(
-                    listOf(),
-                    hardConstraintsSatStatus,
-                    maxSATSucceeded = false,
-                    timeoutExceeded = true,
-                )
                 KSolverStatus.SAT -> handleSat(model!!)
                 KSolverStatus.UNSAT -> throw NotImplementedError()
                 KSolverStatus.UNKNOWN -> throw NotImplementedError()
+                else -> error("Unexpected status: $solverStatus")
             }
         }
 
-        return maxSATResult as KMaxSATResult
+        return maxSATResult
+    }
+
+    private fun runMaxSATLogic(timeout: Duration): KMaxSATResult {
+        val clockStart = System.currentTimeMillis()
+
+        if (softConstraints.isEmpty()) {
+            val hardConstraintsStatus = solver.check(timeout)
+
+            return KMaxSATResult(
+                listOf(),
+                hardConstraintsStatus,
+                hardConstraintsStatus != KSolverStatus.UNKNOWN,
+            )
+        }
+
+        val status = solver.check(timeout)
+
+        if (status == KSolverStatus.UNSAT) {
+            return KMaxSATResult(listOf(), status, true)
+        } else if (status == KSolverStatus.UNKNOWN) {
+            return KMaxSATResult(listOf(), status, false)
+        }
+
+        var i = 0
+        var formula = softConstraints.toMutableList()
+
+        unionSoftConstraintsWithSameExpressions(formula)
+
+        while (true) {
+            val softConstraintsCheckRemainingTime = computeRemainingTime(timeout, clockStart)
+
+            if (softConstraintsCheckRemainingTime.isNegative() || softConstraintsCheckRemainingTime == Duration.ZERO) {
+                return KMaxSATResult(listOf(), status, false)
+            }
+
+            val (solverStatus, unsatCore, model) =
+                checkSAT(formula, softConstraintsCheckRemainingTime)
+
+            if (solverStatus == KSolverStatus.UNKNOWN) {
+                // TODO: get max SAT soft constraints subset
+                return KMaxSATResult(listOf(), status, false)
+            }
+
+            currentMaxSATResult = Triple(solverStatus, unsatCore, model)
+
+            if (solverStatus == KSolverStatus.SAT) {
+                return handleSat(model!!)
+            }
+
+            val (weight, splitUnsatCore) = splitUnsatCore(formula, unsatCore)
+
+            val (formulaReified, reificationLiterals) =
+                reifyUnsatCore(formula, splitUnsatCore, i, weight)
+
+            unionReificationLiterals(reificationLiterals)
+
+            formula = applyMaxRes(formulaReified, reificationLiterals, i, weight)
+
+            i++
+        }
     }
 
     /**
@@ -189,8 +197,9 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
      * @return a triple of solver status, unsat core (if exists, empty list otherwise) and model
      * (if exists, null otherwise).
      */
-    private fun checkSAT(assumptions: List<SoftConstraint>): Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> =
-        when (val status = solver.checkWithAssumptions(assumptions.map { x -> x.expression })) {
+    private fun checkSAT(assumptions: List<SoftConstraint>, timeout: Duration):
+        Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> =
+        when (val status = solver.checkWithAssumptions(assumptions.map { x -> x.expression }, timeout)) {
             KSolverStatus.SAT -> Triple(status, listOf(), solver.model())
             KSolverStatus.UNSAT -> Triple(status, solver.unsatCore(), null)
             KSolverStatus.UNKNOWN -> Triple(status, listOf(), null)
@@ -269,11 +278,16 @@ class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>
 
     private fun handleSat(model: KModel): KMaxSATResult {
         val satSoftConstraints = getSatSoftConstraintsByModel(model)
-        return KMaxSATResult(satSoftConstraints, KSolverStatus.SAT, maxSATSucceeded = true, timeoutExceeded = false)
+        return KMaxSATResult(satSoftConstraints, KSolverStatus.SAT, maxSATSucceeded = true)
     }
 
     private fun getSatSoftConstraintsByModel(model: KModel): List<SoftConstraint> {
         return softConstraints.filter { model.eval(it.expression).internEquals(KTrue(ctx)) }
+    }
+
+    private fun computeRemainingTime(timeout: Duration, clockStart: Long): Duration {
+        val msUnit = DurationUnit.MILLISECONDS
+        return timeout - (System.currentTimeMillis().toDuration(msUnit) - clockStart.toDuration(msUnit))
     }
 
     override fun configure(configurator: KSolverConfiguration.() -> Unit) {
