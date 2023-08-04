@@ -190,7 +190,7 @@
     
 
 <p><a href="https://github.com/UnitTestBot/ksmt/actions/workflows/build-and-run-tests.yml"><img src="https://github.com/UnitTestBot/ksmt/actions/workflows/build-and-run-tests.yml/badge.svg" alt="KSMT: build" /></a>
-<a href="https://central.sonatype.com/artifact/io.ksmt/ksmt-core/0.5.4"><img src="https://img.shields.io/maven-central/v/io.ksmt/ksmt-core" alt="Maven Central" /></a>
+<a href="https://central.sonatype.com/artifact/io.ksmt/ksmt-core/0.5.6"><img src="https://img.shields.io/maven-central/v/io.ksmt/ksmt-core" alt="Maven Central" /></a>
 <a href="https://javadoc.io/doc/io.ksmt/ksmt-core"><img src="https://javadoc.io/badge2/io.ksmt/ksmt-core/javadoc.svg" alt="javadoc" /></a></p>
 
 <blockquote class="highlight">
@@ -216,9 +216,9 @@
 <p>To start using KSMT, install it via <a href="https://gradle.org/">Gradle</a>:</p>
 
 <div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// core </span>
-<span class="nf">implementation</span><span class="p">(</span><span class="s">"io.ksmt:ksmt-core:0.5.4"</span><span class="p">)</span>
+<span class="nf">implementation</span><span class="p">(</span><span class="s">"io.ksmt:ksmt-core:0.5.6"</span><span class="p">)</span>
 <span class="c1">// z3 solver</span>
-<span class="nf">implementation</span><span class="p">(</span><span class="s">"io.ksmt:ksmt-z3:0.5.4"</span><span class="p">)</span>
+<span class="nf">implementation</span><span class="p">(</span><span class="s">"io.ksmt:ksmt-z3:0.5.6"</span><span class="p">)</span>
 </code></pre></div></div>
 
 <p>Find basic instructions in the <a href="getting-started">Getting started</a> guide and try it out with the 
@@ -316,7 +316,7 @@ feature support and plans for the nearest future.</p><hr />
       <td>IEEE Floats</td>
       <td style="text-align: center">✔</td>
       <td style="text-align: center">✔</td>
-      <td style="text-align: center"> </td>
+      <td style="text-align: center">✔ <sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup></td>
       <td style="text-align: center">✔</td>
     </tr>
     <tr>
@@ -443,6 +443,14 @@ portfolio mode.</p><hr />
 
 <p>KSMT is distributed as JVM library with solver binaries provided. The library has been tested against the SMT-LIB 
 benchmarks. Documentation and examples are also available.</p>
+
+<div class="footnotes" role="doc-endnotes">
+  <ol>
+    <li id="fn:1" role="doc-endnote">
+      <p>IEEE Floats are supported in Yices2 using ksmt-symfpu <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
 
                 
 

@@ -71,7 +71,7 @@
   },"10": {
     "doc": "Getting started",
     "title": "Installation",
-    "content": "Install KSMT via Gradle. 1. Enable Maven Central repository in your build configuration: . repositories { mavenCentral() } . 2. Add KSMT core dependency: . dependencies { // core implementation(\"io.ksmt:ksmt-core:0.5.4\") } . 3. Add one or more SMT solver dependencies: . dependencies { // z3 implementation(\"io.ksmt:ksmt-z3:0.5.4\") // bitwuzla implementation(\"io.ksmt:ksmt-bitwuzla:0.5.4\") } . SMT solver specific packages are provided with solver native binaries. ",
+    "content": "Install KSMT via Gradle. 1. Enable Maven Central repository in your build configuration: . repositories { mavenCentral() } . 2. Add KSMT core dependency: . dependencies { // core implementation(\"io.ksmt:ksmt-core:0.5.6\") } . 3. Add one or more SMT solver dependencies: . dependencies { // z3 implementation(\"io.ksmt:ksmt-z3:0.5.6\") // bitwuzla implementation(\"io.ksmt:ksmt-bitwuzla:0.5.6\") } . SMT solver specific packages are provided with solver native binaries. ",
     "url": "/getting-started.html#installation",
     
     "relUrl": "/getting-started.html#installation"
@@ -99,7 +99,7 @@
   },"14": {
     "doc": "API reference",
     "title": "API reference",
-    "content": "ksmt-core | | | . ksmt-core 0.5.4 ",
+    "content": "ksmt-core | | | . ksmt-core 0.5.6 ",
     "url": "/api/",
     
     "relUrl": "/api/"
@@ -113,14 +113,14 @@
   },"16": {
     "doc": "Overview",
     "title": "Quick start",
-    "content": "To start using KSMT, install it via Gradle: . // core implementation(\"io.ksmt:ksmt-core:0.5.4\") // z3 solver implementation(\"io.ksmt:ksmt-z3:0.5.4\") . Find basic instructions in the Getting started guide and try it out with the Kotlin or Java examples. To go beyond the basic scenarios, proceed to the Advanced usage guide and try the advanced example. To get guided experience in KSMT, step through the detailed scenario for creating custom expressions. Check the Roadmap to know more about current feature support and plans for the nearest future. ",
+    "content": "To start using KSMT, install it via Gradle: . // core implementation(\"io.ksmt:ksmt-core:0.5.6\") // z3 solver implementation(\"io.ksmt:ksmt-z3:0.5.6\") . Find basic instructions in the Getting started guide and try it out with the Kotlin or Java examples. To go beyond the basic scenarios, proceed to the Advanced usage guide and try the advanced example. To get guided experience in KSMT, step through the detailed scenario for creating custom expressions. Check the Roadmap to know more about current feature support and plans for the nearest future. ",
     "url": "/#quick-start",
     
     "relUrl": "/#quick-start"
   },"17": {
     "doc": "Overview",
     "title": "Supported solvers and theories",
-    "content": "KSMT provides support for various solvers: . | SMT solver | Linux-x64 | Windows-x64 | macOS-aarch64 | macOS-x64 | . | Z3 | ✔ | ✔ | ✔ | ✔ | . | Bitwuzla | ✔ | ✔ | ✔ |   | . | Yices2 | ✔ | ✔ | ✔ |   | . | cvc5 | ✔ | ✔ | ✔ |   | . You can also use SMT solvers across multiple theories: . | Theory | Z3 | Bitwuzla | Yices2 | cvc5 | . | Bitvectors | ✔ | ✔ | ✔ | ✔ | . | Arrays | ✔ | ✔ | ✔ | ✔ | . | IEEE Floats | ✔ | ✔ |   | ✔ | . | Uninterpreted Functions | ✔ | ✔ | ✔ | ✔ | . | Arithmetic | ✔ |   | ✔ | ✔ | . ",
+    "content": "KSMT provides support for various solvers: . | SMT solver | Linux-x64 | Windows-x64 | macOS-aarch64 | macOS-x64 | . | Z3 | ✔ | ✔ | ✔ | ✔ | . | Bitwuzla | ✔ | ✔ | ✔ |   | . | Yices2 | ✔ | ✔ | ✔ |   | . | cvc5 | ✔ | ✔ | ✔ |   | . You can also use SMT solvers across multiple theories: . | Theory | Z3 | Bitwuzla | Yices2 | cvc5 | . | Bitvectors | ✔ | ✔ | ✔ | ✔ | . | Arrays | ✔ | ✔ | ✔ | ✔ | . | IEEE Floats | ✔ | ✔ | ✔ 1 | ✔ | . | Uninterpreted Functions | ✔ | ✔ | ✔ | ✔ | . | Arithmetic | ✔ |   | ✔ | ✔ | . ",
     "url": "/#supported-solvers-and-theories",
     
     "relUrl": "/#supported-solvers-and-theories"
@@ -162,7 +162,7 @@
   },"23": {
     "doc": "Overview",
     "title": "KSMT distribution",
-    "content": "Many solvers do not have prebuilt binaries, or binaries are for Linux only. KSMT is distributed as JVM library with solver binaries provided. The library has been tested against the SMT-LIB benchmarks. Documentation and examples are also available. ",
+    "content": "Many solvers do not have prebuilt binaries, or binaries are for Linux only. KSMT is distributed as JVM library with solver binaries provided. The library has been tested against the SMT-LIB benchmarks. Documentation and examples are also available. | IEEE Floats are supported in Yices2 using ksmt-symfpu &#8617; . | . ",
     "url": "/#ksmt-distribution",
     
     "relUrl": "/#ksmt-distribution"
