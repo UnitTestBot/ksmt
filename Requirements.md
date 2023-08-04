@@ -25,7 +25,7 @@
 | [Model based projection](#model-based-projection)                                | TODO           |
 | [Support more theories](#support-more-theories)                                  | TODO           |
 | [Solver proofs](#solver-proofs)                                                  | TODO           |
-| [SymFpu](#symfpu)                                                                | In progress    |
+| [SymFpu](#symfpu)                                                                | Done           |
 | ...                                                                              | -              |
 
 
