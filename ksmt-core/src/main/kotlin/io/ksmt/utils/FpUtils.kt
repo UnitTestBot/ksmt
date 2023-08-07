@@ -199,26 +199,26 @@ object FpUtils {
         sort: T
     ): KFpValue<T> = value.ctx.fpValueFromBv(rm, value, signed, sort).uncheckedCast()
 
-    fun KContext.fpZeroExponentBiased(sort: KFpSort): KBitVecValue<*> =
+    fun KContext.fpZeroExponentBiased(sort: KFpSort): KBitVecValue<KBvSort> =
         bvZero(sort.exponentBits)
 
-    fun KContext.fpInfExponentBiased(sort: KFpSort): KBitVecValue<*> =
+    fun KContext.fpInfExponentBiased(sort: KFpSort): KBitVecValue<KBvSort> =
         fpTopExponentBiased(sort.exponentBits)
 
-    fun KContext.fpNaNExponentBiased(sort: KFpSort): KBitVecValue<*> =
+    fun KContext.fpNaNExponentBiased(sort: KFpSort): KBitVecValue<KBvSort> =
         fpTopExponentBiased(sort.exponentBits)
 
-    fun KContext.fpZeroSignificand(sort: KFpSort): KBitVecValue<*> =
+    fun KContext.fpZeroSignificand(sort: KFpSort): KBitVecValue<KBvSort> =
         bvZero(sort.significandBits - 1u)
 
-    fun KContext.fpInfSignificand(sort: KFpSort): KBitVecValue<*> =
+    fun KContext.fpInfSignificand(sort: KFpSort): KBitVecValue<KBvSort> =
         bvZero(sort.significandBits - 1u)
 
-    fun KContext.fpNaNSignificand(sort: KFpSort): KBitVecValue<*> =
+    fun KContext.fpNaNSignificand(sort: KFpSort): KBitVecValue<KBvSort> =
         bvOne(sort.significandBits - 1u)
 
     fun <T : KFpSort> KContext.mkFpMaxValue(sort: T, signBit: Boolean): KFpValue<T> {
-        val maxSignificand = bvMaxValueUnsigned(sort.significandBits - 1u)
+        val maxSignificand = bvMaxValueUnsigned<KBvSort>(sort.significandBits - 1u)
         val maxExponent = fpTopExponentBiased(sort.exponentBits) - bvOne(sort.exponentBits)
         return mkFpBiased(
             significand = maxSignificand,
@@ -250,7 +250,7 @@ object FpUtils {
     }
 
     // All 1 bits
-    private fun KContext.fpTopExponentBiased(size: UInt): KBitVecValue<*> =
+    private fun KContext.fpTopExponentBiased(size: UInt): KBitVecValue<KBvSort> =
         bvMaxValueUnsigned(size)
 
     private fun KBitVecValue<*>.isTopExponent(): Boolean =
@@ -1557,7 +1557,7 @@ object FpUtils {
         } else {
             // denormal
             val significandBv = mkBv(significand, significandSize - 1u)
-            val botBiasedExponent = bvZero(exponentSize)
+            val botBiasedExponent = bvZero<KBvSort>(exponentSize)
             return mkFpBiased(
                 significand = significandBv,
                 biasedExponent = botBiasedExponent,

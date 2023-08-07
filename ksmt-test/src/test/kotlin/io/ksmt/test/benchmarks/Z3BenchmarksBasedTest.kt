@@ -32,7 +32,7 @@ class Z3BenchmarksBasedTest : BenchmarksBasedTest() {
 
     companion object {
         @JvmStatic
-        fun z3TestData() = testData
+        fun z3TestData() = testData()
 
         @JvmStatic
         fun z3SolverTestData() = z3TestData()

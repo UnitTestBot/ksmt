@@ -31,22 +31,22 @@ class YicesBenchmarksBasedTest : BenchmarksBasedTest() {
 
     companion object {
         @JvmStatic
-        fun yicesTestData() = testData
-            .skipUnsupportedTheories()
-            .skipBadTestCases()
-            .ensureNotEmpty()
+        fun yicesTestData() = testData { skipUnsupportedTheories(it) && skipBadTestCases(it) }
 
-        private fun List<BenchmarkTestArguments>.skipUnsupportedTheories() =
-            filterNot { "QF" !in it.name || "FP" in it.name || "N" in it.name }
+        private fun skipUnsupportedTheories(name: String): Boolean =
+            "QF" in name && "FP" !in name && "N" !in name
 
-        private fun List<BenchmarkTestArguments>.skipBadTestCases(): List<BenchmarkTestArguments> =
-            /**
-             * Yices bug: returns an incorrect model
-             */
-            filterNot { it.name == "QF_UFBV_QF_UFBV_bv8_bv_eq_sdp_v4_ab_cti_max.smt2" }
-                // Yices bug: incorrect bv-add after bv-and on 64 bit bv (63 and 65 are correct).
-                .filterNot { it.name == "QF_BV_countbits064.smt2" }
-                // Yices bug: same as in previous sample
-                .filterNot { it.name == "QF_BV_nextpoweroftwo064.smt2" }
+        private fun skipBadTestCases(name: String): Boolean {
+            // Yices bug: returns an incorrect model
+            if (name == "QF_UFBV_QF_UFBV_bv8_bv_eq_sdp_v4_ab_cti_max.smt2") return false
+
+            // Yices bug: incorrect bv-add after bv-and on 64 bit bv (63 and 65 are correct).
+            if (name == "QF_BV_countbits064.smt2") return false
+
+            // Yices bug: same as in previous sample
+            if (name == "QF_BV_nextpoweroftwo064.smt2") return false
+
+            return true
+        }
     }
 }

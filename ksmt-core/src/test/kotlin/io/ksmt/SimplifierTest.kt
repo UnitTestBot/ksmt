@@ -162,7 +162,7 @@ class SimplifierTest {
         arg: UInt,
         shift: UInt,
         expected: UInt,
-        op: (KBitVecValue<*>, KBitVecValue<*>) -> KBitVecValue<*>
+        op: (KBitVecValue<KBvSort>, KBitVecValue<KBvSort>) -> KBitVecValue<KBvSort>
     ) = with(sort.ctx) {
         val expectedBv = mkBv(expected.toInt(), sort)
         val actual = op(mkBv(arg.toInt(), sort), mkBv(shift.toInt(), sort))

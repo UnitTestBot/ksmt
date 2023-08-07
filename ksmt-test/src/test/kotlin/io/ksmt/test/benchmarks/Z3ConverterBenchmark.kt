@@ -170,14 +170,16 @@ class Z3ConverterBenchmark : BenchmarksBasedTest() {
         }
 
         @JvmStatic
-        fun z3TestData() = testData.skipSlowSamples()
+        fun z3TestData() = testData(::skipSlowSamples)
 
         // skip samples with slow native assert
-        private fun List<BenchmarkTestArguments>.skipSlowSamples() = this
-            .filterNot { it.name.startsWith("QF_ABV_try3") }
-            .filterNot { it.name.startsWith("QF_ABV_try5") }
-            .filterNot { it.name.startsWith("QF_ABV_testcase") }
-            .filterNot { it.name in slowSamples }
+        private fun skipSlowSamples(name: String): Boolean {
+            if (name.startsWith("QF_ABV_try3")) return false
+            if (name.startsWith("QF_ABV_try5")) return false
+            if (name.startsWith("QF_ABV_testcase")) return false
+            if (name in slowSamples) return false
+            return true
+        }
 
         private val slowSamples = setOf(
             "QF_ABV_ridecore-qf_abv-bug.smt2",
