@@ -9,3 +9,6 @@ build
 
 # ignore ksmt test data
 ksmt-test/testData
+
+# ignore maxsat test data
+ksmt-maxsat-test/testData
