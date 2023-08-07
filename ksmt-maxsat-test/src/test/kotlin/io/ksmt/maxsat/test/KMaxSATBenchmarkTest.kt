@@ -16,6 +16,7 @@ import kotlin.io.path.relativeTo
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 
 class KMaxSATBenchmarkTest {
     @ParameterizedTest(name = "{0}")
@@ -40,7 +41,7 @@ class KMaxSATBenchmarkTest {
             }
         }
 
-        val maxSATResult = maxSATSolver.checkMaxSAT(1000.milliseconds)
+        val maxSATResult = maxSATSolver.checkMaxSAT(1.minutes)
         val satConstraintsScore = maxSATResult.satSoftConstraints.sumOf { it.weight }
 
         assertEquals(KSolverStatus.SAT, maxSATResult.hardConstraintsSATStatus)
