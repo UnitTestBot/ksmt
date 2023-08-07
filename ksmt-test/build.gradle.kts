@@ -101,7 +101,7 @@ val testDataRevision = project.stringProperty("testDataRevision") ?: "no-revisio
 val downloadPreparedBenchmarksTestData = downloadPreparedSmtLibBenchmarkTestData(
     downloadPath = downloadedTestData,
     testDataPath = unpackedTestDataDir,
-    version = testDataRevision
+    testDataRevision = testDataRevision
 )
 
 tasks.withType<Test> {

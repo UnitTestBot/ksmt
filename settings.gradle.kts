@@ -8,6 +8,7 @@ include("ksmt-runner:solver-generator")
 include("ksmt-test")
 include("ksmt-cvc5")
 include("ksmt-maxsat")
+include("ksmt-maxsat-test")
 
 pluginManagement {
     resolutionStrategy {
