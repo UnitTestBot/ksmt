@@ -33,18 +33,16 @@ fun Project.mkSmtLibBenchmarkTestData(name: String) = tasks.register("smtLibBenc
     }
 }
 
-fun Project.usePreparedSmtLibBenchmarkTestData(path: File) {
+fun Project.usePreparedSmtLibBenchmarkTestData(path: File) =
     usePreparedBenchmarkTestData(path, SMTLIB_BENCHMARK_NAME_L)
-}
 
-fun Project.downloadPreparedSmtLibBenchmarkTestData(downloadPath: File, testDataPath: File, testDataRevision: String) {
+fun Project.downloadPreparedSmtLibBenchmarkTestData(downloadPath: File, testDataPath: File, testDataRevision: String) =
     downloadPreparedBenchmarkTestData(
         downloadPath,
         testDataPath,
         SMTLIB_BENCHMARK_NAME_U,
         "https://github.com/UnitTestBot/ksmt/releases/download/$testDataRevision/benchmarks.zip",
     )
-}
 
 private const val MK_SMTLIB_BENCHMARK_REPO_URL = "http://smt-lib.loria.fr"
 
