@@ -1,0 +1,68 @@
+name: Build and run long ksmt maxsat tests
+
+on:
+  workflow_dispatch:
+
+env:
+  TEST_DATA_REVISION: 0.0.0
+
+jobs:
+  setup:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Prepare test data (cache)
+        id: test-data-cache
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-maxsat-test-data
+        with:
+          key: maxsat-test-data-${{ env.TEST_DATA_REVISION }}-${{ matrix.os }}
+          path: ksmt-maxsat-test/testData/data/*
+
+      - name: Set up JDK 1.8
+        uses: actions/setup-java@v3
+        with:
+          java-version: 8
+          distribution: 'zulu'
+          cache: gradle
+
+      - name: Prepare test data (download)
+        if: steps.test-data-cache.outputs.cache-hit != 'true'
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: |
+            :ksmt-maxsat-test:downloadPreparedMaxSatBenchmarkTestData
+            --no-daemon
+            -PtestDataRevision=${{ env.TEST_DATA_REVISION }}
+
+      - name: Prepare test data (unpack)
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: |
+            :ksmt-maxsat-test:usePreparedTestData
+            --no-daemon
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+
+      - name: Run maxsat benchmark
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: |
+            :ksmt-maxsat-test:test
+            --no-daemon
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ksmt-maxsat-test-report
+          path: ksmt-maxsat-test/build/reports/tests/test/*
