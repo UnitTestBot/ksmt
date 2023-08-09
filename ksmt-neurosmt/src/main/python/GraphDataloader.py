@@ -16,7 +16,7 @@ from GraphReader import read_graph_by_path
 BATCH_SIZE = 32
 MAX_FORMULA_SIZE = 10000
 MAX_FORMULA_DEPTH = 2500
-NUM_WORKERS = 16
+NUM_WORKERS = 32
 METADATA_PATH = "__meta"
 
 
@@ -75,7 +75,10 @@ def load_data(paths_to_datasets, target):
 def get_dataloader(paths_to_datasets, target, path_to_ordinal_encoder):
     print(f"creating dataloader for {target}")
 
+    print("loading data")
     data = load_data(paths_to_datasets, target)
+
+    print(f"stats: {len(data)} overall; sat fraction is {sum(it[2] for it in data) / len(data)}")
 
     print("loading encoder")
     encoder = joblib.load(path_to_ordinal_encoder)

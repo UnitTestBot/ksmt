@@ -62,4 +62,11 @@ def read_graph_from_file(inf, max_size, max_depth):
 
 def read_graph_by_path(path, max_size, max_depth):
     with open(path, "r") as inf:
-        return read_graph_from_file(inf, max_size, max_depth)
+        try:
+            return read_graph_from_file(inf, max_size, max_depth)
+
+        except Exception as e:
+            print(e)
+            print(f"path: '{path}'")
+
+            raise e

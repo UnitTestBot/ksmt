@@ -12,6 +12,7 @@ import java.io.FileOutputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.isRegularFile
+import kotlin.io.path.name
 import kotlin.time.Duration.Companion.seconds
 
 fun main(args: Array<String>) {
@@ -21,12 +22,23 @@ fun main(args: Array<String>) {
 
     val files = Files.walk(Path.of(inputRoot)).filter { it.isRegularFile() }
 
+    File(outputRoot).mkdirs()
+
     var sat = 0; var unsat = 0; var skipped = 0
 
     val ctx = KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY)
 
     var curIdx = 0
     ProgressBar.wrap(files, "converting ksmt binary files").forEach {
+        val relFile = it.toFile().relativeTo(File(inputRoot))
+        val parentDirFile = if (relFile.parentFile == null) {
+            "."
+        } else {
+            relFile.parentFile.path
+        }
+        val outputDir = File(outputRoot, parentDirFile)
+        outputDir.mkdirs()
+
         val assertList = try {
             deserialize(ctx, FileInputStream(it.toFile()))
         } catch (e: Exception) {
@@ -34,7 +46,11 @@ fun main(args: Array<String>) {
             return@forEach
         }
 
-        val answer = getAnswerForTest(ctx, assertList, timeout)
+        val answer = when {
+            it.name.endsWith("-sat") -> KSolverStatus.SAT
+            it.name.endsWith("-unsat") -> KSolverStatus.UNSAT
+            else -> getAnswerForTest(ctx, assertList, timeout)
+        }
 
         if (answer == KSolverStatus.UNKNOWN) {
             skipped++
@@ -55,7 +71,7 @@ fun main(args: Array<String>) {
                 }
             }
 
-            val outputFile = File("$outputRoot/$curIdx-${answer.toString().lowercase()}")
+            val outputFile = File("$outputDir/$curIdx-${answer.toString().lowercase()}")
             val outputStream = FileOutputStream(outputFile)
             outputStream.write("; $it\n".encodeToByteArray())
 
