@@ -1,8 +1,9 @@
-package io.ksmt.solver.maxsat
+package io.ksmt.maxsat
 
 import io.ksmt.KContext
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.z3.KZ3Solver
+import io.ksmt.maxsat.solvers.KMaxResSolver
 import io.ksmt.utils.getValue
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -12,7 +13,7 @@ class KMaxSATSolverTest {
     @Test
     fun noSoftConstraintsSatTest() = with(KContext()) {
         val z3Solver = KZ3Solver(this)
-        val maxSATSolver = KMaxSATSolver(this, z3Solver)
+        val maxSATSolver = KMaxResSolver(this, z3Solver)
         val a by boolSort
         val b by boolSort
         val c by boolSort
@@ -34,7 +35,7 @@ class KMaxSATSolverTest {
     @Test
     fun oneOfTwoSoftConstraintsSatTest() = with(KContext()) {
         val z3Solver = KZ3Solver(this)
-        val maxSATSolver = KMaxSATSolver(this, z3Solver)
+        val maxSATSolver = KMaxResSolver(this, z3Solver)
         val a by boolSort
         val b by boolSort
 
@@ -57,7 +58,7 @@ class KMaxSATSolverTest {
     @Test
     fun twoOfThreeSoftConstraintsSatTest() = with(KContext()) {
         val z3Solver = KZ3Solver(this)
-        val maxSATSolver = KMaxSATSolver(this, z3Solver)
+        val maxSATSolver = KMaxResSolver(this, z3Solver)
         val a by boolSort
         val b by boolSort
 
@@ -82,7 +83,7 @@ class KMaxSATSolverTest {
     @Test
     fun sameExpressionSoftConstraintsSatTest() = with(KContext()) {
         val z3Solver = KZ3Solver(this)
-        val maxSATSolver = KMaxSATSolver(this, z3Solver)
+        val maxSATSolver = KMaxResSolver(this, z3Solver)
 
         val x by boolSort
         val y by boolSort
@@ -114,7 +115,7 @@ class KMaxSATSolverTest {
     @Test
     fun sameExpressionSoftConstraintsUnsatTest() = with(KContext()) {
         val z3Solver = KZ3Solver(this)
-        val maxSATSolver = KMaxSATSolver(this, z3Solver)
+        val maxSATSolver = KMaxResSolver(this, z3Solver)
 
         val x by boolSort
         val y by boolSort
@@ -142,7 +143,7 @@ class KMaxSATSolverTest {
     @Test
     fun chooseOneConstraintByWeightTest() = with(KContext()) {
         val z3Solver = KZ3Solver(this)
-        val maxSATSolver = KMaxSATSolver(this, z3Solver)
+        val maxSATSolver = KMaxResSolver(this, z3Solver)
         val z by boolSort
         val a by boolSort
         val b by boolSort
@@ -163,7 +164,7 @@ class KMaxSATSolverTest {
     @Test
     fun inequalitiesTest() = with(KContext()) {
         val z3Solver = KZ3Solver(this)
-        val maxSATSolver = KMaxSATSolver(this, z3Solver)
+        val maxSATSolver = KMaxResSolver(this, z3Solver)
 
         val x by intSort
         val y by intSort
@@ -194,7 +195,7 @@ class KMaxSATSolverTest {
     @Test
     fun oneScopePushPopTest() = with(KContext()) {
         val z3Solver = KZ3Solver(this)
-        val maxSATSolver = KMaxSATSolver(this, z3Solver)
+        val maxSATSolver = KMaxResSolver(this, z3Solver)
         val a by boolSort
         val b by boolSort
 
@@ -222,7 +223,7 @@ class KMaxSATSolverTest {
     @Test
     fun threeScopesPushPopTest() = with(KContext()) {
         val z3Solver = KZ3Solver(this)
-        val maxSATSolver = KMaxSATSolver(this, z3Solver)
+        val maxSATSolver = KMaxResSolver(this, z3Solver)
 
         val a by boolSort
         val b by boolSort

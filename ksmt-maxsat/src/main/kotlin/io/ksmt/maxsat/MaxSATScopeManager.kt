@@ -1,4 +1,4 @@
-package io.ksmt.solver.maxsat
+package io.ksmt.maxsat
 
 internal class MaxSATScopeManager {
     private var currentScope = 0u

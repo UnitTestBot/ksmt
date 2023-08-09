@@ -2,10 +2,10 @@ package io.ksmt.maxsat.test
 
 import io.ksmt.KContext
 import io.ksmt.solver.KSolverStatus
-import io.ksmt.solver.maxsat.HardConstraint
-import io.ksmt.solver.maxsat.KMaxSATSolver
-import io.ksmt.solver.maxsat.SoftConstraint
+import io.ksmt.maxsat.HardConstraint
+import io.ksmt.maxsat.SoftConstraint
 import io.ksmt.solver.z3.KZ3Solver
+import io.ksmt.maxsat.solvers.KMaxResSolver
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -15,7 +15,6 @@ import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.relativeTo
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
 class KMaxSATBenchmarkTest {
@@ -28,7 +27,7 @@ class KMaxSATBenchmarkTest {
         val constraints = parseTest(samplePath, this)
 
         val z3Solver = KZ3Solver(this)
-        val maxSATSolver = KMaxSATSolver(this, z3Solver)
+        val maxSATSolver = KMaxResSolver(this, z3Solver)
 
         var sumOfSoftConstraintsWeights = 0u
 

@@ -1,4 +1,4 @@
-package io.ksmt.solver.maxsat
+package io.ksmt.maxsat
 
 import io.ksmt.solver.KSolverStatus
 

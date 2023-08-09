@@ -1,3 +1,3 @@
-package io.ksmt.solver.maxsat
+package io.ksmt.maxsat
 
 internal class MaxSATScope(val scopeAddedSoftConstraints: Int)

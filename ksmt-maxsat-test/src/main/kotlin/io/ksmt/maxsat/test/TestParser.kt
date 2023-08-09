@@ -1,9 +1,9 @@
 package io.ksmt.maxsat.test
 
 import io.ksmt.KContext
-import io.ksmt.solver.maxsat.Constraint
-import io.ksmt.solver.maxsat.HardConstraint
-import io.ksmt.solver.maxsat.SoftConstraint
+import io.ksmt.maxsat.Constraint
+import io.ksmt.maxsat.HardConstraint
+import io.ksmt.maxsat.SoftConstraint
 import io.ksmt.utils.mkConst
 import java.io.File
 import java.nio.file.Path
