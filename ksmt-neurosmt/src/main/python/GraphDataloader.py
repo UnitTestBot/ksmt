@@ -13,7 +13,7 @@ from torch_geometric.loader import DataLoader
 from GraphReader import read_graph_by_path
 
 
-BATCH_SIZE = 32
+BATCH_SIZE = 1024
 MAX_FORMULA_SIZE = 10000
 MAX_FORMULA_DEPTH = 2500
 NUM_WORKERS = 32

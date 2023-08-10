@@ -12,9 +12,6 @@ from GraphDataloader import METADATA_PATH
 from utils import train_val_test_indices, align_sat_unsat_sizes, select_paths_with_suitable_samples_and_transform_to_paths_from_root
 
 
-SHRINK = 10 ** (int(os.environ["SHRINK"]) if "SHRINK" in os.environ else 20)
-
-
 def classic_random_split(path_to_dataset_root, val_qty, test_qty, align_train_mode, align_val_mode, align_test_mode):
     sat_paths, unsat_paths = [], []
     for root, dirs, files in os.walk(path_to_dataset_root, topdown=True):
@@ -30,12 +27,6 @@ def classic_random_split(path_to_dataset_root, val_qty, test_qty, align_train_mo
                 unsat_paths.append(cur_path)
             else:
                 raise Exception(f"strange file path '{cur_path}'")
-
-    if len(sat_paths) > SHRINK:
-        sat_paths = sat_paths[:SHRINK]
-
-    if len(unsat_paths) > SHRINK:
-        unsat_paths = unsat_paths[:SHRINK]
 
     sat_paths = select_paths_with_suitable_samples_and_transform_to_paths_from_root(path_to_dataset_root, sat_paths)
     unsat_paths = select_paths_with_suitable_samples_and_transform_to_paths_from_root(path_to_dataset_root, unsat_paths)
@@ -69,7 +60,8 @@ def grouped_random_split(path_to_dataset_root, val_qty, test_qty, align_train_mo
 
     def calc_group_weights(path_to_dataset_root):
         groups = os.listdir(path_to_dataset_root)
-        groups.remove(METADATA_PATH)
+        if METADATA_PATH in groups:
+            groups.remove(METADATA_PATH)
 
         weights = [return_group_weight(os.path.join(path_to_dataset_root, group)) for group in groups]
 
@@ -90,16 +82,16 @@ def grouped_random_split(path_to_dataset_root, val_qty, test_qty, align_train_mo
         best = None
 
         for _ in trange(attempts):
-            split = np.random.randint(3, size=groups_cnt)
+            cur_split = np.random.randint(3, size=groups_cnt)
 
-            train_size = sum(groups[i][1] for i in range(groups_cnt) if split[i] == 0)
-            val_size = sum(groups[i][1] for i in range(groups_cnt) if split[i] == 1)
-            test_size = sum(groups[i][1] for i in range(groups_cnt) if split[i] == 2)
+            train_size = sum(groups[i][1] for i in range(groups_cnt) if cur_split[i] == 0)
+            val_size = sum(groups[i][1] for i in range(groups_cnt) if cur_split[i] == 1)
+            test_size = sum(groups[i][1] for i in range(groups_cnt) if cur_split[i] == 2)
 
             cur_error = (train_size - need_train) ** 2 + (val_size - need_val) ** 2 + (test_size - need_test) ** 2
 
             if best is None or best[0] > cur_error:
-                best = (cur_error, split)
+                best = (cur_error, cur_split)
 
         return best[1]
 
@@ -122,60 +114,32 @@ def grouped_random_split(path_to_dataset_root, val_qty, test_qty, align_train_mo
     val_data = select_paths_with_suitable_samples_and_transform_to_paths_from_root(path_to_dataset_root, val_data)
     test_data = select_paths_with_suitable_samples_and_transform_to_paths_from_root(path_to_dataset_root, test_data)
 
-    np.random.shuffle(train_data)
-    np.random.shuffle(val_data)
-    np.random.shuffle(test_data)
+    def split_data_to_sat_unsat(data):
+        sat_data = list(filter(lambda path: path.endswith("-sat"), data))
+        unsat_data = list(filter(lambda path: path.endswith("-unsat"), data))
 
-    return train_data, val_data, test_data
+        return sat_data, unsat_data
 
-    """
+    def align_data(data, mode):
+        sat_data, unsat_data = split_data_to_sat_unsat(data)
+        sat_data, unsat_data = align_sat_unsat_sizes(sat_data, unsat_data, mode)
 
-    sat_paths, unsat_paths = [], []
-    for root, dirs, files in os.walk(path_to_dataset_root, topdown=True):
-        if METADATA_PATH in dirs:
-            dirs.remove(METADATA_PATH)
+        return sat_data + unsat_data
 
-        for file_name in files:
-            cur_path = os.path.join(root, file_name)
+    if align_train_mode != "none":
+        train_data = align_data(train_data, align_train_mode)
 
-            if cur_path.endswith("-sat"):
-                sat_paths.append(cur_path)
-            elif cur_path.endswith("-unsat"):
-                unsat_paths.append(cur_path)
-            else:
-                raise Exception(f"strange file path '{cur_path}'")
+    if align_val_mode != "none":
+        val_data = align_data(val_data, align_val_mode)
 
-    if len(sat_paths) > SHRINK:
-        sat_paths = sat_paths[:SHRINK]
-
-    if len(unsat_paths) > SHRINK:
-        unsat_paths = unsat_paths[:SHRINK]
-
-    sat_paths = select_paths_with_suitable_samples_and_transform_to_paths_from_root(path_to_dataset_root, sat_paths)
-    unsat_paths = select_paths_with_suitable_samples_and_transform_to_paths_from_root(path_to_dataset_root, unsat_paths)
-
-    def split_data_to_train_val_test(data):
-        train_ind, val_ind, test_ind = train_val_test_indices(len(data), val_qty=val_qty, test_qty=test_qty)
-
-        return [data[i] for i in train_ind], [data[i] for i in val_ind], [data[i] for i in test_ind]
-
-    sat_train, sat_val, sat_test = split_data_to_train_val_test(sat_paths)
-    unsat_train, unsat_val, unsat_test = split_data_to_train_val_test(unsat_paths)
-
-    sat_train, unsat_train = align_sat_unsat_sizes(sat_train, unsat_train, align_train_mode)
-    sat_val, unsat_val = align_sat_unsat_sizes(sat_val, unsat_val, align_val_mode)
-    sat_test, unsat_test = align_sat_unsat_sizes(sat_test, unsat_test, align_test_mode)
-
-    train_data = sat_train + unsat_train
-    val_data = sat_val + unsat_val
-    test_data = sat_test + unsat_test
+    if align_test_mode != "none":
+        test_data = align_data(test_data, align_test_mode)
 
     np.random.shuffle(train_data)
     np.random.shuffle(val_data)
     np.random.shuffle(test_data)
 
     return train_data, val_data, test_data
-    """
 
 
 def create_split(path_to_dataset_root, val_qty, test_qty, align_train_mode, align_val_mode, align_test_mode, grouped):
