@@ -127,7 +127,7 @@ class KMaxResSolver<T : KSolverConfiguration>(private val ctx: KContext, private
         val unsatCoreSoftConstraints =
             formula.filter { x -> unsatCore.any { x.expression.internEquals(it) } }
 
-        val minWeight = unsatCoreSoftConstraints.minBy { it.weight }.weight
+        val minWeight = unsatCoreSoftConstraints.minOf { it.weight }
 
         val unsatCoreSoftConstraintsSplit = mutableListOf<SoftConstraint>()
 
