@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 import pytorch_lightning as pl
 
-from torchmetrics.classification import BinaryAccuracy, BinaryAUROC
+from torchmetrics.classification import BinaryAccuracy, BinaryAUROC, BinaryConfusionMatrix
 
 from Model import Model
 
@@ -21,6 +21,7 @@ class LightningModel(pl.LightningModule):
 
         self.acc = BinaryAccuracy()
         self.roc_auc = BinaryAUROC()
+        self.confusion_matrix = BinaryConfusionMatrix()
 
     def forward(self, x):
         return self.model(x)
@@ -79,8 +80,28 @@ class LightningModel(pl.LightningModule):
     def validation_step(self, val_batch, batch_idx):
         return self.shared_val_test_step(val_batch, batch_idx, "val")
 
+    def print_confusion_matrix_and_classification_report(self, all_outputs, all_targets):
+        conf_mat = self.confusion_matrix(all_outputs, all_targets).detach().cpu().numpy()
+
+        print("        +-------+-----------+-----------+")
+        print("       ", "|", "unsat", "|", str(conf_mat[0][0]).rjust(9, " "), "|", str(conf_mat[0][1]).rjust(9, " "), "|")
+        print("targets", "|", "  sat", "|", str(conf_mat[1][0]).rjust(9, " "), "|", str(conf_mat[1][1]).rjust(9, " "), "|")
+        print("        +-------+-----------+-----------+")
+        print("       ", "|", "     ", "|", "  unsat  ", "|", "   sat   ", "|")
+        print("        +-------+-----------+-----------+")
+        print("                      preds", "\n", sep="")
+
+        all_outputs = all_outputs.float().cpu().numpy()
+        all_targets = all_targets.float().cpu().numpy()
+
+        all_outputs = all_outputs > 0.5
+        print(
+            classification_report(all_targets, all_outputs, target_names=["unsat", "sat"], digits=3, zero_division=0.0),
+            flush=True
+        )
+
     def on_validation_epoch_end(self):
-        print("\n\n", flush=True)
+        print("\n", flush=True)
 
         all_outputs = torch.flatten(torch.cat(self.val_outputs))
         all_targets = torch.flatten(torch.cat(self.val_targets))
@@ -94,13 +115,7 @@ class LightningModel(pl.LightningModule):
             on_step=False, on_epoch=True
         )
 
-        all_outputs = all_outputs.float().cpu().numpy()
-        all_targets = all_targets.float().cpu().numpy()
-
-        all_outputs = all_outputs > 0.5
-        print(classification_report(all_targets, all_outputs, digits=3, zero_division=0.0))
-
-        print("\n", flush=True)
+        self.print_confusion_matrix_and_classification_report(all_outputs, all_targets)
 
     def test_step(self, test_batch, batch_idx):
         return self.shared_val_test_step(test_batch, batch_idx, "test")
@@ -117,3 +132,6 @@ class LightningModel(pl.LightningModule):
             prog_bar=True, logger=True,
             on_step=False, on_epoch=True
         )
+
+        print("\n")
+        self.print_confusion_matrix_and_classification_report(all_outputs, all_targets)
