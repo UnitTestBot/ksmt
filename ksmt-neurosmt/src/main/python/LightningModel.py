@@ -10,6 +10,12 @@ from torchmetrics.classification import BinaryAccuracy, BinaryAUROC, BinaryConfu
 from Model import Model
 
 
+def unpack_batch(batch):
+    node_labels, edges, depths, root_ptrs = batch.x, batch.edge_index, batch.depth, batch.ptr
+
+    return node_labels, edges, depths, root_ptrs
+
+
 class LightningModel(pl.LightningModule):
     def __init__(self):
         super().__init__()
@@ -23,8 +29,8 @@ class LightningModel(pl.LightningModule):
         self.roc_auc = BinaryAUROC()
         self.confusion_matrix = BinaryConfusionMatrix()
 
-    def forward(self, x):
-        return self.model(x)
+    def forward(self, node_labels, edges, depths, root_ptrs):
+        return self.model(node_labels, edges, depths, root_ptrs)
 
     def configure_optimizers(self):
         params = [p for p in self.model.parameters() if p is not None and p.requires_grad]
@@ -33,7 +39,7 @@ class LightningModel(pl.LightningModule):
         return optimizer
 
     def training_step(self, train_batch, batch_idx):
-        out = self.model(train_batch)
+        out = self.model(*unpack_batch(train_batch))
         loss = F.binary_cross_entropy_with_logits(out, train_batch.y)
 
         out = F.sigmoid(out)
@@ -54,7 +60,7 @@ class LightningModel(pl.LightningModule):
         return loss
 
     def shared_val_test_step(self, batch, batch_idx, metric_name):
-        out = self.model(batch)
+        out = self.model(*unpack_batch(batch))
         loss = F.binary_cross_entropy_with_logits(out, batch.y)
 
         out = F.sigmoid(out)

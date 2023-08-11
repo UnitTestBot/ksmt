@@ -13,8 +13,8 @@ class Model(nn.Module):
         self.encoder = Encoder(hidden_dim=EMBEDDING_DIM)
         self.decoder = Decoder(hidden_dim=EMBEDDING_DIM)
 
-    def forward(self, x):
-        x = self.encoder(x)
+    def forward(self, node_labels, edges, depths, root_ptrs):
+        x = self.encoder(node_labels, edges, depths, root_ptrs)
         x = self.decoder(x)
 
         return x

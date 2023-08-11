@@ -28,6 +28,10 @@ def create_ordinal_encoder(paths_to_datasets, path_to_ordinal_encoder):
     print("dumping ordinal encoder")
     joblib.dump(encoder, path_to_ordinal_encoder)
 
+    with open(path_to_ordinal_encoder + ".cats", "w") as f:
+        for sample in encoder.categories_[0]:
+            f.write(str(sample) + "\n")
+
 
 def get_args():
     parser = ArgumentParser(description="ordinal encoder preparing script")

@@ -16,16 +16,17 @@ class Encoder(nn.Module):
 
         #self.conv = GATConv(64, 64, add_self_loops=False)
 
-    def forward(self, data):
-        x, edge_index, depth = data.x, data.edge_index, data.depth
-        #edge_index = torch.tensor([[0, 0], [1, 2]], dtype=torch.long).to(edge_index.get_device())
+    def forward(self, node_labels, edges, depths, root_ptrs):
+        # x, edge_index, depth = data.x, data.edge_index, data.depth
+        # edge_index = torch.tensor([[0, 0], [1, 2]], dtype=torch.long).to(edge_index.get_device())
 
-        x = self.embedding(x.squeeze())
+        node_features = self.embedding(node_labels.squeeze())
 
-        depth = depth.max()
+        depth = depths.max()
+        node_features += depth * 0.0
         for i in range(depth):
-            x = self.conv(x, edge_index)
+            node_features = self.conv(node_features, edges)
 
-        x = x[data.ptr[1:] - 1]
+        node_features = node_features[root_ptrs[1:] - 1]
 
-        return x
+        return node_features
