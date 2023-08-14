@@ -8,6 +8,8 @@ import io.ksmt.expr.KArrayStoreBase
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.KFunctionAsArray
 import io.ksmt.expr.KUninterpretedSortValue
+import io.ksmt.expr.transformer.KExprVisitResult
+import io.ksmt.expr.transformer.KNonRecursiveVisitor
 import io.ksmt.solver.KModel
 import io.ksmt.solver.model.KFuncInterp
 import io.ksmt.solver.model.KFuncInterpEntryVarsFree
@@ -29,7 +31,7 @@ import io.ksmt.symfpu.operations.pack
 import io.ksmt.utils.asExpr
 import io.ksmt.utils.uncheckedCast
 
-class SymFpuModel(private val kModel: KModel, val ctx: KContext, val transformer: FpToBvTransformer) : KModel {
+class KSymFpuModel(private val kModel: KModel, val ctx: KContext, val transformer: FpToBvTransformer) : KModel {
     override val declarations: Set<KDecl<*>>
         get() = kModel.declarations.mapTo(hashSetOf()) { transformer.findFpDeclByMappedDecl(it) ?: it }
 
@@ -38,6 +40,7 @@ class SymFpuModel(private val kModel: KModel, val ctx: KContext, val transformer
 
     private val evaluatorWithModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = true) }
     private val evaluatorWithoutModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = false) }
+    private val functionAsArrayVisitor = FunctionAsArrayVisitor()
     private val interpretations: MutableMap<KDecl<*>, KFuncInterp<*>> = hashMapOf()
 
     override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KUninterpretedSortValue>? =
@@ -55,7 +58,9 @@ class SymFpuModel(private val kModel: KModel, val ctx: KContext, val transformer
         return interpretations.getOrPut(decl) {
             val mappedDecl = transformer.findMappedDeclForFpDecl(decl)
             if (mappedDecl == null) {
-                return@getOrPut kModel.interpretation<T>(decl) ?: return null
+                val interpretation = kModel.interpretation<T>(decl)
+                interpretation?.let { functionAsArrayVisitor.visitInterpretation(it) }
+                return@getOrPut interpretation ?: return null
             }
 
             val interpretation = kModel.interpretation(mappedDecl) ?: return null
@@ -256,5 +261,31 @@ class SymFpuModel(private val kModel: KModel, val ctx: KContext, val transformer
         }
 
         return KModelImpl(ctx, interpretations.toMap(), uninterpretedSortsUniverses)
+    }
+
+    override fun toString(): String = detach().toString()
+    override fun hashCode(): Int = detach().hashCode()
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is KModel) return false
+        return detach() == other
+    }
+
+    private inner class FunctionAsArrayVisitor : KNonRecursiveVisitor<Unit>(ctx) {
+        override fun <T : KSort> defaultValue(expr: KExpr<T>) = Unit
+        override fun mergeResults(left: Unit, right: Unit) = Unit
+
+        override fun <A : KArraySortBase<R>, R : KSort> visit(expr: KFunctionAsArray<A, R>): KExprVisitResult<Unit> {
+            interpretation(expr.function)
+            return saveVisitResult(expr, Unit)
+        }
+
+        fun <T : KSort> visitInterpretation(interpretation: KFuncInterp<T>) {
+            // Non-array expression cannot contain function-as-array
+            if (interpretation.sort !is KArraySortBase<*>) return
+
+            interpretation.default?.let { applyVisitor(it) }
+            interpretation.entries.forEach { applyVisitor(it.value) }
+        }
     }
 }
