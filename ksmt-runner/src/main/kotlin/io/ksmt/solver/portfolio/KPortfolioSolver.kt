@@ -197,6 +197,7 @@ class KPortfolioSolver(
             val pendingJobs = mutableListOf<Job>()
             activeSolvers.forEach { _, solverOperationState ->
                 pendingJobs += solverOperationState.operationScope.launch {
+                    solverOperationState.solver.terminateSolverIfBusy()
                     solverOperationState.solver.deleteSolverAsync()
                 }
             }
