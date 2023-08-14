@@ -9,7 +9,7 @@ import io.ksmt.solver.KSolverStatus
 import io.ksmt.sort.KBoolSort
 import kotlin.time.Duration
 
-open class SymFpuSolver<Config : KSolverConfiguration>(
+open class KSymFpuSolver<Config : KSolverConfiguration>(
     val solver: KSolver<Config>,
     val ctx: KContext,
     packedBvOptimizationEnabled: Boolean = true
@@ -32,7 +32,7 @@ open class SymFpuSolver<Config : KSolverConfiguration>(
             transformer.applyAndGetExpr(expr).also { mapTransformedToOriginalAssertions[it] = expr }
         }, timeout)
 
-    override fun model(): KModel = SymFpuModel(solver.model(), ctx, transformer)
+    override fun model(): KModel = KSymFpuModel(solver.model(), ctx, transformer)
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = solver.unsatCore().map {
         mapTransformedToOriginalAssertions[it]

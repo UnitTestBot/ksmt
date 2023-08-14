@@ -4,7 +4,7 @@ import io.ksmt.KContext
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.solver.z3.KZ3SolverConfiguration
 import io.ksmt.solver.z3.KZ3SolverUniversalConfiguration
-import io.ksmt.symfpu.solver.SymFpuSolver
+import io.ksmt.symfpu.solver.KSymFpuSolver
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import org.junit.jupiter.params.ParameterizedTest
@@ -13,7 +13,7 @@ import java.nio.file.Path
 
 class SymFpuBenchmarksBasedTest : BenchmarksBasedTest() {
 
-    class SymFpuZ3Solver(ctx: KContext) : SymFpuSolver<KZ3SolverConfiguration>(KZ3Solver(ctx), ctx)
+    class SymFpuZ3Solver(ctx: KContext) : KSymFpuSolver<KZ3SolverConfiguration>(KZ3Solver(ctx), ctx)
 
     @Execution(ExecutionMode.CONCURRENT)
     @ParameterizedTest(name = "{0}")

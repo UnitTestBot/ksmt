@@ -60,12 +60,13 @@ open class KModelImpl(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (javaClass != other?.javaClass) return false
 
-        other as KModelImpl
+        if (other !is KModel) return false
+        val detachedOther = other.detach() as KModelImpl
 
-        if (ctx != other.ctx) return false
-        if (interpretations != other.interpretations) return false
+        if (ctx != detachedOther.ctx) return false
+        if (interpretations != detachedOther.interpretations) return false
+        if (uninterpretedSortsUniverses != detachedOther.uninterpretedSortsUniverses) return false
 
         return true
     }
