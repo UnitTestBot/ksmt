@@ -3,6 +3,7 @@ package io.ksmt.test
 import io.ksmt.KContext
 import io.ksmt.solver.KForkingSolverManager
 import io.ksmt.solver.KSolverStatus
+import io.ksmt.solver.bitwuzla.KBitwuzlaForkingSolverManager
 import io.ksmt.solver.cvc5.KCvc5ForkingSolverManager
 import io.ksmt.solver.yices.KYicesForkingSolverManager
 import io.ksmt.solver.z3.KZ3ForkingSolverManager
@@ -16,6 +17,29 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class KForkingSolverTest {
+    @Nested
+    inner class KForkingSolverTestBitwuzla {
+        @Test
+        fun testCheckSat() = testCheckSat(::mkBitwuzlaForkingSolverManager)
+
+        @Test
+        fun testModel() = testModel(::mkBitwuzlaForkingSolverManager)
+
+        @Test
+        fun testUnsatCore() = testUnsatCore(::mkBitwuzlaForkingSolverManager)
+
+        @Test
+        fun testUninterpretedSort() = testUninterpretedSort(::mkBitwuzlaForkingSolverManager)
+
+        @Test
+        fun testScopedAssertions() = testScopedAssertions(::mkBitwuzlaForkingSolverManager)
+
+        @Test
+        fun testLifeTime() = testLifeTime(::mkBitwuzlaForkingSolverManager)
+
+        private fun mkBitwuzlaForkingSolverManager(ctx: KContext) = KBitwuzlaForkingSolverManager(ctx)
+    }
+
     @Nested
     inner class KForkingSolverTestCvc5 {
         @Test
@@ -376,8 +400,8 @@ class KForkingSolverTest {
             mkForkingSolverManager(ctx).use { man ->
                 with(ctx) {
                     val parent = man.mkForkingSolver()
-                    val x by intSort
-                    val f = x gt 100.expr
+                    val x by bv8Sort
+                    val f = mkBvSignedGreaterExpr(x, mkBv(100, bv8Sort))
 
                     parent.assert(f)
                     parent.check().also { require(it == KSolverStatus.SAT) }

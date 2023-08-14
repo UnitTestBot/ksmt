@@ -1,8 +1,5 @@
 package io.ksmt.solver.bitwuzla
 
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
 import io.ksmt.KContext
 import io.ksmt.decl.KDecl
 import io.ksmt.decl.KFuncDecl
@@ -15,13 +12,10 @@ import io.ksmt.expr.KExistentialQuantifier
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.KFunctionApp
 import io.ksmt.expr.KFunctionAsArray
+import io.ksmt.expr.KUninterpretedSortValue
 import io.ksmt.expr.KUniversalQuantifier
 import io.ksmt.expr.transformer.KNonRecursiveTransformer
 import io.ksmt.solver.KSolverException
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
-import org.ksmt.solver.bitwuzla.bindings.Native
 import io.ksmt.solver.util.KExprLongInternalizerBase.Companion.NOT_INTERNALIZED
 import io.ksmt.sort.KArray2Sort
 import io.ksmt.sort.KArray3Sort
@@ -37,6 +31,13 @@ import io.ksmt.sort.KRealSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KSortVisitor
 import io.ksmt.sort.KUninterpretedSort
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
+import org.ksmt.solver.bitwuzla.bindings.Native
 
 open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
     private var isClosed = false
@@ -433,6 +434,11 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
             return super.transform(expr)
         }
 
+        override fun transform(expr: KUninterpretedSortValue): KExpr<KUninterpretedSort> {
+            registerDeclIfNotIgnored(expr.decl)
+            return super.transform(expr)
+        }
+
         private val quantifiedVarsScopeOwner = arrayListOf<KExpr<*>>()
         private val quantifiedVarsScope = arrayListOf<Set<KDecl<*>>?>()
 
@@ -474,7 +480,7 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
         override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> =
             expr.transformQuantifier(expr.bounds, expr.body)
 
-        override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort>  =
+        override fun transform(expr: KUniversalQuantifier): KExpr<KBoolSort> =
             expr.transformQuantifier(expr.bounds, expr.body)
     }
 

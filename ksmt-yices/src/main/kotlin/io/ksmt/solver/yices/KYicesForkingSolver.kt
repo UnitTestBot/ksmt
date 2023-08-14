@@ -73,7 +73,7 @@ class KYicesForkingSolver(
         get() = trackedAssertions.any { it.isNotEmpty() }
 
     override fun assert(expr: KExpr<KBoolSort>) = yicesTry {
-        ensureAssertionsInitiated()
+        yicesTry { ensureAssertionsInitiated() }
         ctx.ensureContextMatch(expr)
 
         val yicesExpr = with(exprInternalizer) { expr.internalize() }
@@ -82,31 +82,36 @@ class KYicesForkingSolver(
     }
 
     override fun assertAndTrack(expr: KExpr<KBoolSort>) {
-        ensureAssertionsInitiated()
+        yicesTry { ensureAssertionsInitiated() }
         super.assertAndTrack(expr)
     }
 
     override fun push() {
-        ensureAssertionsInitiated()
+        yicesTry { ensureAssertionsInitiated() }
         super.push()
         trackedAssertions.push()
         yicesAssertions.push()
     }
 
     override fun pop(n: UInt) {
-        ensureAssertionsInitiated()
+        yicesTry { ensureAssertionsInitiated() }
         super.pop(n)
         trackedAssertions.pop(n)
         yicesAssertions.pop(n)
     }
 
     override fun check(timeout: Duration): KSolverStatus {
-        ensureAssertionsInitiated()
+        yicesTry { ensureAssertionsInitiated() }
         return super.check(timeout)
     }
 
     override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus {
-        ensureAssertionsInitiated()
+        yicesTry { ensureAssertionsInitiated() }
         return super.checkWithAssumptions(assumptions, timeout)
+    }
+
+    override fun close() {
+        super.close()
+        manager.close(this)
     }
 }

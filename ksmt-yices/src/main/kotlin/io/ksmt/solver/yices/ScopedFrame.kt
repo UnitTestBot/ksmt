@@ -115,7 +115,9 @@ internal class ScopedLinkedFrame<T> private constructor(
     }
 
     override fun pop(n: UInt) {
-        current = current.previous ?: throw IllegalStateException("Can't pop the bottom scope")
+        repeat(n.toInt()) {
+            current = current.previous ?: throw IllegalStateException("Can't pop the bottom scope")
+        }
         recreateTopFrame()
     }
 

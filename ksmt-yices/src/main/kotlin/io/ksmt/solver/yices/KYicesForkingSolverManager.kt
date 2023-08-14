@@ -14,16 +14,15 @@ import io.ksmt.sort.KUninterpretedSort
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
-import java.util.Collections.newSetFromMap
-import java.util.Collections.synchronizedSet
 import java.util.IdentityHashMap
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 class KYicesForkingSolverManager(
     private val ctx: KContext
 ) : KForkingSolverManager<KYicesSolverConfiguration> {
 
-    private val solvers = synchronizedSet(newSetFromMap(IdentityHashMap<KYicesForkingSolver, _>()))
+    private val solvers = ConcurrentHashMap.newKeySet<KYicesForkingSolver>()
     private val sharedCacheReferences = IdentityHashMap<KYicesForkingSolver, AtomicInteger>()
 
     private val expressionsCache = IdentityHashMap<KYicesForkingSolver, ExpressionsCache>()
