@@ -108,7 +108,7 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
 
     private fun internalizeAndConvertYices(assertions: List<KExpr<KBoolSort>>): List<KExpr<KBoolSort>> {
         // Yices doesn't reverse cache internalized expressions (only interpreted values)
-        KYicesContext().use { internContext ->
+        KYicesContext(ctx).use { internContext ->
             val internalizer = KYicesExprInternalizer(internContext)
 
             val yicesAssertions = with(internalizer) {

@@ -4,6 +4,7 @@ import io.ksmt.KContext
 import io.ksmt.solver.KForkingSolverManager
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.cvc5.KCvc5ForkingSolverManager
+import io.ksmt.solver.yices.KYicesForkingSolverManager
 import io.ksmt.solver.z3.KZ3ForkingSolverManager
 import io.ksmt.utils.getValue
 import org.junit.jupiter.api.Nested
@@ -36,6 +37,29 @@ class KForkingSolverTest {
         fun testLifeTime() = testLifeTime(::mkCvc5ForkingSolverManager)
 
         private fun mkCvc5ForkingSolverManager(ctx: KContext) = KCvc5ForkingSolverManager(ctx)
+    }
+
+    @Nested
+    inner class KForkingSolverTestYices {
+        @Test
+        fun testCheckSat() = testCheckSat(::mkYicesForkingSolverManager)
+
+        @Test
+        fun testModel() = testModel(::mkYicesForkingSolverManager)
+
+        @Test
+        fun testUnsatCore() = testUnsatCore(::mkYicesForkingSolverManager)
+
+        @Test
+        fun testUninterpretedSort() = testUninterpretedSort(::mkYicesForkingSolverManager)
+
+        @Test
+        fun testScopedAssertions() = testScopedAssertions(::mkYicesForkingSolverManager)
+
+        @Test
+        fun testLifeTime() = testLifeTime(::mkYicesForkingSolverManager)
+
+        private fun mkYicesForkingSolverManager(ctx: KContext) = KYicesForkingSolverManager(ctx)
     }
 
     @Nested
@@ -336,6 +360,7 @@ class KForkingSolverTest {
                             }
                         }
 
+                        parentSolver.assert(u1 neq pu1v)
                         assertEquals(KSolverStatus.SAT, parentSolver.check())
                         parentSolver.model().uninterpretedSortUniverse(uSort)?.also { universe ->
                             assertContains(universe, pu1v)

@@ -9,10 +9,10 @@ import io.ksmt.decl.KDecl
 import io.ksmt.decl.KFuncDecl
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.KUninterpretedSortValue
+import io.ksmt.solver.KModel
 import io.ksmt.solver.model.KFuncInterp
 import io.ksmt.solver.model.KFuncInterpEntryVarsFree
 import io.ksmt.solver.model.KFuncInterpVarsFree
-import io.ksmt.solver.KModel
 import io.ksmt.solver.model.KModelEvaluator
 import io.ksmt.solver.model.KModelImpl
 import io.ksmt.sort.KArray2Sort
@@ -62,14 +62,14 @@ class KYicesModel(
     private val interpretations = hashMapOf<KDecl<*>, KFuncInterp<*>>()
     private val funcInterpretationsToDo = arrayListOf<Pair<YVal, KFuncDecl<*>>>()
 
-    override fun uninterpretedSortUniverse(
-        sort: KUninterpretedSort
-    ): Set<KUninterpretedSortValue>? = uninterpretedSortUniverse.getOrPut(sort) {
-        val sortDependencies = uninterpretedSortDependencies[sort] ?: return null
+    override fun uninterpretedSortUniverse(sort: KUninterpretedSort) = uninterpretedSortUniverse.getOrPut(sort) {
+        val knownTrackedValues = yicesCtx.uninterpretedSortValues(sort)
+
+        val sortDependencies = uninterpretedSortDependencies[sort] ?: return knownTrackedValues
 
         sortDependencies.forEach { interpretation(it) }
 
-        knownUninterpretedSortValues[sort]?.values?.toHashSet() ?: hashSetOf()
+        knownTrackedValues + (knownUninterpretedSortValues[sort]?.values?.toHashSet() ?: hashSetOf())
     }
 
     private val evaluatorWithModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = true) }
@@ -107,7 +107,7 @@ class KYicesModel(
         }
     }
 
-    private fun <T: KSort> functionInterpretation(yval: YVal, decl: KFuncDecl<T>): KFuncInterp<T> {
+    private fun <T : KSort> functionInterpretation(yval: YVal, decl: KFuncDecl<T>): KFuncInterp<T> {
         val functionChildren = model.expandFunction(yval)
         val default = if (yval.tag != YValTag.UNKNOWN) {
             getValue(functionChildren.value, decl.sort).uncheckedCast<_, KExpr<T>>()
@@ -163,7 +163,7 @@ class KYicesModel(
         declarations.forEach { interpretation(it) }
 
         val uninterpretedSortsUniverses = uninterpretedSorts.associateWith {
-            uninterpretedSortUniverse(it) ?: error("missed sort universe for $it")
+            uninterpretedSortUniverse(it)
         }
 
         return KModelImpl(ctx, interpretations.toMap(), uninterpretedSortsUniverses)

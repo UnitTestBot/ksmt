@@ -960,7 +960,7 @@ open class KYicesExprInternalizer(
             yicesCtx.uninterpretedSortConst(
                 sort.internalizeSort(),
                 yicesCtx.uninterpretedSortValueIndex(valueIdx)
-            )
+            ).also { yicesCtx.registerUninterpretedSortValue(expr) }
         }
     }
 
