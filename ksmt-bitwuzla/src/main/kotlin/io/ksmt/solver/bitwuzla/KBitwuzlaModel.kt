@@ -2,18 +2,15 @@ package io.ksmt.solver.bitwuzla
 
 import io.ksmt.KContext
 import io.ksmt.decl.KDecl
+import io.ksmt.decl.KUninterpretedSortValueDecl
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.KUninterpretedSortValue
+import io.ksmt.solver.KModel
+import io.ksmt.solver.KSolverUnsupportedFeatureException
 import io.ksmt.solver.model.KFuncInterp
 import io.ksmt.solver.model.KFuncInterpEntryVarsFree
 import io.ksmt.solver.model.KFuncInterpEntryVarsFreeOneAry
 import io.ksmt.solver.model.KFuncInterpVarsFree
-import io.ksmt.solver.KModel
-import io.ksmt.solver.KSolverUnsupportedFeatureException
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
-import org.ksmt.solver.bitwuzla.bindings.FunValue
-import org.ksmt.solver.bitwuzla.bindings.Native
 import io.ksmt.solver.model.KFuncInterpWithVars
 import io.ksmt.solver.model.KModelEvaluator
 import io.ksmt.solver.model.KModelImpl
@@ -23,6 +20,10 @@ import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
 import io.ksmt.utils.mkFreshConstDecl
 import io.ksmt.utils.uncheckedCast
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
+import org.ksmt.solver.bitwuzla.bindings.FunValue
+import org.ksmt.solver.bitwuzla.bindings.Native
 
 open class KBitwuzlaModel(
     private val ctx: KContext,
@@ -77,7 +78,12 @@ open class KBitwuzlaModel(
              * to ensure that [uninterpretedSortValueContext] contains
              * all possible values for the given sort.
              * */
-            sortDependency.forEach { interpretation(it) }
+            sortDependency.forEach {
+                if (it is KUninterpretedSortValueDecl) {
+                    val value = ctx.mkUninterpretedSortValue(it.sort, it.valueIdx)
+                    uninterpretedSortValueContext.registerValue(value)
+                } else interpretation(it)
+            }
 
             uninterpretedSortValueContext.currentSortUniverse(sort)
         }
