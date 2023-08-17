@@ -19,6 +19,9 @@ dependencies {
     implementation(project(":ksmt-neurosmt"))
     implementation(project(":ksmt-neurosmt:utils"))
     implementation(project(":ksmt-runner"))
+
+    implementation("com.microsoft.onnxruntime:onnxruntime:1.15.1")
+    implementation("com.microsoft.onnxruntime:onnxruntime_gpu:1.15.1")
 }
 
 tasks.getByName<Test>("test") {

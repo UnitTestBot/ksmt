@@ -1,25 +1,24 @@
+import ai.onnxruntime.OnnxTensor
+import ai.onnxruntime.OrtEnvironment
 import com.jetbrains.rd.framework.SerializationCtx
 import com.jetbrains.rd.framework.Serializers
 import com.jetbrains.rd.framework.UnsafeBuffer
 import io.ksmt.KContext
 import io.ksmt.expr.*
 import io.ksmt.runner.serializer.AstSerializationCtx
-import io.ksmt.solver.KModel
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverStatus
-import io.ksmt.solver.neurosmt.KNeuroSMTSolver
+import io.ksmt.solver.neurosmt.runtime.NeuroSMTModelRunner
 import io.ksmt.solver.z3.*
 import io.ksmt.sort.*
 import io.ksmt.utils.getValue
 import io.ksmt.utils.uncheckedCast
 import java.io.*
-import java.nio.file.Files
-import java.nio.file.Path
+import java.nio.FloatBuffer
+import java.nio.LongBuffer
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.io.path.isRegularFile
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 
 fun serialize(ctx: KContext, expressions: List<KExpr<KBoolSort>>, outputStream: OutputStream) {
     val serializationCtx = AstSerializationCtx().apply { initCtx(ctx) }
@@ -113,6 +112,139 @@ class LogSolver<C : KSolverConfiguration>(
 }
 
 fun main() {
+
+    val ctx = KContext()
+
+    val runner = NeuroSMTModelRunner(ctx, "usvm-enc-2.cats", "embeddings.onnx", "conv.onnx", "decoder.onnx")
+
+    with(ctx) {
+        val a by boolSort
+        val b by intSort
+        val c by intSort
+        val d by realSort
+        val e by bv8Sort
+        val f by fp64Sort
+        val g by mkArraySort(realSort, boolSort)
+        val h by fp64Sort
+
+        val expr = mkBvXorExpr(mkBvShiftLeftExpr(e, mkBv(1.toByte())), mkBvNotExpr(e)) eq
+                mkBvLogicalShiftRightExpr(e, mkBv(1.toByte()))
+
+        println(runner.run(expr))
+    }
+
+    return
+
+    val env = OrtEnvironment.getEnvironment()
+    //val session = env.createSession("kek.onnx")
+    val session = env.createSession("conv.onnx")
+
+    println(session.inputNames)
+    for (info in session.inputInfo) {
+        println(info)
+    }
+
+    println()
+
+    println(session.outputNames)
+    for (info in session.outputInfo) {
+        println(info)
+    }
+
+    println()
+
+    println(session.metadata)
+    println()
+
+    val nodeLabels = listOf(listOf(0L), listOf(1L), listOf(2L), listOf(3L), listOf(4L), listOf(5L), listOf(6L))
+    val nodeFeatures = (1..7).map { (0..31).map { it / 31.toFloat() } }
+    val edges = listOf(
+        //listOf(0L, 1L, 0L),
+        //listOf(1L, 2L, 2L)
+        listOf(0L, 1L, 2L, 3L, 4L, 5L),
+        listOf(1L, 2L, 3L, 4L, 5L, 6L)
+    )
+    val depths = listOf(8L)
+    val rootPtrs = listOf(0L, 7L)
+
+    /*
+    val nodeLabels = listOf(listOf(0L), listOf(1L), listOf(1L), listOf(0L))
+    val edges = listOf(
+        listOf(0L, 0L),
+        listOf(1L, 1L)
+    )
+    val depths = listOf(1L, 1L)
+    val rootPtrs = listOf(0L, 1L, 2L)
+    */
+
+    val nodeLabelsBuffer = LongBuffer.allocate(nodeLabels.sumOf { it.size })
+    nodeLabels.forEach { features ->
+        features.forEach { feature ->
+            nodeLabelsBuffer.put(feature)
+        }
+    }
+    nodeLabelsBuffer.rewind()
+
+    val nodeFeaturesBuffer = FloatBuffer.allocate(nodeFeatures.sumOf { it.size })
+    nodeFeatures.forEach { features ->
+        features.forEach { feature ->
+            nodeFeaturesBuffer.put(feature)
+        }
+    }
+    nodeFeaturesBuffer.rewind()
+
+    val edgesBuffer = LongBuffer.allocate(edges.sumOf { it.size })
+    edges.forEach { row ->
+        row.forEach { node ->
+            edgesBuffer.put(node)
+        }
+    }
+    edgesBuffer.rewind()
+
+    val depthsBuffer = LongBuffer.allocate(depths.size)
+    depths.forEach { d ->
+        depthsBuffer.put(d)
+    }
+    depthsBuffer.rewind()
+
+    val rootPtrsBuffer = LongBuffer.allocate(rootPtrs.size)
+    rootPtrs.forEach { r ->
+        rootPtrsBuffer.put(r)
+    }
+    rootPtrsBuffer.rewind()
+
+    val nodeLabelsData = OnnxTensor.createTensor(env, nodeLabelsBuffer, listOf(nodeLabels.size.toLong(), nodeLabels[0].size.toLong()).toLongArray())
+    val nodeFeaturesData = OnnxTensor.createTensor(env, nodeFeaturesBuffer, listOf(nodeFeatures.size.toLong(), nodeFeatures[0].size.toLong()).toLongArray())
+    val edgesData = OnnxTensor.createTensor(env, edgesBuffer, listOf(edges.size.toLong(), edges[0].size.toLong()).toLongArray())
+    val depthsData = OnnxTensor.createTensor(env, depthsBuffer, listOf(depths.size.toLong()).toLongArray())
+    val rootPtrsData = OnnxTensor.createTensor(env, rootPtrsBuffer, listOf(rootPtrs.size.toLong()).toLongArray())
+
+    /*
+    val result = session.run(mapOf("node_labels" to nodeLabelsData, "edges" to edgesData, "depths" to depthsData, "root_ptrs" to rootPtrsData))
+    val output = (result.get("output").get().value as Array<*>).map {
+        (it as FloatArray).toList()
+    }
+    */
+
+    var curFeatures = nodeFeaturesData
+    repeat(10) {
+        val result = session.run(mapOf("node_features" to curFeatures, "edges" to edgesData))
+        curFeatures = result.get(0) as OnnxTensor
+        println(curFeatures.info.shape.toList())
+        curFeatures.info.shape
+        println(curFeatures.floatBuffer.array().toList().subList(224 - 32, 224))
+    }
+
+    /*
+    val output = (result.get("out").get().value as Array<*>).map {
+        (it as FloatArray).toList()
+    }
+
+    println(output)
+    */
+
+
+    /*
     val ctx = KContext()
 
     with(ctx) {
@@ -128,7 +260,7 @@ fun main() {
             }
         }
         println("$ok / $fail")
-    }
+    }*/
 
     /*
     with(ctx) {

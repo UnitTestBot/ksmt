@@ -1,5 +1,5 @@
 plugins {
-    id("io.ksmt.ksmt-base")
+    kotlin("jvm") // id("io.ksmt.ksmt-base") -- need to be returned in future
 }
 
 repositories {
@@ -9,4 +9,6 @@ repositories {
 dependencies {
     implementation(project(":ksmt-core"))
     // implementation(project(":ksmt-z3"))
+
+    implementation("com.microsoft.onnxruntime:onnxruntime:1.15.1")
 }
