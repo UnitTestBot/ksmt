@@ -2,6 +2,7 @@ import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import com.jetbrains.rd.framework.SerializationCtx
 import com.jetbrains.rd.framework.Serializers
+import com.jetbrains.rd.framework.SocketWire.Companion.timeout
 import com.jetbrains.rd.framework.UnsafeBuffer
 import io.ksmt.KContext
 import io.ksmt.expr.*
@@ -9,16 +10,24 @@ import io.ksmt.runner.serializer.AstSerializationCtx
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverStatus
+import io.ksmt.solver.neurosmt.getAnswerForTest
 import io.ksmt.solver.neurosmt.runtime.NeuroSMTModelRunner
 import io.ksmt.solver.z3.*
 import io.ksmt.sort.*
 import io.ksmt.utils.getValue
 import io.ksmt.utils.uncheckedCast
+import me.tongfei.progressbar.ProgressBar
 import java.io.*
 import java.nio.FloatBuffer
 import java.nio.LongBuffer
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.io.path.isRegularFile
+import kotlin.io.path.name
+import kotlin.io.path.pathString
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 fun serialize(ctx: KContext, expressions: List<KExpr<KBoolSort>>, outputStream: OutputStream) {
     val serializationCtx = AstSerializationCtx().apply { initCtx(ctx) }
@@ -111,12 +120,106 @@ class LogSolver<C : KSolverConfiguration>(
     }
 }
 
+const val THRESHOLD = 0.5
+
 fun main() {
 
-    val ctx = KContext()
+    val ctx = KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY)
 
-    val runner = NeuroSMTModelRunner(ctx, "usvm-enc-2.cats", "embeddings.onnx", "conv.onnx", "decoder.onnx")
+    val pathToDataset = "formulas"
+    val files = Files.walk(Path.of(pathToDataset)).filter { it.isRegularFile() }.toList()
 
+    val runner = NeuroSMTModelRunner(
+        ctx,
+        ordinalsPath = "usvm-enc-2.cats",
+        embeddingPath = "embeddings.onnx",
+        convPath = "conv.onnx",
+        decoderPath = "decoder.onnx"
+    )
+
+    var sat = 0; var unsat = 0; var skipped = 0
+    var ok = 0; var wa = 0
+
+    val confusionMatrix = mutableMapOf<Pair<KSolverStatus, KSolverStatus>, Int>()
+
+    files.forEachIndexed sample@{ ind, it ->
+        if (ind % 100 == 0) {
+            println("#$ind: $ok / $wa [$sat / $unsat / $skipped]")
+            println(confusionMatrix)
+            println()
+        }
+
+        val sampleFile = File(it.pathString)
+
+        val assertList = try {
+            deserialize(ctx, FileInputStream(sampleFile))
+        } catch (e: Exception) {
+            skipped++
+            return@sample
+        }
+
+        val answer = when {
+            it.name.endsWith("-sat") -> KSolverStatus.SAT
+            it.name.endsWith("-unsat") -> KSolverStatus.UNSAT
+            else -> KSolverStatus.UNKNOWN
+        }
+
+        if (answer == KSolverStatus.UNKNOWN) {
+            skipped++
+            return@sample
+        }
+
+        val prob = with(ctx) {
+            val formula = when (assertList.size) {
+                0 -> {
+                    skipped++
+                    return@sample
+                }
+                1 -> {
+                    assertList[0]
+                }
+                else -> {
+                    mkAnd(assertList)
+                }
+            }
+
+            runner.run(formula)
+        }
+
+        val output = if (prob < THRESHOLD) {
+            KSolverStatus.UNSAT
+        } else {
+            KSolverStatus.SAT
+        }
+
+        when (answer) {
+            KSolverStatus.SAT -> sat++
+            KSolverStatus.UNSAT -> unsat++
+            else -> { /* can't happen */ }
+        }
+
+        if (output == answer) {
+            ok++
+        } else {
+            wa++
+        }
+
+        confusionMatrix.compute(answer to output) { _, v ->
+            if (v == null) {
+                1
+            } else {
+                v + 1
+            }
+        }
+    }
+
+    println()
+    println("sat: $sat; unsat: $unsat; skipped: $skipped")
+    println("ok: $ok; wa: $wa")
+
+    return
+
+    /*
     with(ctx) {
         val a by boolSort
         val b by intSort
@@ -130,10 +233,13 @@ fun main() {
         val expr = mkBvXorExpr(mkBvShiftLeftExpr(e, mkBv(1.toByte())), mkBvNotExpr(e)) eq
                 mkBvLogicalShiftRightExpr(e, mkBv(1.toByte()))
 
+        val runner = NeuroSMTModelRunner(ctx, "usvm-enc-2.cats", "embeddings.onnx", "conv.onnx", "decoder.onnx")
         println(runner.run(expr))
     }
 
     return
+
+     */
 
     val env = OrtEnvironment.getEnvironment()
     //val session = env.createSession("kek.onnx")
@@ -156,16 +262,18 @@ fun main() {
     println(session.metadata)
     println()
 
-    val nodeLabels = listOf(listOf(0L), listOf(1L), listOf(2L), listOf(3L), listOf(4L), listOf(5L), listOf(6L))
-    val nodeFeatures = (1..7).map { (0..31).map { it / 31.toFloat() } }
+    //val nodeLabels = listOf(listOf(0L), listOf(1L), listOf(2L), listOf(3L), listOf(4L), listOf(5L), listOf(6L))
+    val nodeLabels = listOf(listOf(0L), listOf(1L), listOf(2L))
+    //val nodeFeatures = (1..7).map { (0..31).map { it / 31.toFloat() } }
+    val nodeFeatures = (1..3).map { (0..31).map { it / 31.toFloat() } }
     val edges = listOf(
-        //listOf(0L, 1L, 0L),
-        //listOf(1L, 2L, 2L)
-        listOf(0L, 1L, 2L, 3L, 4L, 5L),
-        listOf(1L, 2L, 3L, 4L, 5L, 6L)
+        listOf(0L, 1L),
+        listOf(2L, 2L)
+        //listOf(0L, 1L, 2L, 3L, 4L, 5L),
+        //listOf(1L, 2L, 3L, 4L, 5L, 6L)
     )
-    val depths = listOf(8L)
-    val rootPtrs = listOf(0L, 7L)
+    val depths = listOf(1L)
+    val rootPtrs = listOf(0L, 3L)
 
     /*
     val nodeLabels = listOf(listOf(0L), listOf(1L), listOf(1L), listOf(0L))
@@ -232,7 +340,7 @@ fun main() {
         curFeatures = result.get(0) as OnnxTensor
         println(curFeatures.info.shape.toList())
         curFeatures.info.shape
-        println(curFeatures.floatBuffer.array().toList().subList(224 - 32, 224))
+        println(curFeatures.floatBuffer.array().toList().subList(64, 96))
     }
 
     /*

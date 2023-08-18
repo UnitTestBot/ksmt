@@ -34,7 +34,7 @@ class FormulaGraphExtractor(
     }
 
     fun <T : KSort> writeSymbolicVariable(symbol: KConst<T>) {
-        when (symbol.sort) {
+        when (symbol.decl.sort) {
             is KBoolSort -> writer.write("SYMBOLIC; Bool\n")
             is KBvSort -> writer.write("SYMBOLIC; BitVec\n")
             is KFpSort -> writer.write("SYMBOLIC; FP\n")

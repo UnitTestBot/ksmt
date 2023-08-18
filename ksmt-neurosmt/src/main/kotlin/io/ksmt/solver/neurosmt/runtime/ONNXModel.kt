@@ -23,7 +23,7 @@ class ONNXModel(env: OrtEnvironment, modelPath: String) : AutoCloseable {
 }
 
 class NeuroSMTModelRunner(
-    ctx: KContext,
+    val ctx: KContext,
     ordinalsPath: String, embeddingPath: String, convPath: String, decoderPath: String
 ) {
     val env = OrtEnvironment.getEnvironment()
@@ -31,11 +31,11 @@ class NeuroSMTModelRunner(
     val ordinalEncoder = OrdinalEncoder(ordinalsPath)
     val embeddingLayer = ONNXModel(env, embeddingPath)
     val convLayer = ONNXModel(env, convPath)
-    val encoder = ExprEncoder(ctx, env, ordinalEncoder, embeddingLayer, convLayer)
 
     val decoder = ONNXModel(env, decoderPath)
 
     fun run(expr: KExpr<*>): Float {
+        val encoder = ExprEncoder(ctx, env, ordinalEncoder, embeddingLayer, convLayer)
         val exprFeatures = encoder.encodeExpr(expr)
         val result = decoder.forward(mapOf("expr_features" to exprFeatures))
         val logit = result.floatBuffer[0]

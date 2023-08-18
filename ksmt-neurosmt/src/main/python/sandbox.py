@@ -19,6 +19,31 @@ from Model import EMBEDDING_DIM
 if __name__ == "__main__":
 
     pl_model = LightningModel().load_from_checkpoint(sys.argv[1], map_location=torch.device("cpu"))
+    pl_model.eval()
+    pl_model.model.eval()
+
+    print(pl_model.model.encoder.conv.lin_l.weight)
+    print(pl_model.model.encoder.conv.lin_l.bias)
+
+    node_features = torch.tensor([
+        [i / 32 for i in range(32)],
+        [-i / 32 for i in range(32)],
+        [i / 32 * (-1) ** i for i in range(32)]
+    ], dtype=torch.float)
+    edges = torch.tensor([
+        [0, 1],
+        [2, 2]
+    ], dtype=torch.int64)
+
+    conv = pl_model.model.encoder.conv
+
+    print("#0")
+    print(node_features)
+
+    for i in range(5):
+        print(f"#{i}")
+        node_features = conv(node_features, edges)
+        print(node_features)
 
     """
     trainer = Trainer(
@@ -39,6 +64,8 @@ if __name__ == "__main__":
         default_root_dir=".."
     )
     """
+
+    #sys.exit(0)
 
     MAX_SIZE = 3
 

@@ -1,20 +1,22 @@
 import torch
 import torch.nn as nn
 
-from torch_geometric.nn import GCNConv, GatedGraphConv, GATConv
+from torch_geometric.nn import GCNConv, GATConv, TransformerConv, SAGEConv
 
 
-EMBEDDING_DIM = 2000
+EMBEDDINGS_CNT = 2000
 
 
 class Encoder(nn.Module):
     def __init__(self, hidden_dim):
         super().__init__()
 
-        self.embedding = nn.Embedding(EMBEDDING_DIM, hidden_dim)
-        self.conv = GCNConv(hidden_dim, hidden_dim, add_self_loops=False)
+        self.embedding = nn.Embedding(EMBEDDINGS_CNT, hidden_dim)
+        self.conv = SAGEConv(hidden_dim, hidden_dim, "mean", root_weight=False, project=True)
 
-        #self.conv = GATConv(64, 64, add_self_loops=False)
+        # self.conv = GATConv(hidden_dim, hidden_dim, add_self_loops=False)
+        # self.conv = TransformerConv(hidden_dim, hidden_dim, root_weight=False)
+        # self.conv = GCNConv(hidden_dim, hidden_dim, add_self_loops=False)
 
     def forward(self, node_labels, edges, depths, root_ptrs):
         # x, edge_index, depth = data.x, data.edge_index, data.depth
@@ -23,7 +25,6 @@ class Encoder(nn.Module):
         node_features = self.embedding(node_labels.squeeze())
 
         depth = depths.max()
-        node_features += depth * 0.0
         for i in range(depth):
             node_features = self.conv(node_features, edges)
 
