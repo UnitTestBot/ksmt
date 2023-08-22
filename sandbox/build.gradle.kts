@@ -21,7 +21,7 @@ dependencies {
     implementation(project(":ksmt-runner"))
 
     implementation("com.microsoft.onnxruntime:onnxruntime:1.15.1")
-    implementation("com.microsoft.onnxruntime:onnxruntime_gpu:1.15.1")
+    // implementation("com.microsoft.onnxruntime:onnxruntime_gpu:1.15.1")
 
     implementation("me.tongfei:progressbar:0.9.4")
 }

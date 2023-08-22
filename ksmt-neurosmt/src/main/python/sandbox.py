@@ -20,30 +20,6 @@ if __name__ == "__main__":
 
     pl_model = LightningModel().load_from_checkpoint(sys.argv[1], map_location=torch.device("cpu"))
     pl_model.eval()
-    pl_model.model.eval()
-
-    print(pl_model.model.encoder.conv.lin_l.weight)
-    print(pl_model.model.encoder.conv.lin_l.bias)
-
-    node_features = torch.tensor([
-        [i / 32 for i in range(32)],
-        [-i / 32 for i in range(32)],
-        [i / 32 * (-1) ** i for i in range(32)]
-    ], dtype=torch.float)
-    edges = torch.tensor([
-        [0, 1],
-        [2, 2]
-    ], dtype=torch.int64)
-
-    conv = pl_model.model.encoder.conv
-
-    print("#0")
-    print(node_features)
-
-    for i in range(5):
-        print(f"#{i}")
-        node_features = conv(node_features, edges)
-        print(node_features)
 
     """
     trainer = Trainer(
@@ -65,8 +41,6 @@ if __name__ == "__main__":
     )
     """
 
-    #sys.exit(0)
-
     MAX_SIZE = 3
 
     node_labels = torch.tensor([[i] for i in range(MAX_SIZE)], dtype=torch.int32)
@@ -76,8 +50,6 @@ if __name__ == "__main__":
     ], dtype=torch.int64)
     depths = torch.tensor([MAX_SIZE - 1], dtype=torch.int64)
     root_ptrs = torch.tensor([0, MAX_SIZE], dtype=torch.int64)
-
-    print(node_labels.shape, edges.shape, depths.shape, root_ptrs.shape)
 
     torch.onnx.export(
         pl_model.model.encoder.embedding,
@@ -131,58 +103,4 @@ if __name__ == "__main__":
         },
         # verbose=True
     )
-    """
-
-    """
-    torch.onnx.export(torch_model,
-                      x,
-                      '../Game_env/gnn_model.onnx',
-                      opset_version=15,
-                      export_params=True,
-                      input_names = ['x', 'edge_index'],   # the model's input names
-                      output_names = ['output'],
-                      dynamic_axes={'x' : {0 : 'nodes_number'},    # variable length axes
-                                    'edge_index' : {1 : 'egdes_number'},
-                                    },
-                      )
-    """
-
-    """
-    x = torch.randn(*shape, requires_grad=True).to(device)
-    torch_model = actor_model.eval()
-    torch_out = torch_model(x)
-    torch.onnx.export(torch_model,
-                      x,
-                      '../Game_env/actor_model.onnx',
-                      opset_version=15,
-                      export_params=True,
-                      input_names = ['input'],   # the model's input names
-                      output_names = ['output'],
-                      dynamic_axes={'input' : {0 : 'batch_size',
-                                               1 : 'n_actions',
-                                               },    # variable length axes
-                                    'output' : {0 : 'batch_size',
-                                                1 : 'n_actions',
-                                                },
-                                    },
-                      )
-    algo_name = 'NN'
-
-    if actor_model is not None and gnn_model is not None and self.use_gnn:
-        x_shape = [1, self.gnn_in_nfeatures]
-        edge_index_shape = [2, 1]
-        x = (torch.randn(*x_shape, requires_grad=True).to(device), torch.randint(0, 1, edge_index_shape).to(device))
-        torch_model = gnn_model.eval()
-        torch_out = torch_model(*x)
-        torch.onnx.export(torch_model,
-                          x,
-                          '../Game_env/gnn_model.onnx',
-                          opset_version=15,
-                          export_params=True,
-                          input_names = ['x', 'edge_index'],   # the model's input names
-                          output_names = ['output'],
-                          dynamic_axes={'x' : {0 : 'nodes_number'},    # variable length axes
-                                        'edge_index' : {1 : 'egdes_number'},
-                                        },
-                          )
     """

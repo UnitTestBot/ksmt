@@ -24,11 +24,11 @@ class GraphDataset(Dataset):
     def __init__(self, graph_data):
 
         self.graphs = [Graph(
-            x=torch.tensor(nodes),
-            edge_index=torch.tensor(edges).t(),
+            x=torch.tensor(nodes, dtype=torch.int32),
+            edge_index=torch.tensor(edges, dtype=torch.int64).t(),
             y=torch.tensor([[label]], dtype=torch.float),
-            depth=depth
-        ) for nodes, edges, label, depth in graph_data]
+            depth=torch.tensor(depths, dtype=torch.int32)
+        ) for nodes, edges, label, depths in graph_data]
 
     def __len__(self):
         return len(self.graphs)
@@ -48,18 +48,17 @@ def load_data(paths_to_datasets, target):
             for path_to_sample in tqdm(list(f.readlines())):
                 path_to_sample = os.path.join(path_to_dataset, path_to_sample.strip())
 
-                operators, edges, depth = read_graph_by_path(
+                operators, edges, depths = read_graph_by_path(
                     path_to_sample, max_size=MAX_FORMULA_SIZE, max_depth=MAX_FORMULA_DEPTH
                 )
 
-                if depth is None:
+                if operators is None:
                     continue
 
                 if len(edges) == 0:
                     print(f"w: ignoring formula without edges; file '{path_to_sample}'")
                     continue
 
-                label = None
                 if path_to_sample.endswith("-sat"):
                     label = 1
                 elif path_to_sample.endswith("-unsat"):
@@ -67,7 +66,7 @@ def load_data(paths_to_datasets, target):
                 else:
                     raise Exception(f"strange file path '{path_to_sample}'")
 
-                data.append((operators, edges, label, depth))
+                data.append((operators, edges, label, depths))
 
     return data
 
@@ -84,9 +83,9 @@ def get_dataloader(paths_to_datasets, target, path_to_ordinal_encoder):
     encoder = joblib.load(path_to_ordinal_encoder)
 
     def transform(data_for_one_sample):
-        nodes, edges, label, depth = data_for_one_sample
+        nodes, edges, label, depths = data_for_one_sample
         nodes = encoder.transform(np.array(nodes).reshape(-1, 1))
-        return nodes, edges, label, depth
+        return nodes, edges, label, depths
 
     print("transforming")
     data = list(map(transform, data))

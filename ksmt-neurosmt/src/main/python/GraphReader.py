@@ -57,7 +57,7 @@ def read_graph_from_file(inf, max_size, max_depth):
 
         v += 1
 
-    return operators, edges, max(depth)
+    return operators, edges, depth
 
 
 def read_graph_by_path(path, max_size, max_depth):

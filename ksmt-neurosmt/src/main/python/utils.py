@@ -20,9 +20,9 @@ def train_val_test_indices(cnt, val_qty=0.15, test_qty=0.1):
 def select_paths_with_suitable_samples_and_transform_to_paths_from_root(path_to_dataset_root, paths):
     correct_paths = []
     for path in tqdm(paths):
-        operators, edges, depth = read_graph_by_path(path, max_size=MAX_FORMULA_SIZE, max_depth=MAX_FORMULA_DEPTH)
+        operators, edges, _ = read_graph_by_path(path, max_size=MAX_FORMULA_SIZE, max_depth=MAX_FORMULA_DEPTH)
 
-        if depth is None:
+        if operators is None:
             continue
 
         if len(edges) == 0:
