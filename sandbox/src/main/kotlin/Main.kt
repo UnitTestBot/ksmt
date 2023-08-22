@@ -124,7 +124,10 @@ const val THRESHOLD = 0.5
 
 fun main() {
 
-    val ctx = KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY)
+    val ctx = KContext(
+        astManagementMode = KContext.AstManagementMode.NO_GC,
+        simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY
+    )
 
     val pathToDataset = "formulas"
     val files = Files.walk(Path.of(pathToDataset)).filter { it.isRegularFile() }.toList()

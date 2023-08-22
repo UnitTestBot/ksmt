@@ -31,14 +31,13 @@ class ExprEncoder(
     }
 
     override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> {
-        when (expr) {
+        val state = when (expr) {
             is KConst<*> -> calcSymbolicVariableState(expr)
             is KInterpretedValue<*> -> calcValueState(expr)
             else -> calcAppState(expr)
         }
 
-        //print("calculated: ")
-        //println(exprToState[expr]?.floatBuffer?.array()?.toList())
+        exprToState[expr] = state
 
         return expr
     }
@@ -69,7 +68,7 @@ class ExprEncoder(
         return OnnxTensor.createTensor(env, buffer, longArrayOf(2, childrenCnt.toLong()))
     }
 
-    private fun <T : KSort, A : KSort> calcAppState(expr: KApp<T, A>) {
+    private fun <T : KSort, A : KSort> calcAppState(expr: KApp<T, A>): OnnxTensor {
         val childrenStates = expr.args.map { exprToState[it] ?: error("expression state wasn't calculated yet") }
         val childrenCnt = childrenStates.size
 
@@ -79,44 +78,18 @@ class ExprEncoder(
         val buffer = FloatBuffer.allocate((1 + childrenCnt) * embeddingSize.toInt())
         buffer.put(nodeEmbedding.floatBuffer)
         childrenStates.forEach {
-            // println(it.floatBuffer.array().toList())
             buffer.put(it.floatBuffer)
         }
         buffer.rewind()
+
         val nodeFeatures = OnnxTensor.createTensor(env, buffer, longArrayOf(1L + childrenCnt, embeddingSize))
-
-        /*
-        println("+++++")
-        nodeFeatures.floatBuffer.array().toList().chunked(embeddingSize.toInt()).forEach {
-            println(it)
-        }
-
-         */
-
         val edges = createEdgeTensor(childrenStates.size)
-
-        //val edges = createEdgeTensor(0)
-        //println("edges: ${edges.longBuffer.array().toList()}")
-
         val result = convLayer.forward(mapOf("node_features" to nodeFeatures, "edges" to edges))
 
-        //print("fucking result: ")
-        //println(result.floatBuffer.array().toList())
-
-        /*
-        println("*****")
-        result.floatBuffer.array().toList().chunked(embeddingSize.toInt()).forEach {
-            println(it)
-        }
-        println("-----\n")
-         */
-
-        val newNodeFeatures = OnnxTensor.createTensor(env, result.floatBuffer.slice(0, embeddingSize.toInt()), longArrayOf(1L, embeddingSize))
-        // println(newNodeFeatures.floatBuffer.array().toList())
-        exprToState[expr] = newNodeFeatures
+        return OnnxTensor.createTensor(env, result.floatBuffer.slice(0, embeddingSize.toInt()), longArrayOf(1L, embeddingSize))
     }
 
-    private fun <T : KSort> calcSymbolicVariableState(symbol: KConst<T>) {
+    private fun <T : KSort> calcSymbolicVariableState(symbol: KConst<T>): OnnxTensor {
         val key = when (symbol.decl.sort) {
             is KBoolSort -> "SYMBOLIC;Bool"
             is KBvSort -> "SYMBOLIC;BitVec"
@@ -127,10 +100,10 @@ class ExprEncoder(
             else -> error("unknown symbolic sort: ${symbol.decl.sort::class.simpleName}")
         }
 
-        exprToState[symbol] = getNodeEmbedding(key)
+        return getNodeEmbedding(key)
     }
 
-    private fun <T : KSort> calcValueState(value: KInterpretedValue<T>) {
+    private fun <T : KSort> calcValueState(value: KInterpretedValue<T>): OnnxTensor {
         val key = when (value.decl.sort) {
             is KBoolSort -> "VALUE;Bool"
             is KBvSort -> "VALUE;BitVec"
@@ -141,6 +114,6 @@ class ExprEncoder(
             else -> error("unknown value sort: ${value.decl.sort::class.simpleName}")
         }
 
-        exprToState[value] = getNodeEmbedding(key)
+        return getNodeEmbedding(key)
     }
 }
