@@ -90,27 +90,31 @@ class ExprEncoder(
     }
 
     private fun <T : KSort> calcSymbolicVariableState(symbol: KConst<T>): OnnxTensor {
-        val key = when (symbol.decl.sort) {
-            is KBoolSort -> "SYMBOLIC;Bool"
-            is KBvSort -> "SYMBOLIC;BitVec"
-            is KFpSort -> "SYMBOLIC;FP"
-            is KFpRoundingModeSort -> "SYMBOLIC;FP_RM"
-            is KArraySortBase<*> -> "SYMBOLIC;Array"
-            is KUninterpretedSort -> "SYMBOLIC;Unint"
-            else -> error("unknown symbolic sort: ${symbol.decl.sort::class.simpleName}")
+        val sort = symbol.decl.sort
+
+        val key = "SYMBOLIC;" + when (sort) {
+            is KBoolSort -> "Bool"
+            is KBvSort -> "BitVec"
+            is KFpSort -> "FP"
+            is KFpRoundingModeSort -> "FP_RM"
+            is KArraySortBase<*> -> "Array"
+            is KUninterpretedSort -> sort.name
+            else -> error("unknown symbolic sort: ${sort::class.simpleName}")
         }
 
         return getNodeEmbedding(key)
     }
 
     private fun <T : KSort> calcValueState(value: KInterpretedValue<T>): OnnxTensor {
-        val key = when (value.decl.sort) {
-            is KBoolSort -> "VALUE;Bool"
-            is KBvSort -> "VALUE;BitVec"
-            is KFpSort -> "VALUE;FP"
-            is KFpRoundingModeSort -> "VALUE;FP_RM"
-            is KArraySortBase<*> -> "VALUE;Array"
-            is KUninterpretedSort -> "VALUE;Unint"
+        val sort = value.decl.sort
+
+        val key = "VALUE;" + when (sort) {
+            is KBoolSort -> "Bool"
+            is KBvSort -> "BitVec"
+            is KFpSort -> "FP"
+            is KFpRoundingModeSort -> "FP_RM"
+            is KArraySortBase<*> -> "Array"
+            is KUninterpretedSort -> sort.name
             else -> error("unknown value sort: ${value.decl.sort::class.simpleName}")
         }
 

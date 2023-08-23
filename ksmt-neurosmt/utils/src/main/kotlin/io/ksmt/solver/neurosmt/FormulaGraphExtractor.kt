@@ -30,39 +30,47 @@ class FormulaGraphExtractor(
             else -> writeApp(expr)
         }
 
+        writer.newLine()
+
         return expr
     }
 
-    fun <T : KSort> writeSymbolicVariable(symbol: KConst<T>) {
-        when (symbol.decl.sort) {
-            is KBoolSort -> writer.write("SYMBOLIC; Bool\n")
-            is KBvSort -> writer.write("SYMBOLIC; BitVec\n")
-            is KFpSort -> writer.write("SYMBOLIC; FP\n")
-            is KFpRoundingModeSort -> writer.write("SYMBOLIC; FP_RM\n")
-            is KArraySortBase<*> -> writer.write("SYMBOLIC; Array\n")
-            is KUninterpretedSort -> writer.write("SYMBOLIC; Unint\n")
-            else -> error("unknown symbolic sort: ${symbol.sort::class.simpleName}")
+    private fun <T : KSort> writeSymbolicVariable(symbol: KConst<T>) {
+        writer.write("SYMBOLIC;")
+
+        val sort = symbol.decl.sort
+        when (sort) {
+            is KBoolSort -> writer.write("Bool")
+            is KBvSort -> writer.write("BitVec")
+            is KFpSort -> writer.write("FP")
+            is KFpRoundingModeSort -> writer.write("FP_RM")
+            is KArraySortBase<*> -> writer.write("Array")
+            is KUninterpretedSort -> writer.write(sort.name)
+            else -> error("unknown symbolic sort: ${sort::class.simpleName}")
         }
     }
 
-    fun <T : KSort> writeValue(value: KInterpretedValue<T>) {
-        when (value.decl.sort) {
-            is KBoolSort -> writer.write("VALUE; Bool\n")
-            is KBvSort -> writer.write("VALUE; BitVec\n")
-            is KFpSort -> writer.write("VALUE; FP\n")
-            is KFpRoundingModeSort -> writer.write("VALUE; FP_RM\n")
-            is KArraySortBase<*> -> writer.write("VALUE; Array\n")
-            is KUninterpretedSort -> writer.write("VALUE; Unint\n")
-            else -> error("unknown value sort: ${value.decl.sort::class.simpleName}")
+    private fun <T : KSort> writeValue(value: KInterpretedValue<T>) {
+        writer.write("VALUE;")
+
+        val sort = value.decl.sort
+        when (sort) {
+            is KBoolSort -> writer.write("Bool")
+            is KBvSort -> writer.write("BitVec")
+            is KFpSort -> writer.write("FP")
+            is KFpRoundingModeSort -> writer.write("FP_RM")
+            is KArraySortBase<*> -> writer.write("Array")
+            is KUninterpretedSort -> writer.write(sort.name)
+            else -> error("unknown value sort: ${sort::class.simpleName}")
         }
     }
 
-    fun <T : KSort, A : KSort> writeApp(expr: KApp<T, A>) {
+    private fun <T : KSort, A : KSort> writeApp(expr: KApp<T, A>) {
         writer.write("${expr.decl.name};")
+
         for (child in expr.args) {
             writer.write(" ${exprToVertexID[child]}")
         }
-        writer.newLine()
     }
 
     fun extractGraph() {

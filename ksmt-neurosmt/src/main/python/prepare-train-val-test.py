@@ -79,6 +79,10 @@ def grouped_random_split(path_to_dataset_root, val_qty, test_qty, align_train_mo
         need_test = int(samples_cnt * test_qty)
         need_train = samples_cnt - need_val - need_test
 
+        print("picking best split with existing groups")
+        print(f"need: {need_train} (train) | {need_val} (val) | {need_test} (test)")
+        print(flush=True)
+
         best = None
 
         for _ in trange(attempts):
