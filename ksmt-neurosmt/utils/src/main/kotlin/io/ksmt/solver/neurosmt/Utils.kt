@@ -61,7 +61,7 @@ fun deserialize(ctx: KContext, inputStream: InputStream): List<KExpr<KBoolSort>>
     val emptyRdSerializationCtx = SerializationCtx(Serializers())
 
     val buffer = UnsafeBuffer(inputStream.readBytes())
-    val expressions: MutableList<KExpr<KBoolSort>> = mutableListOf()
+    val expressions = mutableListOf<KExpr<KBoolSort>>()
 
     while (true) {
         try {

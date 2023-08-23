@@ -1,11 +1,12 @@
 from sklearn.metrics import classification_report
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 import pytorch_lightning as pl
 
-from torchmetrics.classification import BinaryAccuracy, BinaryAUROC, BinaryConfusionMatrix
+from torchmetrics.classification import BinaryAccuracy, BinaryConfusionMatrix, BinaryAUROC, BinaryPrecisionAtFixedRecall
 
 from Model import Model
 
@@ -26,8 +27,12 @@ class LightningModel(pl.LightningModule):
         self.val_targets = []
 
         self.acc = BinaryAccuracy()
-        self.roc_auc = BinaryAUROC()
         self.confusion_matrix = BinaryConfusionMatrix()
+
+        self.roc_auc = BinaryAUROC()
+        self.precisions_at_recall = nn.ModuleList([
+            BinaryPrecisionAtFixedRecall(rec) for rec in [0.75, 0.8, 0.85, 0.9, 0.95, 0.975, 0.99, 1.0]
+        ])
 
     def forward(self, node_labels, edges, depths, root_ptrs):
         return self.model(node_labels, edges, depths, root_ptrs)
@@ -40,7 +45,7 @@ class LightningModel(pl.LightningModule):
 
     def training_step(self, train_batch, batch_idx):
         out = self.model(*unpack_batch(train_batch))
-        loss = F.binary_cross_entropy_with_logits(out, train_batch.y)
+        loss = F.binary_cross_entropy_with_logits(out, train_batch.y.to(torch.float))
 
         out = F.sigmoid(out)
 
@@ -59,20 +64,24 @@ class LightningModel(pl.LightningModule):
 
         return loss
 
-    def shared_val_test_step(self, batch, batch_idx, metric_name):
+    def shared_val_test_step(self, batch, batch_idx, target_name):
         out = self.model(*unpack_batch(batch))
-        loss = F.binary_cross_entropy_with_logits(out, batch.y)
+        loss = F.binary_cross_entropy_with_logits(out, batch.y.to(torch.float))
 
         out = F.sigmoid(out)
 
+        self.roc_auc.update(out, batch.y)
+        for precision_at_recall in self.precisions_at_recall:
+            precision_at_recall.update(out, batch.y)
+
         self.log(
-            f"{metric_name}/loss", loss.float(),
+            f"{target_name}/loss", loss.float(),
             prog_bar=True, logger=True,
             on_step=False, on_epoch=True,
             batch_size=batch.num_graphs
         )
         self.log(
-            f"{metric_name}/acc", self.acc(out, batch.y),
+            f"{target_name}/acc", self.acc(out, batch.y),
             prog_bar=True, logger=True,
             on_step=False, on_epoch=True,
             batch_size=batch.num_graphs
@@ -82,6 +91,36 @@ class LightningModel(pl.LightningModule):
         self.val_targets.append(batch.y)
 
         return loss
+
+    def shared_val_test_epoch_end(self, target_name):
+        print("\n", flush=True)
+
+        all_outputs = torch.flatten(torch.cat(self.val_outputs))
+        all_targets = torch.flatten(torch.cat(self.val_targets))
+
+        self.val_outputs.clear()
+        self.val_targets.clear()
+
+        self.print_confusion_matrix_and_classification_report(all_outputs, all_targets)
+
+        self.log(
+            f"{target_name}/roc-auc", self.roc_auc.compute(),
+            prog_bar=True, logger=True,
+            on_step=False, on_epoch=True
+        )
+        self.roc_auc.reset()
+
+        for precision_at_recall in self.precisions_at_recall:
+            precision = precision_at_recall.compute()[0]
+            recall = precision_at_recall.min_recall
+
+            self.log(
+                f"{target_name}/precision_at_{recall}", precision,
+                prog_bar=False, logger=True,
+                on_step=False, on_epoch=True
+            )
+
+            precision_at_recall.reset()
 
     def validation_step(self, val_batch, batch_idx):
         return self.shared_val_test_step(val_batch, batch_idx, "val")
@@ -107,37 +146,10 @@ class LightningModel(pl.LightningModule):
         )
 
     def on_validation_epoch_end(self):
-        print("\n", flush=True)
-
-        all_outputs = torch.flatten(torch.cat(self.val_outputs))
-        all_targets = torch.flatten(torch.cat(self.val_targets))
-
-        self.val_outputs.clear()
-        self.val_targets.clear()
-
-        self.log(
-            "val/roc-auc", self.roc_auc(all_outputs, all_targets),
-            prog_bar=True, logger=True,
-            on_step=False, on_epoch=True
-        )
-
-        self.print_confusion_matrix_and_classification_report(all_outputs, all_targets)
+        self.shared_val_test_epoch_end("val")
 
     def test_step(self, test_batch, batch_idx):
         return self.shared_val_test_step(test_batch, batch_idx, "test")
 
     def on_test_epoch_end(self):
-        all_outputs = torch.flatten(torch.cat(self.val_outputs))
-        all_targets = torch.flatten(torch.cat(self.val_targets))
-
-        self.val_outputs.clear()
-        self.val_targets.clear()
-
-        self.log(
-            "test/roc-auc", self.roc_auc(all_outputs, all_targets),
-            prog_bar=True, logger=True,
-            on_step=False, on_epoch=True
-        )
-
-        print("\n")
-        self.print_confusion_matrix_and_classification_report(all_outputs, all_targets)
+        self.shared_val_test_epoch_end("test")

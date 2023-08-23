@@ -26,7 +26,7 @@ class GraphDataset(Dataset):
         self.graphs = [Graph(
             x=torch.tensor(nodes, dtype=torch.int32),
             edge_index=torch.tensor(edges, dtype=torch.int64).t(),
-            y=torch.tensor([[label]], dtype=torch.float),
+            y=torch.tensor([[label]], dtype=torch.int32),
             depth=torch.tensor(depths, dtype=torch.int32)
         ) for nodes, edges, label, depths in graph_data]
 
