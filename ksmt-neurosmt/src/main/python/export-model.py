@@ -4,9 +4,8 @@ import sys
 
 import torch
 
+from GlobalConstants import EMBEDDING_DIM
 from LightningModel import LightningModel
-
-from Model import EMBEDDING_DIM
 
 
 if __name__ == "__main__":

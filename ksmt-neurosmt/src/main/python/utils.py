@@ -3,11 +3,13 @@ import os
 import numpy as np
 from tqdm import tqdm
 
+from GlobalConstants import MAX_FORMULA_SIZE, MAX_FORMULA_DEPTH
 from GraphReader import read_graph_by_path
-from GraphDataloader import MAX_FORMULA_SIZE, MAX_FORMULA_DEPTH
 
 
-def train_val_test_indices(cnt, val_qty=0.15, test_qty=0.1):
+def train_val_test_indices(cnt: int, val_qty: float = 0.15, test_qty: float = 0.1)\
+        -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+
     perm = np.arange(cnt)
     np.random.shuffle(perm)
 
@@ -17,7 +19,10 @@ def train_val_test_indices(cnt, val_qty=0.15, test_qty=0.1):
     return perm[val_cnt + test_cnt:], perm[:val_cnt], perm[val_cnt:val_cnt + test_cnt]
 
 
-def select_paths_with_suitable_samples_and_transform_to_paths_from_root(path_to_dataset_root, paths):
+# select paths to suitable samples and transform them to paths from dataset root
+def select_paths_with_suitable_samples_and_transform_to_paths_from_root(path_to_dataset_root: str, paths: list[str])\
+        -> list[str]:
+
     print("\nloading paths", flush=True)
 
     correct_paths = []
@@ -36,7 +41,7 @@ def select_paths_with_suitable_samples_and_transform_to_paths_from_root(path_to_
     return correct_paths
 
 
-def align_sat_unsat_sizes_with_upsamping(sat_data, unsat_data):
+def align_sat_unsat_sizes_with_upsamping(sat_data: list[str], unsat_data: list[str]) -> tuple[list[str], list[str]]:
     sat_cnt = len(sat_data)
     unsat_cnt = len(unsat_data)
 
@@ -46,7 +51,7 @@ def align_sat_unsat_sizes_with_upsamping(sat_data, unsat_data):
     if sat_cnt < unsat_cnt:
         sat_indices += list(np.random.choice(np.array(sat_indices), unsat_cnt - sat_cnt, replace=True))
     elif sat_cnt > unsat_cnt:
-        unsat_indices += list(np.random.choice(np.array(unsat_indices), sat_cnt - unsat_cnt, replace=False))
+        unsat_indices += list(np.random.choice(np.array(unsat_indices), sat_cnt - unsat_cnt, replace=True))
 
     return (
         list(np.array(sat_data, dtype=object)[sat_indices]),
@@ -54,7 +59,7 @@ def align_sat_unsat_sizes_with_upsamping(sat_data, unsat_data):
     )
 
 
-def align_sat_unsat_sizes_with_downsamping(sat_data, unsat_data):
+def align_sat_unsat_sizes_with_downsamping(sat_data: list[str], unsat_data: list[str]) -> tuple[list[str], list[str]]:
     sat_cnt = len(sat_data)
     unsat_cnt = len(unsat_data)
 
@@ -72,7 +77,7 @@ def align_sat_unsat_sizes_with_downsamping(sat_data, unsat_data):
     )
 
 
-def align_sat_unsat_sizes(sat_data, unsat_data, mode):
+def align_sat_unsat_sizes(sat_data: list[str], unsat_data: list[str], mode: str) -> tuple[list[str], list[str]]:
     if mode == "none":
         return sat_data, unsat_data
     elif mode == "upsample":

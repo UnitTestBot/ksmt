@@ -8,7 +8,6 @@ import torch
 from pytorch_lightning import Trainer
 
 from GraphDataloader import get_dataloader
-
 from LightningModel import LightningModel
 
 
@@ -29,7 +28,7 @@ def get_args():
 
 
 if __name__ == "__main__":
-    # seed_everything(24, workers=True)
+    # enable usage of nvidia's TensorFloat if available
     torch.set_float32_matmul_precision("medium")
 
     args = get_args()

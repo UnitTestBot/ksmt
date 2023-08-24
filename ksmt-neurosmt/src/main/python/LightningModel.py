@@ -1,3 +1,5 @@
+from typing import Literal
+
 from sklearn.metrics import classification_report
 
 import torch
@@ -8,6 +10,7 @@ import pytorch_lightning as pl
 
 from torchmetrics.classification import BinaryAccuracy, BinaryConfusionMatrix, BinaryAUROC, BinaryPrecisionAtFixedRecall
 
+from GlobalConstants import EMBEDDING_DIM
 from Model import Model
 
 
@@ -18,14 +21,19 @@ def unpack_batch(batch):
 
 
 class LightningModel(pl.LightningModule):
+    """
+    PyTorch Lightning wrapper for model
+    """
+
     def __init__(self):
         super().__init__()
 
-        self.model = Model()
+        self.model = Model(hidden_dim=EMBEDDING_DIM)
 
         self.val_outputs = []
         self.val_targets = []
 
+        # different metrics
         self.acc = BinaryAccuracy()
         self.confusion_matrix = BinaryConfusionMatrix()
 
@@ -34,6 +42,7 @@ class LightningModel(pl.LightningModule):
             BinaryPrecisionAtFixedRecall(rec) for rec in [0.75, 0.8, 0.85, 0.9, 0.95, 0.975, 0.99, 1.0]
         ])
 
+    # forward pass is just the same as in the original model
     def forward(self, node_labels, edges, depths, root_ptrs):
         return self.model(node_labels, edges, depths, root_ptrs)
 
@@ -64,7 +73,7 @@ class LightningModel(pl.LightningModule):
 
         return loss
 
-    def shared_val_test_step(self, batch, batch_idx, target_name):
+    def shared_val_test_step(self, batch, batch_idx, target_name: Literal["val", "test"]):
         out = self.model(*unpack_batch(batch))
         loss = F.binary_cross_entropy_with_logits(out, batch.y.to(torch.float))
 
@@ -92,7 +101,7 @@ class LightningModel(pl.LightningModule):
 
         return loss
 
-    def shared_val_test_epoch_end(self, target_name):
+    def shared_val_test_epoch_end(self, target_name: Literal["val", "test"]):
         print("\n", flush=True)
 
         all_outputs = torch.flatten(torch.cat(self.val_outputs))
@@ -125,7 +134,7 @@ class LightningModel(pl.LightningModule):
     def validation_step(self, val_batch, batch_idx):
         return self.shared_val_test_step(val_batch, batch_idx, "val")
 
-    def print_confusion_matrix_and_classification_report(self, all_outputs, all_targets):
+    def print_confusion_matrix_and_classification_report(self, all_outputs: torch.Tensor, all_targets: torch.Tensor):
         conf_mat = self.confusion_matrix(all_outputs, all_targets).detach().cpu().numpy()
 
         print("        +-------+-----------+-----------+")

@@ -8,7 +8,7 @@ from tqdm import trange
 
 from pytorch_lightning import seed_everything
 
-from GraphDataloader import METADATA_PATH
+from GlobalConstants import METADATA_PATH
 from utils import train_val_test_indices, align_sat_unsat_sizes, select_paths_with_suitable_samples_and_transform_to_paths_from_root
 
 

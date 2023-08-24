@@ -2,13 +2,14 @@
 
 import os
 from argparse import ArgumentParser
+from typing import Literal
 
 from tqdm import tqdm
 
-from GraphDataloader import METADATA_PATH
+from GlobalConstants import METADATA_PATH
 
 
-def get_groups_set(paths_to_datasets, target):
+def get_groups_set(paths_to_datasets: list[str], target: Literal["train", "val", "test"]) -> set:
     groups = set()
 
     print(f"loading {target}")

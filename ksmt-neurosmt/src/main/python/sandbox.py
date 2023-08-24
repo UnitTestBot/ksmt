@@ -13,7 +13,7 @@ from GraphDataloader import get_dataloader
 
 from LightningModel import LightningModel
 
-from Model import EMBEDDING_DIM
+from GlobalConstants import EMBEDDING_DIM
 
 
 if __name__ == "__main__":

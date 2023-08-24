@@ -1,4 +1,5 @@
 import os
+from typing import Literal
 
 import numpy as np
 import joblib
@@ -10,19 +11,13 @@ from torch.utils.data import Dataset
 from torch_geometric.data import Data as Graph
 from torch_geometric.loader import DataLoader
 
+from GlobalConstants import BATCH_SIZE, MAX_FORMULA_SIZE, MAX_FORMULA_DEPTH, NUM_WORKERS, METADATA_PATH
 from GraphReader import read_graph_by_path
 
 
-BATCH_SIZE = 1024
-MAX_FORMULA_SIZE = 10000
-MAX_FORMULA_DEPTH = 2500
-NUM_WORKERS = 32
-METADATA_PATH = "__meta"
-
-
+# torch Dataset
 class GraphDataset(Dataset):
     def __init__(self, graph_data):
-
         self.graphs = [Graph(
             x=torch.tensor(nodes, dtype=torch.int32),
             edge_index=torch.tensor(edges, dtype=torch.int64).t(),
@@ -37,7 +32,10 @@ class GraphDataset(Dataset):
         return self.graphs[index]
 
 
-def load_data(paths_to_datasets, target):
+# load all samples from all datasets and return them as a list of tuples
+def load_data(paths_to_datasets: list[str], target: Literal["train", "val", "test"])\
+        -> list[tuple[list[str], list[tuple[int, int]], int, list[int]]]:
+
     data = []
 
     print(f"loading {target}")
@@ -52,7 +50,7 @@ def load_data(paths_to_datasets, target):
                     path_to_sample, max_size=MAX_FORMULA_SIZE, max_depth=MAX_FORMULA_DEPTH
                 )
 
-                if operators is None:
+                if operators is None or edges is None or depths is None:
                     continue
 
                 if len(edges) == 0:
@@ -71,7 +69,10 @@ def load_data(paths_to_datasets, target):
     return data
 
 
-def get_dataloader(paths_to_datasets, target, path_to_ordinal_encoder):
+# load samples from all datasets, transform them and return them in a Dataloader object
+def get_dataloader(paths_to_datasets: list[str], target: Literal["train", "val", "test"], path_to_ordinal_encoder: str)\
+        -> DataLoader:
+
     print(f"creating dataloader for {target}")
 
     print("loading data")
@@ -82,9 +83,12 @@ def get_dataloader(paths_to_datasets, target, path_to_ordinal_encoder):
     print("loading encoder")
     encoder = joblib.load(path_to_ordinal_encoder)
 
-    def transform(data_for_one_sample):
+    def transform(data_for_one_sample: tuple[list[str], list[tuple[int, int]], int, list[int]])\
+            -> tuple[list[str], list[tuple[int, int]], int, list[int]]:
+
         nodes, edges, label, depths = data_for_one_sample
         nodes = encoder.transform(np.array(nodes).reshape(-1, 1))
+
         return nodes, edges, label, depths
 
     print("transforming")

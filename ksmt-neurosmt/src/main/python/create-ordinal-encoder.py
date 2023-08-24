@@ -8,11 +8,11 @@ import joblib
 
 from sklearn.preprocessing import OrdinalEncoder
 
+from GlobalConstants import EMBEDDINGS_CNT
 from GraphDataloader import load_data
-from Encoder import EMBEDDINGS_CNT
 
 
-def create_ordinal_encoder(paths_to_datasets, path_to_ordinal_encoder):
+def create_ordinal_encoder(paths_to_datasets: list[str], path_to_ordinal_encoder: str):
     data = load_data(paths_to_datasets, "train")
 
     encoder = OrdinalEncoder(

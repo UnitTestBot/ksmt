@@ -9,8 +9,8 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 
+from GlobalConstants import MAX_EPOCHS
 from GraphDataloader import get_dataloader
-
 from LightningModel import LightningModel
 
 
@@ -31,7 +31,7 @@ def get_args():
 
 
 if __name__ == "__main__":
-    # seed_everything(24, workers=True)
+    # enable usage of nvidia's TensorFloat if available
     torch.set_float32_matmul_precision("medium")
 
     args = get_args()
@@ -51,7 +51,7 @@ if __name__ == "__main__":
             save_last=True, save_top_k=3, mode="max",
             auto_insert_metric_name=False, save_on_train_epoch_end=False
         )],
-        max_epochs=200,
+        max_epochs=MAX_EPOCHS,
         log_every_n_steps=1,
         enable_checkpointing=True,
         barebones=False,
