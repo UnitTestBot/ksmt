@@ -5,6 +5,8 @@ import io.ksmt.KContext
 import io.ksmt.expr.KExpr
 import kotlin.math.exp
 
+// wrapper for NeuroSMT model
+// runs the whole model pipeline
 class NeuroSMTModelRunner(
     val ctx: KContext,
     ordinalsPath: String, embeddingPath: String, convPath: String, decoderPath: String

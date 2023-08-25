@@ -50,6 +50,7 @@ fun printModelRunTimeStats(modelRunTimes: List<Long>) {
     println()
 }
 
+// standalone tool to run NeuroSMT model in kotlin
 @OptIn(ExperimentalTime::class)
 fun main(args: Array<String>) {
     val arguments = CLArgs()

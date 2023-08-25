@@ -10,6 +10,7 @@ import io.ksmt.sort.*
 import java.io.OutputStream
 import java.util.*
 
+// serializer of ksmt formula to simple format of formula's structure graph
 class FormulaGraphExtractor(
     override val ctx: KContext,
     val formula: KExpr<KBoolSort>,

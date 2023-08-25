@@ -6,6 +6,8 @@ import kotlin.streams.asSequence
 
 const val UNKNOWN_VALUE = 1999
 
+// wrapper for single-feature sklearn OrdinalEncoder (for each string we should provide its ordinal)
+// used to convert strings to integers
 class OrdinalEncoder(ordinalsPath: String, private val unknownValue: Int = UNKNOWN_VALUE) {
     private val lookup = HashMap<String, Int>()
 

@@ -14,6 +14,7 @@ import java.nio.file.Path
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.name
 
+// tool to convert formulas from .smt2 format to their structure graphs
 fun main(args: Array<String>) {
     val inputRoot = args[0]
     val outputRoot = args[1]

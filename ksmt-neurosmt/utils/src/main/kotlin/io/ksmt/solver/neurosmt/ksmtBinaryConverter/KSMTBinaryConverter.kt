@@ -15,6 +15,7 @@ import kotlin.io.path.isRegularFile
 import kotlin.io.path.name
 import kotlin.time.Duration.Companion.seconds
 
+// tool to convert formulas from ksmt binary format to their structure graphs
 fun main(args: Array<String>) {
     val inputRoot = args[0]
     val outputRoot = args[1]

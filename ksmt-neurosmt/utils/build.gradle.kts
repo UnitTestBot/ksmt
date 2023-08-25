@@ -18,11 +18,6 @@ dependencies {
     implementation("me.tongfei:progressbar:0.9.4")
 }
 
-application {
-    // mainClass.set("io.ksmt.solver.neurosmt.smt2Converter.SMT2ConverterKt")
-    mainClass.set("io.ksmt.solver.neurosmt.ksmtBinaryConverter.KSMTBinaryConverterKt")
-}
-
 tasks {
     val smt2FatJar = register<Jar>("smt2FatJar") {
         dependsOn.addAll(listOf("compileJava", "compileKotlin", "processResources"))

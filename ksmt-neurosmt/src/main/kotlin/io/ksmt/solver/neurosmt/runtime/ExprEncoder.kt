@@ -14,6 +14,9 @@ import java.nio.IntBuffer
 import java.nio.LongBuffer
 import java.util.*
 
+// expression encoder
+// walks on an expression and calculates state for each node
+// based on states for its children (which are already calculated at that moment)
 class ExprEncoder(
     override val ctx: KContext,
     val env: OrtEnvironment,

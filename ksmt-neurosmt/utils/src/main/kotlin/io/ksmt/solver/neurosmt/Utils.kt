@@ -16,6 +16,7 @@ import java.io.OutputStream
 import java.nio.file.Path
 import kotlin.time.Duration
 
+// read .smt2 file and try to find answer inside it
 fun getAnswerForTest(path: Path): KSolverStatus {
     File(path.toUri()).useLines { lines ->
         for (line in lines) {
@@ -30,6 +31,7 @@ fun getAnswerForTest(path: Path): KSolverStatus {
     return KSolverStatus.UNKNOWN
 }
 
+// solve formula using Z3 solver
 fun getAnswerForTest(ctx: KContext, formula: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus {
     return KZ3Solver(ctx).use { solver ->
         for (clause in formula) {
@@ -40,6 +42,7 @@ fun getAnswerForTest(ctx: KContext, formula: List<KExpr<KBoolSort>>, timeout: Du
     }
 }
 
+// serialize ksmt formula to binary file
 fun serialize(ctx: KContext, expressions: List<KExpr<KBoolSort>>, outputStream: OutputStream) {
     val serializationCtx = AstSerializationCtx().apply { initCtx(ctx) }
     val marshaller = AstSerializationCtx.marshaller(serializationCtx)
@@ -55,6 +58,7 @@ fun serialize(ctx: KContext, expressions: List<KExpr<KBoolSort>>, outputStream: 
     outputStream.flush()
 }
 
+// deserialize ksmt formula from binary file
 fun deserialize(ctx: KContext, inputStream: InputStream): List<KExpr<KBoolSort>> {
     val srcSerializationCtx = AstSerializationCtx().apply { initCtx(ctx) }
     val srcMarshaller = AstSerializationCtx.marshaller(srcSerializationCtx)

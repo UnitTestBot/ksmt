@@ -3,6 +3,7 @@ package io.ksmt.solver.neurosmt.runtime
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 
+// wrapper for any exported ONNX model
 class ONNXModel(env: OrtEnvironment, modelPath: String) : AutoCloseable {
     val session = env.createSession(modelPath)
 
