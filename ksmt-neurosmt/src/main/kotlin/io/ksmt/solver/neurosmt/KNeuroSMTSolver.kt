@@ -5,36 +5,63 @@ import io.ksmt.expr.KExpr
 import io.ksmt.solver.KModel
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverStatus
+import io.ksmt.solver.neurosmt.runtime.NeuroSMTModelRunner
 import io.ksmt.sort.KBoolSort
 import kotlin.time.Duration
 
-class KNeuroSMTSolver(private val ctx: KContext) : KSolver<KNeuroSMTSolverConfiguration> {
+class KNeuroSMTSolver(
+    private val ctx: KContext,
+    ordinalsPath: String, embeddingPath: String, convPath: String, decoderPath: String,
+    private val threshold: Double = 0.5
+) : KSolver<KNeuroSMTSolverConfiguration> {
+
+    private val modelRunner = NeuroSMTModelRunner(ctx, ordinalsPath, embeddingPath, convPath, decoderPath)
+    private val asserts = mutableListOf<MutableList<KExpr<KBoolSort>>>(mutableListOf())
+
     override fun configure(configurator: KNeuroSMTSolverConfiguration.() -> Unit) {
         TODO("Not yet implemented")
     }
 
     override fun assert(expr: KExpr<KBoolSort>) {
-        // TODO("Not yet implemented")
+        asserts.last().add(expr)
     }
 
     override fun assertAndTrack(expr: KExpr<KBoolSort>) {
-        TODO("Not yet implemented")
+        assert(expr)
     }
 
     override fun push() {
-        TODO("Not yet implemented")
+        asserts.add(mutableListOf())
     }
 
     override fun pop(n: UInt) {
-        TODO("Not yet implemented")
+        repeat(n.toInt()) {
+            asserts.removeLast()
+        }
     }
 
     override fun check(timeout: Duration): KSolverStatus {
-        return KSolverStatus.SAT
+        val prob = with(ctx) {
+            modelRunner.run(mkAnd(asserts.flatten()))
+        }
+
+        return if (prob > threshold) {
+            KSolverStatus.SAT
+        } else {
+            KSolverStatus.UNSAT
+        }
     }
 
     override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus {
-        TODO("Not yet implemented")
+        val prob = with(ctx) {
+            modelRunner.run(mkAnd(asserts.flatten() + assumptions))
+        }
+
+        return if (prob > threshold) {
+            KSolverStatus.SAT
+        } else {
+            KSolverStatus.UNSAT
+        }
     }
 
     override fun model(): KModel {
@@ -54,6 +81,7 @@ class KNeuroSMTSolver(private val ctx: KContext) : KSolver<KNeuroSMTSolverConfig
     }
 
     override fun close() {
-        // TODO("Not yet implemented")
+        modelRunner.close()
+        asserts.clear()
     }
 }

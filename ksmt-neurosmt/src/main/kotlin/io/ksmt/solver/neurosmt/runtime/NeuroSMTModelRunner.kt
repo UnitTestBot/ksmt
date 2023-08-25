@@ -25,4 +25,10 @@ class NeuroSMTModelRunner(
 
         return 1f / (1f + exp(-logit)) // sigmoid calculation
     }
+
+    fun close() {
+        embeddingLayer.close()
+        convLayer.close()
+        decoder.close()
+    }
 }
