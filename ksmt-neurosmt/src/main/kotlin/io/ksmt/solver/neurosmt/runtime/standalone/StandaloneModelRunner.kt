@@ -14,6 +14,10 @@ import java.nio.file.Path
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.name
 import kotlin.io.path.pathString
+import kotlin.math.roundToLong
+import kotlin.math.sqrt
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
 
 fun printStats(
     sat: Int, unsat: Int, skipped: Int,
@@ -37,6 +41,16 @@ fun printStats(
     println()
 }
 
+fun printModelRunTimeStats(modelRunTimes: List<Long>) {
+    val mean = modelRunTimes.average()
+    val std = sqrt(modelRunTimes.map { it - mean }.map { it * it }.average())
+
+    println("run time:")
+    println("mean: ${mean.roundToLong()}μs; std: ${std.roundToLong()}μs")
+    println()
+}
+
+@OptIn(ExperimentalTime::class)
 fun main(args: Array<String>) {
     val arguments = CLArgs()
     try {
@@ -69,6 +83,8 @@ fun main(args: Array<String>) {
         convPath = arguments.convPath,
         decoderPath = arguments.decoderPath
     )
+
+    val modelRunTimes = mutableListOf<Long>()
 
     var sat = 0; var unsat = 0; var skipped = 0
     var ok = 0; var fail = 0
@@ -115,13 +131,18 @@ fun main(args: Array<String>) {
                 }
             }
 
-            runner.run(formula)
+            val timedVal = measureTimedValue {
+                runner.run(formula)
+            }
+
+            modelRunTimes.add(timedVal.duration.inWholeMicroseconds)
+            timedVal.value
         }
 
-        val output = if (prob < arguments.threshold) {
-            KSolverStatus.UNSAT
-        } else {
+        val output = if (prob > arguments.threshold) {
             KSolverStatus.SAT
+        } else {
+            KSolverStatus.UNSAT
         }
 
         when (answer) {
@@ -147,4 +168,6 @@ fun main(args: Array<String>) {
 
     println()
     printStats(sat, unsat, skipped, ok, fail, confusionMatrix)
+
+    printModelRunTimeStats(modelRunTimes)
 }
