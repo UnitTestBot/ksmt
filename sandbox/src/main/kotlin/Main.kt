@@ -34,7 +34,7 @@ fun serialize(ctx: KContext, expressions: List<KExpr<KBoolSort>>, outputStream: 
     val marshaller = AstSerializationCtx.marshaller(serializationCtx)
     val emptyRdSerializationCtx = SerializationCtx(Serializers())
 
-    val buffer = UnsafeBuffer(ByteArray(100_000))
+    val buffer = UnsafeBuffer(ByteArray(20_000)) // ???
 
     expressions.forEach { expr ->
         marshaller.write(emptyRdSerializationCtx, buffer, expr)
@@ -63,26 +63,33 @@ fun deserialize(ctx: KContext, inputStream: InputStream): List<KExpr<KBoolSort>>
     return expressions
 }
 
+object MethodNameStorage {
+    val methodName = ThreadLocal<String>()
+}
+
 class LogSolver<C : KSolverConfiguration>(
     private val ctx: KContext, private val baseSolver: KSolver<C>
 ) : KSolver<C> by baseSolver {
 
     companion object {
-        val counter = AtomicLong(0)
+        val counter = ThreadLocal<Long>()
     }
 
     init {
         File("formulas").mkdirs()
+        File("formulas/${MethodNameStorage.methodName.get()}").mkdirs()
+
+        counter.set(0)
     }
 
     private fun getNewFileCounter(): Long {
-        return synchronized(counter) {
-            counter.getAndIncrement()
-        }
+        val result = counter.get()
+        counter.set(result + 1)
+        return result
     }
 
-    private fun getNewFileName(): String {
-        return "formulas/f-${getNewFileCounter()}.bin"
+    private fun getNewFileName(suffix: String): String {
+        return "formulas/${MethodNameStorage.methodName.get()}/f-${getNewFileCounter()}-$suffix"
     }
 
     val stack = mutableListOf<MutableList<KExpr<KBoolSort>>>(mutableListOf())
@@ -110,13 +117,15 @@ class LogSolver<C : KSolverConfiguration>(
     }
 
     override fun check(timeout: Duration): KSolverStatus {
-        serialize(ctx, stack.flatten(), FileOutputStream(getNewFileName()))
-        return baseSolver.check(timeout)
+        val result = baseSolver.check(timeout)
+        serialize(ctx, stack.flatten(), FileOutputStream(getNewFileName(result.toString().lowercase())))
+        return result
     }
 
     override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus {
-        serialize(ctx, stack.flatten() + assumptions, FileOutputStream(getNewFileName()))
-        return baseSolver.checkWithAssumptions(assumptions, timeout)
+        val result = baseSolver.checkWithAssumptions(assumptions, timeout)
+        serialize(ctx, stack.flatten() + assumptions, FileOutputStream(getNewFileName(result.toString().lowercase())))
+        return result
     }
 }
 
