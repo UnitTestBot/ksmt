@@ -2,7 +2,7 @@ package io.ksmt.solver.z3
 
 import com.microsoft.z3.Context
 import com.microsoft.z3.Z3Exception
-import com.microsoft.z3.decRefUnsafeAll
+import com.microsoft.z3.decRefUnsafe
 import io.ksmt.KAst
 import io.ksmt.KContext
 import io.ksmt.decl.KDecl
@@ -16,6 +16,7 @@ import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet
+import it.unimi.dsi.fastutil.longs.LongSet
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
 import java.util.IdentityHashMap
 import java.util.concurrent.ConcurrentHashMap
@@ -95,22 +96,22 @@ class KZ3ForkingSolverManager(private val ctx: KContext) : KForkingSolverManager
             val nCtx = context.nCtx()
             contextReferences -= context
 
-            expressionsReversedCache.remove(context)!!.keys.decRefUnsafeAll(nCtx)
+            expressionsReversedCache.remove(context)!!.keys.decRefAll(nCtx)
             expressionsCache -= context
 
-            sortsReversedCache.remove(context)!!.keys.decRefUnsafeAll(nCtx)
+            sortsReversedCache.remove(context)!!.keys.decRefAll(nCtx)
             sortsCache -= context
 
-            declsReversedCache.remove(context)!!.keys.decRefUnsafeAll(nCtx)
+            declsReversedCache.remove(context)!!.keys.decRefAll(nCtx)
             declsCache -= context
 
-            uninterpretedSortValueInterpreters.remove(context)!!.decRefUnsafeAll(nCtx)
+            uninterpretedSortValueInterpreters.remove(context)!!.decRefAll(nCtx)
             uninterpretedSortValueInterpreter -= context
             uninterpretedSortValueDecls -= context
             registeredUninterpretedSortValues -= context
 
-            converterNativeObjectsCache.remove(context)!!.decRefUnsafeAll(nCtx)
-            tmpNativeObjectsCache.remove(context)!!.decRefUnsafeAll(nCtx)
+            converterNativeObjectsCache.remove(context)!!.decRefAll(nCtx)
+            tmpNativeObjectsCache.remove(context)!!.decRefAll(nCtx)
 
             try {
                 ctx.close()
@@ -150,6 +151,11 @@ class KZ3ForkingSolverManager(private val ctx: KContext) : KForkingSolverManager
     private fun <T : KAst> Object2LongOpenHashMap<T>.withNotInternalizedAsDefaultValue() = apply {
         defaultReturnValue(KExprLongInternalizerBase.NOT_INTERNALIZED)
     }
+
+    private fun LongSet.decRefAll(nCtx: Long) =
+        longIterator().forEachRemaining {
+            decRefUnsafe(nCtx, it)
+        }
 
 }
 

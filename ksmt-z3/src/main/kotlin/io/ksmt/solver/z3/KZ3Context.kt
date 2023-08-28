@@ -4,7 +4,6 @@ import com.microsoft.z3.Context
 import com.microsoft.z3.Solver
 import com.microsoft.z3.Z3Exception
 import com.microsoft.z3.decRefUnsafe
-import com.microsoft.z3.decRefUnsafeAll
 import com.microsoft.z3.incRefUnsafe
 import io.ksmt.KContext
 import io.ksmt.decl.KDecl
@@ -16,6 +15,7 @@ import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet
+import it.unimi.dsi.fastutil.longs.LongSet
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
 
 @Suppress("TooManyFunctions")
@@ -310,27 +310,27 @@ class KZ3Context internal constructor(
 
         uninterpretedSortValueInterpreter.clear()
 
-        uninterpretedSortValueDecls.keys.decRefUnsafeAll(nCtx)
+        uninterpretedSortValueDecls.keys.decRefAll()
         uninterpretedSortValueDecls.clear()
 
-        uninterpretedSortValueInterpreters.decRefUnsafeAll(nCtx)
+        uninterpretedSortValueInterpreters.decRefAll()
         uninterpretedSortValueInterpreters.clear()
 
-        converterNativeObjects.decRefUnsafeAll(nCtx)
+        converterNativeObjects.decRefAll()
         converterNativeObjects.clear()
 
-        z3Expressions.keys.decRefUnsafeAll(nCtx)
+        z3Expressions.keys.decRefAll()
         expressions.clear()
         z3Expressions.clear()
 
-        tmpNativeObjects.decRefUnsafeAll(nCtx)
+        tmpNativeObjects.decRefAll()
         tmpNativeObjects.clear()
 
-        z3Decls.keys.decRefUnsafeAll(nCtx)
+        z3Decls.keys.decRefAll()
         decls.clear()
         z3Decls.clear()
 
-        z3Sorts.keys.decRefUnsafeAll(nCtx)
+        z3Sorts.keys.decRefAll()
         sorts.clear()
         z3Sorts.clear()
 
@@ -340,4 +340,9 @@ class KZ3Context internal constructor(
             throw KSolverException(e)
         }
     }
+
+    private fun LongSet.decRefAll() =
+        longIterator().forEachRemaining {
+            decRefUnsafe(nCtx, it)
+        }
 }

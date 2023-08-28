@@ -62,7 +62,9 @@ open class KZ3ForkingSolver internal constructor(
         trackedAssertions.currentFrame[track] = trackedExpr
     }
 
-    override fun findTrackedExprByTrack(track: Long): KExpr<KBoolSort>? = trackedAssertions.find { it[track] }
+    override fun findTrackedExprByTrack(track: Long): KExpr<KBoolSort>? = trackedAssertions.findNonNullValue {
+        it[track]
+    }
 
     /**
      * Asserts parental (in case of child) assertions if not

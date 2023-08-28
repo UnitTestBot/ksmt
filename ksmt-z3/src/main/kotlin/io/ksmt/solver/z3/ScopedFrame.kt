@@ -1,25 +1,19 @@
 package io.ksmt.solver.z3
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
+
 internal interface ScopedFrame<T> {
     val currentScope: UInt
     val currentFrame: T
-
-    fun flatten(collect: T.(T) -> Unit): T
-
-    /**
-     * find value [V] in frame [T], and return it or null
-     */
-    fun <V> find(predicate: (T) -> V?): V?
 
     fun push()
     fun pop(n: UInt = 1u)
 }
 
-internal class ScopedArrayFrame<T>(
-    currentFrame: T,
-    private val createNewFrame: () -> T
-) : ScopedFrame<T> {
-    constructor(createNewFrame: () -> T) : this(createNewFrame(), createNewFrame)
+internal class ScopedArrayFrameOfLong2ObjectOpenHashMap<V>(
+    currentFrame: Long2ObjectOpenHashMap<V>
+) : ScopedFrame<Long2ObjectOpenHashMap<V>> {
+    constructor() : this(Long2ObjectOpenHashMap())
 
     private val frames = arrayListOf(currentFrame)
 
@@ -29,11 +23,7 @@ internal class ScopedArrayFrame<T>(
     override val currentScope: UInt
         get() = frames.size.toUInt()
 
-    override fun flatten(collect: T.(T) -> Unit) = createNewFrame().also { newFrame ->
-        frames.forEach { newFrame.collect(it) }
-    }
-
-    override fun <V> find(predicate: (T) -> V?): V? {
+    inline fun findNonNullValue(predicate: (Long2ObjectOpenHashMap<V>) -> V?): V? {
         frames.forEach { frame ->
             predicate(frame)?.let { return it }
         }
@@ -41,7 +31,7 @@ internal class ScopedArrayFrame<T>(
     }
 
     override fun push() {
-        currentFrame = createNewFrame()
+        currentFrame = Long2ObjectOpenHashMap()
         frames += currentFrame
     }
 
@@ -73,19 +63,13 @@ internal class ScopedLinkedFrame<T> private constructor(
     override val currentScope: UInt
         get() = current.scope
 
-    override fun flatten(collect: T.(T) -> Unit): T = createNewFrame().also { newFrame ->
-        forEachReversed { frame ->
-            newFrame.collect(frame)
-        }
-    }
-
     fun stacked(): ArrayDeque<T> = ArrayDeque<T>().also { stack ->
         forEachReversed { frame ->
             stack.addLast(frame)
         }
     }
 
-    override fun <V> find(predicate: (T) -> V?): V? {
+    inline fun <V> findNonNullValue(predicate: (T) -> V?): V? {
         forEachReversed { frame ->
             predicate(frame)?.let { return it }
         }
