@@ -5,9 +5,11 @@ object Permutations {
     fun <T> getPermutations(set: Set<T>): Set<List<T>> {
         fun <T> allPermutations(list: List<T>): Set<List<T>> {
             val result: MutableSet<List<T>> = mutableSetOf()
-            for (i in list.indices) {
-                allPermutations(list - list[i]).forEach { item ->
-                    result.add(item + list[i])
+            if (list.isEmpty())
+                result.add(list)
+            for (item in list) {
+                allPermutations(list - item).forEach { tail ->
+                    result.add(tail + item)
                 }
             }
             return result
