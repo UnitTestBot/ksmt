@@ -1,5 +1,6 @@
 package io.ksmt.utils
 
+import java.io.IOException
 import java.io.InputStream
 import java.net.URL
 import java.nio.file.Path
@@ -129,31 +130,36 @@ object NativeLibraryLoader {
                     val staledDirectoryName = marker.fileName.toString().removeSuffix(STALED_DIRECTORY_SUFFIX)
                     val staledDirectory = marker.resolveSibling(staledDirectoryName)
                     if (staledDirectory.notExists() || tryDeleteStaledDirectory(staledDirectory)) {
-                        withNoSecurityException { marker.deleteIfExists() }
+                        withNoFileExceptions { marker.deleteIfExists() }
                     }
                 }
             }
         }
 
-        private fun tryDeleteStaledDirectory(directory: Path): Boolean {
-            directory.forEachDirectoryEntry {
-                if (!it.safeDeleteFile()) return false
+        private fun tryDeleteStaledDirectory(directory: Path): Boolean =
+            withNoFileExceptions {
+                directory.forEachDirectoryEntry {
+                    if (!it.safeDeleteFile()) return false
+                }
+                return directory.safeDeleteFile()
             }
-            return directory.safeDeleteFile()
-        }
 
-        private fun Path.safeDeleteFile(): Boolean = withNoSecurityException {
+        private fun Path.safeDeleteFile(): Boolean = withNoFileExceptions {
             toFile().delete()
         }
 
         /**
          * Handle [SecurityException] because this exception may be thrown when file has no required permissions.
          * For example, we try do delete file without delete permission.
+         *
+         * Handle [IOException] because this exception may be thrown when file was deleted by another process.
          * */
         @Suppress("SwallowedException")
-        private inline fun withNoSecurityException(block: () -> Boolean): Boolean = try {
+        private inline fun withNoFileExceptions(block: () -> Boolean): Boolean = try {
             block()
         } catch (ex: SecurityException) {
+            false
+        } catch (ex: IOException) {
             false
         }
     }

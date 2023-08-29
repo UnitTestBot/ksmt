@@ -14,6 +14,8 @@ dependencies {
     implementation(project(":ksmt-bitwuzla"))
     implementation(project(":ksmt-yices"))
     implementation(project(":ksmt-runner"))
+    implementation(project(":ksmt-symfpu"))
+
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     implementation(kotlin("reflect"))
 

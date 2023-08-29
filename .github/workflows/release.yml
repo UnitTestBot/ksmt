@@ -43,3 +43,4 @@ jobs:
             ksmt-yices/build/release/**/ksmt-yices-*.jar
             ksmt-cvc5/build/release/**/ksmt-cvc5-*.jar
             ksmt-runner/build/release/**/ksmt-runner-*.jar
+            ksmt-symfpu/build/release/**/ksmt-symfpu-*.jar
