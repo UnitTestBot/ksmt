@@ -37,7 +37,7 @@ class KBitwuzlaForkingSolver(
     /**
      * Creates lazily initiated forked solver (without cache sharing), preserving parental assertions and configuration.
      */
-    override fun fork(): KForkingSolver<KBitwuzlaSolverConfiguration> = manager.mkForkingSolver(this)
+    override fun fork(): KForkingSolver<KBitwuzlaSolverConfiguration> = manager.createForkingSolver(this)
 
     private var assertionsInitiated = parent == null
 

@@ -7,7 +7,7 @@ package io.ksmt.solver
  */
 interface KForkingSolverManager <Config : KSolverConfiguration> : AutoCloseable {
 
-    fun mkForkingSolver(): KForkingSolver<Config>
+    fun createForkingSolver(): KForkingSolver<Config>
 
     /**
      * Closes the manager and all opened solvers ([KForkingSolver]) managed by this

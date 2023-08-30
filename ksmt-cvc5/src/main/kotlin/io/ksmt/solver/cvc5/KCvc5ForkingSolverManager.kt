@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap
  * It's cheaper to create multiple copies of solvers with [KCvc5ForkingSolver.fork]
  * instead of assertions transferring in [KCvc5Solver] instances manually.
  *
- * All solvers created with one manager (via both [KCvc5ForkingSolver.fork] and [mkForkingSolver])
+ * All solvers created with one manager (via both [KCvc5ForkingSolver.fork] and [createForkingSolver])
  * use the same [mkExprContext]*, cache, and registered uninterpreted sort values.
  *
  * (*) [mkExprContext] is responsible for native expressions creation for each [KCvc5ForkingSolver]
@@ -76,13 +76,13 @@ open class KCvc5ForkingSolverManager(private val ctx: KContext) : KForkingSolver
         uninterpretedSortValues
     }
 
-    override fun mkForkingSolver(): KForkingSolver<KCvc5SolverConfiguration> {
+    override fun createForkingSolver(): KForkingSolver<KCvc5SolverConfiguration> {
         return KCvc5ForkingSolver(ctx, this, null).also {
             solvers += it
         }
     }
 
-    internal fun mkForkingSolver(parent: KCvc5ForkingSolver): KForkingSolver<KCvc5SolverConfiguration> {
+    internal fun createForkingSolver(parent: KCvc5ForkingSolver): KForkingSolver<KCvc5SolverConfiguration> {
         return KCvc5ForkingSolver(ctx, this, parent).also {
             solvers += it
         }

@@ -51,7 +51,7 @@ open class KZ3ForkingSolver internal constructor(
     /**
      * Creates lazily initiated forked solver with shared cache, preserving parental assertions and configuration.
      */
-    override fun fork(): KForkingSolver<KZ3SolverConfiguration> = manager.mkForkingSolver(this)
+    override fun fork(): KForkingSolver<KZ3SolverConfiguration> = manager.createForkingSolver(this)
 
     override fun saveTrackedAssertion(track: Long, trackedExpr: KExpr<KBoolSort>) {
         trackedAssertions.currentFrame[track] = trackedExpr

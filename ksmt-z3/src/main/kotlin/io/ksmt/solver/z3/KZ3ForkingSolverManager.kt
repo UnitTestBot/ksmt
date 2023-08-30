@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap
  * It's cheaper to create multiple copies of solvers with [KZ3ForkingSolver.fork]
  * instead of assertions transferring in [KZ3Solver] instances.
  *
- * All created solvers with one manager (via both [KZ3ForkingSolver.fork] and [mkForkingSolver])
+ * All created solvers with one manager (via both [KZ3ForkingSolver.fork] and [createForkingSolver])
  * use the same [Context], cache, and registered uninterpreted sort values.
  */
 class KZ3ForkingSolverManager(private val ctx: KContext) : KForkingSolverManager<KZ3SolverConfiguration> {
@@ -71,11 +71,11 @@ class KZ3ForkingSolverManager(private val ctx: KContext) : KForkingSolverManager
     internal fun KZ3Context.getUninterpretedSortValueInterpreters() = ensureContextMatches(nativeContext)
         .let { uninterpretedSortValueInterpreters }
 
-    override fun mkForkingSolver(): KForkingSolver<KZ3SolverConfiguration> {
+    override fun createForkingSolver(): KForkingSolver<KZ3SolverConfiguration> {
         return KZ3ForkingSolver(ctx, this, null).also { solvers += it }
     }
 
-    internal fun mkForkingSolver(parent: KZ3ForkingSolver): KForkingSolver<KZ3SolverConfiguration> {
+    internal fun createForkingSolver(parent: KZ3ForkingSolver): KForkingSolver<KZ3SolverConfiguration> {
         return KZ3ForkingSolver(ctx, this, parent).also { solvers += it }
     }
 

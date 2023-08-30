@@ -109,10 +109,10 @@ class KForkingSolverTest {
         private fun mkZ3ForkingSolverManager(ctx: KContext) = KZ3ForkingSolverManager(ctx)
     }
 
-    private fun testCheckSat(mkForkingSolverManager: (KContext) -> KForkingSolverManager<*>) =
+    private fun testCheckSat(createForkingSolverManager: (KContext) -> KForkingSolverManager<*>) =
         KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY).use { ctx ->
-            mkForkingSolverManager(ctx).use { man ->
-                man.mkForkingSolver().use { parentSolver ->
+            createForkingSolverManager(ctx).use { man ->
+                man.createForkingSolver().use { parentSolver ->
                     with(ctx) {
                         val a by boolSort
                         val b by boolSort
@@ -166,10 +166,10 @@ class KForkingSolverTest {
             }
         }
 
-    private fun testUnsatCore(mkForkingSolverManager: (KContext) -> KForkingSolverManager<*>): Unit =
+    private fun testUnsatCore(createForkingSolverManager: (KContext) -> KForkingSolverManager<*>): Unit =
         KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY).use { ctx ->
-            mkForkingSolverManager(ctx).use { man ->
-                man.mkForkingSolver().use { parentSolver ->
+            createForkingSolverManager(ctx).use { man ->
+                man.createForkingSolver().use { parentSolver ->
                     with(ctx) {
                         val a by boolSort
                         val b by boolSort
@@ -219,10 +219,10 @@ class KForkingSolverTest {
             }
         }
 
-    private fun testModel(mkForkingSolverManager: (KContext) -> KForkingSolverManager<*>): Unit =
+    private fun testModel(createForkingSolverManager: (KContext) -> KForkingSolverManager<*>): Unit =
         KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY).use { ctx ->
-            mkForkingSolverManager(ctx).use { man ->
-                man.mkForkingSolver().use { parentSolver ->
+            createForkingSolverManager(ctx).use { man ->
+                man.createForkingSolver().use { parentSolver ->
                     with(ctx) {
                         val a by boolSort
                         val b by boolSort
@@ -244,10 +244,10 @@ class KForkingSolverTest {
             }
         }
 
-    private fun testScopedAssertions(mkForkingSolverManager: (KContext) -> KForkingSolverManager<*>): Unit =
+    private fun testScopedAssertions(createForkingSolverManager: (KContext) -> KForkingSolverManager<*>): Unit =
         KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY).use { ctx ->
-            mkForkingSolverManager(ctx).use { man ->
-                man.mkForkingSolver().use { parent ->
+            createForkingSolverManager(ctx).use { man ->
+                man.createForkingSolver().use { parent ->
                     with(ctx) {
                         val a by boolSort
                         val b by boolSort
@@ -315,10 +315,10 @@ class KForkingSolverTest {
         }
 
     @Suppress("LongMethod")
-    private fun testUninterpretedSort(mkForkingSolverManager: (KContext) -> KForkingSolverManager<*>): Unit =
+    private fun testUninterpretedSort(createForkingSolverManager: (KContext) -> KForkingSolverManager<*>): Unit =
         KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY).use { ctx ->
-            mkForkingSolverManager(ctx).use { man ->
-                man.mkForkingSolver().use { parentSolver ->
+            createForkingSolverManager(ctx).use { man ->
+                man.createForkingSolver().use { parentSolver ->
                     with(ctx) {
                         val uSort = mkUninterpretedSort("u")
                         val u1 by uSort
@@ -395,11 +395,11 @@ class KForkingSolverTest {
             }
         }
 
-    fun testLifeTime(mkForkingSolverManager: (KContext) -> KForkingSolverManager<*>): Unit =
+    fun testLifeTime(createForkingSolverManager: (KContext) -> KForkingSolverManager<*>): Unit =
         KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY).use { ctx ->
-            mkForkingSolverManager(ctx).use { man ->
+            createForkingSolverManager(ctx).use { man ->
                 with(ctx) {
-                    val parent = man.mkForkingSolver()
+                    val parent = man.createForkingSolver()
                     val x by bv8Sort
                     val f = mkBvSignedGreaterExpr(x, mkBv(100, bv8Sort))
 

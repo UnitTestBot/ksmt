@@ -14,15 +14,14 @@ import java.util.concurrent.ConcurrentHashMap
 class KBitwuzlaForkingSolverManager(private val ctx: KContext) : KForkingSolverManager<KBitwuzlaSolverConfiguration> {
     private val solvers = ConcurrentHashMap.newKeySet<KBitwuzlaForkingSolver>()
 
-    override fun mkForkingSolver(): KForkingSolver<KBitwuzlaSolverConfiguration> {
+    override fun createForkingSolver(): KForkingSolver<KBitwuzlaSolverConfiguration> {
         return KBitwuzlaForkingSolver(ctx, this, null).also {
             solvers += it
         }
     }
 
-    internal fun mkForkingSolver(parent: KBitwuzlaForkingSolver) = KBitwuzlaForkingSolver(ctx, this, parent).also {
-        solvers += it
-    }
+    internal fun createForkingSolver(parent: KBitwuzlaForkingSolver) = KBitwuzlaForkingSolver(ctx, this, parent)
+        .also { solvers += it }
 
     internal fun close(solver: KBitwuzlaForkingSolver) {
         solvers -= solver

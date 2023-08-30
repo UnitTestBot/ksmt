@@ -24,7 +24,8 @@ import java.util.concurrent.atomic.AtomicInteger
  * It's cheaper to create multiple copies of solvers with [KYicesForkingSolver.fork]
  * instead of assertions transferring in [KYicesSolver] instances manually.
  *
- * All created solvers with one manager (via both [KYicesForkingSolver.fork] and [mkForkingSolver]) use the same cache.
+ * All solvers created with one manager (via both [KYicesForkingSolver.fork] and [createForkingSolver])
+ * use the same cache.
  */
 class KYicesForkingSolverManager(
     private val ctx: KContext
@@ -76,7 +77,7 @@ class KYicesForkingSolverManager(
         maxUninterpretedSortValueIndex.getValue(s)
     }
 
-    override fun mkForkingSolver(): KForkingSolver<KYicesSolverConfiguration> =
+    override fun createForkingSolver(): KForkingSolver<KYicesSolverConfiguration> =
         KYicesForkingSolver(ctx, this, null).also {
             solvers += it
             maxUninterpretedSortValueIndex[it] = AtomicInteger(0)
@@ -85,7 +86,7 @@ class KYicesForkingSolverManager(
             expressionLevels[it] = ExpressionLevels()
         }
 
-    internal fun mkForkingSolver(parent: KYicesForkingSolver) = KYicesForkingSolver(ctx, this, parent).also {
+    internal fun createForkingSolver(parent: KYicesForkingSolver) = KYicesForkingSolver(ctx, this, parent).also {
         solvers += it
         scopedExpressions[it] = ScopedExpressions(::HashSet, ::HashSet)
             .apply { fork(scopedExpressions.getValue(parent)) }

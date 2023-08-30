@@ -41,7 +41,7 @@ open class KCvc5ForkingSolver internal constructor(
         config.configurator()
     }
 
-    override fun fork(): KForkingSolver<KCvc5SolverConfiguration> = manager.mkForkingSolver(this)
+    override fun fork(): KForkingSolver<KCvc5SolverConfiguration> = manager.createForkingSolver(this)
 
     private fun ensureAssertionsInitiated() {
         if (assertionsInitiated) return
