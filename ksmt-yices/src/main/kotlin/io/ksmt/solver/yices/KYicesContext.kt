@@ -3,13 +3,12 @@ package io.ksmt.solver.yices
 import com.sri.yices.Terms
 import com.sri.yices.Types
 import com.sri.yices.Yices
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
+import io.ksmt.KContext
 import io.ksmt.decl.KDecl
 import io.ksmt.expr.KConst
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.KInterpretedValue
+import io.ksmt.expr.KUninterpretedSortValue
 import io.ksmt.solver.KSolverUnsupportedFeatureException
 import io.ksmt.solver.util.KExprIntInternalizerBase.Companion.NOT_INTERNALIZED
 import io.ksmt.solver.yices.TermUtils.addTerm
@@ -19,37 +18,45 @@ import io.ksmt.solver.yices.TermUtils.funApplicationTerm
 import io.ksmt.solver.yices.TermUtils.mulTerm
 import io.ksmt.solver.yices.TermUtils.orTerm
 import io.ksmt.sort.KSort
-import io.ksmt.utils.NativeLibraryLoader
+import io.ksmt.sort.KUninterpretedSort
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
 import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicInteger
 
-open class KYicesContext : AutoCloseable {
-    private var isClosed = false
+open class KYicesContext(ctx: KContext) : AutoCloseable {
+    protected var isClosed = false
 
-    private val expressions = mkTermCache<KExpr<*>>()
-    private val yicesExpressions = mkTermReverseCache<KExpr<*>>()
+    protected open val expressions = mkTermCache<KExpr<*>>()
+    protected open val yicesExpressions = mkTermReverseCache<KExpr<*>>()
 
-    private val sorts = mkSortCache<KSort>()
-    private val yicesSorts = mkSortReverseCache<KSort>()
+    protected open val sorts = mkSortCache<KSort>()
+    protected open val yicesSorts = mkSortReverseCache<KSort>()
 
-    private val decls = mkTermCache<KDecl<*>>()
-    private val yicesDecls = mkTermReverseCache<KDecl<*>>()
+    protected open val decls = mkTermCache<KDecl<*>>()
+    protected open val yicesDecls = mkTermReverseCache<KDecl<*>>()
 
-    private val vars = mkTermCache<KDecl<*>>()
-    private val yicesVars = mkTermReverseCache<KDecl<*>>()
+    protected open val vars = mkTermCache<KDecl<*>>()
+    protected open val yicesVars = mkTermReverseCache<KDecl<*>>()
 
-    private val yicesTypes = mkSortSet()
-    private val yicesTerms = mkTermSet()
+    protected open val yicesTypes = mkSortSet()
+    protected open val yicesTerms = mkTermSet()
 
     val isActive: Boolean
         get() = !isClosed
 
-    fun findInternalizedExpr(expr: KExpr<*>): YicesTerm = expressions.getInt(expr)
+    fun findInternalizedExpr(expr: KExpr<*>): YicesTerm = expressions.getInt(expr).also {
+        if (it != NOT_INTERNALIZED)
+            uninterpretedSortValuesTracker.expressionUse(expr)
+    }
+
     fun saveInternalizedExpr(expr: KExpr<*>, internalized: YicesTerm) {
         if (expressions.putIfAbsent(expr, internalized) == NOT_INTERNALIZED) {
             if (expr is KInterpretedValue<*> || expr is KConst<*>) {
                 yicesExpressions.put(internalized, expr)
             }
+            uninterpretedSortValuesTracker.expressionSave(expr)
         }
     }
 
@@ -175,9 +182,9 @@ open class KYicesContext : AutoCloseable {
     fun functionType(domain: YicesSortArray, range: YicesSort) = mkType { Types.functionType(domain, range) }
     fun newUninterpretedType(name: String) = mkType { Types.newUninterpretedType(name) }
 
-    val zero = mkTerm { Terms.intConst(0L) }
-    val one = mkTerm { Terms.intConst(1L) }
-    val minusOne = mkTerm { Terms.intConst(-1L) }
+    val zero by lazy { mkTerm { Terms.intConst(0L) } }
+    val one by lazy { mkTerm { Terms.intConst(1L) } }
+    val minusOne by lazy { mkTerm { Terms.intConst(-1L) } }
 
     private inline fun mkTerm(mk: () -> YicesTerm): YicesTerm = withGcGuard {
         val term = mk()
@@ -294,7 +301,32 @@ open class KYicesContext : AutoCloseable {
 
     fun uninterpretedSortConst(sort: YicesSort, idx: Int) = mkTerm { Terms.mkConst(sort, idx) }
 
-    private var maxValueIndex = 0
+    protected open var maxValueIndex = 0
+
+    /**
+     * Collects uninterpreted sort values usage for [KYicesModel.uninterpretedSortUniverse]
+     */
+    protected open val uninterpretedSortValuesTracker = UninterpretedValuesTracker(
+        ctx,
+        ScopedArrayFrame(::HashSet),
+        ScopedArrayFrame(::HashMap),
+        Object2IntOpenHashMap<KExpr<*>>()
+    )
+
+    fun pushAssertionLevel() {
+        uninterpretedSortValuesTracker.push()
+    }
+
+    fun popAssertionLevel(n: UInt) {
+        uninterpretedSortValuesTracker.pop(n)
+    }
+
+    fun registerUninterpretedSortValue(value: KUninterpretedSortValue) {
+        uninterpretedSortValuesTracker.addToCurrentLevel(value)
+    }
+
+    fun uninterpretedSortValues(sort: KUninterpretedSort) =
+        uninterpretedSortValuesTracker.getUninterpretedSortValues(sort)
 
     /**
      * Yices can produce different values with the same index.
@@ -339,20 +371,6 @@ open class KYicesContext : AutoCloseable {
     }
 
     companion object {
-        init {
-            if (!Yices.isReady()) {
-                NativeLibraryLoader.load { os ->
-                    when (os) {
-                        NativeLibraryLoader.OS.LINUX -> listOf("libyices", "libyices2java")
-                        NativeLibraryLoader.OS.WINDOWS -> listOf("libyices", "libyices2java")
-                        NativeLibraryLoader.OS.MACOS -> listOf("libyices", "libyices2java")
-                    }
-                }
-                Yices.init()
-                Yices.setReadyFlag(true)
-            }
-        }
-
         private const val UNINTERPRETED_SORT_VALUE_SHIFT = 1 shl 30
         private const val UNINTERPRETED_SORT_MAX_ALLOWED_VALUE = UNINTERPRETED_SORT_VALUE_SHIFT / 2
         private const val UNINTERPRETED_SORT_MIN_ALLOWED_VALUE = -UNINTERPRETED_SORT_MAX_ALLOWED_VALUE
@@ -420,7 +438,8 @@ open class KYicesContext : AutoCloseable {
             }
         }
 
-        private fun performGc() {
+        @JvmStatic
+        protected fun performGc() {
             // spin wait until [gcGuard] == [FREE]
             while (true) {
                 if (gcGuard.compareAndSet(FREE, ON_GC)) {

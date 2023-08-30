@@ -24,9 +24,10 @@ import io.ksmt.expr.KExpr
 import io.ksmt.expr.KFpRoundingMode
 import io.ksmt.expr.KInterpretedValue
 import io.ksmt.solver.KSolverUnsupportedFeatureException
-import io.ksmt.solver.util.KExprConverterBase
 import io.ksmt.solver.util.ExprConversionResult
+import io.ksmt.solver.util.KExprConverterBase
 import io.ksmt.solver.util.KExprConverterUtils.argumentsConversionRequired
+import io.ksmt.solver.util.conversionLoop
 import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KArray2Sort
 import io.ksmt.sort.KArray3Sort
@@ -42,7 +43,7 @@ import io.ksmt.sort.KRealSort
 import io.ksmt.sort.KSort
 import io.ksmt.utils.asExpr
 import io.ksmt.utils.uncheckedCast
-import java.util.*
+import java.util.TreeMap
 
 @Suppress("LargeClass")
 open class KCvc5ExprConverter(
@@ -732,6 +733,26 @@ open class KCvc5ExprConverter(
             }
             else -> error("expected power expr term, but was $expr")
         }
+    }
+
+    fun <T : KSort> Term.convertExprWithMkExprSolver(): KExpr<T> = convertExprWithoutCacheSave<T>().also {
+        with(internalizer) {
+            it.internalizeExpr()
+        }
+    }
+
+    fun <T : KSort> Term.convertExprWithoutCacheSave(): KExpr<T> {
+        val wasteCache = TreeMap<Term, KExpr<*>>()
+        return conversionLoop(
+            stack = exprStack,
+            native = this,
+            stackPush = { stack, element -> stack.add(element) },
+            stackPop = { stack -> stack.removeLast() },
+            stackIsNotEmpty = { stack -> stack.isNotEmpty() },
+            convertNative = { expr -> convertNativeExpr(expr) },
+            findConverted = { expr -> wasteCache[expr] ?: findConvertedNative(expr) },
+            saveConverted = { expr, converted -> wasteCache[expr] = converted }
+        )
     }
 
     fun <T : KSort> Term.convertExpr(): KExpr<T> = convertFromNative()

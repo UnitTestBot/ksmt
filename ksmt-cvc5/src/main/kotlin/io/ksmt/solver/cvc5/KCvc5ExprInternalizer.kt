@@ -160,11 +160,11 @@ import io.ksmt.expr.KXorExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvAddNoOverflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvAddNoUnderflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvDivNoOverflowExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoOverflowExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoUnderflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvNegNoOverflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvSubNoOverflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvSubNoUnderflowExpr
-import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoOverflowExpr
-import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoUnderflowExpr
 import io.ksmt.expr.rewrite.simplify.simplifyBvRotateLeftExpr
 import io.ksmt.expr.rewrite.simplify.simplifyBvRotateRightExpr
 import io.ksmt.solver.KSolverUnsupportedFeatureException
@@ -203,7 +203,7 @@ class KCvc5ExprInternalizer(
     }
 
     private val nsolver: Solver
-        get() = cvc5Ctx.nativeSolver
+        get() = cvc5Ctx.mkExprSolver
 
     private val zeroIntValueTerm: Term by lazy { nsolver.mkInteger(0L) }
 

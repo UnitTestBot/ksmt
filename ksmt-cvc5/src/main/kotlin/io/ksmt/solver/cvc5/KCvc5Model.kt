@@ -72,27 +72,32 @@ open class KCvc5Model(
     private fun <T : KSort> funcInterp(
         decl: KDecl<T>,
         internalizedDecl: Term
-    ): KFuncInterp<T> = with(converter) {
+    ): KFuncInterp<T> {
         val cvc5Interp = cvc5Ctx.nativeSolver.getValue(internalizedDecl)
 
         val vars = decl.argSorts.map { it.mkFreshConst("x") }
         val cvc5Vars = vars.map { with(internalizer) { it.internalizeExpr() } }.toTypedArray()
 
-        val cvc5InterpArgs = cvc5Interp.getChild(0).getChildren()
+        val cvc5InterpArgs = with(converter) { cvc5Interp.getChild(0).getChildren() }
         val cvc5FreshVarsInterp = cvc5Interp.substitute(cvc5InterpArgs, cvc5Vars)
 
-        val defaultBody = cvc5FreshVarsInterp.getChild(1).convertExpr<T>()
+        val defaultBody = cvc5FreshVarsInterp.getChild(1).let {
+            with(cvc5Ctx) { it.convert<T>(converter) }
+        }
 
-        KFuncInterpWithVars(decl, vars.map { it.decl }, emptyList(), defaultBody)
+        return KFuncInterpWithVars(decl, vars.map { it.decl }, emptyList(), defaultBody)
     }
 
-    private fun <T : KSort> constInterp(decl: KDecl<T>, const: Term): KFuncInterp<T> = with(converter) {
+    private fun <T : KSort> constInterp(decl: KDecl<T>, const: Term): KFuncInterp<T> {
         val cvc5Interp = cvc5Ctx.nativeSolver.getValue(const)
-        val interp = cvc5Interp.convertExpr<T>()
-
-        KFuncInterpVarsFree(decl = decl, entries = emptyList(), default = interp)
+        val interp = with(cvc5Ctx) { cvc5Interp.convert<T>(converter) }
+        return KFuncInterpVarsFree(decl = decl, entries = emptyList(), default = interp)
     }
 
+    /**
+     * In case of [KCvc5ForkingSolver.model] call, uninterpreted sort universe extends values of whole forking hierarchy
+     * @see KCvc5Context.getRegisteredSortValues
+     */
     override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KUninterpretedSortValue>? =
         getUninterpretedSortContext(sort).getSortUniverse()
 

@@ -95,7 +95,7 @@ class MultiIndexedArrayTest {
     @Test
     fun testMultiIndexedArraysYicesWithZ3Oracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
         oracleManager.createSolver(this, KZ3Solver::class).use { oracleSolver ->
-            KYicesContext().use { yicesNativeCtx ->
+            KYicesContext(this).use { yicesNativeCtx ->
                 runMultiIndexedArraySamples(oracleSolver) { expr ->
                     internalizeAndConvertYices(yicesNativeCtx, expr)
                 }
@@ -117,7 +117,7 @@ class MultiIndexedArrayTest {
     @Test
     fun testMultiIndexedArraysYicesWithYicesOracle(): Unit = with(KContext(simplificationMode = NO_SIMPLIFY)) {
         oracleManager.createSolver(this, KYicesSolver::class).use { oracleSolver ->
-            KYicesContext().use { yicesNativeCtx ->
+            KYicesContext(this).use { yicesNativeCtx ->
                 runMultiIndexedArraySamples(oracleSolver) { expr ->
                     internalizeAndConvertYices(yicesNativeCtx, expr)
                 }

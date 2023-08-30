@@ -1,6 +1,7 @@
 package io.ksmt.solver.z3
 
 import com.microsoft.z3.Params
+import com.microsoft.z3.Solver
 import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverUniversalConfigurationBuilder
 
@@ -42,6 +43,44 @@ class KZ3SolverConfigurationImpl(private val params: Params) : KZ3SolverConfigur
 
     override fun setZ3Option(option: String, value: String) {
         params.add(option, value)
+    }
+}
+
+class KZ3ForkingSolverConfigurationImpl(private val params: Params) : KZ3SolverConfiguration {
+    private val booleanOptions = hashMapOf<String, Boolean>()
+    private val intOptions = hashMapOf<String, Int>()
+    private val doubleOptions = hashMapOf<String, Double>()
+    private val stringOptions = hashMapOf<String, String>()
+
+    override fun setZ3Option(option: String, value: Boolean) {
+        params.add(option, value)
+        booleanOptions[option] = value
+    }
+
+    override fun setZ3Option(option: String, value: Int) {
+        params.add(option, value)
+        intOptions[option] = value
+    }
+
+    override fun setZ3Option(option: String, value: Double) {
+        params.add(option, value)
+        doubleOptions[option] = value
+    }
+
+    override fun setZ3Option(option: String, value: String) {
+        params.add(option, value)
+        stringOptions[option] = value
+    }
+
+    fun fork(params: Params): KZ3ForkingSolverConfigurationImpl = KZ3ForkingSolverConfigurationImpl(params).also {
+        booleanOptions.forEach { (option, value) -> it.setZ3Option(option, value) }
+        intOptions.forEach { (option, value) -> it.setZ3Option(option, value) }
+        doubleOptions.forEach { (option, value) -> it.setZ3Option(option, value) }
+        stringOptions.forEach { (option, value) -> it.setZ3Option(option, value) }
+    }
+
+    fun setParameters(solver: Solver) {
+        solver.setParameters(params)
     }
 }
 

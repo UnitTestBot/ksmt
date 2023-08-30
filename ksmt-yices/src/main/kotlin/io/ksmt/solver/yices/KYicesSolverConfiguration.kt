@@ -31,6 +31,19 @@ class KYicesSolverConfigurationImpl(private val config: Config) : KYicesSolverCo
     }
 }
 
+class KYicesForkingSolverConfigurationImpl(private val config: Config) : KYicesSolverConfiguration {
+    private val options = hashMapOf<String, String>()
+
+    override fun setYicesOption(option: String, value: String) {
+        config.set(option, value)
+        options[option] = value
+    }
+
+    fun fork(config: Config) = KYicesForkingSolverConfigurationImpl(config).also {
+        options.forEach { (option, value) -> it.setYicesOption(option, value) }
+    }
+}
+
 class KYicesSolverUniversalConfiguration(
     private val builder: KSolverUniversalConfigurationBuilder
 ) : KYicesSolverConfiguration {

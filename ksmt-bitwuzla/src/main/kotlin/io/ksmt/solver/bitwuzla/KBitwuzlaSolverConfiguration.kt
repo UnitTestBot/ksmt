@@ -6,6 +6,7 @@ import io.ksmt.solver.KSolverUnsupportedParameterException
 import org.ksmt.solver.bitwuzla.bindings.Bitwuzla
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaOption
 import org.ksmt.solver.bitwuzla.bindings.Native
+import java.util.EnumMap
 
 interface KBitwuzlaSolverConfiguration : KSolverConfiguration {
     fun setBitwuzlaOption(option: BitwuzlaOption, value: Int)
@@ -41,6 +42,25 @@ class KBitwuzlaSolverConfigurationImpl(private val bitwuzla: Bitwuzla) : KBitwuz
 
     override fun setBitwuzlaOption(option: BitwuzlaOption, value: String) {
         Native.bitwuzlaSetOptionStr(bitwuzla, option, value)
+    }
+}
+
+class KBitwuzlaForkingSolverConfigurationImpl(private val bitwuzla: Bitwuzla) : KBitwuzlaSolverConfiguration {
+    private val intOptions = EnumMap<_, Int>(BitwuzlaOption::class.java)
+    private val stringOptions = EnumMap<_, String>(BitwuzlaOption::class.java)
+    override fun setBitwuzlaOption(option: BitwuzlaOption, value: Int) {
+        Native.bitwuzlaSetOption(bitwuzla, option, value)
+        intOptions[option] = value
+    }
+
+    override fun setBitwuzlaOption(option: BitwuzlaOption, value: String) {
+        Native.bitwuzlaSetOptionStr(bitwuzla, option, value)
+        stringOptions[option] = value
+    }
+
+    fun fork(childBitwuzla: Bitwuzla) = KBitwuzlaForkingSolverConfigurationImpl(childBitwuzla).also {
+        intOptions.forEach { (option, value) -> it.setBitwuzlaOption(option, value) }
+        stringOptions.forEach { (option, value) -> it.setBitwuzlaOption(option, value) }
     }
 }
 

@@ -45,6 +45,29 @@ class KCvc5SolverConfigurationImpl(val solver: Solver) : KCvc5SolverConfiguratio
     }
 }
 
+class KCvc5ForkingSolverConfigurationImpl(val solver: Solver) : KCvc5SolverConfiguration {
+    private val options = hashMapOf<String, String>()
+    private lateinit var logic: String
+    override fun setCvc5Option(option: String, value: String) {
+        solver.setOption(option, value)
+        options[option] = value
+    }
+
+    override fun setCvc5Logic(value: String) {
+        solver.setLogic(value)
+        logic = value
+    }
+
+    fun fork(solver: Solver): KCvc5ForkingSolverConfigurationImpl = KCvc5ForkingSolverConfigurationImpl(solver).also {
+        if (::logic.isInitialized) {
+            it.setCvc5Logic(logic)
+        }
+        options.forEach { (option, value) ->
+            it.setCvc5Option(option, value)
+        }
+    }
+}
+
 class KCvc5SolverUniversalConfiguration(
     private val builder: KSolverUniversalConfigurationBuilder
 ) : KCvc5SolverConfiguration {

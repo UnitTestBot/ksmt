@@ -20,7 +20,7 @@ import io.ksmt.sort.KUninterpretedSort
 open class KCvc5SortInternalizer(
     private val cvc5Ctx: KCvc5Context
 ) : KSortVisitor<Sort> {
-    private val nSolver: Solver = cvc5Ctx.nativeSolver
+    private val nSolver: Solver = cvc5Ctx.mkExprSolver
 
     override fun visit(sort: KBoolSort): Sort = cvc5Ctx.internalizeSort(sort) {
         nSolver.booleanSort
