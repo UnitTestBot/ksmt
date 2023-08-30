@@ -5,6 +5,12 @@ import io.ksmt.solver.KForkingSolver
 import io.ksmt.solver.KForkingSolverManager
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Responsible for creation and managing of [KBitwuzlaForkingSolver].
+ *
+ * Neither native cache is shared between [KBitwuzlaForkingSolver]s
+ * because cache sharing is not supported in bitwuzla.
+ */
 class KBitwuzlaForkingSolverManager(private val ctx: KContext) : KForkingSolverManager<KBitwuzlaSolverConfiguration> {
     private val solvers = ConcurrentHashMap.newKeySet<KBitwuzlaForkingSolver>()
 

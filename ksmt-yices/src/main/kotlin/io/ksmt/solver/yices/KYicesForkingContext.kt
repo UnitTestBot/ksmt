@@ -13,22 +13,22 @@ class KYicesForkingContext(
     manager: KYicesForkingSolverManager,
     solver: KYicesForkingSolver
 ) : KYicesContext(ctx) {
-    override val expressions = manager.findExpressionsCache(solver)
-    override val yicesExpressions = manager.findExpressionsReversedCache(solver)
+    override val expressions = manager.getExpressionsCache(solver)
+    override val yicesExpressions = manager.getExpressionsReversedCache(solver)
 
-    override val sorts = manager.findSortsCache(solver)
-    override val yicesSorts = manager.findSortsReversedCache(solver)
+    override val sorts = manager.getSortsCache(solver)
+    override val yicesSorts = manager.getSortsReversedCache(solver)
 
-    override val decls = manager.findDeclsCache(solver)
-    override val yicesDecls = manager.findDeclsReversedCache(solver)
+    override val decls = manager.getDeclsCache(solver)
+    override val yicesDecls = manager.getDeclsReversedCache(solver)
 
-    override val vars = manager.findVarsCache(solver)
-    override val yicesVars = manager.findVarsReversedCache(solver)
+    override val vars = manager.getVarsCache(solver)
+    override val yicesVars = manager.getVarsReversedCache(solver)
 
-    override val yicesTypes = manager.findTypesCache(solver)
-    override val yicesTerms = manager.findTermsCache(solver)
+    override val yicesTypes = manager.getTypesCache(solver)
+    override val yicesTerms = manager.getTermsCache(solver)
 
-    private val maxValueIndexAtomic = manager.findMaxUninterpretedSortValueIdx(solver)
+    private val maxValueIndexAtomic = manager.getMaxUninterpretedSortValueIdx(solver)
 
     override var maxValueIndex: Int
         get() = maxValueIndexAtomic.get()

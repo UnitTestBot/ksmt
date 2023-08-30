@@ -18,57 +18,67 @@ import java.util.IdentityHashMap
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
+/**
+ * Responsible for creation and managing of [KYicesForkingSolver].
+ *
+ * It's cheaper to create multiple copies of solvers with [KYicesForkingSolver.fork]
+ * instead of assertions transferring in [KYicesSolver] instances manually.
+ *
+ * All created solvers with one manager (via both [KYicesForkingSolver.fork] and [mkForkingSolver]) use the same cache.
+ */
 class KYicesForkingSolverManager(
     private val ctx: KContext
 ) : KForkingSolverManager<KYicesSolverConfiguration> {
 
     private val solvers = ConcurrentHashMap.newKeySet<KYicesForkingSolver>()
-    private val sharedCacheReferences = IdentityHashMap<KYicesForkingSolver, AtomicInteger>()
 
-    private val expressionsCache = IdentityHashMap<KYicesForkingSolver, ExpressionsCache>()
-    private val expressionsReversedCache = IdentityHashMap<KYicesForkingSolver, ExpressionsReversedCache>()
-    private val sortsCache = IdentityHashMap<KYicesForkingSolver, SortsCache>()
-    private val sortsReversedCache = IdentityHashMap<KYicesForkingSolver, SortsReversedCache>()
-    private val declsCache = IdentityHashMap<KYicesForkingSolver, DeclsCache>()
-    private val declsReversedCache = IdentityHashMap<KYicesForkingSolver, DeclsReversedCache>()
-    private val varsCache = IdentityHashMap<KYicesForkingSolver, VarsCache>()
-    private val varsReversedCache = IdentityHashMap<KYicesForkingSolver, VarsReversedCache>()
-    private val typesCache = IdentityHashMap<KYicesForkingSolver, TypesCache>()
-    private val termsCache = IdentityHashMap<KYicesForkingSolver, TermsCache>()
+    private fun ensureSolverRegistered(s: KYicesForkingSolver) = check(s in solvers) {
+        "Solver is not registered by the manager."
+    }
+
+    private val expressionsCache = ExpressionsCache().withNotInternalizedDefaultValue()
+    private val expressionsReversedCache = ExpressionsReversedCache()
+    private val sortsCache = SortsCache().withNotInternalizedDefaultValue()
+    private val sortsReversedCache = SortsReversedCache()
+    private val declsCache = DeclsCache().withNotInternalizedDefaultValue()
+    private val declsReversedCache = DeclsReversedCache()
+    private val varsCache = VarsCache().withNotInternalizedDefaultValue()
+    private val varsReversedCache = VarsReversedCache()
+    private val typesCache = TypesCache()
+    private val termsCache = TermsCache()
     private val maxUninterpretedSortValueIndex = IdentityHashMap<KYicesForkingSolver, AtomicInteger>()
 
     private val scopedExpressions = IdentityHashMap<KYicesForkingSolver, ScopedExpressions>()
     private val scopedUninterpretedValues = IdentityHashMap<KYicesForkingSolver, ScopedUninterpretedSortValues>()
     private val expressionLevels = IdentityHashMap<KYicesForkingSolver, ExpressionLevels>()
 
-    internal fun findExpressionsCache(s: KYicesForkingSolver): ExpressionsCache = expressionsCache.getValue(s)
-    internal fun findExpressionsReversedCache(s: KYicesForkingSolver): ExpressionsReversedCache =
-        expressionsReversedCache.getValue(s)
-
-    internal fun findSortsCache(s: KYicesForkingSolver): SortsCache = sortsCache.getValue(s)
-    internal fun findSortsReversedCache(s: KYicesForkingSolver): SortsReversedCache = sortsReversedCache.getValue(s)
-    internal fun findDeclsCache(s: KYicesForkingSolver): DeclsCache = declsCache.getValue(s)
-    internal fun findDeclsReversedCache(s: KYicesForkingSolver): DeclsReversedCache = declsReversedCache.getValue(s)
-    internal fun findVarsCache(s: KYicesForkingSolver): VarsCache = varsCache.getValue(s)
-    internal fun findVarsReversedCache(s: KYicesForkingSolver): VarsReversedCache = varsReversedCache.getValue(s)
-    internal fun findTypesCache(s: KYicesForkingSolver): TypesCache = typesCache.getValue(s)
-    internal fun findTermsCache(s: KYicesForkingSolver): TermsCache = termsCache.getValue(s)
-    internal fun findMaxUninterpretedSortValueIdx(s: KYicesForkingSolver) = maxUninterpretedSortValueIndex.getValue(s)
+    internal fun getExpressionsCache(s: KYicesForkingSolver): ExpressionsCache = ensureSolverRegistered(s).let {
+        expressionsCache
+    }
+    internal fun getExpressionsReversedCache(s: KYicesForkingSolver) = ensureSolverRegistered(s).let {
+        expressionsReversedCache
+    }
+    internal fun getSortsCache(s: KYicesForkingSolver): SortsCache = ensureSolverRegistered(s).let { sortsCache }
+    internal fun getSortsReversedCache(s: KYicesForkingSolver): SortsReversedCache = ensureSolverRegistered(s).let {
+        sortsReversedCache
+    }
+    internal fun getDeclsCache(s: KYicesForkingSolver): DeclsCache = ensureSolverRegistered(s).let { declsCache }
+    internal fun getDeclsReversedCache(s: KYicesForkingSolver): DeclsReversedCache = ensureSolverRegistered(s).let {
+        declsReversedCache
+    }
+    internal fun getVarsCache(s: KYicesForkingSolver): VarsCache = ensureSolverRegistered(s).let { varsCache }
+    internal fun getVarsReversedCache(s: KYicesForkingSolver): VarsReversedCache = ensureSolverRegistered(s).let {
+        varsReversedCache
+    }
+    internal fun getTypesCache(s: KYicesForkingSolver): TypesCache = ensureSolverRegistered(s).let { typesCache }
+    internal fun getTermsCache(s: KYicesForkingSolver): TermsCache = ensureSolverRegistered(s).let { termsCache }
+    internal fun getMaxUninterpretedSortValueIdx(s: KYicesForkingSolver) = ensureSolverRegistered(s).let {
+        maxUninterpretedSortValueIndex.getValue(s)
+    }
 
     override fun mkForkingSolver(): KForkingSolver<KYicesSolverConfiguration> =
         KYicesForkingSolver(ctx, this, null).also {
             solvers += it
-            sharedCacheReferences[it] = AtomicInteger(1)
-            expressionsCache[it] = ExpressionsCache().withNotInternalizedDefaultValue()
-            expressionsReversedCache[it] = ExpressionsReversedCache()
-            sortsCache[it] = SortsCache().withNotInternalizedDefaultValue()
-            sortsReversedCache[it] = SortsReversedCache()
-            declsCache[it] = DeclsCache().withNotInternalizedDefaultValue()
-            declsReversedCache[it] = DeclsReversedCache()
-            varsCache[it] = VarsCache().withNotInternalizedDefaultValue()
-            varsReversedCache[it] = VarsReversedCache()
-            typesCache[it] = TypesCache()
-            termsCache[it] = TermsCache()
             maxUninterpretedSortValueIndex[it] = AtomicInteger(0)
             scopedExpressions[it] = ScopedExpressions(::HashSet, ::HashSet)
             scopedUninterpretedValues[it] = ScopedUninterpretedSortValues(::HashMap, ::HashMap)
@@ -77,17 +87,6 @@ class KYicesForkingSolverManager(
 
     internal fun mkForkingSolver(parent: KYicesForkingSolver) = KYicesForkingSolver(ctx, this, parent).also {
         solvers += it
-        sharedCacheReferences[it] = sharedCacheReferences.getValue(parent).apply { incrementAndGet() }
-        expressionsCache[it] = expressionsCache[parent]
-        expressionsReversedCache[it] = expressionsReversedCache[parent]
-        sortsCache[it] = sortsCache[parent]
-        sortsReversedCache[it] = sortsReversedCache[parent]
-        declsCache[it] = declsCache[parent]
-        declsReversedCache[it] = declsReversedCache[parent]
-        varsCache[it] = varsCache[parent]
-        varsReversedCache[it] = varsReversedCache[parent]
-        typesCache[it] = typesCache[parent]
-        termsCache[it] = termsCache[parent]
         scopedExpressions[it] = ScopedExpressions(::HashSet, ::HashSet)
             .apply { fork(scopedExpressions.getValue(parent)) }
         scopedUninterpretedValues[it] = ScopedUninterpretedSortValues(::HashMap, ::HashMap)
@@ -118,23 +117,24 @@ class KYicesForkingSolverManager(
     }
 
     private fun decRef(solver: KYicesForkingSolver) {
-        val referencesAfterDec = sharedCacheReferences.getValue(solver).decrementAndGet()
-        if (referencesAfterDec == 0) {
-            sharedCacheReferences -= solver
-            expressionsCache -= solver
-            expressionsReversedCache -= solver
-            sortsCache -= solver
-            sortsReversedCache -= solver
-            declsCache -= solver
-            declsReversedCache -= solver
-            varsCache -= solver
-            varsReversedCache -= solver
-            typesCache.remove(solver)?.forEach(Yices::yicesDecrefType)
-            termsCache.remove(solver)?.forEach(Yices::yicesDecrefTerm)
-            maxUninterpretedSortValueIndex -= solver
-            scopedExpressions -= solver
-            scopedUninterpretedValues -= solver
-            expressionLevels -= solver
+        scopedExpressions -= solver
+        scopedUninterpretedValues -= solver
+        maxUninterpretedSortValueIndex -= solver
+        expressionLevels -= solver
+
+        if (solvers.isEmpty()) {
+            expressionsCache.clear()
+            expressionsReversedCache.clear()
+            sortsCache.clear()
+            sortsReversedCache.clear()
+            declsCache.clear()
+            declsReversedCache.clear()
+            varsCache.clear()
+            varsReversedCache.clear()
+            typesCache.forEach(Yices::yicesDecrefType)
+            termsCache.forEach(Yices::yicesDecrefTerm)
+            typesCache.clear()
+            termsCache.clear()
         }
     }
 

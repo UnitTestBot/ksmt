@@ -57,6 +57,9 @@ class KYicesForkingSolver(
         ksmtConfig.configurator()
     }
 
+    /**
+     * Creates lazily initiated forked solver with shared cache, preserving parental assertions and configuration.
+     */
     override fun fork(): KForkingSolver<KYicesSolverConfiguration> = manager.mkForkingSolver(this)
 
     override fun saveTrackedAssertion(track: YicesTerm, trackedExpr: KExpr<KBoolSort>) {
