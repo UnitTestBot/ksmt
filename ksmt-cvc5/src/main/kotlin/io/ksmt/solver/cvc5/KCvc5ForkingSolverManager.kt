@@ -11,91 +11,80 @@ import io.ksmt.solver.KForkingSolver
 import io.ksmt.solver.KForkingSolverManager
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
-import java.util.IdentityHashMap
 import java.util.TreeMap
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Responsible for creation and managing of [KCvc5ForkingSolver].
+ *
+ * It's cheaper to create multiple copies of solvers with [KCvc5ForkingSolver.fork]
+ * instead of assertions transferring in [KCvc5Solver] instances manually.
+ *
+ * All solvers created with one manager (via both [KCvc5ForkingSolver.fork] and [mkForkingSolver])
+ * use the same [mkExprContext]*, cache, and registered uninterpreted sort values.
+ *
+ * (*) [mkExprContext] is responsible for native expressions creation for each [KCvc5ForkingSolver]
+ * in one [KCvc5ForkingSolverManager]. Therefore, life scope of native expressions is the same with
+ * life scope of [KCvc5ForkingSolverManager]
+ */
 open class KCvc5ForkingSolverManager(private val ctx: KContext) : KForkingSolverManager<KCvc5SolverConfiguration> {
-
+    private val mkExprContext by lazy { Solver() }
     private val solvers: MutableSet<KCvc5ForkingSolver> = ConcurrentHashMap.newKeySet()
 
-    /**
-     * for each parent-to-child hierarchy created only one mkExprSolver,
-     * which is responsible for native expressions lifetime
-     */
-    private val forkingSolverToMkExprSolver = IdentityHashMap<KCvc5ForkingSolver, Solver>()
-    private val mkExprSolverReferences = IdentityHashMap<Solver, Int>()
-
     // shared cache
-    private val expressionsCache = IdentityHashMap<Solver, ExpressionsCache>()
-    private val expressionsReversedCache = IdentityHashMap<Solver, ExpressionsReversedCache>()
-    private val sortsCache = IdentityHashMap<Solver, SortsCache>()
-    private val sortsReversedCache = IdentityHashMap<Solver, SortsReversedCache>()
-    private val declsCache = IdentityHashMap<Solver, DeclsCache>()
-    private val declsReversedCache = IdentityHashMap<Solver, DeclsReversedCache>()
+    private val expressionsCache = ExpressionsCache()
+    private val expressionsReversedCache = ExpressionsReversedCache()
+    private val sortsCache = SortsCache()
+    private val sortsReversedCache = SortsReversedCache()
+    private val declsCache = DeclsCache()
+    private val declsReversedCache = DeclsReversedCache()
+    private val uninterpretedSortValueInterpretersCache = UninterpretedSortValueInterpretersCache()
+    private val uninterpretedSortValues = UninterpretedSortValues()
 
-    private val uninterpretedSortValueDescriptors = IdentityHashMap<Solver, UninterpretedSortValueDescriptors>()
-    private val uninterpretedSortValueInterpretersCache =
-        IdentityHashMap<Solver, UninterpretedSortValueInterpretersCache>()
-    private val uninterpretedSortValues = IdentityHashMap<Solver, UninterpretedSortValues>()
-
-    private fun Solver.ensureRegisteredAsMkExprSolver() = require(this in mkExprSolverReferences) {
+    private fun Solver.ensureMkExprContextMatches() = require(this == mkExprContext) {
         "Solver is not registered by this manager"
     }
 
-    internal fun KCvc5Context.findExpressionsCache() = mkExprSolver.ensureRegisteredAsMkExprSolver().let {
-        expressionsCache.getOrPut(mkExprSolver) { ExpressionsCache() }
+    internal fun KCvc5Context.getExpressionsCache() = mkExprSolver.ensureMkExprContextMatches().let {
+        expressionsCache
     }
 
-    internal fun KCvc5Context.findExpressionsReversedCache() = mkExprSolver.ensureRegisteredAsMkExprSolver().let {
-        expressionsReversedCache.getOrPut(mkExprSolver) { ExpressionsReversedCache() }
+    internal fun KCvc5Context.getExpressionsReversedCache() = mkExprSolver.ensureMkExprContextMatches().let {
+        expressionsReversedCache
     }
 
-    internal fun KCvc5Context.findSortsCache() = mkExprSolver.ensureRegisteredAsMkExprSolver().let {
-        sortsCache.getOrPut(mkExprSolver) { SortsCache() }
+    internal fun KCvc5Context.getSortsCache() = mkExprSolver.ensureMkExprContextMatches().let {
+        sortsCache
     }
 
-    internal fun KCvc5Context.findSortsReversedCache() = mkExprSolver.ensureRegisteredAsMkExprSolver().let {
-        sortsReversedCache.getOrPut(mkExprSolver) { SortsReversedCache() }
+    internal fun KCvc5Context.getSortsReversedCache() = mkExprSolver.ensureMkExprContextMatches().let {
+        sortsReversedCache
     }
 
-    internal fun KCvc5Context.findDeclsCache() = mkExprSolver.ensureRegisteredAsMkExprSolver().let {
-        declsCache.getOrPut(mkExprSolver) { DeclsCache() }
+    internal fun KCvc5Context.getDeclsCache() = mkExprSolver.ensureMkExprContextMatches().let {
+        declsCache
     }
 
-    internal fun KCvc5Context.findDeclsReversedCache() = mkExprSolver.ensureRegisteredAsMkExprSolver().let {
-        declsReversedCache.getOrPut(mkExprSolver) { DeclsReversedCache() }
+    internal fun KCvc5Context.getDeclsReversedCache() = mkExprSolver.ensureMkExprContextMatches().let {
+        declsReversedCache
     }
 
-    internal fun KCvc5Context.findUninterpretedSortsValueDescriptors() = mkExprSolver.ensureRegisteredAsMkExprSolver()
-        .let {
-            uninterpretedSortValueDescriptors.getOrPut(mkExprSolver) { UninterpretedSortValueDescriptors() }
-        }
+    internal fun KCvc5Context.getUninterpretedSortsValueInterpretersCache() = mkExprSolver
+        .ensureMkExprContextMatches().let { uninterpretedSortValueInterpretersCache }
 
-    internal fun KCvc5Context.findUninterpretedSortsValueInterpretersCache() = mkExprSolver
-        .ensureRegisteredAsMkExprSolver().let {
-            uninterpretedSortValueInterpretersCache.getOrPut(mkExprSolver) { UninterpretedSortValueInterpretersCache() }
-        }
-
-    internal fun KCvc5Context.findUninterpretedSortValues() = mkExprSolver.ensureRegisteredAsMkExprSolver().let {
-        uninterpretedSortValues.getOrPut(mkExprSolver) { UninterpretedSortValues() }
+    internal fun KCvc5Context.getUninterpretedSortValues() = mkExprSolver.ensureMkExprContextMatches().let {
+        uninterpretedSortValues
     }
 
     override fun mkForkingSolver(): KForkingSolver<KCvc5SolverConfiguration> {
-        val mkExprSolver = Solver()
-        incRef(mkExprSolver)
-        return KCvc5ForkingSolver(ctx, this, mkExprSolver, null).also {
+        return KCvc5ForkingSolver(ctx, this, null).also {
             solvers += it
-            forkingSolverToMkExprSolver[it] = mkExprSolver
         }
     }
 
     internal fun mkForkingSolver(parent: KCvc5ForkingSolver): KForkingSolver<KCvc5SolverConfiguration> {
-        val mkExprSolver = forkingSolverToMkExprSolver.getValue(parent)
-        incRef(mkExprSolver)
-        return KCvc5ForkingSolver(ctx, this, mkExprSolver, parent).also {
+        return KCvc5ForkingSolver(ctx, this, parent).also {
             solvers += it
-            forkingSolverToMkExprSolver[it] = mkExprSolver
         }
     }
 
@@ -104,37 +93,30 @@ open class KCvc5ForkingSolverManager(private val ctx: KContext) : KForkingSolver
      */
     internal fun close(solver: KCvc5ForkingSolver) {
         solvers -= solver
-        val mkExprSolver = forkingSolverToMkExprSolver.getValue(solver)
-        forkingSolverToMkExprSolver -= solver
-        decRef(mkExprSolver)
+        closeContextIfStale()
     }
 
     override fun close() {
         solvers.forEach(KCvc5ForkingSolver::close)
     }
 
-    private fun incRef(mkExprSolver: Solver) {
-        mkExprSolverReferences[mkExprSolver] = mkExprSolverReferences.getOrDefault(mkExprSolver, 0) + 1
-    }
+    internal fun createCvc5ForkingContext(solver: Solver, parent: KCvc5ForkingContext? = null) = parent
+        ?.fork(solver, this)
+        ?: KCvc5ForkingContext(solver, mkExprContext, ctx, this)
 
-    private fun decRef(mkExprSolver: Solver) {
-        val referencesAfterDec = mkExprSolverReferences.getValue(mkExprSolver) - 1
-        if (referencesAfterDec == 0) {
-            mkExprSolverReferences -= mkExprSolver
-            expressionsCache -= mkExprSolver
-            expressionsReversedCache -= mkExprSolver
-            sortsCache -= mkExprSolver
-            sortsReversedCache -= mkExprSolver
-            declsCache -= mkExprSolver
-            declsReversedCache -= mkExprSolver
-            uninterpretedSortValueDescriptors -= mkExprSolver
-            uninterpretedSortValueInterpretersCache -= mkExprSolver
-            uninterpretedSortValues -= mkExprSolver
+    private fun closeContextIfStale() {
+        if (solvers.isNotEmpty()) return
 
-            mkExprSolver.close()
-        } else {
-            mkExprSolverReferences[mkExprSolver] = referencesAfterDec
-        }
+        expressionsCache.clear()
+        expressionsReversedCache.clear()
+        sortsCache.clear()
+        sortsReversedCache.clear()
+        declsCache.clear()
+        declsReversedCache.clear()
+        uninterpretedSortValueInterpretersCache.clear()
+        uninterpretedSortValues.clear()
+
+        mkExprContext.close()
     }
 
     companion object {
@@ -150,7 +132,6 @@ private typealias SortsCache = HashMap<KSort, Sort>
 private typealias SortsReversedCache = TreeMap<Sort, KSort>
 private typealias DeclsCache = HashMap<KDecl<*>, Term>
 private typealias DeclsReversedCache = TreeMap<Term, KDecl<*>>
-private typealias UninterpretedSortValueDescriptors = ArrayList<KCvc5Context.UninterpretedSortValueDescriptor>
 private typealias UninterpretedSortValueInterpretersCache = HashMap<KUninterpretedSort, Term>
 @Suppress("MaxLineLength")
 private typealias UninterpretedSortValues = HashMap<KUninterpretedSort, MutableList<Pair<Term, KUninterpretedSortValue>>>

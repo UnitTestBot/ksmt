@@ -72,29 +72,26 @@ open class KCvc5Model(
     private fun <T : KSort> funcInterp(
         decl: KDecl<T>,
         internalizedDecl: Term
-    ): KFuncInterp<T> = with(converter) {
+    ): KFuncInterp<T> {
         val cvc5Interp = cvc5Ctx.nativeSolver.getValue(internalizedDecl)
 
         val vars = decl.argSorts.map { it.mkFreshConst("x") }
         val cvc5Vars = vars.map { with(internalizer) { it.internalizeExpr() } }.toTypedArray()
 
-        val cvc5InterpArgs = cvc5Interp.getChild(0).getChildren()
+        val cvc5InterpArgs = with(converter) { cvc5Interp.getChild(0).getChildren() }
         val cvc5FreshVarsInterp = cvc5Interp.substitute(cvc5InterpArgs, cvc5Vars)
 
-        // in case of forking solver, save in cache mkExprSolver's terms
         val defaultBody = cvc5FreshVarsInterp.getChild(1).let {
-            if (cvc5Ctx.isForking) it.convertExprWithMkExprSolver() else it.convertExpr<T>()
+            with(cvc5Ctx) { it.convert<T>(converter) }
         }
 
-        KFuncInterpWithVars(decl, vars.map { it.decl }, emptyList(), defaultBody)
+        return KFuncInterpWithVars(decl, vars.map { it.decl }, emptyList(), defaultBody)
     }
 
-    private fun <T : KSort> constInterp(decl: KDecl<T>, const: Term): KFuncInterp<T> = with(converter) {
+    private fun <T : KSort> constInterp(decl: KDecl<T>, const: Term): KFuncInterp<T> {
         val cvc5Interp = cvc5Ctx.nativeSolver.getValue(const)
-        // in case of forking solver, save in cache mkExprSolver's terms
-        val interp = if (cvc5Ctx.isForking) cvc5Interp.convertExprWithMkExprSolver() else cvc5Interp.convertExpr<T>()
-
-        KFuncInterpVarsFree(decl = decl, entries = emptyList(), default = interp)
+        val interp = with(cvc5Ctx) { cvc5Interp.convert<T>(converter) }
+        return KFuncInterpVarsFree(decl = decl, entries = emptyList(), default = interp)
     }
 
     /**

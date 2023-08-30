@@ -1,6 +1,6 @@
 package io.ksmt.solver.cvc5
 
-import io.github.cvc5.Kind
+import io.github.cvc5.CVC5ApiException
 import io.github.cvc5.Solver
 import io.github.cvc5.Sort
 import io.github.cvc5.Term
@@ -16,46 +16,34 @@ import io.ksmt.expr.KUninterpretedSortValue
 import io.ksmt.expr.KUniversalQuantifier
 import io.ksmt.expr.rewrite.KExprUninterpretedDeclCollector
 import io.ksmt.expr.transformer.KNonRecursiveTransformer
-import io.ksmt.sort.KArray2Sort
-import io.ksmt.sort.KArray3Sort
-import io.ksmt.sort.KArrayNSort
+import io.ksmt.solver.KSolverException
 import io.ksmt.sort.KArraySort
 import io.ksmt.sort.KArraySortBase
 import io.ksmt.sort.KBoolSort
-import io.ksmt.sort.KBvSort
-import io.ksmt.sort.KFpRoundingModeSort
-import io.ksmt.sort.KFpSort
-import io.ksmt.sort.KIntSort
-import io.ksmt.sort.KRealSort
 import io.ksmt.sort.KSort
-import io.ksmt.sort.KSortVisitor
 import io.ksmt.sort.KUninterpretedSort
 import java.util.TreeMap
 
-class KCvc5Context internal constructor(
-    private val solver: Solver,
-    /**
-     * Used as context for expressions lifetime separation.
-     * Exprs which stored in [KCvc5Context], created with [mkExprSolver]
-     */
+/**
+ * @param mkExprSolver used as "context" for creation of all native expressions, which are stored in [KCvc5Context].
+ */
+open class KCvc5Context(
+    protected val solver: Solver,
     val mkExprSolver: Solver,
-    private val ctx: KContext,
-    forkingSolverManager: KCvc5ForkingSolverManager? = null
+    protected val ctx: KContext
 ) : AutoCloseable {
-    constructor(solver: Solver, mkExprSolver: Solver, ctx: KContext)
-        : this(solver, mkExprSolver, ctx, null)
 
-    constructor(solver: Solver, ctx: KContext)
-        : this(solver, solver, ctx, null)
+    /**
+     * Creates [KCvc5Context]. All native expressions will be created via [solver].
+     */
+    constructor(solver: Solver, ctx: KContext) : this(solver, solver, ctx)
 
-    private var isClosed = false
-    val isForking = forkingSolverManager != null
+    protected var isClosed = false
 
-    private val uninterpretedSortCollector = KUninterpretedSortCollector(this)
-    private var exprCurrentLevelCacheRestorer = KCurrentScopeExprCacheRestorer(uninterpretedSortCollector, ctx)
+    private var exprCurrentLevelCacheRestorer = KCurrentScopeExprCacheRestorer(ctx)
 
-    private val uninterpretedSorts: ScopedFrame<HashSet<KUninterpretedSort>>
-    private val declarations: ScopedFrame<HashSet<KDecl<*>>>
+    protected open val uninterpretedSorts: ScopedFrame<HashSet<KUninterpretedSort>> = ScopedArrayFrame(::HashSet)
+    protected open val declarations: ScopedFrame<HashSet<KDecl<*>>> = ScopedArrayFrame(::HashSet)
 
 
     /**
@@ -76,64 +64,23 @@ class KCvc5Context internal constructor(
      *  that is in global cache, but whose sorts / decls have been erased after pop()
      *  (and put this expr to the cache of current accumulated scope)
      */
-    private val currentAccumulatedScopeExpressions = HashMap<KExpr<*>, Term>()
-    private val expressions: HashMap<KExpr<*>, Term>
+    protected val currentAccumulatedScopeExpressions = HashMap<KExpr<*>, Term>()
+    protected open val expressions = HashMap<KExpr<*>, Term>()
 
     /**
      * We can't use HashMap with Term and Sort (hashcode is not implemented)
      */
-    private val cvc5Expressions: TreeMap<Term, KExpr<*>>
-    private val sorts: HashMap<KSort, Sort>
-    private val cvc5Sorts: TreeMap<Sort, KSort>
-    private val decls: HashMap<KDecl<*>, Term>
-    private val cvc5Decls: TreeMap<Term, KDecl<*>>
+    protected open val cvc5Expressions = TreeMap<Term, KExpr<*>>()
+    protected open val sorts = HashMap<KSort, Sort>()
+    protected open val cvc5Sorts = TreeMap<Sort, KSort>()
+    protected open val decls = HashMap<KDecl<*>, Term>()
+    protected open val cvc5Decls = TreeMap<Term, KDecl<*>>()
 
-    private val uninterpretedSortValueDescriptors: ArrayList<UninterpretedSortValueDescriptor>
-    private val uninterpretedSortValueInterpreter: HashMap<KUninterpretedSort, Term>
-
-    /**
-     * Uninterpreted sort values and universe are shared for whole forking hierarchy (from parent to children)
-     * due to shared expressions cache,
-     * that's why once [registerUninterpretedSortValue] and [saveUninterpretedSortValue] are called,
-     * each solver in hierarchy should assert newly internalized uninterpreted sort values via [assertPendingAxioms]
-     *
-     * @see KCvc5Model.uninterpretedSortUniverse
-     */
-    private val uninterpretedSortValues: HashMap<KUninterpretedSort, MutableList<Pair<Term, KUninterpretedSortValue>>>
-
-    init {
-        if (isForking) {
-            uninterpretedSorts = ScopedLinkedFrame(::HashSet, ::HashSet)
-            declarations = ScopedLinkedFrame(::HashSet, ::HashSet)
-        } else {
-            uninterpretedSorts = ScopedArrayFrame(::HashSet)
-            declarations = ScopedArrayFrame(::HashSet)
-        }
-
-        if (forkingSolverManager != null) {
-            with(forkingSolverManager) {
-                expressions = findExpressionsCache()
-                cvc5Expressions = findExpressionsReversedCache()
-                sorts = findSortsCache()
-                cvc5Sorts = findSortsReversedCache()
-                decls = findDeclsCache()
-                cvc5Decls = findDeclsReversedCache()
-                uninterpretedSortValueDescriptors = findUninterpretedSortsValueDescriptors()
-                uninterpretedSortValueInterpreter = findUninterpretedSortsValueInterpretersCache()
-                uninterpretedSortValues = findUninterpretedSortValues()
-            }
-        } else {
-            expressions = HashMap()
-            cvc5Expressions = TreeMap()
-            sorts = HashMap()
-            cvc5Sorts = TreeMap()
-            decls = HashMap()
-            cvc5Decls = TreeMap()
-            uninterpretedSortValueDescriptors = arrayListOf()
-            uninterpretedSortValueInterpreter = hashMapOf()
-            uninterpretedSortValues = hashMapOf()
-        }
-    }
+    @Suppress("LeakingThis")
+    open val uninterpretedValuesTracker = ExpressionUninterpretedValuesTracker(this)
+    protected open val uninterpretedSortValueInterpreter = HashMap<KUninterpretedSort, Term>()
+    protected open val uninterpretedSortValues =
+        HashMap<KUninterpretedSort, MutableList<Pair<Term, KUninterpretedSortValue>>>()
 
     fun addUninterpretedSort(sort: KUninterpretedSort) {
         uninterpretedSorts.currentFrame += sort
@@ -143,7 +90,7 @@ class KCvc5Context internal constructor(
 
     fun addDeclaration(decl: KDecl<*>) {
         declarations.currentFrame += decl
-        uninterpretedSortCollector.collect(decl)
+        uninterpretedValuesTracker.collectUninterpretedSorts(decl)
     }
 
     fun declarations(): Set<KDecl<*>> = declarations.flatten { this += it }
@@ -154,35 +101,23 @@ class KCvc5Context internal constructor(
     val isActive: Boolean
         get() = !isClosed
 
-    fun fork(solver: Solver, forkingSolverManager: KCvc5ForkingSolverManager): KCvc5Context {
-        require(isForking) { "Can't fork non-forking context" }
-        return KCvc5Context(solver, mkExprSolver, ctx, forkingSolverManager).also { forkCtx ->
-            forkCtx.currentAccumulatedScopeExpressions += currentAccumulatedScopeExpressions
-            (forkCtx.uninterpretedSorts as ScopedLinkedFrame).fork(uninterpretedSorts as ScopedLinkedFrame)
-            (forkCtx.declarations as ScopedLinkedFrame).fork(declarations as ScopedLinkedFrame)
-
-            repeat(assertedConstraintLevels.size) {
-                forkCtx.pushAssertionLevel()
-            }
-        }
-    }
+    fun ensureActive() = check(isActive) { "The context is already closed." }
 
     fun push() {
         declarations.push()
         uninterpretedSorts.push()
-
-        pushAssertionLevel()
+        uninterpretedValuesTracker.pushAssertionLevel()
     }
 
     fun pop(n: UInt) {
         declarations.pop(n)
         uninterpretedSorts.pop(n)
 
-        repeat(n.toInt()) { popAssertionLevel() }
+        repeat(n.toInt()) { uninterpretedValuesTracker.popAssertionLevel() }
 
         currentAccumulatedScopeExpressions.clear()
         // recreate cache restorer to avoid KNonRecursiveTransformer cache
-        exprCurrentLevelCacheRestorer = KCurrentScopeExprCacheRestorer(uninterpretedSortCollector, ctx)
+        exprCurrentLevelCacheRestorer = KCurrentScopeExprCacheRestorer(ctx)
     }
 
     fun findInternalizedExpr(expr: KExpr<*>): Term? = currentAccumulatedScopeExpressions[expr]
@@ -195,6 +130,8 @@ class KCvc5Context internal constructor(
              */
             exprCurrentLevelCacheRestorer.apply(expr)
         }
+
+    open fun <T : KSort> Term.convert(converter: KCvc5ExprConverter) = with(converter) { convertExpr<T>() }
 
     fun findConvertedExpr(expr: Term): KExpr<*>? = cvc5Expressions[expr]
 
@@ -255,35 +192,6 @@ class KCvc5Context internal constructor(
         return save(key, computeValue())
     }
 
-
-    @Suppress("ForbiddenComment")
-    /**
-     * Uninterpreted sort values distinct constraints management.
-     *
-     * 1. save/register uninterpreted value.
-     * See [KUninterpretedSortValue] internalization for the details.
-     * 2. Assert distinct constraints ([assertPendingAxioms]) that may be introduced during internalization.
-     * Currently, we assert constraints for all the values we have ever internalized.
-     *
-     * todo: precise uninterpreted sort values tracking
-     * */
-    internal data class UninterpretedSortValueDescriptor(
-        val value: KUninterpretedSortValue,
-        val nativeUniqueValueDescriptor: Term,
-        val nativeValueTerm: Term
-    )
-
-    /**
-     * Uninterpreted sort value axioms will not be lost for [KCvc5ForkingSolver] on [fork].
-     *
-     * On child initialization, "[currentValueConstraintsLevel] = 0"
-     * will be pushed to [assertedConstraintLevels] for each push-level ([currentValueConstraintsLevel] times).
-     * At the first call of [assertPendingAxioms] each descriptor from [uninterpretedSortValueDescriptors]
-     * will be asserted to the child [KCvc5ForkingSolver]
-     */
-    private var currentValueConstraintsLevel = 0
-    private val assertedConstraintLevels = arrayListOf<Int>()
-
     fun saveUninterpretedSortValue(nativeValue: Term, value: KUninterpretedSortValue): Term {
         val sortValues = uninterpretedSortValues.getOrPut(value.sort) { arrayListOf() }
         sortValues += nativeValue to value
@@ -301,11 +209,15 @@ class KCvc5Context internal constructor(
             registerUninterpretedSortValueInterpreter(value.sort, mkInterpreter())
         }
 
-        registerUninterpretedSortValue(value, uniqueValueDescriptorTerm, uninterpretedValueTerm)
+        uninterpretedValuesTracker.registerUninterpretedSortValue(
+            value,
+            uniqueValueDescriptorTerm,
+            uninterpretedValueTerm
+        )
     }
 
     fun assertPendingAxioms(solver: Solver) {
-        assertPendingUninterpretedValueConstraints(solver)
+        uninterpretedValuesTracker.assertPendingUninterpretedValueConstraints(solver)
     }
 
     fun getUninterpretedSortValueInterpreter(sort: KUninterpretedSort): Term? =
@@ -315,48 +227,8 @@ class KCvc5Context internal constructor(
         uninterpretedSortValueInterpreter[sort] = interpreter
     }
 
-    fun registerUninterpretedSortValue(
-        value: KUninterpretedSortValue,
-        uniqueValueDescriptorTerm: Term,
-        uninterpretedValueTerm: Term
-    ) {
-        uninterpretedSortValueDescriptors += UninterpretedSortValueDescriptor(
-            value = value,
-            nativeUniqueValueDescriptor = uniqueValueDescriptorTerm,
-            nativeValueTerm = uninterpretedValueTerm
-        )
-    }
-
     fun getRegisteredSortValues(sort: KUninterpretedSort): List<Pair<Term, KUninterpretedSortValue>> =
         uninterpretedSortValues[sort] ?: emptyList()
-
-    private fun pushAssertionLevel() {
-        assertedConstraintLevels += currentValueConstraintsLevel
-    }
-
-    private fun popAssertionLevel() {
-        currentValueConstraintsLevel = assertedConstraintLevels.removeLast()
-    }
-
-    private fun assertPendingUninterpretedValueConstraints(solver: Solver) {
-        while (currentValueConstraintsLevel < uninterpretedSortValueDescriptors.size) {
-            assertUninterpretedSortValueConstraint(
-                solver,
-                uninterpretedSortValueDescriptors[currentValueConstraintsLevel]
-            )
-            currentValueConstraintsLevel++
-        }
-    }
-
-    private fun assertUninterpretedSortValueConstraint(solver: Solver, value: UninterpretedSortValueDescriptor) {
-        val interpreter = uninterpretedSortValueInterpreter[value.value.sort]
-            ?: error("Interpreter was not registered for sort: ${value.value.sort}")
-
-        val constraintLhs = solver.mkTerm(Kind.APPLY_UF, arrayOf(interpreter, value.nativeValueTerm))
-        val constraint = constraintLhs.eqTerm(value.nativeUniqueValueDescriptor)
-
-        solver.assertFormula(constraint)
-    }
 
     private inline fun <K> internalizeAst(
         cache: MutableMap<K, Term>,
@@ -419,84 +291,42 @@ class KCvc5Context internal constructor(
         isClosed = true
 
         currentAccumulatedScopeExpressions.clear()
-
-        if (!isForking) {
-            expressions.clear()
-            cvc5Expressions.clear()
-            sorts.clear()
-            cvc5Sorts.clear()
-            decls.clear()
-            cvc5Decls.clear()
-            uninterpretedSortValueDescriptors.clear()
-            uninterpretedSortValueInterpreter.clear()
-            uninterpretedSortValues.clear()
-        }
+        expressions.clear()
+        cvc5Expressions.clear()
+        sorts.clear()
+        cvc5Sorts.clear()
+        decls.clear()
+        cvc5Decls.clear()
+        uninterpretedSortValueInterpreter.clear()
+        uninterpretedSortValues.clear()
     }
 
-    class KUninterpretedSortCollector(private val cvc5Ctx: KCvc5Context) : KSortVisitor<Unit> {
-        override fun visit(sort: KBoolSort) = Unit
-
-        override fun visit(sort: KIntSort) = Unit
-
-        override fun visit(sort: KRealSort) = Unit
-
-        override fun <S : KBvSort> visit(sort: S) = Unit
-
-        override fun <S : KFpSort> visit(sort: S) = Unit
-
-        override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>) {
-            sort.domain.accept(this)
-            sort.range.accept(this)
-        }
-
-        override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>) {
-            sort.domainSorts.forEach { it.accept(this) }
-            sort.range.accept(this)
-        }
-
-        override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>) {
-            sort.domainSorts.forEach { it.accept(this) }
-            sort.range.accept(this)
-        }
-
-        override fun <R : KSort> visit(sort: KArrayNSort<R>) {
-            sort.domainSorts.forEach { it.accept(this) }
-            sort.range.accept(this)
-        }
-
-        override fun visit(sort: KFpRoundingModeSort) = Unit
-
-        override fun visit(sort: KUninterpretedSort) = cvc5Ctx.addUninterpretedSort(sort)
-
-        fun collect(decl: KDecl<*>) {
-            decl.argSorts.map { it.accept(this) }
-            decl.sort.accept(this)
-        }
+    inline fun <reified T> cvc5Try(body: () -> T): T = try {
+        ensureActive()
+        body()
+    } catch (ex: CVC5ApiException) {
+        throw KSolverException(ex)
     }
 
-    inner class KCurrentScopeExprCacheRestorer(
-        private val uninterpretedSortCollector: KUninterpretedSortCollector,
-        ctx: KContext
-    ) : KNonRecursiveTransformer(ctx) {
-
+    inner class KCurrentScopeExprCacheRestorer(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         override fun <T : KSort> exprTransformationRequired(expr: KExpr<T>): Boolean =
             expr !in currentAccumulatedScopeExpressions
 
         override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> = cacheIfNeed(expr) {
             this@KCvc5Context.addDeclaration(expr.decl)
-            uninterpretedSortCollector.collect(expr.decl)
+            uninterpretedValuesTracker.collectUninterpretedSorts(expr.decl)
         }
 
         override fun <T : KSort> transform(expr: KConst<T>): KExpr<T> = cacheIfNeed(expr) {
             this@KCvc5Context.addDeclaration(expr.decl)
-            uninterpretedSortCollector.collect(expr.decl)
+            uninterpretedValuesTracker.collectUninterpretedSorts(expr.decl)
             saveInternalizedExprToCurrentAccumulatedScope(expr)
         }
 
         override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KFunctionAsArray<A, R>): KExpr<A> =
             cacheIfNeed(expr) {
                 this@KCvc5Context.addDeclaration(expr.function)
-                uninterpretedSortCollector.collect(expr.function)
+                uninterpretedValuesTracker.collectUninterpretedSorts(expr.function)
             }
 
         override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> =

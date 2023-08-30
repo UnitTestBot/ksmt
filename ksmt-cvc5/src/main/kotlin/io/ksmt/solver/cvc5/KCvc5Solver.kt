@@ -18,7 +18,7 @@ open class KCvc5Solver(ctx: KContext) : KCvc5SolverBase(ctx), KSolver<KCvc5Solve
         trackedAssertions.currentFrame[track] = trackedExpr
     }
 
-    override fun findTrackedExprByTrack(track: Term): KExpr<KBoolSort>? = trackedAssertions.find { it[track] }
+    override fun findTrackedExprByTrack(track: Term) = trackedAssertions.findNonNullValue { it[track] }
 
     override fun push() {
         super.push()

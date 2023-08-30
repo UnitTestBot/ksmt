@@ -9,7 +9,6 @@ import io.ksmt.expr.KApp
 import io.ksmt.expr.KExpr
 import io.ksmt.solver.KModel
 import io.ksmt.solver.KSolver
-import io.ksmt.solver.KSolverException
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.sort.KBoolSort
 import io.ksmt.utils.NativeLibraryLoader
@@ -50,7 +49,7 @@ abstract class KCvc5SolverBase internal constructor(
         KCvc5SolverConfigurationImpl(solver).configurator()
     }
 
-    override fun assert(expr: KExpr<KBoolSort>) = cvc5Try {
+    override fun assert(expr: KExpr<KBoolSort>) = cvc5Ctx.cvc5Try {
         ctx.ensureContextMatch(expr)
 
         val cvc5Expr = with(exprInternalizer) { expr.internalizeExpr() }
@@ -61,7 +60,7 @@ abstract class KCvc5SolverBase internal constructor(
     protected abstract fun saveTrackedAssertion(track: Term, trackedExpr: KExpr<KBoolSort>)
     protected abstract fun findTrackedExprByTrack(track: Term): KExpr<KBoolSort>?
 
-    override fun assertAndTrack(expr: KExpr<KBoolSort>) = cvc5Try {
+    override fun assertAndTrack(expr: KExpr<KBoolSort>) = cvc5Ctx.cvc5Try {
         ctx.ensureContextMatch(expr)
 
         val trackVarApp = createTrackVarApp()
@@ -72,12 +71,12 @@ abstract class KCvc5SolverBase internal constructor(
         saveTrackedAssertion(cvc5TrackVar, expr)
     }
 
-    override fun push() = cvc5Try {
+    override fun push() = cvc5Ctx.cvc5Try {
         solver.push()
         cvc5Ctx.push()
     }
 
-    override fun pop(n: UInt) = cvc5Try {
+    override fun pop(n: UInt) = cvc5Ctx.cvc5Try {
         require(n <= currentScope) {
             "Can not pop $n scope levels because current scope level is $currentScope"
         }
@@ -120,13 +119,13 @@ abstract class KCvc5SolverBase internal constructor(
         cvc5Ctx.uninterpretedSorts(),
     )
 
-    override fun model(): KModel = cvc5Try {
+    override fun model(): KModel = cvc5Ctx.cvc5Try {
         require(lastCheckStatus == KSolverStatus.SAT) { "Models are only available after SAT checks" }
         val model = lastModel ?: freshModel()
         model.also { lastModel = it }
     }
 
-    override fun reasonOfUnknown(): String = cvc5Try {
+    override fun reasonOfUnknown(): String = cvc5Ctx.cvc5Try {
         require(lastCheckStatus == KSolverStatus.UNKNOWN) {
             "Unknown reason is only available after UNKNOWN checks"
         }
@@ -145,7 +144,7 @@ abstract class KCvc5SolverBase internal constructor(
         return unsatCore
     }
 
-    protected fun cvc5UnsatCore(): Array<Term> = cvc5Try {
+    protected fun cvc5UnsatCore(): Array<Term> = cvc5Ctx.cvc5Try {
         require(lastCheckStatus == KSolverStatus.UNSAT) { "Unsat cores are only available after UNSAT checks" }
         solver.unsatCore
     }
@@ -177,12 +176,6 @@ abstract class KCvc5SolverBase internal constructor(
     protected fun Solver.updateTimeout(timeout: Duration) {
         val cvc5Timeout = if (timeout == Duration.INFINITE) 0 else timeout.toInt(DurationUnit.MILLISECONDS)
         setOption("tlimit-per", cvc5Timeout.toString())
-    }
-
-    protected inline fun <reified T> cvc5Try(body: () -> T): T = try {
-        body()
-    } catch (ex: CVC5ApiException) {
-        throw KSolverException(ex)
     }
 
     protected inline fun cvc5TryCheck(body: () -> KSolverStatus): KSolverStatus = try {
