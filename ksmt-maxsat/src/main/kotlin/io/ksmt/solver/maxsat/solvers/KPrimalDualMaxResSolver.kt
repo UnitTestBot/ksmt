@@ -14,6 +14,7 @@ import io.ksmt.solver.maxsat.constraints.SoftConstraint
 import io.ksmt.solver.maxsat.solvers.utils.MinimalUnsatCore
 import io.ksmt.solver.maxsat.utils.CoreUtils
 import io.ksmt.solver.maxsat.utils.ModelUtils
+import io.ksmt.solver.maxsat.utils.TimerUtils
 import io.ksmt.sort.KBoolSort
 import kotlin.time.Duration
 
@@ -31,7 +32,13 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(private val ctx: KContex
     private data class WeightedCore(val expressions: List<KExpr<KBoolSort>>, val weight: UInt)
 
     override fun checkMaxSAT(timeout: Duration): KMaxSATResult {
-        val hardConstraintsStatus = solver.check()
+        val clockStart = System.currentTimeMillis()
+
+        if (TimerUtils.timeoutExceeded(timeout)) {
+            error("Timeout must be positive but was [${timeout.inWholeSeconds} s]")
+        }
+
+        val hardConstraintsStatus = solver.check(timeout)
 
         if (hardConstraintsStatus == UNSAT || softConstraints.isEmpty()) {
             return KMaxSATResult(listOf(), hardConstraintsStatus, true)
@@ -46,7 +53,12 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(private val ctx: KContex
         unionSoftConstraintsWithSameExpressions(assumptions)
 
         while (_lower < _upper) {
-            val status = checkSat(assumptions)
+            val softConstraintsCheckRemainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
+            if (TimerUtils.timeoutExceeded(softConstraintsCheckRemainingTime)) {
+                throw NotImplementedError()
+            }
+
+            val status = checkSat(assumptions, timeout)
 
             when (status) {
                 SAT -> {
@@ -62,18 +74,27 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(private val ctx: KContex
                 }
 
                 UNSAT -> {
-                    val processUnsatStatus = processUnsat(assumptions)
+                    val remainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
+                    if (TimerUtils.timeoutExceeded(remainingTime)) {
+                        solver.pop()
+                        throw NotImplementedError()
+                    }
+
+                    val processUnsatStatus = processUnsat(assumptions, remainingTime)
                     if (processUnsatStatus == UNSAT) {
                         _lower = _upper
+                        // TODO: process this case as it can happen when timeout exceeded
+                        solver.pop()
+                        throw NotImplementedError()
                     } else if (processUnsatStatus == UNKNOWN) {
                         solver.pop()
-                        return KMaxSATResult(listOf(), SAT, false)
+                        throw NotImplementedError()
                     }
                 }
 
                 UNKNOWN -> {
                     solver.pop()
-                    return KMaxSATResult(listOf(), SAT, false)
+                    throw NotImplementedError()
                 }
             }
         }
@@ -96,8 +117,8 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(private val ctx: KContex
         _correctionSetSize = 0
     }
 
-    private fun processUnsat(assumptions: MutableList<SoftConstraint>): KSolverStatus {
-        val (status, cores) = getCores(assumptions)
+    private fun processUnsat(assumptions: MutableList<SoftConstraint>, timeout: Duration): KSolverStatus {
+        val (status, cores) = getCores(assumptions, timeout)
 
         if (status != SAT) {
             return status
@@ -153,12 +174,22 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(private val ctx: KContex
         }
     }
 
-    private fun getCores(assumptions: MutableList<SoftConstraint>): Pair<KSolverStatus, List<WeightedCore>> {
+    private fun getCores(
+        assumptions: MutableList<SoftConstraint>,
+        timeout: Duration,
+    ): Pair<KSolverStatus, List<WeightedCore>> {
+        val clockStart = System.currentTimeMillis()
+
         val cores = mutableListOf<WeightedCore>()
         var status = UNSAT
 
         while (status == UNSAT) {
-            val minimalUnsatCore = minimizeCore(assumptions)
+            val minimizeCoreRemainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
+            if (TimerUtils.timeoutExceeded(minimizeCoreRemainingTime)) {
+                return Pair(SAT, cores) // TODO: is this status Ok?
+            }
+
+            val minimalUnsatCore = minimizeCore(assumptions, minimizeCoreRemainingTime)
             updateMinimalUnsatCoreModel(assumptions)
 
             if (minimalUnsatCore.isEmpty()) {
@@ -179,14 +210,19 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(private val ctx: KContex
                 return Pair(SAT, cores)
             }
 
-            status = checkSat(assumptions)
+            val checkSatRemainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
+            if (TimerUtils.timeoutExceeded(checkSatRemainingTime)) {
+                return Pair(SAT, cores) // TODO: is this status Ok?
+            }
+
+            status = checkSat(assumptions, checkSatRemainingTime)
         }
 
         return Pair(status, cores)
     }
 
-    private fun minimizeCore(assumptions: List<SoftConstraint>): List<SoftConstraint> =
-        _minimalUnsatCore.tryGetMinimalUnsatCore(assumptions)
+    private fun minimizeCore(assumptions: List<SoftConstraint>, timeout: Duration): List<SoftConstraint> =
+        _minimalUnsatCore.tryGetMinimalUnsatCore(assumptions, timeout)
 
     private fun updateMinimalUnsatCoreModel(assumptions: List<SoftConstraint>) {
         val (model, weight) = _minimalUnsatCore.getBestModel()
@@ -358,8 +394,8 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(private val ctx: KContex
         return ModelUtils.getCorrectionSet(ctx, model, assumptions)
     }
 
-    private fun checkSat(assumptions: List<SoftConstraint>): KSolverStatus {
-        val status = solver.checkWithAssumptions(assumptions.map { it.expression })
+    private fun checkSat(assumptions: List<SoftConstraint>, timeout: Duration): KSolverStatus {
+        val status = solver.checkWithAssumptions(assumptions.map { it.expression }, timeout)
 
         if (status == SAT) {
             updateAssignment(solver.model().detach(), assumptions)

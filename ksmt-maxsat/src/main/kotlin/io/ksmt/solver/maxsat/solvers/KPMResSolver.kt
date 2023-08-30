@@ -28,7 +28,7 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
      * @throws NotImplementedError
      */
     override fun checkMaxSAT(timeout: Duration): KMaxSATResult {
-        if (timeout.isNegative() || timeout == Duration.ZERO) {
+        if (TimerUtils.timeoutExceeded(timeout)) {
             error("Timeout must be positive but was [${timeout.inWholeSeconds} s]")
         }
 
@@ -88,7 +88,7 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
         while (true) {
             val softConstraintsCheckRemainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
 
-            if (softConstraintsCheckRemainingTime.isNegative() || softConstraintsCheckRemainingTime == Duration.ZERO) {
+            if (TimerUtils.timeoutExceeded(softConstraintsCheckRemainingTime)) {
                 return KMaxSATResult(listOf(), status, false)
             }
 

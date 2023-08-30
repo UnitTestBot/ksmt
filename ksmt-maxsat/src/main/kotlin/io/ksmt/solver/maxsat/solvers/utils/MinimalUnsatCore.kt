@@ -10,7 +10,9 @@ import io.ksmt.solver.KSolverStatus.UNKNOWN
 import io.ksmt.solver.maxsat.constraints.SoftConstraint
 import io.ksmt.solver.maxsat.utils.CoreUtils
 import io.ksmt.solver.maxsat.utils.ModelUtils
+import io.ksmt.solver.maxsat.utils.TimerUtils
 import io.ksmt.sort.KBoolSort
+import kotlin.time.Duration
 
 internal class MinimalUnsatCore<T : KSolverConfiguration>(
     private val ctx: KContext,
@@ -21,7 +23,12 @@ internal class MinimalUnsatCore<T : KSolverConfiguration>(
     fun getBestModel(): Pair<KModel?, UInt> = _minimalUnsatCoreModel.getBestModel()
 
     // If solver starts returning unknown, we return non minimized unsat core.
-    fun tryGetMinimalUnsatCore(assumptions: List<SoftConstraint>): List<SoftConstraint> = with(ctx) {
+    fun tryGetMinimalUnsatCore(
+        assumptions: List<SoftConstraint>,
+        timeout: Duration = Duration.INFINITE,
+    ): List<SoftConstraint> = with(ctx) {
+        val clockStart = System.currentTimeMillis()
+
         val unsatCore = solver.unsatCore()
 
         if (unsatCore.isEmpty() || unsatCore.size == 1) {
@@ -33,10 +40,15 @@ internal class MinimalUnsatCore<T : KSolverConfiguration>(
         val unknown = unsatCore.toMutableList()
 
         while (unknown.isNotEmpty()) {
+            val remainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
+            if (TimerUtils.timeoutExceeded(remainingTime)) {
+                return CoreUtils.coreToSoftConstraints(unsatCore, assumptions)
+            }
+
             val expr = unknown.removeLast()
 
             val notExpr = !expr
-            val status = solver.checkWithAssumptions(minimalUnsatCore + unknown + notExpr)
+            val status = solver.checkWithAssumptions(minimalUnsatCore + unknown + notExpr, remainingTime)
 
             when (status) {
                 UNKNOWN -> return CoreUtils.coreToSoftConstraints(unsatCore, assumptions)

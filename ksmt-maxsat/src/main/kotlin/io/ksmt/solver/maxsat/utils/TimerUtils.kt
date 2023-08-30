@@ -9,4 +9,7 @@ internal object TimerUtils {
         val msUnit = DurationUnit.MILLISECONDS
         return timeout - (System.currentTimeMillis().toDuration(msUnit) - clockStart.toDuration(msUnit))
     }
+
+    fun timeoutExceeded(timeout: Duration): Boolean =
+        timeout.isNegative() || timeout == Duration.ZERO
 }
