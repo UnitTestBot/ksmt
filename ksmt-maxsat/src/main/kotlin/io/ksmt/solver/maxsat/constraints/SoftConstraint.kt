@@ -1,4 +1,4 @@
-package io.ksmt.maxsat
+package io.ksmt.solver.maxsat.constraints
 
 import io.ksmt.expr.KExpr
 import io.ksmt.sort.KBoolSort

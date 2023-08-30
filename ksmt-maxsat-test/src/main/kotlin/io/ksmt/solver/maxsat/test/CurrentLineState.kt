@@ -1,4 +1,4 @@
-package io.ksmt.maxsat.test
+package io.ksmt.solver.maxsat.test
 
 enum class CurrentLineState {
     COMMENT,

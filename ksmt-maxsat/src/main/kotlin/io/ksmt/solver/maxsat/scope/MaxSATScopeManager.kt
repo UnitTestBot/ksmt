@@ -1,4 +1,6 @@
-package io.ksmt.maxsat
+package io.ksmt.solver.maxsat.scope
+
+import io.ksmt.solver.maxsat.constraints.SoftConstraint
 
 internal class MaxSATScopeManager {
     private var currentScope = 0u

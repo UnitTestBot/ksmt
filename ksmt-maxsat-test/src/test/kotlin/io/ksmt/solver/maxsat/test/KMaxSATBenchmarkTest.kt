@@ -1,11 +1,11 @@
-package io.ksmt.maxsat.test
+package io.ksmt.solver.maxsat.test
 
 import io.ksmt.KContext
 import io.ksmt.solver.KSolverStatus
-import io.ksmt.maxsat.HardConstraint
-import io.ksmt.maxsat.SoftConstraint
-import io.ksmt.solver.z3.KZ3Solver
-import io.ksmt.maxsat.solvers.KMaxResSolver
+import io.ksmt.solver.maxsat.constraints.HardConstraint
+import io.ksmt.solver.maxsat.constraints.SoftConstraint
+import io.ksmt.solver.maxsat.solvers.KMaxSATSolver
+import io.ksmt.solver.z3.KZ3SolverConfiguration
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -17,17 +17,19 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 
-class KMaxSATBenchmarkTest {
+abstract class KMaxSATBenchmarkTest {
+    abstract fun getSolver(): KMaxSATSolver<KZ3SolverConfiguration>
+    abstract val ctx: KContext
+
     @ParameterizedTest(name = "{0}")
     @MethodSource("maxSATTestData")
-    fun maxSATTest(name: String, samplePath: Path) = with(KContext()) {
+    fun maxSATTest(name: String, samplePath: Path) = with(ctx) {
         val testData = maxSATTestNameToExpectedResult.find { it.first == name }
         require(testData != null) { "Test [$name] expected result must be specified" }
 
         val constraints = parseTest(samplePath, this)
 
-        val z3Solver = KZ3Solver(this)
-        val maxSATSolver = KMaxResSolver(this, z3Solver)
+        val maxSATSolver = getSolver()
 
         var sumOfSoftConstraintsWeights = 0u
 

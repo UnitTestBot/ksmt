@@ -1,27 +1,30 @@
-package io.ksmt.maxsat.solvers
+package io.ksmt.solver.maxsat.solvers
 
 import io.ksmt.KContext
 import io.ksmt.expr.KExpr
-import io.ksmt.expr.KTrue
-import io.ksmt.maxsat.KMaxSATResult
-import io.ksmt.maxsat.MaxSATScopeManager
-import io.ksmt.maxsat.SoftConstraint
 import io.ksmt.solver.KModel
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverStatus
+import io.ksmt.solver.KSolverStatus.SAT
+import io.ksmt.solver.KSolverStatus.UNKNOWN
+import io.ksmt.solver.KSolverStatus.UNSAT
+import io.ksmt.solver.maxsat.KMaxSATResult
+import io.ksmt.solver.maxsat.constraints.SoftConstraint
+import io.ksmt.solver.maxsat.scope.MaxSATScopeManager
 import io.ksmt.sort.KBoolSort
 import kotlin.time.Duration
-import kotlin.time.DurationUnit
-import kotlin.time.toDuration
 
-abstract class KMaxSATSolver<T>(private val ctx: KContext, private val solver: KSolver<T>) : KSolver<KSolverConfiguration>
+abstract class KMaxSATSolver<T>(
+    private val ctx: KContext,
+    private val solver: KSolver<T>,
+) : KSolver<KSolverConfiguration>
     where T : KSolverConfiguration {
     private val scopeManager = MaxSATScopeManager()
     protected var softConstraints = mutableListOf<SoftConstraint>()
 
     /**
-     * Assert softly an expression with weight (aka soft constraint) into solver.
+     * Softly assert an expression with weight (aka soft constraint) into solver.
      *
      * @see checkMaxSAT
      * */
@@ -41,6 +44,33 @@ abstract class KMaxSATSolver<T>(private val ctx: KContext, private val solver: K
     abstract fun checkMaxSAT(timeout: Duration = Duration.INFINITE): KMaxSATResult
 
     /**
+     * Union soft constraints with same expressions into a single soft constraint.
+     *
+     * The new soft constraint weight will be equal to the sum of old soft constraints weights.
+     */
+    protected fun unionSoftConstraintsWithSameExpressions(formula: MutableList<SoftConstraint>) {
+        val exprToRepetitionsMap = mutableMapOf<KExpr<KBoolSort>, Int>()
+
+        formula.forEach {
+            if (exprToRepetitionsMap.containsKey(it.expression)) {
+                exprToRepetitionsMap[it.expression] = exprToRepetitionsMap[it.expression]!! + 1
+            } else {
+                exprToRepetitionsMap[it.expression] = 1
+            }
+        }
+
+        exprToRepetitionsMap.forEach { (expr, repetitions) ->
+            if (repetitions > 1) {
+                val repeatedExpressions = formula.filter { it.expression == expr }
+
+                formula.removeAll(repeatedExpressions)
+                val repeatedExpressionsWeightsSum = repeatedExpressions.sumOf { it.weight }
+                formula.add(SoftConstraint(expr, repeatedExpressionsWeightsSum))
+            }
+        }
+    }
+
+    /**
      * Check on satisfiability hard constraints with assumed soft constraints.
      *
      * @return a triple of solver status, unsat core (if exists, empty list otherwise) and model
@@ -49,18 +79,13 @@ abstract class KMaxSATSolver<T>(private val ctx: KContext, private val solver: K
     protected fun checkSAT(assumptions: List<SoftConstraint>, timeout: Duration):
         Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> =
         when (val status = solver.checkWithAssumptions(assumptions.map { x -> x.expression }, timeout)) {
-            KSolverStatus.SAT -> Triple(status, listOf(), solver.model())
-            KSolverStatus.UNSAT -> Triple(status, solver.unsatCore(), null)
-            KSolverStatus.UNKNOWN -> Triple(status, listOf(), null)
+            SAT -> Triple(status, listOf(), solver.model())
+            UNSAT -> Triple(status, solver.unsatCore(), null)
+            UNKNOWN -> Triple(status, listOf(), null)
         }
 
     protected fun getSatSoftConstraintsByModel(model: KModel): List<SoftConstraint> {
-        return softConstraints.filter { model.eval(it.expression).internEquals(KTrue(ctx)) }
-    }
-
-    protected fun computeRemainingTime(timeout: Duration, clockStart: Long): Duration {
-        val msUnit = DurationUnit.MILLISECONDS
-        return timeout - (System.currentTimeMillis().toDuration(msUnit) - clockStart.toDuration(msUnit))
+        return softConstraints.filter { model.eval(it.expression, true) == ctx.trueExpr }
     }
 
     override fun configure(configurator: KSolverConfiguration.() -> Unit) {
