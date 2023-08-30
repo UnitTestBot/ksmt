@@ -11,7 +11,6 @@ import io.ksmt.KContext
 import io.ksmt.expr.KExpr
 import io.ksmt.solver.KModel
 import io.ksmt.solver.KSolver
-import io.ksmt.solver.KSolverException
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.sort.KBoolSort
 import io.ksmt.utils.NativeLibraryLoader
@@ -46,21 +45,21 @@ abstract class KZ3SolverBase(protected val ctx: KContext) : KSolver<KZ3SolverCon
 
     open fun createExprConverter(z3Ctx: KZ3Context) = KZ3ExprConverter(ctx, z3Ctx)
 
-    private fun createSolver(): Solver = z3Try { z3Ctx.nativeContext.mkSolver() }
+    private fun createSolver(): Solver = z3Ctx.z3Try { z3Ctx.nativeContext.mkSolver() }
 
-    override fun configure(configurator: KZ3SolverConfiguration.() -> Unit) = z3Try {
+    override fun configure(configurator: KZ3SolverConfiguration.() -> Unit) = z3Ctx.z3Try {
         val params = z3Ctx.nativeContext.mkParams()
         KZ3SolverConfigurationImpl(params).configurator()
         solver.setParameters(params)
     }
 
-    override fun push(): Unit = z3Try {
+    override fun push(): Unit = z3Ctx.z3Try {
         solver.push()
         z3Ctx.pushAssertionLevel()
         currentScope++
     }
 
-    override fun pop(n: UInt) = z3Try {
+    override fun pop(n: UInt) = z3Ctx.z3Try {
         require(n <= currentScope) {
             "Can not pop $n scope levels because current scope level is $currentScope"
         }
@@ -72,7 +71,7 @@ abstract class KZ3SolverBase(protected val ctx: KContext) : KSolver<KZ3SolverCon
         currentScope -= n
     }
 
-    override fun assert(expr: KExpr<KBoolSort>) = z3Try {
+    override fun assert(expr: KExpr<KBoolSort>) = z3Ctx.z3Try {
         ctx.ensureContextMatch(expr)
 
         val z3Expr = with(exprInternalizer) { expr.internalizeExpr() }
@@ -84,7 +83,7 @@ abstract class KZ3SolverBase(protected val ctx: KContext) : KSolver<KZ3SolverCon
     protected abstract fun saveTrackedAssertion(track: Long, trackedExpr: KExpr<KBoolSort>)
     protected abstract fun findTrackedExprByTrack(track: Long): KExpr<KBoolSort>?
 
-    override fun assertAndTrack(expr: KExpr<KBoolSort>) = z3Try {
+    override fun assertAndTrack(expr: KExpr<KBoolSort>) = z3Ctx.z3Try {
         ctx.ensureContextMatch(expr)
 
         val trackExpr = ctx.mkFreshConst("track", ctx.boolSort)
@@ -128,7 +127,7 @@ abstract class KZ3SolverBase(protected val ctx: KContext) : KSolver<KZ3SolverCon
         solver.solverCheckAssumptions(z3Assumptions).processCheckResult()
     }
 
-    override fun model(): KModel = z3Try {
+    override fun model(): KModel = z3Ctx.z3Try {
         require(lastCheckStatus == KSolverStatus.SAT) {
             "Model are only available after SAT checks, current solver status: $lastCheckStatus"
         }
@@ -144,7 +143,7 @@ abstract class KZ3SolverBase(protected val ctx: KContext) : KSolver<KZ3SolverCon
         model
     }
 
-    override fun unsatCore(): List<KExpr<KBoolSort>> = z3Try {
+    override fun unsatCore(): List<KExpr<KBoolSort>> = z3Ctx.z3Try {
         require(lastCheckStatus == KSolverStatus.UNSAT) { "Unsat cores are only available after UNSAT checks" }
 
         val unsatCore = lastUnsatCore ?: with(exprConverter) {
@@ -158,12 +157,12 @@ abstract class KZ3SolverBase(protected val ctx: KContext) : KSolver<KZ3SolverCon
         unsatCore
     }
 
-    override fun reasonOfUnknown(): String = z3Try {
+    override fun reasonOfUnknown(): String = z3Ctx.z3Try {
         require(lastCheckStatus == KSolverStatus.UNKNOWN) { "Unknown reason is only available after UNKNOWN checks" }
         lastReasonOfUnknown ?: solver.reasonUnknown
     }
 
-    override fun interrupt() = z3Try {
+    override fun interrupt() = z3Ctx.z3Try {
         solver.interrupt()
     }
 
@@ -189,12 +188,6 @@ abstract class KZ3SolverBase(protected val ctx: KContext) : KSolver<KZ3SolverCon
             add("timeout", z3Timeout)
         }
         setParameters(params)
-    }
-
-    protected inline fun <reified T> z3Try(body: () -> T): T = try {
-        body()
-    } catch (ex: Z3Exception) {
-        throw KSolverException(ex)
     }
 
     protected fun invalidateSolverState() {

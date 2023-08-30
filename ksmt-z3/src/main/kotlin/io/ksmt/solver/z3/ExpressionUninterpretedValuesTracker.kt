@@ -3,13 +3,13 @@ package io.ksmt.solver.z3
 import com.microsoft.z3.Native
 import com.microsoft.z3.Solver
 import com.microsoft.z3.solverAssert
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
 import io.ksmt.KContext
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.KUninterpretedSortValue
 import io.ksmt.expr.transformer.KNonRecursiveTransformer
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
 
 /**
  * Uninterpreted sort values distinct constraints management.
@@ -19,29 +19,25 @@ import io.ksmt.sort.KUninterpretedSort
  * 2. Assert distinct constraints ([assertPendingUninterpretedValueConstraints])
  * that may be introduced during internalization.
  * */
-class ExpressionUninterpretedValuesTracker private constructor(
+open class ExpressionUninterpretedValuesTracker protected constructor(
     val ctx: KContext,
     val z3Ctx: KZ3Context,
-    private val registeredUninterpretedSortValues: HashMap<KUninterpretedSortValue, UninterpretedSortValueDescriptor>
+    protected val registeredUninterpretedSortValues: HashMap<KUninterpretedSortValue, UninterpretedSortValueDescriptor>
 ) {
     constructor(ctx: KContext, z3Ctx: KZ3Context) : this(ctx, z3Ctx, hashMapOf())
-    constructor(ctx: KContext, z3Ctx: KZ3Context, forkingSolverManager: KZ3ForkingSolverManager) : this(
-        ctx,
-        z3Ctx,
-        with(forkingSolverManager) { z3Ctx.findRegisteredUninterpretedSortValues() }
-    )
 
-    private val expressionLevels = Object2IntOpenHashMap<KExpr<*>>().apply {
+    protected val expressionLevels = Object2IntOpenHashMap<KExpr<*>>().apply {
         defaultReturnValue(Int.MAX_VALUE) // Level which is greater than any possible level
     }
 
-    private var currentFrame = ValueTrackerAssertionFrame(
-        ctx, this, expressionLevels,
+    protected var currentFrame = ValueTrackerAssertionFrame(
+        ctx, expressionLevels,
         level = 0,
         notAssertedConstraintsFromPreviousLevels = 0
     )
+        private set
 
-    private val valueTrackerFrames = arrayListOf(currentFrame)
+    protected val valueTrackerFrames = arrayListOf(currentFrame)
 
     /**
      * Skip any value tracking related actions until
@@ -55,11 +51,6 @@ class ExpressionUninterpretedValuesTracker private constructor(
     private inline fun ifTrackingEnabled(body: () -> Unit) {
         if (registeredUninterpretedSortValues.isEmpty()) return
         body()
-    }
-
-    fun fork(parent: ExpressionUninterpretedValuesTracker) = also {
-        expressionLevels += parent.expressionLevels
-        repeat(parent.valueTrackerFrames.size - 1) { pushAssertionLevel() }
     }
 
     fun expressionUse(expr: KExpr<*>) = ifTrackingEnabled {
@@ -134,21 +125,22 @@ class ExpressionUninterpretedValuesTracker private constructor(
         z3Ctx.releaseTemporaryAst(constraintLhs)
     }
 
-    internal data class UninterpretedSortValueDescriptor(
+    protected data class UninterpretedSortValueDescriptor(
         val value: KUninterpretedSortValue,
         val nativeUniqueValueDescriptor: Long,
         val nativeValueExpr: Long
     )
 
-    private class ValueTrackerAssertionFrame(
+    protected inner class ValueTrackerAssertionFrame(
         val ctx: KContext,
-        val tracker: ExpressionUninterpretedValuesTracker,
         val expressionLevels: Object2IntOpenHashMap<KExpr<*>>,
         val level: Int,
         val notAssertedConstraintsFromPreviousLevels: Int
     ) {
-        private var initialized = false
-        private var lastAssertedConstraint = 0
+        var initialized = false
+            private set
+
+        var lastAssertedConstraint = 0
 
         lateinit var currentLevelExpressions: MutableSet<KExpr<*>>
         lateinit var currentLevelUninterpretedValues: MutableList<UninterpretedSortValueDescriptor>
@@ -159,7 +151,7 @@ class ExpressionUninterpretedValuesTracker private constructor(
          * since we might not have any uninterpreted values on
          * a current assertion level.
          * */
-        private fun ensureInitialized() {
+        fun ensureInitialized() {
             if (initialized) return
 
             currentLevelExpressions = hashSetOf()
@@ -176,7 +168,7 @@ class ExpressionUninterpretedValuesTracker private constructor(
             val notAssertedConstraints = numberOfConstraints - lastAssertedConstraint
             val nextLevelRemainingConstraints = notAssertedConstraintsFromPreviousLevels + notAssertedConstraints
             return ValueTrackerAssertionFrame(
-                ctx, tracker, expressionLevels,
+                ctx, expressionLevels,
                 level = level + 1,
                 notAssertedConstraintsFromPreviousLevels = nextLevelRemainingConstraints
             )
@@ -228,7 +220,7 @@ class ExpressionUninterpretedValuesTracker private constructor(
         }
 
         fun addRegisteredValueToCurrentLevel(value: KUninterpretedSortValue) {
-            val descriptor = tracker.registeredUninterpretedSortValues[value]
+            val descriptor = registeredUninterpretedSortValues[value]
                 ?: error("Value $value was not registered")
             addRegisteredValueToCurrentLevel(descriptor)
         }
@@ -239,10 +231,10 @@ class ExpressionUninterpretedValuesTracker private constructor(
             currentLevelUninterpretedValues.add(descriptor)
         }
 
-        fun getFrame(level: Int) = tracker.valueTrackerFrames[level]
+        fun getFrame(level: Int) = valueTrackerFrames[level]
     }
 
-    private class ExprUninterpretedValuesAnalyzer(
+    protected class ExprUninterpretedValuesAnalyzer(
         ctx: KContext,
         val frame: ValueTrackerAssertionFrame
     ) : KNonRecursiveTransformer(ctx) {

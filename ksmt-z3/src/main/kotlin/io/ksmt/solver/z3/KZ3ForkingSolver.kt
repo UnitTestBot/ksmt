@@ -1,6 +1,5 @@
 package io.ksmt.solver.z3
 
-import com.microsoft.z3.Context
 import com.microsoft.z3.solverAssert
 import com.microsoft.z3.solverAssertAndTrack
 import io.ksmt.KContext
@@ -17,7 +16,7 @@ open class KZ3ForkingSolver internal constructor(
     private val manager: KZ3ForkingSolverManager,
     parent: KZ3ForkingSolver?
 ) : KZ3SolverBase(ctx), KForkingSolver<KZ3SolverConfiguration> {
-    final override val z3Ctx: KZ3Context
+    final override val z3Ctx: KZ3ForkingContext = manager.createZ3ForkingContext(parent?.z3Ctx)
 
     private val trackedAssertions = ScopedLinkedFrame<Long2ObjectOpenHashMap<KExpr<KBoolSort>>>(
         ::Long2ObjectOpenHashMap, ::Long2ObjectOpenHashMap
@@ -27,20 +26,8 @@ open class KZ3ForkingSolver internal constructor(
     private val isChild = parent != null
     private var assertionsInitiated = !isChild
 
-    init {
-        if (parent != null) {
-            z3Ctx = parent.z3Ctx.fork(ctx, manager)
-            trackedAssertions.fork(parent.trackedAssertions)
-            z3Assertions.fork(parent.z3Assertions)
-        } else {
-            val context = Context()
-            with(manager) { registerContext(context) }
-            z3Ctx = KZ3Context(ctx, context, manager)
-        }
-    }
-
     private val config: KZ3ForkingSolverConfigurationImpl by lazy {
-        z3Try {
+        z3Ctx.z3Try {
             z3Ctx.nativeContext.mkParams().let {
                 parent?.config?.fork(it)?.apply { setParameters(solver) } ?: KZ3ForkingSolverConfigurationImpl(it)
             }
@@ -48,7 +35,12 @@ open class KZ3ForkingSolver internal constructor(
     }
 
     init {
-        if (isChild) config // initialize child config
+        if (parent != null) {
+            // lightweight copying via copying of the linked list node
+            trackedAssertions.fork(parent.trackedAssertions)
+            z3Assertions.fork(parent.z3Assertions)
+            config // initialize child config
+        }
     }
 
     override fun configure(configurator: KZ3SolverConfiguration.() -> Unit) {
@@ -56,6 +48,9 @@ open class KZ3ForkingSolver internal constructor(
         config.setParameters(solver)
     }
 
+    /**
+     * Creates lazily initiated forked solver with shared cache, preserving parental assertions and configuration.
+     */
     override fun fork(): KForkingSolver<KZ3SolverConfiguration> = manager.mkForkingSolver(this)
 
     override fun saveTrackedAssertion(track: Long, trackedExpr: KExpr<KBoolSort>) {
@@ -67,7 +62,7 @@ open class KZ3ForkingSolver internal constructor(
     }
 
     /**
-     * Asserts parental (in case of child) assertions if not
+     * Asserts parental (in case of child) assertions if already not
      */
     private fun ensureAssertionsInitiated() {
         if (assertionsInitiated) return
@@ -92,20 +87,20 @@ open class KZ3ForkingSolver internal constructor(
     }
 
     override fun push() {
-        z3Try { ensureAssertionsInitiated() }
+        z3Ctx.z3Try { ensureAssertionsInitiated() }
         super.push()
         trackedAssertions.push()
         z3Assertions.push()
     }
 
     override fun pop(n: UInt) {
-        z3Try { ensureAssertionsInitiated() }
+        z3Ctx.z3Try { ensureAssertionsInitiated() }
         super.pop(n)
         trackedAssertions.pop(n)
         z3Assertions.pop(n)
     }
 
-    override fun assert(expr: KExpr<KBoolSort>) = z3Try {
+    override fun assert(expr: KExpr<KBoolSort>) = z3Ctx.z3Try {
         ensureAssertionsInitiated()
         ctx.ensureContextMatch(expr)
 
@@ -117,17 +112,22 @@ open class KZ3ForkingSolver internal constructor(
     }
 
     override fun assertAndTrack(expr: KExpr<KBoolSort>) {
-        z3Try { ensureAssertionsInitiated() }
+        z3Ctx.z3Try { ensureAssertionsInitiated() }
         super.assertAndTrack(expr)
     }
 
     override fun check(timeout: Duration): KSolverStatus {
-        z3Try { ensureAssertionsInitiated() }
+        z3Ctx.z3Try { ensureAssertionsInitiated() }
         return super.check(timeout)
     }
 
     override fun checkWithAssumptions(assumptions: List<KExpr<KBoolSort>>, timeout: Duration): KSolverStatus {
-        z3Try { ensureAssertionsInitiated() }
+        z3Ctx.z3Try { ensureAssertionsInitiated() }
         return super.checkWithAssumptions(assumptions, timeout)
+    }
+
+    override fun close() {
+        super.close()
+        manager.close(this)
     }
 }

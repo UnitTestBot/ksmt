@@ -18,145 +18,127 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet
 import it.unimi.dsi.fastutil.longs.LongSet
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
-import java.util.IdentityHashMap
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Responsible for creation and managing of [KZ3ForkingSolver].
+ *
+ * It's cheaper to create multiple copies of solvers with [KZ3ForkingSolver.fork]
+ * instead of assertions transferring in [KZ3Solver] instances.
+ *
+ * All created solvers with one manager (via both [KZ3ForkingSolver.fork] and [mkForkingSolver])
+ * use the same [Context], cache, and registered uninterpreted sort values.
+ */
 class KZ3ForkingSolverManager(private val ctx: KContext) : KForkingSolverManager<KZ3SolverConfiguration> {
+    private val z3Context by lazy { Context() }
     private val solvers = ConcurrentHashMap.newKeySet<KZ3ForkingSolver>()
 
-    /**
-     * for each parent-to-child hierarchy created only one Context.
-     * Each Context user is registered to control solver is alive
-     */
-    private val forkingSolverToContext = IdentityHashMap<KZ3ForkingSolver, Context>()
-    private val contextReferences = IdentityHashMap<Context, Int>()
-
     // shared cache
-    private val expressionsCache = IdentityHashMap<Context, ExpressionsCache>()
-    private val expressionsReversedCache = IdentityHashMap<Context, ExpressionsReversedCache>()
-    private val sortsCache = IdentityHashMap<Context, SortsCache>()
-    private val sortsReversedCache = IdentityHashMap<Context, SortsReversedCache>()
-    private val declsCache = IdentityHashMap<Context, DeclsCache>()
-    private val declsReversedCache = IdentityHashMap<Context, DeclsReversedCache>()
+    private val expressionsCache = ExpressionsCache().withNotInternalizedAsDefaultValue()
+    private val expressionsReversedCache = ExpressionsReversedCache()
+    private val sortsCache = SortsCache().withNotInternalizedAsDefaultValue()
+    private val sortsReversedCache = SortsReversedCache()
+    private val declsCache = DeclsCache().withNotInternalizedAsDefaultValue()
+    private val declsReversedCache = DeclsReversedCache()
 
-    private val tmpNativeObjectsCache = IdentityHashMap<Context, TmpNativeObjectsCache>()
-    private val converterNativeObjectsCache = IdentityHashMap<Context, ConverterNativeObjectsCache>()
+    private val tmpNativeObjectsCache = TmpNativeObjectsCache()
+    private val converterNativeObjectsCache = ConverterNativeObjectsCache()
 
-    private val uninterpretedSortValueInterpreter = IdentityHashMap<Context, UninterpretedSortValueInterpreterCache>()
-    private val uninterpretedSortValueDecls = IdentityHashMap<Context, UninterpretedSortValueDecls>()
-    private val uninterpretedSortValueInterpreters = IdentityHashMap<Context, UninterpretedSortValueInterpretersCache>()
-    private val registeredUninterpretedSortValues = IdentityHashMap<Context, RegisteredUninterpretedSortValues>()
+    private val uninterpretedSortValueInterpreter = UninterpretedSortValueInterpreterCache()
+    private val uninterpretedSortValueDecls = UninterpretedSortValueDecls()
+    private val uninterpretedSortValueInterpreters = UninterpretedSortValueInterpretersCache()
 
-    internal fun KZ3Context.findExpressionsCache() = expressionsCache.getValue(nativeContext)
-    internal fun KZ3Context.findExpressionsReversedCache() = expressionsReversedCache.getValue(nativeContext)
-    internal fun KZ3Context.findSortsCache() = sortsCache.getValue(nativeContext)
-    internal fun KZ3Context.findSortsReversedCache() = sortsReversedCache.getValue(nativeContext)
-    internal fun KZ3Context.findDeclsCache() = declsCache.getValue(nativeContext)
-    internal fun KZ3Context.findDeclsReversedCache() = declsReversedCache.getValue(nativeContext)
-    internal fun KZ3Context.findTmpNativeObjectsCache() = tmpNativeObjectsCache.getValue(nativeContext)
-    internal fun KZ3Context.findConverterNativeObjectsCache() = converterNativeObjectsCache.getValue(nativeContext)
-    internal fun KZ3Context.findUninterpretedSortValueInterpreter() =
-        uninterpretedSortValueInterpreter.getValue(nativeContext)
+    internal fun KZ3Context.getExpressionsCache() = ensureContextMatches(nativeContext).let { expressionsCache }
+    internal fun KZ3Context.getExpressionsReversedCache() = ensureContextMatches(nativeContext)
+        .let { expressionsReversedCache }
 
-    internal fun KZ3Context.findUninterpretedSortValueDecls() =
-        uninterpretedSortValueDecls.getValue(nativeContext)
+    internal fun KZ3Context.getSortsCache() = ensureContextMatches(nativeContext).let { sortsCache }
+    internal fun KZ3Context.getSortsReversedCache() = ensureContextMatches(nativeContext).let { sortsReversedCache }
+    internal fun KZ3Context.getDeclsCache() = ensureContextMatches(nativeContext).let { declsCache }
+    internal fun KZ3Context.getDeclsReversedCache() = ensureContextMatches(nativeContext).let { declsReversedCache }
+    internal fun KZ3Context.getTmpNativeObjectsCache() = ensureContextMatches(nativeContext)
+        .let { tmpNativeObjectsCache }
 
-    internal fun KZ3Context.findUninterpretedSortValueInterpreters() =
-        uninterpretedSortValueInterpreters.getValue(nativeContext)
+    internal fun KZ3Context.getConverterNativeObjectsCache() = ensureContextMatches(nativeContext)
+        .let { converterNativeObjectsCache }
 
-    internal fun KZ3Context.findRegisteredUninterpretedSortValues() =
-        registeredUninterpretedSortValues.getValue(nativeContext)
+    internal fun KZ3Context.getUninterpretedSortValueInterpreter() = ensureContextMatches(nativeContext)
+        .let { uninterpretedSortValueInterpreter }
 
-    internal fun KZ3ForkingSolver.registerContext(sharedContext: Context) {
-        if (forkingSolverToContext.putIfAbsent(this, sharedContext) == null) {
-            incRef(sharedContext)
+    internal fun KZ3Context.getUninterpretedSortValueDecls() = ensureContextMatches(nativeContext)
+        .let { uninterpretedSortValueDecls }
 
-            expressionsCache[sharedContext] = ExpressionsCache().withNotInternalizedAsDefaultValue()
-            expressionsReversedCache[sharedContext] = ExpressionsReversedCache()
-            sortsCache[sharedContext] = SortsCache().withNotInternalizedAsDefaultValue()
-            sortsReversedCache[sharedContext] = SortsReversedCache()
-            declsCache[sharedContext] = DeclsCache().withNotInternalizedAsDefaultValue()
-            declsReversedCache[sharedContext] = DeclsReversedCache()
-            tmpNativeObjectsCache[sharedContext] = TmpNativeObjectsCache()
-            converterNativeObjectsCache[sharedContext] = ConverterNativeObjectsCache()
-            uninterpretedSortValueInterpreter[sharedContext] = UninterpretedSortValueInterpreterCache()
-            uninterpretedSortValueDecls[sharedContext] = UninterpretedSortValueDecls()
-            uninterpretedSortValueInterpreters[sharedContext] = UninterpretedSortValueInterpretersCache()
-            registeredUninterpretedSortValues[sharedContext] = RegisteredUninterpretedSortValues()
-        }
-    }
-
-    private fun incRef(context: Context) {
-        contextReferences[context] = contextReferences.getOrDefault(context, 0) + 1
-    }
-
-    private fun decRef(context: Context) {
-        val referencesAfterDec = contextReferences.getValue(context) - 1
-        if (referencesAfterDec == 0) {
-            val nCtx = context.nCtx()
-            contextReferences -= context
-
-            expressionsReversedCache.remove(context)!!.keys.decRefAll(nCtx)
-            expressionsCache -= context
-
-            sortsReversedCache.remove(context)!!.keys.decRefAll(nCtx)
-            sortsCache -= context
-
-            declsReversedCache.remove(context)!!.keys.decRefAll(nCtx)
-            declsCache -= context
-
-            uninterpretedSortValueInterpreters.remove(context)!!.decRefAll(nCtx)
-            uninterpretedSortValueInterpreter -= context
-            uninterpretedSortValueDecls -= context
-            registeredUninterpretedSortValues -= context
-
-            converterNativeObjectsCache.remove(context)!!.decRefAll(nCtx)
-            tmpNativeObjectsCache.remove(context)!!.decRefAll(nCtx)
-
-            try {
-                ctx.close()
-            } catch (e: Z3Exception) {
-                throw KSolverException(e)
-            }
-        } else {
-            contextReferences[context] = referencesAfterDec
-        }
-    }
+    internal fun KZ3Context.getUninterpretedSortValueInterpreters() = ensureContextMatches(nativeContext)
+        .let { uninterpretedSortValueInterpreters }
 
     override fun mkForkingSolver(): KForkingSolver<KZ3SolverConfiguration> {
         return KZ3ForkingSolver(ctx, this, null).also { solvers += it }
     }
 
     internal fun mkForkingSolver(parent: KZ3ForkingSolver): KForkingSolver<KZ3SolverConfiguration> {
-        return KZ3ForkingSolver(ctx, this, parent).also {
-            solvers += it
-            forkingSolverToContext[it] = forkingSolverToContext[parent]
-        }
+        return KZ3ForkingSolver(ctx, this, parent).also { solvers += it }
     }
+
+    internal fun createZ3ForkingContext(parentCtx: KZ3ForkingContext? = null) = parentCtx?.fork(ctx, this)
+        ?: KZ3ForkingContext(ctx, z3Context, this)
 
     /**
      * unregister [solver] for this manager
      */
     internal fun close(solver: KZ3ForkingSolver) {
         solvers -= solver
-        val sharedContext = forkingSolverToContext.getValue(solver)
-        forkingSolverToContext -= solver
-        decRef(sharedContext)
+        closeContextIfStale()
     }
 
     override fun close() {
         solvers.forEach(KZ3ForkingSolver::close)
     }
 
+    private fun closeContextIfStale() {
+        if (solvers.isEmpty()) {
+            val nCtx = z3Context.nCtx()
+
+            expressionsReversedCache.keys.decRefAll(nCtx)
+            expressionsReversedCache.clear()
+            expressionsCache.clear()
+
+            sortsReversedCache.keys.decRefAll(nCtx)
+            sortsReversedCache.clear()
+            sortsCache.clear()
+
+            declsReversedCache.keys.decRefAll(nCtx)
+            declsReversedCache.clear()
+            declsCache.clear()
+
+            uninterpretedSortValueInterpreters.decRefAll(nCtx)
+            uninterpretedSortValueInterpreters.clear()
+            uninterpretedSortValueInterpreter.clear()
+            uninterpretedSortValueDecls.clear()
+
+            converterNativeObjectsCache.decRefAll(nCtx)
+            converterNativeObjectsCache.clear()
+            tmpNativeObjectsCache.decRefAll(nCtx)
+            tmpNativeObjectsCache.clear()
+
+            try {
+                ctx.close()
+            } catch (e: Z3Exception) {
+                throw KSolverException(e)
+            }
+        }
+    }
+
     private fun <T : KAst> Object2LongOpenHashMap<T>.withNotInternalizedAsDefaultValue() = apply {
         defaultReturnValue(KExprLongInternalizerBase.NOT_INTERNALIZED)
     }
 
-    private fun LongSet.decRefAll(nCtx: Long) =
-        longIterator().forEachRemaining {
-            decRefUnsafe(nCtx, it)
-        }
+    private fun LongSet.decRefAll(nCtx: Long) = longIterator().forEachRemaining {
+        decRefUnsafe(nCtx, it)
+    }
 
+    private fun ensureContextMatches(ctx: Context) {
+        require(ctx == z3Context) { "Context is not registered by manager." }
+    }
 }
 
 private typealias ExpressionsCache = Object2LongOpenHashMap<KExpr<*>>
@@ -174,5 +156,3 @@ private typealias ConverterNativeObjectsCache = LongOpenHashSet
 private typealias UninterpretedSortValueInterpreterCache = HashMap<KUninterpretedSort, Long>
 private typealias UninterpretedSortValueDecls = Long2ObjectOpenHashMap<KUninterpretedSortValue>
 private typealias UninterpretedSortValueInterpretersCache = LongOpenHashSet
-@Suppress("MaxLineLength")
-private typealias RegisteredUninterpretedSortValues = HashMap<KUninterpretedSortValue, ExpressionUninterpretedValuesTracker.UninterpretedSortValueDescriptor>
