@@ -9,6 +9,8 @@ import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.KSolverStatus.SAT
 import io.ksmt.solver.KSolverStatus.UNKNOWN
 import io.ksmt.solver.KSolverStatus.UNSAT
+import io.ksmt.solver.maxsat.KMaxSATContext
+import io.ksmt.solver.maxsat.KMaxSATContext.Strategy.PrimalDualMaxRes
 import io.ksmt.solver.maxsat.KMaxSATResult
 import io.ksmt.solver.maxsat.constraints.SoftConstraint
 import io.ksmt.solver.maxsat.solvers.utils.MinimalUnsatCore
@@ -18,7 +20,11 @@ import io.ksmt.solver.maxsat.utils.TimerUtils
 import io.ksmt.sort.KBoolSort
 import kotlin.time.Duration
 
-class KPrimalDualMaxResSolver<T : KSolverConfiguration>(private val ctx: KContext, private val solver: KSolver<T>) :
+class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
+    private val ctx: KContext,
+    private val solver: KSolver<T>,
+    private val maxSatCtx: KMaxSATContext,
+) :
     KMaxResSolver<T>(ctx, solver) {
     private var _lower: UInt = 0u // Current lower frontier
     private var _upper: UInt = 0u // Current upper frontier
@@ -62,14 +68,20 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(private val ctx: KContex
 
             when (status) {
                 SAT -> {
-                    val correctionSet = getCorrectionSet(solver.model(), assumptions)
-                    if (correctionSet.isEmpty()) {
-                        if (_model != null) {
-                            // Feasible optimum is found by the moment.
-                            _lower = _upper
+                    when (maxSatCtx.strategy) {
+                        KMaxSATContext.Strategy.PrimalMaxRes -> _upper = _lower
+
+                        KMaxSATContext.Strategy.PrimalDualMaxRes -> {
+                            val correctionSet = getCorrectionSet(solver.model(), assumptions)
+                            if (correctionSet.isEmpty()) {
+                                if (_model != null) {
+                                    // Feasible optimum is found by the moment.
+                                    _lower = _upper
+                                }
+                            } else {
+                                processSat(correctionSet, assumptions)
+                            }
                         }
-                    } else {
-                        processSat(correctionSet, assumptions)
                     }
                 }
 
@@ -146,7 +158,10 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(private val ctx: KContex
         assert(fml)
 
         _lower += weightedCore.weight
-        _lower = minOf(_lower, _upper)
+
+        if (maxSatCtx.strategy == PrimalDualMaxRes) {
+            _lower = minOf(_lower, _upper)
+        }
 
         if (_correctionSetModel != null && _correctionSetSize > 0) {
             // This estimate can overshoot for weighted soft constraints.

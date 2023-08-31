@@ -1,7 +1,7 @@
 package io.ksmt.solver.maxsat
 
-import io.ksmt.solver.maxsat.constraints.SoftConstraint
 import io.ksmt.solver.KSolverStatus
+import io.ksmt.solver.maxsat.constraints.SoftConstraint
 
 /**
  * @property satSoftConstraints
