@@ -1,6 +1,7 @@
 package io.ksmt.solver.maxsat.test
 
 import io.ksmt.KContext
+import io.ksmt.solver.maxsat.KMaxSATContext
 import io.ksmt.solver.maxsat.solvers.KMaxSATSolver
 import io.ksmt.solver.maxsat.solvers.KPrimalDualMaxResSolver
 import io.ksmt.solver.z3.KZ3Solver
@@ -11,6 +12,6 @@ class KPrimalDualMaxResBenchmarkTest : KMaxSATBenchmarkTest() {
 
     override fun getSolver(): KMaxSATSolver<KZ3SolverConfiguration> = with(ctx) {
         val z3Solver = KZ3Solver(this)
-        return KPrimalDualMaxResSolver(this, z3Solver)
+        return KPrimalDualMaxResSolver(this, z3Solver, KMaxSATContext())
     }
 }

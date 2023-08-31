@@ -11,6 +11,6 @@ class KPrimalDualMaxResSolverTest : KMaxSATSolverTest {
 
     override fun getSolver(): KMaxSATSolver<KZ3SolverConfiguration> = with(ctx) {
         val z3Solver = KZ3Solver(this)
-        return KPrimalDualMaxResSolver(this, z3Solver)
+        return KPrimalDualMaxResSolver(this, z3Solver, KMaxSATContext())
     }
 }
