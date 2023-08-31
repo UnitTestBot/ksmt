@@ -20,4 +20,3 @@ pluginManagement {
 include("ksmt-neurosmt")
 include("ksmt-neurosmt:utils")
 // findProject(":ksmt-neurosmt:utils")?.name = "utils"
-include("sandbox")
