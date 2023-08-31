@@ -130,7 +130,13 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
     }
 
     private fun processUnsat(assumptions: MutableList<SoftConstraint>, timeout: Duration): KSolverStatus {
-        val (status, cores) = getCores(assumptions, timeout)
+        val (status, cores) = if (maxSatCtx.getMultipleCores) {
+            getCores(assumptions, timeout)
+        } else {
+            val core = solver.unsatCore()
+            val coreSoftConstraints = CoreUtils.coreToSoftConstraints(core, assumptions)
+            Pair(SAT, listOf(WeightedCore(core, CoreUtils.getCoreWeight(coreSoftConstraints))))
+        }
 
         if (status != SAT) {
             return status
