@@ -64,7 +64,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                 throw NotImplementedError()
             }
 
-            val status = checkSat(assumptions, timeout)
+            val status = checkSATHillClimb(assumptions, timeout)
 
             when (status) {
                 SAT -> {
@@ -230,7 +230,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                 return Pair(SAT, cores) // TODO: is this status Ok?
             }
 
-            status = checkSat(assumptions, checkSatRemainingTime)
+            status = checkSATHillClimb(assumptions, checkSatRemainingTime)
         }
 
         return Pair(status, cores)
@@ -407,6 +407,53 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         updateAssignment(model, assumptions)
 
         return ModelUtils.getCorrectionSet(ctx, model, assumptions)
+    }
+
+    private fun checkSATHillClimb(assumptions: MutableList<SoftConstraint>, timeout: Duration): KSolverStatus {
+        var status = SAT
+
+        if (maxSatCtx.preferLargeWeightConstraintsForCores && assumptions.isNotEmpty()) {
+            val clockStart = System.currentTimeMillis()
+
+            // Give preference to cores that have large minimal values.
+            assumptions.sortByDescending { it.weight }
+
+            var lastIndex = 0
+            var index = 0
+
+            while (index < assumptions.size && status == SAT) {
+                while (assumptions.size > 20 * (index - lastIndex) && index < assumptions.size) {
+                    index = getNextIndex(assumptions, index)
+                }
+                lastIndex = index
+
+                val assumptionsToCheck = assumptions.subList(0, index)
+
+                val remainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
+                if (TimerUtils.timeoutExceeded(remainingTime)) {
+                    return UNKNOWN
+                }
+
+                status = checkSat(assumptionsToCheck, remainingTime)
+            }
+        } else {
+            status = checkSat(assumptions, timeout)
+        }
+
+        return status
+    }
+
+    private fun getNextIndex(assumptions: List<SoftConstraint>, index: Int): Int {
+        var currentIndex = index
+
+        if (currentIndex < assumptions.size) {
+            val weight = assumptions[currentIndex].weight
+            ++currentIndex
+            while (currentIndex < assumptions.size && weight == assumptions[currentIndex].weight) {
+                ++currentIndex
+            }
+        }
+        return currentIndex
     }
 
     private fun checkSat(assumptions: List<SoftConstraint>, timeout: Duration): KSolverStatus {
