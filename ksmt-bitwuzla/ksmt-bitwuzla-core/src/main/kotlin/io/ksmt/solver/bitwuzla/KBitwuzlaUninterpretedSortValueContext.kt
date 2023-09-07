@@ -10,10 +10,12 @@ class KBitwuzlaUninterpretedSortValueContext(private val ctx: KContext) {
     private val sortsUniverses = hashMapOf<KUninterpretedSort, MutableMap<KExpr<*>, KUninterpretedSortValue>>()
 
     fun mkValue(sort: KUninterpretedSort, value: KBitVec32Value): KUninterpretedSortValue {
-        val sortUniverse = sortsUniverses.getOrPut(sort) { hashMapOf() }
-        return sortUniverse.getOrPut(value) {
-            ctx.mkUninterpretedSortValue(sort, value.intValue)
-        }
+        return registerValue(ctx.mkUninterpretedSortValue(sort, value.intValue))
+    }
+
+    fun registerValue(value: KUninterpretedSortValue): KUninterpretedSortValue {
+        val sortsUniverse = sortsUniverses.getOrPut(value.sort) { hashMapOf() }
+        return sortsUniverse.getOrPut(value) { value }
     }
 
     fun currentSortUniverse(sort: KUninterpretedSort): Set<KUninterpretedSortValue> =

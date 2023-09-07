@@ -2,9 +2,13 @@
 
 We build Bitwuzla with the following configuration:
 ```shell
-./configure production --shared --only-cadical
+./configure.py release --shared
 ```
-To make our distribution portable we statically link Bitwuzla against `libgmp`.
+To make our distribution portable we statically link Bitwuzla against:
+* `libgmp` - in [src/meson.build](https://github.com/dee-tree/bitwuzla/blob/main/src/meson.build)
+* `bitwuzlabv` (`bitvector_lib`) - in [src/lib/meson.build](https://github.com/dee-tree/bitwuzla/blob/main/src/lib/meson.build)
+* `bitwuzlabb` (`bitblast_lib`) - in [src/lib/meson.build](https://github.com/dee-tree/bitwuzla/blob/main/src/lib/meson.build)
+* `bitwuzlals` (`local_search_lib`) - in [src/lib/meson.build](https://github.com/dee-tree/bitwuzla/blob/main/src/lib/meson.build)
 
 Jni bindings `bitwuzla_jni` are built without any tricks.
 
@@ -18,20 +22,20 @@ To ensure that our distribution is portable, we verify that the produced binarie
 #### Linux x64
 ```shell
 $ ldd libbitwuzla.so 
-        linux-vdso.so.1 (0x00007ffce92d0000)
-        libstdc++.so.6 => /usr/lib/libstdc++.so.6 (0x00007f2fdaa00000)
-        libm.so.6 => /usr/lib/libm.so.6 (0x00007f2fdad18000)
-        libgcc_s.so.1 => /usr/lib/libgcc_s.so.1 (0x00007f2fdb192000)
-        libc.so.6 => /usr/lib/libc.so.6 (0x00007f2fda819000)
-        /usr/lib64/ld-linux-x86-64.so.2 (0x00007f2fdb1e0000)
+        linux-vdso.so.1 (0x00007ffcaf18b000)
+        libstdc++.so.6 => /usr/lib/libstdc++.so.6 (0x00007f1c42c00000)
+        libm.so.6 => /usr/lib/libm.so.6 (0x00007f1c43442000)
+        libgcc_s.so.1 => /usr/lib/libgcc_s.so.1 (0x00007f1c4341d000)
+        libc.so.6 => /usr/lib/libc.so.6 (0x00007f1c42800000)
+        /usr/lib64/ld-linux-x86-64.so.2 (0x00007f1c4355b000)
 $ ldd libbitwuzla_jni.so 
-        libbitwuzla.so => not found
-        linux-vdso.so.1 (0x00007ffd1ddc6000)
-        libstdc++.so.6 => /usr/lib/libstdc++.so.6 (0x00007f6188800000)
-        libm.so.6 => /usr/lib/libm.so.6 (0x00007f6188b18000)
-        libgcc_s.so.1 => /usr/lib/libgcc_s.so.1 (0x00007f6189006000)
-        libc.so.6 => /usr/lib/libc.so.6 (0x00007f6188619000)
-        /usr/lib64/ld-linux-x86-64.so.2 (0x00007f618906d000)
+        linux-vdso.so.1 (0x00007ffcbf36f000)
+        libbitwuzla.so => #PathToCompiledBitwuzlaLibrary
+        libstdc++.so.6 => /usr/lib/libstdc++.so.6 (0x00007f45d3200000)
+        libm.so.6 => /usr/lib/libm.so.6 (0x00007f45d3aa5000)
+        libgcc_s.so.1 => /usr/lib/libgcc_s.so.1 (0x00007f45d3a80000)
+        libc.so.6 => /usr/lib/libc.so.6 (0x00007f45d2e00000)
+        /usr/lib64/ld-linux-x86-64.so.2 (0x00007f45d3bd5000)
 ```
 
 #### Windows x64

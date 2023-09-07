@@ -7,7 +7,9 @@ FIND_PACKAGE(JNI REQUIRED)
 SET(CXX_STANDARD 17)
 
 # Path to bitwuzla.h
-SET(BITWUZLA_INCLUDE "${PROJECT_SOURCE_DIR}/bitwuzla/include")
+SET(BITWUZLA_INCLUDE "${PROJECT_SOURCE_DIR}/bitwuzla/include/bitwuzla/c")
+# Path to enums.h, option.h
+SET(BITWUZLA_INCLUDE2 "${PROJECT_SOURCE_DIR}/include")
 
 # Path to Bitwuzla sources root (required for extensions)
 SET(BITWUZLA_SRC_ROOT "${PROJECT_SOURCE_DIR}/bitwuzla/src")
@@ -15,10 +17,11 @@ SET(BITWUZLA_SRC_ROOT "${PROJECT_SOURCE_DIR}/bitwuzla/src")
 # Path to bitwuzla library (libbitwuzla.so) 
 SET(BITWUZLA_LIB "${PROJECT_SOURCE_DIR}/bitwuzla/lib/${CMAKE_SHARED_LIBRARY_PREFIX}bitwuzla${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
-ADD_LIBRARY (bitwuzla_jni SHARED bitwuzla_jni.cpp bitwuzla_extension.c)
+ADD_LIBRARY (bitwuzla_jni SHARED bitwuzla_jni.cpp)
 
 TARGET_INCLUDE_DIRECTORIES(bitwuzla_jni PRIVATE ${JNI_INCLUDE_DIRS})
 TARGET_INCLUDE_DIRECTORIES(bitwuzla_jni PRIVATE ${BITWUZLA_INCLUDE})
+TARGET_INCLUDE_DIRECTORIES(bitwuzla_jni PRIVATE ${BITWUZLA_INCLUDE2})
 
 SET(BITWUZLA_SRC_INCLUDE "${BITWUZLA_SRC_ROOT}/bitwuzla/src")
 TARGET_INCLUDE_DIRECTORIES(bitwuzla_jni PRIVATE ${BITWUZLA_SRC_INCLUDE})

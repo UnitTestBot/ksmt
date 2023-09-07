@@ -34,6 +34,13 @@ JNIEXPORT void JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSor
 
 /*
  * Class:     org_ksmt_solver_bitwuzla_bindings_Native
+ * Method:    bitwuzlaForceTerminate
+ */
+JNIEXPORT void JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaForceTerminate
+(JNIEnv* env, jobject native_class, jlong bitwuzla);
+
+/*
+ * Class:     org_ksmt_solver_bitwuzla_bindings_Native
  * Method:    bitwuzlaCopyright
  * Signature: ()Ljava/lang/String;
  */
@@ -791,6 +798,27 @@ JNIEXPORT jint JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaChe
  */
 JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetValue
   (JNIEnv *env, jclass native_class, jlong bitwuzla, jlong term);
+
+/*
+ * Class:     org_ksmt_solver_bitwuzla_bindings_Native
+ * Method:    bitwuzlaGetBvValueUInt64
+ */
+JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetBvValueUInt64
+        (JNIEnv *env, jclass native_class, jlong term);
+
+/*
+ * Class:     org_ksmt_solver_bitwuzla_bindings_Native
+ * Method:    bitwuzlaGetBvValueString
+ */
+JNIEXPORT jstring JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetBvValueString
+        (JNIEnv *env, jclass native_class, jlong term);
+
+/*
+ * Class:     org_ksmt_solver_bitwuzla_bindings_Native
+ * Method:    bitwuzlaGetFpValue
+ */
+JNIEXPORT jobject JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetFpValue
+        (JNIEnv *env, jclass native_class, jlong term);
 
 /*
  * Class:     org_ksmt_solver_bitwuzla_bindings_Native

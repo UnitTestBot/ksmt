@@ -1285,6 +1285,16 @@ object Native {
     @JvmStatic
     external fun bitwuzlaGetValue(bitwuzla: Bitwuzla, term: BitwuzlaTerm): BitwuzlaTerm
 
+    @JvmStatic
+    external fun bitwuzlaGetBvValueUInt64(term: BitwuzlaTerm): Long
+
+    @JvmStatic
+    external fun bitwuzlaGetBvValueString(term: BitwuzlaTerm): String
+
+    @JvmStatic
+    external fun bitwuzlaGetFpValue(term: BitwuzlaTerm): FpValue
+
+
     // TODO: mb add statistics?
 //    /**
 //     * Get current statistics.

@@ -190,15 +190,22 @@ void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaInit(JNIEnv *env, jcl
     bitwuzla_set_abort_callback(abort_callback);
 }
 
-JNIEXPORT void JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermDecRef(JNIEnv *env, jclass native_class, jlong term) {
+void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermDecRef(JNIEnv *env, jclass native_class, jlong term) {
     BZLA_TRY_VOID({
         bitwuzla_term_dec_ref(TERM(term));
     })
 }
 
-JNIEXPORT void JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortDecRef(JNIEnv *env, jclass native_class, jlong sort) {
+void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortDecRef(JNIEnv *env, jclass native_class, jlong sort) {
     BZLA_TRY_VOID({
         bitwuzla_sort_dec_ref(SORT(sort));
+    })
+}
+
+void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaForceTerminate(JNIEnv* env, jclass native_class, jlong bitwuzla) {
+    BZLA_TRY_VOID({
+        auto termination_state = get_termination_state(BZLA);
+        termination_state->terminate();
     })
 }
 
@@ -826,6 +833,46 @@ jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetValue(JNIEnv *env
         return (jlong) bitwuzla_get_value(BZLA, TERM(term));
     })
 }
+
+jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetBvValueUInt64(JNIEnv *env, jclass native_class, jlong term) {
+    BZLA_TRY_OR_ZERO({
+        return (jlong) bitwuzla_term_value_get_bv_uint64(TERM(term));
+    })
+}
+
+jstring Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetBvValueString(JNIEnv *env, jclass native_class, jlong term) {
+    BZLA_TRY_OR_ZERO({
+        const char * str = bitwuzla_term_value_get_bv_str(TERM(term), 2);
+        return env->NewStringUTF(str);
+    })
+}
+
+jobject Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetFpValue(JNIEnv *env, jclass native_class, jlong term) {
+    BZLA_TRY_OR_NULL({
+        const char* sign;
+        const char* exponent;
+        const char* significand;
+
+        bitwuzla_term_value_get_fp_ieee(term, &sign, &exponent, &significand, 2);
+        jclass clazz = env->FindClass("org/ksmt/solver/bitwuzla/bindings/FpValue");
+        jmethodID constructor = env->GetMethodID(clazz, "<init>", "()V");
+        jfieldID sign_id = env->GetFieldID(clazz, "sign", "Ljava/lang/String;");
+        jfieldID exponent_id = env->GetFieldID(clazz, "exponent", "Ljava/lang/String;");
+        jfieldID significand_id = env->GetFieldID(clazz, "significand", "Ljava/lang/String;");
+
+        jstring sign_str = env->NewStringUTF(sign);
+        jstring exponent_str = env->NewStringUTF(exponent);
+        jstring significand_str = env->NewStringUTF(significand);
+
+        jobject result = env->NewObject(clazz, constructor);
+        env->SetObjectField(result, sign_id, sign_str);
+        env->SetObjectField(result, exponent_id, exponent_str);
+        env->SetObjectField(result, significand_id, significand_str);
+
+        return result;
+    })
+}
+
 
 jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkArraySort(JNIEnv *env, jclass native_class, jlong index, jlong element) {
     BZLA_TRY_OR_ZERO({
