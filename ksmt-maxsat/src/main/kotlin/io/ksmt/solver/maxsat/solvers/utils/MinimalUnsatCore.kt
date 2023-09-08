@@ -31,7 +31,7 @@ internal class MinimalUnsatCore<T : KSolverConfiguration>(
 
         val unsatCore = solver.unsatCore()
 
-        if (unsatCore.isEmpty() || unsatCore.size == 1) {
+        if (unsatCore.isEmpty()) {
             return CoreUtils.coreToSoftConstraints(unsatCore, assumptions)
         }
 

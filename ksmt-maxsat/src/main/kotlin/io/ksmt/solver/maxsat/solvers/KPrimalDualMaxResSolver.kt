@@ -30,7 +30,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
     private var _upper: UInt = 0u // Current upper frontier
     private var _maxUpper = 0u // Max possible upper frontier
     private var _correctionSetSize: Int = 0 // Current corrections set size
-    private val _maxCoreSize = 3
+    private val _maxCoreSize = if (maxSatCtx.getMultipleCores) 3 else 1
     private var _correctionSetModel: KModel? = null
     private var _model: KModel? = null
     private var _minimalUnsatCore = MinimalUnsatCore(ctx, solver)
@@ -130,13 +130,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
     }
 
     private fun processUnsat(assumptions: MutableList<SoftConstraint>, timeout: Duration): KSolverStatus {
-        val (status, cores) = if (maxSatCtx.getMultipleCores) {
-            getCores(assumptions, timeout)
-        } else {
-            val core = solver.unsatCore()
-            val coreSoftConstraints = CoreUtils.coreToSoftConstraints(core, assumptions)
-            Pair(SAT, listOf(WeightedCore(core, CoreUtils.getCoreWeight(coreSoftConstraints))))
-        }
+        val (status, cores) = getCores(assumptions, timeout)
 
         if (status != SAT) {
             return status
