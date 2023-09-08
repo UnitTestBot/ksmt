@@ -7,16 +7,27 @@ import io.ksmt.solver.maxsat.constraints.SoftConstraint
 import io.ksmt.solver.maxsat.solvers.KMaxSATSolver
 import io.ksmt.solver.z3.KZ3SolverConfiguration
 import io.ksmt.utils.getValue
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-interface KMaxSATSolverTest {
-    fun getSolver(): KMaxSATSolver<KZ3SolverConfiguration>
-    val ctx: KContext
+abstract class KMaxSATSolverTest {
+    abstract fun getSolver(): KMaxSATSolver<KZ3SolverConfiguration>
+
+    protected val ctx: KContext = KContext()
+    private lateinit var maxSATSolver: KMaxSATSolver<KZ3SolverConfiguration>
+
+    @BeforeEach
+    fun initSolver() {
+        maxSATSolver = getSolver()
+    }
+
+    @AfterEach
+    fun closeSolver() = maxSATSolver.close()
 
     @Test
     fun hardConstraintsUnsatTest() = with(ctx) {
-        val maxSATSolver = getSolver()
         val a by boolSort
         val b by boolSort
         maxSATSolver.assert(a)
@@ -26,7 +37,6 @@ interface KMaxSATSolverTest {
 
     @Test
     fun hardConstraintsUnsatNoSoftTest() = with(ctx) {
-        val maxSATSolver = getSolver()
         val a by boolSort
         val b by boolSort
         maxSATSolver.assert(a)
@@ -45,8 +55,6 @@ interface KMaxSATSolverTest {
 
     @Test
     fun noSoftConstraintsTest() = with(ctx) {
-        val maxSATSolver = getSolver()
-
         val a by boolSort
         val b by boolSort
         val c by boolSort
@@ -63,8 +71,6 @@ interface KMaxSATSolverTest {
 
     @Test
     fun noSoftConstraintsSatTest() = with(ctx) {
-        val maxSATSolver = getSolver()
-
         val a by boolSort
         val b by boolSort
         val c by boolSort
@@ -83,7 +89,6 @@ interface KMaxSATSolverTest {
 
     @Test
     fun oneOfTwoSoftConstraintsSatTest() = with(ctx) {
-        val maxSATSolver = getSolver()
         val a by boolSort
         val b by boolSort
 
@@ -103,7 +108,6 @@ interface KMaxSATSolverTest {
 
     @Test
     fun twoOfThreeSoftConstraintsSatTest() = with(ctx) {
-        val maxSATSolver = getSolver()
         val a by boolSort
         val b by boolSort
 
@@ -125,8 +129,6 @@ interface KMaxSATSolverTest {
 
     @Test
     fun sameExpressionSoftConstraintsSatTest() = with(ctx) {
-        val maxSATSolver = getSolver()
-
         val x by boolSort
         val y by boolSort
 
@@ -154,8 +156,6 @@ interface KMaxSATSolverTest {
 
     @Test
     fun sameExpressionSoftConstraintsUnsatTest() = with(ctx) {
-        val maxSATSolver = getSolver()
-
         val x by boolSort
         val y by boolSort
 
@@ -179,7 +179,6 @@ interface KMaxSATSolverTest {
 
     @Test
     fun chooseOneConstraintByWeightTest() = with(ctx) {
-        val maxSATSolver = getSolver()
         val z by boolSort
         val a by boolSort
         val b by boolSort
@@ -199,7 +198,6 @@ interface KMaxSATSolverTest {
 
     @Test
     fun equalWeightsTest() = with(ctx) {
-        val maxSATSolver = getSolver()
         val a by boolSort
         val b by boolSort
 
@@ -217,8 +215,6 @@ interface KMaxSATSolverTest {
 
     @Test
     fun inequalitiesTest() = with(ctx) {
-        val maxSATSolver = getSolver()
-
         val x by intSort
         val y by intSort
 
@@ -247,7 +243,6 @@ interface KMaxSATSolverTest {
 
     @Test
     fun oneScopePushPopTest() = with(ctx) {
-        val maxSATSolver = getSolver()
         val a by boolSort
         val b by boolSort
 
@@ -276,8 +271,6 @@ interface KMaxSATSolverTest {
 
     @Test
     fun threeScopesPushPopTest() = with(ctx) {
-        val maxSATSolver = getSolver()
-
         val a by boolSort
         val b by boolSort
         val c by boolSort
