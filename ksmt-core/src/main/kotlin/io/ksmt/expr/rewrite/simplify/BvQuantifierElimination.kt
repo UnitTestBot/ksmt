@@ -20,12 +20,13 @@ object BvConstants {
     var bvZero: KBitVecValue<*>? = null
     var bvOne: KBitVecValue<*>? = null
 
-    fun init(ctx: KContext, expr: KDecl<*>) {
+    fun init(ctx: KContext, expr: KDecl<*>) = with(ctx)
+    {
         if (expr.sort is KBvSort) {
             bvSize = expr.sort.sizeBits
-            bvMaxValueUnsigned = ctx.bvMaxValueUnsigned(bvSize)
-            bvZero = ctx.bvZero(bvSize)
-            bvOne = ctx.bvOne(bvSize)
+            bvMaxValueUnsigned = bvMaxValueUnsigned<KBvSort>(bvSize)
+            bvZero = bvZero<KBvSort>(bvSize)
+            bvOne = bvOne<KBvSort>(bvSize)
         } else
             assert(false) { "Unexpected theory." }
     }
@@ -112,6 +113,25 @@ fun qeProcess(ctx: KContext, assertion: KExistentialQuantifier): KExpr<KBoolSort
 
 fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
         KExpr<KBoolSort> = with(ctx) {
+
+    fun createInequality(lessExpr: KExpr<KBvSort>, greaterExpr: KExpr<KBvSort>): KExpr<KBoolSort> {
+        var condition: KExpr<KBoolSort> = mkTrue()
+        var expr0 = lessExpr
+        if (expr0 is KAndExpr) {
+            condition = expr0.args[0]
+            expr0 = expr0.args[1].uncheckedCast()
+        }
+        var expr1 = greaterExpr
+        if (expr1 is KAndExpr) {
+            condition = mkAnd(expr1.args[0], condition)
+            expr1 = expr1.args[1].uncheckedCast()
+        }
+        val lessOrEqual = mkBvUnsignedLessOrEqualExpr(expr0, expr1)
+        val newInequality: KExpr<KBoolSort> = if (condition is KTrue) lessOrEqual else
+            mkIte(condition, mkFalse().uncheckedCast(), lessOrEqual)
+        return newInequality
+    }
+
     fun orderInequalities(permutation: List<KExpr<KBvSort>>): Array<KExpr<KBoolSort>>
     {
         var orderedInequalities = arrayOf<KExpr<KBoolSort>>()
@@ -122,8 +142,8 @@ fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
                 if (i % 2 == 0)
                     lastExpr = expr
                 else {
-                    val lessOrEqual = mkBvSignedLessOrEqualExpr(lastExpr, expr)
-                    orderedInequalities += lessOrEqual
+                    val newInequality = createInequality(lastExpr, expr)
+                    orderedInequalities += newInequality
                 }
             }
         }
@@ -176,7 +196,7 @@ fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
                     result = if (leP.isEmpty() or geP.isEmpty())
                         mkAnd(*orderedLe, *orderedGe, *freeSet)
                     else {
-                        val middleLe = mkBvUnsignedLessOrEqualExpr(leP[leP.lastIndex], geP[0])
+                        val middleLe = createInequality(leP[leP.lastIndex], geP[0])
                         mkAnd(*orderedLe, *orderedGe, middleLe, *freeSet)
                     }
                 }
@@ -211,16 +231,19 @@ fun getFreeSubExpr(ctx: KContext, expr: KExpr<*>, bound: KDecl<*>):
         return if (expr is KNotExpr) {
             val condition = mkBvUnsignedLessExpr(curExpr.arg0, bvOneExpr)
             val falseBranch = mkBvSubExpr(curExpr.arg0, bvOneExpr)
-            val newFreeSubExpr = mkIte(condition, mkFalse().uncheckedCast(), falseBranch)
+            val newFreeSubExpr = mkAnd(condition, falseBranch.uncheckedCast(), order = false)
             true to newFreeSubExpr // bvult
         }
         else
             false to curExpr.arg0 // bvuge
     }
     return if (expr is KNotExpr) {
-        val condition: KExpr<KBoolSort> = (curExpr.arg1 == BvConstants.bvMaxValueUnsigned).uncheckedCast()
+        val condition: KExpr<KBoolSort> = mkBvUnsignedGreaterOrEqualExpr(
+            curExpr.arg1,
+            BvConstants.bvMaxValueUnsigned.uncheckedCast()
+        )
         val falseBranch = mkBvAddExpr(curExpr.arg1, bvOneExpr)
-        val newFreeSubExpr = mkIte(condition, BvConstants.bvZero.uncheckedCast(), falseBranch)
+        val newFreeSubExpr = mkAnd(condition, falseBranch.uncheckedCast(), order = false)
         false to newFreeSubExpr // bvugt
     }
     else
