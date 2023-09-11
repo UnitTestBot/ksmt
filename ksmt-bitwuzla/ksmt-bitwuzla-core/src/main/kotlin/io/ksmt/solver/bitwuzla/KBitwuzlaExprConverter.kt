@@ -385,16 +385,13 @@ open class KBitwuzlaExprConverter(
         val convertedValue = if (Native.bitwuzlaTermIsBvValue(expr)) {
             // convert Bv value from native representation
             when {
-                size <= Int.SIZE_BITS -> {
-                    TODO()
-//                    val bits = Native.bitwuzlaBvConstNodeGetBitsUInt32(bitwuzla, expr)
-//                    mkBv(bits, size.toUInt())
+                size <= Long.SIZE_BITS -> {
+                    val bits = Native.bitwuzlaGetBvValueUInt64(expr)
+                    mkBv(bits, size.toUInt())
                 }
                 else -> {
-                    TODO()
-//                    val intBits = Native.bitwuzlaBvConstNodeGetBitsUIntArray(bitwuzla, expr)
-//                    val bits = bvBitsToBigInteger(intBits)
-//                    mkBv(bits, size.toUInt())
+                    val bits = Native.bitwuzlaGetBvValueString(expr)
+                    mkBv(bits, size.toUInt())
                 }
             }
         } else {
@@ -408,19 +405,22 @@ open class KBitwuzlaExprConverter(
         return convertedValue
     }
 
-    @Suppress("UNUSED_VARIABLE", "UNREACHABLE_CODE")
     private fun KContext.convertFpValue(expr: BitwuzlaTerm): KExpr<KFpSort> {
-        val sort = Native.bitwuzlaTermGetSort(expr).convertSort() as KFpSort
+        val value = Native.bitwuzlaGetFpValue(expr)
 
-        val convertedValue = if (Native.bitwuzlaTermIsFpValue(expr)) {
+        val convertedValue = mkFpFromBvExpr<KFpSort>(
+            sign = mkBv(value.sign, sizeBits = 1u).uncheckedCast(),
+            biasedExponent = mkBv(value.exponent, value.exponent.length.toUInt()),
+            significand = mkBv(value.significand, value.significand.length.toUInt())
+        )
+
+        /*val convertedValue = if (Native.bitwuzlaTermIsFpValue(expr)) {
             when (sort) {
                 fp32Sort -> {
-                    TODO()
 //                    val fpBits = Native.bitwuzlaFpConstNodeGetBitsUInt32(bitwuzla, expr)
 //                    mkFp(Float.fromBits(fpBits), sort)
                 }
                 fp64Sort -> {
-                    TODO()
 //                    val fpBitsArray = Native.bitwuzlaFpConstNodeGetBitsUIntArray(bitwuzla, expr)
 //                    val higherBits = fpBitsArray[1].toLong() shl Int.SIZE_BITS
 //                    val lowerBits = fpBitsArray[0].toUInt().toLong()
@@ -428,8 +428,7 @@ open class KBitwuzlaExprConverter(
 //                    mkFp(Double.fromBits(fpBits), sort)
                 }
                 else -> {
-                    TODO()
-                    /*val fpBitsArray = Native.bitwuzlaFpConstNodeGetBitsUIntArray(bitwuzla, expr)
+                    val fpBitsArray = Native.bitwuzlaFpConstNodeGetBitsUIntArray(bitwuzla, expr)
                     val fpBits = bvBitsToBigInteger(fpBitsArray)
 
                     val significandMask = powerOfTwo(sort.significandBits - 1u) - BigInteger.ONE
@@ -444,19 +443,18 @@ open class KBitwuzlaExprConverter(
                         biasedExponent = mkBv(exponentBits, sort.exponentBits),
                         significand = mkBv(significandBits, sort.significandBits - 1u),
                         sort = sort
-                    )*/
+                    )
                 }
             }
         } else {
-            TODO()
-            /*val value = Native.bitwuzlaGetFpValue(bitwuzla, expr)
+            val value = Native.bitwuzlaGetFpValue(bitwuzla, expr)
 
             mkFpFromBvExpr(
                 sign = mkBv(value.sign, sizeBits = 1u).uncheckedCast(),
                 biasedExponent = mkBv(value.exponent, value.exponent.length.toUInt()),
                 significand = mkBv(value.significand, value.significand.length.toUInt())
-            )*/
-        }
+            )
+        }*/
 
         bitwuzlaCtx.saveInternalizedValue(convertedValue, expr)
 
