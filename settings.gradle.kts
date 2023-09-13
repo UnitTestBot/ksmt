@@ -6,11 +6,16 @@ include("ksmt-z3:ksmt-z3-core")
 include("ksmt-z3:ksmt-z3-native")
 
 include("ksmt-bitwuzla")
+
 include("ksmt-yices")
+include("ksmt-yices:ksmt-yices-core")
+include("ksmt-yices:ksmt-yices-native")
+
+include("ksmt-cvc5")
+
 include("ksmt-runner")
 include("ksmt-runner:solver-generator")
 include("ksmt-test")
-include("ksmt-cvc5")
 include("ksmt-symfpu")
 
 pluginManagement {
