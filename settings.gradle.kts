@@ -1,6 +1,10 @@
 rootProject.name = "ksmt"
 include("ksmt-core")
+
 include("ksmt-z3")
+include("ksmt-z3:ksmt-z3-core")
+include("ksmt-z3:ksmt-z3-native")
+
 include("ksmt-bitwuzla")
 include("ksmt-yices")
 include("ksmt-runner")
