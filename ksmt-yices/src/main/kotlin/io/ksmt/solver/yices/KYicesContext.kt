@@ -19,7 +19,7 @@ import io.ksmt.solver.yices.TermUtils.funApplicationTerm
 import io.ksmt.solver.yices.TermUtils.mulTerm
 import io.ksmt.solver.yices.TermUtils.orTerm
 import io.ksmt.sort.KSort
-import io.ksmt.utils.NativeLibraryLoader
+import io.ksmt.utils.library.NativeLibraryLoaderUtils
 import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -341,13 +341,7 @@ open class KYicesContext : AutoCloseable {
     companion object {
         init {
             if (!Yices.isReady()) {
-                NativeLibraryLoader.load { os ->
-                    when (os) {
-                        NativeLibraryLoader.OS.LINUX -> listOf("libyices", "libyices2java")
-                        NativeLibraryLoader.OS.WINDOWS -> listOf("libyices", "libyices2java")
-                        NativeLibraryLoader.OS.MACOS -> listOf("libyices", "libyices2java")
-                    }
-                }
+                NativeLibraryLoaderUtils.load<KYicesNativeLibraryLoader>()
                 Yices.init()
                 Yices.setReadyFlag(true)
             }

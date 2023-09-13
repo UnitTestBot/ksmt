@@ -7,7 +7,6 @@ import com.microsoft.z3.solverAssert
 import com.microsoft.z3.solverAssertAndTrack
 import com.microsoft.z3.solverCheckAssumptions
 import com.microsoft.z3.solverGetUnsatCore
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import io.ksmt.KContext
 import io.ksmt.expr.KExpr
 import io.ksmt.solver.KModel
@@ -15,10 +14,11 @@ import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverException
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.sort.KBoolSort
-import io.ksmt.utils.NativeLibraryLoader
+import io.ksmt.utils.library.NativeLibraryLoaderUtils
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import java.lang.ref.PhantomReference
 import java.lang.ref.ReferenceQueue
-import java.util.IdentityHashMap
+import java.util.*
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 
@@ -214,13 +214,7 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
     companion object {
         init {
             System.setProperty("z3.skipLibraryLoad", "true")
-            NativeLibraryLoader.load { os ->
-                when (os) {
-                    NativeLibraryLoader.OS.LINUX -> listOf("libz3", "libz3java")
-                    NativeLibraryLoader.OS.MACOS -> listOf("libz3", "libz3java")
-                    NativeLibraryLoader.OS.WINDOWS -> listOf("vcruntime140", "vcruntime140_1", "libz3", "libz3java")
-                }
-            }
+            NativeLibraryLoaderUtils.load<KZ3NativeLibraryLoader>()
         }
 
         private val cleanupHandlers = ReferenceQueue<KZ3Solver>()

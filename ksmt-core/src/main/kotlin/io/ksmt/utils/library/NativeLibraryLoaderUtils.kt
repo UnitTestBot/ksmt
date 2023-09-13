@@ -1,4 +1,4 @@
-package io.ksmt.utils
+package io.ksmt.utils.library
 
 import java.io.IOException
 import java.io.InputStream
@@ -15,34 +15,47 @@ import kotlin.io.path.forEachDirectoryEntry
 import kotlin.io.path.notExists
 import kotlin.io.path.outputStream
 
-object NativeLibraryLoader {
-    enum class OS {
-        LINUX, WINDOWS, MACOS
-    }
+object NativeLibraryLoaderUtils {
+    const val LINUX_OS_NAME = "Linux"
+    const val WINDOWS_OS_NAME = "Windows"
+    const val MAC_OS_NAME = "Mac"
 
-    private val supportedArchs = setOf("amd64", "x86_64", "aarch64")
+    const val X64_ARCH_NAME = "X64"
+    const val ARM_ARCH_NAME = "Arm"
 
-    fun load(libraries: (OS) -> List<String>) {
-        val arch = System.getProperty("os.arch")
+    val supportedArchs = setOf("amd64", "x86_64", "aarch64")
 
-        require(arch in supportedArchs) { "Not supported arch: $arch" }
-
+    inline fun <reified Loader : NativeLibraryLoader> load() {
         val osName = System.getProperty("os.name").lowercase()
-        val (os, libraryExt) = when {
-            osName.startsWith("linux") -> OS.LINUX to ".so"
-            osName.startsWith("windows") -> OS.WINDOWS to ".dll"
-            osName.startsWith("mac") -> OS.MACOS to ".dylib"
+        val resolvedOsName = when {
+            osName.startsWith("linux") -> LINUX_OS_NAME
+            osName.startsWith("windows") -> WINDOWS_OS_NAME
+            osName.startsWith("mac") -> MAC_OS_NAME
             else -> error("Unknown OS: $osName")
         }
 
-        val librariesToLoad = libraries(os)
+        val arch = System.getProperty("os.arch")
+        require(arch in supportedArchs) { "Not supported arch: $arch" }
+        val resolvedArchName = if (arch == "aarch64") ARM_ARCH_NAME else X64_ARCH_NAME
 
-        val destinationFolder = if (arch == "aarch64") "arm" else "x64"
+        val resolvedLoaderClassName = "${Loader::class.java.name}$resolvedOsName$resolvedArchName"
 
+        @Suppress("SwallowedException", "TooGenericExceptionCaught")
+        val resolvedLoaderClass = try {
+            Class.forName(resolvedLoaderClassName)
+        } catch (ex: Throwable) {
+            error("No loader found for ${Loader::class.java.name} OS: $resolvedOsName Arch: $resolvedArchName")
+        }
+
+        val loader = resolvedLoaderClass.getDeclaredConstructor().newInstance() as Loader
+        loader.load()
+    }
+
+    fun loadLibrariesFromResources(loader: NativeLibraryLoader, libraries: List<String>) {
         withLibraryUnpacker {
-            for (libName in librariesToLoad) {
-                val osLibName = libName + libraryExt
-                val resourceName = "lib/$destinationFolder/$osLibName"
+            for (libName in libraries) {
+                val osLibName = loader.osSpecificLibraryName(libName)
+                val resourceName = loader.resolveLibraryResourceName(libName)
                 val libraryResource = findResource(resourceName)
                     ?: error("Can't find native library $osLibName")
 
@@ -54,7 +67,7 @@ object NativeLibraryLoader {
 
                 val libFile = libraryResource.openStream().use { libResourceStream ->
                     unpackLibrary(
-                        name = libName + libraryExt,
+                        name = osLibName,
                         libraryData = libResourceStream
                     )
                 }
@@ -64,8 +77,14 @@ object NativeLibraryLoader {
         }
     }
 
+    private fun NativeLibraryLoader.osSpecificLibraryName(libName: String): String =
+        "$libName$libraryExt"
+
+    private fun NativeLibraryLoader.resolveLibraryResourceName(libName: String): String =
+        "lib/${osName.lowercase()}/${archName.lowercase()}/${libraryDir.lowercase()}/${osSpecificLibraryName(libName)}"
+
     private fun findResource(resourceName: String): URL? =
-        NativeLibraryLoader::class.java.classLoader
+        NativeLibraryLoaderUtils::class.java.classLoader
             .getResource(resourceName)
 
     private inline fun withLibraryUnpacker(body: TmpDirLibraryUnpacker.() -> Unit) {

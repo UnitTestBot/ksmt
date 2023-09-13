@@ -1,6 +1,6 @@
 package org.ksmt.solver.bitwuzla.bindings
 
-import io.ksmt.utils.NativeLibraryLoader
+import io.ksmt.utils.library.NativeLibraryLoaderUtils
 
 
 typealias Bitwuzla = Long
@@ -11,14 +11,7 @@ typealias BitwuzlaSortArray = LongArray
 
 object Native {
     init {
-        NativeLibraryLoader.load { os ->
-            when (os) {
-                NativeLibraryLoader.OS.LINUX -> listOf("libbitwuzla", "libbitwuzla_jni")
-                NativeLibraryLoader.OS.WINDOWS -> listOf("libbitwuzla", "libbitwuzla_jni")
-                NativeLibraryLoader.OS.MACOS -> listOf("libbitwuzla", "libbitwuzla_jni")
-            }
-        }
-
+        NativeLibraryLoaderUtils.load<KBitwuzlaNativeLibraryLoader>()
         bitwuzlaInit()
     }
 

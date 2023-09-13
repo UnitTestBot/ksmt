@@ -11,7 +11,7 @@ import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverException
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.sort.KBoolSort
-import io.ksmt.utils.NativeLibraryLoader
+import io.ksmt.utils.library.NativeLibraryLoaderUtils
 import java.util.TreeMap
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
@@ -28,6 +28,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     private var lastCheckStatus = KSolverStatus.UNKNOWN
     private var lastReasonOfUnknown: String? = null
     private var lastModel: KCvc5Model? = null
+
     // we need TreeMap here (hashcode not implemented in Term)
     private var cvc5LastAssumptions: TreeMap<Term, KExpr<KBoolSort>>? = null
 
@@ -216,13 +217,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     companion object {
         init {
             if (System.getProperty("cvc5.skipLibraryLoad") != "true") {
-                NativeLibraryLoader.load { os ->
-                    when (os) {
-                        NativeLibraryLoader.OS.LINUX -> listOf("libcvc5", "libcvc5jni")
-                        NativeLibraryLoader.OS.WINDOWS -> listOf("libcvc5", "libcvc5jni")
-                        NativeLibraryLoader.OS.MACOS -> listOf("libcvc5", "libcvc5jni")
-                    }
-                }
+                NativeLibraryLoaderUtils.load<KCvc5NativeLibraryLoader>()
                 System.setProperty("cvc5.skipLibraryLoad", "true")
             }
         }
