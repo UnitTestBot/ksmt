@@ -1,8 +1,32 @@
 package io.ksmt.expr.rewrite.simplify
 
 import io.ksmt.KContext
+import io.ksmt.expr.KExpr
+import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.z3.KZ3SMTLibParser
+import io.ksmt.solver.z3.KZ3Solver
+import io.ksmt.sort.KBoolSort
 import kotlin.test.Test
+
+
+fun xorEquivalenceCheck(ctx: KContext,
+                        quantifierAssertions: List<KExpr<KBoolSort>>,
+                        quantifierFreeAssertions: List<KExpr<KBoolSort>>):
+        Boolean = with(ctx) {
+    for ((i, qAssertion) in quantifierAssertions.withIndex()) {
+        val qfAssertion = quantifierFreeAssertions[i]
+        val xorExpr = mkXor(qAssertion, qfAssertion)
+
+        val solver = KZ3Solver(ctx)
+        solver.assert(xorExpr)
+        val status = solver.check()
+        if (status == KSolverStatus.SAT) {
+            println(solver.model())
+            return false
+        }
+    }
+    return true
+}
 
 class BvQETest {
     class LinearTestsWithoutLinearCoefficients {
@@ -19,6 +43,7 @@ class BvQETest {
             println(assertions)
             val qfAssertions = quantifierElimination(ctx, assertions)
             println(qfAssertions)
+            assert(xorEquivalenceCheck(ctx, assertions, qfAssertions))
         }
 
         @Test
@@ -31,6 +56,7 @@ class BvQETest {
             println(assertions)
             val qfAssertions = quantifierElimination(ctx, assertions)
             println(qfAssertions)
+            assert(xorEquivalenceCheck(ctx, assertions, qfAssertions))
         }
 
         @Test
@@ -43,6 +69,7 @@ class BvQETest {
             println(assertions)
             val qfAssertions = quantifierElimination(ctx, assertions)
             println(qfAssertions)
+            assert(xorEquivalenceCheck(ctx, assertions, qfAssertions))
         }
 
         @Test
@@ -57,6 +84,7 @@ class BvQETest {
             println(assertions)
             val qfAssertions = quantifierElimination(ctx, assertions)
             println(qfAssertions)
+            assert(xorEquivalenceCheck(ctx, assertions, qfAssertions))
         }
 
         @Test
@@ -80,6 +108,7 @@ class BvQETest {
             println(assertions)
             val qfAssertions = quantifierElimination(ctx, assertions)
             println(qfAssertions)
+            assert(xorEquivalenceCheck(ctx, assertions, qfAssertions))
         }
 
         @Test
@@ -93,6 +122,7 @@ class BvQETest {
             println(assertions)
             val qfAssertions = quantifierElimination(ctx, assertions)
             println(qfAssertions)
+            assert(xorEquivalenceCheck(ctx, assertions, qfAssertions))
         }
     }
 

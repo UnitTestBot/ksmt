@@ -114,7 +114,8 @@ fun qeProcess(ctx: KContext, assertion: KExistentialQuantifier): KExpr<KBoolSort
 fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
         KExpr<KBoolSort> = with(ctx) {
 
-    fun createInequality(lessExpr: KExpr<KBvSort>, greaterExpr: KExpr<KBvSort>): KExpr<KBoolSort> {
+    fun createInequality(lessExpr: KExpr<KBvSort>, greaterExpr: KExpr<KBvSort>?):
+            KExpr<KBoolSort> {
         var condition: KExpr<KBoolSort> = mkTrue()
         var expr0 = lessExpr
         if (expr0 is KAndExpr) {
@@ -126,18 +127,20 @@ fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
             condition = mkAnd(expr1.args[0], condition)
             expr1 = expr1.args[1].uncheckedCast()
         }
-        val lessOrEqual = mkBvUnsignedLessOrEqualExpr(expr0, expr1)
+        val lessOrEqual = if (expr1 == null) mkTrue() else mkBvUnsignedLessOrEqualExpr(expr0, expr1)
         val newInequality: KExpr<KBoolSort> = if (condition is KTrue) lessOrEqual else
             mkIte(condition, mkFalse().uncheckedCast(), lessOrEqual)
         return newInequality
     }
 
-    fun orderInequalities(permutation: List<KExpr<KBvSort>>): Array<KExpr<KBoolSort>>
-    {
+    fun orderInequalities(permutation: List<KExpr<KBvSort>>):
+            Array<KExpr<KBoolSort>> {
         var orderedInequalities = arrayOf<KExpr<KBoolSort>>()
 
         if (permutation.isNotEmpty()) {
             var lastExpr = permutation[0]
+            if (permutation.size == 1)
+                orderedInequalities += createInequality(lastExpr, null)
             for ((i, expr) in permutation.withIndex()) {
                 if (i % 2 == 0)
                     lastExpr = expr
@@ -155,6 +158,7 @@ fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
     if (coefficientExpressions.isNotEmpty())
         TODO()
     var result: KExpr<KBoolSort> = KFalse(ctx)
+    var orList = arrayOf<KExpr<KBoolSort>>()
 
     when (body) {
         is KAndExpr, is KNotExpr, is KBvUnsignedLessOrEqualExpr<*> -> {
@@ -167,15 +171,15 @@ fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
             }
             while (args.isNotEmpty()) {
                 val expr = args[0]
-                val (isLe, freeSubExpr) = getFreeSubExpr(ctx, expr, bound)
-                if (isLe == null) {
+                val (freeSubExpr, isLess) = getFreeSubExpr(ctx, expr, bound)
+                if (isLess == null) {
                     when (freeSubExpr)
                     {
                         null -> freeSet += expr
                         is KAndExpr -> args += freeSubExpr.args
                     }
                 }
-                else if (isLe)
+                else if (isLess)
                     leSet.add(freeSubExpr!!)
                 else
                     geSet.add(freeSubExpr!!)
@@ -193,14 +197,16 @@ fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
                     geP as List<KExpr<KBvSort>>
                     val orderedGe = orderInequalities(geP)
 
-                    result = if (leP.isEmpty() or geP.isEmpty())
-                        mkAnd(*orderedLe, *orderedGe, *freeSet)
+                    orList += if (leP.isEmpty() or geP.isEmpty())
+                        mkAnd(*orderedLe, *orderedGe)
                     else {
                         val middleLe = createInequality(leP[leP.lastIndex], geP[0])
-                        mkAnd(*orderedLe, *orderedGe, middleLe, *freeSet)
+                        mkAnd(*orderedLe, *orderedGe, middleLe)
                     }
                 }
             }
+            result = mkOr(*orList)
+            result = mkAnd(result, *freeSet)
         }
         else -> assert(false) { "Expression ${body}:${body.javaClass.typeName} " +
                 "is not in required form." }
@@ -209,10 +215,10 @@ fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
 }
 
 fun getFreeSubExpr(ctx: KContext, expr: KExpr<*>, bound: KDecl<*>):
-        Pair<Boolean?, KExpr<*>?> = with(ctx) {
+        Pair<KExpr<*>?, Boolean?> = with(ctx) {
     val curExpr = if (expr is KNotExpr) expr.arg else expr
     if (curExpr is KAndExpr)
-        return null to expr
+        return expr to null
     else if (curExpr !is KBvUnsignedLessOrEqualExpr<*>)
         assert(false) { "Expression ${curExpr}:${curExpr.javaClass.typeName} " +
                 "is not in required form." }
@@ -232,10 +238,10 @@ fun getFreeSubExpr(ctx: KContext, expr: KExpr<*>, bound: KDecl<*>):
             val condition = mkBvUnsignedLessExpr(curExpr.arg0, bvOneExpr)
             val falseBranch = mkBvSubExpr(curExpr.arg0, bvOneExpr)
             val newFreeSubExpr = mkAnd(condition, falseBranch.uncheckedCast(), order = false)
-            true to newFreeSubExpr // bvult
+            newFreeSubExpr to false // bvult
         }
         else
-            false to curExpr.arg0 // bvuge
+            curExpr.arg0 to true // bvuge
     }
     return if (expr is KNotExpr) {
         val condition: KExpr<KBoolSort> = mkBvUnsignedGreaterOrEqualExpr(
@@ -244,10 +250,10 @@ fun getFreeSubExpr(ctx: KContext, expr: KExpr<*>, bound: KDecl<*>):
         )
         val falseBranch = mkBvAddExpr(curExpr.arg1, bvOneExpr)
         val newFreeSubExpr = mkAnd(condition, falseBranch.uncheckedCast(), order = false)
-        false to newFreeSubExpr // bvugt
+        newFreeSubExpr to true // bvugt
     }
     else
-        true to curExpr.arg1 // bvule
+        curExpr.arg1 to false // bvule
 }
 
 fun sameDecl(expr: KExpr<*>, bound: KDecl<*>): Boolean =
