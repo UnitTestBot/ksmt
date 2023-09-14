@@ -1,4 +1,4 @@
-package org.ksmt.solver.bitwuzla.bindings
+package io.ksmt.solver.bitwuzla
 
 import io.ksmt.utils.library.NativeLibraryLoaderUtils
 import io.ksmt.utils.library.NativeLibraryLoaderWindows

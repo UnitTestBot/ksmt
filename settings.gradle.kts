@@ -6,6 +6,8 @@ include("ksmt-z3:ksmt-z3-core")
 include("ksmt-z3:ksmt-z3-native")
 
 include("ksmt-bitwuzla")
+include("ksmt-bitwuzla:ksmt-bitwuzla-core")
+include("ksmt-bitwuzla:ksmt-bitwuzla-native")
 
 include("ksmt-yices")
 include("ksmt-yices:ksmt-yices-core")

@@ -1,13 +1,13 @@
-package org.ksmt.solver.bitwuzla.bindings
+package io.ksmt.solver.bitwuzla
 
-import io.ksmt.utils.library.NativeLibraryLoaderLinux
+import io.ksmt.utils.library.NativeLibraryLoaderArm
+import io.ksmt.utils.library.NativeLibraryLoaderMac
 import io.ksmt.utils.library.NativeLibraryLoaderUtils
-import io.ksmt.utils.library.NativeLibraryLoaderX64
 
-class KBitwuzlaNativeLibraryLoaderLinuxX64 :
+class KBitwuzlaNativeLibraryLoaderMacArm :
     KBitwuzlaNativeLibraryLoader,
-    NativeLibraryLoaderLinux,
-    NativeLibraryLoaderX64 {
+    NativeLibraryLoaderMac,
+    NativeLibraryLoaderArm {
     override fun load() {
         NativeLibraryLoaderUtils.loadLibrariesFromResources(this, libraries)
     }
