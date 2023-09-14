@@ -15,7 +15,7 @@ publishing.publications {
     register<MavenPublication>("maven") {
         addKsmtPom()
         addMavenDependencies(configurations.default.get().allDependencies)
-        addSourcesAndJavadoc(project, ":ksmt-z3:ksmt-z3-core")
+        addEmptyArtifact(project)
         signKsmtPublication(project)
     }
 }

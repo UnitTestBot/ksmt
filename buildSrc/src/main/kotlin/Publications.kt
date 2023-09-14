@@ -6,7 +6,9 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.get
+import org.gradle.kotlin.dsl.register
 
 fun MavenPublication.addKsmtPom() {
     pom {
@@ -65,9 +67,10 @@ fun MavenPublication.addSourcesAndJavadoc(project: Project) {
     artifact(project.tasks["dokkaJavadocJar"])
 }
 
-fun MavenPublication.addSourcesAndJavadoc(project: Project, projectPath: String) {
-    artifact(project.tasks.getByPath("$projectPath:kotlinSourcesJar"))
-    artifact(project.tasks.getByPath("$projectPath:dokkaJavadocJar"))
+fun MavenPublication.addEmptyArtifact(project: Project): Unit = with(project) {
+    artifact(generateEmptyJar())
+    artifact(generateEmptyJar("sources"))
+    artifact(generateEmptyJar("javadoc"))
 }
 
 fun MavenPublication.addMavenDependencies(dependencies: DependencySet) {
@@ -92,3 +95,8 @@ private fun addMavenPublicationDependency(node: Node, publication: MavenPublicat
     node.appendNode("artifactId", publication.artifactId)
     node.appendNode("version", publication.version)
 }
+
+private fun Project.generateEmptyJar(classifier: String = "") =
+    tasks.register<Jar>("$name-$classifier-empty-jar") {
+        archiveClassifier.set(classifier)
+    }
