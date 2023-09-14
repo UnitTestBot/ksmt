@@ -4,6 +4,7 @@ import io.ksmt.utils.library.NativeLibraryLoaderUtils
 import io.ksmt.utils.library.NativeLibraryLoaderWindows
 import io.ksmt.utils.library.NativeLibraryLoaderX64
 
+@Suppress("unused")
 class KCvc5NativeLibraryLoaderWindowsX64 :
     KCvc5NativeLibraryLoader,
     NativeLibraryLoaderWindows,

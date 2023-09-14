@@ -4,6 +4,7 @@ import io.ksmt.utils.library.NativeLibraryLoaderArm
 import io.ksmt.utils.library.NativeLibraryLoaderMac
 import io.ksmt.utils.library.NativeLibraryLoaderUtils
 
+@Suppress("unused")
 class KZ3NativeLibraryLoaderMacArm :
     KZ3NativeLibraryLoader,
     NativeLibraryLoaderMac,

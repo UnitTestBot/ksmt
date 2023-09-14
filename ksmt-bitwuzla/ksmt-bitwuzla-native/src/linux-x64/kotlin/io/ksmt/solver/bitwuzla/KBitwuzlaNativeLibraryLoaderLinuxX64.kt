@@ -4,6 +4,7 @@ import io.ksmt.utils.library.NativeLibraryLoaderLinux
 import io.ksmt.utils.library.NativeLibraryLoaderUtils
 import io.ksmt.utils.library.NativeLibraryLoaderX64
 
+@Suppress("unused")
 class KBitwuzlaNativeLibraryLoaderLinuxX64 :
     KBitwuzlaNativeLibraryLoader,
     NativeLibraryLoaderLinux,

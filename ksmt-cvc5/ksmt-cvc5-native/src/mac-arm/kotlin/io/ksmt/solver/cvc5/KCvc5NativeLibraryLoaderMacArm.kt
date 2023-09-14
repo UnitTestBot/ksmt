@@ -4,6 +4,7 @@ import io.ksmt.utils.library.NativeLibraryLoaderArm
 import io.ksmt.utils.library.NativeLibraryLoaderMac
 import io.ksmt.utils.library.NativeLibraryLoaderUtils
 
+@Suppress("unused")
 class KCvc5NativeLibraryLoaderMacArm :
     KCvc5NativeLibraryLoader,
     NativeLibraryLoaderMac,

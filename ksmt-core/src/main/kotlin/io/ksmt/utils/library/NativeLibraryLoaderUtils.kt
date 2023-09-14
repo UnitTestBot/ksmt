@@ -25,6 +25,14 @@ object NativeLibraryLoaderUtils {
 
     val supportedArchs = setOf("amd64", "x86_64", "aarch64")
 
+    /**
+     * Load native libraries using [Loader].
+     * The library loader for the specific architecture and OS
+     * must have the same class name as [Loader] with suffix, containing OS and Arch.
+     * For example, if [Loader] name is `a.b.MyLoader`, then the loader for the Windows OS
+     * and x64 architecture must be named as `a.b.MyLoaderWindowsX64`.
+     * Also, the resolved loader must be instantiatable and provide a constructor without arguments.
+     * */
     inline fun <reified Loader : NativeLibraryLoader> load() {
         val osName = System.getProperty("os.name").lowercase()
         val resolvedOsName = when {
@@ -78,7 +86,7 @@ object NativeLibraryLoaderUtils {
     }
 
     private fun NativeLibraryLoader.osSpecificLibraryName(libName: String): String =
-        "$libName$libraryExt"
+        "$libName$osLibraryExt"
 
     private fun NativeLibraryLoader.resolveLibraryResourceName(libName: String): String =
         "lib/${osName.lowercase()}/${archName.lowercase()}/${libraryDir.lowercase()}/${osSpecificLibraryName(libName)}"
