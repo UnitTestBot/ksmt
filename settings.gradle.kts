@@ -14,9 +14,12 @@ include("ksmt-yices:ksmt-yices-core")
 include("ksmt-yices:ksmt-yices-native")
 
 include("ksmt-cvc5")
+include("ksmt-cvc5:ksmt-cvc5-core")
+include("ksmt-cvc5:ksmt-cvc5-native")
 
 include("ksmt-runner")
 include("ksmt-runner:solver-generator")
+
 include("ksmt-test")
 include("ksmt-symfpu")
 
