@@ -65,6 +65,11 @@ fun MavenPublication.addSourcesAndJavadoc(project: Project) {
     artifact(project.tasks["dokkaJavadocJar"])
 }
 
+fun MavenPublication.addSourcesAndJavadoc(project: Project, projectPath: String) {
+    artifact(project.tasks.getByPath("$projectPath:kotlinSourcesJar"))
+    artifact(project.tasks.getByPath("$projectPath:dokkaJavadocJar"))
+}
+
 fun MavenPublication.addMavenDependencies(dependencies: DependencySet) {
     pom.withXml {
         val dependenciesNode: Node = asNode().appendNode("dependencies")
