@@ -21,7 +21,7 @@ fun xorEquivalenceCheck(ctx: KContext,
         solver.assert(xorExpr)
         val status = solver.check()
         if (status == KSolverStatus.SAT) {
-            println(solver.model())
+            print("\n${solver.model()}\n")
             return false
         }
     }
@@ -79,6 +79,57 @@ class BvQETest {
             (declare-fun y () (_ BitVec 4))
             (assert (exists ((x (_ BitVec 4))) (and (bvule x y) (bvuge x #b0010))))
             (assert (bvule y #b1000))
+            """
+            val assertions = KZ3SMTLibParser(ctx).parse(formula)
+            println(assertions)
+            val qfAssertions = quantifierElimination(ctx, assertions)
+            println(qfAssertions)
+            assert(xorEquivalenceCheck(ctx, assertions, qfAssertions))
+        }
+
+        @Test
+        fun regularTest1() {
+            val formula =
+                """
+            (declare-fun y () (_ BitVec 4))
+            
+            (assert (exists ((x (_ BitVec 4))) 
+            (and (bvule x y) (bvult x #b0010))))
+            """
+            val assertions = KZ3SMTLibParser(ctx).parse(formula)
+            println(assertions)
+            val qfAssertions = quantifierElimination(ctx, assertions)
+            println(qfAssertions)
+            assert(xorEquivalenceCheck(ctx, assertions, qfAssertions))
+        }
+
+        @Test
+        fun threeLess() {
+            val formula =
+                """
+            (declare-fun a () (_ BitVec 4))
+            (declare-fun b () (_ BitVec 4))
+            (declare-fun c () (_ BitVec 4))
+            
+            (assert (exists ((x (_ BitVec 4))) 
+            (and (bvule x a) (bvuge b x) (bvult x c))))
+            """
+            val assertions = KZ3SMTLibParser(ctx).parse(formula)
+            println(assertions)
+            val qfAssertions = quantifierElimination(ctx, assertions)
+            println(qfAssertions)
+            assert(xorEquivalenceCheck(ctx, assertions, qfAssertions))
+        }
+
+        @Test
+        fun twoLess() {
+            val formula =
+                """
+            (declare-fun a () (_ BitVec 4))
+            (declare-fun b () (_ BitVec 4))
+            
+            (assert (exists ((x (_ BitVec 4))) 
+            (and (bvult x a) (bvugt b x))))
             """
             val assertions = KZ3SMTLibParser(ctx).parse(formula)
             println(assertions)

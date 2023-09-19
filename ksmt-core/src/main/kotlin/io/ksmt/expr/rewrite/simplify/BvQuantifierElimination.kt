@@ -116,19 +116,22 @@ fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
 
     fun createInequality(lessExpr: KExpr<KBvSort>, greaterExpr: KExpr<KBvSort>?):
             KExpr<KBoolSort> {
-        var condition: KExpr<KBoolSort> = mkTrue()
-        var expr0 = lessExpr
-        if (expr0 is KAndExpr) {
-            condition = expr0.args[0]
-            expr0 = expr0.args[1].uncheckedCast()
-        }
-        var expr1 = greaterExpr
-        if (expr1 is KAndExpr) {
-            condition = mkAnd(expr1.args[0], condition)
-            expr1 = expr1.args[1].uncheckedCast()
-        }
-        val lessOrEqual = if (expr1 == null) mkTrue() else mkBvUnsignedLessOrEqualExpr(expr0, expr1)
-        val newInequality: KExpr<KBoolSort> = if (condition is KTrue) lessOrEqual else
+        var condition: KExpr<KBoolSort> = mkFalse()
+        var conditionChanged = false
+        val argList = mutableListOf<KExpr<KBvSort>>()
+
+        for (item in mutableListOf(lessExpr, greaterExpr ?: BvConstants.bvMaxValueUnsigned))
+            if (item is KAndExpr) {
+                condition = mkOr(item.args[0], condition)
+                conditionChanged = true
+                argList.add(item.args[1].uncheckedCast())
+            }
+            else {
+                argList.add(item.uncheckedCast())
+            }
+
+        val lessOrEqual = mkBvUnsignedLessOrEqualExpr(argList[0], argList[1])
+        val newInequality: KExpr<KBoolSort> = if (!conditionChanged) lessOrEqual else
             mkIte(condition, mkFalse().uncheckedCast(), lessOrEqual)
         return newInequality
     }
@@ -141,13 +144,10 @@ fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
             var lastExpr = permutation[0]
             if (permutation.size == 1)
                 orderedInequalities += createInequality(lastExpr, null)
-            for ((i, expr) in permutation.withIndex()) {
-                if (i % 2 == 0)
-                    lastExpr = expr
-                else {
-                    val newInequality = createInequality(lastExpr, expr)
-                    orderedInequalities += newInequality
-                }
+            for (expr in permutation) {
+                val newInequality = createInequality(lastExpr, expr)
+                orderedInequalities += newInequality
+                lastExpr = expr
             }
         }
         return orderedInequalities
@@ -237,7 +237,7 @@ fun getFreeSubExpr(ctx: KContext, expr: KExpr<*>, bound: KDecl<*>):
         return if (expr is KNotExpr) {
             val condition = mkBvUnsignedLessExpr(curExpr.arg0, bvOneExpr)
             val falseBranch = mkBvSubExpr(curExpr.arg0, bvOneExpr)
-            val newFreeSubExpr = mkAnd(condition, falseBranch.uncheckedCast(), order = false)
+            val newFreeSubExpr = mkAndNoSimplify(condition, falseBranch.uncheckedCast())
             newFreeSubExpr to false // bvult
         }
         else
@@ -249,7 +249,7 @@ fun getFreeSubExpr(ctx: KContext, expr: KExpr<*>, bound: KDecl<*>):
             BvConstants.bvMaxValueUnsigned.uncheckedCast()
         )
         val falseBranch = mkBvAddExpr(curExpr.arg1, bvOneExpr)
-        val newFreeSubExpr = mkAnd(condition, falseBranch.uncheckedCast(), order = false)
+        val newFreeSubExpr = mkAndNoSimplify(condition, falseBranch.uncheckedCast())
         newFreeSubExpr to true // bvugt
     }
     else
