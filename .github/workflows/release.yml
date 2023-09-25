@@ -37,10 +37,4 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            ksmt-core/build/release/**/ksmt-core-*.jar
-            ksmt-z3/build/release/**/ksmt-z3-*.jar
-            ksmt-bitwuzla/build/release/**/ksmt-bitwuzla-*.jar
-            ksmt-yices/build/release/**/ksmt-yices-*.jar
-            ksmt-cvc5/build/release/**/ksmt-cvc5-*.jar
-            ksmt-runner/build/release/**/ksmt-runner-*.jar
-            ksmt-symfpu/build/release/**/ksmt-symfpu-*.jar
+            ./**/build/release/**/ksmt-*.jar
