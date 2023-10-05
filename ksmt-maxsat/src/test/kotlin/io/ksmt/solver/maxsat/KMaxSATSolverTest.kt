@@ -303,6 +303,20 @@ abstract class KMaxSATSolverTest {
         assertTrue(maxSATResult5.satSoftConstraints.isEmpty())
     }
 
+    @Test
+    fun similarExpressionsTest(): Unit = with(ctx) {
+        val a by boolSort
+        val b by boolSort
+
+        maxSATSolver.assertSoft(a or b, 1u)
+        maxSATSolver.assertSoft(!a or b, 1u)
+        maxSATSolver.assertSoft(a or !b, 1u)
+        maxSATSolver.assertSoft(!a or !b, 1u)
+        maxSATSolver.assertSoft(!a or !b or !b, 1u)
+
+        maxSATSolver.checkMaxSAT()
+    }
+
     private fun assertSoftConstraintsSat(
         constraintsToAssert: List<SoftConstraint>,
         satConstraints: List<SoftConstraint>,
