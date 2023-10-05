@@ -50,8 +50,8 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
 
             return when (solverStatus) {
                 SAT -> processSat(model!!)
-                UNSAT -> throw NotImplementedError()
-                UNKNOWN -> throw NotImplementedError()
+                UNSAT -> KMaxSATResult(listOf(), SAT, false) // TODO: support anytime solving
+                UNKNOWN -> KMaxSATResult(listOf(), SAT, false) // TODO: support anytime solving
                 else -> error("Unexpected status: $solverStatus")
             }
         }

@@ -1,35 +1,43 @@
-package io.ksmt.solver.maxsat.test
+package io.ksmt.solver.maxsat.test.sat
 
 import io.ksmt.KContext
-import io.ksmt.solver.KSolverStatus
+import io.ksmt.solver.KSolverStatus.SAT
 import io.ksmt.solver.maxsat.constraints.HardConstraint
 import io.ksmt.solver.maxsat.constraints.SoftConstraint
 import io.ksmt.solver.maxsat.solvers.KMaxSATSolver
+import io.ksmt.solver.maxsat.test.KMaxSMTBenchmarkBasedTest
+import io.ksmt.solver.maxsat.test.parseMaxSATTest
 import io.ksmt.solver.z3.KZ3SolverConfiguration
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.nio.file.Path
-import java.nio.file.Paths
-import kotlin.io.path.listDirectoryEntries
-import kotlin.io.path.relativeTo
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
-abstract class KMaxSATBenchmarkTest {
+abstract class KMaxSATBenchmarkTest : KMaxSMTBenchmarkBasedTest {
     abstract fun getSolver(): KMaxSATSolver<KZ3SolverConfiguration>
-    abstract val ctx: KContext
+
+    protected val ctx: KContext = KContext()
+    private lateinit var maxSATSolver: KMaxSATSolver<KZ3SolverConfiguration>
+
+    @BeforeEach
+    fun initSolver() {
+        maxSATSolver = getSolver()
+    }
+
+    @AfterEach
+    fun closeSolver() = maxSATSolver.close()
 
     @ParameterizedTest(name = "{0}")
-    @MethodSource("maxSATTestData")
+    @MethodSource("maxSMTTestData")
     fun maxSATTest(name: String, samplePath: Path) = with(ctx) {
         val testData = maxSATTestNameToExpectedResult.find { it.first == name }
         require(testData != null) { "Test [$name] expected result must be specified" }
 
-        val constraints = parseTest(samplePath, this)
-
-        val maxSATSolver = getSolver()
+        val constraints = parseMaxSATTest(samplePath, this)
 
         var sumOfSoftConstraintsWeights = 0u
 
@@ -42,45 +50,15 @@ abstract class KMaxSATBenchmarkTest {
             }
         }
 
-        val maxSATResult = maxSATSolver.checkMaxSAT(1.minutes)
+        val maxSATResult = maxSATSolver.checkMaxSAT(20.seconds)
         val satConstraintsScore = maxSATResult.satSoftConstraints.sumOf { it.weight }
 
-        assertEquals(KSolverStatus.SAT, maxSATResult.hardConstraintsSATStatus)
+        assertEquals(SAT, maxSATResult.hardConstraintsSATStatus)
         assertTrue(maxSATResult.maxSATSucceeded && maxSATResult.satSoftConstraints.isNotEmpty())
         assertEquals(
             sumOfSoftConstraintsWeights - maxSATTestNameToExpectedResult.find { it.first == name }!!.second,
             satConstraintsScore.toULong(),
         )
-    }
-
-    data class BenchmarkTestArguments(
-        val name: String,
-        val samplePath: Path,
-    ) : Arguments {
-        override fun get() = arrayOf(name, samplePath)
-    }
-
-    companion object {
-        private fun testDataLocation(): Path = this::class.java.classLoader
-            .getResource("testData")
-            ?.toURI()
-            ?.let { Paths.get(it) }
-            ?: error("No test data")
-
-        private fun prepareTestData(): List<BenchmarkTestArguments> {
-            val testDataLocation = testDataLocation()
-            return testDataLocation
-                .listDirectoryEntries("*.wcnf")
-                .sorted()
-                .map { BenchmarkTestArguments(it.relativeTo(testDataLocation).toString(), it) }
-        }
-
-        private val testData by lazy {
-            prepareTestData()
-        }
-
-        @JvmStatic
-        fun maxSATTestData() = testData
     }
 
     // Elements are pairs of test name and expected test result (cost equal to the excluded soft constraints sum).

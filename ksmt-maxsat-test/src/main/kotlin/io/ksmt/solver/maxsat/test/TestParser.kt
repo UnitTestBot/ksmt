@@ -10,11 +10,42 @@ import java.nio.file.Path
 import kotlin.io.path.extension
 import kotlin.io.path.notExists
 
-fun parseTest(path: Path, ctx: KContext): List<Constraint> {
-    var currentState: CurrentLineState
+fun parseMaxSMTTestInfo(path: Path): MaxSMTTestInfo {
+    if (path.notExists()) {
+        error("Path [$path] does not exist")
+    }
 
-    val constraints = mutableListOf<Constraint>()
+    require(path.extension == "maxsmt") {
+        "File extension cannot be '${path.extension}' as it must be 'maxsmt'"
+    }
 
+    var softConstraintsWeights = listOf<UInt>()
+    var softConstraintsWeightsSum = 0uL
+    var satSoftConstraintsWeightsSum = 0uL
+
+    File(path.toUri()).forEachLine { str ->
+        when {
+            str.startsWith("soft_constraints_weights: ") -> {
+                softConstraintsWeights = str
+                    .removePrefix("soft_constraints_weights: ")
+                    .split(" ")
+                    .map { it.toUInt() }
+            }
+
+            str.startsWith("soft_constraints_weights_sum: ") -> {
+                softConstraintsWeightsSum = str.removePrefix("soft_constraints_weights_sum: ").toULong()
+            }
+
+            str.startsWith("sat_soft_constraints_weights_sum: ") -> {
+                satSoftConstraintsWeightsSum = str.removePrefix("sat_soft_constraints_weights_sum: ").toULong()
+            }
+        }
+    }
+
+    return MaxSMTTestInfo(softConstraintsWeights, softConstraintsWeightsSum, satSoftConstraintsWeightsSum)
+}
+
+fun parseMaxSATTest(path: Path, ctx: KContext): List<Constraint> {
     if (path.notExists()) {
         error("Path [$path] does not exist")
     }
@@ -22,6 +53,10 @@ fun parseTest(path: Path, ctx: KContext): List<Constraint> {
     require(path.extension == "wcnf") {
         "File extension cannot be '${path.extension}' as it must be 'wcnf'"
     }
+
+    var currentState: CurrentLineState
+
+    val constraints = mutableListOf<Constraint>()
 
     File(path.toUri()).forEachLine { wcnfStr ->
         currentState = when {
@@ -73,5 +108,5 @@ fun parseTest(path: Path, ctx: KContext): List<Constraint> {
 private fun getConstraintBeginIndex(currentState: CurrentLineState, str: String): Int = when (currentState) {
     CurrentLineState.HARD_CONSTRAINT -> 2
     CurrentLineState.SOFT_CONSTRAINT -> str.substringBefore(" ").length + 1
-    else -> error("Unexpected value: [${currentState}]")
+    else -> error("Unexpected value: [$currentState]")
 }
