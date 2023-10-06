@@ -1,0 +1,16 @@
+{
+  "logics": [
+    {
+      "NAME": "QF_ABV",
+      "TEST_DATA_REVISION": "0.0.0"
+    },
+    {
+      "NAME": "QF_BV-1",
+      "TEST_DATA_REVISION": "0.0.0"
+    },
+    {
+      "NAME": "QF_BV-2",
+      "TEST_DATA_REVISION": "0.0.0"
+    }
+  ]
+}
