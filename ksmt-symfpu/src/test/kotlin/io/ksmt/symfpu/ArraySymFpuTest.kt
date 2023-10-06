@@ -5,14 +5,14 @@ import io.ksmt.expr.KFpRoundingMode
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.solver.z3.KZ3SolverConfiguration
-import io.ksmt.symfpu.solver.SymFpuSolver
+import io.ksmt.symfpu.solver.KSymFpuSolver
 import io.ksmt.utils.getValue
 import io.ksmt.utils.mkConst
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 class ArraySymFpuTest {
-    class SymFpuZ3Solver(ctx: KContext) : SymFpuSolver<KZ3SolverConfiguration>(KZ3Solver(ctx), ctx)
+    class SymFpuZ3Solver(ctx: KContext) : KSymFpuSolver<KZ3SolverConfiguration>(KZ3Solver(ctx), ctx)
 
     @Test
     fun testFpArrayExpr() = with(KContext(simplificationMode = KContext.SimplificationMode.NO_SIMPLIFY)) {

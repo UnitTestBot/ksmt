@@ -1,7 +1,14 @@
+import gradle.kotlin.dsl.accessors._87b80c14bf1c4d505c7a71d7741e0994.publishing
 import gradle.kotlin.dsl.accessors._87b80c14bf1c4d505c7a71d7741e0994.signing
+import groovy.util.Node
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.DependencySet
+import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.get
+import org.gradle.kotlin.dsl.register
 
 fun MavenPublication.addKsmtPom() {
     pom {
@@ -59,3 +66,37 @@ fun MavenPublication.addSourcesAndJavadoc(project: Project) {
     artifact(project.tasks["kotlinSourcesJar"])
     artifact(project.tasks["dokkaJavadocJar"])
 }
+
+fun MavenPublication.addEmptyArtifact(project: Project): Unit = with(project) {
+    artifact(generateEmptyJar())
+    artifact(generateEmptyJar("sources"))
+    artifact(generateEmptyJar("javadoc"))
+}
+
+fun MavenPublication.addMavenDependencies(dependencies: DependencySet) {
+    pom.withXml {
+        val dependenciesNode: Node = asNode().appendNode("dependencies")
+        dependencies.forEach {
+            addDependencyPublications(dependenciesNode, it)
+        }
+    }
+}
+
+private fun addDependencyPublications(node: Node, dependency: Dependency) {
+    val project = (dependency as? ProjectDependency)?.dependencyProject ?: return
+    project.publishing.publications.filterIsInstance<MavenPublication>().forEach {
+        val dependencyNode = node.appendNode("dependency")
+        addMavenPublicationDependency(dependencyNode, it)
+    }
+}
+
+private fun addMavenPublicationDependency(node: Node, publication: MavenPublication) {
+    node.appendNode("groupId", publication.groupId)
+    node.appendNode("artifactId", publication.artifactId)
+    node.appendNode("version", publication.version)
+}
+
+private fun Project.generateEmptyJar(classifier: String = "") =
+    tasks.register<Jar>("$name-$classifier-empty-jar") {
+        archiveClassifier.set(classifier)
+    }
