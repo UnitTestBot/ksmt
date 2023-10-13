@@ -13,7 +13,7 @@ val `linux-x64` by sourceSets.creating
 val `mac-x64` by sourceSets.creating
 val `mac-arm` by sourceSets.creating
 
-val z3Version = "4.11.2"
+val z3Version = "4.12.2"
 
 val z3Binaries = mapOf(
     `windows-x64` to mkZ3ReleaseDownloadTask(z3Version, "x64-win", "*.dll"),
