@@ -11,7 +11,7 @@ Get the most out of SMT solving with KSMT features:
 * Streamlined [solver delivery](#ksmt-distribution) with no need for building a solver or implementing JVM bindings
 
 [![KSMT: build](https://github.com/UnitTestBot/ksmt/actions/workflows/build-and-run-tests.yml/badge.svg)](https://github.com/UnitTestBot/ksmt/actions/workflows/build-and-run-tests.yml)
-[![Maven Central](https://img.shields.io/maven-central/v/io.ksmt/ksmt-core)](https://central.sonatype.com/artifact/io.ksmt/ksmt-core/0.5.8)
+[![Maven Central](https://img.shields.io/maven-central/v/io.ksmt/ksmt-core)](https://central.sonatype.com/artifact/io.ksmt/ksmt-core/0.5.9)
 [![javadoc](https://javadoc.io/badge2/io.ksmt/ksmt-core/javadoc.svg)](https://javadoc.io/doc/io.ksmt/ksmt-core)
 
 ## Get started
@@ -20,9 +20,9 @@ To start using KSMT, install it via [Gradle](https://gradle.org/):
 
 ```kotlin
 // core 
-implementation("io.ksmt:ksmt-core:0.5.8")
+implementation("io.ksmt:ksmt-core:0.5.9")
 // z3 solver
-implementation("io.ksmt:ksmt-z3:0.5.8")
+implementation("io.ksmt:ksmt-z3:0.5.9")
 ```
 
 Find basic instructions in the [Getting started](docs/getting-started.md) guide and try it out with the 
