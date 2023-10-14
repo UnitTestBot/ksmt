@@ -23,6 +23,7 @@ import io.ksmt.expr.KIntNumExpr
 import io.ksmt.expr.KInterpretedValue
 import io.ksmt.expr.KRealNumExpr
 import io.ksmt.expr.rewrite.KExprUninterpretedDeclCollector
+import io.ksmt.solver.KSolverUnsupportedFeatureException
 import io.ksmt.solver.util.ExprConversionResult
 import io.ksmt.solver.util.KExprConverterUtils.argumentsConversionRequired
 import io.ksmt.solver.util.KExprLongConverterBase
@@ -200,6 +201,7 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_XOR -> expr.convert(::mkXor)
             Z3_decl_kind.Z3_OP_NOT -> expr.convert(::mkNot)
             Z3_decl_kind.Z3_OP_IMPLIES -> expr.convert(::mkImplies)
+            Z3_decl_kind.Z3_OP_IFF,
             Z3_decl_kind.Z3_OP_EQ -> expr.convert(::mkEq)
             Z3_decl_kind.Z3_OP_DISTINCT -> expr.convertList(::mkDistinct)
             Z3_decl_kind.Z3_OP_ITE -> expr.convert(::mkIte)
@@ -220,6 +222,12 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_TO_REAL -> expr.convert(::mkIntToReal)
             Z3_decl_kind.Z3_OP_TO_INT -> expr.convert(::mkRealToInt)
             Z3_decl_kind.Z3_OP_IS_INT -> expr.convert(::mkRealIsInt)
+            Z3_decl_kind.Z3_OP_ANUM -> {
+                error("Unexpected algebraic numeral in app converter")
+            }
+            Z3_decl_kind.Z3_OP_AGNUM -> {
+                throw KSolverUnsupportedFeatureException("Irrational algebraic numbers are not supported")
+            }
             Z3_decl_kind.Z3_OP_STORE -> convertArrayStore(expr)
             Z3_decl_kind.Z3_OP_SELECT -> convertArraySelect(expr)
             Z3_decl_kind.Z3_OP_CONST_ARRAY -> expr.convert { arg: KExpr<KSort> ->
@@ -399,9 +407,18 @@ open class KZ3ExprConverter(
                 }
             Z3_decl_kind.Z3_OP_FPA_BVWRAP,
             Z3_decl_kind.Z3_OP_FPA_BV2RM -> {
-                TODO("Fp $declKind is not supported")
+                throw KSolverUnsupportedFeatureException("Fp $declKind is not supported")
             }
-            else -> TODO("$declKind is not supported")
+
+           Z3_decl_kind.Z3_OP_INTERNAL -> {
+                throw KSolverUnsupportedFeatureException("Z3 internal decl $declKind is not supported")
+            }
+
+            Z3_decl_kind.Z3_OP_RECURSIVE -> {
+                throw KSolverUnsupportedFeatureException("Recursive decl $declKind is not supported")
+            }
+
+            else -> throw KSolverUnsupportedFeatureException("$declKind is not supported")
         }
     }
 
