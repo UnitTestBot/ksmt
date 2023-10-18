@@ -73,7 +73,7 @@ class BvQETest {
         }
 
         @Test
-        fun regularTest0() {
+        fun test0() {
             val formula =
                 """
             (declare-fun y () (_ BitVec 4))
@@ -88,13 +88,27 @@ class BvQETest {
         }
 
         @Test
-        fun regularTest1() {
+        fun test1() {
             val formula =
                 """
             (declare-fun y () (_ BitVec 4))
             
-            (assert (exists ((x (_ BitVec 4))) 
-            (and (bvule x y) (bvult x #b0010))))
+            (assert (exists ((x (_ BitVec 4))) (and (bvule x y) (bvult x #b0010))))
+            """
+            val assertions = KZ3SMTLibParser(ctx).parse(formula)
+            println(assertions)
+            val qfAssertions = quantifierElimination(ctx, assertions)
+            println(qfAssertions)
+            assert(xorEquivalenceCheck(ctx, assertions, qfAssertions))
+        }
+
+        @Test
+        fun test2() {
+            val formula =
+                """
+            (declare-fun y () (_ BitVec 4))
+            
+            (assert (exists ((x (_ BitVec 4))) (and (bvule x y) (bvule (bvmul y #b1000) x))))
             """
             val assertions = KZ3SMTLibParser(ctx).parse(formula)
             println(assertions)
@@ -111,8 +125,7 @@ class BvQETest {
             (declare-fun b () (_ BitVec 4))
             (declare-fun c () (_ BitVec 4))
             
-            (assert (exists ((x (_ BitVec 4))) 
-            (and (bvule x a) (bvuge b x) (bvult x c))))
+            (assert (exists ((x (_ BitVec 4))) (and (bvule x a) (bvuge b x) (bvult x c))))
             """
             val assertions = KZ3SMTLibParser(ctx).parse(formula)
             println(assertions)
@@ -128,8 +141,7 @@ class BvQETest {
             (declare-fun a () (_ BitVec 4))
             (declare-fun b () (_ BitVec 4))
             
-            (assert (exists ((x (_ BitVec 4))) 
-            (and (bvult x a) (bvugt b x))))
+            (assert (exists ((x (_ BitVec 4))) (and (bvult x a) (bvugt b x))))
             """
             val assertions = KZ3SMTLibParser(ctx).parse(formula)
             println(assertions)
@@ -177,21 +189,67 @@ class BvQETest {
         }
     }
 
-    class LinearTests {
+    class TestsWithSameLinearCoefficient {
         private val ctx = KContext()
 
         @Test
-        fun linTest0() {
+        fun test0() {
             val formula =
                 """
             (declare-fun y () (_ BitVec 4))
-            (assert (exists ((x (_ BitVec 4))) (bvult (bvmul x #b0111) y)))
-            (assert (bvult (bvnot y) #b1000))
+            (assert (exists ((x (_ BitVec 4))) (bvule y (bvmul x #b0111))))
+            (assert (bvule #b1111 y))
             """
             val assertions = KZ3SMTLibParser(ctx).parse(formula)
+            println(assertions)
             val qfAssertions = quantifierElimination(ctx, assertions)
             println(qfAssertions)
+            assert(xorEquivalenceCheck(ctx, assertions, qfAssertions))
         }
+
+        @Test
+        fun test1() {
+            val formula =
+                """
+            (declare-fun y () (_ BitVec 4))
+            (assert (exists ((x (_ BitVec 4))) (bvule y (bvmul x #b1000))))
+            (assert (bvule #b1111 y))
+            """
+            val assertions = KZ3SMTLibParser(ctx).parse(formula)
+            println(assertions)
+            val qfAssertions = quantifierElimination(ctx, assertions)
+            println(qfAssertions)
+            assert(xorEquivalenceCheck(ctx, assertions, qfAssertions))
+        }
+
+        @Test
+        fun allInequalities() {
+            val formula =
+                """
+            (declare-fun a () (_ BitVec 4))
+            (declare-fun b () (_ BitVec 4))
+            (declare-fun c () (_ BitVec 4))
+            (declare-fun d () (_ BitVec 4))
+            (declare-fun e () (_ BitVec 4))
+            (declare-fun f () (_ BitVec 4))
+            (declare-fun g () (_ BitVec 4))
+            (declare-fun h () (_ BitVec 4))
+            
+            (assert (exists ((x (_ BitVec 4))) 
+            (let ((x15 (bvmul x #b1111)))
+            (and (bvule x15 a) (bvuge b x15) (bvuge x15 c) (bvule d x15) 
+            (bvult x15 e) (bvugt f x15) (bvugt x15 g) (bvult h x15)))))
+            """
+            val assertions = KZ3SMTLibParser(ctx).parse(formula)
+            println(assertions)
+            val qfAssertions = quantifierElimination(ctx, assertions)
+            println(qfAssertions)
+            assert(xorEquivalenceCheck(ctx, assertions, qfAssertions))
+        }
+    }
+
+    class TestsWithDifferentLinearCoefficient {
+        private val ctx = KContext()
     }
 
     class ExponentialTests {

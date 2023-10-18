@@ -7,12 +7,11 @@ import io.ksmt.expr.rewrite.KBvQETransformer
 import io.ksmt.sort.*
 import io.ksmt.expr.rewrite.KExprCollector
 import io.ksmt.expr.rewrite.KQuantifierSubstitutor
+import io.ksmt.utils.*
 import io.ksmt.utils.BvUtils.bvMaxValueUnsigned
 import io.ksmt.utils.BvUtils.bvZero
 import io.ksmt.utils.BvUtils.bvOne
-import io.ksmt.utils.BvUtils.isBvOne
-import io.ksmt.utils.Permutations
-import io.ksmt.utils.uncheckedCast
+import io.ksmt.utils.BvUtils.isBvZero
 
 object BvConstants {
     var bvSize = 0u
@@ -73,9 +72,9 @@ fun prepareQuantifier(ctx: KContext, assertion: KQuantifier):
         return quantifierAssertion to isUniversal
     }
 
+// p.5, 1st and 2nd steps
 fun qePreprocess(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>) :
         Pair<KExpr<KBoolSort>, List<KDecl<*>>?> {
-    // p.5, 1st and 2nd steps
     val collector = KExprCollector
     val boundExpressions = collector.collectDeclarations(body) {
             arg -> sameDecl(arg, bound)}
@@ -153,10 +152,28 @@ fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
         return orderedInequalities
     }
 
+    fun sameCoefficients(coefficientExpressions: Set<KExpr<*>>): Boolean {
+        var fstCoef: KBitVecValue<*>? = null
+        for ((i, expr) in coefficientExpressions.withIndex())
+        {
+            val coef = hasLinearCoefficient(bound, expr).second
+            if (i == 0)
+                fstCoef = coef
+            else if (fstCoef != coef)
+                return false
+        }
+        return true
+    }
+
     val coefficientExpressions = KExprCollector.collectDeclarations(body) { expr ->
-        hasLinearCoefficient(bound, expr) }
-    if (coefficientExpressions.isNotEmpty())
-        TODO()
+        hasLinearCoefficient(bound, expr).first }
+    var coefficient: KBitVecValue<*>? = null
+    if (coefficientExpressions.isNotEmpty()) {
+        if (sameCoefficients(coefficientExpressions))
+            coefficient = hasLinearCoefficient(bound, coefficientExpressions.first()).second
+        else
+            TODO()
+    }
     var result: KExpr<KBoolSort> = KFalse(ctx)
     var orList = arrayOf<KExpr<KBoolSort>>()
 
@@ -197,11 +214,34 @@ fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
                     geP as List<KExpr<KBvSort>>
                     val orderedGe = orderInequalities(geP)
 
+                    var coefficientExpr: KExpr<KBoolSort> = mkTrue()
+                    if (coefficient != null) {
+                        var addNotOverflow: KExpr<KBoolSort> = mkTrue()
+                        var isNextLess: KExpr<KBoolSort> = mkTrue()
+                        var remainderIsZero: KExpr<KBoolSort> = mkTrue()
+                        var nextMultiple: KExpr<KBvSort> = BvConstants.bvZero.uncheckedCast()
+
+                        if (leP.isNotEmpty()) {
+                            val bigIntegerBvSize = powerOfTwo(BvConstants.bvSize).toInt().toBigInteger()
+                            val gcd = coefficient.gcd(ctx, BvConstants.bvSize, bigIntegerBvSize)
+                            val remainder = mkBvUnsignedRemExpr(leP[leP.lastIndex], gcd.uncheckedCast())
+
+                            remainderIsZero = mkBvUnsignedLessOrEqualExpr(remainder, BvConstants.bvZero.uncheckedCast())
+                            val gcdMinusRemainder = mkBvSubExpr(gcd.uncheckedCast(), remainder)
+                            addNotOverflow = mkBvAddNoOverflowExpr(leP[leP.lastIndex], gcdMinusRemainder, false)
+                            nextMultiple = mkBvAddExpr(leP[leP.lastIndex], gcdMinusRemainder)
+                        }
+                        if (geP.isNotEmpty())
+                            isNextLess = mkBvUnsignedLessExpr(nextMultiple, geP[0])
+
+                        coefficientExpr = mkAnd(isNextLess, mkOr(addNotOverflow, remainderIsZero))
+                    }
+
                     orList += if (leP.isEmpty() or geP.isEmpty())
-                        mkAnd(*orderedLe, *orderedGe)
+                        mkAnd(*orderedLe, *orderedGe, coefficientExpr)
                     else {
                         val middleLe = createInequality(leP[leP.lastIndex], geP[0])
-                        mkAnd(*orderedLe, *orderedGe, middleLe)
+                        mkAnd(*orderedLe, *orderedGe, middleLe, coefficientExpr)
                     }
                 }
             }
@@ -254,23 +294,4 @@ fun getFreeSubExpr(ctx: KContext, expr: KExpr<*>, bound: KDecl<*>):
     }
     else
         curExpr.arg1 to false // bvule
-}
-
-fun sameDecl(expr: KExpr<*>, bound: KDecl<*>): Boolean =
-    expr is KConst<*> && expr.decl == bound
-
-fun occursInExponentialExpression(bound: KDecl<*>, assertion: KExpr<*>): Boolean =
-    assertion is KBvShiftLeftExpr<*> && sameDecl(assertion.shift, bound)
-
-fun hasLinearCoefficient(bound: KDecl<*>, assertion: KExpr<*>): Boolean
-{
-    if (assertion is KBvMulExpr<*>) {
-        val argPairs = arrayOf((assertion.arg0 to assertion.arg1),
-            (assertion.arg1 to assertion.arg0))
-        for ((arg, coef) in argPairs)
-        if (sameDecl(arg, bound))
-            if (coef is KBitVecValue<*> && !coef.isBvOne())
-                return true
-    }
-    return false
 }
