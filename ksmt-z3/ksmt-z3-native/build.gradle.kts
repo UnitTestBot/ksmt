@@ -2,43 +2,53 @@ plugins {
     id("io.ksmt.ksmt-base")
 }
 
+val distDir = projectDir.parentFile.resolve("dist")
+
 repositories {
     mavenCentral()
+    flatDir { dirs(distDir) }
 }
 
 val compileConfig by configurations.creating
+val z3NativeLinuxX64 by configurations.creating
 
 val `windows-x64` by sourceSets.creating
 val `linux-x64` by sourceSets.creating
 val `mac-x64` by sourceSets.creating
 val `mac-arm` by sourceSets.creating
 
-val z3Version = "4.11.2"
+val z3Version = "4.12.2"
 
-val z3Binaries = mapOf(
-    `windows-x64` to mkZ3ReleaseDownloadTask(z3Version, "x64-win", "*.dll"),
-    `linux-x64` to mkZ3ReleaseDownloadTask(z3Version, "x64-glibc-2.31", "*.so"),
-    `mac-x64` to mkZ3ReleaseDownloadTask(z3Version, "x64-osx-10.16", "*.dylib"),
-    `mac-arm` to mkZ3ReleaseDownloadTask(z3Version, "arm64-osx-11.0", "*.dylib")
+val z3Binaries = listOf(
+    Triple(`windows-x64`, mkZ3ReleaseDownloadTask(z3Version, "x64-win", "*.dll"), null),
+    Triple(`linux-x64`, null, z3NativeLinuxX64),
+    Triple(`mac-x64`, mkZ3ReleaseDownloadTask(z3Version, "x64-osx-10.16", "*.dylib"), null),
+    Triple(`mac-arm`, mkZ3ReleaseDownloadTask(z3Version, "arm64-osx-11.0", "*.dylib"), null),
 )
 
-z3Binaries.keys.forEach { it.compileClasspath = compileConfig }
+z3Binaries.forEach { it.first.compileClasspath = compileConfig }
 
 dependencies {
     compileConfig(project(":ksmt-core"))
     compileConfig(project(":ksmt-z3:ksmt-z3-core"))
+
+    z3NativeLinuxX64("z3", "z3-native-linux-x86-64", z3Version, ext = "zip")
 }
 
-z3Binaries.entries.forEach { (sourceSet, z3BinaryTask) ->
+z3Binaries.forEach { (sourceSet, z3BinaryTask, nativeConfig) ->
     val name = sourceSet.name
     val systemArch = name.replace('-', '/')
 
     val jarTask = tasks.register<Jar>("$name-jar") {
-        dependsOn(z3BinaryTask)
-
         from(sourceSet.output)
-        from(z3BinaryTask.outputFiles) {
-            into("lib/$systemArch/z3")
+
+        z3BinaryTask?.let {
+            dependsOn(it)
+            from(it.outputFiles) { into("lib/$systemArch/z3") }
+        }
+
+        nativeConfig?.let {
+            copyArtifactsIntoJar(it, this, "lib/$systemArch/z3")
         }
     }
 
@@ -62,13 +72,16 @@ z3Binaries.entries.forEach { (sourceSet, z3BinaryTask) ->
 }
 
 tasks.getByName<Jar>("jar") {
-    dependsOn.addAll(z3Binaries.values)
-
-    z3Binaries.forEach { (sourceSet, z3BinaryTask) ->
+    z3Binaries.forEach { (sourceSet, z3BinaryTask, nativeConfig) ->
         from(sourceSet.output)
-        from(z3BinaryTask.outputFiles) {
-            val systemArch = sourceSet.name.replace('-', '/')
-            into("lib/$systemArch/z3")
+
+        val systemArch = sourceSet.name.replace('-', '/')
+        z3BinaryTask?.let {
+            dependsOn(it)
+            from(it.outputFiles) { into("lib/$systemArch/z3") }
+        }
+        nativeConfig?.let {
+            copyArtifactsIntoJar(it, this, "lib/$systemArch/z3")
         }
     }
 }
