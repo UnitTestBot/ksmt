@@ -3,8 +3,6 @@ package io.ksmt.solver.maxsat.test
 import org.junit.jupiter.params.provider.Arguments
 import java.nio.file.Path
 import java.nio.file.Paths
-import kotlin.io.path.listDirectoryEntries
-import kotlin.io.path.relativeTo
 
 interface KMaxSMTBenchmarkBasedTest {
     data class BenchmarkTestArguments(
@@ -16,16 +14,18 @@ interface KMaxSMTBenchmarkBasedTest {
 
     companion object {
         private fun testDataLocation(): Path =
-            this::class.java.classLoader.getResource("testData")?.toURI()?.let { Paths.get(it) }
+            this::class.java.classLoader.getResource("maxSmtBenchmark")?.toURI()
+                ?.let { Paths.get(it) }
                 ?: error("No test data")
 
         private fun prepareTestData(): List<BenchmarkTestArguments> {
             val testDataLocation = testDataLocation()
-            return testDataLocation.listDirectoryEntries("*.smt2").sorted()
+            return testDataLocation.toFile().walkTopDown().filter { f -> f.isFile && f.extension == "smt2" }.toList()
+                .sorted()
                 .map {
                     BenchmarkTestArguments(
-                        it.relativeTo(testDataLocation).toString(),
-                        it,
+                        it.relativeTo(testDataLocation.toFile()).toString(),
+                        it.toPath(),
                     )
                 }
         }

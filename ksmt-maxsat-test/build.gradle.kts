@@ -31,7 +31,7 @@ val runMaxSATBenchmarkBasedTests = project.booleanProperty("runMaxSATBenchmarkBa
 val usePreparedMaxSMTBenchmarks = project.booleanProperty("usePreparedMaxSMTBenchmarks") ?: true
 val usePreparedMaxSATBenchmark = project.booleanProperty("usePreparedMaxSATBenchmark") ?: true
 
-val testDataDir = projectDir.resolve("testData")
+val testDataDir = projectDir.resolve("src/resources/testData")
 val unpackedTestDataDir = testDataDir.resolve("data")
 val downloadedTestData = testDataDir.resolve("testData.zip")
 
