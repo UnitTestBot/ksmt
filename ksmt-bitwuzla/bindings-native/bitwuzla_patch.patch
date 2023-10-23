@@ -1,0 +1,159 @@
+diff --git a/include/bitwuzla/c/bitwuzla.h b/include/bitwuzla/c/bitwuzla.h
+index 2870e868..007f9d58 100644
+--- a/include/bitwuzla/c/bitwuzla.h
++++ b/include/bitwuzla/c/bitwuzla.h
+@@ -2007,6 +2007,14 @@ void bitwuzla_substitute_terms(size_t terms_size,
+ 
+ /** @} */
+ 
++void bitwuzla_sort_dec_ref(BitwuzlaSort sort_id);
++
++void bitwuzla_term_dec_ref(BitwuzlaTerm term_id);
++
++uint64_t bitwuzla_bv_value_uint64(BitwuzlaTerm term);
++
++const char *bitwuzla_bv_value_str(BitwuzlaTerm term, uint32_t base);
++
+ #if __cplusplus
+ }
+ #endif
+diff --git a/src/api/c/bitwuzla.cpp b/src/api/c/bitwuzla.cpp
+index ece639cc..5c3175f7 100644
+--- a/src/api/c/bitwuzla.cpp
++++ b/src/api/c/bitwuzla.cpp
+@@ -2069,3 +2069,56 @@ bitwuzla_term_print_fmt(BitwuzlaTerm term, FILE *file, uint8_t base)
+ }
+ 
+ /* -------------------------------------------------------------------------- */
++
++#include "node/node.h"
++#include "bv/bitvector.h"
++
++namespace bitwuzla {
++    template<>
++    bzla::BitVector
++    Term::value(uint8_t base) const {
++        (void) base;
++        BITWUZLA_CHECK_NOT_NULL(d_node);
++        BITWUZLA_CHECK_TERM_IS_BV_VALUE(*this);
++        return d_node->value<bzla::BitVector>();
++    }
++}
++
++void bitwuzla_sort_dec_ref(BitwuzlaSort sort_id) {
++    Bitwuzla::SortMap &sort_map = Bitwuzla::sort_map();
++    const auto it = sort_map.find(sort_id);
++    it->second.second -= 1;
++    if (it->second.second == 0) {
++        it->second.first.reset();
++        sort_map.erase(it);
++    }
++}
++
++void bitwuzla_term_dec_ref(BitwuzlaTerm term_id) {
++    Bitwuzla::TermMap &term_map = Bitwuzla::term_map();
++    const auto it = term_map.find(term_id);
++    it->second.second -= 1;
++    if (it->second.second == 0) {
++        it->second.first.reset();
++        term_map.erase(it);
++    }
++}
++
++uint64_t bitwuzla_bv_value_uint64(BitwuzlaTerm term) {
++    uint64_t res = false;
++    BITWUZLA_TRY_CATCH_BEGIN;
++    BITWUZLA_CHECK_TERM_ID(term);
++    bzla::BitVector bv = import_term(term).value<bzla::BitVector>();
++    res = bv.to_uint64();
++    BITWUZLA_TRY_CATCH_END;
++    return res;
++}
++
++const char *bitwuzla_bv_value_str(BitwuzlaTerm term, uint32_t base) {
++    static thread_local std::string res;
++    BITWUZLA_TRY_CATCH_BEGIN;
++    BITWUZLA_CHECK_TERM_ID(term);
++    res = import_term(term).value<bzla::BitVector>().str(base);
++    BITWUZLA_TRY_CATCH_END;
++    return res.c_str();
++}
+diff --git a/src/api/c/checks.h b/src/api/c/checks.h
+index 63a26fff..60be3ed8 100644
+--- a/src/api/c/checks.h
++++ b/src/api/c/checks.h
+@@ -47,7 +47,7 @@ class BitwuzlaAbortStream
+   {
+     stream() << msg_prefix << " ";
+   }
+-  ~BitwuzlaAbortStream()
++  ~BitwuzlaAbortStream() noexcept(false)
+   {
+     flush();
+     bitwuzla_abort(d_stream.str().c_str());
+diff --git a/src/lib/meson.build b/src/lib/meson.build
+index 7380e24c..38fcb022 100644
+--- a/src/lib/meson.build
++++ b/src/lib/meson.build
+@@ -32,19 +32,19 @@ rng_lib = static_library('bzlarng',
+                   dependencies: gmp_dep)
+
+ # Bitwuzla bit-vector, bit-blast and local search libraries
+-bitvector_lib = library('bitwuzlabv',
++bitvector_lib = static_library('bitwuzlabv',
+                         sources: bv_sources,
+                         link_whole: rng_lib,
+                         dependencies: gmp_dep,
+                         install_rpath: install_rpath,
+                         install: true)
+-bitblast_lib = library('bitwuzlabb',
++bitblast_lib = static_library('bitwuzlabb',
+                        sources: bb_sources,
+                        link_with: bitvector_lib,
+                        dependencies: gmp_dep,
+                        install_rpath: install_rpath,
+                        install: true)
+-local_search_lib = library('bitwuzlals',
++local_search_lib = static_library('bitwuzlals',
+                            sources: ls_sources,
+                            link_with: [bitvector_lib],
+                            link_whole: rng_lib,
+diff --git a/src/meson.build b/src/meson.build
+index ddabc8e8..2260419b 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -9,7 +9,7 @@ cpp_compiler = meson.get_compiler('cpp')
+ gmp_dep = dependency('gmp',
+                      version: '>=6.1',
+                      required: true,
+-                     static: build_static)
++                     static: true)
+
+
+ # Subproject dependencies
+@@ -195,15 +195,23 @@ endif
+ # Public header include directory
+ bitwuzla_inc = include_directories('../include', 'lib')
+
++
++link_args = []
++if host_machine.system() == 'windows'
++  link_args += ['-static-libstdc++', '-static-libgcc', '-Wl,-Bstatic',  '-lstdc++', '-lpthread', '-Wl,-Bdynamic']
++endif
++
+ bitwuzla_lib = library('bitwuzla',
+                       sources,
+                       include_directories: bitwuzla_inc,
+                       link_with: support_libs,
+                       dependencies: dependencies,
+-                      soversion: bitwuzla_lib_soversion,
++                      #soversion: bitwuzla_lib_soversion,
+                       install_rpath: install_rpath,
+                       install: true,
+-                      cpp_args: cpp_args)
++                      cpp_args: cpp_args,
++                      link_args: link_args
++                      )
+
+ # Create library dependency
+ bitwuzla_dep = declare_dependency(include_directories: bitwuzla_inc,

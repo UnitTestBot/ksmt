@@ -793,6 +793,15 @@ JNIEXPORT jint JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaChe
 
 /*
  * Class:     org_ksmt_solver_bitwuzla_bindings_Native
+ * Method:    bitwuzlaCheckSatTimeout
+ * Signature: (J[JJ)I
+ */
+JNIEXPORT jint JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaCheckSatTimeout
+  (JNIEnv* env, jobject native_class, jlong bitwuzla, jlongArray args, jlong timeout);
+
+
+/*
+ * Class:     org_ksmt_solver_bitwuzla_bindings_Native
  * Method:    bitwuzlaGetValue
  * Signature: (JJ)J
  */
@@ -1127,18 +1136,18 @@ JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMk
 /*
  * Class:     org_ksmt_solver_bitwuzla_bindings_Native
  * Method:    bitwuzlaSubstituteTerm
- * Signature: (JJ[J[J)J
+ * Signature: (J[J[J)J
  */
 JNIEXPORT jlong JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSubstituteTerm
-  (JNIEnv *env, jclass native_class, jlong bitwuzla, jlong term, jlongArray mapKeys, jlongArray mapValues);
+  (JNIEnv *env, jclass native_class, jlong term, jlongArray mapKeys, jlongArray mapValues);
 
 /*
  * Class:     org_ksmt_solver_bitwuzla_bindings_Native
  * Method:    bitwuzlaSubstituteTerms
- * Signature: (J[J[J[J)V
+ * Signature: ([J[J[J)V
  */
 JNIEXPORT void JNICALL Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSubstituteTerms
-  (JNIEnv *env, jclass native_class, jlong bitwuzla, jlongArray terms, jlongArray mapKeys, jlongArray mapValues);
+  (JNIEnv *env, jclass native_class, jlongArray terms, jlongArray mapKeys, jlongArray mapValues);
 
 #ifdef __cplusplus
 }

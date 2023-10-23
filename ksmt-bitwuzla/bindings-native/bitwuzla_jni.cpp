@@ -1,11 +1,9 @@
 ﻿#include <iostream>
 #include <atomic>
-#include <bitwuzla.h>
-#include <memory>
-#include <unistd.h>
-#include <vector>
 #include <chrono>
-#include "bitwuzla_jni.hpp"
+#include <bitwuzla/c/bitwuzla.h>
+#include <bitwuzla_jni.hpp>
+#include <bitwuzla_extension.hpp>
 
 #define BITWUZLA_JNI_EXCEPTION_CLS "org/ksmt/solver/bitwuzla/bindings/BitwuzlaNativeException"
 #define BITWUZLA_CATCH_STATEMENT catch (const std::exception& e)
@@ -192,13 +190,13 @@ void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaInit(JNIEnv *env, jcl
 
 void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermDecRef(JNIEnv *env, jclass native_class, jlong term) {
     BZLA_TRY_VOID({
-        bitwuzla_term_dec_ref(TERM(term));
+        bitwuzla_extension_term_dec_ref(TERM(term));
     })
 }
 
 void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortDecRef(JNIEnv *env, jclass native_class, jlong sort) {
     BZLA_TRY_VOID({
-        bitwuzla_sort_dec_ref(SORT(sort));
+        bitwuzla_extension_sort_dec_ref(SORT(sort));
     })
 }
 
@@ -828,6 +826,18 @@ jint Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaCheckSatAssumingNativ
     })
 }
 
+jint Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaCheckSatTimeout(JNIEnv* env, jobject native_class, jlong bitwuzla, jlongArray args, jlong timeout) {
+    BZLA_TRY_OR_ZERO({
+        auto termination_state = get_termination_state(BZLA);
+        ScopedTimeout _timeout(termination_state, timeout);
+
+        GET_PTR_ARRAY(BitwuzlaTerm, args_ptr, args);
+        jsize len = env->GetArrayLength(args);
+
+        return (jint) bitwuzla_check_sat_assuming(BZLA, (uint32_t) len, args_ptr);
+    })
+}
+
 jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetValue(JNIEnv *env, jclass native_class, jlong bitwuzla, jlong term) {
     BZLA_TRY_OR_ZERO({
         return (jlong) bitwuzla_get_value(BZLA, TERM(term));
@@ -836,13 +846,13 @@ jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetValue(JNIEnv *env
 
 jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetBvValueUInt64(JNIEnv *env, jclass native_class, jlong term) {
     BZLA_TRY_OR_ZERO({
-        return (jlong) bitwuzla_term_value_get_bv_uint64(TERM(term));
+        return (jlong) bitwuzla_extension_bv_value_uint64(TERM(term));
     })
 }
 
 jstring Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetBvValueString(JNIEnv *env, jclass native_class, jlong term) {
     BZLA_TRY_OR_ZERO({
-        const char * str = bitwuzla_term_value_get_bv_str(TERM(term), 2);
+        const char * str = bitwuzla_extension_bv_value_str(TERM(term), 2);
         return env->NewStringUTF(str);
     })
 }
@@ -1119,16 +1129,16 @@ jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkVar(JNIEnv *env, j
     })
 }
 
-jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSubstituteTerm(JNIEnv *env, jclass native_class, jlong bitwuzla, jlong term, jlongArray mapKeys, jlongArray mapValues) {
+jlong Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSubstituteTerm(JNIEnv *env, jclass native_class, jlong term, jlongArray mapKeys, jlongArray mapValues) {
     BZLA_TRY_OR_ZERO({
         GET_PTR_ARRAY(BitwuzlaTerm, mapKeys_ptr, mapKeys);
         GET_PTR_ARRAY(BitwuzlaTerm, mapValues_ptr, mapValues);
         jsize map_size = env->GetArrayLength(mapKeys);
-        return (jlong) bitwuzla_substitute_term(BZLA, TERM(term), map_size, mapKeys_ptr, mapValues_ptr);
+        return (jlong) bitwuzla_substitute_term(TERM(term), map_size, mapKeys_ptr, mapValues_ptr);
     })
 }
 
-void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSubstituteTerms(JNIEnv *env, jclass native_class, jlong bitwuzla, jlongArray terms, jlongArray mapKeys, jlongArray mapValues) {
+void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSubstituteTerms(JNIEnv *env, jclass native_class, jlongArray terms, jlongArray mapKeys, jlongArray mapValues) {
     BZLA_TRY_VOID({
         GET_PTR_ARRAY(BitwuzlaTerm, terms_ptr, terms);
         jsize terms_size = env->GetArrayLength(terms);
@@ -1137,6 +1147,6 @@ void Java_org_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSubstituteTerms(JNIEn
         GET_PTR_ARRAY(BitwuzlaTerm, mapValues_ptr, mapValues);
         jsize map_size = env->GetArrayLength(mapKeys);
 
-        bitwuzla_substitute_terms(BZLA, (size_t) terms_size, terms_ptr, map_size, mapKeys_ptr, mapValues_ptr);
+        bitwuzla_substitute_terms((size_t) terms_size, terms_ptr, map_size, mapKeys_ptr, mapValues_ptr);
     })
 }
