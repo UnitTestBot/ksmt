@@ -32,7 +32,7 @@ bitwuzlaBinaries.keys.forEach { it.compileClasspath = compileConfig }
 dependencies {
     compileConfig(project(":ksmt-bitwuzla:ksmt-bitwuzla-core"))
 
-    bitwuzlaNativeLinuxX64("bitwuzla", "bitwuzla-linux64", "1.0", ext = "zip")
+    bitwuzlaNativeLinuxX64("bitwuzla", "bitwuzla-linux64", "0.1.1", ext = "zip")
     bitwuzlaNativeWindowsX64("bitwuzla", "bitwuzla-win64", "1.0", ext = "zip")
     bitwuzlaNativeMacArm("bitwuzla", "bitwuzla-osx-arm64", "1.0", ext = "zip")
 }

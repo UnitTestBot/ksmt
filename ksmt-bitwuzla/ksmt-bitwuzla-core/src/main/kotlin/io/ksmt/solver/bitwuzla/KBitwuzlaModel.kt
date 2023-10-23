@@ -129,22 +129,24 @@ open class KBitwuzlaModel(
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun <T : KSort> functionInterpretation(
         decl: KDecl<T>,
         term: BitwuzlaTerm
     ): KFuncInterp<T> {
-        val interp = Native.bitwuzlaGetFunValue(bitwuzlaCtx.bitwuzla, term)
+        TODO()
+        /*val interp = Native.bitwuzlaGetFunValue(bitwuzlaCtx.bitwuzla, term)
         return if (interp.size != 0) {
             handleArrayFunctionDecl(decl) { functionDecl ->
                 functionValueInterpretation(functionDecl, interp)
             }
         } else {
-            /**
+            *//**
              * Function has default value or bitwuzla can't retrieve its entries.
              * Try parse function interpretation from value term.
-             * */
+             * *//*
             converter.retrieveFunctionValue(decl, term)
-        }
+        }*/
     }
 
     private fun <T : KSort> KBitwuzlaExprConverter.functionValueInterpretation(
@@ -167,6 +169,7 @@ open class KBitwuzlaModel(
         )
     }
 
+    @Suppress("unused")
     private fun <T : KSort> KBitwuzlaExprConverter.retrieveFunctionValue(
         decl: KDecl<T>,
         functionTerm: BitwuzlaTerm
@@ -176,13 +179,15 @@ open class KBitwuzlaModel(
         functionValue.convertExpr(arraySort)
     }
 
+    @Suppress("UNUSED_PARAMETER", "UNUSED_VARIABLE", "UNUSED_ANONYMOUS_PARAMETER")
     private fun <T : KSort> arrayInterpretation(
         decl: KDecl<T>,
         term: BitwuzlaTerm
     ): KFuncInterp<T> = handleArrayFunctionDecl(decl) { arrayFunctionDecl ->
         val sort: KArraySort<KSort, KSort> = decl.sort.uncheckedCast()
         val entries = mutableListOf<KFuncInterpEntryVarsFree<KSort>>()
-        val interp = Native.bitwuzlaGetArrayValue(bitwuzlaCtx.bitwuzla, term)
+        TODO()
+        /*val interp = Native.bitwuzlaGetArrayValue(bitwuzlaCtx.bitwuzla, term)
 
         for (i in 0 until interp.size) {
             val index = interp.indices!![i].convertExpr(sort.domain)
@@ -196,7 +201,7 @@ open class KBitwuzlaModel(
             decl = arrayFunctionDecl,
             entries = entries,
             default = default
-        )
+        )*/
     }
 
     private inline fun <T : KSort> handleArrayFunctionDecl(

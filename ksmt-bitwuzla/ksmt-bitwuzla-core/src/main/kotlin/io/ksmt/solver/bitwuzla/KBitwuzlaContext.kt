@@ -41,11 +41,11 @@ import io.ksmt.sort.KUninterpretedSort
 open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
     private var isClosed = false
 
-    val bitwuzla = Native.bitwuzlaNew()
+    val bitwuzla = Native.bitwuzlaNew(TODO())
 
-    val trueTerm: BitwuzlaTerm = Native.bitwuzlaMkTrue(bitwuzla)
-    val falseTerm: BitwuzlaTerm = Native.bitwuzlaMkFalse(bitwuzla)
-    val boolSort: BitwuzlaSort = Native.bitwuzlaMkBoolSort(bitwuzla)
+    val trueTerm: BitwuzlaTerm = Native.bitwuzlaMkTrue()
+    val falseTerm: BitwuzlaTerm = Native.bitwuzlaMkFalse()
+    val boolSort: BitwuzlaSort = Native.bitwuzlaMkBoolSort()
 
     private val exprGlobalCache = mkTermCache<KExpr<*>>()
     private val bitwuzlaExpressions = mkTermReverseCache<KExpr<*>>()
@@ -239,7 +239,7 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
         val value = constantsGlobalCache.getLong(decl)
         if (value != NOT_INTERNALIZED) return value
 
-        val term = Native.bitwuzlaMkConst(bitwuzla, sort, decl.name).also {
+        val term = Native.bitwuzlaMkConst(sort, decl.name).also {
             bitwuzlaConstants.put(it, decl)
         }
         constantsGlobalCache.put(decl, term)
@@ -248,7 +248,7 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
     }
 
     fun mkVar(decl: KDecl<*>, sort: BitwuzlaSort): BitwuzlaTerm =
-        Native.bitwuzlaMkVar(bitwuzla, sort, decl.name).also {
+        Native.bitwuzlaMkVar(sort, decl.name).also {
             bitwuzlaVars.put(it, decl)
         }
 
