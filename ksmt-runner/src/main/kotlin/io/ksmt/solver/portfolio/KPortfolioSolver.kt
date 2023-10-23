@@ -106,8 +106,16 @@ class KPortfolioSolver(
         assertAsync(expr)
     }
 
+    override fun assert(exprs: List<KExpr<KBoolSort>>) = runBlocking {
+        assertAsync(exprs)
+    }
+
     override fun assertAndTrack(expr: KExpr<KBoolSort>) = runBlocking {
         assertAndTrackAsync(expr)
+    }
+
+    override fun assertAndTrack(exprs: List<KExpr<KBoolSort>>) = runBlocking {
+        assertAndTrackAsync(exprs)
     }
 
     override fun push() = runBlocking {
@@ -153,8 +161,16 @@ class KPortfolioSolver(
         assertAsync(expr)
     }
 
+    override suspend fun assertAsync(exprs: List<KExpr<KBoolSort>>) = solverOperation {
+        assertAsync(exprs)
+    }
+
     override suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>) = solverOperation {
         assertAndTrackAsync(expr)
+    }
+
+    override suspend fun assertAndTrackAsync(exprs: List<KExpr<KBoolSort>>) = solverOperation {
+        assertAndTrackAsync(exprs)
     }
 
     override suspend fun pushAsync() = solverOperation {

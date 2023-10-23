@@ -16,6 +16,7 @@ import io.ksmt.expr.KExpr
 import io.ksmt.expr.KUninterpretedSortValue
 import io.ksmt.runner.core.KsmtWorkerSession
 import io.ksmt.runner.generated.models.AssertParams
+import io.ksmt.runner.generated.models.BulkAssertParams
 import io.ksmt.runner.generated.models.CheckParams
 import io.ksmt.runner.generated.models.CheckResult
 import io.ksmt.runner.generated.models.CheckWithAssumptionsParams
@@ -92,6 +93,25 @@ class KSolverRunnerExecutor(
         query(AssertParams(expr))
     }
 
+    fun bulkAssertSync(exprs: List<KExpr<KBoolSort>>) = bulkAssert(exprs) { params ->
+        queryWithTimeoutAndExceptionHandlingSync {
+            bulkAssert.querySync(params)
+        }
+    }
+
+    suspend fun bulkAssertAsync(exprs: List<KExpr<KBoolSort>>) = bulkAssert(exprs) { params ->
+        queryWithTimeoutAndExceptionHandlingAsync {
+            bulkAssert.queryAsync(params)
+        }
+    }
+
+    private inline fun bulkAssert(exprs: List<KExpr<KBoolSort>>, query: (BulkAssertParams) -> Unit) {
+        if (exprs.isEmpty()) return
+
+        ensureActive()
+        query(BulkAssertParams(exprs))
+    }
+
     fun assertAndTrackSync(expr: KExpr<KBoolSort>) = assertAndTrack(expr) { params ->
         queryWithTimeoutAndExceptionHandlingSync {
             assertAndTrack.querySync(params)
@@ -107,6 +127,25 @@ class KSolverRunnerExecutor(
     private inline fun assertAndTrack(expr: KExpr<KBoolSort>, query: (AssertParams) -> Unit) {
         ensureActive()
         query(AssertParams(expr))
+    }
+
+    fun bulkAssertAndTrackSync(exprs: List<KExpr<KBoolSort>>) = bulkAssertAndTrack(exprs) { params ->
+        queryWithTimeoutAndExceptionHandlingSync {
+            bulkAssertAndTrack.querySync(params)
+        }
+    }
+
+    suspend fun bulkAssertAndTrackAsync(exprs: List<KExpr<KBoolSort>>) = bulkAssertAndTrack(exprs) { params ->
+        queryWithTimeoutAndExceptionHandlingAsync {
+            bulkAssertAndTrack.queryAsync(params)
+        }
+    }
+
+    private inline fun bulkAssertAndTrack(exprs: List<KExpr<KBoolSort>>, query: (BulkAssertParams) -> Unit) {
+        if (exprs.isEmpty()) return
+
+        ensureActive()
+        query(BulkAssertParams(exprs))
     }
 
     fun pushSync() = push {
