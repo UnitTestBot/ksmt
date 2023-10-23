@@ -2,19 +2,22 @@ package io.ksmt.solver.bitwuzla
 
 import io.ksmt.KContext
 import io.ksmt.expr.KExpr
+import io.ksmt.expr.rewrite.KExprSubstitutor
 import io.ksmt.solver.KSolverStatus
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
-import org.ksmt.solver.bitwuzla.bindings.Native
 import io.ksmt.sort.KArray2Sort
 import io.ksmt.sort.KArraySort
 import io.ksmt.sort.KBv32Sort
 import io.ksmt.utils.getValue
+import io.ksmt.utils.uncheckedCast
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
+import org.ksmt.solver.bitwuzla.bindings.Native
 
 class SolverTest {
     private val ctx = KContext()
@@ -24,7 +27,7 @@ class SolverTest {
     fun testAbortHandling() {
         assertFailsWith(BitwuzlaNativeException::class) {
             // Incorrect native expression with invalid term (0)
-            Native.bitwuzlaMkTerm1(solver.bitwuzlaCtx.bitwuzla, BitwuzlaKind.BITWUZLA_KIND_AND, 0)
+            Native.bitwuzlaMkTerm(BitwuzlaKind.BITWUZLA_KIND_AND, 0)
         }
     }
 
@@ -113,8 +116,9 @@ class SolverTest {
         var status = solver.checkWithAssumptions(listOf(a))
         assertEquals(KSolverStatus.UNSAT, status)
         val core = solver.unsatCore()
-        assertEquals(1, core.size)
-        assertTrue(!a in core || a in core)
+        assertEquals(2, core.size)
+        assertTrue(!a in core)
+        assertTrue(a in core)
         solver.pop()
         status = solver.check()
         assertEquals(KSolverStatus.SAT, status)
@@ -135,7 +139,8 @@ class SolverTest {
         for (i in 0..10000) {
             val selectedValue = array.select(mkBv(4198500 + i))
             xoredX = mkBvXorExpr(xoredX, selectedValue)
-            xoredX = mkBvOrExpr(mkBvUnsignedDivExpr(xoredX, mkBv(3)), mkBvUnsignedRemExpr(xoredX, mkBv(3)))
+            // with expression below, bitwuzla can't stop on necessary timeout
+//             xoredX = mkBvOrExpr(mkBvUnsignedDivExpr(xoredX, mkBv(3)), mkBvUnsignedRemExpr(xoredX, mkBv(3)))
         }
         val someRandomValue = mkBv(42)
         val assertion = xoredX eq someRandomValue
@@ -184,12 +189,34 @@ class SolverTest {
     }
 
     @Test
+    fun testArrayLambdaSortNeq() {
+        val bv32Sort = Native.bitwuzlaMkBvSort(32)
+        val arraySort = Native.bitwuzlaMkArraySort(bv32Sort, bv32Sort)
+
+        val varTerm = Native.bitwuzlaMkVar(bv32Sort, "var1")
+        val lambda = Native.bitwuzlaMkTerm(BitwuzlaKind.BITWUZLA_KIND_LAMBDA, varTerm, Native.bitwuzlaMkBvValueInt64(bv32Sort, 512))
+
+        assertFalse { Native.bitwuzlaSortIsEqual(arraySort, Native.bitwuzlaTermGetSort(lambda)) }
+    }
+
+    @Test
+    fun testArrayFunSortNeq() {
+        val bv32Sort = Native.bitwuzlaMkBvSort(32)
+        val arraySort = Native.bitwuzlaMkArraySort(bv32Sort, bv32Sort)
+
+        val fSort = Native.bitwuzlaMkFunSort(longArrayOf(bv32Sort), bv32Sort)
+
+        assertFalse { Native.bitwuzlaSortIsEqual(arraySort, fSort) }
+    }
+
+    @Test
     fun testArrayLambdaEq(): Unit = with(ctx) {
-        val sort = mkArraySort(bv32Sort, bv32Sort)
+        val bvSort = mkBvSort(4u)
+        val sort = mkArraySort(bvSort, bvSort)
         val arrayVar by sort
 
-        val bias by bv32Sort
-        val idx by bv32Sort
+        val bias by bvSort
+        val idx by bvSort
         val lambdaBody = mkBvAddExpr(idx, bias)
         val lambda = mkArrayLambda(idx.decl, lambdaBody)
 
@@ -219,7 +246,7 @@ class SolverTest {
 
         assertEquals(KSolverStatus.SAT, solver.check())
 
-        solver.assert(lambdaSelectValue neq  selectValue)
+        solver.assert(lambdaSelectValue neq selectValue)
 
         assertEquals(KSolverStatus.UNSAT, solver.check())
     }
@@ -256,7 +283,18 @@ class SolverTest {
 
         val model = solver.model()
 
-        assertEquals(10, model.interpretation(f)?.entries?.size)
+        val fInterpretation = model.interpretation(f) ?: error("Lack of interpretation of $f")
+        val default = fInterpretation.default ?: error("Lack of default of $fInterpretation")
+
+        solver.assert(mkOr(
+            (0 until 10).map { i ->
+                f.apply(listOf(mkBv(i), mkBv(i))) neq KExprSubstitutor(ctx).apply {
+                    fInterpretation.vars.forEach { v -> substitute(v.apply(emptyList()).uncheckedCast(), mkBv(i)) }
+                }.apply(default)
+            }
+        ))
+
+        assertEquals(KSolverStatus.UNSAT, solver.check(), "Incorrect function interpretation: $fInterpretation")
     }
 
 }

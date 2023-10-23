@@ -145,12 +145,18 @@ object Native {
      * @see bitwuzlaGetOptionMode
      */
     @JvmStatic
-    fun bitwuzlaSetOptionMode(options: BitwuzlaOptionsNative, option: BitwuzlaOption, value: String) = bitwuzlaSetOptionMode(
-        options, option.value, value
-    )
+    fun bitwuzlaSetOptionMode(
+        options: BitwuzlaOptionsNative,
+        option: BitwuzlaOption,
+        value: String
+    ) = bitwuzlaSetOptionMode(options, option.value, value)
 
     @JvmStatic
-    private external fun bitwuzlaSetOptionMode(options: BitwuzlaOptionsNative, option: BitwuzlaOptionNative, value: String)
+    private external fun bitwuzlaSetOptionMode(
+        options: BitwuzlaOptionsNative,
+        option: BitwuzlaOptionNative,
+        value: String
+    )
 
     /**
      * Get the current value of an option.
@@ -163,7 +169,10 @@ object Native {
      * @see BitwuzlaOption
      */
     @JvmStatic
-    fun bitwuzlaGetOption(options: BitwuzlaOptionsNative, option: BitwuzlaOption) = bitwuzlaGetOption(options, option.value)
+    fun bitwuzlaGetOption(
+        options: BitwuzlaOptionsNative,
+        option: BitwuzlaOption
+    ) = bitwuzlaGetOption(options, option.value)
 
     @JvmStatic
     private external fun bitwuzlaGetOption(options: BitwuzlaOptionsNative, option: BitwuzlaOptionNative): Long
@@ -948,31 +957,6 @@ object Native {
     @JvmStatic
     external fun bitwuzlaTermValueGetStrFmt(term: BitwuzlaTerm, /*uint8_t*/ base: Byte): String
 
-//    /**
-//     * Get (the raw) string representation of a given floating-point value
-//     * term in IEEE 754 standard representation.
-//     *
-//     * @param term        The floating-point value term.
-//     * @param sign        Output parameter. String representation of the
-//     *                    sign bit.
-//     * @param exponent    Output parameter. String representation of the exponent
-//     *                    bit-vector value.
-//     * @param significand Output parameter. String representation of the
-//     *                    significand bit-vector value.
-//     * @param base        The base in which the component bit-vector strings are
-//     *                    given; `2` for binary, `10` for decimal, and `16` for
-//     *                    hexadecimal.
-//     *
-//     * @note Return values sign, exponent and significand are valid until next
-//     *       `bitwuzla_term_value_get_fp_ieee` call.
-//     */
-//    @JvmStatic
-//    external fun bitwuzla_term_value_get_fp_ieee(term: BitwuzlaTerm,
-//    const char **sign,
-//    const char **exponent,
-//    const char **significand,
-//    uint8_t base)
-
     /**
      * Get representation of given rounding mode value term.
      * @param term The rounding mode value term.
@@ -1037,54 +1021,6 @@ object Native {
      */
     @JvmStatic
     external fun bitwuzlaDelete(bitwuzla: Bitwuzla)
-
-//    /**
-//     * Configure a termination callback function.
-//     *
-//     * The `state` of the callback can be retrieved via
-//     * `bitwuzla_get_termination_callback_state()`.
-//     *
-//     * @param bitwuzla The Bitwuzla instance.
-//     * @param fun The callback function, returns a value != 0 if `bitwuzla` should
-//     *            be terminated.
-//     * @param state The argument to the callback function.
-//     *
-//     * @see
-//     *   * `bitwuzla_terminate`
-//     *   * `bitwuzla_get_termination_callback_state`
-//     */
-//    bitwuzla_set_termination_callback(Bitwuzla *bitwuzla,
-//    int32_t (*fun)(void *),
-//    void *state);
-
-//    /**
-//     * Get the state of the termination callback function.
-//     *
-//     * The returned object representing the state of the callback corresponds to
-//     * the `state` configured as argument to the callback function via
-//     * `bitwuzla_set_termination_callback()`.
-//     *
-//     * @param bitwuzla The Bitwuzla instance.
-//     *
-//     * @return The object passed as argument `state` to the callback function.
-//     *
-//     * @see
-//     *   * `bitwuzla_terminate`
-//     *   * `bitwuzla_set_termination_callback`
-//     */
-//    void *bitwuzla_get_termination_callback_state(Bitwuzla *bitwuzla);
-
-//    /**
-//     * Configure an abort callback function, which is called instead of exit
-//     * on abort conditions.
-//     *
-//     * @note If the abort callback function throws a C++ exception, this must be
-//     *       thrown via std::rethrow_if_nested.
-//     *
-//     * @param fun The callback function. Argument `msg` explains the reason for the
-//     *            abort.
-//     */
-//    void bitwuzla_set_abort_callback(void (*fun)(const char *msg));
 
     /**
      * Push context levels.
@@ -1232,7 +1168,7 @@ object Native {
      * callback.
      *
      * *note*: api call: bitwuzla_check_sat
-    */
+     */
     @JvmStatic
     external fun bitwuzlaCheckSatNative(bitwuzla: Bitwuzla): BitwuzlaResultNative
 
@@ -1270,6 +1206,28 @@ object Native {
     @JvmStatic
     external fun bitwuzlaCheckSatAssumingNative(bitwuzla: Bitwuzla, args: BitwuzlaTermArray): BitwuzlaResultNative
 
+    fun bitwuzlaCheckSatWithTimeout(
+        bitwuzla: Bitwuzla,
+        args: BitwuzlaTermArray,
+        timeout: Long
+    ) = BitwuzlaResult.fromValue(bitwuzlaCheckSatTimeout(bitwuzla, args, timeout))
+
+    @JvmStatic
+    external fun bitwuzlaCheckSatTimeout(
+        bitwuzla: Bitwuzla,
+        args: BitwuzlaTermArray,
+        timeout: Long
+    ): BitwuzlaResultNative
+
+    /**
+     * Terminates current check-sat call
+     *
+     * @see bitwuzlaCheckSat
+     * @see bitwuzlaCheckSatAssuming
+     */
+    @JvmStatic
+    external fun bitwuzlaForceTerminate(bitwuzla: Bitwuzla)
+
     /**
      * Get a term representing the model value of a given term.
      *
@@ -1293,28 +1251,6 @@ object Native {
 
     @JvmStatic
     external fun bitwuzlaGetFpValue(term: BitwuzlaTerm): FpValue
-
-
-    // TODO: mb add statistics?
-//    /**
-//     * Get current statistics.
-//     *
-//     * The statistics are retrieved as a mapping from statistic name (`keys`)
-//     * to statistic value (`values`).
-//     *
-//     * @param bitwuzla The Bitwuzla instance.
-//     * @param keys     The resulting set of statistic names.
-//     * @param values   The resulting set of statistic values.
-//     * @param size     The resulting size of `keys` and `values`.
-//     *
-//     * @note Output parameters `keys` and `values` are only valid until the
-//     *       next call to `bitwuzla_get_statistics()`.
-//     */
-//    void bitwuzla_get_statistics(Bitwuzla *bitwuzla,
-//    const char ***keys,
-//    const char ***values,
-//    size_t *size);
-
 
     /* -------------------------------------------------------------------------- */
     /* Sort creation                                                              */
@@ -1357,6 +1293,9 @@ object Native {
      */
     @JvmStatic
     external fun bitwuzlaMkBvSort(size: Long): BitwuzlaSort
+
+    @JvmStatic
+    fun bitwuzlaMkBvSort(size: Int): BitwuzlaSort = bitwuzlaMkBvSort(size.toLong())
 
     /**
      * Create a floating-point sort of given exponent and significand size.
@@ -1741,7 +1680,7 @@ object Native {
      * @see BitwuzlaKind
      */
     @JvmStatic
-    fun bitwuzlaMkTerm(kind: BitwuzlaKind, args: BitwuzlaTermArray): BitwuzlaTerm =  bitwuzlaMkTerm(kind.value, args)
+    fun bitwuzlaMkTerm(kind: BitwuzlaKind, args: BitwuzlaTermArray): BitwuzlaTerm = bitwuzlaMkTerm(kind.value, args)
 
     @JvmStatic
     private external fun bitwuzlaMkTerm(kind: BitwuzlaKindNative, args: BitwuzlaTermArray): BitwuzlaTerm
@@ -1936,7 +1875,6 @@ object Native {
     /**
      * Substitute a set of keys with their corresponding values in the given term.
      *
-     * @param bitwuzla The Bitwuzla instance.
      * @param term The term in which the keys are to be substituted.
      * @param mapKeys The keys.
      * @param mapValues The mapped values.
@@ -1945,7 +1883,6 @@ object Native {
      */
     @JvmStatic
     external fun bitwuzlaSubstituteTerm(
-        bitwuzla: Bitwuzla,
         term: BitwuzlaTerm,
         mapKeys: BitwuzlaTermArray,
         mapValues: BitwuzlaTermArray
@@ -1957,14 +1894,12 @@ object Native {
      *
      * The terms in [terms] are replaced with the terms resulting from this substitutions.
      *
-     * @param bitwuzla The Bitwuzla instance.
      * @param terms The terms in which the keys are to be substituted.
      * @param mapKeys The keys.
      * @param mapValues The mapped values.
      */
     @JvmStatic
     external fun bitwuzlaSubstituteTerms(
-        bitwuzla: Bitwuzla,
         terms: BitwuzlaTermArray,
         mapKeys: BitwuzlaTermArray,
         mapValues: BitwuzlaTermArray

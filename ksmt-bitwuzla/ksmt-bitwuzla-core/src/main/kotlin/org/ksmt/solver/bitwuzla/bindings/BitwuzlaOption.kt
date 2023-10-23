@@ -183,6 +183,20 @@ enum class BitwuzlaOption(val value: Int) {
 
     /**
      * **Propagation-based local search solver engine:
+     *    Optimization for inverse value computation of inequalities over concat and sign extension operands.**
+     *
+     * When enabled, use optimized inverse value computation over concats.
+     *
+     * Values:
+     * * **1**: enable
+     * * **0**: disable (**default**)
+     *
+     * **warning:** This is an expert option to configure the prop solver engine.
+     */
+    BITWUZLA_OPTION_PROP_OPT_LT_CONCAT_SEXT(14),
+
+    /**
+     * **Propagation-based local search solver engine:
      *    Path selection.**
      *
      * Configure mode for path selection.
@@ -195,7 +209,7 @@ enum class BitwuzlaOption(val value: Int) {
      *
      * **warning:** This is an expert option to configure the prop solver engine.
      */
-    BITWUZLA_OPTION_PROP_PATH_SEL(14),
+    BITWUZLA_OPTION_PROP_PATH_SEL(15),
 
     /**
      * **Propagation-based local search solver engine:
@@ -209,7 +223,7 @@ enum class BitwuzlaOption(val value: Int) {
      *
      * **warning:** This is an expert option to configure the prop solver engine.
      */
-    BITWUZLA_OPTION_PROP_PROB_RANDOM_INPUT(15),
+    BITWUZLA_OPTION_PROP_PROB_RANDOM_INPUT(16),
 
     /**
      * **Propagation-based local search solver engine:
@@ -223,7 +237,7 @@ enum class BitwuzlaOption(val value: Int) {
      *
      * **warning:** This is an expert option to configure the prop solver engine.
      */
-    BITWUZLA_OPTION_PROP_PROB_USE_INV_VALUE(16),
+    BITWUZLA_OPTION_PROP_PROB_USE_INV_VALUE(17),
 
     /**
      * **Propagation-based local search solver engine:
@@ -238,7 +252,7 @@ enum class BitwuzlaOption(val value: Int) {
      *
      * **warning:** This is an expert option to configure the prop solver engine.
      */
-    BITWUZLA_OPTION_PROP_SEXT(17),
+    BITWUZLA_OPTION_PROP_SEXT(18),
 
     /**
      * **Propagation-based local search solver engine:
@@ -253,7 +267,7 @@ enum class BitwuzlaOption(val value: Int) {
      *
      * **warning:** This is an expert option to configure the prop solver engine.
      */
-    BITWUZLA_OPTION_PROP_NORMALIZE(18),
+    BITWUZLA_OPTION_PROP_NORMALIZE(19),
 
     /**
      * **Preprocessing**
@@ -264,7 +278,7 @@ enum class BitwuzlaOption(val value: Int) {
      *  * **1**: enable (**default**)
      *  * **0**: disable
      */
-    BITWUZLA_OPTION_PREPROCESS(19),
+    BITWUZLA_OPTION_PREPROCESS(20),
 
     /**
      * **Preprocessing: Find contradicting bit-vector ands**
@@ -275,7 +289,7 @@ enum class BitwuzlaOption(val value: Int) {
      *  * **1**: enable (**default**)
      *  * **0**: disable
      */
-    BITWUZLA_OPTION_PP_CONTRADICTING_ANDS(20),
+    BITWUZLA_OPTION_PP_CONTRADICTING_ANDS(21),
 
     /**
      * **Preprocessing: Eliminate bit-vector extracts on bit-vector constants**
@@ -286,7 +300,7 @@ enum class BitwuzlaOption(val value: Int) {
      *  * **1**: enable
      *  * **0**: disable (**default**)
      */
-    BITWUZLA_OPTION_PP_ELIM_BV_EXTRACTS(21),
+    BITWUZLA_OPTION_PP_ELIM_BV_EXTRACTS(22),
 
     /**
      * **Preprocessing: Embedded constraint substitution**
@@ -298,7 +312,7 @@ enum class BitwuzlaOption(val value: Int) {
      *  * **1**: enable (**default**)
      *  * **0**: disable
      */
-    BITWUZLA_OPTION_PP_EMBEDDED_CONSTR(22),
+    BITWUZLA_OPTION_PP_EMBEDDED_CONSTR(23),
 
     /**
      * **Preprocessing: AND flattening**
@@ -307,7 +321,7 @@ enum class BitwuzlaOption(val value: Int) {
      *  * **1**: enable (**default**)
      *  * **0**: disable
      */
-    BITWUZLA_OPTION_PP_FLATTEN_AND(23),
+    BITWUZLA_OPTION_PP_FLATTEN_AND(24),
 
     /**
      * **Preprocessing: Normalization**
@@ -316,7 +330,7 @@ enum class BitwuzlaOption(val value: Int) {
      *  * **1**: enable (**default**)
      *  * **0**: disable
      */
-    BITWUZLA_OPTION_PP_NORMALIZE(24),
+    BITWUZLA_OPTION_PP_NORMALIZE(25),
 
     /**
      * **Preprocessing: Normalization: Enable share awareness normalization**
@@ -328,7 +342,7 @@ enum class BitwuzlaOption(val value: Int) {
      *  * **1**: enable (**default**)
      *  * **0**: disable
      */
-    BITWUZLA_OPTION_PP_NORMALIZE_SHARE_AWARE(25),
+    BITWUZLA_OPTION_PP_NORMALIZE_SHARE_AWARE(26),
 
     /**
      * **Preprocessing: Boolean skeleton preprocessing**
@@ -337,7 +351,7 @@ enum class BitwuzlaOption(val value: Int) {
      *  * **1**: enable (**default**)
      *  * **0**: disable
      */
-    BITWUZLA_OPTION_PP_SKELETON_PREPROC(26),
+    BITWUZLA_OPTION_PP_SKELETON_PREPROC(27),
 
     /**
      * **Preprocessing: Variable substitution**
@@ -346,7 +360,7 @@ enum class BitwuzlaOption(val value: Int) {
      *  * **1**: enable (**default**)
      *  * **0**: disable
      */
-    BITWUZLA_OPTION_PP_VARIABLE_SUBST(27),
+    BITWUZLA_OPTION_PP_VARIABLE_SUBST(28),
 
     /**
      * **Preprocessing: Variable substitution: Equality Normalization**
@@ -355,7 +369,7 @@ enum class BitwuzlaOption(val value: Int) {
      *  * **1**: enable (**default**)
      *  * **0**: disable
      */
-    BITWUZLA_OPTION_PP_VARIABLE_SUBST_NORM_EQ(28),
+    BITWUZLA_OPTION_PP_VARIABLE_SUBST_NORM_EQ(29),
 
     /**
      * **Preprocessing: Variable substitution: Disequality Normalization**
@@ -364,7 +378,7 @@ enum class BitwuzlaOption(val value: Int) {
      *  * **1**: enable (**default**)
      *  * **0**: disable
      */
-    BITWUZLA_OPTION_PP_VARIABLE_SUBST_NORM_DISEQ(29),
+    BITWUZLA_OPTION_PP_VARIABLE_SUBST_NORM_DISEQ(30),
 
     /**
      * **Preprocessing: Variable substitution: Bit-Vector Inequality
@@ -374,7 +388,7 @@ enum class BitwuzlaOption(val value: Int) {
      *  * **1**: enable (**default**)
      *  * **0**: disable
      */
-    BITWUZLA_OPTION_PP_VARIABLE_SUBST_NORM_BV_INEQ(30),
+    BITWUZLA_OPTION_PP_VARIABLE_SUBST_NORM_BV_INEQ(31),
 
     /**
      * **Debug:
@@ -385,7 +399,7 @@ enum class BitwuzlaOption(val value: Int) {
      *
      * **warning:** This is an expert debug option.
      */
-    BITWUZLA_OPTION_DBG_RW_NODE_THRESH(31),
+    BITWUZLA_OPTION_DBG_RW_NODE_THRESH(32),
 
     /**
      * **Debug:
@@ -395,23 +409,23 @@ enum class BitwuzlaOption(val value: Int) {
      *
      * **warning:** This is an expert debug option.
      */
-    BITWUZLA_OPTION_DBG_PP_NODE_THRESH(32),
+    BITWUZLA_OPTION_DBG_PP_NODE_THRESH(33),
 
     /**
      * **Debug: Check models for each satisfiable query. **
      *
      * **warning:** This is an expert debug option.
      */
-    BITWUZLA_OPTION_DBG_CHECK_MODEL(33),
+    BITWUZLA_OPTION_DBG_CHECK_MODEL(34),
 
     /**
      * **Debug: Check unsat core for each unsatisfiable query. **
      *
      * **warning:** This is an expert debug option.
      */
-    BITWUZLA_OPTION_DBG_CHECK_UNSAT_CORE(34),
+    BITWUZLA_OPTION_DBG_CHECK_UNSAT_CORE(35),
 
-    BITWUZLA_OPTION_NUM_OPTS(35);
+    BITWUZLA_OPTION_NUM_OPTS(36);
 
     companion object {
         private val valueMapping = BitwuzlaOption.values().associateBy { it.value }

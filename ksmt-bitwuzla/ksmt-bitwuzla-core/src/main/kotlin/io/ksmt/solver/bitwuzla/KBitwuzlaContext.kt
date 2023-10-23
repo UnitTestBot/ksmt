@@ -32,16 +32,32 @@ import io.ksmt.sort.KSort
 import io.ksmt.sort.KSortVisitor
 import io.ksmt.sort.KUninterpretedSort
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.longs.LongSet
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
-import org.ksmt.solver.bitwuzla.bindings.Bitwuzla
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaOption
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.Native
 
-open class KBitwuzlaContext(val ctx: KContext, val bitwuzla: Bitwuzla) : AutoCloseable {
+open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
     private var isClosed = false
+
+    val bitwuzlaOptions = Native.bitwuzlaOptionsNew()
+
+    val bitwuzla by lazy { Native.bitwuzlaNew(bitwuzlaOptions).also { bitwuzlaInitialized = true } }
+    private var bitwuzlaInitialized = false
+
+    init {
+        Native.bitwuzlaSetOption(bitwuzlaOptions, BitwuzlaOption.BITWUZLA_OPTION_PRODUCE_MODELS, value = 1)
+        Native.bitwuzlaSetOption(bitwuzlaOptions, BitwuzlaOption.BITWUZLA_OPTION_PRODUCE_UNSAT_ASSUMPTIONS, value = 1)
+        Native.bitwuzlaSetOption(bitwuzlaOptions, BitwuzlaOption.BITWUZLA_OPTION_PRODUCE_UNSAT_CORES, value = 1)
+    }
+
+    val bv1Sort = Native.bitwuzlaMkBvSort(1)
+    val bv1OneTerm: BitwuzlaTerm = Native.bitwuzlaMkBvOne(bv1Sort)
+    val bv1ZeroTerm: BitwuzlaTerm = Native.bitwuzlaMkBvZero(bv1Sort)
 
     val trueTerm: BitwuzlaTerm = Native.bitwuzlaMkTrue()
     val falseTerm: BitwuzlaTerm = Native.bitwuzlaMkFalse()
@@ -58,8 +74,6 @@ open class KBitwuzlaContext(val ctx: KContext, val bitwuzla: Bitwuzla) : AutoClo
     private val sorts = mkTermCache<KSort>()
     private val declSorts = mkTermCache<KDecl<*>>()
     private val bitwuzlaSorts = mkTermReverseCache<KSort>()
-
-    private val bitwuzlaValues = mkTermReverseCache<KExpr<*>>()
 
     private val exprCacheLevel = Object2IntOpenHashMap<KExpr<*>>().apply {
         defaultReturnValue(Int.MAX_VALUE) // Level which is greater than any possible level
@@ -147,17 +161,6 @@ open class KBitwuzlaContext(val ctx: KContext, val bitwuzla: Bitwuzla) : AutoClo
         return internalizedDeclSort
     }
 
-    /**
-     * Internalize and reverse cache Bv value to support Bv values conversion.
-     *
-     * Since [Native.bitwuzlaGetBvValue] is only available after check-sat call
-     * we must reverse cache Bv values to be able to convert all previously internalized
-     * expressions.
-     * */
-    fun saveInternalizedValue(expr: KExpr<*>, term: BitwuzlaTerm) {
-        bitwuzlaValues.put(term, expr)
-    }
-
     fun findConvertedExpr(expr: BitwuzlaTerm): KExpr<*>? = bitwuzlaExpressions.get(expr)
 
     fun saveConvertedExpr(expr: BitwuzlaTerm, converted: KExpr<*>) {
@@ -182,8 +185,6 @@ open class KBitwuzlaContext(val ctx: KContext, val bitwuzla: Bitwuzla) : AutoClo
         saveConvertedSort(sort, convertedSort)
         return convertedSort
     }
-
-    fun convertValue(value: BitwuzlaTerm): KExpr<*>? = bitwuzlaValues.get(value)
 
     // Constant is known only if it was previously internalized
     fun convertConstantIfKnown(term: BitwuzlaTerm): KDecl<*>? = bitwuzlaConstants.get(term)
@@ -301,14 +302,12 @@ open class KBitwuzlaContext(val ctx: KContext, val bitwuzla: Bitwuzla) : AutoClo
         if (isClosed) return
         isClosed = true
 
-        Native.bitwuzlaTermDecRef(trueTerm)
-        Native.bitwuzlaTermDecRef(falseTerm)
-        Native.bitwuzlaSortDecRef(boolSort)
-
         sorts.clear()
+        bitwuzlaSorts.keys.bitwuzlaSortDecRefAll()
         bitwuzlaSorts.clear()
 
         exprGlobalCache.clear()
+        bitwuzlaExpressions.keys.bitwuzlaTermDecRefAll()
         bitwuzlaExpressions.clear()
         constantsGlobalCache.clear()
 
@@ -316,12 +315,24 @@ open class KBitwuzlaContext(val ctx: KContext, val bitwuzla: Bitwuzla) : AutoClo
         exprCurrentLevelCache.clear()
 
         declSorts.clear()
+        bitwuzlaConstants.keys.bitwuzlaTermDecRefAll()
         bitwuzlaConstants.clear()
+
+        bitwuzlaVars.keys.bitwuzlaTermDecRefAll()
+        bitwuzlaVars.clear()
+
+        Native.bitwuzlaDelete(bitwuzla)
+        Native.bitwuzlaOptionsDelete(bitwuzlaOptions)
     }
 
     fun ensureActive() {
         check(!isClosed) { "The context is already closed." }
     }
+
+    fun ensureBitwuzlaNotInitialized() = check(!bitwuzlaInitialized) { "Bitwuzla has already initialized." }
+
+    private fun LongSet.bitwuzlaTermDecRefAll() = forEach(Native::bitwuzlaTermDecRef)
+    private fun LongSet.bitwuzlaSortDecRefAll() = forEach(Native::bitwuzlaSortDecRef)
 
     private class UninterpretedSortRegisterer(
         private val register: MutableMap<KUninterpretedSort, HashSet<KDecl<*>>>
