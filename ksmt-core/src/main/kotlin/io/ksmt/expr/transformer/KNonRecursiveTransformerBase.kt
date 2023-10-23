@@ -41,7 +41,7 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
             while (exprStack.size > initialStackSize) {
                 val e = exprStack.removeLast()
 
-                val cachedExpr = transformedExpr(expr)
+                val cachedExpr = transformedExpr(e)
                 if (cachedExpr != null) {
                     continue
                 }
