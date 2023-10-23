@@ -73,13 +73,12 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
     private fun KExprSimplifier.stagedBooleanOperationStep(
         expr: SimplifierStagedBooleanOperationExpr
     ): KExpr<KBoolSort> {
-        markExpressionAsNotTransformed()
-
         val argument = expr.currentArgument()
         val simplifiedArgument = transformedExpr(argument)
 
         // Simplify argument and retry expr simplification
         if (simplifiedArgument == null) {
+            markExpressionAsNotTransformed()
             expr.transformAfter(argument)
             return expr
         }
@@ -94,6 +93,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
         expr.processNextArgument()
 
         // Repeat simplification with next argument
+        markExpressionAsNotTransformed()
         retryExprTransformation(expr)
 
         return expr
