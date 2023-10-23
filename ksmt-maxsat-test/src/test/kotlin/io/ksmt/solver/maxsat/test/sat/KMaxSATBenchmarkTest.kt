@@ -52,12 +52,17 @@ abstract class KMaxSATBenchmarkTest : KMaxSMTBenchmarkBasedTest {
 
         val maxSATResult = maxSATSolver.checkMaxSAT(20.seconds)
         val satConstraintsScore = maxSATResult.satSoftConstraints.sumOf { it.weight }
+        val expectedSatConstraintsScore =
+            sumOfSoftConstraintsWeights - maxSATTestNameToExpectedResult.find { it.first == name }!!.second
 
-        assertEquals(SAT, maxSATResult.hardConstraintsSATStatus)
-        assertTrue(maxSATResult.maxSATSucceeded && maxSATResult.satSoftConstraints.isNotEmpty())
+        assertEquals(SAT, maxSATResult.hardConstraintsSATStatus, "Hard constraints must be SAT")
+        assertTrue(maxSATResult.maxSATSucceeded, "MaxSAT was not successful [$name]")
+        assertTrue(maxSATResult.satSoftConstraints.isNotEmpty(), "Soft constraints size should not be 0")
         assertEquals(
-            sumOfSoftConstraintsWeights - maxSATTestNameToExpectedResult.find { it.first == name }!!.second,
+            expectedSatConstraintsScore,
             satConstraintsScore.toULong(),
+            "Soft constraints score was [$satConstraintsScore], " +
+                "but must be [$expectedSatConstraintsScore]",
         )
     }
 
