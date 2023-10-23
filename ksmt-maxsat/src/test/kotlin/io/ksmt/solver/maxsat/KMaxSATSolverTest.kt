@@ -8,6 +8,7 @@ import io.ksmt.solver.maxsat.solvers.KMaxSATSolver
 import io.ksmt.solver.z3.KZ3SolverConfiguration
 import io.ksmt.utils.getValue
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -33,6 +34,11 @@ abstract class KMaxSATSolverTest {
         maxSATSolver.assert(a)
         maxSATSolver.assert(b)
         maxSATSolver.assert(!a)
+
+        val maxSATResult = maxSATSolver.checkMaxSAT()
+        assertTrue(maxSATResult.hardConstraintsSATStatus == UNSAT)
+        assertTrue(maxSATResult.maxSATSucceeded)
+        assertTrue(maxSATResult.satSoftConstraints.isEmpty())
     }
 
     @Test
@@ -104,6 +110,58 @@ abstract class KMaxSATSolverTest {
         assertTrue(maxSATResult.maxSATSucceeded)
         assertTrue(maxSATResult.satSoftConstraints.size == 1)
         assertSoftConstraintsSat(listOf(SoftConstraint(!a or !b, 3u)), maxSATResult.satSoftConstraints)
+    }
+
+    @Test
+    fun twoOfFourSoftConstraintsSatTest() = with(ctx) {
+        val a by boolSort
+        val b by boolSort
+        val c by boolSort
+        val d by boolSort
+
+        maxSATSolver.assert(a or b)
+        maxSATSolver.assert(c or d)
+        maxSATSolver.assert(!a or b)
+        maxSATSolver.assert(!c or d)
+
+        maxSATSolver.assertSoft(a or !b, 2u)
+        maxSATSolver.assertSoft(c or !d, 2u)
+        maxSATSolver.assertSoft(!a or !b, 3u)
+        maxSATSolver.assertSoft(!c or !d, 3u)
+
+        val maxSATResult = maxSATSolver.checkMaxSAT()
+
+        assertTrue(maxSATResult.hardConstraintsSATStatus == SAT)
+        assertTrue(maxSATResult.maxSATSucceeded)
+        assertTrue(maxSATResult.satSoftConstraints.size == 2)
+        assertSoftConstraintsSat(
+            listOf(SoftConstraint(!a or !b, 3u), SoftConstraint(!c or !d, 3u)),
+            maxSATResult.satSoftConstraints,
+        )
+    }
+
+    @Test
+    fun sixOfEightSoftConstraintsSatTest() = with(ctx) {
+        val a by boolSort
+        val b by boolSort
+        val c by boolSort
+        val d by boolSort
+
+        maxSATSolver.assertSoft(a or b, 9u)
+        maxSATSolver.assertSoft(c or d, 9u)
+        maxSATSolver.assertSoft(!a or b, 9u)
+        maxSATSolver.assertSoft(!c or d, 9u)
+        maxSATSolver.assertSoft(a or !b, 2u)
+        maxSATSolver.assertSoft(c or !d, 2u)
+        maxSATSolver.assertSoft(!a or !b, 3u)
+        maxSATSolver.assertSoft(!c or !d, 3u)
+
+        val maxSATResult = maxSATSolver.checkMaxSAT()
+
+        assertTrue(maxSATResult.hardConstraintsSATStatus == SAT)
+        assertTrue(maxSATResult.maxSATSucceeded)
+        assertTrue(maxSATResult.satSoftConstraints.size == 6)
+        assertEquals(42u, maxSATResult.satSoftConstraints.sumOf { it.weight })
     }
 
     @Test
