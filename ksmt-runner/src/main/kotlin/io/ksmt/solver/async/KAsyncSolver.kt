@@ -18,7 +18,7 @@ interface KAsyncSolver<Config : KSolverConfiguration> : KSolver<Config> {
 
     suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>)
 
-    suspend fun assertAndTrackAsync(exprs: List<KExpr<KBoolSort>>) = exprs.forEach { assertAndTrack(it) }
+    suspend fun assertAndTrackAsync(exprs: List<KExpr<KBoolSort>>) = exprs.forEach { assertAndTrackAsync(it) }
 
     suspend fun pushAsync()
 

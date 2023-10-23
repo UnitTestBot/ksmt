@@ -128,17 +128,19 @@ class KSolverRunner<Config : KSolverConfiguration>(
         }
     }
 
-    override suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>) = assertAndTrack(expr) { e ->
-        ensureInitializedAndExecuteAsync(onException = {}) {
-            assertAndTrackAsync(e)
+    override suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>) =
+        assertAndTrack(expr) { e ->
+            ensureInitializedAndExecuteAsync(onException = {}) {
+                assertAndTrackAsync(e)
+            }
         }
-    }
 
-    override fun assertAndTrack(expr: KExpr<KBoolSort>) = assertAndTrack(expr) { e ->
-        ensureInitializedAndExecuteSync(onException = {}) {
-            assertAndTrackSync(e)
+    override fun assertAndTrack(expr: KExpr<KBoolSort>) =
+        assertAndTrack(expr) { e ->
+            ensureInitializedAndExecuteSync(onException = {}) {
+                assertAndTrackSync(e)
+            }
         }
-    }
 
     private inline fun assertAndTrack(
         expr: KExpr<KBoolSort>,
@@ -153,17 +155,19 @@ class KSolverRunner<Config : KSolverConfiguration>(
         }
     }
 
-    override suspend fun assertAndTrackAsync(exprs: List<KExpr<KBoolSort>>) = bulkAssertAndTrack(exprs) { e ->
-        ensureInitializedAndExecuteAsync(onException = {}) {
-            bulkAssertAndTrackAsync(e)
+    override suspend fun assertAndTrackAsync(exprs: List<KExpr<KBoolSort>>) =
+        bulkAssertAndTrack(exprs) { e ->
+            ensureInitializedAndExecuteAsync(onException = {}) {
+                bulkAssertAndTrackAsync(e)
+            }
         }
-    }
 
-    override fun assertAndTrack(exprs: List<KExpr<KBoolSort>>) = bulkAssertAndTrack(exprs) { e ->
-        ensureInitializedAndExecuteSync(onException = {}) {
-            bulkAssertAndTrackSync(e)
+    override fun assertAndTrack(exprs: List<KExpr<KBoolSort>>) =
+        bulkAssertAndTrack(exprs) { e ->
+            ensureInitializedAndExecuteSync(onException = {}) {
+                bulkAssertAndTrackSync(e)
+            }
         }
-    }
 
     private inline fun bulkAssertAndTrack(
         exprs: List<KExpr<KBoolSort>>,
