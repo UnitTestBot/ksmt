@@ -39,21 +39,24 @@ dependencies {
 
 cvc5Binaries.entries.forEach { (sourceSet, nativeConfig) ->
     val name = sourceSet.name
+    val artifactName = "ksmt-cvc5-native-$name"
     val systemArch = name.replace('-', '/')
 
     val jarTask = tasks.register<Jar>("$name-jar") {
+        archiveBaseName.set(artifactName)
         from(sourceSet.output)
         copyArtifactsIntoJar(nativeConfig, this, "lib/$systemArch/cvc5")
     }
 
     val sourcesJarTask = tasks.register<Jar>("$name-sources-jar") {
+        archiveBaseName.set(artifactName)
         archiveClassifier.set("sources")
         from(sourceSet.allSource)
     }
 
     publishing.publications {
         register<MavenPublication>("maven-$name") {
-            artifactId = "ksmt-cvc5-native-$name"
+            artifactId = artifactName
 
             artifact(jarTask.get())
             artifact(sourcesJarTask.get())
