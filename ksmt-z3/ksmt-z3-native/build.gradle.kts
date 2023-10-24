@@ -37,9 +37,11 @@ dependencies {
 
 z3Binaries.forEach { (sourceSet, z3BinaryTask, nativeConfig) ->
     val name = sourceSet.name
+    val artifactName = "ksmt-z3-native-$name"
     val systemArch = name.replace('-', '/')
 
     val jarTask = tasks.register<Jar>("$name-jar") {
+        archiveBaseName.set(artifactName)
         from(sourceSet.output)
 
         z3BinaryTask?.let {
@@ -53,13 +55,14 @@ z3Binaries.forEach { (sourceSet, z3BinaryTask, nativeConfig) ->
     }
 
     val sourcesJarTask = tasks.register<Jar>("$name-sources-jar") {
+        archiveBaseName.set(artifactName)
         archiveClassifier.set("sources")
         from(sourceSet.allSource)
     }
 
     publishing.publications {
         register<MavenPublication>("maven-$name") {
-            artifactId = "ksmt-z3-native-$name"
+            artifactId = artifactName
 
             artifact(jarTask.get())
             artifact(sourcesJarTask.get())
