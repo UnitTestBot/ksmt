@@ -20,7 +20,10 @@ Jni bindings `bitwuzla_jni` are built without any tricks.
 
 ### Building on windows
 To produce Windows builds we use MSYS2 (MinGW) environment prepared as described [here](https://github.com/aytey/bitwuzla/blob/refreshed_windows_instructions/docs/building_on_windows.rst).
+
 Also, it is important to link statically with `libwinpthread`, `libgcc`, `libstdc++`.
+
+Besides, it is important to apply [patch](./../bindings-native/win_bv_gmp_long_patch.patch)
 
 ### Expected dynamic dependencies
 To ensure that our distribution is portable, we verify that the produced binaries have no dependencies that might not be present on the user's machine. 

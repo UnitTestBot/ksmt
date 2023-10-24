@@ -30,6 +30,15 @@ git checkout b655bc0cde570258367bf8f09a113bc7b95e46e9
 
 git apply ../bitwuzla_patch.patch
 
+
+# If you build bitwuzla for Windows, apply win_bv_gmp_long_patch.patch
+# until [bitwuzla issue#85](https://github.com/bitwuzla/bitwuzla/issues/85) fixed.
+# Patch description:
+# 1. Replaced GMP functions that accept/return data of `long` type, which is actually 32-bits (LLP64 data model)
+# because bitwuzla expects 64-bits data there.
+#git apply ../win_bv_gmp_long_patch.patch
+
+
 # build bitwuzla
 
 # uncomment if you want to build with python as venv (meson and ninja are needed)
