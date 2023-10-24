@@ -154,6 +154,29 @@ class SolverRunnerTest {
     }
 
     @Test
+    fun testBulkAssert(): Unit = with(context) {
+        val a = boolSort.mkConst("a")
+        val b = boolSort.mkConst("b")
+        val c = boolSort.mkConst("c")
+
+        val e1 = (a and b) or c
+        val e2 = !(a and b)
+        val e3 = !c
+
+        solver.push()
+        solver.assert(listOf(e1, e2, e3))
+        assertEquals(KSolverStatus.UNSAT, solver.check())
+        solver.pop()
+
+        solver.push()
+        solver.assertAndTrack(listOf(e1, e2, e3))
+        assertEquals(KSolverStatus.UNSAT, solver.check())
+
+        val core = solver.unsatCore()
+        assertTrue(core.isNotEmpty())
+    }
+
+    @Test
     fun testSolverInstanceCreation(): Unit = with(context){
         SolverType.Z3.createInstance(this)
         SolverType.Bitwuzla.createInstance(this)

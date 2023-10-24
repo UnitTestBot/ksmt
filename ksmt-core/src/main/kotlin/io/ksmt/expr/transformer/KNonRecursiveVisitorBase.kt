@@ -22,7 +22,7 @@ import java.util.IdentityHashMap
  * a [visitExprAfterVisited] method.
  * */
 abstract class KNonRecursiveVisitorBase<V : Any> : KVisitor<KExprVisitResult<V>> {
-    private val visitResults = IdentityHashMap<KExpr<*>, V>()
+    private var visitResults = IdentityHashMap<KExpr<*>, V>()
     private val exprStack = ArrayList<KExpr<*>>()
 
     private var lastVisitedExpr: KExpr<*>? = null
@@ -98,6 +98,14 @@ abstract class KNonRecursiveVisitorBase<V : Any> : KVisitor<KExprVisitResult<V>>
         }
 
         return expr
+    }
+
+    /**
+     * Reset visitor expression cache.
+     * */
+    fun resetCache() {
+        check(exprStack.isEmpty()) { "Can not reset cache during expression visit" }
+        visitResults = IdentityHashMap()
     }
 
     /**

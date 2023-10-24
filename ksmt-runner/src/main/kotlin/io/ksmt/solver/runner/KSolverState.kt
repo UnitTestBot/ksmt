@@ -18,21 +18,22 @@ import java.util.concurrent.ConcurrentLinkedQueue
  * We don't consider last check-sat result as a solver state.
  * */
 class KSolverState {
-    private sealed interface AssertFrame
-    private data class ExprAssertFrame(val expr: KExpr<KBoolSort>) : AssertFrame
-    private data class AssertAndTrackFrame(val expr: KExpr<KBoolSort>) : AssertFrame
+    private class AssertionFrame(
+        val asserted: ConcurrentLinkedQueue<KExpr<KBoolSort>> = ConcurrentLinkedQueue(),
+        val tracked: ConcurrentLinkedQueue<KExpr<KBoolSort>> = ConcurrentLinkedQueue(),
+    )
 
     private val configuration = ConcurrentLinkedQueue<SolverConfigurationParam>()
 
     /**
      * Asserted expressions.
-     * Each nested queue contains expressions of the
+     * Each nested assertion frame contains expressions of the
      * corresponding assertion level.
      * */
-    private val assertFrames = ConcurrentLinkedDeque<ConcurrentLinkedQueue<AssertFrame>>()
+    private val assertFrames = ConcurrentLinkedDeque<AssertionFrame>()
 
     init {
-        assertFrames.addLast(ConcurrentLinkedQueue())
+        assertFrames.addLast(AssertionFrame())
     }
 
     fun configure(config: List<SolverConfigurationParam>) {
@@ -40,15 +41,15 @@ class KSolverState {
     }
 
     fun assert(expr: KExpr<KBoolSort>) {
-        assertFrames.last.add(ExprAssertFrame(expr))
+        assertFrames.last.asserted.add(expr)
     }
 
     fun assertAndTrack(expr: KExpr<KBoolSort>) {
-        assertFrames.last.add(AssertAndTrackFrame(expr))
+        assertFrames.last.tracked.add(expr)
     }
 
     fun push() {
-        assertFrames.addLast(ConcurrentLinkedQueue())
+        assertFrames.addLast(AssertionFrame())
     }
 
     fun pop(n: UInt) {
@@ -60,15 +61,15 @@ class KSolverState {
     suspend fun applyAsync(executor: KSolverRunnerExecutor) = replayState(
         configureSolver = { executor.configureAsync(it) },
         pushScope = { executor.pushAsync() },
-        assertExpr = { executor.assertAsync(it) },
-        assertExprAndTrack = { expr -> executor.assertAndTrackAsync(expr) }
+        assertExprs = { executor.bulkAssertAsync(it) },
+        assertExprsAndTrack = { expr -> executor.bulkAssertAndTrackAsync(expr) }
     )
 
     fun applySync(executor: KSolverRunnerExecutor) = replayState(
         configureSolver = { executor.configureSync(it) },
         pushScope = { executor.pushSync() },
-        assertExpr = { executor.assertSync(it) },
-        assertExprAndTrack = { expr -> executor.assertAndTrackSync(expr) }
+        assertExprs = { executor.bulkAssertSync(it) },
+        assertExprsAndTrack = { expr -> executor.bulkAssertAndTrackSync(expr) }
     )
 
     /**
@@ -78,8 +79,8 @@ class KSolverState {
     private inline fun replayState(
         configureSolver: (List<SolverConfigurationParam>) -> Unit,
         pushScope: () -> Unit,
-        assertExpr: (KExpr<KBoolSort>) -> Unit,
-        assertExprAndTrack: (KExpr<KBoolSort>) -> Unit
+        assertExprs: (List<KExpr<KBoolSort>>) -> Unit,
+        assertExprsAndTrack: (List<KExpr<KBoolSort>>) -> Unit
     ) {
         if (configuration.isNotEmpty()) {
             configureSolver(configuration.toList())
@@ -93,12 +94,8 @@ class KSolverState {
             }
             firstFrame = false
 
-            for (assertion in frame) {
-                when (assertion) {
-                    is ExprAssertFrame -> assertExpr(assertion.expr)
-                    is AssertAndTrackFrame -> assertExprAndTrack(assertion.expr)
-                }
-            }
+            assertExprs(frame.asserted.toList())
+            assertExprsAndTrack(frame.tracked.toList())
         }
     }
 }

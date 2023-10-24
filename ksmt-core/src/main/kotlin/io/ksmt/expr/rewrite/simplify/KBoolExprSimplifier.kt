@@ -78,6 +78,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
 
         // Simplify argument and retry expr simplification
         if (simplifiedArgument == null) {
+            markExpressionAsNotTransformed()
             expr.transformAfter(argument)
             return expr
         }
@@ -92,6 +93,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
         expr.processNextArgument()
 
         // Repeat simplification with next argument
+        markExpressionAsNotTransformed()
         retryExprTransformation(expr)
 
         return expr

@@ -20,6 +20,15 @@ interface KSolver<Config: KSolverConfiguration> : AutoCloseable {
     @JvmName("assertExpr")
     fun assert(expr: KExpr<KBoolSort>)
 
+
+    /**
+     * Assert multiple expressions into solver.
+     *
+     * @see check
+     * */
+    @JvmName("assertExprs")
+    fun assert(exprs: List<KExpr<KBoolSort>>) = exprs.forEach { assert(it) }
+
     /**
      * Assert an expression into solver and track it in unsat cores.
      *
@@ -27,6 +36,14 @@ interface KSolver<Config: KSolverConfiguration> : AutoCloseable {
      * @see unsatCore
      * */
     fun assertAndTrack(expr: KExpr<KBoolSort>)
+
+    /**
+     * Assert multiple expressions into solver and track them in unsat cores.
+     *
+     * @see checkWithAssumptions
+     * @see unsatCore
+     * */
+    fun assertAndTrack(exprs: List<KExpr<KBoolSort>>) = exprs.forEach { assertAndTrack(it) }
 
     /**
      * Create a backtracking point for assertion stack.
