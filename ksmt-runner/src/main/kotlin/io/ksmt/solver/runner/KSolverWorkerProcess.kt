@@ -85,9 +85,17 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
             @Suppress("UNCHECKED_CAST")
             solver.assert(params.expression as KExpr<KBoolSort>)
         }
+        bulkAssert.measureExecutionForTermination { params ->
+            @Suppress("UNCHECKED_CAST")
+            solver.assert(params.expressions as List<KExpr<KBoolSort>>)
+        }
         assertAndTrack.measureExecutionForTermination { params ->
             @Suppress("UNCHECKED_CAST")
             solver.assertAndTrack(params.expression as KExpr<KBoolSort>)
+        }
+        bulkAssertAndTrack.measureExecutionForTermination { params ->
+            @Suppress("UNCHECKED_CAST")
+            solver.assertAndTrack(params.expressions as List<KExpr<KBoolSort>>)
         }
         push.measureExecutionForTermination {
             solver.push()

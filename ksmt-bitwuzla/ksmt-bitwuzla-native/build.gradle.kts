@@ -39,21 +39,24 @@ dependencies {
 
 bitwuzlaBinaries.entries.forEach { (sourceSet, nativeConfig) ->
     val name = sourceSet.name
+    val artifactName = "ksmt-bitwuzla-native-$name"
     val systemArch = name.replace('-', '/')
 
     val jarTask = tasks.register<Jar>("$name-jar") {
+        archiveBaseName.set(artifactName)
         from(sourceSet.output)
         copyArtifactsIntoJar(nativeConfig, this, "lib/$systemArch/bitwuzla")
     }
 
     val sourcesJarTask = tasks.register<Jar>("$name-sources-jar") {
+        archiveBaseName.set(artifactName)
         archiveClassifier.set("sources")
         from(sourceSet.allSource)
     }
 
     publishing.publications {
         register<MavenPublication>("maven-$name") {
-            artifactId = "ksmt-bitwuzla-native-$name"
+            artifactId = artifactName
 
             artifact(jarTask.get())
             artifact(sourcesJarTask.get())

@@ -48,6 +48,10 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
         field("expression", kastType)
     }
 
+    private val bulkAssertParams = structdef {
+        field("expressions", immutableList(kastType))
+    }
+
     private val popParams = structdef {
         field("levels", PredefinedType.uint)
     }
@@ -114,9 +118,17 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
             async
             documentation = "Assert expression"
         }
+        call("bulkAssert", bulkAssertParams, PredefinedType.void).apply {
+            async
+            documentation = "Assert multiple expressions"
+        }
         call("assertAndTrack", assertParams, PredefinedType.void).apply {
             async
             documentation = "Assert and track expression"
+        }
+        call("bulkAssertAndTrack", bulkAssertParams, PredefinedType.void).apply {
+            async
+            documentation = "Assert and track multiple expressions"
         }
         call("push", PredefinedType.void, PredefinedType.void).apply {
             async

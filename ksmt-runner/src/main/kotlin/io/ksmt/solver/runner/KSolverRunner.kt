@@ -101,17 +101,46 @@ class KSolverRunner<Config : KSolverConfiguration>(
         }
     }
 
-    override suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>) = assertAndTrack(expr) { e ->
-        ensureInitializedAndExecuteAsync(onException = {}) {
-            assertAndTrackAsync(e)
+    override suspend fun assertAsync(exprs: List<KExpr<KBoolSort>>) =
+        bulkAssert(exprs) { e ->
+            ensureInitializedAndExecuteAsync(onException = {}) {
+                bulkAssertAsync(e)
+            }
+        }
+
+    override fun assert(exprs: List<KExpr<KBoolSort>>) =
+        bulkAssert(exprs) { e ->
+            ensureInitializedAndExecuteSync(onException = {}) {
+                bulkAssertSync(e)
+            }
+        }
+
+    private inline fun bulkAssert(
+        exprs: List<KExpr<KBoolSort>>,
+        execute: (List<KExpr<KBoolSort>>) -> Unit
+    ) {
+        ctx.ensureContextMatch(exprs)
+
+        try {
+            execute(exprs)
+        } finally {
+            exprs.forEach { solverState.assert(it) }
         }
     }
 
-    override fun assertAndTrack(expr: KExpr<KBoolSort>) = assertAndTrack(expr) { e ->
-        ensureInitializedAndExecuteSync(onException = {}) {
-            assertAndTrackSync(e)
+    override suspend fun assertAndTrackAsync(expr: KExpr<KBoolSort>) =
+        assertAndTrack(expr) { e ->
+            ensureInitializedAndExecuteAsync(onException = {}) {
+                assertAndTrackAsync(e)
+            }
         }
-    }
+
+    override fun assertAndTrack(expr: KExpr<KBoolSort>) =
+        assertAndTrack(expr) { e ->
+            ensureInitializedAndExecuteSync(onException = {}) {
+                assertAndTrackSync(e)
+            }
+        }
 
     private inline fun assertAndTrack(
         expr: KExpr<KBoolSort>,
@@ -123,6 +152,33 @@ class KSolverRunner<Config : KSolverConfiguration>(
             execute(expr)
         } finally {
             solverState.assertAndTrack(expr)
+        }
+    }
+
+    override suspend fun assertAndTrackAsync(exprs: List<KExpr<KBoolSort>>) =
+        bulkAssertAndTrack(exprs) { e ->
+            ensureInitializedAndExecuteAsync(onException = {}) {
+                bulkAssertAndTrackAsync(e)
+            }
+        }
+
+    override fun assertAndTrack(exprs: List<KExpr<KBoolSort>>) =
+        bulkAssertAndTrack(exprs) { e ->
+            ensureInitializedAndExecuteSync(onException = {}) {
+                bulkAssertAndTrackSync(e)
+            }
+        }
+
+    private inline fun bulkAssertAndTrack(
+        exprs: List<KExpr<KBoolSort>>,
+        execute: (List<KExpr<KBoolSort>>) -> Unit
+    ) {
+        ctx.ensureContextMatch(exprs)
+
+        try {
+            execute(exprs)
+        } finally {
+            exprs.forEach { solverState.assertAndTrack(it) }
         }
     }
 
