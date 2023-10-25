@@ -1,5 +1,5 @@
-import gradle.kotlin.dsl.accessors._87b80c14bf1c4d505c7a71d7741e0994.publishing
-import gradle.kotlin.dsl.accessors._87b80c14bf1c4d505c7a71d7741e0994.signing
+import gradle.kotlin.dsl.accessors._0942c15ed799f01c8e4bd02858158e54.publishing
+import gradle.kotlin.dsl.accessors._0942c15ed799f01c8e4bd02858158e54.signing
 import groovy.util.Node
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
