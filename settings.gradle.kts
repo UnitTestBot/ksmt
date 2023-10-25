@@ -22,8 +22,8 @@ include("ksmt-runner:solver-generator")
 
 include("ksmt-test")
 include("ksmt-symfpu")
-include("ksmt-maxsat")
-include("ksmt-maxsat-test")
+include("ksmt-maxsmt")
+include("ksmt-maxsmt-test")
 
 pluginManagement {
     resolutionStrategy {

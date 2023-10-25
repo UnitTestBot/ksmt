@@ -11,7 +11,7 @@ build
 ksmt-test/testData
 
 # ignore maxsat test data
-ksmt-maxsat-test/testData
+ksmt-maxsmt-test/testData
 
 # ignore maxsmt test data]
-ksmt-maxsat-test/src/test/resources/maxSmtBenchmark
+ksmt-maxsmt-test/src/test/resources/maxSmtBenchmark
