@@ -107,7 +107,7 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             maxSmtTestInfo.satSoftConstraintsWeightsSum,
             satSoftConstraintsWeightsSum.toULong(),
             "Soft constraints weights sum was [$satSoftConstraintsWeightsSum], " +
-                "but must be [${maxSmtTestInfo.softConstraintsWeightsSum}]",
+                "but must be [${maxSmtTestInfo.satSoftConstraintsWeightsSum}]",
         )
     }
 
