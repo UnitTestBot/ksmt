@@ -78,7 +78,7 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: |
-            :ksmt-maxsat-test:maxSmtBenchmark-${{ matrix.logics.NAME }}
+            :ksmt-maxsmt-test:maxSmtBenchmark-${{ matrix.logics.NAME }}
             --no-daemon
             -PmaxSmtTestDataRevision=${{ env.TEST_DATA_REVISION }}
 
@@ -86,13 +86,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: |
-            :ksmt-maxsat-test:test
+            :ksmt-maxsmt-test:test
             --no-daemon
-            --tests "io.ksmt.solver.maxsat.test.smt.KPMResSMTBenchmarkTest.maxSMTTest"
+            --tests "io.ksmt.solver.maxsmt.test.smt.KPMResSMTBenchmarkTest.maxSMTTest"
 
       - name: Archive ${{ matrix.logics.NAME }} test report
         if: ${{ always() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.logics.NAME }}_test_report
-          path: ksmt-maxsat-test/build/reports/tests/test/*
+          path: ksmt-maxsmt-test/build/reports/tests/test/*
