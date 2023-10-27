@@ -11,7 +11,6 @@ import io.ksmt.utils.*
 import io.ksmt.utils.BvUtils.bvMaxValueUnsigned
 import io.ksmt.utils.BvUtils.bvZero
 import io.ksmt.utils.BvUtils.bvOne
-import io.ksmt.utils.BvUtils.isBvZero
 
 object BvConstants {
     var bvSize = 0u
@@ -72,7 +71,7 @@ fun prepareQuantifier(ctx: KContext, assertion: KQuantifier):
         return quantifierAssertion to isUniversal
     }
 
-// p.5, 1st and 2nd steps
+// p.5, 1st and 2nd steps: https://www.researchgate.net/publication/228686393_On_the_expansion_N_2x_of_Presburger_arithmetic
 fun qePreprocess(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>) :
         Pair<KExpr<KBoolSort>, List<KDecl<*>>?> {
     val collector = KExprCollector
