@@ -27,7 +27,7 @@ import java.util.IdentityHashMap
  * a [transformExprAfterTransformed] method.
  * */
 abstract class KNonRecursiveTransformerBase: KTransformer {
-    private val transformed = IdentityHashMap<KExpr<*>, KExpr<*>>()
+    private var transformed = IdentityHashMap<KExpr<*>, KExpr<*>>()
     private val exprStack = ArrayList<KExpr<*>>()
     private var exprWasTransformed = false
 
@@ -41,7 +41,7 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
             while (exprStack.size > initialStackSize) {
                 val e = exprStack.removeLast()
 
-                val cachedExpr = transformedExpr(expr)
+                val cachedExpr = transformedExpr(e)
                 if (cachedExpr != null) {
                     continue
                 }
@@ -61,6 +61,14 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
         }
 
         return transformedExpr(expr) ?: error("expr was not properly transformed: $expr")
+    }
+
+    /**
+     * Reset transformer expression cache.
+     * */
+    fun resetCache() {
+        check(exprStack.isEmpty()) { "Can not reset cache during expression transformation" }
+        transformed = IdentityHashMap()
     }
 
     /**
