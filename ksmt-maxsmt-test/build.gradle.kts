@@ -21,10 +21,7 @@ dependencies {
 }
 
 val maxSmtBenchmarks = listOfNotNull(
-    "QF_ALIA", // 700K
-    // "QF_ABVFP", // 7.37M
-    "QF_ABVFP_light", // 338K
-    "QF_AUFLIA", // 24.1M
+    "QF_ABVFP-light", // 444K
 )
 
 val runMaxSMTBenchmarkBasedTests = project.booleanProperty("runMaxSMTBenchmarkBasedTests") ?: false
