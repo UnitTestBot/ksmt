@@ -1,15 +1,7 @@
 {
   "logics": [
     {
-      "NAME": "QF_ALIA",
-      "TEST_DATA_REVISION": "0.0.0"
-    },
-    {
-      "NAME": "QF_ABVFP_light",
-      "TEST_DATA_REVISION": "0.0.0"
-    },
-    {
-      "NAME": "QF_AUFLIA",
+      "NAME": "QF_ABVFP-light",
       "TEST_DATA_REVISION": "0.0.0"
     }
   ]
