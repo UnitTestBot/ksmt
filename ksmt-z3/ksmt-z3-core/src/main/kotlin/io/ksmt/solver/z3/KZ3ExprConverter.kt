@@ -410,9 +410,7 @@ open class KZ3ExprConverter(
                 throw KSolverUnsupportedFeatureException("Fp $declKind is not supported")
             }
 
-           Z3_decl_kind.Z3_OP_INTERNAL -> {
-                throw KSolverUnsupportedFeatureException("Z3 internal decl $declKind is not supported")
-            }
+            Z3_decl_kind.Z3_OP_INTERNAL -> tryConvertInternalAppExpr(expr, decl)
 
             Z3_decl_kind.Z3_OP_RECURSIVE -> {
                 throw KSolverUnsupportedFeatureException("Recursive decl $declKind is not supported")
@@ -584,6 +582,14 @@ open class KZ3ExprConverter(
             TODO("unexpected fpa num")
         }
         else -> convertApp(expr)
+    }
+
+    private fun tryConvertInternalAppExpr(expr: Long, decl: Long): ExprConversionResult = with(ctx) {
+        val internalDeclName = convertNativeSymbol(Native.getDeclName(nCtx, decl))
+        when (internalDeclName) {
+            "fp.to_ieee_bv" -> expr.convert(::mkFpToIEEEBvExpr)
+            else -> throw KSolverUnsupportedFeatureException("Z3 internal decl $internalDeclName is not supported")
+        }
     }
 
     @Suppress("MemberVisibilityCanBePrivate")
