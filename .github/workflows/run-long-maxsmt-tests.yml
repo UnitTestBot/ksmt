@@ -3,6 +3,12 @@ name: Build and run long MaxSMT tests
 on:
   workflow_dispatch:
     inputs:
+      solver:
+        type: choice
+        description: What solver configuration to choose
+        options: 
+        - KPMRes
+        - KPrimalDualMaxRes
       commitSHA:
         description: Commit SHA
         required: false
@@ -88,7 +94,7 @@ jobs:
           arguments: |
             :ksmt-maxsmt-test:test
             --no-daemon
-            --tests "io.ksmt.solver.maxsmt.test.smt.KPMResSMTBenchmarkTest.maxSMTTest"
+            --tests "io.ksmt.solver.maxsmt.test.smt.${{ github.event.inputs.solver }}SMTBenchmarkTest.maxSMTTest"
 
       - name: Archive ${{ matrix.logics.NAME }} test report
         if: ${{ always() }}
