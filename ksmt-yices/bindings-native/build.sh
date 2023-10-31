@@ -14,10 +14,18 @@ echo "C++ compiler $CXX"
 CPPFLAGS="-I $JAVA_HOME/include -I $JAVA_HOME/include/$OS -I $YICES_DIST/include"
 CXXFLAGS="-fpermissive -g -fPIC -O3 -m64"
 
+# Mac OS specific
+# CPPFLAGS="-I $JAVA_HOME/include -I $JAVA_HOME/include/$OS -I $YICES_DIST/include -I $HOMEBREW_PREFIX/include"
+# CXXFLAGS="-fpermissive -g -fPIC -O3 -stdlib=libc++"
+
 # note: libgcc is gcc specific option. Remove if not compiling with gcc
 LD_STATIC_FLAGS="-static-libstdc++ -static-libgcc"
 LIBS="-l:libyices.$LIB_EXTENSION.$YICES_VERSION -l:libgmp.a"
 LD_FLAGS="-L $YICES_DIST/lib"
+
+# Mac OS specific
+# LIBS="/opt/homebrew/lib/libgmp.a -lyices.2"
+# LD_FLAGS="-L $YICES_DIST/lib -L $HOMEBREW_PREFIX/lib"
 
 YICES_2_JAVA_LIB_NAME="libyices2java.$LIB_EXTENSION"
 
@@ -53,5 +61,9 @@ $JAVAC -h . ../src/main/java/com/sri/yices/*.java
 $CXX $LD_STATIC_FLAGS $CPPFLAGS $CXXFLAGS -c yicesJNI.cpp
 
 $CXX $LD_STATIC_FLAGS $LD_FLAGS -s -shared -o $YICES_2_JAVA_LIB_NAME yicesJNI.o $LIBS
+
+# Mac os specific
+# install_name_tool -change /usr/local/lib/libyices.2.dylib @rpath/libyices.2.dylib libyices2java.dylib
+
 
 cp $YICES_2_JAVA_LIB_NAME ../../
