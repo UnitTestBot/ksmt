@@ -14,6 +14,6 @@ class KYicesNativeLibraryLoaderMacArm :
     }
 
     companion object {
-        private val libraries = listOf("libyices", "libyices2java")
+        private val libraries = listOf("libyices.2", "libyices2java")
     }
 }
