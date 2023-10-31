@@ -43,6 +43,7 @@ import io.ksmt.sort.KUninterpretedSort
 import io.ksmt.utils.asExpr
 import io.ksmt.utils.uncheckedCast
 
+@Suppress("LargeClass")
 open class KZ3ExprConverter(
     private val ctx: KContext,
     private val z3Ctx: KZ3Context,
