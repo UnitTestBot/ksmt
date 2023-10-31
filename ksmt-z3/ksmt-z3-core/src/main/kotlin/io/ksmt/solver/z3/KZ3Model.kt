@@ -82,9 +82,13 @@ open class KZ3Model(
         ensureContextActive()
 
         val z3Expr = with(internalizer) { expr.internalizeExpr() }
-        val z3Result = model.evalNative(z3Expr, isComplete)
+        val z3Result = z3Ctx.temporaryAst(model.evalNative(z3Expr, isComplete))
 
-        return with(converter) { z3Result.convertExpr() }
+        val result: KExpr<T> = with(converter) { z3Result.convertExpr() }
+
+        z3Ctx.releaseTemporaryAst(z3Result)
+
+        return result
     }
 
     override fun <T : KSort> interpretation(decl: KDecl<T>): KFuncInterp<T>? =
