@@ -9,11 +9,11 @@ repositories {
 
 dependencies {
     // core
-    implementation("io.ksmt:ksmt-core:0.5.12")
+    implementation("io.ksmt:ksmt-core:0.5.13")
     // z3 solver
-    implementation("io.ksmt:ksmt-z3:0.5.12")
+    implementation("io.ksmt:ksmt-z3:0.5.13")
     // Runner and portfolio solver
-    implementation("io.ksmt:ksmt-runner:0.5.12")
+    implementation("io.ksmt:ksmt-runner:0.5.13")
 }
 
 java {
