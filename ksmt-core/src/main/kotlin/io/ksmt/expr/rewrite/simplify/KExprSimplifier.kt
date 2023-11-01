@@ -343,6 +343,10 @@ open class KExprSimplifier(override val ctx: KContext) :
         val result = transformedExpr(rewriteFrame.rewritten)
             ?: error("Nested rewrite failed")
 
+        if (rewriteFrame.rewritten is KSimplifierAuxExpr) {
+            eraseTransformationResult(rewriteFrame.rewritten)
+        }
+
         return result.uncheckedCast()
     }
 

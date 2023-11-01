@@ -953,7 +953,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
         val original: KExpr<A>,
         val base: KExpr<A>,
         val values: List<KExpr<R>>
-    ) : KExpr<A>(ctx) {
+    ) : KExpr<A>(ctx), KSimplifierAuxExpr {
         override val sort: A
             get() = base.sort
 
@@ -1146,7 +1146,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
     private sealed class SimplifierArraySelectBaseExpr<A : KArraySortBase<R>, R : KSort>(
         ctx: KContext,
         val array: KExpr<A>
-    ) : KExpr<R>(ctx) {
+    ) : KExpr<R>(ctx), KSimplifierAuxExpr {
         override val sort: R
             get() = array.sort.range
 
@@ -1217,7 +1217,7 @@ interface KArrayExprSimplifier : KExprSimplifierBase {
     private sealed class SelectFromStoreExprBase<A : KArraySortBase<R>, R : KSort>(
         ctx: KContext,
         array: KArrayStoreBase<A, R>
-    ) : KExpr<R>(ctx) {
+    ) : KExpr<R>(ctx), KSimplifierAuxExpr {
         val storeValue: KExpr<R> = array.value
 
         override val sort: R = storeValue.sort
