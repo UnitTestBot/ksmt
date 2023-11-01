@@ -104,8 +104,7 @@ open class KExprSimplifier(override val ctx: KContext) :
              *  Don't check if all expressions are constants as they are trivially comparable.
              *  */
             allDistinct = allDistinct
-                    && !allExpressionsAreConstants
-                    && visitedExprs.all { areDefinitelyDistinct(it, expr) }
+                    && (allExpressionsAreConstants || visitedExprs.all { areDefinitelyDistinct(it, expr) })
         }
 
         if (allDistinct) return true

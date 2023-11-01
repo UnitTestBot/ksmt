@@ -306,7 +306,7 @@ inline fun KContext.simplifyRealToIntLight(
 ): KExpr<KIntSort> {
     if (arg is KRealNumExpr) {
         val realValue = arg.toRealValue()
-        return mkIntNum(realValue.numerator / realValue.denominator)
+        return mkIntNum(evalIntDiv(realValue.numerator, realValue.denominator))
     }
 
     // (real2int (int2real x)) ==> x

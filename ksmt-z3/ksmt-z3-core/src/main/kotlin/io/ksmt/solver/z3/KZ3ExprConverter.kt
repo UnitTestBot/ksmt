@@ -43,6 +43,7 @@ import io.ksmt.sort.KUninterpretedSort
 import io.ksmt.utils.asExpr
 import io.ksmt.utils.uncheckedCast
 
+@Suppress("LargeClass")
 open class KZ3ExprConverter(
     private val ctx: KContext,
     private val z3Ctx: KZ3Context,
@@ -588,6 +589,19 @@ open class KZ3ExprConverter(
         val internalDeclName = convertNativeSymbol(Native.getDeclName(nCtx, decl))
         when (internalDeclName) {
             "fp.to_ieee_bv" -> expr.convert(::mkFpToIEEEBvExpr)
+            "fp.max_i" -> expr.convert(::mkFpMaxExpr)
+            "fp.min_i" -> expr.convert(::mkFpMinExpr)
+            "fp.to_real" -> expr.convert(::mkFpToRealExpr)
+            "fp.to_sbv" -> expr.convert { rm: KExpr<KFpRoundingModeSort>, fp: KExpr<KFpSort> ->
+                val size = Native.getDeclIntParameter(nCtx, decl, 0)
+                mkFpToBvExpr(rm, fp, size, isSigned = true)
+            }
+
+            "fp.to_ubv" -> expr.convert { rm: KExpr<KFpRoundingModeSort>, fp: KExpr<KFpSort> ->
+                val size = Native.getDeclIntParameter(nCtx, decl, 0)
+                mkFpToBvExpr(rm, fp, size, isSigned = false)
+            }
+
             else -> throw KSolverUnsupportedFeatureException("Z3 internal decl $internalDeclName is not supported")
         }
     }
