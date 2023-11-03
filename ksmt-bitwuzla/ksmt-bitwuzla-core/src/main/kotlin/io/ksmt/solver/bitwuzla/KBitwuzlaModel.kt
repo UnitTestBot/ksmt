@@ -2,18 +2,14 @@ package io.ksmt.solver.bitwuzla
 
 import io.ksmt.KContext
 import io.ksmt.decl.KDecl
+import io.ksmt.decl.KUninterpretedSortValueDecl
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.KUninterpretedSortValue
+import io.ksmt.solver.KModel
 import io.ksmt.solver.model.KFuncInterp
 import io.ksmt.solver.model.KFuncInterpEntryVarsFree
 import io.ksmt.solver.model.KFuncInterpEntryVarsFreeOneAry
 import io.ksmt.solver.model.KFuncInterpVarsFree
-import io.ksmt.solver.KModel
-import io.ksmt.solver.KSolverUnsupportedFeatureException
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
-import org.ksmt.solver.bitwuzla.bindings.FunValue
-import org.ksmt.solver.bitwuzla.bindings.Native
 import io.ksmt.solver.model.KFuncInterpWithVars
 import io.ksmt.solver.model.KModelEvaluator
 import io.ksmt.solver.model.KModelImpl
@@ -21,13 +17,18 @@ import io.ksmt.sort.KArraySort
 import io.ksmt.sort.KArraySortBase
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
+import io.ksmt.utils.mkFreshConst
 import io.ksmt.utils.mkFreshConstDecl
 import io.ksmt.utils.uncheckedCast
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaKind
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
+import org.ksmt.solver.bitwuzla.bindings.Native
 
 open class KBitwuzlaModel(
     private val ctx: KContext,
     private val bitwuzlaCtx: KBitwuzlaContext,
     private val converter: KBitwuzlaExprConverter,
+    private val internalizer: KBitwuzlaExprInternalizer,
     assertedDeclarations: Set<KDecl<*>>,
     private val uninterpretedSortDependency: Map<KUninterpretedSort, Set<KDecl<*>>>
 ) : KModel {
@@ -77,7 +78,12 @@ open class KBitwuzlaModel(
              * to ensure that [uninterpretedSortValueContext] contains
              * all possible values for the given sort.
              * */
-            sortDependency.forEach { interpretation(it) }
+            sortDependency.forEach {
+                if (it is KUninterpretedSortValueDecl) {
+                    val value = ctx.mkUninterpretedSortValue(it.sort, it.valueIdx)
+                    uninterpretedSortValueContext.registerValue(value)
+                } else interpretation(it)
+            }
 
             uninterpretedSortValueContext.currentSortUniverse(sort)
         }
@@ -95,19 +101,10 @@ open class KBitwuzlaModel(
             val bitwuzlaConstant = bitwuzlaCtx.findConstant(decl)
                 ?: return@interpretation null
 
-            getInterpretationSafe(decl, bitwuzlaConstant)
+            getInterpretation(decl, bitwuzlaConstant)
         }
 
         return interpretation.uncheckedCast()
-    }
-
-    private fun <T : KSort> getInterpretationSafe(
-        decl: KDecl<T>,
-        term: BitwuzlaTerm
-    ): KFuncInterp<T> = bitwuzlaCtx.bitwuzlaTry {
-        handleModelIsUnsupportedWithQuantifiers {
-            getInterpretation(decl, term)
-        }
     }
 
     private fun <T : KSort> getInterpretation(
@@ -132,39 +129,41 @@ open class KBitwuzlaModel(
     private fun <T : KSort> functionInterpretation(
         decl: KDecl<T>,
         term: BitwuzlaTerm
-    ): KFuncInterp<T> {
-        val interp = Native.bitwuzlaGetFunValue(bitwuzlaCtx.bitwuzla, term)
-        return if (interp.size != 0) {
-            handleArrayFunctionDecl(decl) { functionDecl ->
-                functionValueInterpretation(functionDecl, interp)
-            }
-        } else {
-            /**
-             * Function has default value or bitwuzla can't retrieve its entries.
-             * Try parse function interpretation from value term.
-             * */
-            converter.retrieveFunctionValue(decl, term)
-        }
+    ): KFuncInterp<T> = if (decl.argSorts.isEmpty())
+        converter.retrieveFunctionValue(decl, term)
+    else handleArrayFunctionDecl(decl) { functionDecl ->
+        val interp = Native.bitwuzlaGetValue(bitwuzlaCtx.bitwuzla, term)
+        functionValueInterpretation(functionDecl, interp)
     }
 
-    private fun <T : KSort> KBitwuzlaExprConverter.functionValueInterpretation(
+    private fun <T : KSort> functionValueInterpretation(
         decl: KDecl<T>,
-        interp: FunValue
-    ): KFuncInterpVarsFree<T> {
-        val entries = mutableListOf<KFuncInterpEntryVarsFree<T>>()
+        interp: BitwuzlaTerm
+    ): KFuncInterpWithVars<T> {
+        val vars = decl.argSorts.map { it.mkFreshConst("x") }
 
-        for (i in 0 until interp.size) {
-            // Don't substitute vars since arguments in Bitwuzla model are always constants
-            val args = interp.args!![i].zip(decl.argSorts) { arg, sort -> arg.convertExpr(sort) }
-            val value = interp.values!![i].convertExpr(decl.sort)
-            entries += KFuncInterpEntryVarsFree.create(args, value)
+        val (bitwuzlaInterpVars, bitwuzlaInterpValue) = let {
+            val varTerms = mutableListOf<BitwuzlaTerm>()
+            var (varTerm, lambdaTerm) = Native.bitwuzlaTermGetChildren(interp)
+            varTerms += varTerm
+            while (Native.bitwuzlaTermGetKind(lambdaTerm) == BitwuzlaKind.BITWUZLA_KIND_LAMBDA) {
+                val children = Native.bitwuzlaTermGetChildren(lambdaTerm)
+                varTerm = children[0]
+                varTerms += varTerm
+                lambdaTerm = children[1]
+            }
+
+            varTerms.toLongArray() to lambdaTerm
         }
 
-        return KFuncInterpVarsFree(
-            decl = decl,
-            entries = entries,
-            default = null
-        )
+        val bitwuzlaVars = vars.map { with(internalizer) { it.internalizeExpr() } }.toLongArray()
+        val bitwuzlaFreshInterp = Native.bitwuzlaSubstituteTerm(bitwuzlaInterpValue, bitwuzlaInterpVars, bitwuzlaVars)
+
+        val varsToDecls = bitwuzlaVars.zip(vars).associate { (varTerm, varApp) -> varTerm to varApp.decl }
+        val c = KBitwuzlaExprConverter(ctx, bitwuzlaCtx, varsToDecls)
+        val defaultBody = with(c) { bitwuzlaFreshInterp.convertExpr(decl.sort) }
+
+        return KFuncInterpWithVars(decl, vars.map { it.decl }, emptyList(), defaultBody)
     }
 
     private fun <T : KSort> KBitwuzlaExprConverter.retrieveFunctionValue(
@@ -182,21 +181,19 @@ open class KBitwuzlaModel(
     ): KFuncInterp<T> = handleArrayFunctionDecl(decl) { arrayFunctionDecl ->
         val sort: KArraySort<KSort, KSort> = decl.sort.uncheckedCast()
         val entries = mutableListOf<KFuncInterpEntryVarsFree<KSort>>()
-        val interp = Native.bitwuzlaGetArrayValue(bitwuzlaCtx.bitwuzla, term)
 
-        for (i in 0 until interp.size) {
-            val index = interp.indices!![i].convertExpr(sort.domain)
-            val value = interp.values!![i].convertExpr(sort.range)
+        val interp = Native.bitwuzlaGetValue(bitwuzlaCtx.bitwuzla, term)
+
+        var currentEntry = interp
+        while (Native.bitwuzlaTermGetKind(currentEntry) == BitwuzlaKind.BITWUZLA_KIND_ARRAY_STORE) {
+            val (array, bzlaIndex, bzlaValue) = Native.bitwuzlaTermGetChildren(currentEntry)
+            val index = bzlaIndex.convertExpr(sort.domain)
+            val value = bzlaValue.convertExpr(sort.range)
             entries += KFuncInterpEntryVarsFreeOneAry(index, value)
+            currentEntry = array
         }
-
-        val default = interp.defaultValue.takeIf { it != 0L }?.convertExpr(sort.range)
-
-        KFuncInterpVarsFree(
-            decl = arrayFunctionDecl,
-            entries = entries,
-            default = default
-        )
+        val defaultValue = Native.bitwuzlaTermGetChildren(currentEntry)[0].convertExpr(sort.range)
+        KFuncInterpVarsFree(arrayFunctionDecl, entries, defaultValue)
     }
 
     private inline fun <T : KSort> handleArrayFunctionDecl(
@@ -272,36 +269,5 @@ open class KBitwuzlaModel(
         if (this === other) return true
         if (other !is KModel) return false
         return detach() == other
-    }
-
-    /**
-     * Models are currently not supported for formulas with quantifiers.
-     * Handle this case as unsupported feature rather than general solver failure.
-     * */
-    private inline fun <T> handleModelIsUnsupportedWithQuantifiers(body: () -> T): T = try {
-        body()
-    } catch (ex: BitwuzlaNativeException) {
-        if (isModelUnsupportedWithQuantifiers(ex)) {
-            throw KSolverUnsupportedFeatureException("Model are not supported for formulas with quantifiers")
-        }
-        throw ex
-    }
-
-    companion object {
-        private const val MODEL_UNSUPPORTED_WITH_QUANTIFIERS =
-            "'get-value' is currently not supported with quantifiers\n"
-
-        private fun isModelUnsupportedWithQuantifiers(ex: BitwuzlaNativeException): Boolean {
-            val message = ex.message ?: return false
-            /**
-             * Bitwuzla exception message has the following format:
-             * `[bitwuzla] <api method name> 'get-value' is currently ....`.
-             *
-             * Since we don't know the actual api method name
-             * (we have multiple ways to trigger get-value),
-             * we use `endsWith`.
-             * */
-            return message.endsWith(MODEL_UNSUPPORTED_WITH_QUANTIFIERS)
-        }
     }
 }

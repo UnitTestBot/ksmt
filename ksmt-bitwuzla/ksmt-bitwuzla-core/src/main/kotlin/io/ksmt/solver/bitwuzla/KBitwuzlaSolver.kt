@@ -1,22 +1,21 @@
 package io.ksmt.solver.bitwuzla
 
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet
 import io.ksmt.KContext
 import io.ksmt.expr.KExpr
 import io.ksmt.solver.KModel
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverStatus
+import io.ksmt.sort.KBoolSort
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet
+import kotlin.time.Duration
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
-import org.ksmt.solver.bitwuzla.bindings.BitwuzlaOption
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaResult
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTermArray
 import org.ksmt.solver.bitwuzla.bindings.Native
-import io.ksmt.sort.KBoolSort
-import kotlin.time.Duration
 
 open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverConfiguration> {
-    open val bitwuzlaCtx = KBitwuzlaContext(ctx)
+    open val bitwuzlaCtx by lazy { KBitwuzlaContext(ctx) }
     open val exprInternalizer: KBitwuzlaExprInternalizer by lazy {
         KBitwuzlaExprInternalizer(bitwuzlaCtx)
     }
@@ -29,27 +28,26 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
     private var lastAssumptions: TrackedAssumptions? = null
     private var lastModel: KBitwuzlaModel? = null
 
-    init {
-        Native.bitwuzlaSetOption(bitwuzlaCtx.bitwuzla, BitwuzlaOption.BITWUZLA_OPT_INCREMENTAL, value = 1)
-        Native.bitwuzlaSetOption(bitwuzlaCtx.bitwuzla, BitwuzlaOption.BITWUZLA_OPT_PRODUCE_MODELS, value = 1)
-    }
-
     private var trackedAssertions = mutableListOf<Pair<KExpr<KBoolSort>, BitwuzlaTerm>>()
     private val trackVarsAssertionFrames = arrayListOf(trackedAssertions)
 
     override fun configure(configurator: KBitwuzlaSolverConfiguration.() -> Unit) {
-        KBitwuzlaSolverConfigurationImpl(bitwuzlaCtx.bitwuzla).configurator()
+        bitwuzlaCtx.ensureBitwuzlaNotInitialized()
+        KBitwuzlaSolverConfigurationImpl(bitwuzlaCtx.bitwuzlaOptions).configurator()
     }
 
-    override fun assert(expr: KExpr<KBoolSort>) = bitwuzlaCtx.bitwuzlaTry {
-        ctx.ensureContextMatch(expr)
-
+    private fun internalizeAndAssertWithAxioms(expr: KExpr<KBoolSort>) {
         val assertionWithAxioms = with(exprInternalizer) { expr.internalizeAssertion() }
 
         assertionWithAxioms.axioms.forEach {
             Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, it)
         }
         Native.bitwuzlaAssert(bitwuzlaCtx.bitwuzla, assertionWithAxioms.assertion)
+    }
+
+    override fun assert(expr: KExpr<KBoolSort>) = bitwuzlaCtx.bitwuzlaTry {
+        ctx.ensureContextMatch(expr)
+        internalizeAndAssertWithAxioms(expr)
     }
 
     override fun assertAndTrack(expr: KExpr<KBoolSort>) = bitwuzlaCtx.bitwuzlaTry {
@@ -59,7 +57,6 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
         val trackedExpr = with(ctx) { !trackVarExpr or expr }
 
         assert(trackedExpr)
-
         val trackVarTerm = with(exprInternalizer) { trackVarExpr.internalize() }
         trackedAssertions += expr to trackVarTerm
     }
@@ -88,7 +85,7 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
 
         trackedAssertions = trackVarsAssertionFrames.last()
 
-        Native.bitwuzlaPop(bitwuzlaCtx.bitwuzla, n.toInt())
+        Native.bitwuzlaPop(bitwuzlaCtx.bitwuzla, n.toLong())
     }
 
     override fun check(timeout: Duration): KSolverStatus =
@@ -104,25 +101,33 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
                 currentAssumptions.assumeTrackedAssertion(it)
             }
 
+            val internalizedAssumptions: BitwuzlaTermArray
             with(exprInternalizer) {
-                assumptions.forEach {
-                    currentAssumptions.assumeAssumption(it, it.internalize())
+                internalizedAssumptions = BitwuzlaTermArray(assumptions.size + trackedAssertions.size)
+
+                assumptions.forEachIndexed { idx, assumption ->
+                    internalizedAssumptions[idx] = assumptions[idx].internalize()
+                    currentAssumptions.assumeAssumption(assumption, internalizedAssumptions[idx])
+                }
+                trackedAssertions.forEachIndexed { idx, (_, track) ->
+                    internalizedAssumptions[assumptions.size + idx] = track
                 }
             }
 
-            checkWithTimeout(timeout).processCheckResult()
+            checkWithTimeout(timeout, internalizedAssumptions).processCheckResult()
         }
 
-    private fun checkWithTimeout(timeout: Duration): BitwuzlaResult = if (timeout.isInfinite()) {
-        Native.bitwuzlaCheckSatResult(bitwuzlaCtx.bitwuzla)
-    } else {
-        Native.bitwuzlaCheckSatTimeoutResult(bitwuzlaCtx.bitwuzla, timeout.inWholeMilliseconds)
+    private fun checkWithTimeout(timeout: Duration, assumptions: BitwuzlaTermArray): BitwuzlaResult {
+        return Native.bitwuzlaCheckSatWithTimeout(
+            bitwuzlaCtx.bitwuzla, assumptions,
+            if (timeout == Duration.INFINITE) Long.MAX_VALUE / 2 else timeout.inWholeMilliseconds
+        )
     }
 
     override fun model(): KModel = bitwuzlaCtx.bitwuzlaTry {
         require(lastCheckStatus == KSolverStatus.SAT) { "Model are only available after SAT checks" }
         val model = lastModel ?: KBitwuzlaModel(
-            ctx, bitwuzlaCtx, exprConverter,
+            ctx, bitwuzlaCtx, exprConverter, exprInternalizer,
             bitwuzlaCtx.declarations(),
             bitwuzlaCtx.uninterpretedSortsWithRelevantDecls()
         )
@@ -184,8 +189,7 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
         private val assumedExprs = arrayListOf<Pair<KExpr<KBoolSort>, BitwuzlaTerm>>()
 
         fun assumeTrackedAssertion(trackedAssertion: Pair<KExpr<KBoolSort>, BitwuzlaTerm>) {
-            assumedExprs.add(trackedAssertion)
-            Native.bitwuzlaAssume(bitwuzlaCtx.bitwuzla, trackedAssertion.second)
+            assumedExprs += trackedAssertion
         }
 
         fun assumeAssumption(expr: KExpr<KBoolSort>, term: BitwuzlaTerm) =

@@ -1,0 +1,357 @@
+diff --git a/src/lib/bv/bitvector.cpp b/src/lib/bv/bitvector.cpp
+index 5a895684..d83c0acc 100644
+--- a/src/lib/bv/bitvector.cpp
++++ b/src/lib/bv/bitvector.cpp
+@@ -96,7 +96,15 @@ BitVector::fits_in_size(uint64_t size, const std::string& str, uint32_t base)
+     }
+     else
+     {
++    // We shouldn't pass uint64 as "unsigned long int" in mpz_cmp_ui on Windows, because it's truncated to 32 bits
++#ifdef __MINGW64__
++      mpz_t min_int;
++      mpz_init_set_str(min_int, min.str(2).c_str(), 2);
++      res = mpz_cmp(tmp, min_int) <= 0;
++      mpz_clear(min_int);
++#else
+       res = mpz_cmp_ui(tmp, min.d_val_uint64) <= 0;
++#endif
+     }
+   }
+   else
+@@ -108,7 +116,15 @@ BitVector::fits_in_size(uint64_t size, const std::string& str, uint32_t base)
+     }
+     else
+     {
++    // We shouldn't pass uint64 as "unsigned long int" in mpz_cmp_ui on Windows, because it's truncated to 32 bits
++#ifdef __MINGW64__
++      mpz_t max_int;
++      mpz_init_set_str(max_int, max.str(2).c_str(), 2);
++      res = mpz_cmp(tmp, max_int) <= 0;
++      mpz_clear(max_int);
++#else
+       res = mpz_cmp_ui(tmp, max.d_val_uint64) <= 0;
++#endif
+     }
+   }
+   mpz_clear(tmp);
+@@ -124,7 +140,12 @@ BitVector::fits_in_size(uint64_t size, uint64_t value, bool sign)
+   }
+   mpz_t tmp;
+   /* We do not want to normalize to 'size'. */
++  // We shouldn't pass uint64 as "unsigned long int" in mpz_init_set_ui on Windows, because it's truncated to 32 bits
++#ifdef __MINGW64__
++  mpz_init_set_str(tmp, std::to_string((uint64_t) value).c_str(), 10);
++#else
+   mpz_init_set_ui(tmp, value);
++#endif
+   bool res = size >= mpz_sizeinbase(tmp, 2);
+   mpz_clear(tmp);
+   return res;
+@@ -311,7 +332,11 @@ BitVector::from_ui(uint64_t size, uint64_t value, bool truncate)
+   BitVector res(size);
+   if (res.is_gmp())
+   {
++#ifdef __MINGW64__
++    mpz_init_set_str(res.d_val_gmp, std::to_string(value).c_str(), 10);
++#else
+     mpz_init_set_ui(res.d_val_gmp, value);
++#endif
+     mpz_fdiv_r_2exp(res.d_val_gmp, res.d_val_gmp, size);
+   }
+   else
+@@ -331,7 +356,11 @@ BitVector::from_si(uint64_t size, int64_t value, bool truncate)
+   BitVector res(size);
+   if (res.is_gmp())
+   {
++#ifdef __MINGW64__
++    mpz_init_set_str(res.d_val_gmp, std::to_string(value).c_str(), 10);
++#else
+     mpz_init_set_si(res.d_val_gmp, value);
++#endif
+     mpz_fdiv_r_2exp(res.d_val_gmp, res.d_val_gmp, size);
+   }
+   else
+@@ -510,7 +539,11 @@ BitVector::iset(uint64_t value)
+   assert(d_size);
+   if (is_gmp())
+   {
++#ifdef __MINGW64__
++      mpz_init_set_str(d_val_gmp, std::to_string(value).c_str(), 10);
++#else
+     mpz_set_ui(d_val_gmp, value);
++#endif
+     mpz_fdiv_r_2exp(d_val_gmp, d_val_gmp, d_size);
+   }
+   else
+@@ -644,7 +677,19 @@ BitVector::to_uint64(bool truncate) const
+   assert(truncate || d_size <= 64);
+   if (is_gmp())
+   {
++#ifdef __MINGW64__
++      char *tmp = mpz_get_str(nullptr, 10, d_val_gmp);
++      std::string val_str = tmp;
++      uint64_t ret_val = (uint64_t) std::stoll(val_str);
++
++      void (*freefunc)(void *, size_t);
++      mp_get_memory_functions(nullptr, nullptr, &freefunc);
++
++      freefunc(tmp, std::strlen(tmp) + 1);
++      return ret_val;
++#else
+     return mpz_get_ui(d_val_gmp);
++#endif
+   }
+   return d_val_uint64;
+ }
+@@ -896,8 +941,16 @@ BitVector::is_uadd_overflow(const BitVector& bv) const
+   }
+   else
+   {
++#ifdef __MINGW64__
++      mpz_init_set_str(add, std::to_string(d_val_uint64).c_str(), 10);
++      mpz_t bv_gmp;
++      mpz_init_set_str(bv_gmp, std::to_string(bv.d_val_uint64).c_str(), 10);
++      mpz_add(add, add, bv_gmp);
++      mpz_clear(bv_gmp);
++#else
+     mpz_init_set_ui(add, d_val_uint64);
+     mpz_add_ui(add, add, bv.d_val_uint64);
++#endif
+   }
+   mpz_fdiv_q_2exp(add, add, d_size);
+   bool res = mpz_cmp_ui(add, 0) != 0;
+@@ -920,8 +973,18 @@ BitVector::is_umul_overflow(const BitVector& bv) const
+     }
+     else
+     {
++#ifdef __MINGW64__
++        mpz_t bv_gmp;
++        mpz_init_set_str(bv_gmp, std::to_string(bv.d_val_uint64).c_str(), 10);
++
++        mpz_init_set_str(mul, std::to_string(d_val_uint64).c_str(), 10);
++        mpz_mul(mul, mul, bv_gmp);
++
++        mpz_clear(bv_gmp);
++#else
+       mpz_init_set_ui(mul, d_val_uint64);
+       mpz_mul_ui(mul, mul, bv.d_val_uint64);
++#endif
+     }
+     mpz_fdiv_q_2exp(mul, mul, d_size);
+     bool res = mpz_cmp_ui(mul, 0) != 0;
+@@ -2345,7 +2408,11 @@ BitVector::ibvconcat(const BitVector& bv0, const BitVector& bv1)
+     }
+     else
+     {
++#ifdef __MINGW64__
++      mpz_set_str(d_val_gmp, std::to_string(b0->d_val_uint64).c_str(), 10);
++#else
+       mpz_set_ui(d_val_gmp, b0->d_val_uint64);
++#endif
+     }
+     mpz_mul_2exp(d_val_gmp, d_val_gmp, b1->d_size);
+     if (b1->is_gmp())
+@@ -2354,7 +2421,14 @@ BitVector::ibvconcat(const BitVector& bv0, const BitVector& bv1)
+     }
+     else
+     {
++#ifdef __MINGW64__
++        mpz_t b1_gmp;
++        mpz_init_set_str(b1_gmp, std::to_string(b1->d_val_uint64).c_str(), 10);
++        mpz_add(d_val_gmp, d_val_gmp, b1_gmp);
++        mpz_clear(b1_gmp);
++#else
+       mpz_add_ui(d_val_gmp, d_val_gmp, b1->d_val_uint64);
++#endif
+     }
+     mpz_fdiv_r_2exp(d_val_gmp, d_val_gmp, size);
+   }
+@@ -2387,13 +2461,29 @@ BitVector::ibvextract(const BitVector& bv, uint64_t idx_hi, uint64_t idx_lo)
+     }
+     else
+     {
++#ifdef __MINGW64__
++        mpz_set_str(d_val_gmp, std::to_string(bv.d_val_uint64).c_str(), 10);
++#else
+       mpz_set_ui(d_val_gmp, bv.d_val_uint64);
++#endif
+     }
+     mpz_fdiv_r_2exp(d_val_gmp, d_val_gmp, idx_hi + 1);
+     mpz_fdiv_q_2exp(d_val_gmp, d_val_gmp, idx_lo);
+     if (size <= 64)
+     {
++#ifdef __MINGW64__
++        char *d_val_str_tmp = mpz_get_str(nullptr, 10, d_val_gmp);
++        std::string d_val_str = d_val_str_tmp;
++
++        uint64_t val = (uint64_t) std::stoll(d_val_str);
++
++        void (*freefunc)(void *, size_t);
++        mp_get_memory_functions(nullptr, nullptr, &freefunc);
++
++        freefunc(d_val_str_tmp, std::strlen(d_val_str_tmp) + 1);
++#else
+       uint64_t val = mpz_get_ui(d_val_gmp);
++#endif
+       mpz_clear(d_val_gmp);
+       d_val_uint64 = val;
+     }
+@@ -2409,7 +2499,11 @@ BitVector::ibvextract(const BitVector& bv, uint64_t idx_hi, uint64_t idx_lo)
+       }
+       else
+       {
++#ifdef __MINGW64__
++        mpz_set_str(d_val_gmp, std::to_string(bv.d_val_uint64).c_str(), 10);
++#else
+         mpz_set_ui(d_val_gmp, bv.d_val_uint64);
++#endif
+       }
+       mpz_fdiv_r_2exp(d_val_gmp, d_val_gmp, idx_hi + 1);
+       mpz_fdiv_q_2exp(d_val_gmp, d_val_gmp, idx_lo);
+@@ -2422,7 +2516,19 @@ BitVector::ibvextract(const BitVector& bv, uint64_t idx_hi, uint64_t idx_lo)
+         mpz_init_set(tmp, bv.d_val_gmp);
+         mpz_fdiv_r_2exp(tmp, tmp, idx_hi + 1);
+         mpz_fdiv_q_2exp(tmp, tmp, idx_lo);
++#ifdef __MINGW64__
++          char *d_val_str_tmp = mpz_get_str(nullptr, 10, tmp);
++          std::string d_val_str = d_val_str_tmp;
++
++          d_val_uint64 = (uint64_t) std::stoll(d_val_str);
++
++          void (*freefunc)(void *, size_t);
++          mp_get_memory_functions(nullptr, nullptr, &freefunc);
++
++          freefunc(d_val_str_tmp, std::strlen(d_val_str_tmp) + 1);
++#else
+         d_val_uint64 = mpz_get_ui(tmp);
++#endif
+         mpz_clear(tmp);
+       }
+       else
+@@ -2453,11 +2559,27 @@ BitVector::ibvzext(const BitVector& bv, uint64_t n)
+     }
+     else
+     {
++#ifdef __MINGW64__
++      mpz_set_str(d_val_gmp, std::to_string(bv.d_val_uint64).c_str(), 10);
++#else
+       mpz_set_ui(d_val_gmp, bv.d_val_uint64);
++#endif
+     }
+     if (size <= 64)
+     {
++#ifdef __MINGW64__
++        char *d_val_str_tmp = mpz_get_str(nullptr, 10, d_val_gmp);
++        std::string d_val_str = d_val_str_tmp;
++
++        uint64_t val = (uint64_t) std::stoll(d_val_str);
++
++        void (*freefunc)(void *, size_t);
++        mp_get_memory_functions(nullptr, nullptr, &freefunc);
++
++        freefunc(d_val_str_tmp, std::strlen(d_val_str_tmp) + 1);
++#else
+       uint64_t val = mpz_get_ui(d_val_gmp);
++#endif
+       mpz_clear(d_val_gmp);
+       d_val_uint64 = val;
+     }
+@@ -2485,7 +2607,11 @@ BitVector::ibvzext(const BitVector& bv, uint64_t n)
+       }
+       else
+       {
++#ifdef __MINGW64__
++        mpz_set_str(d_val_gmp, std::to_string(b->d_val_uint64).c_str(), 10);
++#else
+         mpz_set_ui(d_val_gmp, b->d_val_uint64);
++#endif
+       }
+     }
+     else
+@@ -2532,12 +2658,31 @@ BitVector::ibvsext(const BitVector& bv, uint64_t n)
+         }
+         else
+         {
++#ifdef __MINGW64__
++            mpz_t b_gmp;
++            mpz_init_set_str(b_gmp, std::to_string(b->d_val_uint64).c_str(), 10);
++            mpz_add(d_val_gmp, d_val_gmp, b_gmp);
++            mpz_clear(b_gmp);
++#else
+           mpz_add_ui(d_val_gmp, d_val_gmp, b->d_val_uint64);
++#endif
+         }
+         mpz_fdiv_r_2exp(d_val_gmp, d_val_gmp, size);
+         if (size <= 64)
+         {
++#ifdef __MINGW64__
++            char *d_val_str_tmp = mpz_get_str(nullptr, 10, d_val_gmp);
++            std::string d_val_str = d_val_str_tmp;
++
++            uint64_t val = (uint64_t) std::stoll(d_val_str);
++
++            void (*freefunc)(void *, size_t);
++            mp_get_memory_functions(nullptr, nullptr, &freefunc);
++
++            freefunc(d_val_str_tmp, std::strlen(d_val_str_tmp) + 1);
++#else
+           uint64_t val = mpz_get_ui(d_val_gmp);
++#endif
+           mpz_clear(d_val_gmp);
+           d_val_uint64 = val;
+         }
+@@ -2556,7 +2701,14 @@ BitVector::ibvsext(const BitVector& bv, uint64_t n)
+           }
+           else
+           {
++#ifdef __MINGW64__
++              mpz_t b_gmp;
++              mpz_init_set_str(b_gmp, std::to_string(b->d_val_uint64).c_str(), 10);
++              mpz_add(d_val_gmp, d_val_gmp, b_gmp);
++              mpz_clear(b_gmp);
++#else
+             mpz_add_ui(d_val_gmp, d_val_gmp, b->d_val_uint64);
++#endif
+           }
+           mpz_fdiv_r_2exp(d_val_gmp, d_val_gmp, size);
+         }
+@@ -2735,7 +2887,11 @@ BitVector::ibvmodinv(const BitVector& bv)
+       /* b is this bit-vector extended to esize */
+       if (esize > 64)
+       {
++#ifdef __MINGW64__
++        mpz_set_str(b.d_val_gmp, std::to_string(pb->d_val_uint64).c_str(), 10);
++#else
+         mpz_set_ui(b.d_val_gmp, pb->d_val_uint64);
++#endif
+       }
+       else
+       {
+@@ -2770,12 +2926,27 @@ BitVector::ibvmodinv(const BitVector& bv)
+   {
+     if (pb->is_gmp())
+     {
++#ifdef __MINGW64__
++        mpz_t d_val_gmp;
++        mpz_init_set_str(d_val_gmp, std::to_string(d_val_uint64).c_str(), 10);
++        mpz_mul(ty, pb->d_val_gmp, d_val_gmp);
++        mpz_clear(d_val_gmp);
++#else
+       mpz_mul_ui(ty, pb->d_val_gmp, d_val_uint64);
++#endif
+     }
+     else
+     {
++#ifdef __MINGW64__
++        mpz_t d_val_gmp;
++        mpz_init_set_str(d_val_gmp, std::to_string(d_val_uint64).c_str(), 10);
++        mpz_set_str(ty, std::to_string(pb->d_val_uint64).c_str(), 10);
++        mpz_mul(ty, ty, d_val_gmp);
++        mpz_clear(d_val_gmp);
++#else
+       mpz_set_ui(ty, pb->d_val_uint64);
+       mpz_mul_ui(ty, ty, d_val_uint64);
++#endif
+     }
+   }
+   mpz_fdiv_r_2exp(ty, ty, size);

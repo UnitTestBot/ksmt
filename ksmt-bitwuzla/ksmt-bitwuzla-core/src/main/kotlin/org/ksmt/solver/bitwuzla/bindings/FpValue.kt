@@ -1,11 +1,10 @@
 package org.ksmt.solver.bitwuzla.bindings
 
 /**
- * @param sign Binary string representation of the sign bit.
- * @param exponent Binary string representation of the exponent bit-vector value.
- * @param significand Binary string representation of the significand bit-vector value.
+ * @property sign Binary string representation of the sign bit.
+ * @property exponent Binary string representation of the exponent bit-vector value.
+ * @property significand Binary string representation of the significand bit-vector value.
  * */
-
 class FpValue {
     @JvmField
     var sign: String = ""

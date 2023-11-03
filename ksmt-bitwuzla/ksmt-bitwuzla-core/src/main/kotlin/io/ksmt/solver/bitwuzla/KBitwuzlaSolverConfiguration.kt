@@ -3,12 +3,13 @@ package io.ksmt.solver.bitwuzla
 import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverUniversalConfigurationBuilder
 import io.ksmt.solver.KSolverUnsupportedParameterException
-import org.ksmt.solver.bitwuzla.bindings.Bitwuzla
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaOption
+import org.ksmt.solver.bitwuzla.bindings.BitwuzlaOptionsNative
 import org.ksmt.solver.bitwuzla.bindings.Native
 
 interface KBitwuzlaSolverConfiguration : KSolverConfiguration {
-    fun setBitwuzlaOption(option: BitwuzlaOption, value: Int)
+    fun setBitwuzlaOption(option: BitwuzlaOption, value: Long)
+    fun setBitwuzlaOption(option: BitwuzlaOption, value: Int) = setBitwuzlaOption(option, value.toLong())
     fun setBitwuzlaOption(option: BitwuzlaOption, value: String)
 
     override fun setIntParameter(param: String, value: Int) {
@@ -34,21 +35,23 @@ interface KBitwuzlaSolverConfiguration : KSolverConfiguration {
     }
 }
 
-class KBitwuzlaSolverConfigurationImpl(private val bitwuzla: Bitwuzla) : KBitwuzlaSolverConfiguration {
-    override fun setBitwuzlaOption(option: BitwuzlaOption, value: Int) {
-        Native.bitwuzlaSetOption(bitwuzla, option, value)
+class KBitwuzlaSolverConfigurationImpl(
+    private val bitwuzlaOptions: BitwuzlaOptionsNative
+) : KBitwuzlaSolverConfiguration {
+    override fun setBitwuzlaOption(option: BitwuzlaOption, value: Long) {
+        Native.bitwuzlaSetOption(bitwuzlaOptions, option, value)
     }
 
     override fun setBitwuzlaOption(option: BitwuzlaOption, value: String) {
-        Native.bitwuzlaSetOptionStr(bitwuzla, option, value)
+        Native.bitwuzlaSetOptionMode(bitwuzlaOptions, option, value)
     }
 }
 
 class KBitwuzlaSolverUniversalConfiguration(
     private val builder: KSolverUniversalConfigurationBuilder
 ) : KBitwuzlaSolverConfiguration {
-    override fun setBitwuzlaOption(option: BitwuzlaOption, value: Int) {
-        builder.buildIntParameter(option.name, value)
+    override fun setBitwuzlaOption(option: BitwuzlaOption, value: Long) {
+        builder.buildIntParameter(option.name, value.toInt())
     }
 
     override fun setBitwuzlaOption(option: BitwuzlaOption, value: String) {
