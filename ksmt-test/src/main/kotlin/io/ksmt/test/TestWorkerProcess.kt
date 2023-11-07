@@ -1,6 +1,7 @@
 package io.ksmt.test
 
 import com.jetbrains.rd.framework.IProtocol
+import com.jetbrains.rd.util.lifetime.Lifetime
 import com.microsoft.z3.AST
 import com.microsoft.z3.BoolSort
 import com.microsoft.z3.Context
@@ -236,7 +237,7 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
         protocol.testProtocolModel
 
     @Suppress("LongMethod")
-    override fun TestProtocolModel.setup(astSerializationCtx: AstSerializationCtx) {
+    override fun TestProtocolModel.setup(astSerializationCtx: AstSerializationCtx, lifetime: Lifetime) {
         // Limit z3 native memory usage to avoid OOM
         Native.globalParamSet("memory_high_watermark_mb", "2048") // 2048 megabytes
 

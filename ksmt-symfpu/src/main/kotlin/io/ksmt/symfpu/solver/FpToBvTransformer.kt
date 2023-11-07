@@ -572,7 +572,7 @@ class FpToBvTransformer(ctx: KContext, private val packedBvOptimization: Boolean
         override fun <S : KFpSort> visit(sort: S): Boolean = true
 
         override fun visit(sort: KFpRoundingModeSort): Boolean =
-            TODO("Fp rounding mode transformer")
+            throw KSolverUnsupportedFeatureException("Rounding mode expressions are not supported")
 
         override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): Boolean =
             sort.range.accept(this) || sort.domain.accept(this)

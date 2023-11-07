@@ -1083,7 +1083,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     private class SimplifierFlatBvAddExpr<T : KBvSort>(
         ctx: KContext,
         override val args: List<KExpr<T>>
-    ) : KApp<T, T>(ctx) {
+    ) : KApp<T, T>(ctx), KSimplifierAuxExpr {
 
         override val decl: KDecl<T>
             get() = ctx.mkBvAddDecl(sort, sort)
@@ -1104,7 +1104,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     private class SimplifierFlatBvMulExpr<T : KBvSort>(
         ctx: KContext,
         override val args: List<KExpr<T>>
-    ) : KApp<T, T>(ctx) {
+    ) : KApp<T, T>(ctx), KSimplifierAuxExpr {
 
         override val decl: KDecl<T>
             get() = ctx.mkBvMulDecl(sort, sort)
@@ -1125,7 +1125,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     private class SimplifierFlatBvOrExpr<T : KBvSort>(
         ctx: KContext,
         override val args: List<KExpr<T>>
-    ) : KApp<T, T>(ctx) {
+    ) : KApp<T, T>(ctx), KSimplifierAuxExpr {
 
         override val decl: KDecl<T>
             get() = ctx.mkBvOrDecl(sort, sort)
@@ -1146,7 +1146,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     private class SimplifierFlatBvAndExpr<T : KBvSort>(
         ctx: KContext,
         override val args: List<KExpr<T>>
-    ) : KApp<T, T>(ctx) {
+    ) : KApp<T, T>(ctx), KSimplifierAuxExpr {
 
         override val decl: KDecl<T>
             get() = ctx.mkBvAndDecl(sort, sort)
@@ -1167,7 +1167,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
     private class SimplifierFlatBvXorExpr<T : KBvSort>(
         ctx: KContext,
         override val args: List<KExpr<T>>
-    ) : KApp<T, T>(ctx) {
+    ) : KApp<T, T>(ctx), KSimplifierAuxExpr {
 
         override val decl: KDecl<T>
             get() = ctx.mkBvXorDecl(sort, sort)
@@ -1189,7 +1189,7 @@ interface KBvExprSimplifier : KExprSimplifierBase {
         ctx: KContext,
         override val sort: KBvSort,
         override val args: List<KExpr<KBvSort>>
-    ) : KApp<KBvSort, KBvSort>(ctx) {
+    ) : KApp<KBvSort, KBvSort>(ctx), KSimplifierAuxExpr {
 
         // We have no decl, but we don't care since decl is unused
         override val decl: KDecl<KBvSort>

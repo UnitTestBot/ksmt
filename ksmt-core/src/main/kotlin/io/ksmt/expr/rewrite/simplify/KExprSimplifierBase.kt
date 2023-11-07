@@ -46,6 +46,11 @@ interface KExprSimplifierBase : KTransformer {
 @JvmInline
 internal value class SimplifierAuxExpression<T : KSort>(val expr: KExpr<T>)
 
+/**
+ * Mark simplifier auxiliary expressions.
+ * */
+internal interface KSimplifierAuxExpr
+
 internal inline fun <T : KSort> auxExpr(builder: () -> KExpr<T>): SimplifierAuxExpression<T> =
     SimplifierAuxExpression(builder())
 

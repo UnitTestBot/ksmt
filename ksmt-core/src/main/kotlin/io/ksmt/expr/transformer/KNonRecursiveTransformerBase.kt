@@ -129,6 +129,14 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
     }
 
     /**
+     * Erase [expr] transformation result.
+     * Useful for transformer auxiliary expressions.
+     * */
+    fun eraseTransformationResult(expr: KExpr<*>) {
+        transformed.remove(expr)
+    }
+
+    /**
      * Allows to skip expression transformation and stop deepening.
      * */
     open fun <T : KSort> exprTransformationRequired(expr: KExpr<T>): Boolean = true
