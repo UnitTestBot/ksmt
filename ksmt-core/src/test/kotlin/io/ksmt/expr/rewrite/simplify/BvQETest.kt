@@ -250,13 +250,43 @@ class BvQETest {
 
     class TestsWithDifferentLinearCoefficient {
         private val ctx = KContext()
+
+        @Test
+        fun falseTest() {
+            val formula =
+                """
+            (assert (exists ((x (_ BitVec 4))) 
+            (and (bvugt x #b0001) (bvult (bvmul x #b0010) #b0011) (bvuge (bvmul x #b0100) #b0101))))
+            """
+            val assertions = KZ3SMTLibParser(ctx).parse(formula)
+            println(assertions)
+            val qfAssertions = quantifierElimination(ctx, assertions)
+            println(qfAssertions)
+            assert(xorEquivalenceCheck(ctx, assertions, qfAssertions))
+        }
+
+        @Test
+        fun test() {
+            val formula =
+                """
+            (declare-fun y () (_ BitVec 4))
+            
+            (assert (exists ((x (_ BitVec 4))) 
+            (and (bvugt x #b0001) (bvult (bvmul x #b0010) #b0011) (bvuge (bvmul x #b0100) y))))
+            """
+            val assertions = KZ3SMTLibParser(ctx).parse(formula)
+            println(assertions)
+            val qfAssertions = quantifierElimination(ctx, assertions)
+            println(qfAssertions)
+            assert(xorEquivalenceCheck(ctx, assertions, qfAssertions))
+        }
     }
 
     class ExponentialTests {
         private val ctx = KContext()
 
         @Test
-        fun expTest() {
+        fun test() {
             val formula =
                 """
             (declare-fun y () (_ BitVec 4))

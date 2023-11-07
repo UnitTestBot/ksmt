@@ -3,7 +3,11 @@ package io.ksmt.utils
 import io.ksmt.KContext
 import io.ksmt.decl.KDecl
 import io.ksmt.expr.*
+import io.ksmt.expr.rewrite.KExprCollector
+import io.ksmt.expr.rewrite.simplify.BvConstants
+import io.ksmt.sort.KBvSort
 import io.ksmt.utils.BvUtils.bigIntValue
+import io.ksmt.utils.BvUtils.bvOne
 import io.ksmt.utils.BvUtils.isBvOne
 import java.math.BigInteger
 
@@ -39,19 +43,37 @@ fun sameDecl(expr: KExpr<*>, bound: KDecl<*>): Boolean =
 fun occursInExponentialExpression(bound: KDecl<*>, assertion: KExpr<*>): Boolean =
     assertion is KBvShiftLeftExpr<*> && sameDecl(assertion.shift, bound)
 
-fun hasLinearCoefficient(bound: KDecl<*>, assertion: KExpr<*>): Pair<Boolean, KBitVecValue<*>?>
+fun hasLinearCoefficient(ctx: KContext, bound: KDecl<*>, assertion: KExpr<*>): Pair<Boolean, KBitVecValue<*>?>
 {
+    val mulTerms = KExprCollector.collectDeclarations(assertion) {
+            arg -> arg is KBvMulExpr || arg is KBvMulNoOverflowExpr<*>}
+    var mulTerm: KExpr<*>? = null
+    for (curTerm in mulTerms) {
+        val mulTerms = KExprCollector.collectDeclarations(curTerm) { arg -> sameDecl(arg, bound) }
+        if (mulTerms.isNotEmpty()) {
+            mulTerm = curTerm
+            break
+        }
+    }
+    if (mulTerm == null) {
+        val linearTerms = KExprCollector.collectDeclarations(assertion) { arg -> sameDecl(arg, bound) }
+        return if (linearTerms.isNotEmpty())
+            true to ctx.bvOne<KBvSort>(BvConstants.bvSize)
+        else
+            false to null
+    }
+
     val arg0: KExpr<*>
     val arg1: KExpr<*>
-    when (assertion) {
+    when (mulTerm) {
         is KBvMulExpr<*> -> {
-            arg0 = assertion.arg0
-            arg1 = assertion.arg1
+            arg0 = mulTerm.arg0
+            arg1 = mulTerm.arg1
         }
 
         is KBvMulNoOverflowExpr<*> -> {
-            arg0 = assertion.arg0
-            arg1 = assertion.arg1
+            arg0 = mulTerm.arg0
+            arg1 = mulTerm.arg1
         }
 
         else -> return false to null
@@ -59,7 +81,7 @@ fun hasLinearCoefficient(bound: KDecl<*>, assertion: KExpr<*>): Pair<Boolean, KB
     val argPairs = arrayOf((arg0 to arg1), (arg1 to arg0))
     for ((arg, coef) in argPairs)
         if (sameDecl(arg, bound))
-            if (coef is KBitVecValue<*> && !coef.isBvOne())
+            if (coef is KBitVecValue<*>)
                 return true to coef
     return false to null
 }

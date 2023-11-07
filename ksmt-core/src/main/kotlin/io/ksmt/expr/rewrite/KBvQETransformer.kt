@@ -14,13 +14,6 @@ class KBvQETransformer(ctx: KContext, bound: KDecl<KBvSort>) : KNonRecursiveTran
     private var bounds = mutableListOf<KDecl<*>>()
     private var newBody: KExpr<KBoolSort> = ctx.mkTrue()
 
-    override fun <T : KBvSort> transform(expr: KBvMulExpr<T>):
-            KExpr<T>  = with(ctx) {
-        return mkBvMulNoOverflowExpr(expr.arg0, expr.arg1, isSigned = false).uncheckedCast()
-    }
-
-
-
     override fun <T : KSort> transform(expr: KEqExpr<T>):
             KExpr<KBoolSort> = with(ctx) {
         fun eqToAndNoSimplify(l: KExpr<KBvSort>, r: KExpr<KBvSort>): KExpr<KBoolSort> =
