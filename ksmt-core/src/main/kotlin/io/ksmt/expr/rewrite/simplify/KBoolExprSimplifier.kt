@@ -15,6 +15,7 @@ import io.ksmt.expr.KXorExpr
 import io.ksmt.expr.transformer.KTransformerBase
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KSort
+import java.util.IdentityHashMap
 
 interface KBoolExprSimplifier : KExprSimplifierBase {
 
@@ -213,7 +214,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
         val condition: KExpr<KBoolSort>,
         val trueBranch: KExpr<T>,
         val falseBranch: KExpr<T>
-    ) : KApp<T, KBoolSort>(ctx) {
+    ) : KApp<T, KBoolSort>(ctx), KSimplifierAuxExpr {
 
         override val decl: KDecl<T>
             get() = ctx.mkIteDecl(trueBranch.sort)
@@ -240,7 +241,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
         val simplifiedCondition: KExpr<KBoolSort>,
         val trueBranch: KExpr<T>,
         val falseBranch: KExpr<T>
-    ) : KApp<T, T>(ctx) {
+    ) : KApp<T, T>(ctx), KSimplifierAuxExpr {
 
         override val decl: KDecl<T>
             get() = ctx.mkIteDecl(trueBranch.sort)
@@ -272,7 +273,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
         val neutralElement: KExpr<KBoolSort>,
         val zeroElement: KExpr<KBoolSort>,
         override val args: List<KExpr<KBoolSort>>
-    ) : KApp<KBoolSort, KBoolSort>(ctx) {
+    ) : KApp<KBoolSort, KBoolSort>(ctx), KSimplifierAuxExpr {
         override val sort: KBoolSort = ctx.boolSort
         override val decl: KDecl<KBoolSort>
             get() = when (operation) {
@@ -287,6 +288,7 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
 
         val simplifiedArgs = arrayListOf<KExpr<KBoolSort>>()
 
+        private val visitedArgs = IdentityHashMap<KExpr<*>, Unit>()
         private val argsIteratorStack = arrayListOf(args.iterator())
         private var currentArgument: KExpr<KBoolSort>? = null
 
@@ -309,6 +311,9 @@ interface KBoolExprSimplifier : KExprSimplifierBase {
 
             while (hasUnprocessedArgument()) {
                 val argument = argsIteratorStack.last().next()
+
+                if (visitedArgs.put(argument, Unit) != null) continue
+
                 if (!tryFlatExpr(argument)) {
                     currentArgument = argument
                     return

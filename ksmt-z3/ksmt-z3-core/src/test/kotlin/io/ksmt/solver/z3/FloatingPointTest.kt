@@ -29,6 +29,7 @@ import io.ksmt.expr.KFp64Value
 import io.ksmt.expr.KFpRoundingMode
 import io.ksmt.expr.KFpRoundingModeExpr
 import io.ksmt.expr.KTrue
+import io.ksmt.solver.KSolverStatus
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KFp16Sort
 import io.ksmt.sort.KFp32Sort
@@ -738,6 +739,23 @@ class FloatingPointTest {
 
     @Test
     fun testIsInfinite() = testPredicate(context::mkFpIsInfiniteExpr) { value: Double -> value.isInfinite() }
+
+    @Test
+    fun testFpToIeeeModel() = with(context) {
+        val x by fp32Sort
+        val expr = mkFpToIEEEBvExpr(x)
+
+        solver.assert(expr eq mkBv(0, bv32Sort))
+        assertEquals(KSolverStatus.SAT, solver.check())
+
+        val model = solver.model()
+        val z3Value = model.eval(x)
+
+        val detachedModel = model.detach()
+        val detachedValue = detachedModel.eval(x)
+
+        assertEquals(z3Value, detachedValue)
+    }
 
     companion object {
         const val DELTA = 1e-15

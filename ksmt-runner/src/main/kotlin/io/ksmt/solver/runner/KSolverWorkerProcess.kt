@@ -1,6 +1,7 @@
 package io.ksmt.solver.runner
 
 import com.jetbrains.rd.framework.IProtocol
+import com.jetbrains.rd.util.lifetime.Lifetime
 import io.ksmt.KContext
 import io.ksmt.expr.KExpr
 import io.ksmt.runner.core.ChildProcessBase
@@ -44,7 +45,7 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
         protocol.solverProtocolModel
 
     @Suppress("LongMethod")
-    override fun SolverProtocolModel.setup(astSerializationCtx: AstSerializationCtx) {
+    override fun SolverProtocolModel.setup(astSerializationCtx: AstSerializationCtx, lifetime: Lifetime) {
         initSolver.measureExecutionForTermination { params ->
             check(workerCtx == null) { "Solver is initialized" }
 
@@ -140,6 +141,10 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
         }
         interrupt.measureExecutionForTermination {
             solver.interrupt()
+        }
+        lifetime.onTermination {
+            workerSolver?.close()
+            workerCtx?.close()
         }
     }
 

@@ -104,8 +104,7 @@ open class KExprSimplifier(override val ctx: KContext) :
              *  Don't check if all expressions are constants as they are trivially comparable.
              *  */
             allDistinct = allDistinct
-                    && !allExpressionsAreConstants
-                    && visitedExprs.all { areDefinitelyDistinct(it, expr) }
+                    && (allExpressionsAreConstants || visitedExprs.all { areDefinitelyDistinct(it, expr) })
         }
 
         if (allDistinct) return true
@@ -343,6 +342,10 @@ open class KExprSimplifier(override val ctx: KContext) :
 
         val result = transformedExpr(rewriteFrame.rewritten)
             ?: error("Nested rewrite failed")
+
+        if (rewriteFrame.rewritten is KSimplifierAuxExpr) {
+            eraseTransformationResult(rewriteFrame.rewritten)
+        }
 
         return result.uncheckedCast()
     }

@@ -29,7 +29,7 @@ abstract class ChildProcessBase<Model> {
     private val synchronizer = Channel<State>(capacity = 1)
 
     abstract fun initProtocolModel(protocol: IProtocol): Model
-    abstract fun Model.setup(astSerializationCtx: AstSerializationCtx)
+    abstract fun Model.setup(astSerializationCtx: AstSerializationCtx, lifetime: Lifetime)
     abstract fun parseArgs(args: Array<String>): KsmtWorkerArgs
 
     fun start(args: Array<String>) = runBlocking {
@@ -84,7 +84,7 @@ abstract class ChildProcessBase<Model> {
             initProtocolModel(clientProtocol)
         }.await()
 
-        protocolModel.setup(astSerializationCtx)
+        protocolModel.setup(astSerializationCtx, lifetime)
 
         clientProtocol.syncProtocolModel.synchronizationSignal.let { sync ->
             val answerFromMainProcess = sync.adviseForConditionAsync(lifetime) {
