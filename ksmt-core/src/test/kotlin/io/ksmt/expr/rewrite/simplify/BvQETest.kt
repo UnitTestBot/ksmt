@@ -266,7 +266,23 @@ class BvQETest {
         }
 
         @Test
-        fun test() {
+        fun test0() {
+            val formula =
+                """
+            (declare-fun y () (_ BitVec 4))
+            
+            (assert (exists ((x (_ BitVec 4))) 
+            (and (bvule x #b0111) (bvule (bvmul x #b0010) y))))
+            """
+            val assertions = KZ3SMTLibParser(ctx).parse(formula)
+            println(assertions)
+            val qfAssertions = quantifierElimination(ctx, assertions)
+            println(qfAssertions)
+            assert(xorEquivalenceCheck(ctx, assertions, qfAssertions))
+        }
+
+        @Test
+        fun test1() {
             val formula =
                 """
             (declare-fun y () (_ BitVec 4))

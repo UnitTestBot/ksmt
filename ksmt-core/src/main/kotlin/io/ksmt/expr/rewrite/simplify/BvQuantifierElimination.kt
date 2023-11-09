@@ -163,12 +163,9 @@ fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
     }
 
     var resultArray = arrayOf<KExpr<KBoolSort>>()
+    var freeArray = arrayOf<KExpr<KBoolSort>>()
     when (body) {
         is KAndExpr, is KNotExpr, is KBvUnsignedLessOrEqualExpr<*> -> {
-            val leSet = mutableSetOf<KExpr<*>>()
-            val geSet = mutableSetOf<KExpr<*>>()
-            var freeArray = arrayOf<KExpr<KBoolSort>>()
-
             val bodyArgs: MutableList<KExpr<*>> = when (body) {
                 is KAndExpr -> body.args.toMutableList()
                 else -> mutableListOf(body)
@@ -192,6 +189,9 @@ fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
                 val bodyArg = bodyArgMap.keys.first()
                 val coefficient = hasLinearCoefficient(this, bound, bodyArg).second
                 val oneCoefExprSet = getOneCoefficientExpressions(bodyArgMap.keys, coefficient)
+
+                val leSet = mutableSetOf<KExpr<*>>()
+                val geSet = mutableSetOf<KExpr<*>>()
                 for (curExpr in oneCoefExprSet) {
                     val (freeSubExpr, isLess) = bodyArgMap[curExpr]!!
                     if (isLess!!)
@@ -218,7 +218,6 @@ fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
                         var coefficientExpr: KExpr<KBoolSort> = mkTrue()
                         if (!coefficient!!.isBvOne()) {
                             var addNotOverflow: KExpr<KBoolSort> = mkTrue()
-                            var isNextLess: KExpr<KBoolSort> = mkTrue()
                             var remainderIsZero: KExpr<KBoolSort> = mkTrue()
                             var nextMultiple: KExpr<KBvSort> = BvConstants.bvZero.uncheckedCast()
 
@@ -241,15 +240,15 @@ fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
                                 addNotOverflow = mkBvAddNoOverflowExpr(lastLe, gcdMinusRemainder, false)
                                 nextMultiple = mkBvAddExpr(lastLe, gcdMinusRemainder)
                             }
+                            var fstGe = BvConstants.bvMaxValueUnsigned
                             if (geP.isNotEmpty()) {
                                 val initFstGe = geP[0]
-                                var fstGe = initFstGe
                                 if (initFstGe is KAndExpr) {
                                     fstGe = initFstGe.args[1].uncheckedCast()
                                     withOverflowCheck = mkAnd(withOverflowCheck, initFstGe.args[0])
                                 }
-                                isNextLess = mkBvUnsignedLessExpr(nextMultiple, fstGe)
                             }
+                            val isNextLess = mkBvUnsignedLessExpr(nextMultiple, fstGe.uncheckedCast())
                             coefficientExpr = mkAnd(withOverflowCheck, isNextLess, mkOr(addNotOverflow, remainderIsZero))
                         }
                         orList += if (leP.isEmpty() or geP.isEmpty())
@@ -260,7 +259,7 @@ fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
                         }
                     }
                 }
-                resultArray += mkAnd(mkOr(*orList), *freeArray)
+                resultArray += mkAnd(mkOr(*orList))
             }
         }
         else -> assert(false) {
@@ -268,7 +267,7 @@ fun linearQE(ctx: KContext, body: KExpr<KBoolSort>, bound: KDecl<*>):
                     "is not in required form."
         }
     }
-    return mkAnd(*resultArray)
+    return mkAnd(*resultArray, *freeArray)
 }
 
 fun getFreeSubExpr(ctx: KContext, expr: KExpr<*>, bound: KDecl<*>):
