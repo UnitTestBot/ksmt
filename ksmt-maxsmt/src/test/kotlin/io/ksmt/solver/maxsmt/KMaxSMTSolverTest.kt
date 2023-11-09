@@ -272,6 +272,25 @@ abstract class KMaxSMTSolverTest {
     }
 
     @Test
+    fun similarExpressionsTest(): Unit = with(ctx) {
+        val a by boolSort
+        val b by boolSort
+
+        maxSMTSolver.assertSoft(a or b, 1u)
+        maxSMTSolver.assertSoft(!a or b, 1u)
+        maxSMTSolver.assertSoft(a or !b, 1u)
+        maxSMTSolver.assertSoft(!a or !b, 1u)
+        maxSMTSolver.assertSoft(!a or !b or !b, 1u)
+
+        val maxSMTResult = maxSMTSolver.checkMaxSMT()
+
+        assertTrue(maxSMTResult.hardConstraintsSatStatus == SAT)
+        assertTrue(maxSMTResult.satSoftConstraints.size == 4)
+        assertTrue(maxSMTResult.satSoftConstraints.any { it.expression.internEquals(!a or !b) })
+        assertTrue(maxSMTResult.satSoftConstraints.any { it.expression.internEquals(!a or !b or !b) })
+    }
+
+    @Test
     fun inequalitiesTest() = with(ctx) {
         val x by intSort
         val y by intSort
@@ -359,20 +378,6 @@ abstract class KMaxSMTSolverTest {
         maxSMTSolver.pop()
         val maxSMTResult5 = maxSMTSolver.checkMaxSMT()
         assertTrue(maxSMTResult5.satSoftConstraints.isEmpty())
-    }
-
-    @Test
-    fun similarExpressionsTest(): Unit = with(ctx) {
-        val a by boolSort
-        val b by boolSort
-
-        maxSMTSolver.assertSoft(a or b, 1u)
-        maxSMTSolver.assertSoft(!a or b, 1u)
-        maxSMTSolver.assertSoft(a or !b, 1u)
-        maxSMTSolver.assertSoft(!a or !b, 1u)
-        maxSMTSolver.assertSoft(!a or !b or !b, 1u)
-
-        maxSMTSolver.checkMaxSMT()
     }
 
     private fun assertSoftConstraintsSat(
