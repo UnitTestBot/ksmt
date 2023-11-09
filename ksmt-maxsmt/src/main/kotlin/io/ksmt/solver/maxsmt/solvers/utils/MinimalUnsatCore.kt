@@ -48,7 +48,9 @@ internal class MinimalUnsatCore<T : KSolverConfiguration>(
             val expr = unknown.removeLast()
 
             val notExpr = !expr
-            val status = solver.checkWithAssumptions(minimalUnsatCore + unknown + notExpr, remainingTime)
+            minimalUnsatCore.add(notExpr)
+
+            val status = solver.checkWithAssumptions(minimalUnsatCore + unknown, remainingTime)
 
             when (status) {
                 UNKNOWN -> return CoreUtils.coreToSoftConstraints(unsatCore, assumptions)
