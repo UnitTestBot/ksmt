@@ -39,13 +39,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Check out ${{ github.event.inputs.commitSHA }} commit
-        if: github.event.inputs.commitSHA != ''
-        run: |
-          git config --global --add safe.directory ${GITHUB_WORKSPACE}
-          git fetch
-          git checkout ${{ github.event.inputs.commitSHA }}
-
       - id: set-matrix
         name: Read and print config from maxsmt-tests-matrix.json
         run: |
@@ -108,5 +101,5 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.logics.NAME }}_test_report
+          name: ${{ matrix.logics.NAME }}_${{ github.event.inputs.solver }}_${{ github.event.inputs.smtSolver }}_test_report
           path: ksmt-maxsmt-test/build/reports/tests/test/*
