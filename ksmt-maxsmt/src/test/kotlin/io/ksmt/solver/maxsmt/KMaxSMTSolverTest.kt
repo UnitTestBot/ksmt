@@ -1,6 +1,6 @@
 package io.ksmt.solver.maxsmt
 
-import  io.ksmt.KContext
+import io.ksmt.KContext
 import io.ksmt.solver.KSolverStatus.SAT
 import io.ksmt.solver.KSolverStatus.UNSAT
 import io.ksmt.solver.maxsmt.constraints.SoftConstraint
@@ -332,7 +332,7 @@ abstract class KMaxSMTSolverTest {
         assertTrue(maxSMTResult.maxSMTSucceeded)
         assertSoftConstraintsSat(
             listOf(SoftConstraint(y, 783u), SoftConstraint(!x and !y or !x or !y, 859u)),
-            maxSMTResult.satSoftConstraints
+            maxSMTResult.satSoftConstraints,
         )
     }
 
