@@ -319,6 +319,24 @@ abstract class KMaxSMTSolverTest {
     }
 
     @Test
+    fun threeExpressionsAreInconsistentTest() = with(ctx) {
+        val x by boolSort
+        val y by boolSort
+
+        maxSMTSolver.assertSoft(x, 671u)
+        maxSMTSolver.assertSoft(y, 783u)
+        maxSMTSolver.assertSoft(!x and !y or !x or !y, 859u)
+
+        val maxSMTResult = maxSMTSolver.checkMaxSMT()
+
+        assertTrue(maxSMTResult.maxSMTSucceeded)
+        assertSoftConstraintsSat(
+            listOf(SoftConstraint(y, 783u), SoftConstraint(!x and !y or !x or !y, 859u)),
+            maxSMTResult.satSoftConstraints
+        )
+    }
+
+    @Test
     fun oneScopePushPopTest() = with(ctx) {
         val a by boolSort
         val b by boolSort
