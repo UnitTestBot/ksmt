@@ -5,10 +5,18 @@ on:
     inputs:
       solver:
         type: choice
-        description: What solver configuration to choose
+        description: Chosen MaxSMT solver configuration
         options: 
         - KPMRes
         - KPrimalDualMaxRes
+      smtSolver:
+        type: choice
+        description: Chosen SMT solver
+        options:
+        - Z3
+        - Bitwuzla
+        - Cvc5
+        - Yices
       commitSHA:
         description: Commit SHA
         required: false
@@ -94,7 +102,7 @@ jobs:
           arguments: |
             :ksmt-maxsmt-test:test
             --no-daemon
-            --tests "io.ksmt.solver.maxsmt.test.smt.${{ github.event.inputs.solver }}SMTBenchmarkTest.maxSMTTest"
+            --tests "io.ksmt.solver.maxsmt.test.smt.${{ github.event.inputs.solver }}SMTBenchmarkTest.maxSMT${{ github.event.inputs.smtSolver }}Test"
 
       - name: Archive ${{ matrix.logics.NAME }} test report
         if: ${{ always() }}
