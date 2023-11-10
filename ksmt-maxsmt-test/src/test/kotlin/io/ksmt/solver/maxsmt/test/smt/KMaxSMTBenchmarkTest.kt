@@ -10,12 +10,22 @@ import io.ksmt.runner.core.KsmtWorkerPool
 import io.ksmt.runner.core.RdServer
 import io.ksmt.runner.core.WorkerInitializationFailedException
 import io.ksmt.runner.generated.models.TestProtocolModel
+import io.ksmt.solver.KSolver
+import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverStatus.SAT
+import io.ksmt.solver.bitwuzla.KBitwuzlaSolver
+import io.ksmt.solver.cvc5.KCvc5Solver
 import io.ksmt.solver.maxsmt.KMaxSMTResult
 import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolver
 import io.ksmt.solver.maxsmt.test.KMaxSMTBenchmarkBasedTest
 import io.ksmt.solver.maxsmt.test.parseMaxSMTTestInfo
-import io.ksmt.solver.z3.KZ3SolverConfiguration
+import io.ksmt.solver.maxsmt.test.util.Solver
+import io.ksmt.solver.maxsmt.test.util.Solver.BITWUZLA
+import io.ksmt.solver.maxsmt.test.util.Solver.CVC5
+import io.ksmt.solver.maxsmt.test.util.Solver.YICES
+import io.ksmt.solver.maxsmt.test.util.Solver.Z3
+import io.ksmt.solver.yices.KYicesSolver
+import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.sort.KBoolSort
 import io.ksmt.test.TestRunner
 import io.ksmt.test.TestWorker
@@ -25,7 +35,6 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.BeforeEach
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.extension
@@ -38,15 +47,23 @@ import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
 abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
-    abstract fun getSolver(): KMaxSMTSolver<KZ3SolverConfiguration>
+    protected fun getSmtSolver(solver: Solver): KSolver<KSolverConfiguration> = with(ctx) {
+        return when (solver) {
+            Z3 -> KZ3Solver(this) as KSolver<KSolverConfiguration>
+            BITWUZLA -> KBitwuzlaSolver(this) as KSolver<KSolverConfiguration>
+            CVC5 -> KCvc5Solver(this) as KSolver<KSolverConfiguration>
+            YICES -> KYicesSolver(this) as KSolver<KSolverConfiguration>
+        }
+    }
+
+    abstract fun getSolver(solver: Solver): KMaxSMTSolver<KSolverConfiguration>
 
     protected val ctx: KContext = KContext()
-    private lateinit var maxSMTSolver: KMaxSMTSolver<KZ3SolverConfiguration>
+    private lateinit var maxSMTSolver: KMaxSMTSolver<KSolverConfiguration>
     private val logger = KotlinLogging.logger {}
 
-    @BeforeEach
-    fun initSolver() {
-        maxSMTSolver = getSolver()
+    private fun initSolver(solver: Solver) {
+        maxSMTSolver = getSolver(solver)
     }
 
     @AfterEach
@@ -56,7 +73,10 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         name: String,
         samplePath: Path,
         mkKsmtAssertions: suspend TestRunner.(List<KExpr<KBoolSort>>) -> List<KExpr<KBoolSort>>,
+        solver: Solver = Z3,
     ) {
+        initSolver(solver)
+
         val extension = "smt2"
         require(samplePath.extension == extension) {
             "File extension cannot be '${samplePath.extension}' as it must be $extension"

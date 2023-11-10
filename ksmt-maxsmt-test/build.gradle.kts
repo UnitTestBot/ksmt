@@ -12,7 +12,12 @@ dependencies {
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
     testImplementation("org.junit.jupiter", "junit-jupiter-params", "5.8.2")
+
     testImplementation(project(":ksmt-z3"))
+    testImplementation(project(":ksmt-bitwuzla"))
+    testImplementation(project(":ksmt-cvc5"))
+    testImplementation(project(":ksmt-yices"))
+
     testImplementation(project(":ksmt-test"))
     testImplementation(project(":ksmt-runner"))
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
