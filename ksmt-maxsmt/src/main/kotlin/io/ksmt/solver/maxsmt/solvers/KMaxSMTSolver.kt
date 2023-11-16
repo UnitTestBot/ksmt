@@ -6,12 +6,10 @@ import io.ksmt.solver.KModel
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverStatus
-import io.ksmt.solver.KSolverStatus.SAT
-import io.ksmt.solver.KSolverStatus.UNKNOWN
-import io.ksmt.solver.KSolverStatus.UNSAT
 import io.ksmt.solver.maxsmt.KMaxSMTResult
 import io.ksmt.solver.maxsmt.constraints.SoftConstraint
 import io.ksmt.solver.maxsmt.scope.MaxSMTScopeManager
+import io.ksmt.solver.maxsmt.statistics.KMaxSMTStatistics
 import io.ksmt.sort.KBoolSort
 import kotlin.time.Duration
 
@@ -22,6 +20,7 @@ abstract class KMaxSMTSolver<T>(
     where T : KSolverConfiguration {
     private val scopeManager = MaxSMTScopeManager()
     protected var softConstraints = mutableListOf<SoftConstraint>()
+    protected lateinit var maxSMTStatistics: KMaxSMTStatistics
 
     /**
      * Softly assert an expression with weight (aka soft constraint) into solver.
@@ -39,11 +38,33 @@ abstract class KMaxSMTSolver<T>(
     /**
      * Solve maximum satisfiability modulo theories problem.
      *
+     * @throws NotImplementedError
+     */
+    fun checkMaxSMT(timeout: Duration = Duration.INFINITE): KMaxSMTResult =
+        checkMaxSMT(timeout, collectStatistics = false)
+
+    /**
+     * Solve maximum satisfiability modulo theories problem.
+     *
      * @param collectStatistics specifies whether statistics (elapsed time to execute method etc.) should be collected or not.
      *
      * @throws NotImplementedError
      */
-    abstract fun checkMaxSMT(timeout: Duration = Duration.INFINITE, collectStatistics: Boolean = false): KMaxSMTResult
+    abstract fun checkMaxSMT(
+        timeout: Duration = Duration.INFINITE,
+        collectStatistics: Boolean,
+    ): KMaxSMTResult
+
+    /**
+     * Get last MaxSMT launch statistics (number of queries to solver, MaxSMT timeout etc.).
+     */
+    fun collectMaxSMTStatistics(): KMaxSMTStatistics {
+        require(this::maxSMTStatistics.isInitialized) {
+            "MaxSMT statistics is only available after MaxSMT launches with statistics collection enabled"
+        }
+
+        return maxSMTStatistics
+    }
 
     /**
      * Union soft constraints with same expressions into a single soft constraint.
@@ -71,20 +92,6 @@ abstract class KMaxSMTSolver<T>(
             }
         }
     }
-
-    /**
-     * Check on satisfiability hard constraints with assumed soft constraints.
-     *
-     * @return a triple of solver status, unsat core (if exists, empty list otherwise) and model
-     * (if exists, null otherwise).
-     */
-    protected fun checkSAT(assumptions: List<SoftConstraint>, timeout: Duration):
-        Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> =
-        when (val status = solver.checkWithAssumptions(assumptions.map { x -> x.expression }, timeout)) {
-            SAT -> Triple(status, listOf(), solver.model())
-            UNSAT -> Triple(status, solver.unsatCore(), null)
-            UNKNOWN -> Triple(status, listOf(), null)
-        }
 
     protected fun getSatSoftConstraintsByModel(model: KModel): List<SoftConstraint> {
         return softConstraints.filter { model.eval(it.expression, true) == ctx.trueExpr }

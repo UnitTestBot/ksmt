@@ -1,7 +1,6 @@
 package io.ksmt.solver.maxsmt.test.smt
 
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.github.oshai.kotlinlogging.withLoggingContext
 import io.ksmt.KContext
 import io.ksmt.expr.KExpr
 import io.ksmt.runner.core.KsmtWorkerArgs
@@ -19,6 +18,8 @@ import io.ksmt.solver.maxsmt.KMaxSMTResult
 import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolver
 import io.ksmt.solver.maxsmt.test.KMaxSMTBenchmarkBasedTest
 import io.ksmt.solver.maxsmt.test.parseMaxSMTTestInfo
+import io.ksmt.solver.maxsmt.test.statistics.JsonStatisticsHelper
+import io.ksmt.solver.maxsmt.test.statistics.MaxSMTTestStatistics
 import io.ksmt.solver.maxsmt.test.utils.Solver
 import io.ksmt.solver.maxsmt.test.utils.Solver.BITWUZLA
 import io.ksmt.solver.maxsmt.test.utils.Solver.CVC5
@@ -39,14 +40,14 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.io.File
 import java.nio.file.Path
+import java.nio.file.Paths
 import kotlin.io.path.extension
+import kotlin.random.Random
 import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.DurationUnit
-import kotlin.time.toDuration
 
 abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
     protected fun getSmtSolver(solver: Solver): KSolver<KSolverConfiguration> = with(ctx) {
@@ -74,28 +75,28 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
     @ParameterizedTest(name = "{0}")
     @MethodSource("maxSMTTestData")
     fun maxSMTZ3Test(name: String, samplePath: Path) {
-        maxSMTTest(name, samplePath, { assertions -> assertions }, Z3)
+        testMaxSMTSolver(name, samplePath, { assertions -> assertions }, Z3)
     }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("maxSMTTestData")
     fun maxSMTBitwuzlaTest(name: String, samplePath: Path) {
-        maxSMTTest(name, samplePath, { assertions -> internalizeAndConvertBitwuzla(assertions) }, BITWUZLA)
+        testMaxSMTSolver(name, samplePath, { assertions -> internalizeAndConvertBitwuzla(assertions) }, BITWUZLA)
     }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("maxSMTTestData")
     fun maxSMTCvc5Test(name: String, samplePath: Path) {
-        maxSMTTest(name, samplePath, { assertions -> internalizeAndConvertCvc5(assertions) }, CVC5)
+        testMaxSMTSolver(name, samplePath, { assertions -> internalizeAndConvertCvc5(assertions) }, CVC5)
     }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("maxSMTTestData")
     fun maxSMTYicesTest(name: String, samplePath: Path) {
-        maxSMTTest(name, samplePath, { assertions -> internalizeAndConvertYices(assertions) }, YICES)
+        testMaxSMTSolver(name, samplePath, { assertions -> internalizeAndConvertYices(assertions) }, YICES)
     }
 
-    fun maxSMTTest(
+    private fun testMaxSMTSolver(
         name: String,
         samplePath: Path,
         mkKsmtAssertions: suspend TestRunner.(List<KExpr<KBoolSort>>) -> List<KExpr<KBoolSort>>,
@@ -136,25 +137,32 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             }
 
         lateinit var maxSMTResult: KMaxSMTResult
-
         val elapsedTime = measureTimeMillis {
-            maxSMTResult = maxSMTSolver.checkMaxSMT(60.seconds)
+            maxSMTResult = maxSMTSolver.checkMaxSMT(60.seconds, true)
         }
+        val testStatistics = MaxSMTTestStatistics(maxSMTSolver.collectMaxSMTStatistics())
+        testStatistics.name = name
+        testStatistics.maxSMTCallElapsedTimeMs = elapsedTime
 
-        withLoggingContext("test" to name) {
-            logger.info { "Elapsed time: [${elapsedTime.toDuration(DurationUnit.MILLISECONDS).inWholeSeconds} s]" }
-        }
+        logger.info { "Test name: [$name]" }
+        logger.info { "Elapsed time (MaxSMT call): [${elapsedTime}ms]" }
 
         val satSoftConstraintsWeightsSum = maxSMTResult.satSoftConstraints.sumOf { it.weight }
 
-        assertEquals(SAT, maxSMTResult.hardConstraintsSatStatus, "Hard constraints must be SAT")
-        assertTrue(maxSMTResult.maxSMTSucceeded, "MaxSMT was not successful [$name]")
-        assertEquals(
-            maxSmtTestInfo.satSoftConstraintsWeightsSum,
-            satSoftConstraintsWeightsSum.toULong(),
-            "Soft constraints weights sum was [$satSoftConstraintsWeightsSum], " +
-                "but must be [${maxSmtTestInfo.satSoftConstraintsWeightsSum}]",
-        )
+        try {
+            assertEquals(SAT, maxSMTResult.hardConstraintsSatStatus, "Hard constraints must be SAT")
+            assertEquals(
+                maxSmtTestInfo.satSoftConstraintsWeightsSum,
+                satSoftConstraintsWeightsSum.toULong(),
+                "Soft constraints weights sum was [$satSoftConstraintsWeightsSum], " +
+                    "but must be [${maxSmtTestInfo.satSoftConstraintsWeightsSum}]",
+            )
+            testStatistics.correctnessError = false
+            assertTrue(maxSMTResult.maxSMTSucceeded, "MaxSMT was not successful [$name]")
+            testStatistics.passed = true
+        } finally {
+            jsonHelper.appendTestStatisticsToFile(testStatistics)
+        }
     }
 
     private fun KsmtWorkerPool<TestProtocolModel>.withWorker(
@@ -197,6 +205,7 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         val TEST_WORKER_SINGLE_OPERATION_TIMEOUT = 25.seconds
 
         internal lateinit var testWorkers: KsmtWorkerPool<TestProtocolModel>
+        private lateinit var jsonHelper: JsonStatisticsHelper
 
         @BeforeAll
         @JvmStatic
@@ -210,10 +219,22 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
                     override fun mkWorker(id: Int, process: RdServer) = TestWorker(id, process)
                 },
             )
+
+            jsonHelper =
+                JsonStatisticsHelper(
+                    File(
+                        "${
+                            Paths.get("").toAbsolutePath()
+                        }/src/test/resources/maxsmt-statistics-${Random.nextInt(0, 10000)}.json",
+                    ),
+                )
         }
 
         @AfterAll
         @JvmStatic
-        fun closeWorkerPools() = testWorkers.terminate()
+        fun closeWorkerPools() {
+            testWorkers.terminate()
+            jsonHelper.markLastTestStatisticsAsProcessed()
+        }
     }
 }

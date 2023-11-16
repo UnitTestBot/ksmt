@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.konan.properties.loadProperties
+
 plugins {
     id("io.ksmt.ksmt-base")
 }
@@ -6,12 +8,14 @@ repositories {
     mavenCentral()
 }
 
+val versions = loadProperties(projectDir.parentFile.resolve("version.properties").absolutePath)
+
 dependencies {
     implementation(project(":ksmt-core"))
     implementation(project(":ksmt-maxsmt"))
 
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
-    testImplementation("org.junit.jupiter", "junit-jupiter-params", "5.8.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:${versions["junit-jupiter"]}")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:${versions["junit-jupiter"]}")
 
     testImplementation(project(":ksmt-z3"))
     testImplementation(project(":ksmt-bitwuzla"))
@@ -20,9 +24,12 @@ dependencies {
 
     testImplementation(project(":ksmt-test"))
     testImplementation(project(":ksmt-runner"))
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${versions["kotlinx-coroutines"]}")
     testImplementation("io.github.oshai:kotlin-logging-jvm:5.1.0")
     testImplementation("org.slf4j:slf4j-simple:2.0.9")
+
+    testImplementation("com.google.code.gson:gson:2.10.1")
 }
 
 val maxSmtBenchmarks = listOfNotNull(

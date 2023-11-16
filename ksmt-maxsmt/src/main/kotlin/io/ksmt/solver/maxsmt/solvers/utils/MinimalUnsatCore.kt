@@ -13,26 +13,33 @@ import io.ksmt.solver.maxsmt.utils.ModelUtils
 import io.ksmt.solver.maxsmt.utils.TimerUtils
 import io.ksmt.sort.KBoolSort
 import kotlin.time.Duration
+import kotlin.time.TimeSource.Monotonic.markNow
 
 internal class MinimalUnsatCore<T : KSolverConfiguration>(
     private val ctx: KContext,
     private val solver: KSolver<T>,
 ) {
     private val _minimalUnsatCoreModel = MinimalUnsatCoreModel(ctx, solver)
+    private lateinit var coreStatistics: MinimalCoreStatistics
 
     fun getBestModel(): Pair<KModel?, UInt> = _minimalUnsatCoreModel.getBestModel()
 
-    // If solver starts returning unknown, we return non minimized unsat core.
+    // If solver starts returning unknown or exceeds the timeout, we return non minimized unsat core.
     fun tryGetMinimalUnsatCore(
         assumptions: List<SoftConstraint>,
         timeout: Duration = Duration.INFINITE,
+        collectStatistics: Boolean = false,
     ): List<SoftConstraint> = with(ctx) {
         val clockStart = System.currentTimeMillis()
+
+        if (collectStatistics) {
+            coreStatistics = MinimalCoreStatistics()
+        }
 
         val unsatCore = solver.unsatCore()
 
         if (unsatCore.isEmpty()) {
-            return CoreUtils.coreToSoftConstraints(unsatCore, assumptions)
+            return emptyList()
         }
 
         val minimalUnsatCore = mutableListOf<KExpr<KBoolSort>>()
@@ -50,7 +57,12 @@ internal class MinimalUnsatCore<T : KSolverConfiguration>(
             val notExpr = !expr
             minimalUnsatCore.add(notExpr)
 
+            val markCheckStart = markNow()
             val status = solver.checkWithAssumptions(minimalUnsatCore + unknown, remainingTime)
+            if (collectStatistics) {
+                coreStatistics.queriesToSolverNumber++
+                coreStatistics.timeInSolverQueriesMs += (markNow() - markCheckStart).inWholeMilliseconds
+            }
 
             when (status) {
                 UNKNOWN -> return CoreUtils.coreToSoftConstraints(unsatCore, assumptions)
@@ -65,6 +77,17 @@ internal class MinimalUnsatCore<T : KSolverConfiguration>(
         }
 
         return CoreUtils.coreToSoftConstraints(unsatCore, assumptions)
+    }
+
+    /**
+     * Get last core minimization statistics (number of queries to solver, time in solver queries (ms) etc.).
+     */
+    fun collectStatistics(): MinimalCoreStatistics {
+        require(this::coreStatistics.isInitialized) {
+            "Minimal core construction statistics is only available after core minimization launches with statistics collection enabled"
+        }
+
+        return coreStatistics
     }
 
     fun reset() = _minimalUnsatCoreModel.reset()

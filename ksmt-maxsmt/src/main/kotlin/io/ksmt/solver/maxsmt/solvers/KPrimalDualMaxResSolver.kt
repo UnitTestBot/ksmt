@@ -11,14 +11,17 @@ import io.ksmt.solver.KSolverStatus.UNKNOWN
 import io.ksmt.solver.KSolverStatus.UNSAT
 import io.ksmt.solver.maxsmt.KMaxSMTContext
 import io.ksmt.solver.maxsmt.KMaxSMTContext.Strategy.PrimalDualMaxRes
+import io.ksmt.solver.maxsmt.KMaxSMTContext.Strategy.PrimalMaxRes
 import io.ksmt.solver.maxsmt.KMaxSMTResult
 import io.ksmt.solver.maxsmt.constraints.SoftConstraint
 import io.ksmt.solver.maxsmt.solvers.utils.MinimalUnsatCore
+import io.ksmt.solver.maxsmt.statistics.KMaxSMTStatistics
 import io.ksmt.solver.maxsmt.utils.CoreUtils
 import io.ksmt.solver.maxsmt.utils.ModelUtils
 import io.ksmt.solver.maxsmt.utils.TimerUtils
 import io.ksmt.sort.KBoolSort
 import kotlin.time.Duration
+import kotlin.time.TimeSource.Monotonic.markNow
 
 class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
     private val ctx: KContext,
@@ -34,21 +37,41 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
     private var _correctionSetModel: KModel? = null
     private var _model: KModel? = null
     private var _minimalUnsatCore = MinimalUnsatCore(ctx, solver)
+    private var collectStatistics = false
 
     private data class WeightedCore(val expressions: List<KExpr<KBoolSort>>, val weight: UInt)
 
     override fun checkMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult {
         val clockStart = System.currentTimeMillis()
+        val markCheckMaxSMTStart = markNow()
 
         if (TimerUtils.timeoutExceeded(timeout)) {
             error("Timeout must be positive but was [${timeout.inWholeSeconds} s]")
         }
 
+        this.collectStatistics = collectStatistics
+
+        if (this.collectStatistics) {
+            maxSMTStatistics = KMaxSMTStatistics(maxSmtCtx)
+            maxSMTStatistics.timeoutMs = timeout.inWholeMilliseconds
+        }
+
+        val markHardConstraintsCheckStart = markNow()
         val hardConstraintsStatus = solver.check(timeout)
+        if (this.collectStatistics) {
+            maxSMTStatistics.queriesToSolverNumber++
+            maxSMTStatistics.timeInSolverQueriesMs += (markNow() - markHardConstraintsCheckStart).inWholeMilliseconds
+        }
 
         if (hardConstraintsStatus == UNSAT || softConstraints.isEmpty()) {
+            if (collectStatistics) {
+                maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+            }
             return KMaxSMTResult(listOf(), hardConstraintsStatus, true)
         } else if (hardConstraintsStatus == UNKNOWN) {
+            if (collectStatistics) {
+                maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+            }
             return KMaxSMTResult(listOf(), hardConstraintsStatus, false)
         }
 
@@ -61,6 +84,9 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         while (_lower < _upper) {
             val softConstraintsCheckRemainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
             if (TimerUtils.timeoutExceeded(softConstraintsCheckRemainingTime)) {
+                if (collectStatistics) {
+                    maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+                }
                 throw NotImplementedError()
             }
 
@@ -69,9 +95,9 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
             when (status) {
                 SAT -> {
                     when (maxSmtCtx.strategy) {
-                        KMaxSMTContext.Strategy.PrimalMaxRes -> _upper = _lower
+                        PrimalMaxRes -> _upper = _lower
 
-                        KMaxSMTContext.Strategy.PrimalDualMaxRes -> {
+                        PrimalDualMaxRes -> {
                             val correctionSet = getCorrectionSet(solver.model(), assumptions)
                             if (correctionSet.isEmpty()) {
                                 if (_model != null) {
@@ -89,6 +115,9 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                     val remainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
                     if (TimerUtils.timeoutExceeded(remainingTime)) {
                         solver.pop()
+                        if (collectStatistics) {
+                            maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+                        }
                         throw NotImplementedError()
                     }
 
@@ -97,15 +126,24 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                         _lower = _upper
                         // TODO: process this case as it can happen when timeout exceeded
                         solver.pop()
+                        if (collectStatistics) {
+                            maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+                        }
                         throw NotImplementedError()
                     } else if (processUnsatStatus == UNKNOWN) {
                         solver.pop()
+                        if (collectStatistics) {
+                            maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+                        }
                         throw NotImplementedError()
                     }
                 }
 
                 UNKNOWN -> {
                     solver.pop()
+                    if (collectStatistics) {
+                        maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+                    }
                     throw NotImplementedError()
                 }
             }
@@ -117,6 +155,9 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
 
         solver.pop()
 
+        if (collectStatistics) {
+            maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+        }
         return result
     }
 
@@ -236,8 +277,16 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         return Pair(status, cores)
     }
 
-    private fun minimizeCore(assumptions: List<SoftConstraint>, timeout: Duration): List<SoftConstraint> =
-        _minimalUnsatCore.tryGetMinimalUnsatCore(assumptions, timeout)
+    private fun minimizeCore(assumptions: List<SoftConstraint>, timeout: Duration): List<SoftConstraint> {
+        val minimalUnsatCore = _minimalUnsatCore.tryGetMinimalUnsatCore(assumptions, timeout, collectStatistics)
+        if (collectStatistics) {
+            val minimalCoreStatistics = _minimalUnsatCore.collectStatistics()
+            maxSMTStatistics.queriesToSolverNumber += minimalCoreStatistics.queriesToSolverNumber
+            maxSMTStatistics.timeInSolverQueriesMs += minimalCoreStatistics.timeInSolverQueriesMs
+        }
+
+        return minimalUnsatCore
+    }
 
     private fun updateMinimalUnsatCoreModel(assumptions: List<SoftConstraint>) {
         val (model, weight) = _minimalUnsatCore.getBestModel()
@@ -434,10 +483,20 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                     return UNKNOWN
                 }
 
+                val markCheckAssumptionsStart = markNow()
                 status = checkSat(assumptionsToCheck, remainingTime)
+                if (collectStatistics) {
+                    maxSMTStatistics.queriesToSolverNumber++
+                    maxSMTStatistics.timeInSolverQueriesMs += (markNow() - markCheckAssumptionsStart).inWholeMilliseconds
+                }
             }
         } else {
+            val markCheckStart = markNow()
             status = checkSat(assumptions, timeout)
+            if (collectStatistics) {
+                maxSMTStatistics.queriesToSolverNumber++
+                maxSMTStatistics.timeInSolverQueriesMs += (markNow() - markCheckStart).inWholeMilliseconds
+            }
         }
 
         return status
