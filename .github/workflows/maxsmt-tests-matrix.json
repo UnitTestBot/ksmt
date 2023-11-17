@@ -3,6 +3,10 @@
     {
       "NAME": "QF_ABVFP-light",
       "TEST_DATA_REVISION": "0.0.0"
+    },
+    {
+      "NAME": "QF_ABVFP-light2",
+      "TEST_DATA_REVISION": "0.0.0"
     }
   ]
 }
