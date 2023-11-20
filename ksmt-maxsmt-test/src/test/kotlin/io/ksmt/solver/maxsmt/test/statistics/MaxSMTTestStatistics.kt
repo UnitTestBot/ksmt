@@ -6,5 +6,5 @@ internal data class MaxSMTTestStatistics(val maxSMTCallStatistics: KMaxSMTStatis
     var name = ""
     var maxSMTCallElapsedTimeMs: Long = 0
     var passed = false
-    var correctnessError = true
+    var checkedSoftConstraintsSumIsWrong = false
 }
