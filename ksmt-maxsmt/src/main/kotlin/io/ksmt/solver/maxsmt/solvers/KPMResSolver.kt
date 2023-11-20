@@ -88,15 +88,15 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
     private fun runMaxSMTLogic(timeout: Duration): KMaxSMTResult {
         val clockStart = System.currentTimeMillis()
 
+        val markHardConstraintsCheckStart = markNow()
+        val hardConstraintsStatus = solver.check(timeout)
+
+        if (collectStatistics) {
+            maxSMTStatistics.queriesToSolverNumber++
+            maxSMTStatistics.timeInSolverQueriesMs += (markNow() - markHardConstraintsCheckStart).inWholeMilliseconds
+        }
+
         if (softConstraints.isEmpty()) {
-            val markHardConstraintsCheckStart = markNow()
-            val hardConstraintsStatus = solver.check(timeout)
-
-            if (collectStatistics) {
-                maxSMTStatistics.queriesToSolverNumber++
-                maxSMTStatistics.timeInSolverQueriesMs += (markNow() - markHardConstraintsCheckStart).inWholeMilliseconds
-            }
-
             return KMaxSMTResult(
                 listOf(),
                 hardConstraintsStatus,
@@ -104,18 +104,10 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
             )
         }
 
-        val markSoftConstraintsCheckStart = markNow()
-        val status = solver.check(timeout)
-
-        if (collectStatistics) {
-            maxSMTStatistics.queriesToSolverNumber++
-            maxSMTStatistics.timeInSolverQueriesMs += (markNow() - markSoftConstraintsCheckStart).inWholeMilliseconds
-        }
-
-        if (status == UNSAT) {
-            return KMaxSMTResult(listOf(), status, true)
-        } else if (status == UNKNOWN) {
-            return KMaxSMTResult(listOf(), status, false)
+        if (hardConstraintsStatus == UNSAT) {
+            return KMaxSMTResult(listOf(), hardConstraintsStatus, true)
+        } else if (hardConstraintsStatus == UNKNOWN) {
+            return KMaxSMTResult(listOf(), hardConstraintsStatus, false)
         }
 
         var i = 0
@@ -124,15 +116,15 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
         unionSoftConstraintsWithSameExpressions(formula)
 
         while (true) {
-            val softConstraintsCheckRemainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
+            val checkRemainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
 
-            if (TimerUtils.timeoutExceeded(softConstraintsCheckRemainingTime)) {
-                return KMaxSMTResult(listOf(), status, false)
+            if (TimerUtils.timeoutExceeded(checkRemainingTime)) {
+                return KMaxSMTResult(listOf(), hardConstraintsStatus, false)
             }
 
             val markCheckSatStart = markNow()
             val (solverStatus, unsatCore, model) =
-                checkSat(formula, softConstraintsCheckRemainingTime)
+                checkSat(formula, checkRemainingTime)
 
             if (collectStatistics) {
                 maxSMTStatistics.queriesToSolverNumber++
@@ -141,7 +133,7 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
 
             if (solverStatus == UNKNOWN) {
                 // TODO: get max SAT soft constraints subset
-                return KMaxSMTResult(listOf(), status, false)
+                return KMaxSMTResult(listOf(), hardConstraintsStatus, false)
             }
 
             currentMaxSMTResult = Triple(solverStatus, unsatCore, model)
