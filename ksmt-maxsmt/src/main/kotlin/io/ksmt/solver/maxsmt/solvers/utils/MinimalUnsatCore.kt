@@ -133,7 +133,7 @@ internal class MinimalUnsatCore<T : KSolverConfiguration>(
             var weight = 0u
 
             for (asm in assumptions) {
-                if (ModelUtils.expressionIsFalse(ctx, model, asm.expression)) {
+                if (ModelUtils.expressionIsNotTrue(ctx, model, asm.expression)) {
                     weight += asm.weight
                 }
             }

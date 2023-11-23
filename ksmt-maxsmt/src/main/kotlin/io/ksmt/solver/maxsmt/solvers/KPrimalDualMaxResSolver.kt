@@ -299,7 +299,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
     private fun updateAssignment(model: KModel, assumptions: List<SoftConstraint>) {
         var correctionSetSize = 0
         for (constr in assumptions) {
-            if (ModelUtils.expressionIsFalse(ctx, model, constr.expression)) {
+            if (ModelUtils.expressionIsNotTrue(ctx, model, constr.expression)) {
                 ++correctionSetSize
             }
         }
@@ -484,7 +484,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                 }
 
                 val markCheckAssumptionsStart = markNow()
-                status = checkSat(assumptionsToCheck, remainingTime)
+                status = checkSat(assumptionsToCheck, assumptionsToCheck.size == assumptions.size, remainingTime)
                 if (collectStatistics) {
                     maxSMTStatistics.queriesToSolverNumber++
                     maxSMTStatistics.timeInSolverQueriesMs += (markNow() - markCheckAssumptionsStart).inWholeMilliseconds
@@ -492,7 +492,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
             }
         } else {
             val markCheckStart = markNow()
-            status = checkSat(assumptions, timeout)
+            status = checkSat(assumptions, true, timeout)
             if (collectStatistics) {
                 maxSMTStatistics.queriesToSolverNumber++
                 maxSMTStatistics.timeInSolverQueriesMs += (markNow() - markCheckStart).inWholeMilliseconds
@@ -515,10 +515,14 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         return currentIndex
     }
 
-    private fun checkSat(assumptions: List<SoftConstraint>, timeout: Duration): KSolverStatus {
+    private fun checkSat(
+        assumptions: List<SoftConstraint>,
+        passedAllAssumptions: Boolean,
+        timeout: Duration,
+    ): KSolverStatus {
         val status = solver.checkWithAssumptions(assumptions.map { it.expression }, timeout)
 
-        if (status == SAT) {
+        if (passedAllAssumptions && status == SAT) {
             updateAssignment(solver.model().detach(), assumptions)
         }
 

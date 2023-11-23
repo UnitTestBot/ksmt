@@ -7,14 +7,14 @@ import io.ksmt.solver.maxsmt.constraints.SoftConstraint
 import io.ksmt.sort.KBoolSort
 
 internal object ModelUtils {
-    fun expressionIsFalse(ctx: KContext, model: KModel, expression: KExpr<KBoolSort>) =
-        model.eval(expression, true) == ctx.falseExpr
+    fun expressionIsNotTrue(ctx: KContext, model: KModel, expression: KExpr<KBoolSort>) =
+        model.eval(expression, true) != ctx.trueExpr
 
     fun getModelCost(ctx: KContext, model: KModel, softConstraints: List<SoftConstraint>): UInt {
         var upper = 0u
 
         for (soft in softConstraints) {
-            if (expressionIsFalse(ctx, model, soft.expression)) {
+            if (expressionIsNotTrue(ctx, model, soft.expression)) {
                 upper += soft.weight
             }
         }
@@ -26,7 +26,7 @@ internal object ModelUtils {
         val correctionSet = mutableListOf<SoftConstraint>()
 
         for (constr in softConstraints) {
-            if (expressionIsFalse(ctx, model, constr.expression)) {
+            if (expressionIsNotTrue(ctx, model, constr.expression)) {
                 correctionSet.add(constr)
             }
         }
