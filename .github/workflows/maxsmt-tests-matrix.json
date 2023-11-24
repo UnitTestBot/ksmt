@@ -7,6 +7,18 @@
     {
       "NAME": "QF_ABVFP-light2",
       "TEST_DATA_REVISION": "0.0.0"
+    },
+    {
+      "NAME": "QF_AUFBVLIA-light",
+      "TEST_DATA_REVISION": "0.0.0"
+    },
+    {
+      "NAME": "QF_BV-light",
+      "TEST_DATA_REVISION": "0.0.0"
+    },
+    {
+      "NAME": "QF_UFLRA-light",
+      "TEST_DATA_REVISION": "0.0.0"
     }
   ]
 }
