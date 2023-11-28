@@ -6,7 +6,7 @@ on:
       solver:
         type: choice
         description: Chosen MaxSMT solver configuration
-        options: 
+        options:
         - KPMRes
         - KPrimalDualMaxRes
       smtSolver:
@@ -16,7 +16,7 @@ on:
         - Z3
         - Bitwuzla
         - Cvc5
-        - Yices
+        - Yices2
       commitSHA:
         description: Commit SHA
         required: false
@@ -40,9 +40,21 @@ jobs:
         uses: actions/checkout@v3
 
       - id: set-matrix
-        name: Read and print config from maxsmt-tests-matrix.json
+        name: Create and print MaxSMT logics matrix
+
+        # Exclude LIA, LRA tests for Bitwuzla solver
+        # Exclude FP tests for Yices2 solver
         run: |
-          MAXSMT_TESTS=$(echo $(cat .github/workflows/maxsmt-tests-matrix.json))
+          if ${{ github.event.inputs.smtSolver == 'Bitwuzla' }}
+          then
+            MAXSMT_TESTS=$(echo $(cat .github/workflows/maxsmt-tests-matrix.json | jq '{ "logics": [ .[] | select(.NAME | contains("LIA") or contains("LRA") | not) ] }'))
+          elif ${{ github.event.inputs.smtSolver == 'Yices2' }}
+          then
+            MAXSMT_TESTS=$(echo $(cat .github/workflows/maxsmt-tests-matrix.json | jq '{ "logics": [ .[] | select(.NAME | contains("FP") | not) ] }'))
+          else
+            MAXSMT_TESTS=$(echo $(cat .github/workflows/maxsmt-tests-matrix.json | jq '{ "logics": [ .[] ] }'))
+          fi
+
           echo "maxsmt-tests-matrix=$MAXSMT_TESTS" >> $GITHUB_OUTPUT
           echo $MAXSMT_TESTS
 
@@ -53,7 +65,7 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(needs.prepare-matrix.outputs.logics-matrix) }}
 
-    name: Run ${{ matrix.NAME }} tests
+    name: Run ${{ matrix.logics.NAME }} tests
 
     steps:
       - name: Checkout repository
