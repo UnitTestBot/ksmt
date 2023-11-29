@@ -8,6 +8,10 @@
     "TEST_DATA_REVISION": "0.0.0"
   },
   {
+    "NAME": "QF_AUFBV",
+    "TEST_DATA_REVISION": "0.0.0"
+  },
+  {
     "NAME": "QF_AUFBVLIA-light",
     "TEST_DATA_REVISION": "0.0.0"
   },
