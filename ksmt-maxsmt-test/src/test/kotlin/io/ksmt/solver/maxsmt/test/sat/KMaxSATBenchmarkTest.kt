@@ -1,13 +1,13 @@
 package io.ksmt.solver.maxsmt.test.sat
 
 import io.ksmt.KContext
+import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverStatus.SAT
 import io.ksmt.solver.maxsmt.constraints.HardConstraint
 import io.ksmt.solver.maxsmt.constraints.SoftConstraint
 import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolver
 import io.ksmt.solver.maxsmt.test.KMaxSMTBenchmarkBasedTest
 import io.ksmt.solver.maxsmt.test.parseMaxSATTest
-import io.ksmt.solver.z3.KZ3SolverConfiguration
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
@@ -18,10 +18,10 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 
 abstract class KMaxSATBenchmarkTest : KMaxSMTBenchmarkBasedTest {
-    abstract fun getSolver(): KMaxSMTSolver<KZ3SolverConfiguration>
+    abstract fun getSolver(): KMaxSMTSolver<KSolverConfiguration>
 
     protected val ctx: KContext = KContext()
-    private lateinit var maxSATSolver: KMaxSMTSolver<KZ3SolverConfiguration>
+    private lateinit var maxSATSolver: KMaxSMTSolver<KSolverConfiguration>
 
     @BeforeEach
     fun initSolver() {
