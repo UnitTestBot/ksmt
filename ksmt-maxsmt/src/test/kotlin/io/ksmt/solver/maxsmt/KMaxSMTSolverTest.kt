@@ -1,11 +1,11 @@
 package io.ksmt.solver.maxsmt
 
 import io.ksmt.KContext
+import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverStatus.SAT
 import io.ksmt.solver.KSolverStatus.UNSAT
 import io.ksmt.solver.maxsmt.constraints.SoftConstraint
 import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolver
-import io.ksmt.solver.z3.KZ3SolverConfiguration
 import io.ksmt.utils.getValue
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -14,10 +14,10 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 abstract class KMaxSMTSolverTest {
-    abstract fun getSolver(): KMaxSMTSolver<KZ3SolverConfiguration>
+    abstract fun getSolver(): KMaxSMTSolver<out KSolverConfiguration>
 
     protected val ctx: KContext = KContext()
-    private lateinit var maxSMTSolver: KMaxSMTSolver<KZ3SolverConfiguration>
+    private lateinit var maxSMTSolver: KMaxSMTSolver<out KSolverConfiguration>
 
     @BeforeEach
     fun initSolver() {

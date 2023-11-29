@@ -15,7 +15,7 @@ import kotlin.time.Duration
 
 abstract class KMaxSMTSolver<T>(
     private val ctx: KContext,
-    private val solver: KSolver<T>,
+    private val solver: KSolver<out T>,
 ) : KSolver<KSolverConfiguration>
     where T : KSolverConfiguration {
     private val scopeManager = MaxSMTScopeManager()

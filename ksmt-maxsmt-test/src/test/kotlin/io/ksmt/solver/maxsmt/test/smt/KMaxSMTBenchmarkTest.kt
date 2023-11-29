@@ -50,19 +50,19 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
-    protected fun getSmtSolver(solver: Solver): KSolver<KSolverConfiguration> = with(ctx) {
+    protected fun getSmtSolver(solver: Solver): KSolver<out KSolverConfiguration> = with(ctx) {
         return when (solver) {
-            Z3 -> KZ3Solver(this) as KSolver<KSolverConfiguration>
-            BITWUZLA -> KBitwuzlaSolver(this) as KSolver<KSolverConfiguration>
-            CVC5 -> KCvc5Solver(this) as KSolver<KSolverConfiguration>
-            YICES -> KYicesSolver(this) as KSolver<KSolverConfiguration>
+            Z3 -> KZ3Solver(this)
+            BITWUZLA -> KBitwuzlaSolver(this)
+            CVC5 -> KCvc5Solver(this)
+            YICES -> KYicesSolver(this)
         }
     }
 
     abstract fun getSolver(solver: Solver): KMaxSMTSolver<KSolverConfiguration>
 
     protected val ctx: KContext = KContext()
-    private lateinit var maxSMTSolver: KMaxSMTSolver<KSolverConfiguration>
+    private lateinit var maxSMTSolver: KMaxSMTSolver<out KSolverConfiguration>
     private val logger = KotlinLogging.logger {}
 
     private fun initSolver(solver: Solver) {

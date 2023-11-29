@@ -25,7 +25,7 @@ import kotlin.time.TimeSource.Monotonic.markNow
 
 class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
     private val ctx: KContext,
-    private val solver: KSolver<T>,
+    private val solver: KSolver<out T>,
     private val maxSmtCtx: KMaxSMTContext,
 ) :
     KMaxResSolver<T>(ctx, solver) {

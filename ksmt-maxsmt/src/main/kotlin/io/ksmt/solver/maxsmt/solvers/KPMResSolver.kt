@@ -21,7 +21,7 @@ import io.ksmt.utils.mkConst
 import kotlin.time.Duration
 import kotlin.time.TimeSource.Monotonic.markNow
 
-class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private val solver: KSolver<T>) :
+class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private val solver: KSolver<out T>) :
     KMaxResSolver<T>(ctx, solver) {
     private var currentMaxSMTResult: Triple<KSolverStatus?, List<KExpr<KBoolSort>>, KModel?> =
         Triple(null, listOf(), null)
