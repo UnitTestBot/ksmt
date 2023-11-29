@@ -16,7 +16,7 @@ on:
         - Z3
         - Bitwuzla
         - Cvc5
-        - Yices2
+        - Yices
       commitSHA:
         description: Commit SHA
         required: false
@@ -43,12 +43,12 @@ jobs:
         name: Create and print MaxSMT logics matrix
 
         # Exclude LIA, LRA tests for Bitwuzla solver
-        # Exclude FP tests for Yices2 solver
+        # Exclude FP tests for Yices solver
         run: |
           if ${{ github.event.inputs.smtSolver == 'Bitwuzla' }}
           then
             MAXSMT_TESTS=$(echo $(cat .github/workflows/maxsmt-tests-matrix.json | jq '{ "logics": [ .[] | select(.NAME | contains("LIA") or contains("LRA") | not) ] }'))
-          elif ${{ github.event.inputs.smtSolver == 'Yices2' }}
+          elif ${{ github.event.inputs.smtSolver == 'Yices' }}
           then
             MAXSMT_TESTS=$(echo $(cat .github/workflows/maxsmt-tests-matrix.json | jq '{ "logics": [ .[] | select(.NAME | contains("FP") | not) ] }'))
           else
