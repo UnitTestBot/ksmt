@@ -109,6 +109,7 @@ jobs:
             --tests "io.ksmt.solver.maxsmt.test.smt.${{ github.event.inputs.solver }}SMTBenchmarkTest.maxSMT${{ github.event.inputs.smtSolver }}Test"
 
       - name: Add logic name to test run statistics
+        if: ${{ always() }}
         # Create an object with the field 'logics' from the JSON list
         run: |
           cat <<< $(jq -S '. += { "NAME": "${{ matrix.logics.NAME }}" }' ksmt-maxsmt-test/src/test/resources/maxsmt-statistics-*.json) > ksmt-maxsmt-test/src/test/resources/maxsmt-statistics-*.json
