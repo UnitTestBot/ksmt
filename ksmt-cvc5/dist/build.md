@@ -21,16 +21,12 @@ To ensure that our distribution is portable, we verify that the produced binarie
 $ ldd libcvc5.so libcvc5jni.so 
 libcvc5.so:
         linux-vdso.so.1 (0x00007ffe22381000)
-        libstdc++.so.6 => /usr/lib/libstdc++.so.6 (0x00007ff4c7800000)
         libm.so.6 => /usr/lib/libm.so.6 (0x00007ff4c8bf4000)
-        libgcc_s.so.1 => /usr/lib/libgcc_s.so.1 (0x00007ff4c8bd4000)
         libc.so.6 => /usr/lib/libc.so.6 (0x00007ff4c7619000)
         /usr/lib64/ld-linux-x86-64.so.2 (0x00007ff4c8d0a000)
 libcvc5jni.so:
         linux-vdso.so.1 (0x00007ffccbbb5000)
         libcvc5.so => not found
-        libstdc++.so.6 => /usr/lib/libstdc++.so.6 (0x00007fa594e00000)
-        libgcc_s.so.1 => /usr/lib/libgcc_s.so.1 (0x00007fa5962db000)
         libc.so.6 => /usr/lib/libc.so.6 (0x00007fa594c19000)
         libm.so.6 => /usr/lib/libm.so.6 (0x00007fa5961f3000)
         /usr/lib64/ld-linux-x86-64.so.2 (0x00007fa596389000)

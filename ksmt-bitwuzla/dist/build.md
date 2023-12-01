@@ -19,17 +19,13 @@ To ensure that our distribution is portable, we verify that the produced binarie
 ```shell
 $ ldd libbitwuzla.so 
         linux-vdso.so.1 (0x00007ffce92d0000)
-        libstdc++.so.6 => /usr/lib/libstdc++.so.6 (0x00007f2fdaa00000)
         libm.so.6 => /usr/lib/libm.so.6 (0x00007f2fdad18000)
-        libgcc_s.so.1 => /usr/lib/libgcc_s.so.1 (0x00007f2fdb192000)
         libc.so.6 => /usr/lib/libc.so.6 (0x00007f2fda819000)
         /usr/lib64/ld-linux-x86-64.so.2 (0x00007f2fdb1e0000)
 $ ldd libbitwuzla_jni.so 
         libbitwuzla.so => not found
         linux-vdso.so.1 (0x00007ffd1ddc6000)
-        libstdc++.so.6 => /usr/lib/libstdc++.so.6 (0x00007f6188800000)
         libm.so.6 => /usr/lib/libm.so.6 (0x00007f6188b18000)
-        libgcc_s.so.1 => /usr/lib/libgcc_s.so.1 (0x00007f6189006000)
         libc.so.6 => /usr/lib/libc.so.6 (0x00007f6188619000)
         /usr/lib64/ld-linux-x86-64.so.2 (0x00007f618906d000)
 ```
