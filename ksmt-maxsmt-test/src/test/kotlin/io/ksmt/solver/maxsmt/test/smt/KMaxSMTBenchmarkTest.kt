@@ -110,11 +110,24 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         }
 
         lateinit var ksmtAssertions: List<KExpr<KBoolSort>>
+        val testStatistics = MaxSMTTestStatistics(name, solver)
 
-        testWorkers.withWorker(ctx) { worker ->
-            val assertions = worker.parseFile(samplePath)
-            val convertedAssertions = worker.convertAssertions(assertions)
-            ksmtAssertions = worker.mkKsmtAssertions(convertedAssertions)
+        try {
+            testWorkers.withWorker(ctx) { worker ->
+                val assertions = worker.parseFile(samplePath)
+                val convertedAssertions = worker.convertAssertions(assertions)
+                ksmtAssertions = worker.mkKsmtAssertions(convertedAssertions)
+            }
+        } catch (ex: IgnoreTestException) {
+            testStatistics.ignoredTest = true
+            testStatistics.exceptionMessage = ex.message.toString()
+            throw ex
+        } catch (ex: Exception) {
+            testStatistics.failedOnParsingOrConvertingExpressions = true
+            testStatistics.exceptionMessage = ex.message.toString()
+            throw ex
+        } finally {
+            jsonHelper.appendTestStatisticsToFile(testStatistics)
         }
 
         val maxSmtTestPath = File(samplePath.toString().removeSuffix(extension) + "maxsmt").toPath()
@@ -140,9 +153,8 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         val elapsedTime = measureTimeMillis {
             maxSMTResult = maxSMTSolver.checkMaxSMT(60.seconds, true)
         }
-        val testStatistics = MaxSMTTestStatistics(maxSMTSolver.collectMaxSMTStatistics())
-        testStatistics.smtSolver = solver
-        testStatistics.name = name
+
+        testStatistics.maxSMTCallStatistics = maxSMTSolver.collectMaxSMTStatistics()
         testStatistics.maxSMTCallElapsedTimeMs = elapsedTime
 
         logger.info { "Test name: [$name]" }
