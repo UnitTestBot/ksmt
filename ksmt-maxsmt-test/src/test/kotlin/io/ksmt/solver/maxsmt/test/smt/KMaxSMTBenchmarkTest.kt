@@ -148,11 +148,11 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         logger.info { "Test name: [$name]" }
         logger.info { "Elapsed time (MaxSMT call): [${elapsedTime}ms]" }
 
-        val satSoftConstraintsWeightsSum = maxSMTResult.satSoftConstraints.sumOf { it.weight }
-
         try {
             assertTrue(maxSMTResult.maxSMTSucceeded, "MaxSMT was not successful [$name]")
             assertEquals(SAT, maxSMTResult.hardConstraintsSatStatus, "Hard constraints must be SAT")
+
+            val satSoftConstraintsWeightsSum = maxSMTResult.satSoftConstraints.sumOf { it.weight }
             if (maxSmtTestInfo.satSoftConstraintsWeightsSum != satSoftConstraintsWeightsSum.toULong()) {
                 testStatistics.checkedSoftConstraintsSumIsWrong = true
             }
