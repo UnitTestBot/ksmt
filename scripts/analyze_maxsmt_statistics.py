@@ -13,7 +13,7 @@ def analyze_maxsmt_statistics(stat_file, analyzed_stat_file_to_save):
     if not stat_file.exists() or not stat_file.is_file():
         raise FileExistsError(f"File with statistics [{str(stat_file)}] does not exist")
 
-    with open(stat_file, "r") as f:
+    with open(stat_file, "r", encoding="utf-8") as f:
         stat = json.load(f)
 
     logics_size = len(stat["logics"])
@@ -28,7 +28,7 @@ def analyze_maxsmt_statistics(stat_file, analyzed_stat_file_to_save):
         logic_stat_str = json.dumps(logic_stat, default=obj_dict, indent=2, separators=(',', ': '))
         print(logic_stat_str + "\n")
 
-    with open(analyzed_stat_file_to_save, "w") as f:
+    with open(analyzed_stat_file_to_save, "w", encoding="utf-8") as f:
         json.dump(logics_statistics, f, default=obj_dict, indent=2, separators=(',', ': '))
 
 
