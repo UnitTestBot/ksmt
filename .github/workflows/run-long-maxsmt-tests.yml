@@ -109,9 +109,49 @@ jobs:
             --no-daemon
             --tests "io.ksmt.solver.maxsmt.test.smt.${{ github.event.inputs.solver }}SMTBenchmarkTest.maxSMT${{ github.event.inputs.smtSolver }}Test"
 
-      - name: Archive ${{ matrix.logics.NAME }} test report
+      - name: Add logic name to test run statistics
+        # Add logic name to JSON with test statistics
+        run: |
+          cat <<< $(jq -S '. += { "NAME": "${{ matrix.logics.NAME }}" }' ksmt-maxsmt-test/src/test/resources/maxsmt-statistics-*.json) > ksmt-maxsmt-test/src/test/resources/maxsmt-statistics-*.json
+
+      - name: Upload ${{ matrix.logics.NAME }} test statistics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.logics.NAME }}_${{ github.event.inputs.solver }}_${{ github.event.inputs.smtSolver }}_test_statistics
+          path: ksmt-maxsmt-test/src/test/resources/maxsmt-statistics-*.json
+
+      - name: Upload ${{ matrix.logics.NAME }} test report
         if: ${{ always() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.logics.NAME }}_${{ github.event.inputs.solver }}_${{ github.event.inputs.smtSolver }}_test_report
           path: ksmt-maxsmt-test/build/reports/tests/test/*
+
+  merge-maxsmt-statistics:
+    needs: run-maxsmt-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download test statistics
+        uses: actions/download-artifact@v3
+        id: download
+        with:
+          path: downloads
+
+      - name: Add merged test run statistics path to environment variables
+        run: |
+          export MERGED_STATISTICS_PATH=${{steps.download.outputs.download-path}}/${{ github.event.inputs.solver }}_${{ github.event.inputs.smtSolver }}_test_statistics.json
+          echo "MERGED_STATISTICS_PATH=$MERGED_STATISTICS_PATH" >> $GITHUB_ENV
+
+      - name: Merge test run statistics
+        # Merge all test run statistic files into single
+        run: |
+          jq -s '.' ${{steps.download.outputs.download-path}}/*_test_statistics/*.json > ${{ env.MERGED_STATISTICS_PATH }}_temp
+          cat ${{ env.MERGED_STATISTICS_PATH }}_temp | jq '{ "logics": . }' > ${{ env.MERGED_STATISTICS_PATH }}
+
+      - name: Upload test run statistics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ github.event.inputs.solver }}_${{ github.event.inputs.smtSolver }}_test_statistics
+          path: ${{ env.MERGED_STATISTICS_PATH }}
