@@ -41,7 +41,6 @@ jobs:
 
       - id: set-matrix
         name: Create and print MaxSMT logics matrix
-
         # Exclude LIA, LRA tests for Bitwuzla solver
         # Exclude FP tests for Yices solver
         run: |
@@ -110,7 +109,7 @@ jobs:
             --tests "io.ksmt.solver.maxsmt.test.smt.${{ github.event.inputs.solver }}SMTBenchmarkTest.maxSMT${{ github.event.inputs.smtSolver }}Test"
 
       - name: Add logic name to test run statistics
-        # Add logic name to JSON with test statistics
+        # Create an object with the field 'logics' from the JSON list
         run: |
           cat <<< $(jq -S '. += { "NAME": "${{ matrix.logics.NAME }}" }' ksmt-maxsmt-test/src/test/resources/maxsmt-statistics-*.json) > ksmt-maxsmt-test/src/test/resources/maxsmt-statistics-*.json
 
@@ -144,7 +143,11 @@ jobs:
           echo "MERGED_STATISTICS_PATH=$MERGED_STATISTICS_PATH" >> $GITHUB_ENV
 
       - name: Merge test run statistics
-        # Merge all test run statistic files into single
+        # 1. Merge all test run statistics files into a single file:
+        # - merge all test run statistics files (${{steps.download.outputs.download-path}}/*_test_statistics/*.json) for different theories
+        # - save merged files into a single JSON file (${{ env.MERGED_STATISTICS_PATH }}_temp)
+        #
+        # 2. Create an object with the field 'logics' from the JSON list
         run: |
           jq -s '.' ${{steps.download.outputs.download-path}}/*_test_statistics/*.json > ${{ env.MERGED_STATISTICS_PATH }}_temp
           cat ${{ env.MERGED_STATISTICS_PATH }}_temp | jq '{ "logics": . }' > ${{ env.MERGED_STATISTICS_PATH }}
