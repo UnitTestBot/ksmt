@@ -141,6 +141,7 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             maxSMTResult = maxSMTSolver.checkMaxSMT(60.seconds, true)
         }
         val testStatistics = MaxSMTTestStatistics(maxSMTSolver.collectMaxSMTStatistics())
+        testStatistics.smtSolver = solver
         testStatistics.name = name
         testStatistics.maxSMTCallElapsedTimeMs = elapsedTime
 
