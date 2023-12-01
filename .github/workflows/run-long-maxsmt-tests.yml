@@ -156,14 +156,14 @@ jobs:
           jq -s '.' ${{steps.download.outputs.download-path}}/*_test_statistics/*.json > ${{ env.MERGED_STATISTICS_PATH }}_temp
           cat ${{ env.MERGED_STATISTICS_PATH }}_temp | jq '{ "logics": . }' > ${{ env.MERGED_STATISTICS_PATH }}
 
-      - name: Analyze test run statistics
-        run: python ${{ env.MERGED_STATISTICS_PATH }} ${{ env.ANALYZED_STATISTICS_PATH }}
-
       - name: Upload test run statistics
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.event.inputs.solver }}_${{ github.event.inputs.smtSolver }}_test_statistics
           path: ${{ env.MERGED_STATISTICS_PATH }}
+
+      - name: Analyze test run statistics
+        run: python ${{ env.MERGED_STATISTICS_PATH }} ${{ env.ANALYZED_STATISTICS_PATH }}
 
       - name: Upload analyzed test run statistics
         uses: actions/upload-artifact@v3
