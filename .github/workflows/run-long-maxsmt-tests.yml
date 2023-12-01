@@ -128,7 +128,7 @@ jobs:
           name: ${{ matrix.logics.NAME }}_${{ github.event.inputs.solver }}_${{ github.event.inputs.smtSolver }}_test_report
           path: ksmt-maxsmt-test/build/reports/tests/test/*
 
-  merge-maxsmt-statistics:
+  merge-and-analyze-maxsmt-statistics:
     needs: run-maxsmt-tests
     runs-on: ubuntu-20.04
     steps:
@@ -138,10 +138,13 @@ jobs:
         with:
           path: downloads
 
-      - name: Add merged test run statistics path to environment variables
+      - name: Add merged test run statistics and analyzed statistics paths to environment variables
         run: |
           export MERGED_STATISTICS_PATH=${{steps.download.outputs.download-path}}/${{ github.event.inputs.solver }}_${{ github.event.inputs.smtSolver }}_test_statistics.json
           echo "MERGED_STATISTICS_PATH=$MERGED_STATISTICS_PATH" >> $GITHUB_ENV
+
+          export ANALYZED_STATISTICS_PATH=${{steps.download.outputs.download-path}}/${{ github.event.inputs.solver }}_${{ github.event.inputs.smtSolver }}_analyzed_test_statistics.json
+          echo "ANALYZED_STATISTICS_PATH=$ANALYZED_STATISTICS_PATH" >> $GITHUB_ENV
 
       - name: Merge test run statistics
         # 1. Merge all test run statistics files into a single file:
@@ -153,9 +156,17 @@ jobs:
           jq -s '.' ${{steps.download.outputs.download-path}}/*_test_statistics/*.json > ${{ env.MERGED_STATISTICS_PATH }}_temp
           cat ${{ env.MERGED_STATISTICS_PATH }}_temp | jq '{ "logics": . }' > ${{ env.MERGED_STATISTICS_PATH }}
 
+      - name: Analyze test run statistics
+        run: python ${{ env.MERGED_STATISTICS_PATH }} ${{ env.ANALYZED_STATISTICS_PATH }}
+
       - name: Upload test run statistics
-        if: ${{ always() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.event.inputs.solver }}_${{ github.event.inputs.smtSolver }}_test_statistics
           path: ${{ env.MERGED_STATISTICS_PATH }}
+
+      - name: Upload analyzed test run statistics
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ github.event.inputs.solver }}_${{ github.event.inputs.smtSolver }}_analyzed_test_statistics
+          path: ${{ env.ANALYZED_STATISTICS_PATH }}
