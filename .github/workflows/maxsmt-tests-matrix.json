@@ -16,6 +16,10 @@
     "TEST_DATA_REVISION": "0.0.0"
   },
   {
+    "NAME": "QF_FP",
+    "TEST_DATA_REVISION": "0.0.0"
+  },
+  {
     "NAME": "QF_UF-light",
     "TEST_DATA_REVISION": "0.0.0"
   },
