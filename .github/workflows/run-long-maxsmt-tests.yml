@@ -29,7 +29,7 @@ env:
 
 jobs:
   prepare-matrix:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       logics-matrix: ${{ steps.set-matrix.outputs.maxsmt-tests-matrix }}
     steps:
@@ -60,7 +60,7 @@ jobs:
   run-maxsmt-tests:
     needs: prepare-matrix
     continue-on-error: true
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix: ${{ fromJSON(needs.prepare-matrix.outputs.logics-matrix) }}
 
@@ -130,7 +130,7 @@ jobs:
 
   merge-maxsmt-statistics:
     needs: run-maxsmt-tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Download test statistics
         uses: actions/download-artifact@v3
