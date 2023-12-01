@@ -39,6 +39,7 @@ val maxSmtBenchmarks = listOfNotNull(
     "QF_BV-light", // 8.96M
     "QF_FP", // 250K
     "QF_UF-light", // 3.79M
+    "QF_UFBV-light", // 6.26M
     "QF_UFLRA-light", // 2.27M
 )
 
