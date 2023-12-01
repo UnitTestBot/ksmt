@@ -155,7 +155,6 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         }
 
         testStatistics.maxSMTCallStatistics = maxSMTSolver.collectMaxSMTStatistics()
-        testStatistics.maxSMTCallElapsedTimeMs = elapsedTime
 
         logger.info { "Test name: [$name]" }
         logger.info { "Elapsed time (MaxSMT call): [${elapsedTime}ms]" }

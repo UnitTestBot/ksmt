@@ -5,7 +5,6 @@ import io.ksmt.solver.maxsmt.test.utils.Solver
 
 internal data class MaxSMTTestStatistics(val name: String, var smtSolver: Solver) {
     var maxSMTCallStatistics: KMaxSMTStatistics? = null
-    var maxSMTCallElapsedTimeMs: Long = 0
     var passed = false
     var ignoredTest = false
     var failedOnParsingOrConvertingExpressions = false
