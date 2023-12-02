@@ -132,6 +132,9 @@ jobs:
     needs: run-maxsmt-tests
     runs-on: ubuntu-20.04
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       - name: Download test statistics
         uses: actions/download-artifact@v3
         id: download
