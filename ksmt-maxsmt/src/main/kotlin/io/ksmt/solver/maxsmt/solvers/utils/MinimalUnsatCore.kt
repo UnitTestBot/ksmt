@@ -55,10 +55,9 @@ internal class MinimalUnsatCore<T : KSolverConfiguration>(
             val expr = unknown.removeLast()
 
             val notExpr = !expr
-            minimalUnsatCore.add(notExpr)
 
             val markCheckStart = markNow()
-            val status = solver.checkWithAssumptions(minimalUnsatCore + unknown, remainingTime)
+            val status = solver.checkWithAssumptions(minimalUnsatCore + notExpr + unknown, remainingTime)
             if (collectStatistics) {
                 coreStatistics.queriesToSolverNumber++
                 coreStatistics.timeInSolverQueriesMs += (markNow() - markCheckStart).inWholeMilliseconds
@@ -76,7 +75,7 @@ internal class MinimalUnsatCore<T : KSolverConfiguration>(
             }
         }
 
-        return CoreUtils.coreToSoftConstraints(unsatCore, assumptions)
+        return CoreUtils.coreToSoftConstraints(minimalUnsatCore, assumptions)
     }
 
     /**
