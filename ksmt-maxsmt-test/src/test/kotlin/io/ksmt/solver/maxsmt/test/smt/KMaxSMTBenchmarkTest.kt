@@ -25,6 +25,7 @@ import io.ksmt.solver.maxsmt.test.utils.Solver.BITWUZLA
 import io.ksmt.solver.maxsmt.test.utils.Solver.CVC5
 import io.ksmt.solver.maxsmt.test.utils.Solver.YICES
 import io.ksmt.solver.maxsmt.test.utils.Solver.Z3
+import io.ksmt.solver.maxsmt.test.utils.getRandomString
 import io.ksmt.solver.yices.KYicesSolver
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.sort.KBoolSort
@@ -42,7 +43,6 @@ import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.extension
-import kotlin.random.Random
 import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -239,7 +239,7 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
                     File(
                         "${
                             Paths.get("").toAbsolutePath()
-                        }/src/test/resources/maxsmt-statistics-${Random.nextInt(0, 10000)}.json",
+                        }/src/test/resources/maxsmt-statistics-${getRandomString(16)}.json",
                     ),
                 )
         }
