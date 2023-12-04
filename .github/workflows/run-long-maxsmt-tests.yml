@@ -166,7 +166,7 @@ jobs:
           path: ${{ env.MERGED_STATISTICS_PATH }}
 
       - name: Analyze test run statistics
-        run: python ${{ env.MERGED_STATISTICS_PATH }} ${{ env.ANALYZED_STATISTICS_PATH }}
+        run: python ./scripts/analyze_maxsmt_statistics.py ${{ env.MERGED_STATISTICS_PATH }} ${{ env.ANALYZED_STATISTICS_PATH }}
 
       - name: Upload analyzed test run statistics
         uses: actions/upload-artifact@v3
