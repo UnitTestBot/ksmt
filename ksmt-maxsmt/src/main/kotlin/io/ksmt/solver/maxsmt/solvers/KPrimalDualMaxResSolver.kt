@@ -240,15 +240,21 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         var status = UNSAT
 
         while (status == UNSAT) {
-            val minimizeCoreRemainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
-            if (TimerUtils.timeoutExceeded(minimizeCoreRemainingTime)) {
-                return Pair(SAT, cores) // TODO: is this status Ok?
+            var unsatCore: List<SoftConstraint>
+
+            if (maxSmtCtx.minimizeCores) {
+                val minimizeCoreRemainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
+                if (TimerUtils.timeoutExceeded(minimizeCoreRemainingTime)) {
+                    return Pair(SAT, cores) // TODO: is this status Ok?
+                }
+
+                unsatCore = minimizeCore(assumptions, minimizeCoreRemainingTime)
+                updateMinimalUnsatCoreModel(assumptions)
+            } else {
+                unsatCore = CoreUtils.coreToSoftConstraints(solver.unsatCore(), assumptions)
             }
 
-            val minimalUnsatCore = minimizeCore(assumptions, minimizeCoreRemainingTime)
-            updateMinimalUnsatCoreModel(assumptions)
-
-            if (minimalUnsatCore.isEmpty()) {
+            if (unsatCore.isEmpty()) {
                 cores.clear()
                 _lower = _upper
                 return Pair(SAT, cores)
@@ -257,12 +263,12 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
             // 1. remove all core literals from assumptions
             // 2. re-add literals of higher weight than min-weight.
             // 3. 'core' stores the core literals that are re-encoded as assumptions afterward
-            cores.add(WeightedCore(minimalUnsatCore.map { it.expression }, CoreUtils.getCoreWeight(minimalUnsatCore)))
+            cores.add(WeightedCore(unsatCore.map { it.expression }, CoreUtils.getCoreWeight(unsatCore)))
 
-            removeCoreAssumptions(minimalUnsatCore, assumptions)
-            splitCore(minimalUnsatCore, assumptions)
+            removeCoreAssumptions(unsatCore, assumptions)
+            splitCore(unsatCore, assumptions)
 
-            if (minimalUnsatCore.size >= _maxCoreSize) {
+            if (unsatCore.size >= _maxCoreSize) {
                 return Pair(SAT, cores)
             }
 
