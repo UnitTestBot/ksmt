@@ -8,14 +8,14 @@ internal object CoreUtils {
     fun coreToSoftConstraints(core: List<KExpr<KBoolSort>>, assumptions: List<SoftConstraint>): List<SoftConstraint> {
         val uniqueCoreElements = mutableListOf<KExpr<KBoolSort>>()
         core.forEach {
-            if (!uniqueCoreElements.any { u -> u.internEquals(it) }) {
+            if (!uniqueCoreElements.any { u -> u == it }) {
                 uniqueCoreElements.add(it)
             }
         }
 
         val softs = mutableListOf<SoftConstraint>()
         for (soft in assumptions) {
-            if (uniqueCoreElements.any { it.internEquals(soft.expression) }) {
+            if (uniqueCoreElements.any { it == soft.expression }) {
                 softs.add(soft)
             }
         }

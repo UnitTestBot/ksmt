@@ -286,8 +286,8 @@ abstract class KMaxSMTSolverTest {
 
         assertTrue(maxSMTResult.hardConstraintsSatStatus == SAT)
         assertTrue(maxSMTResult.satSoftConstraints.size == 4)
-        assertTrue(maxSMTResult.satSoftConstraints.any { it.expression.internEquals(!a or !b) })
-        assertTrue(maxSMTResult.satSoftConstraints.any { it.expression.internEquals(!a or !b or !b) })
+        assertTrue(maxSMTResult.satSoftConstraints.any { it.expression == !a or !b })
+        assertTrue(maxSMTResult.satSoftConstraints.any { it.expression == !a or !b or !b })
     }
 
     @Test
@@ -405,7 +405,7 @@ abstract class KMaxSMTSolverTest {
         for (constraint in constraintsToAssert) {
             assertTrue(
                 satConstraints.any {
-                    constraint.expression.internEquals(it.expression) && constraint.weight == it.weight
+                    constraint.expression == it.expression && constraint.weight == it.weight
                 },
             )
         }
