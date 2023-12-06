@@ -1,24 +1,18 @@
 name: Build and run long MaxSMT tests
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       solver:
-        type: choice
+        type: string
         description: Chosen MaxSMT solver configuration
-        options:
-        - KPMRes
-        - KPrimalDualMaxRes
+        required: true
       smtSolver:
-        type: choice
+        type: string
         description: Chosen SMT solver
-        options:
-        - Z3
-        - Bitwuzla
-        - Cvc5
-        - Yices
+        required: true
       commitSHA:
-        description: Commit SHA
+        description: Commit SHA (latest commit is default)
         required: false
         type: string
         default: ""
@@ -44,10 +38,10 @@ jobs:
         # Exclude LIA, LRA tests for Bitwuzla solver
         # Exclude FP tests for Yices solver
         run: |
-          if ${{ github.event.inputs.smtSolver == 'Bitwuzla' }}
+          if ${{ inputs.smtSolver == 'Bitwuzla' }}
           then
             MAXSMT_TESTS=$(echo $(cat .github/workflows/maxsmt-tests-matrix.json | jq '{ "logics": [ .[] | select(.NAME | contains("LIA") or contains("LRA") | not) ] }'))
-          elif ${{ github.event.inputs.smtSolver == 'Yices' }}
+          elif ${{ inputs.smtSolver == 'Yices' }}
           then
             MAXSMT_TESTS=$(echo $(cat .github/workflows/maxsmt-tests-matrix.json | jq '{ "logics": [ .[] | select(.NAME | contains("FP") | not) ] }'))
           else
@@ -70,12 +64,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Check out ${{ github.event.inputs.commitSHA }} commit
-        if: github.event.inputs.commitSHA != ''
+      - name: Check out ${{ inputs.commitSHA }} commit
+        if: inputs.commitSHA != ''
         run: |
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
           git fetch
-          git checkout ${{ github.event.inputs.commitSHA }}
+          git checkout ${{ inputs.commitSHA }}
 
       - name: Set up JDK 1.8
         uses: actions/setup-java@v3
@@ -106,7 +100,7 @@ jobs:
           arguments: |
             :ksmt-maxsmt-test:test
             --no-daemon
-            --tests "io.ksmt.solver.maxsmt.test.smt.${{ github.event.inputs.solver }}SMTBenchmarkTest.maxSMT${{ github.event.inputs.smtSolver }}Test"
+            --tests "io.ksmt.solver.maxsmt.test.smt.${{ inputs.solver }}SMTBenchmarkTest.maxSMT${{ inputs.smtSolver }}Test"
 
       - name: Add logic name to test run statistics
         if: ${{ always() }}
@@ -118,14 +112,14 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.logics.NAME }}_${{ github.event.inputs.solver }}_${{ github.event.inputs.smtSolver }}_test_statistics
+          name: ${{ matrix.logics.NAME }}_${{ inputs.solver }}_${{ inputs.smtSolver }}_test_statistics
           path: ksmt-maxsmt-test/src/test/resources/maxsmt-statistics-*.json
 
       - name: Upload ${{ matrix.logics.NAME }} test report
         if: ${{ always() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.logics.NAME }}_${{ github.event.inputs.solver }}_${{ github.event.inputs.smtSolver }}_test_report
+          name: ${{ matrix.logics.NAME }}_${{ inputs.solver }}_${{ inputs.smtSolver }}_test_report
           path: ksmt-maxsmt-test/build/reports/tests/test/*
 
   merge-and-analyze-maxsmt-statistics:
@@ -143,10 +137,10 @@ jobs:
 
       - name: Add merged test run statistics and analyzed statistics paths to environment variables
         run: |
-          export MERGED_STATISTICS_PATH=${{steps.download.outputs.download-path}}/${{ github.event.inputs.solver }}_${{ github.event.inputs.smtSolver }}_test_statistics.json
+          export MERGED_STATISTICS_PATH=${{steps.download.outputs.download-path}}/${{ inputs.solver }}_${{ inputs.smtSolver }}_test_statistics.json
           echo "MERGED_STATISTICS_PATH=$MERGED_STATISTICS_PATH" >> $GITHUB_ENV
 
-          export ANALYZED_STATISTICS_PATH=${{steps.download.outputs.download-path}}/${{ github.event.inputs.solver }}_${{ github.event.inputs.smtSolver }}_analyzed_test_statistics.json
+          export ANALYZED_STATISTICS_PATH=${{steps.download.outputs.download-path}}/${{ inputs.solver }}_${{ inputs.smtSolver }}_analyzed_test_statistics.json
           echo "ANALYZED_STATISTICS_PATH=$ANALYZED_STATISTICS_PATH" >> $GITHUB_ENV
 
       - name: Merge test run statistics
@@ -162,7 +156,7 @@ jobs:
       - name: Upload test run statistics
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.event.inputs.solver }}_${{ github.event.inputs.smtSolver }}_test_statistics
+          name: ${{ inputs.solver }}_${{ inputs.smtSolver }}_test_statistics
           path: ${{ env.MERGED_STATISTICS_PATH }}
 
       - name: Analyze test run statistics
@@ -171,5 +165,5 @@ jobs:
       - name: Upload analyzed test run statistics
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.event.inputs.solver }}_${{ github.event.inputs.smtSolver }}_analyzed_test_statistics
+          name: ${{ inputs.solver }}_${{ inputs.smtSolver }}_analyzed_test_statistics
           path: ${{ env.ANALYZED_STATISTICS_PATH }}
