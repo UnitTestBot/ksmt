@@ -15,3 +15,7 @@ ksmt-maxsmt-test/testData
 
 # ignore maxsmt test data
 ksmt-maxsmt-test/src/test/resources/maxSmtBenchmark
+
+# ignore maxsmt statistics
+ksmt-maxsmt-test/src/test/resources/maxsmt-statistics-*.json
+
