@@ -79,7 +79,6 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         initMaxSMT()
 
         val assumptions = softConstraints.toMutableList()
-        unionSoftConstraintsWithSameExpressions(assumptions)
 
         while (_lower < _upper) {
             val softConstraintsCheckRemainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)

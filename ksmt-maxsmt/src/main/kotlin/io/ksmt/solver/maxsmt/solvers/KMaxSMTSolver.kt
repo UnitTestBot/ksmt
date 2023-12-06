@@ -66,33 +66,6 @@ abstract class KMaxSMTSolver<T>(
         return maxSMTStatistics
     }
 
-    /**
-     * Union soft constraints with same expressions into a single soft constraint.
-     *
-     * The new soft constraint weight will be equal to the sum of old soft constraints weights.
-     */
-    protected fun unionSoftConstraintsWithSameExpressions(formula: MutableList<SoftConstraint>) {
-        val exprToRepetitionsMap = mutableMapOf<KExpr<KBoolSort>, Int>()
-
-        formula.forEach {
-            if (exprToRepetitionsMap.containsKey(it.expression)) {
-                exprToRepetitionsMap[it.expression] = exprToRepetitionsMap[it.expression]!! + 1
-            } else {
-                exprToRepetitionsMap[it.expression] = 1
-            }
-        }
-
-        exprToRepetitionsMap.forEach { (expr, repetitions) ->
-            if (repetitions > 1) {
-                val repeatedExpressions = formula.filter { it.expression == expr }
-
-                formula.removeAll(repeatedExpressions)
-                val repeatedExpressionsWeightsSum = repeatedExpressions.sumOf { it.weight }
-                formula.add(SoftConstraint(expr, repeatedExpressionsWeightsSum))
-            }
-        }
-    }
-
     protected fun getSatSoftConstraintsByModel(model: KModel): List<SoftConstraint> {
         return softConstraints.filter { model.eval(it.expression, true) == ctx.trueExpr }
     }

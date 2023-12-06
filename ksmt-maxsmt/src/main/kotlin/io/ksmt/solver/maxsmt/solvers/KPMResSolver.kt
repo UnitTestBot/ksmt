@@ -113,8 +113,6 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
         var i = 0
         var formula = softConstraints.toMutableList()
 
-        unionSoftConstraintsWithSameExpressions(formula)
-
         while (true) {
             val checkRemainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
 

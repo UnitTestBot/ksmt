@@ -6,23 +6,14 @@ import io.ksmt.sort.KBoolSort
 
 internal object CoreUtils {
     fun coreToSoftConstraints(core: List<KExpr<KBoolSort>>, assumptions: List<SoftConstraint>): List<SoftConstraint> {
-        val uniqueCoreElements = mutableListOf<KExpr<KBoolSort>>()
-        core.forEach {
-            if (!uniqueCoreElements.any { u -> u == it }) {
-                uniqueCoreElements.add(it)
-            }
-        }
-
         val softs = mutableListOf<SoftConstraint>()
-        for (soft in assumptions) {
-            if (uniqueCoreElements.any { it == soft.expression }) {
-                softs.add(soft)
-            }
-        }
 
-        require(uniqueCoreElements.size == softs.size) {
-            "Unsat core size [${uniqueCoreElements.size}] was not equal to corresponding " +
-                "soft constraints size [${softs.size}]"
+        for (element in core) {
+            val softElement = assumptions.find { it.expression == element }
+
+            require(softElement != null) { "Assumptions do not contain an element from the core" }
+
+            softs.add(softElement)
         }
 
         return softs
