@@ -33,10 +33,11 @@ dependencies {
 }
 
 val maxSmtBenchmarks = listOfNotNull(
-    "QF_ABV-light", // 3.03M
+    "QF_ABV-light", // 2.56M
     "QF_ABVFP-light", // 650K
     "QF_AUFBV", // 233K
     "QF_AUFBVLIA-light", // 3.8M
+    "QF_AUFLIA", // 244K
     "QF_BV-light", // 8.55M
     "QF_FP", // 250K
     "QF_UF-light", // 3.79M
