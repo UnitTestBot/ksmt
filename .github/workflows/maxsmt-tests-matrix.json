@@ -1,5 +1,9 @@
 [
   {
+    "NAME": "QF_ABV-light",
+    "TEST_DATA_REVISION": "0.0.0"
+  },
+  {
     "NAME": "QF_ABVFP-light",
     "TEST_DATA_REVISION": "0.0.0"
   },
