@@ -121,13 +121,13 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         } catch (ex: IgnoreTestException) {
             testStatistics.ignoredTest = true
             testStatistics.exceptionMessage = ex.message.toString()
+            jsonHelper.appendTestStatisticsToFile(testStatistics)
             throw ex
         } catch (ex: Exception) {
             testStatistics.failedOnParsingOrConvertingExpressions = true
             testStatistics.exceptionMessage = ex.message.toString()
-            throw ex
-        } finally {
             jsonHelper.appendTestStatisticsToFile(testStatistics)
+            throw ex
         }
 
         val maxSmtTestPath = File(samplePath.toString().removeSuffix(extension) + "maxsmt").toPath()
