@@ -1,4 +1,4 @@
-name: Build and run long ksmt maxsat tests
+name: Build and run long ksmt MaxSAT tests
 
 on:
   workflow_dispatch:
@@ -7,12 +7,12 @@ env:
   TEST_DATA_REVISION: 0.0.0
 
 jobs:
-  setup:
-    runs-on: ${{ matrix.os }}
+  run-maxsat-tests:
+    runs-on: ubuntu-20.04
 
     strategy:
       matrix:
-        os: [ubuntu-20.04, windows-latest]
+        BENCHMARK_NUMBER: [ 1, 2, 3, 4, 5, 6 ]
       fail-fast: false
 
     steps:
@@ -39,30 +39,21 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: |
-            :ksmt-maxsmt-test:downloadPreparedMaxSatBenchmarkTestData
+            :ksmt-maxsmt-test:maxsat-benchmark-${{ matrix.BENCHMARK_NUMBER }}
             --no-daemon
             -PtestDataRevision=${{ env.TEST_DATA_REVISION }}
 
-      - name: Prepare test data (unpack)
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: |
-            :ksmt-maxsmt-test:usePreparedTestData
-            --no-daemon
-
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-
-      - name: Run maxsat benchmark
+      - name: Run MaxSAT benchmark
         uses: gradle/gradle-build-action@v2
         with:
           arguments: |
             :ksmt-maxsmt-test:test
             --no-daemon
+            --tests "io.ksmt.solver.maxsmt.test.sat.KPMResSATBenchmarkTest"
 
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: ksmt-maxsat-test-report
+          name: ksmt-maxsat-test-report-${{ matrix.BENCHMARK_NUMBER }}
           path: ksmt-maxsmt-test/build/reports/tests/test/*

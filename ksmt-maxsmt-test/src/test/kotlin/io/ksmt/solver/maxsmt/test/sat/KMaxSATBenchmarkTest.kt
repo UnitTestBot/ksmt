@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.nio.file.Path
+import kotlin.io.path.name
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
@@ -32,9 +33,9 @@ abstract class KMaxSATBenchmarkTest : KMaxSMTBenchmarkBasedTest {
     fun closeSolver() = maxSATSolver.close()
 
     @ParameterizedTest(name = "{0}")
-    @MethodSource("maxSMTTestData")
+    @MethodSource("maxSATTestData")
     fun maxSATTest(name: String, samplePath: Path) = with(ctx) {
-        val testData = maxSATTestNameToExpectedResult.find { it.first == name }
+        val testData = maxSATTestNameToExpectedResult.find { it.first == samplePath.name }
         require(testData != null) { "Test [$name] expected result must be specified" }
 
         val constraints = parseMaxSATTest(samplePath, this)
@@ -53,7 +54,7 @@ abstract class KMaxSATBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         val maxSATResult = maxSATSolver.checkMaxSMT(20.seconds)
         val satConstraintsScore = maxSATResult.satSoftConstraints.sumOf { it.weight }
         val expectedSatConstraintsScore =
-            sumOfSoftConstraintsWeights - maxSATTestNameToExpectedResult.find { it.first == name }!!.second
+            sumOfSoftConstraintsWeights - maxSATTestNameToExpectedResult.first { it.first == samplePath.name }.second
 
         assertEquals(SAT, maxSATResult.hardConstraintsSatStatus, "Hard constraints must be SAT")
         assertTrue(maxSATResult.maxSMTSucceeded, "MaxSAT was not successful [$name]")

@@ -18,9 +18,10 @@ interface KMaxSMTBenchmarkBasedTest {
                 ?.let { Paths.get(it) }
                 ?: error("No test data")
 
-        private fun prepareTestData(): List<BenchmarkTestArguments> {
+        private fun prepareTestData(extension: String): List<BenchmarkTestArguments> {
             val testDataLocation = testDataLocation()
-            return testDataLocation.toFile().walkTopDown().filter { f -> f.isFile && f.extension == "smt2" }.toList()
+            return testDataLocation.toFile().walkTopDown()
+                .filter { f -> f.isFile && (f.extension == extension) }.toList()
                 .sorted()
                 .map {
                     BenchmarkTestArguments(
@@ -30,11 +31,18 @@ interface KMaxSMTBenchmarkBasedTest {
                 }
         }
 
-        private val testData by lazy {
-            prepareTestData()
+        private val maxSmtTestData by lazy {
+            prepareTestData("smt2")
         }
 
         @JvmStatic
-        fun maxSMTTestData() = testData
+        fun maxSMTTestData() = maxSmtTestData
+
+        private val maxSatTestData by lazy {
+            prepareTestData("wcnf")
+        }
+
+        @JvmStatic
+        fun maxSATTestData() = maxSatTestData
     }
 }

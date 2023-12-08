@@ -46,58 +46,51 @@ val maxSmtBenchmarks = listOfNotNull(
     "QF_UFLRA-light", // 2.23M
 )
 
-val runMaxSMTBenchmarkBasedTests = project.booleanProperty("runMaxSMTBenchmarkBasedTests") ?: false
-val runMaxSATBenchmarkBasedTests = project.booleanProperty("runMaxSATBenchmarkBasedTests") ?: false
+val maxSatBenchmarks = listOfNotNull(
+    "maxsat-benchmark-1", // 48.6M
+    "maxsat-benchmark-2", // 34.1M
+    "maxsat-benchmark-3", // 56.8M
+    "maxsat-benchmark-4", // 17.2M
+    "maxsat-benchmark-5", // 90.4M
+    "maxsat-benchmark-6", // 37.9M
+)
 
-// use benchmarks from testData directory instead of downloading
-val usePreparedMaxSMTBenchmarks = project.booleanProperty("usePreparedMaxSMTBenchmarks") ?: true
-val usePreparedMaxSATBenchmark = project.booleanProperty("usePreparedMaxSATBenchmark") ?: true
+val runMaxSmtBenchmarkTests = project.booleanProperty("runMaxSmtBenchmarkTests") ?: false
+val runMaxSatBenchmarkTests = project.booleanProperty("runMaxSatBenchmarkTests") ?: false
 
-val testDataDir = projectDir.resolve("src/resources/testData")
-val unpackedTestDataDir = testDataDir.resolve("data")
-val downloadedTestData = testDataDir.resolve("testData.zip")
+// Use benchmarks from maxSmtBenchmark directory (test resources) instead of downloading
+val usePreparedBenchmarks = project.booleanProperty("usePreparedBenchmarks") ?: true
 
-val maxSmtTestDataRevision = project.stringProperty("maxSmtTestDataRevision") ?: "no-revision"
-val maxSatTestDataRevision = project.stringProperty("maxSatTestDataRevision") ?: "no-revision"
+val testDataRevision = project.stringProperty("testDataRevision") ?: "no-revision"
 
-val usePreparedMaxSmtTestData = usePreparedMaxSmtBenchmarkTestData(unpackedTestDataDir)
 val downloadPreparedMaxSmtBenchmarkTestData =
-    maxSmtBenchmarks.map { maxSmtBenchmarkTestData(it, maxSmtTestDataRevision) }
+    maxSmtBenchmarks.map { maxSmtBenchmarkTestData(it, testDataRevision) }
 
-val usePreparedMaxSMTTestData by tasks.registering {
+val prepareMaxSmtTestData by tasks.registering {
     tasks.withType<ProcessResources>().forEach { it.enabled = false }
-    if (usePreparedMaxSMTBenchmarks) {
-        dependsOn.add(usePreparedMaxSmtTestData)
-    } else {
+    if (!usePreparedBenchmarks) {
         dependsOn.addAll(downloadPreparedMaxSmtBenchmarkTestData)
     }
 }
 
 tasks.withType<Test> {
-    if (runMaxSMTBenchmarkBasedTests) {
-        dependsOn.add(usePreparedMaxSMTTestData)
+    if (runMaxSmtBenchmarkTests) {
+        dependsOn.add(prepareMaxSmtTestData)
     }
 }
 
-val downloadPreparedMaxSATBenchmarkTestData = downloadMaxSATBenchmarkTestData(
-    downloadPath = downloadedTestData,
-    testDataPath = unpackedTestDataDir,
-    testDataRevision = maxSatTestDataRevision,
-)
+val downloadPreparedMaxSatBenchmarkTestData =
+    maxSatBenchmarks.map { maxSatBenchmarkTestData(it, testDataRevision) }
 
-val preparedMaxSATBenchmarkTestData = usePreparedMaxSATBenchmarkTestData(unpackedTestDataDir)
-
-val usePreparedMaxSATTestData by tasks.registering {
+val prepareMaxSatTestData by tasks.registering {
     tasks.withType<ProcessResources>().forEach { it.enabled = false }
-    if (!usePreparedMaxSATBenchmark) {
-        dependsOn.add(downloadPreparedMaxSATBenchmarkTestData)
+    if (!usePreparedBenchmarks) {
+        dependsOn.addAll(downloadPreparedMaxSatBenchmarkTestData)
     }
-
-    finalizedBy(preparedMaxSATBenchmarkTestData)
 }
 
 tasks.withType<Test> {
-    if (runMaxSATBenchmarkBasedTests) {
-        dependsOn.add(usePreparedMaxSATTestData)
+    if (runMaxSatBenchmarkTests) {
+        dependsOn.add(prepareMaxSatTestData)
     }
 }
