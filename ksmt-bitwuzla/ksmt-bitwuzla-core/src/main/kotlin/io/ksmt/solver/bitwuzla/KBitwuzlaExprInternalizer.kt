@@ -493,24 +493,21 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
         transform { if (value) bitwuzlaCtx.trueTerm else bitwuzlaCtx.falseTerm }
     }
 
-    override fun transform(expr: KBitVec8Value): KExpr<KBv8Sort> = transformBv32Number(expr)
-    override fun transform(expr: KBitVec16Value): KExpr<KBv16Sort> = transformBv32Number(expr)
-    override fun transform(expr: KBitVec32Value): KExpr<KBv32Sort> = transformBv32Number(expr)
-    override fun transform(expr: KBitVec64Value): KExpr<KBv64Sort> = transformBv64Number(expr)
+    override fun transform(expr: KBitVec8Value): KExpr<KBv8Sort> = transformBv32Number(expr, expr.byteValue.toInt())
+    override fun transform(expr: KBitVec16Value): KExpr<KBv16Sort> = transformBv32Number(expr, expr.shortValue.toInt())
+    override fun transform(expr: KBitVec32Value): KExpr<KBv32Sort> = transformBv32Number(expr, expr.intValue)
+    override fun transform(expr: KBitVec64Value): KExpr<KBv64Sort> = transformBv64Number(expr, expr.longValue)
 
-    fun <T : KBitVecNumberValue<S, *>, S : KBvSort> transformBv32Number(expr: T): T = with(expr) {
+    fun <T : KBitVecNumberValue<S, *>, S : KBvSort> transformBv32Number(expr: T, value: Int): T = with(expr) {
         transform {
-            Native.bitwuzlaMkBvValueUint32(
-                bitwuzla,
-                sort.internalizeSort(),
-                numberValue.toInt()
-            ).also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
+            Native.bitwuzlaMkBvValueUint32(bitwuzla, sort.internalizeSort(), value)
+                .also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
         }
     }
 
-    fun <T : KBitVecNumberValue<S, *>, S : KBvSort> transformBv64Number(expr: T): T = with(expr) {
+    fun <T : KBitVecNumberValue<S, *>, S : KBvSort> transformBv64Number(expr: T, value: Long): T = with(expr) {
         transform {
-            transformBvLongNumber(numberValue.toLong(), sort.sizeBits.toInt())
+            transformBvLongNumber(value, sort.sizeBits.toInt())
                 .also { bitwuzlaCtx.saveInternalizedValue(expr, it) }
         }
     }

@@ -462,19 +462,19 @@ class AstSerializer(
     }
 
     override fun transform(expr: KBitVec8Value) = with(expr) {
-        transform { writeExpr { writeByte(numberValue) } }
+        transform { writeExpr { writeByte(byteValue) } }
     }
 
     override fun transform(expr: KBitVec16Value) = with(expr) {
-        transform { writeExpr { writeShort(numberValue) } }
+        transform { writeExpr { writeShort(shortValue) } }
     }
 
     override fun transform(expr: KBitVec32Value) = with(expr) {
-        transform { writeExpr { writeInt(numberValue) } }
+        transform { writeExpr { writeInt(intValue) } }
     }
 
     override fun transform(expr: KBitVec64Value) = with(expr) {
-        transform { writeExpr { writeLong(numberValue) } }
+        transform { writeExpr { writeLong(longValue) } }
     }
 
     override fun transform(expr: KBitVecCustomValue) = with(expr) {
