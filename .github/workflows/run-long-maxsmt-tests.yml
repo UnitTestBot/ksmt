@@ -119,6 +119,13 @@ jobs:
           name: ${{ matrix.logics.NAME }}_${{ inputs.solver }}_${{ inputs.smtSolver }}_test_report
           path: ksmt-maxsmt-test/build/reports/tests/test/*
 
+      - name: Upload ${{ matrix.logics.NAME }} test logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.logics.NAME }}_${{ inputs.solver }}_${{ inputs.smtSolver }}_test_logs
+          path: ksmt-maxsmt-test/logs/*
+
   merge-and-analyze-maxsmt-statistics:
     needs: run-maxsmt-tests
     runs-on: ubuntu-20.04
