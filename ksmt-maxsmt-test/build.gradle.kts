@@ -26,8 +26,9 @@ dependencies {
     testImplementation(project(":ksmt-runner"))
 
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${versions["kotlinx-coroutines"]}")
-    testImplementation("io.github.oshai:kotlin-logging-jvm:5.1.0")
-    testImplementation("org.slf4j:slf4j-simple:2.0.9")
+
+    testImplementation("io.github.oshai:kotlin-logging-jvm:${versions["kotlin-logging-jvm"]}")
+    testImplementation("org.slf4j:slf4j-log4j12:${versions["slf4j-log4j12"]}")
 
     testImplementation("com.google.code.gson:gson:2.10.1")
 }

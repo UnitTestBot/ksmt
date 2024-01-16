@@ -1,5 +1,6 @@
 package io.ksmt.solver.maxsmt.solvers
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ksmt.KContext
 import io.ksmt.expr.KExpr
 import io.ksmt.solver.KModel
@@ -38,12 +39,16 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
     private var _model: KModel? = null
     private var _minimalUnsatCore = MinimalUnsatCore(ctx, solver)
     private var collectStatistics = false
+    private var _iteration = 0
+    private val logger = KotlinLogging.logger {}
+    private var markLoggingPoint = markNow()
 
     private data class WeightedCore(val expressions: List<KExpr<KBoolSort>>, val weight: UInt)
 
     override fun checkMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult {
         val clockStart = System.currentTimeMillis()
         val markCheckMaxSMTStart = markNow()
+        markLoggingPoint = markCheckMaxSMTStart
 
         if (TimerUtils.timeoutExceeded(timeout)) {
             error("Timeout must be positive but was [${timeout.inWholeSeconds} s]")
@@ -81,6 +86,11 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         val assumptions = softConstraints.toMutableList()
 
         while (_lower < _upper) {
+            logger.info {
+                "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] Iteration number: $_iteration"
+            }
+            markLoggingPoint = markNow()
+
             val softConstraintsCheckRemainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
             if (TimerUtils.timeoutExceeded(softConstraintsCheckRemainingTime)) {
                 if (collectStatistics) {
@@ -146,11 +156,16 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                     throw NotImplementedError()
                 }
             }
+
+            ++_iteration
         }
 
         _lower = _upper
 
         val result = KMaxSMTResult(getSatSoftConstraintsByModel(_model!!), SAT, true)
+        logger.info {
+            "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] --- returning result"
+        }
 
         solver.pop()
 
@@ -323,6 +338,11 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         _model = model
 
         _upper = upper
+
+        logger.info {
+            "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] (lower bound: $_lower, upper bound: $_upper) --- model is updated"
+        }
+        markLoggingPoint = markNow()
     }
 
     private fun maxResolve(weightedCore: WeightedCore, assumptions: MutableList<SoftConstraint>) = with(ctx) {
@@ -451,6 +471,13 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
 
         _maxUpper = _upper
         _correctionSetSize = 0
+
+        _iteration = 0
+
+        logger.info {
+            "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] (lower bound: $_lower, upper bound: $_upper) --- model is initialized with null"
+        }
+        markLoggingPoint = markNow()
 
         _model = null
         _correctionSetModel = null

@@ -109,6 +109,8 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             "File extension cannot be '${samplePath.extension}' as it must be $extension"
         }
 
+        logger.info { "Test name: [$name]" }
+
         lateinit var ksmtAssertions: List<KExpr<KBoolSort>>
         val testStatistics = MaxSMTTestStatistics(name, solver)
 
@@ -122,11 +124,13 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             testStatistics.ignoredTest = true
             testStatistics.exceptionMessage = ex.message.toString()
             jsonHelper.appendTestStatisticsToFile(testStatistics)
+            logger.error { ex.message + System.lineSeparator() }
             throw ex
         } catch (ex: Exception) {
             testStatistics.failedOnParsingOrConvertingExpressions = true
             testStatistics.exceptionMessage = ex.message.toString()
             jsonHelper.appendTestStatisticsToFile(testStatistics)
+            logger.error { ex.message + System.lineSeparator() }
             throw ex
         }
 
@@ -157,14 +161,14 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
                 testStatistics.maxSMTCallStatistics = maxSMTSolver.collectMaxSMTStatistics()
                 testStatistics.exceptionMessage = ex.message.toString()
                 jsonHelper.appendTestStatisticsToFile(testStatistics)
+                logger.error { ex.message + System.lineSeparator() }
                 throw ex
             }
         }
 
         testStatistics.maxSMTCallStatistics = maxSMTSolver.collectMaxSMTStatistics()
 
-        logger.info { "Test name: [$name]" }
-        logger.info { "Elapsed time (MaxSMT call): [${elapsedTime}ms]" }
+        logger.info { "Elapsed time: $elapsedTime ms --- MaxSMT call${System.lineSeparator()}" }
 
         try {
             assertTrue(maxSMTResult.maxSMTSucceeded, "MaxSMT was not successful [$name]")
@@ -193,6 +197,7 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         val worker = try {
             getOrCreateFreeWorker()
         } catch (ex: WorkerInitializationFailedException) {
+            logger.error { ex.message + System.lineSeparator() }
             ignoreTest { "worker initialization failed -- ${ex.message}" }
         }
         worker.astSerializationCtx.initCtx(ctx)
@@ -209,6 +214,7 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
                 }
             }
         } catch (ex: TimeoutCancellationException) {
+            logger.error { ex.message + System.lineSeparator() }
             ignoreTest { "worker timeout -- ${ex.message}" }
         } finally {
             worker.release()
