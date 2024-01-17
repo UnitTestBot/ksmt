@@ -163,7 +163,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
 
         val result = KMaxSMTResult(getSatSoftConstraintsByModel(_model!!), SAT, true)
         logger.info {
-            "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] --- returning result"
+            "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] --- returning MaxSMT result"
         }
 
         solver.pop()
@@ -202,6 +202,8 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
     }
 
     private fun processUnsatCore(weightedCore: WeightedCore, assumptions: MutableList<SoftConstraint>) = with(ctx) {
+        logger.info { "processing unsat core --- started" }
+
         val core = weightedCore.expressions
 
         require(core.isNotEmpty()) { "Core should not be empty here" }
@@ -226,6 +228,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         if (_correctionSetModel != null && _correctionSetSize < core.size) {
             val correctionSet = getCorrectionSet(_correctionSetModel!!, assumptions)
             if (correctionSet.size >= core.size) {
+                logger.info { "processing unsat core --- ended" }
                 return
             }
 
@@ -233,6 +236,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
             for (asm in assumptions) {
                 val weight1 = asm.weight
                 if (weight != 0u && weight1 != weight) {
+                    logger.info { "processing unsat core --- ended" }
                     return
                 }
 
@@ -241,6 +245,8 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
 
             processSat(correctionSet, assumptions)
         }
+
+        logger.info { "processing unsat core --- ended" }
     }
 
     private fun getCores(
@@ -489,6 +495,8 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
     }
 
     private fun checkSatHillClimb(assumptions: MutableList<SoftConstraint>, timeout: Duration): KSolverStatus {
+        logger.info { "checking formula on satisfiability --- started" }
+
         var status = SAT
 
         if (maxSmtCtx.preferLargeWeightConstraintsForCores && assumptions.isNotEmpty()) {
@@ -510,6 +518,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
 
                 val remainingTime = TimerUtils.computeRemainingTime(timeout, markStart)
                 if (TimerUtils.timeoutExceeded(remainingTime)) {
+                    logger.info { "checking formula on satisfiability --- ended --- solver returned UNKNOWN" }
                     return UNKNOWN
                 }
 
@@ -529,6 +538,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
             }
         }
 
+        logger.info { "checking formula on satisfiability --- ended" }
         return status
     }
 

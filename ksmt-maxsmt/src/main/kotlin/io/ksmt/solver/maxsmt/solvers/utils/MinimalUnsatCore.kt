@@ -1,5 +1,6 @@
 package io.ksmt.solver.maxsmt.solvers.utils
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ksmt.KContext
 import io.ksmt.expr.KExpr
 import io.ksmt.solver.KModel
@@ -21,6 +22,7 @@ internal class MinimalUnsatCore<T : KSolverConfiguration>(
 ) {
     private val _minimalUnsatCoreModel = MinimalUnsatCoreModel(ctx, solver)
     private lateinit var coreStatistics: MinimalCoreStatistics
+    private val logger = KotlinLogging.logger {}
 
     fun getBestModel(): Pair<KModel?, UInt> = _minimalUnsatCoreModel.getBestModel()
 
@@ -30,6 +32,8 @@ internal class MinimalUnsatCore<T : KSolverConfiguration>(
         timeout: Duration = Duration.INFINITE,
         collectStatistics: Boolean = false,
     ): List<SoftConstraint> = with(ctx) {
+        logger.info { "core minimization --- started" }
+
         val markStart = markNow()
 
         if (collectStatistics) {
@@ -39,6 +43,7 @@ internal class MinimalUnsatCore<T : KSolverConfiguration>(
         val unsatCore = solver.unsatCore()
 
         if (unsatCore.isEmpty()) {
+            logger.info { "core minimization ended --- unsat core is empty" }
             return emptyList()
         }
 
@@ -49,6 +54,7 @@ internal class MinimalUnsatCore<T : KSolverConfiguration>(
         while (unknown.isNotEmpty()) {
             val remainingTime = TimerUtils.computeRemainingTime(timeout, markStart)
             if (TimerUtils.timeoutExceeded(remainingTime)) {
+                logger.info { "core minimization ended --- timeout exceeded" }
                 return CoreUtils.coreToSoftConstraints(unsatCore, assumptions)
             }
 
@@ -64,7 +70,10 @@ internal class MinimalUnsatCore<T : KSolverConfiguration>(
             }
 
             when (status) {
-                UNKNOWN -> return CoreUtils.coreToSoftConstraints(unsatCore, assumptions)
+                UNKNOWN -> {
+                    logger.info { "core minimization ended --- solver returned UNKNOWN" }
+                    return CoreUtils.coreToSoftConstraints(unsatCore, assumptions)
+                }
 
                 SAT -> {
                     minimalUnsatCore.add(expr)
@@ -75,6 +84,7 @@ internal class MinimalUnsatCore<T : KSolverConfiguration>(
             }
         }
 
+        logger.info { "core minimization ended --- core is minimized" }
         return CoreUtils.coreToSoftConstraints(minimalUnsatCore, assumptions)
     }
 
