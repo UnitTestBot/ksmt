@@ -30,7 +30,7 @@ internal class MinimalUnsatCore<T : KSolverConfiguration>(
         timeout: Duration = Duration.INFINITE,
         collectStatistics: Boolean = false,
     ): List<SoftConstraint> = with(ctx) {
-        val clockStart = System.currentTimeMillis()
+        val markStart = markNow()
 
         if (collectStatistics) {
             coreStatistics = MinimalCoreStatistics()
@@ -47,7 +47,7 @@ internal class MinimalUnsatCore<T : KSolverConfiguration>(
         val unknown = unsatCore.toMutableList()
 
         while (unknown.isNotEmpty()) {
-            val remainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
+            val remainingTime = TimerUtils.computeRemainingTime(timeout, markStart)
             if (TimerUtils.timeoutExceeded(remainingTime)) {
                 return CoreUtils.coreToSoftConstraints(unsatCore, assumptions)
             }

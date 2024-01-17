@@ -46,7 +46,6 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
     private data class WeightedCore(val expressions: List<KExpr<KBoolSort>>, val weight: UInt)
 
     override fun checkMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult {
-        val clockStart = System.currentTimeMillis()
         val markCheckMaxSMTStart = markNow()
         markLoggingPoint = markCheckMaxSMTStart
 
@@ -65,17 +64,17 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         val hardConstraintsStatus = solver.check(timeout)
         if (this.collectStatistics) {
             maxSMTStatistics.queriesToSolverNumber++
-            maxSMTStatistics.timeInSolverQueriesMs += (markNow() - markHardConstraintsCheckStart).inWholeMilliseconds
+            maxSMTStatistics.timeInSolverQueriesMs += markHardConstraintsCheckStart.elapsedNow().inWholeMilliseconds
         }
 
         if (hardConstraintsStatus == UNSAT || softConstraints.isEmpty()) {
             if (collectStatistics) {
-                maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+                maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
             }
             return KMaxSMTResult(listOf(), hardConstraintsStatus, true)
         } else if (hardConstraintsStatus == UNKNOWN) {
             if (collectStatistics) {
-                maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+                maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
             }
             return KMaxSMTResult(listOf(), hardConstraintsStatus, false)
         }
@@ -91,10 +90,10 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
             }
             markLoggingPoint = markNow()
 
-            val softConstraintsCheckRemainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
+            val softConstraintsCheckRemainingTime = TimerUtils.computeRemainingTime(timeout, markCheckMaxSMTStart)
             if (TimerUtils.timeoutExceeded(softConstraintsCheckRemainingTime)) {
                 if (collectStatistics) {
-                    maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+                    maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
                 }
                 throw NotImplementedError()
             }
@@ -121,11 +120,11 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                 }
 
                 UNSAT -> {
-                    val remainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
+                    val remainingTime = TimerUtils.computeRemainingTime(timeout, markCheckMaxSMTStart)
                     if (TimerUtils.timeoutExceeded(remainingTime)) {
                         solver.pop()
                         if (collectStatistics) {
-                            maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+                            maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
                         }
                         throw NotImplementedError()
                     }
@@ -136,13 +135,13 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                         // TODO: process this case as it can happen when timeout exceeded
                         solver.pop()
                         if (collectStatistics) {
-                            maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+                            maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
                         }
                         throw NotImplementedError()
                     } else if (processUnsatStatus == UNKNOWN) {
                         solver.pop()
                         if (collectStatistics) {
-                            maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+                            maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
                         }
                         throw NotImplementedError()
                     }
@@ -151,7 +150,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                 UNKNOWN -> {
                     solver.pop()
                     if (collectStatistics) {
-                        maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+                        maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
                     }
                     throw NotImplementedError()
                 }
@@ -170,7 +169,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         solver.pop()
 
         if (collectStatistics) {
-            maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+            maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
         }
         return result
     }
@@ -248,7 +247,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         assumptions: MutableList<SoftConstraint>,
         timeout: Duration,
     ): Pair<KSolverStatus, List<WeightedCore>> {
-        val clockStart = System.currentTimeMillis()
+        val markStart = markNow()
 
         val cores = mutableListOf<WeightedCore>()
         var status = UNSAT
@@ -257,7 +256,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
             var unsatCore: List<SoftConstraint>
 
             if (maxSmtCtx.minimizeCores) {
-                val minimizeCoreRemainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
+                val minimizeCoreRemainingTime = TimerUtils.computeRemainingTime(timeout, markStart)
                 if (TimerUtils.timeoutExceeded(minimizeCoreRemainingTime)) {
                     return Pair(SAT, cores) // TODO: is this status Ok?
                 }
@@ -286,7 +285,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                 return Pair(SAT, cores)
             }
 
-            val checkSatRemainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
+            val checkSatRemainingTime = TimerUtils.computeRemainingTime(timeout, markStart)
             if (TimerUtils.timeoutExceeded(checkSatRemainingTime)) {
                 return Pair(SAT, cores) // TODO: is this status Ok?
             }
@@ -336,7 +335,6 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         }
 
         _model = model
-
         _upper = upper
 
         logger.info {
@@ -494,7 +492,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         var status = SAT
 
         if (maxSmtCtx.preferLargeWeightConstraintsForCores && assumptions.isNotEmpty()) {
-            val clockStart = System.currentTimeMillis()
+            val markStart = markNow()
 
             // Give preference to cores that have large minimal values.
             assumptions.sortByDescending { it.weight }
@@ -510,7 +508,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
 
                 val assumptionsToCheck = assumptions.subList(0, index)
 
-                val remainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
+                val remainingTime = TimerUtils.computeRemainingTime(timeout, markStart)
                 if (TimerUtils.timeoutExceeded(remainingTime)) {
                     return UNKNOWN
                 }
@@ -519,7 +517,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                 status = checkSat(assumptionsToCheck, assumptionsToCheck.size == assumptions.size, remainingTime)
                 if (collectStatistics) {
                     maxSMTStatistics.queriesToSolverNumber++
-                    maxSMTStatistics.timeInSolverQueriesMs += (markNow() - markCheckAssumptionsStart).inWholeMilliseconds
+                    maxSMTStatistics.timeInSolverQueriesMs += markCheckAssumptionsStart.elapsedNow().inWholeMilliseconds
                 }
             }
         } else {
@@ -527,7 +525,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
             status = checkSat(assumptions, true, timeout)
             if (collectStatistics) {
                 maxSMTStatistics.queriesToSolverNumber++
-                maxSMTStatistics.timeInSolverQueriesMs += (markNow() - markCheckStart).inWholeMilliseconds
+                maxSMTStatistics.timeInSolverQueriesMs += markCheckStart.elapsedNow().inWholeMilliseconds
             }
         }
 

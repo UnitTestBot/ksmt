@@ -1,13 +1,11 @@
 package io.ksmt.solver.maxsmt.utils
 
 import kotlin.time.Duration
-import kotlin.time.DurationUnit
-import kotlin.time.toDuration
+import kotlin.time.TimeSource.Monotonic.ValueTimeMark
 
 internal object TimerUtils {
-    fun computeRemainingTime(timeout: Duration, clockStart: Long): Duration {
-        val msUnit = DurationUnit.MILLISECONDS
-        return timeout - (System.currentTimeMillis().toDuration(msUnit) - clockStart.toDuration(msUnit))
+    fun computeRemainingTime(timeout: Duration, markStart: ValueTimeMark): Duration {
+        return timeout - markStart.elapsedNow()
     }
 
     fun timeoutExceeded(timeout: Duration): Boolean =

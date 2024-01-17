@@ -57,7 +57,7 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
 
         if (softConstraints.isEmpty()) {
             if (this.collectStatistics) {
-                maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+                maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
             }
 
             return maxSMTResult
@@ -67,7 +67,7 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
         if (!maxSMTResult.maxSMTSucceeded) {
             val (solverStatus, _, model) = currentMaxSMTResult
             if (this.collectStatistics) {
-                maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+                maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
             }
 
             return when (solverStatus) {
@@ -79,21 +79,19 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
         }
 
         if (this.collectStatistics) {
-            maxSMTStatistics.elapsedTimeMs = (markNow() - markCheckMaxSMTStart).inWholeMilliseconds
+            maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
         }
 
         return maxSMTResult
     }
 
     private fun runMaxSMTLogic(timeout: Duration): KMaxSMTResult {
-        val clockStart = System.currentTimeMillis()
-
         val markHardConstraintsCheckStart = markNow()
         val hardConstraintsStatus = solver.check(timeout)
 
         if (collectStatistics) {
             maxSMTStatistics.queriesToSolverNumber++
-            maxSMTStatistics.timeInSolverQueriesMs += (markNow() - markHardConstraintsCheckStart).inWholeMilliseconds
+            maxSMTStatistics.timeInSolverQueriesMs += markHardConstraintsCheckStart.elapsedNow().inWholeMilliseconds
         }
 
         if (softConstraints.isEmpty()) {
@@ -114,7 +112,7 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
         var formula = softConstraints.toMutableList()
 
         while (true) {
-            val checkRemainingTime = TimerUtils.computeRemainingTime(timeout, clockStart)
+            val checkRemainingTime = TimerUtils.computeRemainingTime(timeout, markHardConstraintsCheckStart)
 
             if (TimerUtils.timeoutExceeded(checkRemainingTime)) {
                 return KMaxSMTResult(listOf(), hardConstraintsStatus, false)
@@ -126,7 +124,7 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
 
             if (collectStatistics) {
                 maxSMTStatistics.queriesToSolverNumber++
-                maxSMTStatistics.timeInSolverQueriesMs += (markNow() - markCheckSatStart).inWholeMilliseconds
+                maxSMTStatistics.timeInSolverQueriesMs += markCheckSatStart.elapsedNow().inWholeMilliseconds
             }
 
             if (solverStatus == UNKNOWN) {
