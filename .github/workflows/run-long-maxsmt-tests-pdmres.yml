@@ -24,19 +24,19 @@ on:
           - Primal
       minimizeCores:
         type: boolean
-        description: Core minimization option (only one of [minimizeCores, preferLargeWeightCores, getMultipleCores] can be false)
+        description: Core minimization option (only one of [minimizeCores, preferLargeWeightCores, getMultipleCores] can be true)
         required: true
-        default: true
+        default: false
       preferLargeWeightCores:
         type: boolean
-        description: Prefer large weight constraints for cores (only one of [minimizeCores, preferLargeWeightCores, getMultipleCores] can be false)
+        description: Prefer large weight constraints for cores (only one of [minimizeCores, preferLargeWeightCores, getMultipleCores] can be true)
         required: true
-        default: true
+        default: false
       getMultipleCores:
         type: boolean
-        description: Get multiple cores (only one of [minimizeCores, preferLargeWeightCores, getMultipleCores] can be false)
+        description: Get multiple cores (only one of [minimizeCores, preferLargeWeightCores, getMultipleCores] can be true)
         required: true
-        default: true
+        default: false
       commitSHA:
         description: Commit SHA (latest commit is default)
         required: false
@@ -48,14 +48,14 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Verify inputs
-        # Check only one option of [minimizeCores, preferLargeWeightCores, getMultipleCores] is false
+        # Check only one option of [minimizeCores, preferLargeWeightCores, getMultipleCores] is true
         # (supported tests configurations)
         run: |
-          if ([[ "${{ inputs.minimizeCores }}" == "false" ]] && [[ "${{ inputs.preferLargeWeightCores }}" == "false" ]]) || \
-            ([[ "${{ inputs.minimizeCores }}" == "false" ]] && [[ "${{ inputs.getMultipleCores }}" == "false" ]]) || \
-            ([[ "${{ inputs.preferLargeWeightCores }}" == "false" ]] && [[ "${{ inputs.getMultipleCores }}" == "false" ]])
+          if ([[ "${{ inputs.minimizeCores }}" == "true" ]] && [[ "${{ inputs.preferLargeWeightCores }}" == "true" ]]) || \
+            ([[ "${{ inputs.minimizeCores }}" == "true" ]] && [[ "${{ inputs.getMultipleCores }}" == "true" ]]) || \
+            ([[ "${{ inputs.preferLargeWeightCores }}" == "true" ]] && [[ "${{ inputs.getMultipleCores }}" == "true" ]])
           then
-            echo "Only one option of [minimizeCores, preferLargeWeightCores, getMultipleCores] can be false"
+            echo "Only one option of [minimizeCores, preferLargeWeightCores, getMultipleCores] can be true"
             exit 1
           fi
 
@@ -67,18 +67,18 @@ jobs:
     steps:
       - name: Construct solver name
         run: |
-          if [[ "${{ inputs.minimizeCores }}" == true ]] && \
-            [[ "${{ inputs.preferLargeWeightCores }}" == true ]] && \
-            [[ "${{ inputs.getMultipleCores }}" == true ]]
+          if [[ "${{ inputs.minimizeCores }}" == false ]] && \
+            [[ "${{ inputs.preferLargeWeightCores }}" == false ]] && \
+            [[ "${{ inputs.getMultipleCores }}" == false ]]
           then
             export OPTION_TO_VALUE=""
-          elif [[ "${{ inputs.preferLargeWeightCores }}" == false ]]
+          elif [[ "${{ inputs.preferLargeWeightCores }}" == true ]]
           then
             export OPTION_TO_VALUE="2"
-          elif [[ "${{ inputs.minimizeCores }}" == false ]]
+          elif [[ "${{ inputs.minimizeCores }}" == true ]]
           then
             export OPTION_TO_VALUE="3"
-          elif [[ "${{ inputs.getMultipleCores }}" == false ]]
+          elif [[ "${{ inputs.getMultipleCores }}" == true ]]
           then
             export OPTION_TO_VALUE="4"
           fi

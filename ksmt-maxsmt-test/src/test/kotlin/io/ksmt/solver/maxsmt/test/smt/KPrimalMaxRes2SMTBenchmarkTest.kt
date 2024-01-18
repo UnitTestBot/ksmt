@@ -15,7 +15,7 @@ class KPrimalMaxRes2SMTBenchmarkTest : KMaxSMTBenchmarkTest() {
             smtSolver,
             KMaxSMTContext(
                 strategy = PrimalMaxRes,
-                preferLargeWeightConstraintsForCores = false,
+                preferLargeWeightConstraintsForCores = true,
             ),
         )
     }

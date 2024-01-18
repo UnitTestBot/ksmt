@@ -13,7 +13,7 @@ class KPrimalMaxRes4SMTBenchmarkTest : KMaxSMTBenchmarkTest() {
         return KPrimalDualMaxResSolver(
             this,
             smtSolver,
-            KMaxSMTContext(strategy = PrimalMaxRes, getMultipleCores = false),
+            KMaxSMTContext(strategy = PrimalMaxRes, getMultipleCores = true),
         )
     }
 }
