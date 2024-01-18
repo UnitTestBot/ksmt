@@ -185,7 +185,10 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
                     "but must be [${maxSmtTestInfo.satSoftConstraintsWeightsSum}]",
             )
             testStatistics.passed = true
-        } finally {
+        } catch (ex: Exception) {
+            logger.error { ex.message + System.lineSeparator() }
+        }
+        finally {
             jsonHelper.appendTestStatisticsToFile(testStatistics)
         }
     }
