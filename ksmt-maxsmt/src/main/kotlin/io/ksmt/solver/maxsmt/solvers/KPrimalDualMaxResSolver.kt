@@ -337,6 +337,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         val upper = ModelUtils.getModelCost(ctx, model, softConstraints)
 
         if (upper > _upper) {
+            logger.info { "Found model has less weight --- model is not updated" }
             return
         }
 
@@ -479,7 +480,8 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         _iteration = 0
 
         logger.info {
-            "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] (lower bound: $_lower, upper bound: $_upper) --- model is initialized with null"
+            "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] (lower bound: $_lower, upper bound: $_upper)" +
+                " --- model is initialized with null"
         }
         markLoggingPoint = markNow()
 
