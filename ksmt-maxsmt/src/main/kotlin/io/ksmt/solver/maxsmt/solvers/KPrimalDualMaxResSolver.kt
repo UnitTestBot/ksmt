@@ -161,7 +161,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
 
         _lower = _upper
 
-        val result = KMaxSMTResult(getSatSoftConstraintsByModel(_model!!), SAT, true)
+        val result = KMaxSMTResult(if (_model != null) getSatSoftConstraintsByModel(_model!!) else listOf(), SAT, true)
         logger.info {
             "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] --- returning MaxSMT result"
         }
@@ -525,7 +525,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                 }
 
                 val markCheckAssumptionsStart = markNow()
-                status = checkSat(assumptionsToCheck, assumptionsToCheck.size == assumptions.size, remainingTime)
+                status = checkSat(assumptionsToCheck, remainingTime)
                 if (collectStatistics) {
                     maxSMTStatistics.queriesToSolverNumber++
                     maxSMTStatistics.timeInSolverQueriesMs += markCheckAssumptionsStart.elapsedNow().inWholeMilliseconds
@@ -533,7 +533,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
             }
         } else {
             val markCheckStart = markNow()
-            status = checkSat(assumptions, true, timeout)
+            status = checkSat(assumptions, timeout)
             if (collectStatistics) {
                 maxSMTStatistics.queriesToSolverNumber++
                 maxSMTStatistics.timeInSolverQueriesMs += markCheckStart.elapsedNow().inWholeMilliseconds
@@ -559,12 +559,11 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
 
     private fun checkSat(
         assumptions: List<SoftConstraint>,
-        passedAllAssumptions: Boolean,
         timeout: Duration,
     ): KSolverStatus {
         val status = solver.checkWithAssumptions(assumptions.map { it.expression }, timeout)
 
-        if (passedAllAssumptions && status == SAT) {
+        if (status == SAT) {
             updateAssignment(solver.model().detach(), assumptions)
         }
 
