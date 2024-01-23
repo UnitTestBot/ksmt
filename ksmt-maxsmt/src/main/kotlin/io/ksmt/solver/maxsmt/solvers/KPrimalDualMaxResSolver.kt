@@ -214,9 +214,11 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         assert(fml)
 
         _lower += weightedCore.weight
+        logger.info { "Unsat core weight: ${weightedCore.weight}" }
 
         if (maxSmtCtx.strategy == PrimalDualMaxRes) {
             _lower = minOf(_lower, _upper)
+            logger.info { "(lower bound: $_lower, upper bound: $_upper) --- lower bound is updated" }
         }
 
         if (_correctionSetModel != null && _correctionSetSize > 0) {
