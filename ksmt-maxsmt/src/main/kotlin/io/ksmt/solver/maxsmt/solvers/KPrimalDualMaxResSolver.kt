@@ -34,7 +34,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
     private var _upper: UInt = 0u // Current upper frontier
     private var _maxUpper = 0u // Max possible upper frontier
     private var _correctionSetSize: Int = 0 // Current corrections set size
-    private val _maxCoreSize = if (maxSmtCtx.getMultipleCores) 3 else 1
+    private val _maxCoreSize = 3
     private var _correctionSetModel: KModel? = null
     private var _model: KModel? = null
     private var _minimalUnsatCore = MinimalUnsatCore(ctx, solver)
@@ -287,7 +287,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
             removeCoreAssumptions(unsatCore, assumptions)
             splitCore(unsatCore, assumptions)
 
-            if (unsatCore.size >= _maxCoreSize) {
+            if (unsatCore.size >= _maxCoreSize || !maxSmtCtx.getMultipleCores) {
                 return Pair(SAT, cores)
             }
 
