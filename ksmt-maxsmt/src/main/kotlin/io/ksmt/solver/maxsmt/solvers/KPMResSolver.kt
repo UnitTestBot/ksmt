@@ -74,7 +74,7 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
                 SAT -> processSat(model!!)
                 UNSAT -> KMaxSMTResult(listOf(), SAT, false) // TODO: support anytime solving
                 UNKNOWN -> KMaxSMTResult(listOf(), SAT, false) // TODO: support anytime solving
-                else -> error("Unexpected status: $solverStatus")
+                null -> error("Unexpected status: null")
             }
         }
 

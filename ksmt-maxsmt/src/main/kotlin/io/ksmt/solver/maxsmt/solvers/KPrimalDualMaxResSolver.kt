@@ -15,6 +15,7 @@ import io.ksmt.solver.maxsmt.KMaxSMTContext.Strategy.PrimalDualMaxRes
 import io.ksmt.solver.maxsmt.KMaxSMTContext.Strategy.PrimalMaxRes
 import io.ksmt.solver.maxsmt.KMaxSMTResult
 import io.ksmt.solver.maxsmt.constraints.SoftConstraint
+import io.ksmt.solver.maxsmt.solvers.exceptions.NotYetImplementedException
 import io.ksmt.solver.maxsmt.solvers.utils.MinimalUnsatCore
 import io.ksmt.solver.maxsmt.statistics.KMaxSMTStatistics
 import io.ksmt.solver.maxsmt.utils.CoreUtils
@@ -95,7 +96,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                 if (collectStatistics) {
                     maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
                 }
-                throw NotImplementedError()
+                throw NotYetImplementedException("MaxSMT solution was not found --- timeout exceeded")
             }
 
             val status = checkSatHillClimb(assumptions, timeout)
@@ -126,7 +127,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                         if (collectStatistics) {
                             maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
                         }
-                        throw NotImplementedError()
+                        throw NotYetImplementedException("MaxSMT solution was not found --- timeout exceeded")
                     }
 
                     val processUnsatStatus = processUnsat(assumptions, remainingTime)
@@ -137,13 +138,13 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                         if (collectStatistics) {
                             maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
                         }
-                        throw NotImplementedError()
+                        throw NotYetImplementedException("MaxSMT solution was not found --- processUnsat returned UNSAT")
                     } else if (processUnsatStatus == UNKNOWN) {
                         solver.pop()
                         if (collectStatistics) {
                             maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
                         }
-                        throw NotImplementedError()
+                        throw NotYetImplementedException("MaxSMT solution was not found --- processUnsat returned UNKNOWN")
                     }
                 }
 
@@ -152,7 +153,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                     if (collectStatistics) {
                         maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
                     }
-                    throw NotImplementedError()
+                    throw NotYetImplementedException("MaxSMT solution was not found --- solver returned UNKNOWN")
                 }
             }
 
