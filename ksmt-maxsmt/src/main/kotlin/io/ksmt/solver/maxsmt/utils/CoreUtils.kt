@@ -8,11 +8,13 @@ internal object CoreUtils {
     fun coreToSoftConstraints(core: List<KExpr<KBoolSort>>, assumptions: List<SoftConstraint>): List<SoftConstraint> {
         val softs = mutableListOf<SoftConstraint>()
 
+        val potentialSofts = assumptions.filter { core.contains(it.expression) }.toMutableList()
+
         for (element in core) {
-            val softElement = assumptions.find { it.expression == element }
+            val softIndex = potentialSofts.indexOfFirst { it.expression == element }
+            val softElement = potentialSofts[softIndex]
 
-            require(softElement != null) { "Assumptions do not contain an element from the core" }
-
+            potentialSofts.removeAt(softIndex)
             softs.add(softElement)
         }
 
