@@ -13,6 +13,7 @@ import io.ksmt.solver.maxsmt.KMaxSMTContext
 import io.ksmt.solver.maxsmt.KMaxSMTContext.Strategy.PrimalMaxRes
 import io.ksmt.solver.maxsmt.KMaxSMTResult
 import io.ksmt.solver.maxsmt.constraints.SoftConstraint
+import io.ksmt.solver.maxsmt.solvers.exceptions.NotYetImplementedException
 import io.ksmt.solver.maxsmt.statistics.KMaxSMTStatistics
 import io.ksmt.solver.maxsmt.utils.CoreUtils
 import io.ksmt.solver.maxsmt.utils.TimerUtils
@@ -23,8 +24,6 @@ import kotlin.time.TimeSource.Monotonic.markNow
 
 class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private val solver: KSolver<out T>) :
     KMaxResSolver<T>(ctx, solver) {
-    private var currentMaxSMTResult: Triple<KSolverStatus?, List<KExpr<KBoolSort>>, KModel?> =
-        Triple(null, listOf(), null)
     private var collectStatistics = false
     private val maxSmtCtx = KMaxSMTContext(
         strategy = PrimalMaxRes,
@@ -47,13 +46,7 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
             maxSMTStatistics.timeoutMs = timeout.inWholeMilliseconds
         }
 
-        solver.push()
-
         val maxSMTResult = runMaxSMTLogic(timeout)
-
-        solver.pop()
-
-        currentMaxSMTResult = Triple(UNKNOWN, listOf(), null)
 
         if (softConstraints.isEmpty()) {
             if (this.collectStatistics) {
@@ -65,17 +58,11 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
 
         // TODO: get max SAT soft constraints subset
         if (!maxSMTResult.maxSMTSucceeded) {
-            val (solverStatus, _, model) = currentMaxSMTResult
             if (this.collectStatistics) {
                 maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
             }
 
-            return when (solverStatus) {
-                SAT -> processSat(model!!)
-                UNSAT -> KMaxSMTResult(listOf(), SAT, false) // TODO: support anytime solving
-                UNKNOWN -> KMaxSMTResult(listOf(), SAT, false) // TODO: support anytime solving
-                null -> error("Unexpected status: null")
-            }
+            throw NotYetImplementedException("MaxSMT solution was not found --- timeout exceeded")
         }
 
         if (this.collectStatistics) {
@@ -108,6 +95,8 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
             return KMaxSMTResult(listOf(), hardConstraintsStatus, false)
         }
 
+        solver.push()
+
         var i = 0
         var formula = softConstraints.toMutableList()
 
@@ -115,6 +104,7 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
             val checkRemainingTime = TimerUtils.computeRemainingTime(timeout, markHardConstraintsCheckStart)
 
             if (TimerUtils.timeoutExceeded(checkRemainingTime)) {
+                solver.pop()
                 return KMaxSMTResult(listOf(), hardConstraintsStatus, false)
             }
 
@@ -127,15 +117,14 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
                 maxSMTStatistics.timeInSolverQueriesMs += markCheckSatStart.elapsedNow().inWholeMilliseconds
             }
 
-            if (solverStatus == UNKNOWN) {
-                // TODO: get max SAT soft constraints subset
-                return KMaxSMTResult(listOf(), hardConstraintsStatus, false)
-            }
-
-            currentMaxSMTResult = Triple(solverStatus, unsatCore, model)
-
             if (solverStatus == SAT) {
+                solver.pop()
                 return processSat(model!!)
+            }
+            else if (solverStatus == UNKNOWN) {
+                // TODO: get max SAT soft constraints subset
+                solver.pop()
+                throw NotYetImplementedException("MaxSMT solution was not found --- solver returned UNKNOWN")
             }
 
             val (weight, splitUnsatCore) = splitUnsatCore(formula, unsatCore)
