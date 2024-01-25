@@ -30,7 +30,7 @@ dependencies {
     testImplementation("io.github.oshai:kotlin-logging-jvm:${versions["kotlin-logging-jvm"]}")
     testImplementation("org.slf4j:slf4j-log4j12:${versions["slf4j-log4j12"]}")
 
-    testImplementation("com.google.code.gson:gson:2.10.1")
+    testImplementation("com.google.code.gson:gson:${versions["gson"]}")
 }
 
 val maxSmtBenchmarks = listOfNotNull(
