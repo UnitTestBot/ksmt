@@ -58,6 +58,15 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
         nativeContext.assertFormula(yicesExpr)
     }
 
+    override fun assert(exprs: List<KExpr<KBoolSort>>) = yicesTry {
+        ctx.ensureContextMatch(exprs)
+
+        val yicesExprs = with(exprInternalizer) {
+            IntArray(exprs.size) { idx -> exprs[idx].internalize() }
+        }
+        nativeContext.assertFormulas(yicesExprs)
+    }
+
     override fun assertAndTrack(expr: KExpr<KBoolSort>) = yicesTry {
         ctx.ensureContextMatch(expr)
 

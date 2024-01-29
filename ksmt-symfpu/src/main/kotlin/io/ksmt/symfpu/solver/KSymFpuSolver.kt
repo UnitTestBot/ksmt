@@ -20,6 +20,9 @@ open class KSymFpuSolver<Config : KSolverConfiguration>(
 
     override fun assert(expr: KExpr<KBoolSort>) = solver.assert(transformer.applyAndGetExpr(expr))
 
+    override fun assert(exprs: List<KExpr<KBoolSort>>) =
+        solver.assert(exprs.map { transformer.applyAndGetExpr(it) })
+
     override fun assertAndTrack(expr: KExpr<KBoolSort>) {
         val transformedExpr = transformer.applyAndGetExpr(expr).also { mapTransformedToOriginalAssertions[it] = expr }
         solver.assertAndTrack(transformedExpr)
