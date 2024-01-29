@@ -1155,10 +1155,6 @@ object FpUtils {
     ): KFpValue<*> {
        val (normalizedValue, normalizationStickyBit) = fpFmaRoundNormalizeSignificand(value, exponentSize)
 
-        if (normalizedValue.unbiasedExponent > fpMaxExponentValue(exponentSize)) {
-            return mkFpInf(value.sign, mkFpSort(exponentSize, significandSize))
-        }
-
         val valueWithoutExtraBits = fpFmaRoundRemoveExtraBits(normalizedValue, normalizationStickyBit, significandSize)
 
         if (valueWithoutExtraBits.significand.isZero()) {
@@ -1210,18 +1206,28 @@ object FpUtils {
         stickyBit: Boolean,
         significandSize: UInt
     ): UnpackedFp {
-        var (significand, resultStickyBit) = if (significandSize >= 4u) {
-            val (quot, rem) = value.significand.divAndRem2k(significandSize - 4u + 3u)
-            quot to (stickyBit || !rem.isZero())
+        val exponent: BigInteger
+        var significand: BigInteger
+        var sticky: Boolean = stickyBit
+
+        if (significandSize >= 4u) {
+            val (sig, rem) = value.significand.divAndRem2k(significandSize + 3u - 4u)
+            exponent = value.unbiasedExponent
+            significand = sig
+            sticky = sticky || !rem.isZero()
         } else {
-            value.significand.mul2k(4u - significandSize + 3u) to false
+            val exponentDelta = 4u - significandSize + 3u
+            significand = value.significand.mul2k(exponentDelta)
+            exponent = value.unbiasedExponent - exponentDelta.toInt().toBigInteger()
         }
 
-        if (resultStickyBit && significand.isEven()) {
+        if (sticky && significand.isEven()) {
             significand++
         }
 
-        return value.copy(significand = significand)
+        return normalizeUpperBound(exponent, significand, significandSize + 4u) { exp, sig ->
+            value.copy(unbiasedExponent = exp, significand = sig)
+        }
     }
 
     private fun UnpackedFp.addSignificandExtraBits(bits: UInt) = copy(
@@ -1275,40 +1281,58 @@ object FpUtils {
     private fun KContext.fpRoundToIntegralUnpacked(rm: KFpRoundingMode, value: UnpackedFp): KFpValue<*> {
         val shift = (value.significandSize - 1u).toInt().toBigInteger() - value.unbiasedExponent
 
-        var resultSignificand = fpRoundSignificandToIntegral(value, shift, rm)
-        var resultExponent = value.unbiasedExponent
+        val resultSignificand = fpRoundSignificandToIntegral(value, shift, rm)
+        val resultExponent = value.unbiasedExponent
 
         // re-normalize
-        val powerToNormalize = resultSignificand.log2() - value.significandSize.toInt() + 1
-        if (powerToNormalize > 0) {
-            resultExponent += powerToNormalize.toBigInteger()
-            resultSignificand = resultSignificand.div2k(powerToNormalize.toUInt())
+        return normalizeUpperBound(resultExponent, resultSignificand, value.significandSize) { exp, sig ->
+            mkRoundedValue(
+                rm, exp, sig, value.sign, value.exponentSize, value.significandSize
+            )
         }
-
-        return mkRoundedValue(
-            rm, resultExponent, resultSignificand, value.sign, value.exponentSize, value.significandSize
-        )
     }
 
     private fun fpNormalize(value: UnpackedFp): UnpackedFp {
         if (value.significand.isZero()) return value
+        return normalizeUpperBound(value.unbiasedExponent, value.significand, value.significandSize) { e, s ->
+            normalizeLowerBound(e, s, value.significandSize) { exp, sig ->
+                UnpackedFp(value.exponentSize, value.significandSize, value.sign, exp, sig)
+            }
+        }
+    }
 
-        var sig = value.significand
-        var exp = value.unbiasedExponent
-
-        val normalizeUpperBound = sig.log2() - value.significandSize.toInt() + 1
-        if (normalizeUpperBound > 0) {
-            sig = sig.div2k(normalizeUpperBound.toUInt())
-            exp += normalizeUpperBound.toBigInteger()
+    private inline fun <T> normalizeUpperBound(
+        exponent: BigInteger,
+        significand: BigInteger,
+        significandSize: UInt,
+        body: (exponent: BigInteger, significand: BigInteger) -> T
+    ): T {
+        val exponentDelta = significand.log2() - significandSize.toInt() + 1
+        if (exponentDelta <= 0) {
+            return body(exponent, significand)
         }
 
-        val normalizeLowerBound = value.significandSize.toInt() - 1 - sig.log2()
-        if (normalizeLowerBound > 0){
-            sig = sig.mul2k(normalizeLowerBound.toUInt())
-            exp -= normalizeLowerBound.toBigInteger()
+        return body(
+            exponent.plus(exponentDelta.toBigInteger()),
+            significand.div2k(exponentDelta.toUInt())
+        )
+    }
+
+    private inline fun <T> normalizeLowerBound(
+        exponent: BigInteger,
+        significand: BigInteger,
+        significandSize: UInt,
+        body: (exponent: BigInteger, significand: BigInteger) -> T
+    ): T {
+        val exponentDelta = significandSize.toInt() - 1 - significand.log2()
+        if (exponentDelta <= 0) {
+            return body(exponent, significand)
         }
 
-        return UnpackedFp(value.exponentSize, value.significandSize, value.sign, exp, sig)
+        return body(
+            exponent.minus(exponentDelta.toBigInteger()),
+            significand.mul2k(exponentDelta.toUInt())
+        )
     }
 
     private fun fpRoundSignificandToIntegral(
