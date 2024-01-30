@@ -17,12 +17,12 @@ val `linux-x64` by sourceSets.creating
 val `mac-x64` by sourceSets.creating
 val `mac-arm` by sourceSets.creating
 
-val z3Version = "4.12.2"
+val z3Version = "4.12.5"
 
 val z3Binaries = listOf(
     Triple(`windows-x64`, mkZ3ReleaseDownloadTask(z3Version, "x64-win", "*.dll"), null),
     Triple(`linux-x64`, null, z3NativeLinuxX64),
-    Triple(`mac-x64`, mkZ3ReleaseDownloadTask(z3Version, "x64-osx-10.16", "*.dylib"), null),
+    Triple(`mac-x64`, mkZ3ReleaseDownloadTask(z3Version, "x64-osx-11.7.10", "*.dylib"), null),
     Triple(`mac-arm`, mkZ3ReleaseDownloadTask(z3Version, "arm64-osx-11.0", "*.dylib"), null),
 )
 

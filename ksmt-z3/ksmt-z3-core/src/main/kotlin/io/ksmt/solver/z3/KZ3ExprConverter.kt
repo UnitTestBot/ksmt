@@ -131,6 +131,7 @@ open class KZ3ExprConverter(
             Z3_sort_kind.Z3_SEQ_SORT,
             Z3_sort_kind.Z3_RE_SORT,
             Z3_sort_kind.Z3_CHAR_SORT,
+            Z3_sort_kind.Z3_TYPE_VAR,
             Z3_sort_kind.Z3_UNKNOWN_SORT -> TODO("$sort is not supported yet")
             null -> error("z3 sort kind cannot be null")
         }

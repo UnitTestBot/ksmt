@@ -144,11 +144,6 @@ abstract class BenchmarksBasedTest {
                  * */
                 val assertionsToCheck = evaluatedAssertions.filterNot { hasUnderspecifiedOperations(it) }
 
-                // Samples are false UNSAT in Z3 because of incorrect FMA eval
-                if (name in KnownZ3Issues.z3FpFmaFalseUnsatSamples) {
-                    ignoreTest { "Example is known to be false UNSAT in Z3 test oracle" }
-                }
-
                 worker.performEqualityChecks {
                     cardinalityConstraints.forEach { assume(it) }
                     assertionsToCheck.forEach { isTrue(it) }
@@ -181,15 +176,7 @@ abstract class BenchmarksBasedTest {
                     worker.assert(solver, it)
                 }
 
-                var expectedStatus = worker.check(solver)
-
-                // Fix known Z3 satisfiability issues
-                if (expectedStatus == KSolverStatus.UNSAT && name in KnownZ3Issues.z3FpFmaFalseUnsatSamples) {
-                    expectedStatus = KSolverStatus.SAT
-                }
-                if (expectedStatus == KSolverStatus.SAT && name in KnownZ3Issues.z3FpFmaFalseSatSamples) {
-                    expectedStatus = KSolverStatus.UNSAT
-                }
+                val expectedStatus = worker.check(solver)
 
                 if (expectedStatus == KSolverStatus.UNKNOWN) {
                     ignoreTest { "Expected status is unknown" }
@@ -542,179 +529,5 @@ abstract class BenchmarksBasedTest {
             System.err.println("IGNORE $testClassName.$testName: ${ignore.message}")
             Assumptions.assumeTrue(false)
         }
-    }
-
-    object KnownZ3Issues {
-        /**
-         * These samples are known to be SAT according to the annotation
-         * in the source and according to the previous versions of Z3 (e.g. 4.8.15).
-         * Currently used z3 4.11.2 treat these samples as UNSAT.
-         *
-         * Todo: remove when this issue will be fixed in Z3.
-         * */
-        val z3FpFmaFalseUnsatSamples = setOf(
-            "QF_FP_fma-has-solution-10232.smt2",
-            "QF_FP_fma-has-solution-10256.smt2",
-            "QF_FP_fma-has-solution-10601.smt2",
-            "QF_FP_fma-has-solution-10792.smt2",
-            "QF_FP_fma-has-solution-10834.smt2",
-            "QF_FP_fma-has-solution-10856.smt2",
-            "QF_FP_fma-has-solution-10867.smt2",
-            "QF_FP_fma-has-solution-10998.smt2",
-            "QF_FP_fma-has-solution-11152.smt2",
-            "QF_FP_fma-has-solution-11193.smt2",
-            "QF_FP_fma-has-solution-11245.smt2",
-            "QF_FP_fma-has-solution-11482.smt2",
-            "QF_FP_fma-has-solution-11503.smt2",
-            "QF_FP_fma-has-solution-12238.smt2",
-            "QF_FP_fma-has-solution-12329.smt2",
-            "QF_FP_fma-has-solution-1247.smt2",
-            "QF_FP_fma-has-solution-12600.smt2",
-            "QF_FP_fma-has-solution-12639.smt2",
-            "QF_FP_fma-has-solution-12682.smt2",
-            "QF_FP_fma-has-solution-12789.smt2",
-            "QF_FP_fma-has-solution-12840.smt2",
-            "QF_FP_fma-has-solution-12969.smt2",
-            "QF_FP_fma-has-solution-1325.smt2",
-            "QF_FP_fma-has-solution-13421.smt2",
-            "QF_FP_fma-has-solution-13786.smt2",
-            "QF_FP_fma-has-solution-14111.smt2",
-            "QF_FP_fma-has-solution-14346.smt2",
-            "QF_FP_fma-has-solution-14535.smt2",
-            "QF_FP_fma-has-solution-14613.smt2",
-            "QF_FP_fma-has-solution-14742.smt2",
-            "QF_FP_fma-has-solution-14799.smt2",
-            "QF_FP_fma-has-solution-14835.smt2",
-            "QF_FP_fma-has-solution-154.smt2",
-            "QF_FP_fma-has-solution-15774.smt2",
-            "QF_FP_fma-has-solution-15798.smt2",
-            "QF_FP_fma-has-solution-15963.smt2",
-            "QF_FP_fma-has-solution-15995.smt2",
-            "QF_FP_fma-has-solution-17127.smt2",
-            "QF_FP_fma-has-solution-17650.smt2",
-            "QF_FP_fma-has-solution-17915.smt2",
-            "QF_FP_fma-has-solution-17959.smt2",
-            "QF_FP_fma-has-solution-1809.smt2",
-            "QF_FP_fma-has-solution-18220.smt2",
-            "QF_FP_fma-has-solution-18700.smt2",
-            "QF_FP_fma-has-solution-19191.smt2",
-            "QF_FP_fma-has-solution-19593.smt2",
-            "QF_FP_fma-has-solution-2988.smt2",
-            "QF_FP_fma-has-solution-3042.smt2",
-            "QF_FP_fma-has-solution-3742.smt2",
-            "QF_FP_fma-has-solution-4281.smt2",
-            "QF_FP_fma-has-solution-457.smt2",
-            "QF_FP_fma-has-solution-4615.smt2",
-            "QF_FP_fma-has-solution-4981.smt2",
-            "QF_FP_fma-has-solution-4983.smt2",
-            "QF_FP_fma-has-solution-5056.smt2",
-            "QF_FP_fma-has-solution-5127.smt2",
-            "QF_FP_fma-has-solution-5213.smt2",
-            "QF_FP_fma-has-solution-5986.smt2",
-            "QF_FP_fma-has-solution-6211.smt2",
-            "QF_FP_fma-has-solution-6468.smt2",
-            "QF_FP_fma-has-solution-6573.smt2",
-            "QF_FP_fma-has-solution-6673.smt2",
-            "QF_FP_fma-has-solution-6822.smt2",
-            "QF_FP_fma-has-solution-7580.smt2",
-            "QF_FP_fma-has-solution-7736.smt2",
-            "QF_FP_fma-has-solution-7832.smt2",
-            "QF_FP_fma-has-solution-7920.smt2",
-            "QF_FP_fma-has-solution-80.smt2",
-            "QF_FP_fma-has-solution-8278.smt2",
-            "QF_FP_fma-has-solution-8475.smt2",
-            "QF_FP_fma-has-solution-8483.smt2",
-            "QF_FP_fma-has-solution-9132.smt2",
-            "QF_FP_fma-has-solution-9188.smt2",
-            "QF_FP_fma-has-solution-9455.smt2",
-            "QF_FP_fma-has-solution-9467.smt2",
-            "QF_FP_fma-has-solution-9517.smt2",
-        )
-
-        /**
-         * These samples are known to be UNSAT according to the annotation
-         * in the source and according to the previous versions of Z3 (e.g. 4.8.15).
-         * Currently used z3 4.11.2 treat these samples as SAT.
-         *
-         * Todo: remove when this issue will be fixed in Z3.
-         * */
-        val z3FpFmaFalseSatSamples = setOf(
-            "QF_FP_fma-has-no-other-solution-10232.smt2",
-            "QF_FP_fma-has-no-other-solution-10256.smt2",
-            "QF_FP_fma-has-no-other-solution-10601.smt2",
-            "QF_FP_fma-has-no-other-solution-10856.smt2",
-            "QF_FP_fma-has-no-other-solution-10834.smt2",
-            "QF_FP_fma-has-no-other-solution-10792.smt2",
-            "QF_FP_fma-has-no-other-solution-10867.smt2",
-            "QF_FP_fma-has-no-other-solution-10998.smt2",
-            "QF_FP_fma-has-no-other-solution-11152.smt2",
-            "QF_FP_fma-has-no-other-solution-11193.smt2",
-            "QF_FP_fma-has-no-other-solution-11245.smt2",
-            "QF_FP_fma-has-no-other-solution-11482.smt2",
-            "QF_FP_fma-has-no-other-solution-11503.smt2",
-            "QF_FP_fma-has-no-other-solution-12238.smt2",
-            "QF_FP_fma-has-no-other-solution-12329.smt2",
-            "QF_FP_fma-has-no-other-solution-1247.smt2",
-            "QF_FP_fma-has-no-other-solution-12639.smt2",
-            "QF_FP_fma-has-no-other-solution-12600.smt2",
-            "QF_FP_fma-has-no-other-solution-12682.smt2",
-            "QF_FP_fma-has-no-other-solution-12789.smt2",
-            "QF_FP_fma-has-no-other-solution-12840.smt2",
-            "QF_FP_fma-has-no-other-solution-12969.smt2",
-            "QF_FP_fma-has-no-other-solution-1325.smt2",
-            "QF_FP_fma-has-no-other-solution-13421.smt2",
-            "QF_FP_fma-has-no-other-solution-13786.smt2",
-            "QF_FP_fma-has-no-other-solution-14111.smt2",
-            "QF_FP_fma-has-no-other-solution-14346.smt2",
-            "QF_FP_fma-has-no-other-solution-14613.smt2",
-            "QF_FP_fma-has-no-other-solution-14535.smt2",
-            "QF_FP_fma-has-no-other-solution-14742.smt2",
-            "QF_FP_fma-has-no-other-solution-14835.smt2",
-            "QF_FP_fma-has-no-other-solution-14799.smt2",
-            "QF_FP_fma-has-no-other-solution-154.smt2",
-            "QF_FP_fma-has-no-other-solution-15774.smt2",
-            "QF_FP_fma-has-no-other-solution-15798.smt2",
-            "QF_FP_fma-has-no-other-solution-15963.smt2",
-            "QF_FP_fma-has-no-other-solution-15995.smt2",
-            "QF_FP_fma-has-no-other-solution-17127.smt2",
-            "QF_FP_fma-has-no-other-solution-17650.smt2",
-            "QF_FP_fma-has-no-other-solution-17915.smt2",
-            "QF_FP_fma-has-no-other-solution-17959.smt2",
-            "QF_FP_fma-has-no-other-solution-1809.smt2",
-            "QF_FP_fma-has-no-other-solution-18220.smt2",
-            "QF_FP_fma-has-no-other-solution-18700.smt2",
-            "QF_FP_fma-has-no-other-solution-19191.smt2",
-            "QF_FP_fma-has-no-other-solution-19593.smt2",
-            "QF_FP_fma-has-no-other-solution-2988.smt2",
-            "QF_FP_fma-has-no-other-solution-3042.smt2",
-            "QF_FP_fma-has-no-other-solution-3742.smt2",
-            "QF_FP_fma-has-no-other-solution-4281.smt2",
-            "QF_FP_fma-has-no-other-solution-457.smt2",
-            "QF_FP_fma-has-no-other-solution-4615.smt2",
-            "QF_FP_fma-has-no-other-solution-4981.smt2",
-            "QF_FP_fma-has-no-other-solution-5056.smt2",
-            "QF_FP_fma-has-no-other-solution-4983.smt2",
-            "QF_FP_fma-has-no-other-solution-5213.smt2",
-            "QF_FP_fma-has-no-other-solution-5127.smt2",
-            "QF_FP_fma-has-no-other-solution-5986.smt2",
-            "QF_FP_fma-has-no-other-solution-6211.smt2",
-            "QF_FP_fma-has-no-other-solution-6468.smt2",
-            "QF_FP_fma-has-no-other-solution-6573.smt2",
-            "QF_FP_fma-has-no-other-solution-6673.smt2",
-            "QF_FP_fma-has-no-other-solution-6822.smt2",
-            "QF_FP_fma-has-no-other-solution-7580.smt2",
-            "QF_FP_fma-has-no-other-solution-7736.smt2",
-            "QF_FP_fma-has-no-other-solution-7832.smt2",
-            "QF_FP_fma-has-no-other-solution-7920.smt2",
-            "QF_FP_fma-has-no-other-solution-80.smt2",
-            "QF_FP_fma-has-no-other-solution-8278.smt2",
-            "QF_FP_fma-has-no-other-solution-8475.smt2",
-            "QF_FP_fma-has-no-other-solution-8483.smt2",
-            "QF_FP_fma-has-no-other-solution-9132.smt2",
-            "QF_FP_fma-has-no-other-solution-9188.smt2",
-            "QF_FP_fma-has-no-other-solution-9517.smt2",
-            "QF_FP_fma-has-no-other-solution-9455.smt2",
-            "QF_FP_fma-has-no-other-solution-9467.smt2",
-        )
     }
 }
