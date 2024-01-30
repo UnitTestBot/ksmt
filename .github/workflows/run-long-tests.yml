@@ -98,7 +98,7 @@ jobs:
             ./gradlew
             :ksmt-test:downloadPreparedSmtLibBenchmarkTestData
             --no-daemon
-            -PtestDataRevision=${{ env.TEST_DATA_REVISION }}
+            '-PtestDataRevision=${{ env.TEST_DATA_REVISION }}'
 
   run_tests:
     needs: [setup, prepare_test_data]
@@ -147,7 +147,7 @@ jobs:
             ./gradlew
             :ksmt-test:downloadPreparedSmtLibBenchmarkTestData
             --no-daemon
-            -PtestDataRevision=${{ env.TEST_DATA_REVISION }}
+            '-PtestDataRevision=${{ env.TEST_DATA_REVISION }}'
 
       # We don't want to run basic KSMT tests on each chunk
       - name: Build project
