@@ -20,37 +20,28 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 1.8
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: 8
           distribution: 'zulu'
           cache: gradle
 
+      - name: Setup gradle
+        uses: gradle/actions/setup-gradle@v3
+
       - name: Build and run z3 tests on macOS
-        uses: gradle/gradle-build-action@v2
         if: runner.os == 'macOS'
-        with:
-          arguments: |
-            :ksmt-z3:build
-             --no-daemon
-             --continue
-             -PrunBenchmarksBasedTests=false
+        run: ./gradlew :ksmt-z3:build --no-daemon --continue -PrunBenchmarksBasedTests=false
 
       - name: Build and run simple tests on Linux or Windows
-        uses: gradle/gradle-build-action@v2
         if: runner.os != 'macOS'
-        with:
-          arguments: |
-            build
-             --no-daemon
-             --continue
-             -PrunBenchmarksBasedTests=false
+        run: ./gradlew build --no-daemon --continue -PrunBenchmarksBasedTests=false
 
       - name: Upload ksmt test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ksmt-tests-report-${{ matrix.os }}
