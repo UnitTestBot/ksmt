@@ -1,7 +1,6 @@
 package io.ksmt.solver.z3
 
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
@@ -54,7 +53,6 @@ class Example {
         assertNotNull(bInterp)
         val detachedModel = model.detach()
         solver.close()
-        assertFailsWith(IllegalStateException::class) { model.eval(a) }
         assertEquals(aValue, detachedModel.eval(a))
         assertEquals(cValue, detachedModel.eval(c))
         assertEquals(eValue, detachedModel.eval(e))

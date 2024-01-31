@@ -26,11 +26,15 @@ import io.ksmt.utils.mkFreshConst
 import io.ksmt.utils.uncheckedCast
 
 open class KZ3Model(
-    private val model: Model,
+    nativeModel: Model,
     private val ctx: KContext,
     private val z3Ctx: KZ3Context,
     private val internalizer: KZ3ExprInternalizer
 ) : KModel {
+    private var nativeModel: Model? = nativeModel
+    private val model: Model
+        get() = nativeModel ?: error("Native model released")
+
     private val converter by lazy { KZ3ExprConverter(ctx, z3Ctx, this) }
 
     private val constantDeclarations: Set<KDecl<*>> by lazy {
@@ -172,17 +176,21 @@ open class KZ3Model(
             uninterpretedSortUniverse(it) ?: error("missed sort universe for $it")
         }
 
+        // The model is detached from the solver and therefore can be released
+        releaseNativeModel()
+
         return KModelImpl(ctx, interpretations, uninterpretedSortsUniverses)
+    }
+
+    override fun close() {
+        releaseNativeModel()
     }
 
     private fun ensureContextActive() = check(z3Ctx.isActive) { "Context already closed" }
 
-    override fun toString(): String = detach().toString()
-    override fun hashCode(): Int = detach().hashCode()
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is KModel) return false
-        return detach() == other
+    private fun releaseNativeModel() {
+        // Released by GC
+        nativeModel = null
     }
 
     private fun <T> LongArray.convertToSet(convert: KZ3ExprConverter.(Long) -> T?): Set<T> {

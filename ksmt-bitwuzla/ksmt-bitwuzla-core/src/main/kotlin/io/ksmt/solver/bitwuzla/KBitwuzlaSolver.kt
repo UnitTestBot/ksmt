@@ -6,6 +6,7 @@ import io.ksmt.expr.KExpr
 import io.ksmt.solver.KModel
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverStatus
+import io.ksmt.solver.model.KNativeSolverModel
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaOption
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaResult
@@ -27,7 +28,8 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
     private var lastCheckStatus = KSolverStatus.UNKNOWN
     private var lastReasonOfUnknown: String? = null
     private var lastAssumptions: TrackedAssumptions? = null
-    private var lastModel: KBitwuzlaModel? = null
+    private var lastBitwuzlaModel: KBitwuzlaModel? = null
+    private var lastModel: KModel? = null
 
     init {
         Native.bitwuzlaSetOption(bitwuzlaCtx.bitwuzla, BitwuzlaOption.BITWUZLA_OPT_INCREMENTAL, value = 1)
@@ -121,13 +123,17 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
 
     override fun model(): KModel = bitwuzlaCtx.bitwuzlaTry {
         require(lastCheckStatus == KSolverStatus.SAT) { "Model are only available after SAT checks" }
-        val model = lastModel ?: KBitwuzlaModel(
+        lastModel?.let { return it }
+
+        val bitwuzlaModel = KBitwuzlaModel(
             ctx, bitwuzlaCtx, exprConverter,
             bitwuzlaCtx.declarations(),
             bitwuzlaCtx.uninterpretedSortsWithRelevantDecls()
         )
-        lastModel = model
-        model
+        return KNativeSolverModel(bitwuzlaModel).also {
+            lastBitwuzlaModel = bitwuzlaModel
+            lastModel = it
+        }
     }
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = bitwuzlaCtx.bitwuzlaTry {
@@ -163,7 +169,8 @@ open class KBitwuzlaSolver(private val ctx: KContext) : KSolver<KBitwuzlaSolverC
         /**
          * Bitwuzla model is only valid until the next check-sat call.
          * */
-        lastModel?.markInvalid()
+        lastBitwuzlaModel?.markInvalid()
+        lastBitwuzlaModel = null
         lastModel = null
 
         lastCheckStatus = KSolverStatus.UNKNOWN

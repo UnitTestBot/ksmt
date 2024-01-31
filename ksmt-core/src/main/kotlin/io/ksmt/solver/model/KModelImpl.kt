@@ -72,4 +72,8 @@ open class KModelImpl(
     }
 
     override fun hashCode(): Int = interpretations.hashCode()
+
+    override fun close() {
+        // nothing to close
+    }
 }

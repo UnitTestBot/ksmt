@@ -10,6 +10,7 @@ import io.ksmt.solver.KModel
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverException
 import io.ksmt.solver.KSolverStatus
+import io.ksmt.solver.model.KNativeSolverModel
 import io.ksmt.sort.KBoolSort
 import io.ksmt.utils.library.NativeLibraryLoaderUtils
 import java.util.TreeMap
@@ -27,7 +28,8 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
 
     private var lastCheckStatus = KSolverStatus.UNKNOWN
     private var lastReasonOfUnknown: String? = null
-    private var lastModel: KCvc5Model? = null
+    private var lastCvcModel: KCvc5Model? = null
+    private var lastModel: KModel? = null
 
     // we need TreeMap here (hashcode not implemented in Term)
     private var cvc5LastAssumptions: TreeMap<Term, KExpr<KBoolSort>>? = null
@@ -130,16 +132,20 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
 
     override fun model(): KModel = cvc5Try {
         require(lastCheckStatus == KSolverStatus.SAT) { "Models are only available after SAT checks" }
-        val model = lastModel ?: KCvc5Model(
+        lastModel?.let { return it }
+
+        val cvcModel = KCvc5Model(
             ctx,
             cvc5Ctx,
             exprInternalizer,
             cvc5Ctx.declarations().flatMapTo(hashSetOf()) { it },
             cvc5Ctx.uninterpretedSorts().flatMapTo(hashSetOf()) { it },
         )
-        lastModel = model
 
-        model
+        return KNativeSolverModel(cvcModel).also {
+            lastCvcModel = cvcModel
+            lastModel = it
+        }
     }
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = cvc5Try {
@@ -205,7 +211,8 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         /**
          * Cvc5 model is only valid until the next check-sat call.
          * */
-        lastModel?.markInvalid()
+        lastCvcModel?.markInvalid()
+        lastCvcModel = null
         lastModel = null
 
         lastCheckStatus = KSolverStatus.UNKNOWN

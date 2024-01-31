@@ -12,6 +12,7 @@ import io.ksmt.solver.KModel
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverException
 import io.ksmt.solver.KSolverStatus
+import io.ksmt.solver.model.KNativeSolverModel
 import io.ksmt.sort.KBoolSort
 import java.util.Timer
 import java.util.TimerTask
@@ -36,6 +37,7 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
 
     private var lastAssumptions: TrackedAssumptions? = null
     private var lastCheckStatus = KSolverStatus.UNKNOWN
+    private var lastModel: KModel? = null
     private var lastReasonOfUnknown: String? = null
 
     private var currentLevelTrackedAssertions = mutableListOf<Pair<KExpr<KBoolSort>, YicesTerm>>()
@@ -140,9 +142,12 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
         require(lastCheckStatus == KSolverStatus.SAT) {
             "Model are only available after SAT checks, current solver status: $lastCheckStatus"
         }
-        val model = nativeContext.model
+        lastModel?.let { return it }
 
-        return KYicesModel(model, ctx, yicesCtx, exprInternalizer, exprConverter)
+        val yicesModel = KYicesModel(nativeContext.model, ctx, yicesCtx, exprInternalizer, exprConverter)
+        return KNativeSolverModel(yicesModel).also {
+            lastModel = it
+        }
     }
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = yicesTry {
@@ -198,6 +203,7 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
         lastCheckStatus = KSolverStatus.UNKNOWN
         lastReasonOfUnknown = null
         lastAssumptions = null
+        lastModel = null
     }
 
     private fun Status.processCheckResult() = when (this) {
