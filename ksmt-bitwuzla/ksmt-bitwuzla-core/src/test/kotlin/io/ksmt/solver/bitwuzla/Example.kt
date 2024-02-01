@@ -6,7 +6,6 @@ import io.ksmt.sort.KArraySort
 import io.ksmt.utils.mkConst
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -63,7 +62,6 @@ class Example {
 
         solver.close()
 
-        assertFailsWith(IllegalStateException::class) { model.interpretation(b) }
         assertEquals(aValue, detachedModel.eval(a))
         assertEquals(cValue, detachedModel.eval(c))
     }

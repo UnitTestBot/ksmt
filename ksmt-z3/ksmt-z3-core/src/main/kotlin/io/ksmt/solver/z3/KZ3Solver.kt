@@ -13,6 +13,7 @@ import io.ksmt.solver.KModel
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverException
 import io.ksmt.solver.KSolverStatus
+import io.ksmt.solver.model.KNativeSolverModel
 import io.ksmt.sort.KBoolSort
 import io.ksmt.utils.library.NativeLibraryLoaderUtils
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
@@ -28,7 +29,7 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
 
     private var lastCheckStatus = KSolverStatus.UNKNOWN
     private var lastReasonOfUnknown: String? = null
-    private var lastModel: KZ3Model? = null
+    private var lastModel: KModel? = null
     private var lastUnsatCore: List<KExpr<KBoolSort>>? = null
 
     private var currentScope: UInt = 0u
@@ -133,16 +134,12 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
         require(lastCheckStatus == KSolverStatus.SAT) {
             "Model are only available after SAT checks, current solver status: $lastCheckStatus"
         }
+        lastModel?.let { return it }
 
-        val model = lastModel ?: KZ3Model(
-            model = solver.model,
-            ctx = ctx,
-            z3Ctx = z3Ctx,
-            internalizer = exprInternalizer
-        )
-        lastModel = model
-
-        model
+        val z3Model = KZ3Model(solver.model, ctx, z3Ctx, exprInternalizer)
+        return KNativeSolverModel(z3Model).also {
+            lastModel = it
+        }
     }
 
     override fun unsatCore(): List<KExpr<KBoolSort>> = z3Try {
