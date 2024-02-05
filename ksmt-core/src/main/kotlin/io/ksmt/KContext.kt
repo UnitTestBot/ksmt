@@ -1884,6 +1884,7 @@ open class KContext(
      * Note: if [sizeBits] is greater than 1, the [value] bit will be repeated.
      * */
     fun mkBv(value: Boolean, sizeBits: UInt): KBitVecValue<KBvSort> {
+        if (sizeBits == bv1Sort.sizeBits) return mkBv(value).cast()
         val intValue = (if (value) 1 else 0) as Number
         return mkBv(intValue, sizeBits)
     }
@@ -1894,7 +1895,7 @@ open class KContext(
      * Note: if [sort] size is greater than 1, the [value] bit will be repeated.
      * */
     fun <T : KBvSort> mkBv(value: Boolean, sort: T): KBitVecValue<T> =
-        mkBv(value, sort.sizeBits).cast()
+        if (sort == bv1Sort) mkBv(value).cast() else mkBv(value, sort.sizeBits).cast()
 
     fun Boolean.toBv(): KBitVec1Value = mkBv(this)
     fun Boolean.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
@@ -1914,7 +1915,8 @@ open class KContext(
      * At the same time, if [sizeBits] is greater than 8,
      * binary representation of the [value] will be padded from the start with its sign bit.
      * */
-    fun mkBv(value: Byte, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
+    fun mkBv(value: Byte, sizeBits: UInt): KBitVecValue<KBvSort> =
+        if (sizeBits == bv8Sort.sizeBits) mkBv(value).cast() else mkBv(value as Number, sizeBits)
 
     /**
      * Create a BitVec value of the BitVec [sort].
@@ -1925,7 +1927,8 @@ open class KContext(
      * At the same time, if [sort] size is greater than 8,
      * binary representation of the [value] will be padded from the start with its sign bit.
      * */
-    fun <T : KBvSort> mkBv(value: Byte, sort: T): KBitVecValue<T> = mkBv(value as Number, sort)
+    fun <T : KBvSort> mkBv(value: Byte, sort: T): KBitVecValue<T> =
+        if (sort == bv8Sort) mkBv(value).cast() else mkBv(value as Number, sort)
 
     fun Byte.toBv(): KBitVec8Value = mkBv(this)
     fun Byte.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
@@ -1946,7 +1949,8 @@ open class KContext(
      * At the same time, if [sizeBits] is greater than 16,
      * binary representation of the [value] will be padded from the start with its sign bit.
      * */
-    fun mkBv(value: Short, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
+    fun mkBv(value: Short, sizeBits: UInt): KBitVecValue<KBvSort> =
+        if (sizeBits == bv16Sort.sizeBits) mkBv(value).cast() else mkBv(value as Number, sizeBits)
 
     /**
      * Create a BitVec value of the BitVec [sort].
@@ -1957,7 +1961,8 @@ open class KContext(
      * At the same time, if [sort] size is greater than 16,
      * binary representation of the [value] will be padded from the start with its sign bit.
      * */
-    fun <T : KBvSort> mkBv(value: Short, sort: T): KBitVecValue<T> = mkBv(value as Number, sort)
+    fun <T : KBvSort> mkBv(value: Short, sort: T): KBitVecValue<T>  =
+        if (sort == bv16Sort) mkBv(value).cast() else mkBv(value as Number, sort)
 
     fun Short.toBv(): KBitVec16Value = mkBv(this)
     fun Short.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
@@ -1978,7 +1983,8 @@ open class KContext(
      * At the same time, if [sizeBits] is greater than 32,
      * binary representation of the [value] will be padded from the start with its sign bit.
      * */
-    fun mkBv(value: Int, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
+    fun mkBv(value: Int, sizeBits: UInt): KBitVecValue<KBvSort> =
+        if (sizeBits == bv32Sort.sizeBits) mkBv(value).cast() else mkBv(value as Number, sizeBits)
 
     /**
      * Create a BitVec value of the BitVec [sort].
@@ -1989,7 +1995,8 @@ open class KContext(
      * At the same time, if [sort] size is greater than 32,
      * binary representation of the [value] will be padded from the start with its sign bit.
      * */
-    fun <T : KBvSort> mkBv(value: Int, sort: T): KBitVecValue<T> = mkBv(value as Number, sort)
+    fun <T : KBvSort> mkBv(value: Int, sort: T): KBitVecValue<T> =
+        if (sort == bv32Sort) mkBv(value).cast() else mkBv(value as Number, sort)
 
     fun Int.toBv(): KBitVec32Value = mkBv(this)
     fun Int.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
@@ -2010,7 +2017,8 @@ open class KContext(
      * At the same time, if [sizeBits] is greater than 64,
      * binary representation of the [value] will be padded from the start with its sign bit.
      * */
-    fun mkBv(value: Long, sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(value as Number, sizeBits)
+    fun mkBv(value: Long, sizeBits: UInt): KBitVecValue<KBvSort> =
+        if (sizeBits == bv64Sort.sizeBits) mkBv(value).cast() else mkBv(value as Number, sizeBits)
 
     /**
      * Create a BitVec value of the BitVec [sort].
@@ -2021,7 +2029,8 @@ open class KContext(
      * At the same time, if [sort] size is greater than 64,
      * binary representation of the [value] will be padded from the start with its sign bit.
      * */
-    fun <T : KBvSort> mkBv(value: Long, sort: T): KBitVecValue<T> = mkBv(value as Number, sort)
+    fun <T : KBvSort> mkBv(value: Long, sort: T): KBitVecValue<T> =
+        if (sort == bv64Sort) mkBv(value).cast() else mkBv(value as Number, sort)
 
     fun Long.toBv(): KBitVec64Value = mkBv(this)
     fun Long.toBv(sizeBits: UInt): KBitVecValue<KBvSort> = mkBv(this, sizeBits)
