@@ -14,21 +14,6 @@
 #include "io_ksmt_solver_bitwuzla_bindings_Native.h"
 #include "access_private.hpp"
 
-#define BITWUZLA_JNI_EXCEPTION_CLS "io/ksmt/solver/bitwuzla/bindings/BitwuzlaNativeException"
-#define BITWUZLA_CATCH_STATEMENT catch (const std::exception& e)
-#define BITWUZLA_JNI_EXCEPTION jclass exception = env->FindClass(BITWUZLA_JNI_EXCEPTION_CLS);
-#define BITWUZLA_JNI_THROW env->ThrowNew(exception, e.what());
-#define BZLA_TRY(CODE, ERROR_VAL) try { CODE } BITWUZLA_CATCH_STATEMENT { BITWUZLA_JNI_EXCEPTION BITWUZLA_JNI_THROW return ERROR_VAL;}
-#define BZLA_TRY_OR_ZERO(CODE) BZLA_TRY(CODE, 0)
-#define BZLA_TRY_VOID(CODE) BZLA_TRY(CODE, )
-#define BZLA_TRY_OR_NULL(CODE) BZLA_TRY(CODE, nullptr)
-#define BZLA_TRY_PTR_EXPR(EXPR) BZLA_TRY_OR_ZERO({return reinterpret_cast<jlong>(EXPR);})
-#define BZLA_TRY_UINT64_EXPR(EXPR) BZLA_TRY_OR_ZERO({return static_cast<jlong>(EXPR);})
-#define BZLA_TRY_INT32_EXPR(EXPR) BZLA_TRY_OR_ZERO({return static_cast<jint>(EXPR);})
-#define BZLA_TRY_BOOL_EXPR(EXPR) BZLA_TRY_OR_ZERO({return static_cast<bool>(EXPR) ? JNI_TRUE : JNI_FALSE;})
-#define BZLA_TRY_STRING_EXPR(EXPR) BZLA_TRY_OR_NULL({return static_cast<jstring>(EXPR);})
-#define BZLA_TRY_VOID_EXPR(EXPR) BZLA_TRY_VOID((EXPR);)
-
 template<typename T>
 struct JniPoinerArray {
     JNIEnv* env;
@@ -134,10 +119,42 @@ void set_ptr_array(JNIEnv* env, jlongArray array, T* ptr_array, size_t size) {
 #define TERM(t) (reinterpret_cast<BitwuzlaTerm>(t))
 #define SORT(s) (reinterpret_cast<BitwuzlaSort>(s))
 
-void abort_callback(const char* msg) {
-    // todo: check callback (rethrow_if_nested)
-    throw std::runtime_error(msg);
+#define EXCEPTION_STATE_UNKNOWN (-1)
+#define EXCEPTION_STATE_NO_EXCEPTION (0)
+
+static thread_local int exception_state = EXCEPTION_STATE_UNKNOWN;
+static thread_local std::string exception_message = "";
+
+void abort_callback(const char* msg)
+{
+    exception_state++;
+    exception_message = std::string(msg);
 }
+
+#define BITWUZLA_JNI_EXCEPTION_CLS "io/ksmt/solver/bitwuzla/bindings/BitwuzlaNativeException"
+
+# define BZLA_API_TRY(EXPR, ON_SUCCESS, ERROR_VAL) {                      \
+    exception_state = EXCEPTION_STATE_NO_EXCEPTION;                       \
+    bitwuzla_set_abort_callback(abort_callback);                          \
+    EXPR;                                                                 \
+    if (exception_state > EXCEPTION_STATE_NO_EXCEPTION) {                 \
+        jclass exception = env->FindClass(BITWUZLA_JNI_EXCEPTION_CLS);    \
+        env->ThrowNew(exception, exception_message.c_str());              \
+        exception_state = EXCEPTION_STATE_UNKNOWN;                        \
+        return ERROR_VAL;                                                 \
+    }                                                                     \
+    exception_state = EXCEPTION_STATE_UNKNOWN;                            \
+    ON_SUCCESS;                                                           \
+}                                                                         \
+
+#define BZLA_TRY_PTR_EXPR(EXPR) BZLA_API_TRY(auto api_call_result = EXPR, return reinterpret_cast<jlong>(api_call_result), 0)
+#define BZLA_TRY_UINT64_EXPR(EXPR) BZLA_API_TRY(auto api_call_result = EXPR, return static_cast<jlong>(api_call_result), 0)
+#define BZLA_TRY_INT32_EXPR(EXPR) BZLA_API_TRY(auto api_call_result = EXPR, return static_cast<jint>(api_call_result), 0)
+#define BZLA_TRY_BOOL_EXPR(EXPR) BZLA_API_TRY(bool api_call_result = EXPR, return api_call_result ? JNI_TRUE : JNI_FALSE, JNI_FALSE)
+#define BZLA_TRY_STRING_EXPR(EXPR) BZLA_API_TRY(auto api_call_result = EXPR, return env->NewStringUTF(api_call_result), nullptr)
+#define BZLA_TRY_VOID_EXPR(EXPR) BZLA_API_TRY(EXPR, , )
+#define BZLA_TRY_OR_RETURN_ZERO(EXPR) BZLA_API_TRY(EXPR, , 0)
+#define BZLA_TRY_OR_RETURN_NULL(EXPR) BZLA_API_TRY(EXPR, , nullptr)
 
 enum TerminationState {
     NOT_ACTIVE, ACTIVE, TERMINATED
@@ -213,14 +230,7 @@ struct ScopedTimeout {
     }
 };
 
-void Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaInit(JNIEnv* env, jclass native_class) {
-    bitwuzla_set_abort_callback(abort_callback);
-}
-
 jlong Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermManagerNew(JNIEnv* env, jclass native_class) {
-    // todo: abort callback is thread local
-    bitwuzla_set_abort_callback(abort_callback);
-
     BZLA_TRY_PTR_EXPR(bitwuzla_term_manager_new())
 }
 
@@ -251,15 +261,13 @@ void Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermRelease(
 jlong Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaNew(JNIEnv* env, jclass native_class,
                                                                 jlong bitwuzla_term_manager, jlong bitwuzla_options)
 {
-    BZLA_TRY_OR_ZERO({
-        Bitwuzla* bzla = bitwuzla_new(TERM_MANAGER, reinterpret_cast<BitwuzlaOptions*>(bitwuzla_options));
+    Bitwuzla* bzla;
+    BZLA_TRY_OR_RETURN_ZERO(bzla = bitwuzla_new(TERM_MANAGER, reinterpret_cast<BitwuzlaOptions*>(bitwuzla_options)))
 
-        auto termination_state = new BitwuzlaTerminationCallbackState();
-        termination_state->reset();
-        bitwuzla_set_termination_callback(bzla, termination_callback, termination_state);
-
-        return reinterpret_cast<jlong>(bzla);
-    })
+    auto termination_state = new BitwuzlaTerminationCallbackState();
+    termination_state->reset();
+    bitwuzla_set_termination_callback(bzla, termination_callback, termination_state);
+    return reinterpret_cast<jlong>(bzla);
 }
 
 void Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaDelete(JNIEnv* env, jclass native_class, jlong bitwuzla)
@@ -325,12 +333,12 @@ jstring
 Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetOptionMode(JNIEnv* env, jclass native_class, jlong options,
                                                                     jint bitwuzla_option)
 {
-    BZLA_TRY_STRING_EXPR(env->NewStringUTF(
+    BZLA_TRY_STRING_EXPR(
         bitwuzla_get_option_mode(
             reinterpret_cast<BitwuzlaOptions*>(options),
             static_cast<BitwuzlaOption>(bitwuzla_option)
         )
-    ))
+    )
 }
 
 jlong
@@ -487,14 +495,14 @@ Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaMkBvValueUint64Array(JNIEnv
         uint64_t chunk_width = remaining_width > chunk_size ? chunk_size : remaining_width;
         remaining_width -= chunk_size;
 
-        BZLA_TRY_OR_ZERO({
+        BZLA_TRY_OR_RETURN_ZERO(
             bv_chunks.emplace_back(
                 TERM_MANAGER->d_tm.mk_bv_value_uint64(
                     TERM_MANAGER->d_tm.mk_bv_sort(chunk_width),
                     chunk_value
                 )
-            );
-        })
+            )
+        )
     }
 
     BZLA_TRY_PTR_EXPR(
@@ -673,25 +681,26 @@ Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaIsUnsatAssumption(JNIEnv* e
 }
 
 jlongArray Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetUnsatAssumptions(JNIEnv* env, jclass native_class,
-                                                                                     jlong bitwuzla) {
-    BZLA_TRY_OR_NULL({
-                         size_t len = 0;
-                         BitwuzlaTerm* array = bitwuzla_get_unsat_assumptions(reinterpret_cast<Bitwuzla*>(bitwuzla), &len);
-                         jlongArray result = create_ptr_array(env, len);
-                         set_ptr_array(env, result, array, len);
-                         return result;
-                     })
+    jlong bitwuzla)
+{
+    size_t len = 0;
+    BitwuzlaTerm* array;
+    BZLA_TRY_OR_RETURN_NULL(array = bitwuzla_get_unsat_assumptions(reinterpret_cast<Bitwuzla*>(bitwuzla), &len))
+
+    jlongArray result = create_ptr_array(env, len);
+    set_ptr_array(env, result, array, len);
+    return result;
 }
 
 jlongArray
 Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGetUnsatCore(JNIEnv* env, jclass native_class, jlong bitwuzla) {
-    BZLA_TRY_OR_NULL({
-                         size_t len = 0;
-                         BitwuzlaTerm* array = bitwuzla_get_unsat_core(reinterpret_cast<Bitwuzla*>(bitwuzla), &len);
-                         jlongArray result = create_ptr_array(env, len);
-                         set_ptr_array(env, result, array, len);
-                         return result;
-                     })
+    size_t len = 0;
+    BitwuzlaTerm* array;
+    BZLA_TRY_OR_RETURN_NULL(array = bitwuzla_get_unsat_core(reinterpret_cast<Bitwuzla*>(bitwuzla), &len))
+
+    jlongArray result = create_ptr_array(env, len);
+    set_ptr_array(env, result, array, len);
+    return result;
 }
 
 void
@@ -852,8 +861,9 @@ Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSubstituteTerm(JNIEnv* env,
 
 jlongArray
 Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSubstituteTerms(JNIEnv* env, jclass native_class,
-                                                                      jlongArray terms, jlongArray map_keys,
-                                                                      jlongArray map_values) {
+                                                                     jlongArray terms, jlongArray map_keys,
+                                                                     jlongArray map_values)
+{
     GET_PTR_ARRAY(BitwuzlaTerm, terms_ptr, terms);
     jsize num_terms = env->GetArrayLength(terms);
 
@@ -861,14 +871,12 @@ Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSubstituteTerms(JNIEnv* env
     GET_PTR_ARRAY(BitwuzlaTerm, values_ptr, map_values);
     jsize num_keys = env->GetArrayLength(map_keys);
 
-    BZLA_TRY_OR_NULL({
-        bitwuzla_substitute_terms(num_terms, terms_ptr, num_keys, keys_ptr, values_ptr);
+    BZLA_TRY_OR_RETURN_NULL(bitwuzla_substitute_terms(num_terms, terms_ptr, num_keys, keys_ptr, values_ptr))
 
-        jlongArray result_terms = create_ptr_array(env, num_terms);
-        set_ptr_array(env, result_terms, terms_ptr, num_terms);
+    jlongArray result_terms = create_ptr_array(env, num_terms);
+    set_ptr_array(env, result_terms, terms_ptr, num_terms);
 
-        return result_terms;
-    })
+    return result_terms;
 }
 
 jlong
@@ -882,27 +890,29 @@ jint Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermGetKind(JNIEnv* en
 }
 
 jlongArray Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermGetChildren(JNIEnv* env, jclass native_class,
-                                                                                 jlong bitwuzla_term) {
-    BZLA_TRY_OR_NULL({
-                         size_t len = 0;
-                         BitwuzlaTerm* array = bitwuzla_term_get_children(TERM(bitwuzla_term), &len);
+    jlong bitwuzla_term)
+{
+    size_t len = 0;
+    BitwuzlaTerm* array;
 
-                         jlongArray result = create_ptr_array(env, len);
-                         set_ptr_array(env, result, array, len);
-                         return result;
-                     })
+    BZLA_TRY_OR_RETURN_NULL(array = bitwuzla_term_get_children(TERM(bitwuzla_term), &len))
+
+    jlongArray result = create_ptr_array(env, len);
+    set_ptr_array(env, result, array, len);
+    return result;
 }
 
 jlongArray Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermGetIndices(JNIEnv* env, jclass native_class,
-                                                                               jlong bitwuzla_term) {
-    BZLA_TRY_OR_NULL({
-                         size_t len = 0;
-                         uint64_t* array = bitwuzla_term_get_indices(TERM(bitwuzla_term), &len);
+                                                                               jlong bitwuzla_term)
+{
+    size_t len = 0;
+    uint64_t* array;
 
-                         jlongArray result = env->NewLongArray(static_cast<jsize>(len));
-                         env->SetLongArrayRegion(result, 0, len, reinterpret_cast<jlong*>(array));
-                         return result;
-                     })
+    BZLA_TRY_OR_RETURN_NULL(array = bitwuzla_term_get_indices(TERM(bitwuzla_term), &len))
+
+    jlongArray result = env->NewLongArray(static_cast<jsize>(len));
+    env->SetLongArrayRegion(result, 0, static_cast<jsize>(len), reinterpret_cast<jlong*>(array));
+    return result;
 }
 
 jlong Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortBvGetSize(JNIEnv* env, jclass native_class,
@@ -934,17 +944,15 @@ jlong Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortArrayGetElement(J
 jlongArray
 Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortFunGetDomainSorts(JNIEnv* env, jclass native_class,
                                                                             jlong bitwuzla_sort) {
-    BZLA_TRY_OR_NULL({
-                         size_t result_size = 0;
-                         BitwuzlaSort* result = bitwuzla_sort_fun_get_domain_sorts(
-                                 SORT(bitwuzla_sort), &result_size
-                         );
+    size_t result_size = 0;
+    BitwuzlaSort* result;
 
-                         jlongArray result_array = create_ptr_array(env, result_size);
-                         set_ptr_array(env, result_array, result, result_size);
+    BZLA_TRY_OR_RETURN_NULL(result = bitwuzla_sort_fun_get_domain_sorts(SORT(bitwuzla_sort), &result_size))
 
-                         return result_array;
-                     })
+    jlongArray result_array = create_ptr_array(env, result_size);
+    set_ptr_array(env, result_array, result, result_size);
+
+    return result_array;
 }
 
 jlong
@@ -963,9 +971,7 @@ jstring
 Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortGetUninterpretedSymbol(
     JNIEnv* env, jclass native_class, jlong bitwuzla_sort)
 {
-    BZLA_TRY_STRING_EXPR(env->NewStringUTF(
-        bitwuzla_sort_get_uninterpreted_symbol(SORT(bitwuzla_sort))
-    ))
+    BZLA_TRY_STRING_EXPR(bitwuzla_sort_get_uninterpreted_symbol(SORT(bitwuzla_sort)))
 }
 
 jboolean Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortIsArray(JNIEnv* env, jclass native_class,
@@ -1031,17 +1037,15 @@ jlong Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermArrayGetElementSo
 jlongArray
 Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermFunGetDomainSorts(JNIEnv* env, jclass native_class,
                                                                             jlong bitwuzla_term) {
-    BZLA_TRY_OR_NULL({
-                         size_t result_size = 0;
-                         BitwuzlaSort* result = bitwuzla_term_fun_get_domain_sorts(
-                                 TERM(bitwuzla_term), &result_size
-                         );
+    size_t result_size = 0;
+    BitwuzlaSort* result;
 
-                         jlongArray result_array = create_ptr_array(env, result_size);
-                         set_ptr_array(env, result_array, result, result_size);
+    BZLA_TRY_OR_RETURN_NULL(result = bitwuzla_term_fun_get_domain_sorts(TERM(bitwuzla_term), &result_size))
 
-                         return result_array;
-                     })
+    jlongArray result_array = create_ptr_array(env, result_size);
+    set_ptr_array(env, result_array, result, result_size);
+
+    return result_array;
 }
 
 jlong Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermFunGetCodomainSort(JNIEnv* env, jclass native_class,
@@ -1072,9 +1076,7 @@ jlong Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermFunGetArity(JNIEn
 jstring Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermGetSymbol(JNIEnv* env, jclass native_class,
                                                                             jlong bitwuzla_term)
 {
-    BZLA_TRY_STRING_EXPR(env->NewStringUTF(
-        bitwuzla_term_get_symbol(TERM(bitwuzla_term))
-    ))
+    BZLA_TRY_STRING_EXPR(bitwuzla_term_get_symbol(TERM(bitwuzla_term)))
 }
 
 jboolean Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermIsEqualSort(JNIEnv* env, jclass native_class,
@@ -1239,57 +1241,42 @@ Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaDumpFormula(JNIEnv* env, jc
     GET_STRING(print_format, format);
     GET_STRING(path, file_path);
 
-    BZLA_TRY_VOID({
-        auto f = fopen(path, "w");
-        bitwuzla_print_formula(reinterpret_cast<Bitwuzla*>(bitwuzla), print_format, f, 16);
-        fclose(f);
-        })
+    const auto f = fopen(path, "w");
+    BZLA_API_TRY(
+        bitwuzla_print_formula(reinterpret_cast<Bitwuzla*>(bitwuzla), print_format, f, 16),
+        fclose(f),
+        (void) fclose(f)
+    )
 }
 
 jstring Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaSortToString(JNIEnv* env, jclass native_class, jlong sort) {
-    BZLA_TRY_STRING_EXPR(env->NewStringUTF(
-        bitwuzla_sort_to_string(SORT(sort))
-    ))
+    BZLA_TRY_STRING_EXPR(bitwuzla_sort_to_string(SORT(sort)))
 }
 
 jstring Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaTermToString(JNIEnv* env, jclass native_class, jlong term) {
-    BZLA_TRY_STRING_EXPR(env->NewStringUTF(
-        bitwuzla_term_to_string(TERM(term))
-    ))
+    BZLA_TRY_STRING_EXPR(bitwuzla_term_to_string(TERM(term)))
 }
 
 jstring Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaResultToString(JNIEnv* env, jclass native_class, jint result) {
-    BZLA_TRY_STRING_EXPR(env->NewStringUTF(
-        bitwuzla_result_to_string(static_cast<BitwuzlaResult>(result))
-    ))
+    BZLA_TRY_STRING_EXPR(bitwuzla_result_to_string(static_cast<BitwuzlaResult>(result)))
 }
 
 jstring Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaRmToString(JNIEnv* env, jclass native_class, jint rm) {
-    BZLA_TRY_STRING_EXPR(env->NewStringUTF(
-        bitwuzla_rm_to_string(static_cast<BitwuzlaRoundingMode>(rm))
-    ))
+    BZLA_TRY_STRING_EXPR(bitwuzla_rm_to_string(static_cast<BitwuzlaRoundingMode>(rm)))
 }
 
 jstring Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaKindToString(JNIEnv* env, jclass native_class, jint kind) {
-    BZLA_TRY_STRING_EXPR(env->NewStringUTF(
-        bitwuzla_kind_to_string(static_cast<BitwuzlaKind>(kind))
-    ))
+    BZLA_TRY_STRING_EXPR(bitwuzla_kind_to_string(static_cast<BitwuzlaKind>(kind)))
 }
 
 jstring Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaCopyright(JNIEnv* env, jclass native_class) {
-    BZLA_TRY_STRING_EXPR(env->NewStringUTF(
-        bitwuzla_copyright()
-    ))
+    BZLA_TRY_STRING_EXPR(bitwuzla_copyright())
 }
 
 jstring Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaVersion(JNIEnv* env, jclass native_class) {
-    BZLA_TRY_STRING_EXPR(env->NewStringUTF(
-        bitwuzla_version()
-    ))
+    BZLA_TRY_STRING_EXPR(bitwuzla_version())
 }
 
 jstring Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaGitId(JNIEnv* env, jclass native_class) {
-    BZLA_TRY_STRING_EXPR(env->NewStringUTF(
-        bitwuzla_git_id()
-    ))
+    BZLA_TRY_STRING_EXPR(bitwuzla_git_id())
 }

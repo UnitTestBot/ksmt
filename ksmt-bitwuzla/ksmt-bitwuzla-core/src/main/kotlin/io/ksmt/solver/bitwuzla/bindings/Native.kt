@@ -13,15 +13,14 @@ typealias BitwuzlaSortArray = LongArray
 
 object Native {
     init {
-        NativeLibraryLoaderUtils.load<KBitwuzlaNativeLibraryLoader>()
-        bitwuzlaInit()
-    }
+        System.load("/home/sobol/CLionProjects/bitwuzla/dist/lib/libbitwuzlabv.so")
+        System.load("/home/sobol/CLionProjects/bitwuzla/dist/lib/libbitwuzlabb.so")
+        System.load("/home/sobol/CLionProjects/bitwuzla/dist/lib/libbitwuzlals.so")
+        System.load("/home/sobol/CLionProjects/bitwuzla/dist/lib/libbitwuzla.so")
+        System.load("/home/sobol/IdeaProjects/ksmt/ksmt-bitwuzla/bindings-native/cmake-build-debug/libbitwuzla_jni.so")
 
-    /**
-     * Initialize Bitwuzla native library.
-     * */
-    @JvmStatic
-    private external fun bitwuzlaInit()
+//        NativeLibraryLoaderUtils.load<KBitwuzlaNativeLibraryLoader>()
+    }
 
     /**
      * Get copyright information.
@@ -1940,7 +1939,7 @@ object Native {
         bitwuzlaResultToString(result.value)
 
     @JvmStatic
-    external fun bitwuzlaResultToString(rm: Int): String
+    external fun bitwuzlaResultToString(result: Int): String
 
     /**
      * Print application [kind].
@@ -1950,5 +1949,5 @@ object Native {
         bitwuzlaKindToString(kind.value)
 
     @JvmStatic
-    external fun bitwuzlaKindToString(rm: Int): String
+    external fun bitwuzlaKindToString(kind: Int): String
 }

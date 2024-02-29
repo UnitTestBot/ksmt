@@ -64,7 +64,7 @@ enum class BitwuzlaRoundingMode(val value: Int) {
      *
      * SMT-LIB: `RTZ` `roundTowardZero`
      */
-    BITWUZLA_RM_RTZ(4), BITWUZLA_RM_MAX(5);
+    BITWUZLA_RM_RTZ(4);
 
     companion object {
         private val valueMapping = BitwuzlaRoundingMode.values().associateBy { it.value }

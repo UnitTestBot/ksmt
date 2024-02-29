@@ -9,14 +9,6 @@ extern "C" {
 #endif
 /*
  * Class:     io_ksmt_solver_bitwuzla_bindings_Native
- * Method:    bitwuzlaInit
- * Signature: ()V
- */
-JNIEXPORT void JNICALL Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaInit
-  (JNIEnv *, jclass);
-
-/*
- * Class:     io_ksmt_solver_bitwuzla_bindings_Native
  * Method:    bitwuzlaCopyright
  * Signature: ()Ljava/lang/String;
  */
