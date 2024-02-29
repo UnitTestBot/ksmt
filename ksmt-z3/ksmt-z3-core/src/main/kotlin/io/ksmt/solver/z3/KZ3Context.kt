@@ -264,6 +264,12 @@ class KZ3Context(
         if (isClosed) return
         isClosed = true
 
+        closeUnsafe()
+
+        ctx.close()
+    }
+
+    fun closeUnsafe() {
         uninterpretedSortValueInterpreter.clear()
 
         uninterpretedSortValueDecls.keys.decRefAll()
@@ -289,8 +295,6 @@ class KZ3Context(
         z3Sorts.keys.decRefAll()
         sorts.clear()
         z3Sorts.clear()
-
-        ctx.close()
     }
 
     private fun LongSet.decRefAll() =

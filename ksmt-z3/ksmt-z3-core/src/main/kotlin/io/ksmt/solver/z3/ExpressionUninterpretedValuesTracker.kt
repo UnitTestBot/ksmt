@@ -214,6 +214,13 @@ class ExpressionUninterpretedValuesTracker(val ctx: KContext, val z3Ctx: KZ3Cont
             }
         }
 
+        fun containsExpressionOnCurrentLevel(expr: KExpr<*>): Boolean {
+            // Was not initialized --> has no expressions
+            if (!initialized) return false
+
+            return expr in currentLevelExpressions
+        }
+
         fun addRegisteredValueToCurrentLevel(value: KUninterpretedSortValue) {
             val descriptor = tracker.registeredUninterpretedSortValues[value]
                 ?: error("Value $value was not registered")
@@ -250,7 +257,7 @@ class ExpressionUninterpretedValuesTracker(val ctx: KContext, val z3Ctx: KZ3Cont
             if (frameLevel < level) {
                 val levelFrame = getFrame(frameLevel)
                 // If expr is valid on its level we don't need to move it
-                return expr !in levelFrame.currentLevelExpressions
+                return !levelFrame.containsExpressionOnCurrentLevel(expr)
             }
             return super.exprTransformationRequired(expr)
         }

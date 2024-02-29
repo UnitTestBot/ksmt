@@ -12,6 +12,7 @@ import io.ksmt.expr.KBvNotExpr
 import io.ksmt.expr.KBvOrExpr
 import io.ksmt.expr.KBvShiftLeftExpr
 import io.ksmt.expr.KBvXorExpr
+import io.ksmt.expr.KBvZeroExtensionExpr
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.KIteExpr
 import io.ksmt.sort.KBoolSort
@@ -826,6 +827,8 @@ inline fun <T : KBvSort> KContext.simplifyBvLogicalShiftRightExprLight(
     shift: KExpr<T>,
     cont: (KExpr<T>, KExpr<T>) -> KExpr<T>
 ): KExpr<T> {
+    val sizeBits = shift.sort.sizeBits
+
     if (shift is KBitVecValue<T>) {
         // (x >>> 0) ==> x
         if (shift.isBvZero()) {
@@ -833,8 +836,12 @@ inline fun <T : KBvSort> KContext.simplifyBvLogicalShiftRightExprLight(
         }
 
         // (x >>> shift), shift >= size ==> 0
-        if (shift.signedGreaterOrEqual(shift.sort.sizeBits.toInt())) {
-            return bvZero(shift.sort.sizeBits)
+        if (shift.signedGreaterOrEqual(sizeBits.toInt())) {
+            return bvZero(sizeBits)
+        }
+
+        if (lhs is KBvZeroExtensionExpr && shift.signedGreaterOrEqual(sizeBits.toInt() - lhs.extensionSize)) {
+            return bvZero(sizeBits)
         }
 
         if (lhs is KBitVecValue<T>) {
@@ -844,7 +851,7 @@ inline fun <T : KBvSort> KContext.simplifyBvLogicalShiftRightExprLight(
 
     // (x >>> x) ==> 0
     if (lhs == shift) {
-        return bvZero(shift.sort.sizeBits)
+        return bvZero(sizeBits)
     }
 
     return cont(lhs, shift)
