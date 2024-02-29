@@ -1269,6 +1269,15 @@ jstring Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaKindToString(JNIEnv
     BZLA_TRY_STRING_EXPR(bitwuzla_kind_to_string(static_cast<BitwuzlaKind>(kind)))
 }
 
+jstring Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaOptionToString(
+    JNIEnv* env, jclass native_class, jint option)
+{
+    BitwuzlaOptions options{};
+    BitwuzlaOptionInfo info{};
+    BZLA_TRY_OR_RETURN_NULL(bitwuzla_get_option_info(&options, static_cast<BitwuzlaOption>(option), &info))
+    BZLA_TRY_STRING_EXPR(info.lng)
+}
+
 jstring Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaCopyright(JNIEnv* env, jclass native_class) {
     BZLA_TRY_STRING_EXPR(bitwuzla_copyright())
 }

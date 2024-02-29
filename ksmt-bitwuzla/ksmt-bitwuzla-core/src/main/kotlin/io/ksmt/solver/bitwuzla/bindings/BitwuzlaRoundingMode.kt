@@ -1,5 +1,3 @@
-@file:Suppress("MagicNumber")
-
 package io.ksmt.solver.bitwuzla.bindings
 
 /**
@@ -13,7 +11,7 @@ package io.ksmt.solver.bitwuzla.bindings
  * arithmetic, which in turn is based on IEEE Standard 754.
  * The rounding modes are specified in Sections 4.3.1 and 4.3.2 of the IEEE Standard 754.
  */
-enum class BitwuzlaRoundingMode(val value: Int) {
+enum class BitwuzlaRoundingMode {
     /**
      * Round to the nearest even number.
      *
@@ -23,7 +21,7 @@ enum class BitwuzlaRoundingMode(val value: Int) {
      *
      * SMT-LIB: `RNE` `roundNearestTiesToEven`
      */
-    BITWUZLA_RM_RNE(0),
+    BITWUZLA_RM_RNE,
 
     /**
      * Round to the nearest number away from zero.
@@ -34,7 +32,7 @@ enum class BitwuzlaRoundingMode(val value: Int) {
      *
      * SMT-LIB: `RNA` `roundNearestTiesToAway`
      */
-    BITWUZLA_RM_RNA(1),
+    BITWUZLA_RM_RNA,
 
     /**
      * Round towards negative infinity (-oo).
@@ -44,7 +42,7 @@ enum class BitwuzlaRoundingMode(val value: Int) {
      *
      * SMT-LIB: `RTN` `roundTowardNegative`
      */
-    BITWUZLA_RM_RTN(2),
+    BITWUZLA_RM_RTN,
 
     /**
      * Round towards positive infinity (+oo).
@@ -54,7 +52,7 @@ enum class BitwuzlaRoundingMode(val value: Int) {
      *
      * SMT-LIB: `RTP` `roundTowardPositive`
      */
-    BITWUZLA_RM_RTP(3),
+    BITWUZLA_RM_RTP,
 
     /**
      * Round towards zero.
@@ -64,10 +62,10 @@ enum class BitwuzlaRoundingMode(val value: Int) {
      *
      * SMT-LIB: `RTZ` `roundTowardZero`
      */
-    BITWUZLA_RM_RTZ(4);
+    BITWUZLA_RM_RTZ;
 
     companion object {
-        private val valueMapping = BitwuzlaRoundingMode.values().associateBy { it.value }
+        private val valueMapping = BitwuzlaRoundingMode.values().associateBy { it.ordinal }
         fun fromValue(value: Int): BitwuzlaRoundingMode = valueMapping.getValue(value)
     }
 }

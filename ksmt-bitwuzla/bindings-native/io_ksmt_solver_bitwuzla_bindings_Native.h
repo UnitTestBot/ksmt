@@ -1159,6 +1159,14 @@ JNIEXPORT jstring JNICALL Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaR
 JNIEXPORT jstring JNICALL Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaKindToString
   (JNIEnv *, jclass, jint);
 
+/*
+ * Class:     io_ksmt_solver_bitwuzla_bindings_Native
+ * Method:    bitwuzlaOptionToString
+ * Signature: (I)Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_io_ksmt_solver_bitwuzla_bindings_Native_bitwuzlaOptionToString
+  (JNIEnv *, jclass, jint);
+
 #ifdef __cplusplus
 }
 #endif

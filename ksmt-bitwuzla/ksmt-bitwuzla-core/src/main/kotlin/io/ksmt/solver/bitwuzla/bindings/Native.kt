@@ -1,8 +1,5 @@
 package io.ksmt.solver.bitwuzla.bindings
 
-import io.ksmt.solver.bitwuzla.KBitwuzlaNativeLibraryLoader
-import io.ksmt.utils.library.NativeLibraryLoaderUtils
-
 typealias BitwuzlaTermManager = Long
 typealias Bitwuzla = Long
 typealias BitwuzlaOptions = Long
@@ -123,7 +120,7 @@ object Native {
      */
     @JvmStatic
     fun bitwuzlaSetOption(options: BitwuzlaOptions, option: BitwuzlaOption, value: Int) =
-        bitwuzlaSetOption(options, option.value, value.toLong())
+        bitwuzlaSetOption(options, option.ordinal, value.toLong())
 
     @JvmStatic
     external fun bitwuzlaSetOption(options: BitwuzlaOptions, option: Int, value: Long)
@@ -139,7 +136,7 @@ object Native {
      */
     @JvmStatic
     fun bitwuzlaSetOptionMode(options: BitwuzlaOptions, option: BitwuzlaOption, value: String) =
-        bitwuzlaSetOptionMode(options, option.value, value)
+        bitwuzlaSetOptionMode(options, option.ordinal, value)
 
     @JvmStatic
     external fun bitwuzlaSetOptionMode(optsions: BitwuzlaOptions, option: Int, value: String)
@@ -156,7 +153,7 @@ object Native {
      */
     @JvmStatic
     fun bitwuzlaGetOption(options: BitwuzlaOptions, option: BitwuzlaOption): Int =
-        bitwuzlaGetOption(options, option.value).toInt()
+        bitwuzlaGetOption(options, option.ordinal).toInt()
 
     @JvmStatic
     external fun bitwuzlaGetOption(options: BitwuzlaOptions, option: Int): Long
@@ -175,7 +172,7 @@ object Native {
      */
     @JvmStatic
     fun bitwuzlaGetOptionMode(options: BitwuzlaOptions, option: BitwuzlaOption): String =
-        bitwuzlaGetOptionMode(options, option.value)
+        bitwuzlaGetOptionMode(options, option.ordinal)
 
     @JvmStatic
     external fun bitwuzlaGetOptionMode(options: BitwuzlaOptions, option: Int): String
@@ -602,7 +599,7 @@ object Native {
      */
     @JvmStatic
     fun bitwuzlaMkRmValue(termManager: BitwuzlaTermManager, rm: BitwuzlaRoundingMode): BitwuzlaTerm =
-        bitwuzlaMkRmValue(termManager, rm.value)
+        bitwuzlaMkRmValue(termManager, rm.ordinal)
 
     @JvmStatic
     external fun bitwuzlaMkRmValue(termManager: BitwuzlaTermManager, rm: Int): BitwuzlaTerm
@@ -620,7 +617,7 @@ object Native {
      */
     @JvmStatic
     fun bitwuzlaMkTerm1(termManager: BitwuzlaTermManager, kind: BitwuzlaKind, arg: BitwuzlaTerm): BitwuzlaTerm =
-        bitwuzlaMkTerm1(termManager, kind.value, arg)
+        bitwuzlaMkTerm1(termManager, kind.ordinal, arg)
 
     @JvmStatic
     external fun bitwuzlaMkTerm1(termManager: BitwuzlaTermManager, kind: Int, arg: BitwuzlaTerm): BitwuzlaTerm
@@ -643,7 +640,7 @@ object Native {
         kind: BitwuzlaKind,
         arg0: BitwuzlaTerm,
         arg1: BitwuzlaTerm
-    ): BitwuzlaTerm = bitwuzlaMkTerm2(termManager, kind.value, arg0, arg1)
+    ): BitwuzlaTerm = bitwuzlaMkTerm2(termManager, kind.ordinal, arg0, arg1)
 
     @JvmStatic
     external fun bitwuzlaMkTerm2(
@@ -673,7 +670,7 @@ object Native {
         arg0: BitwuzlaTerm,
         arg1: BitwuzlaTerm,
         arg2: BitwuzlaTerm
-    ): BitwuzlaTerm = bitwuzlaMkTerm3(termManager, kind.value, arg0, arg1, arg2)
+    ): BitwuzlaTerm = bitwuzlaMkTerm3(termManager, kind.ordinal, arg0, arg1, arg2)
 
     @JvmStatic
     external fun bitwuzlaMkTerm3(
@@ -697,7 +694,7 @@ object Native {
      */
     @JvmStatic
     fun bitwuzlaMkTerm(termManager: BitwuzlaTermManager, kind: BitwuzlaKind, args: BitwuzlaTermArray): BitwuzlaTerm =
-        bitwuzlaMkTerm(termManager, kind.value, args)
+        bitwuzlaMkTerm(termManager, kind.ordinal, args)
 
     @JvmStatic
     external fun bitwuzlaMkTerm(termManager: BitwuzlaTermManager, kind: Int, args: BitwuzlaTermArray): BitwuzlaTerm
@@ -720,7 +717,7 @@ object Native {
         kind: BitwuzlaKind,
         arg: BitwuzlaTerm,
         idx: Int
-    ): BitwuzlaTerm = bitwuzlaMkTerm1Indexed1(termManager, kind.value, arg, idx.toLong())
+    ): BitwuzlaTerm = bitwuzlaMkTerm1Indexed1(termManager, kind.ordinal, arg, idx.toLong())
 
     @JvmStatic
     external fun bitwuzlaMkTerm1Indexed1(
@@ -751,7 +748,7 @@ object Native {
         arg: BitwuzlaTerm,
         idx0: Int,
         idx1: Int
-    ): BitwuzlaTerm = bitwuzlaMkTerm1Indexed2(termManager, kind.value, arg, idx0.toLong(), idx1.toLong())
+    ): BitwuzlaTerm = bitwuzlaMkTerm1Indexed2(termManager, kind.ordinal, arg, idx0.toLong(), idx1.toLong())
 
     @JvmStatic
     external fun bitwuzlaMkTerm1Indexed2(
@@ -783,7 +780,7 @@ object Native {
         arg0: BitwuzlaTerm,
         arg1: BitwuzlaTerm,
         idx: Int
-    ): BitwuzlaTerm = bitwuzlaMkTerm2Indexed1(termManager, kind.value, arg0, arg1, idx.toLong())
+    ): BitwuzlaTerm = bitwuzlaMkTerm2Indexed1(termManager, kind.ordinal, arg0, arg1, idx.toLong())
 
     @JvmStatic
     external fun bitwuzlaMkTerm2Indexed1(
@@ -818,7 +815,7 @@ object Native {
         arg1: BitwuzlaTerm,
         idx0: Int,
         idx1: Int
-    ): BitwuzlaTerm = bitwuzlaMkTerm2Indexed2(termManager, kind.value, arg0, arg1, idx0.toLong(), idx1.toLong())
+    ): BitwuzlaTerm = bitwuzlaMkTerm2Indexed2(termManager, kind.ordinal, arg0, arg1, idx0.toLong(), idx1.toLong())
 
     @Suppress("LongParameterList")
     @JvmStatic
@@ -848,7 +845,7 @@ object Native {
         kind: BitwuzlaKind,
         args: BitwuzlaTermArray,
         indices: LongArray
-    ): BitwuzlaTerm = bitwuzlaMkTermIndexed(termManager, kind.value, args, indices)
+    ): BitwuzlaTerm = bitwuzlaMkTermIndexed(termManager, kind.ordinal, args, indices)
 
     @JvmStatic
     external fun bitwuzlaMkTermIndexed(
@@ -1926,7 +1923,7 @@ object Native {
      * */
     @JvmStatic
     fun bitwuzlaRmToString(rm: BitwuzlaRoundingMode): String =
-        bitwuzlaRmToString(rm.value)
+        bitwuzlaRmToString(rm.ordinal)
 
     @JvmStatic
     external fun bitwuzlaRmToString(rm: Int): String
@@ -1946,8 +1943,18 @@ object Native {
      * */
     @JvmStatic
     fun bitwuzlaKindToString(kind: BitwuzlaKind): String =
-        bitwuzlaKindToString(kind.value)
+        bitwuzlaKindToString(kind.ordinal)
 
     @JvmStatic
     external fun bitwuzlaKindToString(kind: Int): String
+
+    /**
+     * Print [option] name.
+     * */
+    @JvmStatic
+    fun bitwuzlaOptionToString(option: BitwuzlaOption): String =
+        bitwuzlaOptionToString(option.ordinal)
+
+    @JvmStatic
+    external fun bitwuzlaOptionToString(option: Int): String
 }
