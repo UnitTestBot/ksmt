@@ -331,11 +331,25 @@ class KCvc5ExprInternalizer(
     }
 
     override fun <T : KBvSort> transform(expr: KBvReductionAndExpr<T>) = with(expr) {
-        transform(value) { value: Term -> nsolver.mkTerm(Kind.BITVECTOR_REDAND, value) }
+        transform(value) { value: Term ->
+            nsolver.mkTerm(
+                Kind.ITE,
+                nsolver.mkTerm(Kind.BITVECTOR_REDAND, value),
+                nsolver.mkBitVector(1, 1),
+                nsolver.mkBitVector(1, 0)
+            )
+        }
     }
 
     override fun <T : KBvSort> transform(expr: KBvReductionOrExpr<T>) = with(expr) {
-        transform(value) { value: Term -> nsolver.mkTerm(Kind.BITVECTOR_REDOR, value) }
+        transform(value) { value: Term ->
+            nsolver.mkTerm(
+                Kind.ITE,
+                nsolver.mkTerm(Kind.BITVECTOR_REDOR, value),
+                nsolver.mkBitVector(1, 1),
+                nsolver.mkBitVector(1, 0)
+            )
+        }
     }
 
     override fun <T : KBvSort> transform(expr: KBvAndExpr<T>) = with(expr) {
@@ -1196,11 +1210,15 @@ class KCvc5ExprInternalizer(
     private fun Term.mkFunctionApp(args: List<Term>): Term =
         nsolver.mkTerm(Kind.APPLY_UF, arrayOf(this) + args)
 
-    private fun mkAndTerm(args: List<Term>): Term =
-        if (args.size == 1) args.single() else nsolver.mkTerm(Kind.AND, args.toTypedArray())
+    private fun mkAndTerm(args: List<Term>): Term {
+        if (args.isEmpty()) return nsolver.mkTrue()
+        return if (args.size == 1) args.single() else nsolver.mkTerm(Kind.AND, args.toTypedArray())
+    }
 
-    private fun mkOrTerm(args: List<Term>): Term =
-        if (args.size == 1) args.single() else nsolver.mkTerm(Kind.OR, args.toTypedArray())
+    private fun mkOrTerm(args: List<Term>): Term {
+        if (args.isEmpty()) return nsolver.mkFalse()
+        return if (args.size == 1) args.single() else nsolver.mkTerm(Kind.OR, args.toTypedArray())
+    }
 
     private fun mkArraySelectTerm(array: Term, indices: List<Term>): Term =
         if (array.sort.isArray) {
