@@ -71,6 +71,10 @@ class ModelTest {
             return KModelImpl(ctx, interpretations.toMap(), emptyMap())
         }
 
+        override fun close() {
+            // ignored
+        }
+
         override val uninterpretedSorts: Set<KUninterpretedSort> = emptySet()
 
         override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KUninterpretedSortValue>? = null

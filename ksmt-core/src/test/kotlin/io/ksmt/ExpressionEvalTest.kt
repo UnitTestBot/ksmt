@@ -11,6 +11,7 @@ import io.ksmt.expr.KInt32NumExpr
 import io.ksmt.expr.KInterpretedValue
 import io.ksmt.expr.KRealNumExpr
 import io.ksmt.expr.rewrite.simplify.KExprSimplifier
+import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.sort.KBvSort
@@ -164,7 +165,7 @@ open class ExpressionEvalTest {
             testCases.clear()
         }
 
-        private fun computeSolverValues(solver: KZ3Solver) = with(ctx) {
+        private fun computeSolverValues(solver: KSolver<*>) = with(ctx) {
             val testCaseVars = testCases.map {
                 val valueVar = mkFreshConst("v", it.unsimplifiedExpr.sort)
                 solver.assert(valueVar eq it.unsimplifiedExpr.uncheckedCast())

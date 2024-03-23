@@ -31,7 +31,6 @@ open class KBitwuzlaModel(
     assertedDeclarations: Set<KDecl<*>>,
     private val uninterpretedSortDependency: Map<KUninterpretedSort, Set<KDecl<*>>>
 ) : KModel {
-
     private val modelDeclarations = assertedDeclarations.toHashSet()
 
     override val declarations: Set<KDecl<*>>
@@ -263,15 +262,14 @@ open class KBitwuzlaModel(
             interpretation(it) ?: error("missed interpretation for $it")
         }
 
+        // The model is detached from the solver and therefore invalid
+        markInvalid()
+
         return KModelImpl(ctx, interpretations, uninterpretedSortsUniverses)
     }
 
-    override fun toString(): String = detach().toString()
-    override fun hashCode(): Int = detach().hashCode()
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is KModel) return false
-        return detach() == other
+    override fun close() {
+        markInvalid()
     }
 
     /**

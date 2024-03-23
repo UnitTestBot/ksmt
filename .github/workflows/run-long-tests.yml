@@ -69,11 +69,11 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Prepare test data (cache)
         id: test-data-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: cache-test-data
         with:
@@ -82,20 +82,23 @@ jobs:
 
       - name: Set up JDK 1.8
         if: steps.test-data-cache.outputs.cache-hit != 'true'
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: 8
           distribution: 'zulu'
           cache: gradle
 
+      - name: Setup gradle
+        if: steps.test-data-cache.outputs.cache-hit != 'true'
+        uses: gradle/actions/setup-gradle@v3
+
       - name: Prepare test data (download)
         if: steps.test-data-cache.outputs.cache-hit != 'true'
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: |
+        run: >
+            ./gradlew
             :ksmt-test:downloadPreparedSmtLibBenchmarkTestData
             --no-daemon
-            -PtestDataRevision=${{ env.TEST_DATA_REVISION }}
+            '-PtestDataRevision=${{ env.TEST_DATA_REVISION }}'
 
   run_tests:
     needs: [setup, prepare_test_data]
@@ -111,11 +114,11 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Prepare test data (cache)
         id: test-data-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: cache-test-data
         with:
@@ -129,34 +132,31 @@ jobs:
           exit 1
 
       - name: Set up JDK 1.8
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: 8
           distribution: 'zulu'
           cache: gradle
 
+      - name: Setup gradle
+        uses: gradle/actions/setup-gradle@v3
+
       # Since ksmt-test/testData/testData.zip exists task will not download it again
       - name: Prepare test data (unpack)
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: |
+        run: >
+            ./gradlew
             :ksmt-test:downloadPreparedSmtLibBenchmarkTestData
             --no-daemon
-            -PtestDataRevision=${{ env.TEST_DATA_REVISION }}
+            '-PtestDataRevision=${{ env.TEST_DATA_REVISION }}'
 
       # We don't want to run basic KSMT tests on each chunk
       - name: Build project
-        uses: gradle/gradle-build-action@v2
         if: ${{ matrix.chunk == '0' }}
-        with:
-          arguments: |
-            build
-            --no-daemon
+        run: ./gradlew build --no-daemon
 
       - name: Run ${{ matrix.test }}
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: |
+        run: >
+            ./gradlew
             :ksmt-test:test --tests  ${{ format('"io.ksmt.test.benchmarks.{0}"', matrix.test) }}
             --no-daemon
             --continue
@@ -165,7 +165,7 @@ jobs:
             -PbenchmarkChunk=${{ matrix.chunk }}
 
       - name: Upload ksmt test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ${{ format('ksmt-test-report-{0}-{1}-{2}', matrix.os, matrix.test, matrix.chunk) }}
@@ -179,36 +179,37 @@ jobs:
     if: ${{ always() }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           path: reports
 
       - name: Set up JDK 1.8
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: 8
           distribution: 'zulu'
 
+      - name: Setup gradle
+        uses: gradle/actions/setup-gradle@v3
+
       - name: Merge test report [ubuntu-latest]
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: |
+        run: >
+            ./gradlew
             :ksmt-test:mergeTestReports
             --no-daemon
             -PtestReportMergePrefix=ksmt-test-report-ubuntu-latest
 
       - name: Merge test report [windows-latest]
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: |
+        run: >
+            ./gradlew
             :ksmt-test:mergeTestReports
             --no-daemon
             -PtestReportMergePrefix=ksmt-test-report-windows-latest
             
       - name: Upload merged test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ksmt-test-report
           path: ksmt-test-report-*

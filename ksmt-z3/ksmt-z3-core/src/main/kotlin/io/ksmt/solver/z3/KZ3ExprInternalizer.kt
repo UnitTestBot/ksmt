@@ -243,15 +243,24 @@ open class KZ3ExprInternalizer(
                 Native.mkBvNumeral(nCtx, bits.size, bits)
             }
 
-            is KBitVec8Value, is KBitVec16Value, is KBitVec32Value -> {
+            is KBitVec8Value -> {
                 val sort = expr.sort.internalizeSort()
-                val intValue = (expr as KBitVecNumberValue<*, *>).numberValue.toInt()
-                Native.mkInt(nCtx, intValue, sort)
+                Native.mkInt(nCtx, expr.byteValue.toInt(), sort)
+            }
+
+            is KBitVec16Value -> {
+                val sort = expr.sort.internalizeSort()
+                Native.mkInt(nCtx, expr.shortValue.toInt(), sort)
+            }
+
+            is KBitVec32Value -> {
+                val sort = expr.sort.internalizeSort()
+                Native.mkInt(nCtx, expr.intValue, sort)
             }
 
             is KBitVec64Value -> {
                 val sort = expr.sort.internalizeSort()
-                Native.mkInt64(nCtx, expr.numberValue, sort)
+                Native.mkInt64(nCtx, expr.longValue, sort)
             }
 
             is KBitVecCustomValue -> {

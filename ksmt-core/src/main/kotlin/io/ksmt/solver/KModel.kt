@@ -7,7 +7,7 @@ import io.ksmt.solver.model.KFuncInterp
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
 
-interface KModel {
+interface KModel : AutoCloseable {
     val declarations: Set<KDecl<*>>
 
     val uninterpretedSorts: Set<KUninterpretedSort>
@@ -21,5 +21,13 @@ interface KModel {
      * */
     fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KUninterpretedSortValue>?
 
+    /**
+     * Detach model from the solver and release native resources.
+     * */
     fun detach(): KModel
+
+    /**
+     * Close model and release acquired native resources.
+     * */
+    override fun close()
 }

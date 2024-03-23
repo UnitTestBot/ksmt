@@ -22,7 +22,7 @@ abstract class KBitVecValue<S : KBvSort>(ctx: KContext) : KInterpretedValue<S>(c
 
 class KBitVec1Value internal constructor(
     ctx: KContext,
-    val value: Boolean
+    @JvmField val value: Boolean
 ) : KBitVecValue<KBv1Sort>(ctx) {
     override fun accept(transformer: KTransformerBase): KExpr<KBv1Sort> = transformer.transform(this)
 
@@ -50,7 +50,7 @@ abstract class KBitVecNumberValue<S : KBvSort, N : Number>(ctx: KContext) : KBit
 
 class KBitVec8Value internal constructor(
     ctx: KContext,
-    val byteValue: Byte
+    @JvmField val byteValue: Byte
 ) : KBitVecNumberValue<KBv8Sort, Byte>(ctx) {
     override fun accept(transformer: KTransformerBase): KExpr<KBv8Sort> = transformer.transform(this)
 
@@ -58,7 +58,7 @@ class KBitVec8Value internal constructor(
         get() = byteValue
 
     override val decl: KDecl<KBv8Sort>
-        get() = ctx.mkBvDecl(numberValue)
+        get() = ctx.mkBvDecl(byteValue)
 
     override val sort: KBv8Sort = ctx.bv8Sort
 
@@ -68,7 +68,7 @@ class KBitVec8Value internal constructor(
 
 class KBitVec16Value internal constructor(
     ctx: KContext,
-    val shortValue: Short
+    @JvmField val shortValue: Short
 ) : KBitVecNumberValue<KBv16Sort, Short>(ctx) {
     override fun accept(transformer: KTransformerBase): KExpr<KBv16Sort> = transformer.transform(this)
 
@@ -76,7 +76,7 @@ class KBitVec16Value internal constructor(
         get() = shortValue
 
     override val decl: KDecl<KBv16Sort>
-        get() = ctx.mkBvDecl(numberValue)
+        get() = ctx.mkBvDecl(shortValue)
 
     override val sort: KBv16Sort = ctx.bv16Sort
 
@@ -86,7 +86,7 @@ class KBitVec16Value internal constructor(
 
 class KBitVec32Value internal constructor(
     ctx: KContext,
-    val intValue: Int
+    @JvmField val intValue: Int
 ) : KBitVecNumberValue<KBv32Sort, Int>(ctx) {
     override fun accept(transformer: KTransformerBase): KExpr<KBv32Sort> = transformer.transform(this)
 
@@ -94,7 +94,7 @@ class KBitVec32Value internal constructor(
         get() = intValue
 
     override val decl: KDecl<KBv32Sort>
-        get() = ctx.mkBvDecl(numberValue)
+        get() = ctx.mkBvDecl(intValue)
 
     override val sort: KBv32Sort = ctx.bv32Sort
 
@@ -104,7 +104,7 @@ class KBitVec32Value internal constructor(
 
 class KBitVec64Value internal constructor(
     ctx: KContext,
-    val longValue: Long
+    @JvmField val longValue: Long
 ) : KBitVecNumberValue<KBv64Sort, Long>(ctx) {
     override fun accept(transformer: KTransformerBase): KExpr<KBv64Sort> = transformer.transform(this)
 
@@ -112,7 +112,7 @@ class KBitVec64Value internal constructor(
         get() = longValue
 
     override val decl: KDecl<KBv64Sort>
-        get() = ctx.mkBvDecl(numberValue)
+        get() = ctx.mkBvDecl(longValue)
 
     override val sort: KBv64Sort = ctx.bv64Sort
 

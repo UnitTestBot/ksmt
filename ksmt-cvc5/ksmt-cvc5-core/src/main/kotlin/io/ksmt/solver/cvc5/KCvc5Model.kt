@@ -108,19 +108,17 @@ open class KCvc5Model(
             uninterpretedSortUniverse(it) ?: error("missed sort universe for $it")
         }
 
+        // The model is detached from the solver and therefore invalid
+        markInvalid()
+
         return KModelImpl(ctx, interpretations, uninterpretedSortsUniverses)
     }
 
-    private fun ensureContextActive() = check(cvc5Ctx.isActive) { "Context already closed" }
-
-    override fun toString(): String = detach().toString()
-    override fun hashCode(): Int = detach().hashCode()
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is KModel) return false
-        return detach() == other
+    override fun close() {
+        markInvalid()
     }
 
+    private fun ensureContextActive() = check(cvc5Ctx.isActive) { "Context already closed" }
 
     private fun getUninterpretedSortContext(sort: KUninterpretedSort): UninterpretedSortValueContext =
         uninterpretedSortValues.getOrPut(sort) { UninterpretedSortValueContext(sort) }

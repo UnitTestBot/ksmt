@@ -327,19 +327,19 @@ open class KYicesExprInternalizer(
     }
 
     override fun transform(expr: KBitVec8Value): KExpr<KBv8Sort> = with(expr) {
-        transform { yicesCtx.bvConst(sort.sizeBits, numberValue.toLong()) }
+        transform { yicesCtx.bvConst(sort.sizeBits, byteValue.toLong()) }
     }
 
     override fun transform(expr: KBitVec16Value): KExpr<KBv16Sort> = with(expr) {
-        transform { yicesCtx.bvConst(sort.sizeBits, numberValue.toLong()) }
+        transform { yicesCtx.bvConst(sort.sizeBits, shortValue.toLong()) }
     }
 
     override fun transform(expr: KBitVec32Value): KExpr<KBv32Sort> = with(expr) {
-        transform { yicesCtx.bvConst(sort.sizeBits, numberValue.toLong()) }
+        transform { yicesCtx.bvConst(sort.sizeBits, intValue.toLong()) }
     }
 
     override fun transform(expr: KBitVec64Value): KExpr<KBv64Sort> = with(expr) {
-        transform { yicesCtx.bvConst(sort.sizeBits, numberValue) }
+        transform { yicesCtx.bvConst(sort.sizeBits, longValue) }
     }
 
     override fun transform(expr: KBitVecCustomValue): KExpr<KBvSort> = with(expr) {

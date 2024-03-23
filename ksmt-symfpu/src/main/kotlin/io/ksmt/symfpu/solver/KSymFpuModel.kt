@@ -31,9 +31,12 @@ import io.ksmt.symfpu.operations.pack
 import io.ksmt.utils.asExpr
 import io.ksmt.utils.uncheckedCast
 
-class KSymFpuModel(private val kModel: KModel, val ctx: KContext, val transformer: FpToBvTransformer) : KModel {
-    override val declarations: Set<KDecl<*>>
-        get() = kModel.declarations.mapTo(hashSetOf()) { transformer.findFpDeclByMappedDecl(it) ?: it }
+class KSymFpuModel(underlyingModel: KModel, val ctx: KContext, val transformer: FpToBvTransformer) : KModel {
+    private var kModel: KModel = underlyingModel
+
+    override val declarations: Set<KDecl<*>> by lazy {
+        kModel.declarations.mapTo(hashSetOf()) { transformer.findFpDeclByMappedDecl(it) ?: it }
+    }
 
     override val uninterpretedSorts
         get() = kModel.uninterpretedSorts
@@ -252,6 +255,8 @@ class KSymFpuModel(private val kModel: KModel, val ctx: KContext, val transforme
     }
 
     override fun detach(): KModel {
+        kModel = kModel.detach()
+
         declarations.forEach {
             interpretation(it) ?: error("missed interpretation for $it")
         }
@@ -261,6 +266,10 @@ class KSymFpuModel(private val kModel: KModel, val ctx: KContext, val transforme
         }
 
         return KModelImpl(ctx, interpretations.toMap(), uninterpretedSortsUniverses)
+    }
+
+    override fun close() {
+        kModel.close()
     }
 
     override fun toString(): String = detach().toString()

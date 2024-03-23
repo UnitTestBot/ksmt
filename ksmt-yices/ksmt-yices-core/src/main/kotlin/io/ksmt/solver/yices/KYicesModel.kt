@@ -32,12 +32,16 @@ import io.ksmt.sort.KUninterpretedSort
 import io.ksmt.utils.uncheckedCast
 
 class KYicesModel(
-    private val model: Model,
+    nativeModel: Model,
     private val ctx: KContext,
     private val yicesCtx: KYicesContext,
     private val internalizer: KYicesExprInternalizer,
     private val converter: KYicesExprConverter
-) : KModel, AutoCloseable {
+) : KModel {
+    private var nativeModel: Model? = nativeModel
+    private val model: Model
+        get() = nativeModel ?: error("Native model released")
+
     override val declarations: Set<KDecl<*>> by lazy {
         model.collectDefinedTerms().mapTo(hashSetOf()) { converter.convertDecl(it) }
     }
@@ -166,19 +170,19 @@ class KYicesModel(
             uninterpretedSortUniverse(it) ?: error("missed sort universe for $it")
         }
 
+        // The model is detached from the solver and therefore can be released
+        releaseNativeModel()
+
         return KModelImpl(ctx, interpretations.toMap(), uninterpretedSortsUniverses)
     }
 
     override fun close() {
-        model.close()
+        releaseNativeModel()
     }
 
-    override fun toString(): String = detach().toString()
-    override fun hashCode(): Int = detach().hashCode()
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is KModel) return false
-        return detach() == other
+    private fun releaseNativeModel() {
+        nativeModel?.close()
+        nativeModel = null
     }
 
     private class UninterpretedSortCollector(
