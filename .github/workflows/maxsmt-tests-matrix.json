@@ -1,0 +1,46 @@
+[
+  {
+    "NAME": "QF_ABV-light",
+    "TEST_DATA_REVISION": "0.0.0"
+  },
+  {
+    "NAME": "QF_ABVFP-light",
+    "TEST_DATA_REVISION": "0.0.0"
+  },
+  {
+    "NAME": "QF_AUFBV",
+    "TEST_DATA_REVISION": "0.0.0"
+  },
+  {
+    "NAME": "QF_AUFBVLIA-light",
+    "TEST_DATA_REVISION": "0.0.0"
+  },
+  {
+    "NAME": "QF_AUFLIA",
+    "TEST_DATA_REVISION": "0.0.0"
+  },
+  {
+    "NAME": "QF_BV-light",
+    "TEST_DATA_REVISION": "0.0.0"
+  },
+  {
+    "NAME": "QF_FP",
+    "TEST_DATA_REVISION": "0.0.0"
+  },
+  {
+    "NAME": "QF_UF-light",
+    "TEST_DATA_REVISION": "0.0.0"
+  },
+  {
+    "NAME": "QF_UFBV-light",
+    "TEST_DATA_REVISION": "0.0.0"
+  },
+  {
+    "NAME": "QF_UFLIA-light",
+    "TEST_DATA_REVISION": "0.0.0"
+  },
+  {
+    "NAME": "QF_UFLRA-light",
+    "TEST_DATA_REVISION": "0.0.0"
+  }
+]
