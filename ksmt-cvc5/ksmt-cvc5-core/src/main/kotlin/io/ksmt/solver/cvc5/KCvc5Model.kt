@@ -1,5 +1,6 @@
 package io.ksmt.solver.cvc5
 
+import io.github.cvc5.Solver
 import io.github.cvc5.Term
 import io.ksmt.KContext
 import io.ksmt.decl.KConstDecl
@@ -16,16 +17,17 @@ import io.ksmt.solver.model.KModelImpl
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
 import io.ksmt.utils.mkFreshConst
-import java.util.TreeMap
 
 open class KCvc5Model(
     private val ctx: KContext,
     private val cvc5Ctx: KCvc5Context,
+    private val solver: Solver,
     private val internalizer: KCvc5ExprInternalizer,
     override val declarations: Set<KDecl<*>>,
     override val uninterpretedSorts: Set<KUninterpretedSort>
 ) : KModel {
-    private val converter: KCvc5ExprConverter by lazy { KCvc5ExprConverter(ctx, cvc5Ctx, this) }
+    private val tm = cvc5Ctx.termManager
+    private val converter: KCvc5ExprConverter by lazy { KCvc5ExprConverter(ctx, cvc5Ctx, solver, this) }
 
     private val interpretations = hashMapOf<KDecl<*>, KFuncInterp<*>?>()
     private val uninterpretedSortValues = hashMapOf<KUninterpretedSort, UninterpretedSortValueContext>()
@@ -73,21 +75,21 @@ open class KCvc5Model(
         decl: KDecl<T>,
         internalizedDecl: Term
     ): KFuncInterp<T> = with(converter) {
-        val cvc5Interp = cvc5Ctx.nativeSolver.getValue(internalizedDecl)
+        val cvc5Interp = solver.getValue(internalizedDecl).also { tm.registerPointer(it) }
 
         val vars = decl.argSorts.map { it.mkFreshConst("x") }
         val cvc5Vars = vars.map { with(internalizer) { it.internalizeExpr() } }.toTypedArray()
 
-        val cvc5InterpArgs = cvc5Interp.getChild(0).getChildren()
-        val cvc5FreshVarsInterp = cvc5Interp.substitute(cvc5InterpArgs, cvc5Vars)
+        val cvc5InterpArgs = tm.termChild(cvc5Interp, 0).getChildren()
+        val cvc5FreshVarsInterp = tm.termOp(cvc5Interp) { substitute(cvc5InterpArgs, cvc5Vars) }
 
-        val defaultBody = cvc5FreshVarsInterp.getChild(1).convertExpr<T>()
+        val defaultBody = tm.termChild(cvc5FreshVarsInterp, 1).convertExpr<T>()
 
         KFuncInterpWithVars(decl, vars.map { it.decl }, emptyList(), defaultBody)
     }
 
     private fun <T : KSort> constInterp(decl: KDecl<T>, const: Term): KFuncInterp<T> = with(converter) {
-        val cvc5Interp = cvc5Ctx.nativeSolver.getValue(const)
+        val cvc5Interp = solver.getValue(const).also { tm.registerPointer(it) }
         val interp = cvc5Interp.convertExpr<T>()
 
         KFuncInterpVarsFree(decl = decl, entries = emptyList(), default = interp)
@@ -126,7 +128,7 @@ open class KCvc5Model(
     private inner class UninterpretedSortValueContext(val sort: KUninterpretedSort) {
         private var initialized = false
         private var currentValueIdx = 0
-        private val modelValues = TreeMap<Term, KUninterpretedSortValue>()
+        private val modelValues = KCvc5TermMap<KUninterpretedSortValue>()
         private val sortUniverse = hashSetOf<KUninterpretedSortValue>()
 
         fun getSortUniverse(): Set<KUninterpretedSortValue> {
@@ -155,7 +157,8 @@ open class KCvc5Model(
             initializeModelValues()
 
             val cvc5Sort = with(internalizer) { sort.internalizeSort() }
-            val cvc5SortUniverse = cvc5Ctx.nativeSolver.getModelDomainElements(cvc5Sort)
+            val cvc5SortUniverse = solver.getModelDomainElements(cvc5Sort)
+                .onEach { tm.registerPointer(it) }
 
             initializeSortUniverse(cvc5SortUniverse)
         }
@@ -163,13 +166,13 @@ open class KCvc5Model(
         private fun initializeModelValues() {
             val registeredValues = cvc5Ctx.getRegisteredSortValues(sort)
             registeredValues.forEach { (nativeValue, value) ->
-                val modelValue = cvc5Ctx.nativeSolver.getValue(nativeValue)
+                val modelValue = solver.getValue(nativeValue).also { tm.registerPointer(it) }
                 modelValues[modelValue] = value
                 currentValueIdx = maxOf(currentValueIdx, value.valueIdx + 1)
             }
         }
 
-        private fun initializeSortUniverse(universe: Array<Term>) {
+        private fun initializeSortUniverse(universe: Array<out Term>) {
             universe.forEach {
                 sortUniverse.add(mkValue(it))
             }

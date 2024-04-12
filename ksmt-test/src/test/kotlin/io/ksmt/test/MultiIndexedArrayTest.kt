@@ -1,6 +1,7 @@
 package io.ksmt.test
 
 import com.microsoft.z3.Context
+import io.ksmt.solver.cvc5.KCvc5TermManager
 import io.github.cvc5.Solver
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
@@ -355,12 +356,13 @@ class MultiIndexedArrayTest {
         return converted
     }
 
-    private fun <T : KSort> KContext.internalizeAndConvertCvc5(nativeCtx: Solver, expr: KExpr<T>): KExpr<T> {
+    private fun <T : KSort> KContext.internalizeAndConvertCvc5(nativeCtx: KCvc5TermManager, expr: KExpr<T>): KExpr<T> {
         val internalizationCtx = KCvc5Context(nativeCtx, this)
         val conversionCtx = KCvc5Context(nativeCtx, this)
 
-        val internalizer = KCvc5ExprInternalizer(internalizationCtx)
-        val converter = KCvc5ExprConverter(this, conversionCtx)
+        val solver = nativeCtx.builder { Solver(this) }
+        val internalizer = KCvc5ExprInternalizer(internalizationCtx, solver)
+        val converter = KCvc5ExprConverter(this, conversionCtx, solver)
 
         val internalized = with(internalizer) {
             expr.internalizeExpr()
@@ -493,9 +495,9 @@ class MultiIndexedArrayTest {
         return Context()
     }
 
-    private fun mkCvc5Context(ctx: KContext): Solver {
+    private fun mkCvc5Context(ctx: KContext): KCvc5TermManager {
         KCvc5Solver(ctx).close()
-        return Solver()
+        return KCvc5TermManager()
     }
 
     private inline fun TestStats.withErrorHandling(body: () -> Unit) = try {

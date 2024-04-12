@@ -1,5 +1,8 @@
 ### Build details
 
+Build is based on the cvc5 fork: https://github.com/Saloed/cvc5/tree/ksmt
+This fork provides fixed Java API and buildscripts (`build_(linux|windows|mac).sh`)
+
 We build cvc5 with the following configuration:
 ```shell
 ./configure.sh production --auto-download --ipo --no-static --no-cln --no-glpk --no-editline --cryptominisat --java-bindings
