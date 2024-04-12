@@ -364,8 +364,6 @@ class KCvc5Context(
         cvc5Sorts.clear()
         decls.clear()
         cvc5Decls.clear()
-
-        termManager.close()
     }
 
     class KUninterpretedSortCollector(private val cvc5Ctx: KCvc5Context) : KSortVisitor<Unit> {

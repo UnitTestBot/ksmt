@@ -168,6 +168,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         cvc5TrackedAssertions.clear()
 
         cvc5Ctx.close()
+        termManager.close()
     }
 
     /*
