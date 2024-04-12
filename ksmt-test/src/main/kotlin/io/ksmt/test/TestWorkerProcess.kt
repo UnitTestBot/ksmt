@@ -90,8 +90,13 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
     }
 
     private fun convertAssertions(nativeAssertions: List<Long>): List<KExpr<KBoolSort>> {
-        val converter = KZ3ExprConverter(ctx, KZ3Context(ctx, z3Ctx))
-        return with(converter) { nativeAssertions.map { it.convertExpr() } }
+        val context = KZ3Context(ctx, z3Ctx)
+        return try {
+            val converter = KZ3ExprConverter(ctx, context)
+            with(converter) { nativeAssertions.map { it.convertExpr() } }
+        } finally {
+            context.closeUnsafe()
+        }
     }
 
     private fun internalizeAndConvertBitwuzla(assertions: List<KExpr<KBoolSort>>): List<KExpr<KBoolSort>> =
