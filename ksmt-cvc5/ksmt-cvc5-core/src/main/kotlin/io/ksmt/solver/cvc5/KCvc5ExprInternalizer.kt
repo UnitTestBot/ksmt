@@ -1043,7 +1043,19 @@ class KCvc5ExprInternalizer(
     }
 
     override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>) = with(expr) {
-        transform(lhs, rhs) { lhs: Term, rhs: Term -> tm.mkTerm(Kind.POW, lhs, rhs) }
+        transform(lhs, rhs) { lhs: Term, rhs: Term ->
+            /**
+             * According to the cvc5 focs:
+             * The exponent of the POW(^) operator can only be a positive integral constant below 67108864
+             * */
+            if (!rhs.isIntegerValue || rhs.realOrIntegerValueSign < 0 || rhs.integerValue > BigInteger.valueOf(67108864)) {
+                throw KSolverUnsupportedFeatureException(
+                    "The exponent of the $expr can only be a positive integral constant below 67108864"
+                )
+            }
+
+            tm.mkTerm(Kind.POW, lhs, rhs)
+        }
     }
 
     override fun <T : KArithSort> transform(expr: KLtArithExpr<T>) = with(expr) {
