@@ -897,13 +897,17 @@ open class KCvc5ExprConverter(
 
     private val Term.bvZeroExtensionSize: Int
         get() {
-            require(kind == Kind.BITVECTOR_ZERO_EXTEND) { "Required op is ${Kind.BITVECTOR_ZERO_EXTEND}, but was $kind" }
+            require(kind == Kind.BITVECTOR_ZERO_EXTEND) {
+                "Required op is ${Kind.BITVECTOR_ZERO_EXTEND}, but was $kind"
+            }
             return termOpArg(this, 0).integerValue.toInt()
         }
 
     private val Term.bvSignExtensionSize: Int
         get() {
-            require(kind == Kind.BITVECTOR_SIGN_EXTEND) { "Required op is ${Kind.BITVECTOR_SIGN_EXTEND}, but was $kind" }
+            require(kind == Kind.BITVECTOR_SIGN_EXTEND) {
+                "Required op is ${Kind.BITVECTOR_SIGN_EXTEND}, but was $kind"
+            }
             return termOpArg(this, 0).integerValue.toInt()
         }
 

@@ -1045,10 +1045,11 @@ class KCvc5ExprInternalizer(
     override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>) = with(expr) {
         transform(lhs, rhs) { lhs: Term, rhs: Term ->
             /**
-             * According to the cvc5 focs:
+             * According to the cvc5 docs:
              * The exponent of the POW(^) operator can only be a positive integral constant below 67108864
              * */
-            if (!rhs.isIntegerValue || rhs.realOrIntegerValueSign < 0 || rhs.integerValue > BigInteger.valueOf(67108864)) {
+            val exponentMaxValue = 67108864.toBigInteger()
+            if (!rhs.isIntegerValue || rhs.realOrIntegerValueSign < 0 || rhs.integerValue > exponentMaxValue) {
                 throw KSolverUnsupportedFeatureException(
                     "The exponent of the $expr can only be a positive integral constant below 67108864"
                 )
