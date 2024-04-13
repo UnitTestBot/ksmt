@@ -13,16 +13,16 @@ val compileConfig by configurations.creating
 
 val cvc5NativeLinuxX64 by configurations.creating
 val cvc5NativeWindowsX64 by configurations.creating
-//val cvc5NativeMacArm by configurations.creating
+val cvc5NativeMacArm by configurations.creating
 
 val `linux-x64` by sourceSets.creating
 val `windows-x64` by sourceSets.creating
-//val `mac-arm` by sourceSets.creating
+val `mac-arm` by sourceSets.creating
 
 val cvc5Binaries = mapOf(
     `linux-x64` to cvc5NativeLinuxX64,
     `windows-x64` to cvc5NativeWindowsX64,
-//    `mac-arm` to cvc5NativeMacArm,
+    `mac-arm` to cvc5NativeMacArm,
 )
 
 cvc5Binaries.keys.forEach { it.compileClasspath = compileConfig }
@@ -34,7 +34,7 @@ dependencies {
 
     cvc5NativeLinuxX64("cvc5", "cvc5-native-linux-x86-64", cvc5Version, ext = "zip")
     cvc5NativeWindowsX64("cvc5", "cvc5-native-win-x86-64", cvc5Version, ext = "zip")
-//    cvc5NativeMacArm("cvc5", "cvc5-native-osx-arm64", cvc5Version, ext = "zip")
+    cvc5NativeMacArm("cvc5", "cvc5-native-osx-arm64", cvc5Version, ext = "zip")
 }
 
 cvc5Binaries.entries.forEach { (sourceSet, nativeConfig) ->
