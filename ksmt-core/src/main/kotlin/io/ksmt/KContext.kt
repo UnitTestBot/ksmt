@@ -2675,16 +2675,16 @@ open class KContext(
     private val zeroExtensionExprCache = mkAstInterner<KBvZeroExtensionExpr>()
 
     /**
-     * Create BitVec signed extension (`signext`) expression.
-     * Returns a BitVec expression with [extensionSize] extra sign (leftmost, highest) bits.
+     * Create BitVec zero extension (`zeroext`) expression.
+     * Returns a BitVec expression with [extensionSize] extra zero bits.
      * The extra bits are prepended to the provided [value].
      * */
     open fun <T : KBvSort> mkBvZeroExtensionExpr(extensionSize: Int, value: KExpr<T>): KExpr<KBvSort> =
         mkSimplified(extensionSize, value, KContext::simplifyBvZeroExtensionExpr, ::mkBvZeroExtensionExprNoSimplify)
 
     /**
-     * Create BitVec signed extension (`signext`) expression.
-     * Returns a BitVec expression with [extensionSize] extra sign (leftmost, highest) bits.
+     * Create BitVec zero extension (`zeroext`) expression.
+     * Returns a BitVec expression with [extensionSize] extra zero bits.
      * The extra bits are prepended to the provided [value].
      * */
     open fun <T : KBvSort> mkBvZeroExtensionExprNoSimplify(
