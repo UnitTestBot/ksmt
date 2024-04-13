@@ -259,14 +259,46 @@ open class KCvc5ExprConverter(
                 "No direct mapping of ${Kind.BITVECTOR_COMP} in ksmt"
             )
 
-            Kind.BITVECTOR_NEGO -> TODO()
-            Kind.BITVECTOR_UADDO -> TODO()
-            Kind.BITVECTOR_SADDO -> TODO()
-            Kind.BITVECTOR_UMULO -> TODO()
-            Kind.BITVECTOR_SMULO -> TODO()
-            Kind.BITVECTOR_USUBO -> TODO()
-            Kind.BITVECTOR_SSUBO -> TODO()
-            Kind.BITVECTOR_SDIVO -> TODO()
+            Kind.BITVECTOR_NEGO -> expr.convert { bvExpr: KExpr<KBvSort> ->
+                mkBvNegationNoOverflowExpr(bvExpr)
+            }
+
+            Kind.BITVECTOR_UADDO -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+                mkBvAddNoOverflowExpr(arg0, arg1, isSigned = false)
+            }
+
+            Kind.BITVECTOR_SADDO -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+                mkAnd(
+                    mkBvAddNoOverflowExpr(arg0, arg1, isSigned = true),
+                    mkBvAddNoUnderflowExpr(arg0, arg1)
+                )
+            }
+
+            Kind.BITVECTOR_UMULO -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+                mkBvMulNoOverflowExpr(arg0, arg1, isSigned = false)
+            }
+
+            Kind.BITVECTOR_SMULO -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+                mkAnd(
+                    mkBvMulNoOverflowExpr(arg0, arg1, isSigned = true),
+                    mkBvMulNoUnderflowExpr(arg0, arg1)
+                )
+            }
+
+            Kind.BITVECTOR_USUBO -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+                mkBvSubNoUnderflowExpr(arg0, arg1, isSigned = false)
+            }
+
+            Kind.BITVECTOR_SSUBO -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+                mkAnd(
+                    mkBvSubNoOverflowExpr(arg0, arg1),
+                    mkBvSubNoUnderflowExpr(arg0, arg1, isSigned = true)
+                )
+            }
+
+            Kind.BITVECTOR_SDIVO -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+                mkBvDivNoOverflowExpr(arg0, arg1)
+            }
 
             // fp
             Kind.FLOATINGPOINT_FP -> {
