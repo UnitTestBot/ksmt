@@ -8,7 +8,7 @@ nav_order: 1
 {: .no_toc }
 
 [![KSMT: build](https://github.com/UnitTestBot/ksmt/actions/workflows/build-and-run-tests.yml/badge.svg)](https://github.com/UnitTestBot/ksmt/actions/workflows/build-and-run-tests.yml)
-[![Maven Central](https://img.shields.io/maven-central/v/io.ksmt/ksmt-core)](https://central.sonatype.com/artifact/io.ksmt/ksmt-core/0.5.4)
+[![Maven Central](https://img.shields.io/maven-central/v/io.ksmt/ksmt-core)](https://central.sonatype.com/artifact/io.ksmt/ksmt-core/0.5.23)
 [![javadoc](https://javadoc.io/badge2/io.ksmt/ksmt-core/javadoc.svg)](https://javadoc.io/doc/io.ksmt/ksmt-core)
 
 {: .highlight }
@@ -27,9 +27,9 @@ To start using KSMT, install it via [Gradle](https://gradle.org/):
 
 ```kotlin
 // core 
-implementation("io.ksmt:ksmt-core:0.5.4")
+implementation("io.ksmt:ksmt-core:0.5.23")
 // z3 solver
-implementation("io.ksmt:ksmt-z3:0.5.4")
+implementation("io.ksmt:ksmt-z3:0.5.23")
 ```
 
 Find basic instructions in the [Getting started](getting-started) guide and try it out with the 
@@ -58,13 +58,15 @@ KSMT provides support for various solvers:
 
 You can also use SMT solvers across multiple theories:
 
-| Theory                  | Z3         | Bitwuzla | Yices2       |   cvc5    |
-|-------------------------|:----------:|:--------:|:------------:|:---------:|
-| Bitvectors              |  &#x2714;  | &#x2714; |   &#x2714;   | &#x2714;  |
-| Arrays                  |  &#x2714;  | &#x2714; |   &#x2714;   | &#x2714;  |
-| IEEE Floats             |  &#x2714;  | &#x2714; |              | &#x2714;  |
-| Uninterpreted Functions |  &#x2714;  | &#x2714; |   &#x2714;   | &#x2714;  |
-| Arithmetic              |  &#x2714;  |          |   &#x2714;   | &#x2714;  |
+| Theory                  | Z3         | Bitwuzla |    Yices2     |   cvc5    |
+|-------------------------|:----------:|:--------:|:-------------:|:---------:|
+| Bitvectors              |  &#x2714;  | &#x2714; |   &#x2714;    | &#x2714;  |
+| Arrays                  |  &#x2714;  | &#x2714; |   &#x2714;    | &#x2714;  |
+| IEEE Floats             |  &#x2714;  | &#x2714; | &#x2714; [^1] | &#x2714;  |
+| Uninterpreted Functions |  &#x2714;  | &#x2714; |   &#x2714;    | &#x2714;  |
+| Arithmetic              |  &#x2714;  |          |   &#x2714;    | &#x2714;  |
+
+[^1]: IEEE Floats are supported in Yices2 using ksmt-symfpu
 
 ---
 ## Solver-agnostic formula representation
