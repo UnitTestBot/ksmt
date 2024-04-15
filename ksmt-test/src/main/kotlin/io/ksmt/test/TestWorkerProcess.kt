@@ -26,6 +26,7 @@ import io.ksmt.solver.cvc5.KCvc5Context
 import io.ksmt.solver.cvc5.KCvc5ExprConverter
 import io.ksmt.solver.cvc5.KCvc5ExprInternalizer
 import io.ksmt.solver.cvc5.KCvc5Solver
+import io.ksmt.solver.cvc5.KCvc5TermManager
 import io.github.cvc5.Solver as Cvc5Solver
 import io.ksmt.solver.z3.KZ3Context
 import io.ksmt.solver.yices.*
@@ -127,14 +128,15 @@ class TestWorkerProcess : ChildProcessBase<TestProtocolModel>() {
     private fun internalizeAndConvertCvc5(assertions: List<KExpr<KBoolSort>>): List<KExpr<KBoolSort>> {
         KCvc5Solver(ctx).close() // ensure native libs loaded
 
-        return Cvc5Solver().use { cvc5Solver ->
-            val cvc5Assertions = KCvc5Context(cvc5Solver, ctx).use { cvc5Ctx ->
-                val internalizer = KCvc5ExprInternalizer(cvc5Ctx)
+        return KCvc5TermManager().use { cvc5tm ->
+            val cvc5Solver = cvc5tm.builder { Cvc5Solver(this) }
+            val cvc5Assertions = KCvc5Context(cvc5tm, ctx).use { cvc5Ctx ->
+                val internalizer = KCvc5ExprInternalizer(cvc5Ctx, cvc5Solver)
                 with(internalizer) { assertions.map { it.internalizeExpr() } }
             }
 
-            KCvc5Context(cvc5Solver, ctx).use { cvc5Ctx ->
-                val converter = KCvc5ExprConverter(ctx, cvc5Ctx)
+            KCvc5Context(cvc5tm, ctx).use { cvc5Ctx ->
+                val converter = KCvc5ExprConverter(ctx, cvc5Ctx, cvc5Solver)
                 with(converter) { cvc5Assertions.map { it.convertExpr() } }
             }
         }

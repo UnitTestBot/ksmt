@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "io.ksmt"
-version = "0.5.22"
+version = "0.5.23"
 
 repositories {
     mavenCentral()
