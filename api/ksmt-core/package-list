@@ -1599,8 +1599,10 @@ $dokka.location:io.ksmt.expr.transformer/KNonRecursiveTransformer/transformExprD
 $dokka.location:io.ksmt.expr.transformer/KNonRecursiveTransformerBase///PointingToDeclaration/ksmt-core/io.ksmt.expr.transformer/-k-non-recursive-transformer-base/index.html
 $dokka.location:io.ksmt.expr.transformer/KNonRecursiveTransformerBase/KNonRecursiveTransformerBase/#/PointingToDeclaration/ksmt-core/io.ksmt.expr.transformer/-k-non-recursive-transformer-base/-k-non-recursive-transformer-base.html
 $dokka.location:io.ksmt.expr.transformer/KNonRecursiveTransformerBase/apply/#io.ksmt.expr.KExpr[TypeParam(bounds=[io.ksmt.sort.KSort])]/PointingToDeclaration/ksmt-core/io.ksmt.expr.transformer/-k-non-recursive-transformer-base/apply.html
+$dokka.location:io.ksmt.expr.transformer/KNonRecursiveTransformerBase/eraseTransformationResult/#io.ksmt.expr.KExpr[*]/PointingToDeclaration/ksmt-core/io.ksmt.expr.transformer/-k-non-recursive-transformer-base/erase-transformation-result.html
 $dokka.location:io.ksmt.expr.transformer/KNonRecursiveTransformerBase/exprTransformationRequired/#io.ksmt.expr.KExpr[TypeParam(bounds=[io.ksmt.sort.KSort])]/PointingToDeclaration/ksmt-core/io.ksmt.expr.transformer/-k-non-recursive-transformer-base/expr-transformation-required.html
 $dokka.location:io.ksmt.expr.transformer/KNonRecursiveTransformerBase/markExpressionAsNotTransformed/#/PointingToDeclaration/ksmt-core/io.ksmt.expr.transformer/-k-non-recursive-transformer-base/mark-expression-as-not-transformed.html
+$dokka.location:io.ksmt.expr.transformer/KNonRecursiveTransformerBase/resetCache/#/PointingToDeclaration/ksmt-core/io.ksmt.expr.transformer/-k-non-recursive-transformer-base/reset-cache.html
 $dokka.location:io.ksmt.expr.transformer/KNonRecursiveTransformerBase/retryExprTransformation/#io.ksmt.expr.KExpr[*]/PointingToDeclaration/ksmt-core/io.ksmt.expr.transformer/-k-non-recursive-transformer-base/retry-expr-transformation.html
 $dokka.location:io.ksmt.expr.transformer/KNonRecursiveTransformerBase/transform/#io.ksmt.expr.KArray2Lambda[TypeParam(bounds=[io.ksmt.sort.KSort]),TypeParam(bounds=[io.ksmt.sort.KSort]),TypeParam(bounds=[io.ksmt.sort.KSort])]/PointingToDeclaration/ksmt-core/io.ksmt.expr.transformer/-k-non-recursive-transformer-base/transform.html
 $dokka.location:io.ksmt.expr.transformer/KNonRecursiveTransformerBase/transform/#io.ksmt.expr.KArray3Lambda[TypeParam(bounds=[io.ksmt.sort.KSort]),TypeParam(bounds=[io.ksmt.sort.KSort]),TypeParam(bounds=[io.ksmt.sort.KSort]),TypeParam(bounds=[io.ksmt.sort.KSort])]/PointingToDeclaration/ksmt-core/io.ksmt.expr.transformer/-k-non-recursive-transformer-base/transform.html
@@ -1761,6 +1763,7 @@ $dokka.location:io.ksmt.expr.transformer/KNonRecursiveVisitorBase/apply/#io.ksmt
 $dokka.location:io.ksmt.expr.transformer/KNonRecursiveVisitorBase/applyVisitor/#io.ksmt.expr.KExpr[TypeParam(bounds=[io.ksmt.sort.KSort])]/PointingToDeclaration/ksmt-core/io.ksmt.expr.transformer/-k-non-recursive-visitor-base/apply-visitor.html
 $dokka.location:io.ksmt.expr.transformer/KNonRecursiveVisitorBase/exprVisitResult/#TypeParam(bounds=[io.ksmt.expr.KExpr[*]])#io.ksmt.expr.transformer.KExprVisitResult[TypeParam(bounds=[kotlin.Any])]/PointingToDeclaration/ksmt-core/io.ksmt.expr.transformer/-k-non-recursive-visitor-base/expr-visit-result.html
 $dokka.location:io.ksmt.expr.transformer/KNonRecursiveVisitorBase/lastVisitResult/#io.ksmt.expr.KExpr[*]/PointingToDeclaration/ksmt-core/io.ksmt.expr.transformer/-k-non-recursive-visitor-base/last-visit-result.html
+$dokka.location:io.ksmt.expr.transformer/KNonRecursiveVisitorBase/resetCache/#/PointingToDeclaration/ksmt-core/io.ksmt.expr.transformer/-k-non-recursive-visitor-base/reset-cache.html
 $dokka.location:io.ksmt.expr.transformer/KNonRecursiveVisitorBase/resetLastVisitResult/#/PointingToDeclaration/ksmt-core/io.ksmt.expr.transformer/-k-non-recursive-visitor-base/reset-last-visit-result.html
 $dokka.location:io.ksmt.expr.transformer/KNonRecursiveVisitorBase/result/#io.ksmt.expr.KExpr[TypeParam(bounds=[io.ksmt.sort.KSort])]/PointingToDeclaration/ksmt-core/io.ksmt.expr.transformer/-k-non-recursive-visitor-base/result.html
 $dokka.location:io.ksmt.expr.transformer/KNonRecursiveVisitorBase/retryExprVisit/#io.ksmt.expr.KExpr[*]/PointingToDeclaration/ksmt-core/io.ksmt.expr.transformer/-k-non-recursive-visitor-base/retry-expr-visit.html
@@ -3787,6 +3790,7 @@ $dokka.location:io.ksmt.solver.model/KModelEvaluator/transformSelect/#io.ksmt.ex
 $dokka.location:io.ksmt.solver.model/KModelEvaluator/transformSelect/#io.ksmt.expr.KExpr[io.ksmt.sort.KArraySort[TypeParam(bounds=[io.ksmt.sort.KSort]),TypeParam(bounds=[io.ksmt.sort.KSort])]]#io.ksmt.expr.KExpr[TypeParam(bounds=[io.ksmt.sort.KSort])]/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-model-evaluator/transform-select.html
 $dokka.location:io.ksmt.solver.model/KModelImpl///PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-model-impl/index.html
 $dokka.location:io.ksmt.solver.model/KModelImpl/KModelImpl/#io.ksmt.KContext#kotlin.collections.Map[io.ksmt.decl.KDecl[*],io.ksmt.solver.model.KFuncInterp[*]]#kotlin.collections.Map[io.ksmt.sort.KUninterpretedSort,kotlin.collections.Set[io.ksmt.expr.KUninterpretedSortValue]]/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-model-impl/-k-model-impl.html
+$dokka.location:io.ksmt.solver.model/KModelImpl/close/#/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-model-impl/close.html
 $dokka.location:io.ksmt.solver.model/KModelImpl/ctx/#/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-model-impl/ctx.html
 $dokka.location:io.ksmt.solver.model/KModelImpl/declarations/#/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-model-impl/declarations.html
 $dokka.location:io.ksmt.solver.model/KModelImpl/detach/#/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-model-impl/detach.html
@@ -3797,6 +3801,18 @@ $dokka.location:io.ksmt.solver.model/KModelImpl/interpretation/#io.ksmt.decl.KDe
 $dokka.location:io.ksmt.solver.model/KModelImpl/toString/#/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-model-impl/to-string.html
 $dokka.location:io.ksmt.solver.model/KModelImpl/uninterpretedSortUniverse/#io.ksmt.sort.KUninterpretedSort/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-model-impl/uninterpreted-sort-universe.html
 $dokka.location:io.ksmt.solver.model/KModelImpl/uninterpretedSorts/#/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-model-impl/uninterpreted-sorts.html
+$dokka.location:io.ksmt.solver.model/KNativeSolverModel///PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-native-solver-model/index.html
+$dokka.location:io.ksmt.solver.model/KNativeSolverModel/KNativeSolverModel/#io.ksmt.solver.KModel/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-native-solver-model/-k-native-solver-model.html
+$dokka.location:io.ksmt.solver.model/KNativeSolverModel/close/#/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-native-solver-model/close.html
+$dokka.location:io.ksmt.solver.model/KNativeSolverModel/declarations/#/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-native-solver-model/declarations.html
+$dokka.location:io.ksmt.solver.model/KNativeSolverModel/detach/#/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-native-solver-model/detach.html
+$dokka.location:io.ksmt.solver.model/KNativeSolverModel/equals/#kotlin.Any?/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-native-solver-model/equals.html
+$dokka.location:io.ksmt.solver.model/KNativeSolverModel/eval/#io.ksmt.expr.KExpr[TypeParam(bounds=[io.ksmt.sort.KSort])]#kotlin.Boolean/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-native-solver-model/eval.html
+$dokka.location:io.ksmt.solver.model/KNativeSolverModel/hashCode/#/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-native-solver-model/hash-code.html
+$dokka.location:io.ksmt.solver.model/KNativeSolverModel/interpretation/#io.ksmt.decl.KDecl[TypeParam(bounds=[io.ksmt.sort.KSort])]/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-native-solver-model/interpretation.html
+$dokka.location:io.ksmt.solver.model/KNativeSolverModel/toString/#/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-native-solver-model/to-string.html
+$dokka.location:io.ksmt.solver.model/KNativeSolverModel/uninterpretedSortUniverse/#io.ksmt.sort.KUninterpretedSort/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-native-solver-model/uninterpreted-sort-universe.html
+$dokka.location:io.ksmt.solver.model/KNativeSolverModel/uninterpretedSorts/#/PointingToDeclaration/ksmt-core/io.ksmt.solver.model/-k-native-solver-model/uninterpreted-sorts.html
 $dokka.location:io.ksmt.solver.util////PointingToDeclaration/ksmt-core/io.ksmt.solver.util/index.html
 $dokka.location:io.ksmt.solver.util//conversionLoop/#TypeParam(bounds=[kotlin.Any?])#TypeParam(bounds=[kotlin.Any?])#kotlin.Function2[TypeParam(bounds=[kotlin.Any?]),TypeParam(bounds=[kotlin.Any?]),kotlin.Unit]#kotlin.Function1[TypeParam(bounds=[kotlin.Any?]),TypeParam(bounds=[kotlin.Any?])]#kotlin.Function1[TypeParam(bounds=[kotlin.Any?]),kotlin.Boolean]#kotlin.Function1[TypeParam(bounds=[kotlin.Any?]),io.ksmt.solver.util.ExprConversionResult]#kotlin.Function1[TypeParam(bounds=[kotlin.Any?]),io.ksmt.expr.KExpr[*]?]#kotlin.Function2[TypeParam(bounds=[kotlin.Any?]),io.ksmt.expr.KExpr[*],kotlin.Unit]/PointingToDeclaration/ksmt-core/io.ksmt.solver.util/conversion-loop.html
 $dokka.location:io.ksmt.solver.util//ensureArgsConvertedAndConvert/#TypeParam(bounds=[kotlin.Any?])#TypeParam(bounds=[kotlin.Any?])#TypeParam(bounds=[kotlin.Any?])#kotlin.Int#kotlin.Function2[TypeParam(bounds=[kotlin.Any?]),TypeParam(bounds=[kotlin.Any?]),kotlin.Unit]#kotlin.Function1[TypeParam(bounds=[kotlin.Any?]),kotlin.Int]#kotlin.Function2[TypeParam(bounds=[kotlin.Any?]),kotlin.Int,TypeParam(bounds=[kotlin.Any?])]#kotlin.Function1[TypeParam(bounds=[kotlin.Any?]),io.ksmt.expr.KExpr[*]?]/PointingToDeclaration/ksmt-core/io.ksmt.solver.util/ensure-args-converted-and-convert.html
@@ -3888,6 +3904,7 @@ $dokka.location:io.ksmt.solver.util/KExprLongInternalizerBase/transform/TypePara
 $dokka.location:io.ksmt.solver.util/KExprLongInternalizerBase/transformList/TypeParam(bounds=[io.ksmt.expr.KExpr[*]])#kotlin.collections.List[io.ksmt.expr.KExpr[*]]#kotlin.Function1[kotlin.LongArray,kotlin.Long]/PointingToDeclaration/ksmt-core/io.ksmt.solver.util/-k-expr-long-internalizer-base/transform-list.html
 $dokka.location:io.ksmt.solver////PointingToDeclaration/ksmt-core/io.ksmt.solver/index.html
 $dokka.location:io.ksmt.solver/KModel///PointingToDeclaration/ksmt-core/io.ksmt.solver/-k-model/index.html
+$dokka.location:io.ksmt.solver/KModel/close/#/PointingToDeclaration/ksmt-core/io.ksmt.solver/-k-model/close.html
 $dokka.location:io.ksmt.solver/KModel/declarations/#/PointingToDeclaration/ksmt-core/io.ksmt.solver/-k-model/declarations.html
 $dokka.location:io.ksmt.solver/KModel/detach/#/PointingToDeclaration/ksmt-core/io.ksmt.solver/-k-model/detach.html
 $dokka.location:io.ksmt.solver/KModel/eval/#io.ksmt.expr.KExpr[TypeParam(bounds=[io.ksmt.sort.KSort])]#kotlin.Boolean/PointingToDeclaration/ksmt-core/io.ksmt.solver/-k-model/eval.html
@@ -3896,7 +3913,9 @@ $dokka.location:io.ksmt.solver/KModel/uninterpretedSortUniverse/#io.ksmt.sort.KU
 $dokka.location:io.ksmt.solver/KModel/uninterpretedSorts/#/PointingToDeclaration/ksmt-core/io.ksmt.solver/-k-model/uninterpreted-sorts.html
 $dokka.location:io.ksmt.solver/KSolver///PointingToDeclaration/ksmt-core/io.ksmt.solver/-k-solver/index.html
 $dokka.location:io.ksmt.solver/KSolver/assert/#io.ksmt.expr.KExpr[io.ksmt.sort.KBoolSort]/PointingToDeclaration/ksmt-core/io.ksmt.solver/-k-solver/assert.html
+$dokka.location:io.ksmt.solver/KSolver/assert/#kotlin.collections.List[io.ksmt.expr.KExpr[io.ksmt.sort.KBoolSort]]/PointingToDeclaration/ksmt-core/io.ksmt.solver/-k-solver/assert.html
 $dokka.location:io.ksmt.solver/KSolver/assertAndTrack/#io.ksmt.expr.KExpr[io.ksmt.sort.KBoolSort]/PointingToDeclaration/ksmt-core/io.ksmt.solver/-k-solver/assert-and-track.html
+$dokka.location:io.ksmt.solver/KSolver/assertAndTrack/#kotlin.collections.List[io.ksmt.expr.KExpr[io.ksmt.sort.KBoolSort]]/PointingToDeclaration/ksmt-core/io.ksmt.solver/-k-solver/assert-and-track.html
 $dokka.location:io.ksmt.solver/KSolver/check/#kotlin.time.Duration/PointingToDeclaration/ksmt-core/io.ksmt.solver/-k-solver/check.html
 $dokka.location:io.ksmt.solver/KSolver/checkWithAssumptions/#kotlin.collections.List[io.ksmt.expr.KExpr[io.ksmt.sort.KBoolSort]]#kotlin.time.Duration/PointingToDeclaration/ksmt-core/io.ksmt.solver/-k-solver/check-with-assumptions.html
 $dokka.location:io.ksmt.solver/KSolver/close/#/PointingToDeclaration/ksmt-core/io.ksmt.solver/-k-solver/close.html
@@ -3996,6 +4015,7 @@ $dokka.location:io.ksmt.sort/KBv8Sort///PointingToDeclaration/ksmt-core/io.ksmt
 $dokka.location:io.ksmt.sort/KBv8Sort/accept/#io.ksmt.sort.KSortVisitor[TypeParam(bounds=[kotlin.Any?])]/PointingToDeclaration/ksmt-core/io.ksmt.sort/-k-bv8-sort/accept.html
 $dokka.location:io.ksmt.sort/KBv8Sort/sizeBits/#/PointingToDeclaration/ksmt-core/io.ksmt.sort/-k-bv8-sort/size-bits.html
 $dokka.location:io.ksmt.sort/KBvCustomSizeSort///PointingToDeclaration/ksmt-core/io.ksmt.sort/-k-bv-custom-size-sort/index.html
+$dokka.location:io.ksmt.sort/KBvCustomSizeSort/KBvCustomSizeSort/#io.ksmt.KContext#kotlin.UInt/PointingToDeclaration/ksmt-core/io.ksmt.sort/-k-bv-custom-size-sort/-k-bv-custom-size-sort.html
 $dokka.location:io.ksmt.sort/KBvCustomSizeSort/accept/#io.ksmt.sort.KSortVisitor[TypeParam(bounds=[kotlin.Any?])]/PointingToDeclaration/ksmt-core/io.ksmt.sort/-k-bv-custom-size-sort/accept.html
 $dokka.location:io.ksmt.sort/KBvCustomSizeSort/sizeBits/#/PointingToDeclaration/ksmt-core/io.ksmt.sort/-k-bv-custom-size-sort/size-bits.html
 $dokka.location:io.ksmt.sort/KBvSort///PointingToDeclaration/ksmt-core/io.ksmt.sort/-k-bv-sort/index.html
@@ -4076,11 +4096,41 @@ $dokka.location:io.ksmt.sort/KSortVisitor/visit/#io.ksmt.sort.KRealSort/Pointing
 $dokka.location:io.ksmt.sort/KSortVisitor/visit/#io.ksmt.sort.KSort/PointingToDeclaration/ksmt-core/io.ksmt.sort/-k-sort-visitor/visit.html
 $dokka.location:io.ksmt.sort/KSortVisitor/visit/#io.ksmt.sort.KUninterpretedSort/PointingToDeclaration/ksmt-core/io.ksmt.sort/-k-sort-visitor/visit.html
 $dokka.location:io.ksmt.sort/KUninterpretedSort///PointingToDeclaration/ksmt-core/io.ksmt.sort/-k-uninterpreted-sort/index.html
+$dokka.location:io.ksmt.sort/KUninterpretedSort/KUninterpretedSort/#kotlin.String#io.ksmt.KContext/PointingToDeclaration/ksmt-core/io.ksmt.sort/-k-uninterpreted-sort/-k-uninterpreted-sort.html
 $dokka.location:io.ksmt.sort/KUninterpretedSort/accept/#io.ksmt.sort.KSortVisitor[TypeParam(bounds=[kotlin.Any?])]/PointingToDeclaration/ksmt-core/io.ksmt.sort/-k-uninterpreted-sort/accept.html
 $dokka.location:io.ksmt.sort/KUninterpretedSort/equals/#kotlin.Any?/PointingToDeclaration/ksmt-core/io.ksmt.sort/-k-uninterpreted-sort/equals.html
 $dokka.location:io.ksmt.sort/KUninterpretedSort/hashCode/#/PointingToDeclaration/ksmt-core/io.ksmt.sort/-k-uninterpreted-sort/hash-code.html
 $dokka.location:io.ksmt.sort/KUninterpretedSort/name/#/PointingToDeclaration/ksmt-core/io.ksmt.sort/-k-uninterpreted-sort/name.html
 $dokka.location:io.ksmt.sort/KUninterpretedSort/print/#java.lang.StringBuilder/PointingToDeclaration/ksmt-core/io.ksmt.sort/-k-uninterpreted-sort/print.html
+$dokka.location:io.ksmt.utils.library////PointingToDeclaration/ksmt-core/io.ksmt.utils.library/index.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoader///PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader/index.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoader/archName/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader/arch-name.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoader/libraryDir/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader/library-dir.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoader/load/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader/load.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoader/osLibraryExt/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader/os-library-ext.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoader/osName/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader/os-name.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderArm///PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-arm/index.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderArm/archName/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-arm/arch-name.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderLinux///PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-linux/index.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderLinux/osLibraryExt/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-linux/os-library-ext.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderLinux/osName/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-linux/os-name.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderMac///PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-mac/index.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderMac/osLibraryExt/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-mac/os-library-ext.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderMac/osName/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-mac/os-name.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderUtils///PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-utils/index.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderUtils/ARM_ARCH_NAME/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-utils/-a-r-m_-a-r-c-h_-n-a-m-e.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderUtils/LINUX_OS_NAME/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-utils/-l-i-n-u-x_-o-s_-n-a-m-e.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderUtils/MAC_OS_NAME/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-utils/-m-a-c_-o-s_-n-a-m-e.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderUtils/WINDOWS_OS_NAME/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-utils/-w-i-n-d-o-w-s_-o-s_-n-a-m-e.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderUtils/X64_ARCH_NAME/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-utils/-x64_-a-r-c-h_-n-a-m-e.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderUtils/load/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-utils/load.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderUtils/loadLibrariesFromResources/#io.ksmt.utils.library.NativeLibraryLoader#kotlin.collections.List[kotlin.String]/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-utils/load-libraries-from-resources.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderUtils/supportedArchs/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-utils/supported-archs.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderWindows///PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-windows/index.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderWindows/osLibraryExt/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-windows/os-library-ext.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderWindows/osName/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-windows/os-name.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderX64///PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-x64/index.html
+$dokka.location:io.ksmt.utils.library/NativeLibraryLoaderX64/archName/#/PointingToDeclaration/ksmt-core/io.ksmt.utils.library/-native-library-loader-x64/arch-name.html
 $dokka.location:io.ksmt.utils////PointingToDeclaration/ksmt-core/io.ksmt.utils/index.html
 $dokka.location:io.ksmt.utils//asExpr/io.ksmt.expr.KExpr[*]#TypeParam(bounds=[io.ksmt.sort.KSort])/PointingToDeclaration/ksmt-core/io.ksmt.utils/as-expr.html
 $dokka.location:io.ksmt.utils//booleanSignBit/kotlin.Double#/PointingToDeclaration/ksmt-core/io.ksmt.utils/boolean-sign-bit.html
@@ -4248,14 +4298,6 @@ $dokka.location:io.ksmt.utils/FpUtils/isZero/io.ksmt.expr.KFpValue[*]#/PointingT
 $dokka.location:io.ksmt.utils/FpUtils/mkFpMaxValue/io.ksmt.KContext#TypeParam(bounds=[io.ksmt.sort.KFpSort])#kotlin.Boolean/PointingToDeclaration/ksmt-core/io.ksmt.utils/-fp-utils/mk-fp-max-value.html
 $dokka.location:io.ksmt.utils/FpUtils/mkFpOne/io.ksmt.KContext#TypeParam(bounds=[io.ksmt.sort.KFpSort])#kotlin.Boolean/PointingToDeclaration/ksmt-core/io.ksmt.utils/-fp-utils/mk-fp-one.html
 $dokka.location:io.ksmt.utils/FpUtils/unbiasFpExponent/#io.ksmt.expr.KBitVecValue[*]#kotlin.UInt/PointingToDeclaration/ksmt-core/io.ksmt.utils/-fp-utils/unbias-fp-exponent.html
-$dokka.location:io.ksmt.utils/NativeLibraryLoader.OS.LINUX///PointingToDeclaration/{"org.jetbrains.dokka.links.EnumEntryDRIExtra":{"key":"org.jetbrains.dokka.links.EnumEntryDRIExtra"}}ksmt-core/io.ksmt.utils/-native-library-loader/-o-s/-l-i-n-u-x/index.html
-$dokka.location:io.ksmt.utils/NativeLibraryLoader.OS.MACOS///PointingToDeclaration/{"org.jetbrains.dokka.links.EnumEntryDRIExtra":{"key":"org.jetbrains.dokka.links.EnumEntryDRIExtra"}}ksmt-core/io.ksmt.utils/-native-library-loader/-o-s/-m-a-c-o-s/index.html
-$dokka.location:io.ksmt.utils/NativeLibraryLoader.OS.WINDOWS///PointingToDeclaration/{"org.jetbrains.dokka.links.EnumEntryDRIExtra":{"key":"org.jetbrains.dokka.links.EnumEntryDRIExtra"}}ksmt-core/io.ksmt.utils/-native-library-loader/-o-s/-w-i-n-d-o-w-s/index.html
-$dokka.location:io.ksmt.utils/NativeLibraryLoader.OS///PointingToDeclaration/ksmt-core/io.ksmt.utils/-native-library-loader/-o-s/index.html
-$dokka.location:io.ksmt.utils/NativeLibraryLoader.OS/valueOf/#kotlin.String/PointingToDeclaration/ksmt-core/io.ksmt.utils/-native-library-loader/-o-s/value-of.html
-$dokka.location:io.ksmt.utils/NativeLibraryLoader.OS/values/#/PointingToDeclaration/ksmt-core/io.ksmt.utils/-native-library-loader/-o-s/values.html
-$dokka.location:io.ksmt.utils/NativeLibraryLoader///PointingToDeclaration/ksmt-core/io.ksmt.utils/-native-library-loader/index.html
-$dokka.location:io.ksmt.utils/NativeLibraryLoader/load/#kotlin.Function1[io.ksmt.utils.NativeLibraryLoader.OS,kotlin.collections.List[kotlin.String]]/PointingToDeclaration/ksmt-core/io.ksmt.utils/-native-library-loader/load.html
 $dokka.location:io.ksmt////PointingToDeclaration/ksmt-core/io.ksmt/index.html
 $dokka.location:io.ksmt/KAst///PointingToDeclaration/ksmt-core/io.ksmt/-k-ast/index.html
 $dokka.location:io.ksmt/KAst/KAst/#io.ksmt.KContext/PointingToDeclaration/ksmt-core/io.ksmt/-k-ast/-k-ast.html
@@ -4843,4 +4885,5 @@ io.ksmt.solver.model
 io.ksmt.solver.util
 io.ksmt.sort
 io.ksmt.utils
+io.ksmt.utils.library
 
