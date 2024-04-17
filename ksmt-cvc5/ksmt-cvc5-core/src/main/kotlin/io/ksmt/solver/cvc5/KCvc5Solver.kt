@@ -3,7 +3,7 @@ package io.ksmt.solver.cvc5
 import io.github.cvc5.CVC5ApiException
 import io.github.cvc5.Result
 import io.github.cvc5.Solver
-import io.github.cvc5.Term
+import io.github.cvc5.TermManager
 import io.ksmt.KContext
 import io.ksmt.expr.KExpr
 import io.ksmt.solver.KModel
@@ -13,13 +13,13 @@ import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.model.KNativeSolverModel
 import io.ksmt.sort.KBoolSort
 import io.ksmt.utils.library.NativeLibraryLoaderUtils
-import java.util.TreeMap
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 
 open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfiguration> {
-    private val solver = Solver()
-    private val cvc5Ctx = KCvc5Context(solver, ctx)
+    private val termManager = KCvc5TermManager()
+    private val solver = termManager.builder { Solver(this) }
+    private val cvc5Ctx = KCvc5Context(termManager, ctx)
 
     private val exprInternalizer by lazy { createExprInternalizer(cvc5Ctx) }
 
@@ -31,10 +31,9 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     private var lastCvcModel: KCvc5Model? = null
     private var lastModel: KModel? = null
 
-    // we need TreeMap here (hashcode not implemented in Term)
-    private var cvc5LastAssumptions: TreeMap<Term, KExpr<KBoolSort>>? = null
+    private var cvc5LastAssumptions: KCvc5TermMap<KExpr<KBoolSort>>? = null
 
-    private var cvc5CurrentLevelTrackedAssertions = TreeMap<Term, KExpr<KBoolSort>>()
+    private var cvc5CurrentLevelTrackedAssertions = KCvc5TermMap<KExpr<KBoolSort>>()
     private val cvc5TrackedAssertions = mutableListOf(cvc5CurrentLevelTrackedAssertions)
 
     init {
@@ -47,7 +46,8 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         solver.setOption("fp-exp", "true")
     }
 
-    open fun createExprInternalizer(cvc5Ctx: KCvc5Context): KCvc5ExprInternalizer = KCvc5ExprInternalizer(cvc5Ctx)
+    open fun createExprInternalizer(cvc5Ctx: KCvc5Context): KCvc5ExprInternalizer =
+        KCvc5ExprInternalizer(cvc5Ctx, solver)
 
     override fun configure(configurator: KCvc5SolverConfiguration.() -> Unit) {
         KCvc5SolverConfigurationImpl(solver).configurator()
@@ -76,7 +76,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     }
 
     override fun push() = solver.push().also {
-        cvc5CurrentLevelTrackedAssertions = TreeMap()
+        cvc5CurrentLevelTrackedAssertions = KCvc5TermMap()
         cvc5TrackedAssertions.add(cvc5CurrentLevelTrackedAssertions)
 
         cvc5Ctx.push()
@@ -109,7 +109,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     ): KSolverStatus = cvc5TryCheck {
         ctx.ensureContextMatch(assumptions)
 
-        val lastAssumptions = TreeMap<Term, KExpr<KBoolSort>>().also { cvc5LastAssumptions = it }
+        val lastAssumptions = KCvc5TermMap<KExpr<KBoolSort>>().also { cvc5LastAssumptions = it }
         val cvc5Assumptions = Array(assumptions.size) { idx ->
             val assumedExpr = assumptions[idx]
             with(exprInternalizer) {
@@ -137,6 +137,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         val cvcModel = KCvc5Model(
             ctx,
             cvc5Ctx,
+            solver,
             exprInternalizer,
             cvc5Ctx.declarations().flatMapTo(hashSetOf()) { it },
             cvc5Ctx.uninterpretedSorts().flatMapTo(hashSetOf()) { it },
@@ -151,9 +152,9 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     override fun unsatCore(): List<KExpr<KBoolSort>> = cvc5Try {
         require(lastCheckStatus == KSolverStatus.UNSAT) { "Unsat cores are only available after UNSAT checks" }
 
-        val cvc5FullCore = solver.unsatCore
+        val cvc5FullCore = solver.unsatCore.onEach { termManager.registerPointer(it) }
 
-        val trackedTerms = TreeMap<Term, KExpr<KBoolSort>>()
+        val trackedTerms = KCvc5TermMap<KExpr<KBoolSort>>()
         cvc5TrackedAssertions.forEach { frame ->
             trackedTerms.putAll(frame)
         }
@@ -167,7 +168,7 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         cvc5TrackedAssertions.clear()
 
         cvc5Ctx.close()
-        solver.close()
+        termManager.close()
     }
 
     /*

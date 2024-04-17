@@ -627,7 +627,7 @@ open class KContext(
     /**
      * Create a BitVec sort with [sizeBits] bits length (_ BitVec [sizeBits]).
      * */
-    fun mkBvSort(sizeBits: UInt): KBvSort = ensureContextActive {
+    open fun mkBvSort(sizeBits: UInt): KBvSort = ensureContextActive {
         when (sizeBits.toInt()) {
             1 -> mkBv1Sort()
             Byte.SIZE_BITS -> mkBv8Sort()
@@ -643,7 +643,7 @@ open class KContext(
     /**
      * Create an uninterpreted sort named [name].
      * */
-    fun mkUninterpretedSort(name: String): KUninterpretedSort =
+    open fun mkUninterpretedSort(name: String): KUninterpretedSort =
         ensureContextActive {
             KUninterpretedSort(name, this)
         }
@@ -678,7 +678,7 @@ open class KContext(
     /**
      * Create an arbitrary precision IEEE floating point sort (_ FloatingPoint [exponentBits] [significandBits]).
      * */
-    fun mkFpSort(exponentBits: UInt, significandBits: UInt): KFpSort =
+    open fun mkFpSort(exponentBits: UInt, significandBits: UInt): KFpSort =
         ensureContextActive {
             val eb = exponentBits
             val sb = significandBits
@@ -2675,16 +2675,16 @@ open class KContext(
     private val zeroExtensionExprCache = mkAstInterner<KBvZeroExtensionExpr>()
 
     /**
-     * Create BitVec signed extension (`signext`) expression.
-     * Returns a BitVec expression with [extensionSize] extra sign (leftmost, highest) bits.
+     * Create BitVec zero extension (`zeroext`) expression.
+     * Returns a BitVec expression with [extensionSize] extra zero bits.
      * The extra bits are prepended to the provided [value].
      * */
     open fun <T : KBvSort> mkBvZeroExtensionExpr(extensionSize: Int, value: KExpr<T>): KExpr<KBvSort> =
         mkSimplified(extensionSize, value, KContext::simplifyBvZeroExtensionExpr, ::mkBvZeroExtensionExprNoSimplify)
 
     /**
-     * Create BitVec signed extension (`signext`) expression.
-     * Returns a BitVec expression with [extensionSize] extra sign (leftmost, highest) bits.
+     * Create BitVec zero extension (`zeroext`) expression.
+     * Returns a BitVec expression with [extensionSize] extra zero bits.
      * The extra bits are prepended to the provided [value].
      * */
     open fun <T : KBvSort> mkBvZeroExtensionExprNoSimplify(

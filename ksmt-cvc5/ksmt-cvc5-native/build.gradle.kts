@@ -15,19 +15,19 @@ val cvc5NativeLinuxX64 by configurations.creating
 val cvc5NativeWindowsX64 by configurations.creating
 val cvc5NativeMacArm by configurations.creating
 
-val `windows-x64` by sourceSets.creating
 val `linux-x64` by sourceSets.creating
+val `windows-x64` by sourceSets.creating
 val `mac-arm` by sourceSets.creating
 
 val cvc5Binaries = mapOf(
-    `windows-x64` to cvc5NativeWindowsX64,
     `linux-x64` to cvc5NativeLinuxX64,
+    `windows-x64` to cvc5NativeWindowsX64,
     `mac-arm` to cvc5NativeMacArm,
 )
 
 cvc5Binaries.keys.forEach { it.compileClasspath = compileConfig }
 
-val cvc5Version = "1.0.2"
+val cvc5Version = "1.1.2"
 
 dependencies {
     compileConfig(project(":ksmt-cvc5:ksmt-cvc5-core"))
