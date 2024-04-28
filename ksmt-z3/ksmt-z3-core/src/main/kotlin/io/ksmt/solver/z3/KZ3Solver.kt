@@ -95,6 +95,8 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
         trackedAssertions.put(z3TrackVar, expr)
 
         solver.solverAssertAndTrack(z3Expr, z3TrackVar)
+
+        z3Ctx.assertPendingAxioms(solver)
     }
 
     override fun check(timeout: Duration): KSolverStatus = z3TryCheck {
