@@ -46,6 +46,155 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
 
     private data class WeightedCore(val expressions: List<KExpr<KBoolSort>>, val weight: UInt)
 
+    // TODO: may be we should return KMaxSMTSubOptResult?
+    fun checkSubOptMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult {
+        val markCheckMaxSMTStart = markNow()
+        markLoggingPoint = markCheckMaxSMTStart
+
+        if (TimerUtils.timeoutExceeded(timeout)) {
+            error("Timeout must be positive but was [${timeout.inWholeSeconds} s]")
+        }
+
+        this.collectStatistics = collectStatistics
+
+        if (this.collectStatistics) {
+            maxSMTStatistics = KMaxSMTStatistics(maxSmtCtx)
+            maxSMTStatistics.timeoutMs = timeout.inWholeMilliseconds
+        }
+
+        val markHardConstraintsCheckStart = markNow()
+        val hardConstraintsStatus = solver.check(timeout)
+        if (this.collectStatistics) {
+            maxSMTStatistics.queriesToSolverNumber++
+            maxSMTStatistics.timeInSolverQueriesMs += markHardConstraintsCheckStart.elapsedNow().inWholeMilliseconds
+        }
+
+        if (hardConstraintsStatus == UNSAT || softConstraints.isEmpty()) {
+            if (collectStatistics) {
+                maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
+            }
+            return KMaxSMTResult(listOf(), hardConstraintsStatus, true)
+        } else if (hardConstraintsStatus == UNKNOWN) {
+            if (collectStatistics) {
+                maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
+            }
+            return KMaxSMTResult(listOf(), hardConstraintsStatus, false)
+        }
+
+        solver.push()
+        initMaxSMT()
+
+        val assumptions = softConstraints.toMutableList()
+
+        while (_lower < _upper) {
+            logger.info {
+                "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] Iteration number: $_iteration"
+            }
+            markLoggingPoint = markNow()
+
+            val softConstraintsCheckRemainingTime = TimerUtils.computeRemainingTime(timeout, markCheckMaxSMTStart)
+            if (TimerUtils.timeoutExceeded(softConstraintsCheckRemainingTime)) {
+                if (collectStatistics) {
+                    maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
+                }
+
+                logger.info {
+                    "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] --- returning SubOpt MaxSMT result"
+                }
+                return getSubOptMaxSMTResult(true)
+            }
+
+            val status = checkSatHillClimb(assumptions, timeout)
+
+            when (status) {
+                SAT -> {
+                    when (maxSmtCtx.strategy) {
+                        PrimalMaxRes -> _upper = _lower
+
+                        PrimalDualMaxRes -> {
+                            val correctionSet = getCorrectionSet(solver.model(), assumptions)
+                            if (correctionSet.isEmpty()) {
+                                if (_model != null) {
+                                    // Feasible optimum is found by the moment.
+                                    _lower = _upper
+                                }
+                            } else {
+                                processSat(correctionSet, assumptions)
+                            }
+                        }
+
+                        else -> error("Unexpected strategy: ${maxSmtCtx.strategy}")
+                    }
+                }
+
+                UNSAT -> {
+                    val remainingTime = TimerUtils.computeRemainingTime(timeout, markCheckMaxSMTStart)
+                    if (TimerUtils.timeoutExceeded(remainingTime)) {
+                        solver.pop()
+                        if (collectStatistics) {
+                            maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
+                        }
+                        logger.info {
+                            "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] --- returning SubOpt MaxSMT result"
+                        }
+                        return getSubOptMaxSMTResult(true)
+                    }
+
+                    val processUnsatStatus = processUnsat(assumptions, remainingTime)
+                    if (processUnsatStatus == UNSAT) {
+                        _lower = _upper
+                        // TODO: process this case as it can happen when timeout exceeded???
+                        solver.pop()
+                        if (collectStatistics) {
+                            maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
+                        }
+                        // TODO: is it Ok?
+                        logger.info {
+                            "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] --- returning SubOpt MaxSMT result"
+                        }
+                        return getSubOptMaxSMTResult(true)
+                    } else if (processUnsatStatus == UNKNOWN) {
+                        solver.pop()
+                        if (collectStatistics) {
+                            maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
+                        }
+                        logger.info {
+                            "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] --- returning SubOpt MaxSMT result"
+                        }
+                        return getSubOptMaxSMTResult(true)
+                    }
+                }
+
+                UNKNOWN -> {
+                    solver.pop()
+                    if (collectStatistics) {
+                        maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
+                    }
+                    logger.info {
+                        "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] --- returning SubOpt MaxSMT result"
+                    }
+                    return getSubOptMaxSMTResult(true)
+                }
+            }
+
+            ++_iteration
+        }
+
+        _lower = _upper
+
+        val result = KMaxSMTResult(if (_model != null) getSatSoftConstraintsByModel(_model!!) else listOf(), SAT, true)
+        logger.info {
+            "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] --- returning SubOpt MaxSMT result"
+        }
+
+        solver.pop()
+
+        if (collectStatistics) {
+            maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
+        }
+        return result
+    }
+
     override fun checkMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult {
         val markCheckMaxSMTStart = markNow()
         markLoggingPoint = markCheckMaxSMTStart
@@ -117,6 +266,8 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                                 processSat(correctionSet, assumptions)
                             }
                         }
+
+                        else -> error("Unexpected strategy: ${maxSmtCtx.strategy}")
                     }
                 }
 
@@ -339,8 +490,8 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
 
         val upper = ModelUtils.getModelCost(ctx, model, softConstraints)
 
-        if (upper > _upper) {
-            logger.info { "Found model has less weight --- model is not updated" }
+        if (_model != null && upper >= _upper) {
+            logger.info { "Found model has less or equal weight --- model is not updated" }
             return
         }
 
@@ -484,7 +635,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
 
         logger.info {
             "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] (lower bound: $_lower, upper bound: $_upper)" +
-                " --- model is initialized with null"
+                    " --- model is initialized with null"
         }
         markLoggingPoint = markNow()
 
@@ -571,5 +722,13 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         }
 
         return status
+    }
+
+    private fun getSubOptMaxSMTResult(maxSMTSucceeded: Boolean): KMaxSMTResult {
+        return if (_model != null) {
+            KMaxSMTResult(getSatSoftConstraintsByModel(_model!!), SAT, maxSMTSucceeded)
+        } else {
+            KMaxSMTResult(listOf(), SAT, maxSMTSucceeded)
+        }
     }
 }
