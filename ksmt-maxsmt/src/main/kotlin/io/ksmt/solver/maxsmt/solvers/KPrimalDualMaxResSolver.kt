@@ -29,8 +29,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
     private val ctx: KContext,
     private val solver: KSolver<out T>,
     private val maxSmtCtx: KMaxSMTContext,
-) :
-    KMaxResSolver<T>(ctx, solver) {
+) : KMaxResSolver<T>(ctx, solver) {
     private var _lower: UInt = 0u // Current lower frontier
     private var _upper: UInt = 0u // Current upper frontier
     private var _maxUpper = 0u // Max possible upper frontier
@@ -47,7 +46,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
     private data class WeightedCore(val expressions: List<KExpr<KBoolSort>>, val weight: UInt)
 
     // TODO: may be we should return KMaxSMTSubOptResult?
-    fun checkSubOptMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult {
+    fun checkSubOptMaxSMT(timeout: Duration = Duration.INFINITE, collectStatistics: Boolean = false): KMaxSMTResult {
         val markCheckMaxSMTStart = markNow()
         markLoggingPoint = markCheckMaxSMTStart
 
@@ -634,8 +633,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         _iteration = 0
 
         logger.info {
-            "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] (lower bound: $_lower, upper bound: $_upper)" +
-                    " --- model is initialized with null"
+            "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] (lower bound: $_lower, upper bound: $_upper)" + " --- model is initialized with null"
         }
         markLoggingPoint = markNow()
 
@@ -724,11 +722,6 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         return status
     }
 
-    private fun getSubOptMaxSMTResult(maxSMTSucceeded: Boolean): KMaxSMTResult {
-        return if (_model != null) {
-            KMaxSMTResult(getSatSoftConstraintsByModel(_model!!), SAT, maxSMTSucceeded)
-        } else {
-            KMaxSMTResult(listOf(), SAT, maxSMTSucceeded)
-        }
-    }
+    private fun getSubOptMaxSMTResult(maxSMTSucceeded: Boolean): KMaxSMTResult =
+        KMaxSMTResult(if (_model != null) getSatSoftConstraintsByModel(_model!!) else listOf(), SAT, maxSMTSucceeded)
 }
