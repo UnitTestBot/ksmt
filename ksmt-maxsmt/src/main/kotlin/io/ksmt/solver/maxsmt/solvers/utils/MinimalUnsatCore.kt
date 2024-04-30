@@ -26,7 +26,7 @@ internal class MinimalUnsatCore<T : KSolverConfiguration>(
 
     fun getBestModel(): Pair<KModel?, UInt> = _minimalUnsatCoreModel.getBestModel()
 
-    // If solver starts returning unknown or exceeds the timeout, we return non minimized unsat core.
+    // If solver starts returning unknown or exceeds the timeout, non-minimized unsat core is returned.
     fun tryGetMinimalUnsatCore(
         assumptions: List<SoftConstraint>,
         timeout: Duration = Duration.INFINITE,
