@@ -14,7 +14,22 @@ internal class JsonStatisticsHelper(private val jsonFile: File) {
         }
     }
 
+    fun appendTestStatisticsToFile(statistics: SubOptMaxSMTTestStatistics) {
+        processBeforeAppending()
+        jsonFile.appendText(gson.toJson(statistics))
+    }
+
     fun appendTestStatisticsToFile(statistics: MaxSMTTestStatistics) {
+        processBeforeAppending()
+        jsonFile.appendText(gson.toJson(statistics))
+    }
+
+    fun markLastTestStatisticsAsProcessed() {
+        lastMet = true
+        jsonFile.appendText("\n]\n}")
+    }
+
+    private fun processBeforeAppending() {
         require(!lastMet) { "It's not allowed to append statistics when the last test is processed" }
 
         if (firstMet) {
@@ -23,11 +38,5 @@ internal class JsonStatisticsHelper(private val jsonFile: File) {
             jsonFile.appendText("{\n\"TESTS\": [\n")
             firstMet = true
         }
-        jsonFile.appendText(gson.toJson(statistics))
-    }
-
-    fun markLastTestStatisticsAsProcessed() {
-        lastMet = true
-        jsonFile.appendText("\n]\n}")
     }
 }

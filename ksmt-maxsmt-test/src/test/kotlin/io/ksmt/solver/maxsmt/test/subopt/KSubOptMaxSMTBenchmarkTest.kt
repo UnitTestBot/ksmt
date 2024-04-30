@@ -1,4 +1,4 @@
-package io.ksmt.solver.maxsmt.test.smt
+package io.ksmt.solver.maxsmt.test.subopt
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ksmt.KContext
@@ -15,11 +15,11 @@ import io.ksmt.solver.KSolverStatus.SAT
 import io.ksmt.solver.bitwuzla.KBitwuzlaSolver
 import io.ksmt.solver.cvc5.KCvc5Solver
 import io.ksmt.solver.maxsmt.KMaxSMTResult
-import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolver
+import io.ksmt.solver.maxsmt.solvers.KPrimalDualMaxResSolver
 import io.ksmt.solver.maxsmt.test.KMaxSMTBenchmarkBasedTest
 import io.ksmt.solver.maxsmt.test.parseMaxSMTTestInfo
 import io.ksmt.solver.maxsmt.test.statistics.JsonStatisticsHelper
-import io.ksmt.solver.maxsmt.test.statistics.MaxSMTTestStatistics
+import io.ksmt.solver.maxsmt.test.statistics.SubOptMaxSMTTestStatistics
 import io.ksmt.solver.maxsmt.test.utils.Solver
 import io.ksmt.solver.maxsmt.test.utils.Solver.BITWUZLA
 import io.ksmt.solver.maxsmt.test.utils.Solver.CVC5
@@ -51,7 +51,7 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
+abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
     protected fun getSmtSolver(solver: Solver): KSolver<out KSolverConfiguration> = with(ctx) {
         return when (solver) {
             Z3 -> KZ3Solver(this)
@@ -70,10 +70,10 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         }
     }
 
-    abstract fun getSolver(solver: Solver): KMaxSMTSolver<KSolverConfiguration>
+    abstract fun getSolver(solver: Solver): KPrimalDualMaxResSolver<KSolverConfiguration>
 
     protected val ctx: KContext = KContext()
-    private lateinit var maxSMTSolver: KMaxSMTSolver<out KSolverConfiguration>
+    private lateinit var maxSMTSolver: KPrimalDualMaxResSolver<out KSolverConfiguration>
     private val logger = KotlinLogging.logger {}
 
     private fun initSolver(solver: Solver) {
@@ -107,6 +107,12 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         testMaxSMTSolver(name, samplePath, { assertions -> internalizeAndConvertYices(assertions) }, YICES)
     }
 
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("maxSMTTestData")
+    fun maxSMTPortfolioTest(name: String, samplePath: Path) {
+        testMaxSMTSolver(name, samplePath, { assertions -> internalizeAndConvertYices(assertions) }, PORTFOLIO)
+    }
+
     private fun testMaxSMTSolver(
         name: String,
         samplePath: Path,
@@ -123,7 +129,7 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         logger.info { "Test name: [$name]" }
 
         lateinit var ksmtAssertions: List<KExpr<KBoolSort>>
-        val testStatistics = MaxSMTTestStatistics(name, solver)
+        val testStatistics = SubOptMaxSMTTestStatistics(name, solver)
 
         try {
             testWorkers.withWorker(ctx) { worker ->
@@ -148,6 +154,9 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         val maxSmtTestPath = File(samplePath.toString().removeSuffix(extension) + "maxsmt").toPath()
         val maxSmtTestInfo = parseMaxSMTTestInfo(maxSmtTestPath)
 
+        val optimalWeight = maxSmtTestInfo.satSoftConstraintsWeightsSum
+        testStatistics.optimalWeight = optimalWeight
+
         val softConstraintsSize = maxSmtTestInfo.softConstraintsWeights.size
 
         val softExpressions =
@@ -167,7 +176,7 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         lateinit var maxSMTResult: KMaxSMTResult
         val elapsedTime = measureTimeMillis {
             try {
-                maxSMTResult = maxSMTSolver.checkMaxSMT(60.seconds, true)
+                maxSMTResult = maxSMTSolver.checkSubOptMaxSMT(10.seconds, true)
             } catch (ex: Exception) {
                 testStatistics.maxSMTCallStatistics = maxSMTSolver.collectMaxSMTStatistics()
                 testStatistics.exceptionMessage = ex.message.toString()
@@ -176,25 +185,26 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
                 throw ex
             }
         }
+        val foundSoFarWeight = maxSMTResult.satSoftConstraints.sumOf { it.weight.toULong() }
+        testStatistics.foundSoFarWeight = foundSoFarWeight
 
         testStatistics.maxSMTCallStatistics = maxSMTSolver.collectMaxSMTStatistics()
 
-        logger.info { "Elapsed time: $elapsedTime ms --- MaxSMT call${System.lineSeparator()}" }
+        logger.info { "Elapsed time: $elapsedTime ms --- SubOpt MaxSMT call${System.lineSeparator()}" }
 
         try {
-            assertTrue(maxSMTResult.maxSMTSucceeded, "MaxSMT was not successful [$name]")
+            assertTrue(maxSMTResult.maxSMTSucceeded, "SubOpt MaxSMT was not successful [$name]")
             assertEquals(SAT, maxSMTResult.hardConstraintsSatStatus, "Hard constraints must be SAT")
 
-            val satSoftConstraintsWeightsSum = maxSMTResult.satSoftConstraints.sumOf { it.weight }
-            if (maxSmtTestInfo.satSoftConstraintsWeightsSum != satSoftConstraintsWeightsSum.toULong()) {
+            if (optimalWeight >= foundSoFarWeight) {
                 testStatistics.checkedSoftConstraintsSumIsWrong = true
             }
-            assertEquals(
-                maxSmtTestInfo.satSoftConstraintsWeightsSum,
-                satSoftConstraintsWeightsSum.toULong(),
-                "Soft constraints weights sum was [$satSoftConstraintsWeightsSum], " +
-                        "but must be [${maxSmtTestInfo.satSoftConstraintsWeightsSum}]",
+            assertTrue(
+                optimalWeight >= foundSoFarWeight,
+                "Soft constraints weights sum was [$foundSoFarWeight], " +
+                        "but must be no more than [${optimalWeight}]",
             )
+
             testStatistics.passed = true
         } catch (ex: Exception) {
             logger.error { ex.message + System.lineSeparator() }
@@ -265,7 +275,7 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
                     File(
                         "${
                             Paths.get("").toAbsolutePath()
-                        }/src/test/resources/maxsmt-statistics-${getRandomString(16)}.json",
+                        }/src/test/resources/subopt-maxsmt-statistics-${getRandomString(16)}.json",
                     ),
                 )
         }
