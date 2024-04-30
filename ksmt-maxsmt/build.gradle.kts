@@ -12,6 +12,7 @@ val versions = loadProperties(projectDir.parentFile.resolve("version.properties"
 
 dependencies {
     implementation(project(":ksmt-core"))
+    implementation(project(":ksmt-runner"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${versions["kotlinx-coroutines"]}")
 
     implementation("io.github.oshai:kotlin-logging-jvm:${versions["kotlin-logging-jvm"]}")

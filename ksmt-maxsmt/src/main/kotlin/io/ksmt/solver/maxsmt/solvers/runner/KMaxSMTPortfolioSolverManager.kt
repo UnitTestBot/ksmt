@@ -1,34 +1,34 @@
-package io.ksmt.solver.portfolio
+package io.ksmt.solver.maxsmt.solvers.runner
 
 import io.ksmt.KContext
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverConfiguration
-import io.ksmt.solver.runner.KSolverRunnerManager
+import io.ksmt.solver.maxsmt.KMaxSMTContext
 import io.ksmt.utils.uncheckedCast
 import kotlin.reflect.KClass
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-open class KPortfolioSolverManager(
+class KMaxSMTPortfolioSolverManager(
     private val solvers: List<KClass<out KSolver<out KSolverConfiguration>>>,
     portfolioPoolSize: Int = DEFAULT_PORTFOLIO_POOL_SIZE,
     hardTimeout: Duration = DEFAULT_HARD_TIMEOUT,
     workerProcessIdleTimeout: Duration = DEFAULT_WORKER_PROCESS_IDLE_TIMEOUT
-) : KSolverRunnerManager(
+) : KMaxSMTSolverRunnerManager(
     workerPoolSize = portfolioPoolSize * solvers.size,
     hardTimeout = hardTimeout,
     workerProcessIdleTimeout = workerProcessIdleTimeout
 ) {
     init {
-        require(solvers.isNotEmpty()) { "Empty solver portfolio" }
+        require(solvers.isNotEmpty()) { "Empty MaxSMT solver portfolio" }
     }
 
-    fun createPortfolioSolver(ctx: KContext): KPortfolioSolver {
+    fun createMaxSMTPortfolioSolver(ctx: KContext, maxSmtCtx: KMaxSMTContext): KMaxSMTPortfolioSolver {
         val solverInstances = solvers.map {
             val solverType: KClass<out KSolver<KSolverConfiguration>> = it.uncheckedCast()
-            it to createSolver(ctx, solverType)
+            it to createMaxSMTSolver(ctx, maxSmtCtx, solverType)
         }
-        return KPortfolioSolver(solverInstances)
+        return KMaxSMTPortfolioSolver(solverInstances)
     }
 
     companion object {

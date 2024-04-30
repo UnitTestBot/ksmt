@@ -14,8 +14,10 @@ import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverStatus.SAT
 import io.ksmt.solver.bitwuzla.KBitwuzlaSolver
 import io.ksmt.solver.cvc5.KCvc5Solver
+import io.ksmt.solver.maxsmt.KMaxSMTContext
 import io.ksmt.solver.maxsmt.KMaxSMTResult
 import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolver
+import io.ksmt.solver.maxsmt.solvers.runner.KMaxSMTPortfolioSolverManager
 import io.ksmt.solver.maxsmt.test.KMaxSMTBenchmarkBasedTest
 import io.ksmt.solver.maxsmt.test.parseMaxSMTTestInfo
 import io.ksmt.solver.maxsmt.test.statistics.JsonStatisticsHelper
@@ -27,7 +29,6 @@ import io.ksmt.solver.maxsmt.test.utils.Solver.PORTFOLIO
 import io.ksmt.solver.maxsmt.test.utils.Solver.YICES
 import io.ksmt.solver.maxsmt.test.utils.Solver.Z3
 import io.ksmt.solver.maxsmt.test.utils.getRandomString
-import io.ksmt.solver.portfolio.KPortfolioSolverManager
 import io.ksmt.solver.yices.KYicesSolver
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.sort.KBoolSort
@@ -59,13 +60,13 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             CVC5 -> KCvc5Solver(this)
             YICES -> KYicesSolver(this)
             PORTFOLIO -> {
-                val solverManager = KPortfolioSolverManager(
+                val solverManager = KMaxSMTPortfolioSolverManager(
                     listOf(
                         // CVC5 often runs out of memory...
                         KZ3Solver::class, KBitwuzlaSolver::class, KYicesSolver::class
                     )
                 )
-                solverManager.createPortfolioSolver(this)
+                solverManager.createMaxSMTPortfolioSolver(this, maxSmtCtx)
             }
         }
     }
@@ -73,6 +74,7 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
     abstract fun getSolver(solver: Solver): KMaxSMTSolver<KSolverConfiguration>
 
     protected val ctx: KContext = KContext()
+    protected abstract val maxSmtCtx: KMaxSMTContext
     private lateinit var maxSMTSolver: KMaxSMTSolver<out KSolverConfiguration>
     private val logger = KotlinLogging.logger {}
 

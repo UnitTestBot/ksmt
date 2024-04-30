@@ -7,8 +7,8 @@ import io.ksmt.solver.maxsmt.constraints.SoftConstraint
 import io.ksmt.solver.maxsmt.utils.CoreUtils
 
 abstract class KMaxResSolver<T>(
-    private val ctx: KContext,
-    private val solver: KSolver<out T>,
+    ctx: KContext,
+    solver: KSolver<out T>,
 ) : KMaxSMTSolver<T>(ctx, solver) where T : KSolverConfiguration {
     protected fun removeCoreAssumptions(core: List<SoftConstraint>, assumptions: MutableList<SoftConstraint>) {
         assumptions.removeAll(core)

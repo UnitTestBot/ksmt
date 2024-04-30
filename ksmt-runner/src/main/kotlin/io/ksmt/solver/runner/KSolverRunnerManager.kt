@@ -27,7 +27,7 @@ open class KSolverRunnerManager(
     private val hardTimeout: Duration = DEFAULT_HARD_TIMEOUT,
     workerProcessIdleTimeout: Duration = DEFAULT_WORKER_PROCESS_IDLE_TIMEOUT
 ) : AutoCloseable {
-    private val workers = KsmtWorkerPool(
+    protected val workers = KsmtWorkerPool(
         maxWorkerPoolSize = workerPoolSize,
         initializationTimeout = SOLVER_WORKER_INITIALIZATION_TIMEOUT,
         workerProcessIdleTimeout = workerProcessIdleTimeout,
@@ -38,8 +38,8 @@ open class KSolverRunnerManager(
         }
     )
 
-    private val customSolvers = hashMapOf<String, CustomSolverInfo>()
-    private val customSolversConfiguration = hashMapOf<CustomSolverInfo, ConfigurationBuilder<KSolverConfiguration>>()
+    protected val customSolvers = hashMapOf<String, CustomSolverInfo>()
+    protected val customSolversConfiguration = hashMapOf<CustomSolverInfo, ConfigurationBuilder<KSolverConfiguration>>()
 
     override fun close() {
         workers.terminate()

@@ -9,12 +9,10 @@ import io.ksmt.solver.maxsmt.test.smt.KMaxSMTBenchmarkTest
 import io.ksmt.solver.maxsmt.test.utils.Solver
 
 class KPrimalMaxRes4SMTBenchmarkTest : KMaxSMTBenchmarkTest() {
+    override val maxSmtCtx = KMaxSMTContext(strategy = PrimalMaxRes, getMultipleCores = true)
+
     override fun getSolver(solver: Solver): KMaxSMTSolver<KSolverConfiguration> = with(ctx) {
         val smtSolver = getSmtSolver(solver)
-        return KPrimalDualMaxResSolver(
-            this,
-            smtSolver,
-            KMaxSMTContext(strategy = PrimalMaxRes, getMultipleCores = true),
-        )
+        return KPrimalDualMaxResSolver(this, smtSolver, maxSmtCtx)
     }
 }

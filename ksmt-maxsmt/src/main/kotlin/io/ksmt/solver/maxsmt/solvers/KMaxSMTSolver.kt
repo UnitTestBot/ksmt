@@ -16,8 +16,7 @@ import kotlin.time.Duration
 abstract class KMaxSMTSolver<T>(
     private val ctx: KContext,
     private val solver: KSolver<out T>,
-) : KSolver<KSolverConfiguration>
-    where T : KSolverConfiguration {
+) : KMaxSMTSolverInterface<T> where T : KSolverConfiguration {
     private val scopeManager = MaxSMTScopeManager()
     protected var softConstraints = mutableListOf<SoftConstraint>()
     protected lateinit var maxSMTStatistics: KMaxSMTStatistics
@@ -27,7 +26,7 @@ abstract class KMaxSMTSolver<T>(
      *
      * @see checkMaxSMT
      * */
-    fun assertSoft(expr: KExpr<KBoolSort>, weight: UInt) {
+    override fun assertSoft(expr: KExpr<KBoolSort>, weight: UInt) {
         require(weight > 0u) { "Soft constraint weight cannot be equal to $weight as it must be greater than 0" }
 
         val softConstraint = SoftConstraint(expr, weight)
@@ -40,7 +39,7 @@ abstract class KMaxSMTSolver<T>(
      *
      * @throws NotImplementedError
      */
-    fun checkMaxSMT(timeout: Duration = Duration.INFINITE): KMaxSMTResult =
+    fun checkMaxSMT(timeout: Duration): KMaxSMTResult =
         checkMaxSMT(timeout, collectStatistics = false)
 
     /**
@@ -50,15 +49,12 @@ abstract class KMaxSMTSolver<T>(
      *
      * @throws NotImplementedError
      */
-    abstract fun checkMaxSMT(
-        timeout: Duration = Duration.INFINITE,
-        collectStatistics: Boolean,
-    ): KMaxSMTResult
+    abstract override fun checkMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult
 
     /**
      * Get last MaxSMT launch statistics (number of queries to solver, MaxSMT timeout etc.).
      */
-    fun collectMaxSMTStatistics(): KMaxSMTStatistics {
+    override fun collectMaxSMTStatistics(): KMaxSMTStatistics {
         require(this::maxSMTStatistics.isInitialized) {
             "MaxSMT statistics is only available after MaxSMT launches with statistics collection enabled"
         }
@@ -67,10 +63,15 @@ abstract class KMaxSMTSolver<T>(
     }
 
     protected fun getSatSoftConstraintsByModel(model: KModel): List<SoftConstraint> {
-        return softConstraints.filter { model.eval(it.expression, true) == ctx.trueExpr }
+        return softConstraints.filter {
+            model.eval(it.expression, true) == ctx.trueExpr || model.eval(
+                it.expression,
+                true,
+            ) != ctx.falseExpr
+        }
     }
 
-    override fun configure(configurator: KSolverConfiguration.() -> Unit) {
+    override fun configure(configurator: T.() -> Unit) {
         solver.configure(configurator)
     }
 

@@ -46,7 +46,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
     private data class WeightedCore(val expressions: List<KExpr<KBoolSort>>, val weight: UInt)
 
     // TODO: may be we should return KMaxSMTSubOptResult?
-    fun checkSubOptMaxSMT(timeout: Duration = Duration.INFINITE, collectStatistics: Boolean = false): KMaxSMTResult {
+    override fun checkSubOptMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult {
         val markCheckMaxSMTStart = markNow()
         markLoggingPoint = markCheckMaxSMTStart
 

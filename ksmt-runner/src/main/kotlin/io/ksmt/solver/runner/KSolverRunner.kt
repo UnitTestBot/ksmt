@@ -24,7 +24,7 @@ import kotlin.time.Duration
  * Manages remote solver executor and can fully restore
  * its state after failures (e.g. hard timeout) to allow incremental usage.
  * */
-class KSolverRunner<Config : KSolverConfiguration>(
+open class KSolverRunner<Config : KSolverConfiguration>(
     private val manager: KSolverRunnerManager,
     private val ctx: KContext,
     private val configurationBuilder: ConfigurationBuilder<Config>,

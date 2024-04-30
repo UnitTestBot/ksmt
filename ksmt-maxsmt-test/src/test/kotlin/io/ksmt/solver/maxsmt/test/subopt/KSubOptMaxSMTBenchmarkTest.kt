@@ -14,12 +14,20 @@ import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverStatus.SAT
 import io.ksmt.solver.bitwuzla.KBitwuzlaSolver
 import io.ksmt.solver.cvc5.KCvc5Solver
+import io.ksmt.solver.maxsmt.KMaxSMTContext
 import io.ksmt.solver.maxsmt.KMaxSMTResult
+import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolver
+import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolverInterface
+import io.ksmt.solver.maxsmt.solvers.KPMResSolver
 import io.ksmt.solver.maxsmt.solvers.KPrimalDualMaxResSolver
+import io.ksmt.solver.maxsmt.solvers.runner.KMaxSMTPortfolioSolver
+import io.ksmt.solver.maxsmt.solvers.runner.KMaxSMTPortfolioSolverManager
+import io.ksmt.solver.maxsmt.solvers.runner.KMaxSMTSolverRunner
 import io.ksmt.solver.maxsmt.test.KMaxSMTBenchmarkBasedTest
 import io.ksmt.solver.maxsmt.test.parseMaxSMTTestInfo
 import io.ksmt.solver.maxsmt.test.statistics.JsonStatisticsHelper
 import io.ksmt.solver.maxsmt.test.statistics.SubOptMaxSMTTestStatistics
+import io.ksmt.solver.maxsmt.test.utils.MaxSmtSolver
 import io.ksmt.solver.maxsmt.test.utils.Solver
 import io.ksmt.solver.maxsmt.test.utils.Solver.BITWUZLA
 import io.ksmt.solver.maxsmt.test.utils.Solver.CVC5
@@ -27,7 +35,6 @@ import io.ksmt.solver.maxsmt.test.utils.Solver.PORTFOLIO
 import io.ksmt.solver.maxsmt.test.utils.Solver.YICES
 import io.ksmt.solver.maxsmt.test.utils.Solver.Z3
 import io.ksmt.solver.maxsmt.test.utils.getRandomString
-import io.ksmt.solver.portfolio.KPortfolioSolverManager
 import io.ksmt.solver.yices.KYicesSolver
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.sort.KBoolSort
@@ -52,6 +59,22 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
+    protected fun getMaxSmtSolver(
+        maxSmtSolver: MaxSmtSolver,
+        solver: KSolver<out KSolverConfiguration>
+    ): KMaxSMTSolverInterface<out KSolverConfiguration> {
+        when (maxSmtSolver) {
+            MaxSmtSolver.PMRES -> return KPMResSolver(ctx, solver)
+            MaxSmtSolver.PRIMAL_DUAL_MAXRES -> {
+                // Thus, MaxSMT algorithm will be executed in the backend process.
+                if (solver is KMaxSMTPortfolioSolver) {
+                    return solver
+                }
+                return KPrimalDualMaxResSolver(ctx, solver, maxSmtCtx)
+            }
+        }
+    }
+
     protected fun getSmtSolver(solver: Solver): KSolver<out KSolverConfiguration> = with(ctx) {
         return when (solver) {
             Z3 -> KZ3Solver(this)
@@ -59,21 +82,22 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             CVC5 -> KCvc5Solver(this)
             YICES -> KYicesSolver(this)
             PORTFOLIO -> {
-                val solverManager = KPortfolioSolverManager(
+                val solverManager = KMaxSMTPortfolioSolverManager(
                     listOf(
                         // CVC5 often runs out of memory...
                         KZ3Solver::class, KBitwuzlaSolver::class, KYicesSolver::class
                     )
                 )
-                solverManager.createPortfolioSolver(this)
+                solverManager.createMaxSMTPortfolioSolver(this, maxSmtCtx)
             }
         }
     }
 
-    abstract fun getSolver(solver: Solver): KPrimalDualMaxResSolver<KSolverConfiguration>
+    abstract fun getSolver(solver: Solver): KMaxSMTSolverInterface<out KSolverConfiguration>
 
     protected val ctx: KContext = KContext()
-    private lateinit var maxSMTSolver: KPrimalDualMaxResSolver<out KSolverConfiguration>
+    protected abstract val maxSmtCtx: KMaxSMTContext
+    private lateinit var maxSMTSolver: KMaxSMTSolverInterface<out KSolverConfiguration>
     private val logger = KotlinLogging.logger {}
 
     private fun initSolver(solver: Solver) {

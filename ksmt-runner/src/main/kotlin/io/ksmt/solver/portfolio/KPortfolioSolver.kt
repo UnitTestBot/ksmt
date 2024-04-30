@@ -26,14 +26,14 @@ import java.util.concurrent.atomic.AtomicReferenceArray
 import kotlin.reflect.KClass
 import kotlin.time.Duration
 
-class KPortfolioSolver(
+open class KPortfolioSolver(
     solverRunners: List<Pair<KClass<out KSolver<*>>, KSolverRunner<*>>>
 ) : KAsyncSolver<KSolverConfiguration> {
-    private val lastSuccessfulSolver = AtomicReference<KSolverRunner<*>?>(null)
-    private val pendingTermination = ConcurrentLinkedQueue<KSolverRunner<*>>()
+    protected val lastSuccessfulSolver = AtomicReference<KSolverRunner<*>?>(null)
+    protected val pendingTermination = ConcurrentLinkedQueue<KSolverRunner<*>>()
 
     @OptIn(DelicateCoroutinesApi::class)
-    private inner class SolverOperationState(
+    protected inner class SolverOperationState(
         val solverId: Int,
         val solver: KSolverRunner<*>
     ) : AutoCloseable {
@@ -71,7 +71,7 @@ class KPortfolioSolver(
         val isActive: Boolean
             get() = solverIsActive.get()
 
-        internal fun logSolverQueryBest() {
+        fun logSolverQueryBest() {
             numberOfBestQueries.incrementAndGet()
         }
 
@@ -87,9 +87,9 @@ class KPortfolioSolver(
         SolverOperationState(it, solverRunners[it].second)
     }
 
-    private val activeSolvers = AtomicReferenceArray(solverStates)
+    protected val activeSolvers = AtomicReferenceArray(solverStates)
 
-    private val solverStats = Array(solverRunners.size) {
+    protected val solverStats = Array(solverRunners.size) {
         SolverStatistic(solverRunners[it].first)
     }
 
@@ -223,7 +223,7 @@ class KPortfolioSolver(
         solverStates.forEach { it.close() }
     }
 
-    private suspend inline fun solverOperation(
+    protected suspend inline fun solverOperation(
         crossinline block: suspend KSolverRunner<*>.() -> Unit
     ) {
         val result = awaitFirstSolver(block) { true }
@@ -275,7 +275,7 @@ class KPortfolioSolver(
      * with a result matching the [predicate].
      * */
     @Suppress("TooGenericExceptionCaught")
-    private suspend inline fun <T> awaitFirstSolver(
+    protected suspend inline fun <T> awaitFirstSolver(
         crossinline operation: suspend KSolverRunner<*>.() -> T,
         crossinline predicate: (T) -> Boolean
     ): SolverAwaitResult<T> {
@@ -336,12 +336,12 @@ class KPortfolioSolver(
         return resultFuture.await()
     }
 
-    private fun removeSolverFromPortfolio(solverId: Int) {
+    protected fun removeSolverFromPortfolio(solverId: Int) {
         activeSolvers.set(solverId, null)
         solverStats[solverId].logSolverRemovedFromPortfolio()
     }
 
-    private fun <T> SolverAwaitFailure<T>.findSuccessOrThrow(): SolverOperationResult<T> {
+    protected fun <T> SolverAwaitFailure<T>.findSuccessOrThrow(): SolverOperationResult<T> {
         val exceptions = arrayListOf<Throwable>()
         results.forEach { result ->
             result
@@ -368,17 +368,17 @@ class KPortfolioSolver(
         val result: T
     )
 
-    private sealed interface SolverAwaitResult<T>
+    protected sealed interface SolverAwaitResult<T>
 
-    private class SolverAwaitSuccess<T>(
+    protected class SolverAwaitSuccess<T>(
         val result: SolverOperationResult<T>
     ) : SolverAwaitResult<T>
 
-    private class SolverAwaitFailure<T>(
+    protected class SolverAwaitFailure<T>(
         val results: Collection<Result<SolverOperationResult<T>>>
     ) : SolverAwaitResult<T>
 
-    private inline fun <T> AtomicReferenceArray<T?>.forEach(
+    protected inline fun <T> AtomicReferenceArray<T?>.forEach(
         onNullValue: (Int) -> Unit = {},
         notNullBody: (Int, T) -> Unit
     ) {

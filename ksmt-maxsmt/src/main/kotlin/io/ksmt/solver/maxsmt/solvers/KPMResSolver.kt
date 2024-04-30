@@ -72,6 +72,10 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
         return maxSMTResult
     }
 
+    override fun checkSubOptMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult {
+        TODO("Not yet implemented")
+    }
+
     private fun runMaxSMTLogic(timeout: Duration): KMaxSMTResult {
         val markHardConstraintsCheckStart = markNow()
         val hardConstraintsStatus = solver.check(timeout)
