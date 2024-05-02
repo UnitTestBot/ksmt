@@ -322,7 +322,7 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
                     File(
                         "${
                             Paths.get("").toAbsolutePath()
-                        }/src/test/resources/subopt-maxsmt-statistics-${getRandomString(16)}.json",
+                        }/src/test/resources/maxsmt-statistics-${getRandomString(16)}.json",
                     ),
                 )
         }
