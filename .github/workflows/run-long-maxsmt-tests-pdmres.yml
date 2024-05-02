@@ -95,7 +95,7 @@ jobs:
             export SUB_OPT="SubOpt"
           fi
 
-          echo "SUB_OPT" >> $GITHUB_ENV
+          echo "SUB_OPT=$SUB_OPT" >> $GITHUB_ENV
 
       - name: Set solver name to output
         id: set-output
