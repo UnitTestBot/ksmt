@@ -107,6 +107,12 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         testMaxSMTSolver(name, samplePath, { assertions -> internalizeAndConvertYices(assertions) }, YICES)
     }
 
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("maxSMTTestData")
+    fun maxSMTPortfolioTest(name: String, samplePath: Path) {
+        testMaxSMTSolver(name, samplePath, { assertions -> internalizeAndConvertYices(assertions) }, PORTFOLIO)
+    }
+
     private fun testMaxSMTSolver(
         name: String,
         samplePath: Path,

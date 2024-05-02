@@ -141,7 +141,8 @@ class KPortfolioSolver(
 
     override fun checkMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult = runBlocking {
         val solverAwaitResult = solverOperationWithResult(
-            { checkMaxSMT(timeout, collectStatistics) }, { it.maxSMTSucceeded }
+            { checkMaxSMT(timeout, collectStatistics) },
+            { it.maxSMTSucceeded }
         )
 
         when (solverAwaitResult) {
@@ -152,7 +153,8 @@ class KPortfolioSolver(
 
     override fun checkSubOptMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult = runBlocking {
         val solverAwaitResult = solverOperationWithResult(
-            { checkSubOptMaxSMT(timeout, collectStatistics) }, { it.maxSMTSucceeded }
+            { checkSubOptMaxSMT(timeout, collectStatistics) },
+            { it.maxSMTSucceeded }
         )
 
         when (solverAwaitResult) {
