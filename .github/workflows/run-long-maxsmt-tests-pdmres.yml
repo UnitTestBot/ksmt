@@ -93,6 +93,7 @@ jobs:
           if [[ "${{ inputs.optimality }}" == false ]]
           then
             export SUB_OPT="SubOpt"
+          fi
 
           echo "SUB_OPT" >> $GITHUB_ENV
 
