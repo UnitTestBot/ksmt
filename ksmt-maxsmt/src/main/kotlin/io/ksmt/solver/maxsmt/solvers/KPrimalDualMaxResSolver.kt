@@ -121,8 +121,6 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                                 processSat(correctionSet, assumptions)
                             }
                         }
-
-                        else -> error("Unexpected strategy: ${maxSmtCtx.strategy}")
                     }
                 }
 
@@ -265,8 +263,6 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                                 processSat(correctionSet, assumptions)
                             }
                         }
-
-                        else -> error("Unexpected strategy: ${maxSmtCtx.strategy}")
                     }
                 }
 
