@@ -98,7 +98,10 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
     }
 
     @AfterEach
-    fun closeSolver() = maxSMTSolver.close()
+    fun close() {
+        maxSMTSolver.close()
+        ctx.close()
+    }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("maxSMTTestData")
@@ -301,7 +304,7 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             solverManager = KPortfolioSolverManager(
                 listOf(
                     KZ3Solver::class, KBitwuzlaSolver::class, KYicesSolver::class, KCvc5Solver::class
-                ) //, 4
+                ), 4
             )
         }
 

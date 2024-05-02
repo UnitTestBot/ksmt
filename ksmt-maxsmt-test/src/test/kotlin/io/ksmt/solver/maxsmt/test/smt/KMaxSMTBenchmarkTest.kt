@@ -21,6 +21,7 @@ import io.ksmt.solver.maxsmt.test.KMaxSMTBenchmarkBasedTest
 import io.ksmt.solver.maxsmt.test.parseMaxSMTTestInfo
 import io.ksmt.solver.maxsmt.test.statistics.JsonStatisticsHelper
 import io.ksmt.solver.maxsmt.test.statistics.MaxSMTTestStatistics
+import io.ksmt.solver.maxsmt.test.subopt.KSubOptMaxSMTBenchmarkTest
 import io.ksmt.solver.maxsmt.test.utils.Solver
 import io.ksmt.solver.maxsmt.test.utils.Solver.BITWUZLA
 import io.ksmt.solver.maxsmt.test.utils.Solver.CVC5
@@ -60,12 +61,6 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             CVC5 -> KCvc5Solver(this)
             YICES -> KYicesSolver(this)
             PORTFOLIO -> {
-                // TODO: update this like in KSubOptMaxSMTBenchmarkTest.
-                val solverManager = KPortfolioSolverManager(
-                    listOf(
-                        KZ3Solver::class, KBitwuzlaSolver::class, KYicesSolver::class, KCvc5Solver::class
-                    )
-                )
                 solverManager.createPortfolioSolver(this, maxSmtCtx)
             }
         }
@@ -83,7 +78,10 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
     }
 
     @AfterEach
-    fun closeSolver() = maxSMTSolver.close()
+    fun close() {
+        maxSMTSolver.close()
+        ctx.close()
+    }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("maxSMTTestData")
@@ -248,6 +246,7 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
 
         internal lateinit var testWorkers: KsmtWorkerPool<TestProtocolModel>
         private lateinit var jsonHelper: JsonStatisticsHelper
+        private lateinit var solverManager: KPortfolioSolverManager
 
         @BeforeAll
         @JvmStatic
@@ -261,7 +260,33 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
                     override fun mkWorker(id: Int, process: RdServer) = TestWorker(id, process)
                 },
             )
+        }
 
+        @AfterAll
+        @JvmStatic
+        fun closeWorkerPools() {
+            testWorkers.terminate()
+        }
+
+        @BeforeAll
+        @JvmStatic
+        fun initSolverManager() {
+            solverManager = KPortfolioSolverManager(
+                listOf(
+                    KZ3Solver::class, KBitwuzlaSolver::class, KYicesSolver::class, KCvc5Solver::class
+                )
+            )
+        }
+
+        @AfterAll
+        @JvmStatic
+        fun closeSolverManager() {
+            solverManager.close()
+        }
+
+        @BeforeAll
+        @JvmStatic
+        fun initJsonHelper() {
             jsonHelper =
                 JsonStatisticsHelper(
                     File(
@@ -274,8 +299,7 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
 
         @AfterAll
         @JvmStatic
-        fun closeWorkerPools() {
-            testWorkers.terminate()
+        fun closeJsonHelper() {
             jsonHelper.markLastTestStatisticsAsProcessed()
         }
     }
