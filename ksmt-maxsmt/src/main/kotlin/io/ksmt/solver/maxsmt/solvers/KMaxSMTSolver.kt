@@ -68,7 +68,7 @@ abstract class KMaxSMTSolver<T>(
                 it.expression,
                 true,
             ) != ctx.falseExpr
-        }
+        }.also { model.close() }
     }
 
     override fun configure(configurator: T.() -> Unit) {

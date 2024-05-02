@@ -8,22 +8,26 @@ import io.ksmt.runner.core.ChildProcessBase
 import io.ksmt.runner.core.KsmtWorkerArgs
 import io.ksmt.runner.generated.createInstance
 import io.ksmt.runner.generated.createSolverConstructor
+import io.ksmt.runner.generated.models.CheckMaxSMTResult
 import io.ksmt.runner.generated.models.CheckResult
+import io.ksmt.runner.generated.models.CollectMaxSMTStatisticsResult
 import io.ksmt.runner.generated.models.ContextSimplificationMode
 import io.ksmt.runner.generated.models.ModelEntry
 import io.ksmt.runner.generated.models.ModelFuncInterpEntry
 import io.ksmt.runner.generated.models.ModelResult
 import io.ksmt.runner.generated.models.ModelUninterpretedSortUniverse
 import io.ksmt.runner.generated.models.ReasonUnknownResult
+import io.ksmt.runner.generated.models.SoftConstraint
 import io.ksmt.runner.generated.models.SolverProtocolModel
 import io.ksmt.runner.generated.models.SolverType
 import io.ksmt.runner.generated.models.UnsatCoreResult
 import io.ksmt.runner.generated.models.solverProtocolModel
 import io.ksmt.runner.serializer.AstSerializationCtx
+import io.ksmt.solver.KSolver
+import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolverInterface
 import io.ksmt.solver.model.KFuncInterp
 import io.ksmt.solver.model.KFuncInterpEntry
 import io.ksmt.solver.model.KFuncInterpEntryWithVars
-import io.ksmt.solver.KSolver
 import io.ksmt.solver.model.KFuncInterpWithVars
 import io.ksmt.sort.KBoolSort
 import kotlin.time.Duration.Companion.milliseconds
@@ -86,6 +90,10 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
             @Suppress("UNCHECKED_CAST")
             solver.assert(params.expression as KExpr<KBoolSort>)
         }
+        assertSoft.measureExecutionForTermination { params ->
+            @Suppress("UNCHECKED_CAST")
+            (solver as KMaxSMTSolverInterface).assertSoft(params.expression as KExpr<KBoolSort>, params.weight)
+        }
         bulkAssert.measureExecutionForTermination { params ->
             @Suppress("UNCHECKED_CAST")
             solver.assert(params.expressions as List<KExpr<KBoolSort>>)
@@ -116,6 +124,32 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
             val status = solver.checkWithAssumptions(params.assumptions as List<KExpr<KBoolSort>>, timeout)
 
             CheckResult(status)
+        }
+        checkMaxSMT.measureExecutionForTermination { params ->
+            val timeout = params.timeout.milliseconds
+
+            val result = (solver as KMaxSMTSolverInterface).checkMaxSMT(timeout)
+
+            @Suppress("UNCHECKED_CAST")
+            CheckMaxSMTResult(result.satSoftConstraints as List<SoftConstraint>, result.hardConstraintsSatStatus, result.maxSMTSucceeded)
+        }
+        checkSubOptMaxSMT.measureExecutionForTermination { params ->
+            val timeout = params.timeout.milliseconds
+
+            val result = (solver as KMaxSMTSolverInterface).checkSubOptMaxSMT(timeout)
+
+            @Suppress("UNCHECKED_CAST")
+            CheckMaxSMTResult(result.satSoftConstraints as List<SoftConstraint>, result.hardConstraintsSatStatus, result.maxSMTSucceeded)
+        }
+        collectMaxSMTStatistics.measureExecutionForTermination {
+            val statistics = (solver as KMaxSMTSolverInterface).collectMaxSMTStatistics()
+
+            CollectMaxSMTStatisticsResult(
+                statistics.timeoutMs,
+                statistics.elapsedTimeMs,
+                statistics.timeInSolverQueriesMs,
+                statistics.queriesToSolverNumber
+            )
         }
         model.measureExecutionForTermination {
             val model = solver.model().detach()

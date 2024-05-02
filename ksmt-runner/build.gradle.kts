@@ -23,6 +23,7 @@ kotlin {
 
 dependencies {
     implementation(project(":ksmt-core"))
+    implementation(project(":ksmt-maxsmt"))
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
 

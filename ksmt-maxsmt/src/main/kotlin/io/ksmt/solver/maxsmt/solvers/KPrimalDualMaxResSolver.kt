@@ -494,6 +494,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
             return
         }
 
+        _model?.close()
         _model = model
         _upper = upper
 

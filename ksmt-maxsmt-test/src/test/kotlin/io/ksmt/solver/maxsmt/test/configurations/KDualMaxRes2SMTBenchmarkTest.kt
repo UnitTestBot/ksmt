@@ -1,6 +1,5 @@
 package io.ksmt.solver.maxsmt.test.configurations
 
-import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.maxsmt.KMaxSMTContext
 import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolver

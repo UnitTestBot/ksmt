@@ -2,7 +2,6 @@ package io.ksmt.solver.runner
 
 import com.jetbrains.rd.util.AtomicReference
 import com.jetbrains.rd.util.threading.SpinWait
-import kotlinx.coroutines.sync.Mutex
 import io.ksmt.KContext
 import io.ksmt.expr.KExpr
 import io.ksmt.runner.generated.ConfigurationBuilder
@@ -13,8 +12,12 @@ import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverException
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.async.KAsyncSolver
+import io.ksmt.solver.maxsmt.KMaxSMTContext
+import io.ksmt.solver.maxsmt.KMaxSMTResult
+import io.ksmt.solver.maxsmt.solvers.KPrimalDualMaxResSolver
 import io.ksmt.solver.runner.KSolverRunnerManager.CustomSolverInfo
 import io.ksmt.sort.KBoolSort
+import kotlinx.coroutines.sync.Mutex
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration
 
@@ -24,9 +27,10 @@ import kotlin.time.Duration
  * Manages remote solver executor and can fully restore
  * its state after failures (e.g. hard timeout) to allow incremental usage.
  * */
-open class KSolverRunner<Config : KSolverConfiguration>(
+class KSolverRunner<Config : KSolverConfiguration>(
     private val manager: KSolverRunnerManager,
     private val ctx: KContext,
+    maxSmtCtx: KMaxSMTContext = KMaxSMTContext(),
     private val configurationBuilder: ConfigurationBuilder<Config>,
     private val solverType: SolverType,
     private val customSolverInfo: CustomSolverInfo? = null,
@@ -40,6 +44,8 @@ open class KSolverRunner<Config : KSolverConfiguration>(
     private val lastUnsatCore = AtomicReference<List<KExpr<KBoolSort>>?>(null)
 
     private val solverState = KSolverState()
+
+    private val maxSMTSolver = KPrimalDualMaxResSolver(ctx, this, maxSmtCtx)
 
     override fun close() {
         deleteSolverSync()
@@ -114,6 +120,10 @@ open class KSolverRunner<Config : KSolverConfiguration>(
                 bulkAssertSync(e)
             }
         }
+
+    fun assertSoft(expr: KExpr<KBoolSort>, weight: UInt) {
+        maxSMTSolver.assertSoft(expr, weight)
+    }
 
     private inline fun bulkAssert(
         exprs: List<KExpr<KBoolSort>>,
@@ -231,6 +241,16 @@ open class KSolverRunner<Config : KSolverConfiguration>(
         handleCheckSatExceptionAsUnknownSync {
             checkSync(timeout)
         }
+
+    fun checkSubOptMaxSMT(
+        timeout: Duration,
+        collectStatistics: Boolean
+    ): KMaxSMTResult = maxSMTSolver.checkSubOptMaxSMT(timeout, collectStatistics)
+
+    fun checkMaxSMT(timeout: Duration, collectStatistics: Boolean)
+            : KMaxSMTResult = maxSMTSolver.checkMaxSMT(timeout, collectStatistics)
+
+    fun collectMaxSMTStatistics() = maxSMTSolver.collectMaxSMTStatistics()
 
     override suspend fun checkWithAssumptionsAsync(
         assumptions: List<KExpr<KBoolSort>>,

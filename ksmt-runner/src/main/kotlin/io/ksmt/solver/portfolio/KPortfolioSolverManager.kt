@@ -3,6 +3,7 @@ package io.ksmt.solver.portfolio
 import io.ksmt.KContext
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverConfiguration
+import io.ksmt.solver.maxsmt.KMaxSMTContext
 import io.ksmt.solver.runner.KSolverRunnerManager
 import io.ksmt.utils.uncheckedCast
 import kotlin.reflect.KClass
@@ -23,10 +24,10 @@ open class KPortfolioSolverManager(
         require(solvers.isNotEmpty()) { "Empty solver portfolio" }
     }
 
-    fun createPortfolioSolver(ctx: KContext): KPortfolioSolver {
+    fun createPortfolioSolver(ctx: KContext, maxsmtCtx: KMaxSMTContext = KMaxSMTContext()): KPortfolioSolver {
         val solverInstances = solvers.map {
             val solverType: KClass<out KSolver<KSolverConfiguration>> = it.uncheckedCast()
-            it to createSolver(ctx, solverType)
+            it to createSolver(ctx, maxsmtCtx, solverType)
         }
         return KPortfolioSolver(solverInstances)
     }

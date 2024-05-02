@@ -44,6 +44,11 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
         field("value", PredefinedType.string)
     }
 
+    private val softConstraint = structdef {
+        field("expression", kastType)
+        field("weight", PredefinedType.uint)
+    }
+
     private val assertParams = structdef {
         field("expression", kastType)
     }
@@ -64,9 +69,27 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
         field("status", statusType)
     }
 
+    private val checkMaxSMTParams = structdef {
+        field("timeout", PredefinedType.long)
+        field("collectStatistics", PredefinedType.bool)
+    }
+
+    private val checkMaxSMTResult = structdef {
+        field("satSoftConstraints", immutableList(softConstraint))
+        field("hardConstraintsSatStatus", statusType)
+        field("maxSMTSucceeded", PredefinedType.bool)
+    }
+
     private val checkWithAssumptionsParams = structdef {
         field("assumptions", immutableList(kastType))
         field("timeout", PredefinedType.long)
+    }
+
+    private val collectMaxSMTStatisticsResult = structdef {
+        field("timeoutMs", PredefinedType.long)
+        field("elapsedTimeMs", PredefinedType.long)
+        field("timeInSolverQueriesMs", PredefinedType.long)
+        field("queriesToSolverNumber", PredefinedType.int)
     }
 
     private val unsatCoreResult = structdef {
@@ -118,6 +141,10 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
             async
             documentation = "Assert expression"
         }
+        call("assertSoft", softConstraint, PredefinedType.void).apply {
+            async
+            documentation = "Assert expression softly"
+        }
         call("bulkAssert", bulkAssertParams, PredefinedType.void).apply {
             async
             documentation = "Assert multiple expressions"
@@ -141,6 +168,18 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
         call("check", checkParams, checkResult).apply {
             async
             documentation = "Check SAT"
+        }
+        call("checkMaxSMT", checkMaxSMTParams, checkMaxSMTResult).apply {
+            async
+            documentation = "Check MaxSMT"
+        }
+        call("checkSubOptMaxSMT", checkMaxSMTParams, checkMaxSMTResult).apply {
+            async
+            documentation = "Check SubOptMaxSMT"
+        }
+        call("collectMaxSMTStatistics", PredefinedType.void, collectMaxSMTStatisticsResult).apply {
+            async
+            documentation = "Collect MaxSMT statistics"
         }
         call("checkWithAssumptions", checkWithAssumptionsParams, checkResult).apply {
             async
