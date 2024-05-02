@@ -50,7 +50,7 @@ on:
 
 jobs:
   verify-inputs:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Verify inputs
         # Check only one option of [minimizeCores, preferLargeWeightCores, getMultipleCores] is true
@@ -66,7 +66,7 @@ jobs:
 
   construct-solver-name:
     needs: verify-inputs
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       solver: ${{ steps.set-output.outputs.solver }}
     steps:

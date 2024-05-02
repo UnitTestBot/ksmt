@@ -27,7 +27,7 @@ env:
 
 jobs:
   prepare-matrix:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       logics-matrix: ${{ steps.set-matrix.outputs.maxsmt-tests-matrix }}
     steps:
@@ -60,7 +60,7 @@ jobs:
   run-maxsmt-tests:
     needs: prepare-matrix
     continue-on-error: true
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix: ${{ fromJSON(needs.prepare-matrix.outputs.logics-matrix) }}
 
@@ -132,7 +132,7 @@ jobs:
 
   merge-and-analyze-maxsmt-statistics:
     needs: run-maxsmt-tests
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
