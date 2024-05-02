@@ -101,7 +101,7 @@ jobs:
           arguments: |
             :ksmt-maxsmt-test:test
             --no-daemon
-            --tests "io.ksmt.solver.maxsmt.test.smt.${{ inputs.solver }}SMTBenchmarkTest.maxSMT${{ inputs.smtSolver }}Test"
+            --tests "io.ksmt.solver.maxsmt.test.configurations.${{ inputs.solver }}SMTBenchmarkTest.maxSMT${{ inputs.smtSolver }}Test"
 
       - name: Add logic name to test run statistics
         if: ${{ always() }}
