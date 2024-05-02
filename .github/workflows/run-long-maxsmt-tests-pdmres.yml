@@ -12,10 +12,15 @@ on:
         type: choice
         description: Chosen SMT solver
         options:
+          - Portfolio
           - Z3
           - Bitwuzla
           - Cvc5
           - Yices
+      optimality:
+        type: boolean
+        description: Chosen optimal (otherwise suboptimal) configuration
+        default: false
       strategy:
         type: choice
         description: Chosen MaxSMT solving strategy
@@ -85,9 +90,15 @@ jobs:
 
           echo "OPTION_TO_VALUE=$OPTION_TO_VALUE" >> $GITHUB_ENV
 
+          if [[ "${{ inputs.optimality }}" == false ]]
+          then
+            export SUB_OPT="SubOpt"
+
+          echo "SUB_OPT" >> $GITHUB_ENV
+
       - name: Set solver name to output
         id: set-output
-        run: echo "solver=K${{ inputs.strategy }}MaxRes${{ env.OPTION_TO_VALUE }}" >> $GITHUB_OUTPUT
+        run: echo "solver=K${{ env.SUB_OPT }}${{ inputs.strategy }}MaxRes${{ env.OPTION_TO_VALUE }}" >> $GITHUB_OUTPUT
 
   run-long-maxsmt-tests:
     needs: construct-solver-name

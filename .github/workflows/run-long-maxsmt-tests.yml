@@ -11,6 +11,10 @@ on:
         type: string
         description: Chosen SMT solver
         required: true
+      optimality:
+        type: boolean
+        description: Chosen optimal (otherwise suboptimal) configuration
+        required: true
       commitSHA:
         description: Commit SHA (latest commit is default)
         required: false

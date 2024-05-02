@@ -28,4 +28,5 @@ jobs:
     with:
       solver: ${{ inputs.solver }}
       smtSolver: ${{ inputs.smtSolver }}
+      optimality: true
       commitSHA: ${{ inputs.commitSHA }}
