@@ -106,4 +106,5 @@ jobs:
     with:
       solver: ${{ needs.construct-solver-name.outputs.solver }}
       smtSolver: ${{ inputs.smtSolver }}
+      optimality: ${{ inputs.optimality }}
       commitSHA: ${{ inputs.commitSHA }}
