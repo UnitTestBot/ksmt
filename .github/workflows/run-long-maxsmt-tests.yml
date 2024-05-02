@@ -111,21 +111,21 @@ jobs:
 
       - name: Upload ${{ matrix.logics.NAME }} test statistics
         if: ${{ always() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.logics.NAME }}_${{ inputs.solver }}_${{ inputs.smtSolver }}_test_statistics
           path: ksmt-maxsmt-test/src/test/resources/maxsmt-statistics-*.json
 
       - name: Upload ${{ matrix.logics.NAME }} test report
         if: ${{ always() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.logics.NAME }}_${{ inputs.solver }}_${{ inputs.smtSolver }}_test_report
           path: ksmt-maxsmt-test/build/reports/tests/test/*
 
       - name: Upload ${{ matrix.logics.NAME }} test logs
         if: ${{ always() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.logics.NAME }}_${{ inputs.solver }}_${{ inputs.smtSolver }}_test_logs
           path: ksmt-maxsmt-test/logs/*
@@ -162,7 +162,7 @@ jobs:
           cat ${{ env.MERGED_STATISTICS_PATH }}_temp | jq '{ "logics": . }' > ${{ env.MERGED_STATISTICS_PATH }}
 
       - name: Upload test run statistics
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.solver }}_${{ inputs.smtSolver }}_test_statistics
           path: ${{ env.MERGED_STATISTICS_PATH }}
@@ -171,7 +171,7 @@ jobs:
         run: python ./scripts/analyze_maxsmt_statistics.py ${{ env.MERGED_STATISTICS_PATH }} ${{ env.ANALYZED_STATISTICS_PATH }}
 
       - name: Upload analyzed test run statistics
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.solver }}_${{ inputs.smtSolver }}_analyzed_test_statistics
           path: ${{ env.ANALYZED_STATISTICS_PATH }}

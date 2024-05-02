@@ -53,7 +53,7 @@ jobs:
 
       - name: Upload test report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ksmt-maxsat-test-report-${{ matrix.BENCHMARK_NUMBER }}
           path: ksmt-maxsmt-test/build/reports/tests/test/*

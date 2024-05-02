@@ -21,3 +21,7 @@ ksmt-maxsmt-test/src/test/resources/maxsmt-statistics-*.json
 
 **/logs/
 
+ksmt-maxsmt-test/src/test/resources/
+
+ksmt-maxsmt-test/*.log
+
