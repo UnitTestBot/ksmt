@@ -111,21 +111,21 @@ jobs:
 
       - name: Upload ${{ matrix.logics.NAME }} test statistics
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.logics.NAME }}_${{ inputs.solver }}_${{ inputs.smtSolver }}_test_statistics
           path: ksmt-maxsmt-test/src/test/resources/maxsmt-statistics-*.json
 
       - name: Upload ${{ matrix.logics.NAME }} test report
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.logics.NAME }}_${{ inputs.solver }}_${{ inputs.smtSolver }}_test_report
           path: ksmt-maxsmt-test/build/reports/tests/test/*
 
       - name: Upload ${{ matrix.logics.NAME }} test logs
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.logics.NAME }}_${{ inputs.solver }}_${{ inputs.smtSolver }}_test_logs
           path: ksmt-maxsmt-test/logs/*
