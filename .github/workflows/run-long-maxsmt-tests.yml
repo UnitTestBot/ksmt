@@ -151,6 +151,10 @@ jobs:
           export ANALYZED_STATISTICS_PATH=${{steps.download.outputs.download-path}}/${{ inputs.solver }}_${{ inputs.smtSolver }}_analyzed_test_statistics.json
           echo "ANALYZED_STATISTICS_PATH=$ANALYZED_STATISTICS_PATH" >> $GITHUB_ENV
 
+      - name: Debug step
+        run: |
+          ls ${{steps.download.outputs.download-path}}
+
       - name: Merge test run statistics
         # 1. Merge all test run statistics files into a single file:
         # - merge all test run statistics files (${{steps.download.outputs.download-path}}/*_test_statistics/*.json) for different theories
