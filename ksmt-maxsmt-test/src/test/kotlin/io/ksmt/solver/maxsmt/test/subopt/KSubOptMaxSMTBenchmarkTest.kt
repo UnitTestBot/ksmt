@@ -196,7 +196,7 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         lateinit var maxSMTResult: KMaxSMTResult
         val elapsedTime = measureTimeMillis {
             try {
-                maxSMTResult = maxSMTSolver.checkSubOptMaxSMT(10.seconds, true)
+                maxSMTResult = maxSMTSolver.checkSubOptMaxSMT(1.seconds, true)
             } catch (ex: Exception) {
                 testStatistics.maxSMTCallStatistics = maxSMTSolver.collectMaxSMTStatistics()
                 testStatistics.exceptionMessage = ex.message.toString()
@@ -216,7 +216,7 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             assertTrue(maxSMTResult.maxSMTSucceeded, "SubOpt MaxSMT was not successful [$name]")
             assertEquals(SAT, maxSMTResult.hardConstraintsSatStatus, "Hard constraints must be SAT")
 
-            if (optimalWeight >= foundSoFarWeight) {
+            if (foundSoFarWeight > optimalWeight) {
                 testStatistics.checkedSoftConstraintsSumIsWrong = true
             }
             assertTrue(
