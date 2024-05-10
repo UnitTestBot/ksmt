@@ -172,7 +172,16 @@ def create_tests_score_statistics(tests):
     def score(x):
         if isinstance(x, int) or isinstance(x, float):
             return x
-        return 1 if x["foundSoFarWeight"] == 0 else x["optimalWeight"] / x["foundSoFarWeight"]
+        found_so_far_weight = x["foundSoFarWeight"]
+        optimal_weight = x["optimalWeight"]
+
+        if optimal_weight == 0:
+            if found_so_far_weight == 0:
+                return 1
+            else:
+                return 0
+        else:
+            return found_so_far_weight / optimal_weight
 
     avg_score_passed_tests = reduce(
         lambda x, y: score(x) + score(y), passed_tests, 0) / passed_tests_size
