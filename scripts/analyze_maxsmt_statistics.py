@@ -28,6 +28,11 @@ def analyze_maxsmt_statistics(stat_file, analyzed_stat_file_to_save):
         logic_stat_str = json.dumps(logic_stat, default=obj_dict, indent=2, separators=(',', ': '))
         print(logic_stat_str + "\n")
 
+    all_tests_stat = create_all_tests_statistics(logics_statistics)
+    logics_statistics.append(all_tests_stat)
+    all_tests_stat_str = json.dumps(all_tests_stat, default=obj_dict, indent=2, separators=(',', ': '))
+    print(all_tests_stat_str + "\n")
+
     with open(analyzed_stat_file_to_save, "w", encoding="utf-8") as f:
         json.dump(logics_statistics, f, default=obj_dict, indent=2, separators=(',', ': '))
 
@@ -35,8 +40,9 @@ def analyze_maxsmt_statistics(stat_file, analyzed_stat_file_to_save):
 def create_tests_size_statistics(tests):
     tests_size = len(tests)
     tests_executed_maxsmt_size = len(list(filter(lambda x: x.get("maxSMTCallStatistics") is not None, tests)))
+    tests_executed_maxsmt_passed_size = len(list(filter(lambda x: x["passed"], tests)))
     tests_executed_maxsmt_passed_tests_percent = 0 if tests_executed_maxsmt_size == 0 \
-        else len(list(filter(lambda x: x["passed"], tests))) / tests_executed_maxsmt_size * 100
+        else tests_executed_maxsmt_passed_size / tests_executed_maxsmt_size * 100
     failed_or_ignored_tests_size = len(list(filter(lambda x: not x["passed"], tests)))
     failed_tests_wrong_soft_constr_sum_size = len(list(filter(lambda x: x["checkedSoftConstraintsSumIsWrong"], tests)))
     ignored_tests_size = len(list(filter(lambda x: x["ignoredTest"], tests)))
@@ -53,6 +59,7 @@ def create_tests_size_statistics(tests):
         list(filter(lambda x: x["failedOnParsingOrConvertingExpressions"], tests)))
 
     return TestsSizeStatistics(tests_size, tests_executed_maxsmt_size,
+                               tests_executed_maxsmt_passed_size,
                                tests_executed_maxsmt_passed_tests_percent,
                                failed_or_ignored_tests_size, ignored_tests_size,
                                failed_on_parsing_or_converting_expressions_size,
@@ -156,6 +163,23 @@ def create_tests_elapsed_time_statistics(tests):
                                       avg_elapsed_failed_tests_time_ms)
 
 
+def create_tests_score_statistics(tests):
+    tests_executed_maxsmt = list(filter(lambda x: x.get("maxSMTCallStatistics") is not None, tests))
+
+    passed_tests = list(filter(lambda x: x["passed"], tests_executed_maxsmt))
+    passed_tests_size = len(passed_tests)
+
+    def score(x):
+        if isinstance(x, int) or isinstance(x, float):
+            return x
+        return 1 if x["foundSoFarWeight"] == 0 else x["optimalWeight"] / x["foundSoFarWeight"]
+
+    avg_score_passed_tests = reduce(
+        lambda x, y: score(x) + score(y), passed_tests, 0) / passed_tests_size
+
+    return TestsScoreStatistics(avg_score_passed_tests)
+
+
 class MaxSMTContext:
     def __int__(self, strategy, prefer_large_weight_constraints_for_cores, minimize_cores, get_multiple_cores):
         self.strategy = strategy
@@ -166,6 +190,7 @@ class MaxSMTContext:
 
 class TestsSizeStatistics:
     def __init__(self, tests_size, tests_executed_maxsmt_size,
+                 tests_executed_maxsmt_passed_size,
                  tests_executed_maxsmt_passed_tests_percent,
                  failed_tests_size,
                  ignored_tests_size,
@@ -174,6 +199,7 @@ class TestsSizeStatistics:
                  failed_tests_wrong_soft_constr_sum_size):
         self.tests_size = tests_size
         self.tests_executed_maxsmt_size = tests_executed_maxsmt_size
+        self.tests_executed_maxsmt_passed_size = tests_executed_maxsmt_passed_size
         self.tests_executed_maxsmt_passed_tests_percent = tests_executed_maxsmt_passed_tests_percent,
         self.failed_tests_size = failed_tests_size
         self.ignored_tests_size = ignored_tests_size
@@ -181,6 +207,11 @@ class TestsSizeStatistics:
         self.failed_on_parsing_or_converting_expressions_exception_messages = (
             failed_on_parsing_or_converting_expressions_exception_messages)
         self.failed_tests_wrong_soft_constr_sum_size = failed_tests_wrong_soft_constr_sum_size
+
+
+class TestsScoreStatistics:
+    def __init__(self, avg_score_passed_tests):
+        self.avg_score_passed_tests = avg_score_passed_tests
 
 
 class TestsQueriesToSolverStatistics:
@@ -205,6 +236,7 @@ class TestsElapsedTimeStatistics:
 
 class LogicTestsStatistics:
     def __init__(self, smt_solver, name, timeout_ms, max_smt_ctx, tests_size_stat: TestsSizeStatistics,
+                 tests_score_stat: TestsScoreStatistics,
                  tests_queries_to_solver_stat: TestsQueriesToSolverStatistics,
                  tests_elapsed_time_stat: TestsElapsedTimeStatistics):
         self.smt_solver = smt_solver
@@ -212,8 +244,96 @@ class LogicTestsStatistics:
         self.timeout_ms = timeout_ms
         self.max_smt_ctx = max_smt_ctx
         self.tests_size_stat = tests_size_stat
+        self.tests_score_stat = tests_score_stat
         self.tests_queries_to_solver_stat = tests_queries_to_solver_stat
         self.tests_elapsed_time_stat = tests_elapsed_time_stat
+
+
+class AllTestsStatistics:
+    def __init__(self, timeout_ms, max_smt_ctx, tests_size_stat: TestsSizeStatistics,
+                 tests_score_stat: TestsScoreStatistics, tests_elapsed_time_stat: TestsElapsedTimeStatistics):
+        self.timeout_ms = timeout_ms
+        self.max_smt_ctx = max_smt_ctx
+        self.tests_size_stat = tests_size_stat
+        self.tests_score_stat = tests_score_stat
+        self.tests_elapsed_time_stat = tests_elapsed_time_stat
+
+
+def create_all_tests_statistics(logics_statistics):
+    first_logic: LogicTestsStatistics = logics_statistics[0]
+
+    timeout_ms = first_logic.timeout_ms
+    max_smt_ctx = first_logic.max_smt_ctx
+
+    # For test size statistics.
+    tests_size = 0
+    tests_executed_maxsmt_size = 0
+    tests_executed_maxsmt_passed_size = 0
+    failed_tests_size = 0
+    ignored_tests_size = 0
+    failed_on_parsing_or_converting_expressions_size = 0
+    failed_on_parsing_or_converting_expressions_exception_messages = []
+    failed_tests_wrong_soft_constr_sum_size = 0
+
+    # For test score statistics.
+    avg_score_passed_tests = 0.0
+
+    # For elapsed time statistics.
+    avg_elapsed_time_ms = 0.0
+    avg_elapsed_passed_tests_time_ms = 0.0
+    avg_elapsed_failed_tests_time_ms = 0.0
+
+    for logic in logics_statistics:
+        size_statistics = logic.tests_size_stat
+        score_statistics = logic.tests_score_stat
+        elapsed_time_statistics = logic.tests_elapsed_time_stat
+
+        tests_size += size_statistics.tests_size
+        tests_executed_maxsmt_size += size_statistics.tests_executed_maxsmt_size
+        tests_executed_maxsmt_passed_size += size_statistics.tests_executed_maxsmt_passed_size
+        failed_tests_size += size_statistics.failed_tests_size
+        ignored_tests_size += size_statistics.ignored_tests_size
+        failed_on_parsing_or_converting_expressions_size += (
+            size_statistics.failed_on_parsing_or_converting_expressions_size)
+        failed_on_parsing_or_converting_expressions_exception_messages += (
+            size_statistics.failed_on_parsing_or_converting_expressions_exception_messages)
+        failed_tests_wrong_soft_constr_sum_size += size_statistics.failed_tests_wrong_soft_constr_sum_size
+
+        avg_score_passed_tests += (score_statistics.avg_score_passed_tests *
+                                   size_statistics.tests_executed_maxsmt_passed_size)
+
+        avg_elapsed_time_ms += (elapsed_time_statistics.avg_elapsed_time_ms *
+                                size_statistics.tests_executed_maxsmt_size)
+        avg_elapsed_passed_tests_time_ms += (
+                elapsed_time_statistics.avg_elapsed_passed_tests_time_ms *
+                size_statistics.tests_executed_maxsmt_passed_size)
+        avg_elapsed_failed_tests_time_ms += elapsed_time_statistics.avg_elapsed_failed_tests_time_ms * (
+                size_statistics.tests_executed_maxsmt_size - size_statistics.tests_executed_maxsmt_passed_size)
+
+    avg_score_passed_tests /= tests_executed_maxsmt_passed_size \
+        if tests_executed_maxsmt_passed_size != 0 else "No tests"
+
+    avg_elapsed_time_ms /= tests_executed_maxsmt_size \
+        if tests_executed_maxsmt_size != 0 else "No tests"
+    avg_elapsed_passed_tests_time_ms /= tests_executed_maxsmt_passed_size \
+        if tests_executed_maxsmt_passed_size != 0 else "No tests"
+    avg_elapsed_failed_tests_time_ms /= (tests_executed_maxsmt_size - tests_executed_maxsmt_passed_size) \
+        if (tests_executed_maxsmt_size - tests_executed_maxsmt_passed_size) != 0 else "No tests"
+
+    return AllTestsStatistics(timeout_ms, max_smt_ctx,
+                              TestsSizeStatistics(tests_size, tests_executed_maxsmt_size,
+                                                  tests_executed_maxsmt_passed_size,
+                                                  tests_executed_maxsmt_passed_size / tests_executed_maxsmt_size,
+                                                  failed_tests_size, ignored_tests_size,
+                                                  failed_on_parsing_or_converting_expressions_size,
+                                                  failed_on_parsing_or_converting_expressions_exception_messages,
+                                                  failed_tests_wrong_soft_constr_sum_size
+                                                  ),
+                              TestsScoreStatistics(avg_score_passed_tests),
+                              TestsElapsedTimeStatistics(avg_elapsed_time_ms,
+                                                         avg_elapsed_passed_tests_time_ms,
+                                                         avg_elapsed_failed_tests_time_ms)
+                              )
 
 
 def create_logic_statistics(logic):
@@ -224,6 +344,7 @@ def create_logic_statistics(logic):
         "maxSMTCallStatistics"]
     return LogicTestsStatistics(first_test["smtSolver"], logic["NAME"], first_max_smt_call_stat["timeoutMs"],
                                 first_max_smt_call_stat["maxSmtCtx"], create_tests_size_statistics(tests),
+                                create_tests_score_statistics(tests),
                                 create_tests_queries_to_solver_statistics(tests),
                                 create_tests_elapsed_time_statistics(tests))
 
