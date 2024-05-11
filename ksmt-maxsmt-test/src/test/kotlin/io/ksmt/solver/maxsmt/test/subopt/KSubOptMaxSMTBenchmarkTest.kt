@@ -282,7 +282,7 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         @JvmStatic
         fun initWorkerPools() {
             testWorkers = KsmtWorkerPool(
-                maxWorkerPoolSize = 4,
+                maxWorkerPoolSize = 1,
                 workerProcessIdleTimeout = 10.minutes,
                 workerFactory = object : KsmtWorkerFactory<TestProtocolModel> {
                     override val childProcessEntrypoint = TestWorkerProcess::class
@@ -304,7 +304,7 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             solverManager = KPortfolioSolverManager(
                 listOf(
                     KZ3Solver::class, KBitwuzlaSolver::class, KYicesSolver::class, KCvc5Solver::class
-                ), 4
+                ), 2
             )
         }
 
