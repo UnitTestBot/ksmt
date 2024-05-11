@@ -140,27 +140,17 @@ class KPortfolioSolver(
     }
 
     override fun checkMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult = runBlocking {
-        val solverAwaitResult = solverOperationWithResult(
+        solverQuery(
             { checkMaxSMT(timeout, collectStatistics) },
-            { it.maxSMTSucceeded }
+            { this.maxSMTSucceeded }
         )
-
-        when (solverAwaitResult) {
-            is SolverAwaitSuccess -> return@runBlocking solverAwaitResult.result.result
-            is SolverAwaitFailure -> throw KSolverException("MaxSMT portfolio solver failed")
-        }
     }
 
     override fun checkSubOptMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult = runBlocking {
-        val solverAwaitResult = solverOperationWithResult(
+        solverQuery(
             { checkSubOptMaxSMT(timeout, collectStatistics) },
-            { it.maxSMTSucceeded }
+            { this.maxSMTSucceeded }
         )
-
-        when (solverAwaitResult) {
-            is SolverAwaitSuccess -> return@runBlocking solverAwaitResult.result.result
-            is SolverAwaitFailure -> throw KSolverException("MaxSMT portfolio solver failed")
-        }
     }
 
     override fun collectMaxSMTStatistics(): KMaxSMTStatistics = runBlocking {
@@ -225,16 +215,19 @@ class KPortfolioSolver(
         popAsync(n)
     }
 
-    override suspend fun checkAsync(timeout: Duration): KSolverStatus = solverQuery {
-        checkAsync(timeout)
-    }
+    override suspend fun checkAsync(timeout: Duration): KSolverStatus = solverQuery(
+        { checkAsync(timeout) },
+        { this != KSolverStatus.UNKNOWN }
+    )
 
     override suspend fun checkWithAssumptionsAsync(
         assumptions: List<KExpr<KBoolSort>>,
         timeout: Duration
-    ): KSolverStatus = solverQuery {
-        checkWithAssumptionsAsync(assumptions, timeout)
-    }
+    ): KSolverStatus = solverQuery(
+        { checkWithAssumptionsAsync(assumptions, timeout) },
+        { this != KSolverStatus.UNKNOWN }
+
+    )
 
     override suspend fun modelAsync(): KModel =
         lastSuccessfulSolver.get()?.modelAsync()
@@ -290,15 +283,16 @@ class KPortfolioSolver(
         return result
     }
 
-    private suspend inline fun solverQuery(
-        crossinline block: suspend KSolverRunner<*>.() -> KSolverStatus
-    ): KSolverStatus {
+    private suspend inline fun <T> solverQuery(
+        crossinline block: suspend KSolverRunner<*>.() -> T,
+        crossinline solverPredicate: T.() -> Boolean
+    ): T {
         terminateIfNeeded()
 
         lastSuccessfulSolver.getAndSet(null)
 
         val awaitResult = awaitFirstSolver(block) {
-            it != KSolverStatus.UNKNOWN
+            solverPredicate(it)
         }
 
         val result = when (awaitResult) {
