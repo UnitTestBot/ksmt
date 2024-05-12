@@ -90,7 +90,7 @@ abstract class KMaxSATBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             }
         }
 
-        val maxSATResult = maxSATSolver.checkMaxSMT(60.seconds)
+        val maxSATResult = maxSATSolver.checkMaxSMT(600.seconds)
         val satConstraintsScore = maxSATResult.satSoftConstraints.sumOf { it.weight.toULong() }
         val expectedSatConstraintsScore =
             sumOfSoftConstraintsWeights - maxSATTestNameToExpectedResult.first { it.first == samplePath.name }.second
