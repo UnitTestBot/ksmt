@@ -9,6 +9,9 @@ import io.ksmt.solver.z3.KZ3Solver
 class KPrimalDualMaxResSATBenchmarkTest : KMaxSATBenchmarkTest() {
     override fun getSolver(): KMaxSMTSolver<KSolverConfiguration> = with(ctx) {
         val z3Solver = KZ3Solver(this)
-        return KPrimalDualMaxResSolver(this, z3Solver, KMaxSMTContext())
+        return KPrimalDualMaxResSolver(
+            this, z3Solver,
+            KMaxSMTContext(preferLargeWeightConstraintsForCores = true)
+        )
     }
 }

@@ -49,7 +49,7 @@ jobs:
           arguments: |
             :ksmt-maxsmt-test:test
             --no-daemon
-            --tests "io.ksmt.solver.maxsmt.test.sat.KPMResSATBenchmarkTest"
+            --tests "io.ksmt.solver.maxsmt.test.sat.KPrimalDualMaxResSATBenchmarkTest"
 
       - name: Upload test report
         if: always()
