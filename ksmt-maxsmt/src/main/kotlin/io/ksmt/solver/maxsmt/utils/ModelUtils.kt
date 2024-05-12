@@ -10,8 +10,8 @@ internal object ModelUtils {
     fun expressionIsNotTrue(ctx: KContext, model: KModel, expression: KExpr<KBoolSort>) =
         model.eval(expression, true) != ctx.trueExpr
 
-    fun getModelCost(ctx: KContext, model: KModel, softConstraints: List<SoftConstraint>): UInt {
-        var upper = 0u
+    fun getModelCost(ctx: KContext, model: KModel, softConstraints: List<SoftConstraint>): ULong {
+        var upper = 0uL
 
         for (soft in softConstraints) {
             if (expressionIsNotTrue(ctx, model, soft.expression)) {

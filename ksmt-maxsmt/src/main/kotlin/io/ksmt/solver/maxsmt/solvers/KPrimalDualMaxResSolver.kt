@@ -30,9 +30,9 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
     private val solver: KSolver<out T>,
     private val maxSmtCtx: KMaxSMTContext,
 ) : KMaxResSolver<T>(ctx, solver) {
-    private var _lower: UInt = 0u // Current lower frontier
-    private var _upper: UInt = 0u // Current upper frontier
-    private var _maxUpper = 0u // Max possible upper frontier
+    private var _lower: ULong = 0uL // Current lower frontier
+    private var _upper: ULong = 0uL // Current upper frontier
+    private var _maxUpper = 0uL // Max possible upper frontier
     private var _correctionSetSize: Int = 0 // Current corrections set size
     private val _maxCoreSize = 3
     private var _correctionSetModel: KModel? = null
@@ -622,7 +622,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
 
     private fun initMaxSMT() {
         _lower = 0u
-        _upper = softConstraints.sumOf { it.weight }
+        _upper = softConstraints.sumOf { it.weight.toULong() }
 
         _maxUpper = _upper
         _correctionSetSize = 0
