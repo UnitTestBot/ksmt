@@ -2,6 +2,15 @@ name: Build and run long ksmt MaxSAT tests
 
 on:
   workflow_dispatch:
+    inputs:
+      smtSolver:
+        type: choice
+        description: Chosen SMT solver
+        options:
+          - Z3
+          - Bitwuzla
+          - Cvc5
+          - Yices
 
 env:
   TEST_DATA_REVISION: 0.0.0
@@ -49,7 +58,7 @@ jobs:
           arguments: |
             :ksmt-maxsmt-test:test
             --no-daemon
-            --tests "io.ksmt.solver.maxsmt.test.sat.KPrimalDualMaxResSATBenchmarkTest"
+            --tests "io.ksmt.solver.maxsmt.test.sat.KPrimalDualMaxResSATBenchmarkTest.maxSAT${{ inputs.smtSolver }}Test"
 
       - name: Upload test report
         if: always()
