@@ -4,13 +4,13 @@ import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.maxsmt.KMaxSMTContext
 import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolver
 import io.ksmt.solver.maxsmt.solvers.KPrimalDualMaxResSolver
-import io.ksmt.solver.z3.KZ3Solver
+import io.ksmt.solver.maxsmt.test.utils.Solver
 
 class KPrimalDualMaxResSATBenchmarkTest : KMaxSATBenchmarkTest() {
-    override fun getSolver(): KMaxSMTSolver<KSolverConfiguration> = with(ctx) {
-        val z3Solver = KZ3Solver(this)
+    override fun getSolver(solver: Solver): KMaxSMTSolver<KSolverConfiguration> = with(ctx) {
+        val smtSolver = getSmtSolver(solver)
         return KPrimalDualMaxResSolver(
-            this, z3Solver,
+            this, smtSolver,
             KMaxSMTContext(preferLargeWeightConstraintsForCores = true)
         )
     }

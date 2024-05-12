@@ -1,15 +1,20 @@
 package io.ksmt.solver.maxsmt.test.sat
 
 import io.ksmt.KContext
+import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverStatus.SAT
+import io.ksmt.solver.bitwuzla.KBitwuzlaSolver
+import io.ksmt.solver.cvc5.KCvc5Solver
 import io.ksmt.solver.maxsmt.constraints.HardConstraint
 import io.ksmt.solver.maxsmt.constraints.SoftConstraint
 import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolver
 import io.ksmt.solver.maxsmt.test.KMaxSMTBenchmarkBasedTest
 import io.ksmt.solver.maxsmt.test.parseMaxSATTest
+import io.ksmt.solver.maxsmt.test.utils.Solver
+import io.ksmt.solver.yices.KYicesSolver
+import io.ksmt.solver.z3.KZ3Solver
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.nio.file.Path
@@ -19,14 +24,24 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 
 abstract class KMaxSATBenchmarkTest : KMaxSMTBenchmarkBasedTest {
-    abstract fun getSolver(): KMaxSMTSolver<KSolverConfiguration>
+    protected fun getSmtSolver(solver: Solver): KSolver<out KSolverConfiguration> = with(ctx) {
+        return when (solver) {
+            Solver.Z3 -> KZ3Solver(this)
+            Solver.BITWUZLA -> KBitwuzlaSolver(this)
+            Solver.CVC5 -> KCvc5Solver(this)
+            Solver.YICES -> KYicesSolver(this)
+            Solver.PORTFOLIO ->
+                throw NotImplementedError("Portfolio solver for MaxSAT is not supported in tests")
+        }
+    }
+
+    abstract fun getSolver(solver: Solver): KMaxSMTSolver<KSolverConfiguration>
 
     protected val ctx: KContext = KContext()
-    private lateinit var maxSATSolver: KMaxSMTSolver<KSolverConfiguration>
+    private lateinit var maxSATSolver: KMaxSMTSolver<out KSolverConfiguration>
 
-    @BeforeEach
-    fun initSolver() {
-        maxSATSolver = getSolver()
+    private fun initSolver(solver: Solver) {
+        maxSATSolver = getSolver(solver)
     }
 
     @AfterEach
@@ -34,13 +49,37 @@ abstract class KMaxSATBenchmarkTest : KMaxSMTBenchmarkBasedTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("maxSATTestData")
-    fun maxSATTest(name: String, samplePath: Path) = with(ctx) {
+    fun maxSATZ3Test(name: String, samplePath: Path) {
+        testMaxSATSolver(name, samplePath, Solver.Z3)
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("maxSATTestData")
+    fun maxSATBitwuzlaTest(name: String, samplePath: Path) {
+        testMaxSATSolver(name, samplePath, Solver.BITWUZLA)
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("maxSATTestData")
+    fun maxSATCvc5Test(name: String, samplePath: Path) {
+        testMaxSATSolver(name, samplePath, Solver.CVC5)
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("maxSATTestData")
+    fun maxSATYicesTest(name: String, samplePath: Path) {
+        testMaxSATSolver(name, samplePath, Solver.YICES)
+    }
+
+    private fun testMaxSATSolver(name: String, samplePath: Path, solver: Solver) = with(ctx) {
         val testData = maxSATTestNameToExpectedResult.find { it.first == samplePath.name }
         require(testData != null) { "Test [$name] expected result must be specified" }
 
         val constraints = parseMaxSATTest(samplePath, this)
 
         var sumOfSoftConstraintsWeights = 0u
+
+        initSolver(solver)
 
         constraints.forEach {
             if (it is HardConstraint) {
@@ -63,7 +102,7 @@ abstract class KMaxSATBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             expectedSatConstraintsScore,
             satConstraintsScore.toULong(),
             "Soft constraints score was [$satConstraintsScore], " +
-                "but must be [$expectedSatConstraintsScore]",
+                    "but must be [$expectedSatConstraintsScore]",
         )
     }
 
