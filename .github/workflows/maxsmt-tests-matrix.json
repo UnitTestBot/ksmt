@@ -28,15 +28,7 @@
     "TEST_DATA_REVISION": "0.0.0"
   },
   {
-    "NAME": "QF_UF-light",
-    "TEST_DATA_REVISION": "0.0.0"
-  },
-  {
     "NAME": "QF_UFBV-light",
-    "TEST_DATA_REVISION": "0.0.0"
-  },
-  {
-    "NAME": "QF_UFLIA-light",
     "TEST_DATA_REVISION": "0.0.0"
   },
   {
