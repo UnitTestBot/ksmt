@@ -27,7 +27,7 @@ class TestProtocolModel private constructor(
     private val _internalizeAndConvertCvc5: RdCall<TestInternalizeAndConvertParams, TestConversionResult>,
     private val _createSolver: RdCall<Int, Int>,
     private val _assert: RdCall<TestAssertParams, Unit>,
-    private val _assertSoft: RdCall<SoftConstraint, Unit>,
+    private val _assertSoft: RdCall<TestSoftConstraint, Unit>,
     private val _check: RdCall<Int, TestCheckResult>,
     private val _checkMaxSMT: RdCall<TestCheckMaxSMTParams, TestCheckMaxSMTResult>,
     private val _checkSubOptMaxSMT: RdCall<TestCheckMaxSMTParams, TestCheckMaxSMTResult>,
@@ -45,7 +45,7 @@ class TestProtocolModel private constructor(
     companion object : ISerializersOwner {
         
         override fun registerSerializersCore(serializers: ISerializers)  {
-            serializers.register(SoftConstraint)
+            serializers.register(TestSoftConstraint)
             serializers.register(EqualityCheckParams)
             serializers.register(EqualityCheckAssumptionsParams)
             serializers.register(TestAssertParams)
@@ -80,7 +80,7 @@ class TestProtocolModel private constructor(
         private val __LongListSerializer = FrameworkMarshallers.Long.list()
         private val __IntNullableSerializer = FrameworkMarshallers.Int.nullable()
         
-        const val serializationHash = 4390712550753555496L
+        const val serializationHash = -5506113420646493100L
         
     }
     override val serializersOwner: ISerializersOwner get() = TestProtocolModel
@@ -136,7 +136,7 @@ class TestProtocolModel private constructor(
     /**
      * Assert expression softly
      */
-    val assertSoft: RdCall<SoftConstraint, Unit> get() = _assertSoft
+    val assertSoft: RdCall<TestSoftConstraint, Unit> get() = _assertSoft
     
     /**
      * Check-sat
@@ -253,7 +253,7 @@ class TestProtocolModel private constructor(
         RdCall<TestInternalizeAndConvertParams, TestConversionResult>(TestInternalizeAndConvertParams, TestConversionResult),
         RdCall<Int, Int>(FrameworkMarshallers.Int, FrameworkMarshallers.Int),
         RdCall<TestAssertParams, Unit>(TestAssertParams, FrameworkMarshallers.Void),
-        RdCall<SoftConstraint, Unit>(SoftConstraint, FrameworkMarshallers.Void),
+        RdCall<TestSoftConstraint, Unit>(TestSoftConstraint, FrameworkMarshallers.Void),
         RdCall<Int, TestCheckResult>(FrameworkMarshallers.Int, TestCheckResult),
         RdCall<TestCheckMaxSMTParams, TestCheckMaxSMTResult>(TestCheckMaxSMTParams, TestCheckMaxSMTResult),
         RdCall<TestCheckMaxSMTParams, TestCheckMaxSMTResult>(TestCheckMaxSMTParams, TestCheckMaxSMTResult),
@@ -462,69 +462,6 @@ data class EqualityCheckParams (
 
 
 /**
- * #### Generated from [TestProtocolModel.kt:19]
- */
-data class SoftConstraint (
-    val expression: io.ksmt.KAst,
-    val weight: UInt
-) : IPrintable {
-    //companion
-    
-    companion object : IMarshaller<SoftConstraint> {
-        override val _type: KClass<SoftConstraint> = SoftConstraint::class
-        
-        @Suppress("UNCHECKED_CAST")
-        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): SoftConstraint  {
-            val expression = (ctx.serializers.get(io.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<io.ksmt.KAst>).read(ctx, buffer)
-            val weight = buffer.readUInt()
-            return SoftConstraint(expression, weight)
-        }
-        
-        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: SoftConstraint)  {
-            (ctx.serializers.get(io.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<io.ksmt.KAst>).write(ctx,buffer, value.expression)
-            buffer.writeUInt(value.weight)
-        }
-        
-        
-    }
-    //fields
-    //methods
-    //initializer
-    //secondary constructor
-    //equals trait
-    override fun equals(other: Any?): Boolean  {
-        if (this === other) return true
-        if (other == null || other::class != this::class) return false
-        
-        other as SoftConstraint
-        
-        if (expression != other.expression) return false
-        if (weight != other.weight) return false
-        
-        return true
-    }
-    //hash code trait
-    override fun hashCode(): Int  {
-        var __r = 0
-        __r = __r*31 + expression.hashCode()
-        __r = __r*31 + weight.hashCode()
-        return __r
-    }
-    //pretty print
-    override fun print(printer: PrettyPrinter)  {
-        printer.println("SoftConstraint (")
-        printer.indent {
-            print("expression = "); expression.print(printer); println()
-            print("weight = "); weight.print(printer); println()
-        }
-        printer.print(")")
-    }
-    //deepClone
-    //contexts
-}
-
-
-/**
  * #### Generated from [TestProtocolModel.kt:35]
  */
 data class TestAssertParams (
@@ -654,7 +591,7 @@ data class TestCheckMaxSMTParams (
  * #### Generated from [TestProtocolModel.kt:49]
  */
 data class TestCheckMaxSMTResult (
-    val satSoftConstraints: List<SoftConstraint>,
+    val satSoftConstraints: List<TestSoftConstraint>,
     val hardConstraintsSatStatus: io.ksmt.solver.KSolverStatus,
     val maxSMTSucceeded: Boolean
 ) : IPrintable {
@@ -665,14 +602,14 @@ data class TestCheckMaxSMTResult (
         
         @Suppress("UNCHECKED_CAST")
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): TestCheckMaxSMTResult  {
-            val satSoftConstraints = buffer.readList { SoftConstraint.read(ctx, buffer) }
+            val satSoftConstraints = buffer.readList { TestSoftConstraint.read(ctx, buffer) }
             val hardConstraintsSatStatus = buffer.readEnum<io.ksmt.solver.KSolverStatus>()
             val maxSMTSucceeded = buffer.readBool()
             return TestCheckMaxSMTResult(satSoftConstraints, hardConstraintsSatStatus, maxSMTSucceeded)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: TestCheckMaxSMTResult)  {
-            buffer.writeList(value.satSoftConstraints) { v -> SoftConstraint.write(ctx, buffer, v) }
+            buffer.writeList(value.satSoftConstraints) { v -> TestSoftConstraint.write(ctx, buffer, v) }
             buffer.writeEnum(value.hardConstraintsSatStatus)
             buffer.writeBool(value.maxSMTSucceeded)
         }
@@ -957,6 +894,69 @@ data class TestInternalizeAndConvertParams (
         printer.println("TestInternalizeAndConvertParams (")
         printer.indent {
             print("expressions = "); expressions.print(printer); println()
+        }
+        printer.print(")")
+    }
+    //deepClone
+    //contexts
+}
+
+
+/**
+ * #### Generated from [TestProtocolModel.kt:19]
+ */
+data class TestSoftConstraint (
+    val expression: io.ksmt.KAst,
+    val weight: UInt
+) : IPrintable {
+    //companion
+    
+    companion object : IMarshaller<TestSoftConstraint> {
+        override val _type: KClass<TestSoftConstraint> = TestSoftConstraint::class
+        
+        @Suppress("UNCHECKED_CAST")
+        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): TestSoftConstraint  {
+            val expression = (ctx.serializers.get(io.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<io.ksmt.KAst>).read(ctx, buffer)
+            val weight = buffer.readUInt()
+            return TestSoftConstraint(expression, weight)
+        }
+        
+        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: TestSoftConstraint)  {
+            (ctx.serializers.get(io.ksmt.runner.serializer.AstSerializationCtx.marshallerId)!! as IMarshaller<io.ksmt.KAst>).write(ctx,buffer, value.expression)
+            buffer.writeUInt(value.weight)
+        }
+        
+        
+    }
+    //fields
+    //methods
+    //initializer
+    //secondary constructor
+    //equals trait
+    override fun equals(other: Any?): Boolean  {
+        if (this === other) return true
+        if (other == null || other::class != this::class) return false
+        
+        other as TestSoftConstraint
+        
+        if (expression != other.expression) return false
+        if (weight != other.weight) return false
+        
+        return true
+    }
+    //hash code trait
+    override fun hashCode(): Int  {
+        var __r = 0
+        __r = __r*31 + expression.hashCode()
+        __r = __r*31 + weight.hashCode()
+        return __r
+    }
+    //pretty print
+    override fun print(printer: PrettyPrinter)  {
+        printer.println("TestSoftConstraint (")
+        printer.indent {
+            print("expression = "); expression.print(printer); println()
+            print("weight = "); weight.print(printer); println()
         }
         printer.print(")")
     }

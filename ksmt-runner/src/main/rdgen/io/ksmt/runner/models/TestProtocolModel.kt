@@ -16,7 +16,7 @@ object TestProtocolModel : Ext(TestProtocolRoot) {
     private val kastType = kastType()
     private val statusType = solverStatusType()
 
-    private val softConstraint = structdef {
+    private val testSoftConstraint = structdef {
         field("expression", kastType)
         field("weight", PredefinedType.uint)
     }
@@ -47,7 +47,7 @@ object TestProtocolModel : Ext(TestProtocolRoot) {
     }
 
     private val testCheckMaxSMTResult = structdef {
-        field("satSoftConstraints", immutableList(softConstraint))
+        field("satSoftConstraints", immutableList(testSoftConstraint))
         field("hardConstraintsSatStatus", statusType)
         field("maxSMTSucceeded", PredefinedType.bool)
     }
@@ -104,7 +104,7 @@ object TestProtocolModel : Ext(TestProtocolRoot) {
             async
             documentation = "Assert expr"
         }
-        call("assertSoft", softConstraint, PredefinedType.void).apply {
+        call("assertSoft", testSoftConstraint, PredefinedType.void).apply {
             async
             documentation = "Assert expression softly"
         }
