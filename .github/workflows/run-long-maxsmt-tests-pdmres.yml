@@ -109,3 +109,4 @@ jobs:
       smtSolver: ${{ inputs.smtSolver }}
       optimality: ${{ inputs.optimality }}
       commitSHA: ${{ inputs.commitSHA }}
+    secrets: inherit

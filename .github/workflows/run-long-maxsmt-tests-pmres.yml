@@ -30,3 +30,4 @@ jobs:
       smtSolver: ${{ inputs.smtSolver }}
       optimality: true
       commitSHA: ${{ inputs.commitSHA }}
+    secrets: inherit
