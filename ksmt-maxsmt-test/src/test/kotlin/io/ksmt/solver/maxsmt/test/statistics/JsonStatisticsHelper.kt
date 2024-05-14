@@ -14,11 +14,6 @@ internal class JsonStatisticsHelper(private val jsonFile: File) {
         }
     }
 
-    fun appendTestStatisticsToFile(statistics: SubOptMaxSMTTestStatistics) {
-        processBeforeAppending()
-        jsonFile.appendText(gson.toJson(statistics))
-    }
-
     fun appendTestStatisticsToFile(statistics: MaxSMTTestStatistics) {
         processBeforeAppending()
         jsonFile.appendText(gson.toJson(statistics))

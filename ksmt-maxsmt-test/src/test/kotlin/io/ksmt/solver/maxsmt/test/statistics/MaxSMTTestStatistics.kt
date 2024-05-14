@@ -9,5 +9,10 @@ internal data class MaxSMTTestStatistics(val name: String, var smtSolver: Solver
     var ignoredTest = false
     var failedOnParsingOrConvertingExpressions = false
     var exceptionMessage: String? = null
+    /**
+     * It's wrong when it's more than optimal in case of SubOpt.
+     */
     var checkedSoftConstraintsSumIsWrong = false
+    var optimalWeight: ULong = 0U
+    var foundSoFarWeight: ULong = 0U
 }

@@ -22,7 +22,7 @@ import io.ksmt.solver.maxsmt.solvers.KPrimalDualMaxResSolver
 import io.ksmt.solver.maxsmt.test.KMaxSMTBenchmarkBasedTest
 import io.ksmt.solver.maxsmt.test.parseMaxSMTTestInfo
 import io.ksmt.solver.maxsmt.test.statistics.JsonStatisticsHelper
-import io.ksmt.solver.maxsmt.test.statistics.SubOptMaxSMTTestStatistics
+import io.ksmt.solver.maxsmt.test.statistics.MaxSMTTestStatistics
 import io.ksmt.solver.maxsmt.test.utils.MaxSmtSolver
 import io.ksmt.solver.maxsmt.test.utils.Solver
 import io.ksmt.solver.maxsmt.test.utils.Solver.BITWUZLA
@@ -149,7 +149,7 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         logger.info { "Test name: [$name]" }
 
         lateinit var ksmtAssertions: List<KExpr<KBoolSort>>
-        val testStatistics = SubOptMaxSMTTestStatistics(name, solver)
+        val testStatistics = MaxSMTTestStatistics(name, solver)
 
         try {
             testWorkers.withWorker(ctx) { worker ->
