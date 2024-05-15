@@ -87,7 +87,7 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
 
     abstract fun getSolver(solver: Solver): KMaxSMTSolverInterface<out KSolverConfiguration>
 
-    protected val ctx: KContext = KContext()
+    private val ctx: KContext = KContext()
     protected abstract val maxSmtCtx: KMaxSMTContext
     private lateinit var maxSMTSolver: KMaxSMTSolverInterface<out KSolverConfiguration>
 
