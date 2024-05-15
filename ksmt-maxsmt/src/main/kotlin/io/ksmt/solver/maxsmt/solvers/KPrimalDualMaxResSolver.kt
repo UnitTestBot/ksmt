@@ -92,7 +92,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
             markLoggingPoint = markNow()
 
             val softConstraintsCheckRemainingTime = TimerUtils.computeRemainingTime(timeout, markCheckMaxSMTStart)
-            if (TimerUtils.timeoutExceeded(softConstraintsCheckRemainingTime)) {
+            if (TimerUtils.timeoutExceeded(softConstraintsCheckRemainingTime) || isInterrupted) {
                 if (collectStatistics) {
                     maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
                 }
@@ -126,7 +126,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
 
                 UNSAT -> {
                     val remainingTime = TimerUtils.computeRemainingTime(timeout, markCheckMaxSMTStart)
-                    if (TimerUtils.timeoutExceeded(remainingTime)) {
+                    if (TimerUtils.timeoutExceeded(remainingTime) || isInterrupted) {
                         solver.pop()
                         if (collectStatistics) {
                             maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
@@ -238,7 +238,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
             markLoggingPoint = markNow()
 
             val softConstraintsCheckRemainingTime = TimerUtils.computeRemainingTime(timeout, markCheckMaxSMTStart)
-            if (TimerUtils.timeoutExceeded(softConstraintsCheckRemainingTime)) {
+            if (TimerUtils.timeoutExceeded(softConstraintsCheckRemainingTime) || isInterrupted) {
                 if (collectStatistics) {
                     maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
                 }
@@ -268,7 +268,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
 
                 UNSAT -> {
                     val remainingTime = TimerUtils.computeRemainingTime(timeout, markCheckMaxSMTStart)
-                    if (TimerUtils.timeoutExceeded(remainingTime)) {
+                    if (TimerUtils.timeoutExceeded(remainingTime) || isInterrupted) {
                         solver.pop()
                         if (collectStatistics) {
                             maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
@@ -412,7 +412,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
 
             if (maxSmtCtx.minimizeCores) {
                 val minimizeCoreRemainingTime = TimerUtils.computeRemainingTime(timeout, markStart)
-                if (TimerUtils.timeoutExceeded(minimizeCoreRemainingTime)) {
+                if (TimerUtils.timeoutExceeded(minimizeCoreRemainingTime) || isInterrupted) {
                     return Pair(SAT, cores) // TODO: is this status Ok?
                 }
 
@@ -441,7 +441,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
             }
 
             val checkSatRemainingTime = TimerUtils.computeRemainingTime(timeout, markStart)
-            if (TimerUtils.timeoutExceeded(checkSatRemainingTime)) {
+            if (TimerUtils.timeoutExceeded(checkSatRemainingTime) || isInterrupted) {
                 return Pair(SAT, cores) // TODO: is this status Ok?
             }
 
@@ -621,6 +621,8 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
     }
 
     private fun initMaxSMT() {
+        isInterrupted = false
+
         _lower = 0u
         _upper = softConstraints.sumOf { it.weight.toULong() }
 
@@ -668,8 +670,11 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                 val assumptionsToCheck = assumptions.subList(0, index)
 
                 val remainingTime = TimerUtils.computeRemainingTime(timeout, markStart)
-                if (TimerUtils.timeoutExceeded(remainingTime)) {
-                    logger.info { "checking formula on satisfiability --- ended --- solver returned UNKNOWN" }
+                if (TimerUtils.timeoutExceeded(remainingTime) || isInterrupted) {
+                    logger.info {
+                        "checking formula on satisfiability --- ended --- solver returned UNKNOWN" +
+                                "or operation was interrupted"
+                    }
                     return UNKNOWN
                 }
 

@@ -20,6 +20,7 @@ abstract class KMaxSMTSolver<T>(
     private val scopeManager = MaxSMTScopeManager()
     protected var softConstraints = mutableListOf<SoftConstraint>()
     protected lateinit var maxSMTStatistics: KMaxSMTStatistics
+    protected var isInterrupted = false
 
     /**
      * Softly assert an expression with weight (aka soft constraint) into solver.
@@ -114,6 +115,7 @@ abstract class KMaxSMTSolver<T>(
     }
 
     override fun interrupt() {
+        isInterrupted = true
         solver.interrupt()
     }
 

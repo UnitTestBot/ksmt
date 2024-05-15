@@ -89,7 +89,7 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
         while (true) {
             val checkRemainingTime = TimerUtils.computeRemainingTime(timeout, markHardConstraintsCheckStart)
 
-            if (TimerUtils.timeoutExceeded(checkRemainingTime)) {
+            if (TimerUtils.timeoutExceeded(checkRemainingTime) || isInterrupted) {
                 solver.pop()
                 return KMaxSMTResult(listOf(), hardConstraintsStatus, false)
             }
