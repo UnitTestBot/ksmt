@@ -204,7 +204,11 @@ class TestProtocolModel private constructor(
         _internalizeAndConvertCvc5.async = true
         _createSolver.async = true
         _assert.async = true
+        _assertSoft.async = true
         _check.async = true
+        _checkMaxSMT.async = true
+        _checkSubOptMaxSMT.async = true
+        _collectMaxSMTStatistics.async = true
         _exprToString.async = true
         _getReasonUnknown.async = true
         _addEqualityCheck.async = true

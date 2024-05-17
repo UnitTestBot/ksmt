@@ -133,8 +133,9 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
         }
         checkMaxSMT.measureExecutionForTermination { params ->
             val timeout = params.timeout.milliseconds
+            val collectStatistics = params.collectStatistics
 
-            val result = maxSmtSolver.checkMaxSMT(timeout)
+            val result = maxSmtSolver.checkMaxSMT(timeout, collectStatistics)
 
             @Suppress("UNCHECKED_CAST")
             CheckMaxSMTResult(
@@ -145,8 +146,9 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
         }
         checkSubOptMaxSMT.measureExecutionForTermination { params ->
             val timeout = params.timeout.milliseconds
+            val collectStatistics = params.collectStatistics
 
-            val result = maxSmtSolver.checkSubOptMaxSMT(timeout)
+            val result = maxSmtSolver.checkSubOptMaxSMT(timeout, collectStatistics)
 
             @Suppress("UNCHECKED_CAST")
             CheckMaxSMTResult(

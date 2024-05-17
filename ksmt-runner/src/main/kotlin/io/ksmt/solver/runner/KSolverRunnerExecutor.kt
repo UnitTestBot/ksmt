@@ -96,9 +96,9 @@ class KSolverRunnerExecutor(
         }
     }
 
-    fun assertSoft(expr: KExpr<KBoolSort>, weight: UInt) = assertSoft(expr, weight) { params ->
-        queryWithTimeoutAndExceptionHandlingSync {
-            assertSoft.querySync(params)
+    suspend fun assertSoft(expr: KExpr<KBoolSort>, weight: UInt) = assertSoft(expr, weight) { params ->
+        queryWithTimeoutAndExceptionHandlingAsync {
+            assertSoft.queryAsync(params)
         }
     }
 
@@ -225,17 +225,17 @@ class KSolverRunnerExecutor(
         return result.status
     }
 
-    fun checkMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult =
+    suspend fun checkMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult =
         checkAnyMaxSMT(timeout, collectStatistics) { params ->
-            queryWithTimeoutAndExceptionHandlingSync {
-                checkMaxSMT.querySync(params)
+            queryWithTimeoutAndExceptionHandlingAsync {
+                checkMaxSMT.queryAsync(params)
             }
         }
 
-    fun checkSubOptMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult =
+    suspend fun checkSubOptMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult =
         checkAnyMaxSMT(timeout, collectStatistics) { params ->
-            queryWithTimeoutAndExceptionHandlingSync {
-                checkSubOptMaxSMT.querySync(params)
+            queryWithTimeoutAndExceptionHandlingAsync {
+                checkSubOptMaxSMT.queryAsync(params)
             }
         }
 
@@ -259,11 +259,11 @@ class KSolverRunnerExecutor(
         )
     }
 
-    fun collectMaxSMTStatistics(): KMaxSMTStatistics {
+    suspend fun collectMaxSMTStatistics(): KMaxSMTStatistics {
         ensureActive()
 
-        val result = queryWithTimeoutAndExceptionHandlingSync {
-            collectMaxSMTStatistics.querySync(Unit)
+        val result = queryWithTimeoutAndExceptionHandlingAsync {
+            collectMaxSMTStatistics.queryAsync(Unit)
         }
 
         val maxSMTStatistics = KMaxSMTStatistics(maxSmtCtx).apply {
