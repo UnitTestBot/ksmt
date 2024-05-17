@@ -13,7 +13,7 @@ import io.ksmt.solver.maxsmt.statistics.KMaxSMTStatistics
 import io.ksmt.sort.KBoolSort
 import kotlin.time.Duration
 
-abstract class KMaxSMTSolver<T>(
+abstract class KMaxSMTSolverBase<T>(
     private val ctx: KContext,
     private val solver: KSolver<out T>,
 ) : KMaxSMTSolverInterface<T> where T : KSolverConfiguration {

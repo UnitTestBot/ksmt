@@ -8,7 +8,7 @@ import io.ksmt.solver.bitwuzla.KBitwuzlaSolver
 import io.ksmt.solver.cvc5.KCvc5Solver
 import io.ksmt.solver.maxsmt.constraints.HardConstraint
 import io.ksmt.solver.maxsmt.constraints.SoftConstraint
-import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolver
+import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolverBase
 import io.ksmt.solver.maxsmt.test.KMaxSMTBenchmarkBasedTest
 import io.ksmt.solver.maxsmt.test.parseMaxSATTest
 import io.ksmt.solver.maxsmt.test.utils.Solver
@@ -35,10 +35,10 @@ abstract class KMaxSATBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         }
     }
 
-    abstract fun getSolver(solver: Solver): KMaxSMTSolver<KSolverConfiguration>
+    abstract fun getSolver(solver: Solver): KMaxSMTSolverBase<KSolverConfiguration>
 
     protected val ctx: KContext = KContext()
-    private lateinit var maxSATSolver: KMaxSMTSolver<out KSolverConfiguration>
+    private lateinit var maxSATSolver: KMaxSMTSolverBase<out KSolverConfiguration>
 
     private fun initSolver(solver: Solver) {
         maxSATSolver = getSolver(solver)

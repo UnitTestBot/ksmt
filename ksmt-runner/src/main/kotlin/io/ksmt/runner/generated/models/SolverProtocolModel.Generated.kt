@@ -197,15 +197,12 @@ class SolverProtocolModel private constructor(
         _deleteSolver.async = true
         _configure.async = true
         _assert.async = true
-        _assertSoft.async = true
         _bulkAssert.async = true
         _assertAndTrack.async = true
         _bulkAssertAndTrack.async = true
         _push.async = true
         _pop.async = true
         _check.async = true
-        _checkMaxSMT.async = true
-        _checkSubOptMaxSMT.async = true
         _checkWithAssumptions.async = true
         _model.async = true
         _unsatCore.async = true

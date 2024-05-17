@@ -6,10 +6,10 @@ import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.maxsmt.constraints.SoftConstraint
 import io.ksmt.solver.maxsmt.utils.CoreUtils
 
-abstract class KMaxResSolver<T>(
+abstract class KMaxResSolverBase<T>(
     ctx: KContext,
     solver: KSolver<out T>,
-) : KMaxSMTSolver<T>(ctx, solver) where T : KSolverConfiguration {
+) : KMaxSMTSolverBase<T>(ctx, solver) where T : KSolverConfiguration {
     protected fun removeCoreAssumptions(core: List<SoftConstraint>, assumptions: MutableList<SoftConstraint>) {
         assumptions.removeAll(core)
     }

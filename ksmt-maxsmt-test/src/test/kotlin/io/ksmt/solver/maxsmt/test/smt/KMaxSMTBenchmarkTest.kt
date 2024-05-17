@@ -16,7 +16,6 @@ import io.ksmt.solver.bitwuzla.KBitwuzlaSolver
 import io.ksmt.solver.cvc5.KCvc5Solver
 import io.ksmt.solver.maxsmt.KMaxSMTContext
 import io.ksmt.solver.maxsmt.KMaxSMTResult
-import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolver
 import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolverInterface
 import io.ksmt.solver.maxsmt.solvers.KPMResSolver
 import io.ksmt.solver.maxsmt.solvers.KPrimalDualMaxResSolver
@@ -24,7 +23,6 @@ import io.ksmt.solver.maxsmt.test.KMaxSMTBenchmarkBasedTest
 import io.ksmt.solver.maxsmt.test.parseMaxSMTTestInfo
 import io.ksmt.solver.maxsmt.test.statistics.JsonStatisticsHelper
 import io.ksmt.solver.maxsmt.test.statistics.MaxSMTTestStatistics
-import io.ksmt.solver.maxsmt.test.subopt.KSubOptMaxSMTBenchmarkTest
 import io.ksmt.solver.maxsmt.test.utils.MaxSmtSolver
 import io.ksmt.solver.maxsmt.test.utils.Solver
 import io.ksmt.solver.maxsmt.test.utils.Solver.BITWUZLA
@@ -82,7 +80,7 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             CVC5 -> KCvc5Solver(this)
             YICES -> KYicesSolver(this)
             PORTFOLIO -> {
-                solverManager.createPortfolioSolver(this, maxSmtCtx)
+                solverManager.createPortfolioSolver(this)
             }
         }
     }

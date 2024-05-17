@@ -24,7 +24,10 @@ import io.ksmt.runner.generated.models.UnsatCoreResult
 import io.ksmt.runner.generated.models.solverProtocolModel
 import io.ksmt.runner.serializer.AstSerializationCtx
 import io.ksmt.solver.KSolver
-import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolverInterface
+import io.ksmt.solver.KSolverConfiguration
+import io.ksmt.solver.maxsmt.KMaxSMTContext
+import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolverBase
+import io.ksmt.solver.maxsmt.solvers.KPrimalDualMaxResSolver
 import io.ksmt.solver.model.KFuncInterp
 import io.ksmt.solver.model.KFuncInterpEntry
 import io.ksmt.solver.model.KFuncInterpEntryWithVars
@@ -42,6 +45,9 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
 
     private val solver: KSolver<*>
         get() = workerSolver ?: error("Solver is not initialized")
+
+    private val maxSmtSolver: KMaxSMTSolverBase<KSolverConfiguration>
+        get() = KPrimalDualMaxResSolver(ctx, solver, KMaxSMTContext(preferLargeWeightConstraintsForCores = true))
 
     override fun parseArgs(args: Array<String>) = KsmtWorkerArgs.fromList(args.toList())
 
@@ -75,74 +81,82 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
             }
         }
         deleteSolver.measureExecutionForTermination {
-            solver.close()
+            maxSmtSolver.close()
             ctx.close()
             astSerializationCtx.resetCtx()
             workerSolver = null
             workerCtx = null
         }
         configure.measureExecutionForTermination { config ->
-            solver.configure {
+            maxSmtSolver.configure {
                 config.forEach { addUniversalParam(it) }
             }
         }
         assert.measureExecutionForTermination { params ->
             @Suppress("UNCHECKED_CAST")
-            solver.assert(params.expression as KExpr<KBoolSort>)
+            maxSmtSolver.assert(params.expression as KExpr<KBoolSort>)
         }
         assertSoft.measureExecutionForTermination { params ->
             @Suppress("UNCHECKED_CAST")
-            (solver as KMaxSMTSolverInterface).assertSoft(params.expression as KExpr<KBoolSort>, params.weight)
+            maxSmtSolver.assertSoft(params.expression as KExpr<KBoolSort>, params.weight)
         }
         bulkAssert.measureExecutionForTermination { params ->
             @Suppress("UNCHECKED_CAST")
-            solver.assert(params.expressions as List<KExpr<KBoolSort>>)
+            maxSmtSolver.assert(params.expressions as List<KExpr<KBoolSort>>)
         }
         assertAndTrack.measureExecutionForTermination { params ->
             @Suppress("UNCHECKED_CAST")
-            solver.assertAndTrack(params.expression as KExpr<KBoolSort>)
+            maxSmtSolver.assertAndTrack(params.expression as KExpr<KBoolSort>)
         }
         bulkAssertAndTrack.measureExecutionForTermination { params ->
             @Suppress("UNCHECKED_CAST")
-            solver.assertAndTrack(params.expressions as List<KExpr<KBoolSort>>)
+            maxSmtSolver.assertAndTrack(params.expressions as List<KExpr<KBoolSort>>)
         }
         push.measureExecutionForTermination {
-            solver.push()
+            maxSmtSolver.push()
         }
         pop.measureExecutionForTermination { params ->
-            solver.pop(params.levels)
+            maxSmtSolver.pop(params.levels)
         }
         check.measureExecutionForTermination { params ->
             val timeout = params.timeout.milliseconds
-            val status = solver.check(timeout)
+            val status = maxSmtSolver.check(timeout)
             CheckResult(status)
         }
         checkWithAssumptions.measureExecutionForTermination { params ->
             val timeout = params.timeout.milliseconds
 
             @Suppress("UNCHECKED_CAST")
-            val status = solver.checkWithAssumptions(params.assumptions as List<KExpr<KBoolSort>>, timeout)
+            val status = maxSmtSolver.checkWithAssumptions(params.assumptions as List<KExpr<KBoolSort>>, timeout)
 
             CheckResult(status)
         }
         checkMaxSMT.measureExecutionForTermination { params ->
             val timeout = params.timeout.milliseconds
 
-            val result = (solver as KMaxSMTSolverInterface).checkMaxSMT(timeout)
+            val result = maxSmtSolver.checkMaxSMT(timeout)
 
             @Suppress("UNCHECKED_CAST")
-            CheckMaxSMTResult(result.satSoftConstraints as List<SoftConstraint>, result.hardConstraintsSatStatus, result.maxSMTSucceeded)
+            CheckMaxSMTResult(
+                result.satSoftConstraints as List<SoftConstraint>,
+                result.hardConstraintsSatStatus,
+                result.maxSMTSucceeded
+            )
         }
         checkSubOptMaxSMT.measureExecutionForTermination { params ->
             val timeout = params.timeout.milliseconds
 
-            val result = (solver as KMaxSMTSolverInterface).checkSubOptMaxSMT(timeout)
+            val result = maxSmtSolver.checkSubOptMaxSMT(timeout)
 
             @Suppress("UNCHECKED_CAST")
-            CheckMaxSMTResult(result.satSoftConstraints as List<SoftConstraint>, result.hardConstraintsSatStatus, result.maxSMTSucceeded)
+            CheckMaxSMTResult(
+                result.satSoftConstraints as List<SoftConstraint>,
+                result.hardConstraintsSatStatus,
+                result.maxSMTSucceeded
+            )
         }
         collectMaxSMTStatistics.measureExecutionForTermination {
-            val statistics = (solver as KMaxSMTSolverInterface).collectMaxSMTStatistics()
+            val statistics = maxSmtSolver.collectMaxSMTStatistics()
 
             CollectMaxSMTStatisticsResult(
                 statistics.timeoutMs,
@@ -152,7 +166,7 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
             )
         }
         model.measureExecutionForTermination {
-            val model = solver.model().detach()
+            val model = maxSmtSolver.model().detach()
             val declarations = model.declarations.toList()
             val interpretations = declarations.map {
                 val interp = model.interpretation(it) ?: error("No interpretation for model declaration $it")
@@ -166,15 +180,15 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
             ModelResult(declarations, interpretations, uninterpretedSortUniverse)
         }
         unsatCore.measureExecutionForTermination {
-            val core = solver.unsatCore()
+            val core = maxSmtSolver.unsatCore()
             UnsatCoreResult(core)
         }
         reasonOfUnknown.measureExecutionForTermination {
-            val reason = solver.reasonOfUnknown()
+            val reason = maxSmtSolver.reasonOfUnknown()
             ReasonUnknownResult(reason)
         }
         interrupt.measureExecutionForTermination {
-            solver.interrupt()
+            maxSmtSolver.interrupt()
         }
         lifetime.onTermination {
             workerSolver?.close()

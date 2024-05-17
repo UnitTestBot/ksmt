@@ -142,7 +142,6 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
             documentation = "Assert expression"
         }
         call("assertSoft", softConstraint, PredefinedType.void).apply {
-            async
             documentation = "Assert expression softly"
         }
         call("bulkAssert", bulkAssertParams, PredefinedType.void).apply {
@@ -170,15 +169,12 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
             documentation = "Check SAT"
         }
         call("checkMaxSMT", checkMaxSMTParams, checkMaxSMTResult).apply {
-            async
             documentation = "Check MaxSMT"
         }
         call("checkSubOptMaxSMT", checkMaxSMTParams, checkMaxSMTResult).apply {
-            async
             documentation = "Check SubOptMaxSMT"
         }
         call("collectMaxSMTStatistics", PredefinedType.void, collectMaxSMTStatisticsResult).apply {
-            async
             documentation = "Collect MaxSMT statistics"
         }
         call("checkWithAssumptions", checkWithAssumptionsParams, checkResult).apply {

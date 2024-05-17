@@ -14,7 +14,8 @@ import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.async.KAsyncSolver
 import io.ksmt.solver.maxsmt.KMaxSMTContext
 import io.ksmt.solver.maxsmt.KMaxSMTResult
-import io.ksmt.solver.maxsmt.solvers.KPrimalDualMaxResSolver
+import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolverInterface
+import io.ksmt.solver.maxsmt.statistics.KMaxSMTStatistics
 import io.ksmt.solver.runner.KSolverRunnerManager.CustomSolverInfo
 import io.ksmt.sort.KBoolSort
 import kotlinx.coroutines.sync.Mutex
@@ -30,11 +31,11 @@ import kotlin.time.Duration
 class KSolverRunner<Config : KSolverConfiguration>(
     private val manager: KSolverRunnerManager,
     private val ctx: KContext,
-    maxSmtCtx: KMaxSMTContext = KMaxSMTContext(),
+    private val maxSmtCtx: KMaxSMTContext = KMaxSMTContext(),
     private val configurationBuilder: ConfigurationBuilder<Config>,
     private val solverType: SolverType,
     private val customSolverInfo: CustomSolverInfo? = null,
-) : KAsyncSolver<Config> {
+) : KAsyncSolver<Config>, KMaxSMTSolverInterface<Config> {
     private val isActive = AtomicBoolean(true)
     private val executorInitializationLock = Mutex()
     private val executorRef = AtomicReference<KSolverRunnerExecutor?>(null)
@@ -44,8 +45,6 @@ class KSolverRunner<Config : KSolverConfiguration>(
     private val lastUnsatCore = AtomicReference<List<KExpr<KBoolSort>>?>(null)
 
     private val solverState = KSolverState()
-
-    private val maxSMTSolver = KPrimalDualMaxResSolver(ctx, this, maxSmtCtx)
 
     override fun close() {
         deleteSolverSync()
@@ -121,8 +120,12 @@ class KSolverRunner<Config : KSolverConfiguration>(
             }
         }
 
-    fun assertSoft(expr: KExpr<KBoolSort>, weight: UInt) {
-        maxSMTSolver.assertSoft(expr, weight)
+    override fun assertSoft(expr: KExpr<KBoolSort>, weight: UInt) {
+        ctx.ensureContextMatch(expr)
+
+        ensureInitializedAndExecuteSync(onException = {}) {
+            assertSoft(expr, weight)
+        }
     }
 
     private inline fun bulkAssert(
@@ -242,15 +245,20 @@ class KSolverRunner<Config : KSolverConfiguration>(
             checkSync(timeout)
         }
 
-    fun checkSubOptMaxSMT(
-        timeout: Duration,
-        collectStatistics: Boolean
-    ): KMaxSMTResult = maxSMTSolver.checkSubOptMaxSMT(timeout, collectStatistics)
+    override fun checkMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult =
+        handleCheckAnyMaxSMTExceptionAsNotSucceededSync {
+            checkMaxSMT(timeout, collectStatistics)
+        }
 
-    fun checkMaxSMT(timeout: Duration, collectStatistics: Boolean)
-            : KMaxSMTResult = maxSMTSolver.checkMaxSMT(timeout, collectStatistics)
+    override fun checkSubOptMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult =
+        handleCheckAnyMaxSMTExceptionAsNotSucceededSync {
+            checkSubOptMaxSMT(timeout, collectStatistics)
+        }
 
-    fun collectMaxSMTStatistics() = maxSMTSolver.collectMaxSMTStatistics()
+    override fun collectMaxSMTStatistics(): KMaxSMTStatistics =
+        handleCollectStatisticsSync {
+            collectMaxSMTStatistics()
+        }
 
     override suspend fun checkWithAssumptionsAsync(
         assumptions: List<KExpr<KBoolSort>>,
@@ -442,6 +450,24 @@ class KSolverRunner<Config : KSolverConfiguration>(
         ensureInitializedAndExecuteSync(
             body = body,
             onException = { ex -> onException(ex) }
+        )
+    }
+
+    private inline fun handleCheckAnyMaxSMTExceptionAsNotSucceededSync(
+        crossinline body: KSolverRunnerExecutor.() -> KMaxSMTResult
+    ): KMaxSMTResult {
+        return ensureInitializedAndExecuteSync(
+            body = body,
+            onException = { KMaxSMTResult(emptyList(), KSolverStatus.UNKNOWN, false) }
+        )
+    }
+
+    private inline fun handleCollectStatisticsSync(
+        crossinline body: KSolverRunnerExecutor.() -> KMaxSMTStatistics
+    ): KMaxSMTStatistics {
+        return ensureInitializedAndExecuteSync(
+            body = body,
+            onException = { KMaxSMTStatistics(maxSmtCtx) }
         )
     }
 

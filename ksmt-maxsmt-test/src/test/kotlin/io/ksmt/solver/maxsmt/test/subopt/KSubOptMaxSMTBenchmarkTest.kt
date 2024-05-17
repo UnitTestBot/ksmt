@@ -80,7 +80,7 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             CVC5 -> KCvc5Solver(this)
             YICES -> KYicesSolver(this)
             PORTFOLIO -> {
-                solverManager.createPortfolioSolver(this, maxSmtCtx)
+                solverManager.createPortfolioSolver(this)
             }
         }
     }

@@ -21,8 +21,8 @@ import io.ksmt.utils.mkConst
 import kotlin.time.Duration
 import kotlin.time.TimeSource.Monotonic.markNow
 
-class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private val solver: KSolver<out T>) :
-    KMaxResSolver<T>(ctx, solver) {
+class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, solver: KSolver<out T>) :
+    KMaxResSolverBase<T>(ctx, solver) {
     private var collectStatistics = false
     private val maxSmtCtx = KMaxSMTContext(
         strategy = PrimalMaxRes,
@@ -60,7 +60,7 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
 
     private fun runMaxSMTLogic(timeout: Duration): KMaxSMTResult {
         val markHardConstraintsCheckStart = markNow()
-        val hardConstraintsStatus = solver.check(timeout)
+        val hardConstraintsStatus = check(timeout)
 
         if (collectStatistics) {
             maxSMTStatistics.queriesToSolverNumber++
@@ -81,7 +81,7 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
             return KMaxSMTResult(listOf(), hardConstraintsStatus, false)
         }
 
-        solver.push()
+        push()
 
         var i = 0
         var formula = softConstraints.toMutableList()
@@ -90,7 +90,7 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
             val checkRemainingTime = TimerUtils.computeRemainingTime(timeout, markHardConstraintsCheckStart)
 
             if (TimerUtils.timeoutExceeded(checkRemainingTime) || isInterrupted) {
-                solver.pop()
+                pop()
                 return KMaxSMTResult(listOf(), hardConstraintsStatus, false)
             }
 
@@ -104,11 +104,10 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
             }
 
             if (solverStatus == SAT) {
-                solver.pop()
+                pop()
                 return processSat(model!!)
-            }
-            else if (solverStatus == UNKNOWN) {
-                solver.pop()
+            } else if (solverStatus == UNKNOWN) {
+                pop()
                 return KMaxSMTResult(emptyList(), SAT, false)
             }
 
@@ -223,10 +222,10 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, private 
      * (if exists, null otherwise).
      */
     private fun checkSat(assumptions: List<SoftConstraint>, timeout: Duration):
-        Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> =
-        when (val status = solver.checkWithAssumptions(assumptions.map { x -> x.expression }, timeout)) {
-            SAT -> Triple(status, listOf(), solver.model())
-            UNSAT -> Triple(status, solver.unsatCore(), null)
+            Triple<KSolverStatus, List<KExpr<KBoolSort>>, KModel?> =
+        when (val status = checkWithAssumptions(assumptions.map { x -> x.expression }, timeout)) {
+            SAT -> Triple(status, listOf(), model())
+            UNSAT -> Triple(status, unsatCore(), null)
             UNKNOWN -> Triple(status, listOf(), null)
         }
 }

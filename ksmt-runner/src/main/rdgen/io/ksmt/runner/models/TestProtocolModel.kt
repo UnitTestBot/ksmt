@@ -105,7 +105,6 @@ object TestProtocolModel : Ext(TestProtocolRoot) {
             documentation = "Assert expr"
         }
         call("assertSoft", testSoftConstraint, PredefinedType.void).apply {
-            async
             documentation = "Assert expression softly"
         }
         call("check", PredefinedType.int, testCheckResult).apply {
@@ -113,11 +112,9 @@ object TestProtocolModel : Ext(TestProtocolRoot) {
             documentation = "Check-sat"
         }
         call("checkMaxSMT", testCheckMaxSMTParams, testCheckMaxSMTResult).apply {
-            async
             documentation = "Check MaxSMT"
         }
         call("checkSubOptMaxSMT", testCheckMaxSMTParams, testCheckMaxSMTResult).apply {
-            async
             documentation = "Check SubOptMaxSMT"
         }
         call("collectMaxSMTStatistics", PredefinedType.void, testCollectMaxSMTStatisticsResult).apply {
