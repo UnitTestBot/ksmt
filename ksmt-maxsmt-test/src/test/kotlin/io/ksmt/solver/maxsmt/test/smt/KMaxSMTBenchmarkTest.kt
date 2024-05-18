@@ -280,7 +280,7 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         @JvmStatic
         fun initWorkerPools() {
             testWorkers = KsmtWorkerPool(
-                maxWorkerPoolSize = 4,
+                maxWorkerPoolSize = 1,
                 workerProcessIdleTimeout = 10.minutes,
                 workerFactory = object : KsmtWorkerFactory<TestProtocolModel> {
                     override val childProcessEntrypoint = TestWorkerProcess::class
