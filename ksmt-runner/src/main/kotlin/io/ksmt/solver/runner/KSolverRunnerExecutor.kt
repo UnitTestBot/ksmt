@@ -252,8 +252,12 @@ class KSolverRunnerExecutor(
         val params = CheckMaxSMTParams(timeout.inWholeMilliseconds, collectStatistics)
         val result = query(params)
         @Suppress("UNCHECKED_CAST")
+        val satSoftConstraints = (result.satSoftConstraintExprs as List<KExpr<KBoolSort>>)
+            .zip(result.satSoftConstraintWeights)
+            .map { io.ksmt.solver.maxsmt.constraints.SoftConstraint(it.first, it.second) }
+
         return KMaxSMTResult(
-            result.satSoftConstraints as List<io.ksmt.solver.maxsmt.constraints.SoftConstraint>,
+            satSoftConstraints,
             result.hardConstraintsSatStatus,
             result.timeoutExceededOrUnknown,
             result.maxSMTSucceeded

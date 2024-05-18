@@ -140,16 +140,21 @@ class KPortfolioSolver(
     }
 
     override fun checkMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult = runBlocking {
-        solverQuery(
+        solverMaxSmtQuery(
             { checkMaxSMT(timeout, collectStatistics) },
-            { this.maxSMTSucceeded }
+            { !this.timeoutExceededOrUnknown }
         )
     }
 
     override fun checkSubOptMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult = runBlocking {
-        solverQuery(
+        solverMaxSmtQuery(
             { checkSubOptMaxSMT(timeout, collectStatistics) },
-            { this.maxSMTSucceeded }
+            solverPredicate = { false },
+            onFailure = { results ->
+                results.results
+                    .mapNotNull { it.getOrNull() }
+                    .maxByOrNull { it.result.satSoftConstraints.sumOf { constr -> constr.weight } }!!
+            }
         )
     }
 
@@ -281,6 +286,45 @@ class KPortfolioSolver(
         }
 
         return result
+    }
+
+    private suspend inline fun <T> solverMaxSmtQuery(
+        crossinline block: suspend KSolverRunner<*>.() -> T,
+        crossinline solverPredicate: T.() -> Boolean,
+        crossinline onFailure: (SolverAwaitFailure<T>) -> SolverOperationResult<T> = { it.findSuccessOrThrow() }
+    ): T {
+        terminateIfNeeded()
+
+        lastSuccessfulSolver.getAndSet(null)
+
+        val awaitResult = awaitFirstSolver(block) {
+            solverPredicate(it)
+        }
+
+        val result = when (awaitResult) {
+            is SolverAwaitSuccess -> awaitResult.result.also {
+                solverStats[awaitResult.result.solverId].logSolverQueryBest()
+            }
+            /**
+             * All solvers finished with Unknown or failed with exception.
+             * If some solver ends up with Unknown we can treat this result as successful.
+             * */
+            is SolverAwaitFailure -> onFailure(awaitResult)
+        }
+
+        lastSuccessfulSolver.getAndSet(result.solver)
+
+        activeSolvers.forEach { _, solverOperationState ->
+            if (solverOperationState.solver != result.solver) {
+                val failedSolver = solverOperationState.solver
+                solverOperationState.operationScope.launch {
+                    failedSolver.interruptAsync()
+                }
+                pendingTermination.offer(failedSolver)
+            }
+        }
+
+        return result.result
     }
 
     private suspend inline fun <T> solverQuery(

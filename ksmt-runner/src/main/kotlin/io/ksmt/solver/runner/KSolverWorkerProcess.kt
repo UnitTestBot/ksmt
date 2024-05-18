@@ -137,9 +137,9 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
 
             val result = maxSmtSolver.checkMaxSMT(timeout, collectStatistics)
 
-            @Suppress("UNCHECKED_CAST")
             CheckMaxSMTResult(
-                result.satSoftConstraints as List<SoftConstraint>,
+                result.satSoftConstraints.map { it.expression },
+                result.satSoftConstraints.map { it.weight },
                 result.hardConstraintsSatStatus,
                 result.timeoutExceededOrUnknown,
                 result.maxSMTSucceeded
@@ -151,9 +151,9 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
 
             val result = maxSmtSolver.checkSubOptMaxSMT(timeout, collectStatistics)
 
-            @Suppress("UNCHECKED_CAST")
             CheckMaxSMTResult(
-                result.satSoftConstraints as List<SoftConstraint>,
+                result.satSoftConstraints.map { it.expression },
+                result.satSoftConstraints.map { it.weight },
                 result.hardConstraintsSatStatus,
                 result.timeoutExceededOrUnknown,
                 result.maxSMTSucceeded
