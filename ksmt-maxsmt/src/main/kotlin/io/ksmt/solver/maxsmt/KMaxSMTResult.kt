@@ -11,6 +11,10 @@ import io.ksmt.solver.maxsmt.constraints.SoftConstraint
  * @property hardConstraintsSatStatus
  * Shows satisfiability status of hardly asserted constraints' conjunction.
  *
+ * @property timeoutExceededOrUnknown
+ * Shows whether timeout has exceeded, solver was interrupted or returned UNKNOWN (can happen when timeout has exceeded
+ * or by some other reason).
+ *
  * @property maxSMTSucceeded
  * Shows whether MaxSMT calculation has succeeded or not.
  *
@@ -20,5 +24,6 @@ import io.ksmt.solver.maxsmt.constraints.SoftConstraint
 class KMaxSMTResult(
     val satSoftConstraints: List<SoftConstraint>,
     val hardConstraintsSatStatus: KSolverStatus,
-    val maxSMTSucceeded: Boolean,
+    val timeoutExceededOrUnknown: Boolean,
+    val maxSMTSucceeded: Boolean
 )

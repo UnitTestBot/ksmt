@@ -71,14 +71,23 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, solver: 
             return KMaxSMTResult(
                 listOf(),
                 hardConstraintsStatus,
+                hardConstraintsStatus == UNKNOWN,
                 hardConstraintsStatus != UNKNOWN,
             )
         }
 
         if (hardConstraintsStatus == UNSAT) {
-            return KMaxSMTResult(listOf(), hardConstraintsStatus, true)
+            return KMaxSMTResult(
+                listOf(), hardConstraintsStatus,
+                timeoutExceededOrUnknown = false,
+                maxSMTSucceeded = true
+            )
         } else if (hardConstraintsStatus == UNKNOWN) {
-            return KMaxSMTResult(listOf(), hardConstraintsStatus, false)
+            return KMaxSMTResult(
+                listOf(), hardConstraintsStatus,
+                timeoutExceededOrUnknown = true,
+                maxSMTSucceeded = false
+            )
         }
 
         push()
@@ -91,7 +100,11 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, solver: 
 
             if (TimerUtils.timeoutExceeded(checkRemainingTime) || isInterrupted) {
                 pop()
-                return KMaxSMTResult(listOf(), hardConstraintsStatus, false)
+                return KMaxSMTResult(
+                    listOf(), hardConstraintsStatus,
+                    timeoutExceededOrUnknown = true,
+                    maxSMTSucceeded = false
+                )
             }
 
             val markCheckSatStart = markNow()
@@ -108,7 +121,7 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, solver: 
                 return processSat(model!!)
             } else if (solverStatus == UNKNOWN) {
                 pop()
-                return KMaxSMTResult(emptyList(), SAT, false)
+                return KMaxSMTResult(emptyList(), SAT, timeoutExceededOrUnknown = true, maxSMTSucceeded = false)
             }
 
             val (weight, splitUnsatCore) = splitUnsatCore(formula, unsatCore)
@@ -212,7 +225,7 @@ class KPMResSolver<T : KSolverConfiguration>(private val ctx: KContext, solver: 
 
     private fun processSat(model: KModel): KMaxSMTResult {
         val satSoftConstraints = getSatSoftConstraintsByModel(model)
-        return KMaxSMTResult(satSoftConstraints, SAT, true)
+        return KMaxSMTResult(satSoftConstraints, SAT, timeoutExceededOrUnknown = false, maxSMTSucceeded = true)
     }
 
     /**

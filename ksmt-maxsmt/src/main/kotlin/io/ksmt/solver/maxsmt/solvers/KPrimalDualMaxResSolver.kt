@@ -15,7 +15,6 @@ import io.ksmt.solver.maxsmt.KMaxSMTContext.Strategy.PrimalDualMaxRes
 import io.ksmt.solver.maxsmt.KMaxSMTContext.Strategy.PrimalMaxRes
 import io.ksmt.solver.maxsmt.KMaxSMTResult
 import io.ksmt.solver.maxsmt.constraints.SoftConstraint
-import io.ksmt.solver.maxsmt.solvers.exceptions.NotYetImplementedException
 import io.ksmt.solver.maxsmt.solvers.utils.MinimalUnsatCore
 import io.ksmt.solver.maxsmt.statistics.KMaxSMTStatistics
 import io.ksmt.solver.maxsmt.utils.CoreUtils
@@ -71,12 +70,20 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
             if (collectStatistics) {
                 maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
             }
-            return KMaxSMTResult(listOf(), hardConstraintsStatus, true)
+            return KMaxSMTResult(
+                listOf(), hardConstraintsStatus,
+                timeoutExceededOrUnknown = false,
+                maxSMTSucceeded = true
+            )
         } else if (hardConstraintsStatus == UNKNOWN) {
             if (collectStatistics) {
                 maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
             }
-            return KMaxSMTResult(listOf(), hardConstraintsStatus, false)
+            return KMaxSMTResult(
+                listOf(), hardConstraintsStatus,
+                timeoutExceededOrUnknown = true,
+                maxSMTSucceeded = false
+            )
         }
 
         push()
@@ -120,6 +127,8 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                                 processSat(correctionSet, assumptions)
                             }
                         }
+
+                        else -> error("Unexpected strategy: ${maxSmtCtx.strategy}")
                     }
                 }
 
@@ -148,6 +157,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                         logger.info {
                             "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] --- returning SubOpt MaxSMT result"
                         }
+                        // Something went wrong, so timeout has exceeded, solver was interrupted or returned UNKNOWN.
                         return getSubOptMaxSMTResult(true)
                     } else if (processUnsatStatus == UNKNOWN) {
                         pop()
@@ -178,7 +188,11 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
 
         _lower = _upper
 
-        val result = KMaxSMTResult(if (_model != null) getSatSoftConstraintsByModel(_model!!) else listOf(), SAT, true)
+        val result = KMaxSMTResult(
+            if (_model != null) getSatSoftConstraintsByModel(_model!!) else listOf(), SAT,
+            timeoutExceededOrUnknown = false,
+            maxSMTSucceeded = true
+        )
         logger.info {
             "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] --- returning SubOpt MaxSMT result"
         }
@@ -217,12 +231,20 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
             if (collectStatistics) {
                 maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
             }
-            return KMaxSMTResult(listOf(), hardConstraintsStatus, true)
+            return KMaxSMTResult(
+                listOf(), hardConstraintsStatus,
+                timeoutExceededOrUnknown = false,
+                maxSMTSucceeded = true
+            )
         } else if (hardConstraintsStatus == UNKNOWN) {
             if (collectStatistics) {
                 maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
             }
-            return KMaxSMTResult(listOf(), hardConstraintsStatus, false)
+            return KMaxSMTResult(
+                listOf(), hardConstraintsStatus,
+                timeoutExceededOrUnknown = true,
+                maxSMTSucceeded = false
+            )
         }
 
         push()
@@ -241,7 +263,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                 if (collectStatistics) {
                     maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
                 }
-                throw NotYetImplementedException("MaxSMT solution was not found --- timeout exceeded")
+                return KMaxSMTResult(listOf(), SAT, timeoutExceededOrUnknown = true, maxSMTSucceeded = false)
             }
 
             val status = checkSatHillClimb(assumptions, timeout)
@@ -262,6 +284,8 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                                 processSat(correctionSet, assumptions)
                             }
                         }
+
+                        else -> error("Unexpected strategy: ${maxSmtCtx.strategy}")
                     }
                 }
 
@@ -272,7 +296,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                         if (collectStatistics) {
                             maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
                         }
-                        throw NotYetImplementedException("MaxSMT solution was not found --- timeout exceeded")
+                        return KMaxSMTResult(listOf(), SAT, timeoutExceededOrUnknown = true, maxSMTSucceeded = false)
                     }
 
                     val processUnsatStatus = processUnsat(assumptions, remainingTime)
@@ -283,13 +307,13 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                         if (collectStatistics) {
                             maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
                         }
-                        throw NotYetImplementedException("MaxSMT solution was not found --- processUnsat returned UNSAT")
+                        return KMaxSMTResult(listOf(), SAT, timeoutExceededOrUnknown = true, maxSMTSucceeded = false)
                     } else if (processUnsatStatus == UNKNOWN) {
                         pop()
                         if (collectStatistics) {
                             maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
                         }
-                        throw NotYetImplementedException("MaxSMT solution was not found --- processUnsat returned UNKNOWN")
+                        return KMaxSMTResult(listOf(), SAT, timeoutExceededOrUnknown = true, maxSMTSucceeded = false)
                     }
                 }
 
@@ -298,7 +322,8 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                     if (collectStatistics) {
                         maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
                     }
-                    throw NotYetImplementedException("MaxSMT solution was not found --- solver returned UNKNOWN")
+                    // Solver returned UNKNOWN case.
+                    return KMaxSMTResult(listOf(), SAT, timeoutExceededOrUnknown = true, maxSMTSucceeded = false)
                 }
             }
 
@@ -307,7 +332,11 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
 
         _lower = _upper
 
-        val result = KMaxSMTResult(if (_model != null) getSatSoftConstraintsByModel(_model!!) else listOf(), SAT, true)
+        val result = KMaxSMTResult(
+            if (_model != null) getSatSoftConstraintsByModel(_model!!) else listOf(), SAT,
+            timeoutExceededOrUnknown = false,
+            maxSMTSucceeded = true
+        )
         logger.info {
             "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] --- returning MaxSMT result"
         }
@@ -330,12 +359,14 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
     }
 
     private fun processUnsat(assumptions: MutableList<SoftConstraint>, timeout: Duration): KSolverStatus {
+        // We can't get UNSAT from it.
         val (status, cores) = getCores(assumptions, timeout)
 
         if (status != SAT) {
             return status
         }
 
+        // Timeout has exceeded or some core was empty (how???).
         if (cores.isEmpty()) {
             return UNSAT
         }
@@ -397,6 +428,9 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         logger.info { "processing unsat core --- ended" }
     }
 
+    /**
+     * Status is UNKNOWN when timeout has exceeded or solver returned UNKNOWN.
+     */
     private fun getCores(
         assumptions: MutableList<SoftConstraint>,
         timeout: Duration,
@@ -421,6 +455,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                 unsatCore = CoreUtils.coreToSoftConstraints(unsatCore(), assumptions)
             }
 
+            // TODO: when can we reach it?
             if (unsatCore.isEmpty()) {
                 cores.clear()
                 _lower = _upper
@@ -447,6 +482,8 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
             status = checkSatHillClimb(assumptions, checkSatRemainingTime)
         }
 
+        // TODO: for the future, we can improve this processing UNKNOWN case.
+        //  Okay, it's UNKNOWN, but if timeout has not exceeded and we have a core then it's Okay, we can do something.
         return Pair(status, cores)
     }
 
@@ -723,6 +760,14 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         return status
     }
 
-    private fun getSubOptMaxSMTResult(maxSMTSucceeded: Boolean): KMaxSMTResult =
-        KMaxSMTResult(if (_model != null) getSatSoftConstraintsByModel(_model!!) else listOf(), SAT, maxSMTSucceeded)
+    private fun getSubOptMaxSMTResult(
+        maxSMTSucceeded: Boolean,
+        timeoutExceededOrInterrupted: Boolean = true
+    ): KMaxSMTResult =
+        KMaxSMTResult(
+            if (_model != null) getSatSoftConstraintsByModel(_model!!) else listOf(),
+            SAT,
+            timeoutExceededOrInterrupted,
+            maxSMTSucceeded
+        )
 }
