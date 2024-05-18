@@ -141,6 +141,7 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
             CheckMaxSMTResult(
                 result.satSoftConstraints as List<SoftConstraint>,
                 result.hardConstraintsSatStatus,
+                result.timeoutExceededOrUnknown,
                 result.maxSMTSucceeded
             )
         }
@@ -154,6 +155,7 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
             CheckMaxSMTResult(
                 result.satSoftConstraints as List<SoftConstraint>,
                 result.hardConstraintsSatStatus,
+                result.timeoutExceededOrUnknown,
                 result.maxSMTSucceeded
             )
         }

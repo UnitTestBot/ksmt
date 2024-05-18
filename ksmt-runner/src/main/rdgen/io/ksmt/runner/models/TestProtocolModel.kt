@@ -49,6 +49,7 @@ object TestProtocolModel : Ext(TestProtocolRoot) {
     private val testCheckMaxSMTResult = structdef {
         field("satSoftConstraints", immutableList(testSoftConstraint))
         field("hardConstraintsSatStatus", statusType)
+        field("timeoutExceededOrUnknown", PredefinedType.bool)
         field("maxSMTSucceeded", PredefinedType.bool)
     }
 

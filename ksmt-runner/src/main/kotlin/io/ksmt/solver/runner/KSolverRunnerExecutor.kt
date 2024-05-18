@@ -255,6 +255,7 @@ class KSolverRunnerExecutor(
         return KMaxSMTResult(
             result.satSoftConstraints as List<io.ksmt.solver.maxsmt.constraints.SoftConstraint>,
             result.hardConstraintsSatStatus,
+            result.timeoutExceededOrUnknown,
             result.maxSMTSucceeded
         )
     }

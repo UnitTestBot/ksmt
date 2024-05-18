@@ -80,7 +80,7 @@ class TestProtocolModel private constructor(
         private val __LongListSerializer = FrameworkMarshallers.Long.list()
         private val __IntNullableSerializer = FrameworkMarshallers.Int.nullable()
         
-        const val serializationHash = -5506113420646493100L
+        const val serializationHash = -3623267389865938479L
         
     }
     override val serializersOwner: ISerializersOwner get() = TestProtocolModel
@@ -594,6 +594,7 @@ data class TestCheckMaxSMTParams (
 data class TestCheckMaxSMTResult (
     val satSoftConstraints: List<TestSoftConstraint>,
     val hardConstraintsSatStatus: io.ksmt.solver.KSolverStatus,
+    val timeoutExceededOrUnknown: Boolean,
     val maxSMTSucceeded: Boolean
 ) : IPrintable {
     //companion
@@ -605,13 +606,15 @@ data class TestCheckMaxSMTResult (
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): TestCheckMaxSMTResult  {
             val satSoftConstraints = buffer.readList { TestSoftConstraint.read(ctx, buffer) }
             val hardConstraintsSatStatus = buffer.readEnum<io.ksmt.solver.KSolverStatus>()
+            val timeoutExceededOrUnknown = buffer.readBool()
             val maxSMTSucceeded = buffer.readBool()
-            return TestCheckMaxSMTResult(satSoftConstraints, hardConstraintsSatStatus, maxSMTSucceeded)
+            return TestCheckMaxSMTResult(satSoftConstraints, hardConstraintsSatStatus, timeoutExceededOrUnknown, maxSMTSucceeded)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: TestCheckMaxSMTResult)  {
             buffer.writeList(value.satSoftConstraints) { v -> TestSoftConstraint.write(ctx, buffer, v) }
             buffer.writeEnum(value.hardConstraintsSatStatus)
+            buffer.writeBool(value.timeoutExceededOrUnknown)
             buffer.writeBool(value.maxSMTSucceeded)
         }
         
@@ -630,6 +633,7 @@ data class TestCheckMaxSMTResult (
         
         if (satSoftConstraints != other.satSoftConstraints) return false
         if (hardConstraintsSatStatus != other.hardConstraintsSatStatus) return false
+        if (timeoutExceededOrUnknown != other.timeoutExceededOrUnknown) return false
         if (maxSMTSucceeded != other.maxSMTSucceeded) return false
         
         return true
@@ -639,6 +643,7 @@ data class TestCheckMaxSMTResult (
         var __r = 0
         __r = __r*31 + satSoftConstraints.hashCode()
         __r = __r*31 + hardConstraintsSatStatus.hashCode()
+        __r = __r*31 + timeoutExceededOrUnknown.hashCode()
         __r = __r*31 + maxSMTSucceeded.hashCode()
         return __r
     }
@@ -648,6 +653,7 @@ data class TestCheckMaxSMTResult (
         printer.indent {
             print("satSoftConstraints = "); satSoftConstraints.print(printer); println()
             print("hardConstraintsSatStatus = "); hardConstraintsSatStatus.print(printer); println()
+            print("timeoutExceededOrUnknown = "); timeoutExceededOrUnknown.print(printer); println()
             print("maxSMTSucceeded = "); maxSMTSucceeded.print(printer); println()
         }
         printer.print(")")
@@ -715,7 +721,7 @@ data class TestCheckResult (
 
 
 /**
- * #### Generated from [TestProtocolModel.kt:55]
+ * #### Generated from [TestProtocolModel.kt:56]
  */
 data class TestCollectMaxSMTStatisticsResult (
     val timeoutMs: Long,
@@ -790,7 +796,7 @@ data class TestCollectMaxSMTStatisticsResult (
 
 
 /**
- * #### Generated from [TestProtocolModel.kt:62]
+ * #### Generated from [TestProtocolModel.kt:63]
  */
 data class TestConversionResult (
     val expressions: List<io.ksmt.KAst>
@@ -847,7 +853,7 @@ data class TestConversionResult (
 
 
 /**
- * #### Generated from [TestProtocolModel.kt:66]
+ * #### Generated from [TestProtocolModel.kt:67]
  */
 data class TestInternalizeAndConvertParams (
     val expressions: List<io.ksmt.KAst>

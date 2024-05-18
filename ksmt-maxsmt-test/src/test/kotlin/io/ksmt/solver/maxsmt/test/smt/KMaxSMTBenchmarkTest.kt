@@ -207,7 +207,10 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         logger.info { "Elapsed time: $elapsedTime ms --- MaxSMT call${System.lineSeparator()}" }
 
         try {
-            assertTrue(maxSMTResult.maxSMTSucceeded, "MaxSMT was not successful [$name]")
+            assertTrue(
+                !maxSMTResult.timeoutExceededOrUnknown, "MaxSMT was not successful [$name] as timeout" +
+                        "has exceeded, solver was interrupted or returned UNKNOWN"
+            )
             assertEquals(SAT, maxSMTResult.hardConstraintsSatStatus, "Hard constraints must be SAT")
 
             val satSoftConstraintsWeightsSum = maxSMTResult.satSoftConstraints.sumOf { it.weight }

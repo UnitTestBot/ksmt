@@ -14,7 +14,6 @@ import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.async.KAsyncSolver
 import io.ksmt.solver.maxsmt.KMaxSMTContext
 import io.ksmt.solver.maxsmt.KMaxSMTResult
-import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolverInterface
 import io.ksmt.solver.maxsmt.statistics.KMaxSMTStatistics
 import io.ksmt.solver.runner.KSolverRunnerManager.CustomSolverInfo
 import io.ksmt.sort.KBoolSort
@@ -458,7 +457,13 @@ class KSolverRunner<Config : KSolverConfiguration>(
     ): KMaxSMTResult {
         return ensureInitializedAndExecuteAsync(
             body = body,
-            onException = { KMaxSMTResult(emptyList(), KSolverStatus.UNKNOWN, false) }
+            onException = {
+                KMaxSMTResult(
+                    emptyList(), KSolverStatus.UNKNOWN,
+                    timeoutExceededOrUnknown = true,
+                    maxSMTSucceeded = false
+                )
+            }
         )
     }
 

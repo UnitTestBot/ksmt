@@ -88,7 +88,7 @@ class SolverProtocolModel private constructor(
         
         private val __SolverConfigurationParamListSerializer = SolverConfigurationParam.list()
         
-        const val serializationHash = 283104004146364238L
+        const val serializationHash = 4749706839366626801L
         
     }
     override val serializersOwner: ISerializersOwner get() = SolverProtocolModel
@@ -501,6 +501,7 @@ data class CheckMaxSMTParams (
 data class CheckMaxSMTResult (
     val satSoftConstraints: List<SoftConstraint>,
     val hardConstraintsSatStatus: io.ksmt.solver.KSolverStatus,
+    val timeoutExceededOrUnknown: Boolean,
     val maxSMTSucceeded: Boolean
 ) : IPrintable {
     //companion
@@ -512,13 +513,15 @@ data class CheckMaxSMTResult (
         override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): CheckMaxSMTResult  {
             val satSoftConstraints = buffer.readList { SoftConstraint.read(ctx, buffer) }
             val hardConstraintsSatStatus = buffer.readEnum<io.ksmt.solver.KSolverStatus>()
+            val timeoutExceededOrUnknown = buffer.readBool()
             val maxSMTSucceeded = buffer.readBool()
-            return CheckMaxSMTResult(satSoftConstraints, hardConstraintsSatStatus, maxSMTSucceeded)
+            return CheckMaxSMTResult(satSoftConstraints, hardConstraintsSatStatus, timeoutExceededOrUnknown, maxSMTSucceeded)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: CheckMaxSMTResult)  {
             buffer.writeList(value.satSoftConstraints) { v -> SoftConstraint.write(ctx, buffer, v) }
             buffer.writeEnum(value.hardConstraintsSatStatus)
+            buffer.writeBool(value.timeoutExceededOrUnknown)
             buffer.writeBool(value.maxSMTSucceeded)
         }
         
@@ -537,6 +540,7 @@ data class CheckMaxSMTResult (
         
         if (satSoftConstraints != other.satSoftConstraints) return false
         if (hardConstraintsSatStatus != other.hardConstraintsSatStatus) return false
+        if (timeoutExceededOrUnknown != other.timeoutExceededOrUnknown) return false
         if (maxSMTSucceeded != other.maxSMTSucceeded) return false
         
         return true
@@ -546,6 +550,7 @@ data class CheckMaxSMTResult (
         var __r = 0
         __r = __r*31 + satSoftConstraints.hashCode()
         __r = __r*31 + hardConstraintsSatStatus.hashCode()
+        __r = __r*31 + timeoutExceededOrUnknown.hashCode()
         __r = __r*31 + maxSMTSucceeded.hashCode()
         return __r
     }
@@ -555,6 +560,7 @@ data class CheckMaxSMTResult (
         printer.indent {
             print("satSoftConstraints = "); satSoftConstraints.print(printer); println()
             print("hardConstraintsSatStatus = "); hardConstraintsSatStatus.print(printer); println()
+            print("timeoutExceededOrUnknown = "); timeoutExceededOrUnknown.print(printer); println()
             print("maxSMTSucceeded = "); maxSMTSucceeded.print(printer); println()
         }
         printer.print(")")
@@ -679,7 +685,7 @@ data class CheckResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:83]
+ * #### Generated from [SolverProtocolModel.kt:84]
  */
 data class CheckWithAssumptionsParams (
     val assumptions: List<io.ksmt.KAst>,
@@ -742,7 +748,7 @@ data class CheckWithAssumptionsParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:88]
+ * #### Generated from [SolverProtocolModel.kt:89]
  */
 data class CollectMaxSMTStatisticsResult (
     val timeoutMs: Long,
@@ -922,7 +928,7 @@ data class CreateSolverParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:109]
+ * #### Generated from [SolverProtocolModel.kt:110]
  */
 data class ModelEntry (
     val decl: io.ksmt.KAst,
@@ -997,7 +1003,7 @@ data class ModelEntry (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:103]
+ * #### Generated from [SolverProtocolModel.kt:104]
  */
 data class ModelFuncInterpEntry (
     val hasVars: Boolean,
@@ -1066,7 +1072,7 @@ data class ModelFuncInterpEntry (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:121]
+ * #### Generated from [SolverProtocolModel.kt:122]
  */
 data class ModelResult (
     val declarations: List<io.ksmt.KAst>,
@@ -1135,7 +1141,7 @@ data class ModelResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:116]
+ * #### Generated from [SolverProtocolModel.kt:117]
  */
 data class ModelUninterpretedSortUniverse (
     val sort: io.ksmt.KAst,
@@ -1255,7 +1261,7 @@ data class PopParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:99]
+ * #### Generated from [SolverProtocolModel.kt:100]
  */
 data class ReasonUnknownResult (
     val reasonUnknown: String
@@ -1461,7 +1467,7 @@ enum class SolverType {
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:95]
+ * #### Generated from [SolverProtocolModel.kt:96]
  */
 data class UnsatCoreResult (
     val core: List<io.ksmt.KAst>
