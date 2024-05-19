@@ -32,6 +32,7 @@ import io.ksmt.solver.model.KFuncInterp
 import io.ksmt.solver.model.KFuncInterpEntry
 import io.ksmt.solver.model.KFuncInterpEntryWithVars
 import io.ksmt.solver.model.KFuncInterpWithVars
+import io.ksmt.solver.model.KNativeSolverModel
 import io.ksmt.sort.KBoolSort
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -39,15 +40,21 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
     private var workerCtx: KContext? = null
     private var workerSolver: KSolver<*>? = null
     private val customSolverCreators = hashMapOf<String, (KContext) -> KSolver<*>>()
+    private var _maxSmtSolver: KMaxSMTSolverBase<KSolverConfiguration>? = null
+    private val maxSmtSolver: KMaxSMTSolverBase<KSolverConfiguration>
+        get() {
+            if (_maxSmtSolver == null) {
+                _maxSmtSolver = KPrimalDualMaxResSolver(ctx, solver, KMaxSMTContext(preferLargeWeightConstraintsForCores = true))
+                return _maxSmtSolver!!
+            }
+            return _maxSmtSolver!!
+        }
 
     private val ctx: KContext
         get() = workerCtx ?: error("Solver is not initialized")
 
     private val solver: KSolver<*>
         get() = workerSolver ?: error("Solver is not initialized")
-
-    private val maxSmtSolver: KMaxSMTSolverBase<KSolverConfiguration>
-        get() = KPrimalDualMaxResSolver(ctx, solver, KMaxSMTContext(preferLargeWeightConstraintsForCores = true))
 
     override fun parseArgs(args: Array<String>) = KsmtWorkerArgs.fromList(args.toList())
 
