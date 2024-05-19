@@ -82,7 +82,7 @@ def create_tests_queries_to_solver_statistics(tests):
         return max_smt_stat(test)["timeInSolverQueriesMs"]
 
     def elapsed_time_ms(test):
-        return max_smt_stat(test)["elapsedTimeMs"]
+        return test["elapsedTimeMs"]
 
     tests_executed_maxsmt = list(filter(lambda x: x.get("maxSMTCallStatistics") is not None, tests))
     tests_executed_maxsmt_size = len(tests_executed_maxsmt)
@@ -140,7 +140,7 @@ def create_tests_elapsed_time_statistics(tests):
     def elapsed_time_ms(test):
         if isinstance(test, int):
             return test
-        return max_smt_stat(test)["elapsedTimeMs"]
+        return test["elapsedTimeMs"]
 
     tests_executed_maxsmt = list(filter(lambda x: x.get("maxSMTCallStatistics") is not None, tests))
     tests_executed_maxsmt_size = len(tests_executed_maxsmt)
