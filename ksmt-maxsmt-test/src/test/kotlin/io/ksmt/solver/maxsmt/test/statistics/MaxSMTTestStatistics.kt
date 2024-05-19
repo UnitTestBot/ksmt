@@ -9,6 +9,7 @@ internal data class MaxSMTTestStatistics(val name: String, var smtSolver: Solver
     var ignoredTest = false
     var failedOnParsingOrConvertingExpressions = false
     var exceptionMessage: String? = null
+    var elapsedTimeMs: Long = 0
     /**
      * It's wrong when it's more than optimal in case of SubOpt.
      */

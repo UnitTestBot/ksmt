@@ -201,6 +201,7 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
                 throw ex
             }
         }
+        testStatistics.elapsedTimeMs = elapsedTime
 
         testStatistics.maxSMTCallStatistics = maxSMTSolver.collectMaxSMTStatistics()
 

@@ -205,6 +205,8 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
                 throw ex
             }
         }
+        testStatistics.elapsedTimeMs = elapsedTime
+
         val foundSoFarWeight = maxSMTResult.satSoftConstraints.sumOf { it.weight.toULong() }
         testStatistics.foundSoFarWeight = foundSoFarWeight
 
