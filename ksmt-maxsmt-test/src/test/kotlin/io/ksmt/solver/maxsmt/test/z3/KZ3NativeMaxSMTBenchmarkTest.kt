@@ -6,6 +6,8 @@ import com.microsoft.z3.Optimize
 import com.microsoft.z3.Status
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ksmt.KContext
+import io.ksmt.solver.maxsmt.KMaxSMTContext
+import io.ksmt.solver.maxsmt.statistics.KMaxSMTStatistics
 import io.ksmt.solver.maxsmt.test.KMaxSMTBenchmarkBasedTest
 import io.ksmt.solver.maxsmt.test.parseMaxSMTTestInfo
 import io.ksmt.solver.maxsmt.test.statistics.JsonStatisticsHelper
@@ -26,7 +28,7 @@ import kotlin.io.path.extension
 import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals
 
-open class KZ3NativeMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
+abstract class KZ3NativeMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
     private lateinit var z3Ctx: Context
     private lateinit var maxSMTSolver: Optimize
     private val logger = KotlinLogging.logger {}
@@ -106,13 +108,25 @@ open class KZ3NativeMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         // Cores are non-minimized by default.
         val params = z3Ctx.mkParams()
         // 1-minute timeout (in ms)
-        params.add("timeout", 60000)
+        val timeoutMs = 60000
+        params.add("timeout", timeoutMs)
         // Choose an algorithm.
         params.add("maxsat_engine", "pd-maxres")
         // Prefer larger cores.
         params.add("maxres.hill_climb", true)
         params.add("maxres.max_core_size", 3)
         maxSMTSolver.setParameters(params)
+
+        val maxSmtCallStatistics = KMaxSMTStatistics(
+            KMaxSMTContext(
+                KMaxSMTContext.Strategy.PrimalDualMaxRes,
+                preferLargeWeightConstraintsForCores = true
+            )
+        ).apply {
+            this.timeoutMs = timeoutMs.toLong()
+        }
+
+        testStatistics.maxSMTCallStatistics = maxSmtCallStatistics
 
         var maxSMTResult: Status?
         val elapsedTimeMs: Long
