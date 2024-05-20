@@ -32,6 +32,8 @@ abstract class KMaxSATBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             Solver.YICES -> KYicesSolver(this)
             Solver.PORTFOLIO ->
                 throw NotImplementedError("Portfolio solver for MaxSAT is not supported in tests")
+
+            Solver.Z3_NATIVE -> error("Unexpected solver type: Z3_NATIVE")
         }
     }
 

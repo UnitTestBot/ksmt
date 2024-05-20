@@ -30,6 +30,7 @@ import io.ksmt.solver.maxsmt.test.utils.Solver.CVC5
 import io.ksmt.solver.maxsmt.test.utils.Solver.PORTFOLIO
 import io.ksmt.solver.maxsmt.test.utils.Solver.YICES
 import io.ksmt.solver.maxsmt.test.utils.Solver.Z3
+import io.ksmt.solver.maxsmt.test.utils.Solver.Z3_NATIVE
 import io.ksmt.solver.maxsmt.test.utils.getRandomString
 import io.ksmt.solver.portfolio.KPortfolioSolver
 import io.ksmt.solver.portfolio.KPortfolioSolverManager
@@ -82,6 +83,8 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             PORTFOLIO -> {
                 solverManager.createPortfolioSolver(this)
             }
+
+            Z3_NATIVE -> error("Unexpected solver type: Z3_NATIVE")
         }
     }
 
