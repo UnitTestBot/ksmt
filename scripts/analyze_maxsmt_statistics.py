@@ -319,15 +319,25 @@ def create_all_tests_statistics(logics_statistics):
         avg_elapsed_failed_tests_time_ms += elapsed_time_statistics.avg_elapsed_failed_tests_time_ms * (
                 size_statistics.tests_executed_maxsmt_size - size_statistics.tests_executed_maxsmt_passed_size)
 
-    avg_score_passed_tests /= tests_executed_maxsmt_passed_size \
-        if tests_executed_maxsmt_passed_size != 0 else "No tests"
+    if tests_executed_maxsmt_passed_size != 0:
+        avg_score_passed_tests /= tests_executed_maxsmt_passed_size
+    else:
+        avg_score_passed_tests = "No tests"
 
-    avg_elapsed_time_ms /= tests_executed_maxsmt_size \
-        if tests_executed_maxsmt_size != 0 else "No tests"
-    avg_elapsed_passed_tests_time_ms /= tests_executed_maxsmt_passed_size \
-        if tests_executed_maxsmt_passed_size != 0 else "No tests"
-    avg_elapsed_failed_tests_time_ms /= (tests_executed_maxsmt_size - tests_executed_maxsmt_passed_size) \
-        if (tests_executed_maxsmt_size - tests_executed_maxsmt_passed_size) != 0 else "No tests"
+    if tests_executed_maxsmt_size != 0:
+        avg_elapsed_time_ms /= tests_executed_maxsmt_size
+    else:
+        avg_elapsed_time_ms = "No tests"
+
+    if tests_executed_maxsmt_passed_size != 0:
+        avg_elapsed_passed_tests_time_ms /= tests_executed_maxsmt_passed_size
+    else:
+        avg_elapsed_passed_tests_time_ms = "No tests"
+
+    if (tests_executed_maxsmt_size - tests_executed_maxsmt_passed_size) != 0:
+        avg_elapsed_failed_tests_time_ms /= (tests_executed_maxsmt_size - tests_executed_maxsmt_passed_size)
+    else:
+        avg_elapsed_failed_tests_time_ms = "No tests"
 
     return AllTestsStatistics(timeout_ms, max_smt_ctx,
                               TestsSizeStatistics(tests_size, tests_executed_maxsmt_size,
