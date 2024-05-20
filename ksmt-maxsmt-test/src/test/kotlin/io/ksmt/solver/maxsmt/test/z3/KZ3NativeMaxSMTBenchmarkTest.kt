@@ -26,7 +26,7 @@ import kotlin.io.path.extension
 import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals
 
-class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
+abstract class KZ3NativeMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
     private lateinit var z3Ctx: Context
     private lateinit var maxSMTSolver: Optimize
     private val logger = KotlinLogging.logger {}
@@ -103,11 +103,15 @@ class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
 
         // Setting parameters (timeout).
         // Solver tries to find an optimal solution by default and suboptimal if timeout is set.
+        // Cores are non-minimized by default.
         val params = z3Ctx.mkParams()
         // 1-minute timeout (in ms)
         params.add("timeout", 60000)
-        // Setting an algorithm.
+        // Choose an algorithm.
         params.add("maxsat_engine", "pd-maxres")
+        // Prefer larger cores.
+        params.add("maxres.hill_climb", true)
+        params.add("maxres.max_core_size", 3)
         maxSMTSolver.setParameters(params)
 
         var maxSMTResult: Status?

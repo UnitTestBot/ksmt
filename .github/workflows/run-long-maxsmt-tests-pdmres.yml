@@ -17,6 +17,7 @@ on:
           - Bitwuzla
           - Cvc5
           - Yices
+          - Z3Native
       optimality:
         type: boolean
         description: Chosen optimal (otherwise suboptimal) configuration
@@ -99,7 +100,13 @@ jobs:
 
       - name: Set solver name to output
         id: set-output
-        run: echo "solver=K${{ env.SUB_OPT }}${{ inputs.strategy }}MaxRes${{ env.OPTION_TO_VALUE }}" >> $GITHUB_OUTPUT
+        run: |
+          if [[ "${{ inputs.smtSolver }}" == "Z3Native" ]]
+          then
+            echo "solver=Z3Native"
+          else
+            echo "solver=K${{ env.SUB_OPT }}${{ inputs.strategy }}MaxRes${{ env.OPTION_TO_VALUE }}" >> $GITHUB_OUTPUT
+          fi
 
   run-long-maxsmt-tests:
     needs: construct-solver-name
