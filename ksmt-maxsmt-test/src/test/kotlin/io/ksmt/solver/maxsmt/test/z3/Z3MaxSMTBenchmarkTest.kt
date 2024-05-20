@@ -104,7 +104,10 @@ class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         // Setting parameters (timeout).
         // Solver tries to find an optimal solution by default and suboptimal if timeout is set.
         val params = z3Ctx.mkParams()
-        params.add("timeout", 60000) // 1-minute timeout (in ms)
+        // 1-minute timeout (in ms)
+        params.add("timeout", 60000)
+        // Setting an algorithm.
+        params.add("maxsat_engine", "pd-maxres")
         maxSMTSolver.setParameters(params)
 
         var maxSMTResult: Status?
