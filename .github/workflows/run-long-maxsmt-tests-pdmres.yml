@@ -103,7 +103,7 @@ jobs:
         run: |
           if [[ "${{ inputs.smtSolver }}" == "Z3Native" ]]
           then
-            echo "solver=Z3Native"
+            echo "solver=Z3Native" >> $GITHUB_OUTPUT
           else
             echo "solver=K${{ env.SUB_OPT }}${{ inputs.strategy }}MaxRes${{ env.OPTION_TO_VALUE }}" >> $GITHUB_OUTPUT
           fi
