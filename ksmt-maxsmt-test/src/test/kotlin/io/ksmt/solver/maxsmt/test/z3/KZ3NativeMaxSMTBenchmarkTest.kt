@@ -144,6 +144,7 @@ abstract class KZ3NativeMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
 
         logger.info { "Elapsed time: $elapsedTimeMs ms --- MaxSMT call${System.lineSeparator()}" }
         testStatistics.elapsedTimeMs = elapsedTimeMs
+        testStatistics.timeoutExceededOrUnknown = (maxSMTResult == Status.UNKNOWN)
 
         val actualSatSoftConstraintsWeightsSum = maxSmtTestInfo.softConstraintsWeights
             .zip(softExpressions)

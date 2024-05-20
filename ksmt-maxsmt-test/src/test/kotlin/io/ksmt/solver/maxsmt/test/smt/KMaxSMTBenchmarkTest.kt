@@ -206,6 +206,7 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         testStatistics.elapsedTimeMs = elapsedTime
 
         testStatistics.maxSMTCallStatistics = maxSMTSolver.collectMaxSMTStatistics()
+        testStatistics.timeoutExceededOrUnknown = maxSMTResult.timeoutExceededOrUnknown
 
         logger.info { "Elapsed time: $elapsedTime ms --- MaxSMT call${System.lineSeparator()}" }
 

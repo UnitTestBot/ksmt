@@ -16,4 +16,8 @@ internal data class MaxSMTTestStatistics(val name: String, var smtSolver: Solver
     var checkedSoftConstraintsSumIsWrong = false
     var optimalWeight: ULong = 0U
     var foundSoFarWeight: ULong = 0U
+    /**
+     * Shows whether timeout has been exceeded, solver was terminated or returned UNKNOWN.
+     */
+    var timeoutExceededOrUnknown: Boolean = true
 }
