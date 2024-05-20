@@ -149,7 +149,7 @@ class KPortfolioSolver(
     override fun checkSubOptMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult = runBlocking {
         solverMaxSmtQuery(
             { checkSubOptMaxSMT(timeout, collectStatistics) },
-            solverPredicate = { false },
+            solverPredicate = { !this.timeoutExceededOrUnknown },
             onFailure = { results ->
                 results.results
                     .mapNotNull { it.getOrNull() }
