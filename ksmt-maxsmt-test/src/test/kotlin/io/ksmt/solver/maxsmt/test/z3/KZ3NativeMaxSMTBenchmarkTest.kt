@@ -26,7 +26,7 @@ import kotlin.io.path.extension
 import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals
 
-abstract class KZ3NativeMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
+open class KZ3NativeMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
     private lateinit var z3Ctx: Context
     private lateinit var maxSMTSolver: Optimize
     private val logger = KotlinLogging.logger {}
