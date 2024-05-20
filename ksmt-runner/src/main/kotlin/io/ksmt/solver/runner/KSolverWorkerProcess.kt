@@ -93,6 +93,7 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
             astSerializationCtx.resetCtx()
             workerSolver = null
             workerCtx = null
+            _maxSmtSolver = null
         }
         configure.measureExecutionForTermination { config ->
             maxSmtSolver.configure {
