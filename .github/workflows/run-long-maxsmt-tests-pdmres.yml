@@ -32,7 +32,7 @@ on:
         type: boolean
         description: Core minimization option (only one of [minimizeCores, preferLargeWeightCores, getMultipleCores] can be true)
         required: true
-        default: false
+        default: true
       preferLargeWeightCores:
         type: boolean
         description: Prefer large weight constraints for cores (only one of [minimizeCores, preferLargeWeightCores, getMultipleCores] can be true)
