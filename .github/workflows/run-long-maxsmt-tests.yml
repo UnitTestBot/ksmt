@@ -47,9 +47,6 @@ jobs:
           if ${{ inputs.smtSolver == 'Bitwuzla' }}
           then
             MAXSMT_TESTS=$(echo $(cat .github/workflows/maxsmt-tests-matrix.json | jq '{ "logics": [ .[] | select(.NAME | contains("LIA") or contains("LRA") | not) ] }'))
-          elif ${{ inputs.smtSolver == 'Yices' }}
-          then
-            MAXSMT_TESTS=$(echo $(cat .github/workflows/maxsmt-tests-matrix.json | jq '{ "logics": [ .[] | select(.NAME | contains("FP") | not) ] }'))
           else
             MAXSMT_TESTS=$(echo $(cat .github/workflows/maxsmt-tests-matrix.json | jq '{ "logics": [ .[] ] }'))
           fi
