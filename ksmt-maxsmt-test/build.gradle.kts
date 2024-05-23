@@ -63,6 +63,7 @@ val runMaxSatBenchmarkTests = project.booleanProperty("runMaxSatBenchmarkTests")
 // Use benchmarks from maxSmtBenchmark directory (test resources) instead of downloading
 val usePreparedBenchmarks = project.booleanProperty("usePreparedBenchmarks") ?: true
 
+val testDataRevision = project.stringProperty("testDataRevision") ?: "0.0.0"
 
 val downloadPreparedMaxSmtBenchmarkTestData =
     maxSmtBenchmarks.map { maxSmtBenchmarkTestData(it, testDataRevision) }
