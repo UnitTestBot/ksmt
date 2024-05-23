@@ -24,7 +24,10 @@ open class KPortfolioSolverManager(
         require(solvers.isNotEmpty()) { "Empty solver portfolio" }
     }
 
-    fun createPortfolioSolver(ctx: KContext, maxsmtCtx: KMaxSMTContext = KMaxSMTContext()): KPortfolioSolver {
+    fun createPortfolioSolver(
+        ctx: KContext,
+        maxsmtCtx: KMaxSMTContext = KMaxSMTContext(preferLargeWeightConstraintsForCores = true)
+    ): KPortfolioSolver {
         val solverInstances = solvers.map {
             val solverType: KClass<out KSolver<KSolverConfiguration>> = it.uncheckedCast()
             it to createSolver(ctx, maxsmtCtx, solverType)

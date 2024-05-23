@@ -140,14 +140,14 @@ class KPortfolioSolver(
     }
 
     override fun checkMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult = runBlocking {
-        solverMaxSmtQuery(
+        solverMaxSmtQueryAsync(
             { checkMaxSMT(timeout, collectStatistics) },
             { !this.timeoutExceededOrUnknown }
         )
     }
 
     override fun checkSubOptMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult = runBlocking {
-        solverMaxSmtQuery(
+        solverMaxSmtQueryAsync(
             { checkSubOptMaxSMT(timeout, collectStatistics) },
             solverPredicate = { !this.timeoutExceededOrUnknown },
             onFailure = { results ->
@@ -288,7 +288,7 @@ class KPortfolioSolver(
         return result
     }
 
-    private suspend inline fun <T> solverMaxSmtQuery(
+    private suspend inline fun <T> solverMaxSmtQueryAsync(
         crossinline block: suspend KSolverRunner<*>.() -> T,
         crossinline solverPredicate: T.() -> Boolean,
         crossinline onFailure: (SolverAwaitFailure<T>) -> SolverOperationResult<T> = { it.findSuccessOrThrow() }

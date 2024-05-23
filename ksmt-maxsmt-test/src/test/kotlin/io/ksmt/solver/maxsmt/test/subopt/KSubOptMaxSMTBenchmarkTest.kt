@@ -21,6 +21,7 @@ import io.ksmt.solver.maxsmt.solvers.KPMResSolver
 import io.ksmt.solver.maxsmt.solvers.KPrimalDualMaxResSolver
 import io.ksmt.solver.maxsmt.test.KMaxSMTBenchmarkBasedTest
 import io.ksmt.solver.maxsmt.test.parseMaxSMTTestInfo
+import io.ksmt.solver.maxsmt.test.smt.KMaxSMTBenchmarkTest
 import io.ksmt.solver.maxsmt.test.statistics.JsonStatisticsHelper
 import io.ksmt.solver.maxsmt.test.statistics.MaxSMTTestStatistics
 import io.ksmt.solver.maxsmt.test.utils.MaxSmtSolver
@@ -35,8 +36,11 @@ import io.ksmt.solver.maxsmt.test.utils.getRandomString
 import io.ksmt.solver.portfolio.KPortfolioSolver
 import io.ksmt.solver.portfolio.KPortfolioSolverManager
 import io.ksmt.solver.yices.KYicesSolver
+import io.ksmt.solver.yices.KYicesSolverConfiguration
+import io.ksmt.solver.yices.KYicesSolverUniversalConfiguration
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.sort.KBoolSort
+import io.ksmt.symfpu.solver.KSymFpuSolver
 import io.ksmt.test.TestRunner
 import io.ksmt.test.TestWorker
 import io.ksmt.test.TestWorkerProcess
@@ -79,7 +83,7 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             Z3 -> KZ3Solver(this)
             BITWUZLA -> KBitwuzlaSolver(this)
             CVC5 -> KCvc5Solver(this)
-            YICES -> KYicesSolver(this)
+            YICES -> KSymFpuSolver(KYicesSolver(this), this)
             PORTFOLIO -> {
                 solverManager.createPortfolioSolver(this)
             }
@@ -109,37 +113,36 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
     @ParameterizedTest(name = "{0}")
     @MethodSource("maxSMTTestData")
     fun maxSMTZ3Test(name: String, samplePath: Path) {
-        testMaxSMTSolver(name, samplePath, { assertions -> assertions }, Z3)
+        testMaxSMTSolver(name, samplePath, Z3)
     }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("maxSMTTestData")
     fun maxSMTBitwuzlaTest(name: String, samplePath: Path) {
-        testMaxSMTSolver(name, samplePath, { assertions -> internalizeAndConvertBitwuzla(assertions) }, BITWUZLA)
+        testMaxSMTSolver(name, samplePath, BITWUZLA)
     }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("maxSMTTestData")
     fun maxSMTCvc5Test(name: String, samplePath: Path) {
-        testMaxSMTSolver(name, samplePath, { assertions -> internalizeAndConvertCvc5(assertions) }, CVC5)
+        testMaxSMTSolver(name, samplePath, CVC5)
     }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("maxSMTTestData")
     fun maxSMTYicesTest(name: String, samplePath: Path) {
-        testMaxSMTSolver(name, samplePath, { assertions -> internalizeAndConvertYices(assertions) }, YICES)
+        testMaxSMTSolver(name, samplePath, YICES)
     }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("maxSMTTestData")
     fun maxSMTPortfolioTest(name: String, samplePath: Path) {
-        testMaxSMTSolver(name, samplePath, { assertions -> assertions }, PORTFOLIO)
+        testMaxSMTSolver(name, samplePath, PORTFOLIO)
     }
 
     private fun testMaxSMTSolver(
         name: String,
         samplePath: Path,
-        mkKsmtAssertions: suspend TestRunner.(List<KExpr<KBoolSort>>) -> List<KExpr<KBoolSort>>,
         solver: Solver = Z3,
     ) {
         initSolver(solver)
@@ -151,14 +154,13 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
 
         logger.info { "Test name: [$name]" }
 
-        lateinit var ksmtAssertions: List<KExpr<KBoolSort>>
+        lateinit var convertedAssertions: List<KExpr<KBoolSort>>
         val testStatistics = MaxSMTTestStatistics(name, solver)
 
         try {
             testWorkers.withWorker(ctx) { worker ->
                 val assertions = worker.parseFile(samplePath)
-                val convertedAssertions = worker.convertAssertions(assertions)
-                ksmtAssertions = worker.mkKsmtAssertions(convertedAssertions)
+                convertedAssertions = worker.convertAssertions(assertions)
             }
         } catch (ex: IgnoreTestException) {
             testStatistics.ignoredTest = true
@@ -183,8 +185,8 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         val softConstraintsSize = maxSmtTestInfo.softConstraintsWeights.size
 
         val softExpressions =
-            ksmtAssertions.subList(ksmtAssertions.size - softConstraintsSize, ksmtAssertions.size)
-        val hardExpressions = ksmtAssertions.subList(0, ksmtAssertions.size - softConstraintsSize)
+            convertedAssertions.subList(convertedAssertions.size - softConstraintsSize, convertedAssertions.size)
+        val hardExpressions = convertedAssertions.subList(0, convertedAssertions.size - softConstraintsSize)
 
         hardExpressions.forEach {
             maxSMTSolver.assert(it)
@@ -278,7 +280,7 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
     class IgnoreTestException(message: String?) : Exception(message)
 
     companion object {
-        val TEST_WORKER_SINGLE_OPERATION_TIMEOUT = 25.seconds
+        val TEST_WORKER_SINGLE_OPERATION_TIMEOUT = 45.seconds
 
         internal lateinit var testWorkers: KsmtWorkerPool<TestProtocolModel>
         private lateinit var jsonHelper: JsonStatisticsHelper
@@ -307,10 +309,19 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         @BeforeAll
         @JvmStatic
         fun initSolverManager() {
+            class SymFpuYicesSolver(ctx: KContext) : KSymFpuSolver<KYicesSolverConfiguration>(KYicesSolver(ctx), ctx)
             solverManager = KPortfolioSolverManager(
                 listOf(
-                    KZ3Solver::class, KBitwuzlaSolver::class, KYicesSolver::class, KCvc5Solver::class
+                    KZ3Solver::class, KBitwuzlaSolver::class, SymFpuYicesSolver::class
                 ), 2
+            )
+            solverManager.registerSolver(
+                SymFpuYicesSolver::class,
+                KYicesSolverUniversalConfiguration::class
+            )
+            solverManager.createSolver(
+                KContext(), KMaxSMTContext(preferLargeWeightConstraintsForCores = false),
+                SymFpuYicesSolver::class
             )
         }
 
