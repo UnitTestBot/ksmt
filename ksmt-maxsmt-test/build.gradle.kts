@@ -21,6 +21,7 @@ dependencies {
     testImplementation(project(":ksmt-bitwuzla"))
     testImplementation(project(":ksmt-cvc5"))
     testImplementation(project(":ksmt-yices"))
+    testImplementation(project(":ksmt-symfpu"))
 
     testImplementation(project(":ksmt-test"))
     testImplementation(project(":ksmt-runner"))
@@ -62,7 +63,6 @@ val runMaxSatBenchmarkTests = project.booleanProperty("runMaxSatBenchmarkTests")
 // Use benchmarks from maxSmtBenchmark directory (test resources) instead of downloading
 val usePreparedBenchmarks = project.booleanProperty("usePreparedBenchmarks") ?: true
 
-val testDataRevision = project.stringProperty("testDataRevision") ?: "no-revision"
 
 val downloadPreparedMaxSmtBenchmarkTestData =
     maxSmtBenchmarks.map { maxSmtBenchmarkTestData(it, testDataRevision) }
