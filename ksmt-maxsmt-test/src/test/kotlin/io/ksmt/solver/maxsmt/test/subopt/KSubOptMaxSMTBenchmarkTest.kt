@@ -21,7 +21,6 @@ import io.ksmt.solver.maxsmt.solvers.KPMResSolver
 import io.ksmt.solver.maxsmt.solvers.KPrimalDualMaxResSolver
 import io.ksmt.solver.maxsmt.test.KMaxSMTBenchmarkBasedTest
 import io.ksmt.solver.maxsmt.test.parseMaxSMTTestInfo
-import io.ksmt.solver.maxsmt.test.smt.KMaxSMTBenchmarkTest
 import io.ksmt.solver.maxsmt.test.statistics.JsonStatisticsHelper
 import io.ksmt.solver.maxsmt.test.statistics.MaxSMTTestStatistics
 import io.ksmt.solver.maxsmt.test.utils.MaxSmtSolver
@@ -36,11 +35,8 @@ import io.ksmt.solver.maxsmt.test.utils.getRandomString
 import io.ksmt.solver.portfolio.KPortfolioSolver
 import io.ksmt.solver.portfolio.KPortfolioSolverManager
 import io.ksmt.solver.yices.KYicesSolver
-import io.ksmt.solver.yices.KYicesSolverConfiguration
-import io.ksmt.solver.yices.KYicesSolverUniversalConfiguration
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.sort.KBoolSort
-import io.ksmt.symfpu.solver.KSymFpuSolver
 import io.ksmt.test.TestRunner
 import io.ksmt.test.TestWorker
 import io.ksmt.test.TestWorkerProcess
@@ -83,7 +79,7 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             Z3 -> KZ3Solver(this)
             BITWUZLA -> KBitwuzlaSolver(this)
             CVC5 -> KCvc5Solver(this)
-            YICES -> KSymFpuSolver(KYicesSolver(this), this)
+            YICES -> KYicesSolver(this)
             PORTFOLIO -> {
                 solverManager.createPortfolioSolver(this)
             }
@@ -309,19 +305,10 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         @BeforeAll
         @JvmStatic
         fun initSolverManager() {
-            class SymFpuYicesSolver(ctx: KContext) : KSymFpuSolver<KYicesSolverConfiguration>(KYicesSolver(ctx), ctx)
             solverManager = KPortfolioSolverManager(
                 listOf(
-                    KZ3Solver::class, KBitwuzlaSolver::class, SymFpuYicesSolver::class
+                    KZ3Solver::class, KBitwuzlaSolver::class, KYicesSolver::class
                 ), 2
-            )
-            solverManager.registerSolver(
-                SymFpuYicesSolver::class,
-                KYicesSolverUniversalConfiguration::class
-            )
-            solverManager.createSolver(
-                KContext(), KMaxSMTContext(preferLargeWeightConstraintsForCores = false),
-                SymFpuYicesSolver::class
             )
         }
 

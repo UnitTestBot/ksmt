@@ -35,12 +35,8 @@ import io.ksmt.solver.maxsmt.test.utils.getRandomString
 import io.ksmt.solver.portfolio.KPortfolioSolver
 import io.ksmt.solver.portfolio.KPortfolioSolverManager
 import io.ksmt.solver.yices.KYicesSolver
-import io.ksmt.solver.yices.KYicesSolverConfiguration
-import io.ksmt.solver.yices.KYicesSolverConfigurationImpl
-import io.ksmt.solver.yices.KYicesSolverUniversalConfiguration
 import io.ksmt.solver.z3.KZ3Solver
 import io.ksmt.sort.KBoolSort
-import io.ksmt.symfpu.solver.KSymFpuSolver
 import io.ksmt.test.TestRunner
 import io.ksmt.test.TestWorker
 import io.ksmt.test.TestWorkerProcess
@@ -83,7 +79,7 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             Z3 -> KZ3Solver(this)
             BITWUZLA -> KBitwuzlaSolver(this)
             CVC5 -> KCvc5Solver(this)
-            YICES -> KSymFpuSolver(KYicesSolver(this), this)
+            YICES -> KYicesSolver(this)
             PORTFOLIO -> {
                 solverManager.createPortfolioSolver(this)
             }
@@ -306,19 +302,10 @@ abstract class KMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         @BeforeAll
         @JvmStatic
         fun initSolverManager() {
-            class SymFpuYicesSolver(ctx: KContext) : KSymFpuSolver<KYicesSolverConfiguration>(KYicesSolver(ctx), ctx)
             solverManager = KPortfolioSolverManager(
                 listOf(
-                    KZ3Solver::class, KBitwuzlaSolver::class, SymFpuYicesSolver::class
+                    KZ3Solver::class, KBitwuzlaSolver::class, KYicesSolver::class
                 )
-            )
-            solverManager.registerSolver(
-                SymFpuYicesSolver::class,
-                KYicesSolverUniversalConfiguration::class
-            )
-            solverManager.createSolver(
-                KContext(), KMaxSMTContext(preferLargeWeightConstraintsForCores = false),
-                SymFpuYicesSolver::class
             )
         }
 
