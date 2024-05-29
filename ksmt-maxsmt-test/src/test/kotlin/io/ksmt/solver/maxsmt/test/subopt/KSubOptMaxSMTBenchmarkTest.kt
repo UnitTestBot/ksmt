@@ -54,6 +54,7 @@ import kotlin.io.path.extension
 import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
@@ -197,7 +198,7 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         lateinit var maxSMTResult: KMaxSMTResult
         val elapsedTime = measureTimeMillis {
             try {
-                maxSMTResult = maxSMTSolver.checkSubOptMaxSMT(1.seconds, true)
+                maxSMTResult = maxSMTSolver.checkSubOptMaxSMT(500.milliseconds, true)
             } catch (ex: Exception) {
                 testStatistics.maxSMTCallStatistics = maxSMTSolver.collectMaxSMTStatistics()
                 testStatistics.exceptionMessage = ex.message.toString()

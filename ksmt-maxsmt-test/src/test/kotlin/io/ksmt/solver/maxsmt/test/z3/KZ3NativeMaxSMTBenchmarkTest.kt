@@ -107,7 +107,7 @@ abstract class KZ3NativeMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         // Cores are non-minimized by default.
         val params = z3Ctx.mkParams()
         // Setting parameters (timeout).
-        val timeoutMs = 1000
+        val timeoutMs = 500
         params.add("timeout", timeoutMs)
         // Choose an algorithm.
         params.add("maxsat_engine", "pd-maxres")
