@@ -10,9 +10,4 @@ internal object TimerUtils {
 
     fun timeoutExceeded(timeout: Duration): Boolean =
         timeout.isNegative() || timeout == Duration.ZERO
-
-    fun timeoutExceeded(timeout: Duration, markStart: ValueTimeMark): Boolean {
-        val remainingTime = computeRemainingTime(timeout, markStart)
-        return timeoutExceeded(remainingTime)
-    }
 }
