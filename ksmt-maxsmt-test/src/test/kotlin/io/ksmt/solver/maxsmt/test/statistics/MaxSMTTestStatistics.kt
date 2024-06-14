@@ -11,7 +11,8 @@ internal data class MaxSMTTestStatistics(val name: String, var smtSolver: Solver
     var exceptionMessage: String? = null
     var elapsedTimeMs: Long = 0
     /**
-     * It's wrong when it's more than optimal in case of SubOpt.
+     * It's false when a sum is more than optimal in case of SubOpt
+     * or is different from expected in case of Opt.
      */
     var checkedSoftConstraintsSumIsWrong = false
     var optimalWeight: ULong = 0U

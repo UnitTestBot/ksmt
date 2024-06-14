@@ -98,7 +98,10 @@ abstract class KMaxSATBenchmarkTest : KMaxSMTBenchmarkBasedTest {
             sumOfSoftConstraintsWeights - maxSATTestNameToExpectedResult.first { it.first == samplePath.name }.second
 
         assertEquals(SAT, maxSATResult.hardConstraintsSatStatus, "Hard constraints must be SAT")
-        assertTrue(maxSATResult.maxSMTSucceeded, "MaxSAT was not successful [$name]")
+        assertTrue(
+            !maxSATResult.timeoutExceededOrUnknown, "Timeout exceeded, solver returned UNKNOWN" +
+                    "or something else happened [$name]"
+        )
         assertTrue(maxSATResult.satSoftConstraints.isNotEmpty(), "Soft constraints size should not be 0")
         assertEquals(
             expectedSatConstraintsScore,

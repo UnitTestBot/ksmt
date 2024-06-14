@@ -37,7 +37,7 @@ abstract class KMaxSMTSolverTest {
 
         val maxSMTResult = maxSMTSolver.checkMaxSMT()
         assertTrue(maxSMTResult.hardConstraintsSatStatus == UNSAT)
-        assertTrue(maxSMTResult.maxSMTSucceeded)
+        assertTrue(!maxSMTResult.timeoutExceededOrUnknown)
         assertTrue(maxSMTResult.satSoftConstraints.isEmpty())
     }
 
@@ -55,7 +55,7 @@ abstract class KMaxSMTSolverTest {
         val maxSMTResult = maxSMTSolver.checkMaxSMT()
 
         assertTrue(maxSMTResult.hardConstraintsSatStatus == UNSAT)
-        assertTrue(maxSMTResult.maxSMTSucceeded)
+        assertTrue(!maxSMTResult.timeoutExceededOrUnknown)
         assertTrue(maxSMTResult.satSoftConstraints.isEmpty())
     }
 
@@ -71,7 +71,7 @@ abstract class KMaxSMTSolverTest {
         val maxSMTResult = maxSMTSolver.checkMaxSMT()
 
         assertTrue(maxSMTResult.hardConstraintsSatStatus == SAT)
-        assertTrue(maxSMTResult.maxSMTSucceeded)
+        assertTrue(!maxSMTResult.timeoutExceededOrUnknown)
         assertTrue(maxSMTResult.satSoftConstraints.isEmpty())
     }
 
@@ -89,7 +89,7 @@ abstract class KMaxSMTSolverTest {
         val maxSMTResult = maxSMTSolver.checkMaxSMT()
 
         assertTrue(maxSMTResult.hardConstraintsSatStatus == SAT)
-        assertTrue(maxSMTResult.maxSMTSucceeded)
+        assertTrue(!maxSMTResult.timeoutExceededOrUnknown)
         assertTrue(maxSMTResult.satSoftConstraints.isEmpty())
     }
 
@@ -107,7 +107,7 @@ abstract class KMaxSMTSolverTest {
         val maxSMTResult = maxSMTSolver.checkMaxSMT()
 
         assertTrue(maxSMTResult.hardConstraintsSatStatus == SAT)
-        assertTrue(maxSMTResult.maxSMTSucceeded)
+        assertTrue(!maxSMTResult.timeoutExceededOrUnknown)
         assertTrue(maxSMTResult.satSoftConstraints.size == 1)
         assertSoftConstraintsSat(listOf(SoftConstraint(!a or !b, 3u)), maxSMTResult.satSoftConstraints)
     }
@@ -132,7 +132,7 @@ abstract class KMaxSMTSolverTest {
         val maxSMTResult = maxSMTSolver.checkMaxSMT()
 
         assertTrue(maxSMTResult.hardConstraintsSatStatus == SAT)
-        assertTrue(maxSMTResult.maxSMTSucceeded)
+        assertTrue(!maxSMTResult.timeoutExceededOrUnknown)
         assertTrue(maxSMTResult.satSoftConstraints.size == 2)
         assertSoftConstraintsSat(
             listOf(SoftConstraint(!a or !b, 3u), SoftConstraint(!c or !d, 3u)),
@@ -159,7 +159,7 @@ abstract class KMaxSMTSolverTest {
         val maxSMTResult = maxSMTSolver.checkMaxSMT()
 
         assertTrue(maxSMTResult.hardConstraintsSatStatus == SAT)
-        assertTrue(maxSMTResult.maxSMTSucceeded)
+        assertTrue(!maxSMTResult.timeoutExceededOrUnknown)
         assertTrue(maxSMTResult.satSoftConstraints.size == 6)
         assertEquals(42u, maxSMTResult.satSoftConstraints.sumOf { it.weight })
     }
@@ -178,7 +178,7 @@ abstract class KMaxSMTSolverTest {
         val maxSMTResult = maxSMTSolver.checkMaxSMT()
 
         assertTrue(maxSMTResult.hardConstraintsSatStatus == SAT)
-        assertTrue(maxSMTResult.maxSMTSucceeded)
+        assertTrue(!maxSMTResult.timeoutExceededOrUnknown)
         assertTrue(maxSMTResult.satSoftConstraints.size == 2)
         val softConstraintsToAssertSAT =
             listOf(SoftConstraint(!a or b, 4u), SoftConstraint(a or !b, 6u))
@@ -200,7 +200,7 @@ abstract class KMaxSMTSolverTest {
         val maxSMTResult = maxSMTSolver.checkMaxSMT()
 
         assertTrue(maxSMTResult.hardConstraintsSatStatus == SAT)
-        assertTrue(maxSMTResult.maxSMTSucceeded)
+        assertTrue(!maxSMTResult.timeoutExceededOrUnknown)
         assertTrue(maxSMTResult.satSoftConstraints.size == 3)
         assertSoftConstraintsSat(
             listOf(
@@ -227,7 +227,7 @@ abstract class KMaxSMTSolverTest {
         val maxSMTResult = maxSMTSolver.checkMaxSMT()
 
         assertTrue(maxSMTResult.hardConstraintsSatStatus == SAT)
-        assertTrue(maxSMTResult.maxSMTSucceeded)
+        assertTrue(!maxSMTResult.timeoutExceededOrUnknown)
         assertTrue(maxSMTResult.satSoftConstraints.size == 2)
         assertSoftConstraintsSat(
             listOf(SoftConstraint(!x or y, 6u), SoftConstraint(x or !y, 6u)),
@@ -249,7 +249,7 @@ abstract class KMaxSMTSolverTest {
         val maxSMTResult = maxSMTSolver.checkMaxSMT()
 
         assertTrue(maxSMTResult.hardConstraintsSatStatus == SAT)
-        assertTrue(maxSMTResult.maxSMTSucceeded)
+        assertTrue(!maxSMTResult.timeoutExceededOrUnknown)
         assertTrue(maxSMTResult.satSoftConstraints.size == 1)
         assertSoftConstraintsSat(listOf(SoftConstraint(!a and !b, 5u)), maxSMTResult.satSoftConstraints)
     }
@@ -310,7 +310,7 @@ abstract class KMaxSMTSolverTest {
         val maxSMTResult = maxSMTSolver.checkMaxSMT()
 
         assertTrue(maxSMTResult.hardConstraintsSatStatus == SAT)
-        assertTrue(maxSMTResult.maxSMTSucceeded)
+        assertTrue(!maxSMTResult.timeoutExceededOrUnknown)
         assertTrue(maxSMTResult.satSoftConstraints.size == 2)
         assertSoftConstraintsSat(
             listOf(SoftConstraint(!a3, 5u), SoftConstraint(!a1, 10u)),
@@ -329,7 +329,7 @@ abstract class KMaxSMTSolverTest {
 
         val maxSMTResult = maxSMTSolver.checkMaxSMT()
 
-        assertTrue(maxSMTResult.maxSMTSucceeded)
+        assertTrue(!maxSMTResult.timeoutExceededOrUnknown)
         assertSoftConstraintsSat(
             listOf(SoftConstraint(y, 783u), SoftConstraint(!x and !y or !x or !y, 859u)),
             maxSMTResult.satSoftConstraints,
@@ -356,7 +356,7 @@ abstract class KMaxSMTSolverTest {
         val maxSMTResultScoped = maxSMTSolver.checkMaxSMT()
 
         assertTrue(maxSMTResult.hardConstraintsSatStatus == SAT)
-        assertTrue(maxSMTResult.maxSMTSucceeded)
+        assertTrue(!maxSMTResult.timeoutExceededOrUnknown)
         assertTrue(maxSMTResultScoped.satSoftConstraints.size == 2)
 
         maxSMTSolver.pop()

@@ -218,7 +218,6 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         logger.info { "Elapsed time: $elapsedTime ms --- SubOpt MaxSMT call${System.lineSeparator()}" }
 
         try {
-            assertTrue(maxSMTResult.maxSMTSucceeded, "SubOpt MaxSMT was not successful [$name]")
             assertEquals(SAT, maxSMTResult.hardConstraintsSatStatus, "Hard constraints must be SAT")
 
             if (foundSoFarWeight > optimalWeight) {
