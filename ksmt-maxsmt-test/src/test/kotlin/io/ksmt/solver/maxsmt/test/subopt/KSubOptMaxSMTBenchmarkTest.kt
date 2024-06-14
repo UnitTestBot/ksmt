@@ -198,7 +198,7 @@ abstract class KSubOptMaxSMTBenchmarkTest : KMaxSMTBenchmarkBasedTest {
         lateinit var maxSMTResult: KMaxSMTResult
         val elapsedTime = measureTimeMillis {
             try {
-                maxSMTResult = maxSMTSolver.checkSubOptMaxSMT(500.milliseconds, true)
+                maxSMTResult = maxSMTSolver.checkMaxSMT(500.milliseconds, true)
             } catch (ex: Exception) {
                 testStatistics.maxSMTCallStatistics = maxSMTSolver.collectMaxSMTStatistics()
                 testStatistics.exceptionMessage = ex.message.toString()

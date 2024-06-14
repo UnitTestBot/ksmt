@@ -13,7 +13,5 @@ interface KMaxSMTSolverInterface<C> : KSolver<C> where C : KSolverConfiguration 
 
     fun checkMaxSMT(timeout: Duration = Duration.INFINITE, collectStatistics: Boolean = false): KMaxSMTResult
 
-    fun checkSubOptMaxSMT(timeout: Duration = Duration.INFINITE, collectStatistics: Boolean = false): KMaxSMTResult
-
     fun collectMaxSMTStatistics(): KMaxSMTStatistics
 }
