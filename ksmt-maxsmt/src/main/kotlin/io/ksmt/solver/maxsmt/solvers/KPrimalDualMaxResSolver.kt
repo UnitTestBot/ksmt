@@ -104,7 +104,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                 logger.info {
                     "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] --- returning SubOpt MaxSMT result"
                 }
-                return getSubOptMaxSMTResult(true)
+                return getSubOptMaxSMTResult()
             }
 
             val status = checkSatHillClimb(assumptions, timeout)
@@ -138,7 +138,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                         logger.info {
                             "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] --- returning SubOpt MaxSMT result"
                         }
-                        return getSubOptMaxSMTResult(true)
+                        return getSubOptMaxSMTResult()
                     }
 
                     val processUnsatStatus = processUnsat(assumptions, remainingTime)
@@ -154,7 +154,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                             "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] --- returning SubOpt MaxSMT result"
                         }
                         // Something went wrong, so timeout has exceeded, solver was interrupted or returned UNKNOWN.
-                        return getSubOptMaxSMTResult(true)
+                        return getSubOptMaxSMTResult()
                     } else if (processUnsatStatus == UNKNOWN) {
                         pop()
                         if (collectStatistics) {
@@ -163,7 +163,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                         logger.info {
                             "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] --- returning SubOpt MaxSMT result"
                         }
-                        return getSubOptMaxSMTResult(true)
+                        return getSubOptMaxSMTResult()
                     }
                 }
 
@@ -175,7 +175,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                     logger.info {
                         "[${markLoggingPoint.elapsedNow().inWholeMicroseconds} mcs] --- returning SubOpt MaxSMT result"
                     }
-                    return getSubOptMaxSMTResult(true)
+                    return getSubOptMaxSMTResult()
                 }
             }
 
@@ -314,6 +314,7 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
                         maxSMTStatistics.elapsedTimeMs = markCheckMaxSMTStart.elapsedNow().inWholeMilliseconds
                     }
                     // Solver returned UNKNOWN case.
+                    return KMaxSMTResult(listOf(), SAT, timeoutExceededOrUnknown = true)
                 }
             }
 
@@ -749,12 +750,10 @@ class KPrimalDualMaxResSolver<T : KSolverConfiguration>(
         return status
     }
 
-    private fun getSubOptMaxSMTResult(
-        timeoutExceededOrInterrupted: Boolean = true
-    ): KMaxSMTResult =
+    private fun getSubOptMaxSMTResult(): KMaxSMTResult =
         KMaxSMTResult(
             if (_model != null) getSatSoftConstraintsByModel(_model!!) else listOf(),
             SAT,
-            timeoutExceededOrInterrupted,
+            true
         )
 }

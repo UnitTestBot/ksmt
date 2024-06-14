@@ -13,6 +13,9 @@ import io.ksmt.solver.maxsmt.statistics.KMaxSMTStatistics
 import io.ksmt.sort.KBoolSort
 import kotlin.time.Duration
 
+/**
+ * This class implements a logic general for any MaxSMT solver.
+ */
 abstract class KMaxSMTSolverBase<T>(
     private val ctx: KContext,
     private val solver: KSolver<out T>,
@@ -37,8 +40,6 @@ abstract class KMaxSMTSolverBase<T>(
 
     /**
      * Solve maximum satisfiability modulo theories problem.
-     *
-     * @throws NotImplementedError
      */
     fun checkMaxSMT(timeout: Duration): KMaxSMTResult =
         checkMaxSMT(timeout, collectStatistics = false)
@@ -47,8 +48,6 @@ abstract class KMaxSMTSolverBase<T>(
      * Solve maximum satisfiability modulo theories problem.
      *
      * @param collectStatistics specifies whether statistics (elapsed time to execute method etc.) should be collected or not.
-     *
-     * @throws NotImplementedError
      */
     abstract override fun checkMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult
 
