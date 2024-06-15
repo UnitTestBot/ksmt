@@ -30,7 +30,6 @@ class TestProtocolModel private constructor(
     private val _assertSoft: RdCall<TestSoftConstraint, Unit>,
     private val _check: RdCall<Int, TestCheckResult>,
     private val _checkMaxSMT: RdCall<TestCheckMaxSMTParams, TestCheckMaxSMTResult>,
-    private val _checkSubOptMaxSMT: RdCall<TestCheckMaxSMTParams, TestCheckMaxSMTResult>,
     private val _collectMaxSMTStatistics: RdCall<Unit, TestCollectMaxSMTStatisticsResult>,
     private val _exprToString: RdCall<Long, String>,
     private val _getReasonUnknown: RdCall<Int, String>,
@@ -80,7 +79,7 @@ class TestProtocolModel private constructor(
         private val __LongListSerializer = FrameworkMarshallers.Long.list()
         private val __IntNullableSerializer = FrameworkMarshallers.Int.nullable()
         
-        const val serializationHash = -1203465621073210600L
+        const val serializationHash = 1052422932439377909L
         
     }
     override val serializersOwner: ISerializersOwner get() = TestProtocolModel
@@ -149,11 +148,6 @@ class TestProtocolModel private constructor(
     val checkMaxSMT: RdCall<TestCheckMaxSMTParams, TestCheckMaxSMTResult> get() = _checkMaxSMT
     
     /**
-     * Check SubOptMaxSMT
-     */
-    val checkSubOptMaxSMT: RdCall<TestCheckMaxSMTParams, TestCheckMaxSMTResult> get() = _checkSubOptMaxSMT
-    
-    /**
      * Collect MaxSMT statistics
      */
     val collectMaxSMTStatistics: RdCall<Unit, TestCollectMaxSMTStatisticsResult> get() = _collectMaxSMTStatistics
@@ -207,7 +201,6 @@ class TestProtocolModel private constructor(
         _assertSoft.async = true
         _check.async = true
         _checkMaxSMT.async = true
-        _checkSubOptMaxSMT.async = true
         _collectMaxSMTStatistics.async = true
         _exprToString.async = true
         _getReasonUnknown.async = true
@@ -231,7 +224,6 @@ class TestProtocolModel private constructor(
         bindableChildren.add("assertSoft" to _assertSoft)
         bindableChildren.add("check" to _check)
         bindableChildren.add("checkMaxSMT" to _checkMaxSMT)
-        bindableChildren.add("checkSubOptMaxSMT" to _checkSubOptMaxSMT)
         bindableChildren.add("collectMaxSMTStatistics" to _collectMaxSMTStatistics)
         bindableChildren.add("exprToString" to _exprToString)
         bindableChildren.add("getReasonUnknown" to _getReasonUnknown)
@@ -256,7 +248,6 @@ class TestProtocolModel private constructor(
         RdCall<TestAssertParams, Unit>(TestAssertParams, FrameworkMarshallers.Void),
         RdCall<TestSoftConstraint, Unit>(TestSoftConstraint, FrameworkMarshallers.Void),
         RdCall<Int, TestCheckResult>(FrameworkMarshallers.Int, TestCheckResult),
-        RdCall<TestCheckMaxSMTParams, TestCheckMaxSMTResult>(TestCheckMaxSMTParams, TestCheckMaxSMTResult),
         RdCall<TestCheckMaxSMTParams, TestCheckMaxSMTResult>(TestCheckMaxSMTParams, TestCheckMaxSMTResult),
         RdCall<Unit, TestCollectMaxSMTStatisticsResult>(FrameworkMarshallers.Void, TestCollectMaxSMTStatisticsResult),
         RdCall<Long, String>(FrameworkMarshallers.Long, FrameworkMarshallers.String),
@@ -286,7 +277,6 @@ class TestProtocolModel private constructor(
             print("assertSoft = "); _assertSoft.print(printer); println()
             print("check = "); _check.print(printer); println()
             print("checkMaxSMT = "); _checkMaxSMT.print(printer); println()
-            print("checkSubOptMaxSMT = "); _checkSubOptMaxSMT.print(printer); println()
             print("collectMaxSMTStatistics = "); _collectMaxSMTStatistics.print(printer); println()
             print("exprToString = "); _exprToString.print(printer); println()
             print("getReasonUnknown = "); _getReasonUnknown.print(printer); println()
@@ -313,7 +303,6 @@ class TestProtocolModel private constructor(
             _assertSoft.deepClonePolymorphic(),
             _check.deepClonePolymorphic(),
             _checkMaxSMT.deepClonePolymorphic(),
-            _checkSubOptMaxSMT.deepClonePolymorphic(),
             _collectMaxSMTStatistics.deepClonePolymorphic(),
             _exprToString.deepClonePolymorphic(),
             _getReasonUnknown.deepClonePolymorphic(),
@@ -595,8 +584,7 @@ data class TestCheckMaxSMTResult (
     val satSoftConstraintExprs: List<io.ksmt.KAst>,
     val satSoftConstraintWeights: List<UInt>,
     val hardConstraintsSatStatus: io.ksmt.solver.KSolverStatus,
-    val timeoutExceededOrUnknown: Boolean,
-    val maxSMTSucceeded: Boolean
+    val timeoutExceededOrUnknown: Boolean
 ) : IPrintable {
     //companion
     
@@ -609,8 +597,7 @@ data class TestCheckMaxSMTResult (
             val satSoftConstraintWeights = buffer.readList { buffer.readUInt() }
             val hardConstraintsSatStatus = buffer.readEnum<io.ksmt.solver.KSolverStatus>()
             val timeoutExceededOrUnknown = buffer.readBool()
-            val maxSMTSucceeded = buffer.readBool()
-            return TestCheckMaxSMTResult(satSoftConstraintExprs, satSoftConstraintWeights, hardConstraintsSatStatus, timeoutExceededOrUnknown, maxSMTSucceeded)
+            return TestCheckMaxSMTResult(satSoftConstraintExprs, satSoftConstraintWeights, hardConstraintsSatStatus, timeoutExceededOrUnknown)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: TestCheckMaxSMTResult)  {
@@ -618,7 +605,6 @@ data class TestCheckMaxSMTResult (
             buffer.writeList(value.satSoftConstraintWeights) { v -> buffer.writeUInt(v) }
             buffer.writeEnum(value.hardConstraintsSatStatus)
             buffer.writeBool(value.timeoutExceededOrUnknown)
-            buffer.writeBool(value.maxSMTSucceeded)
         }
         
         
@@ -638,7 +624,6 @@ data class TestCheckMaxSMTResult (
         if (satSoftConstraintWeights != other.satSoftConstraintWeights) return false
         if (hardConstraintsSatStatus != other.hardConstraintsSatStatus) return false
         if (timeoutExceededOrUnknown != other.timeoutExceededOrUnknown) return false
-        if (maxSMTSucceeded != other.maxSMTSucceeded) return false
         
         return true
     }
@@ -649,7 +634,6 @@ data class TestCheckMaxSMTResult (
         __r = __r*31 + satSoftConstraintWeights.hashCode()
         __r = __r*31 + hardConstraintsSatStatus.hashCode()
         __r = __r*31 + timeoutExceededOrUnknown.hashCode()
-        __r = __r*31 + maxSMTSucceeded.hashCode()
         return __r
     }
     //pretty print
@@ -660,7 +644,6 @@ data class TestCheckMaxSMTResult (
             print("satSoftConstraintWeights = "); satSoftConstraintWeights.print(printer); println()
             print("hardConstraintsSatStatus = "); hardConstraintsSatStatus.print(printer); println()
             print("timeoutExceededOrUnknown = "); timeoutExceededOrUnknown.print(printer); println()
-            print("maxSMTSucceeded = "); maxSMTSucceeded.print(printer); println()
         }
         printer.print(")")
     }
@@ -727,7 +710,7 @@ data class TestCheckResult (
 
 
 /**
- * #### Generated from [TestProtocolModel.kt:57]
+ * #### Generated from [TestProtocolModel.kt:56]
  */
 data class TestCollectMaxSMTStatisticsResult (
     val timeoutMs: Long,
@@ -802,7 +785,7 @@ data class TestCollectMaxSMTStatisticsResult (
 
 
 /**
- * #### Generated from [TestProtocolModel.kt:64]
+ * #### Generated from [TestProtocolModel.kt:63]
  */
 data class TestConversionResult (
     val expressions: List<io.ksmt.KAst>
@@ -859,7 +842,7 @@ data class TestConversionResult (
 
 
 /**
- * #### Generated from [TestProtocolModel.kt:68]
+ * #### Generated from [TestProtocolModel.kt:67]
  */
 data class TestInternalizeAndConvertParams (
     val expressions: List<io.ksmt.KAst>

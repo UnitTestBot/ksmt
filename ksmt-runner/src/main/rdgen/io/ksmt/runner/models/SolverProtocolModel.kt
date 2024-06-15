@@ -79,7 +79,6 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
         field("satSoftConstraintWeights", immutableList(PredefinedType.uint))
         field("hardConstraintsSatStatus", statusType)
         field("timeoutExceededOrUnknown", PredefinedType.bool)
-        field("maxSMTSucceeded", PredefinedType.bool)
     }
 
     private val checkWithAssumptionsParams = structdef {
@@ -174,10 +173,6 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
         call("checkMaxSMT", checkMaxSMTParams, checkMaxSMTResult).apply {
             async
             documentation = "Check MaxSMT"
-        }
-        call("checkSubOptMaxSMT", checkMaxSMTParams, checkMaxSMTResult).apply {
-            async
-            documentation = "Check SubOptMaxSMT"
         }
         call("collectMaxSMTStatistics", PredefinedType.void, collectMaxSMTStatisticsResult).apply {
             async

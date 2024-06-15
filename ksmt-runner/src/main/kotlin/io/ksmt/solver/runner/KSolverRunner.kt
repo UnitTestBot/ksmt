@@ -249,11 +249,6 @@ class KSolverRunner<Config : KSolverConfiguration>(
             checkMaxSMT(timeout, collectStatistics)
         }
 
-    suspend fun checkSubOptMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult =
-        handleCheckAnyMaxSMTExceptionAsNotSucceededAsync {
-            checkSubOptMaxSMT(timeout, collectStatistics)
-        }
-
     suspend fun collectMaxSMTStatistics(): KMaxSMTStatistics =
         handleCollectStatisticsAsync {
             collectMaxSMTStatistics()
@@ -459,9 +454,9 @@ class KSolverRunner<Config : KSolverConfiguration>(
             body = body,
             onException = {
                 KMaxSMTResult(
-                    emptyList(), KSolverStatus.UNKNOWN,
-                    timeoutExceededOrUnknown = true,
-                    maxSMTSucceeded = false
+                    emptyList(),
+                    KSolverStatus.UNKNOWN,
+                    timeoutExceededOrUnknown = true
                 )
             }
         )

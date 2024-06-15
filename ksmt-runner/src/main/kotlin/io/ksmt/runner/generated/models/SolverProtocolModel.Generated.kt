@@ -30,7 +30,6 @@ class SolverProtocolModel private constructor(
     private val _pop: RdCall<PopParams, Unit>,
     private val _check: RdCall<CheckParams, CheckResult>,
     private val _checkMaxSMT: RdCall<CheckMaxSMTParams, CheckMaxSMTResult>,
-    private val _checkSubOptMaxSMT: RdCall<CheckMaxSMTParams, CheckMaxSMTResult>,
     private val _collectMaxSMTStatistics: RdCall<Unit, CollectMaxSMTStatisticsResult>,
     private val _checkWithAssumptions: RdCall<CheckWithAssumptionsParams, CheckResult>,
     private val _model: RdCall<Unit, ModelResult>,
@@ -88,7 +87,7 @@ class SolverProtocolModel private constructor(
         
         private val __SolverConfigurationParamListSerializer = SolverConfigurationParam.list()
         
-        const val serializationHash = 60617290091922470L
+        const val serializationHash = -1861632144359942979L
         
     }
     override val serializersOwner: ISerializersOwner get() = SolverProtocolModel
@@ -157,11 +156,6 @@ class SolverProtocolModel private constructor(
     val checkMaxSMT: RdCall<CheckMaxSMTParams, CheckMaxSMTResult> get() = _checkMaxSMT
     
     /**
-     * Check SubOptMaxSMT
-     */
-    val checkSubOptMaxSMT: RdCall<CheckMaxSMTParams, CheckMaxSMTResult> get() = _checkSubOptMaxSMT
-    
-    /**
      * Collect MaxSMT statistics
      */
     val collectMaxSMTStatistics: RdCall<Unit, CollectMaxSMTStatisticsResult> get() = _collectMaxSMTStatistics
@@ -205,7 +199,6 @@ class SolverProtocolModel private constructor(
         _pop.async = true
         _check.async = true
         _checkMaxSMT.async = true
-        _checkSubOptMaxSMT.async = true
         _collectMaxSMTStatistics.async = true
         _checkWithAssumptions.async = true
         _model.async = true
@@ -227,7 +220,6 @@ class SolverProtocolModel private constructor(
         bindableChildren.add("pop" to _pop)
         bindableChildren.add("check" to _check)
         bindableChildren.add("checkMaxSMT" to _checkMaxSMT)
-        bindableChildren.add("checkSubOptMaxSMT" to _checkSubOptMaxSMT)
         bindableChildren.add("collectMaxSMTStatistics" to _collectMaxSMTStatistics)
         bindableChildren.add("checkWithAssumptions" to _checkWithAssumptions)
         bindableChildren.add("model" to _model)
@@ -250,7 +242,6 @@ class SolverProtocolModel private constructor(
         RdCall<Unit, Unit>(FrameworkMarshallers.Void, FrameworkMarshallers.Void),
         RdCall<PopParams, Unit>(PopParams, FrameworkMarshallers.Void),
         RdCall<CheckParams, CheckResult>(CheckParams, CheckResult),
-        RdCall<CheckMaxSMTParams, CheckMaxSMTResult>(CheckMaxSMTParams, CheckMaxSMTResult),
         RdCall<CheckMaxSMTParams, CheckMaxSMTResult>(CheckMaxSMTParams, CheckMaxSMTResult),
         RdCall<Unit, CollectMaxSMTStatisticsResult>(FrameworkMarshallers.Void, CollectMaxSMTStatisticsResult),
         RdCall<CheckWithAssumptionsParams, CheckResult>(CheckWithAssumptionsParams, CheckResult),
@@ -278,7 +269,6 @@ class SolverProtocolModel private constructor(
             print("pop = "); _pop.print(printer); println()
             print("check = "); _check.print(printer); println()
             print("checkMaxSMT = "); _checkMaxSMT.print(printer); println()
-            print("checkSubOptMaxSMT = "); _checkSubOptMaxSMT.print(printer); println()
             print("collectMaxSMTStatistics = "); _collectMaxSMTStatistics.print(printer); println()
             print("checkWithAssumptions = "); _checkWithAssumptions.print(printer); println()
             print("model = "); _model.print(printer); println()
@@ -303,7 +293,6 @@ class SolverProtocolModel private constructor(
             _pop.deepClonePolymorphic(),
             _check.deepClonePolymorphic(),
             _checkMaxSMT.deepClonePolymorphic(),
-            _checkSubOptMaxSMT.deepClonePolymorphic(),
             _collectMaxSMTStatistics.deepClonePolymorphic(),
             _checkWithAssumptions.deepClonePolymorphic(),
             _model.deepClonePolymorphic(),
@@ -502,8 +491,7 @@ data class CheckMaxSMTResult (
     val satSoftConstraintExprs: List<io.ksmt.KAst>,
     val satSoftConstraintWeights: List<UInt>,
     val hardConstraintsSatStatus: io.ksmt.solver.KSolverStatus,
-    val timeoutExceededOrUnknown: Boolean,
-    val maxSMTSucceeded: Boolean
+    val timeoutExceededOrUnknown: Boolean
 ) : IPrintable {
     //companion
     
@@ -516,8 +504,7 @@ data class CheckMaxSMTResult (
             val satSoftConstraintWeights = buffer.readList { buffer.readUInt() }
             val hardConstraintsSatStatus = buffer.readEnum<io.ksmt.solver.KSolverStatus>()
             val timeoutExceededOrUnknown = buffer.readBool()
-            val maxSMTSucceeded = buffer.readBool()
-            return CheckMaxSMTResult(satSoftConstraintExprs, satSoftConstraintWeights, hardConstraintsSatStatus, timeoutExceededOrUnknown, maxSMTSucceeded)
+            return CheckMaxSMTResult(satSoftConstraintExprs, satSoftConstraintWeights, hardConstraintsSatStatus, timeoutExceededOrUnknown)
         }
         
         override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: CheckMaxSMTResult)  {
@@ -525,7 +512,6 @@ data class CheckMaxSMTResult (
             buffer.writeList(value.satSoftConstraintWeights) { v -> buffer.writeUInt(v) }
             buffer.writeEnum(value.hardConstraintsSatStatus)
             buffer.writeBool(value.timeoutExceededOrUnknown)
-            buffer.writeBool(value.maxSMTSucceeded)
         }
         
         
@@ -545,7 +531,6 @@ data class CheckMaxSMTResult (
         if (satSoftConstraintWeights != other.satSoftConstraintWeights) return false
         if (hardConstraintsSatStatus != other.hardConstraintsSatStatus) return false
         if (timeoutExceededOrUnknown != other.timeoutExceededOrUnknown) return false
-        if (maxSMTSucceeded != other.maxSMTSucceeded) return false
         
         return true
     }
@@ -556,7 +541,6 @@ data class CheckMaxSMTResult (
         __r = __r*31 + satSoftConstraintWeights.hashCode()
         __r = __r*31 + hardConstraintsSatStatus.hashCode()
         __r = __r*31 + timeoutExceededOrUnknown.hashCode()
-        __r = __r*31 + maxSMTSucceeded.hashCode()
         return __r
     }
     //pretty print
@@ -567,7 +551,6 @@ data class CheckMaxSMTResult (
             print("satSoftConstraintWeights = "); satSoftConstraintWeights.print(printer); println()
             print("hardConstraintsSatStatus = "); hardConstraintsSatStatus.print(printer); println()
             print("timeoutExceededOrUnknown = "); timeoutExceededOrUnknown.print(printer); println()
-            print("maxSMTSucceeded = "); maxSMTSucceeded.print(printer); println()
         }
         printer.print(")")
     }
@@ -691,7 +674,7 @@ data class CheckResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:85]
+ * #### Generated from [SolverProtocolModel.kt:84]
  */
 data class CheckWithAssumptionsParams (
     val assumptions: List<io.ksmt.KAst>,
@@ -754,7 +737,7 @@ data class CheckWithAssumptionsParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:90]
+ * #### Generated from [SolverProtocolModel.kt:89]
  */
 data class CollectMaxSMTStatisticsResult (
     val timeoutMs: Long,
@@ -934,7 +917,7 @@ data class CreateSolverParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:111]
+ * #### Generated from [SolverProtocolModel.kt:110]
  */
 data class ModelEntry (
     val decl: io.ksmt.KAst,
@@ -1009,7 +992,7 @@ data class ModelEntry (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:105]
+ * #### Generated from [SolverProtocolModel.kt:104]
  */
 data class ModelFuncInterpEntry (
     val hasVars: Boolean,
@@ -1078,7 +1061,7 @@ data class ModelFuncInterpEntry (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:123]
+ * #### Generated from [SolverProtocolModel.kt:122]
  */
 data class ModelResult (
     val declarations: List<io.ksmt.KAst>,
@@ -1147,7 +1130,7 @@ data class ModelResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:118]
+ * #### Generated from [SolverProtocolModel.kt:117]
  */
 data class ModelUninterpretedSortUniverse (
     val sort: io.ksmt.KAst,
@@ -1267,7 +1250,7 @@ data class PopParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:101]
+ * #### Generated from [SolverProtocolModel.kt:100]
  */
 data class ReasonUnknownResult (
     val reasonUnknown: String
@@ -1473,7 +1456,7 @@ enum class SolverType {
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:97]
+ * #### Generated from [SolverProtocolModel.kt:96]
  */
 data class UnsatCoreResult (
     val core: List<io.ksmt.KAst>

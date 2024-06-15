@@ -149,22 +149,7 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
                 result.satSoftConstraints.map { it.expression },
                 result.satSoftConstraints.map { it.weight },
                 result.hardConstraintsSatStatus,
-                result.timeoutExceededOrUnknown,
-                result.maxSMTSucceeded
-            )
-        }
-        checkSubOptMaxSMT.measureExecutionForTermination { params ->
-            val timeout = params.timeout.milliseconds
-            val collectStatistics = params.collectStatistics
-
-            val result = maxSmtSolver.checkSubOptMaxSMT(timeout, collectStatistics)
-
-            CheckMaxSMTResult(
-                result.satSoftConstraints.map { it.expression },
-                result.satSoftConstraints.map { it.weight },
-                result.hardConstraintsSatStatus,
-                result.timeoutExceededOrUnknown,
-                result.maxSMTSucceeded
+                result.timeoutExceededOrUnknown
             )
         }
         collectMaxSMTStatistics.measureExecutionForTermination {

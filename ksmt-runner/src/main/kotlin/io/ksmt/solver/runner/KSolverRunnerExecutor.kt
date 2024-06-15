@@ -232,13 +232,6 @@ class KSolverRunnerExecutor(
             }
         }
 
-    suspend fun checkSubOptMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult =
-        checkAnyMaxSMT(timeout, collectStatistics) { params ->
-            queryWithTimeoutAndExceptionHandlingAsync {
-                checkSubOptMaxSMT.queryAsync(params)
-            }
-        }
-
     /**
      * Can be used with both optimal and suboptimal versions.
      */
@@ -259,8 +252,7 @@ class KSolverRunnerExecutor(
         return KMaxSMTResult(
             satSoftConstraints,
             result.hardConstraintsSatStatus,
-            result.timeoutExceededOrUnknown,
-            result.maxSMTSucceeded
+            result.timeoutExceededOrUnknown
         )
     }
 
