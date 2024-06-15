@@ -1,0 +1,177 @@
+name: Build and run long MaxSMT tests
+
+on:
+  workflow_call:
+    inputs:
+      solver:
+        type: string
+        description: Chosen MaxSMT solver configuration
+        required: true
+      smtSolver:
+        type: string
+        description: Chosen SMT solver
+        required: true
+      optimality:
+        type: boolean
+        description: Chosen optimal (otherwise suboptimal) configuration
+        required: true
+      commitSHA:
+        description: Commit SHA (latest commit is default)
+        required: false
+        type: string
+        default: ""
+
+env:
+  TEST_DATA_REVISION: 0.0.0
+  PUSHGATEWAY_HOSTNAME: monitoring.utbot.org
+
+jobs:
+  prepare-matrix:
+    runs-on: ubuntu-22.04
+    outputs:
+      logics-matrix: ${{ steps.set-matrix.outputs.maxsmt-tests-matrix }}
+    steps:
+      - name: Print environment variables
+        run: printenv
+
+      - name: Checkout repository (or SHA)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commitSHA }}
+
+      - id: set-matrix
+        name: Create and print MaxSMT logics matrix
+        # Exclude LIA, LRA tests for Bitwuzla solver
+        # Exclude FP tests for Yices solver
+        run: |
+          if ${{ inputs.smtSolver == 'Bitwuzla' }}
+          then
+            MAXSMT_TESTS=$(echo $(cat .github/workflows/maxsmt-tests-matrix.json | jq '{ "logics": [ .[] | select(.NAME | contains("LIA") or contains("LRA") | not) ] }'))
+          elif ${{ inputs.smtSolver == 'Yices' }}
+          then
+            MAXSMT_TESTS=$(echo $(cat .github/workflows/maxsmt-tests-matrix.json | jq '{ "logics": [ .[] | select(.NAME | contains("FP") | not) ] }'))
+          else
+            MAXSMT_TESTS=$(echo $(cat .github/workflows/maxsmt-tests-matrix.json | jq '{ "logics": [ .[] ] }'))
+          fi
+
+          echo "maxsmt-tests-matrix=$MAXSMT_TESTS" >> $GITHUB_OUTPUT
+          echo $MAXSMT_TESTS
+
+  run-maxsmt-tests:
+    needs: prepare-matrix
+    continue-on-error: true
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix: ${{ fromJSON(needs.prepare-matrix.outputs.logics-matrix) }}
+
+    name: Run ${{ matrix.logics.NAME }} tests
+
+    steps:
+      - name: Checkout repository (or SHA)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commitSHA }}
+
+      - name: Set up JDK 1.8
+        uses: actions/setup-java@v3
+        with:
+          java-version: 8
+          distribution: 'zulu'
+
+      - name: Run monitoring
+        # secret uploaded using base64 encoding to have one-line output:
+        # cat file | base64 -w 0
+        continue-on-error: true
+        run: |
+          chmod +x ./scripts/monitoring.sh
+          ./scripts/monitoring.sh "${PUSHGATEWAY_HOSTNAME}" "${{ secrets.PUSHGATEWAY_USER }}" "${{ secrets.PUSHGATEWAY_PASSWORD }}"
+          echo "Please visit Grafana to check metrics: https://${PUSHGATEWAY_HOSTNAME}/d/rYdddlPWk/node-exporter-full?orgId=1&from=now-1h&to=now&var-service=github&var-instance=${GITHUB_RUN_ID}-${HOSTNAME}&refresh=1m"
+
+      - name: Download ${{ matrix.logics.NAME }} tests
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: |
+            :ksmt-maxsmt-test:maxSmtBenchmark-${{ matrix.logics.NAME }}
+            --no-daemon
+            -PtestDataRevision=${{ env.TEST_DATA_REVISION }}
+
+      - name: Run ${{ matrix.logics.NAME }} tests
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: |
+            :ksmt-maxsmt-test:test
+            --no-daemon
+            --tests "io.ksmt.solver.maxsmt.test.configurations.${{ inputs.solver }}SMTBenchmarkTest.maxSMT${{ inputs.smtSolver }}Test"
+
+      - name: Add logic name to test run statistics
+        if: ${{ always() }}
+        # Create an object with the field 'logics' from the JSON list
+        run: |
+          cat <<< $(jq -S '. += { "NAME": "${{ matrix.logics.NAME }}" }' ksmt-maxsmt-test/src/test/resources/maxsmt-statistics-*.json) > ksmt-maxsmt-test/src/test/resources/maxsmt-statistics-*.json
+
+      - name: Upload ${{ matrix.logics.NAME }} test statistics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.logics.NAME }}_${{ inputs.solver }}_${{ inputs.smtSolver }}_test_statistics
+          path: ksmt-maxsmt-test/src/test/resources/maxsmt-statistics-*.json
+
+      - name: Upload ${{ matrix.logics.NAME }} test report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.logics.NAME }}_${{ inputs.solver }}_${{ inputs.smtSolver }}_test_report
+          path: ksmt-maxsmt-test/build/reports/tests/test/*
+
+      - name: Upload ${{ matrix.logics.NAME }} test logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.logics.NAME }}_${{ inputs.solver }}_${{ inputs.smtSolver }}_test_logs
+          path: ksmt-maxsmt-test/logs/*
+
+  merge-and-analyze-maxsmt-statistics:
+    needs: run-maxsmt-tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download test statistics
+        uses: actions/download-artifact@v4
+        id: download
+        with:
+          path: downloads
+
+      - name: Add merged test run statistics and analyzed statistics paths to environment variables
+        run: |
+          export MERGED_STATISTICS_PATH=${{steps.download.outputs.download-path}}/${{ inputs.solver }}_${{ inputs.smtSolver }}_test_statistics.json
+          echo "MERGED_STATISTICS_PATH=$MERGED_STATISTICS_PATH" >> $GITHUB_ENV
+
+          export ANALYZED_STATISTICS_PATH=${{steps.download.outputs.download-path}}/${{ inputs.solver }}_${{ inputs.smtSolver }}_analyzed_test_statistics.json
+          echo "ANALYZED_STATISTICS_PATH=$ANALYZED_STATISTICS_PATH" >> $GITHUB_ENV
+
+      - name: Merge test run statistics
+        # 1. Merge all test run statistics files into a single file:
+        # - merge all test run statistics files (${{steps.download.outputs.download-path}}/*_test_statistics/*.json) for different theories
+        # - save merged files into a single JSON file (${{ env.MERGED_STATISTICS_PATH }}_temp)
+        #
+        # 2. Create an object with the field 'logics' from the JSON list
+        run: |
+          jq -s '.' ${{steps.download.outputs.download-path}}/*_test_statistics/*.json > ${{ env.MERGED_STATISTICS_PATH }}_temp
+          cat ${{ env.MERGED_STATISTICS_PATH }}_temp | jq '{ "logics": . }' > ${{ env.MERGED_STATISTICS_PATH }}
+
+      - name: Upload test run statistics
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.solver }}_${{ inputs.smtSolver }}_test_statistics
+          path: ${{ env.MERGED_STATISTICS_PATH }}
+
+      - name: Analyze test run statistics
+        run: python ./scripts/analyze_maxsmt_statistics.py ${{ env.MERGED_STATISTICS_PATH }} ${{ env.ANALYZED_STATISTICS_PATH }}
+
+      - name: Upload analyzed test run statistics
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.solver }}_${{ inputs.smtSolver }}_analyzed_test_statistics
+          path: ${{ env.ANALYZED_STATISTICS_PATH }}

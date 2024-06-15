@@ -1,0 +1,33 @@
+name: (PMRes solver) Build and run long MaxSMT tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      solver:
+        type: choice
+        description: Chosen MaxSMT solver
+        options:
+          - KPMRes
+      smtSolver:
+        type: choice
+        description: Chosen SMT solver
+        options:
+          - Z3
+          - Bitwuzla
+          - Cvc5
+          - Yices
+      commitSHA:
+        description: Commit SHA (latest commit is default)
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  run-long-maxsmt-tests:
+    uses: ./.github/workflows/run-long-maxsmt-tests.yml
+    with:
+      solver: ${{ inputs.solver }}
+      smtSolver: ${{ inputs.smtSolver }}
+      optimality: true
+      commitSHA: ${{ inputs.commitSHA }}
+    secrets: inherit

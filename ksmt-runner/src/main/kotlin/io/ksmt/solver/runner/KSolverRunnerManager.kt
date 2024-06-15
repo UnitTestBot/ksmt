@@ -1,7 +1,6 @@
 package io.ksmt.solver.runner
 
 import com.jetbrains.rd.util.lifetime.isNotAlive
-import kotlinx.coroutines.runBlocking
 import io.ksmt.KContext
 import io.ksmt.runner.core.KsmtWorkerArgs
 import io.ksmt.runner.core.KsmtWorkerFactory
@@ -18,6 +17,8 @@ import io.ksmt.runner.generated.solverType
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverException
+import io.ksmt.solver.maxsmt.KMaxSMTContext
+import kotlinx.coroutines.runBlocking
 import kotlin.reflect.KClass
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -47,6 +48,7 @@ open class KSolverRunnerManager(
 
     fun <C : KSolverConfiguration> createSolver(
         ctx: KContext,
+        maxsmtCtx: KMaxSMTContext = KMaxSMTContext(),
         solver: KClass<out KSolver<C>>
     ): KSolverRunner<C> {
         if (workers.lifetime.isNotAlive) {
@@ -54,7 +56,7 @@ open class KSolverRunnerManager(
         }
         val solverType = solver.solverType
         if (solverType != SolverType.Custom) {
-            return KSolverRunner(this, ctx, solverType.createConfigurationBuilder(), solverType)
+            return KSolverRunner(this, ctx, maxsmtCtx, solverType.createConfigurationBuilder(), solverType)
         }
 
         return createCustomSolver(ctx, solver)
