@@ -14,7 +14,12 @@ dependencies {
 publishing.publications {
     register<MavenPublication>("maven") {
         addKsmtPom()
-        addMavenDependencies(configurations.default.get().allDependencies)
+
+        addMavenDependencies(configurations.default.get().allDependencies) { dependency ->
+            // exclude linux arm from default ksmt-z3 configuration
+            dependency.artifactId.let { !it.endsWith("linux-arm") }
+        }
+
         addEmptyArtifact(project)
         signKsmtPublication(project)
     }
