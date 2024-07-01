@@ -73,18 +73,21 @@ fun MavenPublication.addEmptyArtifact(project: Project): Unit = with(project) {
     artifact(generateEmptyJar("javadoc"))
 }
 
-fun MavenPublication.addMavenDependencies(dependencies: DependencySet) {
+fun MavenPublication.addMavenDependencies(
+    dependencies: DependencySet,
+    dependencyFilter: (MavenPublication) -> Boolean = { true }
+) {
     pom.withXml {
         val dependenciesNode: Node = asNode().appendNode("dependencies")
         dependencies.forEach {
-            addDependencyPublications(dependenciesNode, it)
+            addDependencyPublications(dependenciesNode, it, dependencyFilter)
         }
     }
 }
 
-private fun addDependencyPublications(node: Node, dependency: Dependency) {
+private fun addDependencyPublications(node: Node, dependency: Dependency, dependencyFilter: (MavenPublication) -> Boolean) {
     val project = (dependency as? ProjectDependency)?.dependencyProject ?: return
-    project.publishing.publications.filterIsInstance<MavenPublication>().forEach {
+    project.publishing.publications.filterIsInstance<MavenPublication>().filter(dependencyFilter).forEach {
         val dependencyNode = node.appendNode("dependency")
         addMavenPublicationDependency(dependencyNode, it)
     }
