@@ -16,6 +16,11 @@ object TestProtocolModel : Ext(TestProtocolRoot) {
     private val kastType = kastType()
     private val statusType = solverStatusType()
 
+    private val testSoftConstraint = structdef {
+        field("expression", kastType)
+        field("weight", PredefinedType.uint)
+    }
+
     private val equalityCheckParams = structdef {
         field("solver", PredefinedType.int)
         field("actual", kastType)
@@ -34,6 +39,25 @@ object TestProtocolModel : Ext(TestProtocolRoot) {
 
     private val testCheckResult = structdef {
         field("status", statusType)
+    }
+
+    private val testCheckMaxSMTParams = structdef {
+        field("timeout", PredefinedType.long)
+        field("collectStatistics", PredefinedType.bool)
+    }
+
+    private val testCheckMaxSMTResult = structdef {
+        field("satSoftConstraintExprs", immutableList(kastType))
+        field("satSoftConstraintWeights", immutableList(PredefinedType.uint))
+        field("hardConstraintsSatStatus", statusType)
+        field("timeoutExceededOrUnknown", PredefinedType.bool)
+    }
+
+    private val testCollectMaxSMTStatisticsResult = structdef {
+        field("timeoutMs", PredefinedType.long)
+        field("elapsedTimeMs", PredefinedType.long)
+        field("timeInSolverQueriesMs", PredefinedType.long)
+        field("queriesToSolverNumber", PredefinedType.int)
     }
 
     private val testConversionResult = structdef {
@@ -81,9 +105,21 @@ object TestProtocolModel : Ext(TestProtocolRoot) {
             async
             documentation = "Assert expr"
         }
+        call("assertSoft", testSoftConstraint, PredefinedType.void).apply {
+            async
+            documentation = "Assert expression softly"
+        }
         call("check", PredefinedType.int, testCheckResult).apply {
             async
             documentation = "Check-sat"
+        }
+        call("checkMaxSMT", testCheckMaxSMTParams, testCheckMaxSMTResult).apply {
+            async
+            documentation = "Check MaxSMT"
+        }
+        call("collectMaxSMTStatistics", PredefinedType.void, testCollectMaxSMTStatisticsResult).apply {
+            async
+            documentation = "Collect MaxSMT statistics"
         }
         call("exprToString", PredefinedType.long, PredefinedType.string).apply {
             async

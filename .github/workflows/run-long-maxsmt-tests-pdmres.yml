@@ -1,0 +1,119 @@
+name: (PrimalDualMaxRes solver) Build and run long MaxSMT tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      solver:
+        type: choice
+        description: Chosen MaxSMT solver
+        options:
+          - KPrimalDualMaxRes
+      smtSolver:
+        type: choice
+        description: Chosen SMT solver
+        options:
+          - Portfolio
+          - Z3
+          - Bitwuzla
+          - Cvc5
+          - Yices
+          - Z3Native
+      optimality:
+        type: boolean
+        description: Chosen optimal (otherwise suboptimal) configuration
+        default: false
+      strategy:
+        type: choice
+        description: Chosen MaxSMT solving strategy
+        options:
+          - Dual
+          - Primal
+      minimizeCores:
+        type: boolean
+        description: Core minimization option (only one of [minimizeCores, preferLargeWeightCores, getMultipleCores] can be true)
+        required: true
+        default: false
+      preferLargeWeightCores:
+        type: boolean
+        description: Prefer large weight constraints for cores (only one of [minimizeCores, preferLargeWeightCores, getMultipleCores] can be true)
+        required: true
+        default: true
+      getMultipleCores:
+        type: boolean
+        description: Get multiple cores (only one of [minimizeCores, preferLargeWeightCores, getMultipleCores] can be true)
+        required: true
+        default: false
+      commitSHA:
+        description: Commit SHA (latest commit is default)
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  verify-inputs:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Verify inputs
+        # Check only one option of [minimizeCores, preferLargeWeightCores, getMultipleCores] is true
+        # (supported tests configurations)
+        run: |
+          if ([[ "${{ inputs.minimizeCores }}" == "true" ]] && [[ "${{ inputs.preferLargeWeightCores }}" == "true" ]]) || \
+            ([[ "${{ inputs.minimizeCores }}" == "true" ]] && [[ "${{ inputs.getMultipleCores }}" == "true" ]]) || \
+            ([[ "${{ inputs.preferLargeWeightCores }}" == "true" ]] && [[ "${{ inputs.getMultipleCores }}" == "true" ]])
+          then
+            echo "Only one option of [minimizeCores, preferLargeWeightCores, getMultipleCores] can be true"
+            exit 1
+          fi
+
+  construct-solver-name:
+    needs: verify-inputs
+    runs-on: ubuntu-22.04
+    outputs:
+      solver: ${{ steps.set-output.outputs.solver }}
+    steps:
+      - name: Construct solver name
+        run: |
+          if [[ "${{ inputs.minimizeCores }}" == false ]] && \
+            [[ "${{ inputs.preferLargeWeightCores }}" == false ]] && \
+            [[ "${{ inputs.getMultipleCores }}" == false ]]
+          then
+            export OPTION_TO_VALUE=""
+          elif [[ "${{ inputs.preferLargeWeightCores }}" == true ]]
+          then
+            export OPTION_TO_VALUE="2"
+          elif [[ "${{ inputs.minimizeCores }}" == true ]]
+          then
+            export OPTION_TO_VALUE="3"
+          elif [[ "${{ inputs.getMultipleCores }}" == true ]]
+          then
+            export OPTION_TO_VALUE="4"
+          fi
+
+          echo "OPTION_TO_VALUE=$OPTION_TO_VALUE" >> $GITHUB_ENV
+
+          if [[ "${{ inputs.optimality }}" == false ]]
+          then
+            export SUB_OPT="SubOpt"
+          fi
+
+          echo "SUB_OPT=$SUB_OPT" >> $GITHUB_ENV
+
+      - name: Set solver name to output
+        id: set-output
+        run: |
+          if [[ "${{ inputs.smtSolver }}" == "Z3Native" ]]
+          then
+            echo "solver=Z3Native" >> $GITHUB_OUTPUT
+          else
+            echo "solver=K${{ env.SUB_OPT }}${{ inputs.strategy }}MaxRes${{ env.OPTION_TO_VALUE }}" >> $GITHUB_OUTPUT
+          fi
+
+  run-long-maxsmt-tests:
+    needs: construct-solver-name
+    uses: ./.github/workflows/run-long-maxsmt-tests.yml
+    with:
+      solver: ${{ needs.construct-solver-name.outputs.solver }}
+      smtSolver: ${{ inputs.smtSolver }}
+      optimality: ${{ inputs.optimality }}
+      commitSHA: ${{ inputs.commitSHA }}
+    secrets: inherit

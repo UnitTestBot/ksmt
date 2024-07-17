@@ -3,13 +3,14 @@ package io.ksmt.solver.portfolio
 import io.ksmt.KContext
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverConfiguration
+import io.ksmt.solver.maxsmt.KMaxSMTContext
 import io.ksmt.solver.runner.KSolverRunnerManager
 import io.ksmt.utils.uncheckedCast
 import kotlin.reflect.KClass
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-class KPortfolioSolverManager(
+open class KPortfolioSolverManager(
     private val solvers: List<KClass<out KSolver<out KSolverConfiguration>>>,
     portfolioPoolSize: Int = DEFAULT_PORTFOLIO_POOL_SIZE,
     hardTimeout: Duration = DEFAULT_HARD_TIMEOUT,
@@ -23,10 +24,13 @@ class KPortfolioSolverManager(
         require(solvers.isNotEmpty()) { "Empty solver portfolio" }
     }
 
-    fun createPortfolioSolver(ctx: KContext): KPortfolioSolver {
+    fun createPortfolioSolver(
+        ctx: KContext,
+        maxsmtCtx: KMaxSMTContext = KMaxSMTContext(preferLargeWeightConstraintsForCores = true)
+    ): KPortfolioSolver {
         val solverInstances = solvers.map {
             val solverType: KClass<out KSolver<KSolverConfiguration>> = it.uncheckedCast()
-            it to createSolver(ctx, solverType)
+            it to createSolver(ctx, maxsmtCtx, solverType)
         }
         return KPortfolioSolver(solverInstances)
     }

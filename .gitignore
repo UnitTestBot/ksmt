@@ -9,3 +9,19 @@ build
 
 # ignore ksmt test data
 ksmt-test/testData
+
+# ignore maxsat test data
+ksmt-maxsmt-test/testData
+
+# ignore maxsmt test data
+ksmt-maxsmt-test/src/test/resources/maxSmtBenchmark
+
+# ignore maxsmt statistics
+ksmt-maxsmt-test/src/test/resources/maxsmt-statistics-*.json
+
+**/logs/
+
+ksmt-maxsmt-test/src/test/resources/
+
+ksmt-maxsmt-test/*.log
+

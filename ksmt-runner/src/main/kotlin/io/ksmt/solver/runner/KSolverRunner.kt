@@ -2,7 +2,6 @@ package io.ksmt.solver.runner
 
 import com.jetbrains.rd.util.AtomicReference
 import com.jetbrains.rd.util.threading.SpinWait
-import kotlinx.coroutines.sync.Mutex
 import io.ksmt.KContext
 import io.ksmt.expr.KExpr
 import io.ksmt.runner.generated.ConfigurationBuilder
@@ -13,8 +12,12 @@ import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverException
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.async.KAsyncSolver
+import io.ksmt.solver.maxsmt.KMaxSMTContext
+import io.ksmt.solver.maxsmt.KMaxSMTResult
+import io.ksmt.solver.maxsmt.statistics.KMaxSMTStatistics
 import io.ksmt.solver.runner.KSolverRunnerManager.CustomSolverInfo
 import io.ksmt.sort.KBoolSort
+import kotlinx.coroutines.sync.Mutex
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration
 
@@ -27,6 +30,7 @@ import kotlin.time.Duration
 class KSolverRunner<Config : KSolverConfiguration>(
     private val manager: KSolverRunnerManager,
     private val ctx: KContext,
+    private val maxSmtCtx: KMaxSMTContext = KMaxSMTContext(),
     private val configurationBuilder: ConfigurationBuilder<Config>,
     private val solverType: SolverType,
     private val customSolverInfo: CustomSolverInfo? = null,
@@ -114,6 +118,14 @@ class KSolverRunner<Config : KSolverConfiguration>(
                 bulkAssertSync(e)
             }
         }
+
+    suspend fun assertSoft(expr: KExpr<KBoolSort>, weight: UInt) {
+        ctx.ensureContextMatch(expr)
+
+        ensureInitializedAndExecuteAsync(onException = {}) {
+            assertSoft(expr, weight)
+        }
+    }
 
     private inline fun bulkAssert(
         exprs: List<KExpr<KBoolSort>>,
@@ -230,6 +242,16 @@ class KSolverRunner<Config : KSolverConfiguration>(
     override fun check(timeout: Duration): KSolverStatus =
         handleCheckSatExceptionAsUnknownSync {
             checkSync(timeout)
+        }
+
+    suspend fun checkMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult =
+        handleCheckAnyMaxSMTExceptionAsNotSucceededAsync {
+            checkMaxSMT(timeout, collectStatistics)
+        }
+
+    suspend fun collectMaxSMTStatistics(): KMaxSMTStatistics =
+        handleCollectStatisticsAsync {
+            collectMaxSMTStatistics()
         }
 
     override suspend fun checkWithAssumptionsAsync(
@@ -422,6 +444,30 @@ class KSolverRunner<Config : KSolverConfiguration>(
         ensureInitializedAndExecuteSync(
             body = body,
             onException = { ex -> onException(ex) }
+        )
+    }
+
+    private suspend inline fun handleCheckAnyMaxSMTExceptionAsNotSucceededAsync(
+        crossinline body: suspend KSolverRunnerExecutor.() -> KMaxSMTResult
+    ): KMaxSMTResult {
+        return ensureInitializedAndExecuteAsync(
+            body = body,
+            onException = {
+                KMaxSMTResult(
+                    emptyList(),
+                    KSolverStatus.UNKNOWN,
+                    timeoutExceededOrUnknown = true
+                )
+            }
+        )
+    }
+
+    private suspend inline fun handleCollectStatisticsAsync(
+        crossinline body: suspend KSolverRunnerExecutor.() -> KMaxSMTStatistics
+    ): KMaxSMTStatistics {
+        return ensureInitializedAndExecuteAsync(
+            body = body,
+            onException = { KMaxSMTStatistics(maxSmtCtx) }
         )
     }
 

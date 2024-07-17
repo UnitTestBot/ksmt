@@ -8,8 +8,6 @@ import com.jetbrains.rd.util.TimeoutException
 import com.jetbrains.rd.util.lifetime.Lifetime
 import com.jetbrains.rd.util.reactive.RdFault
 import com.jetbrains.rd.util.threading.SynchronousScheduler
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.withTimeout
 import io.ksmt.KContext
 import io.ksmt.decl.KDecl
 import io.ksmt.expr.KExpr
@@ -17,45 +15,55 @@ import io.ksmt.expr.KUninterpretedSortValue
 import io.ksmt.runner.core.KsmtWorkerSession
 import io.ksmt.runner.generated.models.AssertParams
 import io.ksmt.runner.generated.models.BulkAssertParams
+import io.ksmt.runner.generated.models.CheckMaxSMTParams
+import io.ksmt.runner.generated.models.CheckMaxSMTResult
 import io.ksmt.runner.generated.models.CheckParams
 import io.ksmt.runner.generated.models.CheckResult
 import io.ksmt.runner.generated.models.CheckWithAssumptionsParams
 import io.ksmt.runner.generated.models.ContextSimplificationMode
 import io.ksmt.runner.generated.models.CreateSolverParams
-import io.ksmt.runner.generated.models.ModelResult
 import io.ksmt.runner.generated.models.ModelEntry
 import io.ksmt.runner.generated.models.ModelFuncInterpEntry
+import io.ksmt.runner.generated.models.ModelResult
 import io.ksmt.runner.generated.models.PopParams
 import io.ksmt.runner.generated.models.ReasonUnknownResult
+import io.ksmt.runner.generated.models.SoftConstraint
 import io.ksmt.runner.generated.models.SolverConfigurationParam
 import io.ksmt.runner.generated.models.SolverProtocolModel
 import io.ksmt.runner.generated.models.SolverType
 import io.ksmt.runner.generated.models.UnsatCoreResult
+import io.ksmt.solver.KModel
+import io.ksmt.solver.KSolverException
+import io.ksmt.solver.KSolverStatus
+import io.ksmt.solver.KSolverUnsupportedFeatureException
+import io.ksmt.solver.KSolverUnsupportedParameterException
+import io.ksmt.solver.maxsmt.KMaxSMTContext
+import io.ksmt.solver.maxsmt.KMaxSMTResult
+import io.ksmt.solver.maxsmt.statistics.KMaxSMTStatistics
 import io.ksmt.solver.model.KFuncInterp
 import io.ksmt.solver.model.KFuncInterpEntry
 import io.ksmt.solver.model.KFuncInterpEntryVarsFree
 import io.ksmt.solver.model.KFuncInterpEntryWithVars
 import io.ksmt.solver.model.KFuncInterpVarsFree
 import io.ksmt.solver.model.KFuncInterpWithVars
-import io.ksmt.solver.KModel
-import io.ksmt.solver.KSolverException
-import io.ksmt.solver.KSolverStatus
-import io.ksmt.solver.KSolverUnsupportedFeatureException
-import io.ksmt.solver.KSolverUnsupportedParameterException
 import io.ksmt.solver.model.KModelImpl
 import io.ksmt.solver.runner.KSolverRunnerManager.CustomSolverInfo
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
+import io.ksmt.utils.uncheckedCast
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
-import io.ksmt.utils.uncheckedCast
 import kotlin.time.Duration
 
 class KSolverRunnerExecutor(
     private val hardTimeout: Duration,
     private val worker: KsmtWorkerSession<SolverProtocolModel>,
 ) {
+    private val maxSmtCtx = KMaxSMTContext(preferLargeWeightConstraintsForCores = true)
+
     fun configureSync(config: List<SolverConfigurationParam>) = configure(config) { cfg ->
         queryWithTimeoutAndExceptionHandlingSync {
             configure.querySync(cfg)
@@ -88,9 +96,20 @@ class KSolverRunnerExecutor(
         }
     }
 
+    suspend fun assertSoft(expr: KExpr<KBoolSort>, weight: UInt) = assertSoft(expr, weight) { params ->
+        queryWithTimeoutAndExceptionHandlingAsync {
+            assertSoft.queryAsync(params)
+        }
+    }
+
     private inline fun assert(expr: KExpr<KBoolSort>, query: (AssertParams) -> Unit) {
         ensureActive()
         query(AssertParams(expr))
+    }
+
+    private inline fun assertSoft(expr: KExpr<KBoolSort>, weight: UInt, query: (SoftConstraint) -> Unit) {
+        ensureActive()
+        query(SoftConstraint(expr, weight))
     }
 
     fun bulkAssertSync(exprs: List<KExpr<KBoolSort>>) = bulkAssert(exprs) { params ->
@@ -204,6 +223,53 @@ class KSolverRunnerExecutor(
         val params = CheckParams(timeout.inWholeMilliseconds)
         val result = query(params)
         return result.status
+    }
+
+    suspend fun checkMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult =
+        checkAnyMaxSMT(timeout, collectStatistics) { params ->
+            queryWithTimeoutAndExceptionHandlingAsync {
+                checkMaxSMT.queryAsync(params)
+            }
+        }
+
+    /**
+     * Can be used with both optimal and suboptimal versions.
+     */
+    private inline fun checkAnyMaxSMT(
+        timeout: Duration,
+        collectStatistics: Boolean,
+        query: (CheckMaxSMTParams) -> CheckMaxSMTResult
+    ): KMaxSMTResult {
+        ensureActive()
+
+        val params = CheckMaxSMTParams(timeout.inWholeMilliseconds, collectStatistics)
+        val result = query(params)
+        @Suppress("UNCHECKED_CAST")
+        val satSoftConstraints = (result.satSoftConstraintExprs as List<KExpr<KBoolSort>>)
+            .zip(result.satSoftConstraintWeights)
+            .map { io.ksmt.solver.maxsmt.constraints.SoftConstraint(it.first, it.second) }
+
+        return KMaxSMTResult(
+            satSoftConstraints,
+            result.hardConstraintsSatStatus,
+            result.timeoutExceededOrUnknown
+        )
+    }
+
+    suspend fun collectMaxSMTStatistics(): KMaxSMTStatistics {
+        ensureActive()
+
+        val result = queryWithTimeoutAndExceptionHandlingAsync {
+            collectMaxSMTStatistics.queryAsync(Unit)
+        }
+
+        val maxSMTStatistics = KMaxSMTStatistics(maxSmtCtx).apply {
+            timeoutMs = result.timeoutMs
+            elapsedTimeMs = result.elapsedTimeMs
+            queriesToSolverNumber = result.queriesToSolverNumber
+            result.timeInSolverQueriesMs
+        }
+        return maxSMTStatistics
     }
 
     fun checkWithAssumptionsSync(

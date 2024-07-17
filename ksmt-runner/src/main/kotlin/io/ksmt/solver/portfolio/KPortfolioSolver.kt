@@ -2,6 +2,18 @@ package io.ksmt.solver.portfolio
 
 import com.jetbrains.rd.util.AtomicInteger
 import com.jetbrains.rd.util.AtomicReference
+import io.ksmt.expr.KExpr
+import io.ksmt.solver.KModel
+import io.ksmt.solver.KSolver
+import io.ksmt.solver.KSolverConfiguration
+import io.ksmt.solver.KSolverException
+import io.ksmt.solver.KSolverStatus
+import io.ksmt.solver.async.KAsyncSolver
+import io.ksmt.solver.maxsmt.KMaxSMTResult
+import io.ksmt.solver.maxsmt.solvers.KMaxSMTSolverInterface
+import io.ksmt.solver.maxsmt.statistics.KMaxSMTStatistics
+import io.ksmt.solver.runner.KSolverRunner
+import io.ksmt.sort.KBoolSort
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -11,15 +23,6 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.runBlocking
-import io.ksmt.expr.KExpr
-import io.ksmt.solver.KModel
-import io.ksmt.solver.KSolver
-import io.ksmt.solver.KSolverConfiguration
-import io.ksmt.solver.KSolverException
-import io.ksmt.solver.KSolverStatus
-import io.ksmt.solver.async.KAsyncSolver
-import io.ksmt.solver.runner.KSolverRunner
-import io.ksmt.sort.KBoolSort
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReferenceArray
@@ -28,7 +31,7 @@ import kotlin.time.Duration
 
 class KPortfolioSolver(
     solverRunners: List<Pair<KClass<out KSolver<*>>, KSolverRunner<*>>>
-) : KAsyncSolver<KSolverConfiguration> {
+) : KAsyncSolver<KSolverConfiguration>, KMaxSMTSolverInterface<KSolverConfiguration> {
     private val lastSuccessfulSolver = AtomicReference<KSolverRunner<*>?>(null)
     private val pendingTermination = ConcurrentLinkedQueue<KSolverRunner<*>>()
 
@@ -61,7 +64,7 @@ class KPortfolioSolver(
         }
     }
 
-    class SolverStatistic(val solver: KClass<out KSolver<*>>) {
+    private class SolverStatistic(val solver: KClass<out KSolver<*>>) {
         private val numberOfBestQueries = AtomicInteger(0)
         private val solverIsActive = AtomicBoolean(true)
 
@@ -71,11 +74,11 @@ class KPortfolioSolver(
         val isActive: Boolean
             get() = solverIsActive.get()
 
-        internal fun logSolverQueryBest() {
+        fun logSolverQueryBest() {
             numberOfBestQueries.incrementAndGet()
         }
 
-        internal fun logSolverRemovedFromPortfolio() {
+        fun logSolverRemovedFromPortfolio() {
             solverIsActive.set(false)
         }
 
@@ -96,7 +99,7 @@ class KPortfolioSolver(
     /**
      * Gather current statistic on the solvers in the portfolio.
      * */
-    fun solverPortfolioStats(): List<SolverStatistic> = solverStats.toList()
+    private fun solverPortfolioStats(): List<SolverStatistic> = solverStats.toList()
 
     override fun configure(configurator: KSolverConfiguration.() -> Unit) = runBlocking {
         configureAsync(configurator)
@@ -108,6 +111,12 @@ class KPortfolioSolver(
 
     override fun assert(exprs: List<KExpr<KBoolSort>>) = runBlocking {
         assertAsync(exprs)
+    }
+
+    override fun assertSoft(expr: KExpr<KBoolSort>, weight: UInt) = runBlocking {
+        solverOperation {
+            assertSoft(expr, weight)
+        }
     }
 
     override fun assertAndTrack(expr: KExpr<KBoolSort>) = runBlocking {
@@ -128,6 +137,29 @@ class KPortfolioSolver(
 
     override fun check(timeout: Duration): KSolverStatus = runBlocking {
         checkAsync(timeout)
+    }
+
+    override fun checkMaxSMT(timeout: Duration, collectStatistics: Boolean): KMaxSMTResult = runBlocking {
+        solverMaxSmtQueryAsync(
+            { checkSubOptMaxSMT(timeout, collectStatistics) },
+            solverPredicate = { !this.timeoutExceededOrUnknown },
+            onFailure = { results ->
+                results.results
+                    .mapNotNull { it.getOrNull() }
+                    .maxByOrNull { it.result.satSoftConstraints.sumOf { constr -> constr.weight } }!!
+            }
+        )
+    }
+
+    override fun collectMaxSMTStatistics(): KMaxSMTStatistics = runBlocking {
+        val solverAwaitResult = solverOperationWithResult(
+            { this.collectMaxSMTStatistics() }
+        )
+
+        when (solverAwaitResult) {
+            is SolverAwaitSuccess -> return@runBlocking solverAwaitResult.result.result
+            is SolverAwaitFailure -> throw KSolverException("MaxSMT portfolio solver failed")
+        }
     }
 
     override fun checkWithAssumptions(
@@ -181,16 +213,19 @@ class KPortfolioSolver(
         popAsync(n)
     }
 
-    override suspend fun checkAsync(timeout: Duration): KSolverStatus = solverQuery {
-        checkAsync(timeout)
-    }
+    override suspend fun checkAsync(timeout: Duration): KSolverStatus = solverQuery(
+        { checkAsync(timeout) },
+        { this != KSolverStatus.UNKNOWN }
+    )
 
     override suspend fun checkWithAssumptionsAsync(
         assumptions: List<KExpr<KBoolSort>>,
         timeout: Duration
-    ): KSolverStatus = solverQuery {
-        checkWithAssumptionsAsync(assumptions, timeout)
-    }
+    ): KSolverStatus = solverQuery(
+        { checkWithAssumptionsAsync(assumptions, timeout) },
+        { this != KSolverStatus.UNKNOWN }
+
+    )
 
     override suspend fun modelAsync(): KModel =
         lastSuccessfulSolver.get()?.modelAsync()
@@ -233,15 +268,68 @@ class KPortfolioSolver(
         }
     }
 
-    private suspend inline fun solverQuery(
-        crossinline block: suspend KSolverRunner<*>.() -> KSolverStatus
-    ): KSolverStatus {
+    private suspend inline fun <T> solverOperationWithResult(
+        crossinline block: suspend KSolverRunner<*>.() -> T,
+        crossinline predicate: (T) -> Boolean = { true }
+    ): SolverAwaitResult<T> {
+        val result = awaitFirstSolver(block, predicate)
+        if (result is SolverAwaitFailure<*>) {
+            // throw exception if all solvers in portfolio failed with exception
+            result.findSuccessOrThrow()
+        }
+
+        return result
+    }
+
+    private suspend inline fun <T> solverMaxSmtQueryAsync(
+        crossinline block: suspend KSolverRunner<*>.() -> T,
+        crossinline solverPredicate: T.() -> Boolean,
+        crossinline onFailure: (SolverAwaitFailure<T>) -> SolverOperationResult<T> = { it.findSuccessOrThrow() }
+    ): T {
         terminateIfNeeded()
 
         lastSuccessfulSolver.getAndSet(null)
 
         val awaitResult = awaitFirstSolver(block) {
-            it != KSolverStatus.UNKNOWN
+            solverPredicate(it)
+        }
+
+        val result = when (awaitResult) {
+            is SolverAwaitSuccess -> awaitResult.result.also {
+                solverStats[awaitResult.result.solverId].logSolverQueryBest()
+            }
+            /**
+             * All solvers finished with Unknown or failed with exception.
+             * If some solver ends up with Unknown we can treat this result as successful.
+             * */
+            is SolverAwaitFailure -> onFailure(awaitResult)
+        }
+
+        lastSuccessfulSolver.getAndSet(result.solver)
+
+        activeSolvers.forEach { _, solverOperationState ->
+            if (solverOperationState.solver != result.solver) {
+                val failedSolver = solverOperationState.solver
+                solverOperationState.operationScope.launch {
+                    failedSolver.interruptAsync()
+                }
+                pendingTermination.offer(failedSolver)
+            }
+        }
+
+        return result.result
+    }
+
+    private suspend inline fun <T> solverQuery(
+        crossinline block: suspend KSolverRunner<*>.() -> T,
+        crossinline solverPredicate: T.() -> Boolean
+    ): T {
+        terminateIfNeeded()
+
+        lastSuccessfulSolver.getAndSet(null)
+
+        val awaitResult = awaitFirstSolver(block) {
+            solverPredicate(it)
         }
 
         val result = when (awaitResult) {
