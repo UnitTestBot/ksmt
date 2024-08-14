@@ -5,8 +5,6 @@ import io.github.cvc5.RoundingMode
 import io.github.cvc5.Solver
 import io.github.cvc5.Sort
 import io.github.cvc5.Term
-import io.github.cvc5.mkLambda
-import io.github.cvc5.mkQuantifier
 import io.ksmt.decl.KDecl
 import io.ksmt.expr.KAddArithExpr
 import io.ksmt.expr.KAndBinaryExpr
@@ -190,11 +188,13 @@ import java.math.BigInteger
 
 @Suppress("LargeClass")
 class KCvc5ExprInternalizer(
-    private val cvc5Ctx: KCvc5Context
+    private val cvc5Ctx: KCvc5Context,
+    private val solver: Solver
 ) : KExprInternalizerBase<Term>() {
-
     private val sortInternalizer = KCvc5SortInternalizer(cvc5Ctx)
-    private val declInternalizer = KCvc5DeclInternalizer(cvc5Ctx, sortInternalizer)
+    private val declInternalizer = KCvc5DeclInternalizer(cvc5Ctx, solver, sortInternalizer)
+
+    private val tm: KCvc5TermManager = cvc5Ctx.termManager
 
     override fun findInternalizedExpr(expr: KExpr<*>): Term? = cvc5Ctx.findInternalizedExpr(expr)
 
@@ -202,10 +202,11 @@ class KCvc5ExprInternalizer(
         cvc5Ctx.saveInternalizedExpr(expr, internalized)
     }
 
-    private val nsolver: Solver
-        get() = cvc5Ctx.nativeSolver
-
-    private val zeroIntValueTerm: Term by lazy { nsolver.mkInteger(0L) }
+    private val zeroIntValueTerm: Term by lazy {
+        val ksmtZero = cvc5Ctx.ctx.mkIntNum(0)
+        findInternalizedExpr(ksmtZero)
+            ?: tm.builder { mkInteger(0L) }.also { saveInternalizedExpr(ksmtZero, it) }
+    }
 
     fun <T : KDecl<*>> T.internalizeDecl(): Term = accept(declInternalizer)
 
@@ -219,7 +220,8 @@ class KCvc5ExprInternalizer(
             val decl = decl.internalizeDecl()
 
             if (decl.hasOp()) {
-                nsolver.mkTerm(decl.op, args)
+                val op = tm.termOp(decl) { op }
+                tm.mkTerm(op, args)
             } else {
                 decl.mkFunctionApp(args.asList())
             }
@@ -239,7 +241,7 @@ class KCvc5ExprInternalizer(
     }
 
     override fun transform(expr: KAndBinaryExpr) = with(expr) {
-        transform(lhs, rhs) { l: Term, r: Term -> nsolver.mkTerm(Kind.AND, l, r) }
+        transform(lhs, rhs) { l: Term, r: Term -> tm.mkTerm(Kind.AND, l, r) }
     }
 
     override fun transform(expr: KOrExpr) = with(expr) {
@@ -247,27 +249,27 @@ class KCvc5ExprInternalizer(
     }
 
     override fun transform(expr: KOrBinaryExpr) = with(expr) {
-        transform(lhs, rhs) { l: Term, r: Term -> nsolver.mkTerm(Kind.OR, l, r) }
+        transform(lhs, rhs) { l: Term, r: Term -> tm.mkTerm(Kind.OR, l, r) }
     }
 
     override fun transform(expr: KNotExpr) =
-        with(expr) { transform(arg) { arg: Term -> nsolver.mkTerm(Kind.NOT, arg) } }
+        with(expr) { transform(arg) { arg: Term -> tm.mkTerm(Kind.NOT, arg) } }
 
     override fun transform(expr: KImpliesExpr) = with(expr) {
         transform(p, q) { p: Term, q: Term ->
-            nsolver.mkTerm(Kind.IMPLIES, p, q)
+            tm.mkTerm(Kind.IMPLIES, p, q)
         }
     }
 
     override fun transform(expr: KXorExpr) = with(expr) {
         transform(a, b) { a: Term, b: Term ->
-            nsolver.mkTerm(Kind.XOR, a, b)
+            tm.mkTerm(Kind.XOR, a, b)
         }
     }
 
-    override fun transform(expr: KTrue) = expr.transform { nsolver.mkTrue() }
+    override fun transform(expr: KTrue) = expr.transform { tm.builder { mkTrue() } }
 
-    override fun transform(expr: KFalse) = expr.transform { nsolver.mkFalse() }
+    override fun transform(expr: KFalse) = expr.transform { tm.builder { mkFalse() } }
 
     override fun <T : KSort> transform(expr: KEqExpr<T>) = with(expr) {
         transform(lhs, rhs) { lhs: Term, rhs: Term ->
@@ -284,7 +286,7 @@ class KCvc5ExprInternalizer(
             mkArraySpecificTerm(
                 sort = expr.args.first().sort,
                 arrayTerm = { mkArrayDistinctTerm(it, args.asList()) },
-                default = { nsolver.mkTerm(Kind.DISTINCT, args) }
+                default = { tm.mkTerm(Kind.DISTINCT, args) }
             )
         }
     }
@@ -304,13 +306,13 @@ class KCvc5ExprInternalizer(
     fun <T : KBvSort> transformBitVecValue(expr: KBitVecValue<T>) = expr.transform {
         val size = expr.decl.sort.sizeBits.toInt()
         when {
-            expr is KBitVec1Value -> nsolver.mkBitVector(size, if (expr.value) 1L else 0L)
+            expr is KBitVec1Value -> tm.builder { mkBitVector(size, if (expr.value) 1L else 0L) }
             // cvc5 can't create bitvector from negatives
             expr is KBitVecNumberValue<*, *> && expr.numberValue.toLong() >= 0 -> {
-                nsolver.mkBitVector(size, expr.numberValue.toLong())
+                tm.builder { mkBitVector(size, expr.numberValue.toLong()) }
             }
 
-            else -> nsolver.mkBitVector(size, expr.stringValue, 2)
+            else -> tm.builder { mkBitVector(size, expr.stringValue, 2) }
         }
     }
 
@@ -327,7 +329,7 @@ class KCvc5ExprInternalizer(
     override fun transform(expr: KBitVecCustomValue) = transformBitVecValue(expr)
 
     override fun <T : KBvSort> transform(expr: KBvNotExpr<T>) = with(expr) {
-        transform(value) { value: Term -> nsolver.mkTerm(Kind.BITVECTOR_NOT, value) }
+        transform(value) { value: Term -> tm.mkTerm(Kind.BITVECTOR_NOT, value) }
     }
 
     override fun <T : KBvSort> transform(expr: KBvReductionAndExpr<T>) = with(expr) {
@@ -354,191 +356,191 @@ class KCvc5ExprInternalizer(
 
     override fun <T : KBvSort> transform(expr: KBvAndExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_AND, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_AND, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvOrExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_OR, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_OR, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvXorExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_XOR, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_XOR, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvNAndExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_NAND, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_NAND, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvNorExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_NOR, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_NOR, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvXNorExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_XNOR, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_XNOR, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvNegationExpr<T>) = with(expr) {
         transform(value) { value: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_NEG, value)
+            tm.mkTerm(Kind.BITVECTOR_NEG, value)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvAddExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_ADD, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_ADD, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvSubExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_SUB, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_SUB, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvMulExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_MULT, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_MULT, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedDivExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_UDIV, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_UDIV, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvSignedDivExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_SDIV, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_SDIV, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedRemExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_UREM, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_UREM, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvSignedRemExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_SREM, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_SREM, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvSignedModExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_SMOD, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_SMOD, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedLessExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_ULT, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_ULT, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvSignedLessExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_SLT, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_SLT, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedLessOrEqualExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_ULE, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_ULE, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvSignedLessOrEqualExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_SLE, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_SLE, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterOrEqualExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_UGE, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_UGE, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvSignedGreaterOrEqualExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_SGE, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_SGE, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvUnsignedGreaterExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_UGT, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_UGT, arg0, arg1)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvSignedGreaterExpr<T>) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_SGT, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_SGT, arg0, arg1)
         }
     }
 
     override fun transform(expr: KBvConcatExpr): KExpr<KBvSort> = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_CONCAT, arg0, arg1)
+            tm.mkTerm(Kind.BITVECTOR_CONCAT, arg0, arg1)
         }
     }
 
     override fun transform(expr: KBvExtractExpr) = with(expr) {
         transform(value) { value: Term ->
-            val extractOp = nsolver.mkOp(Kind.BITVECTOR_EXTRACT, high, low)
-            nsolver.mkTerm(extractOp, value)
+            val extractOp = tm.mkOp(Kind.BITVECTOR_EXTRACT, high, low)
+            tm.mkTerm(extractOp, value)
         }
     }
 
     override fun transform(expr: KBvSignExtensionExpr) = with(expr) {
         transform(value) { value: Term ->
-            val extensionOp = nsolver.mkOp(Kind.BITVECTOR_SIGN_EXTEND, extensionSize)
-            nsolver.mkTerm(extensionOp, value)
+            val extensionOp = tm.mkOp(Kind.BITVECTOR_SIGN_EXTEND, extensionSize)
+            tm.mkTerm(extensionOp, value)
         }
     }
 
     override fun transform(expr: KBvZeroExtensionExpr) = with(expr) {
         transform(value) { value: Term ->
-            val extensionOp = nsolver.mkOp(Kind.BITVECTOR_ZERO_EXTEND, extensionSize)
-            nsolver.mkTerm(extensionOp, value)
+            val extensionOp = tm.mkOp(Kind.BITVECTOR_ZERO_EXTEND, extensionSize)
+            tm.mkTerm(extensionOp, value)
         }
     }
 
     override fun transform(expr: KBvRepeatExpr) = with(expr) {
         transform(value) { value: Term ->
-            val repeatOp = nsolver.mkOp(Kind.BITVECTOR_REPEAT, repeatNumber)
-            nsolver.mkTerm(repeatOp, value)
+            val repeatOp = tm.mkOp(Kind.BITVECTOR_REPEAT, repeatNumber)
+            tm.mkTerm(repeatOp, value)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvShiftLeftExpr<T>) = with(expr) {
         transform(arg, shift) { arg: Term, shift: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_SHL, arg, shift)
+            tm.mkTerm(Kind.BITVECTOR_SHL, arg, shift)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvLogicalShiftRightExpr<T>) = with(expr) {
         transform(arg, shift) { arg: Term, shift: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_LSHR, arg, shift)
+            tm.mkTerm(Kind.BITVECTOR_LSHR, arg, shift)
         }
     }
 
     override fun <T : KBvSort> transform(expr: KBvArithShiftRightExpr<T>) = with(expr) {
         transform(arg, shift) { arg: Term, shift: Term ->
-            nsolver.mkTerm(Kind.BITVECTOR_ASHR, arg, shift)
+            tm.mkTerm(Kind.BITVECTOR_ASHR, arg, shift)
         }
     }
 
@@ -579,16 +581,16 @@ class KCvc5ExprInternalizer(
 
     override fun <T : KBvSort> transform(expr: KBvRotateLeftIndexedExpr<T>) = with(expr) {
         transform(value) { value: Term ->
-            val rotationOp = nsolver.mkOp(Kind.BITVECTOR_ROTATE_LEFT, rotationNumber)
-            nsolver.mkTerm(rotationOp, value)
+            val rotationOp = tm.mkOp(Kind.BITVECTOR_ROTATE_LEFT, rotationNumber)
+            tm.mkTerm(rotationOp, value)
         }
     }
 
 
     override fun <T : KBvSort> transform(expr: KBvRotateRightIndexedExpr<T>) = with(expr) {
         transform(value) { value: Term ->
-            val rotationOp = nsolver.mkOp(Kind.BITVECTOR_ROTATE_RIGHT, rotationNumber)
-            nsolver.mkTerm(rotationOp, value)
+            val rotationOp = tm.mkOp(Kind.BITVECTOR_ROTATE_RIGHT, rotationNumber)
+            tm.mkTerm(rotationOp, value)
         }
     }
 
@@ -597,20 +599,20 @@ class KCvc5ExprInternalizer(
     override fun transform(expr: KBv2IntExpr) = with(expr) {
         transform(value) { value: Term ->
             // by default, it is unsigned in cvc5
-            val intTerm = nsolver.mkTerm(Kind.BITVECTOR_TO_NAT, value)
+            val intTerm = tm.mkTerm(Kind.BITVECTOR_TO_NAT, value)
 
             if (isSigned) {
                 val size = this.value.sort.sizeBits.toInt()
                 val modulo = powerOfTwo(size.toUInt())
                 val maxInt = (powerOfTwo((size - 1).toUInt())) - BigInteger.ONE
 
-                val moduloTerm = nsolver.mkInteger(modulo.toString(10))
-                val maxIntTerm = nsolver.mkInteger(maxInt.toString(10))
+                val moduloTerm = tm.builder { mkInteger(modulo.toString(10)) }
+                val maxIntTerm = tm.builder { mkInteger(maxInt.toString(10)) }
 
-                val gtTerm = nsolver.mkTerm(Kind.GT, intTerm, maxIntTerm)
-                val subTerm = nsolver.mkTerm(Kind.SUB, intTerm, moduloTerm)
+                val gtTerm = tm.mkTerm(Kind.GT, intTerm, maxIntTerm)
+                val subTerm = tm.mkTerm(Kind.SUB, intTerm, moduloTerm)
 
-                nsolver.mkTerm(Kind.ITE, gtTerm, subTerm, intTerm)
+                tm.mkTerm(Kind.ITE, gtTerm, subTerm, intTerm)
             } else intTerm
         }
     }
@@ -670,7 +672,7 @@ class KCvc5ExprInternalizer(
 
         val bvString = signString + expString + significandString
 
-        return nsolver.mkBitVector(bvString.length, bvString, 2)
+        return tm.builder { mkBitVector(bvString.length, bvString, 2) }
     }
 
     private fun <T : KFpSort> KFpValue<T>.toBitvectorTerm(): Term = fpToBvTerm(signBit, biasedExponent, significand)
@@ -679,7 +681,9 @@ class KCvc5ExprInternalizer(
         transform {
             val bv = expr.toBitvectorTerm()
             // created from IEEE-754 bit-vector representation of the floating-point value
-            nsolver.mkFloatingPoint(sort.exponentBits.toInt(), sort.significandBits.toInt(), bv)
+            tm.builder {
+                mkFloatingPoint(sort.exponentBits.toInt(), sort.significandBits.toInt(), bv)
+            }
         }
     }
 
@@ -703,25 +707,25 @@ class KCvc5ExprInternalizer(
                 KFpRoundingMode.RoundTowardZero -> RoundingMode.ROUND_TOWARD_ZERO
             }
 
-            nsolver.mkRoundingMode(rmMode)
+            tm.builder { mkRoundingMode(rmMode) }
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpAbsExpr<T>): KExpr<T> = with(expr) {
         transform(value) { value: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_ABS, value)
+            tm.mkTerm(Kind.FLOATINGPOINT_ABS, value)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpNegationExpr<T>): KExpr<T> = with(expr) {
         transform(value) { value: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_NEG, value)
+            tm.mkTerm(Kind.FLOATINGPOINT_NEG, value)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpAddExpr<T>): KExpr<T> = with(expr) {
         transform(roundingMode, arg0, arg1) { roundingMode: Term, arg0: Term, arg1: Term ->
-            nsolver.mkTerm(
+            tm.mkTerm(
                 Kind.FLOATINGPOINT_ADD,
                 roundingMode,
                 arg0,
@@ -732,7 +736,7 @@ class KCvc5ExprInternalizer(
 
     override fun <T : KFpSort> transform(expr: KFpSubExpr<T>): KExpr<T> = with(expr) {
         transform(roundingMode, arg0, arg1) { roundingMode: Term, arg0: Term, arg1: Term ->
-            nsolver.mkTerm(
+            tm.mkTerm(
                 Kind.FLOATINGPOINT_SUB,
                 roundingMode,
                 arg0,
@@ -743,7 +747,7 @@ class KCvc5ExprInternalizer(
 
     override fun <T : KFpSort> transform(expr: KFpMulExpr<T>): KExpr<T> = with(expr) {
         transform(roundingMode, arg0, arg1) { roundingMode: Term, arg0: Term, arg1: Term ->
-            nsolver.mkTerm(
+            tm.mkTerm(
                 Kind.FLOATINGPOINT_MULT,
                 roundingMode,
                 arg0,
@@ -754,7 +758,7 @@ class KCvc5ExprInternalizer(
 
     override fun <T : KFpSort> transform(expr: KFpDivExpr<T>): KExpr<T> = with(expr) {
         transform(roundingMode, arg0, arg1) { roundingMode: Term, arg0: Term, arg1: Term ->
-            nsolver.mkTerm(
+            tm.mkTerm(
                 Kind.FLOATINGPOINT_DIV,
                 roundingMode,
                 arg0,
@@ -765,7 +769,7 @@ class KCvc5ExprInternalizer(
 
     override fun <T : KFpSort> transform(expr: KFpFusedMulAddExpr<T>): KExpr<T> = with(expr) {
         transform(roundingMode, arg0, arg1, arg2) { rm: Term, arg0: Term, arg1: Term, arg2: Term ->
-            nsolver.mkTerm(
+            tm.mkTerm(
                 Kind.FLOATINGPOINT_FMA,
                 arrayOf(rm, arg0, arg1, arg2)
             )
@@ -774,104 +778,104 @@ class KCvc5ExprInternalizer(
 
     override fun <T : KFpSort> transform(expr: KFpSqrtExpr<T>): KExpr<T> = with(expr) {
         transform(roundingMode, value) { roundingMode: Term, value: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_SQRT, roundingMode, value)
+            tm.mkTerm(Kind.FLOATINGPOINT_SQRT, roundingMode, value)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpRemExpr<T>): KExpr<T> = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_REM, arg0, arg1)
+            tm.mkTerm(Kind.FLOATINGPOINT_REM, arg0, arg1)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpRoundToIntegralExpr<T>): KExpr<T> =
         with(expr) {
             transform(roundingMode, value) { roundingMode: Term, value: Term ->
-                nsolver.mkTerm(Kind.FLOATINGPOINT_RTI, roundingMode, value)
+                tm.mkTerm(Kind.FLOATINGPOINT_RTI, roundingMode, value)
             }
         }
 
     override fun <T : KFpSort> transform(expr: KFpMinExpr<T>): KExpr<T> = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_MIN, arg0, arg1)
+            tm.mkTerm(Kind.FLOATINGPOINT_MIN, arg0, arg1)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpMaxExpr<T>): KExpr<T> = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_MAX, arg0, arg1)
+            tm.mkTerm(Kind.FLOATINGPOINT_MAX, arg0, arg1)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpLessOrEqualExpr<T>): KExpr<KBoolSort> = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_LEQ, arg0, arg1)
+            tm.mkTerm(Kind.FLOATINGPOINT_LEQ, arg0, arg1)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpLessExpr<T>): KExpr<KBoolSort> = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_LT, arg0, arg1)
+            tm.mkTerm(Kind.FLOATINGPOINT_LT, arg0, arg1)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpGreaterOrEqualExpr<T>): KExpr<KBoolSort> = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_GEQ, arg0, arg1)
+            tm.mkTerm(Kind.FLOATINGPOINT_GEQ, arg0, arg1)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpGreaterExpr<T>): KExpr<KBoolSort> = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_GT, arg0, arg1)
+            tm.mkTerm(Kind.FLOATINGPOINT_GT, arg0, arg1)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpEqualExpr<T>): KExpr<KBoolSort> = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_EQ, arg0, arg1)
+            tm.mkTerm(Kind.FLOATINGPOINT_EQ, arg0, arg1)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpIsNormalExpr<T>): KExpr<KBoolSort> = with(expr) {
         transform(value) { value: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_IS_NORMAL, value)
+            tm.mkTerm(Kind.FLOATINGPOINT_IS_NORMAL, value)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpIsSubnormalExpr<T>): KExpr<KBoolSort> = with(expr) {
         transform(value) { value: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_IS_SUBNORMAL, value)
+            tm.mkTerm(Kind.FLOATINGPOINT_IS_SUBNORMAL, value)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpIsZeroExpr<T>): KExpr<KBoolSort> = with(expr) {
         transform(value) { value: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_IS_ZERO, value)
+            tm.mkTerm(Kind.FLOATINGPOINT_IS_ZERO, value)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpIsInfiniteExpr<T>): KExpr<KBoolSort> = with(expr) {
         transform(value) { value: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_IS_INF, value)
+            tm.mkTerm(Kind.FLOATINGPOINT_IS_INF, value)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpIsNaNExpr<T>): KExpr<KBoolSort> = with(expr) {
         transform(value) { value: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_IS_NAN, value)
+            tm.mkTerm(Kind.FLOATINGPOINT_IS_NAN, value)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpIsNegativeExpr<T>): KExpr<KBoolSort> = with(expr) {
         transform(value) { value: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_IS_NEG, value)
+            tm.mkTerm(Kind.FLOATINGPOINT_IS_NEG, value)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpIsPositiveExpr<T>): KExpr<KBoolSort> = with(expr) {
         transform(value) { value: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_IS_POS, value)
+            tm.mkTerm(Kind.FLOATINGPOINT_IS_POS, value)
         }
     }
 
@@ -879,14 +883,14 @@ class KCvc5ExprInternalizer(
         with(expr) {
             transform(roundingMode, value) { rm: Term, value: Term ->
                 val opKind = if (isSigned) Kind.FLOATINGPOINT_TO_SBV else Kind.FLOATINGPOINT_TO_UBV
-                val op = nsolver.mkOp(opKind, bvSize)
-                nsolver.mkTerm(op, rm, value)
+                val op = tm.mkOp(opKind, bvSize)
+                tm.mkTerm(op, rm, value)
             }
         }
 
     override fun <T : KFpSort> transform(expr: KFpToRealExpr<T>): KExpr<KRealSort> = with(expr) {
         transform(value) { value: Term ->
-            nsolver.mkTerm(Kind.FLOATINGPOINT_TO_REAL, value)
+            tm.mkTerm(Kind.FLOATINGPOINT_TO_REAL, value)
         }
     }
 
@@ -895,56 +899,56 @@ class KCvc5ExprInternalizer(
 
     override fun <T : KFpSort> transform(expr: KFpFromBvExpr<T>): KExpr<T> = with(expr) {
         transform(sign, biasedExponent, significand) { sign: Term, biasedExp: Term, significand: Term ->
-            val bvTerm = nsolver.mkTerm(
+            val bvTerm = tm.mkTerm(
                 Kind.BITVECTOR_CONCAT,
-                nsolver.mkTerm(Kind.BITVECTOR_CONCAT, sign, biasedExp),
+                tm.mkTerm(Kind.BITVECTOR_CONCAT, sign, biasedExp),
                 significand
             )
 
-            val toFpOp = nsolver.mkOp(
+            val toFpOp = tm.mkOp(
                 Kind.FLOATINGPOINT_TO_FP_FROM_IEEE_BV,
                 sort.exponentBits.toInt(),
                 sort.significandBits.toInt()
             )
 
-            nsolver.mkTerm(toFpOp, bvTerm)
+            tm.mkTerm(toFpOp, bvTerm)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KFpToFpExpr<T>): KExpr<T> = with(expr) {
         transform(roundingMode, value) { rm: Term, value: Term ->
-            val op = nsolver.mkOp(
+            val op = tm.mkOp(
                 Kind.FLOATINGPOINT_TO_FP_FROM_FP,
                 sort.exponentBits.toInt(),
                 sort.significandBits.toInt()
             )
 
-            nsolver.mkTerm(op, rm, value)
+            tm.mkTerm(op, rm, value)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KRealToFpExpr<T>): KExpr<T> = with(expr) {
         transform(roundingMode, value) { rm: Term, value: Term ->
-            val op = nsolver.mkOp(
+            val op = tm.mkOp(
                 Kind.FLOATINGPOINT_TO_FP_FROM_REAL,
                 sort.exponentBits.toInt(),
                 sort.significandBits.toInt()
             )
 
-            nsolver.mkTerm(op, rm, value)
+            tm.mkTerm(op, rm, value)
         }
     }
 
     override fun <T : KFpSort> transform(expr: KBvToFpExpr<T>): KExpr<T> = with(expr) {
         transform(roundingMode, value) { rm: Term, value: Term ->
             val opKind = if (signed) Kind.FLOATINGPOINT_TO_FP_FROM_SBV else Kind.FLOATINGPOINT_TO_FP_FROM_UBV
-            val op = nsolver.mkOp(
+            val op = tm.mkOp(
                 opKind,
                 sort.exponentBits.toInt(),
                 sort.significandBits.toInt()
             )
 
-            nsolver.mkTerm(op, rm, value)
+            tm.mkTerm(op, rm, value)
         }
     }
 
@@ -993,9 +997,9 @@ class KCvc5ExprInternalizer(
         transform(value) { valueTerm: Term ->
             if (value is KInterpretedValue<*> || value is KArrayConst<*, *>) {
                 // const array base must be a value or a constant array
-                nsolver.mkConstArray(sort.internalizeSort(), valueTerm)
+                tm.builder { mkConstArray(sort.internalizeSort(), valueTerm) }
             } else {
-                val bounds = sort.domainSorts.map { nsolver.mkConst(it.internalizeSort()) }
+                val bounds = sort.domainSorts.map { tm.builder { mkConst(it.internalizeSort()) } }
                 mkLambdaTerm(bounds, valueTerm)
             }
         }
@@ -1023,19 +1027,19 @@ class KCvc5ExprInternalizer(
     }
 
     override fun <T : KArithSort> transform(expr: KAddArithExpr<T>) = with(expr) {
-        transformArray(args) { args -> nsolver.mkTerm(Kind.ADD, args) }
+        transformArray(args) { args -> tm.mkTerm(Kind.ADD, args) }
     }
 
     override fun <T : KArithSort> transform(expr: KSubArithExpr<T>) = with(expr) {
-        transformArray(args) { args -> nsolver.mkTerm(Kind.SUB, args) }
+        transformArray(args) { args -> tm.mkTerm(Kind.SUB, args) }
     }
 
     override fun <T : KArithSort> transform(expr: KMulArithExpr<T>) = with(expr) {
-        transformArray(args) { args -> nsolver.mkTerm(Kind.MULT, args) }
+        transformArray(args) { args -> tm.mkTerm(Kind.MULT, args) }
     }
 
     override fun <T : KArithSort> transform(expr: KUnaryMinusArithExpr<T>) = with(expr) {
-        transform(arg) { arg: Term -> nsolver.mkTerm(Kind.NEG, arg) }
+        transform(arg) { arg: Term -> tm.mkTerm(Kind.NEG, arg) }
     }
 
     override fun <T : KArithSort> transform(expr: KDivArithExpr<T>) = with(expr) {
@@ -1046,43 +1050,56 @@ class KCvc5ExprInternalizer(
 
     private fun arithDivide(sort: KArithSort, lhs: Term, rhs: Term): Term = with(sort.ctx) {
         when (sort) {
-            realSort -> nsolver.mkTerm(Kind.DIVISION, lhs, rhs)
-            intSort -> nsolver.mkTerm(Kind.INTS_DIVISION, lhs, rhs)
+            realSort -> tm.mkTerm(Kind.DIVISION, lhs, rhs)
+            intSort -> tm.mkTerm(Kind.INTS_DIVISION, lhs, rhs)
             else -> throw KSolverUnsupportedFeatureException("Arith sort $sort is unsupported")
         }
     }
 
     override fun <T : KArithSort> transform(expr: KPowerArithExpr<T>) = with(expr) {
-        transform(lhs, rhs) { lhs: Term, rhs: Term -> nsolver.mkTerm(Kind.POW, lhs, rhs) }
+        transform(lhs, rhs) { lhs: Term, rhs: Term ->
+            /**
+             * According to the cvc5 docs:
+             * The exponent of the POW(^) operator can only be a positive integral constant below 67108864
+             * */
+            val exponentMaxValue = 67108864.toBigInteger()
+            if (!rhs.isIntegerValue || rhs.realOrIntegerValueSign < 0 || rhs.integerValue > exponentMaxValue) {
+                throw KSolverUnsupportedFeatureException(
+                    "The exponent of the $expr can only be a positive integral constant below 67108864"
+                )
+            }
+
+            tm.mkTerm(Kind.POW, lhs, rhs)
+        }
     }
 
     override fun <T : KArithSort> transform(expr: KLtArithExpr<T>) = with(expr) {
         transform(lhs, rhs) { lhs: Term, rhs: Term ->
-            nsolver.mkTerm(Kind.LT, lhs, rhs)
+            tm.mkTerm(Kind.LT, lhs, rhs)
         }
     }
 
     override fun <T : KArithSort> transform(expr: KLeArithExpr<T>) = with(expr) {
         transform(lhs, rhs) { lhs: Term, rhs: Term ->
-            nsolver.mkTerm(Kind.LEQ, lhs, rhs)
+            tm.mkTerm(Kind.LEQ, lhs, rhs)
         }
     }
 
     override fun <T : KArithSort> transform(expr: KGtArithExpr<T>) = with(expr) {
         transform(lhs, rhs) { lhs: Term, rhs: Term ->
-            nsolver.mkTerm(Kind.GT, lhs, rhs)
+            tm.mkTerm(Kind.GT, lhs, rhs)
         }
     }
 
     override fun <T : KArithSort> transform(expr: KGeArithExpr<T>) = with(expr) {
         transform(lhs, rhs) { lhs: Term, rhs: Term ->
-            nsolver.mkTerm(Kind.GEQ, lhs, rhs)
+            tm.mkTerm(Kind.GEQ, lhs, rhs)
         }
     }
 
     override fun transform(expr: KModIntExpr) = with(expr) {
         transform(lhs, rhs) { lhs: Term, rhs: Term ->
-            nsolver.mkTerm(Kind.INTS_MODULUS, lhs, rhs)
+            tm.mkTerm(Kind.INTS_MODULUS, lhs, rhs)
         }
     }
 
@@ -1090,51 +1107,51 @@ class KCvc5ExprInternalizer(
     override fun transform(expr: KRemIntExpr) = with(expr) {
         transform(lhs, rhs) { lhs: Term, rhs: Term ->
             // there is no ints remainder in cvc5
-            val remSign = nsolver.mkTerm(Kind.GEQ, lhs, zeroIntValueTerm)
-                .xorTerm(nsolver.mkTerm(Kind.GEQ, rhs, zeroIntValueTerm))
-            val modTerm = nsolver.mkTerm(Kind.INTS_MODULUS, lhs, rhs)
+            val remSign = tm.mkTerm(Kind.GEQ, lhs, zeroIntValueTerm)
+                .xorTerm(tm.mkTerm(Kind.GEQ, rhs, zeroIntValueTerm))
+            val modTerm = tm.mkTerm(Kind.INTS_MODULUS, lhs, rhs)
 
-            remSign.iteTerm(nsolver.mkTerm(Kind.NEG, modTerm), modTerm)
+            remSign.iteTerm(tm.mkTerm(Kind.NEG, modTerm), modTerm)
         }
     }
 
     override fun transform(expr: KToRealIntExpr) = with(expr) {
         transform(arg) { arg: Term ->
-            nsolver.mkTerm(Kind.TO_REAL, arg)
+            tm.mkTerm(Kind.TO_REAL, arg)
         }
     }
 
     override fun transform(expr: KInt32NumExpr) = with(expr) {
-        transform { nsolver.mkInteger(expr.value.toLong()) }
+        transform { tm.builder { mkInteger(expr.value.toLong()) } }
     }
 
     override fun transform(expr: KInt64NumExpr) = with(expr) {
         // We need to pass String value here because on Windows it might be cut to 32 bit int value
-        transform { nsolver.mkInteger(expr.value.toString()) }
+        transform { tm.builder { mkInteger(expr.value.toString()) } }
     }
 
     override fun transform(expr: KIntBigNumExpr) = with(expr) {
-        transform { nsolver.mkInteger(expr.value.toString()) }
+        transform { tm.builder { mkInteger(expr.value.toString()) } }
     }
 
     override fun transform(expr: KToIntRealExpr) = with(expr) {
         transform(arg) { arg: Term ->
-            nsolver.mkTerm(Kind.TO_INTEGER, arg)
+            tm.mkTerm(Kind.TO_INTEGER, arg)
         }
     }
 
     override fun transform(expr: KIsIntRealExpr) = with(expr) {
         transform(arg) { arg: Term ->
-            nsolver.mkTerm(Kind.IS_INTEGER, arg)
+            tm.mkTerm(Kind.IS_INTEGER, arg)
         }
     }
 
     override fun transform(expr: KRealNumExpr) = with(expr) {
         transform(numerator, denominator) { num: Term, denom: Term ->
-            val numAsReal = nsolver.mkTerm(Kind.TO_REAL, num)
-            val denomAsReal = nsolver.mkTerm(Kind.TO_REAL, denom)
+            val numAsReal = tm.mkTerm(Kind.TO_REAL, num)
+            val denomAsReal = tm.mkTerm(Kind.TO_REAL, denom)
 
-            nsolver.mkTerm(Kind.DIVISION, numAsReal, denomAsReal)
+            tm.mkTerm(Kind.DIVISION, numAsReal, denomAsReal)
         }
     }
 
@@ -1166,10 +1183,11 @@ class KCvc5ExprInternalizer(
     override fun transform(expr: KUninterpretedSortValue): KExpr<KUninterpretedSort> = with(expr) {
         transform(ctx.mkIntNum(expr.valueIdx)) { intValueExpr: Term ->
             val exprSort = sort.internalizeSort()
-            cvc5Ctx.saveUninterpretedSortValue(nsolver.mkConst(exprSort), expr).also {
+            cvc5Ctx.saveUninterpretedSortValue(tm.builder { mkConst(exprSort) }, expr).also {
                 cvc5Ctx.registerUninterpretedSortValue(expr, intValueExpr, it) {
                     val descriptorSort = ctx.intSort.internalizeSort()
-                    nsolver.declareFun("${sort.name}!interpreter", arrayOf(exprSort), descriptorSort)
+                    solver.declareFun("${sort.name}!interpreter", arrayOf(exprSort), descriptorSort)
+                        .also { f -> tm.registerPointer(f) }
                 }
             }
         }
@@ -1186,20 +1204,21 @@ class KCvc5ExprInternalizer(
 
     private fun mkQuantifierTerm(isUniversal: Boolean, bounds: List<Term>, body: Term): Term =
         resolveBoundVars(bounds, body) { boundVars, bodyWithVars ->
-            nsolver.mkQuantifier(isUniversal, boundVars, bodyWithVars)
+            tm.mkQuantifier(isUniversal, boundVars, bodyWithVars)
         }
 
     private fun mkLambdaTerm(bounds: List<Term>, body: Term): Term =
         resolveBoundVars(bounds, body) { boundVars, bodyWithVars ->
-            nsolver.mkLambda(boundVars, bodyWithVars)
+            tm.mkLambda(boundVars, bodyWithVars)
         }
 
     private inline fun resolveBoundVars(bounds: List<Term>, body: Term, mkTerm: (Array<Term>, Term) -> Term): Term {
         val boundVars = bounds.map {
+            val sort = tm.termSort(it)
             if (it.hasSymbol()) {
-                nsolver.mkVar(it.sort, it.symbol)
+                tm.builder { mkVar(sort, it.symbol) }
             } else {
-                nsolver.mkVar(it.sort)
+                tm.builder { mkVar(sort) }
             }
         }.toTypedArray()
 
@@ -1208,7 +1227,7 @@ class KCvc5ExprInternalizer(
     }
 
     private fun Term.mkFunctionApp(args: List<Term>): Term =
-        nsolver.mkTerm(Kind.APPLY_UF, arrayOf(this) + args)
+        tm.mkTerm(Kind.APPLY_UF, arrayOf(this) + args)
 
     private fun mkAndTerm(args: List<Term>): Term {
         if (args.isEmpty()) return nsolver.mkTrue()
@@ -1221,19 +1240,19 @@ class KCvc5ExprInternalizer(
     }
 
     private fun mkArraySelectTerm(array: Term, indices: List<Term>): Term =
-        if (array.sort.isArray) {
+        if (tm.termSort(array).isArray) {
             val selectIdx = mkArrayOperationIndex(indices)
-            nsolver.mkTerm(Kind.SELECT, array, selectIdx)
+            tm.mkTerm(Kind.SELECT, array, selectIdx)
         } else {
-            nsolver.mkTerm(Kind.APPLY_UF, arrayOf(array) + indices)
+            tm.mkTerm(Kind.APPLY_UF, arrayOf(array) + indices)
         }
 
     private fun mkArrayStoreTerm(array: Term, indices: List<Term>, value: Term): Term =
-        if (array.sort.isArray) {
+        if (tm.termSort(array).isArray) {
             val storeIdx = mkArrayOperationIndex(indices)
-            nsolver.mkTerm(Kind.STORE, arrayOf(array, storeIdx, value))
+            tm.mkTerm(Kind.STORE, arrayOf(array, storeIdx, value))
         } else {
-            val boundVars = indices.map { nsolver.mkVar(it.sort) }
+            val boundVars = indices.map { tm.builder { mkVar(tm.termSort(it)) } }
 
             val condition = indices.zip(boundVars) { idx, boundVar ->
                 idx.eqTerm(boundVar)
@@ -1242,18 +1261,18 @@ class KCvc5ExprInternalizer(
             val arrayValue = array.mkFunctionApp(boundVars)
             val body = condition.iteTerm(value, arrayValue)
 
-            nsolver.mkLambda(boundVars.toTypedArray(), body)
+            tm.mkLambda(boundVars.toTypedArray(), body)
         }
 
     private fun mkArrayOperationIndex(indices: List<Term>): Term =
         if (indices.size == 1) {
             indices.single()
         } else {
-            nsolver.mkTuple(indices.map { it.sort }.toTypedArray(), indices.toTypedArray())
+            tm.builder { mkTuple(indices.toTypedArray()) }
         }
 
     private fun mkArrayEqTerm(arraySort: KArraySortBase<*>, lhs: Term, rhs: Term): Term {
-        if (lhs.sort == rhs.sort) {
+        if (tm.termSort(lhs) == tm.termSort(rhs)) {
             return lhs.eqTerm(rhs)
         }
 
@@ -1270,26 +1289,26 @@ class KCvc5ExprInternalizer(
      * We coerce `SMT arrays` to functions.
      * */
     private fun ensureArrayLambda(arraySort: KArraySortBase<*>, term: Term): Term =
-        if (!term.sort.isArray) {
+        if (!tm.termSort(term).isArray) {
             term
         } else {
-            val boundVars = arraySort.domainSorts.map { nsolver.mkVar(it.internalizeSort()) }
+            val boundVars = arraySort.domainSorts.map { tm.builder { mkVar(it.internalizeSort()) } }
             val body = mkArraySelectTerm(term, boundVars)
-            nsolver.mkLambda(boundVars.toTypedArray(), body)
+            tm.mkLambda(boundVars.toTypedArray(), body)
         }
 
     private fun mkArrayIteTerm(arraySort: KArraySortBase<*>, cond: Term, trueBranch: Term, falseBranch: Term): Term {
-        if (trueBranch.sort.isArray && falseBranch.sort.isArray) {
+        if (tm.termSort(trueBranch).isArray && tm.termSort(falseBranch).isArray) {
             return cond.iteTerm(trueBranch, falseBranch)
         }
 
-        val boundVars = arraySort.domainSorts.map { nsolver.mkVar(it.internalizeSort()) }
+        val boundVars = arraySort.domainSorts.map { tm.builder { mkVar(it.internalizeSort()) } }
         val trueValue = mkArraySelectTerm(trueBranch, boundVars)
         val falseValue = mkArraySelectTerm(falseBranch, boundVars)
 
         val body = cond.iteTerm(trueValue, falseValue)
 
-        return nsolver.mkLambda(boundVars.toTypedArray(), body)
+        return tm.mkLambda(boundVars.toTypedArray(), body)
     }
 
     private fun mkArrayDistinctTerm(arraySort: KArraySortBase<*>, args: List<Term>): Term {

@@ -2,18 +2,9 @@ package io.ksmt.solver.cvc5
 
 import io.github.cvc5.Kind
 import io.github.cvc5.RoundingMode
+import io.github.cvc5.Solver
 import io.github.cvc5.Sort
 import io.github.cvc5.Term
-import io.github.cvc5.bvLowerExtractionBitIndex
-import io.github.cvc5.bvRepeatTimes
-import io.github.cvc5.bvRotateBitsCount
-import io.github.cvc5.bvSignExtensionSize
-import io.github.cvc5.bvSizeToConvertTo
-import io.github.cvc5.bvUpperExtractionBitIndex
-import io.github.cvc5.bvZeroExtensionSize
-import io.github.cvc5.intDivisibleArg
-import io.github.cvc5.toFpExponentSize
-import io.github.cvc5.toFpSignificandSize
 import io.ksmt.KContext
 import io.ksmt.decl.KConstDecl
 import io.ksmt.decl.KDecl
@@ -42,18 +33,19 @@ import io.ksmt.sort.KRealSort
 import io.ksmt.sort.KSort
 import io.ksmt.utils.asExpr
 import io.ksmt.utils.uncheckedCast
-import java.util.*
 
 @Suppress("LargeClass")
 open class KCvc5ExprConverter(
     private val ctx: KContext,
     private val cvc5Ctx: KCvc5Context,
+    private val solver: Solver,
     private val model: KCvc5Model? = null
 ) : KExprConverterBase<Term>() {
+    private val tm = cvc5Ctx.termManager
 
-    private val internalizer by lazy { KCvc5ExprInternalizer(cvc5Ctx) }
+    private val internalizer by lazy { KCvc5ExprInternalizer(cvc5Ctx, solver) }
 
-    private val converterLocalCache = TreeMap<Term, KExpr<*>>()
+    private val converterLocalCache = KCvc5TermMap<KExpr<*>>()
 
     override fun findConvertedNative(expr: Term): KExpr<*>? {
         val localCached = converterLocalCache[expr]
@@ -93,7 +85,7 @@ open class KCvc5ExprConverter(
             Kind.CONSTANT -> convert { expr.convertDecl<KSort>().apply(emptyList()) }
             Kind.UNINTERPRETED_SORT_VALUE -> convert {
                 model ?: error("Uninterpreted value without model")
-                model.resolveUninterpretedSortValue(expr.sort.convertSort(), expr).also {
+                model.resolveUninterpretedSortValue(tm.termSort(expr).convertSort(), expr).also {
                     // Save here to skip save to the global cache
                     converterLocalCache.putIfAbsent(expr, it)
                 }
@@ -159,6 +151,12 @@ open class KCvc5ExprConverter(
             Kind.INTS_MODULUS -> expr.convert(::mkIntMod)
             Kind.INTS_DIVISION -> expr.convert(::mkArithDiv)
             Kind.DIVISION -> expr.convert(::mkArithDiv)
+
+            // Divide by 0 operations
+            Kind.DIVISION_TOTAL,
+            Kind.INTS_DIVISION_TOTAL,
+            Kind.INTS_MODULUS_TOTAL,
+
             Kind.ARCCOTANGENT,
             Kind.ARCSECANT,
             Kind.ARCCOSECANT,
@@ -260,6 +258,47 @@ open class KCvc5ExprConverter(
             Kind.BITVECTOR_COMP -> throw KSolverUnsupportedFeatureException(
                 "No direct mapping of ${Kind.BITVECTOR_COMP} in ksmt"
             )
+
+            Kind.BITVECTOR_NEGO -> expr.convert { bvExpr: KExpr<KBvSort> ->
+                mkBvNegationNoOverflowExpr(bvExpr)
+            }
+
+            Kind.BITVECTOR_UADDO -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+                mkBvAddNoOverflowExpr(arg0, arg1, isSigned = false)
+            }
+
+            Kind.BITVECTOR_SADDO -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+                mkAnd(
+                    mkBvAddNoOverflowExpr(arg0, arg1, isSigned = true),
+                    mkBvAddNoUnderflowExpr(arg0, arg1)
+                )
+            }
+
+            Kind.BITVECTOR_UMULO -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+                mkBvMulNoOverflowExpr(arg0, arg1, isSigned = false)
+            }
+
+            Kind.BITVECTOR_SMULO -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+                mkAnd(
+                    mkBvMulNoOverflowExpr(arg0, arg1, isSigned = true),
+                    mkBvMulNoUnderflowExpr(arg0, arg1)
+                )
+            }
+
+            Kind.BITVECTOR_USUBO -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+                mkBvSubNoUnderflowExpr(arg0, arg1, isSigned = false)
+            }
+
+            Kind.BITVECTOR_SSUBO -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+                mkAnd(
+                    mkBvSubNoOverflowExpr(arg0, arg1),
+                    mkBvSubNoUnderflowExpr(arg0, arg1, isSigned = true)
+                )
+            }
+
+            Kind.BITVECTOR_SDIVO -> expr.convert { arg0: KExpr<KBvSort>, arg1: KExpr<KBvSort> ->
+                mkBvDivNoOverflowExpr(arg0, arg1)
+            }
 
             // fp
             Kind.FLOATINGPOINT_FP -> {
@@ -398,16 +437,13 @@ open class KCvc5ExprConverter(
             Kind.BAG_SUBBAG,
             Kind.BAG_COUNT,
             Kind.BAG_MEMBER,
-            Kind.BAG_DUPLICATE_REMOVAL,
             Kind.BAG_MAKE,
             Kind.BAG_CARD,
             Kind.BAG_CHOOSE,
-            Kind.BAG_IS_SINGLETON,
-            Kind.BAG_FROM_SET,
-            Kind.BAG_TO_SET,
             Kind.BAG_MAP,
             Kind.BAG_FILTER,
             Kind.BAG_FOLD,
+            Kind.BAG_SETOF,
             Kind.BAG_PARTITION -> throw KSolverUnsupportedFeatureException("currently ksmt does not support bags")
 
             Kind.TABLE_PRODUCT,
@@ -477,17 +513,26 @@ open class KCvc5ExprConverter(
             Kind.SEQ_UNIT,
             Kind.SEQ_NTH -> throw KSolverUnsupportedFeatureException("currently ksmt does not support sequences")
 
+            Kind.CONST_FINITE_FIELD,
+            Kind.FINITE_FIELD_NEG,
+            Kind.FINITE_FIELD_ADD,
+            Kind.FINITE_FIELD_BITSUM,
+            Kind.FINITE_FIELD_MULT ->
+                throw KSolverUnsupportedFeatureException("currently ksmt does not support Finite fields")
+
             Kind.WITNESS -> error("no direct mapping in ksmt")
             Kind.LAST_KIND -> error("should not be here. Marks the upper-bound of this enumeration, not op kind")
             Kind.INTERNAL_KIND -> error("should not be here. Not exposed via the API")
             Kind.UNDEFINED_KIND -> error("should not be here. Not exposed via the API")
-            Kind.NULL_TERM -> error("no support in ksmt")
+            Kind.NULL_TERM,
+            Kind.NULLABLE_LIFT,
+            Kind.SKOLEM -> error("no support in ksmt")
             null -> error("kind can't be null")
         }
 
     }
 
-    private val quantifiedExpressionBodies = TreeMap<Term, Pair<List<KDecl<*>>, Term>>()
+    private val quantifiedExpressionBodies = KCvc5TermMap<Pair<List<KDecl<*>>, Term>>()
 
     private inline fun convertNativeQuantifiedBodyExpr(
         expr: Term,
@@ -496,8 +541,8 @@ open class KCvc5ExprConverter(
         val quantifiedExprBody = quantifiedExpressionBodies[expr]
 
         val (bounds, body) = if (quantifiedExprBody == null) {
-            val cvc5Vars = expr.getChild(0).getChildren()
-            val cvc5BodyWithVars = expr.getChild(1)
+            val cvc5Vars = tm.termChild(expr, 0).getChildren()
+            val cvc5BodyWithVars = tm.termChild(expr, 1)
 
             // fresh bounds
             val bounds = cvc5Vars.map { ctx.convertFreshConstDecl(it) }
@@ -507,7 +552,7 @@ open class KCvc5ExprConverter(
                 .map { with(internalizer) { it.internalizeExpr() } }
                 .toTypedArray()
 
-            val cvc5PreparedBody = cvc5BodyWithVars.substitute(cvc5Vars, cvc5ConstBounds)
+            val cvc5PreparedBody = tm.termOp(cvc5BodyWithVars) { substitute(cvc5Vars, cvc5ConstBounds) }
 
             val body = findConvertedNative(cvc5PreparedBody)
             if (body == null) {
@@ -545,8 +590,9 @@ open class KCvc5ExprConverter(
         }
 
     private fun <R : KSort> convertNativeConstArrayExpr(expr: Term): ExprConversionResult = with(ctx) {
-        expr.convert(arrayOf(expr.constArrayBase)) { arrayBase: KExpr<R> ->
-            mkArrayConst(expr.sort.convertSort() as KArraySortBase<R>, arrayBase)
+        val constArray = tm.termOp(expr) { constArrayBase }
+        expr.convert(arrayOf(constArray)) { arrayBase: KExpr<R> ->
+            mkArrayConst(tm.termSort(expr).convertSort() as KArraySortBase<R>, arrayBase)
         }
     }
 
@@ -591,7 +637,7 @@ open class KCvc5ExprConverter(
     }
 
     private fun getArrayOperationIndices(expr: Term): List<Term> =
-        if (expr.sort.isTuple) {
+        if (tm.termSort(expr).isTuple) {
             check(expr.kind == Kind.APPLY_CONSTRUCTOR) { "Unexpected array index: $expr" }
             expr.getChildren().drop(1)
         } else {
@@ -702,7 +748,7 @@ open class KCvc5ExprConverter(
         val fpTriplet = expr.floatingPointValue // (exponent, significand, bvValue)
         val significandSize = fpTriplet.second.toInt()
         val exponentSize = fpTriplet.first.toInt()
-        val bvValue = fpTriplet.third.bitVectorValue
+        val bvValue = tm.registerPointer(fpTriplet.third).bitVectorValue
         val fpSignBit = bvValue[0] == '1'
         val fpExponent = mkBv(bvValue.substring(1..exponentSize), exponentSize.toUInt())
         val fpSignificand = mkBv(bvValue.substring(exponentSize + 1), significandSize.toUInt() - 1u)
@@ -749,7 +795,7 @@ open class KCvc5ExprConverter(
 
     open fun convertNativeDecl(decl: Term): KDecl<*> = with(ctx) {
         when {
-            decl.sort.isFunction -> convertFuncDecl(decl)
+            tm.termSort(decl).isFunction -> convertFuncDecl(decl)
             decl.kind == Kind.CONSTANT -> convertConstDecl(decl)
             else -> error("Unexpected term: $decl")
         }
@@ -762,8 +808,8 @@ open class KCvc5ExprConverter(
             sort.isInteger -> intSort
             sort.isReal -> realSort
             sort.isArray -> mkArrayAnySort(
-                domain = convertArrayDomainSort(sort.arrayIndexSort),
-                range = sort.arrayElementSort.convertSort()
+                domain = convertArrayDomainSort(tm.sortOp(sort) { arrayIndexSort }),
+                range = tm.sortOp(sort) { arrayElementSort }.convertSort()
             )
             sort.isFloatingPoint -> mkFpSort(
                 sort.floatingPointExponentSize.toUInt(),
@@ -777,7 +823,7 @@ open class KCvc5ExprConverter(
     }
 
     private fun convertArrayDomainSort(sort: Sort): List<KSort> = if (sort.isTuple) {
-        sort.tupleSorts.map { it.convertSort() }
+        sort.tupleSorts.map { tm.registerPointer(it).convertSort() }
     } else {
         listOf(sort.convertSort())
     }
@@ -798,7 +844,7 @@ open class KCvc5ExprConverter(
     }
 
     private fun KContext.convertConstDecl(expr: Term): KConstDecl<KSort> {
-        val sort = expr.sort.convertSort<KSort>()
+        val sort = tm.termSort(expr).convertSort<KSort>()
         return if (expr.hasSymbol()) {
             mkConstDecl(expr.symbol, sort)
         } else {
@@ -807,14 +853,15 @@ open class KCvc5ExprConverter(
     }
 
     private fun KContext.convertFreshConstDecl(expr: Term): KConstDecl<KSort> {
-        val sort = expr.sort.convertSort<KSort>()
+        val sort = tm.termSort(expr).convertSort<KSort>()
         val name = if (expr.hasSymbol()) expr.symbol else "cvc5_var"
         return mkFreshConstDecl(name, sort)
     }
 
     private fun KContext.convertFuncDecl(expr: Term): KFuncDecl<KSort> {
-        val range = expr.sort.functionCodomainSort.convertSort<KSort>()
-        val domain = expr.sort.functionDomainSorts.map { it.convertSort<KSort>() }
+        val exprSort = tm.termSort(expr)
+        val range = tm.sortOp(exprSort) { functionCodomainSort }.convertSort<KSort>()
+        val domain = exprSort.functionDomainSorts.map { tm.registerPointer(it).convertSort<KSort>() }
         return if (expr.hasSymbol()) {
             mkFuncDecl(expr.symbol, range, domain)
         } else {
@@ -873,5 +920,93 @@ open class KCvc5ExprConverter(
     inline fun <T : KSort, A0 : KSort> Term.convertList(op: (List<KExpr<A0>>) -> KExpr<T>) =
         convertList(getChildren(), op)
 
-    fun Term.getChildren(): Array<Term> = Array(numChildren) { i -> getChild(i) }
+    fun Term.getChildren(): Array<Term> = Array(numChildren) { i -> tm.termChild(this, i) }
+
+    private fun termOpArg(term: Term, arg: Int): Term {
+        val op = tm.termOp(term) { op }
+        return op.get(arg).also { tm.registerPointer(it) }
+    }
+
+    private val Term.bvZeroExtensionSize: Int
+        get() {
+            require(kind == Kind.BITVECTOR_ZERO_EXTEND) {
+                "Required op is ${Kind.BITVECTOR_ZERO_EXTEND}, but was $kind"
+            }
+            return termOpArg(this, 0).integerValue.toInt()
+        }
+
+    private val Term.bvSignExtensionSize: Int
+        get() {
+            require(kind == Kind.BITVECTOR_SIGN_EXTEND) {
+                "Required op is ${Kind.BITVECTOR_SIGN_EXTEND}, but was $kind"
+            }
+            return termOpArg(this, 0).integerValue.toInt()
+        }
+
+    private val Term.bvUpperExtractionBitIndex: Int
+        get() {
+            require(kind == Kind.BITVECTOR_EXTRACT) { "Required op is ${Kind.BITVECTOR_EXTRACT}, but was $kind" }
+            return termOpArg(this, 0).integerValue.toInt()
+        }
+
+    private val Term.bvLowerExtractionBitIndex: Int
+        get() {
+            require(kind == Kind.BITVECTOR_EXTRACT) { "Required op is ${Kind.BITVECTOR_EXTRACT}, but was $kind" }
+            return termOpArg(this, 1).integerValue.toInt()
+        }
+
+    private val Term.bvRotateBitsCountTerm: Term
+        get() {
+            require(kind == Kind.BITVECTOR_ROTATE_LEFT || kind == Kind.BITVECTOR_ROTATE_RIGHT) {
+                "Required op is ${Kind.BITVECTOR_ROTATE_LEFT} or ${Kind.BITVECTOR_ROTATE_RIGHT}, but was $kind"
+            }
+            return termOpArg(this, 0)
+        }
+
+    private val Term.bvRotateBitsCount: Int
+        get() = bvRotateBitsCountTerm.integerValue.toInt()
+
+    private val Term.bvRepeatTimes: Int
+        get() {
+            require(kind == Kind.BITVECTOR_REPEAT) { "Required op is ${Kind.BITVECTOR_REPEAT}, but was $kind" }
+            return termOpArg(this, 0).integerValue.toInt()
+        }
+
+    private val toBvAllowedOps = listOf(
+        Kind.INT_TO_BITVECTOR,
+        Kind.FLOATINGPOINT_TO_SBV,
+        Kind.FLOATINGPOINT_TO_UBV
+    )
+    private val Term.bvSizeToConvertTo: Int
+        get() {
+            require(kind in toBvAllowedOps) { "Required op are $toBvAllowedOps, but was $kind" }
+            return termOpArg(this, 0).integerValue.toInt()
+        }
+
+    private val toFpAllowedOps = listOf(
+        Kind.FLOATINGPOINT_TO_FP_FROM_IEEE_BV,
+        Kind.FLOATINGPOINT_TO_FP_FROM_REAL,
+        Kind.FLOATINGPOINT_TO_FP_FROM_FP,
+        Kind.FLOATINGPOINT_TO_FP_FROM_SBV,
+        Kind.FLOATINGPOINT_TO_FP_FROM_UBV
+
+    )
+
+    private val Term.toFpExponentSize: Int
+        get() {
+            require(kind in toFpAllowedOps) { "Required ops are $toFpAllowedOps, but was $kind" }
+            return termOpArg(this, 0).integerValue.toInt()
+        }
+
+    private val Term.toFpSignificandSize: Int
+        get() {
+            require(kind in toFpAllowedOps) { "Required ops are $toFpAllowedOps, but was $kind" }
+            return termOpArg(this, 1).integerValue.toInt()
+        }
+
+    private val Term.intDivisibleArg: Int
+        get() {
+            require(kind == Kind.DIVISIBLE) { "Required op is ${Kind.DIVISIBLE}, but was $kind" }
+            return termOpArg(this, 0).integerValue.toInt()
+        }
 }

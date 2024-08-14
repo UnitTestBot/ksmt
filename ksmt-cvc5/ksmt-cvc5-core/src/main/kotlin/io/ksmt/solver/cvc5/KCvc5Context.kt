@@ -30,11 +30,10 @@ import io.ksmt.sort.KRealSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KSortVisitor
 import io.ksmt.sort.KUninterpretedSort
-import java.util.TreeMap
 
 class KCvc5Context(
-    private val solver: Solver,
-    private val ctx: KContext
+    val termManager: KCvc5TermManager,
+    val ctx: KContext
 ) : AutoCloseable {
     private var isClosed = false
 
@@ -62,11 +61,11 @@ class KCvc5Context(
     private val currentScopeExpressions = HashMap<KExpr<*>, Term>()
     private val expressions = HashMap<KExpr<*>, Term>()
     // we can't use HashMap with Term and Sort (hashcode is not implemented)
-    private val cvc5Expressions = TreeMap<Term, KExpr<*>>()
+    private val cvc5Expressions = KCvc5TermMap<KExpr<*>>()
     private val sorts = HashMap<KSort, Sort>()
-    private val cvc5Sorts = TreeMap<Sort, KSort>()
+    private val cvc5Sorts = KCvc5SortMap<KSort>()
     private val decls = HashMap<KDecl<*>, Term>()
-    private val cvc5Decls = TreeMap<Term, KDecl<*>>()
+    private val cvc5Decls = KCvc5TermMap<KDecl<*>>()
 
     private var currentLevelUninterpretedSorts = hashSetOf<KUninterpretedSort>()
     private val uninterpretedSorts = mutableListOf(currentLevelUninterpretedSorts)
@@ -90,9 +89,6 @@ class KCvc5Context(
      * declarations of active push-levels
      */
     fun declarations(): List<Set<KDecl<*>>> = declarations
-
-    val nativeSolver: Solver
-        get() = solver
 
     val isActive: Boolean
         get() = !isClosed
@@ -287,7 +283,7 @@ class KCvc5Context(
         val interpreter = uninterpretedSortValueInterpreter[value.value.sort]
             ?: error("Interpreter was not registered for sort: ${value.value.sort}")
 
-        val constraintLhs = solver.mkTerm(Kind.APPLY_UF, arrayOf(interpreter, value.nativeValueTerm))
+        val constraintLhs = termManager.mkTerm(Kind.APPLY_UF, arrayOf(interpreter, value.nativeValueTerm))
         val constraint = constraintLhs.eqTerm(value.nativeUniqueValueDescriptor)
 
         solver.assertFormula(constraint)
