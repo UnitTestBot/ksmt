@@ -121,6 +121,7 @@ class BvSimplifyTest: ExpressionSimplifyTest() {
                 bvValue(it.sizeBits, 3),
                 bvValue(it.sizeBits, BV_SIZE.toInt() + 5),
                 bvZero(it.sizeBits),
+                mkBvZeroExtensionExpr((it.sizeBits.toInt() - 3).coerceAtLeast(0), mkConst("b", mkBvSort(3u))),
                 mkConst("a", it)  // same as lhs
             )
         }

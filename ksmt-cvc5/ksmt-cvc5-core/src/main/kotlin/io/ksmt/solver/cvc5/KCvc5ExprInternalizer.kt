@@ -333,11 +333,25 @@ class KCvc5ExprInternalizer(
     }
 
     override fun <T : KBvSort> transform(expr: KBvReductionAndExpr<T>) = with(expr) {
-        transform(value) { value: Term -> tm.mkTerm(Kind.BITVECTOR_REDAND, value) }
+        transform(value) { value: Term ->
+            tm.mkTerm(
+                Kind.ITE,
+                tm.mkTerm(Kind.BITVECTOR_REDAND, value),
+                tm.builder { mkBitVector(1, 1) },
+                tm.builder { mkBitVector(1, 0) },
+            )
+        }
     }
 
     override fun <T : KBvSort> transform(expr: KBvReductionOrExpr<T>) = with(expr) {
-        transform(value) { value: Term -> tm.mkTerm(Kind.BITVECTOR_REDOR, value) }
+        transform(value) { value: Term ->
+            tm.mkTerm(
+                Kind.ITE,
+                tm.mkTerm(Kind.BITVECTOR_REDOR, value),
+                tm.builder { mkBitVector(1, 1) },
+                tm.builder { mkBitVector(1, 0) },
+            )
+        }
     }
 
     override fun <T : KBvSort> transform(expr: KBvAndExpr<T>) = with(expr) {
@@ -1215,11 +1229,17 @@ class KCvc5ExprInternalizer(
     private fun Term.mkFunctionApp(args: List<Term>): Term =
         tm.mkTerm(Kind.APPLY_UF, arrayOf(this) + args)
 
-    private fun mkAndTerm(args: List<Term>): Term =
-        if (args.size == 1) args.single() else tm.mkTerm(Kind.AND, args.toTypedArray())
+    private fun mkAndTerm(args: List<Term>): Term = when (args.size) {
+        0 -> tm.builder { mkTrue() }
+        1 -> args.single()
+        else -> tm.mkTerm(Kind.AND, args.toTypedArray())
+    }
 
-    private fun mkOrTerm(args: List<Term>): Term =
-        if (args.size == 1) args.single() else tm.mkTerm(Kind.OR, args.toTypedArray())
+    private fun mkOrTerm(args: List<Term>): Term = when (args.size) {
+        0 -> tm.builder { mkFalse() }
+        1 -> args.single()
+        else -> tm.mkTerm(Kind.OR, args.toTypedArray())
+    }
 
     private fun mkArraySelectTerm(array: Term, indices: List<Term>): Term =
         if (tm.termSort(array).isArray) {
