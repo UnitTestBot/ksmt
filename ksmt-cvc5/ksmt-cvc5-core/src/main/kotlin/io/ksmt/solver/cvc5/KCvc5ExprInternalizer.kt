@@ -333,25 +333,11 @@ class KCvc5ExprInternalizer(
     }
 
     override fun <T : KBvSort> transform(expr: KBvReductionAndExpr<T>) = with(expr) {
-        transform(value) { value: Term ->
-            tm.mkTerm(
-                Kind.ITE,
-                tm.mkTerm(Kind.BITVECTOR_REDAND, value),
-                tm.builder { mkBitVector(1, 1) },
-                tm.builder { mkBitVector(1, 0) },
-            )
-        }
+        transform(value) { value: Term -> tm.mkTerm(Kind.BITVECTOR_REDAND, value) }
     }
 
     override fun <T : KBvSort> transform(expr: KBvReductionOrExpr<T>) = with(expr) {
-        transform(value) { value: Term ->
-            tm.mkTerm(
-                Kind.ITE,
-                tm.mkTerm(Kind.BITVECTOR_REDOR, value),
-                tm.builder { mkBitVector(1, 1) },
-                tm.builder { mkBitVector(1, 0) },
-            )
-        }
+        transform(value) { value: Term -> tm.mkTerm(Kind.BITVECTOR_REDOR, value) }
     }
 
     override fun <T : KBvSort> transform(expr: KBvAndExpr<T>) = with(expr) {
