@@ -27,7 +27,7 @@ val macDylibPath = listOf("**/libz3.dylib", "**/libz3java.dylib")
 
 val z3Binaries = listOf(
     Triple(`windows-x64`, mkZ3ReleaseDownloadTask(z3Version, "x64-win", winDllPath), null),
-    Triple(`linux-x64`, mkZ3ReleaseDownloadTask(z3Version, "x64-glibc-2.31", linuxSoPath), null),
+    Triple(`linux-x64`, null, z3NativeLinuxX64),
     Triple(`mac-x64`, mkZ3ReleaseDownloadTask(z3Version, "x64-osx-11.7.10", macDylibPath), null),
     Triple(`mac-arm`, mkZ3ReleaseDownloadTask(z3Version, "arm64-osx-11.0", macDylibPath), null),
     Triple(`linux-arm`, mkZ3ReleaseDownloadTask(z3Version, "arm64-glibc-2.35", linuxSoPath), null),
