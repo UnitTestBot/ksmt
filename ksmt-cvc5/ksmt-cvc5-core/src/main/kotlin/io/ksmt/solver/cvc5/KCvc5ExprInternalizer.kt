@@ -1215,11 +1215,17 @@ class KCvc5ExprInternalizer(
     private fun Term.mkFunctionApp(args: List<Term>): Term =
         tm.mkTerm(Kind.APPLY_UF, arrayOf(this) + args)
 
-    private fun mkAndTerm(args: List<Term>): Term =
-        if (args.size == 1) args.single() else tm.mkTerm(Kind.AND, args.toTypedArray())
+    private fun mkAndTerm(args: List<Term>): Term = when (args.size) {
+        0 -> tm.builder { mkTrue() }
+        1 -> args.single()
+        else -> tm.mkTerm(Kind.AND, args.toTypedArray())
+    }
 
-    private fun mkOrTerm(args: List<Term>): Term =
-        if (args.size == 1) args.single() else tm.mkTerm(Kind.OR, args.toTypedArray())
+    private fun mkOrTerm(args: List<Term>): Term = when (args.size) {
+        0 -> tm.builder { mkFalse() }
+        1 -> args.single()
+        else -> tm.mkTerm(Kind.OR, args.toTypedArray())
+    }
 
     private fun mkArraySelectTerm(array: Term, indices: List<Term>): Term =
         if (tm.termSort(array).isArray) {
