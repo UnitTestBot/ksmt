@@ -34,7 +34,7 @@ repositories {
 ```kotlin
 dependencies {
     // core 
-    implementation("io.ksmt:ksmt-core:0.5.24")    
+    implementation("io.ksmt:ksmt-core:0.5.25")    
 }
 ```
 
@@ -43,9 +43,9 @@ dependencies {
 ```kotlin
 dependencies {
     // z3 
-    implementation("io.ksmt:ksmt-z3:0.5.24")
+    implementation("io.ksmt:ksmt-z3:0.5.25")
     // bitwuzla
-    implementation("io.ksmt:ksmt-bitwuzla:0.5.24")
+    implementation("io.ksmt:ksmt-bitwuzla:0.5.25")
 }
 ```
 
