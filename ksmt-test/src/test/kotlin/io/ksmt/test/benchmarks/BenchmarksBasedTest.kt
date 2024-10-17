@@ -112,7 +112,7 @@ abstract class BenchmarksBasedTest {
                 val ksmtAssertions = worker.convertAssertions(assertions)
 
                 val theoryRequirement = KExprTheoryRequirement(ctx).also { req ->
-                    ksmtAssertions.forEach { it.accept(req) }
+                    ksmtAssertions.forEach { req.apply(it) }
                 }
 
                 val model = solverProvider(ctx).use { testSolver ->
@@ -194,7 +194,7 @@ abstract class BenchmarksBasedTest {
                 val ksmtAssertions = worker.convertAssertions(assertions)
 
                 val theoryRequirement = KExprTheoryRequirement(ctx).also { req ->
-                    ksmtAssertions.forEach { it.accept(req) }
+                    ksmtAssertions.forEach { req.apply(it) }
                 }
 
                 val actualStatus = solverProvider(ctx).use { ksmtSolver ->
