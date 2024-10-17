@@ -7,6 +7,7 @@ import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.KSolverUniversalConfigurationBuilder
+import io.ksmt.solver.KTheory
 import io.ksmt.solver.model.KModelImpl
 import io.ksmt.sort.KBoolSort
 import kotlin.test.Test
@@ -72,6 +73,10 @@ class CustomSolverTest {
     class CustomSolverConfigBuilder(
         val builder: KSolverUniversalConfigurationBuilder
     ) : CustomSolverConfig {
+        override fun optimizeForTheories(theories: Set<KTheory>?, quantifiersAllowed: Boolean) {
+            error("Solver stub is not configurable")
+        }
+
         override fun setBoolParameter(param: String, value: Boolean) {
             error("Solver stub is not configurable")
         }

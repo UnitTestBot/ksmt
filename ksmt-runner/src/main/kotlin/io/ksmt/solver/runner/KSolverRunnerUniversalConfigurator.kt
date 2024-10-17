@@ -2,11 +2,18 @@ package io.ksmt.solver.runner
 
 import io.ksmt.runner.generated.models.ConfigurationParamKind
 import io.ksmt.runner.generated.models.SolverConfigurationParam
+import io.ksmt.runner.generated.models.SolverConfigurationTheories
 import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverUniversalConfigurationBuilder
+import io.ksmt.solver.KTheory
 
 class KSolverRunnerUniversalConfigurator : KSolverUniversalConfigurationBuilder {
     val config = mutableListOf<SolverConfigurationParam>()
+    var theories: SolverConfigurationTheories? = null
+
+    override fun buildOptimizeForTheories(theories: Set<KTheory>?, quantifiersAllowed: Boolean) {
+        this.theories = SolverConfigurationTheories(quantifiersAllowed, theories?.map { it.name })
+    }
 
     override fun buildBoolParameter(param: String, value: Boolean) {
         config += SolverConfigurationParam(ConfigurationParamKind.Bool, param, "$value")
@@ -23,6 +30,11 @@ class KSolverRunnerUniversalConfigurator : KSolverUniversalConfigurationBuilder 
     override fun buildStringParameter(param: String, value: String) {
         config += SolverConfigurationParam(ConfigurationParamKind.String, param, value)
     }
+}
+
+fun KSolverConfiguration.setUniversalOptimizeForTheories(theoriesConfig: SolverConfigurationTheories) {
+    val theories = theoriesConfig.theories?.mapTo(hashSetOf()) { KTheory.valueOf(it) }
+    optimizeForTheories(theories, theoriesConfig.quantifiersAllowed)
 }
 
 fun KSolverConfiguration.addUniversalParam(param: SolverConfigurationParam): Unit = with(param) {

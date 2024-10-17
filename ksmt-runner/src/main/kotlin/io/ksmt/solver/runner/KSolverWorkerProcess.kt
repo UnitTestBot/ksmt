@@ -79,7 +79,8 @@ class KSolverWorkerProcess : ChildProcessBase<SolverProtocolModel>() {
         }
         configure.measureExecutionForTermination { config ->
             solver.configure {
-                config.forEach { addUniversalParam(it) }
+                config.theories?.let { setUniversalOptimizeForTheories(it) }
+                config.params.forEach { addUniversalParam(it) }
             }
         }
         assert.measureExecutionForTermination { params ->

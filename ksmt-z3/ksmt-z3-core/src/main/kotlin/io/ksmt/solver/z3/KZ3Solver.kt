@@ -25,7 +25,11 @@ import kotlin.time.DurationUnit
 
 open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration> {
     private val z3Ctx = KZ3Context(ctx)
-    private val solver = createSolver()
+
+    private var lazyConfiguration: KZ3SolverLazyConfiguration? = null
+    private var solverInitialized: Boolean = false
+    private val solver by lazy { createSolver() }
+    fun nativeSolver(): Solver = solver
 
     private var lastCheckStatus = KSolverStatus.UNKNOWN
     private var lastReasonOfUnknown: String? = null
@@ -48,12 +52,36 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
 
     open fun createExprConverter(z3Ctx: KZ3Context) = KZ3ExprConverter(ctx, z3Ctx)
 
-    private fun createSolver(): Solver = z3Ctx.nativeContext.mkSolver()
+    private fun createSolver(): Solver {
+        solverInitialized = true
+        val config = lazyConfiguration
+        lazyConfiguration = null
+
+        val logic = config?.logicConfiguration
+
+        val solver = if (logic != null) {
+            z3Ctx.nativeContext.mkSolver(logic)
+        } else {
+            z3Ctx.nativeContext.mkSolver()
+        }
+
+        config?.params?.let { solver.setParameters(it) }
+
+        return solver
+    }
 
     override fun configure(configurator: KZ3SolverConfiguration.() -> Unit) {
-        val params = z3Ctx.nativeContext.mkParams()
-        KZ3SolverConfigurationImpl(params).configurator()
-        solver.setParameters(params)
+        if (!solverInitialized) {
+            val config = lazyConfiguration
+                ?: KZ3SolverLazyConfiguration(z3Ctx.nativeContext.mkParams())
+                    .also { lazyConfiguration = it }
+
+            config.configurator()
+        } else {
+            val config = KZ3SolverParamsConfiguration(z3Ctx.nativeContext.mkParams())
+            config.configurator()
+            solver.setParameters(config.params)
+        }
     }
 
     override fun push() {

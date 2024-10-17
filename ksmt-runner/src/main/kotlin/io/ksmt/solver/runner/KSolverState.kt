@@ -1,7 +1,7 @@
 package io.ksmt.solver.runner
 
 import io.ksmt.expr.KExpr
-import io.ksmt.runner.generated.models.SolverConfigurationParam
+import io.ksmt.runner.generated.models.SolverConfiguration
 import io.ksmt.sort.KBoolSort
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -23,7 +23,7 @@ class KSolverState {
         val tracked: ConcurrentLinkedQueue<KExpr<KBoolSort>> = ConcurrentLinkedQueue(),
     )
 
-    private val configuration = ConcurrentLinkedQueue<SolverConfigurationParam>()
+    private val configuration = ConcurrentLinkedQueue<SolverConfiguration>()
 
     /**
      * Asserted expressions.
@@ -36,8 +36,8 @@ class KSolverState {
         assertFrames.addLast(AssertionFrame())
     }
 
-    fun configure(config: List<SolverConfigurationParam>) {
-        configuration.addAll(config)
+    fun configure(config: SolverConfiguration) {
+        configuration.add(config)
     }
 
     fun assert(expr: KExpr<KBoolSort>) {
@@ -77,13 +77,13 @@ class KSolverState {
      * all solver state modification operations.
      * */
     private inline fun replayState(
-        configureSolver: (List<SolverConfigurationParam>) -> Unit,
+        configureSolver: (SolverConfiguration) -> Unit,
         pushScope: () -> Unit,
         assertExprs: (List<KExpr<KBoolSort>>) -> Unit,
         assertExprsAndTrack: (List<KExpr<KBoolSort>>) -> Unit
     ) {
         if (configuration.isNotEmpty()) {
-            configureSolver(configuration.toList())
+            configuration.forEach { configureSolver(it) }
         }
 
         var firstFrame = true

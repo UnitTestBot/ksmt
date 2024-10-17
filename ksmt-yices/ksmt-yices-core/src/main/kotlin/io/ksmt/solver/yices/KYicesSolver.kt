@@ -28,6 +28,8 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
         }
     }
 
+    fun nativeSolver(): Context = nativeContext
+
     private val exprInternalizer: KYicesExprInternalizer by lazy {
         KYicesExprInternalizer(yicesCtx)
     }
@@ -50,7 +52,9 @@ class KYicesSolver(private val ctx: KContext) : KSolver<KYicesSolverConfiguratio
             "Solver instance has already been created"
         }
 
-        KYicesSolverConfigurationImpl(config).configurator()
+        yicesTry {
+            KYicesSolverConfigurationImpl(config).configurator()
+        }
     }
 
     override fun assert(expr: KExpr<KBoolSort>) = yicesTry {

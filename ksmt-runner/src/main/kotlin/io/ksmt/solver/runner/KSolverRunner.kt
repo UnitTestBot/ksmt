@@ -2,11 +2,10 @@ package io.ksmt.solver.runner
 
 import com.jetbrains.rd.util.AtomicReference
 import com.jetbrains.rd.util.threading.SpinWait
-import kotlinx.coroutines.sync.Mutex
 import io.ksmt.KContext
 import io.ksmt.expr.KExpr
 import io.ksmt.runner.generated.ConfigurationBuilder
-import io.ksmt.runner.generated.models.SolverConfigurationParam
+import io.ksmt.runner.generated.models.SolverConfiguration
 import io.ksmt.runner.generated.models.SolverType
 import io.ksmt.solver.KModel
 import io.ksmt.solver.KSolverConfiguration
@@ -15,6 +14,7 @@ import io.ksmt.solver.KSolverStatus
 import io.ksmt.solver.async.KAsyncSolver
 import io.ksmt.solver.runner.KSolverRunnerManager.CustomSolverInfo
 import io.ksmt.sort.KBoolSort
+import kotlinx.coroutines.sync.Mutex
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration
 
@@ -61,11 +61,14 @@ class KSolverRunner<Config : KSolverConfiguration>(
 
     private inline fun configure(
         configurator: Config.() -> Unit,
-        execute: (List<SolverConfigurationParam>) -> Unit
+        execute: (SolverConfiguration) -> Unit
     ) {
         val universalConfigurator = KSolverRunnerUniversalConfigurator()
         configurationBuilder(universalConfigurator).configurator()
-        val config = universalConfigurator.config
+        val config = SolverConfiguration(
+            params = universalConfigurator.config,
+            theories = universalConfigurator.theories
+        )
 
         try {
             execute(config)
