@@ -55,7 +55,7 @@ class KCvc5SolverLazyConfiguration : KCvc5SolverConfiguration {
     }
 
     fun configure(solver: Solver) {
-        logicConfiguration.let { solver.setLogic(it) }
+        logicConfiguration?.let { solver.setLogic(it) }
         options.forEach { (option, value) -> solver.setOption(option, value) }
     }
 }
