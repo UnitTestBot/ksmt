@@ -36,16 +36,7 @@ class Cvc5BenchmarksBasedTest : BenchmarksBasedTest() {
         @JvmStatic
         fun cvc5TestData() = testData()
 
-        /**
-         * Resource limit to prevent solver from consuming huge amounts of native memory.
-         * The value is measured in some abstract resource usage units and chosen to maintain
-         * a balance between resource usage and the number of unknown check-sat results.
-         * */
-        const val RESOURCE_LIMIT = 4000
-
         fun KSolverRunnerManager.createCvc5TestSolver(ctx: KContext) =
-            createSolver(ctx, KCvc5Solver::class).apply {
-                configure { setCvc5Option("rlimit", "$RESOURCE_LIMIT") }
-            }
+            createSolver(ctx, KCvc5Solver::class)
     }
 }
