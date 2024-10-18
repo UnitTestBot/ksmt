@@ -20,7 +20,7 @@ import kotlin.jvm.JvmStatic
 class SolverProtocolModel private constructor(
     private val _initSolver: RdCall<CreateSolverParams, Unit>,
     private val _deleteSolver: RdCall<Unit, Unit>,
-    private val _configure: RdCall<List<SolverConfigurationParam>, Unit>,
+    private val _configure: RdCall<SolverConfiguration, Unit>,
     private val _assert: RdCall<AssertParams, Unit>,
     private val _bulkAssert: RdCall<BulkAssertParams, Unit>,
     private val _assertAndTrack: RdCall<AssertParams, Unit>,
@@ -41,6 +41,8 @@ class SolverProtocolModel private constructor(
         override fun registerSerializersCore(serializers: ISerializers)  {
             serializers.register(CreateSolverParams)
             serializers.register(SolverConfigurationParam)
+            serializers.register(SolverConfigurationTheories)
+            serializers.register(SolverConfiguration)
             serializers.register(AssertParams)
             serializers.register(BulkAssertParams)
             serializers.register(PopParams)
@@ -78,9 +80,8 @@ class SolverProtocolModel private constructor(
             }
         }
         
-        private val __SolverConfigurationParamListSerializer = SolverConfigurationParam.list()
         
-        const val serializationHash = 6588187342629653927L
+        const val serializationHash = 2069028780388633863L
         
     }
     override val serializersOwner: ISerializersOwner get() = SolverProtocolModel
@@ -101,7 +102,7 @@ class SolverProtocolModel private constructor(
     /**
      * Configure solver with parameters
      */
-    val configure: RdCall<List<SolverConfigurationParam>, Unit> get() = _configure
+    val configure: RdCall<SolverConfiguration, Unit> get() = _configure
     
     /**
      * Assert expression
@@ -205,7 +206,7 @@ class SolverProtocolModel private constructor(
     ) : this(
         RdCall<CreateSolverParams, Unit>(CreateSolverParams, FrameworkMarshallers.Void),
         RdCall<Unit, Unit>(FrameworkMarshallers.Void, FrameworkMarshallers.Void),
-        RdCall<List<SolverConfigurationParam>, Unit>(__SolverConfigurationParamListSerializer, FrameworkMarshallers.Void),
+        RdCall<SolverConfiguration, Unit>(SolverConfiguration, FrameworkMarshallers.Void),
         RdCall<AssertParams, Unit>(AssertParams, FrameworkMarshallers.Void),
         RdCall<BulkAssertParams, Unit>(BulkAssertParams, FrameworkMarshallers.Void),
         RdCall<AssertParams, Unit>(AssertParams, FrameworkMarshallers.Void),
@@ -271,7 +272,7 @@ val IProtocol.solverProtocolModel get() = getOrCreateExtension(SolverProtocolMod
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:47]
+ * #### Generated from [SolverProtocolModel.kt:57]
  */
 data class AssertParams (
     val expression: io.ksmt.KAst
@@ -328,7 +329,7 @@ data class AssertParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:51]
+ * #### Generated from [SolverProtocolModel.kt:61]
  */
 data class BulkAssertParams (
     val expressions: List<io.ksmt.KAst>
@@ -385,7 +386,7 @@ data class BulkAssertParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:59]
+ * #### Generated from [SolverProtocolModel.kt:69]
  */
 data class CheckParams (
     val timeout: Long
@@ -442,7 +443,7 @@ data class CheckParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:63]
+ * #### Generated from [SolverProtocolModel.kt:73]
  */
 data class CheckResult (
     val status: io.ksmt.solver.KSolverStatus
@@ -499,7 +500,7 @@ data class CheckResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:67]
+ * #### Generated from [SolverProtocolModel.kt:77]
  */
 data class CheckWithAssumptionsParams (
     val assumptions: List<io.ksmt.KAst>,
@@ -667,7 +668,7 @@ data class CreateSolverParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:86]
+ * #### Generated from [SolverProtocolModel.kt:96]
  */
 data class ModelEntry (
     val decl: io.ksmt.KAst,
@@ -742,7 +743,7 @@ data class ModelEntry (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:80]
+ * #### Generated from [SolverProtocolModel.kt:90]
  */
 data class ModelFuncInterpEntry (
     val hasVars: Boolean,
@@ -811,7 +812,7 @@ data class ModelFuncInterpEntry (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:98]
+ * #### Generated from [SolverProtocolModel.kt:108]
  */
 data class ModelResult (
     val declarations: List<io.ksmt.KAst>,
@@ -880,7 +881,7 @@ data class ModelResult (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:93]
+ * #### Generated from [SolverProtocolModel.kt:103]
  */
 data class ModelUninterpretedSortUniverse (
     val sort: io.ksmt.KAst,
@@ -943,7 +944,7 @@ data class ModelUninterpretedSortUniverse (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:55]
+ * #### Generated from [SolverProtocolModel.kt:65]
  */
 data class PopParams (
     val levels: UInt
@@ -1000,7 +1001,7 @@ data class PopParams (
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:76]
+ * #### Generated from [SolverProtocolModel.kt:86]
  */
 data class ReasonUnknownResult (
     val reasonUnknown: String
@@ -1048,6 +1049,69 @@ data class ReasonUnknownResult (
         printer.println("ReasonUnknownResult (")
         printer.indent {
             print("reasonUnknown = "); reasonUnknown.print(printer); println()
+        }
+        printer.print(")")
+    }
+    //deepClone
+    //contexts
+}
+
+
+/**
+ * #### Generated from [SolverProtocolModel.kt:52]
+ */
+data class SolverConfiguration (
+    val params: List<SolverConfigurationParam>,
+    val theories: SolverConfigurationTheories?
+) : IPrintable {
+    //companion
+    
+    companion object : IMarshaller<SolverConfiguration> {
+        override val _type: KClass<SolverConfiguration> = SolverConfiguration::class
+        
+        @Suppress("UNCHECKED_CAST")
+        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): SolverConfiguration  {
+            val params = buffer.readList { SolverConfigurationParam.read(ctx, buffer) }
+            val theories = buffer.readNullable { SolverConfigurationTheories.read(ctx, buffer) }
+            return SolverConfiguration(params, theories)
+        }
+        
+        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: SolverConfiguration)  {
+            buffer.writeList(value.params) { v -> SolverConfigurationParam.write(ctx, buffer, v) }
+            buffer.writeNullable(value.theories) { SolverConfigurationTheories.write(ctx, buffer, it) }
+        }
+        
+        
+    }
+    //fields
+    //methods
+    //initializer
+    //secondary constructor
+    //equals trait
+    override fun equals(other: Any?): Boolean  {
+        if (this === other) return true
+        if (other == null || other::class != this::class) return false
+        
+        other as SolverConfiguration
+        
+        if (params != other.params) return false
+        if (theories != other.theories) return false
+        
+        return true
+    }
+    //hash code trait
+    override fun hashCode(): Int  {
+        var __r = 0
+        __r = __r*31 + params.hashCode()
+        __r = __r*31 + if (theories != null) theories.hashCode() else 0
+        return __r
+    }
+    //pretty print
+    override fun print(printer: PrettyPrinter)  {
+        printer.println("SolverConfiguration (")
+        printer.indent {
+            print("params = "); params.print(printer); println()
+            print("theories = "); theories.print(printer); println()
         }
         printer.print(")")
     }
@@ -1126,6 +1190,69 @@ data class SolverConfigurationParam (
 
 
 /**
+ * #### Generated from [SolverProtocolModel.kt:47]
+ */
+data class SolverConfigurationTheories (
+    val quantifiersAllowed: Boolean,
+    val theories: List<String>?
+) : IPrintable {
+    //companion
+    
+    companion object : IMarshaller<SolverConfigurationTheories> {
+        override val _type: KClass<SolverConfigurationTheories> = SolverConfigurationTheories::class
+        
+        @Suppress("UNCHECKED_CAST")
+        override fun read(ctx: SerializationCtx, buffer: AbstractBuffer): SolverConfigurationTheories  {
+            val quantifiersAllowed = buffer.readBool()
+            val theories = buffer.readNullable { buffer.readList { buffer.readString() } }
+            return SolverConfigurationTheories(quantifiersAllowed, theories)
+        }
+        
+        override fun write(ctx: SerializationCtx, buffer: AbstractBuffer, value: SolverConfigurationTheories)  {
+            buffer.writeBool(value.quantifiersAllowed)
+            buffer.writeNullable(value.theories) { buffer.writeList(it) { v -> buffer.writeString(v) } }
+        }
+        
+        
+    }
+    //fields
+    //methods
+    //initializer
+    //secondary constructor
+    //equals trait
+    override fun equals(other: Any?): Boolean  {
+        if (this === other) return true
+        if (other == null || other::class != this::class) return false
+        
+        other as SolverConfigurationTheories
+        
+        if (quantifiersAllowed != other.quantifiersAllowed) return false
+        if (theories != other.theories) return false
+        
+        return true
+    }
+    //hash code trait
+    override fun hashCode(): Int  {
+        var __r = 0
+        __r = __r*31 + quantifiersAllowed.hashCode()
+        __r = __r*31 + if (theories != null) theories.hashCode() else 0
+        return __r
+    }
+    //pretty print
+    override fun print(printer: PrettyPrinter)  {
+        printer.println("SolverConfigurationTheories (")
+        printer.indent {
+            print("quantifiersAllowed = "); quantifiersAllowed.print(printer); println()
+            print("theories = "); theories.print(printer); println()
+        }
+        printer.print(")")
+    }
+    //deepClone
+    //contexts
+}
+
+
+/**
  * #### Generated from [SolverProtocolModel.kt:21]
  */
 enum class SolverType {
@@ -1143,7 +1270,7 @@ enum class SolverType {
 
 
 /**
- * #### Generated from [SolverProtocolModel.kt:72]
+ * #### Generated from [SolverProtocolModel.kt:82]
  */
 data class UnsatCoreResult (
     val core: List<io.ksmt.KAst>

@@ -5,4 +5,5 @@ interface KSolverUniversalConfigurationBuilder {
     fun buildIntParameter(param: String, value: Int)
     fun buildStringParameter(param: String, value: String)
     fun buildDoubleParameter(param: String, value: Double)
+    fun buildOptimizeForTheories(theories: Set<KTheory>?, quantifiersAllowed: Boolean)
 }

@@ -8,8 +8,6 @@ import com.jetbrains.rd.util.TimeoutException
 import com.jetbrains.rd.util.lifetime.Lifetime
 import com.jetbrains.rd.util.reactive.RdFault
 import com.jetbrains.rd.util.threading.SynchronousScheduler
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.withTimeout
 import io.ksmt.KContext
 import io.ksmt.decl.KDecl
 import io.ksmt.expr.KExpr
@@ -22,55 +20,57 @@ import io.ksmt.runner.generated.models.CheckResult
 import io.ksmt.runner.generated.models.CheckWithAssumptionsParams
 import io.ksmt.runner.generated.models.ContextSimplificationMode
 import io.ksmt.runner.generated.models.CreateSolverParams
-import io.ksmt.runner.generated.models.ModelResult
 import io.ksmt.runner.generated.models.ModelEntry
 import io.ksmt.runner.generated.models.ModelFuncInterpEntry
+import io.ksmt.runner.generated.models.ModelResult
 import io.ksmt.runner.generated.models.PopParams
 import io.ksmt.runner.generated.models.ReasonUnknownResult
-import io.ksmt.runner.generated.models.SolverConfigurationParam
+import io.ksmt.runner.generated.models.SolverConfiguration
 import io.ksmt.runner.generated.models.SolverProtocolModel
 import io.ksmt.runner.generated.models.SolverType
 import io.ksmt.runner.generated.models.UnsatCoreResult
+import io.ksmt.solver.KModel
+import io.ksmt.solver.KSolverException
+import io.ksmt.solver.KSolverStatus
+import io.ksmt.solver.KSolverUnsupportedFeatureException
+import io.ksmt.solver.KSolverUnsupportedParameterException
 import io.ksmt.solver.model.KFuncInterp
 import io.ksmt.solver.model.KFuncInterpEntry
 import io.ksmt.solver.model.KFuncInterpEntryVarsFree
 import io.ksmt.solver.model.KFuncInterpEntryWithVars
 import io.ksmt.solver.model.KFuncInterpVarsFree
 import io.ksmt.solver.model.KFuncInterpWithVars
-import io.ksmt.solver.KModel
-import io.ksmt.solver.KSolverException
-import io.ksmt.solver.KSolverStatus
-import io.ksmt.solver.KSolverUnsupportedFeatureException
-import io.ksmt.solver.KSolverUnsupportedParameterException
 import io.ksmt.solver.model.KModelImpl
 import io.ksmt.solver.runner.KSolverRunnerManager.CustomSolverInfo
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
+import io.ksmt.utils.uncheckedCast
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
-import io.ksmt.utils.uncheckedCast
 import kotlin.time.Duration
 
 class KSolverRunnerExecutor(
     private val hardTimeout: Duration,
     private val worker: KsmtWorkerSession<SolverProtocolModel>,
 ) {
-    fun configureSync(config: List<SolverConfigurationParam>) = configure(config) { cfg ->
+    fun configureSync(config: SolverConfiguration) = configure(config) { cfg ->
         queryWithTimeoutAndExceptionHandlingSync {
             configure.querySync(cfg)
         }
     }
 
-    suspend fun configureAsync(config: List<SolverConfigurationParam>) = configure(config) { cfg ->
+    suspend fun configureAsync(config: SolverConfiguration) = configure(config) { cfg ->
         queryWithTimeoutAndExceptionHandlingAsync {
             configure.queryAsync(cfg)
         }
     }
 
     private inline fun configure(
-        config: List<SolverConfigurationParam>,
-        query: (List<SolverConfigurationParam>) -> Unit
+        config: SolverConfiguration,
+        query: (SolverConfiguration) -> Unit
     ) {
         ensureActive()
         query(config)

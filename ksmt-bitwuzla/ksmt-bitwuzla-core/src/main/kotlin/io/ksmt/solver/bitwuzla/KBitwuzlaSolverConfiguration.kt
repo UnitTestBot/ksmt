@@ -2,7 +2,13 @@ package io.ksmt.solver.bitwuzla
 
 import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverUniversalConfigurationBuilder
+import io.ksmt.solver.KSolverUnsupportedFeatureException
 import io.ksmt.solver.KSolverUnsupportedParameterException
+import io.ksmt.solver.KTheory
+import io.ksmt.solver.KTheory.LIA
+import io.ksmt.solver.KTheory.LRA
+import io.ksmt.solver.KTheory.NIA
+import io.ksmt.solver.KTheory.NRA
 import org.ksmt.solver.bitwuzla.bindings.Bitwuzla
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaOption
 import org.ksmt.solver.bitwuzla.bindings.Native
@@ -42,11 +48,23 @@ class KBitwuzlaSolverConfigurationImpl(private val bitwuzla: Bitwuzla) : KBitwuz
     override fun setBitwuzlaOption(option: BitwuzlaOption, value: String) {
         Native.bitwuzlaSetOptionStr(bitwuzla, option, value)
     }
+
+    override fun optimizeForTheories(theories: Set<KTheory>?, quantifiersAllowed: Boolean) {
+        if (theories.isNullOrEmpty()) return
+
+        if (setOf(LIA, LRA, NIA, NRA).intersect(theories).isNotEmpty()) {
+            throw KSolverUnsupportedFeatureException("Unsupported theories $theories")
+        }
+    }
 }
 
 class KBitwuzlaSolverUniversalConfiguration(
     private val builder: KSolverUniversalConfigurationBuilder
 ) : KBitwuzlaSolverConfiguration {
+    override fun optimizeForTheories(theories: Set<KTheory>?, quantifiersAllowed: Boolean) {
+        builder.buildOptimizeForTheories(theories, quantifiersAllowed)
+    }
+
     override fun setBitwuzlaOption(option: BitwuzlaOption, value: Int) {
         builder.buildIntParameter(option.name, value)
     }

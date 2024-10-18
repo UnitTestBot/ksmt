@@ -44,6 +44,16 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
         field("value", PredefinedType.string)
     }
 
+    private val solverConfigurationTheories = structdef {
+        field("quantifiersAllowed", PredefinedType.bool)
+        field("theories", immutableList(PredefinedType.string).nullable)
+    }
+
+    private val solverConfiguration = structdef {
+        field("params", immutableList(solverConfigurationParam))
+        field("theories", solverConfigurationTheories.nullable)
+    }
+
     private val assertParams = structdef {
         field("expression", kastType)
     }
@@ -110,7 +120,7 @@ object SolverProtocolModel : Ext(SolverProtocolRoot) {
             async
             documentation = "Delete solver"
         }
-        call("configure", immutableList(solverConfigurationParam), PredefinedType.void).apply {
+        call("configure", solverConfiguration, PredefinedType.void).apply {
             async
             documentation = "Configure solver with parameters"
         }

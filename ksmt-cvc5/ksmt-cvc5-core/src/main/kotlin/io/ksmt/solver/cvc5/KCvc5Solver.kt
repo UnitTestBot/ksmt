@@ -3,7 +3,6 @@ package io.ksmt.solver.cvc5
 import io.github.cvc5.CVC5ApiException
 import io.github.cvc5.Result
 import io.github.cvc5.Solver
-import io.github.cvc5.TermManager
 import io.ksmt.KContext
 import io.ksmt.expr.KExpr
 import io.ksmt.solver.KModel
@@ -18,8 +17,12 @@ import kotlin.time.DurationUnit
 
 open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfiguration> {
     private val termManager = KCvc5TermManager()
-    private val solver = termManager.builder { Solver(this) }
     private val cvc5Ctx = KCvc5Context(termManager, ctx)
+
+    private var solverLazyConfiguration: KCvc5SolverLazyConfiguration? = null
+    private var solverInitialized: Boolean = false
+    private val solver by lazy { initSolver() }
+    fun nativeSolver(): Solver = solver
 
     private val exprInternalizer by lazy { createExprInternalizer(cvc5Ctx) }
 
@@ -36,21 +39,37 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
     private var cvc5CurrentLevelTrackedAssertions = KCvc5TermMap<KExpr<KBoolSort>>()
     private val cvc5TrackedAssertions = mutableListOf(cvc5CurrentLevelTrackedAssertions)
 
-    init {
+    private fun initSolver(): Solver = cvc5Try {
+        val solver = termManager.builder { Solver(this) }
+
+        solverInitialized = true
+        solverLazyConfiguration?.configure(solver)
+        solverLazyConfiguration = null
+
         solver.setOption("produce-models", "true")
         solver.setOption("produce-unsat-cores", "true")
+
         /**
          * Allow floating-point sorts of all sizes, rather than
          * only Float32 (8/24) or Float64 (11/53) (experimental in cvc5 1.0.2)
          */
         solver.setOption("fp-exp", "true")
+
+        return solver
     }
 
     open fun createExprInternalizer(cvc5Ctx: KCvc5Context): KCvc5ExprInternalizer =
         KCvc5ExprInternalizer(cvc5Ctx, solver)
 
     override fun configure(configurator: KCvc5SolverConfiguration.() -> Unit) {
-        KCvc5SolverConfigurationImpl(solver).configurator()
+        if (!solverInitialized) {
+            val config = solverLazyConfiguration
+                ?: KCvc5SolverLazyConfiguration().also { solverLazyConfiguration = it }
+
+            config.configurator()
+        } else {
+            KCvc5SolverOptionsConfiguration(solver).configurator()
+        }
     }
 
     override fun assert(expr: KExpr<KBoolSort>) = cvc5Try {

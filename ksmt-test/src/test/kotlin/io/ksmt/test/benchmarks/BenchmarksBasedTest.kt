@@ -49,6 +49,7 @@ import io.ksmt.test.TestRunner
 import io.ksmt.test.TestWorker
 import io.ksmt.test.TestWorkerProcess
 import io.ksmt.utils.FpUtils.isZero
+import io.ksmt.utils.KExprTheoryRequirement
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.Path
@@ -110,7 +111,15 @@ abstract class BenchmarksBasedTest {
                 val assertions = worker.parseFile(samplePath)
                 val ksmtAssertions = worker.convertAssertions(assertions)
 
+                val theoryRequirement = KExprTheoryRequirement(ctx).also { req ->
+                    ksmtAssertions.forEach { req.apply(it) }
+                }
+
                 val model = solverProvider(ctx).use { testSolver ->
+                    testSolver.configure {
+                        optimizeForTheories(theoryRequirement.usedTheories, theoryRequirement.hasQuantifiers)
+                    }
+
                     ksmtAssertions.forEach { testSolver.assertAsync(it) }
 
                     val status = testSolver.checkAsync(SOLVER_CHECK_SAT_TIMEOUT)
@@ -184,7 +193,15 @@ abstract class BenchmarksBasedTest {
 
                 val ksmtAssertions = worker.convertAssertions(assertions)
 
+                val theoryRequirement = KExprTheoryRequirement(ctx).also { req ->
+                    ksmtAssertions.forEach { req.apply(it) }
+                }
+
                 val actualStatus = solverProvider(ctx).use { ksmtSolver ->
+                    ksmtSolver.configure {
+                        optimizeForTheories(theoryRequirement.usedTheories, theoryRequirement.hasQuantifiers)
+                    }
+
                     ksmtAssertions.forEach { ksmtSolver.assertAsync(it) }
 
                     // use greater timeout to reduce false-positive unknowns
