@@ -5,12 +5,14 @@ import io.ksmt.solver.KSolverConfiguration
 import io.ksmt.solver.KSolverException
 import io.ksmt.solver.KSolverUniversalConfigurationBuilder
 import io.ksmt.solver.KTheory
+import io.ksmt.solver.KTheory.Array
 import io.ksmt.solver.KTheory.BV
 import io.ksmt.solver.KTheory.FP
 import io.ksmt.solver.KTheory.LIA
 import io.ksmt.solver.KTheory.LRA
 import io.ksmt.solver.KTheory.NIA
 import io.ksmt.solver.KTheory.NRA
+import io.ksmt.solver.KTheory.UF
 import io.ksmt.solver.smtLib2String
 
 interface KZ3SolverConfiguration : KSolverConfiguration {
@@ -57,7 +59,7 @@ sealed class KZ3SolverConfigurationImpl(val params: Params) : KZ3SolverConfigura
 class KZ3SolverLazyConfiguration(params: Params) : KZ3SolverConfigurationImpl(params) {
     var logicConfiguration: String? = null
     override fun optimizeForTheories(theories: Set<KTheory>?, quantifiersAllowed: Boolean) {
-        if (theories.isNullOrEmpty() || !supportedLogicCombination(theories)) {
+        if (theories.isNullOrEmpty() || !supportedLogicCombination(theories, quantifiersAllowed)) {
             logicConfiguration = null
             return
         }
@@ -66,22 +68,69 @@ class KZ3SolverLazyConfiguration(params: Params) : KZ3SolverConfigurationImpl(pa
     }
 
     /**
-     * Z3 doesn't provide special solver for the following theory combinations
+     * Z3 provide special solver only for the following theory combinations
      * */
-    private fun supportedLogicCombination(theories: Set<KTheory>): Boolean {
-        if (BV in theories) {
-            if (setOf(LIA, LRA, NIA, NRA).intersect(theories).isNotEmpty()) {
-                return false
-            }
+    private fun supportedLogicCombination(theories: Set<KTheory>, quantifiersAllowed: Boolean): Boolean =
+        if (quantifiersAllowed) {
+            theories in supportedTheoriesWithQuantifiers
+        } else {
+            theories in supportedQuantifierFreeTheories
         }
 
-        if (FP in theories) {
-            if (setOf(LIA, NIA, NRA).intersect(theories).isNotEmpty()) {
-                return false
-            }
-        }
+    companion object {
+        private fun l(vararg theories: KTheory) = theories.toSet()
 
-        return true
+        private val supportedTheoriesWithQuantifiers = setOf(
+            l(Array, BV),
+            l(Array, LIA),
+            l(Array, UF, BV),
+            l(Array, UF, LIA),
+            l(Array, UF, LIA, LRA),
+            l(Array, UF, NIA),
+            l(Array, UF, NIA, NRA),
+            l(BV),
+            l(FP),
+            l(LIA),
+            l(LRA),
+            l(NIA),
+            l(NRA),
+            l(UF),
+            l(UF, BV),
+            l(UF, LIA),
+            l(UF, LRA),
+            l(UF, NIA),
+            l(UF, NIA, NRA),
+            l(UF, NRA),
+        )
+
+        private val supportedQuantifierFreeTheories = setOf(
+            l(Array),
+            l(Array, BV),
+            l(Array, LIA),
+            l(Array, NIA),
+            l(Array, UF, BV),
+            l(Array, UF, LIA),
+            l(Array, UF, LIA, LRA),
+            l(Array, UF, NIA),
+            l(Array, UF, NIA, NRA),
+            l(BV),
+            l(BV, FP),
+            l(FP),
+            l(FP, LRA),
+            l(LIA),
+            l(LIA, LRA),
+            l(LRA),
+            l(NIA),
+            l(NIA, NRA),
+            l(NRA),
+            l(UF),
+            l(UF, BV),
+            l(UF, LIA),
+            l(UF, LRA),
+            l(UF, NIA),
+            l(UF, NIA, NRA),
+            l(UF, NRA),
+        )
     }
 }
 
