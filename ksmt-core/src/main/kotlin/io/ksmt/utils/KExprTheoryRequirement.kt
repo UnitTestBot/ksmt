@@ -4,6 +4,7 @@ import io.ksmt.KContext
 import io.ksmt.expr.KDivArithExpr
 import io.ksmt.expr.KExistentialQuantifier
 import io.ksmt.expr.KExpr
+import io.ksmt.expr.KFunctionApp
 import io.ksmt.expr.KMulArithExpr
 import io.ksmt.expr.KPowerArithExpr
 import io.ksmt.expr.KUniversalQuantifier
@@ -43,6 +44,13 @@ class KExprTheoryRequirement(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     override fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> {
         expr.sort.accept(sortRequirementCollector)
         return super.transformExpr(expr)
+    }
+
+    override fun <T : KSort> transform(expr: KFunctionApp<T>): KExpr<T> {
+        if (expr.args.isNotEmpty()) {
+            usedTheories += UF
+        }
+        return super.transform(expr)
     }
 
     override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> {
