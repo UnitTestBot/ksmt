@@ -129,6 +129,7 @@ import io.ksmt.decl.KIntModDecl
 import io.ksmt.decl.KIntNumDecl
 import io.ksmt.decl.KIntRemDecl
 import io.ksmt.decl.KIntToRealDecl
+import io.ksmt.decl.KStringLiteralDecl
 import io.ksmt.decl.KIteDecl
 import io.ksmt.decl.KNotDecl
 import io.ksmt.decl.KOrDecl
@@ -272,6 +273,7 @@ import io.ksmt.expr.KInt64NumExpr
 import io.ksmt.expr.KIntBigNumExpr
 import io.ksmt.expr.KIntNumExpr
 import io.ksmt.expr.KIsIntRealExpr
+import io.ksmt.expr.KStringLiteralExpr
 import io.ksmt.expr.KIteExpr
 import io.ksmt.expr.KLeArithExpr
 import io.ksmt.expr.KLtArithExpr
@@ -728,6 +730,9 @@ open class KContext(
 
     val realSort: KRealSort
         get() = mkRealSort()
+
+    val stringSort: KStringSort
+        get() = mkStringSort()
 
     val bv1Sort: KBv1Sort
         get() = mkBv1Sort()
@@ -1883,6 +1888,16 @@ open class KContext(
 
     fun KExpr<KRealSort>.toIntExpr() = mkRealToInt(this)
     fun KExpr<KRealSort>.isIntExpr() = mkRealIsInt(this)
+
+    // strings
+    private val stringLiteralCache = mkAstInterner<KStringLiteralExpr>()
+
+    /**
+     * Create a String value.
+     * */
+    fun mkStringLiteral(value: String): KStringLiteralExpr = stringLiteralCache.createIfContextActive {
+        KStringLiteralExpr(this, value)
+    }
 
     // bitvectors
     private val bv1Cache = mkAstInterner<KBitVec1Value>()
@@ -4483,6 +4498,10 @@ open class KContext(
 
     fun mkRealNumDecl(value: String): KRealNumDecl = KRealNumDecl(this, value)
 
+    // string
+    fun mkStringLiteralDecl(value: String): KStringLiteralDecl = KStringLiteralDecl(this, value)
+
+    // Bit vectors
     fun mkBvDecl(value: Boolean): KDecl<KBv1Sort> =
         KBitVec1ValueDecl(this, value)
 
