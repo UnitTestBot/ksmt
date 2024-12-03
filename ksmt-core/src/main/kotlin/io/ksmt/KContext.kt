@@ -422,6 +422,8 @@ import io.ksmt.sort.KFpRoundingModeSort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRealSort
+import io.ksmt.sort.KStringSort
+import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KSortVisitor
 import io.ksmt.sort.KUninterpretedSort
@@ -590,6 +592,24 @@ open class KContext(
      * Create a Real sort.
      * */
     fun mkRealSort(): KRealSort = realSortCache
+
+    private val stringSortCache by lazy {
+        ensureContextActive { KStringSort(this) }
+    }
+
+    /**
+     * Create a String sort.
+     * */
+    fun mkStringSort(): KStringSort = stringSortCache
+
+    private val regexSortCache by lazy {
+        ensureContextActive { KRegexSort(this) }
+    }
+
+    /**
+     * Create a Regex sort.
+     * */
+    fun mkRegexSort(): KRegexSort = regexSortCache
 
     // bit-vec
     private val bv1SortCache: KBv1Sort by lazy { KBv1Sort(this) }
