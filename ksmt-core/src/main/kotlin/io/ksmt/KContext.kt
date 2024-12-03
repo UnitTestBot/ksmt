@@ -136,6 +136,7 @@ import io.ksmt.decl.KStringToRegexDecl
 import io.ksmt.decl.KRegexLiteralDecl
 import io.ksmt.decl.KRegexConcatDecl
 import io.ksmt.decl.KRegexUnionDecl
+import io.ksmt.decl.KRegexIntersectionDecl
 import io.ksmt.decl.KIteDecl
 import io.ksmt.decl.KNotDecl
 import io.ksmt.decl.KOrDecl
@@ -286,6 +287,7 @@ import io.ksmt.expr.KStringToRegexExpr
 import io.ksmt.expr.KRegexLiteralExpr
 import io.ksmt.expr.KRegexConcatExpr
 import io.ksmt.expr.KRegexUnionExpr
+import io.ksmt.expr.KRegexIntersectionExpr
 import io.ksmt.expr.KIteExpr
 import io.ksmt.expr.KLeArithExpr
 import io.ksmt.expr.KLtArithExpr
@@ -1992,18 +1994,35 @@ open class KContext(
     private val regexUnionExprCache = mkAstInterner<KRegexUnionExpr>()
 
     /**
-     * Create Regex concatenation (`concat`) expression.
+     * Create Regex union (`union`) expression.
      * */
     open fun mkRegexUnion(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KExpr<KRegexSort> =
         mkSimplified(arg0, arg1, KContext::mkRegexUnionNoSimplify, ::mkRegexUnionNoSimplify) // Add simplified version
 
     /**
-     * Create Regex concatenation (`concat`) expression.
+     * Create Regex union (`union`) expression.
      * */
     open fun mkRegexUnionNoSimplify(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KRegexUnionExpr =
         regexUnionExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KRegexUnionExpr(this, arg0, arg1)
+        }
+
+    private val regexIntersectionExprCache = mkAstInterner<KRegexIntersectionExpr>()
+
+    /**
+     * Create Regex intersection (`intersect`) expression.
+     * */
+    open fun mkRegexIntersection(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(arg0, arg1, KContext::mkRegexIntersectionNoSimplify, ::mkRegexIntersectionNoSimplify) // Add simplified version
+
+    /**
+     * Create Regex intersection (`intersect`) expression.
+     * */
+    open fun mkRegexIntersectionNoSimplify(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KRegexIntersectionExpr =
+        regexIntersectionExprCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KRegexIntersectionExpr(this, arg0, arg1)
         }
 
     // bitvectors
@@ -4620,6 +4639,8 @@ open class KContext(
     fun mkRegexConcatDecl(): KRegexConcatDecl = KRegexConcatDecl(this)
 
     fun mkRegexUnionDecl(): KRegexUnionDecl = KRegexUnionDecl(this)
+
+    fun mkRegexIntersectionDecl(): KRegexIntersectionDecl = KRegexIntersectionDecl(this)
 
     // Bit vectors
     fun mkBvDecl(value: Boolean): KDecl<KBv1Sort> =

@@ -46,3 +46,20 @@ class KRegexUnionDecl internal constructor(
         arg1: KExpr<KRegexSort>
     ): KApp<KRegexSort, *> = mkRegexUnionNoSimplify(arg0, arg1)
 }
+
+class KRegexIntersectionDecl internal constructor(
+    ctx: KContext,
+) : KFuncDecl2<KRegexSort, KRegexSort, KRegexSort>(
+    ctx,
+    name = "intersect",
+    resultSort = ctx.mkRegexSort(),
+    ctx.mkRegexSort(),
+    ctx.mkRegexSort()
+) {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<KRegexSort>,
+        arg1: KExpr<KRegexSort>
+    ): KApp<KRegexSort, *> = mkRegexIntersectionNoSimplify(arg0, arg1)
+}
