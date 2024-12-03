@@ -81,6 +81,10 @@ class KExprTheoryRequirement(ctx: KContext) : KNonRecursiveTransformer(ctx) {
             TODO("Not yet implemented")
         }
 
+        override fun visit(sort: KRegexSort) {
+            TODO("Not yet implemented")
+        }
+
         override fun <S : KBvSort> visit(sort: S) {
             usedTheories += BV
         }

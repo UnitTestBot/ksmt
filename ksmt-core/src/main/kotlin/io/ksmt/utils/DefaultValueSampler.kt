@@ -18,6 +18,10 @@ open class DefaultValueSampler(val ctx: KContext) : KSortVisitor<KExpr<*>> {
         TODO("Not yet implemented")
     }
 
+    override fun visit(sort: KRegexSort): KExpr<*> {
+        TODO("Not yet implemented")
+    }
+
     override fun <S : KBvSort> visit(sort: S): KExpr<*> =
         ctx.bvSortDefaultValue(sort)
 

@@ -58,6 +58,18 @@ class KStringSort internal constructor(ctx: KContext) : KSort(ctx) {
     override fun equals(other: Any?): Boolean = this === other || other is KStringSort
 }
 
+class KRegexSort internal constructor(ctx: KContext) : KSort(ctx) {
+    override fun <T> accept(visitor: KSortVisitor<T>): T = visitor.visit(this)
+
+    override fun print(builder: StringBuilder) {
+        builder.append("Regex")
+    }
+
+    override fun hashCode(): Int = hash(javaClass)
+
+    override fun equals(other: Any?): Boolean = this === other || other is KRegexSort
+}
+
 sealed class KArraySortBase<R : KSort>(ctx: KContext) : KSort(ctx) {
     abstract val domainSorts: List<KSort>
     abstract val range: R
