@@ -12,3 +12,20 @@ class KStringLiteralDecl internal constructor(
     override fun apply(args: List<KExpr<*>>): KApp<KStringSort, *> = ctx.mkStringLiteral(value)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
+
+class KStringConcatDecl internal constructor(
+    ctx: KContext,
+) : KFuncDecl2<KStringSort, KStringSort, KStringSort>(
+    ctx,
+    name = "concat",
+    resultSort = ctx.mkStringSort(),
+    ctx.mkStringSort(),
+    ctx.mkStringSort()
+) {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>
+    ): KApp<KStringSort, *> = mkStringConcatExprNoSimplify(arg0, arg1)
+}

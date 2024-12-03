@@ -6,7 +6,6 @@ import io.ksmt.cache.structurallyEqual
 import io.ksmt.decl.KRegexLiteralDecl
 import io.ksmt.expr.transformer.KTransformerBase
 import io.ksmt.sort.KRegexSort
-import io.ksmt.sort.KStringSort
 
 class KRegexLiteralExpr internal constructor(
     ctx: KContext,

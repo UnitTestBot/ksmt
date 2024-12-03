@@ -130,6 +130,7 @@ import io.ksmt.decl.KIntNumDecl
 import io.ksmt.decl.KIntRemDecl
 import io.ksmt.decl.KIntToRealDecl
 import io.ksmt.decl.KStringLiteralDecl
+import io.ksmt.decl.KStringConcatDecl
 import io.ksmt.decl.KRegexLiteralDecl
 import io.ksmt.decl.KIteDecl
 import io.ksmt.decl.KNotDecl
@@ -275,6 +276,7 @@ import io.ksmt.expr.KIntBigNumExpr
 import io.ksmt.expr.KIntNumExpr
 import io.ksmt.expr.KIsIntRealExpr
 import io.ksmt.expr.KStringLiteralExpr
+import io.ksmt.expr.KStringConcatExpr
 import io.ksmt.expr.KRegexLiteralExpr
 import io.ksmt.expr.KIteExpr
 import io.ksmt.expr.KLeArithExpr
@@ -1903,6 +1905,23 @@ open class KContext(
     fun mkStringLiteral(value: String): KStringLiteralExpr = stringLiteralCache.createIfContextActive {
         KStringLiteralExpr(this, value)
     }
+
+    private val stringConcatExprCache = mkAstInterner<KStringConcatExpr>()
+
+    /**
+     * Create String concatenation (`concat`) expression.
+     * */
+    open fun mkStringConcatExpr(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KExpr<KStringSort> =
+        mkSimplified(arg0, arg1, KContext::mkStringConcatExprNoSimplify, ::mkStringConcatExprNoSimplify) // Add simplified version
+
+    /**
+     * Create String concatenation (`concat`) expression.
+     * */
+    open fun mkStringConcatExprNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KStringConcatExpr =
+        stringConcatExprCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KStringConcatExpr(this, arg0, arg1)
+        }
 
     private val regexLiteralCache = mkAstInterner<KRegexLiteralExpr>()
 
@@ -4514,6 +4533,8 @@ open class KContext(
 
     // string
     fun mkStringLiteralDecl(value: String): KStringLiteralDecl = KStringLiteralDecl(this, value)
+
+    fun mkStringConcatDecl(): KStringConcatDecl = KStringConcatDecl(this)
 
     // regex
     fun mkRegexLiteralDecl(value: String): KRegexLiteralDecl = KRegexLiteralDecl(this, value)

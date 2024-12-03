@@ -3,8 +3,10 @@ package io.ksmt.expr
 import io.ksmt.KContext
 import io.ksmt.cache.hash
 import io.ksmt.cache.structurallyEqual
+import io.ksmt.decl.KDecl
 import io.ksmt.decl.KStringLiteralDecl
 import io.ksmt.expr.transformer.KTransformerBase
+import io.ksmt.sort.KBvSort
 import io.ksmt.sort.KStringSort
 
 class KStringLiteralExpr internal constructor(
@@ -23,4 +25,25 @@ class KStringLiteralExpr internal constructor(
 
     override fun internHashCode(): Int = hash(value)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
+}
+
+class KStringConcatExpr internal constructor(
+    ctx: KContext,
+    val arg0: KExpr<KStringSort>,
+    val arg1: KExpr<KStringSort>
+) : KApp<KStringSort, KStringSort>(ctx) {
+    override val args: List<KExpr<KStringSort>>
+        get() = listOf(arg0, arg1)
+
+    override val decl: KDecl<KStringSort>
+        get() = ctx.mkStringConcatDecl()
+
+    override fun accept(transformer: KTransformerBase): KExpr<KStringSort> {
+        TODO("Not yet implemented")
+    }
+
+    override val sort: KStringSort = ctx.mkStringSort()
+
+    override fun internHashCode(): Int = hash(arg0, arg1)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg0 }, { arg1 })
 }
