@@ -3,7 +3,9 @@ package io.ksmt.decl
 import io.ksmt.KContext
 import io.ksmt.expr.KApp
 import io.ksmt.expr.KExpr
+import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRegexSort
+import io.ksmt.sort.KStringSort
 
 class KRegexLiteralDecl internal constructor(
     ctx: KContext,
@@ -63,3 +65,28 @@ class KRegexIntersectionDecl internal constructor(
         arg1: KExpr<KRegexSort>
     ): KApp<KRegexSort, *> = mkRegexIntersectionNoSimplify(arg0, arg1)
 }
+
+class KRegexKleeneClosureDecl internal constructor(
+    ctx: KContext
+) : KFuncDecl1<KRegexSort, KRegexSort>(ctx, "closure", ctx.mkRegexSort(), ctx.mkRegexSort()) {
+    override fun KContext.apply(arg: KExpr<KRegexSort>): KApp<KRegexSort, KRegexSort> = mkRegexKleeneClosureNoSimplify(arg)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
+
+class KRegexDifferenceDecl internal constructor(
+    ctx: KContext,
+) : KFuncDecl2<KRegexSort, KRegexSort, KRegexSort>(
+    ctx,
+    name = "diff",
+    resultSort = ctx.mkRegexSort(),
+    ctx.mkRegexSort(),
+    ctx.mkRegexSort()
+) {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<KRegexSort>,
+        arg1: KExpr<KRegexSort>
+    ): KApp<KRegexSort, *> = mkRegexDifferenceNoSimplify(arg0, arg1)
+}
+

@@ -137,6 +137,8 @@ import io.ksmt.decl.KRegexLiteralDecl
 import io.ksmt.decl.KRegexConcatDecl
 import io.ksmt.decl.KRegexUnionDecl
 import io.ksmt.decl.KRegexIntersectionDecl
+import io.ksmt.decl.KRegexKleeneClosureDecl
+import io.ksmt.decl.KRegexDifferenceDecl
 import io.ksmt.decl.KIteDecl
 import io.ksmt.decl.KNotDecl
 import io.ksmt.decl.KOrDecl
@@ -288,6 +290,8 @@ import io.ksmt.expr.KRegexLiteralExpr
 import io.ksmt.expr.KRegexConcatExpr
 import io.ksmt.expr.KRegexUnionExpr
 import io.ksmt.expr.KRegexIntersectionExpr
+import io.ksmt.expr.KRegexKleeneClosureExpr
+import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KIteExpr
 import io.ksmt.expr.KLeArithExpr
 import io.ksmt.expr.KLtArithExpr
@@ -2023,6 +2027,39 @@ open class KContext(
         regexIntersectionExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KRegexIntersectionExpr(this, arg0, arg1)
+        }
+
+    private val regexKleeneClosureExprCache = mkAstInterner<KRegexKleeneClosureExpr>()
+
+    /**
+     * Create regular expression's Kleene closure.
+     * */
+    open fun mkRegexKleeneClosure(arg: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(arg, KContext::mkRegexKleeneClosureNoSimplify, ::mkRegexKleeneClosureNoSimplify) // Add simplified version
+
+    /**
+     * Create regular expression's Kleene closure.
+     * */
+    open fun mkRegexKleeneClosureNoSimplify(arg: KExpr<KRegexSort>): KRegexKleeneClosureExpr = regexKleeneClosureExprCache.createIfContextActive {
+        ensureContextMatch(arg)
+        KRegexKleeneClosureExpr(this, arg)
+    }
+
+    private val regexDifferenceExprCache = mkAstInterner<KRegexDifferenceExpr>()
+
+    /**
+     * Create Regex difference (`intersect`) expression.
+     * */
+    open fun mkRegexDifference(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(arg0, arg1, KContext::mkRegexDifferenceNoSimplify, ::mkRegexDifferenceNoSimplify) // Add simplified version
+
+    /**
+     * Create Regex difference (`intersect`) expression.
+     * */
+    open fun mkRegexDifferenceNoSimplify(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KRegexDifferenceExpr =
+        regexDifferenceExprCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KRegexDifferenceExpr(this, arg0, arg1)
         }
 
     // bitvectors
@@ -4641,6 +4678,10 @@ open class KContext(
     fun mkRegexUnionDecl(): KRegexUnionDecl = KRegexUnionDecl(this)
 
     fun mkRegexIntersectionDecl(): KRegexIntersectionDecl = KRegexIntersectionDecl(this)
+
+    fun mkRegexKleeneClosureDecl(): KRegexKleeneClosureDecl = KRegexKleeneClosureDecl(this)
+
+    fun mkRegexDifferenceDecl(): KRegexDifferenceDecl = KRegexDifferenceDecl(this)
 
     // Bit vectors
     fun mkBvDecl(value: Boolean): KDecl<KBv1Sort> =
