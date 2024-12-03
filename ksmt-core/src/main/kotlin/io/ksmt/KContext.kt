@@ -133,6 +133,8 @@ import io.ksmt.decl.KStringLiteralDecl
 import io.ksmt.decl.KStringConcatDecl
 import io.ksmt.decl.KStringLenDecl
 import io.ksmt.decl.KStringToRegexDecl
+import io.ksmt.decl.KSuffixOfDecl
+import io.ksmt.decl.KPrefixOfDecl
 import io.ksmt.decl.KRegexLiteralDecl
 import io.ksmt.decl.KRegexConcatDecl
 import io.ksmt.decl.KRegexUnionDecl
@@ -287,6 +289,8 @@ import io.ksmt.expr.KStringLiteralExpr
 import io.ksmt.expr.KStringConcatExpr
 import io.ksmt.expr.KStringLenExpr
 import io.ksmt.expr.KStringToRegexExpr
+import io.ksmt.expr.KSuffixOfExpr
+import io.ksmt.expr.KPrefixOfExpr
 import io.ksmt.expr.KRegexLiteralExpr
 import io.ksmt.expr.KRegexConcatExpr
 import io.ksmt.expr.KRegexUnionExpr
@@ -1970,6 +1974,41 @@ open class KContext(
         ensureContextMatch(arg)
         KStringToRegexExpr(this, arg)
     }
+
+    private val suffixOfExprCache = mkAstInterner<KSuffixOfExpr>()
+
+    /**
+     * Check if first string is a suffix of second.
+     * */
+    open fun mkSuffixOf(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KExpr<KBoolSort> =
+        mkSimplified(arg0, arg1, KContext::mkSuffixOfNoSimplify, ::mkSuffixOfNoSimplify) // Add simplified version
+
+    /**
+     * Check if first string is a suffix of second.
+     * */
+    open fun mkSuffixOfNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KSuffixOfExpr =
+        suffixOfExprCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KSuffixOfExpr(this, arg0, arg1)
+        }
+
+    private val prefixOfExprCache = mkAstInterner<KPrefixOfExpr>()
+
+    /**
+     * Check if first string is a prefix of second.
+     * */
+    open fun mkPrefixOf(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KExpr<KBoolSort> =
+        mkSimplified(arg0, arg1, KContext::mkPrefixOfNoSimplify, ::mkPrefixOfNoSimplify) // Add simplified version
+
+    /**
+     * Check if first string is a prefix of second.
+     * */
+    open fun mkPrefixOfNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KPrefixOfExpr =
+        prefixOfExprCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KPrefixOfExpr(this, arg0, arg1)
+        }
+
 
     private val regexLiteralCache = mkAstInterner<KRegexLiteralExpr>()
 
@@ -4687,6 +4726,10 @@ open class KContext(
     fun mkStringLenDecl(): KStringLenDecl = KStringLenDecl(this)
 
     fun mkStringToRegexDecl(): KStringToRegexDecl = KStringToRegexDecl(this)
+
+    fun mkSuffixOfDecl(): KSuffixOfDecl = KSuffixOfDecl(this)
+
+    fun mkPrefixOfDecl(): KPrefixOfDecl = KPrefixOfDecl(this)
 
     // regex
     fun mkRegexLiteralDecl(value: String): KRegexLiteralDecl = KRegexLiteralDecl(this, value)

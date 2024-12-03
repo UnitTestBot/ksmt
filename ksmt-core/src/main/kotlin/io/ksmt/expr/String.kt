@@ -5,6 +5,7 @@ import io.ksmt.cache.hash
 import io.ksmt.cache.structurallyEqual
 import io.ksmt.decl.*
 import io.ksmt.expr.transformer.KTransformerBase
+import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KStringSort
@@ -86,4 +87,46 @@ class KStringToRegexExpr internal constructor(
 
     override fun internHashCode(): Int = hash(arg)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
+}
+
+class KSuffixOfExpr internal constructor(
+    ctx: KContext,
+    val arg0: KExpr<KStringSort>,
+    val arg1: KExpr<KStringSort>
+) : KApp<KBoolSort, KStringSort>(ctx) {
+    override val sort: KBoolSort = ctx.mkBoolSort()
+
+    override val args: List<KExpr<KStringSort>>
+        get() = listOf(arg0, arg1)
+
+    override val decl: KDecl<KBoolSort>
+        get() = ctx.mkSuffixOfDecl()
+
+    override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> {
+        TODO("Not yet implemented")
+    }
+
+    override fun internHashCode(): Int = hash(arg0, arg1)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg0 }, { arg1 })
+}
+
+class KPrefixOfExpr internal constructor(
+    ctx: KContext,
+    val arg0: KExpr<KStringSort>,
+    val arg1: KExpr<KStringSort>
+) : KApp<KBoolSort, KStringSort>(ctx) {
+    override val sort: KBoolSort = ctx.mkBoolSort()
+
+    override val args: List<KExpr<KStringSort>>
+        get() = listOf(arg0, arg1)
+
+    override val decl: KDecl<KBoolSort>
+        get() = ctx.mkPrefixOfDecl()
+
+    override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> {
+        TODO("Not yet implemented")
+    }
+
+    override fun internHashCode(): Int = hash(arg0, arg1)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg0 }, { arg1 })
 }

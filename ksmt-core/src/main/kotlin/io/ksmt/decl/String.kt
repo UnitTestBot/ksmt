@@ -46,3 +46,37 @@ class KStringToRegexDecl internal constructor(
     override fun KContext.apply(arg: KExpr<KStringSort>): KApp<KRegexSort, KStringSort> = mkStringToRegexNoSimplify(arg)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
+
+class KSuffixOfDecl internal constructor(
+    ctx: KContext,
+) : KFuncDecl2<KBoolSort, KStringSort, KStringSort>(
+    ctx,
+    name = "suffix_of",
+    resultSort = ctx.mkBoolSort(),
+    ctx.mkStringSort(),
+    ctx.mkStringSort()
+) {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>
+    ): KApp<KBoolSort, *> = mkSuffixOfNoSimplify(arg0, arg1)
+}
+
+class KPrefixOfDecl internal constructor(
+    ctx: KContext,
+) : KFuncDecl2<KBoolSort, KStringSort, KStringSort>(
+    ctx,
+    name = "prefix_of",
+    resultSort = ctx.mkBoolSort(),
+    ctx.mkStringSort(),
+    ctx.mkStringSort()
+) {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>
+    ): KApp<KBoolSort, *> = mkPrefixOfNoSimplify(arg0, arg1)
+}
