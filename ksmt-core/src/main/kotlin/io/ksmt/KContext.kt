@@ -134,6 +134,7 @@ import io.ksmt.decl.KStringConcatDecl
 import io.ksmt.decl.KStringLenDecl
 import io.ksmt.decl.KStringToRegexDecl
 import io.ksmt.decl.KRegexLiteralDecl
+import io.ksmt.decl.KRegexConcatDecl
 import io.ksmt.decl.KIteDecl
 import io.ksmt.decl.KNotDecl
 import io.ksmt.decl.KOrDecl
@@ -282,6 +283,7 @@ import io.ksmt.expr.KStringConcatExpr
 import io.ksmt.expr.KStringLenExpr
 import io.ksmt.expr.KStringToRegexExpr
 import io.ksmt.expr.KRegexLiteralExpr
+import io.ksmt.expr.KRegexConcatExpr
 import io.ksmt.expr.KIteExpr
 import io.ksmt.expr.KLeArithExpr
 import io.ksmt.expr.KLtArithExpr
@@ -1967,6 +1969,23 @@ open class KContext(
     fun mkRegexLiteral(value: String): KRegexLiteralExpr = regexLiteralCache.createIfContextActive {
         KRegexLiteralExpr(this, value)
     }
+
+    private val regexConcatExprCache = mkAstInterner<KRegexConcatExpr>()
+
+    /**
+     * Create Regex concatenation (`concat`) expression.
+     * */
+    open fun mkRegexConcat(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(arg0, arg1, KContext::mkRegexConcatNoSimplify, ::mkRegexConcatNoSimplify) // Add simplified version
+
+    /**
+     * Create Regex concatenation (`concat`) expression.
+     * */
+    open fun mkRegexConcatNoSimplify(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KRegexConcatExpr =
+        regexConcatExprCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KRegexConcatExpr(this, arg0, arg1)
+        }
 
     // bitvectors
     private val bv1Cache = mkAstInterner<KBitVec1Value>()
@@ -4578,6 +4597,8 @@ open class KContext(
 
     // regex
     fun mkRegexLiteralDecl(value: String): KRegexLiteralDecl = KRegexLiteralDecl(this, value)
+
+    fun mkRegexConcatDecl(): KRegexConcatDecl = KRegexConcatDecl(this)
 
     // Bit vectors
     fun mkBvDecl(value: Boolean): KDecl<KBv1Sort> =

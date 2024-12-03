@@ -5,7 +5,6 @@ import io.ksmt.cache.hash
 import io.ksmt.cache.structurallyEqual
 import io.ksmt.decl.*
 import io.ksmt.expr.transformer.KTransformerBase
-import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KStringSort
