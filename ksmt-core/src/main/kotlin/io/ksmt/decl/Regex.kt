@@ -73,6 +73,13 @@ class KRegexKleeneClosureDecl internal constructor(
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
+class KRegexKleeneCrossDecl internal constructor(
+    ctx: KContext
+) : KFuncDecl1<KRegexSort, KRegexSort>(ctx, "kleene_cross", ctx.mkRegexSort(), ctx.mkRegexSort()) {
+    override fun KContext.apply(arg: KExpr<KRegexSort>): KApp<KRegexSort, KRegexSort> = mkRegexKleeneCrossNoSimplify(arg)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
+
 class KRegexDifferenceDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl2<KRegexSort, KRegexSort, KRegexSort>(

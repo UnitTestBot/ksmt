@@ -138,6 +138,7 @@ import io.ksmt.decl.KRegexConcatDecl
 import io.ksmt.decl.KRegexUnionDecl
 import io.ksmt.decl.KRegexIntersectionDecl
 import io.ksmt.decl.KRegexKleeneClosureDecl
+import io.ksmt.decl.KRegexKleeneCrossDecl
 import io.ksmt.decl.KRegexDifferenceDecl
 import io.ksmt.decl.KIteDecl
 import io.ksmt.decl.KNotDecl
@@ -291,6 +292,7 @@ import io.ksmt.expr.KRegexConcatExpr
 import io.ksmt.expr.KRegexUnionExpr
 import io.ksmt.expr.KRegexIntersectionExpr
 import io.ksmt.expr.KRegexKleeneClosureExpr
+import io.ksmt.expr.KRegexKleeneCrossExpr
 import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KIteExpr
 import io.ksmt.expr.KLeArithExpr
@@ -2043,6 +2045,22 @@ open class KContext(
     open fun mkRegexKleeneClosureNoSimplify(arg: KExpr<KRegexSort>): KRegexKleeneClosureExpr = regexKleeneClosureExprCache.createIfContextActive {
         ensureContextMatch(arg)
         KRegexKleeneClosureExpr(this, arg)
+    }
+
+    private val regexKleeneCrossExprCache = mkAstInterner<KRegexKleeneCrossExpr>()
+
+    /**
+     * Create regular expression's Kleene cross.
+     * */
+    open fun mkRegexKleeneCross(arg: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(arg, KContext::mkRegexKleeneCrossNoSimplify, ::mkRegexKleeneCrossNoSimplify) // Add simplified version
+
+    /**
+     * Create regular expression's Kleene cross.
+     * */
+    open fun mkRegexKleeneCrossNoSimplify(arg: KExpr<KRegexSort>): KRegexKleeneCrossExpr = regexKleeneCrossExprCache.createIfContextActive {
+        ensureContextMatch(arg)
+        KRegexKleeneCrossExpr(this, arg)
     }
 
     private val regexDifferenceExprCache = mkAstInterner<KRegexDifferenceExpr>()
@@ -4680,6 +4698,8 @@ open class KContext(
     fun mkRegexIntersectionDecl(): KRegexIntersectionDecl = KRegexIntersectionDecl(this)
 
     fun mkRegexKleeneClosureDecl(): KRegexKleeneClosureDecl = KRegexKleeneClosureDecl(this)
+
+    fun mkRegexKleeneCrossDecl(): KRegexKleeneCrossDecl = KRegexKleeneCrossDecl(this)
 
     fun mkRegexDifferenceDecl(): KRegexDifferenceDecl = KRegexDifferenceDecl(this)
 
