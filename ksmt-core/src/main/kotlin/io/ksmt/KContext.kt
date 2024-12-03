@@ -131,6 +131,7 @@ import io.ksmt.decl.KIntRemDecl
 import io.ksmt.decl.KIntToRealDecl
 import io.ksmt.decl.KStringLiteralDecl
 import io.ksmt.decl.KStringConcatDecl
+import io.ksmt.decl.KStringLenDecl
 import io.ksmt.decl.KRegexLiteralDecl
 import io.ksmt.decl.KIteDecl
 import io.ksmt.decl.KNotDecl
@@ -277,6 +278,7 @@ import io.ksmt.expr.KIntNumExpr
 import io.ksmt.expr.KIsIntRealExpr
 import io.ksmt.expr.KStringLiteralExpr
 import io.ksmt.expr.KStringConcatExpr
+import io.ksmt.expr.KStringLenExpr
 import io.ksmt.expr.KRegexLiteralExpr
 import io.ksmt.expr.KIteExpr
 import io.ksmt.expr.KLeArithExpr
@@ -1922,6 +1924,22 @@ open class KContext(
             ensureContextMatch(arg0, arg1)
             KStringConcatExpr(this, arg0, arg1)
         }
+
+    private val stringLenExprCache = mkAstInterner<KStringLenExpr>()
+
+    /**
+     * Create string's length expression.
+     * */
+    open fun mkStringLen(arg: KExpr<KStringSort>): KExpr<KIntSort> =
+        mkSimplified(arg, KContext::mkStringLenNoSimplify, ::mkStringLenNoSimplify)
+
+    /**
+     * Create string's length expression.
+     * */
+    open fun mkStringLenNoSimplify(arg: KExpr<KStringSort>): KStringLenExpr = stringLenExprCache.createIfContextActive {
+        ensureContextMatch(arg)
+        KStringLenExpr(this, arg)
+    }
 
     private val regexLiteralCache = mkAstInterner<KRegexLiteralExpr>()
 
@@ -4535,6 +4553,8 @@ open class KContext(
     fun mkStringLiteralDecl(value: String): KStringLiteralDecl = KStringLiteralDecl(this, value)
 
     fun mkStringConcatDecl(): KStringConcatDecl = KStringConcatDecl(this)
+
+    fun mkStringLenDecl(): KStringLenDecl = KStringLenDecl(this)
 
     // regex
     fun mkRegexLiteralDecl(value: String): KRegexLiteralDecl = KRegexLiteralDecl(this, value)

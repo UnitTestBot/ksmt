@@ -3,6 +3,8 @@ package io.ksmt.decl
 import io.ksmt.KContext
 import io.ksmt.expr.KApp
 import io.ksmt.expr.KExpr
+import io.ksmt.sort.KBoolSort
+import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KStringSort
 
 class KStringLiteralDecl internal constructor(
@@ -28,4 +30,11 @@ class KStringConcatDecl internal constructor(
         arg0: KExpr<KStringSort>,
         arg1: KExpr<KStringSort>
     ): KApp<KStringSort, *> = mkStringConcatExprNoSimplify(arg0, arg1)
+}
+
+class KStringLenDecl internal constructor(
+    ctx: KContext
+) : KFuncDecl1<KIntSort, KStringSort>(ctx, "len", ctx.mkIntSort(), ctx.mkStringSort()) {
+    override fun KContext.apply(arg: KExpr<KStringSort>): KApp<KIntSort, KStringSort> = mkStringLenNoSimplify(arg)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
