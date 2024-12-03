@@ -132,6 +132,7 @@ import io.ksmt.decl.KIntToRealDecl
 import io.ksmt.decl.KStringLiteralDecl
 import io.ksmt.decl.KStringConcatDecl
 import io.ksmt.decl.KStringLenDecl
+import io.ksmt.decl.KStringToRegexDecl
 import io.ksmt.decl.KRegexLiteralDecl
 import io.ksmt.decl.KIteDecl
 import io.ksmt.decl.KNotDecl
@@ -279,6 +280,7 @@ import io.ksmt.expr.KIsIntRealExpr
 import io.ksmt.expr.KStringLiteralExpr
 import io.ksmt.expr.KStringConcatExpr
 import io.ksmt.expr.KStringLenExpr
+import io.ksmt.expr.KStringToRegexExpr
 import io.ksmt.expr.KRegexLiteralExpr
 import io.ksmt.expr.KIteExpr
 import io.ksmt.expr.KLeArithExpr
@@ -1931,7 +1933,7 @@ open class KContext(
      * Create string's length expression.
      * */
     open fun mkStringLen(arg: KExpr<KStringSort>): KExpr<KIntSort> =
-        mkSimplified(arg, KContext::mkStringLenNoSimplify, ::mkStringLenNoSimplify)
+        mkSimplified(arg, KContext::mkStringLenNoSimplify, ::mkStringLenNoSimplify) // Add simplified version
 
     /**
      * Create string's length expression.
@@ -1939,6 +1941,22 @@ open class KContext(
     open fun mkStringLenNoSimplify(arg: KExpr<KStringSort>): KStringLenExpr = stringLenExprCache.createIfContextActive {
         ensureContextMatch(arg)
         KStringLenExpr(this, arg)
+    }
+
+    private val stringToRegexExprCache = mkAstInterner<KStringToRegexExpr>()
+
+    /**
+     * Create a regular expression based on a string expression.
+     * */
+    open fun mkStringToRegex(arg: KExpr<KStringSort>): KExpr<KRegexSort> =
+        mkSimplified(arg, KContext::mkStringToRegexNoSimplify, ::mkStringToRegexNoSimplify) // Add simplified version
+
+    /**
+     * Create a regular expression based on a string expression.
+     * */
+    open fun mkStringToRegexNoSimplify(arg: KExpr<KStringSort>): KStringToRegexExpr = stringToRegexExprCache.createIfContextActive {
+        ensureContextMatch(arg)
+        KStringToRegexExpr(this, arg)
     }
 
     private val regexLiteralCache = mkAstInterner<KRegexLiteralExpr>()
@@ -4555,6 +4573,8 @@ open class KContext(
     fun mkStringConcatDecl(): KStringConcatDecl = KStringConcatDecl(this)
 
     fun mkStringLenDecl(): KStringLenDecl = KStringLenDecl(this)
+
+    fun mkStringToRegexDecl(): KStringToRegexDecl = KStringToRegexDecl(this)
 
     // regex
     fun mkRegexLiteralDecl(value: String): KRegexLiteralDecl = KRegexLiteralDecl(this, value)

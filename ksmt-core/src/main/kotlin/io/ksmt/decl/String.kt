@@ -5,6 +5,7 @@ import io.ksmt.expr.KApp
 import io.ksmt.expr.KExpr
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KIntSort
+import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KStringSort
 
 class KStringLiteralDecl internal constructor(
@@ -36,5 +37,12 @@ class KStringLenDecl internal constructor(
     ctx: KContext
 ) : KFuncDecl1<KIntSort, KStringSort>(ctx, "len", ctx.mkIntSort(), ctx.mkStringSort()) {
     override fun KContext.apply(arg: KExpr<KStringSort>): KApp<KIntSort, KStringSort> = mkStringLenNoSimplify(arg)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
+
+class KStringToRegexDecl internal constructor(
+    ctx: KContext
+) : KFuncDecl1<KRegexSort, KStringSort>(ctx, "to_regex", ctx.mkRegexSort(), ctx.mkStringSort()) {
+    override fun KContext.apply(arg: KExpr<KStringSort>): KApp<KRegexSort, KStringSort> = mkStringToRegexNoSimplify(arg)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
