@@ -29,3 +29,20 @@ class KRegexConcatDecl internal constructor(
         arg1: KExpr<KRegexSort>
     ): KApp<KRegexSort, *> = mkRegexConcatNoSimplify(arg0, arg1)
 }
+
+class KRegexUnionDecl internal constructor(
+    ctx: KContext,
+) : KFuncDecl2<KRegexSort, KRegexSort, KRegexSort>(
+    ctx,
+    name = "union",
+    resultSort = ctx.mkRegexSort(),
+    ctx.mkRegexSort(),
+    ctx.mkRegexSort()
+) {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<KRegexSort>,
+        arg1: KExpr<KRegexSort>
+    ): KApp<KRegexSort, *> = mkRegexUnionNoSimplify(arg0, arg1)
+}
