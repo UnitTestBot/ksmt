@@ -130,6 +130,7 @@ import io.ksmt.decl.KIntNumDecl
 import io.ksmt.decl.KIntRemDecl
 import io.ksmt.decl.KIntToRealDecl
 import io.ksmt.decl.KStringLiteralDecl
+import io.ksmt.decl.KRegexLiteralDecl
 import io.ksmt.decl.KIteDecl
 import io.ksmt.decl.KNotDecl
 import io.ksmt.decl.KOrDecl
@@ -274,6 +275,7 @@ import io.ksmt.expr.KIntBigNumExpr
 import io.ksmt.expr.KIntNumExpr
 import io.ksmt.expr.KIsIntRealExpr
 import io.ksmt.expr.KStringLiteralExpr
+import io.ksmt.expr.KRegexLiteralExpr
 import io.ksmt.expr.KIteExpr
 import io.ksmt.expr.KLeArithExpr
 import io.ksmt.expr.KLtArithExpr
@@ -733,6 +735,9 @@ open class KContext(
 
     val stringSort: KStringSort
         get() = mkStringSort()
+
+    val regexSort: KRegexSort
+        get() = mkRegexSort()
 
     val bv1Sort: KBv1Sort
         get() = mkBv1Sort()
@@ -1897,6 +1902,15 @@ open class KContext(
      * */
     fun mkStringLiteral(value: String): KStringLiteralExpr = stringLiteralCache.createIfContextActive {
         KStringLiteralExpr(this, value)
+    }
+
+    private val regexLiteralCache = mkAstInterner<KRegexLiteralExpr>()
+
+    /**
+     * Create a Regex value.
+     * */
+    fun mkRegexLiteral(value: String): KRegexLiteralExpr = regexLiteralCache.createIfContextActive {
+        KRegexLiteralExpr(this, value)
     }
 
     // bitvectors
@@ -4500,6 +4514,9 @@ open class KContext(
 
     // string
     fun mkStringLiteralDecl(value: String): KStringLiteralDecl = KStringLiteralDecl(this, value)
+
+    // regex
+    fun mkRegexLiteralDecl(value: String): KRegexLiteralDecl = KRegexLiteralDecl(this, value)
 
     // Bit vectors
     fun mkBvDecl(value: Boolean): KDecl<KBv1Sort> =
