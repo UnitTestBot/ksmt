@@ -140,6 +140,9 @@ import io.ksmt.decl.KStringLtDecl
 import io.ksmt.decl.KStringLeDecl
 import io.ksmt.decl.KStringGtDecl
 import io.ksmt.decl.KStringGeDecl
+import io.ksmt.decl.KEpsilonDecl
+import io.ksmt.decl.KAllDecl
+import io.ksmt.decl.KAllCharDecl
 import io.ksmt.decl.KRegexLiteralDecl
 import io.ksmt.decl.KRegexConcatDecl
 import io.ksmt.decl.KRegexUnionDecl
@@ -302,6 +305,9 @@ import io.ksmt.expr.KStringLtExpr
 import io.ksmt.expr.KStringLeExpr
 import io.ksmt.expr.KStringGtExpr
 import io.ksmt.expr.KStringGeExpr
+import io.ksmt.expr.KEpsilon
+import io.ksmt.expr.KAll
+import io.ksmt.expr.KAllChar
 import io.ksmt.expr.KRegexLiteralExpr
 import io.ksmt.expr.KRegexConcatExpr
 import io.ksmt.expr.KRegexUnionExpr
@@ -2230,6 +2236,28 @@ open class KContext(
         ensureContextMatch(arg)
         KRegexComplementExpr(this, arg)
     }
+
+    val epsilonExpr: KEpsilon = KEpsilon(this)
+
+    /**
+     * Create regex Epsilon constant.
+     * Epsilon regular expression denoting the empty set of strings.
+     * */
+    fun mkEpsilon(): KEpsilon = epsilonExpr
+
+    val allExpr: KAll = KAll(this)
+
+    /**
+     * Create regex constant denoting the set of all strings.
+     * */
+    fun mkAll(): KAll = allExpr
+
+    val allCharExpr: KAllChar = KAllChar(this)
+
+    /**
+     * Create regex constant denoting the set of all strings of length 1.
+     * */
+    fun mkAllChar(): KAllChar = allCharExpr
 
     // bitvectors
     private val bv1Cache = mkAstInterner<KBitVec1Value>()
@@ -4854,6 +4882,7 @@ open class KContext(
     fun mkStringGeDecl(): KStringGeDecl = KStringGeDecl(this)
 
     // regex
+
     fun mkRegexLiteralDecl(value: String): KRegexLiteralDecl = KRegexLiteralDecl(this, value)
 
     fun mkRegexConcatDecl(): KRegexConcatDecl = KRegexConcatDecl(this)
@@ -4869,6 +4898,12 @@ open class KContext(
     fun mkRegexDifferenceDecl(): KRegexDifferenceDecl = KRegexDifferenceDecl(this)
 
     fun mkRegexComplementDecl(): KRegexComplementDecl = KRegexComplementDecl(this)
+
+    fun mkEpsilonDecl(): KEpsilonDecl = KEpsilonDecl(this)
+
+    fun mkAllDecl(): KAllDecl = KAllDecl(this)
+
+    fun mkAllCharDecl(): KAllCharDecl = KAllCharDecl(this)
 
     // Bit vectors
     fun mkBvDecl(value: Boolean): KDecl<KBv1Sort> =

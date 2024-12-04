@@ -5,9 +5,12 @@ import io.ksmt.cache.hash
 import io.ksmt.cache.structurallyEqual
 import io.ksmt.decl.KDecl
 import io.ksmt.decl.KRegexKleeneClosureDecl
-import io.ksmt.decl.KRegexLiteralDecl
 import io.ksmt.decl.KRegexKleeneCrossDecl
+import io.ksmt.decl.KRegexLiteralDecl
 import io.ksmt.decl.KRegexComplementDecl
+import io.ksmt.decl.KEpsilonDecl
+import io.ksmt.decl.KAllDecl
+import io.ksmt.decl.KAllCharDecl
 import io.ksmt.expr.transformer.KTransformerBase
 import io.ksmt.sort.KRegexSort
 
@@ -171,4 +174,46 @@ class KRegexComplementExpr internal constructor(
 
     override fun internHashCode(): Int = hash(arg)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
+}
+
+class KEpsilon(ctx: KContext) : KInterpretedValue<KRegexSort>(ctx) {
+    override val sort: KRegexSort = ctx.regexSort
+
+    override val decl: KEpsilonDecl
+        get() = ctx.mkEpsilonDecl()
+
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> {
+        TODO("Not yet implemented")
+    }
+
+    override fun internHashCode(): Int = hash()
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other)
+}
+
+class KAll(ctx: KContext) : KInterpretedValue<KRegexSort>(ctx) {
+    override val sort: KRegexSort = ctx.regexSort
+
+    override val decl: KAllDecl
+        get() = ctx.mkAllDecl()
+
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> {
+        TODO("Not yet implemented")
+    }
+
+    override fun internHashCode(): Int = hash()
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other)
+}
+
+class KAllChar(ctx: KContext) : KInterpretedValue<KRegexSort>(ctx) {
+    override val sort: KRegexSort = ctx.regexSort
+
+    override val decl: KAllCharDecl
+        get() = ctx.mkAllCharDecl()
+
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> {
+        TODO("Not yet implemented")
+    }
+
+    override fun internHashCode(): Int = hash()
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other)
 }

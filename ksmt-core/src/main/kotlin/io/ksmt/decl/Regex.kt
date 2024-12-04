@@ -101,3 +101,24 @@ class KRegexComplementDecl internal constructor(
     override fun KContext.apply(arg: KExpr<KRegexSort>): KApp<KRegexSort, KRegexSort> = mkRegexComplementNoSimplify(arg)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
+
+class KEpsilonDecl internal constructor(
+    ctx: KContext
+) : KConstDecl<KRegexSort>(ctx, "eps", ctx.mkRegexSort()) {
+    override fun apply(args: List<KExpr<*>>): KApp<KRegexSort, *> = ctx.mkEpsilon()
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
+
+class KAllDecl internal constructor(
+    ctx: KContext
+) : KConstDecl<KRegexSort>(ctx, "all", ctx.mkRegexSort()) {
+    override fun apply(args: List<KExpr<*>>): KApp<KRegexSort, *> = ctx.mkAll()
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
+
+class KAllCharDecl internal constructor(
+    ctx: KContext
+) : KConstDecl<KRegexSort>(ctx, "all_char", ctx.mkRegexSort()) {
+    override fun apply(args: List<KExpr<*>>): KApp<KRegexSort, *> = ctx.mkAllChar()
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
