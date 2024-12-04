@@ -18,7 +18,22 @@ import io.ksmt.solver.KTheory.LRA
 import io.ksmt.solver.KTheory.NIA
 import io.ksmt.solver.KTheory.NRA
 import io.ksmt.solver.KTheory.UF
-import io.ksmt.sort.*
+import io.ksmt.sort.KSortVisitor
+import io.ksmt.sort.KSort
+import io.ksmt.sort.KBoolSort
+import io.ksmt.sort.KArithSort
+import io.ksmt.sort.KIntSort
+import io.ksmt.sort.KRealSort
+import io.ksmt.sort.KStringSort
+import io.ksmt.sort.KRegexSort
+import io.ksmt.sort.KBvSort
+import io.ksmt.sort.KFpSort
+import io.ksmt.sort.KFpRoundingModeSort
+import io.ksmt.sort.KArraySort
+import io.ksmt.sort.KArray2Sort
+import io.ksmt.sort.KArray3Sort
+import io.ksmt.sort.KArrayNSort
+import io.ksmt.sort.KUninterpretedSort
 
 class KExprTheoryRequirement(ctx: KContext) : KNonRecursiveTransformer(ctx) {
     val usedTheories = hashSetOf<KTheory>()
