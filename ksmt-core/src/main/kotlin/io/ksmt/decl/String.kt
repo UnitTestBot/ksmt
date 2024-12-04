@@ -121,3 +121,9 @@ class KStringGeDecl internal constructor(ctx: KContext) :
     override fun KContext.apply(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KApp<KBoolSort, *> = mkStringGeNoSimplify(arg0, arg1)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
+
+class KStringContainsDecl internal constructor(ctx: KContext) :
+    KFuncDecl2<KBoolSort, KStringSort, KStringSort>(ctx, "contains", ctx.mkBoolSort(), ctx.mkStringSort(), ctx.mkStringSort()) {
+    override fun KContext.apply(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KApp<KBoolSort, *> = mkStringContainsNoSimplify(arg0, arg1)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}

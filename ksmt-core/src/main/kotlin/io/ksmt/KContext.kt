@@ -140,6 +140,7 @@ import io.ksmt.decl.KStringLtDecl
 import io.ksmt.decl.KStringLeDecl
 import io.ksmt.decl.KStringGtDecl
 import io.ksmt.decl.KStringGeDecl
+import io.ksmt.decl.KStringContainsDecl
 import io.ksmt.decl.KEpsilonDecl
 import io.ksmt.decl.KAllDecl
 import io.ksmt.decl.KAllCharDecl
@@ -306,6 +307,7 @@ import io.ksmt.expr.KStringLtExpr
 import io.ksmt.expr.KStringLeExpr
 import io.ksmt.expr.KStringGtExpr
 import io.ksmt.expr.KStringGeExpr
+import io.ksmt.expr.KStringContainsExpr
 import io.ksmt.expr.KEpsilon
 import io.ksmt.expr.KAll
 import io.ksmt.expr.KAllChar
@@ -2019,7 +2021,7 @@ open class KContext(
      * Create a lexicographic ordering (`<` (less)) expression.
      * */
     open fun mkStringLt(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
-        mkSimplified(lhs, rhs, KContext::mkStringLtNoSimplify, ::mkStringLtNoSimplify)
+        mkSimplified(lhs, rhs, KContext::mkStringLtNoSimplify, ::mkStringLtNoSimplify) // Add simplified version
 
     /**
      * Create a lexicographic ordering (`<` (less)) expression.
@@ -2036,7 +2038,7 @@ open class KContext(
      * Create a lexicographic ordering reflexive closure (`<=` (less or equal)) expression.
      * */
     open fun mkStringLe(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
-        mkSimplified(lhs, rhs, KContext::mkStringLeNoSimplify, ::mkStringLeNoSimplify)
+        mkSimplified(lhs, rhs, KContext::mkStringLeNoSimplify, ::mkStringLeNoSimplify) // Add simplified version
 
     /**
      * Create a lexicographic ordering reflexive closure (`<=` (less or equal)) expression.
@@ -2053,7 +2055,7 @@ open class KContext(
      * Create a lexicographic ordering (`>` (greater)) expression.
      * */
     open fun mkStringGt(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
-        mkSimplified(lhs, rhs, KContext::mkStringGtNoSimplify, ::mkStringGtNoSimplify)
+        mkSimplified(lhs, rhs, KContext::mkStringGtNoSimplify, ::mkStringGtNoSimplify) // Add simplified version
 
     /**
      * Create a lexicographic ordering (`>` (greater)) expression.
@@ -2070,7 +2072,7 @@ open class KContext(
      * Create a lexicographic ordering reflexive closure (`>=` (greater or equal)) expression.
      * */
     open fun mkStringGe(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
-        mkSimplified(lhs, rhs, KContext::mkStringGeNoSimplify, ::mkStringGeNoSimplify)
+        mkSimplified(lhs, rhs, KContext::mkStringGeNoSimplify, ::mkStringGeNoSimplify) // Add simplified version
 
     /**
      * Create a lexicographic ordering reflexive closure (`>=` (greater or equal)) expression.
@@ -2079,6 +2081,23 @@ open class KContext(
         stringGeCache.createIfContextActive {
             ensureContextMatch(lhs, rhs)
             KStringGeExpr(this, lhs, rhs)
+        }
+
+    private val stringContainsCache = mkAstInterner<KStringContainsExpr>()
+
+    /**
+     * Check if first string contains second one.
+     * */
+    open fun mkStringContains(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
+        mkSimplified(lhs, rhs, KContext::mkStringContainsNoSimplify, ::mkStringContainsNoSimplify) // Add simplified version
+
+    /**
+     * Check if first string contains second one.
+     * */
+    open fun mkStringContainsNoSimplify(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KStringContainsExpr =
+        stringContainsCache.createIfContextActive {
+            ensureContextMatch(lhs, rhs)
+            KStringContainsExpr(this, lhs, rhs)
         }
 
     private val stringToRegexExprCache = mkAstInterner<KStringToRegexExpr>()
@@ -4901,8 +4920,9 @@ open class KContext(
 
     fun mkStringGeDecl(): KStringGeDecl = KStringGeDecl(this)
 
-    // regex
+    fun mkStringContainsDecl(): KStringContainsDecl = KStringContainsDecl(this)
 
+    // regex
     fun mkRegexLiteralDecl(value: String): KRegexLiteralDecl = KRegexLiteralDecl(this, value)
 
     fun mkRegexConcatDecl(): KRegexConcatDecl = KRegexConcatDecl(this)

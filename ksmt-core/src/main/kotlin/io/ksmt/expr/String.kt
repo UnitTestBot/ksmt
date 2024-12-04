@@ -12,6 +12,7 @@ import io.ksmt.decl.KStringGtDecl
 import io.ksmt.decl.KStringGeDecl
 import io.ksmt.decl.KStringToRegexDecl
 import io.ksmt.decl.KStringInRegexDecl
+import io.ksmt.decl.KStringContainsDecl
 import io.ksmt.expr.transformer.KTransformerBase
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KBoolSort
@@ -234,6 +235,27 @@ class KStringGeExpr internal constructor(
 
     override val decl: KStringGeDecl
         get() = ctx.mkStringGeDecl()
+
+    override val args: List<KExpr<KStringSort>>
+        get() = listOf(lhs, rhs)
+
+    override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> {
+        TODO("Not yet implemented")
+    }
+
+    override fun internHashCode(): Int = hash(lhs, rhs)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
+}
+
+class KStringContainsExpr internal constructor(
+    ctx: KContext,
+    val lhs: KExpr<KStringSort>,
+    val rhs: KExpr<KStringSort>
+) : KApp<KBoolSort, KStringSort>(ctx) {
+    override val sort: KBoolSort = ctx.boolSort
+
+    override val decl: KStringContainsDecl
+        get() = ctx.mkStringContainsDecl()
 
     override val args: List<KExpr<KStringSort>>
         get() = listOf(lhs, rhs)
