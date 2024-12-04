@@ -3,7 +3,6 @@ package io.ksmt.decl
 import io.ksmt.KContext
 import io.ksmt.expr.KApp
 import io.ksmt.expr.KExpr
-import io.ksmt.sort.KSort
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRegexSort
@@ -97,4 +96,28 @@ class KPrefixOfDecl internal constructor(
         arg0: KExpr<KStringSort>,
         arg1: KExpr<KStringSort>
     ): KApp<KBoolSort, *> = mkPrefixOfNoSimplify(arg0, arg1)
+}
+
+class KStringLtDecl internal constructor(ctx: KContext) :
+    KFuncDecl2<KBoolSort, KStringSort, KStringSort>(ctx, "stringLt", ctx.mkBoolSort(), ctx.mkStringSort(), ctx.mkStringSort()) {
+    override fun KContext.apply(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KApp<KBoolSort, *> = mkStringLtNoSimplify(arg0, arg1)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
+
+class KStringLeDecl internal constructor(ctx: KContext) :
+    KFuncDecl2<KBoolSort, KStringSort, KStringSort>(ctx, "stringLe", ctx.mkBoolSort(), ctx.mkStringSort(), ctx.mkStringSort()) {
+    override fun KContext.apply(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KApp<KBoolSort, *> = mkStringLeNoSimplify(arg0, arg1)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
+
+class KStringGtDecl internal constructor(ctx: KContext) :
+    KFuncDecl2<KBoolSort, KStringSort, KStringSort>(ctx, "stringGt", ctx.mkBoolSort(), ctx.mkStringSort(), ctx.mkStringSort()) {
+    override fun KContext.apply(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KApp<KBoolSort, *> = mkStringGtNoSimplify(arg0, arg1)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
+
+class KStringGeDecl internal constructor(ctx: KContext) :
+    KFuncDecl2<KBoolSort, KStringSort, KStringSort>(ctx, "stringGe", ctx.mkBoolSort(), ctx.mkStringSort(), ctx.mkStringSort()) {
+    override fun KContext.apply(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KApp<KBoolSort, *> = mkStringGeNoSimplify(arg0, arg1)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }

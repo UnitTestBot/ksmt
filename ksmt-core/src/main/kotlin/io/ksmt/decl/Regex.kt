@@ -3,9 +3,7 @@ package io.ksmt.decl
 import io.ksmt.KContext
 import io.ksmt.expr.KApp
 import io.ksmt.expr.KExpr
-import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRegexSort
-import io.ksmt.sort.KStringSort
 
 class KRegexLiteralDecl internal constructor(
     ctx: KContext,

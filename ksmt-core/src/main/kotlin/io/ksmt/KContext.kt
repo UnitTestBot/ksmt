@@ -136,6 +136,10 @@ import io.ksmt.decl.KStringToRegexDecl
 import io.ksmt.decl.KStringInRegexDecl
 import io.ksmt.decl.KSuffixOfDecl
 import io.ksmt.decl.KPrefixOfDecl
+import io.ksmt.decl.KStringLtDecl
+import io.ksmt.decl.KStringLeDecl
+import io.ksmt.decl.KStringGtDecl
+import io.ksmt.decl.KStringGeDecl
 import io.ksmt.decl.KRegexLiteralDecl
 import io.ksmt.decl.KRegexConcatDecl
 import io.ksmt.decl.KRegexUnionDecl
@@ -293,6 +297,10 @@ import io.ksmt.expr.KStringToRegexExpr
 import io.ksmt.expr.KStringInRegexExpr
 import io.ksmt.expr.KSuffixOfExpr
 import io.ksmt.expr.KPrefixOfExpr
+import io.ksmt.expr.KStringLtExpr
+import io.ksmt.expr.KStringLeExpr
+import io.ksmt.expr.KStringGtExpr
+import io.ksmt.expr.KStringGeExpr
 import io.ksmt.expr.KRegexLiteralExpr
 import io.ksmt.expr.KRegexConcatExpr
 import io.ksmt.expr.KRegexUnionExpr
@@ -1993,6 +2001,74 @@ open class KContext(
         prefixOfExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KPrefixOfExpr(this, arg0, arg1)
+        }
+
+    private val stringLtCache = mkAstInterner<KStringLtExpr>()
+
+    /**
+     * Create a lexicographic ordering (`<` (less)) expression.
+     * */
+    open fun mkStringLt(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
+        mkSimplified(lhs, rhs, KContext::mkStringLtNoSimplify, ::mkStringLtNoSimplify)
+
+    /**
+     * Create a lexicographic ordering (`<` (less)) expression.
+     * */
+    open fun mkStringLtNoSimplify(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KStringLtExpr =
+        stringLtCache.createIfContextActive {
+            ensureContextMatch(lhs, rhs)
+            KStringLtExpr(this, lhs, rhs)
+        }
+
+    private val stringLeCache = mkAstInterner<KStringLeExpr>()
+
+    /**
+     * Create a lexicographic ordering reflexive closure (`<=` (less or equal)) expression.
+     * */
+    open fun mkStringLe(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
+        mkSimplified(lhs, rhs, KContext::mkStringLeNoSimplify, ::mkStringLeNoSimplify)
+
+    /**
+     * Create a lexicographic ordering reflexive closure (`<=` (less or equal)) expression.
+     * */
+    open fun mkStringLeNoSimplify(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KStringLeExpr =
+        stringLeCache.createIfContextActive {
+            ensureContextMatch(lhs, rhs)
+            KStringLeExpr(this, lhs, rhs)
+        }
+
+    private val stringGtCache = mkAstInterner<KStringGtExpr>()
+
+    /**
+     * Create a lexicographic ordering (`>` (greater)) expression.
+     * */
+    open fun mkStringGt(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
+        mkSimplified(lhs, rhs, KContext::mkStringGtNoSimplify, ::mkStringGtNoSimplify)
+
+    /**
+     * Create a lexicographic ordering (`>` (greater)) expression.
+     * */
+    open fun mkStringGtNoSimplify(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KStringGtExpr =
+        stringGtCache.createIfContextActive {
+            ensureContextMatch(lhs, rhs)
+            KStringGtExpr(this, lhs, rhs)
+        }
+
+    private val stringGeCache = mkAstInterner<KStringGeExpr>()
+
+    /**
+     * Create a lexicographic ordering reflexive closure (`>=` (greater or equal)) expression.
+     * */
+    open fun mkStringGe(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
+        mkSimplified(lhs, rhs, KContext::mkStringGeNoSimplify, ::mkStringGeNoSimplify)
+
+    /**
+     * Create a lexicographic ordering reflexive closure (`>=` (greater or equal)) expression.
+     * */
+    open fun mkStringGeNoSimplify(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KStringGeExpr =
+        stringGeCache.createIfContextActive {
+            ensureContextMatch(lhs, rhs)
+            KStringGeExpr(this, lhs, rhs)
         }
 
     private val stringToRegexExprCache = mkAstInterner<KStringToRegexExpr>()
@@ -4750,6 +4826,14 @@ open class KContext(
     fun mkSuffixOfDecl(): KSuffixOfDecl = KSuffixOfDecl(this)
 
     fun mkPrefixOfDecl(): KPrefixOfDecl = KPrefixOfDecl(this)
+
+    fun mkStringLtDecl(): KStringLtDecl = KStringLtDecl(this)
+
+    fun mkStringLeDecl(): KStringLeDecl = KStringLeDecl(this)
+
+    fun mkStringGtDecl(): KStringGtDecl = KStringGtDecl(this)
+
+    fun mkStringGeDecl(): KStringGeDecl = KStringGeDecl(this)
 
     // regex
     fun mkRegexLiteralDecl(value: String): KRegexLiteralDecl = KRegexLiteralDecl(this, value)
