@@ -133,6 +133,7 @@ import io.ksmt.decl.KStringLiteralDecl
 import io.ksmt.decl.KStringConcatDecl
 import io.ksmt.decl.KStringLenDecl
 import io.ksmt.decl.KStringToRegexDecl
+import io.ksmt.decl.KStringInRegexDecl
 import io.ksmt.decl.KSuffixOfDecl
 import io.ksmt.decl.KPrefixOfDecl
 import io.ksmt.decl.KRegexLiteralDecl
@@ -289,6 +290,7 @@ import io.ksmt.expr.KStringLiteralExpr
 import io.ksmt.expr.KStringConcatExpr
 import io.ksmt.expr.KStringLenExpr
 import io.ksmt.expr.KStringToRegexExpr
+import io.ksmt.expr.KStringInRegexExpr
 import io.ksmt.expr.KSuffixOfExpr
 import io.ksmt.expr.KPrefixOfExpr
 import io.ksmt.expr.KRegexLiteralExpr
@@ -1959,22 +1961,6 @@ open class KContext(
         KStringLenExpr(this, arg)
     }
 
-    private val stringToRegexExprCache = mkAstInterner<KStringToRegexExpr>()
-
-    /**
-     * Create a regular expression based on a string expression.
-     * */
-    open fun mkStringToRegex(arg: KExpr<KStringSort>): KExpr<KRegexSort> =
-        mkSimplified(arg, KContext::mkStringToRegexNoSimplify, ::mkStringToRegexNoSimplify) // Add simplified version
-
-    /**
-     * Create a regular expression based on a string expression.
-     * */
-    open fun mkStringToRegexNoSimplify(arg: KExpr<KStringSort>): KStringToRegexExpr = stringToRegexExprCache.createIfContextActive {
-        ensureContextMatch(arg)
-        KStringToRegexExpr(this, arg)
-    }
-
     private val suffixOfExprCache = mkAstInterner<KSuffixOfExpr>()
 
     /**
@@ -2009,6 +1995,38 @@ open class KContext(
             KPrefixOfExpr(this, arg0, arg1)
         }
 
+    private val stringToRegexExprCache = mkAstInterner<KStringToRegexExpr>()
+
+    /**
+     * Create a regular expression based on a string expression.
+     * */
+    open fun mkStringToRegex(arg: KExpr<KStringSort>): KExpr<KRegexSort> =
+        mkSimplified(arg, KContext::mkStringToRegexNoSimplify, ::mkStringToRegexNoSimplify) // Add simplified version
+
+    /**
+     * Create a regular expression based on a string expression.
+     * */
+    open fun mkStringToRegexNoSimplify(arg: KExpr<KStringSort>): KStringToRegexExpr = stringToRegexExprCache.createIfContextActive {
+        ensureContextMatch(arg)
+        KStringToRegexExpr(this, arg)
+    }
+
+    private val stringInRegexExprCache = mkAstInterner<KStringInRegexExpr>()
+
+    /**
+     * Check if a string belongs to the language defined by the regular expression.
+     * */
+    open fun mkStringInRegex(arg0: KExpr<KStringSort>, arg1: KExpr<KRegexSort>): KExpr<KBoolSort> =
+        mkSimplified(arg0, arg1, KContext::mkStringInRegexNoSimplify, ::mkStringInRegexNoSimplify) // Add simplified version
+
+    /**
+     * Check if a string belongs to the language defined by the regular expression.
+     * */
+    open fun mkStringInRegexNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KRegexSort>): KStringInRegexExpr =
+        stringInRegexExprCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KStringInRegexExpr(this, arg0, arg1)
+        }
 
     private val regexLiteralCache = mkAstInterner<KRegexLiteralExpr>()
 
@@ -4726,6 +4744,8 @@ open class KContext(
     fun mkStringLenDecl(): KStringLenDecl = KStringLenDecl(this)
 
     fun mkStringToRegexDecl(): KStringToRegexDecl = KStringToRegexDecl(this)
+
+    fun mkStringInRegexDecl(): KStringInRegexDecl = KStringInRegexDecl(this)
 
     fun mkSuffixOfDecl(): KSuffixOfDecl = KSuffixOfDecl(this)
 

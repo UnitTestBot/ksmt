@@ -3,6 +3,7 @@ package io.ksmt.decl
 import io.ksmt.KContext
 import io.ksmt.expr.KApp
 import io.ksmt.expr.KExpr
+import io.ksmt.sort.KSort
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRegexSort
@@ -45,6 +46,23 @@ class KStringToRegexDecl internal constructor(
 ) : KFuncDecl1<KRegexSort, KStringSort>(ctx, "to_regex", ctx.mkRegexSort(), ctx.mkStringSort()) {
     override fun KContext.apply(arg: KExpr<KStringSort>): KApp<KRegexSort, KStringSort> = mkStringToRegexNoSimplify(arg)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
+
+class KStringInRegexDecl internal constructor(
+    ctx: KContext,
+) : KFuncDecl2<KBoolSort, KStringSort, KRegexSort>(
+    ctx,
+    name = "in_regex",
+    resultSort = ctx.mkBoolSort(),
+    ctx.mkStringSort(),
+    ctx.mkRegexSort()
+) {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KRegexSort>
+    ): KApp<KBoolSort, *> = mkStringInRegexNoSimplify(arg0, arg1)
 }
 
 class KSuffixOfDecl internal constructor(

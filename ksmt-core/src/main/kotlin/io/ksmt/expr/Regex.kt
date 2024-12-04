@@ -3,12 +3,10 @@ package io.ksmt.expr
 import io.ksmt.KContext
 import io.ksmt.cache.hash
 import io.ksmt.cache.structurallyEqual
-import io.ksmt.decl.KDecl
-import io.ksmt.decl.KRegexKleeneClosureDecl
-import io.ksmt.decl.KRegexKleeneCrossDecl
-import io.ksmt.decl.KRegexLiteralDecl
+import io.ksmt.decl.*
 import io.ksmt.expr.transformer.KTransformerBase
 import io.ksmt.sort.KRegexSort
+import io.ksmt.sort.KStringSort
 
 class KRegexLiteralExpr internal constructor(
     ctx: KContext,
