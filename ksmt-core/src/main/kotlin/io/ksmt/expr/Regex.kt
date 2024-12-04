@@ -7,6 +7,7 @@ import io.ksmt.decl.KDecl
 import io.ksmt.decl.KRegexKleeneClosureDecl
 import io.ksmt.decl.KRegexLiteralDecl
 import io.ksmt.decl.KRegexKleeneCrossDecl
+import io.ksmt.decl.KRegexComplementDecl
 import io.ksmt.expr.transformer.KTransformerBase
 import io.ksmt.sort.KRegexSort
 
@@ -150,4 +151,24 @@ class KRegexDifferenceExpr internal constructor(
 
     override fun internHashCode(): Int = hash(arg0, arg1)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg0 }, { arg1 })
+}
+
+class KRegexComplementExpr internal constructor(
+    ctx: KContext,
+    val arg: KExpr<KRegexSort>
+) : KApp<KRegexSort, KRegexSort>(ctx) {
+    override val sort: KRegexSort = ctx.regexSort
+
+    override val decl: KRegexComplementDecl
+        get() = ctx.mkRegexComplementDecl()
+
+    override val args: List<KExpr<KRegexSort>>
+        get() = listOf(arg)
+
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> {
+        TODO("Not yet implemented")
+    }
+
+    override fun internHashCode(): Int = hash(arg)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
 }

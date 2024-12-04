@@ -95,3 +95,9 @@ class KRegexDifferenceDecl internal constructor(
     ): KApp<KRegexSort, *> = mkRegexDifferenceNoSimplify(arg0, arg1)
 }
 
+class KRegexComplementDecl internal constructor(
+    ctx: KContext
+) : KFuncDecl1<KRegexSort, KRegexSort>(ctx, "comp", ctx.mkRegexSort(), ctx.mkRegexSort()) {
+    override fun KContext.apply(arg: KExpr<KRegexSort>): KApp<KRegexSort, KRegexSort> = mkRegexComplementNoSimplify(arg)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}

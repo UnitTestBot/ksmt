@@ -147,6 +147,7 @@ import io.ksmt.decl.KRegexIntersectionDecl
 import io.ksmt.decl.KRegexKleeneClosureDecl
 import io.ksmt.decl.KRegexKleeneCrossDecl
 import io.ksmt.decl.KRegexDifferenceDecl
+import io.ksmt.decl.KRegexComplementDecl
 import io.ksmt.decl.KIteDecl
 import io.ksmt.decl.KNotDecl
 import io.ksmt.decl.KOrDecl
@@ -308,6 +309,7 @@ import io.ksmt.expr.KRegexIntersectionExpr
 import io.ksmt.expr.KRegexKleeneClosureExpr
 import io.ksmt.expr.KRegexKleeneCrossExpr
 import io.ksmt.expr.KRegexDifferenceExpr
+import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KIteExpr
 import io.ksmt.expr.KLeArithExpr
 import io.ksmt.expr.KLtArithExpr
@@ -2212,6 +2214,22 @@ open class KContext(
             ensureContextMatch(arg0, arg1)
             KRegexDifferenceExpr(this, arg0, arg1)
         }
+
+    private val regexComplementExprCache = mkAstInterner<KRegexComplementExpr>()
+
+    /**
+     * Create regular expression's complement.
+     * */
+    open fun mkRegexComplement(arg: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(arg, KContext::mkRegexComplementNoSimplify, ::mkRegexComplementNoSimplify) // Add simplified version
+
+    /**
+     * Create regular expression's complement.
+     * */
+    open fun mkRegexComplementNoSimplify(arg: KExpr<KRegexSort>): KRegexComplementExpr = regexComplementExprCache.createIfContextActive {
+        ensureContextMatch(arg)
+        KRegexComplementExpr(this, arg)
+    }
 
     // bitvectors
     private val bv1Cache = mkAstInterner<KBitVec1Value>()
@@ -4849,6 +4867,8 @@ open class KContext(
     fun mkRegexKleeneCrossDecl(): KRegexKleeneCrossDecl = KRegexKleeneCrossDecl(this)
 
     fun mkRegexDifferenceDecl(): KRegexDifferenceDecl = KRegexDifferenceDecl(this)
+
+    fun mkRegexComplementDecl(): KRegexComplementDecl = KRegexComplementDecl(this)
 
     // Bit vectors
     fun mkBvDecl(value: Boolean): KDecl<KBv1Sort> =
