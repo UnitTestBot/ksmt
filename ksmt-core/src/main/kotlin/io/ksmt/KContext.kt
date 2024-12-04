@@ -151,6 +151,7 @@ import io.ksmt.decl.KRegexKleeneClosureDecl
 import io.ksmt.decl.KRegexKleeneCrossDecl
 import io.ksmt.decl.KRegexDifferenceDecl
 import io.ksmt.decl.KRegexComplementDecl
+import io.ksmt.decl.KRegexOptionDecl
 import io.ksmt.decl.KIteDecl
 import io.ksmt.decl.KNotDecl
 import io.ksmt.decl.KOrDecl
@@ -316,6 +317,7 @@ import io.ksmt.expr.KRegexKleeneClosureExpr
 import io.ksmt.expr.KRegexKleeneCrossExpr
 import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
+import io.ksmt.expr.KRegexOptionExpr
 import io.ksmt.expr.KIteExpr
 import io.ksmt.expr.KLeArithExpr
 import io.ksmt.expr.KLtArithExpr
@@ -2235,6 +2237,24 @@ open class KContext(
     open fun mkRegexComplementNoSimplify(arg: KExpr<KRegexSort>): KRegexComplementExpr = regexComplementExprCache.createIfContextActive {
         ensureContextMatch(arg)
         KRegexComplementExpr(this, arg)
+    }
+
+    private val regexOptionExprCache = mkAstInterner<KRegexOptionExpr>()
+
+    /**
+     * Make regular expression optional.
+     * Equivalent to concatenating a regular expression with the empty string.
+     * */
+    open fun mkRegexOption(arg: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(arg, KContext::mkRegexOptionNoSimplify, ::mkRegexOptionNoSimplify) // Add simplified version
+
+    /**
+     * Make regular expression optional.
+     * Equivalent to concatenating a regular expression with the empty string.
+     * */
+    open fun mkRegexOptionNoSimplify(arg: KExpr<KRegexSort>): KRegexOptionExpr = regexOptionExprCache.createIfContextActive {
+        ensureContextMatch(arg)
+        KRegexOptionExpr(this, arg)
     }
 
     val epsilonExpr: KEpsilon = KEpsilon(this)
@@ -4898,6 +4918,8 @@ open class KContext(
     fun mkRegexDifferenceDecl(): KRegexDifferenceDecl = KRegexDifferenceDecl(this)
 
     fun mkRegexComplementDecl(): KRegexComplementDecl = KRegexComplementDecl(this)
+
+    fun mkRegexOptionDecl(): KRegexOptionDecl = KRegexOptionDecl(this)
 
     fun mkEpsilonDecl(): KEpsilonDecl = KEpsilonDecl(this)
 

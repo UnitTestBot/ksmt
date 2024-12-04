@@ -102,6 +102,13 @@ class KRegexComplementDecl internal constructor(
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
+class KRegexOptionDecl internal constructor(
+    ctx: KContext
+) : KFuncDecl1<KRegexSort, KRegexSort>(ctx, "opt", ctx.mkRegexSort(), ctx.mkRegexSort()) {
+    override fun KContext.apply(arg: KExpr<KRegexSort>): KApp<KRegexSort, KRegexSort> = mkRegexOptionNoSimplify(arg)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
+
 class KEpsilonDecl internal constructor(
     ctx: KContext
 ) : KConstDecl<KRegexSort>(ctx, "eps", ctx.mkRegexSort()) {
