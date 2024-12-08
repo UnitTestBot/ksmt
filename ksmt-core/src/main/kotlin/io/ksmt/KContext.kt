@@ -2032,6 +2032,12 @@ open class KContext(
             KStringLtExpr(this, lhs, rhs)
         }
 
+    /**
+     * Create a lexicographic ordering (`<` (less)) expression.
+     * */
+    @JvmName("stringLt")
+    infix fun KExpr<KStringSort>.lt(other: KExpr<KStringSort>) = mkStringLt(this, other)
+
     private val stringLeCache = mkAstInterner<KStringLeExpr>()
 
     /**
@@ -2048,6 +2054,12 @@ open class KContext(
             ensureContextMatch(lhs, rhs)
             KStringLeExpr(this, lhs, rhs)
         }
+
+    /**
+     * Create a lexicographic ordering reflexive closure (`<=` (less or equal)) expression.
+     * */
+    @JvmName("stringLe")
+    infix fun KExpr<KStringSort>.le(other: KExpr<KStringSort>) = mkStringLe(this, other)
 
     private val stringGtCache = mkAstInterner<KStringGtExpr>()
 
@@ -2066,6 +2078,12 @@ open class KContext(
             KStringGtExpr(this, lhs, rhs)
         }
 
+    /**
+     * Create a lexicographic ordering (`>` (greater)) expression.
+     * */
+    @JvmName("stringGt")
+    infix fun KExpr<KStringSort>.gt(other: KExpr<KStringSort>) = mkStringGt(this, other)
+
     private val stringGeCache = mkAstInterner<KStringGeExpr>()
 
     /**
@@ -2082,6 +2100,12 @@ open class KContext(
             ensureContextMatch(lhs, rhs)
             KStringGeExpr(this, lhs, rhs)
         }
+
+    /**
+     * Create a lexicographic ordering reflexive closure (`>=` (greater or equal)) expression.
+     * */
+    @JvmName("stringGe")
+    infix fun KExpr<KStringSort>.ge(other: KExpr<KStringSort>) = mkStringGe(this, other)
 
     private val stringContainsCache = mkAstInterner<KStringContainsExpr>()
 
