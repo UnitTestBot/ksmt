@@ -2152,6 +2152,7 @@ open class KContext(
     /**
      * Check if first string contains second one.
      * */
+    @JvmName("strContains")
     infix fun KExpr<KStringSort>.contains(other: KExpr<KStringSort>) = mkStringContains(this, other)
 
     private val stringToRegexExprCache = mkAstInterner<KStringToRegexExpr>()
@@ -2170,6 +2171,16 @@ open class KContext(
         KStringToRegexExpr(this, arg)
     }
 
+    /**
+     * Create a regular expression based on a string expression.
+     * */
+    fun KExpr<KStringSort>.toRegex() = mkStringToRegex(this)
+
+    /**
+     * Create a regular expression based on a string expression.
+     * */
+    fun String.toRegex() = mkStringToRegex(this.expr)
+
     private val stringInRegexExprCache = mkAstInterner<KStringInRegexExpr>()
 
     /**
@@ -2186,6 +2197,22 @@ open class KContext(
             ensureContextMatch(arg0, arg1)
             KStringInRegexExpr(this, arg0, arg1)
         }
+
+    /**
+     * Check if a string belongs to the language defined by the regular expression.
+     * */
+    infix fun KExpr<KStringSort>.inRegex(other: KExpr<KRegexSort>) = mkStringInRegex(this, other)
+
+    /**
+     * Check if a string belongs to the language defined by the regular expression.
+     * */
+    infix fun String.inRegex(other: KExpr<KRegexSort>) = mkStringInRegex(this.expr, other)
+
+    /**
+     * Check if a string belongs to the language defined by the regular expression.
+     * */
+    @JvmName("regexContains")
+    infix fun KExpr<KRegexSort>.contains(other: KExpr<KStringSort>) = mkStringInRegex(other, this)
 
     private val regexLiteralCache = mkAstInterner<KRegexLiteralExpr>()
 
