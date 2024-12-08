@@ -129,3 +129,9 @@ class KAllCharDecl internal constructor(
     override fun apply(args: List<KExpr<*>>): KApp<KRegexSort, *> = ctx.mkAllChar()
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
+
+class KRangeDecl : RuntimeException("Not yet implemented")
+
+class KRegexReplaceDecl : RuntimeException("Not yet implemented")
+
+class KRegexReplaceAllDecl : RuntimeException("Not yet implemented")

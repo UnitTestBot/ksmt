@@ -267,3 +267,27 @@ class KStringContainsExpr internal constructor(
     override fun internHashCode(): Int = hash(lhs, rhs)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { lhs }, { rhs })
 }
+
+class KSingletonSubstringExpr : RuntimeException("Not yet implemented")
+
+class KSubstringExpr : RuntimeException("Not yet implemented")
+
+class KIndexOfExpr : RuntimeException("Not yet implemented")
+
+class KStringReplaceExpr : RuntimeException("Not yet implemented")
+
+class KStringReplaceAllExpr : RuntimeException("Not yet implemented")
+
+/*
+    Maps to and from integers.
+ */
+
+class KIsDigitExpr : RuntimeException("Not yet implemented")
+
+class KToCodeExpr : RuntimeException("Not yet implemented")
+
+class KFromCodeExpr : RuntimeException("Not yet implemented")
+
+class KToIntExpr : RuntimeException("Not yet implemented")
+
+class KFromIntExpr : RuntimeException("Not yet implemented")

@@ -127,3 +127,27 @@ class KStringContainsDecl internal constructor(ctx: KContext) :
     override fun KContext.apply(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KApp<KBoolSort, *> = mkStringContainsNoSimplify(arg0, arg1)
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
+
+class KSingletonSubstringDecl : RuntimeException("Not yet implemented")
+
+class KSubstringDecl : RuntimeException("Not yet implemented")
+
+class KIndexOfDecl : RuntimeException("Not yet implemented")
+
+class KStringReplaceDecl : RuntimeException("Not yet implemented")
+
+class KStringReplaceAllDecl : RuntimeException("Not yet implemented")
+
+/*
+    Maps to and from integers.
+ */
+
+class KIsDigitDecl : RuntimeException("Not yet implemented")
+
+class KToCodeDecl : RuntimeException("Not yet implemented")
+
+class KFromCodeDecl : RuntimeException("Not yet implemented")
+
+class KToIntDecl : RuntimeException("Not yet implemented")
+
+class KFromIntDecl : RuntimeException("Not yet implemented")

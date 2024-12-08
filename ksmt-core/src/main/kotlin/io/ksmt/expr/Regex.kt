@@ -239,3 +239,9 @@ class KAllChar(ctx: KContext) : KInterpretedValue<KRegexSort>(ctx) {
     override fun internHashCode(): Int = hash()
     override fun internEquals(other: Any): Boolean = structurallyEqual(other)
 }
+
+class KRangeExpr : RuntimeException("Not yet implemented")
+
+class KRegexReplaceExpr : RuntimeException("Not yet implemented")
+
+class KRegexReplaceAllExpr : RuntimeException("Not yet implemented")
