@@ -1948,6 +1948,9 @@ open class KContext(
         KStringLiteralExpr(this, value)
     }
 
+    val String.expr
+        get() = mkStringLiteral(this)
+
     private val stringConcatExprCache = mkAstInterner<KStringConcatExpr>()
 
     /**
@@ -1986,6 +1989,12 @@ open class KContext(
         ensureContextMatch(arg)
         KStringLenExpr(this, arg)
     }
+
+    val KExpr<KStringSort>.len
+        get() = mkStringLen(this)
+
+    val String.len
+        get() = mkStringLen(this.expr)
 
     private val suffixOfExprCache = mkAstInterner<KSuffixOfExpr>()
 
