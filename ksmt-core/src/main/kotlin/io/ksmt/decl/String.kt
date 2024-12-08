@@ -169,19 +169,44 @@ class KStringReplaceAllDecl internal constructor(
         arg0: KExpr<KStringSort>,
         arg1: KExpr<KStringSort>,
         arg2: KExpr<KStringSort>
-    ): KApp<KStringSort, *> = mkStringReplaceNoSimplify(arg0, arg1, arg2)
+    ): KApp<KStringSort, *> = mkStringReplaceAllNoSimplify(arg0, arg1, arg2)
 }
 
 /*
     Maps to and from integers.
  */
 
-class KIsDigitDecl : RuntimeException("Not yet implemented")
+class KStringIsDigitDecl internal constructor(
+    ctx: KContext
+) : KFuncDecl1<KBoolSort, KStringSort>(ctx, "is_digit", ctx.mkBoolSort(), ctx.mkStringSort()) {
+    override fun KContext.apply(arg: KExpr<KStringSort>): KApp<KBoolSort, KStringSort> = mkStringIsDigitNoSimplify(arg)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
 
-class KToCodeDecl : RuntimeException("Not yet implemented")
+class KStringToCodeDecl internal constructor(
+    ctx: KContext
+) : KFuncDecl1<KIntSort, KStringSort>(ctx, "to_code", ctx.mkIntSort(), ctx.mkStringSort()) {
+    override fun KContext.apply(arg: KExpr<KStringSort>): KApp<KIntSort, KStringSort> = mkStringToCodeNoSimplify(arg)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
 
-class KFromCodeDecl : RuntimeException("Not yet implemented")
+class KStringFromCodeDecl internal constructor(
+    ctx: KContext
+) : KFuncDecl1<KStringSort, KIntSort>(ctx, "from_code", ctx.mkStringSort(), ctx.mkIntSort()) {
+    override fun KContext.apply(arg: KExpr<KIntSort>): KApp<KStringSort, KIntSort> = mkStringFromCodeNoSimplify(arg)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
 
-class KToIntDecl : RuntimeException("Not yet implemented")
+class KStringToIntDecl internal constructor(
+    ctx: KContext
+) : KFuncDecl1<KIntSort, KStringSort>(ctx, "to_int", ctx.mkIntSort(), ctx.mkStringSort()) {
+    override fun KContext.apply(arg: KExpr<KStringSort>): KApp<KIntSort, KStringSort> = mkStringToIntNoSimplify(arg)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
 
-class KFromIntDecl : RuntimeException("Not yet implemented")
+class KStringFromIntDecl internal constructor(
+    ctx: KContext
+) : KFuncDecl1<KStringSort, KIntSort>(ctx, "from_int", ctx.mkStringSort(), ctx.mkIntSort()) {
+    override fun KContext.apply(arg: KExpr<KIntSort>): KApp<KStringSort, KIntSort> = mkStringFromIntNoSimplify(arg)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}

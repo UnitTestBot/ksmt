@@ -143,6 +143,11 @@ import io.ksmt.decl.KStringGeDecl
 import io.ksmt.decl.KStringContainsDecl
 import io.ksmt.decl.KStringReplaceDecl
 import io.ksmt.decl.KStringReplaceAllDecl
+import io.ksmt.decl.KStringIsDigitDecl
+import io.ksmt.decl.KStringToCodeDecl
+import io.ksmt.decl.KStringFromCodeDecl
+import io.ksmt.decl.KStringToIntDecl
+import io.ksmt.decl.KStringFromIntDecl
 import io.ksmt.decl.KEpsilonDecl
 import io.ksmt.decl.KAllDecl
 import io.ksmt.decl.KAllCharDecl
@@ -313,6 +318,11 @@ import io.ksmt.expr.KStringGeExpr
 import io.ksmt.expr.KStringContainsExpr
 import io.ksmt.expr.KStringReplaceExpr
 import io.ksmt.expr.KStringReplaceAllExpr
+import io.ksmt.expr.KStringIsDigitExpr
+import io.ksmt.expr.KStringToCodeExpr
+import io.ksmt.expr.KStringFromCodeExpr
+import io.ksmt.expr.KStringToIntExpr
+import io.ksmt.expr.KStringFromIntExpr
 import io.ksmt.expr.KEpsilon
 import io.ksmt.expr.KAll
 import io.ksmt.expr.KAllChar
@@ -2199,6 +2209,99 @@ open class KContext(
         stringReplaceAllCache.createIfContextActive {
             ensureContextMatch(arg0, arg1, arg2)
             KStringReplaceAllExpr(this, arg0, arg1, arg2)
+        }
+
+    private val stringIsDigitCache = mkAstInterner<KStringIsDigitExpr>()
+
+    /**
+     * Check that the string contains only decimal digit characters.
+     * */
+    open fun mkStringIsDigit(arg: KExpr<KStringSort>): KExpr<KBoolSort> =
+        mkSimplified(arg, KContext::mkStringIsDigitNoSimplify, ::mkStringIsDigitNoSimplify) // Add simplified version
+
+    /**
+     * Check that the string contains only decimal digit characters.
+     * */
+    open fun mkStringIsDigitNoSimplify(arg: KExpr<KStringSort>): KStringIsDigitExpr =
+        stringIsDigitCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KStringIsDigitExpr(this, arg)
+        }
+
+    private val stringToCodeCache = mkAstInterner<KStringToCodeExpr>()
+
+    /**
+     * Returns the code point of the only character in the string if the string is a singleton.
+     * Otherwise, returns -1.
+     * */
+    open fun mkStringToCode(arg: KExpr<KStringSort>): KExpr<KIntSort> =
+        mkSimplified(arg, KContext::mkStringToCodeNoSimplify, ::mkStringToCodeNoSimplify) // Add simplified version
+
+    /**
+     * Returns the code point of the only character in the string if the string is a singleton.
+     * Otherwise, returns -1.
+     * */
+    open fun mkStringToCodeNoSimplify(arg: KExpr<KStringSort>): KStringToCodeExpr =
+        stringToCodeCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KStringToCodeExpr(this, arg)
+        }
+
+    private val stringFromCodeCache = mkAstInterner<KStringFromCodeExpr>()
+
+    /**
+     * Returns a singleton string consisting of a character, with the given code point.
+     * If codepoint not in range [0, 196607], returns empty string.
+     * */
+    open fun mkStringFromCode(arg: KExpr<KIntSort>): KExpr<KStringSort> =
+        mkSimplified(arg, KContext::mkStringFromCodeNoSimplify, ::mkStringFromCodeNoSimplify) // Add simplified version
+
+    /**
+     * Returns a singleton string consisting of a character, with the given code point.
+     * If codepoint not in range [0, 196607], returns empty string.
+     * */
+    open fun mkStringFromCodeNoSimplify(arg: KExpr<KIntSort>): KStringFromCodeExpr =
+        stringFromCodeCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KStringFromCodeExpr(this, arg)
+        }
+
+    private val stringToIntCache = mkAstInterner<KStringToIntExpr>()
+
+    /**
+     * Converts a string containing only decimal digits to a positive integer.
+     * Otherwise, if the string contains a character that is not a decimal number, then returns -1.
+     * */
+    open fun mkStringToInt(arg: KExpr<KStringSort>): KExpr<KIntSort> =
+        mkSimplified(arg, KContext::mkStringToIntNoSimplify, ::mkStringToIntNoSimplify) // Add simplified version
+
+    /**
+     * Converts a string containing only decimal digits to a positive integer.
+     * Otherwise, if the string contains a character that is not a decimal number, then returns -1.
+     * */
+    open fun mkStringToIntNoSimplify(arg: KExpr<KStringSort>): KStringToIntExpr =
+        stringToIntCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KStringToIntExpr(this, arg)
+        }
+
+    private val stringFromIntCache = mkAstInterner<KStringFromIntExpr>()
+
+    /**
+     * Converts a positive integer to a string consisting of the decimal digits of that number, with no leading zeros.
+     * If the number is negative, it returns an empty string.
+     * */
+    open fun mkStringFromInt(arg: KExpr<KIntSort>): KExpr<KStringSort> =
+        mkSimplified(arg, KContext::mkStringFromIntNoSimplify, ::mkStringFromIntNoSimplify) // Add simplified version
+
+    /**
+     * Converts a positive integer to a string consisting of the decimal digits of that number, with no leading zeros.
+     * If the number is negative, it returns an empty string.
+     * */
+    open fun mkStringFromIntNoSimplify(arg: KExpr<KIntSort>): KStringFromIntExpr =
+        stringFromIntCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KStringFromIntExpr(this, arg)
         }
 
     private val stringToRegexExprCache = mkAstInterner<KStringToRegexExpr>()
@@ -5079,6 +5182,16 @@ open class KContext(
     fun mkStringReplaceDecl(): KStringReplaceDecl = KStringReplaceDecl(this)
 
     fun mkStringReplaceAllDecl(): KStringReplaceAllDecl = KStringReplaceAllDecl(this)
+
+    fun mkStringIsDigitDecl(): KStringIsDigitDecl = KStringIsDigitDecl(this)
+
+    fun mkStringToCodeDecl(): KStringToCodeDecl = KStringToCodeDecl(this)
+
+    fun mkStringFromCodeDecl(): KStringFromCodeDecl = KStringFromCodeDecl(this)
+
+    fun mkStringToIntDecl(): KStringToIntDecl = KStringToIntDecl(this)
+
+    fun mkStringFromIntDecl(): KStringFromIntDecl = KStringFromIntDecl(this)
 
     // regex
     fun mkRegexLiteralDecl(value: String): KRegexLiteralDecl = KRegexLiteralDecl(this, value)

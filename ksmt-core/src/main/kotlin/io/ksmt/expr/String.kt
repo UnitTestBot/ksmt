@@ -15,6 +15,11 @@ import io.ksmt.decl.KStringInRegexDecl
 import io.ksmt.decl.KStringContainsDecl
 import io.ksmt.decl.KStringReplaceDecl
 import io.ksmt.decl.KStringReplaceAllDecl
+import io.ksmt.decl.KStringIsDigitDecl
+import io.ksmt.decl.KStringToCodeDecl
+import io.ksmt.decl.KStringFromCodeDecl
+import io.ksmt.decl.KStringToIntDecl
+import io.ksmt.decl.KStringFromIntDecl
 import io.ksmt.expr.transformer.KTransformerBase
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KBoolSort
@@ -324,12 +329,102 @@ class KStringReplaceAllExpr internal constructor(
     Maps to and from integers.
  */
 
-class KIsDigitExpr : RuntimeException("Not yet implemented")
+class KStringIsDigitExpr internal constructor(
+    ctx: KContext,
+    val arg: KExpr<KStringSort>
+) : KApp<KBoolSort, KStringSort>(ctx) {
+    override val sort: KBoolSort = ctx.boolSort
 
-class KToCodeExpr : RuntimeException("Not yet implemented")
+    override val decl: KStringIsDigitDecl
+        get() = ctx.mkStringIsDigitDecl()
 
-class KFromCodeExpr : RuntimeException("Not yet implemented")
+    override val args: List<KExpr<KStringSort>>
+        get() = listOf(arg)
 
-class KToIntExpr : RuntimeException("Not yet implemented")
+    override fun accept(transformer: KTransformerBase): KExpr<KBoolSort> {
+        TODO("Not yet implemented")
+    }
 
-class KFromIntExpr : RuntimeException("Not yet implemented")
+    override fun internHashCode(): Int = hash(arg)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
+}
+
+class KStringToCodeExpr internal constructor(
+    ctx: KContext,
+    val arg: KExpr<KStringSort>
+) : KApp<KIntSort, KStringSort>(ctx) {
+    override val sort: KIntSort = ctx.intSort
+
+    override val decl: KStringToCodeDecl
+        get() = ctx.mkStringToCodeDecl()
+
+    override val args: List<KExpr<KStringSort>>
+        get() = listOf(arg)
+
+    override fun accept(transformer: KTransformerBase): KExpr<KIntSort> {
+        TODO("Not yet implemented")
+    }
+
+    override fun internHashCode(): Int = hash(arg)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
+}
+
+class KStringFromCodeExpr internal constructor(
+    ctx: KContext,
+    val arg: KExpr<KIntSort>
+) : KApp<KStringSort, KIntSort>(ctx) {
+    override val sort: KStringSort = ctx.stringSort
+
+    override val decl: KStringFromCodeDecl
+        get() = ctx.mkStringFromCodeDecl()
+
+    override val args: List<KExpr<KIntSort>>
+        get() = listOf(arg)
+
+    override fun accept(transformer: KTransformerBase): KExpr<KStringSort> {
+        TODO("Not yet implemented")
+    }
+
+    override fun internHashCode(): Int = hash(arg)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
+}
+
+class KStringToIntExpr internal constructor(
+    ctx: KContext,
+    val arg: KExpr<KStringSort>
+) : KApp<KIntSort, KStringSort>(ctx) {
+    override val sort: KIntSort = ctx.intSort
+
+    override val decl: KStringToIntDecl
+        get() = ctx.mkStringToIntDecl()
+
+    override val args: List<KExpr<KStringSort>>
+        get() = listOf(arg)
+
+    override fun accept(transformer: KTransformerBase): KExpr<KIntSort> {
+        TODO("Not yet implemented")
+    }
+
+    override fun internHashCode(): Int = hash(arg)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
+}
+
+class KStringFromIntExpr internal constructor(
+    ctx: KContext,
+    val arg: KExpr<KIntSort>
+) : KApp<KStringSort, KIntSort>(ctx) {
+    override val sort: KStringSort = ctx.stringSort
+
+    override val decl: KStringFromIntDecl
+        get() = ctx.mkStringFromIntDecl()
+
+    override val args: List<KExpr<KIntSort>>
+        get() = listOf(arg)
+
+    override fun accept(transformer: KTransformerBase): KExpr<KStringSort> {
+        TODO("Not yet implemented")
+    }
+
+    override fun internHashCode(): Int = hash(arg)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
+}
