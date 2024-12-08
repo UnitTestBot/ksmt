@@ -2013,6 +2013,11 @@ open class KContext(
             KSuffixOfExpr(this, arg0, arg1)
         }
 
+    /**
+     * Check if first string is a suffix of second.
+     * */
+    infix fun KExpr<KStringSort>.isSuffixOf(other: KExpr<KStringSort>) = mkSuffixOf(this, other)
+
     private val prefixOfExprCache = mkAstInterner<KPrefixOfExpr>()
 
     /**
@@ -2029,6 +2034,11 @@ open class KContext(
             ensureContextMatch(arg0, arg1)
             KPrefixOfExpr(this, arg0, arg1)
         }
+
+    /**
+     * Check if first string is a prefix of second.
+     * */
+    infix fun KExpr<KStringSort>.isPrefixOf(other: KExpr<KStringSort>) = mkPrefixOf(this, other)
 
     private val stringLtCache = mkAstInterner<KStringLtExpr>()
 
@@ -2138,6 +2148,11 @@ open class KContext(
             ensureContextMatch(lhs, rhs)
             KStringContainsExpr(this, lhs, rhs)
         }
+
+    /**
+     * Check if first string contains second one.
+     * */
+    infix fun KExpr<KStringSort>.contains(other: KExpr<KStringSort>) = mkStringContains(this, other)
 
     private val stringToRegexExprCache = mkAstInterner<KStringToRegexExpr>()
 
