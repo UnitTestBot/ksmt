@@ -4,6 +4,7 @@ import io.ksmt.KContext
 import io.ksmt.expr.KApp
 import io.ksmt.expr.KExpr
 import io.ksmt.sort.KRegexSort
+import io.ksmt.sort.KStringSort
 
 class KRegexLiteralDecl internal constructor(
     ctx: KContext,
@@ -130,7 +131,22 @@ class KAllCharDecl internal constructor(
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
-class KRangeDecl : RuntimeException("Not yet implemented")
+class KRangeDecl internal constructor(
+    ctx: KContext,
+) : KFuncDecl2<KRegexSort, KStringSort, KStringSort>(
+    ctx,
+    name = "range",
+    resultSort = ctx.mkRegexSort(),
+    ctx.mkStringSort(),
+    ctx.mkStringSort()
+) {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>
+    ): KApp<KRegexSort, *> = mkRangeNoSimplify(arg0, arg1)
+}
 
 class KRegexReplaceDecl : RuntimeException("Not yet implemented")
 

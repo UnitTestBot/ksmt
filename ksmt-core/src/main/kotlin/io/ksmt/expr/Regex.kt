@@ -14,6 +14,7 @@ import io.ksmt.decl.KAllDecl
 import io.ksmt.decl.KAllCharDecl
 import io.ksmt.expr.transformer.KTransformerBase
 import io.ksmt.sort.KRegexSort
+import io.ksmt.sort.KStringSort
 
 class KRegexLiteralExpr internal constructor(
     ctx: KContext,
@@ -240,7 +241,26 @@ class KAllChar(ctx: KContext) : KInterpretedValue<KRegexSort>(ctx) {
     override fun internEquals(other: Any): Boolean = structurallyEqual(other)
 }
 
-class KRangeExpr : RuntimeException("Not yet implemented")
+class KRangeExpr internal constructor(
+    ctx: KContext,
+    val arg0: KExpr<KStringSort>,
+    val arg1: KExpr<KStringSort>
+) : KApp<KRegexSort, KStringSort>(ctx) {
+    override val args: List<KExpr<KStringSort>>
+        get() = listOf(arg0, arg1)
+
+    override val decl: KDecl<KRegexSort>
+        get() = ctx.mkRangeDecl()
+
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> {
+        TODO("Not yet implemented")
+    }
+
+    override val sort: KRegexSort = ctx.mkRegexSort()
+
+    override fun internHashCode(): Int = hash(arg0, arg1)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg0 }, { arg1 })
+}
 
 class KRegexReplaceExpr : RuntimeException("Not yet implemented")
 

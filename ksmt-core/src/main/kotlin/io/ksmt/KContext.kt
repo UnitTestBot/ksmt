@@ -155,6 +155,7 @@ import io.ksmt.decl.KRegexKleeneCrossDecl
 import io.ksmt.decl.KRegexDifferenceDecl
 import io.ksmt.decl.KRegexComplementDecl
 import io.ksmt.decl.KRegexOptionDecl
+import io.ksmt.decl.KRangeDecl
 import io.ksmt.decl.KIteDecl
 import io.ksmt.decl.KNotDecl
 import io.ksmt.decl.KOrDecl
@@ -324,6 +325,7 @@ import io.ksmt.expr.KRegexKleeneCrossExpr
 import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KRegexOptionExpr
+import io.ksmt.expr.KRangeExpr
 import io.ksmt.expr.KIteExpr
 import io.ksmt.expr.KLeArithExpr
 import io.ksmt.expr.KLtArithExpr
@@ -2359,13 +2361,13 @@ open class KContext(
     private val regexDifferenceExprCache = mkAstInterner<KRegexDifferenceExpr>()
 
     /**
-     * Create Regex difference (`intersect`) expression.
+     * Create Regex difference (`diff`) expression.
      * */
     open fun mkRegexDifference(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KExpr<KRegexSort> =
         mkSimplified(arg0, arg1, KContext::mkRegexDifferenceNoSimplify, ::mkRegexDifferenceNoSimplify) // Add simplified version
 
     /**
-     * Create Regex difference (`intersect`) expression.
+     * Create Regex difference (`diff`) expression.
      * */
     open fun mkRegexDifferenceNoSimplify(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KRegexDifferenceExpr =
         regexDifferenceExprCache.createIfContextActive {
@@ -2406,6 +2408,27 @@ open class KContext(
         ensureContextMatch(arg)
         KRegexOptionExpr(this, arg)
     }
+
+    private val rangeExprCache = mkAstInterner<KRangeExpr>()
+
+    /**
+     * Return the set of all singleton strings in the range
+     * between the first and second string that are also singletons.
+     * Otherwise the empty set.
+     * */
+    open fun mkRange(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KExpr<KRegexSort> =
+        mkSimplified(arg0, arg1, KContext::mkRangeNoSimplify, ::mkRangeNoSimplify) // Add simplified version
+
+    /**
+     * Return the set of all singleton strings in the range
+     * between the first and second string that are also singletons.
+     * Otherwise the empty set.
+     * */
+    open fun mkRangeNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KRangeExpr =
+        rangeExprCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KRangeExpr(this, arg0, arg1)
+        }
 
     val epsilonExpr: KEpsilon = KEpsilon(this)
 
@@ -5075,6 +5098,8 @@ open class KContext(
     fun mkRegexComplementDecl(): KRegexComplementDecl = KRegexComplementDecl(this)
 
     fun mkRegexOptionDecl(): KRegexOptionDecl = KRegexOptionDecl(this)
+
+    fun mkRangeDecl(): KRangeDecl = KRangeDecl(this)
 
     fun mkEpsilonDecl(): KEpsilonDecl = KEpsilonDecl(this)
 
