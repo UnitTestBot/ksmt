@@ -13,6 +13,8 @@ import io.ksmt.decl.KStringGeDecl
 import io.ksmt.decl.KStringToRegexDecl
 import io.ksmt.decl.KStringInRegexDecl
 import io.ksmt.decl.KStringContainsDecl
+import io.ksmt.decl.KStringReplaceDecl
+import io.ksmt.decl.KStringReplaceAllDecl
 import io.ksmt.expr.transformer.KTransformerBase
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KBoolSort
@@ -274,9 +276,49 @@ class KSubstringExpr : RuntimeException("Not yet implemented")
 
 class KIndexOfExpr : RuntimeException("Not yet implemented")
 
-class KStringReplaceExpr : RuntimeException("Not yet implemented")
+class KStringReplaceExpr internal constructor(
+    ctx: KContext,
+    val arg0: KExpr<KStringSort>,
+    val arg1: KExpr<KStringSort>,
+    val arg2: KExpr<KStringSort>
+) : KApp<KStringSort, KStringSort>(ctx) {
+    override val sort: KStringSort = ctx.stringSort
 
-class KStringReplaceAllExpr : RuntimeException("Not yet implemented")
+    override val decl: KStringReplaceDecl
+        get() = ctx.mkStringReplaceDecl()
+
+    override val args: List<KExpr<KStringSort>>
+        get() = listOf(arg0, arg1, arg2)
+
+    override fun accept(transformer: KTransformerBase): KExpr<KStringSort> {
+        TODO("Not yet implemented")
+    }
+
+    override fun internHashCode(): Int = hash(arg0, arg1, arg2)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg0 }, { arg1 }, { arg2 })
+}
+
+class KStringReplaceAllExpr internal constructor(
+    ctx: KContext,
+    val arg0: KExpr<KStringSort>,
+    val arg1: KExpr<KStringSort>,
+    val arg2: KExpr<KStringSort>
+) : KApp<KStringSort, KStringSort>(ctx) {
+    override val sort: KStringSort = ctx.stringSort
+
+    override val decl: KStringReplaceAllDecl
+        get() = ctx.mkStringReplaceAllDecl()
+
+    override val args: List<KExpr<KStringSort>>
+        get() = listOf(arg0, arg1, arg2)
+
+    override fun accept(transformer: KTransformerBase): KExpr<KStringSort> {
+        TODO("Not yet implemented")
+    }
+
+    override fun internHashCode(): Int = hash(arg0, arg1, arg2)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg0 }, { arg1 }, { arg2 })
+}
 
 /*
     Maps to and from integers.

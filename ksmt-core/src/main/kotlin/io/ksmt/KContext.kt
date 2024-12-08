@@ -141,6 +141,8 @@ import io.ksmt.decl.KStringLeDecl
 import io.ksmt.decl.KStringGtDecl
 import io.ksmt.decl.KStringGeDecl
 import io.ksmt.decl.KStringContainsDecl
+import io.ksmt.decl.KStringReplaceDecl
+import io.ksmt.decl.KStringReplaceAllDecl
 import io.ksmt.decl.KEpsilonDecl
 import io.ksmt.decl.KAllDecl
 import io.ksmt.decl.KAllCharDecl
@@ -308,6 +310,8 @@ import io.ksmt.expr.KStringLeExpr
 import io.ksmt.expr.KStringGtExpr
 import io.ksmt.expr.KStringGeExpr
 import io.ksmt.expr.KStringContainsExpr
+import io.ksmt.expr.KStringReplaceExpr
+import io.ksmt.expr.KStringReplaceAllExpr
 import io.ksmt.expr.KEpsilon
 import io.ksmt.expr.KAll
 import io.ksmt.expr.KAllChar
@@ -2154,6 +2158,46 @@ open class KContext(
      * */
     @JvmName("strContains")
     infix fun KExpr<KStringSort>.contains(other: KExpr<KStringSort>) = mkStringContains(this, other)
+
+    private val stringReplaceCache = mkAstInterner<KStringReplaceExpr>()
+
+    /**
+     * Replace the first occurrence of the second string in the first string with the third,
+     * if there are such occurrences, otherwise return the first string.
+     * If the second line is empty, then the third is inserted at the beginning of the first.
+     * */
+    open fun mkStringReplace(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>, arg2: KExpr<KStringSort>): KExpr<KStringSort> =
+        mkSimplified(arg0, arg1, arg2, KContext::mkStringReplaceNoSimplify, ::mkStringReplaceNoSimplify) // Add simplified version
+
+    /**
+     * Replace the first occurrence of the second string in the first string with the third,
+     * if there are such occurrences, otherwise return the first string.
+     * If the second line is empty, then the third is inserted at the beginning of the first.
+     * */
+    open fun mkStringReplaceNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>, arg2: KExpr<KStringSort>): KStringReplaceExpr =
+        stringReplaceCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1, arg2)
+            KStringReplaceExpr(this, arg0, arg1, arg2)
+        }
+
+    private val stringReplaceAllCache = mkAstInterner<KStringReplaceAllExpr>()
+
+    /**
+     * Replace the all occurrences of the second string in the first string with the third,
+     * if there are such occurrences, otherwise return the first string.
+     * */
+    open fun mkStringReplaceAll(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>, arg2: KExpr<KStringSort>): KExpr<KStringSort> =
+        mkSimplified(arg0, arg1, arg2, KContext::mkStringReplaceAllNoSimplify, ::mkStringReplaceAllNoSimplify) // Add simplified version
+
+    /**
+     * Replace the all occurrences of the second string in the first string with the third,
+     * if there are such occurrences, otherwise return the first string.
+     * */
+    open fun mkStringReplaceAllNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>, arg2: KExpr<KStringSort>): KStringReplaceAllExpr =
+        stringReplaceAllCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1, arg2)
+            KStringReplaceAllExpr(this, arg0, arg1, arg2)
+        }
 
     private val stringToRegexExprCache = mkAstInterner<KStringToRegexExpr>()
 
@@ -5008,6 +5052,10 @@ open class KContext(
     fun mkStringGeDecl(): KStringGeDecl = KStringGeDecl(this)
 
     fun mkStringContainsDecl(): KStringContainsDecl = KStringContainsDecl(this)
+
+    fun mkStringReplaceDecl(): KStringReplaceDecl = KStringReplaceDecl(this)
+
+    fun mkStringReplaceAllDecl(): KStringReplaceAllDecl = KStringReplaceAllDecl(this)
 
     // regex
     fun mkRegexLiteralDecl(value: String): KRegexLiteralDecl = KRegexLiteralDecl(this, value)

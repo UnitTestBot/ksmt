@@ -134,9 +134,43 @@ class KSubstringDecl : RuntimeException("Not yet implemented")
 
 class KIndexOfDecl : RuntimeException("Not yet implemented")
 
-class KStringReplaceDecl : RuntimeException("Not yet implemented")
+class KStringReplaceDecl internal constructor(
+    ctx: KContext,
+) : KFuncDecl3<KStringSort, KStringSort, KStringSort, KStringSort>(
+    ctx,
+    name = "str_replace",
+    resultSort = ctx.mkStringSort(),
+    ctx.mkStringSort(),
+    ctx.mkStringSort(),
+    ctx.mkStringSort()
+) {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-class KStringReplaceAllDecl : RuntimeException("Not yet implemented")
+    override fun KContext.apply(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>,
+        arg2: KExpr<KStringSort>
+    ): KApp<KStringSort, *> = mkStringReplaceNoSimplify(arg0, arg1, arg2)
+}
+
+class KStringReplaceAllDecl internal constructor(
+    ctx: KContext,
+) : KFuncDecl3<KStringSort, KStringSort, KStringSort, KStringSort>(
+    ctx,
+    name = "str_replace_all",
+    resultSort = ctx.mkStringSort(),
+    ctx.mkStringSort(),
+    ctx.mkStringSort(),
+    ctx.mkStringSort()
+) {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>,
+        arg2: KExpr<KStringSort>
+    ): KApp<KStringSort, *> = mkStringReplaceNoSimplify(arg0, arg1, arg2)
+}
 
 /*
     Maps to and from integers.
