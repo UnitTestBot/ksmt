@@ -138,7 +138,7 @@ class KStringReplaceDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl3<KStringSort, KStringSort, KStringSort, KStringSort>(
     ctx,
-    name = "str_replace",
+    name = "replace",
     resultSort = ctx.mkStringSort(),
     ctx.mkStringSort(),
     ctx.mkStringSort(),
@@ -157,7 +157,7 @@ class KStringReplaceAllDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl3<KStringSort, KStringSort, KStringSort, KStringSort>(
     ctx,
-    name = "str_replace_all",
+    name = "replace_all",
     resultSort = ctx.mkStringSort(),
     ctx.mkStringSort(),
     ctx.mkStringSort(),
@@ -170,6 +170,44 @@ class KStringReplaceAllDecl internal constructor(
         arg1: KExpr<KStringSort>,
         arg2: KExpr<KStringSort>
     ): KApp<KStringSort, *> = mkStringReplaceAllNoSimplify(arg0, arg1, arg2)
+}
+
+class KStringReplaceWithRegexDecl internal constructor(
+    ctx: KContext,
+) : KFuncDecl3<KStringSort, KStringSort, KRegexSort, KStringSort>(
+    ctx,
+    name = "replace_with_regex",
+    resultSort = ctx.mkStringSort(),
+    ctx.mkStringSort(),
+    ctx.mkRegexSort(),
+    ctx.mkStringSort()
+) {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KRegexSort>,
+        arg2: KExpr<KStringSort>
+    ): KApp<KStringSort, *> = mkStringReplaceWithRegexNoSimplify(arg0, arg1, arg2)
+}
+
+class KStringReplaceAllWithRegexDecl internal constructor(
+    ctx: KContext,
+) : KFuncDecl3<KStringSort, KStringSort, KRegexSort, KStringSort>(
+    ctx,
+    name = "replace_all_with_regex",
+    resultSort = ctx.mkStringSort(),
+    ctx.mkStringSort(),
+    ctx.mkRegexSort(),
+    ctx.mkStringSort()
+) {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KRegexSort>,
+        arg2: KExpr<KStringSort>
+    ): KApp<KStringSort, *> = mkStringReplaceAllWithRegexNoSimplify(arg0, arg1, arg2)
 }
 
 /*

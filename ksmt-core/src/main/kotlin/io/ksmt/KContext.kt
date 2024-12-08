@@ -143,6 +143,8 @@ import io.ksmt.decl.KStringGeDecl
 import io.ksmt.decl.KStringContainsDecl
 import io.ksmt.decl.KStringReplaceDecl
 import io.ksmt.decl.KStringReplaceAllDecl
+import io.ksmt.decl.KStringReplaceWithRegexDecl
+import io.ksmt.decl.KStringReplaceAllWithRegexDecl
 import io.ksmt.decl.KStringIsDigitDecl
 import io.ksmt.decl.KStringToCodeDecl
 import io.ksmt.decl.KStringFromCodeDecl
@@ -318,6 +320,8 @@ import io.ksmt.expr.KStringGeExpr
 import io.ksmt.expr.KStringContainsExpr
 import io.ksmt.expr.KStringReplaceExpr
 import io.ksmt.expr.KStringReplaceAllExpr
+import io.ksmt.expr.KStringReplaceWithRegexExpr
+import io.ksmt.expr.KStringReplaceAllWithRegexExpr
 import io.ksmt.expr.KStringIsDigitExpr
 import io.ksmt.expr.KStringToCodeExpr
 import io.ksmt.expr.KStringFromCodeExpr
@@ -2209,6 +2213,42 @@ open class KContext(
         stringReplaceAllCache.createIfContextActive {
             ensureContextMatch(arg0, arg1, arg2)
             KStringReplaceAllExpr(this, arg0, arg1, arg2)
+        }
+
+    private val stringReplaceWithRegexCache = mkAstInterner<KStringReplaceWithRegexExpr>()
+
+    /**
+     * Replace the shortest leftmost match of regex in first string, if any, by second string.
+     * If the language of r contains the empty string, the result is to prepend second string to first one.
+     * */
+    open fun mkStringReplaceWithRegex(arg0: KExpr<KStringSort>, arg1: KExpr<KRegexSort>, arg2: KExpr<KStringSort>): KExpr<KStringSort> =
+        mkSimplified(arg0, arg1, arg2, KContext::mkStringReplaceWithRegexNoSimplify, ::mkStringReplaceWithRegexNoSimplify) // Add simplified version
+
+    /**
+     * Replace the shortest leftmost match of regex in first string, if any, by second string.
+     * If the language of r contains the empty string, the result is to prepend second string to first one.
+     * */
+    open fun mkStringReplaceWithRegexNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KRegexSort>, arg2: KExpr<KStringSort>): KStringReplaceWithRegexExpr =
+        stringReplaceWithRegexCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1, arg2)
+            KStringReplaceWithRegexExpr(this, arg0, arg1, arg2)
+        }
+
+    private val stringReplaceAllWithRegexCache = mkAstInterner<KStringReplaceAllWithRegexExpr>()
+
+    /**
+     * Replace left-to right, each shortest non-empty match of regex in first string by seconds.
+     * */
+    open fun mkStringReplaceAllWithRegex(arg0: KExpr<KStringSort>, arg1: KExpr<KRegexSort>, arg2: KExpr<KStringSort>): KExpr<KStringSort> =
+        mkSimplified(arg0, arg1, arg2, KContext::mkStringReplaceAllWithRegexNoSimplify, ::mkStringReplaceAllWithRegexNoSimplify) // Add simplified version
+
+    /**
+     * Replace left-to right, each shortest non-empty match of regex in first string by seconds.
+     * */
+    open fun mkStringReplaceAllWithRegexNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KRegexSort>, arg2: KExpr<KStringSort>): KStringReplaceAllWithRegexExpr =
+        stringReplaceAllWithRegexCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1, arg2)
+            KStringReplaceAllWithRegexExpr(this, arg0, arg1, arg2)
         }
 
     private val stringIsDigitCache = mkAstInterner<KStringIsDigitExpr>()
@@ -5182,6 +5222,10 @@ open class KContext(
     fun mkStringReplaceDecl(): KStringReplaceDecl = KStringReplaceDecl(this)
 
     fun mkStringReplaceAllDecl(): KStringReplaceAllDecl = KStringReplaceAllDecl(this)
+
+    fun mkStringReplaceWithRegexDecl(): KStringReplaceWithRegexDecl = KStringReplaceWithRegexDecl(this)
+
+    fun mkStringReplaceAllWithRegexDecl(): KStringReplaceAllWithRegexDecl = KStringReplaceAllWithRegexDecl(this)
 
     fun mkStringIsDigitDecl(): KStringIsDigitDecl = KStringIsDigitDecl(this)
 

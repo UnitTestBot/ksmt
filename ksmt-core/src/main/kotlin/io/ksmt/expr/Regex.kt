@@ -261,7 +261,3 @@ class KRangeExpr internal constructor(
     override fun internHashCode(): Int = hash(arg0, arg1)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg0 }, { arg1 })
 }
-
-class KRegexReplaceExpr : RuntimeException("Not yet implemented")
-
-class KRegexReplaceAllExpr : RuntimeException("Not yet implemented")

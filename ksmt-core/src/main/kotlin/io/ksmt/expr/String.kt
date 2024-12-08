@@ -15,6 +15,8 @@ import io.ksmt.decl.KStringInRegexDecl
 import io.ksmt.decl.KStringContainsDecl
 import io.ksmt.decl.KStringReplaceDecl
 import io.ksmt.decl.KStringReplaceAllDecl
+import io.ksmt.decl.KStringReplaceWithRegexDecl
+import io.ksmt.decl.KStringReplaceAllWithRegexDecl
 import io.ksmt.decl.KStringIsDigitDecl
 import io.ksmt.decl.KStringToCodeDecl
 import io.ksmt.decl.KStringFromCodeDecl
@@ -316,6 +318,50 @@ class KStringReplaceAllExpr internal constructor(
 
     override val args: List<KExpr<KStringSort>>
         get() = listOf(arg0, arg1, arg2)
+
+    override fun accept(transformer: KTransformerBase): KExpr<KStringSort> {
+        TODO("Not yet implemented")
+    }
+
+    override fun internHashCode(): Int = hash(arg0, arg1, arg2)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg0 }, { arg1 }, { arg2 })
+}
+
+class KStringReplaceWithRegexExpr internal constructor(
+    ctx: KContext,
+    val arg0: KExpr<KStringSort>,
+    val arg1: KExpr<KRegexSort>,
+    val arg2: KExpr<KStringSort>
+) : KApp<KStringSort, KSort>(ctx) {
+    override val sort: KStringSort = ctx.stringSort
+
+    override val decl: KStringReplaceWithRegexDecl
+        get() = ctx.mkStringReplaceWithRegexDecl()
+
+    override val args: List<KExpr<KSort>>
+        get() = listOf(arg0.cast(), arg1.cast(), arg2.cast())
+
+    override fun accept(transformer: KTransformerBase): KExpr<KStringSort> {
+        TODO("Not yet implemented")
+    }
+
+    override fun internHashCode(): Int = hash(arg0, arg1, arg2)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg0 }, { arg1 }, { arg2 })
+}
+
+class KStringReplaceAllWithRegexExpr internal constructor(
+    ctx: KContext,
+    val arg0: KExpr<KStringSort>,
+    val arg1: KExpr<KRegexSort>,
+    val arg2: KExpr<KStringSort>
+) : KApp<KStringSort, KSort>(ctx) {
+    override val sort: KStringSort = ctx.stringSort
+
+    override val decl: KStringReplaceAllWithRegexDecl
+        get() = ctx.mkStringReplaceAllWithRegexDecl()
+
+    override val args: List<KExpr<KSort>>
+        get() = listOf(arg0.cast(), arg1.cast(), arg2.cast())
 
     override fun accept(transformer: KTransformerBase): KExpr<KStringSort> {
         TODO("Not yet implemented")
