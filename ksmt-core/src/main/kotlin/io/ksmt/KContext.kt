@@ -1953,17 +1953,23 @@ open class KContext(
     /**
      * Create String concatenation (`concat`) expression.
      * */
-    open fun mkStringConcatExpr(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KExpr<KStringSort> =
-        mkSimplified(arg0, arg1, KContext::mkStringConcatExprNoSimplify, ::mkStringConcatExprNoSimplify) // Add simplified version
+    open fun mkStringConcat(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KExpr<KStringSort> =
+        mkSimplified(arg0, arg1, KContext::mkStringConcatNoSimplify, ::mkStringConcatNoSimplify) // Add simplified version
 
     /**
      * Create String concatenation (`concat`) expression.
      * */
-    open fun mkStringConcatExprNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KStringConcatExpr =
+    open fun mkStringConcatNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KStringConcatExpr =
         stringConcatExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KStringConcatExpr(this, arg0, arg1)
         }
+
+    /**
+     * Create String concatenation (`concat`) expression.
+     * */
+    @JvmName("stringConcat")
+    operator fun KExpr<KStringSort>.plus(other: KExpr<KStringSort>) = mkStringConcat(this, other)
 
     private val stringLenExprCache = mkAstInterner<KStringLenExpr>()
 
@@ -2182,6 +2188,12 @@ open class KContext(
             ensureContextMatch(arg0, arg1)
             KRegexConcatExpr(this, arg0, arg1)
         }
+
+    /**
+     * Create Regex concatenation (`concat`) expression.
+     * */
+    @JvmName("regexConcat")
+    operator fun KExpr<KRegexSort>.plus(other: KExpr<KRegexSort>) = mkRegexConcat(this, other)
 
     private val regexUnionExprCache = mkAstInterner<KRegexUnionExpr>()
 

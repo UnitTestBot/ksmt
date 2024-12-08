@@ -20,7 +20,7 @@ class KStringConcatDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl2<KStringSort, KStringSort, KStringSort>(
     ctx,
-    name = "concat",
+    name = "str_concat",
     resultSort = ctx.mkStringSort(),
     ctx.mkStringSort(),
     ctx.mkStringSort()
@@ -30,7 +30,7 @@ class KStringConcatDecl internal constructor(
     override fun KContext.apply(
         arg0: KExpr<KStringSort>,
         arg1: KExpr<KStringSort>
-    ): KApp<KStringSort, *> = mkStringConcatExprNoSimplify(arg0, arg1)
+    ): KApp<KStringSort, *> = mkStringConcatNoSimplify(arg0, arg1)
 }
 
 class KStringLenDecl internal constructor(

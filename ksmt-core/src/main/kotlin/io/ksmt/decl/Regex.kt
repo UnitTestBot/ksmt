@@ -17,7 +17,7 @@ class KRegexConcatDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl2<KRegexSort, KRegexSort, KRegexSort>(
     ctx,
-    name = "concat",
+    name = "regex_concat",
     resultSort = ctx.mkRegexSort(),
     ctx.mkRegexSort(),
     ctx.mkRegexSort()
