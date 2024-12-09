@@ -9,7 +9,7 @@ import io.ksmt.solver.KTheory.LIA
 import io.ksmt.solver.KTheory.LRA
 import io.ksmt.solver.KTheory.NIA
 import io.ksmt.solver.KTheory.NRA
-import io.ksmt.solver.KTheory.STR
+import io.ksmt.solver.KTheory.Str
 import org.ksmt.solver.bitwuzla.bindings.Bitwuzla
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaOption
 import org.ksmt.solver.bitwuzla.bindings.Native
@@ -53,7 +53,7 @@ class KBitwuzlaSolverConfigurationImpl(private val bitwuzla: Bitwuzla) : KBitwuz
     override fun optimizeForTheories(theories: Set<KTheory>?, quantifiersAllowed: Boolean) {
         if (theories.isNullOrEmpty()) return
 
-        if (setOf(LIA, LRA, NIA, NRA, STR).intersect(theories).isNotEmpty()) {
+        if (setOf(LIA, LRA, NIA, NRA, Str).intersect(theories).isNotEmpty()) {
             throw KSolverUnsupportedFeatureException("Unsupported theories $theories")
         }
     }

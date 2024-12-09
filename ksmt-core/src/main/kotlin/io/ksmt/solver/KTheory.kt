@@ -8,6 +8,7 @@ import io.ksmt.solver.KTheory.LRA
 import io.ksmt.solver.KTheory.NIA
 import io.ksmt.solver.KTheory.NRA
 import io.ksmt.solver.KTheory.UF
+import io.ksmt.solver.KTheory.Str
 
 /**
  * SMT theory
@@ -15,7 +16,7 @@ import io.ksmt.solver.KTheory.UF
 enum class KTheory {
     UF, BV, FP, Array,
     LIA, NIA, LRA, NRA,
-    STR
+    Str
 }
 
 @Suppress("ComplexMethod", "ComplexCondition")
@@ -56,6 +57,10 @@ fun Set<KTheory>?.smtLib2String(quantifiersAllowed: Boolean = false): String = b
         append("FP")
     }
 
+    if (Str in theories) {
+        append("S")
+    }
+
     if (LIA in theories || NIA in theories || LRA in theories || NRA in theories) {
         val hasNonLinear = NIA in theories || NRA in theories
         val hasReal = LRA in theories || NRA in theories
@@ -78,7 +83,4 @@ fun Set<KTheory>?.smtLib2String(quantifiersAllowed: Boolean = false): String = b
         append("A")
     }
 
-    if (KTheory.STR in theories) {
-        append("STR")
-    }
 }
