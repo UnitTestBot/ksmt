@@ -141,6 +141,9 @@ import io.ksmt.decl.KStringLeDecl
 import io.ksmt.decl.KStringGtDecl
 import io.ksmt.decl.KStringGeDecl
 import io.ksmt.decl.KStringContainsDecl
+import io.ksmt.decl.KSingletonSubstringDecl
+import io.ksmt.decl.KSubstringDecl
+import io.ksmt.decl.KIndexOfDecl
 import io.ksmt.decl.KStringReplaceDecl
 import io.ksmt.decl.KStringReplaceAllDecl
 import io.ksmt.decl.KStringReplaceWithRegexDecl
@@ -318,6 +321,9 @@ import io.ksmt.expr.KStringLeExpr
 import io.ksmt.expr.KStringGtExpr
 import io.ksmt.expr.KStringGeExpr
 import io.ksmt.expr.KStringContainsExpr
+import io.ksmt.expr.KSingletonSubstringExpr
+import io.ksmt.expr.KSubstringExpr
+import io.ksmt.expr.KIndexOfExpr
 import io.ksmt.expr.KStringReplaceExpr
 import io.ksmt.expr.KStringReplaceAllExpr
 import io.ksmt.expr.KStringReplaceWithRegexExpr
@@ -2174,6 +2180,69 @@ open class KContext(
      * */
     @JvmName("strContains")
     infix fun KExpr<KStringSort>.contains(other: KExpr<KStringSort>) = mkStringContains(this, other)
+
+    private val singletonSubstringCache = mkAstInterner<KSingletonSubstringExpr>()
+
+    /**
+     * Returns singleton string containing a character at given position.
+     * If position is out of range (less than 0, or grater than (string length - 1)), then returns empty string.
+     * */
+    open fun mkSingletonSubstring(arg0: KExpr<KStringSort>, arg1: KExpr<KIntSort>): KExpr<KStringSort> =
+        mkSimplified(arg0, arg1, KContext::mkSingletonSubstringNoSimplify, ::mkSingletonSubstringNoSimplify) // Add simplified version
+
+    /**
+     * Returns singleton string containing a character at given position.
+     * If position is out of range (less than 0, or grater than (string length - 1)), then returns empty string.
+     * */
+    open fun mkSingletonSubstringNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KIntSort>): KSingletonSubstringExpr =
+        singletonSubstringCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KSingletonSubstringExpr(this, arg0, arg1)
+        }
+
+    private val substringCache = mkAstInterner<KSubstringExpr>()
+
+    /**
+     * Evaluates the longest substring from the input string, starting at the specified position
+     * and extending up to the given length. Returns an empty string if the given length is negative
+     * or the given position is out of bounds.
+     */
+    open fun mkSubstring(arg0: KExpr<KStringSort>, arg1: KExpr<KIntSort>, arg2: KExpr<KIntSort>): KExpr<KStringSort> =
+        mkSimplified(arg0, arg1, arg2, KContext::mkSubstringNoSimplify, ::mkSubstringNoSimplify) // Add simplified version
+
+    /**
+     * Evaluates the longest substring from the input string, starting at the specified position
+     * and extending up to the given length. Returns an empty string if the given length is negative
+     * or the given position is out of bounds.
+     */
+    open fun mkSubstringNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KIntSort>, arg2: KExpr<KIntSort>): KSubstringExpr =
+        substringCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KSubstringExpr(this, arg0, arg1, arg2)
+        }
+
+    private val indexOfCache = mkAstInterner<KIndexOfExpr>()
+
+    /**
+     * Find the index of the first occurrence of the second string in the first string,
+     * starting at the specified position. Returns -1 if not found
+     * or if the position is out of bounds.
+     * Returns the position if the second string is empty.
+     */
+    open fun mkIndexOf(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>, arg2: KExpr<KIntSort>): KExpr<KIntSort> =
+        mkSimplified(arg0, arg1, arg2, KContext::mkIndexOfNoSimplify, ::mkIndexOfNoSimplify) // Add simplified version
+
+    /**
+     * Find the index of the first occurrence of the second string in the first string,
+     * starting at the specified position. Returns -1 if not found
+     * or if the position is out of bounds.
+     * Returns the position if the second string is empty.
+     */
+    open fun mkIndexOfNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>, arg2: KExpr<KIntSort>): KIndexOfExpr =
+        indexOfCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KIndexOfExpr(this, arg0, arg1, arg2)
+        }
 
     private val stringReplaceCache = mkAstInterner<KStringReplaceExpr>()
 
@@ -5218,6 +5287,12 @@ open class KContext(
     fun mkStringGeDecl(): KStringGeDecl = KStringGeDecl(this)
 
     fun mkStringContainsDecl(): KStringContainsDecl = KStringContainsDecl(this)
+
+    fun mkSingletonSubstringDecl(): KSingletonSubstringDecl = KSingletonSubstringDecl(this)
+
+    fun mkSubstringDecl(): KSubstringDecl = KSubstringDecl(this)
+
+    fun mkIndexOfDecl(): KIndexOfDecl = KIndexOfDecl(this)
 
     fun mkStringReplaceDecl(): KStringReplaceDecl = KStringReplaceDecl(this)
 

@@ -128,11 +128,49 @@ class KStringContainsDecl internal constructor(ctx: KContext) :
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
-class KSingletonSubstringDecl : RuntimeException("Not yet implemented")
+class KSingletonSubstringDecl internal constructor(ctx: KContext) :
+    KFuncDecl2<KStringSort, KStringSort, KIntSort>(ctx, "singleton_substr", ctx.mkStringSort(), ctx.mkStringSort(), ctx.mkIntSort()) {
+    override fun KContext.apply(arg0: KExpr<KStringSort>, arg1: KExpr<KIntSort>): KApp<KStringSort, *> = mkSingletonSubstringNoSimplify(arg0, arg1)
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+}
 
-class KSubstringDecl : RuntimeException("Not yet implemented")
+class KSubstringDecl internal constructor(
+    ctx: KContext,
+) : KFuncDecl3<KStringSort, KStringSort, KIntSort, KIntSort>(
+    ctx,
+    name = "substr",
+    resultSort = ctx.mkStringSort(),
+    ctx.mkStringSort(),
+    ctx.mkIntSort(),
+    ctx.mkIntSort()
+) {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 
-class KIndexOfDecl : RuntimeException("Not yet implemented")
+    override fun KContext.apply(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KIntSort>,
+        arg2: KExpr<KIntSort>
+    ): KApp<KStringSort, *> = mkSubstringNoSimplify(arg0, arg1, arg2)
+}
+
+class KIndexOfDecl internal constructor(
+    ctx: KContext,
+) : KFuncDecl3<KIntSort, KStringSort, KStringSort, KIntSort>(
+    ctx,
+    name = "index_of",
+    resultSort = ctx.mkIntSort(),
+    ctx.mkStringSort(),
+    ctx.mkStringSort(),
+    ctx.mkIntSort()
+) {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>,
+        arg2: KExpr<KIntSort>
+    ): KApp<KIntSort, *> = mkIndexOfNoSimplify(arg0, arg1, arg2)
+}
 
 class KStringReplaceDecl internal constructor(
     ctx: KContext,
