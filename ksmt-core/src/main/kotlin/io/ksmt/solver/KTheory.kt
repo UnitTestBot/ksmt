@@ -14,7 +14,8 @@ import io.ksmt.solver.KTheory.UF
  * */
 enum class KTheory {
     UF, BV, FP, Array,
-    LIA, NIA, LRA, NRA
+    LIA, NIA, LRA, NRA,
+    STR
 }
 
 @Suppress("ComplexMethod", "ComplexCondition")
@@ -75,5 +76,9 @@ fun Set<KTheory>?.smtLib2String(quantifiersAllowed: Boolean = false): String = b
         }
 
         append("A")
+    }
+
+    if (KTheory.STR in theories) {
+        append("STR")
     }
 }
