@@ -174,6 +174,19 @@ import io.ksmt.expr.KStringFromCodeExpr
 import io.ksmt.expr.KStringToIntExpr
 import io.ksmt.expr.KStringFromIntExpr
 import io.ksmt.expr.KStringLiteralExpr
+import io.ksmt.expr.KRegexConcatExpr
+import io.ksmt.expr.KRegexUnionExpr
+import io.ksmt.expr.KRegexIntersectionExpr
+import io.ksmt.expr.KRegexKleeneClosureExpr
+import io.ksmt.expr.KRegexKleeneCrossExpr
+import io.ksmt.expr.KRegexDifferenceExpr
+import io.ksmt.expr.KRegexComplementExpr
+import io.ksmt.expr.KRegexOptionExpr
+import io.ksmt.expr.KRangeExpr
+import io.ksmt.expr.KRegexLiteralExpr
+import io.ksmt.expr.KEpsilon
+import io.ksmt.expr.KAll
+import io.ksmt.expr.KAllChar
 import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KArray2Sort
 import io.ksmt.sort.KArray3Sort
@@ -463,6 +476,21 @@ interface KTransformer : KTransformerBase {
     override fun transform(expr: KStringToIntExpr): KExpr<KIntSort> = transformApp(expr)
     override fun transform(expr: KStringFromIntExpr): KExpr<KStringSort> = transformApp(expr)
     override fun transform(expr: KStringLiteralExpr): KExpr<KStringSort> = transformValue(expr)
+
+    // regex transformers
+    override fun transform(expr: KRegexConcatExpr): KExpr<KRegexSort> = transformApp(expr)
+    override fun transform(expr: KRegexUnionExpr): KExpr<KRegexSort> = transformApp(expr)
+    override fun transform(expr: KRegexIntersectionExpr): KExpr<KRegexSort> = transformApp(expr)
+    override fun transform(expr: KRegexKleeneClosureExpr): KExpr<KRegexSort> = transformApp(expr)
+    override fun transform(expr: KRegexKleeneCrossExpr): KExpr<KRegexSort> = transformApp(expr)
+    override fun transform(expr: KRegexDifferenceExpr): KExpr<KRegexSort> = transformApp(expr)
+    override fun transform(expr: KRegexComplementExpr): KExpr<KRegexSort> = transformApp(expr)
+    override fun transform(expr: KRegexOptionExpr): KExpr<KRegexSort> = transformApp(expr)
+    override fun transform(expr: KRangeExpr): KExpr<KRegexSort> = transformApp(expr)
+    override fun transform(expr: KRegexLiteralExpr): KExpr<KRegexSort> = transformValue(expr)
+    override fun transform(expr: KEpsilon): KExpr<KRegexSort> = transformValue(expr)
+    override fun transform(expr: KAll): KExpr<KRegexSort> = transformValue(expr)
+    override fun transform(expr: KAllChar): KExpr<KRegexSort> = transformValue(expr)
 
     // quantifier transformers
     override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> = with(ctx) {

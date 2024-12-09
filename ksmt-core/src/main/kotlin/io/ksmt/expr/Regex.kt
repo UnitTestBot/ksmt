@@ -26,9 +26,7 @@ class KRegexLiteralExpr internal constructor(
     override val decl: KRegexLiteralDecl
         get() = ctx.mkRegexLiteralDecl(value)
 
-    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(value)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
@@ -45,9 +43,7 @@ class KRegexConcatExpr internal constructor(
     override val decl: KDecl<KRegexSort>
         get() = ctx.mkRegexConcatDecl()
 
-    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> = transformer.transform(this)
 
     override val sort: KRegexSort = ctx.mkRegexSort()
 
@@ -66,9 +62,7 @@ class KRegexUnionExpr internal constructor(
     override val decl: KDecl<KRegexSort>
         get() = ctx.mkRegexUnionDecl()
 
-    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> = transformer.transform(this)
 
     override val sort: KRegexSort = ctx.mkRegexSort()
 
@@ -87,9 +81,7 @@ class KRegexIntersectionExpr internal constructor(
     override val decl: KDecl<KRegexSort>
         get() = ctx.mkRegexIntersectionDecl()
 
-    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> = transformer.transform(this)
 
     override val sort: KRegexSort = ctx.mkRegexSort()
 
@@ -109,9 +101,7 @@ class KRegexKleeneClosureExpr internal constructor(
     override val args: List<KExpr<KRegexSort>>
         get() = listOf(arg)
 
-    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(arg)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
@@ -129,9 +119,7 @@ class KRegexKleeneCrossExpr internal constructor(
     override val args: List<KExpr<KRegexSort>>
         get() = listOf(arg)
 
-    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(arg)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
@@ -148,9 +136,7 @@ class KRegexDifferenceExpr internal constructor(
     override val decl: KDecl<KRegexSort>
         get() = ctx.mkRegexDifferenceDecl()
 
-    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> = transformer.transform(this)
 
     override val sort: KRegexSort = ctx.mkRegexSort()
 
@@ -170,9 +156,7 @@ class KRegexComplementExpr internal constructor(
     override val args: List<KExpr<KRegexSort>>
         get() = listOf(arg)
 
-    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(arg)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
@@ -190,9 +174,7 @@ class KRegexOptionExpr internal constructor(
     override val args: List<KExpr<KRegexSort>>
         get() = listOf(arg)
 
-    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash(arg)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
@@ -205,9 +187,7 @@ class KEpsilon(ctx: KContext) : KInterpretedValue<KRegexSort>(ctx) {
     override val decl: KEpsilonDecl
         get() = ctx.mkEpsilonDecl()
 
-    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash()
     override fun internEquals(other: Any): Boolean = structurallyEqual(other)
@@ -219,9 +199,7 @@ class KAll(ctx: KContext) : KInterpretedValue<KRegexSort>(ctx) {
     override val decl: KAllDecl
         get() = ctx.mkAllDecl()
 
-    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash()
     override fun internEquals(other: Any): Boolean = structurallyEqual(other)
@@ -233,9 +211,7 @@ class KAllChar(ctx: KContext) : KInterpretedValue<KRegexSort>(ctx) {
     override val decl: KAllCharDecl
         get() = ctx.mkAllCharDecl()
 
-    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> = transformer.transform(this)
 
     override fun internHashCode(): Int = hash()
     override fun internEquals(other: Any): Boolean = structurallyEqual(other)
@@ -252,9 +228,7 @@ class KRangeExpr internal constructor(
     override val decl: KDecl<KRegexSort>
         get() = ctx.mkRangeDecl()
 
-    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> {
-        TODO("Not yet implemented")
-    }
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> = transformer.transform(this)
 
     override val sort: KRegexSort = ctx.mkRegexSort()
 

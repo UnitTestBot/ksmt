@@ -147,7 +147,15 @@ import io.ksmt.expr.KStringToCodeExpr
 import io.ksmt.expr.KStringFromCodeExpr
 import io.ksmt.expr.KStringToIntExpr
 import io.ksmt.expr.KStringFromIntExpr
-import io.ksmt.expr.KStringLiteralExpr
+import io.ksmt.expr.KRegexConcatExpr
+import io.ksmt.expr.KRegexUnionExpr
+import io.ksmt.expr.KRegexIntersectionExpr
+import io.ksmt.expr.KRegexKleeneClosureExpr
+import io.ksmt.expr.KRegexKleeneCrossExpr
+import io.ksmt.expr.KRegexDifferenceExpr
+import io.ksmt.expr.KRegexComplementExpr
+import io.ksmt.expr.KRegexOptionExpr
+import io.ksmt.expr.KRangeExpr
 import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KArray2Sort
 import io.ksmt.sort.KArray3Sort
@@ -801,6 +809,52 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
     override fun transform(expr: KStringFromIntExpr): KExpr<KStringSort> =
         transformExprAfterTransformedDefault(
             expr, expr.arg, ::transformApp, KContext::mkStringFromCode
+        )
+
+    // regex transformers
+    override fun transform(expr: KRegexConcatExpr): KExpr<KRegexSort> =
+        transformExprAfterTransformedDefault(
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkRegexConcat
+        )
+
+    override fun transform(expr: KRegexUnionExpr): KExpr<KRegexSort> =
+        transformExprAfterTransformedDefault(
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkRegexUnion
+        )
+
+    override fun transform(expr: KRegexIntersectionExpr): KExpr<KRegexSort> =
+        transformExprAfterTransformedDefault(
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkRegexIntersection
+        )
+
+    override fun transform(expr: KRegexKleeneClosureExpr): KExpr<KRegexSort> =
+        transformExprAfterTransformedDefault(
+            expr, expr.arg, ::transformApp, KContext::mkRegexKleeneClosure
+        )
+
+    override fun transform(expr: KRegexKleeneCrossExpr): KExpr<KRegexSort> =
+        transformExprAfterTransformedDefault(
+            expr, expr.arg, ::transformApp, KContext::mkRegexKleeneCross
+        )
+
+    override fun transform(expr: KRegexDifferenceExpr): KExpr<KRegexSort> =
+        transformExprAfterTransformedDefault(
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkRegexDifference
+        )
+
+    override fun transform(expr: KRegexComplementExpr): KExpr<KRegexSort> =
+        transformExprAfterTransformedDefault(
+            expr, expr.arg, ::transformApp, KContext::mkRegexComplement
+        )
+
+    override fun transform(expr: KRegexOptionExpr): KExpr<KRegexSort> =
+        transformExprAfterTransformedDefault(
+            expr, expr.arg, ::transformApp, KContext::mkRegexOption
+        )
+
+    override fun transform(expr: KRangeExpr): KExpr<KRegexSort> =
+        transformExprAfterTransformedDefault(
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkRange
         )
 
     // quantified expressions

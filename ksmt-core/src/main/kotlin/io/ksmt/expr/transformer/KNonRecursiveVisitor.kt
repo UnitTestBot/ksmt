@@ -147,6 +147,15 @@ import io.ksmt.expr.KStringToCodeExpr
 import io.ksmt.expr.KStringFromCodeExpr
 import io.ksmt.expr.KStringToIntExpr
 import io.ksmt.expr.KStringFromIntExpr
+import io.ksmt.expr.KRegexConcatExpr
+import io.ksmt.expr.KRegexUnionExpr
+import io.ksmt.expr.KRegexIntersectionExpr
+import io.ksmt.expr.KRegexKleeneClosureExpr
+import io.ksmt.expr.KRegexKleeneCrossExpr
+import io.ksmt.expr.KRegexDifferenceExpr
+import io.ksmt.expr.KRegexComplementExpr
+import io.ksmt.expr.KRegexOptionExpr
+import io.ksmt.expr.KRangeExpr
 import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KArraySortBase
 import io.ksmt.sort.KBvSort
@@ -721,6 +730,34 @@ abstract class KNonRecursiveVisitor<V : Any>(
 
     override fun visit(expr: KStringFromIntExpr): KExprVisitResult<V> =
         visitExprAfterVisitedDefault(expr, expr.arg, ::visitApp)
+
+    // regex visitors
+    override fun visit(expr: KRegexConcatExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, ::visitApp)
+
+    override fun visit(expr: KRegexUnionExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, ::visitApp)
+
+    override fun visit(expr: KRegexIntersectionExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, ::visitApp)
+
+    override fun visit(expr: KRegexKleeneClosureExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg, ::visitApp)
+
+    override fun visit(expr: KRegexKleeneCrossExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg, ::visitApp)
+
+    override fun visit(expr: KRegexDifferenceExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, ::visitApp)
+
+    override fun visit(expr: KRegexComplementExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg, ::visitApp)
+
+    override fun visit(expr: KRegexOptionExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg, ::visitApp)
+
+    override fun visit(expr: KRangeExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, ::visitApp)
 
     // quantified expressions
     override fun visit(expr: KExistentialQuantifier): KExprVisitResult<V> =

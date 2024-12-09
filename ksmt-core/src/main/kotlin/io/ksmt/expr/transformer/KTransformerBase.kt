@@ -165,6 +165,19 @@ import io.ksmt.expr.KStringFromCodeExpr
 import io.ksmt.expr.KStringToIntExpr
 import io.ksmt.expr.KStringFromIntExpr
 import io.ksmt.expr.KStringLiteralExpr
+import io.ksmt.expr.KRegexConcatExpr
+import io.ksmt.expr.KRegexUnionExpr
+import io.ksmt.expr.KRegexIntersectionExpr
+import io.ksmt.expr.KRegexKleeneClosureExpr
+import io.ksmt.expr.KRegexKleeneCrossExpr
+import io.ksmt.expr.KRegexDifferenceExpr
+import io.ksmt.expr.KRegexComplementExpr
+import io.ksmt.expr.KRegexOptionExpr
+import io.ksmt.expr.KRangeExpr
+import io.ksmt.expr.KRegexLiteralExpr
+import io.ksmt.expr.KEpsilon
+import io.ksmt.expr.KAll
+import io.ksmt.expr.KAllChar
 import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KArray2Sort
 import io.ksmt.sort.KArray3Sort
@@ -391,6 +404,21 @@ interface KTransformerBase {
     fun transform(expr: KStringToIntExpr): KExpr<KIntSort>
     fun transform(expr: KStringFromIntExpr): KExpr<KStringSort>
     fun transform(expr: KStringLiteralExpr): KExpr<KStringSort>
+
+    // regex transformers
+    fun transform(expr: KRegexConcatExpr): KExpr<KRegexSort>
+    fun transform(expr: KRegexUnionExpr): KExpr<KRegexSort>
+    fun transform(expr: KRegexIntersectionExpr): KExpr<KRegexSort>
+    fun transform(expr: KRegexKleeneClosureExpr): KExpr<KRegexSort>
+    fun transform(expr: KRegexKleeneCrossExpr): KExpr<KRegexSort>
+    fun transform(expr: KRegexDifferenceExpr): KExpr<KRegexSort>
+    fun transform(expr: KRegexComplementExpr): KExpr<KRegexSort>
+    fun transform(expr: KRegexOptionExpr): KExpr<KRegexSort>
+    fun transform(expr: KRangeExpr): KExpr<KRegexSort>
+    fun transform(expr: KRegexLiteralExpr): KExpr<KRegexSort>
+    fun transform(expr: KEpsilon): KExpr<KRegexSort>
+    fun transform(expr: KAll): KExpr<KRegexSort>
+    fun transform(expr: KAllChar): KExpr<KRegexSort>
 
     // quantifier transformers
     fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort>
