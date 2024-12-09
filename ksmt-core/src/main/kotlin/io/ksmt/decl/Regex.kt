@@ -110,6 +110,23 @@ class KRegexOptionDecl internal constructor(
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
 
+class KRangeDecl internal constructor(
+    ctx: KContext,
+) : KFuncDecl2<KRegexSort, KStringSort, KStringSort>(
+    ctx,
+    name = "range",
+    resultSort = ctx.mkRegexSort(),
+    ctx.mkStringSort(),
+    ctx.mkStringSort()
+) {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>
+    ): KApp<KRegexSort, *> = mkRangeNoSimplify(arg0, arg1)
+}
+
 class KEpsilonDecl internal constructor(
     ctx: KContext
 ) : KConstDecl<KRegexSort>(ctx, "eps", ctx.mkRegexSort()) {
@@ -130,24 +147,3 @@ class KAllCharDecl internal constructor(
     override fun apply(args: List<KExpr<*>>): KApp<KRegexSort, *> = ctx.mkAllChar()
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
 }
-
-class KRangeDecl internal constructor(
-    ctx: KContext,
-) : KFuncDecl2<KRegexSort, KStringSort, KStringSort>(
-    ctx,
-    name = "range",
-    resultSort = ctx.mkRegexSort(),
-    ctx.mkStringSort(),
-    ctx.mkStringSort()
-) {
-    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
-
-    override fun KContext.apply(
-        arg0: KExpr<KStringSort>,
-        arg1: KExpr<KStringSort>
-    ): KApp<KRegexSort, *> = mkRangeNoSimplify(arg0, arg1)
-}
-
-class KRegexReplaceDecl : RuntimeException("Not yet implemented")
-
-class KRegexReplaceAllDecl : RuntimeException("Not yet implemented")
