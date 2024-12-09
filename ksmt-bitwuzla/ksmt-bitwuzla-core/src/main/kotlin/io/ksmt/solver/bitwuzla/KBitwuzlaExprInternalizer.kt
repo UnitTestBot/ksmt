@@ -151,6 +151,43 @@ import io.ksmt.expr.KUnaryMinusArithExpr
 import io.ksmt.expr.KUninterpretedSortValue
 import io.ksmt.expr.KUniversalQuantifier
 import io.ksmt.expr.KXorExpr
+import io.ksmt.expr.KStringConcatExpr
+import io.ksmt.expr.KStringLenExpr
+import io.ksmt.expr.KStringToRegexExpr
+import io.ksmt.expr.KStringInRegexExpr
+import io.ksmt.expr.KSuffixOfExpr
+import io.ksmt.expr.KPrefixOfExpr
+import io.ksmt.expr.KStringLtExpr
+import io.ksmt.expr.KStringLeExpr
+import io.ksmt.expr.KStringGtExpr
+import io.ksmt.expr.KStringGeExpr
+import io.ksmt.expr.KStringContainsExpr
+import io.ksmt.expr.KSingletonSubstringExpr
+import io.ksmt.expr.KSubstringExpr
+import io.ksmt.expr.KIndexOfExpr
+import io.ksmt.expr.KStringReplaceExpr
+import io.ksmt.expr.KStringReplaceAllExpr
+import io.ksmt.expr.KStringReplaceWithRegexExpr
+import io.ksmt.expr.KStringReplaceAllWithRegexExpr
+import io.ksmt.expr.KStringIsDigitExpr
+import io.ksmt.expr.KStringToCodeExpr
+import io.ksmt.expr.KStringFromCodeExpr
+import io.ksmt.expr.KStringToIntExpr
+import io.ksmt.expr.KStringFromIntExpr
+import io.ksmt.expr.KStringLiteralExpr
+import io.ksmt.expr.KRegexConcatExpr
+import io.ksmt.expr.KRegexUnionExpr
+import io.ksmt.expr.KRegexIntersectionExpr
+import io.ksmt.expr.KRegexKleeneClosureExpr
+import io.ksmt.expr.KRegexKleeneCrossExpr
+import io.ksmt.expr.KRegexDifferenceExpr
+import io.ksmt.expr.KRegexComplementExpr
+import io.ksmt.expr.KRegexOptionExpr
+import io.ksmt.expr.KRangeExpr
+import io.ksmt.expr.KRegexLiteralExpr
+import io.ksmt.expr.KEpsilon
+import io.ksmt.expr.KAll
+import io.ksmt.expr.KAllChar
 import io.ksmt.expr.rewrite.simplify.rewriteBvAddNoUnderflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoUnderflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvNegNoOverflowExpr
@@ -183,6 +220,8 @@ import io.ksmt.sort.KFpRoundingModeSort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRealSort
+import io.ksmt.sort.KStringSort
+import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KSortVisitor
 import io.ksmt.sort.KUninterpretedSort
@@ -1405,6 +1444,154 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
         )
     }
 
+    override fun transform(expr: KStringConcatExpr): KExpr<KStringSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringLenExpr): KExpr<KIntSort> {
+        throw KSolverUnsupportedFeatureException("string and int theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringToRegexExpr): KExpr<KRegexSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringInRegexExpr): KExpr<KBoolSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KSuffixOfExpr): KExpr<KBoolSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KPrefixOfExpr): KExpr<KBoolSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringLtExpr): KExpr<KBoolSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringLeExpr): KExpr<KBoolSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringGtExpr): KExpr<KBoolSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringGeExpr): KExpr<KBoolSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringContainsExpr): KExpr<KBoolSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KSingletonSubstringExpr): KExpr<KStringSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KSubstringExpr): KExpr<KStringSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KIndexOfExpr): KExpr<KIntSort> {
+        throw KSolverUnsupportedFeatureException("string and int theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringReplaceExpr): KExpr<KStringSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringReplaceAllExpr): KExpr<KStringSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringReplaceWithRegexExpr): KExpr<KStringSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringReplaceAllWithRegexExpr): KExpr<KStringSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringIsDigitExpr): KExpr<KBoolSort> {
+        throw KSolverUnsupportedFeatureException("string and int theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringToCodeExpr): KExpr<KIntSort> {
+        throw KSolverUnsupportedFeatureException("string and int theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringFromCodeExpr): KExpr<KStringSort> {
+        throw KSolverUnsupportedFeatureException("string and int theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringToIntExpr): KExpr<KIntSort> {
+        throw KSolverUnsupportedFeatureException("string and int theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringFromIntExpr): KExpr<KStringSort> {
+        throw KSolverUnsupportedFeatureException("string and int theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringLiteralExpr): KExpr<KStringSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KRegexConcatExpr): KExpr<KRegexSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KRegexUnionExpr): KExpr<KRegexSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KRegexIntersectionExpr): KExpr<KRegexSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KRegexKleeneClosureExpr): KExpr<KRegexSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KRegexKleeneCrossExpr): KExpr<KRegexSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KRegexDifferenceExpr): KExpr<KRegexSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KRegexComplementExpr): KExpr<KRegexSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KRegexOptionExpr): KExpr<KRegexSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KRangeExpr): KExpr<KRegexSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KRegexLiteralExpr): KExpr<KRegexSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KEpsilon): KExpr<KRegexSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KAll): KExpr<KRegexSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KAllChar): KExpr<KRegexSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
     private inline fun <T : KQuantifier> T.internalizeQuantifier(
         crossinline mkQuantifierTerm: (LongArray) -> BitwuzlaTerm
     ): T {
@@ -1554,12 +1741,18 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
         }
 
         /**
-         * Bitwuzla doesn't support integers and reals.
+         * Bitwuzla doesn't support strings, regular expressions, integers and reals.
          * */
         override fun visit(sort: KIntSort) =
             throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
 
         override fun visit(sort: KRealSort) =
+            throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
+
+        override fun visit(sort: KStringSort) =
+            throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
+
+        override fun visit(sort: KRegexSort) =
             throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
 
         /**
@@ -1704,6 +1897,8 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
         override fun visit(sort: KBoolSort): Boolean = false
         override fun visit(sort: KIntSort): Boolean = false
         override fun visit(sort: KRealSort): Boolean = false
+        override fun visit(sort: KStringSort): Boolean = false
+        override fun visit(sort: KRegexSort): Boolean = false
         override fun <S : KBvSort> visit(sort: S): Boolean = false
         override fun <S : KFpSort> visit(sort: S): Boolean = false
         override fun visit(sort: KFpRoundingModeSort): Boolean = false
