@@ -1248,15 +1248,21 @@ class KCvc5ExprInternalizer(
     }
 
     override fun transform(expr: KSingletonSubstringExpr) = with(expr) {
-        TODO("Not yet implemented")
+        transform(arg0, arg1) { arg0: Term, arg1: Term ->
+            tm.mkTerm(Kind.STRING_CHARAT, arg0, arg1)
+        }
     }
 
     override fun transform(expr: KSubstringExpr) = with(expr) {
-        TODO("Not yet implemented")
+        transform(arg0, arg1, arg2) { arg0: Term, arg1: Term, arg2: Term ->
+            tm.mkTerm(Kind.STRING_SUBSTR, arg0, arg1, arg2)
+        }
     }
 
     override fun transform(expr: KIndexOfExpr) = with(expr) {
-        TODO("Not yet implemented")
+        transform(arg0, arg1, arg2) { arg0: Term, arg1: Term, arg2: Term ->
+            tm.mkTerm(Kind.STRING_INDEXOF, arg0, arg1, arg2)
+        }
     }
 
     override fun transform(expr: KStringReplaceExpr) = with(expr) {
