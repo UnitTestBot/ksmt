@@ -1008,7 +1008,7 @@ open class KYicesExprInternalizer(
     }
 
     override fun transform(expr: KStringLenExpr): KExpr<KIntSort> {
-        throw KSolverUnsupportedFeatureException("string and int theory is not supported in Yices")
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
     override fun transform(expr: KStringToRegexExpr): KExpr<KRegexSort> {
@@ -1056,7 +1056,7 @@ open class KYicesExprInternalizer(
     }
 
     override fun transform(expr: KIndexOfExpr): KExpr<KIntSort> {
-        throw KSolverUnsupportedFeatureException("string and int theory is not supported in Yices")
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
     override fun transform(expr: KStringReplaceExpr): KExpr<KStringSort> {
@@ -1076,23 +1076,23 @@ open class KYicesExprInternalizer(
     }
 
     override fun transform(expr: KStringIsDigitExpr): KExpr<KBoolSort> {
-        throw KSolverUnsupportedFeatureException("string and int theory is not supported in Yices")
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
     override fun transform(expr: KStringToCodeExpr): KExpr<KIntSort> {
-        throw KSolverUnsupportedFeatureException("string and int theory is not supported in Yices")
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
     override fun transform(expr: KStringFromCodeExpr): KExpr<KStringSort> {
-        throw KSolverUnsupportedFeatureException("string and int theory is not supported in Yices")
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
     override fun transform(expr: KStringToIntExpr): KExpr<KIntSort> {
-        throw KSolverUnsupportedFeatureException("string and int theory is not supported in Yices")
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
     override fun transform(expr: KStringFromIntExpr): KExpr<KStringSort> {
-        throw KSolverUnsupportedFeatureException("string and int theory is not supported in Yices")
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
     override fun transform(expr: KStringLiteralExpr): KExpr<KStringSort> {
