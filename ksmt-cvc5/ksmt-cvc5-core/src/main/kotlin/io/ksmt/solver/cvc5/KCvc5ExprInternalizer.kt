@@ -188,7 +188,6 @@ import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KRegexOptionExpr
 import io.ksmt.expr.KRangeExpr
-import io.ksmt.expr.KRegexLiteralExpr
 import io.ksmt.expr.KEpsilon
 import io.ksmt.expr.KAll
 import io.ksmt.expr.KAllChar
@@ -1388,12 +1387,6 @@ class KCvc5ExprInternalizer(
 
     override fun transform(expr: KAllChar) = with(expr) {
         transform { tm.mkTerm(Kind.REGEXP_ALLCHAR) }
-    }
-
-    override fun transform(expr: KRegexLiteralExpr) = with(expr) {
-        transform(ctx.mkStringLiteral(value)) { str: Term -> // Reconsider.
-            tm.mkTerm(Kind.STRING_TO_REGEXP, str)
-        }
     }
 
     // Quantifiers

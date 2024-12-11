@@ -184,7 +184,6 @@ import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KRegexOptionExpr
 import io.ksmt.expr.KRangeExpr
-import io.ksmt.expr.KRegexLiteralExpr
 import io.ksmt.expr.KEpsilon
 import io.ksmt.expr.KAll
 import io.ksmt.expr.KAllChar
@@ -1573,10 +1572,6 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
     }
 
     override fun transform(expr: KRangeExpr): KExpr<KRegexSort> {
-        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
-    }
-
-    override fun transform(expr: KRegexLiteralExpr): KExpr<KRegexSort> {
         throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
     }
 

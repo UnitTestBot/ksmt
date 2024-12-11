@@ -6,14 +6,6 @@ import io.ksmt.expr.KExpr
 import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KStringSort
 
-class KRegexLiteralDecl internal constructor(
-    ctx: KContext,
-    val value: String
-) : KConstDecl<KRegexSort>(ctx, value, ctx.mkRegexSort()) {
-    override fun apply(args: List<KExpr<*>>): KApp<KRegexSort, *> = ctx.mkRegexLiteral(value)
-    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
-}
-
 class KRegexConcatDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl2<KRegexSort, KRegexSort, KRegexSort>(

@@ -183,7 +183,6 @@ import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KRegexOptionExpr
 import io.ksmt.expr.KRangeExpr
-import io.ksmt.expr.KRegexLiteralExpr
 import io.ksmt.expr.KEpsilon
 import io.ksmt.expr.KAll
 import io.ksmt.expr.KAllChar
@@ -487,7 +486,6 @@ interface KTransformer : KTransformerBase {
     override fun transform(expr: KRegexComplementExpr): KExpr<KRegexSort> = transformApp(expr)
     override fun transform(expr: KRegexOptionExpr): KExpr<KRegexSort> = transformApp(expr)
     override fun transform(expr: KRangeExpr): KExpr<KRegexSort> = transformApp(expr)
-    override fun transform(expr: KRegexLiteralExpr): KExpr<KRegexSort> = transformValue(expr)
     override fun transform(expr: KEpsilon): KExpr<KRegexSort> = transformValue(expr)
     override fun transform(expr: KAll): KExpr<KRegexSort> = transformValue(expr)
     override fun transform(expr: KAllChar): KExpr<KRegexSort> = transformValue(expr)

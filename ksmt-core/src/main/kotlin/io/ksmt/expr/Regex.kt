@@ -6,7 +6,6 @@ import io.ksmt.cache.structurallyEqual
 import io.ksmt.decl.KDecl
 import io.ksmt.decl.KRegexKleeneClosureDecl
 import io.ksmt.decl.KRegexKleeneCrossDecl
-import io.ksmt.decl.KRegexLiteralDecl
 import io.ksmt.decl.KRegexComplementDecl
 import io.ksmt.decl.KRegexOptionDecl
 import io.ksmt.decl.KEpsilonDecl
@@ -15,22 +14,6 @@ import io.ksmt.decl.KAllCharDecl
 import io.ksmt.expr.transformer.KTransformerBase
 import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KStringSort
-
-class KRegexLiteralExpr internal constructor(
-    ctx: KContext,
-    val value: String
-) : KInterpretedValue<KRegexSort>(ctx) {
-    override val sort: KRegexSort
-        get() = ctx.regexSort
-
-    override val decl: KRegexLiteralDecl
-        get() = ctx.mkRegexLiteralDecl(value)
-
-    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> = transformer.transform(this)
-
-    override fun internHashCode(): Int = hash(value)
-    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }
-}
 
 class KRegexConcatExpr internal constructor(
     ctx: KContext,

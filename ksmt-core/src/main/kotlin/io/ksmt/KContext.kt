@@ -156,7 +156,6 @@ import io.ksmt.decl.KStringFromIntDecl
 import io.ksmt.decl.KEpsilonDecl
 import io.ksmt.decl.KAllDecl
 import io.ksmt.decl.KAllCharDecl
-import io.ksmt.decl.KRegexLiteralDecl
 import io.ksmt.decl.KRegexConcatDecl
 import io.ksmt.decl.KRegexUnionDecl
 import io.ksmt.decl.KRegexIntersectionDecl
@@ -336,7 +335,6 @@ import io.ksmt.expr.KStringFromIntExpr
 import io.ksmt.expr.KEpsilon
 import io.ksmt.expr.KAll
 import io.ksmt.expr.KAllChar
-import io.ksmt.expr.KRegexLiteralExpr
 import io.ksmt.expr.KRegexConcatExpr
 import io.ksmt.expr.KRegexUnionExpr
 import io.ksmt.expr.KRegexIntersectionExpr
@@ -2471,15 +2469,6 @@ open class KContext(
      * */
     @JvmName("regexContains")
     infix fun KExpr<KRegexSort>.contains(other: KExpr<KStringSort>) = mkStringInRegex(other, this)
-
-    private val regexLiteralCache = mkAstInterner<KRegexLiteralExpr>()
-
-    /**
-     * Create a Regex value.
-     * */
-    fun mkRegexLiteral(value: String): KRegexLiteralExpr = regexLiteralCache.createIfContextActive {
-        KRegexLiteralExpr(this, value)
-    }
 
     private val regexConcatExprCache = mkAstInterner<KRegexConcatExpr>()
 
@@ -5313,8 +5302,6 @@ open class KContext(
     fun mkStringFromIntDecl(): KStringFromIntDecl = KStringFromIntDecl(this)
 
     // regex
-    fun mkRegexLiteralDecl(value: String): KRegexLiteralDecl = KRegexLiteralDecl(this, value)
-
     fun mkRegexConcatDecl(): KRegexConcatDecl = KRegexConcatDecl(this)
 
     fun mkRegexUnionDecl(): KRegexUnionDecl = KRegexUnionDecl(this)
