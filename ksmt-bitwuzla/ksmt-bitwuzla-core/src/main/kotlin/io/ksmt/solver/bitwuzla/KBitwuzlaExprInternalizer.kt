@@ -165,10 +165,14 @@ import io.ksmt.expr.KStringContainsExpr
 import io.ksmt.expr.KStringSingletonSubExpr
 import io.ksmt.expr.KStringSubExpr
 import io.ksmt.expr.KStringIndexOfExpr
+import io.ksmt.expr.KStringIndexOfRegexExpr
 import io.ksmt.expr.KStringReplaceExpr
 import io.ksmt.expr.KStringReplaceAllExpr
 import io.ksmt.expr.KStringReplaceWithRegexExpr
 import io.ksmt.expr.KStringReplaceAllWithRegexExpr
+import io.ksmt.expr.KStringToLowerExpr
+import io.ksmt.expr.KStringToUpperExpr
+import io.ksmt.expr.KStringReverseExpr
 import io.ksmt.expr.KStringIsDigitExpr
 import io.ksmt.expr.KStringToCodeExpr
 import io.ksmt.expr.KStringFromCodeExpr
@@ -1499,6 +1503,10 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
         throw KSolverUnsupportedFeatureException("string and int theory is not supported in Bitwuzla")
     }
 
+    override fun transform(expr: KStringIndexOfRegexExpr): KExpr<KIntSort> {
+        throw KSolverUnsupportedFeatureException("string and int theory is not supported in Bitwuzla")
+    }
+
     override fun transform(expr: KStringReplaceExpr): KExpr<KStringSort> {
         throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
     }
@@ -1512,6 +1520,18 @@ open class KBitwuzlaExprInternalizer(val bitwuzlaCtx: KBitwuzlaContext) : KExprL
     }
 
     override fun transform(expr: KStringReplaceAllWithRegexExpr): KExpr<KStringSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringToLowerExpr): KExpr<KStringSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringToUpperExpr): KExpr<KStringSort> {
+        throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
+    }
+
+    override fun transform(expr: KStringReverseExpr): KExpr<KStringSort> {
         throw KSolverUnsupportedFeatureException("string theory is not supported in Bitwuzla")
     }
 

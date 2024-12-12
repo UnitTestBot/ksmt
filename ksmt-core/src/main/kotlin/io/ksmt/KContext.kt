@@ -144,10 +144,14 @@ import io.ksmt.decl.KStringContainsDecl
 import io.ksmt.decl.KStringSingletonSubDecl
 import io.ksmt.decl.KStringSubDecl
 import io.ksmt.decl.KStringIndexOfDecl
+import io.ksmt.decl.KStringIndexOfRegexDecl
 import io.ksmt.decl.KStringReplaceDecl
 import io.ksmt.decl.KStringReplaceAllDecl
 import io.ksmt.decl.KStringReplaceWithRegexDecl
 import io.ksmt.decl.KStringReplaceAllWithRegexDecl
+import io.ksmt.decl.KStringToLowerDecl
+import io.ksmt.decl.KStringToUpperDecl
+import io.ksmt.decl.KStringReverseDecl
 import io.ksmt.decl.KStringIsDigitDecl
 import io.ksmt.decl.KStringToCodeDecl
 import io.ksmt.decl.KStringFromCodeDecl
@@ -323,10 +327,14 @@ import io.ksmt.expr.KStringContainsExpr
 import io.ksmt.expr.KStringSingletonSubExpr
 import io.ksmt.expr.KStringSubExpr
 import io.ksmt.expr.KStringIndexOfExpr
+import io.ksmt.expr.KStringIndexOfRegexExpr
 import io.ksmt.expr.KStringReplaceExpr
 import io.ksmt.expr.KStringReplaceAllExpr
 import io.ksmt.expr.KStringReplaceWithRegexExpr
 import io.ksmt.expr.KStringReplaceAllWithRegexExpr
+import io.ksmt.expr.KStringToLowerExpr
+import io.ksmt.expr.KStringToUpperExpr
+import io.ksmt.expr.KStringReverseExpr
 import io.ksmt.expr.KStringIsDigitExpr
 import io.ksmt.expr.KStringToCodeExpr
 import io.ksmt.expr.KStringFromCodeExpr
@@ -2224,6 +2232,27 @@ open class KContext(
             KStringIndexOfExpr(this, arg0, arg1, arg2)
         }
 
+    private val stringIndexOfRegexCache = mkAstInterner<KStringIndexOfRegexExpr>()
+
+    /**
+     * Find the index of the first match of a regular expression in the string,
+     * starting at the specified position. Returns -1 if not found
+     * or if the position is out of bounds.
+     */
+    open fun mkStringIndexOfRegex(arg0: KExpr<KStringSort>, arg1: KExpr<KRegexSort>, arg2: KExpr<KIntSort>): KExpr<KIntSort> =
+        mkSimplified(arg0, arg1, arg2, KContext::mkStringIndexOfRegexNoSimplify, ::mkStringIndexOfRegexNoSimplify) // Add simplified version
+
+    /**
+     * Find the index of the first match of a regular expression in the string,
+     * starting at the specified position. Returns -1 if not found
+     * or if the position is out of bounds.
+     */
+    open fun mkStringIndexOfRegexNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KRegexSort>, arg2: KExpr<KIntSort>): KStringIndexOfRegexExpr =
+        stringIndexOfRegexCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KStringIndexOfRegexExpr(this, arg0, arg1, arg2)
+        }
+
     private val stringReplaceCache = mkAstInterner<KStringReplaceExpr>()
 
     /**
@@ -2298,6 +2327,57 @@ open class KContext(
         stringReplaceAllWithRegexCache.createIfContextActive {
             ensureContextMatch(arg0, arg1, arg2)
             KStringReplaceAllWithRegexExpr(this, arg0, arg1, arg2)
+        }
+
+    private val stringToLowerExprCache = mkAstInterner<KStringToLowerExpr>()
+
+    /**
+     * Convert string to lower case.
+     * */
+    open fun mkStringToLower(arg: KExpr<KStringSort>): KExpr<KStringSort> =
+        mkSimplified(arg, KContext::mkStringToLowerNoSimplify, ::mkStringToLowerNoSimplify) // Add simplified version
+
+    /**
+     * Convert string to lower case.
+     * */
+    open fun mkStringToLowerNoSimplify(arg: KExpr<KStringSort>): KStringToLowerExpr =
+        stringToLowerExprCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KStringToLowerExpr(this, arg)
+        }
+
+    private val stringToUpperExprCache = mkAstInterner<KStringToUpperExpr>()
+
+    /**
+     * Convert string to upper case.
+     * */
+    open fun mkStringToUpper(arg: KExpr<KStringSort>): KExpr<KStringSort> =
+        mkSimplified(arg, KContext::mkStringToUpperNoSimplify, ::mkStringToUpperNoSimplify) // Add simplified version
+
+    /**
+     * Convert string to upper case.
+     * */
+    open fun mkStringToUpperNoSimplify(arg: KExpr<KStringSort>): KStringToUpperExpr =
+        stringToUpperExprCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KStringToUpperExpr(this, arg)
+        }
+
+    private val stringReverseExprCache = mkAstInterner<KStringReverseExpr>()
+
+    /**
+     * Reverse string.
+     * */
+    open fun mkStringReverse(arg: KExpr<KStringSort>): KExpr<KStringSort> =
+        mkSimplified(arg, KContext::mkStringReverseNoSimplify, ::mkStringReverseNoSimplify) // Add simplified version
+
+    /**
+     * Reverse string.
+     * */
+    open fun mkStringReverseNoSimplify(arg: KExpr<KStringSort>): KStringReverseExpr =
+        stringReverseExprCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KStringReverseExpr(this, arg)
         }
 
     private val stringIsDigitCache = mkAstInterner<KStringIsDigitExpr>()
@@ -5249,6 +5329,8 @@ open class KContext(
 
     fun mkStringIndexOfDecl(): KStringIndexOfDecl = KStringIndexOfDecl(this)
 
+    fun mkStringIndexOfRegexDecl(): KStringIndexOfRegexDecl = KStringIndexOfRegexDecl(this)
+
     fun mkStringReplaceDecl(): KStringReplaceDecl = KStringReplaceDecl(this)
 
     fun mkStringReplaceAllDecl(): KStringReplaceAllDecl = KStringReplaceAllDecl(this)
@@ -5256,6 +5338,12 @@ open class KContext(
     fun mkStringReplaceWithRegexDecl(): KStringReplaceWithRegexDecl = KStringReplaceWithRegexDecl(this)
 
     fun mkStringReplaceAllWithRegexDecl(): KStringReplaceAllWithRegexDecl = KStringReplaceAllWithRegexDecl(this)
+
+    fun mkStringToLowerDecl(): KStringToLowerDecl = KStringToLowerDecl(this)
+
+    fun mkStringToUpperDecl(): KStringToUpperDecl = KStringToUpperDecl(this)
+
+    fun mkStringReverseDecl(): KStringReverseDecl = KStringReverseDecl(this)
 
     fun mkStringIsDigitDecl(): KStringIsDigitDecl = KStringIsDigitDecl(this)
 

@@ -164,10 +164,14 @@ import io.ksmt.expr.KStringContainsExpr
 import io.ksmt.expr.KStringSingletonSubExpr
 import io.ksmt.expr.KStringSubExpr
 import io.ksmt.expr.KStringIndexOfExpr
+import io.ksmt.expr.KStringIndexOfRegexExpr
 import io.ksmt.expr.KStringReplaceExpr
 import io.ksmt.expr.KStringReplaceAllExpr
 import io.ksmt.expr.KStringReplaceWithRegexExpr
 import io.ksmt.expr.KStringReplaceAllWithRegexExpr
+import io.ksmt.expr.KStringToLowerExpr
+import io.ksmt.expr.KStringToUpperExpr
+import io.ksmt.expr.KStringReverseExpr
 import io.ksmt.expr.KStringIsDigitExpr
 import io.ksmt.expr.KStringToCodeExpr
 import io.ksmt.expr.KStringFromCodeExpr
@@ -465,10 +469,14 @@ interface KTransformer : KTransformerBase {
     override fun transform(expr: KStringSingletonSubExpr): KExpr<KStringSort> = transformApp(expr)
     override fun transform(expr: KStringSubExpr): KExpr<KStringSort> = transformApp(expr)
     override fun transform(expr: KStringIndexOfExpr): KExpr<KIntSort> = transformApp(expr)
+    override fun transform(expr: KStringIndexOfRegexExpr): KExpr<KIntSort> = transformApp(expr)
     override fun transform(expr: KStringReplaceExpr): KExpr<KStringSort> = transformApp(expr)
     override fun transform(expr: KStringReplaceAllExpr): KExpr<KStringSort> = transformApp(expr)
     override fun transform(expr: KStringReplaceWithRegexExpr): KExpr<KStringSort> = transformApp(expr)
     override fun transform(expr: KStringReplaceAllWithRegexExpr): KExpr<KStringSort> = transformApp(expr)
+    override fun transform(expr: KStringToLowerExpr): KExpr<KStringSort> = transformApp(expr)
+    override fun transform(expr: KStringToUpperExpr): KExpr<KStringSort> = transformApp(expr)
+    override fun transform(expr: KStringReverseExpr): KExpr<KStringSort> = transformApp(expr)
     override fun transform(expr: KStringIsDigitExpr): KExpr<KBoolSort> = transformApp(expr)
     override fun transform(expr: KStringToCodeExpr): KExpr<KIntSort> = transformApp(expr)
     override fun transform(expr: KStringFromCodeExpr): KExpr<KStringSort> = transformApp(expr)

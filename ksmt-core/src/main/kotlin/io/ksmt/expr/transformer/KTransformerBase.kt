@@ -155,10 +155,14 @@ import io.ksmt.expr.KStringContainsExpr
 import io.ksmt.expr.KStringSingletonSubExpr
 import io.ksmt.expr.KStringSubExpr
 import io.ksmt.expr.KStringIndexOfExpr
+import io.ksmt.expr.KStringIndexOfRegexExpr
 import io.ksmt.expr.KStringReplaceExpr
 import io.ksmt.expr.KStringReplaceAllExpr
 import io.ksmt.expr.KStringReplaceWithRegexExpr
 import io.ksmt.expr.KStringReplaceAllWithRegexExpr
+import io.ksmt.expr.KStringToLowerExpr
+import io.ksmt.expr.KStringToUpperExpr
+import io.ksmt.expr.KStringReverseExpr
 import io.ksmt.expr.KStringIsDigitExpr
 import io.ksmt.expr.KStringToCodeExpr
 import io.ksmt.expr.KStringFromCodeExpr
@@ -393,10 +397,14 @@ interface KTransformerBase {
     fun transform(expr: KStringSingletonSubExpr): KExpr<KStringSort>
     fun transform(expr: KStringSubExpr): KExpr<KStringSort>
     fun transform(expr: KStringIndexOfExpr): KExpr<KIntSort>
+    fun transform(expr: KStringIndexOfRegexExpr): KExpr<KIntSort>
     fun transform(expr: KStringReplaceExpr): KExpr<KStringSort>
     fun transform(expr: KStringReplaceAllExpr): KExpr<KStringSort>
     fun transform(expr: KStringReplaceWithRegexExpr): KExpr<KStringSort>
     fun transform(expr: KStringReplaceAllWithRegexExpr): KExpr<KStringSort>
+    fun transform(expr: KStringToLowerExpr): KExpr<KStringSort>
+    fun transform(expr: KStringToUpperExpr): KExpr<KStringSort>
+    fun transform(expr: KStringReverseExpr): KExpr<KStringSort>
     fun transform(expr: KStringIsDigitExpr): KExpr<KBoolSort>
     fun transform(expr: KStringToCodeExpr): KExpr<KIntSort>
     fun transform(expr: KStringFromCodeExpr): KExpr<KStringSort>

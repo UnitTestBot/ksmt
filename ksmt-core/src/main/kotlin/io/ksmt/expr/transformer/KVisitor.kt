@@ -163,10 +163,14 @@ import io.ksmt.expr.KStringContainsExpr
 import io.ksmt.expr.KStringSingletonSubExpr
 import io.ksmt.expr.KStringSubExpr
 import io.ksmt.expr.KStringIndexOfExpr
+import io.ksmt.expr.KStringIndexOfRegexExpr
 import io.ksmt.expr.KStringReplaceExpr
 import io.ksmt.expr.KStringReplaceAllExpr
 import io.ksmt.expr.KStringReplaceWithRegexExpr
 import io.ksmt.expr.KStringReplaceAllWithRegexExpr
+import io.ksmt.expr.KStringToLowerExpr
+import io.ksmt.expr.KStringToUpperExpr
+import io.ksmt.expr.KStringReverseExpr
 import io.ksmt.expr.KStringIsDigitExpr
 import io.ksmt.expr.KStringToCodeExpr
 import io.ksmt.expr.KStringFromCodeExpr
@@ -667,10 +671,14 @@ interface KVisitor<V> : KTransformer {
     fun visit(expr: KStringSingletonSubExpr): V = visitApp(expr)
     fun visit(expr: KStringSubExpr): V = visitApp(expr)
     fun visit(expr: KStringIndexOfExpr): V = visitApp(expr)
+    fun visit(expr: KStringIndexOfRegexExpr): V = visitApp(expr)
     fun visit(expr: KStringReplaceExpr): V = visitApp(expr)
     fun visit(expr: KStringReplaceAllExpr): V = visitApp(expr)
     fun visit(expr: KStringReplaceWithRegexExpr): V = visitApp(expr)
     fun visit(expr: KStringReplaceAllWithRegexExpr): V = visitApp(expr)
+    fun visit(expr: KStringToLowerExpr): V = visitApp(expr)
+    fun visit(expr: KStringToUpperExpr): V = visitApp(expr)
+    fun visit(expr: KStringReverseExpr): V = visitApp(expr)
     fun visit(expr: KStringIsDigitExpr): V = visitApp(expr)
     fun visit(expr: KStringToCodeExpr): V = visitApp(expr)
     fun visit(expr: KStringFromCodeExpr): V = visitApp(expr)
@@ -692,10 +700,14 @@ interface KVisitor<V> : KTransformer {
     override fun transform(expr: KStringSingletonSubExpr): KExpr<KStringSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringSubExpr): KExpr<KStringSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringIndexOfExpr): KExpr<KIntSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KStringIndexOfRegexExpr): KExpr<KIntSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringReplaceExpr): KExpr<KStringSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringReplaceAllExpr): KExpr<KStringSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringReplaceWithRegexExpr): KExpr<KStringSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringReplaceAllWithRegexExpr): KExpr<KStringSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KStringToLowerExpr): KExpr<KStringSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KStringToUpperExpr): KExpr<KStringSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KStringReverseExpr): KExpr<KStringSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringIsDigitExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringToCodeExpr): KExpr<KIntSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringFromCodeExpr): KExpr<KStringSort> = visitExpr(expr, ::visit)

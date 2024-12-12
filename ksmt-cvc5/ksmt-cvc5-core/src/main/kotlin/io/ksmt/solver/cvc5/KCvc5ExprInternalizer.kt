@@ -169,10 +169,14 @@ import io.ksmt.expr.KStringContainsExpr
 import io.ksmt.expr.KStringSingletonSubExpr
 import io.ksmt.expr.KStringSubExpr
 import io.ksmt.expr.KStringIndexOfExpr
+import io.ksmt.expr.KStringIndexOfRegexExpr
 import io.ksmt.expr.KStringReplaceExpr
 import io.ksmt.expr.KStringReplaceAllExpr
 import io.ksmt.expr.KStringReplaceWithRegexExpr
 import io.ksmt.expr.KStringReplaceAllWithRegexExpr
+import io.ksmt.expr.KStringToLowerExpr
+import io.ksmt.expr.KStringToUpperExpr
+import io.ksmt.expr.KStringReverseExpr
 import io.ksmt.expr.KStringIsDigitExpr
 import io.ksmt.expr.KStringToCodeExpr
 import io.ksmt.expr.KStringFromCodeExpr
@@ -1264,6 +1268,12 @@ class KCvc5ExprInternalizer(
         }
     }
 
+    override fun transform(expr: KStringIndexOfRegexExpr) = with(expr) {
+        transform(arg0, arg1, arg2) { arg0: Term, arg1: Term, arg2: Term ->
+            tm.mkTerm(Kind.STRING_INDEXOF_RE, arg0, arg1, arg2)
+        }
+    }
+
     override fun transform(expr: KStringReplaceExpr) = with(expr) {
         transform(arg0, arg1, arg2) { arg0: Term, arg1: Term, arg2: Term ->
             tm.mkTerm(Kind.STRING_REPLACE, arg0, arg1, arg2)
@@ -1285,6 +1295,24 @@ class KCvc5ExprInternalizer(
     override fun transform(expr: KStringReplaceAllWithRegexExpr) = with(expr) {
         transform(arg0, arg1, arg2) { arg0: Term, arg1: Term, arg2: Term ->
             tm.mkTerm(Kind.STRING_REPLACE_RE_ALL, arg0, arg1, arg2)
+        }
+    }
+
+    override fun transform(expr: KStringToLowerExpr) = with(expr) {
+        transform(arg) { arg: Term ->
+            tm.mkTerm(Kind.STRING_TO_LOWER, arg)
+        }
+    }
+
+    override fun transform(expr: KStringToUpperExpr) = with(expr) {
+        transform(arg) { arg: Term ->
+            tm.mkTerm(Kind.STRING_TO_UPPER, arg)
+        }
+    }
+
+    override fun transform(expr: KStringReverseExpr) = with(expr) {
+        transform(arg) { arg: Term ->
+            tm.mkTerm(Kind.STRING_REV, arg)
         }
     }
 

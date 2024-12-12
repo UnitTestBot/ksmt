@@ -17,10 +17,14 @@ import io.ksmt.decl.KStringContainsDecl
 import io.ksmt.decl.KStringSingletonSubDecl
 import io.ksmt.decl.KStringSubDecl
 import io.ksmt.decl.KStringIndexOfDecl
+import io.ksmt.decl.KStringIndexOfRegexDecl
 import io.ksmt.decl.KStringReplaceDecl
 import io.ksmt.decl.KStringReplaceAllDecl
 import io.ksmt.decl.KStringReplaceWithRegexDecl
 import io.ksmt.decl.KStringReplaceAllWithRegexDecl
+import io.ksmt.decl.KStringToLowerDecl
+import io.ksmt.decl.KStringToUpperDecl
+import io.ksmt.decl.KStringReverseDecl
 import io.ksmt.decl.KStringIsDigitDecl
 import io.ksmt.decl.KStringToCodeDecl
 import io.ksmt.decl.KStringFromCodeDecl
@@ -330,6 +334,28 @@ class KStringIndexOfExpr internal constructor(
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg0 }, { arg1 }, { arg2 })
 }
 
+class KStringIndexOfRegexExpr internal constructor(
+    ctx: KContext,
+    val arg0: KExpr<KStringSort>,
+    val arg1: KExpr<KRegexSort>,
+    val arg2: KExpr<KIntSort>
+) : KApp<KIntSort, KSort>(ctx) {
+    override val sort: KIntSort
+        get() = ctx.intSort
+
+    override val args: List<KExpr<KSort>>
+        get() = listOf(arg0.cast(), arg1.cast(), arg2.cast())
+
+    override val decl: KStringIndexOfRegexDecl
+        get() = ctx.mkStringIndexOfRegexDecl()
+
+    override fun accept(transformer: KTransformerBase): KExpr<KIntSort> =
+        transformer.transform(this)
+
+    override fun internHashCode(): Int = hash(arg0, arg1, arg2)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg0 }, { arg1 }, { arg2 })
+}
+
 class KStringReplaceExpr internal constructor(
     ctx: KContext,
     val arg0: KExpr<KStringSort>,
@@ -416,6 +442,66 @@ class KStringReplaceAllWithRegexExpr internal constructor(
 
     override fun internHashCode(): Int = hash(arg0, arg1, arg2)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg0 }, { arg1 }, { arg2 })
+}
+
+class KStringToLowerExpr internal constructor(
+    ctx: KContext,
+    val arg: KExpr<KStringSort>
+) : KApp<KStringSort, KStringSort>(ctx) {
+    override val sort: KStringSort
+        get() = ctx.stringSort
+
+    override val args: List<KExpr<KStringSort>>
+        get() = listOf(arg)
+
+    override val decl: KStringToLowerDecl
+        get() = ctx.mkStringToLowerDecl()
+
+    override fun accept(transformer: KTransformerBase): KExpr<KStringSort> =
+        transformer.transform(this)
+
+    override fun internHashCode(): Int = hash(arg)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
+}
+
+class KStringToUpperExpr internal constructor(
+    ctx: KContext,
+    val arg: KExpr<KStringSort>
+) : KApp<KStringSort, KStringSort>(ctx) {
+    override val sort: KStringSort
+        get() = ctx.stringSort
+
+    override val args: List<KExpr<KStringSort>>
+        get() = listOf(arg)
+
+    override val decl: KStringToUpperDecl
+        get() = ctx.mkStringToUpperDecl()
+
+    override fun accept(transformer: KTransformerBase): KExpr<KStringSort> =
+        transformer.transform(this)
+
+    override fun internHashCode(): Int = hash(arg)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
+}
+
+class KStringReverseExpr internal constructor(
+    ctx: KContext,
+    val arg: KExpr<KStringSort>
+) : KApp<KStringSort, KStringSort>(ctx) {
+    override val sort: KStringSort
+        get() = ctx.stringSort
+
+    override val args: List<KExpr<KStringSort>>
+        get() = listOf(arg)
+
+    override val decl: KStringReverseDecl
+        get() = ctx.mkStringReverseDecl()
+
+    override fun accept(transformer: KTransformerBase): KExpr<KStringSort> =
+        transformer.transform(this)
+
+    override fun internHashCode(): Int = hash(arg)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
 }
 
 /*
@@ -521,6 +607,10 @@ class KStringFromIntExpr internal constructor(
     override fun internHashCode(): Int = hash(arg)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { arg }
 }
+
+/*
+    Literals
+ */
 
 class KStringLiteralExpr internal constructor(
     ctx: KContext,

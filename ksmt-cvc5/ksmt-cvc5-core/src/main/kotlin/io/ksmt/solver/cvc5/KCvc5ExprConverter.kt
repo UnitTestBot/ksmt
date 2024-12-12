@@ -401,20 +401,12 @@ open class KCvc5ExprConverter(
             Kind.STRING_FROM_CODE -> expr.convert(::mkStringFromCode)
             Kind.STRING_TO_INT -> expr.convert(::mkStringToInt)
             Kind.STRING_FROM_INT -> expr.convert(::mkStringFromInt)
+            Kind.STRING_INDEXOF_RE -> expr.convert(::mkStringIndexOfRegex)
+            Kind.STRING_TO_LOWER -> expr.convert(::mkStringToLower)
+            Kind.STRING_TO_UPPER -> expr.convert(::mkStringToUpper)
+            Kind.STRING_REV -> expr.convert(::mkStringReverse)
             Kind.STRING_UPDATE -> throw KSolverUnsupportedFeatureException(
                 "No direct mapping of ${Kind.STRING_UPDATE} in ksmt"
-            )
-            Kind.STRING_INDEXOF_RE -> throw KSolverUnsupportedFeatureException(
-                "No direct mapping of ${Kind.STRING_INDEXOF_RE} in ksmt"
-            )
-            Kind.STRING_TO_LOWER -> throw KSolverUnsupportedFeatureException(
-                "No direct mapping of ${Kind.STRING_TO_LOWER} in ksmt"
-            )
-            Kind.STRING_TO_UPPER -> throw KSolverUnsupportedFeatureException(
-                "No direct mapping of ${Kind.STRING_TO_UPPER} in ksmt"
-            )
-            Kind.STRING_REV -> throw KSolverUnsupportedFeatureException(
-                "No direct mapping of ${Kind.STRING_REV} in ksmt"
             )
 
             // regex

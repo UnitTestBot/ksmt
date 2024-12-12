@@ -138,10 +138,14 @@ import io.ksmt.expr.KStringContainsExpr
 import io.ksmt.expr.KStringSingletonSubExpr
 import io.ksmt.expr.KStringSubExpr
 import io.ksmt.expr.KStringIndexOfExpr
+import io.ksmt.expr.KStringIndexOfRegexExpr
 import io.ksmt.expr.KStringReplaceExpr
 import io.ksmt.expr.KStringReplaceAllExpr
 import io.ksmt.expr.KStringReplaceWithRegexExpr
 import io.ksmt.expr.KStringReplaceAllWithRegexExpr
+import io.ksmt.expr.KStringToLowerExpr
+import io.ksmt.expr.KStringToUpperExpr
+import io.ksmt.expr.KStringReverseExpr
 import io.ksmt.expr.KStringIsDigitExpr
 import io.ksmt.expr.KStringToCodeExpr
 import io.ksmt.expr.KStringFromCodeExpr
@@ -704,6 +708,9 @@ abstract class KNonRecursiveVisitor<V : Any>(
     override fun visit(expr: KStringIndexOfExpr): KExprVisitResult<V> =
         visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, expr.arg2, ::visitApp)
 
+    override fun visit(expr: KStringIndexOfRegexExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, expr.arg2, ::visitApp)
+
     override fun visit(expr: KStringReplaceExpr): KExprVisitResult<V> =
         visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, expr.arg2, ::visitApp)
 
@@ -715,6 +722,15 @@ abstract class KNonRecursiveVisitor<V : Any>(
 
     override fun visit(expr: KStringReplaceAllWithRegexExpr): KExprVisitResult<V> =
         visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, expr.arg2, ::visitApp)
+
+    override fun visit(expr: KStringToLowerExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg, ::visitApp)
+
+    override fun visit(expr: KStringToUpperExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg, ::visitApp)
+
+    override fun visit(expr: KStringReverseExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg, ::visitApp)
 
     override fun visit(expr: KStringIsDigitExpr): KExprVisitResult<V> =
         visitExprAfterVisitedDefault(expr, expr.arg, ::visitApp)
