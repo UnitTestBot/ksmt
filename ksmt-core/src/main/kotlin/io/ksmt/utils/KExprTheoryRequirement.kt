@@ -18,6 +18,7 @@ import io.ksmt.solver.KTheory.LRA
 import io.ksmt.solver.KTheory.NIA
 import io.ksmt.solver.KTheory.NRA
 import io.ksmt.solver.KTheory.UF
+import io.ksmt.solver.KTheory.S
 import io.ksmt.sort.KSortVisitor
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KBoolSort
@@ -93,11 +94,11 @@ class KExprTheoryRequirement(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         }
 
         override fun visit(sort: KStringSort) {
-            TODO("Not yet implemented")
+            usedTheories += S
         }
 
         override fun visit(sort: KRegexSort) {
-            TODO("Not yet implemented")
+            usedTheories += S
         }
 
         override fun <S : KBvSort> visit(sort: S) {
