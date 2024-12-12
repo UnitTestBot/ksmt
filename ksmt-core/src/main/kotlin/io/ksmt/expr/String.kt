@@ -27,6 +27,7 @@ import io.ksmt.decl.KStringFromCodeDecl
 import io.ksmt.decl.KStringToIntDecl
 import io.ksmt.decl.KStringFromIntDecl
 import io.ksmt.decl.KStringLiteralDecl
+import io.ksmt.expr.printer.ExpressionPrinter
 import io.ksmt.expr.transformer.KTransformerBase
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KBoolSort
@@ -533,6 +534,8 @@ class KStringLiteralExpr internal constructor(
 
     override fun accept(transformer: KTransformerBase): KExpr<KStringSort> =
         transformer.transform(this)
+
+    override fun print(printer: ExpressionPrinter) = with(printer) { append("\"$value\"") }
 
     override fun internHashCode(): Int = hash(value)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other) { value }

@@ -431,10 +431,10 @@ open class KCvc5ExprConverter(
             Kind.REGEXP_ALLCHAR -> convert { mkRegexAllChar() }
             Kind.REGEXP_RANGE -> expr.convert(::mkRegexRange)
             Kind.REGEXP_REPEAT -> throw KSolverUnsupportedFeatureException(
-                "No direct mapping of ${Kind.STRING_REV} in ksmt"
+                "No direct mapping of ${Kind.REGEXP_REPEAT} in ksmt"
             )
             Kind.REGEXP_LOOP -> throw KSolverUnsupportedFeatureException(
-                "No direct mapping of ${Kind.STRING_REV} in ksmt"
+                "No direct mapping of ${Kind.REGEXP_LOOP} in ksmt"
             )
 
             Kind.EQ_RANGE -> throw KSolverUnsupportedFeatureException("EQ_RANGE is not supported")
