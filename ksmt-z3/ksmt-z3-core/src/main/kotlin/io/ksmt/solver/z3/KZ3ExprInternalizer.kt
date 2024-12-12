@@ -149,6 +149,42 @@ import io.ksmt.expr.KUnaryMinusArithExpr
 import io.ksmt.expr.KUninterpretedSortValue
 import io.ksmt.expr.KUniversalQuantifier
 import io.ksmt.expr.KXorExpr
+import io.ksmt.expr.KStringConcatExpr
+import io.ksmt.expr.KStringLenExpr
+import io.ksmt.expr.KStringToRegexExpr
+import io.ksmt.expr.KStringInRegexExpr
+import io.ksmt.expr.KStringSuffixOfExpr
+import io.ksmt.expr.KStringPrefixOfExpr
+import io.ksmt.expr.KStringLtExpr
+import io.ksmt.expr.KStringLeExpr
+import io.ksmt.expr.KStringGtExpr
+import io.ksmt.expr.KStringGeExpr
+import io.ksmt.expr.KStringContainsExpr
+import io.ksmt.expr.KStringSingletonSubExpr
+import io.ksmt.expr.KStringSubExpr
+import io.ksmt.expr.KStringIndexOfExpr
+import io.ksmt.expr.KStringReplaceExpr
+import io.ksmt.expr.KStringReplaceAllExpr
+import io.ksmt.expr.KStringReplaceWithRegexExpr
+import io.ksmt.expr.KStringReplaceAllWithRegexExpr
+import io.ksmt.expr.KStringIsDigitExpr
+import io.ksmt.expr.KStringToCodeExpr
+import io.ksmt.expr.KStringFromCodeExpr
+import io.ksmt.expr.KStringToIntExpr
+import io.ksmt.expr.KStringFromIntExpr
+import io.ksmt.expr.KStringLiteralExpr
+import io.ksmt.expr.KRegexConcatExpr
+import io.ksmt.expr.KRegexUnionExpr
+import io.ksmt.expr.KRegexIntersectionExpr
+import io.ksmt.expr.KRegexStarExpr
+import io.ksmt.expr.KRegexCrossExpr
+import io.ksmt.expr.KRegexDifferenceExpr
+import io.ksmt.expr.KRegexComplementExpr
+import io.ksmt.expr.KRegexOptionExpr
+import io.ksmt.expr.KRegexRangeExpr
+import io.ksmt.expr.KRegexEpsilon
+import io.ksmt.expr.KRegexAll
+import io.ksmt.expr.KRegexAllChar
 import io.ksmt.solver.util.KExprLongInternalizerBase
 import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KArray2Sort
@@ -823,6 +859,216 @@ open class KZ3ExprInternalizer(
                 z3InternCtx.releaseTemporaryAst(realDenominator)
             }
         }
+    }
+
+    // strings
+    override fun transform(expr: KStringConcatExpr) = with(expr) {
+        transform(arg0, arg1) { arg0, arg1 ->
+            Native.mkSeqConcat(nCtx, 2, longArrayOf(arg0, arg1))
+        }
+    }
+
+    override fun transform(expr: KStringLenExpr) = with(expr) {
+        transform(arg) { arg ->
+            Native.mkSeqLength(nCtx, arg)
+        }
+    }
+
+    override fun transform(expr: KStringToRegexExpr) = with(expr) {
+        transform(arg) { arg ->
+            Native.mkSeqToRe(nCtx, arg)
+        }
+    }
+
+    override fun transform(expr: KStringInRegexExpr) = with(expr) {
+        transform(arg0, arg1) { arg0, arg1 ->
+            Native.mkSeqInRe(nCtx, arg0, arg1)
+        }
+    }
+
+    override fun transform(expr: KStringSuffixOfExpr) = with(expr) {
+        transform(arg0, arg1) { arg0, arg1 ->
+            Native.mkSeqSuffix(nCtx, arg0, arg1)
+        }
+    }
+
+    override fun transform(expr: KStringPrefixOfExpr) = with(expr) {
+        transform(arg0, arg1) { arg0, arg1 ->
+            Native.mkSeqPrefix(nCtx, arg0, arg1)
+        }
+    }
+
+    override fun transform(expr: KStringLtExpr) = with(expr) {
+        transform(arg0, arg1) { arg0, arg1 ->
+            Native.mkStrLt(nCtx, arg0, arg1)
+        }
+    }
+
+    override fun transform(expr: KStringLeExpr) = with(expr) {
+        transform(arg0, arg1) { arg0, arg1 ->
+            Native.mkStrLe(nCtx, arg0, arg1)
+        }
+    }
+
+    override fun transform(expr: KStringGtExpr) = with(expr) {
+        transform(arg0, arg1) { arg0, arg1 ->
+            Native.mkStrLt(nCtx, arg1, arg0)
+        }
+    }
+
+    override fun transform(expr: KStringGeExpr) = with(expr) {
+        transform(arg0, arg1) { arg0, arg1 ->
+            Native.mkStrLe(nCtx, arg1, arg0)
+        }
+    }
+
+    override fun transform(expr: KStringContainsExpr) = with(expr) {
+        transform(arg0, arg1) { arg0, arg1 ->
+            Native.mkSeqContains(nCtx, arg0, arg1)
+        }
+    }
+
+    override fun transform(expr: KStringSingletonSubExpr) = with(expr) {
+        transform(arg0, arg1) { arg0, arg1 ->
+            Native.mkSeqAt(nCtx, arg0, arg1)
+        }
+    }
+
+    override fun transform(expr: KStringSubExpr) = with(expr) {
+        transform(arg0, arg1, arg2) { arg0, arg1, arg2 ->
+            TODO("Not yet implemented")
+        }
+    }
+
+    override fun transform(expr: KStringIndexOfExpr) = with(expr) {
+        transform(arg0, arg1, arg2) { arg0, arg1, arg2 ->
+            Native.mkSeqIndex(nCtx, arg0, arg1, arg2)
+        }
+    }
+
+    override fun transform(expr: KStringReplaceExpr) = with(expr) {
+        transform(arg0, arg1, arg2) { arg0, arg1, arg2 ->
+            TODO("Not yet implemented")
+        }
+    }
+
+    override fun transform(expr: KStringReplaceAllExpr) = with(expr) {
+        transform(arg0, arg1, arg2) { arg0, arg1, arg2 ->
+            TODO("Not yet implemented")
+        }
+    }
+
+    override fun transform(expr: KStringReplaceWithRegexExpr) = with(expr) {
+        transform(arg0, arg1, arg2) { arg0, arg1, arg2 ->
+            TODO("Not yet implemented")
+        }
+    }
+
+    override fun transform(expr: KStringReplaceAllWithRegexExpr) = with(expr) {
+        transform(arg0, arg1, arg2) { arg0, arg1, arg2 ->
+            TODO("Not yet implemented")
+        }
+    }
+
+    override fun transform(expr: KStringIsDigitExpr) = with(expr) {
+        transform(arg) { arg ->
+            TODO("Not yet implemented")
+        }
+    }
+
+    override fun transform(expr: KStringToCodeExpr) = with(expr) {
+        transform(arg) { arg ->
+            Native.mkStringToCode(nCtx, arg)
+        }
+    }
+
+    override fun transform(expr: KStringFromCodeExpr) = with(expr) {
+        transform(arg) { arg ->
+            Native.mkStringFromCode(nCtx, arg)
+        }
+    }
+
+    override fun transform(expr: KStringToIntExpr) = with(expr) {
+        transform(arg) { arg ->
+            Native.mkStrToInt(nCtx, arg)
+        }
+    }
+
+    override fun transform(expr: KStringFromIntExpr) = with(expr) {
+        transform(arg) { arg ->
+            Native.mkIntToStr(nCtx, arg)
+        }
+    }
+
+    override fun transform(expr: KStringLiteralExpr) = with(expr) {
+        transform { Native.mkString(nCtx, value) }
+    }
+
+    // regex
+    override fun transform(expr: KRegexConcatExpr) = with(expr) {
+        transform(arg0, arg1) { arg0, arg1 ->
+            Native.mkReConcat(nCtx, 2, longArrayOf(arg0, arg1))
+        }
+    }
+
+    override fun transform(expr: KRegexUnionExpr) = with(expr) {
+        transform(arg0, arg1) { arg0, arg1 ->
+            Native.mkReUnion(nCtx, 2, longArrayOf(arg0, arg1))
+        }
+    }
+
+    override fun transform(expr: KRegexIntersectionExpr) = with(expr) {
+        transform(arg0, arg1) { arg0, arg1 ->
+            Native.mkReIntersect(nCtx, 2, longArrayOf(arg0, arg1))
+        }
+    }
+
+    override fun transform(expr: KRegexStarExpr) = with(expr) {
+        transform(arg) { arg ->
+            Native.mkReStar(nCtx, arg)
+        }
+    }
+
+    override fun transform(expr: KRegexCrossExpr) = with(expr) {
+        transform(arg) { arg ->
+            Native.mkRePlus(nCtx, arg)
+        }
+    }
+
+    override fun transform(expr: KRegexDifferenceExpr) = with(expr) {
+        transform(arg0, arg1) { arg0, arg1 ->
+            Native.mkReDiff(nCtx, arg0, arg1)
+        }
+    }
+
+    override fun transform(expr: KRegexComplementExpr) = with(expr) {
+        transform(arg) { arg ->
+            Native.mkReComplement(nCtx, arg)
+        }
+    }
+
+    override fun transform(expr: KRegexOptionExpr) = with(expr) {
+        transform(arg) { arg ->
+            Native.mkReOption(nCtx, arg)
+        }
+    }
+
+    override fun transform(expr: KRegexRangeExpr) = with(expr) {
+        transform(arg0, arg1) { arg0, arg1 ->
+            Native.mkReRange(nCtx, arg0, arg1)
+        }
+    }
+
+    override fun transform(expr: KRegexEpsilon) = with(expr) {
+        TODO("Not yet implemented")
+    }
+
+    override fun transform(expr: KRegexAll) = with(expr) {
+        TODO("Not yet implemented")
+    }
+
+    override fun transform(expr: KRegexAllChar) = with(expr) {
+        TODO("Not yet implemented")
     }
 
     private fun transformQuantifier(expr: KQuantifier, isUniversal: Boolean) = with(expr) {
