@@ -10,8 +10,8 @@ class KRegexConcatDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl2<KRegexSort, KRegexSort, KRegexSort>(
     ctx,
-    name = "regex_concat",
-    resultSort = ctx.mkRegexSort(),
+    "regex_concat",
+    ctx.mkRegexSort(),
     ctx.mkRegexSort(),
     ctx.mkRegexSort()
 ) {
@@ -27,8 +27,8 @@ class KRegexUnionDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl2<KRegexSort, KRegexSort, KRegexSort>(
     ctx,
-    name = "union",
-    resultSort = ctx.mkRegexSort(),
+    "regex_union",
+    ctx.mkRegexSort(),
     ctx.mkRegexSort(),
     ctx.mkRegexSort()
 ) {
@@ -44,8 +44,8 @@ class KRegexIntersectionDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl2<KRegexSort, KRegexSort, KRegexSort>(
     ctx,
-    name = "intersect",
-    resultSort = ctx.mkRegexSort(),
+    "regex_intersect",
+    ctx.mkRegexSort(),
     ctx.mkRegexSort(),
     ctx.mkRegexSort()
 ) {
@@ -57,26 +57,42 @@ class KRegexIntersectionDecl internal constructor(
     ): KApp<KRegexSort, *> = mkRegexIntersectionNoSimplify(arg0, arg1)
 }
 
-class KRegexKleeneClosureDecl internal constructor(
+class KRegexStarDecl internal constructor(
     ctx: KContext
-) : KFuncDecl1<KRegexSort, KRegexSort>(ctx, "closure", ctx.mkRegexSort(), ctx.mkRegexSort()) {
-    override fun KContext.apply(arg: KExpr<KRegexSort>): KApp<KRegexSort, KRegexSort> = mkRegexKleeneClosureNoSimplify(arg)
+) : KFuncDecl1<KRegexSort, KRegexSort>(
+    ctx,
+    "regex_star",
+    ctx.mkRegexSort(),
+    ctx.mkRegexSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg: KExpr<KRegexSort>
+    ): KApp<KRegexSort, KRegexSort> = mkRegexStarNoSimplify(arg)
 }
 
-class KRegexKleeneCrossDecl internal constructor(
+class KRegexCrossDecl internal constructor(
     ctx: KContext
-) : KFuncDecl1<KRegexSort, KRegexSort>(ctx, "kleene_cross", ctx.mkRegexSort(), ctx.mkRegexSort()) {
-    override fun KContext.apply(arg: KExpr<KRegexSort>): KApp<KRegexSort, KRegexSort> = mkRegexKleeneCrossNoSimplify(arg)
+) : KFuncDecl1<KRegexSort, KRegexSort>(
+    ctx,
+    "regex_cross",
+    ctx.mkRegexSort(),
+    ctx.mkRegexSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg: KExpr<KRegexSort>
+    ): KApp<KRegexSort, KRegexSort> = mkRegexCrossNoSimplify(arg)
 }
 
 class KRegexDifferenceDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl2<KRegexSort, KRegexSort, KRegexSort>(
     ctx,
-    name = "diff",
-    resultSort = ctx.mkRegexSort(),
+    "regex_diff",
+    ctx.mkRegexSort(),
     ctx.mkRegexSort(),
     ctx.mkRegexSort()
 ) {
@@ -90,24 +106,40 @@ class KRegexDifferenceDecl internal constructor(
 
 class KRegexComplementDecl internal constructor(
     ctx: KContext
-) : KFuncDecl1<KRegexSort, KRegexSort>(ctx, "comp", ctx.mkRegexSort(), ctx.mkRegexSort()) {
-    override fun KContext.apply(arg: KExpr<KRegexSort>): KApp<KRegexSort, KRegexSort> = mkRegexComplementNoSimplify(arg)
+) : KFuncDecl1<KRegexSort, KRegexSort>(
+    ctx,
+    "regex_comp",
+    ctx.mkRegexSort(),
+    ctx.mkRegexSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg: KExpr<KRegexSort>
+    ): KApp<KRegexSort, KRegexSort> = mkRegexComplementNoSimplify(arg)
 }
 
 class KRegexOptionDecl internal constructor(
     ctx: KContext
-) : KFuncDecl1<KRegexSort, KRegexSort>(ctx, "opt", ctx.mkRegexSort(), ctx.mkRegexSort()) {
-    override fun KContext.apply(arg: KExpr<KRegexSort>): KApp<KRegexSort, KRegexSort> = mkRegexOptionNoSimplify(arg)
+) : KFuncDecl1<KRegexSort, KRegexSort>(
+    ctx,
+    "regex_opt",
+    ctx.mkRegexSort(),
+    ctx.mkRegexSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg: KExpr<KRegexSort>
+    ): KApp<KRegexSort, KRegexSort> = mkRegexOptionNoSimplify(arg)
 }
 
-class KRangeDecl internal constructor(
+class KRegexRangeDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl2<KRegexSort, KStringSort, KStringSort>(
     ctx,
-    name = "range",
-    resultSort = ctx.mkRegexSort(),
+    "regex_range",
+    ctx.mkRegexSort(),
     ctx.mkStringSort(),
     ctx.mkStringSort()
 ) {
@@ -116,26 +148,47 @@ class KRangeDecl internal constructor(
     override fun KContext.apply(
         arg0: KExpr<KStringSort>,
         arg1: KExpr<KStringSort>
-    ): KApp<KRegexSort, *> = mkRangeNoSimplify(arg0, arg1)
+    ): KApp<KRegexSort, *> = mkRegexRangeNoSimplify(arg0, arg1)
 }
 
-class KEpsilonDecl internal constructor(
+class KRegexEpsilonDecl internal constructor(
     ctx: KContext
-) : KConstDecl<KRegexSort>(ctx, "eps", ctx.mkRegexSort()) {
-    override fun apply(args: List<KExpr<*>>): KApp<KRegexSort, *> = ctx.mkEpsilon()
+) : KConstDecl<KRegexSort>(
+    ctx,
+    "regex_eps",
+    ctx.mkRegexSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun apply(
+        args: List<KExpr<*>>
+    ): KApp<KRegexSort, *> = ctx.mkRegexEpsilon()
 }
 
-class KAllDecl internal constructor(
+class KRegexAllDecl internal constructor(
     ctx: KContext
-) : KConstDecl<KRegexSort>(ctx, "all", ctx.mkRegexSort()) {
-    override fun apply(args: List<KExpr<*>>): KApp<KRegexSort, *> = ctx.mkAll()
+) : KConstDecl<KRegexSort>(
+    ctx,
+    "regex_all",
+    ctx.mkRegexSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun apply(
+        args: List<KExpr<*>>
+    ): KApp<KRegexSort, *> = ctx.mkRegexAll()
 }
 
-class KAllCharDecl internal constructor(
+class KRegexAllCharDecl internal constructor(
     ctx: KContext
-) : KConstDecl<KRegexSort>(ctx, "all_char", ctx.mkRegexSort()) {
-    override fun apply(args: List<KExpr<*>>): KApp<KRegexSort, *> = ctx.mkAllChar()
+) : KConstDecl<KRegexSort>(
+    ctx,
+    "regex_all_char",
+    ctx.mkRegexSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun apply(
+        args: List<KExpr<*>>
+    ): KApp<KRegexSort, *> = ctx.mkRegexAllChar()
 }

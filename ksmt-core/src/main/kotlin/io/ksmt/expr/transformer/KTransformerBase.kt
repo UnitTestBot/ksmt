@@ -145,16 +145,16 @@ import io.ksmt.expr.KStringConcatExpr
 import io.ksmt.expr.KStringLenExpr
 import io.ksmt.expr.KStringToRegexExpr
 import io.ksmt.expr.KStringInRegexExpr
-import io.ksmt.expr.KSuffixOfExpr
-import io.ksmt.expr.KPrefixOfExpr
+import io.ksmt.expr.KStringSuffixOfExpr
+import io.ksmt.expr.KStringPrefixOfExpr
 import io.ksmt.expr.KStringLtExpr
 import io.ksmt.expr.KStringLeExpr
 import io.ksmt.expr.KStringGtExpr
 import io.ksmt.expr.KStringGeExpr
 import io.ksmt.expr.KStringContainsExpr
-import io.ksmt.expr.KSingletonSubstringExpr
-import io.ksmt.expr.KSubstringExpr
-import io.ksmt.expr.KIndexOfExpr
+import io.ksmt.expr.KStringSingletonSubExpr
+import io.ksmt.expr.KStringSubExpr
+import io.ksmt.expr.KStringIndexOfExpr
 import io.ksmt.expr.KStringReplaceExpr
 import io.ksmt.expr.KStringReplaceAllExpr
 import io.ksmt.expr.KStringReplaceWithRegexExpr
@@ -168,15 +168,15 @@ import io.ksmt.expr.KStringLiteralExpr
 import io.ksmt.expr.KRegexConcatExpr
 import io.ksmt.expr.KRegexUnionExpr
 import io.ksmt.expr.KRegexIntersectionExpr
-import io.ksmt.expr.KRegexKleeneClosureExpr
-import io.ksmt.expr.KRegexKleeneCrossExpr
+import io.ksmt.expr.KRegexStarExpr
+import io.ksmt.expr.KRegexCrossExpr
 import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KRegexOptionExpr
-import io.ksmt.expr.KRangeExpr
-import io.ksmt.expr.KEpsilon
-import io.ksmt.expr.KAll
-import io.ksmt.expr.KAllChar
+import io.ksmt.expr.KRegexRangeExpr
+import io.ksmt.expr.KRegexEpsilon
+import io.ksmt.expr.KRegexAll
+import io.ksmt.expr.KRegexAllChar
 import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KArray2Sort
 import io.ksmt.sort.KArray3Sort
@@ -383,16 +383,16 @@ interface KTransformerBase {
     fun transform(expr: KStringLenExpr): KExpr<KIntSort>
     fun transform(expr: KStringToRegexExpr): KExpr<KRegexSort>
     fun transform(expr: KStringInRegexExpr): KExpr<KBoolSort>
-    fun transform(expr: KSuffixOfExpr): KExpr<KBoolSort>
-    fun transform(expr: KPrefixOfExpr): KExpr<KBoolSort>
+    fun transform(expr: KStringSuffixOfExpr): KExpr<KBoolSort>
+    fun transform(expr: KStringPrefixOfExpr): KExpr<KBoolSort>
     fun transform(expr: KStringLtExpr): KExpr<KBoolSort>
     fun transform(expr: KStringLeExpr): KExpr<KBoolSort>
     fun transform(expr: KStringGtExpr): KExpr<KBoolSort>
     fun transform(expr: KStringGeExpr): KExpr<KBoolSort>
     fun transform(expr: KStringContainsExpr): KExpr<KBoolSort>
-    fun transform(expr: KSingletonSubstringExpr): KExpr<KStringSort>
-    fun transform(expr: KSubstringExpr): KExpr<KStringSort>
-    fun transform(expr: KIndexOfExpr): KExpr<KIntSort>
+    fun transform(expr: KStringSingletonSubExpr): KExpr<KStringSort>
+    fun transform(expr: KStringSubExpr): KExpr<KStringSort>
+    fun transform(expr: KStringIndexOfExpr): KExpr<KIntSort>
     fun transform(expr: KStringReplaceExpr): KExpr<KStringSort>
     fun transform(expr: KStringReplaceAllExpr): KExpr<KStringSort>
     fun transform(expr: KStringReplaceWithRegexExpr): KExpr<KStringSort>
@@ -408,15 +408,15 @@ interface KTransformerBase {
     fun transform(expr: KRegexConcatExpr): KExpr<KRegexSort>
     fun transform(expr: KRegexUnionExpr): KExpr<KRegexSort>
     fun transform(expr: KRegexIntersectionExpr): KExpr<KRegexSort>
-    fun transform(expr: KRegexKleeneClosureExpr): KExpr<KRegexSort>
-    fun transform(expr: KRegexKleeneCrossExpr): KExpr<KRegexSort>
+    fun transform(expr: KRegexStarExpr): KExpr<KRegexSort>
+    fun transform(expr: KRegexCrossExpr): KExpr<KRegexSort>
     fun transform(expr: KRegexDifferenceExpr): KExpr<KRegexSort>
     fun transform(expr: KRegexComplementExpr): KExpr<KRegexSort>
     fun transform(expr: KRegexOptionExpr): KExpr<KRegexSort>
-    fun transform(expr: KRangeExpr): KExpr<KRegexSort>
-    fun transform(expr: KEpsilon): KExpr<KRegexSort>
-    fun transform(expr: KAll): KExpr<KRegexSort>
-    fun transform(expr: KAllChar): KExpr<KRegexSort>
+    fun transform(expr: KRegexRangeExpr): KExpr<KRegexSort>
+    fun transform(expr: KRegexEpsilon): KExpr<KRegexSort>
+    fun transform(expr: KRegexAll): KExpr<KRegexSort>
+    fun transform(expr: KRegexAllChar): KExpr<KRegexSort>
 
     // quantifier transformers
     fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort>

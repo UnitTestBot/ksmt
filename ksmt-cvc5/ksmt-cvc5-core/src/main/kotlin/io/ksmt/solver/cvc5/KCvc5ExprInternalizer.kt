@@ -159,16 +159,16 @@ import io.ksmt.expr.KStringConcatExpr
 import io.ksmt.expr.KStringLenExpr
 import io.ksmt.expr.KStringToRegexExpr
 import io.ksmt.expr.KStringInRegexExpr
-import io.ksmt.expr.KSuffixOfExpr
-import io.ksmt.expr.KPrefixOfExpr
+import io.ksmt.expr.KStringSuffixOfExpr
+import io.ksmt.expr.KStringPrefixOfExpr
 import io.ksmt.expr.KStringLtExpr
 import io.ksmt.expr.KStringLeExpr
 import io.ksmt.expr.KStringGtExpr
 import io.ksmt.expr.KStringGeExpr
 import io.ksmt.expr.KStringContainsExpr
-import io.ksmt.expr.KSingletonSubstringExpr
-import io.ksmt.expr.KSubstringExpr
-import io.ksmt.expr.KIndexOfExpr
+import io.ksmt.expr.KStringSingletonSubExpr
+import io.ksmt.expr.KStringSubExpr
+import io.ksmt.expr.KStringIndexOfExpr
 import io.ksmt.expr.KStringReplaceExpr
 import io.ksmt.expr.KStringReplaceAllExpr
 import io.ksmt.expr.KStringReplaceWithRegexExpr
@@ -182,15 +182,15 @@ import io.ksmt.expr.KStringLiteralExpr
 import io.ksmt.expr.KRegexConcatExpr
 import io.ksmt.expr.KRegexUnionExpr
 import io.ksmt.expr.KRegexIntersectionExpr
-import io.ksmt.expr.KRegexKleeneClosureExpr
-import io.ksmt.expr.KRegexKleeneCrossExpr
+import io.ksmt.expr.KRegexStarExpr
+import io.ksmt.expr.KRegexCrossExpr
 import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KRegexOptionExpr
-import io.ksmt.expr.KRangeExpr
-import io.ksmt.expr.KEpsilon
-import io.ksmt.expr.KAll
-import io.ksmt.expr.KAllChar
+import io.ksmt.expr.KRegexRangeExpr
+import io.ksmt.expr.KRegexEpsilon
+import io.ksmt.expr.KRegexAll
+import io.ksmt.expr.KRegexAllChar
 import io.ksmt.expr.rewrite.simplify.rewriteBvAddNoOverflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvAddNoUnderflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvDivNoOverflowExpr
@@ -1204,61 +1204,61 @@ class KCvc5ExprInternalizer(
         }
     }
 
-    override fun transform(expr: KSuffixOfExpr) = with(expr) {
+    override fun transform(expr: KStringSuffixOfExpr) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
             tm.mkTerm(Kind.STRING_SUFFIX, arg0, arg1)
         }
     }
 
-    override fun transform(expr: KPrefixOfExpr) = with(expr) {
+    override fun transform(expr: KStringPrefixOfExpr) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
             tm.mkTerm(Kind.STRING_PREFIX, arg0, arg1)
         }
     }
 
     override fun transform(expr: KStringLtExpr) = with(expr) {
-        transform(lhs, rhs) { lhs: Term, rhs: Term ->
-            tm.mkTerm(Kind.STRING_LT, lhs, rhs)
+        transform(arg0, arg1) { arg0: Term, arg1: Term ->
+            tm.mkTerm(Kind.STRING_LT, arg0, arg1)
         }
     }
 
     override fun transform(expr: KStringLeExpr) = with(expr) {
-        transform(lhs, rhs) { lhs: Term, rhs: Term ->
-            tm.mkTerm(Kind.STRING_LEQ, lhs, rhs)
+        transform(arg0, arg1) { arg0: Term, arg1: Term ->
+            tm.mkTerm(Kind.STRING_LEQ, arg0, arg1)
         }
     }
 
     override fun transform(expr: KStringGtExpr) = with(expr) {
-        transform(lhs, rhs) { lhs: Term, rhs: Term ->
-            tm.mkTerm(Kind.STRING_LT, rhs, lhs)
+        transform(arg0, arg1) { arg0: Term, arg1: Term ->
+            tm.mkTerm(Kind.STRING_LT, arg1, arg0)
         }
     }
 
     override fun transform(expr: KStringGeExpr) = with(expr) {
-        transform(lhs, rhs) { lhs: Term, rhs: Term ->
-            tm.mkTerm(Kind.STRING_LEQ, rhs, lhs)
+        transform(arg0, arg1) { arg0: Term, arg1: Term ->
+            tm.mkTerm(Kind.STRING_LEQ, arg1, arg0)
         }
     }
 
     override fun transform(expr: KStringContainsExpr) = with(expr) {
-        transform(lhs, rhs) { lhs: Term, rhs: Term ->
-            tm.mkTerm(Kind.STRING_CONTAINS, rhs, lhs)
+        transform(arg0, arg1) { arg0: Term, arg1: Term ->
+            tm.mkTerm(Kind.STRING_CONTAINS, arg0, arg1)
         }
     }
 
-    override fun transform(expr: KSingletonSubstringExpr) = with(expr) {
+    override fun transform(expr: KStringSingletonSubExpr) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
             tm.mkTerm(Kind.STRING_CHARAT, arg0, arg1)
         }
     }
 
-    override fun transform(expr: KSubstringExpr) = with(expr) {
+    override fun transform(expr: KStringSubExpr) = with(expr) {
         transform(arg0, arg1, arg2) { arg0: Term, arg1: Term, arg2: Term ->
             tm.mkTerm(Kind.STRING_SUBSTR, arg0, arg1, arg2)
         }
     }
 
-    override fun transform(expr: KIndexOfExpr) = with(expr) {
+    override fun transform(expr: KStringIndexOfExpr) = with(expr) {
         transform(arg0, arg1, arg2) { arg0: Term, arg1: Term, arg2: Term ->
             tm.mkTerm(Kind.STRING_INDEXOF, arg0, arg1, arg2)
         }
@@ -1341,13 +1341,13 @@ class KCvc5ExprInternalizer(
         }
     }
 
-    override fun transform(expr: KRegexKleeneClosureExpr) = with(expr) {
+    override fun transform(expr: KRegexStarExpr) = with(expr) {
         transform(arg) { arg: Term ->
             tm.mkTerm(Kind.REGEXP_STAR, arg)
         }
     }
 
-    override fun transform(expr: KRegexKleeneCrossExpr) = with(expr) {
+    override fun transform(expr: KRegexCrossExpr) = with(expr) {
         transform(arg) { arg: Term ->
             tm.mkTerm(Kind.REGEXP_PLUS, arg)
         }
@@ -1371,21 +1371,21 @@ class KCvc5ExprInternalizer(
         }
     }
 
-    override fun transform(expr: KRangeExpr) = with(expr) {
+    override fun transform(expr: KRegexRangeExpr) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
             tm.mkTerm(Kind.REGEXP_RANGE, arg0, arg1)
         }
     }
 
-    override fun transform(expr: KEpsilon) = with(expr) {
+    override fun transform(expr: KRegexEpsilon) = with(expr) {
         transform { tm.mkTerm(Kind.REGEXP_NONE) }
     }
 
-    override fun transform(expr: KAll) = with(expr) {
+    override fun transform(expr: KRegexAll) = with(expr) {
         transform { tm.mkTerm(Kind.REGEXP_ALL) }
     }
 
-    override fun transform(expr: KAllChar) = with(expr) {
+    override fun transform(expr: KRegexAllChar) = with(expr) {
         transform { tm.mkTerm(Kind.REGEXP_ALLCHAR) }
     }
 

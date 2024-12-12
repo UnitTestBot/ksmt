@@ -153,16 +153,16 @@ import io.ksmt.expr.KStringConcatExpr
 import io.ksmt.expr.KStringLenExpr
 import io.ksmt.expr.KStringToRegexExpr
 import io.ksmt.expr.KStringInRegexExpr
-import io.ksmt.expr.KSuffixOfExpr
-import io.ksmt.expr.KPrefixOfExpr
+import io.ksmt.expr.KStringSuffixOfExpr
+import io.ksmt.expr.KStringPrefixOfExpr
 import io.ksmt.expr.KStringLtExpr
 import io.ksmt.expr.KStringLeExpr
 import io.ksmt.expr.KStringGtExpr
 import io.ksmt.expr.KStringGeExpr
 import io.ksmt.expr.KStringContainsExpr
-import io.ksmt.expr.KSingletonSubstringExpr
-import io.ksmt.expr.KSubstringExpr
-import io.ksmt.expr.KIndexOfExpr
+import io.ksmt.expr.KStringSingletonSubExpr
+import io.ksmt.expr.KStringSubExpr
+import io.ksmt.expr.KStringIndexOfExpr
 import io.ksmt.expr.KStringReplaceExpr
 import io.ksmt.expr.KStringReplaceAllExpr
 import io.ksmt.expr.KStringReplaceWithRegexExpr
@@ -176,15 +176,15 @@ import io.ksmt.expr.KStringLiteralExpr
 import io.ksmt.expr.KRegexConcatExpr
 import io.ksmt.expr.KRegexUnionExpr
 import io.ksmt.expr.KRegexIntersectionExpr
-import io.ksmt.expr.KRegexKleeneClosureExpr
-import io.ksmt.expr.KRegexKleeneCrossExpr
+import io.ksmt.expr.KRegexStarExpr
+import io.ksmt.expr.KRegexCrossExpr
 import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KRegexOptionExpr
-import io.ksmt.expr.KRangeExpr
-import io.ksmt.expr.KEpsilon
-import io.ksmt.expr.KAll
-import io.ksmt.expr.KAllChar
+import io.ksmt.expr.KRegexRangeExpr
+import io.ksmt.expr.KRegexEpsilon
+import io.ksmt.expr.KRegexAll
+import io.ksmt.expr.KRegexAllChar
 import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KArray2Sort
 import io.ksmt.sort.KArray3Sort
@@ -657,16 +657,16 @@ interface KVisitor<V> : KTransformer {
     fun visit(expr: KStringLenExpr): V = visitApp(expr)
     fun visit(expr: KStringToRegexExpr): V = visitApp(expr)
     fun visit(expr: KStringInRegexExpr): V = visitApp(expr)
-    fun visit(expr: KSuffixOfExpr): V = visitApp(expr)
-    fun visit(expr: KPrefixOfExpr): V = visitApp(expr)
+    fun visit(expr: KStringSuffixOfExpr): V = visitApp(expr)
+    fun visit(expr: KStringPrefixOfExpr): V = visitApp(expr)
     fun visit(expr: KStringLtExpr): V = visitApp(expr)
     fun visit(expr: KStringLeExpr): V = visitApp(expr)
     fun visit(expr: KStringGtExpr): V = visitApp(expr)
     fun visit(expr: KStringGeExpr): V = visitApp(expr)
     fun visit(expr: KStringContainsExpr): V = visitApp(expr)
-    fun visit(expr: KSingletonSubstringExpr): V = visitApp(expr)
-    fun visit(expr: KSubstringExpr): V = visitApp(expr)
-    fun visit(expr: KIndexOfExpr): V = visitApp(expr)
+    fun visit(expr: KStringSingletonSubExpr): V = visitApp(expr)
+    fun visit(expr: KStringSubExpr): V = visitApp(expr)
+    fun visit(expr: KStringIndexOfExpr): V = visitApp(expr)
     fun visit(expr: KStringReplaceExpr): V = visitApp(expr)
     fun visit(expr: KStringReplaceAllExpr): V = visitApp(expr)
     fun visit(expr: KStringReplaceWithRegexExpr): V = visitApp(expr)
@@ -682,16 +682,16 @@ interface KVisitor<V> : KTransformer {
     override fun transform(expr: KStringLenExpr): KExpr<KIntSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringToRegexExpr): KExpr<KRegexSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringInRegexExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
-    override fun transform(expr: KSuffixOfExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
-    override fun transform(expr: KPrefixOfExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KStringSuffixOfExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KStringPrefixOfExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringLtExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringLeExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringGtExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringGeExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringContainsExpr): KExpr<KBoolSort> = visitExpr(expr, ::visit)
-    override fun transform(expr: KSingletonSubstringExpr): KExpr<KStringSort> = visitExpr(expr, ::visit)
-    override fun transform(expr: KSubstringExpr): KExpr<KStringSort> = visitExpr(expr, ::visit)
-    override fun transform(expr: KIndexOfExpr): KExpr<KIntSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KStringSingletonSubExpr): KExpr<KStringSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KStringSubExpr): KExpr<KStringSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KStringIndexOfExpr): KExpr<KIntSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringReplaceExpr): KExpr<KStringSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringReplaceAllExpr): KExpr<KStringSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KStringReplaceWithRegexExpr): KExpr<KStringSort> = visitExpr(expr, ::visit)
@@ -707,28 +707,28 @@ interface KVisitor<V> : KTransformer {
     fun visit(expr: KRegexConcatExpr): V = visitApp(expr)
     fun visit(expr: KRegexUnionExpr): V = visitApp(expr)
     fun visit(expr: KRegexIntersectionExpr): V = visitApp(expr)
-    fun visit(expr: KRegexKleeneClosureExpr): V = visitApp(expr)
-    fun visit(expr: KRegexKleeneCrossExpr): V = visitApp(expr)
+    fun visit(expr: KRegexStarExpr): V = visitApp(expr)
+    fun visit(expr: KRegexCrossExpr): V = visitApp(expr)
     fun visit(expr: KRegexDifferenceExpr): V = visitApp(expr)
     fun visit(expr: KRegexComplementExpr): V = visitApp(expr)
     fun visit(expr: KRegexOptionExpr): V = visitApp(expr)
-    fun visit(expr: KRangeExpr): V = visitApp(expr)
-    fun visit(expr: KEpsilon): V = visitValue(expr)
-    fun visit(expr: KAll): V = visitValue(expr)
-    fun visit(expr: KAllChar): V = visitValue(expr)
+    fun visit(expr: KRegexRangeExpr): V = visitApp(expr)
+    fun visit(expr: KRegexEpsilon): V = visitValue(expr)
+    fun visit(expr: KRegexAll): V = visitValue(expr)
+    fun visit(expr: KRegexAllChar): V = visitValue(expr)
 
     override fun transform(expr: KRegexConcatExpr): KExpr<KRegexSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KRegexUnionExpr): KExpr<KRegexSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KRegexIntersectionExpr): KExpr<KRegexSort> = visitExpr(expr, ::visit)
-    override fun transform(expr: KRegexKleeneClosureExpr): KExpr<KRegexSort> = visitExpr(expr, ::visit)
-    override fun transform(expr: KRegexKleeneCrossExpr): KExpr<KRegexSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KRegexStarExpr): KExpr<KRegexSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KRegexCrossExpr): KExpr<KRegexSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KRegexDifferenceExpr): KExpr<KRegexSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KRegexComplementExpr): KExpr<KRegexSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KRegexOptionExpr): KExpr<KRegexSort> = visitExpr(expr, ::visit)
-    override fun transform(expr: KRangeExpr): KExpr<KRegexSort> = visitExpr(expr, ::visit)
-    override fun transform(expr: KEpsilon): KExpr<KRegexSort> = visitExpr(expr, ::visit)
-    override fun transform(expr: KAll): KExpr<KRegexSort> = visitExpr(expr, ::visit)
-    override fun transform(expr: KAllChar): KExpr<KRegexSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KRegexRangeExpr): KExpr<KRegexSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KRegexEpsilon): KExpr<KRegexSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KRegexAll): KExpr<KRegexSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KRegexAllChar): KExpr<KRegexSort> = visitExpr(expr, ::visit)
 
     // quantifier visitors
     fun visit(expr: KExistentialQuantifier): V = visitExpr(expr)

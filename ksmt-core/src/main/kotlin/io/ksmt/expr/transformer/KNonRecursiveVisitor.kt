@@ -128,16 +128,16 @@ import io.ksmt.expr.KStringConcatExpr
 import io.ksmt.expr.KStringLenExpr
 import io.ksmt.expr.KStringToRegexExpr
 import io.ksmt.expr.KStringInRegexExpr
-import io.ksmt.expr.KSuffixOfExpr
-import io.ksmt.expr.KPrefixOfExpr
+import io.ksmt.expr.KStringSuffixOfExpr
+import io.ksmt.expr.KStringPrefixOfExpr
 import io.ksmt.expr.KStringLtExpr
 import io.ksmt.expr.KStringLeExpr
 import io.ksmt.expr.KStringGtExpr
 import io.ksmt.expr.KStringGeExpr
 import io.ksmt.expr.KStringContainsExpr
-import io.ksmt.expr.KSingletonSubstringExpr
-import io.ksmt.expr.KSubstringExpr
-import io.ksmt.expr.KIndexOfExpr
+import io.ksmt.expr.KStringSingletonSubExpr
+import io.ksmt.expr.KStringSubExpr
+import io.ksmt.expr.KStringIndexOfExpr
 import io.ksmt.expr.KStringReplaceExpr
 import io.ksmt.expr.KStringReplaceAllExpr
 import io.ksmt.expr.KStringReplaceWithRegexExpr
@@ -150,12 +150,12 @@ import io.ksmt.expr.KStringFromIntExpr
 import io.ksmt.expr.KRegexConcatExpr
 import io.ksmt.expr.KRegexUnionExpr
 import io.ksmt.expr.KRegexIntersectionExpr
-import io.ksmt.expr.KRegexKleeneClosureExpr
-import io.ksmt.expr.KRegexKleeneCrossExpr
+import io.ksmt.expr.KRegexStarExpr
+import io.ksmt.expr.KRegexCrossExpr
 import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KRegexOptionExpr
-import io.ksmt.expr.KRangeExpr
+import io.ksmt.expr.KRegexRangeExpr
 import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KArraySortBase
 import io.ksmt.sort.KBvSort
@@ -674,34 +674,34 @@ abstract class KNonRecursiveVisitor<V : Any>(
     override fun visit(expr: KStringInRegexExpr): KExprVisitResult<V> =
         visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, ::visitApp)
 
-    override fun visit(expr: KSuffixOfExpr): KExprVisitResult<V> =
+    override fun visit(expr: KStringSuffixOfExpr): KExprVisitResult<V> =
         visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, ::visitApp)
 
-    override fun visit(expr: KPrefixOfExpr): KExprVisitResult<V> =
+    override fun visit(expr: KStringPrefixOfExpr): KExprVisitResult<V> =
         visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, ::visitApp)
 
     override fun visit(expr: KStringLtExpr): KExprVisitResult<V> =
-        visitExprAfterVisitedDefault(expr, expr.lhs, expr.rhs, ::visitApp)
-
-    override fun visit(expr: KStringLeExpr): KExprVisitResult<V> =
-        visitExprAfterVisitedDefault(expr, expr.lhs, expr.rhs, ::visitApp)
-
-    override fun visit(expr: KStringGtExpr): KExprVisitResult<V> =
-        visitExprAfterVisitedDefault(expr, expr.lhs, expr.rhs, ::visitApp)
-
-    override fun visit(expr: KStringGeExpr): KExprVisitResult<V> =
-        visitExprAfterVisitedDefault(expr, expr.lhs, expr.rhs, ::visitApp)
-
-    override fun visit(expr: KStringContainsExpr): KExprVisitResult<V> =
-        visitExprAfterVisitedDefault(expr, expr.lhs, expr.rhs, ::visitApp)
-
-    override fun visit(expr: KSingletonSubstringExpr): KExprVisitResult<V> =
         visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, ::visitApp)
 
-    override fun visit(expr: KSubstringExpr): KExprVisitResult<V> =
+    override fun visit(expr: KStringLeExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, ::visitApp)
+
+    override fun visit(expr: KStringGtExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, ::visitApp)
+
+    override fun visit(expr: KStringGeExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, ::visitApp)
+
+    override fun visit(expr: KStringContainsExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, ::visitApp)
+
+    override fun visit(expr: KStringSingletonSubExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, ::visitApp)
+
+    override fun visit(expr: KStringSubExpr): KExprVisitResult<V> =
         visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, expr.arg2, ::visitApp)
 
-    override fun visit(expr: KIndexOfExpr): KExprVisitResult<V> =
+    override fun visit(expr: KStringIndexOfExpr): KExprVisitResult<V> =
         visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, expr.arg2, ::visitApp)
 
     override fun visit(expr: KStringReplaceExpr): KExprVisitResult<V> =
@@ -741,10 +741,10 @@ abstract class KNonRecursiveVisitor<V : Any>(
     override fun visit(expr: KRegexIntersectionExpr): KExprVisitResult<V> =
         visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, ::visitApp)
 
-    override fun visit(expr: KRegexKleeneClosureExpr): KExprVisitResult<V> =
+    override fun visit(expr: KRegexStarExpr): KExprVisitResult<V> =
         visitExprAfterVisitedDefault(expr, expr.arg, ::visitApp)
 
-    override fun visit(expr: KRegexKleeneCrossExpr): KExprVisitResult<V> =
+    override fun visit(expr: KRegexCrossExpr): KExprVisitResult<V> =
         visitExprAfterVisitedDefault(expr, expr.arg, ::visitApp)
 
     override fun visit(expr: KRegexDifferenceExpr): KExprVisitResult<V> =
@@ -756,7 +756,7 @@ abstract class KNonRecursiveVisitor<V : Any>(
     override fun visit(expr: KRegexOptionExpr): KExprVisitResult<V> =
         visitExprAfterVisitedDefault(expr, expr.arg, ::visitApp)
 
-    override fun visit(expr: KRangeExpr): KExprVisitResult<V> =
+    override fun visit(expr: KRegexRangeExpr): KExprVisitResult<V> =
         visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, ::visitApp)
 
     // quantified expressions

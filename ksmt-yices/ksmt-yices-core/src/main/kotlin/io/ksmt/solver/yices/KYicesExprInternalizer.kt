@@ -149,16 +149,16 @@ import io.ksmt.expr.KStringConcatExpr
 import io.ksmt.expr.KStringLenExpr
 import io.ksmt.expr.KStringToRegexExpr
 import io.ksmt.expr.KStringInRegexExpr
-import io.ksmt.expr.KSuffixOfExpr
-import io.ksmt.expr.KPrefixOfExpr
+import io.ksmt.expr.KStringSuffixOfExpr
+import io.ksmt.expr.KStringPrefixOfExpr
 import io.ksmt.expr.KStringLtExpr
 import io.ksmt.expr.KStringLeExpr
 import io.ksmt.expr.KStringGtExpr
 import io.ksmt.expr.KStringGeExpr
 import io.ksmt.expr.KStringContainsExpr
-import io.ksmt.expr.KSingletonSubstringExpr
-import io.ksmt.expr.KSubstringExpr
-import io.ksmt.expr.KIndexOfExpr
+import io.ksmt.expr.KStringSingletonSubExpr
+import io.ksmt.expr.KStringSubExpr
+import io.ksmt.expr.KStringIndexOfExpr
 import io.ksmt.expr.KStringReplaceExpr
 import io.ksmt.expr.KStringReplaceAllExpr
 import io.ksmt.expr.KStringReplaceWithRegexExpr
@@ -172,15 +172,15 @@ import io.ksmt.expr.KStringLiteralExpr
 import io.ksmt.expr.KRegexConcatExpr
 import io.ksmt.expr.KRegexUnionExpr
 import io.ksmt.expr.KRegexIntersectionExpr
-import io.ksmt.expr.KRegexKleeneClosureExpr
-import io.ksmt.expr.KRegexKleeneCrossExpr
+import io.ksmt.expr.KRegexStarExpr
+import io.ksmt.expr.KRegexCrossExpr
 import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KRegexOptionExpr
-import io.ksmt.expr.KRangeExpr
-import io.ksmt.expr.KEpsilon
-import io.ksmt.expr.KAll
-import io.ksmt.expr.KAllChar
+import io.ksmt.expr.KRegexRangeExpr
+import io.ksmt.expr.KRegexEpsilon
+import io.ksmt.expr.KRegexAll
+import io.ksmt.expr.KRegexAllChar
 import io.ksmt.expr.rewrite.simplify.rewriteBvAddNoOverflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvAddNoUnderflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvDivNoOverflowExpr
@@ -1018,11 +1018,11 @@ open class KYicesExprInternalizer(
         throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
-    override fun transform(expr: KSuffixOfExpr): KExpr<KBoolSort> {
+    override fun transform(expr: KStringSuffixOfExpr): KExpr<KBoolSort> {
         throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
-    override fun transform(expr: KPrefixOfExpr): KExpr<KBoolSort> {
+    override fun transform(expr: KStringPrefixOfExpr): KExpr<KBoolSort> {
         throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
@@ -1046,15 +1046,15 @@ open class KYicesExprInternalizer(
         throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
-    override fun transform(expr: KSingletonSubstringExpr): KExpr<KStringSort> {
+    override fun transform(expr: KStringSingletonSubExpr): KExpr<KStringSort> {
         throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
-    override fun transform(expr: KSubstringExpr): KExpr<KStringSort> {
+    override fun transform(expr: KStringSubExpr): KExpr<KStringSort> {
         throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
-    override fun transform(expr: KIndexOfExpr): KExpr<KIntSort> {
+    override fun transform(expr: KStringIndexOfExpr): KExpr<KIntSort> {
         throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
@@ -1110,11 +1110,11 @@ open class KYicesExprInternalizer(
         throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
-    override fun transform(expr: KRegexKleeneClosureExpr): KExpr<KRegexSort> {
+    override fun transform(expr: KRegexStarExpr): KExpr<KRegexSort> {
         throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
-    override fun transform(expr: KRegexKleeneCrossExpr): KExpr<KRegexSort> {
+    override fun transform(expr: KRegexCrossExpr): KExpr<KRegexSort> {
         throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
@@ -1130,19 +1130,19 @@ open class KYicesExprInternalizer(
         throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
-    override fun transform(expr: KRangeExpr): KExpr<KRegexSort> {
+    override fun transform(expr: KRegexRangeExpr): KExpr<KRegexSort> {
         throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
-    override fun transform(expr: KEpsilon): KExpr<KRegexSort> {
+    override fun transform(expr: KRegexEpsilon): KExpr<KRegexSort> {
         throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
-    override fun transform(expr: KAll): KExpr<KRegexSort> {
+    override fun transform(expr: KRegexAll): KExpr<KRegexSort> {
         throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 
-    override fun transform(expr: KAllChar): KExpr<KRegexSort> {
+    override fun transform(expr: KRegexAllChar): KExpr<KRegexSort> {
         throw KSolverUnsupportedFeatureException("string theory is not supported in Yices")
     }
 

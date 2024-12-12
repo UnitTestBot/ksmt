@@ -128,16 +128,16 @@ import io.ksmt.expr.KStringConcatExpr
 import io.ksmt.expr.KStringLenExpr
 import io.ksmt.expr.KStringToRegexExpr
 import io.ksmt.expr.KStringInRegexExpr
-import io.ksmt.expr.KSuffixOfExpr
-import io.ksmt.expr.KPrefixOfExpr
+import io.ksmt.expr.KStringSuffixOfExpr
+import io.ksmt.expr.KStringPrefixOfExpr
 import io.ksmt.expr.KStringLtExpr
 import io.ksmt.expr.KStringLeExpr
 import io.ksmt.expr.KStringGtExpr
 import io.ksmt.expr.KStringGeExpr
 import io.ksmt.expr.KStringContainsExpr
-import io.ksmt.expr.KSingletonSubstringExpr
-import io.ksmt.expr.KSubstringExpr
-import io.ksmt.expr.KIndexOfExpr
+import io.ksmt.expr.KStringSingletonSubExpr
+import io.ksmt.expr.KStringSubExpr
+import io.ksmt.expr.KStringIndexOfExpr
 import io.ksmt.expr.KStringReplaceExpr
 import io.ksmt.expr.KStringReplaceAllExpr
 import io.ksmt.expr.KStringReplaceWithRegexExpr
@@ -150,12 +150,12 @@ import io.ksmt.expr.KStringFromIntExpr
 import io.ksmt.expr.KRegexConcatExpr
 import io.ksmt.expr.KRegexUnionExpr
 import io.ksmt.expr.KRegexIntersectionExpr
-import io.ksmt.expr.KRegexKleeneClosureExpr
-import io.ksmt.expr.KRegexKleeneCrossExpr
+import io.ksmt.expr.KRegexStarExpr
+import io.ksmt.expr.KRegexCrossExpr
 import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KRegexOptionExpr
-import io.ksmt.expr.KRangeExpr
+import io.ksmt.expr.KRegexRangeExpr
 import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KArray2Sort
 import io.ksmt.sort.KArray3Sort
@@ -716,54 +716,54 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
             expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkStringInRegex
         )
 
-    override fun transform(expr: KSuffixOfExpr): KExpr<KBoolSort> =
+    override fun transform(expr: KStringSuffixOfExpr): KExpr<KBoolSort> =
         transformExprAfterTransformedDefault(
-            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkSuffixOf
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkStringSuffixOf
         )
 
-    override fun transform(expr: KPrefixOfExpr): KExpr<KBoolSort> =
+    override fun transform(expr: KStringPrefixOfExpr): KExpr<KBoolSort> =
         transformExprAfterTransformedDefault(
-            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkPrefixOf
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkStringPrefixOf
         )
 
     override fun transform(expr: KStringLtExpr): KExpr<KBoolSort> =
         transformExprAfterTransformedDefault(
-            expr, expr.lhs, expr.rhs, ::transformApp, KContext::mkStringLt
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkStringLt
         )
 
     override fun transform(expr: KStringLeExpr): KExpr<KBoolSort> =
         transformExprAfterTransformedDefault(
-            expr, expr.lhs, expr.rhs, ::transformApp, KContext::mkStringLe
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkStringLe
         )
 
     override fun transform(expr: KStringGtExpr): KExpr<KBoolSort> =
         transformExprAfterTransformedDefault(
-            expr, expr.lhs, expr.rhs, ::transformApp, KContext::mkStringGt
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkStringGt
         )
 
     override fun transform(expr: KStringGeExpr): KExpr<KBoolSort> =
         transformExprAfterTransformedDefault(
-            expr, expr.lhs, expr.rhs, ::transformApp, KContext::mkStringGe
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkStringGe
         )
 
     override fun transform(expr: KStringContainsExpr): KExpr<KBoolSort> =
         transformExprAfterTransformedDefault(
-            expr, expr.lhs, expr.rhs, ::transformApp, KContext::mkStringContains
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkStringContains
         )
 
-    override fun transform(expr: KSingletonSubstringExpr): KExpr<KStringSort> =
+    override fun transform(expr: KStringSingletonSubExpr): KExpr<KStringSort> =
         transformExprAfterTransformedDefault(
-            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkSingletonSubstring
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkStringSingletonSub
         )
 
-    override fun transform(expr: KSubstringExpr): KExpr<KStringSort> =
+    override fun transform(expr: KStringSubExpr): KExpr<KStringSort> =
         transformExprAfterTransformedDefault(
-            expr, expr.arg0, expr.arg1, expr.arg2, ::transformApp, KContext::mkSubstring
+            expr, expr.arg0, expr.arg1, expr.arg2, ::transformApp, KContext::mkStringSub
         )
 
-    override fun transform(expr: KIndexOfExpr): KExpr<KIntSort> =
+    override fun transform(expr: KStringIndexOfExpr): KExpr<KIntSort> =
         transformExprAfterTransformedDefault(
-            expr, expr.arg0, expr.arg1, expr.arg2, ::transformApp, KContext::mkIndexOf
+            expr, expr.arg0, expr.arg1, expr.arg2, ::transformApp, KContext::mkStringIndexOf
         )
 
     override fun transform(expr: KStringReplaceExpr): KExpr<KStringSort> =
@@ -827,14 +827,14 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
             expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkRegexIntersection
         )
 
-    override fun transform(expr: KRegexKleeneClosureExpr): KExpr<KRegexSort> =
+    override fun transform(expr: KRegexStarExpr): KExpr<KRegexSort> =
         transformExprAfterTransformedDefault(
-            expr, expr.arg, ::transformApp, KContext::mkRegexKleeneClosure
+            expr, expr.arg, ::transformApp, KContext::mkRegexStar
         )
 
-    override fun transform(expr: KRegexKleeneCrossExpr): KExpr<KRegexSort> =
+    override fun transform(expr: KRegexCrossExpr): KExpr<KRegexSort> =
         transformExprAfterTransformedDefault(
-            expr, expr.arg, ::transformApp, KContext::mkRegexKleeneCross
+            expr, expr.arg, ::transformApp, KContext::mkRegexCross
         )
 
     override fun transform(expr: KRegexDifferenceExpr): KExpr<KRegexSort> =
@@ -852,9 +852,9 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
             expr, expr.arg, ::transformApp, KContext::mkRegexOption
         )
 
-    override fun transform(expr: KRangeExpr): KExpr<KRegexSort> =
+    override fun transform(expr: KRegexRangeExpr): KExpr<KRegexSort> =
         transformExprAfterTransformedDefault(
-            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkRange
+            expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkRegexRange
         )
 
     // quantified expressions

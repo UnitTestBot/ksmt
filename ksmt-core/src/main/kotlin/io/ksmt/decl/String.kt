@@ -8,20 +8,12 @@ import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KStringSort
 
-class KStringLiteralDecl internal constructor(
-    ctx: KContext,
-    val value: String
-) : KConstDecl<KStringSort>(ctx, value, ctx.mkStringSort()) {
-    override fun apply(args: List<KExpr<*>>): KApp<KStringSort, *> = ctx.mkStringLiteral(value)
-    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
-}
-
 class KStringConcatDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl2<KStringSort, KStringSort, KStringSort>(
     ctx,
-    name = "str_concat",
-    resultSort = ctx.mkStringSort(),
+    "str_concat",
+    ctx.mkStringSort(),
     ctx.mkStringSort(),
     ctx.mkStringSort()
 ) {
@@ -35,24 +27,40 @@ class KStringConcatDecl internal constructor(
 
 class KStringLenDecl internal constructor(
     ctx: KContext
-) : KFuncDecl1<KIntSort, KStringSort>(ctx, "len", ctx.mkIntSort(), ctx.mkStringSort()) {
-    override fun KContext.apply(arg: KExpr<KStringSort>): KApp<KIntSort, KStringSort> = mkStringLenNoSimplify(arg)
+) : KFuncDecl1<KIntSort, KStringSort>(
+    ctx,
+    "str_len",
+    ctx.mkIntSort(),
+    ctx.mkStringSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg: KExpr<KStringSort>
+    ): KApp<KIntSort, KStringSort> = mkStringLenNoSimplify(arg)
 }
 
 class KStringToRegexDecl internal constructor(
     ctx: KContext
-) : KFuncDecl1<KRegexSort, KStringSort>(ctx, "to_regex", ctx.mkRegexSort(), ctx.mkStringSort()) {
-    override fun KContext.apply(arg: KExpr<KStringSort>): KApp<KRegexSort, KStringSort> = mkStringToRegexNoSimplify(arg)
+) : KFuncDecl1<KRegexSort, KStringSort>(
+    ctx,
+    "str_to_regex",
+    ctx.mkRegexSort(),
+    ctx.mkStringSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg: KExpr<KStringSort>
+    ): KApp<KRegexSort, KStringSort> = mkStringToRegexNoSimplify(arg)
 }
 
 class KStringInRegexDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl2<KBoolSort, KStringSort, KRegexSort>(
     ctx,
-    name = "in_regex",
-    resultSort = ctx.mkBoolSort(),
+    "str_in_regex",
+    ctx.mkBoolSort(),
     ctx.mkStringSort(),
     ctx.mkRegexSort()
 ) {
@@ -64,12 +72,12 @@ class KStringInRegexDecl internal constructor(
     ): KApp<KBoolSort, *> = mkStringInRegexNoSimplify(arg0, arg1)
 }
 
-class KSuffixOfDecl internal constructor(
+class KStringSuffixOfDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl2<KBoolSort, KStringSort, KStringSort>(
     ctx,
-    name = "suffix_of",
-    resultSort = ctx.mkBoolSort(),
+    "str_suffix_of",
+    ctx.mkBoolSort(),
     ctx.mkStringSort(),
     ctx.mkStringSort()
 ) {
@@ -78,15 +86,15 @@ class KSuffixOfDecl internal constructor(
     override fun KContext.apply(
         arg0: KExpr<KStringSort>,
         arg1: KExpr<KStringSort>
-    ): KApp<KBoolSort, *> = mkSuffixOfNoSimplify(arg0, arg1)
+    ): KApp<KBoolSort, *> = mkStringSuffixOfNoSimplify(arg0, arg1)
 }
 
-class KPrefixOfDecl internal constructor(
+class KStringPrefixOfDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl2<KBoolSort, KStringSort, KStringSort>(
     ctx,
-    name = "prefix_of",
-    resultSort = ctx.mkBoolSort(),
+    "str_prefix_of",
+    ctx.mkBoolSort(),
     ctx.mkStringSort(),
     ctx.mkStringSort()
 ) {
@@ -95,51 +103,116 @@ class KPrefixOfDecl internal constructor(
     override fun KContext.apply(
         arg0: KExpr<KStringSort>,
         arg1: KExpr<KStringSort>
-    ): KApp<KBoolSort, *> = mkPrefixOfNoSimplify(arg0, arg1)
+    ): KApp<KBoolSort, *> = mkStringPrefixOfNoSimplify(arg0, arg1)
 }
 
-class KStringLtDecl internal constructor(ctx: KContext) :
-    KFuncDecl2<KBoolSort, KStringSort, KStringSort>(ctx, "stringLt", ctx.mkBoolSort(), ctx.mkStringSort(), ctx.mkStringSort()) {
-    override fun KContext.apply(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KApp<KBoolSort, *> = mkStringLtNoSimplify(arg0, arg1)
+class KStringLtDecl internal constructor(
+    ctx: KContext
+) : KFuncDecl2<KBoolSort, KStringSort, KStringSort>(
+    ctx,
+    "str_lt",
+    ctx.mkBoolSort(),
+    ctx.mkStringSort(),
+    ctx.mkStringSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>
+    ): KApp<KBoolSort, *> = mkStringLtNoSimplify(arg0, arg1)
 }
 
-class KStringLeDecl internal constructor(ctx: KContext) :
-    KFuncDecl2<KBoolSort, KStringSort, KStringSort>(ctx, "stringLe", ctx.mkBoolSort(), ctx.mkStringSort(), ctx.mkStringSort()) {
-    override fun KContext.apply(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KApp<KBoolSort, *> = mkStringLeNoSimplify(arg0, arg1)
+class KStringLeDecl internal constructor(
+    ctx: KContext
+) : KFuncDecl2<KBoolSort, KStringSort, KStringSort>(
+    ctx,
+    "str_le",
+    ctx.mkBoolSort(),
+    ctx.mkStringSort(),
+    ctx.mkStringSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>
+    ): KApp<KBoolSort, *> = mkStringLeNoSimplify(arg0, arg1)
 }
 
-class KStringGtDecl internal constructor(ctx: KContext) :
-    KFuncDecl2<KBoolSort, KStringSort, KStringSort>(ctx, "stringGt", ctx.mkBoolSort(), ctx.mkStringSort(), ctx.mkStringSort()) {
-    override fun KContext.apply(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KApp<KBoolSort, *> = mkStringGtNoSimplify(arg0, arg1)
+class KStringGtDecl internal constructor(
+    ctx: KContext
+) : KFuncDecl2<KBoolSort, KStringSort, KStringSort>(
+    ctx,
+    "str_gt",
+    ctx.mkBoolSort(),
+    ctx.mkStringSort(),
+    ctx.mkStringSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>
+    ): KApp<KBoolSort, *> = mkStringGtNoSimplify(arg0, arg1)
 }
 
-class KStringGeDecl internal constructor(ctx: KContext) :
-    KFuncDecl2<KBoolSort, KStringSort, KStringSort>(ctx, "stringGe", ctx.mkBoolSort(), ctx.mkStringSort(), ctx.mkStringSort()) {
-    override fun KContext.apply(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KApp<KBoolSort, *> = mkStringGeNoSimplify(arg0, arg1)
+class KStringGeDecl internal constructor(
+    ctx: KContext
+) : KFuncDecl2<KBoolSort, KStringSort, KStringSort>(
+    ctx,
+    "str_ge",
+    ctx.mkBoolSort(),
+    ctx.mkStringSort(),
+    ctx.mkStringSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>
+    ): KApp<KBoolSort, *> = mkStringGeNoSimplify(arg0, arg1)
 }
 
-class KStringContainsDecl internal constructor(ctx: KContext) :
-    KFuncDecl2<KBoolSort, KStringSort, KStringSort>(ctx, "contains", ctx.mkBoolSort(), ctx.mkStringSort(), ctx.mkStringSort()) {
-    override fun KContext.apply(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KApp<KBoolSort, *> = mkStringContainsNoSimplify(arg0, arg1)
+class KStringContainsDecl internal constructor(
+    ctx: KContext
+) : KFuncDecl2<KBoolSort, KStringSort, KStringSort>(
+    ctx,
+    "str_contains",
+    ctx.mkBoolSort(),
+    ctx.mkStringSort(),
+    ctx.mkStringSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>
+    ): KApp<KBoolSort, *> = mkStringContainsNoSimplify(arg0, arg1)
 }
 
-class KSingletonSubstringDecl internal constructor(ctx: KContext) :
-    KFuncDecl2<KStringSort, KStringSort, KIntSort>(ctx, "singleton_substr", ctx.mkStringSort(), ctx.mkStringSort(), ctx.mkIntSort()) {
-    override fun KContext.apply(arg0: KExpr<KStringSort>, arg1: KExpr<KIntSort>): KApp<KStringSort, *> = mkSingletonSubstringNoSimplify(arg0, arg1)
+class KStringSingletonSubDecl internal constructor(
+    ctx: KContext
+) : KFuncDecl2<KStringSort, KStringSort, KIntSort>(
+    ctx,
+    "str_singleton_sub",
+    ctx.mkStringSort(),
+    ctx.mkStringSort(),
+    ctx.mkIntSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+    override fun KContext.apply(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KIntSort>
+    ): KApp<KStringSort, *> = mkStringSingletonSubNoSimplify(arg0, arg1)
 }
 
-class KSubstringDecl internal constructor(
+class KStringSubDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl3<KStringSort, KStringSort, KIntSort, KIntSort>(
     ctx,
-    name = "substr",
-    resultSort = ctx.mkStringSort(),
+    "str_sub",
+    ctx.mkStringSort(),
     ctx.mkStringSort(),
     ctx.mkIntSort(),
     ctx.mkIntSort()
@@ -150,15 +223,15 @@ class KSubstringDecl internal constructor(
         arg0: KExpr<KStringSort>,
         arg1: KExpr<KIntSort>,
         arg2: KExpr<KIntSort>
-    ): KApp<KStringSort, *> = mkSubstringNoSimplify(arg0, arg1, arg2)
+    ): KApp<KStringSort, *> = mkStringSubNoSimplify(arg0, arg1, arg2)
 }
 
-class KIndexOfDecl internal constructor(
+class KStringIndexOfDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl3<KIntSort, KStringSort, KStringSort, KIntSort>(
     ctx,
-    name = "index_of",
-    resultSort = ctx.mkIntSort(),
+    "str_index_of",
+    ctx.mkIntSort(),
     ctx.mkStringSort(),
     ctx.mkStringSort(),
     ctx.mkIntSort()
@@ -169,15 +242,15 @@ class KIndexOfDecl internal constructor(
         arg0: KExpr<KStringSort>,
         arg1: KExpr<KStringSort>,
         arg2: KExpr<KIntSort>
-    ): KApp<KIntSort, *> = mkIndexOfNoSimplify(arg0, arg1, arg2)
+    ): KApp<KIntSort, *> = mkStringIndexOfNoSimplify(arg0, arg1, arg2)
 }
 
 class KStringReplaceDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl3<KStringSort, KStringSort, KStringSort, KStringSort>(
     ctx,
-    name = "replace",
-    resultSort = ctx.mkStringSort(),
+    "str_replace",
+    ctx.mkStringSort(),
     ctx.mkStringSort(),
     ctx.mkStringSort(),
     ctx.mkStringSort()
@@ -195,8 +268,8 @@ class KStringReplaceAllDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl3<KStringSort, KStringSort, KStringSort, KStringSort>(
     ctx,
-    name = "replace_all",
-    resultSort = ctx.mkStringSort(),
+    "str_replace_all",
+    ctx.mkStringSort(),
     ctx.mkStringSort(),
     ctx.mkStringSort(),
     ctx.mkStringSort()
@@ -214,8 +287,8 @@ class KStringReplaceWithRegexDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl3<KStringSort, KStringSort, KRegexSort, KStringSort>(
     ctx,
-    name = "replace_with_regex",
-    resultSort = ctx.mkStringSort(),
+    "str_replace_with_regex",
+    ctx.mkStringSort(),
     ctx.mkStringSort(),
     ctx.mkRegexSort(),
     ctx.mkStringSort()
@@ -233,8 +306,8 @@ class KStringReplaceAllWithRegexDecl internal constructor(
     ctx: KContext,
 ) : KFuncDecl3<KStringSort, KStringSort, KRegexSort, KStringSort>(
     ctx,
-    name = "replace_all_with_regex",
-    resultSort = ctx.mkStringSort(),
+    "str_replace_all_with_regex",
+    ctx.mkStringSort(),
     ctx.mkStringSort(),
     ctx.mkRegexSort(),
     ctx.mkStringSort()
@@ -254,35 +327,78 @@ class KStringReplaceAllWithRegexDecl internal constructor(
 
 class KStringIsDigitDecl internal constructor(
     ctx: KContext
-) : KFuncDecl1<KBoolSort, KStringSort>(ctx, "is_digit", ctx.mkBoolSort(), ctx.mkStringSort()) {
-    override fun KContext.apply(arg: KExpr<KStringSort>): KApp<KBoolSort, KStringSort> = mkStringIsDigitNoSimplify(arg)
+) : KFuncDecl1<KBoolSort, KStringSort>(
+    ctx,
+    "str_is_digit",
+    ctx.mkBoolSort(),
+    ctx.mkStringSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(arg: KExpr<KStringSort>): KApp<KBoolSort, KStringSort> = mkStringIsDigitNoSimplify(arg)
 }
 
 class KStringToCodeDecl internal constructor(
     ctx: KContext
-) : KFuncDecl1<KIntSort, KStringSort>(ctx, "to_code", ctx.mkIntSort(), ctx.mkStringSort()) {
-    override fun KContext.apply(arg: KExpr<KStringSort>): KApp<KIntSort, KStringSort> = mkStringToCodeNoSimplify(arg)
+) : KFuncDecl1<KIntSort, KStringSort>(
+    ctx,
+    "str_to_code",
+    ctx.mkIntSort(),
+    ctx.mkStringSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(arg: KExpr<KStringSort>): KApp<KIntSort, KStringSort> = mkStringToCodeNoSimplify(arg)
 }
 
 class KStringFromCodeDecl internal constructor(
     ctx: KContext
-) : KFuncDecl1<KStringSort, KIntSort>(ctx, "from_code", ctx.mkStringSort(), ctx.mkIntSort()) {
-    override fun KContext.apply(arg: KExpr<KIntSort>): KApp<KStringSort, KIntSort> = mkStringFromCodeNoSimplify(arg)
+) : KFuncDecl1<KStringSort, KIntSort>(
+    ctx,
+    "str_from_code",
+    ctx.mkStringSort(),
+    ctx.mkIntSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(arg: KExpr<KIntSort>): KApp<KStringSort, KIntSort> = mkStringFromCodeNoSimplify(arg)
 }
 
 class KStringToIntDecl internal constructor(
     ctx: KContext
-) : KFuncDecl1<KIntSort, KStringSort>(ctx, "to_int", ctx.mkIntSort(), ctx.mkStringSort()) {
-    override fun KContext.apply(arg: KExpr<KStringSort>): KApp<KIntSort, KStringSort> = mkStringToIntNoSimplify(arg)
+) : KFuncDecl1<KIntSort, KStringSort>(
+    ctx,
+    "str_to_int",
+    ctx.mkIntSort(),
+    ctx.mkStringSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(arg: KExpr<KStringSort>): KApp<KIntSort, KStringSort> = mkStringToIntNoSimplify(arg)
 }
 
 class KStringFromIntDecl internal constructor(
     ctx: KContext
-) : KFuncDecl1<KStringSort, KIntSort>(ctx, "from_int", ctx.mkStringSort(), ctx.mkIntSort()) {
-    override fun KContext.apply(arg: KExpr<KIntSort>): KApp<KStringSort, KIntSort> = mkStringFromIntNoSimplify(arg)
+) : KFuncDecl1<KStringSort, KIntSort>(
+    ctx,
+    "str_from_int",
+    ctx.mkStringSort(),
+    ctx.mkIntSort()
+) {
     override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(arg: KExpr<KIntSort>): KApp<KStringSort, KIntSort> = mkStringFromIntNoSimplify(arg)
+}
+
+class KStringLiteralDecl internal constructor(
+    ctx: KContext,
+    val value: String
+) : KConstDecl<KStringSort>(
+    ctx,
+    value,
+    ctx.mkStringSort()
+) {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun apply(args: List<KExpr<*>>): KApp<KStringSort, *> = ctx.mkStringLiteral(value)
 }

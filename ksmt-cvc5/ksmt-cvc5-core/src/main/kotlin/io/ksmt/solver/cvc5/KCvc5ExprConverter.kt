@@ -384,14 +384,14 @@ open class KCvc5ExprConverter(
             Kind.STRING_LENGTH -> expr.convert(::mkStringLen)
             Kind.STRING_TO_REGEXP -> expr.convert(::mkStringToRegex)
             Kind.STRING_IN_REGEXP -> expr.convert(::mkStringInRegex)
-            Kind.STRING_SUFFIX -> expr.convert(::mkSuffixOf)
-            Kind.STRING_PREFIX -> expr.convert(::mkPrefixOf)
+            Kind.STRING_SUFFIX -> expr.convert(::mkStringSuffixOf)
+            Kind.STRING_PREFIX -> expr.convert(::mkStringPrefixOf)
             Kind.STRING_LT -> expr.convert(::mkStringLt)
             Kind.STRING_LEQ -> expr.convert(::mkStringLe)
             Kind.STRING_CONTAINS -> expr.convert(::mkStringContains)
-            Kind.STRING_CHARAT -> expr.convert(::mkSingletonSubstring)
-            Kind.STRING_SUBSTR -> expr.convert(::mkSubstring)
-            Kind.STRING_INDEXOF -> expr.convert(::mkIndexOf)
+            Kind.STRING_CHARAT -> expr.convert(::mkStringSingletonSub)
+            Kind.STRING_SUBSTR -> expr.convert(::mkStringSub)
+            Kind.STRING_INDEXOF -> expr.convert(::mkStringIndexOf)
             Kind.STRING_REPLACE -> expr.convert(::mkStringReplace)
             Kind.STRING_REPLACE_ALL -> expr.convert(::mkStringReplaceAll)
             Kind.STRING_REPLACE_RE -> expr.convert(::mkStringReplaceWithRegex)
@@ -421,15 +421,15 @@ open class KCvc5ExprConverter(
             Kind.REGEXP_CONCAT -> expr.convert(::mkRegexConcat)
             Kind.REGEXP_UNION -> expr.convert(::mkRegexUnion)
             Kind.REGEXP_INTER -> expr.convert(::mkRegexIntersection)
-            Kind.REGEXP_STAR -> expr.convert(::mkRegexKleeneClosure)
-            Kind.REGEXP_PLUS -> expr.convert(::mkRegexKleeneCross)
+            Kind.REGEXP_STAR -> expr.convert(::mkRegexStar)
+            Kind.REGEXP_PLUS -> expr.convert(::mkRegexCross)
             Kind.REGEXP_DIFF -> expr.convert(::mkRegexDifference)
             Kind.REGEXP_COMPLEMENT -> expr.convert(::mkRegexComplement)
             Kind.REGEXP_OPT -> expr.convert(::mkRegexOption)
-            Kind.REGEXP_NONE -> convert { mkEpsilon() }
-            Kind.REGEXP_ALL -> convert { mkAll() }
-            Kind.REGEXP_ALLCHAR -> convert { mkAllChar() }
-            Kind.REGEXP_RANGE -> expr.convert(::mkRange)
+            Kind.REGEXP_NONE -> convert { mkRegexEpsilon() }
+            Kind.REGEXP_ALL -> convert { mkRegexAll() }
+            Kind.REGEXP_ALLCHAR -> convert { mkRegexAllChar() }
+            Kind.REGEXP_RANGE -> expr.convert(::mkRegexRange)
             Kind.REGEXP_REPEAT -> throw KSolverUnsupportedFeatureException(
                 "No direct mapping of ${Kind.STRING_REV} in ksmt"
             )
