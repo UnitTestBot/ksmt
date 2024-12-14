@@ -28,13 +28,11 @@ open class DefaultValueSampler(val ctx: KContext) : KSortVisitor<KExpr<*>> {
     override fun visit(sort: KRealSort): KExpr<*> =
         ctx.realSortDefaultValue()
 
-    override fun visit(sort: KStringSort): KExpr<*> {
-        TODO("Not yet implemented")
-    }
+    override fun visit(sort: KStringSort): KExpr<*> =
+        ctx.stringSortDefaultValue()
 
-    override fun visit(sort: KRegexSort): KExpr<*> {
-        TODO("Not yet implemented")
-    }
+    override fun visit(sort: KRegexSort): KExpr<*> =
+        ctx.regexSortDefaultValue()
 
     override fun <S : KBvSort> visit(sort: S): KExpr<*> =
         ctx.bvSortDefaultValue(sort)

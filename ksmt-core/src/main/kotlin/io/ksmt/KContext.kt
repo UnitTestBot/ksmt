@@ -5136,6 +5136,10 @@ open class KContext(
 
     open fun realSortDefaultValue(): KExpr<KRealSort> = mkRealNum(0)
 
+    open fun stringSortDefaultValue(): KExpr<KStringSort> = mkStringLiteral("")
+
+    open fun regexSortDefaultValue(): KExpr<KRegexSort> = mkRegexEpsilon()
+
     open fun <S : KBvSort> bvSortDefaultValue(sort: S): KExpr<S> = mkBv(0, sort)
 
     open fun <S : KFpSort> fpSortDefaultValue(sort: S): KExpr<S> = mkFpZero(signBit = false, sort)
