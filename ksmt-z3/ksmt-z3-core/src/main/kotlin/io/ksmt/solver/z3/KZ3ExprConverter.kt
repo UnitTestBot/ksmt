@@ -22,6 +22,7 @@ import io.ksmt.expr.KFpRoundingModeExpr
 import io.ksmt.expr.KIntNumExpr
 import io.ksmt.expr.KInterpretedValue
 import io.ksmt.expr.KRealNumExpr
+import io.ksmt.expr.KStringLiteralExpr
 import io.ksmt.expr.rewrite.KExprUninterpretedDeclCollector
 import io.ksmt.solver.KSolverUnsupportedFeatureException
 import io.ksmt.solver.util.ExprConversionResult
@@ -116,6 +117,9 @@ open class KZ3ExprConverter(
             Z3_sort_kind.Z3_BOOL_SORT -> boolSort
             Z3_sort_kind.Z3_INT_SORT -> intSort
             Z3_sort_kind.Z3_REAL_SORT -> realSort
+            // Currently, KSMT supports the only type of sequences - strings.
+            Z3_sort_kind.Z3_SEQ_SORT -> stringSort
+            Z3_sort_kind.Z3_RE_SORT -> regexSort
             Z3_sort_kind.Z3_ARRAY_SORT -> convertNativeArraySort(sort)
             Z3_sort_kind.Z3_BV_SORT -> mkBvSort(Native.getBvSortSize(nCtx, sort).toUInt())
             Z3_sort_kind.Z3_FLOATING_POINT_SORT ->
@@ -525,6 +529,8 @@ open class KZ3ExprConverter(
             Z3_sort_kind.Z3_BV_SORT -> convert { convertBvNumeral(expr, sort) }
             Z3_sort_kind.Z3_ROUNDING_MODE_SORT -> convert { convertFpRmNumeral(expr) }
             Z3_sort_kind.Z3_FLOATING_POINT_SORT -> convertFpNumeral(expr, sort)
+            // Currently, KSMT supports the only type of sequences - strings.
+            Z3_sort_kind.Z3_SEQ_SORT -> convert { convertStringLiteral(expr) }
             else -> TODO("numerals with ${Native.sortToString(nCtx, sort)} are not supported")
         }
     }
@@ -545,6 +551,12 @@ open class KZ3ExprConverter(
             z3Ctx.releaseTemporaryAst(numerator)
             z3Ctx.releaseTemporaryAst(denominator)
         }
+    }
+
+    @Suppress("MemberVisibilityCanBePrivate")
+    fun convertStringLiteral(expr: Long): KStringLiteralExpr = with(ctx) {
+        val value = Native.getString(nCtx, expr)
+        mkStringLiteral(value)
     }
 
     @Suppress("MemberVisibilityCanBePrivate")
@@ -602,6 +614,8 @@ open class KZ3ExprConverter(
                 val size = Native.getDeclIntParameter(nCtx, decl, 0)
                 mkFpToBvExpr(rm, fp, size, isSigned = false)
             }
+
+            "String" -> convertNumeral(expr)
 
             else -> throw KSolverUnsupportedFeatureException("Z3 internal decl $internalDeclName is not supported")
         }

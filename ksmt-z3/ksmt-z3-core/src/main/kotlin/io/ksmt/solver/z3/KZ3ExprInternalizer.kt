@@ -189,6 +189,7 @@ import io.ksmt.expr.KRegexRangeExpr
 import io.ksmt.expr.KRegexEpsilon
 import io.ksmt.expr.KRegexAll
 import io.ksmt.expr.KRegexAllChar
+import io.ksmt.solver.KSolverUnsupportedFeatureException
 import io.ksmt.solver.util.KExprLongInternalizerBase
 import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KArray2Sort
@@ -940,7 +941,7 @@ open class KZ3ExprInternalizer(
 
     override fun transform(expr: KStringSubExpr) = with(expr) {
         transform(arg0, arg1, arg2) { arg0, arg1, arg2 ->
-            TODO("Not yet implemented")
+            Native.mkSeqExtract(nCtx, arg0, arg1, arg2)
         }
     }
 
@@ -950,57 +951,50 @@ open class KZ3ExprInternalizer(
         }
     }
 
-    override fun transform(expr: KStringIndexOfExpr) = with(expr) {
-        transform(arg0, arg1, arg2) { arg0, arg1, arg2 ->
-            TODO("Not yet implemented")
-        }
-    }
+    override fun transform(expr: KStringIndexOfRegexExpr) =
+        throw KSolverUnsupportedFeatureException(
+            "${expr::class.simpleName} is not supported in z3"
+        )
 
     override fun transform(expr: KStringReplaceExpr) = with(expr) {
         transform(arg0, arg1, arg2) { arg0, arg1, arg2 ->
-            TODO("Not yet implemented")
+            Native.mkSeqReplace(nCtx, arg0, arg1, arg2)
         }
     }
 
-    override fun transform(expr: KStringReplaceAllExpr) = with(expr) {
-        transform(arg0, arg1, arg2) { arg0, arg1, arg2 ->
-            TODO("Not yet implemented")
-        }
-    }
+    override fun transform(expr: KStringReplaceAllExpr) =
+        throw KSolverUnsupportedFeatureException(
+            "${expr::class.simpleName} is not supported in z3"
+        )
 
-    override fun transform(expr: KStringReplaceWithRegexExpr) = with(expr) {
-        transform(arg0, arg1, arg2) { arg0, arg1, arg2 ->
-            TODO("Not yet implemented")
-        }
-    }
+    override fun transform(expr: KStringReplaceWithRegexExpr) =
+        throw KSolverUnsupportedFeatureException(
+            "${expr::class.simpleName} is not supported in z3"
+        )
 
-    override fun transform(expr: KStringReplaceAllWithRegexExpr) = with(expr) {
-        transform(arg0, arg1, arg2) { arg0, arg1, arg2 ->
-            TODO("Not yet implemented")
-        }
-    }
+    override fun transform(expr: KStringReplaceAllWithRegexExpr) =
+        throw KSolverUnsupportedFeatureException(
+            "${expr::class.simpleName} is not supported in z3"
+        )
 
-    override fun transform(expr: KStringToLowerExpr) = with(expr) {
-        transform(arg) { arg ->
-            TODO("Not yet implemented")
-        }
-    }
+    override fun transform(expr: KStringToLowerExpr) =
+        throw KSolverUnsupportedFeatureException(
+            "${expr::class.simpleName} is not supported in z3"
+        )
 
-    override fun transform(expr: KStringToUpperExpr) = with(expr) {
-        transform(arg) { arg ->
-            TODO("Not yet implemented")
-        }
-    }
+    override fun transform(expr: KStringToUpperExpr) =
+        throw KSolverUnsupportedFeatureException(
+            "${expr::class.simpleName} is not supported in z3"
+        )
 
-    override fun transform(expr: KStringReverseExpr) = with(expr) {
-        transform(arg) { arg ->
-            TODO("Not yet implemented")
-        }
-    }
+    override fun transform(expr: KStringReverseExpr) =
+        throw KSolverUnsupportedFeatureException(
+            "${expr::class.simpleName} is not supported in z3"
+        )
 
     override fun transform(expr: KStringIsDigitExpr) = with(expr) {
         transform(arg) { arg ->
-            TODO("Not yet implemented")
+            Native.mkCharIsDigit(nCtx, arg)
         }
     }
 
@@ -1088,15 +1082,39 @@ open class KZ3ExprInternalizer(
     }
 
     override fun transform(expr: KRegexEpsilon) = with(expr) {
-        TODO("Not yet implemented")
+        transform {
+            Native.mkReEmpty(
+                nCtx,
+                Native.mkReSort(
+                    nCtx,
+                    Native.mkStringSort(nCtx)
+                )
+            )
+        }
     }
 
     override fun transform(expr: KRegexAll) = with(expr) {
-        TODO("Not yet implemented")
+        transform {
+            Native.mkReFull(
+                nCtx,
+                Native.mkReSort(
+                    nCtx,
+                    Native.mkStringSort(nCtx)
+                )
+            )
+        }
     }
 
     override fun transform(expr: KRegexAllChar) = with(expr) {
-        TODO("Not yet implemented")
+        transform {
+            Native.mkReAllchar(
+                nCtx,
+                Native.mkReSort(
+                    nCtx,
+                    Native.mkStringSort(nCtx)
+                )
+            )
+        }
     }
 
     private fun transformQuantifier(expr: KQuantifier, isUniversal: Boolean) = with(expr) {
