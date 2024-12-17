@@ -147,6 +147,46 @@ import io.ksmt.expr.KUnaryMinusArithExpr
 import io.ksmt.expr.KUninterpretedSortValue
 import io.ksmt.expr.KUniversalQuantifier
 import io.ksmt.expr.KXorExpr
+import io.ksmt.expr.KStringConcatExpr
+import io.ksmt.expr.KStringLenExpr
+import io.ksmt.expr.KStringToRegexExpr
+import io.ksmt.expr.KStringInRegexExpr
+import io.ksmt.expr.KStringSuffixOfExpr
+import io.ksmt.expr.KStringPrefixOfExpr
+import io.ksmt.expr.KStringLtExpr
+import io.ksmt.expr.KStringLeExpr
+import io.ksmt.expr.KStringGtExpr
+import io.ksmt.expr.KStringGeExpr
+import io.ksmt.expr.KStringContainsExpr
+import io.ksmt.expr.KStringSingletonSubExpr
+import io.ksmt.expr.KStringSubExpr
+import io.ksmt.expr.KStringIndexOfExpr
+import io.ksmt.expr.KStringIndexOfRegexExpr
+import io.ksmt.expr.KStringReplaceExpr
+import io.ksmt.expr.KStringReplaceAllExpr
+import io.ksmt.expr.KStringReplaceWithRegexExpr
+import io.ksmt.expr.KStringReplaceAllWithRegexExpr
+import io.ksmt.expr.KStringToLowerExpr
+import io.ksmt.expr.KStringToUpperExpr
+import io.ksmt.expr.KStringReverseExpr
+import io.ksmt.expr.KStringIsDigitExpr
+import io.ksmt.expr.KStringToCodeExpr
+import io.ksmt.expr.KStringFromCodeExpr
+import io.ksmt.expr.KStringToIntExpr
+import io.ksmt.expr.KStringFromIntExpr
+import io.ksmt.expr.KStringLiteralExpr
+import io.ksmt.expr.KRegexConcatExpr
+import io.ksmt.expr.KRegexUnionExpr
+import io.ksmt.expr.KRegexIntersectionExpr
+import io.ksmt.expr.KRegexStarExpr
+import io.ksmt.expr.KRegexCrossExpr
+import io.ksmt.expr.KRegexDifferenceExpr
+import io.ksmt.expr.KRegexComplementExpr
+import io.ksmt.expr.KRegexOptionExpr
+import io.ksmt.expr.KRegexRangeExpr
+import io.ksmt.expr.KRegexEpsilon
+import io.ksmt.expr.KRegexAll
+import io.ksmt.expr.KRegexAllChar
 import io.ksmt.solver.util.KExprIntInternalizerBase
 import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KArray2Sort
@@ -1106,6 +1146,168 @@ class AstSerializer(
 
     override fun transform(expr: KRealNumExpr) = with(expr) {
         serialize(numerator, denominator)
+    }
+
+    override fun transform(expr: KStringConcatExpr) = with(expr) {
+        serialize(arg0, arg1)
+    }
+
+    override fun transform(expr: KStringLenExpr) = with(expr) {
+        serialize(arg)
+    }
+
+    override fun transform(expr: KStringToRegexExpr) = with(expr) {
+        serialize(arg)
+    }
+
+    override fun transform(expr: KStringInRegexExpr) = with(expr) {
+        serialize(arg0, arg1)
+    }
+
+    override fun transform(expr: KStringSuffixOfExpr) = with(expr) {
+        serialize(arg0, arg1)
+    }
+
+    override fun transform(expr: KStringPrefixOfExpr) = with(expr) {
+        serialize(arg0, arg1)
+    }
+
+    override fun transform(expr: KStringLtExpr) = with(expr) {
+        serialize(arg0, arg1)
+    }
+
+    override fun transform(expr: KStringLeExpr) = with(expr) {
+        serialize(arg0, arg1)
+    }
+
+    override fun transform(expr: KStringGtExpr) = with(expr) {
+        serialize(arg0, arg1)
+    }
+
+    override fun transform(expr: KStringGeExpr) = with(expr) {
+        serialize(arg0, arg1)
+    }
+
+    override fun transform(expr: KStringContainsExpr) = with(expr) {
+        serialize(arg0, arg1)
+    }
+
+    override fun transform(expr: KStringSingletonSubExpr) = with(expr) {
+        serialize(arg0, arg1)
+    }
+
+    override fun transform(expr: KStringSubExpr) = with(expr) {
+        serialize(arg0, arg1, arg2)
+    }
+
+    override fun transform(expr: KStringIndexOfExpr) = with(expr) {
+        serialize(arg0, arg1, arg2)
+    }
+
+    override fun transform(expr: KStringIndexOfRegexExpr) = with(expr) {
+        serialize(arg0, arg1, arg2)
+    }
+
+    override fun transform(expr: KStringReplaceExpr) = with(expr) {
+        serialize(arg0, arg1, arg2)
+    }
+
+    override fun transform(expr: KStringReplaceAllExpr) = with(expr) {
+        serialize(arg0, arg1, arg2)
+    }
+
+    override fun transform(expr: KStringReplaceWithRegexExpr) = with(expr) {
+        serialize(arg0, arg1, arg2)
+    }
+
+    override fun transform(expr: KStringReplaceAllWithRegexExpr) = with(expr) {
+        serialize(arg0, arg1, arg2)
+    }
+
+    override fun transform(expr: KStringToLowerExpr) = with(expr) {
+        serialize(arg)
+    }
+
+    override fun transform(expr: KStringToUpperExpr) = with(expr) {
+        serialize(arg)
+    }
+
+    override fun transform(expr: KStringReverseExpr) = with(expr) {
+        serialize(arg)
+    }
+
+    override fun transform(expr: KStringIsDigitExpr) = with(expr) {
+        serialize(arg)
+    }
+
+    override fun transform(expr: KStringToCodeExpr) = with(expr) {
+        serialize(arg)
+    }
+
+    override fun transform(expr: KStringFromCodeExpr) = with(expr) {
+        serialize(arg)
+    }
+
+    override fun transform(expr: KStringToIntExpr) = with(expr) {
+        serialize(arg)
+    }
+
+    override fun transform(expr: KStringFromIntExpr) = with(expr) {
+        serialize(arg)
+    }
+
+    override fun transform(expr: KStringLiteralExpr) = with(expr) {
+        transform {
+            writeExpr { writeString(value) }
+        }
+    }
+
+    override fun transform(expr: KRegexConcatExpr) = with(expr) {
+        serialize(arg0, arg1)
+    }
+
+    override fun transform(expr: KRegexUnionExpr) = with(expr) {
+        serialize(arg0, arg1)
+    }
+
+    override fun transform(expr: KRegexIntersectionExpr) = with(expr) {
+        serialize(arg0, arg1)
+    }
+
+    override fun transform(expr: KRegexStarExpr) = with(expr) {
+        serialize(arg)
+    }
+
+    override fun transform(expr: KRegexCrossExpr) = with(expr) {
+        serialize(arg)
+    }
+
+    override fun transform(expr: KRegexDifferenceExpr) = with(expr) {
+        serialize(arg0, arg1)
+    }
+
+    override fun transform(expr: KRegexComplementExpr) = with(expr) {
+        serialize(arg)
+    }
+
+    override fun transform(expr: KRegexOptionExpr) = with(expr) {
+        serialize(arg)
+    }
+
+    override fun transform(expr: KRegexRangeExpr) = with(expr) {
+        serialize(arg0, arg1)
+    }
+
+    override fun transform(expr: KRegexEpsilon) = with(expr) {
+        serialize()
+    }
+
+    override fun transform(expr: KRegexAll) = with(expr) {
+        serialize()
+    }
+
+    override fun transform(expr: KRegexAllChar) = with(expr) {
+        serialize()
     }
 
     override fun transform(expr: KExistentialQuantifier) = with(expr) {
