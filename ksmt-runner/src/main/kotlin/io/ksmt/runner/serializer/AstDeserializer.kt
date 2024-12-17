@@ -92,6 +92,8 @@ class AstDeserializer(
             SortKind.Bool -> boolSort
             SortKind.Int -> intSort
             SortKind.Real -> realSort
+            SortKind.String -> stringSort
+            SortKind.Regex -> regexSort
             SortKind.FpRM -> mkFpRoundingModeSort()
             SortKind.Bv -> mkBvSort(readUInt())
             SortKind.Fp -> mkFpSort(readUInt(), readUInt())
