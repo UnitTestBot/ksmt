@@ -416,6 +416,47 @@ open class KZ3ExprConverter(
                 throw KSolverUnsupportedFeatureException("Fp $declKind is not supported")
             }
 
+            // Currently, KSMT supports the only type of sequences - strings
+            Z3_decl_kind.Z3_OP_SEQ_CONCAT -> expr.convert(::mkStringConcat)
+            Z3_decl_kind.Z3_OP_SEQ_LENGTH -> expr.convert(::mkStringLen)
+            Z3_decl_kind.Z3_OP_SEQ_TO_RE -> expr.convert(::mkStringToRegex)
+            Z3_decl_kind.Z3_OP_SEQ_IN_RE -> expr.convert(::mkStringInRegex)
+            Z3_decl_kind.Z3_OP_SEQ_SUFFIX -> expr.convert(::mkStringSuffixOf)
+            Z3_decl_kind.Z3_OP_SEQ_PREFIX -> expr.convert(::mkStringPrefixOf)
+            Z3_decl_kind.Z3_OP_STRING_LT -> expr.convert(::mkStringLt)
+            Z3_decl_kind.Z3_OP_STRING_LE -> expr.convert(::mkStringLe)
+            Z3_decl_kind.Z3_OP_SEQ_CONTAINS -> expr.convert(::mkStringContains)
+            Z3_decl_kind.Z3_OP_SEQ_AT -> expr.convert(::mkStringSingletonSub)
+            Z3_decl_kind.Z3_OP_SEQ_EXTRACT -> expr.convert(::mkStringSub)
+            Z3_decl_kind.Z3_OP_SEQ_INDEX -> {
+                var args = getAppArgs(nCtx, expr)
+                if (args.size == 2) {
+                    args += Native.mkInt(nCtx, 0, Native.mkIntSort(nCtx))
+                }
+                expr.convert(args, ::mkStringIndexOf)
+            }
+            Z3_decl_kind.Z3_OP_SEQ_REPLACE -> expr.convert(::mkStringReplace)
+            Z3_decl_kind.Z3_OP_SEQ_REPLACE_ALL -> expr.convert(::mkStringReplaceAll)
+            Z3_decl_kind.Z3_OP_SEQ_REPLACE_RE -> expr.convert(::mkStringReplaceWithRegex)
+            Z3_decl_kind.Z3_OP_SEQ_REPLACE_RE_ALL -> expr.convert(::mkStringReplaceAllWithRegex)
+            Z3_decl_kind.Z3_OP_CHAR_IS_DIGIT -> expr.convert(::mkStringIsDigit)
+            Z3_decl_kind.Z3_OP_STR_TO_CODE -> expr.convert(::mkStringToCode)
+            Z3_decl_kind.Z3_OP_STR_FROM_CODE -> expr.convert(::mkStringFromCode)
+            Z3_decl_kind.Z3_OP_STR_TO_INT -> expr.convert(::mkStringToInt)
+            Z3_decl_kind.Z3_OP_INT_TO_STR -> expr.convert(::mkStringFromInt)
+            Z3_decl_kind.Z3_OP_RE_CONCAT -> expr.convert(::mkRegexConcat)
+            Z3_decl_kind.Z3_OP_RE_UNION -> expr.convert(::mkRegexUnion)
+            Z3_decl_kind.Z3_OP_RE_INTERSECT -> expr.convert(::mkRegexIntersection)
+            Z3_decl_kind.Z3_OP_RE_STAR -> expr.convert(::mkRegexStar)
+            Z3_decl_kind.Z3_OP_RE_PLUS -> expr.convert(::mkRegexCross)
+            Z3_decl_kind.Z3_OP_RE_DIFF -> expr.convert(::mkRegexDifference)
+            Z3_decl_kind.Z3_OP_RE_COMPLEMENT -> expr.convert(::mkRegexComplement)
+            Z3_decl_kind.Z3_OP_RE_OPTION -> expr.convert(::mkRegexOption)
+            Z3_decl_kind.Z3_OP_RE_RANGE -> expr.convert(::mkRegexRange)
+            Z3_decl_kind.Z3_OP_RE_EMPTY_SET -> ExprConversionResult(mkRegexEpsilon())
+            Z3_decl_kind.Z3_OP_RE_FULL_SET -> ExprConversionResult(mkRegexAll())
+            Z3_decl_kind.Z3_OP_RE_FULL_CHAR_SET -> ExprConversionResult(mkRegexAllChar())
+
             Z3_decl_kind.Z3_OP_INTERNAL -> tryConvertInternalAppExpr(expr, decl)
 
             Z3_decl_kind.Z3_OP_RECURSIVE -> {
@@ -616,6 +657,7 @@ open class KZ3ExprConverter(
             }
 
             "String" -> convertNumeral(expr)
+            "str.is_digit" -> expr.convert(::mkStringIsDigit)
 
             else -> throw KSolverUnsupportedFeatureException("Z3 internal decl $internalDeclName is not supported")
         }
