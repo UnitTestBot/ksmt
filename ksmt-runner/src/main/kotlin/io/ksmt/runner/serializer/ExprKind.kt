@@ -175,6 +175,8 @@ enum class ExprKind {
     RegexComplementExpr,
     RegexOptionExpr,
     RegexRangeExpr,
+    RegexPowerExpr,
+    RegexLoopExpr,
     RegexEpsilonExpr,
     RegexAllExpr,
     RegexAllCharExpr,

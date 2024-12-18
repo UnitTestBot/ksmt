@@ -172,6 +172,8 @@ interface KDeclVisitor<T> {
     fun visit(decl: KRegexComplementDecl): T = visit(decl as KFuncDecl<KRegexSort>)
     fun visit(decl: KRegexOptionDecl): T = visit(decl as KFuncDecl<KRegexSort>)
     fun visit(decl: KRegexRangeDecl): T = visit(decl as KFuncDecl<KRegexSort>)
+    fun visit(decl: KRegexPowerDecl): T = visit(decl as KFuncDecl<KRegexSort>)
+    fun visit(decl: KRegexLoopDecl): T = visit(decl as KFuncDecl<KRegexSort>)
     fun visit(decl: KRegexEpsilonDecl): T = visit(decl as KConstDecl<KRegexSort>)
     fun visit(decl: KRegexAllDecl): T = visit(decl as KConstDecl<KRegexSort>)
     fun visit(decl: KRegexAllCharDecl): T = visit(decl as KConstDecl<KRegexSort>)

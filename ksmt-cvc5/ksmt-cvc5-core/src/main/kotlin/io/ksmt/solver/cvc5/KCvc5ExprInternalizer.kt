@@ -192,6 +192,8 @@ import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KRegexOptionExpr
 import io.ksmt.expr.KRegexRangeExpr
+import io.ksmt.expr.KRegexPowerExpr
+import io.ksmt.expr.KRegexLoopExpr
 import io.ksmt.expr.KRegexEpsilon
 import io.ksmt.expr.KRegexAll
 import io.ksmt.expr.KRegexAllChar
@@ -1402,6 +1404,20 @@ class KCvc5ExprInternalizer(
     override fun transform(expr: KRegexRangeExpr) = with(expr) {
         transform(arg0, arg1) { arg0: Term, arg1: Term ->
             tm.mkTerm(Kind.REGEXP_RANGE, arg0, arg1)
+        }
+    }
+
+    override fun transform(expr: KRegexPowerExpr) = with(expr) {
+        transform(arg) { arg: Term ->
+            val extractOp = tm.mkOp(Kind.REGEXP_REPEAT, power)
+            tm.mkTerm(extractOp, arg)
+        }
+    }
+
+    override fun transform(expr: KRegexLoopExpr) = with(expr) {
+        transform(arg) { arg: Term ->
+            val extractOp = tm.mkOp(Kind.REGEXP_LOOP, from, to)
+            tm.mkTerm(extractOp, arg)
         }
     }
 

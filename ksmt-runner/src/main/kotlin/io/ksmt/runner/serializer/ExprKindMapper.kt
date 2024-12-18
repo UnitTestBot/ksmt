@@ -178,6 +178,8 @@ import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KRegexOptionExpr
 import io.ksmt.expr.KRegexRangeExpr
+import io.ksmt.expr.KRegexPowerExpr
+import io.ksmt.expr.KRegexLoopExpr
 import io.ksmt.expr.KRegexEpsilon
 import io.ksmt.expr.KRegexAll
 import io.ksmt.expr.KRegexAllChar
@@ -778,6 +780,12 @@ class ExprKindMapper: KTransformerBase {
 
 
     override fun transform(expr: KRegexRangeExpr): KExpr<KRegexSort> = expr.kind(ExprKind.RegexRangeExpr)
+
+
+    override fun transform(expr: KRegexPowerExpr): KExpr<KRegexSort> = expr.kind(ExprKind.RegexPowerExpr)
+
+
+    override fun transform(expr: KRegexLoopExpr): KExpr<KRegexSort> = expr.kind(ExprKind.RegexLoopExpr)
 
 
     override fun transform(expr: KRegexEpsilon): KExpr<KRegexSort> = expr.kind(ExprKind.RegexEpsilonExpr)

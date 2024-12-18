@@ -169,6 +169,8 @@ import io.ksmt.decl.KRegexDifferenceDecl
 import io.ksmt.decl.KRegexComplementDecl
 import io.ksmt.decl.KRegexOptionDecl
 import io.ksmt.decl.KRegexRangeDecl
+import io.ksmt.decl.KRegexPowerDecl
+import io.ksmt.decl.KRegexLoopDecl
 import io.ksmt.decl.KIteDecl
 import io.ksmt.decl.KNotDecl
 import io.ksmt.decl.KOrDecl
@@ -352,6 +354,8 @@ import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KRegexOptionExpr
 import io.ksmt.expr.KRegexRangeExpr
+import io.ksmt.expr.KRegexPowerExpr
+import io.ksmt.expr.KRegexLoopExpr
 import io.ksmt.expr.KIteExpr
 import io.ksmt.expr.KLeArithExpr
 import io.ksmt.expr.KLtArithExpr
@@ -2675,6 +2679,44 @@ open class KContext(
         regexRangeExprCache.createIfContextActive {
             ensureContextMatch(arg0, arg1)
             KRegexRangeExpr(this, arg0, arg1)
+        }
+
+    private val regexPowerExprCache = mkAstInterner<KRegexPowerExpr>()
+
+    /**
+     * Constructs a regex expression that represents the concatenation
+     * of the given `arg` regex repeated `power` times.
+     * */
+    open fun mkRegexPower(power: Int, arg: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(power, arg, KContext::mkRegexPowerNoSimplify, ::mkRegexPowerNoSimplify) // Add simplified version
+
+    /**
+     * Constructs a regex expression that represents the concatenation
+     * of the given `arg` regex repeated `power` times.
+     * */
+    open fun mkRegexPowerNoSimplify(power: Int, arg: KExpr<KRegexSort>): KRegexPowerExpr =
+        regexPowerExprCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KRegexPowerExpr(this, power, arg)
+        }
+
+    private val regexLoopExprCache = mkAstInterner<KRegexLoopExpr>()
+
+    /**
+     * Constructs a regex expression that represents the union of regexes
+     * formed by repeating the given `arg` regex from `from` to `to` times inclusively.
+     * */
+    open fun mkRegexLoop(from: Int, to: Int, arg: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(from, to, arg, KContext::mkRegexLoopNoSimplify, ::mkRegexLoopNoSimplify) // Add simplified version
+
+    /**
+     * Constructs a regex expression that represents the union of regexes
+     * formed by repeating the given `arg` regex from `from` to `to` times inclusively.
+     * */
+    open fun mkRegexLoopNoSimplify(from: Int, to: Int, arg: KExpr<KRegexSort>): KRegexLoopExpr =
+        regexLoopExprCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KRegexLoopExpr(this, from, to, arg)
         }
 
     val regexEpsilonExpr: KRegexEpsilon = KRegexEpsilon(this)
@@ -5377,6 +5419,10 @@ open class KContext(
     fun mkRegexOptionDecl(): KRegexOptionDecl = KRegexOptionDecl(this)
 
     fun mkRegexRangeDecl(): KRegexRangeDecl = KRegexRangeDecl(this)
+
+    fun mkRegexPowerDecl(power: Int): KRegexPowerDecl = KRegexPowerDecl(this, power)
+
+    fun mkRegexLoopDecl(from: Int, to: Int): KRegexLoopDecl = KRegexLoopDecl(this, from, to)
 
     fun mkRegexEpsilonDecl(): KRegexEpsilonDecl = KRegexEpsilonDecl(this)
 

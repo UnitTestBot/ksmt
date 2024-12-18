@@ -160,6 +160,8 @@ import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KRegexOptionExpr
 import io.ksmt.expr.KRegexRangeExpr
+import io.ksmt.expr.KRegexPowerExpr
+import io.ksmt.expr.KRegexLoopExpr
 import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KArray2Sort
 import io.ksmt.sort.KArray3Sort
@@ -880,6 +882,16 @@ abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecurs
         transformExprAfterTransformedDefault(
             expr, expr.arg0, expr.arg1, ::transformApp, KContext::mkRegexRange
         )
+
+    override fun transform(expr: KRegexPowerExpr): KExpr<KRegexSort> =
+        transformExprAfterTransformedDefault(expr, expr.arg, ::transformApp) {
+            arg -> mkRegexPower(expr.power, arg)
+        }
+
+    override fun transform(expr: KRegexLoopExpr): KExpr<KRegexSort> =
+        transformExprAfterTransformedDefault(expr, expr.arg, ::transformApp) {
+            arg -> mkRegexLoop(expr.from, expr.to, arg)
+        }
 
     // quantified expressions
     override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> =

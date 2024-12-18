@@ -316,6 +316,8 @@ class AstDeserializer(
             ExprKind.RegexComplementExpr -> deserialize(::mkRegexComplementNoSimplify)
             ExprKind.RegexOptionExpr -> deserialize(::mkRegexOptionNoSimplify)
             ExprKind.RegexRangeExpr -> deserialize(::mkRegexRangeNoSimplify)
+            ExprKind.RegexPowerExpr -> mkRegexPower(readExpr(), readInt())
+            ExprKind.RegexLoopExpr -> mkRegexLoop(readExpr(), readInt(), readInt())
             ExprKind.RegexEpsilonExpr -> mkRegexEpsilon()
             ExprKind.RegexAllExpr -> mkRegexAll()
             ExprKind.RegexAllCharExpr -> mkRegexAllChar()

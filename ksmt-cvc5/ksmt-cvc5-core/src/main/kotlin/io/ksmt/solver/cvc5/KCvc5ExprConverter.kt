@@ -26,6 +26,7 @@ import io.ksmt.sort.KArraySortBase
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KBv1Sort
 import io.ksmt.sort.KBvSort
+import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KFpRoundingModeSort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KIntSort
@@ -422,12 +423,12 @@ open class KCvc5ExprConverter(
             Kind.REGEXP_ALL -> convert { mkRegexAll() }
             Kind.REGEXP_ALLCHAR -> convert { mkRegexAllChar() }
             Kind.REGEXP_RANGE -> expr.convert(::mkRegexRange)
-            Kind.REGEXP_REPEAT -> throw KSolverUnsupportedFeatureException(
-                "No direct mapping of ${Kind.REGEXP_REPEAT} in ksmt"
-            )
-            Kind.REGEXP_LOOP -> throw KSolverUnsupportedFeatureException(
-                "No direct mapping of ${Kind.REGEXP_LOOP} in ksmt"
-            )
+            Kind.REGEXP_REPEAT -> expr.convert { regexExpr: KExpr<KRegexSort> ->
+                mkRegexPower(expr.regexRepeatTime, regexExpr)
+            }
+            Kind.REGEXP_LOOP -> expr.convert { regexExpr: KExpr<KRegexSort> ->
+                mkRegexLoop(expr.regexLoopFrom, expr.regexLoopTo, regexExpr)
+            }
 
             Kind.EQ_RANGE -> throw KSolverUnsupportedFeatureException("EQ_RANGE is not supported")
 
@@ -1020,5 +1021,29 @@ open class KCvc5ExprConverter(
         get() {
             require(kind == Kind.DIVISIBLE) { "Required op is ${Kind.DIVISIBLE}, but was $kind" }
             return termOpArg(this, 0).integerValue.toInt()
+        }
+
+    private val Term.regexRepeatTime: Int
+        get() {
+            require(kind == Kind.REGEXP_REPEAT) {
+                "Required op is ${Kind.REGEXP_REPEAT}, but was $kind"
+            }
+            return termOpArg(this, 0).integerValue.toInt()
+        }
+
+    private val Term.regexLoopFrom: Int
+        get() {
+            require(kind == Kind.REGEXP_LOOP) {
+                "Required op is ${Kind.REGEXP_LOOP}, but was $kind"
+            }
+            return termOpArg(this, 0).integerValue.toInt()
+        }
+
+    private val Term.regexLoopTo: Int
+        get() {
+            require(kind == Kind.REGEXP_LOOP) {
+                "Required op is ${Kind.REGEXP_LOOP}, but was $kind"
+            }
+            return termOpArg(this, 1).integerValue.toInt()
         }
 }

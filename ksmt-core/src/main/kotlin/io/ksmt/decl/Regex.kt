@@ -151,6 +151,39 @@ class KRegexRangeDecl internal constructor(
     ): KApp<KRegexSort, *> = mkRegexRangeNoSimplify(arg0, arg1)
 }
 
+class KRegexPowerDecl internal constructor(
+    ctx: KContext,
+    val power: Int
+) : KFuncDecl1<KRegexSort, KRegexSort>(
+    ctx,
+    "(regex_power $power)",
+    ctx.mkRegexSort(),
+    ctx.mkRegexSort()
+) {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg: KExpr<KRegexSort>
+    ): KApp<KRegexSort, KRegexSort> = mkRegexPowerNoSimplify(power, arg)
+}
+
+class KRegexLoopDecl internal constructor(
+    ctx: KContext,
+    val from: Int,
+    val to: Int
+) : KFuncDecl1<KRegexSort, KRegexSort>(
+    ctx,
+    "(regex_loop $from $to)",
+    ctx.mkRegexSort(),
+    ctx.mkRegexSort()
+) {
+    override fun <R> accept(visitor: KDeclVisitor<R>): R = visitor.visit(this)
+
+    override fun KContext.apply(
+        arg: KExpr<KRegexSort>
+    ): KApp<KRegexSort, KRegexSort> = mkRegexLoopNoSimplify(from, to, arg)
+}
+
 class KRegexEpsilonDecl internal constructor(
     ctx: KContext
 ) : KConstDecl<KRegexSort>(

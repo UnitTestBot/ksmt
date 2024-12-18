@@ -178,6 +178,8 @@ import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KRegexOptionExpr
 import io.ksmt.expr.KRegexRangeExpr
+import io.ksmt.expr.KRegexPowerExpr
+import io.ksmt.expr.KRegexLoopExpr
 import io.ksmt.expr.KRegexEpsilon
 import io.ksmt.expr.KRegexAll
 import io.ksmt.expr.KRegexAllChar
@@ -422,6 +424,8 @@ interface KTransformerBase {
     fun transform(expr: KRegexComplementExpr): KExpr<KRegexSort>
     fun transform(expr: KRegexOptionExpr): KExpr<KRegexSort>
     fun transform(expr: KRegexRangeExpr): KExpr<KRegexSort>
+    fun transform(expr: KRegexPowerExpr): KExpr<KRegexSort>
+    fun transform(expr: KRegexLoopExpr): KExpr<KRegexSort>
     fun transform(expr: KRegexEpsilon): KExpr<KRegexSort>
     fun transform(expr: KRegexAll): KExpr<KRegexSort>
     fun transform(expr: KRegexAllChar): KExpr<KRegexSort>

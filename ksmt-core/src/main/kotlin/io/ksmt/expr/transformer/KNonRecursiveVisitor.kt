@@ -160,6 +160,8 @@ import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KRegexOptionExpr
 import io.ksmt.expr.KRegexRangeExpr
+import io.ksmt.expr.KRegexPowerExpr
+import io.ksmt.expr.KRegexLoopExpr
 import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KArraySortBase
 import io.ksmt.sort.KBvSort
@@ -774,6 +776,12 @@ abstract class KNonRecursiveVisitor<V : Any>(
 
     override fun visit(expr: KRegexRangeExpr): KExprVisitResult<V> =
         visitExprAfterVisitedDefault(expr, expr.arg0, expr.arg1, ::visitApp)
+
+    override fun visit(expr: KRegexPowerExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg, ::visitApp)
+
+    override fun visit(expr: KRegexLoopExpr): KExprVisitResult<V> =
+        visitExprAfterVisitedDefault(expr, expr.arg, ::visitApp)
 
     // quantified expressions
     override fun visit(expr: KExistentialQuantifier): KExprVisitResult<V> =

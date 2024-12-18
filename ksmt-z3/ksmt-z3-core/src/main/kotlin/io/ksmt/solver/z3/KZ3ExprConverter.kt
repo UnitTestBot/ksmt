@@ -453,6 +453,17 @@ open class KZ3ExprConverter(
             Z3_decl_kind.Z3_OP_RE_COMPLEMENT -> expr.convert(::mkRegexComplement)
             Z3_decl_kind.Z3_OP_RE_OPTION -> expr.convert(::mkRegexOption)
             Z3_decl_kind.Z3_OP_RE_RANGE -> expr.convert(::mkRegexRange)
+            Z3_decl_kind.Z3_OP_RE_POWER -> {
+                val args = getAppArgs(nCtx, expr)
+                val power = Native.getDeclIntParameter(nCtx, decl, 0)
+                expr.convert(args) { arg -> mkRegexPower(power, arg) }
+            }
+            Z3_decl_kind.Z3_OP_RE_LOOP -> {
+                val args = getAppArgs(nCtx, expr)
+                val from = Native.getDeclIntParameter(nCtx, decl, 0)
+                val to = Native.getDeclIntParameter(nCtx, decl, 1)
+                expr.convert(args) { arg -> mkRegexLoop(from, to, arg) }
+            }
             Z3_decl_kind.Z3_OP_RE_EMPTY_SET -> ExprConversionResult(mkRegexEpsilon())
             Z3_decl_kind.Z3_OP_RE_FULL_SET -> ExprConversionResult(mkRegexAll())
             Z3_decl_kind.Z3_OP_RE_FULL_CHAR_SET -> ExprConversionResult(mkRegexAllChar())

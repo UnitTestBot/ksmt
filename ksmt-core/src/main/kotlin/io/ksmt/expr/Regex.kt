@@ -12,6 +12,8 @@ import io.ksmt.decl.KRegexDifferenceDecl
 import io.ksmt.decl.KRegexComplementDecl
 import io.ksmt.decl.KRegexOptionDecl
 import io.ksmt.decl.KRegexRangeDecl
+import io.ksmt.decl.KRegexPowerDecl
+import io.ksmt.decl.KRegexLoopDecl
 import io.ksmt.decl.KRegexEpsilonDecl
 import io.ksmt.decl.KRegexAllDecl
 import io.ksmt.decl.KRegexAllCharDecl
@@ -202,6 +204,49 @@ class KRegexRangeExpr internal constructor(
 
     override fun internHashCode(): Int = hash(arg0, arg1)
     override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg0 }, { arg1 })
+}
+
+class KRegexPowerExpr internal constructor(
+    ctx: KContext,
+    val power: Int,
+    val arg: KExpr<KRegexSort>,
+) : KApp<KRegexSort, KRegexSort>(ctx) {
+    override val sort: KRegexSort
+        get() = ctx.regexSort
+
+    override val decl: KRegexPowerDecl
+        get() = ctx.mkRegexPowerDecl(power)
+
+    override val args: List<KExpr<KRegexSort>>
+        get() = listOf(arg)
+
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> =
+        transformer.transform(this)
+
+    override fun internHashCode(): Int = hash(arg, power)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg }, { power })
+}
+
+class KRegexLoopExpr internal constructor(
+    ctx: KContext,
+    val from: Int,
+    val to: Int,
+    val arg: KExpr<KRegexSort>,
+) : KApp<KRegexSort, KRegexSort>(ctx) {
+    override val sort: KRegexSort
+        get() = ctx.regexSort
+
+    override val decl: KRegexLoopDecl
+        get() = ctx.mkRegexLoopDecl(from, to)
+
+    override val args: List<KExpr<KRegexSort>>
+        get() = listOf(arg)
+
+    override fun accept(transformer: KTransformerBase): KExpr<KRegexSort> =
+        transformer.transform(this)
+
+    override fun internHashCode(): Int = hash(arg, from, to)
+    override fun internEquals(other: Any): Boolean = structurallyEqual(other, { arg }, { from }, { to })
 }
 
 class KRegexEpsilon(ctx: KContext) : KInterpretedValue<KRegexSort>(ctx) {

@@ -186,6 +186,8 @@ import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KRegexOptionExpr
 import io.ksmt.expr.KRegexRangeExpr
+import io.ksmt.expr.KRegexPowerExpr
+import io.ksmt.expr.KRegexLoopExpr
 import io.ksmt.expr.KRegexEpsilon
 import io.ksmt.expr.KRegexAll
 import io.ksmt.expr.KRegexAllChar
@@ -1078,6 +1080,18 @@ open class KZ3ExprInternalizer(
     override fun transform(expr: KRegexRangeExpr) = with(expr) {
         transform(arg0, arg1) { arg0, arg1 ->
             Native.mkReRange(nCtx, arg0, arg1)
+        }
+    }
+
+    override fun transform(expr: KRegexPowerExpr) = with(expr) {
+        transform(arg) { arg ->
+            Native.mkRePower(nCtx, arg, power)
+        }
+    }
+
+    override fun transform(expr: KRegexLoopExpr) = with(expr) {
+        transform(arg) { arg ->
+            Native.mkReLoop(nCtx, arg, from, to)
         }
     }
 

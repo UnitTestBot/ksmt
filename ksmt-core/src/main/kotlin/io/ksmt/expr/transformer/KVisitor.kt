@@ -186,6 +186,8 @@ import io.ksmt.expr.KRegexDifferenceExpr
 import io.ksmt.expr.KRegexComplementExpr
 import io.ksmt.expr.KRegexOptionExpr
 import io.ksmt.expr.KRegexRangeExpr
+import io.ksmt.expr.KRegexPowerExpr
+import io.ksmt.expr.KRegexLoopExpr
 import io.ksmt.expr.KRegexEpsilon
 import io.ksmt.expr.KRegexAll
 import io.ksmt.expr.KRegexAllChar
@@ -725,6 +727,8 @@ interface KVisitor<V> : KTransformer {
     fun visit(expr: KRegexComplementExpr): V = visitApp(expr)
     fun visit(expr: KRegexOptionExpr): V = visitApp(expr)
     fun visit(expr: KRegexRangeExpr): V = visitApp(expr)
+    fun visit(expr: KRegexPowerExpr): V = visitApp(expr)
+    fun visit(expr: KRegexLoopExpr): V = visitApp(expr)
     fun visit(expr: KRegexEpsilon): V = visitValue(expr)
     fun visit(expr: KRegexAll): V = visitValue(expr)
     fun visit(expr: KRegexAllChar): V = visitValue(expr)
@@ -738,6 +742,8 @@ interface KVisitor<V> : KTransformer {
     override fun transform(expr: KRegexComplementExpr): KExpr<KRegexSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KRegexOptionExpr): KExpr<KRegexSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KRegexRangeExpr): KExpr<KRegexSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KRegexPowerExpr): KExpr<KRegexSort> = visitExpr(expr, ::visit)
+    override fun transform(expr: KRegexLoopExpr): KExpr<KRegexSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KRegexEpsilon): KExpr<KRegexSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KRegexAll): KExpr<KRegexSort> = visitExpr(expr, ::visit)
     override fun transform(expr: KRegexAllChar): KExpr<KRegexSort> = visitExpr(expr, ::visit)
