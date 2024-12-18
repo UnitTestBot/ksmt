@@ -12,6 +12,7 @@ import io.ksmt.sort.KArraySortBase
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KIntSort
+import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
 import io.ksmt.utils.uncheckedCast
@@ -316,8 +317,17 @@ class AstDeserializer(
             ExprKind.RegexComplementExpr -> deserialize(::mkRegexComplementNoSimplify)
             ExprKind.RegexOptionExpr -> deserialize(::mkRegexOptionNoSimplify)
             ExprKind.RegexRangeExpr -> deserialize(::mkRegexRangeNoSimplify)
-            ExprKind.RegexPowerExpr -> mkRegexPower(readExpr(), readInt())
-            ExprKind.RegexLoopExpr -> mkRegexLoop(readExpr(), readInt(), readInt())
+            ExprKind.RegexPowerExpr -> {
+                val expr = readExpr<KRegexSort>()
+                val power = readInt()
+                mkRegexPower(power, expr)
+            }
+            ExprKind.RegexLoopExpr -> {
+                val expr = readExpr<KRegexSort>()
+                val from = readInt()
+                val to = readInt()
+                mkRegexLoop(from, to, expr)
+            }
             ExprKind.RegexEpsilonExpr -> mkRegexEpsilon()
             ExprKind.RegexAllExpr -> mkRegexAll()
             ExprKind.RegexAllCharExpr -> mkRegexAllChar()
