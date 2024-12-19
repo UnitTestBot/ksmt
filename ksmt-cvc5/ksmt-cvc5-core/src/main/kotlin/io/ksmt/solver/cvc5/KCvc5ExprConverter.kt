@@ -820,6 +820,8 @@ open class KCvc5ExprConverter(
             sort.isBitVector -> mkBvSort(sort.bitVectorSize.toUInt())
             sort.isInteger -> intSort
             sort.isReal -> realSort
+            sort.isString -> stringSort
+            sort.isRegExp -> regexSort
             sort.isArray -> mkArrayAnySort(
                 domain = convertArrayDomainSort(tm.sortOp(sort) { arrayIndexSort }),
                 range = tm.sortOp(sort) { arrayElementSort }.convertSort()
