@@ -483,6 +483,44 @@ import io.ksmt.expr.rewrite.simplify.simplifyRealIsInt
 import io.ksmt.expr.rewrite.simplify.simplifyRealToFpExpr
 import io.ksmt.expr.rewrite.simplify.simplifyRealToInt
 import io.ksmt.expr.rewrite.simplify.simplifyXor
+import io.ksmt.expr.rewrite.simplify.simplifyStringConcat
+import io.ksmt.expr.rewrite.simplify.simplifyStringLen
+import io.ksmt.expr.rewrite.simplify.simplifyStringToRegex
+import io.ksmt.expr.rewrite.simplify.simplifyStringInRegex
+import io.ksmt.expr.rewrite.simplify.simplifyStringSuffixOf
+import io.ksmt.expr.rewrite.simplify.simplifyStringPrefixOf
+import io.ksmt.expr.rewrite.simplify.simplifyStringLt
+import io.ksmt.expr.rewrite.simplify.simplifyStringLe
+import io.ksmt.expr.rewrite.simplify.simplifyStringGt
+import io.ksmt.expr.rewrite.simplify.simplifyStringGe
+import io.ksmt.expr.rewrite.simplify.simplifyStringContains
+import io.ksmt.expr.rewrite.simplify.simplifyStringSingletonSub
+import io.ksmt.expr.rewrite.simplify.simplifyStringSub
+import io.ksmt.expr.rewrite.simplify.simplifyStringIndexOf
+import io.ksmt.expr.rewrite.simplify.simplifyStringIndexOfRegex
+import io.ksmt.expr.rewrite.simplify.simplifyStringReplace
+import io.ksmt.expr.rewrite.simplify.simplifyStringReplaceAll
+import io.ksmt.expr.rewrite.simplify.simplifyStringReplaceWithRegex
+import io.ksmt.expr.rewrite.simplify.simplifyStringReplaceAllWithRegex
+import io.ksmt.expr.rewrite.simplify.simplifyStringToLower
+import io.ksmt.expr.rewrite.simplify.simplifyStringToUpper
+import io.ksmt.expr.rewrite.simplify.simplifyStringReverse
+import io.ksmt.expr.rewrite.simplify.simplifyStringIsDigit
+import io.ksmt.expr.rewrite.simplify.simplifyStringToCode
+import io.ksmt.expr.rewrite.simplify.simplifyStringFromCode
+import io.ksmt.expr.rewrite.simplify.simplifyStringToInt
+import io.ksmt.expr.rewrite.simplify.simplifyStringFromInt
+import io.ksmt.expr.rewrite.simplify.simplifyRegexConcat
+import io.ksmt.expr.rewrite.simplify.simplifyRegexUnion
+import io.ksmt.expr.rewrite.simplify.simplifyRegexIntersection
+import io.ksmt.expr.rewrite.simplify.simplifyRegexStar
+import io.ksmt.expr.rewrite.simplify.simplifyRegexCross
+import io.ksmt.expr.rewrite.simplify.simplifyRegexDifference
+import io.ksmt.expr.rewrite.simplify.simplifyRegexComplement
+import io.ksmt.expr.rewrite.simplify.simplifyRegexOption
+import io.ksmt.expr.rewrite.simplify.simplifyRegexRange
+import io.ksmt.expr.rewrite.simplify.simplifyRegexPower
+import io.ksmt.expr.rewrite.simplify.simplifyRegexLoop
 import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KArray2Sort
 import io.ksmt.sort.KArray3Sort
@@ -1996,7 +2034,7 @@ open class KContext(
      * Create String concatenation (`concat`) expression.
      * */
     open fun mkStringConcat(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KExpr<KStringSort> =
-        mkSimplified(arg0, arg1, KContext::mkStringConcatNoSimplify, ::mkStringConcatNoSimplify) // Add simplified version
+        mkSimplified(arg0, arg1, KContext::simplifyStringConcat, ::mkStringConcatNoSimplify) // Add simplified version
 
     /**
      * Create String concatenation (`concat`) expression.
@@ -2019,7 +2057,7 @@ open class KContext(
      * Create string's length expression.
      * */
     open fun mkStringLen(arg: KExpr<KStringSort>): KExpr<KIntSort> =
-        mkSimplified(arg, KContext::mkStringLenNoSimplify, ::mkStringLenNoSimplify) // Add simplified version
+        mkSimplified(arg, KContext::simplifyStringLen, ::mkStringLenNoSimplify) // Add simplified version
 
     /**
      * Create string's length expression.
@@ -2041,7 +2079,7 @@ open class KContext(
      * Check if first string is a suffix of second.
      * */
     open fun mkStringSuffixOf(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KExpr<KBoolSort> =
-        mkSimplified(arg0, arg1, KContext::mkStringSuffixOfNoSimplify, ::mkStringSuffixOfNoSimplify) // Add simplified version
+        mkSimplified(arg0, arg1, KContext::simplifyStringSuffixOf, ::mkStringSuffixOfNoSimplify) // Add simplified version
 
     /**
      * Check if first string is a suffix of second.
@@ -2060,7 +2098,7 @@ open class KContext(
      * Check if first string is a prefix of second.
      * */
     open fun mkStringPrefixOf(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KExpr<KBoolSort> =
-        mkSimplified(arg0, arg1, KContext::mkStringPrefixOfNoSimplify, ::mkStringPrefixOfNoSimplify) // Add simplified version
+        mkSimplified(arg0, arg1, KContext::simplifyStringPrefixOf, ::mkStringPrefixOfNoSimplify) // Add simplified version
 
     /**
      * Check if first string is a prefix of second.
@@ -2079,7 +2117,7 @@ open class KContext(
      * Create a lexicographic ordering (`<` (less)) expression.
      * */
     open fun mkStringLt(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
-        mkSimplified(lhs, rhs, KContext::mkStringLtNoSimplify, ::mkStringLtNoSimplify) // Add simplified version
+        mkSimplified(lhs, rhs, KContext::simplifyStringLt, ::mkStringLtNoSimplify) // Add simplified version
 
     /**
      * Create a lexicographic ordering (`<` (less)) expression.
@@ -2099,7 +2137,7 @@ open class KContext(
      * Create a lexicographic ordering reflexive closure (`<=` (less or equal)) expression.
      * */
     open fun mkStringLe(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
-        mkSimplified(lhs, rhs, KContext::mkStringLeNoSimplify, ::mkStringLeNoSimplify) // Add simplified version
+        mkSimplified(lhs, rhs, KContext::simplifyStringLe, ::mkStringLeNoSimplify) // Add simplified version
 
     /**
      * Create a lexicographic ordering reflexive closure (`<=` (less or equal)) expression.
@@ -2119,7 +2157,7 @@ open class KContext(
      * Create a lexicographic ordering (`>` (greater)) expression.
      * */
     open fun mkStringGt(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
-        mkSimplified(lhs, rhs, KContext::mkStringGtNoSimplify, ::mkStringGtNoSimplify) // Add simplified version
+        mkSimplified(lhs, rhs, KContext::simplifyStringGt, ::mkStringGtNoSimplify) // Add simplified version
 
     /**
      * Create a lexicographic ordering (`>` (greater)) expression.
@@ -2139,7 +2177,7 @@ open class KContext(
      * Create a lexicographic ordering reflexive closure (`>=` (greater or equal)) expression.
      * */
     open fun mkStringGe(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
-        mkSimplified(lhs, rhs, KContext::mkStringGeNoSimplify, ::mkStringGeNoSimplify) // Add simplified version
+        mkSimplified(lhs, rhs, KContext::simplifyStringGe, ::mkStringGeNoSimplify) // Add simplified version
 
     /**
      * Create a lexicographic ordering reflexive closure (`>=` (greater or equal)) expression.
@@ -2159,7 +2197,7 @@ open class KContext(
      * Check if first string contains second one.
      * */
     open fun mkStringContains(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
-        mkSimplified(lhs, rhs, KContext::mkStringContainsNoSimplify, ::mkStringContainsNoSimplify) // Add simplified version
+        mkSimplified(lhs, rhs, KContext::simplifyStringContains, ::mkStringContainsNoSimplify) // Add simplified version
 
     /**
      * Check if first string contains second one.
@@ -2180,7 +2218,7 @@ open class KContext(
      * If position is out of range (less than 0, or grater than (string length - 1)), then returns empty string.
      * */
     open fun mkStringSingletonSub(arg0: KExpr<KStringSort>, arg1: KExpr<KIntSort>): KExpr<KStringSort> =
-        mkSimplified(arg0, arg1, KContext::mkStringSingletonSubNoSimplify, ::mkStringSingletonSubNoSimplify) // Add simplified version
+        mkSimplified(arg0, arg1, KContext::simplifyStringSingletonSub, ::mkStringSingletonSubNoSimplify) // Add simplified version
 
     /**
      * Returns singleton string containing a character at given position.
@@ -2200,7 +2238,7 @@ open class KContext(
      * or the given position is out of bounds.
      */
     open fun mkStringSub(arg0: KExpr<KStringSort>, arg1: KExpr<KIntSort>, arg2: KExpr<KIntSort>): KExpr<KStringSort> =
-        mkSimplified(arg0, arg1, arg2, KContext::mkStringSubNoSimplify, ::mkStringSubNoSimplify) // Add simplified version
+        mkSimplified(arg0, arg1, arg2, KContext::simplifyStringSub, ::mkStringSubNoSimplify) // Add simplified version
 
     /**
      * Evaluates the longest substring from the input string, starting at the specified position
@@ -2222,7 +2260,7 @@ open class KContext(
      * Returns the position if the second string is empty.
      */
     open fun mkStringIndexOf(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>, arg2: KExpr<KIntSort>): KExpr<KIntSort> =
-        mkSimplified(arg0, arg1, arg2, KContext::mkStringIndexOfNoSimplify, ::mkStringIndexOfNoSimplify) // Add simplified version
+        mkSimplified(arg0, arg1, arg2, KContext::simplifyStringIndexOf, ::mkStringIndexOfNoSimplify) // Add simplified version
 
     /**
      * Find the index of the first occurrence of the second string in the first string,
@@ -2244,7 +2282,7 @@ open class KContext(
      * or if the position is out of bounds.
      */
     open fun mkStringIndexOfRegex(arg0: KExpr<KStringSort>, arg1: KExpr<KRegexSort>, arg2: KExpr<KIntSort>): KExpr<KIntSort> =
-        mkSimplified(arg0, arg1, arg2, KContext::mkStringIndexOfRegexNoSimplify, ::mkStringIndexOfRegexNoSimplify) // Add simplified version
+        mkSimplified(arg0, arg1, arg2, KContext::simplifyStringIndexOfRegex, ::mkStringIndexOfRegexNoSimplify) // Add simplified version
 
     /**
      * Find the index of the first match of a regular expression in the string,
@@ -2265,7 +2303,7 @@ open class KContext(
      * If the second line is empty, then the third is inserted at the beginning of the first.
      * */
     open fun mkStringReplace(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>, arg2: KExpr<KStringSort>): KExpr<KStringSort> =
-        mkSimplified(arg0, arg1, arg2, KContext::mkStringReplaceNoSimplify, ::mkStringReplaceNoSimplify) // Add simplified version
+        mkSimplified(arg0, arg1, arg2, KContext::simplifyStringReplace, ::mkStringReplaceNoSimplify) // Add simplified version
 
     /**
      * Replace the first occurrence of the second string in the first string with the third,
@@ -2285,7 +2323,7 @@ open class KContext(
      * if there are such occurrences, otherwise return the first string.
      * */
     open fun mkStringReplaceAll(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>, arg2: KExpr<KStringSort>): KExpr<KStringSort> =
-        mkSimplified(arg0, arg1, arg2, KContext::mkStringReplaceAllNoSimplify, ::mkStringReplaceAllNoSimplify) // Add simplified version
+        mkSimplified(arg0, arg1, arg2, KContext::simplifyStringReplaceAll, ::mkStringReplaceAllNoSimplify) // Add simplified version
 
     /**
      * Replace the all occurrences of the second string in the first string with the third,
@@ -2304,7 +2342,7 @@ open class KContext(
      * If the language of r contains the empty string, the result is to prepend second string to first one.
      * */
     open fun mkStringReplaceWithRegex(arg0: KExpr<KStringSort>, arg1: KExpr<KRegexSort>, arg2: KExpr<KStringSort>): KExpr<KStringSort> =
-        mkSimplified(arg0, arg1, arg2, KContext::mkStringReplaceWithRegexNoSimplify, ::mkStringReplaceWithRegexNoSimplify) // Add simplified version
+        mkSimplified(arg0, arg1, arg2, KContext::simplifyStringReplaceWithRegex, ::mkStringReplaceWithRegexNoSimplify) // Add simplified version
 
     /**
      * Replace the shortest leftmost match of regex in first string, if any, by second string.
@@ -2322,7 +2360,7 @@ open class KContext(
      * Replace left-to right, each shortest non-empty match of regex in first string by seconds.
      * */
     open fun mkStringReplaceAllWithRegex(arg0: KExpr<KStringSort>, arg1: KExpr<KRegexSort>, arg2: KExpr<KStringSort>): KExpr<KStringSort> =
-        mkSimplified(arg0, arg1, arg2, KContext::mkStringReplaceAllWithRegexNoSimplify, ::mkStringReplaceAllWithRegexNoSimplify) // Add simplified version
+        mkSimplified(arg0, arg1, arg2, KContext::simplifyStringReplaceAllWithRegex, ::mkStringReplaceAllWithRegexNoSimplify) // Add simplified version
 
     /**
      * Replace left-to right, each shortest non-empty match of regex in first string by seconds.
@@ -2339,7 +2377,7 @@ open class KContext(
      * Convert string to lower case.
      * */
     open fun mkStringToLower(arg: KExpr<KStringSort>): KExpr<KStringSort> =
-        mkSimplified(arg, KContext::mkStringToLowerNoSimplify, ::mkStringToLowerNoSimplify) // Add simplified version
+        mkSimplified(arg, KContext::simplifyStringToLower, ::mkStringToLowerNoSimplify) // Add simplified version
 
     /**
      * Convert string to lower case.
@@ -2356,7 +2394,7 @@ open class KContext(
      * Convert string to upper case.
      * */
     open fun mkStringToUpper(arg: KExpr<KStringSort>): KExpr<KStringSort> =
-        mkSimplified(arg, KContext::mkStringToUpperNoSimplify, ::mkStringToUpperNoSimplify) // Add simplified version
+        mkSimplified(arg, KContext::simplifyStringToUpper, ::mkStringToUpperNoSimplify) // Add simplified version
 
     /**
      * Convert string to upper case.
@@ -2373,7 +2411,7 @@ open class KContext(
      * Reverse string.
      * */
     open fun mkStringReverse(arg: KExpr<KStringSort>): KExpr<KStringSort> =
-        mkSimplified(arg, KContext::mkStringReverseNoSimplify, ::mkStringReverseNoSimplify) // Add simplified version
+        mkSimplified(arg, KContext::simplifyStringReverse, ::mkStringReverseNoSimplify) // Add simplified version
 
     /**
      * Reverse string.
@@ -2390,7 +2428,7 @@ open class KContext(
      * Check that the string contains only decimal digit characters.
      * */
     open fun mkStringIsDigit(arg: KExpr<KStringSort>): KExpr<KBoolSort> =
-        mkSimplified(arg, KContext::mkStringIsDigitNoSimplify, ::mkStringIsDigitNoSimplify) // Add simplified version
+        mkSimplified(arg, KContext::simplifyStringIsDigit, ::mkStringIsDigitNoSimplify) // Add simplified version
 
     /**
      * Check that the string contains only decimal digit characters.
@@ -2408,7 +2446,7 @@ open class KContext(
      * Otherwise, returns -1.
      * */
     open fun mkStringToCode(arg: KExpr<KStringSort>): KExpr<KIntSort> =
-        mkSimplified(arg, KContext::mkStringToCodeNoSimplify, ::mkStringToCodeNoSimplify) // Add simplified version
+        mkSimplified(arg, KContext::simplifyStringToCode, ::mkStringToCodeNoSimplify) // Add simplified version
 
     /**
      * Returns the code point of the only character in the string if the string is a singleton.
@@ -2427,7 +2465,7 @@ open class KContext(
      * If codepoint not in range [0, 196607], returns empty string.
      * */
     open fun mkStringFromCode(arg: KExpr<KIntSort>): KExpr<KStringSort> =
-        mkSimplified(arg, KContext::mkStringFromCodeNoSimplify, ::mkStringFromCodeNoSimplify) // Add simplified version
+        mkSimplified(arg, KContext::simplifyStringFromCode, ::mkStringFromCodeNoSimplify) // Add simplified version
 
     /**
      * Returns a singleton string consisting of a character, with the given code point.
@@ -2446,7 +2484,7 @@ open class KContext(
      * Otherwise, if the string contains a character that is not a decimal number, then returns -1.
      * */
     open fun mkStringToInt(arg: KExpr<KStringSort>): KExpr<KIntSort> =
-        mkSimplified(arg, KContext::mkStringToIntNoSimplify, ::mkStringToIntNoSimplify) // Add simplified version
+        mkSimplified(arg, KContext::simplifyStringToInt, ::mkStringToIntNoSimplify) // Add simplified version
 
     /**
      * Converts a string containing only decimal digits to a positive integer.
@@ -2465,7 +2503,7 @@ open class KContext(
      * If the number is negative, it returns an empty string.
      * */
     open fun mkStringFromInt(arg: KExpr<KIntSort>): KExpr<KStringSort> =
-        mkSimplified(arg, KContext::mkStringFromIntNoSimplify, ::mkStringFromIntNoSimplify) // Add simplified version
+        mkSimplified(arg, KContext::simplifyStringFromInt, ::mkStringFromIntNoSimplify) // Add simplified version
 
     /**
      * Converts a positive integer to a string consisting of the decimal digits of that number, with no leading zeros.
@@ -2483,7 +2521,7 @@ open class KContext(
      * Create a regular expression based on a string expression.
      * */
     open fun mkStringToRegex(arg: KExpr<KStringSort>): KExpr<KRegexSort> =
-        mkSimplified(arg, KContext::mkStringToRegexNoSimplify, ::mkStringToRegexNoSimplify) // Add simplified version
+        mkSimplified(arg, KContext::simplifyStringToRegex, ::mkStringToRegexNoSimplify) // Add simplified version
 
     /**
      * Create a regular expression based on a string expression.
@@ -2503,7 +2541,7 @@ open class KContext(
      * Check if a string belongs to the language defined by the regular expression.
      * */
     open fun mkStringInRegex(arg0: KExpr<KStringSort>, arg1: KExpr<KRegexSort>): KExpr<KBoolSort> =
-        mkSimplified(arg0, arg1, KContext::mkStringInRegexNoSimplify, ::mkStringInRegexNoSimplify) // Add simplified version
+        mkSimplified(arg0, arg1, KContext::simplifyStringInRegex, ::mkStringInRegexNoSimplify) // Add simplified version
 
     /**
      * Check if a string belongs to the language defined by the regular expression.
@@ -2527,7 +2565,7 @@ open class KContext(
      * Create Regex concatenation (`concat`) expression.
      * */
     open fun mkRegexConcat(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KExpr<KRegexSort> =
-        mkSimplified(arg0, arg1, KContext::mkRegexConcatNoSimplify, ::mkRegexConcatNoSimplify) // Add simplified version
+        mkSimplified(arg0, arg1, KContext::simplifyRegexConcat, ::mkRegexConcatNoSimplify) // Add simplified version
 
     /**
      * Create Regex concatenation (`concat`) expression.
@@ -2547,7 +2585,7 @@ open class KContext(
      * Create Regex union (`union`) expression.
      * */
     open fun mkRegexUnion(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KExpr<KRegexSort> =
-        mkSimplified(arg0, arg1, KContext::mkRegexUnionNoSimplify, ::mkRegexUnionNoSimplify) // Add simplified version
+        mkSimplified(arg0, arg1, KContext::simplifyRegexUnion, ::mkRegexUnionNoSimplify) // Add simplified version
 
     /**
      * Create Regex union (`union`) expression.
@@ -2564,7 +2602,7 @@ open class KContext(
      * Create Regex intersection (`intersect`) expression.
      * */
     open fun mkRegexIntersection(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KExpr<KRegexSort> =
-        mkSimplified(arg0, arg1, KContext::mkRegexIntersectionNoSimplify, ::mkRegexIntersectionNoSimplify) // Add simplified version
+        mkSimplified(arg0, arg1, KContext::simplifyRegexIntersection, ::mkRegexIntersectionNoSimplify) // Add simplified version
 
     /**
      * Create Regex intersection (`intersect`) expression.
@@ -2581,7 +2619,7 @@ open class KContext(
      * Create regular expression's Kleene closure.
      * */
     open fun mkRegexStar(arg: KExpr<KRegexSort>): KExpr<KRegexSort> =
-        mkSimplified(arg, KContext::mkRegexStarNoSimplify, ::mkRegexStarNoSimplify) // Add simplified version
+        mkSimplified(arg, KContext::simplifyRegexStar, ::mkRegexStarNoSimplify) // Add simplified version
 
     /**
      * Create regular expression's Kleene closure.
@@ -2598,7 +2636,7 @@ open class KContext(
      * Create regular expression's Kleene cross.
      * */
     open fun mkRegexCross(arg: KExpr<KRegexSort>): KExpr<KRegexSort> =
-        mkSimplified(arg, KContext::mkRegexCrossNoSimplify, ::mkRegexCrossNoSimplify) // Add simplified version
+        mkSimplified(arg, KContext::simplifyRegexCross, ::mkRegexCrossNoSimplify) // Add simplified version
 
     /**
      * Create regular expression's Kleene cross.
@@ -2615,7 +2653,7 @@ open class KContext(
      * Create Regex difference (`diff`) expression.
      * */
     open fun mkRegexDifference(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KExpr<KRegexSort> =
-        mkSimplified(arg0, arg1, KContext::mkRegexDifferenceNoSimplify, ::mkRegexDifferenceNoSimplify) // Add simplified version
+        mkSimplified(arg0, arg1, KContext::simplifyRegexDifference, ::mkRegexDifferenceNoSimplify) // Add simplified version
 
     /**
      * Create Regex difference (`diff`) expression.
@@ -2632,7 +2670,7 @@ open class KContext(
      * Create regular expression's complement.
      * */
     open fun mkRegexComplement(arg: KExpr<KRegexSort>): KExpr<KRegexSort> =
-        mkSimplified(arg, KContext::mkRegexComplementNoSimplify, ::mkRegexComplementNoSimplify) // Add simplified version
+        mkSimplified(arg, KContext::simplifyRegexComplement, ::mkRegexComplementNoSimplify) // Add simplified version
 
     /**
      * Create regular expression's complement.
@@ -2649,7 +2687,7 @@ open class KContext(
      * Equivalent to concatenating a regular expression with the empty string.
      * */
     open fun mkRegexOption(arg: KExpr<KRegexSort>): KExpr<KRegexSort> =
-        mkSimplified(arg, KContext::mkRegexOptionNoSimplify, ::mkRegexOptionNoSimplify) // Add simplified version
+        mkSimplified(arg, KContext::simplifyRegexOption, ::mkRegexOptionNoSimplify) // Add simplified version
 
     /**
      * Make regular expression optional.
@@ -2668,7 +2706,7 @@ open class KContext(
      * Otherwise the empty set.
      * */
     open fun mkRegexRange(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KExpr<KRegexSort> =
-        mkSimplified(arg0, arg1, KContext::mkRegexRangeNoSimplify, ::mkRegexRangeNoSimplify) // Add simplified version
+        mkSimplified(arg0, arg1, KContext::simplifyRegexRange, ::mkRegexRangeNoSimplify) // Add simplified version
 
     /**
      * Return the set of all singleton strings in the range
@@ -2688,7 +2726,7 @@ open class KContext(
      * of the given `arg` regex repeated `power` times.
      * */
     open fun mkRegexPower(power: Int, arg: KExpr<KRegexSort>): KExpr<KRegexSort> =
-        mkSimplified(power, arg, KContext::mkRegexPowerNoSimplify, ::mkRegexPowerNoSimplify) // Add simplified version
+        mkSimplified(power, arg, KContext::simplifyRegexPower, ::mkRegexPowerNoSimplify) // Add simplified version
 
     /**
      * Constructs a regex expression that represents the concatenation
@@ -2707,7 +2745,7 @@ open class KContext(
      * formed by repeating the given `arg` regex from `from` to `to` times inclusively.
      * */
     open fun mkRegexLoop(from: Int, to: Int, arg: KExpr<KRegexSort>): KExpr<KRegexSort> =
-        mkSimplified(from, to, arg, KContext::mkRegexLoopNoSimplify, ::mkRegexLoopNoSimplify) // Add simplified version
+        mkSimplified(from, to, arg, KContext::simplifyRegexLoop, ::mkRegexLoopNoSimplify) // Add simplified version
 
     /**
      * Constructs a regex expression that represents the union of regexes
