@@ -19,7 +19,7 @@ val `mac-arm` by sourceSets.creating
 val `windows-arm` by sourceSets.creating
 val `linux-arm` by sourceSets.creating
 
-val z3Version = "4.13.0"
+val z3Version = "4.13.4"
 
 val winDllPath = listOf("**/vcruntime140.dll", "**/vcruntime140_1.dll", "**/libz3.dll", "**/libz3java.dll")
 val linuxSoPath = listOf("**/libz3.so", "**/libz3java.so")
@@ -28,9 +28,9 @@ val macDylibPath = listOf("**/libz3.dylib", "**/libz3java.dylib")
 val z3Binaries = listOf(
     Triple(`windows-x64`, mkZ3ReleaseDownloadTask(z3Version, "x64-win", winDllPath), null),
     Triple(`linux-x64`, null, z3NativeLinuxX64),
-    Triple(`mac-x64`, mkZ3ReleaseDownloadTask(z3Version, "x64-osx-11.7.10", macDylibPath), null),
-    Triple(`mac-arm`, mkZ3ReleaseDownloadTask(z3Version, "arm64-osx-11.0", macDylibPath), null),
-    Triple(`linux-arm`, mkZ3ReleaseDownloadTask(z3Version, "arm64-glibc-2.35", linuxSoPath), null),
+    Triple(`mac-x64`, mkZ3ReleaseDownloadTask(z3Version, "x64-osx-13.7.1", macDylibPath), null),
+    Triple(`mac-arm`, mkZ3ReleaseDownloadTask(z3Version, "arm64-osx-13.7.1", macDylibPath), null),
+    Triple(`linux-arm`, mkZ3ReleaseDownloadTask(z3Version, "arm64-glibc-2.34", linuxSoPath), null),
 )
 
 z3Binaries.forEach { it.first.compileClasspath = compileConfig }
