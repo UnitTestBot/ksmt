@@ -539,8 +539,10 @@ open class KCvc5ExprConverter(
 
             Kind.WITNESS -> error("no direct mapping in ksmt")
             Kind.LAST_KIND -> error("should not be here. Marks the upper-bound of this enumeration, not op kind")
-            Kind.INTERNAL_KIND -> error("should not be here. Not exposed via the API")
-            Kind.UNDEFINED_KIND -> error("should not be here. Not exposed via the API")
+
+            Kind.INTERNAL_KIND -> throw KSolverUnsupportedFeatureException("Unsupported internal expr $expr")
+
+            Kind.UNDEFINED_KIND -> error("$expr should not be here. Not exposed via the API")
             Kind.NULL_TERM,
             Kind.NULLABLE_LIFT,
             Kind.SKOLEM -> error("no support in ksmt")
