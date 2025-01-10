@@ -15,8 +15,6 @@ class KCvc5NativeLibraryLoaderWindowsX64 :
 
     companion object {
         private val libraries = listOf(
-            "libpoly",
-            "libpolyxx",
             "libcvc5",
             "libcvc5parser",
             "libcvc5jni"

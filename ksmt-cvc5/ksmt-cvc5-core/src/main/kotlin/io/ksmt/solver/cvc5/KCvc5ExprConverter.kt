@@ -300,6 +300,21 @@ open class KCvc5ExprConverter(
                 mkBvDivNoOverflowExpr(arg0, arg1)
             }
 
+            Kind.BITVECTOR_FROM_BOOLS -> expr.convertList { bits: List<KExpr<KBoolSort>> ->
+                val oneBit = mkBv(true)
+                val zeroBit = mkBv(false)
+
+                bits
+                    .map<_, KExpr<out KBvSort>> { mkIte(it, oneBit, zeroBit) }
+                    .reduce { acc, bit -> mkBvConcatExpr(acc, bit) }
+            }
+
+            Kind.BITVECTOR_BIT -> expr.convert { arg: KExpr<KBvSort> ->
+                val bitIndex = expr.bvBitIndex
+                val bitValue: KExpr<KBv1Sort> = mkBvExtractExpr(bitIndex, bitIndex, arg).uncheckedCast()
+                mkEq(bitValue, mkBv(true))
+            }
+
             // fp
             Kind.FLOATINGPOINT_FP -> {
                 expr.convert { bvSign: KExpr<KBv1Sort>, bvExponent: KExpr<KBvSort>, bvSignificand: KExpr<KBvSort> ->
@@ -414,6 +429,7 @@ open class KCvc5ExprConverter(
             Kind.SET_IS_SINGLETON,
             Kind.SET_MAP,
             Kind.SET_FILTER,
+            Kind.SET_IS_EMPTY,
             Kind.SET_FOLD -> throw KSolverUnsupportedFeatureException("currently ksmt does not support sets")
 
             Kind.RELATION_JOIN,
@@ -450,6 +466,7 @@ open class KCvc5ExprConverter(
             Kind.TABLE_PROJECT,
             Kind.TABLE_AGGREGATE,
             Kind.TABLE_JOIN,
+            Kind.RELATION_TABLE_JOIN,
             Kind.TABLE_GROUP -> throw KSolverUnsupportedFeatureException("currently ksmt does not support tables")
 
             Kind.STRING_CONCAT,
@@ -522,8 +539,10 @@ open class KCvc5ExprConverter(
 
             Kind.WITNESS -> error("no direct mapping in ksmt")
             Kind.LAST_KIND -> error("should not be here. Marks the upper-bound of this enumeration, not op kind")
-            Kind.INTERNAL_KIND -> error("should not be here. Not exposed via the API")
-            Kind.UNDEFINED_KIND -> error("should not be here. Not exposed via the API")
+
+            Kind.INTERNAL_KIND -> throw KSolverUnsupportedFeatureException("Unsupported internal expr $expr")
+
+            Kind.UNDEFINED_KIND -> error("$expr should not be here. Not exposed via the API")
             Kind.NULL_TERM,
             Kind.NULLABLE_LIFT,
             Kind.SKOLEM -> error("no support in ksmt")
@@ -969,6 +988,12 @@ open class KCvc5ExprConverter(
     private val Term.bvRepeatTimes: Int
         get() {
             require(kind == Kind.BITVECTOR_REPEAT) { "Required op is ${Kind.BITVECTOR_REPEAT}, but was $kind" }
+            return termOpArg(this, 0).integerValue.toInt()
+        }
+
+    private val Term.bvBitIndex: Int
+        get() {
+            require(kind == Kind.BITVECTOR_BIT) { "Required op is ${Kind.BITVECTOR_BIT}, but was $kind" }
             return termOpArg(this, 0).integerValue.toInt()
         }
 

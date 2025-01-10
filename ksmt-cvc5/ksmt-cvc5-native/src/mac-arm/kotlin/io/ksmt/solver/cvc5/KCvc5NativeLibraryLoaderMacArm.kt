@@ -15,8 +15,6 @@ class KCvc5NativeLibraryLoaderMacArm :
 
     companion object {
         private val libraries = listOf(
-            "libpoly.0.1.13",
-            "libpolyxx.0.1.13",
             "libcvc5.1",
             "libcvc5parser.1",
             "libcvc5jni",

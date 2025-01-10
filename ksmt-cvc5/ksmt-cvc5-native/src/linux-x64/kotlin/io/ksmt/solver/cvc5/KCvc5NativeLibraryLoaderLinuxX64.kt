@@ -18,8 +18,6 @@ class KCvc5NativeLibraryLoaderLinuxX64 :
 
     companion object {
         private val libraries = listOf(
-            "libpoly.so.0.1.13",
-            "libpolyxx.so.0.1.13",
             "libcvc5.so.1",
             "libcvc5parser.so.1",
             "libcvc5jni.so",

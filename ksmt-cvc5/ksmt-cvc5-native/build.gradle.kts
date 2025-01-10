@@ -27,7 +27,7 @@ val cvc5Binaries = mapOf(
 
 cvc5Binaries.keys.forEach { it.compileClasspath = compileConfig }
 
-val cvc5Version = "1.1.2"
+val cvc5Version = "1.2.0"
 
 dependencies {
     compileConfig(project(":ksmt-cvc5:ksmt-cvc5-core"))

@@ -11,7 +11,7 @@ repositories {
     mavenCentral()
 }
 
-val cvc5Version = "1.1.2"
+val cvc5Version = "1.2.0"
 val cvc5Jar = distDir.resolve("cvc5-$cvc5Version.jar")
 
 dependencies {
