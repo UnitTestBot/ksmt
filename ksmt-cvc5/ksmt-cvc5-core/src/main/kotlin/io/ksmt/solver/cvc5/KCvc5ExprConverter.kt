@@ -26,6 +26,7 @@ import io.ksmt.sort.KArraySortBase
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KBv1Sort
 import io.ksmt.sort.KBvSort
+import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KFpRoundingModeSort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KIntSort
@@ -82,6 +83,7 @@ open class KCvc5ExprConverter(
             Kind.CONST_ARRAY -> convertNativeConstArrayExpr<KSort>(expr)
             Kind.CONST_INTEGER -> convertNativeConstIntegerExpr(expr)
             Kind.CONST_RATIONAL -> convertNativeConstRealExpr(expr)
+            Kind.CONST_STRING -> convertNativeConstStringExpr(expr)
             Kind.CONSTANT -> convert { expr.convertDecl<KSort>().apply(emptyList()) }
             Kind.UNINTERPRETED_SORT_VALUE -> convert {
                 model ?: error("Uninterpreted value without model")
@@ -393,6 +395,56 @@ open class KCvc5ExprConverter(
             Kind.SELECT -> convertNativeArraySelect(expr)
             Kind.STORE -> convertNativeArrayStore(expr)
 
+            // strings
+            Kind.STRING_CONCAT -> expr.convert(::mkStringConcat)
+            Kind.STRING_LENGTH -> expr.convert(::mkStringLen)
+            Kind.STRING_TO_REGEXP -> expr.convert(::mkStringToRegex)
+            Kind.STRING_IN_REGEXP -> expr.convert(::mkStringInRegex)
+            Kind.STRING_SUFFIX -> expr.convert(::mkStringSuffixOf)
+            Kind.STRING_PREFIX -> expr.convert(::mkStringPrefixOf)
+            Kind.STRING_LT -> expr.convert(::mkStringLt)
+            Kind.STRING_LEQ -> expr.convert(::mkStringLe)
+            Kind.STRING_CONTAINS -> expr.convert(::mkStringContains)
+            Kind.STRING_CHARAT -> expr.convert(::mkStringSingletonSub)
+            Kind.STRING_SUBSTR -> expr.convert(::mkStringSub)
+            Kind.STRING_INDEXOF -> expr.convert(::mkStringIndexOf)
+            Kind.STRING_REPLACE -> expr.convert(::mkStringReplace)
+            Kind.STRING_REPLACE_ALL -> expr.convert(::mkStringReplaceAll)
+            Kind.STRING_REPLACE_RE -> expr.convert(::mkStringReplaceWithRegex)
+            Kind.STRING_REPLACE_RE_ALL -> expr.convert(::mkStringReplaceAllWithRegex)
+            Kind.STRING_IS_DIGIT -> expr.convert(::mkStringIsDigit)
+            Kind.STRING_TO_CODE -> expr.convert(::mkStringToCode)
+            Kind.STRING_FROM_CODE -> expr.convert(::mkStringFromCode)
+            Kind.STRING_TO_INT -> expr.convert(::mkStringToInt)
+            Kind.STRING_FROM_INT -> expr.convert(::mkStringFromInt)
+            Kind.STRING_INDEXOF_RE -> expr.convert(::mkStringIndexOfRegex)
+            Kind.STRING_TO_LOWER -> expr.convert(::mkStringToLower)
+            Kind.STRING_TO_UPPER -> expr.convert(::mkStringToUpper)
+            Kind.STRING_REV -> expr.convert(::mkStringReverse)
+            Kind.STRING_UPDATE -> throw KSolverUnsupportedFeatureException(
+                "No direct mapping of ${Kind.STRING_UPDATE} in ksmt"
+            )
+
+            // regex
+            Kind.REGEXP_CONCAT -> expr.convert(::mkRegexConcat)
+            Kind.REGEXP_UNION -> expr.convert(::mkRegexUnion)
+            Kind.REGEXP_INTER -> expr.convert(::mkRegexIntersection)
+            Kind.REGEXP_STAR -> expr.convert(::mkRegexStar)
+            Kind.REGEXP_PLUS -> expr.convert(::mkRegexCross)
+            Kind.REGEXP_DIFF -> expr.convert(::mkRegexDifference)
+            Kind.REGEXP_COMPLEMENT -> expr.convert(::mkRegexComplement)
+            Kind.REGEXP_OPT -> expr.convert(::mkRegexOption)
+            Kind.REGEXP_NONE -> convert { mkRegexEpsilon() }
+            Kind.REGEXP_ALL -> convert { mkRegexAll() }
+            Kind.REGEXP_ALLCHAR -> convert { mkRegexAllChar() }
+            Kind.REGEXP_RANGE -> expr.convert(::mkRegexRange)
+            Kind.REGEXP_REPEAT -> expr.convert { regexExpr: KExpr<KRegexSort> ->
+                mkRegexPower(expr.regexRepeatTime, regexExpr)
+            }
+            Kind.REGEXP_LOOP -> expr.convert { regexExpr: KExpr<KRegexSort> ->
+                mkRegexLoop(expr.regexLoopFrom, expr.regexLoopTo, regexExpr)
+            }
+
             Kind.EQ_RANGE -> throw KSolverUnsupportedFeatureException("EQ_RANGE is not supported")
 
             Kind.APPLY_CONSTRUCTOR,
@@ -468,51 +520,6 @@ open class KCvc5ExprConverter(
             Kind.TABLE_JOIN,
             Kind.RELATION_TABLE_JOIN,
             Kind.TABLE_GROUP -> throw KSolverUnsupportedFeatureException("currently ksmt does not support tables")
-
-            Kind.STRING_CONCAT,
-            Kind.STRING_IN_REGEXP,
-            Kind.STRING_LENGTH,
-            Kind.STRING_SUBSTR,
-            Kind.STRING_UPDATE,
-            Kind.STRING_CHARAT,
-            Kind.STRING_CONTAINS,
-            Kind.STRING_INDEXOF,
-            Kind.STRING_INDEXOF_RE,
-            Kind.STRING_REPLACE,
-            Kind.STRING_REPLACE_ALL,
-            Kind.STRING_REPLACE_RE,
-            Kind.STRING_REPLACE_RE_ALL,
-            Kind.STRING_TO_LOWER,
-            Kind.STRING_TO_UPPER,
-            Kind.STRING_REV,
-            Kind.STRING_TO_CODE,
-            Kind.STRING_FROM_CODE,
-            Kind.STRING_LT,
-            Kind.STRING_LEQ,
-            Kind.STRING_PREFIX,
-            Kind.STRING_SUFFIX,
-            Kind.STRING_IS_DIGIT,
-            Kind.STRING_FROM_INT,
-            Kind.STRING_TO_INT,
-            Kind.CONST_STRING,
-            Kind.STRING_TO_REGEXP -> throw KSolverUnsupportedFeatureException("currently ksmt does not support strings")
-
-            Kind.REGEXP_CONCAT,
-            Kind.REGEXP_UNION,
-            Kind.REGEXP_INTER,
-            Kind.REGEXP_DIFF,
-            Kind.REGEXP_STAR,
-            Kind.REGEXP_PLUS,
-            Kind.REGEXP_OPT,
-            Kind.REGEXP_RANGE,
-            Kind.REGEXP_REPEAT,
-            Kind.REGEXP_LOOP,
-            Kind.REGEXP_NONE,
-            Kind.REGEXP_ALL,
-            Kind.REGEXP_ALLCHAR,
-            Kind.REGEXP_COMPLEMENT -> throw KSolverUnsupportedFeatureException(
-                "currently ksmt does not support regular expressions"
-            )
 
             Kind.SEQ_CONCAT,
             Kind.SEQ_LENGTH,
@@ -729,6 +736,12 @@ open class KCvc5ExprConverter(
         }
     }
 
+    private fun convertNativeConstStringExpr(expr: Term): ExprConversionResult = with(ctx) {
+        convert {
+            mkStringLiteral(expr.stringValue)
+        }
+    }
+
     private fun convertNativeBitvectorConstExpr(expr: Term): ExprConversionResult = with(ctx) {
         convert { mkBv(expr.bitVectorValue, expr.bitVectorValue.length.toUInt()) }
     }
@@ -826,6 +839,8 @@ open class KCvc5ExprConverter(
             sort.isBitVector -> mkBvSort(sort.bitVectorSize.toUInt())
             sort.isInteger -> intSort
             sort.isReal -> realSort
+            sort.isString -> stringSort
+            sort.isRegExp -> regexSort
             sort.isArray -> mkArrayAnySort(
                 domain = convertArrayDomainSort(tm.sortOp(sort) { arrayIndexSort }),
                 range = tm.sortOp(sort) { arrayElementSort }.convertSort()
@@ -1033,5 +1048,29 @@ open class KCvc5ExprConverter(
         get() {
             require(kind == Kind.DIVISIBLE) { "Required op is ${Kind.DIVISIBLE}, but was $kind" }
             return termOpArg(this, 0).integerValue.toInt()
+        }
+
+    private val Term.regexRepeatTime: Int
+        get() {
+            require(kind == Kind.REGEXP_REPEAT) {
+                "Required op is ${Kind.REGEXP_REPEAT}, but was $kind"
+            }
+            return termOpArg(this, 0).integerValue.toInt()
+        }
+
+    private val Term.regexLoopFrom: Int
+        get() {
+            require(kind == Kind.REGEXP_LOOP) {
+                "Required op is ${Kind.REGEXP_LOOP}, but was $kind"
+            }
+            return termOpArg(this, 0).integerValue.toInt()
+        }
+
+    private val Term.regexLoopTo: Int
+        get() {
+            require(kind == Kind.REGEXP_LOOP) {
+                "Required op is ${Kind.REGEXP_LOOP}, but was $kind"
+            }
+            return termOpArg(this, 1).integerValue.toInt()
         }
 }

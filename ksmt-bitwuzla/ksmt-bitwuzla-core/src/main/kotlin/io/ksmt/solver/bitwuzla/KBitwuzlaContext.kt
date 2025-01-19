@@ -18,6 +18,7 @@ import io.ksmt.expr.KFunctionAsArray
 import io.ksmt.expr.KUniversalQuantifier
 import io.ksmt.expr.transformer.KNonRecursiveTransformer
 import io.ksmt.solver.KSolverException
+import io.ksmt.solver.KSolverUnsupportedFeatureException
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaNativeException
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaSort
 import org.ksmt.solver.bitwuzla.bindings.BitwuzlaTerm
@@ -34,6 +35,8 @@ import io.ksmt.sort.KFpRoundingModeSort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRealSort
+import io.ksmt.sort.KStringSort
+import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KSortVisitor
 import io.ksmt.sort.KUninterpretedSort
@@ -360,6 +363,12 @@ open class KBitwuzlaContext(val ctx: KContext) : AutoCloseable {
         }
 
         override fun visit(sort: KRealSort) {
+        }
+
+        override fun visit(sort: KStringSort) {
+        }
+
+        override fun visit(sort: KRegexSort) {
         }
 
         override fun <S : KBvSort> visit(sort: S) {

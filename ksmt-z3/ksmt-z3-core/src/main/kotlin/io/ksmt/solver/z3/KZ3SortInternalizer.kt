@@ -17,6 +17,8 @@ import io.ksmt.sort.KFpRoundingModeSort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRealSort
+import io.ksmt.sort.KStringSort
+import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KSortVisitor
 import io.ksmt.sort.KUninterpretedSort
@@ -38,6 +40,14 @@ open class KZ3SortInternalizer(
 
     override fun visit(sort: KRealSort) {
         internalizedSort = Native.mkRealSort(nCtx)
+    }
+
+    override fun visit(sort: KStringSort) {
+        internalizedSort = Native.mkStringSort(nCtx)
+    }
+
+    override fun visit(sort: KRegexSort) {
+        internalizedSort = Native.mkReSort(nCtx, Native.mkStringSort(nCtx))
     }
 
     override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>) {

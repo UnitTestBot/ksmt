@@ -18,7 +18,12 @@ abstract class KDecl<T : KSort>(
 
     override fun print(builder: StringBuilder): Unit = with(builder) {
         append('(')
-        append(name)
+
+        if (this@KDecl is KStringLiteralDecl) {
+            append("\"$name\"")
+        } else {
+            append(name)
+        }
 
         if (this@KDecl is KParameterizedFuncDecl) {
             append(parameters.joinToString(separator = " ", prefix = " [", postfix = "]"))

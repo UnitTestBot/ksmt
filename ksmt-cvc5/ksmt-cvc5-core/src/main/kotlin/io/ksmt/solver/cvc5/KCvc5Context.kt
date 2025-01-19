@@ -27,6 +27,8 @@ import io.ksmt.sort.KFpRoundingModeSort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRealSort
+import io.ksmt.sort.KStringSort
+import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KSortVisitor
 import io.ksmt.sort.KUninterpretedSort
@@ -372,6 +374,10 @@ class KCvc5Context(
         override fun visit(sort: KIntSort) = Unit
 
         override fun visit(sort: KRealSort) = Unit
+
+        override fun visit(sort: KStringSort) = Unit
+
+        override fun visit(sort: KRegexSort) = Unit
 
         override fun <S : KBvSort> visit(sort: S) = Unit
 
