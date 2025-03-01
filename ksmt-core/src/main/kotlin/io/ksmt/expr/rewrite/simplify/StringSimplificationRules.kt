@@ -5,6 +5,7 @@ import io.ksmt.expr.KExpr
 import io.ksmt.expr.KInterpretedValue
 import io.ksmt.expr.KStringConcatExpr
 import io.ksmt.expr.KStringLiteralExpr
+import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KStringSort
@@ -70,6 +71,8 @@ inline fun KContext.simplifyStringNestedConcat(
 * String length expression simplification
 * */
 
+/**
+ * Eval length of string constant. */
 inline fun KContext.simplifyStringLenExpr(
     arg: KExpr<KStringSort>,
     cont: (KExpr<KStringSort>) -> KExpr<KIntSort>
@@ -78,6 +81,32 @@ inline fun KContext.simplifyStringLenExpr(
         mkIntNum(literalArg.value.length)
     }) {
         cont(arg)
+    }
+
+/*
+* SuffixOf and PrefixOf expression simplifications
+* */
+
+/** Simplifies string suffix checking expressions
+ * (str_suffix_of strConst1 strConst2) ==> boolConst */
+inline fun KContext.simplifyStringBasicSuffixOfExpr(
+    arg0: KExpr<KStringSort>,
+    arg1: KExpr<KStringSort>,
+    cont: (KExpr<KStringSort>, KExpr<KStringSort>) -> KExpr<KBoolSort>
+): KExpr<KBoolSort> =
+    tryEvalStringLiteralOperation(arg0, arg1, { a0, a1 -> StringUtils.isStringSuffix(a0, a1) }) {
+        cont(arg0, arg1)
+    }
+
+/** Simplifies string prefix checking expressions
+ * (str_prefix_of strConst1 strConst2) ==> boolConst */
+inline fun KContext.simplifyStringBasicPrefixOfExpr(
+    arg0: KExpr<KStringSort>,
+    arg1: KExpr<KStringSort>,
+    cont: (KExpr<KStringSort>, KExpr<KStringSort>) -> KExpr<KBoolSort>
+): KExpr<KBoolSort> =
+    tryEvalStringLiteralOperation(arg0, arg1, { a0, a1 -> StringUtils.isStringPrefix(a0, a1) }) {
+        cont(arg0, arg1)
     }
 
 inline fun <K : KSort> tryEvalStringLiteralOperation(

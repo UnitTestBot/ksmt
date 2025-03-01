@@ -30,12 +30,12 @@ fun KContext.simplifyStringInRegex(
 fun KContext.simplifyStringSuffixOf(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>
-): KExpr<KBoolSort> = mkStringSuffixOfNoSimplify(arg0, arg1) // Temporarily
+): KExpr<KBoolSort> = simplifyStringBasicSuffixOfExpr(arg0, arg1, ::mkStringSuffixOfNoSimplify)
 
 fun KContext.simplifyStringPrefixOf(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>
-): KExpr<KBoolSort> = mkStringPrefixOfNoSimplify(arg0, arg1) // Temporarily
+): KExpr<KBoolSort> = simplifyStringBasicPrefixOfExpr(arg0, arg1, ::mkStringPrefixOfNoSimplify)
 
 fun KContext.simplifyStringLt(
     arg0: KExpr<KStringSort>,
