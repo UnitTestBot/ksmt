@@ -90,13 +90,25 @@ inline fun <K : KSort> tryEvalStringLiteralOperation(
     cont()
 }
 
-inline fun tryEvalStringLiteralOperation(
+inline fun <K: KSort> tryEvalStringLiteralOperation(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
-    operation: (KStringLiteralExpr, KStringLiteralExpr) -> KStringLiteralExpr,
-    cont: () -> KExpr<KStringSort>
-): KExpr<KStringSort> = if (arg0 is KStringLiteralExpr && arg1 is KStringLiteralExpr) {
+    operation: (KStringLiteralExpr, KStringLiteralExpr) -> KInterpretedValue<K>,
+    cont: () -> KExpr<K>
+): KExpr<K> = if (arg0 is KStringLiteralExpr && arg1 is KStringLiteralExpr) {
     operation(arg0, arg1)
+} else {
+    cont()
+}
+
+inline fun <K: KSort> tryEvalStringLiteralOperation(
+    arg0: KExpr<KStringSort>,
+    arg1: KExpr<KStringSort>,
+    arg2: KExpr<KStringSort>,
+    operation: (KStringLiteralExpr, KStringLiteralExpr, KStringLiteralExpr) -> KInterpretedValue<K>,
+    cont: () -> KExpr<K>
+): KExpr<K> = if (arg0 is KStringLiteralExpr && arg1 is KStringLiteralExpr && arg2 is KStringLiteralExpr) {
+    operation(arg0, arg1, arg2)
 } else {
     cont()
 }
