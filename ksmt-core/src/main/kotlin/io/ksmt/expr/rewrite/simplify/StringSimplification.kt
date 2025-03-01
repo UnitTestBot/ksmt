@@ -10,7 +10,9 @@ import io.ksmt.sort.KStringSort
 fun KContext.simplifyStringConcat(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>
-): KExpr<KStringSort> = mkStringConcatNoSimplify(arg0, arg1) // Temporarily
+): KExpr<KStringSort> = simplifyStringBasicConcat(arg0, arg1) {arg2, arg3 ->
+    simplifyStringNestedConcat(arg2, arg3, KContext::simplifyStringConcat, ::mkStringConcatNoSimplify)
+}
 
 fun KContext.simplifyStringLen(
     arg: KExpr<KStringSort>
