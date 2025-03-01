@@ -16,7 +16,7 @@ fun KContext.simplifyStringConcat(
 
 fun KContext.simplifyStringLen(
     arg: KExpr<KStringSort>
-): KExpr<KIntSort> = mkStringLenNoSimplify(arg) // Temporarily
+): KExpr<KIntSort> = simplifyStringLenExpr(arg, ::mkStringLenNoSimplify)
 
 fun KContext.simplifyStringToRegex(
     arg: KExpr<KStringSort>
