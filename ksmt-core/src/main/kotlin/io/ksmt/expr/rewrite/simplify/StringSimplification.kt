@@ -60,7 +60,7 @@ fun KContext.simplifyStringGe(
 fun KContext.simplifyStringContains(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>
-): KExpr<KBoolSort> = mkStringContainsNoSimplify(arg0, arg1) // Temporarily
+): KExpr<KBoolSort> = simplifyStringBasicContainsExpr(arg0, arg1, ::mkStringContainsNoSimplify)
 
 fun KContext.simplifyStringSingletonSub(
     arg0: KExpr<KStringSort>,
@@ -111,15 +111,15 @@ fun KContext.simplifyStringReplaceAllWithRegex(
 
 fun KContext.simplifyStringToLower(
     arg: KExpr<KStringSort>
-): KExpr<KStringSort> = mkStringToLowerNoSimplify(arg) // Temporarily
+): KExpr<KStringSort> = simplifyStringBasicToLowerExpr(arg, ::mkStringToLowerNoSimplify)
 
 fun KContext.simplifyStringToUpper(
     arg: KExpr<KStringSort>
-): KExpr<KStringSort> = mkStringToUpperNoSimplify(arg) // Temporarily
+): KExpr<KStringSort> = simplifyStringBasicToUpperExpr(arg, ::mkStringToUpperNoSimplify)
 
 fun KContext.simplifyStringReverse(
     arg: KExpr<KStringSort>
-): KExpr<KStringSort> = mkStringReverseNoSimplify(arg) // Temporarily
+): KExpr<KStringSort> = simplifyStringBasicReverseExpr(arg, ::mkStringReverseNoSimplify)
 
 fun KContext.simplifyStringIsDigit(
     arg: KExpr<KStringSort>

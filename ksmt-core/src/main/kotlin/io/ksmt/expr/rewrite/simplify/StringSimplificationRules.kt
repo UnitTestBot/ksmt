@@ -1,10 +1,7 @@
 package io.ksmt.expr.rewrite.simplify
 
 import io.ksmt.KContext
-import io.ksmt.expr.KExpr
-import io.ksmt.expr.KInterpretedValue
-import io.ksmt.expr.KStringConcatExpr
-import io.ksmt.expr.KStringLiteralExpr
+import io.ksmt.expr.*
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KSort
@@ -77,8 +74,8 @@ inline fun KContext.simplifyStringLenExpr(
     arg: KExpr<KStringSort>,
     cont: (KExpr<KStringSort>) -> KExpr<KIntSort>
 ): KExpr<KIntSort> =
-    tryEvalStringLiteralOperation(arg, { literalArg ->
-        mkIntNum(literalArg.value.length)
+    tryEvalStringLiteralOperation(arg, {
+        a -> StringUtils.getStringLen(a)
     }) {
         cont(arg)
     }
@@ -155,6 +152,52 @@ inline fun KContext.simplifyStringBasicGeExpr(
 ): KExpr<KBoolSort> =
     tryEvalStringLiteralOperation(arg0, arg1, { a0, a1 -> StringUtils.stringGe(a0, a1) }) {
         cont(arg0, arg1)
+    }
+
+/*
+* String contains expression simplifications
+* */
+
+/** Basic simplify string contains expression
+ * (str_contains strConst1 strConst2) ==> boolConst */
+inline fun KContext.simplifyStringBasicContainsExpr(
+    arg0: KExpr<KStringSort>,
+    arg1: KExpr<KStringSort>,
+    cont: (KExpr<KStringSort>, KExpr<KStringSort>) -> KExpr<KBoolSort>
+): KExpr<KBoolSort> =
+    tryEvalStringLiteralOperation(arg0, arg1, { a0, a1 -> StringUtils.stringContains(a0, a1) }) {
+        cont(arg0, arg1)
+    }
+
+/*
+* String to lower/upper case expression simplifications
+* */
+
+/** Converting all letters of a string constant to lowercase. */
+inline fun KContext.simplifyStringBasicToLowerExpr(
+    arg: KExpr<KStringSort>,
+    cont: (KExpr<KStringSort>) -> KExpr<KStringSort>
+): KExpr<KStringSort> =
+    tryEvalStringLiteralOperation(arg, { a -> StringUtils.stringToLowerCase(a) }) {
+        cont(arg)
+    }
+
+/** Converting all letters of a string constant to uppercase. */
+inline fun KContext.simplifyStringBasicToUpperExpr(
+    arg: KExpr<KStringSort>,
+    cont: (KExpr<KStringSort>) -> KExpr<KStringSort>
+): KExpr<KStringSort> =
+    tryEvalStringLiteralOperation(arg, { a -> StringUtils.stringToUpperCase(a) }) {
+        cont(arg)
+    }
+
+/** Reverses a string constant */
+inline fun KContext.simplifyStringBasicReverseExpr(
+    arg: KExpr<KStringSort>,
+    cont: (KExpr<KStringSort>) -> KExpr<KStringSort>
+): KExpr<KStringSort> =
+    tryEvalStringLiteralOperation(arg, { a -> StringUtils.stringReverse(a) }) {
+        cont(arg)
     }
 
 inline fun <K : KSort> tryEvalStringLiteralOperation(
