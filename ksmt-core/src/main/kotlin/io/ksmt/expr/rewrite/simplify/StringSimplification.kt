@@ -40,22 +40,22 @@ fun KContext.simplifyStringPrefixOf(
 fun KContext.simplifyStringLt(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>
-): KExpr<KBoolSort> = mkStringLtNoSimplify(arg0, arg1) // Temporarily
+): KExpr<KBoolSort> = simplifyStringBasicLtExpr(arg0, arg1, ::mkStringLtNoSimplify)
 
 fun KContext.simplifyStringLe(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>
-): KExpr<KBoolSort> = mkStringLeNoSimplify(arg0, arg1) // Temporarily
+): KExpr<KBoolSort> = simplifyStringBasicLeExpr(arg0, arg1, ::mkStringLeNoSimplify)
 
 fun KContext.simplifyStringGt(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>
-): KExpr<KBoolSort> = mkStringGtNoSimplify(arg0, arg1) // Temporarily
+): KExpr<KBoolSort> = simplifyStringBasicGtExpr(arg0, arg1, ::mkStringGtNoSimplify)
 
 fun KContext.simplifyStringGe(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>
-): KExpr<KBoolSort> = mkStringGeNoSimplify(arg0, arg1) // Temporarily
+): KExpr<KBoolSort> = simplifyStringBasicGeExpr(arg0, arg1, ::mkStringGeNoSimplify)
 
 fun KContext.simplifyStringContains(
     arg0: KExpr<KStringSort>,

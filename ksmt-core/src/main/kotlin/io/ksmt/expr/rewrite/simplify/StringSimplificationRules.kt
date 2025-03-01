@@ -109,6 +109,54 @@ inline fun KContext.simplifyStringBasicPrefixOfExpr(
         cont(arg0, arg1)
     }
 
+/*
+* String comparison expression simplifications
+* */
+
+/** Simplifies string "less than" comparison expressions
+ * (str_lt strConst1 strConst2) ==> boolConst */
+inline fun KContext.simplifyStringBasicLtExpr(
+    arg0: KExpr<KStringSort>,
+    arg1: KExpr<KStringSort>,
+    cont: (KExpr<KStringSort>, KExpr<KStringSort>) -> KExpr<KBoolSort>
+): KExpr<KBoolSort> =
+    tryEvalStringLiteralOperation(arg0, arg1, { a0, a1 -> StringUtils.stringLt(a0, a1) }) {
+        cont(arg0, arg1)
+    }
+
+/** Simplifies string "less than or equal" comparison expressions
+ * (str_le strConst1 strConst2) ==> boolConst */
+inline fun KContext.simplifyStringBasicLeExpr(
+    arg0: KExpr<KStringSort>,
+    arg1: KExpr<KStringSort>,
+    cont: (KExpr<KStringSort>, KExpr<KStringSort>) -> KExpr<KBoolSort>
+): KExpr<KBoolSort> =
+    tryEvalStringLiteralOperation(arg0, arg1, { a0, a1 -> StringUtils.stringLe(a0, a1) }) {
+        cont(arg0, arg1)
+    }
+
+/** Simplifies string "greater than" comparison expressions
+ * (str_gt strConst1 strConst2) ==> boolConst */
+inline fun KContext.simplifyStringBasicGtExpr(
+    arg0: KExpr<KStringSort>,
+    arg1: KExpr<KStringSort>,
+    cont: (KExpr<KStringSort>, KExpr<KStringSort>) -> KExpr<KBoolSort>
+): KExpr<KBoolSort> =
+    tryEvalStringLiteralOperation(arg0, arg1, { a0, a1 -> StringUtils.stringGt(a0, a1) }) {
+        cont(arg0, arg1)
+    }
+
+/** Simplifies string "greater than or equal" comparison expressions
+ * (str_ge strConst1 strConst2) ==> boolConst */
+inline fun KContext.simplifyStringBasicGeExpr(
+    arg0: KExpr<KStringSort>,
+    arg1: KExpr<KStringSort>,
+    cont: (KExpr<KStringSort>, KExpr<KStringSort>) -> KExpr<KBoolSort>
+): KExpr<KBoolSort> =
+    tryEvalStringLiteralOperation(arg0, arg1, { a0, a1 -> StringUtils.stringGe(a0, a1) }) {
+        cont(arg0, arg1)
+    }
+
 inline fun <K : KSort> tryEvalStringLiteralOperation(
     arg: KExpr<KStringSort>,
     operation: (KStringLiteralExpr) -> KInterpretedValue<K>,

@@ -20,4 +20,24 @@ object StringUtils {
     fun isStringPrefix(arg0: KStringLiteralExpr, arg1: KStringLiteralExpr): KInterpretedValue<KBoolSort> = with (arg0.ctx) {
         mkBool(arg1.value.startsWith(arg0.value)).uncheckedCast()
     }
+
+    @JvmStatic
+    fun stringLt(arg0: KStringLiteralExpr, arg1: KStringLiteralExpr): KInterpretedValue<KBoolSort> = with (arg0.ctx) {
+        mkBool(arg0.value < arg1.value).uncheckedCast()
+    }
+
+    @JvmStatic
+    fun stringLe(arg0: KStringLiteralExpr, arg1: KStringLiteralExpr): KInterpretedValue<KBoolSort> = with (arg0.ctx) {
+        mkBool(arg0.value <= arg1.value).uncheckedCast()
+    }
+
+    @JvmStatic
+    fun stringGt(arg0: KStringLiteralExpr, arg1: KStringLiteralExpr): KInterpretedValue<KBoolSort> = with (arg0.ctx) {
+        mkBool(arg0.value > arg1.value).uncheckedCast()
+    }
+
+    @JvmStatic
+    fun stringGe(arg0: KStringLiteralExpr, arg1: KStringLiteralExpr): KInterpretedValue<KBoolSort> = with (arg0.ctx) {
+        mkBool(arg0.value >= arg1.value).uncheckedCast()
+    }
 }
