@@ -171,6 +171,30 @@ inline fun KContext.simplifyStringBasicContainsExpr(
     }
 
 /*
+* String replace expressions simplifications
+* */
+
+inline fun KContext.simplifyStringReplaceExprBasic(
+    arg0: KExpr<KStringSort>,
+    arg1: KExpr<KStringSort>,
+    arg2: KExpr<KStringSort>,
+    cont: (KExpr<KStringSort>, KExpr<KStringSort>, KExpr<KStringSort>) -> KExpr<KStringSort>
+): KExpr<KStringSort> =
+    tryEvalStringLiteralOperation(arg0, arg1, arg2, { a0, a1, a2 -> StringUtils.strintReplace(a0, a1, a2) }) {
+        cont(arg0, arg1, arg2)
+    }
+
+inline fun KContext.simplifyStringReplaceAllExprBasic(
+    arg0: KExpr<KStringSort>,
+    arg1: KExpr<KStringSort>,
+    arg2: KExpr<KStringSort>,
+    cont: (KExpr<KStringSort>, KExpr<KStringSort>, KExpr<KStringSort>) -> KExpr<KStringSort>
+): KExpr<KStringSort> =
+    tryEvalStringLiteralOperation(arg0, arg1, arg2, { a0, a1, a2 -> StringUtils.strintReplaceAll(a0, a1, a2) }) {
+        cont(arg0, arg1, arg2)
+    }
+
+/*
 * String to lower/upper case expression simplifications
 * */
 

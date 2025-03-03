@@ -89,13 +89,13 @@ fun KContext.simplifyStringReplace(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
     arg2: KExpr<KStringSort>
-): KExpr<KStringSort> = mkStringReplaceNoSimplify(arg0, arg1, arg2) // Temporarily
+): KExpr<KStringSort> = simplifyStringReplaceExprBasic(arg0, arg1, arg2, ::mkStringReplaceNoSimplify)
 
 fun KContext.simplifyStringReplaceAll(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
     arg2: KExpr<KStringSort>
-): KExpr<KStringSort> = mkStringReplaceAllNoSimplify(arg0, arg1, arg2) // Temporarily
+): KExpr<KStringSort> = simplifyStringReplaceAllExprBasic(arg0, arg1, arg2, ::mkStringReplaceAllNoSimplify)
 
 fun KContext.simplifyStringReplaceWithRegex(
     arg0: KExpr<KStringSort>,

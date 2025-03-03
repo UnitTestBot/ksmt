@@ -91,4 +91,20 @@ object StringUtils {
             mkIntNum(-1)
         }
     }
+
+    @JvmStatic
+    fun strintReplace(arg0: KStringLiteralExpr, arg1: KStringLiteralExpr, arg2: KStringLiteralExpr): KStringLiteralExpr = with(arg0.ctx) {
+        val str = arg0.value
+        val search = arg1.value
+        val replace = arg2.value
+        return mkStringLiteral(if (search.isEmpty()) (replace + str) else str.replaceFirst(search, replace))
+    }
+
+    @JvmStatic
+    fun strintReplaceAll(arg0: KStringLiteralExpr, arg1: KStringLiteralExpr, arg2: KStringLiteralExpr): KStringLiteralExpr = with(arg0.ctx) {
+        val str = arg0.value
+        val search = arg1.value
+        val replace = arg2.value
+        return mkStringLiteral(if (search.isEmpty()) str else str.replace(search, replace))
+    }
 }
