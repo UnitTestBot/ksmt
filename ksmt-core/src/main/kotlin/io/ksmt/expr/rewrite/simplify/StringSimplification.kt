@@ -123,20 +123,20 @@ fun KContext.simplifyStringReverse(
 
 fun KContext.simplifyStringIsDigit(
     arg: KExpr<KStringSort>
-): KExpr<KBoolSort> = mkStringIsDigitNoSimplify(arg) // Temporarily
+): KExpr<KBoolSort> = simplifyStringIsDigitExprBasic(arg, ::mkStringIsDigitNoSimplify)
 
 fun KContext.simplifyStringToCode(
     arg: KExpr<KStringSort>
-): KExpr<KIntSort> = mkStringToCodeNoSimplify(arg) // Temporarily
+): KExpr<KIntSort> = simplifyStringToCodeExprBasic(arg, ::mkStringToCodeNoSimplify)
 
 fun KContext.simplifyStringFromCode(
     arg: KExpr<KIntSort>
-): KExpr<KStringSort> = mkStringFromCodeNoSimplify(arg) // Temporarily
+): KExpr<KStringSort> = simplifyStringFromCodeExprBasic(arg, ::mkStringFromCodeNoSimplify)
 
 fun KContext.simplifyStringToInt(
     arg: KExpr<KStringSort>
-): KExpr<KIntSort> = mkStringToIntNoSimplify(arg) // Temporarily
+): KExpr<KIntSort> = simplifyStringToIntExprBasic(arg, ::mkStringToIntNoSimplify)
 
 fun KContext.simplifyStringFromInt(
     arg: KExpr<KIntSort>
-): KExpr<KStringSort> = mkStringFromIntNoSimplify(arg) // Temporarily
+): KExpr<KStringSort> = simplifyStringFromIntExprBasic(arg, ::mkStringFromIntNoSimplify)

@@ -7,6 +7,7 @@ import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KStringSort
 import io.ksmt.utils.StringUtils
+import io.ksmt.utils.StringUtils.STRING_FROM_CODE_UPPER_BOUND
 
 /*
 * String concatenation simplification
@@ -191,7 +192,7 @@ inline fun KContext.simplifyStringBasicToUpperExpr(
         cont(arg)
     }
 
-/** Reverses a string constant */
+/** Reverses a string constan.t */
 inline fun KContext.simplifyStringBasicReverseExpr(
     arg: KExpr<KStringSort>,
     cont: (KExpr<KStringSort>) -> KExpr<KStringSort>
@@ -199,6 +200,74 @@ inline fun KContext.simplifyStringBasicReverseExpr(
     tryEvalStringLiteralOperation(arg, { a -> StringUtils.stringReverse(a) }) {
         cont(arg)
     }
+
+/*
+* Mapping between strings and integers simplifications
+* */
+
+/** Eval constants: if string literal consist of one digit - return true, otherwise false. */
+inline fun KContext.simplifyStringIsDigitExprBasic(
+    arg: KExpr<KStringSort>,
+    cont: (KExpr<KStringSort>) -> KExpr<KBoolSort>
+): KExpr<KBoolSort> =
+    tryEvalStringLiteralOperation(arg, { a -> StringUtils.stringIsDigit(a) }) {
+        cont(arg)
+    }
+
+/** Eval constants: if string literal consist of one character - return its code, otherwise return -1. */
+inline fun KContext.simplifyStringToCodeExprBasic(
+    arg: KExpr<KStringSort>,
+    cont: (KExpr<KStringSort>) -> KExpr<KIntSort>
+): KExpr<KIntSort> =
+    tryEvalStringLiteralOperation(arg, { a -> StringUtils.stringToCode(a) }) {
+        cont(arg)
+    }
+
+/** Eval constants: if int constant is in the range [0; STRING_FROM_CODE_UPPER_BOUND], then
+ * return code point of constant, otherwise return empty string. */
+inline fun KContext.simplifyStringFromCodeExprBasic(
+    arg: KExpr<KIntSort>,
+    cont: (KExpr<KIntSort>) -> KExpr<KStringSort>
+): KExpr<KStringSort> {
+    val value = when (arg) {
+        is KInt32NumExpr -> arg.value.toLong()
+        is KInt64NumExpr -> arg.value
+        is KIntBigNumExpr -> arg.value.toLong()
+        else -> return cont(arg)
+    }
+
+    return if (value in 0..STRING_FROM_CODE_UPPER_BOUND) {
+        mkStringLiteral(value.toInt().toChar().toString())
+    } else {
+        mkStringLiteral("")
+    }
+}
+
+/** Eval constants: if string literal consist of digits, then
+ * return the positive integer denoted by literal;
+ * otherwise, return -1. */
+inline fun KContext.simplifyStringToIntExprBasic(
+    arg: KExpr<KStringSort>,
+    cont: (KExpr<KStringSort>) -> KExpr<KIntSort>
+): KExpr<KIntSort> =
+    tryEvalStringLiteralOperation(arg, { a -> StringUtils.stringToInt(a) }) {
+        cont(arg)
+    }
+
+/** Eval constants: if the integer is non-negative, return its string representation;
+ * otherwise, return an empty string. */
+inline fun KContext.simplifyStringFromIntExprBasic(
+    arg: KExpr<KIntSort>,
+    cont: (KExpr<KIntSort>) -> KExpr<KStringSort>
+): KExpr<KStringSort> {
+    val intValue = when (arg) {
+        is KInt32NumExpr -> arg.value.toLong()
+        is KInt64NumExpr -> arg.value
+        is KIntBigNumExpr -> arg.value.toLong()
+        else -> return cont(arg)
+    }
+    return mkStringLiteral(if (intValue >= 0) intValue.toString() else "")
+}
 
 inline fun <K : KSort> tryEvalStringLiteralOperation(
     arg: KExpr<KStringSort>,
