@@ -174,6 +174,7 @@ inline fun KContext.simplifyStringBasicContainsExpr(
 * Substring expressions simplifications
 * */
 
+/** Eval constants. */
 inline fun KContext.simplifyStringSingletonSubExprBasic(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KIntSort>,
@@ -198,6 +199,7 @@ inline fun KContext.simplifyStringSingletonSubExprBasic(
     }
 }
 
+/** Eval constants. */
 inline fun KContext.simplifyStringSubExprBasic(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KIntSort>,
@@ -220,10 +222,11 @@ inline fun KContext.simplifyStringSubExprBasic(
     }
 }
 
+/** Eval constants. */
 inline fun KContext.simplifyStringIndexOfExprBasic(
-    arg0: KExpr<KStringSort>, // Исходная строка (s)
-    arg1: KExpr<KStringSort>, // Подстрока для поиска (t)
-    arg2: KExpr<KIntSort>,    // Начальная позиция (i)
+    arg0: KExpr<KStringSort>,
+    arg1: KExpr<KStringSort>,
+    arg2: KExpr<KIntSort>,
     cont: (KExpr<KStringSort>, KExpr<KStringSort>, KExpr<KIntSort>) -> KExpr<KIntSort>
 ): KExpr<KIntSort> = with(arg0.ctx) {
 
