@@ -171,6 +171,90 @@ inline fun KContext.simplifyStringBasicContainsExpr(
     }
 
 /*
+* Substring expressions simplifications
+* */
+
+inline fun KContext.simplifyStringSingletonSubExprBasic(
+    arg0: KExpr<KStringSort>,
+    arg1: KExpr<KIntSort>,
+    cont: (KExpr<KStringSort>, KExpr<KIntSort>) -> KExpr<KStringSort>
+): KExpr<KStringSort> {
+    return if (arg0 is KStringLiteralExpr && arg1 is KIntNumExpr) {
+        val str = arg0.value
+        val pos = when (arg1) {
+            is KInt32NumExpr -> arg1.value.toLong()
+            is KInt64NumExpr -> arg1.value
+            is KIntBigNumExpr -> arg1.value.toLong()
+            else -> return cont(arg0, arg1)
+        }
+        val result = if (pos <= Int.MAX_VALUE && pos >= 0 && pos < str.length) {
+            str[pos.toInt()].toString()
+        } else {
+            ""
+        }
+        mkStringLiteral(result)
+    } else {
+        cont(arg0, arg1)
+    }
+}
+
+inline fun KContext.simplifyStringSubExprBasic(
+    arg0: KExpr<KStringSort>,
+    arg1: KExpr<KIntSort>,
+    arg2: KExpr<KIntSort>,
+    cont: (KExpr<KStringSort>, KExpr<KIntSort>, KExpr<KIntSort>) -> KExpr<KStringSort>
+): KExpr<KStringSort> {
+    return if (arg0 is KStringLiteralExpr && arg1 is KIntNumExpr && arg2 is KIntNumExpr) {
+        val str = arg0.value
+        val startPos = arg1.toLongValue()
+        val length = arg2.toLongValue()
+        val result = if (startPos in 0..Int.MAX_VALUE && length in 0..Int.MAX_VALUE && startPos < str.length) {
+            val endPos = minOf(startPos + length, str.length.toLong()).toInt()
+            str.substring(startPos.toInt(), endPos)
+        } else {
+            ""
+        }
+        mkStringLiteral(result)
+    } else {
+        cont(arg0, arg1, arg2)
+    }
+}
+
+inline fun KContext.simplifyStringIndexOfExprBasic(
+    arg0: KExpr<KStringSort>, // Исходная строка (s)
+    arg1: KExpr<KStringSort>, // Подстрока для поиска (t)
+    arg2: KExpr<KIntSort>,    // Начальная позиция (i)
+    cont: (KExpr<KStringSort>, KExpr<KStringSort>, KExpr<KIntSort>) -> KExpr<KIntSort>
+): KExpr<KIntSort> = with(arg0.ctx) {
+
+    if (arg0 is KStringLiteralExpr && arg1 is KStringLiteralExpr && arg2 is KIntNumExpr) {
+        val str = arg0.value
+        val search = arg1.value
+        val startPosLong = arg2.toLongValue()
+        val startPos: Int
+        if (startPosLong <= Int.MAX_VALUE) {
+            startPos = startPosLong.toInt()
+        } else {
+            return cont(arg0, arg1, arg2)
+        }
+
+        val result = if (startPos >= 0 && startPos <= str.length) {
+            if (search.isEmpty()) {
+                startPos
+            } else {
+                val index = str.indexOf(search, startPos)
+                if (index >= 0) index else -1
+            }
+        } else {
+            -1
+        }
+        return mkIntNum(result)
+    } else {
+        return cont(arg0, arg1, arg2)
+    }
+}
+
+/*
 * String replace expressions simplifications
 * */
 
@@ -324,4 +408,11 @@ inline fun <K: KSort> tryEvalStringLiteralOperation(
     operation(arg0, arg1, arg2)
 } else {
     cont()
+}
+
+fun KIntNumExpr.toLongValue(): Long = when (this) {
+    is KInt32NumExpr -> value.toLong()
+    is KInt64NumExpr -> value
+    is KIntBigNumExpr -> value.toLong()
+    else -> throw IllegalArgumentException("Unsupported KIntNumExpr type: ${this::class}")
 }

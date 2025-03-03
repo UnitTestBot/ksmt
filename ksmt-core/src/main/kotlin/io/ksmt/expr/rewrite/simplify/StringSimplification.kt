@@ -65,19 +65,19 @@ fun KContext.simplifyStringContains(
 fun KContext.simplifyStringSingletonSub(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KIntSort>
-): KExpr<KStringSort> = mkStringSingletonSubNoSimplify(arg0, arg1) // Temporarily
+): KExpr<KStringSort> = simplifyStringSingletonSubExprBasic(arg0, arg1, ::mkStringSingletonSubNoSimplify)
 
 fun KContext.simplifyStringSub(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KIntSort>,
     arg2: KExpr<KIntSort>
-): KExpr<KStringSort> = mkStringSubNoSimplify(arg0, arg1, arg2) // Temporarily
+): KExpr<KStringSort> = simplifyStringSubExprBasic(arg0, arg1, arg2, ::mkStringSubNoSimplify)
 
 fun KContext.simplifyStringIndexOf(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
     arg2: KExpr<KIntSort>
-): KExpr<KIntSort> = mkStringIndexOfNoSimplify(arg0, arg1, arg2) // Temporarily
+): KExpr<KIntSort> = simplifyStringIndexOfExprBasic(arg0, arg1, arg2, ::mkStringIndexOfNoSimplify)
 
 fun KContext.simplifyStringIndexOfRegex(
     arg0: KExpr<KStringSort>,
