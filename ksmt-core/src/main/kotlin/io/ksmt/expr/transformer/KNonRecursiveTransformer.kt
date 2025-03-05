@@ -183,6 +183,7 @@ import io.ksmt.utils.uncheckedCast
  * Apply specialized non-recursive transformations for all KSMT expressions.
  * See [KNonRecursiveTransformerBase] for details.
  * */
+@Suppress("LargeClass")
 abstract class KNonRecursiveTransformer(override val ctx: KContext) : KNonRecursiveTransformerBase(), KTransformer {
 
     override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> = transformExpr(expr)

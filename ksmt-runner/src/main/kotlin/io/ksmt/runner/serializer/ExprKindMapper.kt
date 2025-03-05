@@ -704,7 +704,9 @@ class ExprKindMapper: KTransformerBase {
     override fun transform(expr: KStringContainsExpr): KExpr<KBoolSort> = expr.kind(ExprKind.StringContainsExpr)
 
 
-    override fun transform(expr: KStringSingletonSubExpr): KExpr<KStringSort> = expr.kind(ExprKind.StringSingletonSubExpr)
+    override fun transform(
+        expr: KStringSingletonSubExpr
+    ): KExpr<KStringSort> = expr.kind(ExprKind.StringSingletonSubExpr)
 
 
     override fun transform(expr: KStringSubExpr): KExpr<KStringSort> = expr.kind(ExprKind.StringSubExpr)
@@ -722,10 +724,14 @@ class ExprKindMapper: KTransformerBase {
     override fun transform(expr: KStringReplaceAllExpr): KExpr<KStringSort> = expr.kind(ExprKind.StringReplaceAllExpr)
 
 
-    override fun transform(expr: KStringReplaceWithRegexExpr): KExpr<KStringSort> = expr.kind(ExprKind.StringReplaceWithRegexExpr)
+    override fun transform(
+        expr: KStringReplaceWithRegexExpr
+    ): KExpr<KStringSort> = expr.kind(ExprKind.StringReplaceWithRegexExpr)
 
 
-    override fun transform(expr: KStringReplaceAllWithRegexExpr): KExpr<KStringSort> = expr.kind(ExprKind.StringReplaceAllWithRegexExpr)
+    override fun transform(
+        expr: KStringReplaceAllWithRegexExpr
+    ): KExpr<KStringSort> = expr.kind(ExprKind.StringReplaceAllWithRegexExpr)
 
 
     override fun transform(expr: KStringToLowerExpr): KExpr<KStringSort> = expr.kind(ExprKind.StringToLowerExpr)

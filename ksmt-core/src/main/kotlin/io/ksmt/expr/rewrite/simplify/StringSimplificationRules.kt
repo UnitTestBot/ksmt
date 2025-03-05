@@ -1,7 +1,14 @@
 package io.ksmt.expr.rewrite.simplify
 
 import io.ksmt.KContext
-import io.ksmt.expr.*
+import io.ksmt.expr.KStringConcatExpr
+import io.ksmt.expr.KStringLiteralExpr
+import io.ksmt.expr.KIntNumExpr
+import io.ksmt.expr.KInt32NumExpr
+import io.ksmt.expr.KInt64NumExpr
+import io.ksmt.expr.KIntBigNumExpr
+import io.ksmt.expr.KInterpretedValue
+import io.ksmt.expr.KExpr
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KSort
@@ -223,6 +230,7 @@ inline fun KContext.simplifyStringSubExprBasic(
 }
 
 /** Eval constants. */
+@Suppress("NestedBlockDepth")
 inline fun KContext.simplifyStringIndexOfExprBasic(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
