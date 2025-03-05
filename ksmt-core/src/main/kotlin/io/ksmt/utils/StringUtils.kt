@@ -1,13 +1,10 @@
 package io.ksmt.utils
 
-import io.ksmt.expr.KInt32NumExpr
-import io.ksmt.expr.KInt64NumExpr
-import io.ksmt.expr.KIntBigNumExpr
+import io.ksmt.KContext
+import io.ksmt.expr.KStringLiteralExpr
 import io.ksmt.expr.KIntNumExpr
 import io.ksmt.expr.KInterpretedValue
-import io.ksmt.expr.KStringLiteralExpr
 import io.ksmt.sort.KBoolSort
-import io.ksmt.sort.KStringSort
 
 object StringUtils {
 
@@ -150,5 +147,14 @@ object StringUtils {
         val search = arg1.value
         val replace = arg2.value
         return mkStringLiteral(if (search.isEmpty()) str else str.replace(search, replace))
+    }
+
+    @JvmStatic
+    fun KContext.sequentialStringsForComparisons(): List<KStringLiteralExpr> {
+        val alphabet = ('A'..'Z') + ('a'..'z')
+
+        return alphabet.map { char ->
+            this.mkStringLiteral(char.toString())
+        }
     }
 }
