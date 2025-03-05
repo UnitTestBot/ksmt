@@ -211,6 +211,7 @@ import io.ksmt.sort.KRealSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
 
+@Suppress("LargeClass")
 open class KZ3ExprInternalizer(
     val ctx: KContext,
     private val z3InternCtx: KZ3Context

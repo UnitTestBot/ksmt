@@ -15,6 +15,8 @@ import io.ksmt.sort.KBvSort
 import io.ksmt.sort.KFp128Sort
 import io.ksmt.sort.KFp64Sort
 import io.ksmt.sort.KFpRoundingModeSort
+import io.ksmt.sort.KStringSort
+import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRealSort
@@ -219,6 +221,8 @@ class RandomExpressionGenerator {
         private val boolGen by lazy { generators.single { it.function.match("mkBool", Boolean::class) } }
         private val intGen by lazy { generators.single { it.function.match("mkIntNum", Int::class) } }
         private val realGen by lazy { generators.single { it.function.match("mkRealNum", Int::class) } }
+        private val stringGen by lazy { generators.single { it.function.match("mkStringLiteral", String::class) } }
+        private val regexGen by lazy { generators.single { it.function.match("mkStringToRegex", String::class) } }
         private val bvGen by lazy { generators.single { it.function.match("mkBv", Int::class, UInt::class) } }
         private val fpGen by lazy { generators.single { it.function.match("mkFp", Double::class, KSort::class) } }
         private val arrayGen by lazy {
@@ -415,6 +419,8 @@ class RandomExpressionGenerator {
             override fun visit(sort: KIntSort): AstGenerator<ExprArgument> = intGen
             override fun visit(sort: KRealSort): AstGenerator<ExprArgument> = realGen
             override fun visit(sort: KFpRoundingModeSort): AstGenerator<ExprArgument> = fpRmGen
+            override fun visit(sort: KStringSort): AstGenerator<ExprArgument> = stringGen
+            override fun visit(sort: KRegexSort): AstGenerator<ExprArgument> = regexGen
 
             override fun <S : KBvSort> visit(sort: S): AstGenerator<ExprArgument> =
                 AstGenerator(bvGen.function, bvGen.refSortProviders, listOf(SimpleProvider(Int::class))) { args ->
