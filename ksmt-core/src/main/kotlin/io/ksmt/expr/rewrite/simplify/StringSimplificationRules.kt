@@ -23,7 +23,7 @@ import io.ksmt.utils.StringUtils.STRING_FROM_CODE_UPPER_BOUND
 /**
  * Eval constants.
  * (concat const1 const2) ==> (const3) */
-inline fun KContext.simplifyStringBasicConcat(
+inline fun KContext.simplifyStringConcatBasic(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
     cont: (KExpr<KStringSort>, KExpr<KStringSort>) -> KExpr<KStringSort>
@@ -37,7 +37,7 @@ inline fun KContext.simplifyStringBasicConcat(
  * ((concat const1 (concat const2 a)) => (concat (concat const1 const2) a)
  * ((concat (concat a const1) (concat const2 b)) ==> (concat a (concat (concat const1 const2) b))
  */
-inline fun KContext.simplifyStringNestedConcat(
+inline fun KContext.simplifyStringConcatNested(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
     rewriteStringConcatExpr: KContext.(KExpr<KStringSort>, KExpr<KStringSort>) -> KExpr<KStringSort>,
@@ -78,7 +78,7 @@ inline fun KContext.simplifyStringNestedConcat(
 
 /**
  * Eval length of string constant. */
-inline fun KContext.simplifyStringLenExpr(
+inline fun KContext.simplifyStringLenBasic(
     arg: KExpr<KStringSort>,
     cont: (KExpr<KStringSort>) -> KExpr<KIntSort>
 ): KExpr<KIntSort> =
@@ -94,7 +94,7 @@ inline fun KContext.simplifyStringLenExpr(
 
 /** Simplifies string suffix checking expressions
  * (str_suffix_of strConst1 strConst2) ==> boolConst */
-inline fun KContext.simplifyStringBasicSuffixOfExpr(
+inline fun KContext.simplifyStringSuffixOfBasic(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
     cont: (KExpr<KStringSort>, KExpr<KStringSort>) -> KExpr<KBoolSort>
@@ -105,7 +105,7 @@ inline fun KContext.simplifyStringBasicSuffixOfExpr(
 
 /** Simplifies string prefix checking expressions
  * (str_prefix_of strConst1 strConst2) ==> boolConst */
-inline fun KContext.simplifyStringBasicPrefixOfExpr(
+inline fun KContext.simplifyStringPrefixOfBasic(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
     cont: (KExpr<KStringSort>, KExpr<KStringSort>) -> KExpr<KBoolSort>
@@ -120,7 +120,7 @@ inline fun KContext.simplifyStringBasicPrefixOfExpr(
 
 /** Simplifies string "less than" comparison expressions
  * (str_lt strConst1 strConst2) ==> boolConst */
-inline fun KContext.simplifyStringBasicLtExpr(
+inline fun KContext.simplifyStringLtBasic(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
     cont: (KExpr<KStringSort>, KExpr<KStringSort>) -> KExpr<KBoolSort>
@@ -131,7 +131,7 @@ inline fun KContext.simplifyStringBasicLtExpr(
 
 /** Simplifies string "less than or equal" comparison expressions
  * (str_le strConst1 strConst2) ==> boolConst */
-inline fun KContext.simplifyStringBasicLeExpr(
+inline fun KContext.simplifyStringLeBasic(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
     cont: (KExpr<KStringSort>, KExpr<KStringSort>) -> KExpr<KBoolSort>
@@ -142,7 +142,7 @@ inline fun KContext.simplifyStringBasicLeExpr(
 
 /** Simplifies string "greater than" comparison expressions
  * (str_gt strConst1 strConst2) ==> boolConst */
-inline fun KContext.simplifyStringBasicGtExpr(
+inline fun KContext.simplifyStringGtBasic(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
     cont: (KExpr<KStringSort>, KExpr<KStringSort>) -> KExpr<KBoolSort>
@@ -153,7 +153,7 @@ inline fun KContext.simplifyStringBasicGtExpr(
 
 /** Simplifies string "greater than or equal" comparison expressions
  * (str_ge strConst1 strConst2) ==> boolConst */
-inline fun KContext.simplifyStringBasicGeExpr(
+inline fun KContext.simplifyStringGeBasic(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
     cont: (KExpr<KStringSort>, KExpr<KStringSort>) -> KExpr<KBoolSort>
@@ -168,7 +168,7 @@ inline fun KContext.simplifyStringBasicGeExpr(
 
 /** Basic simplify string contains expression
  * (str_contains strConst1 strConst2) ==> boolConst */
-inline fun KContext.simplifyStringBasicContainsExpr(
+inline fun KContext.simplifyStringContainsBasic(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
     cont: (KExpr<KStringSort>, KExpr<KStringSort>) -> KExpr<KBoolSort>
@@ -182,7 +182,7 @@ inline fun KContext.simplifyStringBasicContainsExpr(
 * */
 
 /** Eval constants. */
-inline fun KContext.simplifyStringSingletonSubExprBasic(
+inline fun KContext.simplifyStringSingletonSubBasic(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KIntSort>,
     cont: (KExpr<KStringSort>, KExpr<KIntSort>) -> KExpr<KStringSort>
@@ -207,7 +207,7 @@ inline fun KContext.simplifyStringSingletonSubExprBasic(
 }
 
 /** Eval constants. */
-inline fun KContext.simplifyStringSubExprBasic(
+inline fun KContext.simplifyStringSubBasic(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KIntSort>,
     arg2: KExpr<KIntSort>,
@@ -231,7 +231,7 @@ inline fun KContext.simplifyStringSubExprBasic(
 
 /** Eval constants. */
 @Suppress("NestedBlockDepth")
-inline fun KContext.simplifyStringIndexOfExprBasic(
+inline fun KContext.simplifyStringIndexOfBasic(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
     arg2: KExpr<KIntSort>,
@@ -269,7 +269,7 @@ inline fun KContext.simplifyStringIndexOfExprBasic(
 * String replace expressions simplifications
 * */
 
-inline fun KContext.simplifyStringReplaceExprBasic(
+inline fun KContext.simplifyStringReplaceBasic(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
     arg2: KExpr<KStringSort>,
@@ -279,7 +279,7 @@ inline fun KContext.simplifyStringReplaceExprBasic(
         cont(arg0, arg1, arg2)
     }
 
-inline fun KContext.simplifyStringReplaceAllExprBasic(
+inline fun KContext.simplifyStringReplaceAllBasic(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
     arg2: KExpr<KStringSort>,
@@ -294,7 +294,7 @@ inline fun KContext.simplifyStringReplaceAllExprBasic(
 * */
 
 /** Converting all letters of a string constant to lowercase. */
-inline fun KContext.simplifyStringBasicToLowerExpr(
+inline fun KContext.simplifyStringToLowerBasic(
     arg: KExpr<KStringSort>,
     cont: (KExpr<KStringSort>) -> KExpr<KStringSort>
 ): KExpr<KStringSort> =
@@ -303,7 +303,7 @@ inline fun KContext.simplifyStringBasicToLowerExpr(
     }
 
 /** Converting all letters of a string constant to uppercase. */
-inline fun KContext.simplifyStringBasicToUpperExpr(
+inline fun KContext.simplifyStringToUpperBasic(
     arg: KExpr<KStringSort>,
     cont: (KExpr<KStringSort>) -> KExpr<KStringSort>
 ): KExpr<KStringSort> =
@@ -312,7 +312,7 @@ inline fun KContext.simplifyStringBasicToUpperExpr(
     }
 
 /** Reverses a string constan.t */
-inline fun KContext.simplifyStringBasicReverseExpr(
+inline fun KContext.simplifyStringReverseBasic(
     arg: KExpr<KStringSort>,
     cont: (KExpr<KStringSort>) -> KExpr<KStringSort>
 ): KExpr<KStringSort> =
@@ -325,7 +325,7 @@ inline fun KContext.simplifyStringBasicReverseExpr(
 * */
 
 /** Eval constants: if string literal consist of one digit - return true, otherwise false. */
-inline fun KContext.simplifyStringIsDigitExprBasic(
+inline fun KContext.simplifyStringIsDigitBasic(
     arg: KExpr<KStringSort>,
     cont: (KExpr<KStringSort>) -> KExpr<KBoolSort>
 ): KExpr<KBoolSort> =
@@ -334,7 +334,7 @@ inline fun KContext.simplifyStringIsDigitExprBasic(
     }
 
 /** Eval constants: if string literal consist of one character - return its code, otherwise return -1. */
-inline fun KContext.simplifyStringToCodeExprBasic(
+inline fun KContext.simplifyStringToCodeBasic(
     arg: KExpr<KStringSort>,
     cont: (KExpr<KStringSort>) -> KExpr<KIntSort>
 ): KExpr<KIntSort> =
@@ -344,7 +344,7 @@ inline fun KContext.simplifyStringToCodeExprBasic(
 
 /** Eval constants: if int constant is in the range [0; STRING_FROM_CODE_UPPER_BOUND], then
  * return code point of constant, otherwise return empty string. */
-inline fun KContext.simplifyStringFromCodeExprBasic(
+inline fun KContext.simplifyStringFromCodeBasic(
     arg: KExpr<KIntSort>,
     cont: (KExpr<KIntSort>) -> KExpr<KStringSort>
 ): KExpr<KStringSort> {
@@ -365,7 +365,7 @@ inline fun KContext.simplifyStringFromCodeExprBasic(
 /** Eval constants: if string literal consist of digits, then
  * return the positive integer denoted by literal;
  * otherwise, return -1. */
-inline fun KContext.simplifyStringToIntExprBasic(
+inline fun KContext.simplifyStringToIntBasic(
     arg: KExpr<KStringSort>,
     cont: (KExpr<KStringSort>) -> KExpr<KIntSort>
 ): KExpr<KIntSort> =
@@ -375,7 +375,7 @@ inline fun KContext.simplifyStringToIntExprBasic(
 
 /** Eval constants: if the integer is non-negative, return its string representation;
  * otherwise, return an empty string. */
-inline fun KContext.simplifyStringFromIntExprBasic(
+inline fun KContext.simplifyStringFromIntBasic(
     arg: KExpr<KIntSort>,
     cont: (KExpr<KIntSort>) -> KExpr<KStringSort>
 ): KExpr<KStringSort> {

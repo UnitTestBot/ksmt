@@ -10,13 +10,13 @@ import io.ksmt.sort.KStringSort
 fun KContext.simplifyStringConcat(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>
-): KExpr<KStringSort> = simplifyStringBasicConcat(arg0, arg1) {arg2, arg3 ->
-    simplifyStringNestedConcat(arg2, arg3, KContext::simplifyStringConcat, ::mkStringConcatNoSimplify)
+): KExpr<KStringSort> = simplifyStringConcatBasic(arg0, arg1) {arg2, arg3 ->
+    simplifyStringConcatNested(arg2, arg3, KContext::simplifyStringConcat, ::mkStringConcatNoSimplify)
 }
 
 fun KContext.simplifyStringLen(
     arg: KExpr<KStringSort>
-): KExpr<KIntSort> = simplifyStringLenExpr(arg, ::mkStringLenNoSimplify)
+): KExpr<KIntSort> = simplifyStringLenBasic(arg, ::mkStringLenNoSimplify)
 
 fun KContext.simplifyStringToRegex(
     arg: KExpr<KStringSort>
@@ -30,54 +30,54 @@ fun KContext.simplifyStringInRegex(
 fun KContext.simplifyStringSuffixOf(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>
-): KExpr<KBoolSort> = simplifyStringBasicSuffixOfExpr(arg0, arg1, ::mkStringSuffixOfNoSimplify)
+): KExpr<KBoolSort> = simplifyStringSuffixOfBasic(arg0, arg1, ::mkStringSuffixOfNoSimplify)
 
 fun KContext.simplifyStringPrefixOf(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>
-): KExpr<KBoolSort> = simplifyStringBasicPrefixOfExpr(arg0, arg1, ::mkStringPrefixOfNoSimplify)
+): KExpr<KBoolSort> = simplifyStringPrefixOfBasic(arg0, arg1, ::mkStringPrefixOfNoSimplify)
 
 fun KContext.simplifyStringLt(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>
-): KExpr<KBoolSort> = simplifyStringBasicLtExpr(arg0, arg1, ::mkStringLtNoSimplify)
+): KExpr<KBoolSort> = simplifyStringLtBasic(arg0, arg1, ::mkStringLtNoSimplify)
 
 fun KContext.simplifyStringLe(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>
-): KExpr<KBoolSort> = simplifyStringBasicLeExpr(arg0, arg1, ::mkStringLeNoSimplify)
+): KExpr<KBoolSort> = simplifyStringLeBasic(arg0, arg1, ::mkStringLeNoSimplify)
 
 fun KContext.simplifyStringGt(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>
-): KExpr<KBoolSort> = simplifyStringBasicGtExpr(arg0, arg1, ::mkStringGtNoSimplify)
+): KExpr<KBoolSort> = simplifyStringGtBasic(arg0, arg1, ::mkStringGtNoSimplify)
 
 fun KContext.simplifyStringGe(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>
-): KExpr<KBoolSort> = simplifyStringBasicGeExpr(arg0, arg1, ::mkStringGeNoSimplify)
+): KExpr<KBoolSort> = simplifyStringGeBasic(arg0, arg1, ::mkStringGeNoSimplify)
 
 fun KContext.simplifyStringContains(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>
-): KExpr<KBoolSort> = simplifyStringBasicContainsExpr(arg0, arg1, ::mkStringContainsNoSimplify)
+): KExpr<KBoolSort> = simplifyStringContainsBasic(arg0, arg1, ::mkStringContainsNoSimplify)
 
 fun KContext.simplifyStringSingletonSub(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KIntSort>
-): KExpr<KStringSort> = simplifyStringSingletonSubExprBasic(arg0, arg1, ::mkStringSingletonSubNoSimplify)
+): KExpr<KStringSort> = simplifyStringSingletonSubBasic(arg0, arg1, ::mkStringSingletonSubNoSimplify)
 
 fun KContext.simplifyStringSub(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KIntSort>,
     arg2: KExpr<KIntSort>
-): KExpr<KStringSort> = simplifyStringSubExprBasic(arg0, arg1, arg2, ::mkStringSubNoSimplify)
+): KExpr<KStringSort> = simplifyStringSubBasic(arg0, arg1, arg2, ::mkStringSubNoSimplify)
 
 fun KContext.simplifyStringIndexOf(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
     arg2: KExpr<KIntSort>
-): KExpr<KIntSort> = simplifyStringIndexOfExprBasic(arg0, arg1, arg2, ::mkStringIndexOfNoSimplify)
+): KExpr<KIntSort> = simplifyStringIndexOfBasic(arg0, arg1, arg2, ::mkStringIndexOfNoSimplify)
 
 fun KContext.simplifyStringIndexOfRegex(
     arg0: KExpr<KStringSort>,
@@ -89,13 +89,13 @@ fun KContext.simplifyStringReplace(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
     arg2: KExpr<KStringSort>
-): KExpr<KStringSort> = simplifyStringReplaceExprBasic(arg0, arg1, arg2, ::mkStringReplaceNoSimplify)
+): KExpr<KStringSort> = simplifyStringReplaceBasic(arg0, arg1, arg2, ::mkStringReplaceNoSimplify)
 
 fun KContext.simplifyStringReplaceAll(
     arg0: KExpr<KStringSort>,
     arg1: KExpr<KStringSort>,
     arg2: KExpr<KStringSort>
-): KExpr<KStringSort> = simplifyStringReplaceAllExprBasic(arg0, arg1, arg2, ::mkStringReplaceAllNoSimplify)
+): KExpr<KStringSort> = simplifyStringReplaceAllBasic(arg0, arg1, arg2, ::mkStringReplaceAllNoSimplify)
 
 fun KContext.simplifyStringReplaceWithRegex(
     arg0: KExpr<KStringSort>,
@@ -111,32 +111,32 @@ fun KContext.simplifyStringReplaceAllWithRegex(
 
 fun KContext.simplifyStringToLower(
     arg: KExpr<KStringSort>
-): KExpr<KStringSort> = simplifyStringBasicToLowerExpr(arg, ::mkStringToLowerNoSimplify)
+): KExpr<KStringSort> = simplifyStringToLowerBasic(arg, ::mkStringToLowerNoSimplify)
 
 fun KContext.simplifyStringToUpper(
     arg: KExpr<KStringSort>
-): KExpr<KStringSort> = simplifyStringBasicToUpperExpr(arg, ::mkStringToUpperNoSimplify)
+): KExpr<KStringSort> = simplifyStringToUpperBasic(arg, ::mkStringToUpperNoSimplify)
 
 fun KContext.simplifyStringReverse(
     arg: KExpr<KStringSort>
-): KExpr<KStringSort> = simplifyStringBasicReverseExpr(arg, ::mkStringReverseNoSimplify)
+): KExpr<KStringSort> = simplifyStringReverseBasic(arg, ::mkStringReverseNoSimplify)
 
 fun KContext.simplifyStringIsDigit(
     arg: KExpr<KStringSort>
-): KExpr<KBoolSort> = simplifyStringIsDigitExprBasic(arg, ::mkStringIsDigitNoSimplify)
+): KExpr<KBoolSort> = simplifyStringIsDigitBasic(arg, ::mkStringIsDigitNoSimplify)
 
 fun KContext.simplifyStringToCode(
     arg: KExpr<KStringSort>
-): KExpr<KIntSort> = simplifyStringToCodeExprBasic(arg, ::mkStringToCodeNoSimplify)
+): KExpr<KIntSort> = simplifyStringToCodeBasic(arg, ::mkStringToCodeNoSimplify)
 
 fun KContext.simplifyStringFromCode(
     arg: KExpr<KIntSort>
-): KExpr<KStringSort> = simplifyStringFromCodeExprBasic(arg, ::mkStringFromCodeNoSimplify)
+): KExpr<KStringSort> = simplifyStringFromCodeBasic(arg, ::mkStringFromCodeNoSimplify)
 
 fun KContext.simplifyStringToInt(
     arg: KExpr<KStringSort>
-): KExpr<KIntSort> = simplifyStringToIntExprBasic(arg, ::mkStringToIntNoSimplify)
+): KExpr<KIntSort> = simplifyStringToIntBasic(arg, ::mkStringToIntNoSimplify)
 
 fun KContext.simplifyStringFromInt(
     arg: KExpr<KIntSort>
-): KExpr<KStringSort> = simplifyStringFromIntExprBasic(arg, ::mkStringFromIntNoSimplify)
+): KExpr<KStringSort> = simplifyStringFromIntBasic(arg, ::mkStringFromIntNoSimplify)
