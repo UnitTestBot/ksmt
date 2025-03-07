@@ -150,7 +150,7 @@ object StringUtils {
     }
 
     @JvmStatic
-    fun KContext.sequentialStringsForComparisons(): List<KStringLiteralExpr> {
+    fun KContext.sequentialEngAlphabetChars(): List<KStringLiteralExpr> {
         val alphabet = ('A'..'Z') + ('a'..'z')
 
         return alphabet.map { char ->
