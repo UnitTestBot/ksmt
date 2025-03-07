@@ -2341,7 +2341,10 @@ open class KContext(
             KStringIndexOfRegexExpr(this, arg0, arg1, arg2)
         }
     
-    fun KExpr<KStringSort>.indexOf(arg1: KExpr<KRegexSort>, arg2: KExpr<KIntSort>) = mkStringIndexOfRegex(this, arg1, arg2)
+    fun KExpr<KStringSort>.indexOfRegex(
+        arg1: KExpr<KRegexSort>, 
+        arg2: KExpr<KIntSort>
+    ) = mkStringIndexOfRegex(this, arg1, arg2)
 
     private val stringReplaceCache = mkAstInterner<KStringReplaceExpr>()
 
@@ -2378,7 +2381,10 @@ open class KContext(
             KStringReplaceExpr(this, arg0, arg1, arg2)
         }
 
-    fun KExpr<KStringSort>.replaceWith(arg1: KExpr<KStringSort>, arg2: KExpr<KStringSort>) = mkStringReplace(this, arg1, arg2)
+    fun KExpr<KStringSort>.replaceWith(
+        arg1: KExpr<KStringSort>, 
+        arg2: KExpr<KStringSort>
+    ) = mkStringReplace(this, arg1, arg2)
 
     private val stringReplaceAllCache = mkAstInterner<KStringReplaceAllExpr>()
 
@@ -2413,7 +2419,10 @@ open class KContext(
             KStringReplaceAllExpr(this, arg0, arg1, arg2)
         }
     
-    fun KExpr<KStringSort>.replaceAllWith(arg1: KExpr<KStringSort>, arg2: KExpr<KStringSort>) = mkStringReplaceAll(this, arg1, arg2)
+    fun KExpr<KStringSort>.replaceAllWith(
+        arg1: KExpr<KStringSort>, 
+        arg2: KExpr<KStringSort>
+    ) = mkStringReplaceAll(this, arg1, arg2)
 
     private val stringReplaceWithRegexCache = mkAstInterner<KStringReplaceWithRegexExpr>()
 
@@ -2448,7 +2457,10 @@ open class KContext(
             KStringReplaceWithRegexExpr(this, arg0, arg1, arg2)
         }
     
-    fun KExpr<KStringSort>.replaceWith(arg1: KExpr<KRegexSort>, arg2: KExpr<KStringSort>) = mkStringReplaceWithRegex(this, arg1, arg2)
+    fun KExpr<KStringSort>.replaceWithRegex(
+        arg1: KExpr<KRegexSort>, 
+        arg2: KExpr<KStringSort>
+    ) = mkStringReplaceWithRegex(this, arg1, arg2)
 
     private val stringReplaceAllWithRegexCache = mkAstInterner<KStringReplaceAllWithRegexExpr>()
 
@@ -2481,7 +2493,10 @@ open class KContext(
             KStringReplaceAllWithRegexExpr(this, arg0, arg1, arg2)
         }
     
-    fun KExpr<KStringSort>.replaceAllWith(arg1: KExpr<KRegexSort>, arg2: KExpr<KStringSort>) = mkStringReplaceAllWithRegex(this, arg1, arg2)
+    fun KExpr<KStringSort>.replaceAllWithRegex(
+        arg1: KExpr<KRegexSort>, 
+        arg2: KExpr<KStringSort>
+    ) = mkStringReplaceAllWithRegex(this, arg1, arg2)
 
     private val stringToLowerExprCache = mkAstInterner<KStringToLowerExpr>()
 
