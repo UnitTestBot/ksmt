@@ -2243,6 +2243,8 @@ open class KContext(
             ensureContextMatch(arg0, arg1)
             KStringSingletonSubExpr(this, arg0, arg1)
         }
+        
+    fun KExpr<KStringSort>.charAtPos(arg: KExpr<KIntSort>) = mkStringSingletonSub(this, arg)
 
     private val stringSubCache = mkAstInterner<KStringSubExpr>()
 
@@ -2268,6 +2270,8 @@ open class KContext(
             ensureContextMatch(arg0, arg1)
             KStringSubExpr(this, arg0, arg1, arg2)
         }
+    
+    fun KExpr<KStringSort>.substring(arg1: KExpr<KIntSort>, arg2: KExpr<KIntSort>) = mkStringSub(this, arg1, arg2)
 
     private val stringIndexOfCache = mkAstInterner<KStringIndexOfExpr>()
 
@@ -2306,6 +2310,8 @@ open class KContext(
             KStringIndexOfExpr(this, arg0, arg1, arg2)
         }
 
+    fun KExpr<KStringSort>.indexOf(arg1: KExpr<KStringSort>, arg2: KExpr<KIntSort>) = mkStringIndexOf(this, arg1, arg2)
+
     private val stringIndexOfRegexCache = mkAstInterner<KStringIndexOfRegexExpr>()
 
     /**
@@ -2334,6 +2340,8 @@ open class KContext(
             ensureContextMatch(arg0, arg1)
             KStringIndexOfRegexExpr(this, arg0, arg1, arg2)
         }
+    
+    fun KExpr<KStringSort>.indexOf(arg1: KExpr<KRegexSort>, arg2: KExpr<KIntSort>) = mkStringIndexOfRegex(this, arg1, arg2)
 
     private val stringReplaceCache = mkAstInterner<KStringReplaceExpr>()
 
@@ -2370,6 +2378,8 @@ open class KContext(
             KStringReplaceExpr(this, arg0, arg1, arg2)
         }
 
+    fun KExpr<KStringSort>.replaceWith(arg1: KExpr<KStringSort>, arg2: KExpr<KStringSort>) = mkStringReplace(this, arg1, arg2)
+
     private val stringReplaceAllCache = mkAstInterner<KStringReplaceAllExpr>()
 
     /**
@@ -2402,6 +2412,8 @@ open class KContext(
             ensureContextMatch(arg0, arg1, arg2)
             KStringReplaceAllExpr(this, arg0, arg1, arg2)
         }
+    
+    fun KExpr<KStringSort>.replaceAllWith(arg1: KExpr<KStringSort>, arg2: KExpr<KStringSort>) = mkStringReplaceAll(this, arg1, arg2)
 
     private val stringReplaceWithRegexCache = mkAstInterner<KStringReplaceWithRegexExpr>()
 
@@ -2435,6 +2447,8 @@ open class KContext(
             ensureContextMatch(arg0, arg1, arg2)
             KStringReplaceWithRegexExpr(this, arg0, arg1, arg2)
         }
+    
+    fun KExpr<KStringSort>.replaceWith(arg1: KExpr<KRegexSort>, arg2: KExpr<KStringSort>) = mkStringReplaceWithRegex(this, arg1, arg2)
 
     private val stringReplaceAllWithRegexCache = mkAstInterner<KStringReplaceAllWithRegexExpr>()
 
@@ -2466,6 +2480,8 @@ open class KContext(
             ensureContextMatch(arg0, arg1, arg2)
             KStringReplaceAllWithRegexExpr(this, arg0, arg1, arg2)
         }
+    
+    fun KExpr<KStringSort>.replaceAllWith(arg1: KExpr<KRegexSort>, arg2: KExpr<KStringSort>) = mkStringReplaceAllWithRegex(this, arg1, arg2)
 
     private val stringToLowerExprCache = mkAstInterner<KStringToLowerExpr>()
 
@@ -2483,6 +2499,8 @@ open class KContext(
             ensureContextMatch(arg)
             KStringToLowerExpr(this, arg)
         }
+    
+    fun KExpr<KStringSort>.toLower() = mkStringToLower(this)
 
     private val stringToUpperExprCache = mkAstInterner<KStringToUpperExpr>()
 
@@ -2500,6 +2518,8 @@ open class KContext(
             ensureContextMatch(arg)
             KStringToUpperExpr(this, arg)
         }
+    
+    fun KExpr<KStringSort>.toUpper() = mkStringToUpper(this)
 
     private val stringReverseExprCache = mkAstInterner<KStringReverseExpr>()
 
@@ -2517,6 +2537,8 @@ open class KContext(
             ensureContextMatch(arg)
             KStringReverseExpr(this, arg)
         }
+    
+    fun KExpr<KStringSort>.reverse() = mkStringReverse(this)
 
     private val stringIsDigitCache = mkAstInterner<KStringIsDigitExpr>()
 
@@ -2534,6 +2556,8 @@ open class KContext(
             ensureContextMatch(arg)
             KStringIsDigitExpr(this, arg)
         }
+    
+    fun KExpr<KStringSort>.isDigit() = mkStringIsDigit(this)
 
     private val stringToCodeCache = mkAstInterner<KStringToCodeExpr>()
 
@@ -2553,6 +2577,8 @@ open class KContext(
             ensureContextMatch(arg)
             KStringToCodeExpr(this, arg)
         }
+    
+    fun KExpr<KStringSort>.toCode() = mkStringToCode(this)
 
     private val stringFromCodeCache = mkAstInterner<KStringFromCodeExpr>()
 
@@ -2572,6 +2598,8 @@ open class KContext(
             ensureContextMatch(arg)
             KStringFromCodeExpr(this, arg)
         }
+    
+    fun KExpr<KIntSort>.toChar() = mkStringFromCode(this)
 
     private val stringToIntCache = mkAstInterner<KStringToIntExpr>()
 
@@ -2591,6 +2619,9 @@ open class KContext(
             ensureContextMatch(arg)
             KStringToIntExpr(this, arg)
         }
+    
+    
+    fun KExpr<KStringSort>.toInt() = mkStringToInt(this)
 
     private val stringFromIntCache = mkAstInterner<KStringFromIntExpr>()
 
@@ -2610,6 +2641,8 @@ open class KContext(
             ensureContextMatch(arg)
             KStringFromIntExpr(this, arg)
         }
+    
+    fun KExpr<KIntSort>.convertToString() = mkStringFromInt(this)
 
     private val stringToRegexExprCache = mkAstInterner<KStringToRegexExpr>()
 
@@ -2693,6 +2726,8 @@ open class KContext(
             ensureContextMatch(arg0, arg1)
             KRegexUnionExpr(this, arg0, arg1)
         }
+    
+    infix fun KExpr<KRegexSort>.union(other: KExpr<KRegexSort>) = mkRegexUnion(this, other)
 
     private val regexIntersectionExprCache = mkAstInterner<KRegexIntersectionExpr>()
 
@@ -2710,6 +2745,8 @@ open class KContext(
             ensureContextMatch(arg0, arg1)
             KRegexIntersectionExpr(this, arg0, arg1)
         }
+    
+    infix fun KExpr<KRegexSort>.intersect(other: KExpr<KRegexSort>) = mkRegexIntersection(this, other)
 
     private val regexStarExprCache = mkAstInterner<KRegexStarExpr>()
 
@@ -2727,6 +2764,8 @@ open class KContext(
             ensureContextMatch(arg)
             KRegexStarExpr(this, arg)
         }
+    
+    fun KExpr<KRegexSort>.kleeneStar() = mkRegexStar(this)
 
     private val regexCrossExprCache = mkAstInterner<KRegexCrossExpr>()
 
@@ -2744,6 +2783,8 @@ open class KContext(
             ensureContextMatch(arg)
             KRegexCrossExpr(this, arg)
         }
+    
+    fun KExpr<KRegexSort>.kleeneCross() = mkRegexCross(this)
 
     private val regexDifferenceExprCache = mkAstInterner<KRegexDifferenceExpr>()
 
@@ -2761,6 +2802,8 @@ open class KContext(
             ensureContextMatch(arg0, arg1)
             KRegexDifferenceExpr(this, arg0, arg1)
         }
+    
+    infix fun KExpr<KRegexSort>.diff(other: KExpr<KRegexSort>) = mkRegexDifference(this, other)
 
     private val regexComplementExprCache = mkAstInterner<KRegexComplementExpr>()
 
@@ -2779,6 +2822,8 @@ open class KContext(
         ensureContextMatch(arg)
         KRegexComplementExpr(this, arg)
     }
+
+    fun KExpr<KRegexSort>.complement() = mkRegexComplement(this)
 
     private val regexOptionExprCache = mkAstInterner<KRegexOptionExpr>()
 
@@ -2799,6 +2844,8 @@ open class KContext(
         ensureContextMatch(arg)
         KRegexOptionExpr(this, arg)
     }
+
+    fun KExpr<KRegexSort>.opt() = mkRegexOption(this)
 
     private val regexRangeExprCache = mkAstInterner<KRegexRangeExpr>()
 
@@ -2839,6 +2886,8 @@ open class KContext(
             ensureContextMatch(arg)
             KRegexPowerExpr(this, power, arg)
         }
+    
+    fun KExpr<KRegexSort>.toPow(power: Int) = mkRegexPower(power, this)
 
     private val regexLoopExprCache = mkAstInterner<KRegexLoopExpr>()
 
@@ -2858,6 +2907,8 @@ open class KContext(
             ensureContextMatch(arg)
             KRegexLoopExpr(this, from, to, arg)
         }
+    
+    fun KExpr<KRegexSort>.loop(from: Int, to: Int) = mkRegexLoop(from, to, this)
 
     val regexEpsilonExpr: KRegexEpsilon = KRegexEpsilon(this)
 
