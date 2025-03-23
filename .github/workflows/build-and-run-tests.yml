@@ -32,12 +32,7 @@ jobs:
       - name: Setup gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Build and run z3 tests on macOS
-        if: runner.os == 'macOS'
-        run: ./gradlew :ksmt-z3:build --no-daemon --continue -PrunBenchmarksBasedTests=false
-
-      - name: Build and run simple tests on Linux or Windows
-        if: runner.os != 'macOS'
+      - name: Build and run tests
         run: ./gradlew build --no-daemon --continue -PrunBenchmarksBasedTests=false
 
       - name: Upload ksmt test reports
