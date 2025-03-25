@@ -412,3 +412,53 @@ Note: todo -- additional simplification rules implemented in Z3
     * eval constants
 32. KEqExpr(KFp, KFp)
     * eval constants
+
+### Strings
+
+1. KStringConcat
+    * eval constants
+    * ``((concat a const1) const2) ==> (concat a (concat const1 const2))``
+    * ``((concat const1 (concat const2 a)) => (concat (concat const1 const2) a)``
+    * ``((concat (concat a const1) (concat const2 b)) ==> (concat a (concat (concat const1 const2) b))``
+2. KStringLen
+    * eval constants
+3. KStringSuffixOf
+    * eval constants
+4. KStringPrefixOf
+    * eval constants
+5. KStringLt
+    * eval constants
+6. KStringLe
+    * eval constants 
+7. KStringGt
+    * eval constants
+8. KStringGe
+    * eval constants
+9. KStringContains
+    * eval constants
+10. KStringSingletonSub
+    * eval constants
+11. KStringSub
+    * eval constants
+12. KStringIndexOf
+    * eval constants
+13. KStringReplace
+    * eval constants
+14. KStringReplaceAll
+    * eval constants 
+15. KStringToLower
+    * eval constants
+16. KStringToUpper
+    * eval constants
+17. KStringReverse
+    * eval constants
+18. KStringIsDigit
+    * eval constants
+19. KStringToCode
+    * eval constants 
+20. KStringFromCode
+    * eval constants 
+21. KStringToInt
+    * eval constants 
+22. KStringFromInt
+    * eval constants

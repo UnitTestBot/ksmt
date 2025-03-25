@@ -7,6 +7,7 @@ import io.ksmt.solver.KSolverUnsupportedFeatureException
 import io.ksmt.solver.KSolverUnsupportedParameterException
 import io.ksmt.solver.KTheory
 import io.ksmt.solver.KTheory.FP
+import io.ksmt.solver.KTheory.S
 import io.ksmt.solver.KTheory.LIA
 import io.ksmt.solver.KTheory.LRA
 import io.ksmt.solver.KTheory.NIA
@@ -39,6 +40,10 @@ class KYicesSolverConfigurationImpl(private val config: Config) : KYicesSolverCo
 
         if (FP in theories) {
             throw KSolverUnsupportedFeatureException("Unsupported theory $FP")
+        }
+
+        if (S in theories) {
+            throw KSolverUnsupportedFeatureException("Unsupported theory $S")
         }
 
         // Yices requires MCSAT for the arithmetic theories

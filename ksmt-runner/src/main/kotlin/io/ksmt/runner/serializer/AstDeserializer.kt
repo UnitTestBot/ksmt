@@ -12,6 +12,7 @@ import io.ksmt.sort.KArraySortBase
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KIntSort
+import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
 import io.ksmt.utils.uncheckedCast
@@ -87,11 +88,14 @@ class AstDeserializer(
         mkFreshFuncDecl(name, sort, argSorts as List<KSort>)
     }
 
+    @Suppress("ComplexMethod")
     private fun AbstractBuffer.deserializeSort(sortKind: SortKind): KSort = with(serializationCtx.ctx) {
         when (sortKind) {
             SortKind.Bool -> boolSort
             SortKind.Int -> intSort
             SortKind.Real -> realSort
+            SortKind.String -> stringSort
+            SortKind.Regex -> regexSort
             SortKind.FpRM -> mkFpRoundingModeSort()
             SortKind.Bv -> mkBvSort(readUInt())
             SortKind.Fp -> mkFpSort(readUInt(), readUInt())
@@ -276,6 +280,57 @@ class AstDeserializer(
             ExprKind.ToIntRealExpr -> deserialize(::mkRealToIntNoSimplify)
             ExprKind.IsIntRealExpr -> deserialize(::mkRealIsIntNoSimplify)
             ExprKind.RealNumExpr -> mkRealNum(readExpr<KIntSort>() as KIntNumExpr, readExpr<KIntSort>() as KIntNumExpr)
+            ExprKind.StringConcatExpr -> deserialize(::mkStringConcatNoSimplify)
+            ExprKind.StringLenExpr -> deserialize(::mkStringLenNoSimplify)
+            ExprKind.StringToRegexExpr -> deserialize(::mkStringToRegexNoSimplify)
+            ExprKind.StringInRegexExpr -> deserialize(::mkStringInRegexNoSimplify)
+            ExprKind.StringSuffixOfExpr -> deserialize(::mkStringSuffixOfNoSimplify)
+            ExprKind.StringPrefixOfExpr -> deserialize(::mkStringPrefixOfNoSimplify)
+            ExprKind.StringLtExpr -> deserialize(::mkStringLtNoSimplify)
+            ExprKind.StringLeExpr -> deserialize(::mkStringLeNoSimplify)
+            ExprKind.StringGtExpr -> deserialize(::mkStringGtNoSimplify)
+            ExprKind.StringGeExpr -> deserialize(::mkStringGeNoSimplify)
+            ExprKind.StringContainsExpr -> deserialize(::mkStringContainsNoSimplify)
+            ExprKind.StringSingletonSubExpr -> deserialize(::mkStringSingletonSubNoSimplify)
+            ExprKind.StringSubExpr -> deserialize(::mkStringSubNoSimplify)
+            ExprKind.StringIndexOfExpr -> deserialize(::mkStringIndexOfNoSimplify)
+            ExprKind.StringIndexOfRegexExpr -> deserialize(::mkStringIndexOfRegexNoSimplify)
+            ExprKind.StringReplaceExpr -> deserialize(::mkStringReplaceNoSimplify)
+            ExprKind.StringReplaceAllExpr -> deserialize(::mkStringReplaceAllNoSimplify)
+            ExprKind.StringReplaceWithRegexExpr -> deserialize(::mkStringReplaceWithRegexNoSimplify)
+            ExprKind.StringReplaceAllWithRegexExpr -> deserialize(::mkStringReplaceAllWithRegexNoSimplify)
+            ExprKind.StringToLowerExpr -> deserialize(::mkStringToLowerNoSimplify)
+            ExprKind.StringToUpperExpr -> deserialize(::mkStringToUpperNoSimplify)
+            ExprKind.StringReverseExpr -> deserialize(::mkStringReverseNoSimplify)
+            ExprKind.StringIsDigitExpr -> deserialize(::mkStringIsDigitNoSimplify)
+            ExprKind.StringToCodeExpr -> deserialize(::mkStringToCodeNoSimplify)
+            ExprKind.StringFromCodeExpr -> deserialize(::mkStringFromCodeNoSimplify)
+            ExprKind.StringToIntExpr -> deserialize(::mkStringToIntNoSimplify)
+            ExprKind.StringFromIntExpr -> deserialize(::mkStringFromIntNoSimplify)
+            ExprKind.StringLiteralExpr -> mkStringLiteral(readString())
+            ExprKind.RegexConcatExpr -> deserialize(::mkRegexConcatNoSimplify)
+            ExprKind.RegexUnionExpr -> deserialize(::mkRegexUnionNoSimplify)
+            ExprKind.RegexIntersectionExpr -> deserialize(::mkRegexIntersectionNoSimplify)
+            ExprKind.RegexStarExpr -> deserialize(::mkRegexStarNoSimplify)
+            ExprKind.RegexCrossExpr -> deserialize(::mkRegexCrossNoSimplify)
+            ExprKind.RegexDifferenceExpr -> deserialize(::mkRegexDifferenceNoSimplify)
+            ExprKind.RegexComplementExpr -> deserialize(::mkRegexComplementNoSimplify)
+            ExprKind.RegexOptionExpr -> deserialize(::mkRegexOptionNoSimplify)
+            ExprKind.RegexRangeExpr -> deserialize(::mkRegexRangeNoSimplify)
+            ExprKind.RegexPowerExpr -> {
+                val expr = readExpr<KRegexSort>()
+                val power = readInt()
+                mkRegexPower(power, expr)
+            }
+            ExprKind.RegexLoopExpr -> {
+                val expr = readExpr<KRegexSort>()
+                val from = readInt()
+                val to = readInt()
+                mkRegexLoop(from, to, expr)
+            }
+            ExprKind.RegexEpsilonExpr -> mkRegexEpsilon()
+            ExprKind.RegexAllExpr -> mkRegexAll()
+            ExprKind.RegexAllCharExpr -> mkRegexAllChar()
             ExprKind.ExistentialQuantifier -> {
                 val bounds = readAstArray()
                 mkExistentialQuantifier(readExpr(), bounds as List<KDecl<*>>)

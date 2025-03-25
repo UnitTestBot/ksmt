@@ -3,8 +3,11 @@ package io.ksmt.solver.cvc5
 import io.github.cvc5.Solver
 import io.github.cvc5.Term
 import io.ksmt.decl.KConstDecl
+import io.ksmt.decl.KDecl
 import io.ksmt.decl.KDeclVisitor
 import io.ksmt.decl.KFuncDecl
+import io.ksmt.solver.KSolverUnsupportedFeatureException
+import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KSort
 
 open class KCvc5DeclInternalizer(
@@ -29,9 +32,16 @@ open class KCvc5DeclInternalizer(
     }
 
     override fun <S : KSort> visit(decl: KConstDecl<S>): Term = cvc5Ctx.internalizeDecl(decl) {
+        checkConstDeclSort(decl)
         cvc5Ctx.addDeclaration(decl)
 
         val sort = decl.sort.accept(sortInternalizer)
         tm.builder { mkConst(sort, decl.name) }
+    }
+
+    private fun <S : KSort> checkConstDeclSort(decl: KDecl<S>) {
+        if (decl.sort is KRegexSort) {
+            throw KSolverUnsupportedFeatureException("Regex constants unsupported in cvc5")
+        }
     }
 }

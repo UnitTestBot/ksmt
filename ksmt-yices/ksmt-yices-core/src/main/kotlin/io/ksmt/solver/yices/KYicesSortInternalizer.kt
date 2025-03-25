@@ -12,6 +12,8 @@ import io.ksmt.sort.KFpRoundingModeSort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRealSort
+import io.ksmt.sort.KStringSort
+import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KSortVisitor
 import io.ksmt.sort.KUninterpretedSort
@@ -74,13 +76,17 @@ open class KYicesSortInternalizer(
         internalizedSort = yicesCtx.newUninterpretedType(sort.name)
     }
 
-    override fun <S : KFpSort> visit(sort: S) {
+    override fun <S : KFpSort> visit(sort: S) =
         throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
-    }
 
-    override fun visit(sort: KFpRoundingModeSort) {
+    override fun visit(sort: KFpRoundingModeSort) =
         throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
-    }
+
+    override fun visit(sort: KStringSort) =
+        throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
+
+    override fun visit(sort: KRegexSort) =
+        throw KSolverUnsupportedFeatureException("Unsupported sort $sort")
 
     fun internalizeYicesSort(sort: KSort): YicesSort = yicesCtx.internalizeSort(sort) {
         sort.accept(this)

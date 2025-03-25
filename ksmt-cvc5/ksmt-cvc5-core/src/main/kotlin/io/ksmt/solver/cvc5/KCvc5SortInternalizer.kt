@@ -11,6 +11,8 @@ import io.ksmt.sort.KFpRoundingModeSort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRealSort
+import io.ksmt.sort.KStringSort
+import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KSortVisitor
 import io.ksmt.sort.KUninterpretedSort
@@ -31,6 +33,14 @@ open class KCvc5SortInternalizer(
 
     override fun visit(sort: KRealSort): Sort = cvc5Ctx.internalizeSort(sort) {
         tm.builder { realSort }
+    }
+
+    override fun visit(sort: KStringSort): Sort = cvc5Ctx.internalizeSort(sort) {
+        tm.builder { stringSort }
+    }
+
+    override fun visit(sort: KRegexSort): Sort = cvc5Ctx.internalizeSort(sort) {
+        tm.builder { regExpSort }
     }
 
     override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): Sort =
