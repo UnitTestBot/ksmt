@@ -6,6 +6,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.register
@@ -71,6 +72,30 @@ fun MavenPublication.signKsmtPublication(project: Project) = with(project) {
 fun MavenPublication.addSourcesAndJavadoc(project: Project) {
     artifact(project.tasks["kotlinSourcesJar"])
     artifact(project.tasks["dokkaJavadocJar"])
+}
+
+fun MavenPublication.addSourcesAndJavadoc(
+    project: Project, sourceSet: SourceSet,
+    name: String, artifactName: String
+) {
+    val sourcesJarTask = project.tasks.register<Jar>("$name-sources-jar") {
+        archiveBaseName.set(artifactName)
+        archiveClassifier.set("sources")
+        from(sourceSet.allSource)
+    }
+
+    val javaDocJarTask = project.tasks.register<Jar>("$name-javadoc-jar") {
+        archiveBaseName.set(artifactName)
+        archiveClassifier.set("javadoc")
+
+        val javaDocTask = project.tasks["dokkaJavadocJar"]
+        dependsOn(javaDocTask)
+
+        from(javaDocTask.outputs)
+    }
+
+    artifact(sourcesJarTask.get())
+    artifact(javaDocJarTask.get())
 }
 
 fun MavenPublication.addEmptyArtifact(project: Project): Unit = with(project) {

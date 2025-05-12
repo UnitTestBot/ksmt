@@ -54,19 +54,12 @@ cvc5Binaries.entries.forEach { (sourceSet, nativeConfig) ->
         copyArtifactsIntoJar(nativeConfig, this, "lib/$systemArch/cvc5")
     }
 
-    val sourcesJarTask = tasks.register<Jar>("$name-sources-jar") {
-        archiveBaseName.set(artifactName)
-        archiveClassifier.set("sources")
-        from(sourceSet.allSource)
-    }
-
     publishing.publications {
         register<MavenPublication>("maven-$name") {
             artifactId = artifactName
 
             artifact(jarTask.get())
-            artifact(sourcesJarTask.get())
-            artifact(project.tasks["dokkaJavadocJar"])
+            addSourcesAndJavadoc(project, sourceSet, name, artifactName)
 
             addKsmtPom()
             signKsmtPublication(project)
