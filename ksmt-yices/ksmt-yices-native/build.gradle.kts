@@ -1,3 +1,5 @@
+import gratatouille.capitalizeFirstLetter
+
 plugins {
     id("io.ksmt.ksmt-base")
 }
@@ -39,6 +41,10 @@ yicesBinaries.entries.forEach { (sourceSet, nativeConfig) ->
     val name = sourceSet.name
     val artifactName = "ksmt-yices-native-$name"
     val systemArch = name.replace('-', '/')
+
+    tasks.getByName("compile${name.capitalizeFirstLetter()}Kotlin") {
+        mustRunAfter(project(":ksmt-yices:ksmt-yices-core").tasks.named("jar"))
+    }
 
     val jarTask = tasks.register<Jar>("$name-jar") {
         archiveBaseName.set(artifactName)

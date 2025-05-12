@@ -4,7 +4,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id("io.ksmt.ksmt-base")
-    id("com.jetbrains.rdgen") version "2022.3.2"
+    id("com.jetbrains.rdgen") version "2025.1.1"
 }
 
 repositories {

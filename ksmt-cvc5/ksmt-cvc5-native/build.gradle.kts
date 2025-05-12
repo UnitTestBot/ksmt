@@ -1,3 +1,5 @@
+import gratatouille.capitalizeFirstLetter
+
 plugins {
     id("io.ksmt.ksmt-base")
 }
@@ -41,6 +43,10 @@ cvc5Binaries.entries.forEach { (sourceSet, nativeConfig) ->
     val name = sourceSet.name
     val artifactName = "ksmt-cvc5-native-$name"
     val systemArch = name.replace('-', '/')
+
+    tasks.getByName("compile${name.capitalizeFirstLetter()}Kotlin") {
+        mustRunAfter(project(":ksmt-cvc5:ksmt-cvc5-core").tasks.named("jar"))
+    }
 
     val jarTask = tasks.register<Jar>("$name-jar") {
         archiveBaseName.set(artifactName)

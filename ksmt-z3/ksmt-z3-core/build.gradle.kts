@@ -2,7 +2,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     id("io.ksmt.ksmt-base")
-    id("com.github.johnrengelman.shadow") version "7.1.2"
+    id("com.gradleup.shadow") version "9.0.0-beta13"
 }
 
 repositories {
@@ -40,6 +40,7 @@ publishing {
             project.shadow.component(this)
 
             addKsmtPom()
+            generateMavenMetadata(project)
             addSourcesAndJavadoc(project)
             signKsmtPublication(project)
         }

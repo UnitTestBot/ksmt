@@ -19,6 +19,10 @@ dependencies {
     implementation("de.undercouch.download:de.undercouch.download.gradle.plugin:5.1.0")
 }
 
+tasks.withType<JavaCompile> {
+    targetCompatibility = JavaVersion.VERSION_1_8.toString()
+}
+
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = JavaVersion.VERSION_1_8.toString()
 }

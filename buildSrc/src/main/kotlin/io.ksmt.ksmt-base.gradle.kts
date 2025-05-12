@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "io.ksmt"
-version = "0.5.29"
+version = "0.5.30"
 
 repositories {
     mavenCentral()
@@ -29,6 +29,10 @@ dependencies {
 detekt {
     buildUponDefaultConfig = true
     config = files(rootDir.resolve("detekt.yml"))
+}
+
+tasks.withType<JavaCompile> {
+    targetCompatibility = JavaVersion.VERSION_1_8.toString()
 }
 
 tasks.withType<KotlinCompile> {
@@ -55,19 +59,6 @@ publishing {
         maven {
             name = "releaseDir"
             url = uri(layout.buildDirectory.dir("release"))
-        }
-
-        val mavenDeployUrl = project.stringProperty("mavenDeployUrl")
-        if (mavenDeployUrl != null) {
-            maven {
-                name = "central"
-                url = uri(mavenDeployUrl)
-
-                credentials {
-                    username = project.stringProperty("mavenDeployUser") ?: ""
-                    password = project.stringProperty("mavenDeployPassword") ?: ""
-                }
-            }
         }
     }
 }

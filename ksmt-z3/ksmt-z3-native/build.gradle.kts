@@ -1,3 +1,5 @@
+import gratatouille.capitalizeFirstLetter
+
 plugins {
     id("io.ksmt.ksmt-base")
 }
@@ -46,6 +48,10 @@ z3Binaries.forEach { (sourceSet, z3BinaryTask, nativeConfig) ->
     val name = sourceSet.name
     val artifactName = "ksmt-z3-native-$name"
     val systemArch = name.replace('-', '/')
+
+    tasks.getByName("compile${name.capitalizeFirstLetter()}Kotlin") {
+        mustRunAfter(project(":ksmt-z3:ksmt-z3-core").tasks.named("jar"))
+    }
 
     val jarTask = tasks.register<Jar>("$name-jar") {
         archiveBaseName.set(artifactName)
