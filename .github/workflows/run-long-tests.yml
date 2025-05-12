@@ -80,11 +80,11 @@ jobs:
           key: test-data-${{ env.TEST_DATA_REVISION }}-${{ matrix.os }}
           path: ksmt-test/testData/testData.zip
 
-      - name: Set up JDK 1.8
+      - name: Set up JDK 17
         if: steps.test-data-cache.outputs.cache-hit != 'true'
         uses: actions/setup-java@v4
         with:
-          java-version: 8
+          java-version: 17
           distribution: 'zulu'
           cache: gradle
 
@@ -131,10 +131,10 @@ jobs:
           echo "Test data is not available"
           exit 1
 
-      - name: Set up JDK 1.8
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: 8
+          java-version: 17
           distribution: 'zulu'
           cache: gradle
 
@@ -185,10 +185,10 @@ jobs:
         with:
           path: reports
 
-      - name: Set up JDK 1.8
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: 8
+          java-version: 17
           distribution: 'zulu'
 
       - name: Setup gradle

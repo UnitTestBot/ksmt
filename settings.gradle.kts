@@ -24,6 +24,11 @@ include("ksmt-test")
 include("ksmt-symfpu")
 
 pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+
     resolutionStrategy {
         eachPlugin {
             if (requested.id.name == "rdgen") {

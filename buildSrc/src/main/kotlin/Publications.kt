@@ -1,5 +1,5 @@
-import gradle.kotlin.dsl.accessors._87b80c14bf1c4d505c7a71d7741e0994.publishing
-import gradle.kotlin.dsl.accessors._87b80c14bf1c4d505c7a71d7741e0994.signing
+import gradle.kotlin.dsl.accessors._a772fae24f61b6fdfe5e797ccdf7ddf5.publishing
+import gradle.kotlin.dsl.accessors._a772fae24f61b6fdfe5e797ccdf7ddf5.signing
 import groovy.util.Node
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
@@ -47,6 +47,12 @@ fun MavenPublication.addKsmtPom() {
                 email.set("alex.menshutin99@gmail.com")
             }
         }
+    }
+}
+
+fun MavenPublication.generateMavenMetadata(project: Project) {
+    project.tasks.getByName("generateMetadataFileForMavenPublication") {
+        mustRunAfter(project.tasks.named("jar"))
     }
 }
 
