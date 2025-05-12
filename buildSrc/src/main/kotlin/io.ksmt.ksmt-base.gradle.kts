@@ -60,18 +60,5 @@ publishing {
             name = "releaseDir"
             url = uri(layout.buildDirectory.dir("release"))
         }
-
-        val mavenDeployUrl = project.stringProperty("mavenDeployUrl")
-        if (mavenDeployUrl != null) {
-            maven {
-                name = "central"
-                url = uri(mavenDeployUrl)
-
-                credentials {
-                    username = project.stringProperty("mavenDeployUser") ?: ""
-                    password = project.stringProperty("mavenDeployPassword") ?: ""
-                }
-            }
-        }
     }
 }
