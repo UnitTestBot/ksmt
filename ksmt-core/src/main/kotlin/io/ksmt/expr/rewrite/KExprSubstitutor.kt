@@ -47,8 +47,9 @@ open class KExprSubstitutor(ctx: KContext) : KNonRecursiveTransformer(ctx) {
         declDeclSubstitution[from] = to
     }
 
-    override fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> =
-        exprExprSubstitution[expr]?.uncheckedCast() ?: expr
+    override fun <T : KSort> transformExpr(expr: KExpr<T>): KExpr<T> {
+        return exprExprSubstitution[expr]?.uncheckedCast() ?: expr
+    }
 
     override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> {
         val substitution: KDecl<T> = declDeclSubstitution[expr.decl]?.uncheckedCast() ?: return transformExpr(expr)
