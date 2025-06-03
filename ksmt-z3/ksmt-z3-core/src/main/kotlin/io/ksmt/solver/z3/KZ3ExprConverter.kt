@@ -22,6 +22,7 @@ import io.ksmt.expr.KFpRoundingModeExpr
 import io.ksmt.expr.KIntNumExpr
 import io.ksmt.expr.KInterpretedValue
 import io.ksmt.expr.KRealNumExpr
+import io.ksmt.expr.KStringLiteralExpr
 import io.ksmt.expr.rewrite.KExprUninterpretedDeclCollector
 import io.ksmt.solver.KSolverUnsupportedFeatureException
 import io.ksmt.solver.util.ExprConversionResult
@@ -116,6 +117,9 @@ open class KZ3ExprConverter(
             Z3_sort_kind.Z3_BOOL_SORT -> boolSort
             Z3_sort_kind.Z3_INT_SORT -> intSort
             Z3_sort_kind.Z3_REAL_SORT -> realSort
+            // Currently, KSMT supports the only type of sequences - strings.
+            Z3_sort_kind.Z3_SEQ_SORT -> stringSort
+            Z3_sort_kind.Z3_RE_SORT -> regexSort
             Z3_sort_kind.Z3_ARRAY_SORT -> convertNativeArraySort(sort)
             Z3_sort_kind.Z3_BV_SORT -> mkBvSort(Native.getBvSortSize(nCtx, sort).toUInt())
             Z3_sort_kind.Z3_FLOATING_POINT_SORT ->
@@ -128,8 +132,6 @@ open class KZ3ExprConverter(
             Z3_sort_kind.Z3_DATATYPE_SORT,
             Z3_sort_kind.Z3_RELATION_SORT,
             Z3_sort_kind.Z3_FINITE_DOMAIN_SORT,
-            Z3_sort_kind.Z3_SEQ_SORT,
-            Z3_sort_kind.Z3_RE_SORT,
             Z3_sort_kind.Z3_CHAR_SORT,
             Z3_sort_kind.Z3_TYPE_VAR,
             Z3_sort_kind.Z3_UNKNOWN_SORT -> TODO("$sort is not supported yet")
@@ -412,6 +414,58 @@ open class KZ3ExprConverter(
                 throw KSolverUnsupportedFeatureException("Fp $declKind is not supported")
             }
 
+            // Currently, KSMT supports the only type of sequences - strings
+            Z3_decl_kind.Z3_OP_SEQ_CONCAT -> expr.convert(::mkStringConcat)
+            Z3_decl_kind.Z3_OP_SEQ_LENGTH -> expr.convert(::mkStringLen)
+            Z3_decl_kind.Z3_OP_SEQ_TO_RE -> expr.convert(::mkStringToRegex)
+            Z3_decl_kind.Z3_OP_SEQ_IN_RE -> expr.convert(::mkStringInRegex)
+            Z3_decl_kind.Z3_OP_SEQ_SUFFIX -> expr.convert(::mkStringSuffixOf)
+            Z3_decl_kind.Z3_OP_SEQ_PREFIX -> expr.convert(::mkStringPrefixOf)
+            Z3_decl_kind.Z3_OP_STRING_LT -> expr.convert(::mkStringLt)
+            Z3_decl_kind.Z3_OP_STRING_LE -> expr.convert(::mkStringLe)
+            Z3_decl_kind.Z3_OP_SEQ_CONTAINS -> expr.convert(::mkStringContains)
+            Z3_decl_kind.Z3_OP_SEQ_AT -> expr.convert(::mkStringSingletonSub)
+            Z3_decl_kind.Z3_OP_SEQ_EXTRACT -> expr.convert(::mkStringSub)
+            Z3_decl_kind.Z3_OP_SEQ_INDEX -> {
+                var args = getAppArgs(nCtx, expr)
+                if (args.size == 2) {
+                    args += Native.mkInt(nCtx, 0, Native.mkIntSort(nCtx))
+                }
+                expr.convert(args, ::mkStringIndexOf)
+            }
+            Z3_decl_kind.Z3_OP_SEQ_REPLACE -> expr.convert(::mkStringReplace)
+            Z3_decl_kind.Z3_OP_SEQ_REPLACE_ALL -> expr.convert(::mkStringReplaceAll)
+            Z3_decl_kind.Z3_OP_SEQ_REPLACE_RE -> expr.convert(::mkStringReplaceWithRegex)
+            Z3_decl_kind.Z3_OP_SEQ_REPLACE_RE_ALL -> expr.convert(::mkStringReplaceAllWithRegex)
+            Z3_decl_kind.Z3_OP_CHAR_IS_DIGIT -> expr.convert(::mkStringIsDigit)
+            Z3_decl_kind.Z3_OP_STR_TO_CODE -> expr.convert(::mkStringToCode)
+            Z3_decl_kind.Z3_OP_STR_FROM_CODE -> expr.convert(::mkStringFromCode)
+            Z3_decl_kind.Z3_OP_STR_TO_INT -> expr.convert(::mkStringToInt)
+            Z3_decl_kind.Z3_OP_INT_TO_STR -> expr.convert(::mkStringFromInt)
+            Z3_decl_kind.Z3_OP_RE_CONCAT -> expr.convert(::mkRegexConcat)
+            Z3_decl_kind.Z3_OP_RE_UNION -> expr.convert(::mkRegexUnion)
+            Z3_decl_kind.Z3_OP_RE_INTERSECT -> expr.convert(::mkRegexIntersection)
+            Z3_decl_kind.Z3_OP_RE_STAR -> expr.convert(::mkRegexStar)
+            Z3_decl_kind.Z3_OP_RE_PLUS -> expr.convert(::mkRegexCross)
+            Z3_decl_kind.Z3_OP_RE_DIFF -> expr.convert(::mkRegexDifference)
+            Z3_decl_kind.Z3_OP_RE_COMPLEMENT -> expr.convert(::mkRegexComplement)
+            Z3_decl_kind.Z3_OP_RE_OPTION -> expr.convert(::mkRegexOption)
+            Z3_decl_kind.Z3_OP_RE_RANGE -> expr.convert(::mkRegexRange)
+            Z3_decl_kind.Z3_OP_RE_POWER -> {
+                val args = getAppArgs(nCtx, expr)
+                val power = Native.getDeclIntParameter(nCtx, decl, 0)
+                expr.convert(args) { arg -> mkRegexPower(power, arg) }
+            }
+            Z3_decl_kind.Z3_OP_RE_LOOP -> {
+                val args = getAppArgs(nCtx, expr)
+                val from = Native.getDeclIntParameter(nCtx, decl, 0)
+                val to = Native.getDeclIntParameter(nCtx, decl, 1)
+                expr.convert(args) { arg -> mkRegexLoop(from, to, arg) }
+            }
+            Z3_decl_kind.Z3_OP_RE_EMPTY_SET -> ExprConversionResult(mkRegexEpsilon())
+            Z3_decl_kind.Z3_OP_RE_FULL_SET -> ExprConversionResult(mkRegexAll())
+            Z3_decl_kind.Z3_OP_RE_FULL_CHAR_SET -> ExprConversionResult(mkRegexAllChar())
+
             Z3_decl_kind.Z3_OP_INTERNAL -> tryConvertInternalAppExpr(expr, decl)
 
             Z3_decl_kind.Z3_OP_RECURSIVE -> {
@@ -525,6 +579,8 @@ open class KZ3ExprConverter(
             Z3_sort_kind.Z3_BV_SORT -> convert { convertBvNumeral(expr, sort) }
             Z3_sort_kind.Z3_ROUNDING_MODE_SORT -> convert { convertFpRmNumeral(expr) }
             Z3_sort_kind.Z3_FLOATING_POINT_SORT -> convertFpNumeral(expr, sort)
+            // Currently, KSMT supports the only type of sequences - strings.
+            Z3_sort_kind.Z3_SEQ_SORT -> convert { convertStringLiteral(expr) }
             else -> TODO("numerals with ${Native.sortToString(nCtx, sort)} are not supported")
         }
     }
@@ -545,6 +601,12 @@ open class KZ3ExprConverter(
             z3Ctx.releaseTemporaryAst(numerator)
             z3Ctx.releaseTemporaryAst(denominator)
         }
+    }
+
+    @Suppress("MemberVisibilityCanBePrivate")
+    fun convertStringLiteral(expr: Long): KStringLiteralExpr = with(ctx) {
+        val value = Native.getString(nCtx, expr)
+        mkStringLiteral(value)
     }
 
     @Suppress("MemberVisibilityCanBePrivate")
@@ -602,6 +664,9 @@ open class KZ3ExprConverter(
                 val size = Native.getDeclIntParameter(nCtx, decl, 0)
                 mkFpToBvExpr(rm, fp, size, isSigned = false)
             }
+
+            "String" -> convertNumeral(expr)
+            "str.is_digit" -> expr.convert(::mkStringIsDigit)
 
             else -> throw KSolverUnsupportedFeatureException("Z3 internal decl $internalDeclName is not supported")
         }

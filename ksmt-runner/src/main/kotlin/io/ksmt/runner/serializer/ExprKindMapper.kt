@@ -141,6 +141,48 @@ import io.ksmt.expr.KUnaryMinusArithExpr
 import io.ksmt.expr.KUninterpretedSortValue
 import io.ksmt.expr.KUniversalQuantifier
 import io.ksmt.expr.KXorExpr
+import io.ksmt.expr.KStringConcatExpr
+import io.ksmt.expr.KStringLenExpr
+import io.ksmt.expr.KStringToRegexExpr
+import io.ksmt.expr.KStringInRegexExpr
+import io.ksmt.expr.KStringSuffixOfExpr
+import io.ksmt.expr.KStringPrefixOfExpr
+import io.ksmt.expr.KStringLtExpr
+import io.ksmt.expr.KStringLeExpr
+import io.ksmt.expr.KStringGtExpr
+import io.ksmt.expr.KStringGeExpr
+import io.ksmt.expr.KStringContainsExpr
+import io.ksmt.expr.KStringSingletonSubExpr
+import io.ksmt.expr.KStringSubExpr
+import io.ksmt.expr.KStringIndexOfExpr
+import io.ksmt.expr.KStringIndexOfRegexExpr
+import io.ksmt.expr.KStringReplaceExpr
+import io.ksmt.expr.KStringReplaceAllExpr
+import io.ksmt.expr.KStringReplaceWithRegexExpr
+import io.ksmt.expr.KStringReplaceAllWithRegexExpr
+import io.ksmt.expr.KStringToLowerExpr
+import io.ksmt.expr.KStringToUpperExpr
+import io.ksmt.expr.KStringReverseExpr
+import io.ksmt.expr.KStringIsDigitExpr
+import io.ksmt.expr.KStringToCodeExpr
+import io.ksmt.expr.KStringFromCodeExpr
+import io.ksmt.expr.KStringToIntExpr
+import io.ksmt.expr.KStringFromIntExpr
+import io.ksmt.expr.KStringLiteralExpr
+import io.ksmt.expr.KRegexConcatExpr
+import io.ksmt.expr.KRegexUnionExpr
+import io.ksmt.expr.KRegexIntersectionExpr
+import io.ksmt.expr.KRegexStarExpr
+import io.ksmt.expr.KRegexCrossExpr
+import io.ksmt.expr.KRegexDifferenceExpr
+import io.ksmt.expr.KRegexComplementExpr
+import io.ksmt.expr.KRegexOptionExpr
+import io.ksmt.expr.KRegexRangeExpr
+import io.ksmt.expr.KRegexPowerExpr
+import io.ksmt.expr.KRegexLoopExpr
+import io.ksmt.expr.KRegexEpsilon
+import io.ksmt.expr.KRegexAll
+import io.ksmt.expr.KRegexAllChar
 import io.ksmt.expr.transformer.KTransformerBase
 import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KArray2Sort
@@ -163,6 +205,8 @@ import io.ksmt.sort.KFpRoundingModeSort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRealSort
+import io.ksmt.sort.KStringSort
+import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
 
@@ -625,6 +669,138 @@ class ExprKindMapper: KTransformerBase {
 
 
     override fun transform(expr: KRealNumExpr): KExpr<KRealSort> = expr.kind(ExprKind.RealNumExpr)
+
+
+    override fun transform(expr: KStringConcatExpr): KExpr<KStringSort> = expr.kind(ExprKind.StringConcatExpr)
+
+
+    override fun transform(expr: KStringLenExpr): KExpr<KIntSort> = expr.kind(ExprKind.StringLenExpr)
+
+
+    override fun transform(expr: KStringToRegexExpr): KExpr<KRegexSort> = expr.kind(ExprKind.StringToRegexExpr)
+
+
+    override fun transform(expr: KStringInRegexExpr): KExpr<KBoolSort> = expr.kind(ExprKind.StringInRegexExpr)
+
+
+    override fun transform(expr: KStringSuffixOfExpr): KExpr<KBoolSort> = expr.kind(ExprKind.StringSuffixOfExpr)
+
+
+    override fun transform(expr: KStringPrefixOfExpr): KExpr<KBoolSort> = expr.kind(ExprKind.StringPrefixOfExpr)
+
+
+    override fun transform(expr: KStringLtExpr): KExpr<KBoolSort> = expr.kind(ExprKind.StringLtExpr)
+
+
+    override fun transform(expr: KStringLeExpr): KExpr<KBoolSort> = expr.kind(ExprKind.StringLeExpr)
+
+
+    override fun transform(expr: KStringGtExpr): KExpr<KBoolSort> = expr.kind(ExprKind.StringGtExpr)
+
+
+    override fun transform(expr: KStringGeExpr): KExpr<KBoolSort> = expr.kind(ExprKind.StringGeExpr)
+
+
+    override fun transform(expr: KStringContainsExpr): KExpr<KBoolSort> = expr.kind(ExprKind.StringContainsExpr)
+
+
+    override fun transform(
+        expr: KStringSingletonSubExpr
+    ): KExpr<KStringSort> = expr.kind(ExprKind.StringSingletonSubExpr)
+
+
+    override fun transform(expr: KStringSubExpr): KExpr<KStringSort> = expr.kind(ExprKind.StringSubExpr)
+
+
+    override fun transform(expr: KStringIndexOfExpr): KExpr<KIntSort> = expr.kind(ExprKind.StringIndexOfExpr)
+
+
+    override fun transform(expr: KStringIndexOfRegexExpr): KExpr<KIntSort> = expr.kind(ExprKind.StringIndexOfRegexExpr)
+
+
+    override fun transform(expr: KStringReplaceExpr): KExpr<KStringSort> = expr.kind(ExprKind.StringReplaceExpr)
+
+
+    override fun transform(expr: KStringReplaceAllExpr): KExpr<KStringSort> = expr.kind(ExprKind.StringReplaceAllExpr)
+
+
+    override fun transform(
+        expr: KStringReplaceWithRegexExpr
+    ): KExpr<KStringSort> = expr.kind(ExprKind.StringReplaceWithRegexExpr)
+
+
+    override fun transform(
+        expr: KStringReplaceAllWithRegexExpr
+    ): KExpr<KStringSort> = expr.kind(ExprKind.StringReplaceAllWithRegexExpr)
+
+
+    override fun transform(expr: KStringToLowerExpr): KExpr<KStringSort> = expr.kind(ExprKind.StringToLowerExpr)
+
+
+    override fun transform(expr: KStringToUpperExpr): KExpr<KStringSort> = expr.kind(ExprKind.StringToUpperExpr)
+
+
+    override fun transform(expr: KStringReverseExpr): KExpr<KStringSort> = expr.kind(ExprKind.StringReverseExpr)
+
+
+    override fun transform(expr: KStringIsDigitExpr): KExpr<KBoolSort> = expr.kind(ExprKind.StringIsDigitExpr)
+
+
+    override fun transform(expr: KStringToCodeExpr): KExpr<KIntSort> = expr.kind(ExprKind.StringToCodeExpr)
+
+
+    override fun transform(expr: KStringFromCodeExpr): KExpr<KStringSort> = expr.kind(ExprKind.StringFromCodeExpr)
+
+
+    override fun transform(expr: KStringToIntExpr): KExpr<KIntSort> = expr.kind(ExprKind.StringToIntExpr)
+
+
+    override fun transform(expr: KStringFromIntExpr): KExpr<KStringSort> = expr.kind(ExprKind.StringFromIntExpr)
+
+
+    override fun transform(expr: KStringLiteralExpr): KExpr<KStringSort> = expr.kind(ExprKind.StringLiteralExpr)
+
+
+    override fun transform(expr: KRegexConcatExpr): KExpr<KRegexSort> = expr.kind(ExprKind.RegexConcatExpr)
+
+
+    override fun transform(expr: KRegexUnionExpr): KExpr<KRegexSort> = expr.kind(ExprKind.RegexUnionExpr)
+
+
+    override fun transform(expr: KRegexIntersectionExpr): KExpr<KRegexSort> = expr.kind(ExprKind.RegexIntersectionExpr)
+
+
+    override fun transform(expr: KRegexStarExpr): KExpr<KRegexSort> = expr.kind(ExprKind.RegexStarExpr)
+
+
+    override fun transform(expr: KRegexCrossExpr): KExpr<KRegexSort> = expr.kind(ExprKind.RegexCrossExpr)
+
+
+    override fun transform(expr: KRegexComplementExpr): KExpr<KRegexSort> = expr.kind(ExprKind.RegexComplementExpr)
+
+
+    override fun transform(expr: KRegexDifferenceExpr): KExpr<KRegexSort> = expr.kind(ExprKind.RegexDifferenceExpr)
+
+
+    override fun transform(expr: KRegexOptionExpr): KExpr<KRegexSort> = expr.kind(ExprKind.RegexOptionExpr)
+
+
+    override fun transform(expr: KRegexRangeExpr): KExpr<KRegexSort> = expr.kind(ExprKind.RegexRangeExpr)
+
+
+    override fun transform(expr: KRegexPowerExpr): KExpr<KRegexSort> = expr.kind(ExprKind.RegexPowerExpr)
+
+
+    override fun transform(expr: KRegexLoopExpr): KExpr<KRegexSort> = expr.kind(ExprKind.RegexLoopExpr)
+
+
+    override fun transform(expr: KRegexEpsilon): KExpr<KRegexSort> = expr.kind(ExprKind.RegexEpsilonExpr)
+
+
+    override fun transform(expr: KRegexAll): KExpr<KRegexSort> = expr.kind(ExprKind.RegexAllExpr)
+
+
+    override fun transform(expr: KRegexAllChar): KExpr<KRegexSort> = expr.kind(ExprKind.RegexAllCharExpr)
 
 
     override fun transform(expr: KExistentialQuantifier): KExpr<KBoolSort> = expr.kind(ExprKind.ExistentialQuantifier)

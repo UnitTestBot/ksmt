@@ -15,6 +15,8 @@ import io.ksmt.sort.KBv8Sort
 import io.ksmt.sort.KBvSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRealSort
+import io.ksmt.sort.KStringSort
+import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KSort
 
 interface KDeclVisitor<T> {
@@ -131,4 +133,48 @@ interface KDeclVisitor<T> {
     fun <S : KBvSort> visit(decl: KBvNegNoOverflowDecl<S>): T = visit(decl as KFuncDecl<KBoolSort>)
     fun <S : KBvSort> visit(decl: KBvMulNoOverflowDecl<S>): T = visit(decl as KFuncDecl<KBoolSort>)
     fun <S : KBvSort> visit(decl: KBvMulNoUnderflowDecl<S>): T = visit(decl as KFuncDecl<KBoolSort>)
+
+    fun visit(decl: KStringConcatDecl): T = visit(decl as KFuncDecl<KStringSort>)
+    fun visit(decl: KStringLenDecl): T = visit(decl as KFuncDecl<KIntSort>)
+    fun visit(decl: KStringToRegexDecl): T = visit(decl as KFuncDecl<KRegexSort>)
+    fun visit(decl: KStringInRegexDecl): T = visit(decl as KFuncDecl<KBoolSort>)
+    fun visit(decl: KStringSuffixOfDecl): T = visit(decl as KFuncDecl<KBoolSort>)
+    fun visit(decl: KStringPrefixOfDecl): T = visit(decl as KFuncDecl<KBoolSort>)
+    fun visit(decl: KStringLtDecl): T = visit(decl as KFuncDecl<KBoolSort>)
+    fun visit(decl: KStringLeDecl): T = visit(decl as KFuncDecl<KBoolSort>)
+    fun visit(decl: KStringGtDecl): T = visit(decl as KFuncDecl<KBoolSort>)
+    fun visit(decl: KStringGeDecl): T = visit(decl as KFuncDecl<KBoolSort>)
+    fun visit(decl: KStringContainsDecl): T = visit(decl as KFuncDecl<KBoolSort>)
+    fun visit(decl: KStringSingletonSubDecl): T = visit(decl as KFuncDecl<KStringSort>)
+    fun visit(decl: KStringSubDecl): T = visit(decl as KFuncDecl<KStringSort>)
+    fun visit(decl: KStringIndexOfDecl): T = visit(decl as KFuncDecl<KIntSort>)
+    fun visit(decl: KStringIndexOfRegexDecl): T = visit(decl as KFuncDecl<KIntSort>)
+    fun visit(decl: KStringReplaceDecl): T = visit(decl as KFuncDecl<KStringSort>)
+    fun visit(decl: KStringReplaceAllDecl): T = visit(decl as KFuncDecl<KStringSort>)
+    fun visit(decl: KStringReplaceWithRegexDecl): T = visit(decl as KFuncDecl<KStringSort>)
+    fun visit(decl: KStringReplaceAllWithRegexDecl): T = visit(decl as KFuncDecl<KStringSort>)
+    fun visit(decl: KStringToLowerDecl): T = visit(decl as KFuncDecl<KStringSort>)
+    fun visit(decl: KStringToUpperDecl): T = visit(decl as KFuncDecl<KStringSort>)
+    fun visit(decl: KStringReverseDecl): T = visit(decl as KFuncDecl<KStringSort>)
+    fun visit(decl: KStringIsDigitDecl): T = visit(decl as KFuncDecl<KBoolSort>)
+    fun visit(decl: KStringToCodeDecl): T = visit(decl as KFuncDecl<KIntSort>)
+    fun visit(decl: KStringFromCodeDecl): T = visit(decl as KFuncDecl<KStringSort>)
+    fun visit(decl: KStringToIntDecl): T = visit(decl as KFuncDecl<KIntSort>)
+    fun visit(decl: KStringFromIntDecl): T = visit(decl as KFuncDecl<KStringSort>)
+    fun visit(decl: KStringLiteralDecl): T = visit(decl as KConstDecl<KStringSort>)
+
+    fun visit(decl: KRegexConcatDecl): T = visit(decl as KFuncDecl<KRegexSort>)
+    fun visit(decl: KRegexUnionDecl): T = visit(decl as KFuncDecl<KRegexSort>)
+    fun visit(decl: KRegexIntersectionDecl): T = visit(decl as KFuncDecl<KRegexSort>)
+    fun visit(decl: KRegexStarDecl): T = visit(decl as KFuncDecl<KRegexSort>)
+    fun visit(decl: KRegexCrossDecl): T = visit(decl as KFuncDecl<KRegexSort>)
+    fun visit(decl: KRegexDifferenceDecl): T = visit(decl as KFuncDecl<KRegexSort>)
+    fun visit(decl: KRegexComplementDecl): T = visit(decl as KFuncDecl<KRegexSort>)
+    fun visit(decl: KRegexOptionDecl): T = visit(decl as KFuncDecl<KRegexSort>)
+    fun visit(decl: KRegexRangeDecl): T = visit(decl as KFuncDecl<KRegexSort>)
+    fun visit(decl: KRegexPowerDecl): T = visit(decl as KFuncDecl<KRegexSort>)
+    fun visit(decl: KRegexLoopDecl): T = visit(decl as KFuncDecl<KRegexSort>)
+    fun visit(decl: KRegexEpsilonDecl): T = visit(decl as KConstDecl<KRegexSort>)
+    fun visit(decl: KRegexAllDecl): T = visit(decl as KConstDecl<KRegexSort>)
+    fun visit(decl: KRegexAllCharDecl): T = visit(decl as KConstDecl<KRegexSort>)
 }

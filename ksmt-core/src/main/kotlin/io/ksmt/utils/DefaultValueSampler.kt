@@ -2,18 +2,20 @@ package io.ksmt.utils
 
 import io.ksmt.KContext
 import io.ksmt.expr.KExpr
+import io.ksmt.sort.KSortVisitor
+import io.ksmt.sort.KSort
+import io.ksmt.sort.KBoolSort
+import io.ksmt.sort.KIntSort
+import io.ksmt.sort.KRealSort
+import io.ksmt.sort.KStringSort
+import io.ksmt.sort.KRegexSort
+import io.ksmt.sort.KBvSort
+import io.ksmt.sort.KFpSort
+import io.ksmt.sort.KFpRoundingModeSort
+import io.ksmt.sort.KArraySort
 import io.ksmt.sort.KArray2Sort
 import io.ksmt.sort.KArray3Sort
 import io.ksmt.sort.KArrayNSort
-import io.ksmt.sort.KArraySort
-import io.ksmt.sort.KBoolSort
-import io.ksmt.sort.KBvSort
-import io.ksmt.sort.KFpRoundingModeSort
-import io.ksmt.sort.KFpSort
-import io.ksmt.sort.KIntSort
-import io.ksmt.sort.KRealSort
-import io.ksmt.sort.KSort
-import io.ksmt.sort.KSortVisitor
 import io.ksmt.sort.KUninterpretedSort
 
 open class DefaultValueSampler(val ctx: KContext) : KSortVisitor<KExpr<*>> {
@@ -25,6 +27,12 @@ open class DefaultValueSampler(val ctx: KContext) : KSortVisitor<KExpr<*>> {
 
     override fun visit(sort: KRealSort): KExpr<*> =
         ctx.realSortDefaultValue()
+
+    override fun visit(sort: KStringSort): KExpr<*> =
+        ctx.stringSortDefaultValue()
+
+    override fun visit(sort: KRegexSort): KExpr<*> =
+        ctx.regexSortDefaultValue()
 
     override fun <S : KBvSort> visit(sort: S): KExpr<*> =
         ctx.bvSortDefaultValue(sort)

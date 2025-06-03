@@ -129,6 +129,48 @@ import io.ksmt.decl.KIntModDecl
 import io.ksmt.decl.KIntNumDecl
 import io.ksmt.decl.KIntRemDecl
 import io.ksmt.decl.KIntToRealDecl
+import io.ksmt.decl.KStringLiteralDecl
+import io.ksmt.decl.KStringConcatDecl
+import io.ksmt.decl.KStringLenDecl
+import io.ksmt.decl.KStringToRegexDecl
+import io.ksmt.decl.KStringInRegexDecl
+import io.ksmt.decl.KStringSuffixOfDecl
+import io.ksmt.decl.KStringPrefixOfDecl
+import io.ksmt.decl.KStringLtDecl
+import io.ksmt.decl.KStringLeDecl
+import io.ksmt.decl.KStringGtDecl
+import io.ksmt.decl.KStringGeDecl
+import io.ksmt.decl.KStringContainsDecl
+import io.ksmt.decl.KStringSingletonSubDecl
+import io.ksmt.decl.KStringSubDecl
+import io.ksmt.decl.KStringIndexOfDecl
+import io.ksmt.decl.KStringIndexOfRegexDecl
+import io.ksmt.decl.KStringReplaceDecl
+import io.ksmt.decl.KStringReplaceAllDecl
+import io.ksmt.decl.KStringReplaceWithRegexDecl
+import io.ksmt.decl.KStringReplaceAllWithRegexDecl
+import io.ksmt.decl.KStringToLowerDecl
+import io.ksmt.decl.KStringToUpperDecl
+import io.ksmt.decl.KStringReverseDecl
+import io.ksmt.decl.KStringIsDigitDecl
+import io.ksmt.decl.KStringToCodeDecl
+import io.ksmt.decl.KStringFromCodeDecl
+import io.ksmt.decl.KStringToIntDecl
+import io.ksmt.decl.KStringFromIntDecl
+import io.ksmt.decl.KRegexEpsilonDecl
+import io.ksmt.decl.KRegexAllDecl
+import io.ksmt.decl.KRegexAllCharDecl
+import io.ksmt.decl.KRegexConcatDecl
+import io.ksmt.decl.KRegexUnionDecl
+import io.ksmt.decl.KRegexIntersectionDecl
+import io.ksmt.decl.KRegexStarDecl
+import io.ksmt.decl.KRegexCrossDecl
+import io.ksmt.decl.KRegexDifferenceDecl
+import io.ksmt.decl.KRegexComplementDecl
+import io.ksmt.decl.KRegexOptionDecl
+import io.ksmt.decl.KRegexRangeDecl
+import io.ksmt.decl.KRegexPowerDecl
+import io.ksmt.decl.KRegexLoopDecl
 import io.ksmt.decl.KIteDecl
 import io.ksmt.decl.KNotDecl
 import io.ksmt.decl.KOrDecl
@@ -272,6 +314,48 @@ import io.ksmt.expr.KInt64NumExpr
 import io.ksmt.expr.KIntBigNumExpr
 import io.ksmt.expr.KIntNumExpr
 import io.ksmt.expr.KIsIntRealExpr
+import io.ksmt.expr.KStringLiteralExpr
+import io.ksmt.expr.KStringConcatExpr
+import io.ksmt.expr.KStringLenExpr
+import io.ksmt.expr.KStringToRegexExpr
+import io.ksmt.expr.KStringInRegexExpr
+import io.ksmt.expr.KStringSuffixOfExpr
+import io.ksmt.expr.KStringPrefixOfExpr
+import io.ksmt.expr.KStringLtExpr
+import io.ksmt.expr.KStringLeExpr
+import io.ksmt.expr.KStringGtExpr
+import io.ksmt.expr.KStringGeExpr
+import io.ksmt.expr.KStringContainsExpr
+import io.ksmt.expr.KStringSingletonSubExpr
+import io.ksmt.expr.KStringSubExpr
+import io.ksmt.expr.KStringIndexOfExpr
+import io.ksmt.expr.KStringIndexOfRegexExpr
+import io.ksmt.expr.KStringReplaceExpr
+import io.ksmt.expr.KStringReplaceAllExpr
+import io.ksmt.expr.KStringReplaceWithRegexExpr
+import io.ksmt.expr.KStringReplaceAllWithRegexExpr
+import io.ksmt.expr.KStringToLowerExpr
+import io.ksmt.expr.KStringToUpperExpr
+import io.ksmt.expr.KStringReverseExpr
+import io.ksmt.expr.KStringIsDigitExpr
+import io.ksmt.expr.KStringToCodeExpr
+import io.ksmt.expr.KStringFromCodeExpr
+import io.ksmt.expr.KStringToIntExpr
+import io.ksmt.expr.KStringFromIntExpr
+import io.ksmt.expr.KRegexEpsilon
+import io.ksmt.expr.KRegexAll
+import io.ksmt.expr.KRegexAllChar
+import io.ksmt.expr.KRegexConcatExpr
+import io.ksmt.expr.KRegexUnionExpr
+import io.ksmt.expr.KRegexIntersectionExpr
+import io.ksmt.expr.KRegexStarExpr
+import io.ksmt.expr.KRegexCrossExpr
+import io.ksmt.expr.KRegexDifferenceExpr
+import io.ksmt.expr.KRegexComplementExpr
+import io.ksmt.expr.KRegexOptionExpr
+import io.ksmt.expr.KRegexRangeExpr
+import io.ksmt.expr.KRegexPowerExpr
+import io.ksmt.expr.KRegexLoopExpr
 import io.ksmt.expr.KIteExpr
 import io.ksmt.expr.KLeArithExpr
 import io.ksmt.expr.KLtArithExpr
@@ -399,6 +483,44 @@ import io.ksmt.expr.rewrite.simplify.simplifyRealIsInt
 import io.ksmt.expr.rewrite.simplify.simplifyRealToFpExpr
 import io.ksmt.expr.rewrite.simplify.simplifyRealToInt
 import io.ksmt.expr.rewrite.simplify.simplifyXor
+import io.ksmt.expr.rewrite.simplify.simplifyStringConcat
+import io.ksmt.expr.rewrite.simplify.simplifyStringLen
+import io.ksmt.expr.rewrite.simplify.simplifyStringToRegex
+import io.ksmt.expr.rewrite.simplify.simplifyStringInRegex
+import io.ksmt.expr.rewrite.simplify.simplifyStringSuffixOf
+import io.ksmt.expr.rewrite.simplify.simplifyStringPrefixOf
+import io.ksmt.expr.rewrite.simplify.simplifyStringLt
+import io.ksmt.expr.rewrite.simplify.simplifyStringLe
+import io.ksmt.expr.rewrite.simplify.simplifyStringGt
+import io.ksmt.expr.rewrite.simplify.simplifyStringGe
+import io.ksmt.expr.rewrite.simplify.simplifyStringContains
+import io.ksmt.expr.rewrite.simplify.simplifyStringSingletonSub
+import io.ksmt.expr.rewrite.simplify.simplifyStringSub
+import io.ksmt.expr.rewrite.simplify.simplifyStringIndexOf
+import io.ksmt.expr.rewrite.simplify.simplifyStringIndexOfRegex
+import io.ksmt.expr.rewrite.simplify.simplifyStringReplace
+import io.ksmt.expr.rewrite.simplify.simplifyStringReplaceAll
+import io.ksmt.expr.rewrite.simplify.simplifyStringReplaceWithRegex
+import io.ksmt.expr.rewrite.simplify.simplifyStringReplaceAllWithRegex
+import io.ksmt.expr.rewrite.simplify.simplifyStringToLower
+import io.ksmt.expr.rewrite.simplify.simplifyStringToUpper
+import io.ksmt.expr.rewrite.simplify.simplifyStringReverse
+import io.ksmt.expr.rewrite.simplify.simplifyStringIsDigit
+import io.ksmt.expr.rewrite.simplify.simplifyStringToCode
+import io.ksmt.expr.rewrite.simplify.simplifyStringFromCode
+import io.ksmt.expr.rewrite.simplify.simplifyStringToInt
+import io.ksmt.expr.rewrite.simplify.simplifyStringFromInt
+import io.ksmt.expr.rewrite.simplify.simplifyRegexConcat
+import io.ksmt.expr.rewrite.simplify.simplifyRegexUnion
+import io.ksmt.expr.rewrite.simplify.simplifyRegexIntersection
+import io.ksmt.expr.rewrite.simplify.simplifyRegexStar
+import io.ksmt.expr.rewrite.simplify.simplifyRegexCross
+import io.ksmt.expr.rewrite.simplify.simplifyRegexDifference
+import io.ksmt.expr.rewrite.simplify.simplifyRegexComplement
+import io.ksmt.expr.rewrite.simplify.simplifyRegexOption
+import io.ksmt.expr.rewrite.simplify.simplifyRegexRange
+import io.ksmt.expr.rewrite.simplify.simplifyRegexPower
+import io.ksmt.expr.rewrite.simplify.simplifyRegexLoop
 import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KArray2Sort
 import io.ksmt.sort.KArray3Sort
@@ -422,6 +544,8 @@ import io.ksmt.sort.KFpRoundingModeSort
 import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRealSort
+import io.ksmt.sort.KStringSort
+import io.ksmt.sort.KRegexSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KSortVisitor
 import io.ksmt.sort.KUninterpretedSort
@@ -591,6 +715,24 @@ open class KContext(
      * */
     fun mkRealSort(): KRealSort = realSortCache
 
+    private val stringSortCache by lazy {
+        ensureContextActive { KStringSort(this) }
+    }
+
+    /**
+     * Create a String sort.
+     * */
+    fun mkStringSort(): KStringSort = stringSortCache
+
+    private val regexSortCache by lazy {
+        ensureContextActive { KRegexSort(this) }
+    }
+
+    /**
+     * Create a Regex sort.
+     * */
+    fun mkRegexSort(): KRegexSort = regexSortCache
+
     // bit-vec
     private val bv1SortCache: KBv1Sort by lazy { KBv1Sort(this) }
     private val bv8SortCache: KBv8Sort by lazy { KBv8Sort(this) }
@@ -708,6 +850,12 @@ open class KContext(
 
     val realSort: KRealSort
         get() = mkRealSort()
+
+    val stringSort: KStringSort
+        get() = mkStringSort()
+
+    val regexSort: KRegexSort
+        get() = mkRegexSort()
 
     val bv1Sort: KBv1Sort
         get() = mkBv1Sort()
@@ -1863,6 +2011,941 @@ open class KContext(
 
     fun KExpr<KRealSort>.toIntExpr() = mkRealToInt(this)
     fun KExpr<KRealSort>.isIntExpr() = mkRealIsInt(this)
+
+    // strings
+    private val stringLiteralCache = mkAstInterner<KStringLiteralExpr>()
+
+    /**
+     * Create a String value.
+     * */
+    fun mkStringLiteral(value: String): KStringLiteralExpr = stringLiteralCache.createIfContextActive {
+        KStringLiteralExpr(this, value)
+    }
+
+    /**
+     * Create a String value.
+     * */
+    val String.expr
+        get() = mkStringLiteral(this)
+
+    private val stringConcatExprCache = mkAstInterner<KStringConcatExpr>()
+
+    /**
+     * Create String concatenation (`concat`) expression.
+     * */
+    open fun mkStringConcat(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KExpr<KStringSort> =
+        mkSimplified(arg0, arg1, KContext::simplifyStringConcat, ::mkStringConcatNoSimplify) 
+
+    /**
+     * Create String concatenation (`concat`) expression.
+     * */
+    open fun mkStringConcatNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KStringConcatExpr =
+        stringConcatExprCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KStringConcatExpr(this, arg0, arg1)
+        }
+
+    /**
+     * Create String concatenation (`concat`) expression.
+     * */
+    @JvmName("stringConcat")
+    operator fun KExpr<KStringSort>.plus(other: KExpr<KStringSort>) = mkStringConcat(this, other)
+
+    private val stringLenExprCache = mkAstInterner<KStringLenExpr>()
+
+    /**
+     * Create string's length expression.
+     * */
+    open fun mkStringLen(arg: KExpr<KStringSort>): KExpr<KIntSort> =
+        mkSimplified(arg, KContext::simplifyStringLen, ::mkStringLenNoSimplify) 
+
+    /**
+     * Create string's length expression.
+     * */
+    open fun mkStringLenNoSimplify(arg: KExpr<KStringSort>): KStringLenExpr = stringLenExprCache.createIfContextActive {
+        ensureContextMatch(arg)
+        KStringLenExpr(this, arg)
+    }
+
+    val KExpr<KStringSort>.len
+        get() = mkStringLen(this)
+
+    val String.len
+        get() = mkStringLen(this.expr)
+
+    private val stringSuffixOfExprCache = mkAstInterner<KStringSuffixOfExpr>()
+
+    /**
+     * Check if first string is a suffix of second.
+     * */
+    open fun mkStringSuffixOf(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>
+    ): KExpr<KBoolSort> =
+        mkSimplified(arg0, arg1, KContext::simplifyStringSuffixOf, ::mkStringSuffixOfNoSimplify) 
+
+    /**
+     * Check if first string is a suffix of second.
+     * */
+    open fun mkStringSuffixOfNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KStringSuffixOfExpr =
+        stringSuffixOfExprCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KStringSuffixOfExpr(this, arg0, arg1)
+        }
+
+    infix fun KExpr<KStringSort>.isSuffixOf(other: KExpr<KStringSort>) = mkStringSuffixOf(this, other)
+
+    private val stringPrefixOfExprCache = mkAstInterner<KStringPrefixOfExpr>()
+
+    /**
+     * Check if first string is a prefix of second.
+     * */
+    open fun mkStringPrefixOf(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>
+    ): KExpr<KBoolSort> =
+        mkSimplified(arg0, arg1, KContext::simplifyStringPrefixOf, ::mkStringPrefixOfNoSimplify) 
+
+    /**
+     * Check if first string is a prefix of second.
+     * */
+    open fun mkStringPrefixOfNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KStringPrefixOfExpr =
+        stringPrefixOfExprCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KStringPrefixOfExpr(this, arg0, arg1)
+        }
+
+    infix fun KExpr<KStringSort>.isPrefixOf(other: KExpr<KStringSort>) = mkStringPrefixOf(this, other)
+
+    private val stringLtCache = mkAstInterner<KStringLtExpr>()
+
+    /**
+     * Create a lexicographic ordering (`<` (less)) expression.
+     * */
+    open fun mkStringLt(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
+        mkSimplified(lhs, rhs, KContext::simplifyStringLt, ::mkStringLtNoSimplify) 
+
+    /**
+     * Create a lexicographic ordering (`<` (less)) expression.
+     * */
+    open fun mkStringLtNoSimplify(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KStringLtExpr =
+        stringLtCache.createIfContextActive {
+            ensureContextMatch(lhs, rhs)
+            KStringLtExpr(this, lhs, rhs)
+        }
+
+    @JvmName("stringLt")
+    infix fun KExpr<KStringSort>.lt(other: KExpr<KStringSort>) = mkStringLt(this, other)
+
+    private val stringLeCache = mkAstInterner<KStringLeExpr>()
+
+    /**
+     * Create a lexicographic ordering reflexive closure (`<=` (less or equal)) expression.
+     * */
+    open fun mkStringLe(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
+        mkSimplified(lhs, rhs, KContext::simplifyStringLe, ::mkStringLeNoSimplify) 
+
+    /**
+     * Create a lexicographic ordering reflexive closure (`<=` (less or equal)) expression.
+     * */
+    open fun mkStringLeNoSimplify(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KStringLeExpr =
+        stringLeCache.createIfContextActive {
+            ensureContextMatch(lhs, rhs)
+            KStringLeExpr(this, lhs, rhs)
+        }
+
+    @JvmName("stringLe")
+    infix fun KExpr<KStringSort>.le(other: KExpr<KStringSort>) = mkStringLe(this, other)
+
+    private val stringGtCache = mkAstInterner<KStringGtExpr>()
+
+    /**
+     * Create a lexicographic ordering (`>` (greater)) expression.
+     * */
+    open fun mkStringGt(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
+        mkSimplified(lhs, rhs, KContext::simplifyStringGt, ::mkStringGtNoSimplify) 
+
+    /**
+     * Create a lexicographic ordering (`>` (greater)) expression.
+     * */
+    open fun mkStringGtNoSimplify(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KStringGtExpr =
+        stringGtCache.createIfContextActive {
+            ensureContextMatch(lhs, rhs)
+            KStringGtExpr(this, lhs, rhs)
+        }
+
+    @JvmName("stringGt")
+    infix fun KExpr<KStringSort>.gt(other: KExpr<KStringSort>) = mkStringGt(this, other)
+
+    private val stringGeCache = mkAstInterner<KStringGeExpr>()
+
+    /**
+     * Create a lexicographic ordering reflexive closure (`>=` (greater or equal)) expression.
+     * */
+    open fun mkStringGe(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
+        mkSimplified(lhs, rhs, KContext::simplifyStringGe, ::mkStringGeNoSimplify) 
+
+    /**
+     * Create a lexicographic ordering reflexive closure (`>=` (greater or equal)) expression.
+     * */
+    open fun mkStringGeNoSimplify(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KStringGeExpr =
+        stringGeCache.createIfContextActive {
+            ensureContextMatch(lhs, rhs)
+            KStringGeExpr(this, lhs, rhs)
+        }
+
+    @JvmName("stringGe")
+    infix fun KExpr<KStringSort>.ge(other: KExpr<KStringSort>) = mkStringGe(this, other)
+
+    private val stringContainsCache = mkAstInterner<KStringContainsExpr>()
+
+    /**
+     * Check if first string contains second one.
+     * */
+    open fun mkStringContains(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KExpr<KBoolSort> =
+        mkSimplified(lhs, rhs, KContext::simplifyStringContains, ::mkStringContainsNoSimplify) 
+
+    /**
+     * Check if first string contains second one.
+     * */
+    open fun mkStringContainsNoSimplify(lhs: KExpr<KStringSort>, rhs: KExpr<KStringSort>): KStringContainsExpr =
+        stringContainsCache.createIfContextActive {
+            ensureContextMatch(lhs, rhs)
+            KStringContainsExpr(this, lhs, rhs)
+        }
+
+    @JvmName("strContains")
+    infix fun KExpr<KStringSort>.contains(other: KExpr<KStringSort>) = mkStringContains(this, other)
+
+    private val stringSingletonSubCache = mkAstInterner<KStringSingletonSubExpr>()
+
+    /**
+     * Returns singleton string containing a character at given position.
+     * If position is out of range (less than 0, or grater than (string length - 1)), then returns empty string.
+     * */
+    open fun mkStringSingletonSub(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KIntSort>
+    ): KExpr<KStringSort> =
+        mkSimplified(
+            arg0,
+            arg1,
+            KContext::simplifyStringSingletonSub,
+            ::mkStringSingletonSubNoSimplify
+        )
+
+    /**
+     * Returns singleton string containing a character at given position.
+     * If position is out of range (less than 0, or grater than (string length - 1)), then returns empty string.
+     * */
+    open fun mkStringSingletonSubNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KIntSort>): KStringSingletonSubExpr =
+        stringSingletonSubCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KStringSingletonSubExpr(this, arg0, arg1)
+        }
+        
+    fun KExpr<KStringSort>.charAtPos(arg: KExpr<KIntSort>) = mkStringSingletonSub(this, arg)
+
+    private val stringSubCache = mkAstInterner<KStringSubExpr>()
+
+    /**
+     * Evaluates the longest substring from the input string, starting at the specified position
+     * and extending up to the given length. Returns an empty string if the given length is negative
+     * or the given position is out of bounds.
+     */
+    open fun mkStringSub(arg0: KExpr<KStringSort>, arg1: KExpr<KIntSort>, arg2: KExpr<KIntSort>): KExpr<KStringSort> =
+        mkSimplified(arg0, arg1, arg2, KContext::simplifyStringSub, ::mkStringSubNoSimplify) 
+
+    /**
+     * Evaluates the longest substring from the input string, starting at the specified position
+     * and extending up to the given length. Returns an empty string if the given length is negative
+     * or the given position is out of bounds.
+     */
+    open fun mkStringSubNoSimplify(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KIntSort>,
+        arg2: KExpr<KIntSort>
+    ): KStringSubExpr =
+        stringSubCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KStringSubExpr(this, arg0, arg1, arg2)
+        }
+    
+    fun KExpr<KStringSort>.substring(arg1: KExpr<KIntSort>, arg2: KExpr<KIntSort>) = mkStringSub(this, arg1, arg2)
+
+    private val stringIndexOfCache = mkAstInterner<KStringIndexOfExpr>()
+
+    /**
+     * Find the index of the first occurrence of the second string in the first string,
+     * starting at the specified position. Returns -1 if not found
+     * or if the position is out of bounds.
+     * Returns the position if the second string is empty.
+     */
+    open fun mkStringIndexOf(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>,
+        arg2: KExpr<KIntSort>
+    ): KExpr<KIntSort> =
+        mkSimplified(
+            arg0,
+            arg1,
+            arg2,
+            KContext::simplifyStringIndexOf,
+            ::mkStringIndexOfNoSimplify
+        )
+
+    /**
+     * Find the index of the first occurrence of the second string in the first string,
+     * starting at the specified position. Returns -1 if not found
+     * or if the position is out of bounds.
+     * Returns the position if the second string is empty.
+     */
+    open fun mkStringIndexOfNoSimplify(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>,
+        arg2: KExpr<KIntSort>
+    ): KStringIndexOfExpr =
+        stringIndexOfCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KStringIndexOfExpr(this, arg0, arg1, arg2)
+        }
+
+    fun KExpr<KStringSort>.indexOf(arg1: KExpr<KStringSort>, arg2: KExpr<KIntSort>) = mkStringIndexOf(this, arg1, arg2)
+
+    private val stringIndexOfRegexCache = mkAstInterner<KStringIndexOfRegexExpr>()
+
+    /**
+     * Find the index of the first match of a regular expression in the string,
+     * starting at the specified position. Returns -1 if not found
+     * or if the position is out of bounds.
+     */
+    open fun mkStringIndexOfRegex(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KRegexSort>,
+        arg2: KExpr<KIntSort>
+    ): KExpr<KIntSort> =
+        mkSimplified(arg0, arg1, arg2, KContext::simplifyStringIndexOfRegex, ::mkStringIndexOfRegexNoSimplify) 
+
+    /**
+     * Find the index of the first match of a regular expression in the string,
+     * starting at the specified position. Returns -1 if not found
+     * or if the position is out of bounds.
+     */
+    open fun mkStringIndexOfRegexNoSimplify(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KRegexSort>,
+        arg2: KExpr<KIntSort>
+    ): KStringIndexOfRegexExpr =
+        stringIndexOfRegexCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KStringIndexOfRegexExpr(this, arg0, arg1, arg2)
+        }
+    
+    fun KExpr<KStringSort>.indexOfRegex(
+        arg1: KExpr<KRegexSort>, 
+        arg2: KExpr<KIntSort>
+    ) = mkStringIndexOfRegex(this, arg1, arg2)
+
+    private val stringReplaceCache = mkAstInterner<KStringReplaceExpr>()
+
+    /**
+     * Replace the first occurrence of the second string in the first string with the third,
+     * if there are such occurrences, otherwise return the first string.
+     * If the second line is empty, then the third is inserted at the beginning of the first.
+     * */
+    open fun mkStringReplace(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>,
+        arg2: KExpr<KStringSort>
+    ): KExpr<KStringSort> =
+        mkSimplified(
+            arg0,
+            arg1,
+            arg2,
+            KContext::simplifyStringReplace,
+            ::mkStringReplaceNoSimplify
+        )
+
+    /**
+     * Replace the first occurrence of the second string in the first string with the third,
+     * if there are such occurrences, otherwise return the first string.
+     * If the second line is empty, then the third is inserted at the beginning of the first.
+     * */
+    open fun mkStringReplaceNoSimplify(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>,
+        arg2: KExpr<KStringSort>
+    ): KStringReplaceExpr =
+        stringReplaceCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1, arg2)
+            KStringReplaceExpr(this, arg0, arg1, arg2)
+        }
+
+    fun KExpr<KStringSort>.replaceWith(
+        arg1: KExpr<KStringSort>, 
+        arg2: KExpr<KStringSort>
+    ) = mkStringReplace(this, arg1, arg2)
+
+    private val stringReplaceAllCache = mkAstInterner<KStringReplaceAllExpr>()
+
+    /**
+     * Replace the all occurrences of the second string in the first string with the third,
+     * if there are such occurrences, otherwise return the first string.
+     * */
+    open fun mkStringReplaceAll(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>,
+        arg2: KExpr<KStringSort>
+    ): KExpr<KStringSort> =
+        mkSimplified(
+            arg0,
+            arg1,
+            arg2,
+            KContext::simplifyStringReplaceAll,
+            ::mkStringReplaceAllNoSimplify
+        )
+
+    /**
+     * Replace the all occurrences of the second string in the first string with the third,
+     * if there are such occurrences, otherwise return the first string.
+     * */
+    open fun mkStringReplaceAllNoSimplify(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KStringSort>,
+        arg2: KExpr<KStringSort>
+    ): KStringReplaceAllExpr =
+        stringReplaceAllCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1, arg2)
+            KStringReplaceAllExpr(this, arg0, arg1, arg2)
+        }
+    
+    fun KExpr<KStringSort>.replaceAllWith(
+        arg1: KExpr<KStringSort>, 
+        arg2: KExpr<KStringSort>
+    ) = mkStringReplaceAll(this, arg1, arg2)
+
+    private val stringReplaceWithRegexCache = mkAstInterner<KStringReplaceWithRegexExpr>()
+
+    /**
+     * Replace the shortest leftmost match of regex in first string, if any, by second string.
+     * If the language of r contains the empty string, the result is to prepend second string to first one.
+     * */
+    open fun mkStringReplaceWithRegex(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KRegexSort>,
+        arg2: KExpr<KStringSort>
+    ): KExpr<KStringSort> =
+        mkSimplified(
+            arg0,
+            arg1,
+            arg2,
+            KContext::simplifyStringReplaceWithRegex,
+            ::mkStringReplaceWithRegexNoSimplify
+        )
+
+    /**
+     * Replace the shortest leftmost match of regex in first string, if any, by second string.
+     * If the language of r contains the empty string, the result is to prepend second string to first one.
+     * */
+    open fun mkStringReplaceWithRegexNoSimplify(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KRegexSort>,
+        arg2: KExpr<KStringSort>
+    ): KStringReplaceWithRegexExpr =
+        stringReplaceWithRegexCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1, arg2)
+            KStringReplaceWithRegexExpr(this, arg0, arg1, arg2)
+        }
+    
+    fun KExpr<KStringSort>.replaceWithRegex(
+        arg1: KExpr<KRegexSort>, 
+        arg2: KExpr<KStringSort>
+    ) = mkStringReplaceWithRegex(this, arg1, arg2)
+
+    private val stringReplaceAllWithRegexCache = mkAstInterner<KStringReplaceAllWithRegexExpr>()
+
+    /**
+     * Replace left-to right, each shortest non-empty match of regex in first string by seconds.
+     * */
+    open fun mkStringReplaceAllWithRegex(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KRegexSort>,
+        arg2: KExpr<KStringSort>
+    ): KExpr<KStringSort> =
+        mkSimplified(
+            arg0,
+            arg1,
+            arg2,
+            KContext::simplifyStringReplaceAllWithRegex,
+            ::mkStringReplaceAllWithRegexNoSimplify
+        )
+
+    /**
+     * Replace left-to right, each shortest non-empty match of regex in first string by seconds.
+     * */
+    open fun mkStringReplaceAllWithRegexNoSimplify(
+        arg0: KExpr<KStringSort>,
+        arg1: KExpr<KRegexSort>,
+        arg2: KExpr<KStringSort>
+    ): KStringReplaceAllWithRegexExpr =
+        stringReplaceAllWithRegexCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1, arg2)
+            KStringReplaceAllWithRegexExpr(this, arg0, arg1, arg2)
+        }
+    
+    fun KExpr<KStringSort>.replaceAllWithRegex(
+        arg1: KExpr<KRegexSort>, 
+        arg2: KExpr<KStringSort>
+    ) = mkStringReplaceAllWithRegex(this, arg1, arg2)
+
+    private val stringToLowerExprCache = mkAstInterner<KStringToLowerExpr>()
+
+    /**
+     * Convert string to lower case.
+     * */
+    open fun mkStringToLower(arg: KExpr<KStringSort>): KExpr<KStringSort> =
+        mkSimplified(arg, KContext::simplifyStringToLower, ::mkStringToLowerNoSimplify) 
+
+    /**
+     * Convert string to lower case.
+     * */
+    open fun mkStringToLowerNoSimplify(arg: KExpr<KStringSort>): KStringToLowerExpr =
+        stringToLowerExprCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KStringToLowerExpr(this, arg)
+        }
+    
+    fun KExpr<KStringSort>.toLower() = mkStringToLower(this)
+
+    private val stringToUpperExprCache = mkAstInterner<KStringToUpperExpr>()
+
+    /**
+     * Convert string to upper case.
+     * */
+    open fun mkStringToUpper(arg: KExpr<KStringSort>): KExpr<KStringSort> =
+        mkSimplified(arg, KContext::simplifyStringToUpper, ::mkStringToUpperNoSimplify) 
+
+    /**
+     * Convert string to upper case.
+     * */
+    open fun mkStringToUpperNoSimplify(arg: KExpr<KStringSort>): KStringToUpperExpr =
+        stringToUpperExprCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KStringToUpperExpr(this, arg)
+        }
+    
+    fun KExpr<KStringSort>.toUpper() = mkStringToUpper(this)
+
+    private val stringReverseExprCache = mkAstInterner<KStringReverseExpr>()
+
+    /**
+     * Reverse string.
+     * */
+    open fun mkStringReverse(arg: KExpr<KStringSort>): KExpr<KStringSort> =
+        mkSimplified(arg, KContext::simplifyStringReverse, ::mkStringReverseNoSimplify) 
+
+    /**
+     * Reverse string.
+     * */
+    open fun mkStringReverseNoSimplify(arg: KExpr<KStringSort>): KStringReverseExpr =
+        stringReverseExprCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KStringReverseExpr(this, arg)
+        }
+    
+    fun KExpr<KStringSort>.reverse() = mkStringReverse(this)
+
+    private val stringIsDigitCache = mkAstInterner<KStringIsDigitExpr>()
+
+    /**
+     * Check that the string contains only decimal digit characters.
+     * */
+    open fun mkStringIsDigit(arg: KExpr<KStringSort>): KExpr<KBoolSort> =
+        mkSimplified(arg, KContext::simplifyStringIsDigit, ::mkStringIsDigitNoSimplify) 
+
+    /**
+     * Check that the string contains only decimal digit characters.
+     * */
+    open fun mkStringIsDigitNoSimplify(arg: KExpr<KStringSort>): KStringIsDigitExpr =
+        stringIsDigitCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KStringIsDigitExpr(this, arg)
+        }
+    
+    fun KExpr<KStringSort>.isDigit() = mkStringIsDigit(this)
+
+    private val stringToCodeCache = mkAstInterner<KStringToCodeExpr>()
+
+    /**
+     * Returns the code point of the only character in the string if the string is a singleton.
+     * Otherwise, returns -1.
+     * */
+    open fun mkStringToCode(arg: KExpr<KStringSort>): KExpr<KIntSort> =
+        mkSimplified(arg, KContext::simplifyStringToCode, ::mkStringToCodeNoSimplify) 
+
+    /**
+     * Returns the code point of the only character in the string if the string is a singleton.
+     * Otherwise, returns -1.
+     * */
+    open fun mkStringToCodeNoSimplify(arg: KExpr<KStringSort>): KStringToCodeExpr =
+        stringToCodeCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KStringToCodeExpr(this, arg)
+        }
+    
+    fun KExpr<KStringSort>.toCode() = mkStringToCode(this)
+
+    private val stringFromCodeCache = mkAstInterner<KStringFromCodeExpr>()
+
+    /**
+     * Returns a singleton string consisting of a character, with the given code point.
+     * If codepoint not in range [0, 196607], returns empty string.
+     * */
+    open fun mkStringFromCode(arg: KExpr<KIntSort>): KExpr<KStringSort> =
+        mkSimplified(arg, KContext::simplifyStringFromCode, ::mkStringFromCodeNoSimplify) 
+
+    /**
+     * Returns a singleton string consisting of a character, with the given code point.
+     * If codepoint not in range [0, 196607], returns empty string.
+     * */
+    open fun mkStringFromCodeNoSimplify(arg: KExpr<KIntSort>): KStringFromCodeExpr =
+        stringFromCodeCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KStringFromCodeExpr(this, arg)
+        }
+    
+    fun KExpr<KIntSort>.toChar() = mkStringFromCode(this)
+
+    private val stringToIntCache = mkAstInterner<KStringToIntExpr>()
+
+    /**
+     * Converts a string containing only decimal digits to a positive integer.
+     * Otherwise, if the string contains a character that is not a decimal number, then returns -1.
+     * */
+    open fun mkStringToInt(arg: KExpr<KStringSort>): KExpr<KIntSort> =
+        mkSimplified(arg, KContext::simplifyStringToInt, ::mkStringToIntNoSimplify) 
+
+    /**
+     * Converts a string containing only decimal digits to a positive integer.
+     * Otherwise, if the string contains a character that is not a decimal number, then returns -1.
+     * */
+    open fun mkStringToIntNoSimplify(arg: KExpr<KStringSort>): KStringToIntExpr =
+        stringToIntCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KStringToIntExpr(this, arg)
+        }
+    
+    
+    fun KExpr<KStringSort>.toInt() = mkStringToInt(this)
+
+    private val stringFromIntCache = mkAstInterner<KStringFromIntExpr>()
+
+    /**
+     * Converts a positive integer to a string consisting of the decimal digits of that number, with no leading zeros.
+     * If the number is negative, it returns an empty string.
+     * */
+    open fun mkStringFromInt(arg: KExpr<KIntSort>): KExpr<KStringSort> =
+        mkSimplified(arg, KContext::simplifyStringFromInt, ::mkStringFromIntNoSimplify) 
+
+    /**
+     * Converts a positive integer to a string consisting of the decimal digits of that number, with no leading zeros.
+     * If the number is negative, it returns an empty string.
+     * */
+    open fun mkStringFromIntNoSimplify(arg: KExpr<KIntSort>): KStringFromIntExpr =
+        stringFromIntCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KStringFromIntExpr(this, arg)
+        }
+    
+    fun KExpr<KIntSort>.convertToString() = mkStringFromInt(this)
+
+    private val stringToRegexExprCache = mkAstInterner<KStringToRegexExpr>()
+
+    /**
+     * Create a regular expression based on a string expression.
+     * */
+    open fun mkStringToRegex(arg: KExpr<KStringSort>): KExpr<KRegexSort> =
+        mkSimplified(arg, KContext::simplifyStringToRegex, ::mkStringToRegexNoSimplify) 
+
+    /**
+     * Create a regular expression based on a string expression.
+     * */
+    open fun mkStringToRegexNoSimplify(
+        arg: KExpr<KStringSort>
+    ): KStringToRegexExpr = stringToRegexExprCache.createIfContextActive {
+        ensureContextMatch(arg)
+        KStringToRegexExpr(this, arg)
+    }
+
+    fun KExpr<KStringSort>.toRegex() = mkStringToRegex(this)
+
+    fun String.toRegex() = mkStringToRegex(this.expr)
+
+    private val stringInRegexExprCache = mkAstInterner<KStringInRegexExpr>()
+
+    /**
+     * Check if a string belongs to the language defined by the regular expression.
+     * */
+    open fun mkStringInRegex(arg0: KExpr<KStringSort>, arg1: KExpr<KRegexSort>): KExpr<KBoolSort> =
+        mkSimplified(arg0, arg1, KContext::simplifyStringInRegex, ::mkStringInRegexNoSimplify) 
+
+    /**
+     * Check if a string belongs to the language defined by the regular expression.
+     * */
+    open fun mkStringInRegexNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KRegexSort>): KStringInRegexExpr =
+        stringInRegexExprCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KStringInRegexExpr(this, arg0, arg1)
+        }
+
+    infix fun KExpr<KStringSort>.inRegex(other: KExpr<KRegexSort>) = mkStringInRegex(this, other)
+
+    infix fun String.inRegex(other: KExpr<KRegexSort>) = mkStringInRegex(this.expr, other)
+
+    @JvmName("regexContains")
+    infix fun KExpr<KRegexSort>.contains(other: KExpr<KStringSort>) = mkStringInRegex(other, this)
+
+    private val regexConcatExprCache = mkAstInterner<KRegexConcatExpr>()
+
+    /**
+     * Create Regex concatenation (`concat`) expression.
+     * */
+    open fun mkRegexConcat(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(arg0, arg1, KContext::simplifyRegexConcat, ::mkRegexConcatNoSimplify) 
+
+    /**
+     * Create Regex concatenation (`concat`) expression.
+     * */
+    open fun mkRegexConcatNoSimplify(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KRegexConcatExpr =
+        regexConcatExprCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KRegexConcatExpr(this, arg0, arg1)
+        }
+
+    @JvmName("regexConcat")
+    operator fun KExpr<KRegexSort>.plus(other: KExpr<KRegexSort>) = mkRegexConcat(this, other)
+
+    private val regexUnionExprCache = mkAstInterner<KRegexUnionExpr>()
+
+    /**
+     * Create Regex union (`union`) expression.
+     * */
+    open fun mkRegexUnion(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(arg0, arg1, KContext::simplifyRegexUnion, ::mkRegexUnionNoSimplify) 
+
+    /**
+     * Create Regex union (`union`) expression.
+     * */
+    open fun mkRegexUnionNoSimplify(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KRegexUnionExpr =
+        regexUnionExprCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KRegexUnionExpr(this, arg0, arg1)
+        }
+    
+    infix fun KExpr<KRegexSort>.union(other: KExpr<KRegexSort>) = mkRegexUnion(this, other)
+
+    private val regexIntersectionExprCache = mkAstInterner<KRegexIntersectionExpr>()
+
+    /**
+     * Create Regex intersection (`intersect`) expression.
+     * */
+    open fun mkRegexIntersection(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(arg0, arg1, KContext::simplifyRegexIntersection, ::mkRegexIntersectionNoSimplify) 
+
+    /**
+     * Create Regex intersection (`intersect`) expression.
+     * */
+    open fun mkRegexIntersectionNoSimplify(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KRegexIntersectionExpr =
+        regexIntersectionExprCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KRegexIntersectionExpr(this, arg0, arg1)
+        }
+    
+    infix fun KExpr<KRegexSort>.intersect(other: KExpr<KRegexSort>) = mkRegexIntersection(this, other)
+
+    private val regexStarExprCache = mkAstInterner<KRegexStarExpr>()
+
+    /**
+     * Create regular expression's Kleene closure.
+     * */
+    open fun mkRegexStar(arg: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(arg, KContext::simplifyRegexStar, ::mkRegexStarNoSimplify) 
+
+    /**
+     * Create regular expression's Kleene closure.
+     * */
+    open fun mkRegexStarNoSimplify(arg: KExpr<KRegexSort>): KRegexStarExpr =
+        regexStarExprCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KRegexStarExpr(this, arg)
+        }
+    
+    fun KExpr<KRegexSort>.kleeneStar() = mkRegexStar(this)
+
+    private val regexCrossExprCache = mkAstInterner<KRegexCrossExpr>()
+
+    /**
+     * Create regular expression's Kleene cross.
+     * */
+    open fun mkRegexCross(arg: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(arg, KContext::simplifyRegexCross, ::mkRegexCrossNoSimplify) 
+
+    /**
+     * Create regular expression's Kleene cross.
+     * */
+    open fun mkRegexCrossNoSimplify(arg: KExpr<KRegexSort>): KRegexCrossExpr =
+        regexCrossExprCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KRegexCrossExpr(this, arg)
+        }
+    
+    fun KExpr<KRegexSort>.kleeneCross() = mkRegexCross(this)
+
+    private val regexDifferenceExprCache = mkAstInterner<KRegexDifferenceExpr>()
+
+    /**
+     * Create Regex difference (`diff`) expression.
+     * */
+    open fun mkRegexDifference(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(arg0, arg1, KContext::simplifyRegexDifference, ::mkRegexDifferenceNoSimplify) 
+
+    /**
+     * Create Regex difference (`diff`) expression.
+     * */
+    open fun mkRegexDifferenceNoSimplify(arg0: KExpr<KRegexSort>, arg1: KExpr<KRegexSort>): KRegexDifferenceExpr =
+        regexDifferenceExprCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KRegexDifferenceExpr(this, arg0, arg1)
+        }
+    
+    infix fun KExpr<KRegexSort>.diff(other: KExpr<KRegexSort>) = mkRegexDifference(this, other)
+
+    private val regexComplementExprCache = mkAstInterner<KRegexComplementExpr>()
+
+    /**
+     * Create regular expression's complement.
+     * */
+    open fun mkRegexComplement(arg: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(arg, KContext::simplifyRegexComplement, ::mkRegexComplementNoSimplify) 
+
+    /**
+     * Create regular expression's complement.
+     * */
+    open fun mkRegexComplementNoSimplify(
+        arg: KExpr<KRegexSort>
+    ): KRegexComplementExpr = regexComplementExprCache.createIfContextActive {
+        ensureContextMatch(arg)
+        KRegexComplementExpr(this, arg)
+    }
+
+    fun KExpr<KRegexSort>.complement() = mkRegexComplement(this)
+
+    private val regexOptionExprCache = mkAstInterner<KRegexOptionExpr>()
+
+    /**
+     * Make regular expression optional.
+     * Equivalent to concatenating a regular expression with the empty string.
+     * */
+    open fun mkRegexOption(arg: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(arg, KContext::simplifyRegexOption, ::mkRegexOptionNoSimplify) 
+
+    /**
+     * Make regular expression optional.
+     * Equivalent to concatenating a regular expression with the empty string.
+     * */
+    open fun mkRegexOptionNoSimplify(
+        arg: KExpr<KRegexSort>
+    ): KRegexOptionExpr = regexOptionExprCache.createIfContextActive {
+        ensureContextMatch(arg)
+        KRegexOptionExpr(this, arg)
+    }
+
+    fun KExpr<KRegexSort>.opt() = mkRegexOption(this)
+
+    private val regexRangeExprCache = mkAstInterner<KRegexRangeExpr>()
+
+    /**
+     * Return the set of all singleton strings in the range
+     * between the first and second string that are also singletons.
+     * Otherwise the empty set.
+     * */
+    open fun mkRegexRange(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KExpr<KRegexSort> =
+        mkSimplified(arg0, arg1, KContext::simplifyRegexRange, ::mkRegexRangeNoSimplify) 
+
+    /**
+     * Return the set of all singleton strings in the range
+     * between the first and second string that are also singletons.
+     * Otherwise the empty set.
+     * */
+    open fun mkRegexRangeNoSimplify(arg0: KExpr<KStringSort>, arg1: KExpr<KStringSort>): KRegexRangeExpr =
+        regexRangeExprCache.createIfContextActive {
+            ensureContextMatch(arg0, arg1)
+            KRegexRangeExpr(this, arg0, arg1)
+        }
+
+    private val regexPowerExprCache = mkAstInterner<KRegexPowerExpr>()
+
+    /**
+     * Constructs a regex expression that represents the concatenation
+     * of the given `arg` regex repeated `power` times.
+     * */
+    open fun mkRegexPower(power: Int, arg: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(power, arg, KContext::simplifyRegexPower, ::mkRegexPowerNoSimplify) 
+
+    /**
+     * Constructs a regex expression that represents the concatenation
+     * of the given `arg` regex repeated `power` times.
+     * */
+    open fun mkRegexPowerNoSimplify(power: Int, arg: KExpr<KRegexSort>): KRegexPowerExpr =
+        regexPowerExprCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KRegexPowerExpr(this, power, arg)
+        }
+    
+    fun KExpr<KRegexSort>.toPow(power: Int) = mkRegexPower(power, this)
+
+    private val regexLoopExprCache = mkAstInterner<KRegexLoopExpr>()
+
+    /**
+     * Constructs a regex expression that represents the union of regexes
+     * formed by repeating the given `arg` regex from `from` to `to` times inclusively.
+     * */
+    open fun mkRegexLoop(from: Int, to: Int, arg: KExpr<KRegexSort>): KExpr<KRegexSort> =
+        mkSimplified(from, to, arg, KContext::simplifyRegexLoop, ::mkRegexLoopNoSimplify) 
+
+    /**
+     * Constructs a regex expression that represents the union of regexes
+     * formed by repeating the given `arg` regex from `from` to `to` times inclusively.
+     * */
+    open fun mkRegexLoopNoSimplify(from: Int, to: Int, arg: KExpr<KRegexSort>): KRegexLoopExpr =
+        regexLoopExprCache.createIfContextActive {
+            ensureContextMatch(arg)
+            KRegexLoopExpr(this, from, to, arg)
+        }
+    
+    fun KExpr<KRegexSort>.loop(from: Int, to: Int) = mkRegexLoop(from, to, this)
+
+    val regexEpsilonExpr: KRegexEpsilon = KRegexEpsilon(this)
+
+    /**
+     * Create regex Epsilon constant.
+     * Epsilon regular expression denoting the empty set of strings.
+     * */
+    fun mkRegexEpsilon(): KRegexEpsilon = regexEpsilonExpr
+
+    val regexAllExpr: KRegexAll = KRegexAll(this)
+
+    /**
+     * Create regex constant denoting the set of all strings.
+     * */
+    fun mkRegexAll(): KRegexAll = regexAllExpr
+
+    val regexAllCharExpr: KRegexAllChar = KRegexAllChar(this)
+
+    /**
+     * Create regex constant denoting the set of all strings of length 1.
+     * */
+    fun mkRegexAllChar(): KRegexAllChar = regexAllCharExpr
 
     // bitvectors
     private val bv1Cache = mkAstInterner<KBitVec1Value>()
@@ -4301,6 +5384,10 @@ open class KContext(
 
     open fun realSortDefaultValue(): KExpr<KRealSort> = mkRealNum(0)
 
+    open fun stringSortDefaultValue(): KExpr<KStringSort> = mkStringLiteral("")
+
+    open fun regexSortDefaultValue(): KExpr<KRegexSort> = mkRegexEpsilon()
+
     open fun <S : KBvSort> bvSortDefaultValue(sort: S): KExpr<S> = mkBv(0, sort)
 
     open fun <S : KFpSort> fpSortDefaultValue(sort: S): KExpr<S> = mkFpZero(signBit = false, sort)
@@ -4463,6 +5550,93 @@ open class KContext(
 
     fun mkRealNumDecl(value: String): KRealNumDecl = KRealNumDecl(this, value)
 
+    // string
+    fun mkStringLiteralDecl(value: String): KStringLiteralDecl = KStringLiteralDecl(this, value)
+
+    fun mkStringConcatDecl(): KStringConcatDecl = KStringConcatDecl(this)
+
+    fun mkStringLenDecl(): KStringLenDecl = KStringLenDecl(this)
+
+    fun mkStringToRegexDecl(): KStringToRegexDecl = KStringToRegexDecl(this)
+
+    fun mkStringInRegexDecl(): KStringInRegexDecl = KStringInRegexDecl(this)
+
+    fun mkStringSuffixOfDecl(): KStringSuffixOfDecl = KStringSuffixOfDecl(this)
+
+    fun mkStringPrefixOfDecl(): KStringPrefixOfDecl = KStringPrefixOfDecl(this)
+
+    fun mkStringLtDecl(): KStringLtDecl = KStringLtDecl(this)
+
+    fun mkStringLeDecl(): KStringLeDecl = KStringLeDecl(this)
+
+    fun mkStringGtDecl(): KStringGtDecl = KStringGtDecl(this)
+
+    fun mkStringGeDecl(): KStringGeDecl = KStringGeDecl(this)
+
+    fun mkStringContainsDecl(): KStringContainsDecl = KStringContainsDecl(this)
+
+    fun mkStringSingletonSubDecl(): KStringSingletonSubDecl = KStringSingletonSubDecl(this)
+
+    fun mkStringSubDecl(): KStringSubDecl = KStringSubDecl(this)
+
+    fun mkStringIndexOfDecl(): KStringIndexOfDecl = KStringIndexOfDecl(this)
+
+    fun mkStringIndexOfRegexDecl(): KStringIndexOfRegexDecl = KStringIndexOfRegexDecl(this)
+
+    fun mkStringReplaceDecl(): KStringReplaceDecl = KStringReplaceDecl(this)
+
+    fun mkStringReplaceAllDecl(): KStringReplaceAllDecl = KStringReplaceAllDecl(this)
+
+    fun mkStringReplaceWithRegexDecl(): KStringReplaceWithRegexDecl = KStringReplaceWithRegexDecl(this)
+
+    fun mkStringReplaceAllWithRegexDecl(): KStringReplaceAllWithRegexDecl = KStringReplaceAllWithRegexDecl(this)
+
+    fun mkStringToLowerDecl(): KStringToLowerDecl = KStringToLowerDecl(this)
+
+    fun mkStringToUpperDecl(): KStringToUpperDecl = KStringToUpperDecl(this)
+
+    fun mkStringReverseDecl(): KStringReverseDecl = KStringReverseDecl(this)
+
+    fun mkStringIsDigitDecl(): KStringIsDigitDecl = KStringIsDigitDecl(this)
+
+    fun mkStringToCodeDecl(): KStringToCodeDecl = KStringToCodeDecl(this)
+
+    fun mkStringFromCodeDecl(): KStringFromCodeDecl = KStringFromCodeDecl(this)
+
+    fun mkStringToIntDecl(): KStringToIntDecl = KStringToIntDecl(this)
+
+    fun mkStringFromIntDecl(): KStringFromIntDecl = KStringFromIntDecl(this)
+
+    // regex
+    fun mkRegexConcatDecl(): KRegexConcatDecl = KRegexConcatDecl(this)
+
+    fun mkRegexUnionDecl(): KRegexUnionDecl = KRegexUnionDecl(this)
+
+    fun mkRegexIntersectionDecl(): KRegexIntersectionDecl = KRegexIntersectionDecl(this)
+
+    fun mkRegexStarDecl(): KRegexStarDecl = KRegexStarDecl(this)
+
+    fun mkRegexCrossDecl(): KRegexCrossDecl = KRegexCrossDecl(this)
+
+    fun mkRegexDifferenceDecl(): KRegexDifferenceDecl = KRegexDifferenceDecl(this)
+
+    fun mkRegexComplementDecl(): KRegexComplementDecl = KRegexComplementDecl(this)
+
+    fun mkRegexOptionDecl(): KRegexOptionDecl = KRegexOptionDecl(this)
+
+    fun mkRegexRangeDecl(): KRegexRangeDecl = KRegexRangeDecl(this)
+
+    fun mkRegexPowerDecl(power: Int): KRegexPowerDecl = KRegexPowerDecl(this, power)
+
+    fun mkRegexLoopDecl(from: Int, to: Int): KRegexLoopDecl = KRegexLoopDecl(this, from, to)
+
+    fun mkRegexEpsilonDecl(): KRegexEpsilonDecl = KRegexEpsilonDecl(this)
+
+    fun mkRegexAllDecl(): KRegexAllDecl = KRegexAllDecl(this)
+
+    fun mkRegexAllCharDecl(): KRegexAllCharDecl = KRegexAllCharDecl(this)
+
+    // Bit vectors
     fun mkBvDecl(value: Boolean): KDecl<KBv1Sort> =
         KBitVec1ValueDecl(this, value)
 

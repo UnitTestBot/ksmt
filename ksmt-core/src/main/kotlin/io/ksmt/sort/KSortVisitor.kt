@@ -5,6 +5,8 @@ interface KSortVisitor<T> {
     fun visit(sort: KBoolSort): T
     fun visit(sort: KIntSort): T
     fun visit(sort: KRealSort): T
+    fun visit(sort: KStringSort): T
+    fun visit(sort: KRegexSort): T
     fun <S : KBvSort> visit(sort: S): T
     fun <S : KFpSort> visit(sort: S): T
     fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>): T
