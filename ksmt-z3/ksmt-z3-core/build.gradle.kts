@@ -9,7 +9,7 @@ repositories {
     mavenCentral()
 }
 
-val z3Version = "4.13.4"
+val z3Version = "4.15.3"
 
 val z3JavaJar by lazy { mkZ3ReleaseDownloadTask(z3Version, "x64-win", listOf("**/com.microsoft.z3.jar")) }
 
