@@ -100,8 +100,18 @@ jobs:
             --no-daemon
             '-PtestDataRevision=${{ env.TEST_DATA_REVISION }}'
 
+  show_info:
+    needs: [setup]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show test info
+        run: echo "${{ fromJSON(needs.setup.outputs.matrix-tests) }}"
+
+      - name: Show chunk info
+        run: echo "${{ fromJSON(needs.setup.outputs.matrix-chunks) }}"
+
   run_tests:
-    needs: [setup, prepare_test_data]
+    needs: [setup, show_info, prepare_test_data]
     continue-on-error: true
     strategy:
       matrix:
