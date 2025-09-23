@@ -137,4 +137,22 @@ class SolverTest {
         assertEquals(KSolverStatus.UNKNOWN, status)
     }
 
+    @Test
+    fun testUninterpretedSortValueModel(): Unit = with(ctx) {
+        KYicesSolver(this).use { solver ->
+            val sort = mkUninterpretedSort("sort")
+
+            val value = mkUninterpretedSortValue(sort, 0)
+            val a by sort
+
+            solver.assert(a neq value)
+            solver.check()
+
+            val model = solver.model()
+            val sortValues = model.uninterpretedSortUniverse(sort)!!
+
+            assertTrue { value in sortValues }
+            assertTrue { sortValues.size >= 2 }
+        }
+    }
 }

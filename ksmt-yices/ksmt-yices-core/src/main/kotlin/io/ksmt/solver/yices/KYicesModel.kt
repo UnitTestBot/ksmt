@@ -9,25 +9,18 @@ import io.ksmt.decl.KDecl
 import io.ksmt.decl.KFuncDecl
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.KUninterpretedSortValue
+import io.ksmt.solver.KModel
 import io.ksmt.solver.model.KFuncInterp
 import io.ksmt.solver.model.KFuncInterpEntryVarsFree
 import io.ksmt.solver.model.KFuncInterpVarsFree
-import io.ksmt.solver.KModel
 import io.ksmt.solver.model.KModelEvaluator
 import io.ksmt.solver.model.KModelImpl
-import io.ksmt.sort.KArray2Sort
-import io.ksmt.sort.KArray3Sort
-import io.ksmt.sort.KArrayNSort
-import io.ksmt.sort.KArraySort
 import io.ksmt.sort.KArraySortBase
 import io.ksmt.sort.KBoolSort
 import io.ksmt.sort.KBvSort
-import io.ksmt.sort.KFpRoundingModeSort
-import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KIntSort
 import io.ksmt.sort.KRealSort
 import io.ksmt.sort.KSort
-import io.ksmt.sort.KSortVisitor
 import io.ksmt.sort.KUninterpretedSort
 import io.ksmt.utils.uncheckedCast
 
@@ -46,35 +39,37 @@ class KYicesModel(
         model.collectDefinedTerms().mapTo(hashSetOf()) { converter.convertDecl(it) }
     }
 
-    override val uninterpretedSorts: Set<KUninterpretedSort> by lazy {
-        uninterpretedSortDependencies.keys
+    private val uninterpretedSortUniverse: Map<KUninterpretedSort, Set<KUninterpretedSortValue>> by lazy {
+        val values = model.uninterpretedSortValues()
+
+        val sortValues = hashMapOf<YicesSort, MutableSet<Int>>()
+        for (value in values) {
+            val (valueId, internalizedSort) = model.scalarValue(value)
+            val valueIdx = yicesCtx.convertUninterpretedSortValueIndex(valueId)
+            sortValues.getOrPut(internalizedSort, ::hashSetOf).add(valueIdx)
+        }
+
+        val result = hashMapOf<KUninterpretedSort, Set<KUninterpretedSortValue>>()
+        for ((internalizedSort, valueIndices) in sortValues) {
+            val sort = converter.convertSort(internalizedSort)
+            check(sort is KUninterpretedSort) { "Unexpected sort with uninterpreted value: $sort" }
+            val sortUniverse = valueIndices.mapTo(hashSetOf()) {
+                ctx.mkUninterpretedSortValue(sort, it)
+            }
+            result[sort] = sortUniverse
+        }
+
+        result
     }
 
-    private val uninterpretedSortDependencies: Map<KUninterpretedSort, Set<KDecl<*>>> by lazy {
-        val sortsWithDependencies = hashMapOf<KUninterpretedSort, MutableSet<KDecl<*>>>()
-        val sortCollector = UninterpretedSortCollector(sortsWithDependencies)
-        declarations.forEach { sortCollector.collect(it) }
-        sortsWithDependencies
-    }
-
-    private val uninterpretedSortUniverse =
-        hashMapOf<KUninterpretedSort, Set<KUninterpretedSortValue>>()
-
-    private val knownUninterpretedSortValues =
-        hashMapOf<KUninterpretedSort, MutableMap<Int, KUninterpretedSortValue>>()
+    override val uninterpretedSorts: Set<KUninterpretedSort>
+        get() = uninterpretedSortUniverse.keys
 
     private val interpretations = hashMapOf<KDecl<*>, KFuncInterp<*>>()
     private val funcInterpretationsToDo = arrayListOf<Pair<YVal, KFuncDecl<*>>>()
 
-    override fun uninterpretedSortUniverse(
-        sort: KUninterpretedSort
-    ): Set<KUninterpretedSortValue>? = uninterpretedSortUniverse.getOrPut(sort) {
-        val sortDependencies = uninterpretedSortDependencies[sort] ?: return null
-
-        sortDependencies.forEach { interpretation(it) }
-
-        knownUninterpretedSortValues[sort]?.values?.toHashSet() ?: hashSetOf()
-    }
+    override fun uninterpretedSortUniverse(sort: KUninterpretedSort): Set<KUninterpretedSortValue>? =
+        uninterpretedSortUniverse[sort]
 
     private val evaluatorWithModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = true) }
     private val evaluatorWithoutModelCompletion by lazy { KModelEvaluator(ctx, this, isComplete = false) }
@@ -94,11 +89,8 @@ class KYicesModel(
             is KIntSort -> mkIntNum(model.bigRationalValue(yval))
             is KUninterpretedSort -> {
                 val uninterpretedSortValueId = model.scalarValue(yval)[0]
-                val sortValues = knownUninterpretedSortValues.getOrPut(sort) { hashMapOf() }
-                sortValues.getOrPut(uninterpretedSortValueId) {
-                    val valueIndex = yicesCtx.convertUninterpretedSortValueIndex(uninterpretedSortValueId)
-                    mkUninterpretedSortValue(sort, valueIndex)
-                }
+                val valueIndex = yicesCtx.convertUninterpretedSortValueIndex(uninterpretedSortValueId)
+                mkUninterpretedSortValue(sort, valueIndex)
             }
             is KArraySortBase<*> -> {
                 val funcDecl = ctx.mkFreshFuncDecl("array", sort.range, sort.domainSorts)
@@ -183,53 +175,5 @@ class KYicesModel(
     private fun releaseNativeModel() {
         nativeModel?.close()
         nativeModel = null
-    }
-
-    private class UninterpretedSortCollector(
-        private val sorts: MutableMap<KUninterpretedSort, MutableSet<KDecl<*>>>
-    ) : KSortVisitor<Unit> {
-        private lateinit var currentDecl: KDecl<*>
-
-        fun collect(decl: KDecl<*>) {
-            currentDecl = decl
-
-            decl.sort.accept(this)
-            decl.argSorts.forEach { it.accept(this) }
-        }
-
-        override fun <D : KSort, R : KSort> visit(sort: KArraySort<D, R>) {
-            sort.range.accept(this)
-            sort.domain.accept(this)
-        }
-
-        override fun <D0 : KSort, D1 : KSort, R : KSort> visit(sort: KArray2Sort<D0, D1, R>) {
-            sort.range.accept(this)
-            sort.domain0.accept(this)
-            sort.domain1.accept(this)
-        }
-
-        override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> visit(sort: KArray3Sort<D0, D1, D2, R>) {
-            sort.range.accept(this)
-            sort.domain0.accept(this)
-            sort.domain1.accept(this)
-            sort.domain2.accept(this)
-        }
-
-        override fun <R : KSort> visit(sort: KArrayNSort<R>) {
-            sort.range.accept(this)
-            sort.domainSorts.forEach { it.accept(this) }
-        }
-
-        override fun visit(sort: KUninterpretedSort) {
-            val sortDependencies = sorts.getOrPut(sort) { hashSetOf() }
-            sortDependencies.add(currentDecl)
-        }
-
-        override fun visit(sort: KBoolSort) = Unit
-        override fun visit(sort: KIntSort) = Unit
-        override fun visit(sort: KRealSort) = Unit
-        override fun <S : KBvSort> visit(sort: S) = Unit
-        override fun <S : KFpSort> visit(sort: S) = Unit
-        override fun visit(sort: KFpRoundingModeSort) = Unit
     }
 }
