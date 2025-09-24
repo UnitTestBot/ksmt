@@ -155,4 +155,31 @@ class SolverTest {
             assertTrue { sortValues.size >= 2 }
         }
     }
+
+    @Test
+    fun testUninterpretedSortMultipleValueModel(): Unit = with(ctx) {
+        KYicesSolver(this).use { solver ->
+            val s1 = mkUninterpretedSort("s1")
+            val s2 = mkUninterpretedSort("s2")
+
+            val s1value = mkUninterpretedSortValue(s1, 1)
+            val s2value = mkUninterpretedSortValue(s2, 1)
+            val s1Var by s1
+            val s2Var by s2
+
+            solver.assert(s1Var neq s1value)
+            solver.assert(s2Var neq s2value)
+            solver.check()
+
+            val model = solver.model()
+            val s1Values = model.uninterpretedSortUniverse(s1)!!
+            val s2Values = model.uninterpretedSortUniverse(s2)!!
+
+            assertTrue { s1value in s1Values }
+            assertTrue { s1Values.size >= 2 }
+
+            assertTrue { s2value in s2Values }
+            assertTrue { s2Values.size >= 2 }
+        }
+    }
 }
