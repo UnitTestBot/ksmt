@@ -39,13 +39,18 @@ class KYicesModel(
         model.collectDefinedTerms().mapTo(hashSetOf()) { converter.convertDecl(it) }
     }
 
+    private val uninterpretedSortValueIndex by lazy { hashMapOf<Int, Int>() }
+    private fun uninterpretedSortValueIdx(valueId: Int): Int = uninterpretedSortValueIndex.getOrPut(valueId) {
+        yicesCtx.convertUninterpretedSortValueIndex(valueId)
+    }
+
     private val uninterpretedSortUniverse: Map<KUninterpretedSort, Set<KUninterpretedSortValue>> by lazy {
         val values = model.uninterpretedSortValues()
 
         val sortValues = hashMapOf<YicesSort, MutableSet<Int>>()
         for (value in values) {
             val (valueId, internalizedSort) = model.scalarValue(value)
-            val valueIdx = yicesCtx.convertUninterpretedSortValueIndex(valueId)
+            val valueIdx = uninterpretedSortValueIdx(valueId)
             sortValues.getOrPut(internalizedSort, ::hashSetOf).add(valueIdx)
         }
 
@@ -89,7 +94,7 @@ class KYicesModel(
             is KIntSort -> mkIntNum(model.bigRationalValue(yval))
             is KUninterpretedSort -> {
                 val uninterpretedSortValueId = model.scalarValue(yval)[0]
-                val valueIndex = yicesCtx.convertUninterpretedSortValueIndex(uninterpretedSortValueId)
+                val valueIndex = uninterpretedSortValueIdx(uninterpretedSortValueId)
                 mkUninterpretedSortValue(sort, valueIndex)
             }
             is KArraySortBase<*> -> {
