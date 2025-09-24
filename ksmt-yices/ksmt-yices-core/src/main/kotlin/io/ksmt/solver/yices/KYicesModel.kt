@@ -40,9 +40,11 @@ class KYicesModel(
     }
 
     private val uninterpretedSortValueIndex by lazy { hashMapOf<Pair<Int, Int>, Int>() }
-    private fun uninterpretedSortValueIdx(valueId: Int, sortId: Int): Int = uninterpretedSortValueIndex.getOrPut(valueId to sortId) {
-        yicesCtx.convertUninterpretedSortValueIndex(valueId)
-    }
+
+    private fun uninterpretedSortValueIdx(valueId: Int, sortId: Int): Int =
+        uninterpretedSortValueIndex.getOrPut(valueId to sortId) {
+            yicesCtx.convertUninterpretedSortValueIndex(valueId)
+        }
 
     private val uninterpretedSortUniverse: Map<KUninterpretedSort, Set<KUninterpretedSortValue>> by lazy {
         val values = model.uninterpretedSortValues()
