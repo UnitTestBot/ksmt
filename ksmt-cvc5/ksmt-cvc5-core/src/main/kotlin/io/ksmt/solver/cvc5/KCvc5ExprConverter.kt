@@ -255,6 +255,15 @@ open class KCvc5ExprConverter(
             Kind.BITVECTOR_TO_NAT -> expr.convert { bvExpr: KExpr<KBvSort> ->
                 mkBv2IntExpr(bvExpr, false)
             }
+
+            Kind.BITVECTOR_SBV_TO_INT -> expr.convert { bvExpr: KExpr<KBvSort> ->
+                mkBv2IntExpr(bvExpr, isSigned = true)
+            }
+
+            Kind.BITVECTOR_UBV_TO_INT -> expr.convert { bvExpr: KExpr<KBvSort> ->
+                mkBv2IntExpr(bvExpr, isSigned = false)
+            }
+
             Kind.BITVECTOR_COMP -> throw KSolverUnsupportedFeatureException(
                 "No direct mapping of ${Kind.BITVECTOR_COMP} in ksmt"
             )
@@ -430,6 +439,8 @@ open class KCvc5ExprConverter(
             Kind.SET_MAP,
             Kind.SET_FILTER,
             Kind.SET_IS_EMPTY,
+            Kind.SET_ALL,
+            Kind.SET_SOME,
             Kind.SET_FOLD -> throw KSolverUnsupportedFeatureException("currently ksmt does not support sets")
 
             Kind.RELATION_JOIN,
@@ -460,6 +471,8 @@ open class KCvc5ExprConverter(
             Kind.BAG_FILTER,
             Kind.BAG_FOLD,
             Kind.BAG_SETOF,
+            Kind.BAG_ALL,
+            Kind.BAG_SOME,
             Kind.BAG_PARTITION -> throw KSolverUnsupportedFeatureException("currently ksmt does not support bags")
 
             Kind.TABLE_PRODUCT,

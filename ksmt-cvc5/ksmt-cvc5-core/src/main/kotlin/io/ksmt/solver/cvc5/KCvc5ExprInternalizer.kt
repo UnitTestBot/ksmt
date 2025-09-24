@@ -158,11 +158,11 @@ import io.ksmt.expr.KXorExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvAddNoOverflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvAddNoUnderflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvDivNoOverflowExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoOverflowExpr
+import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoUnderflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvNegNoOverflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvSubNoOverflowExpr
 import io.ksmt.expr.rewrite.simplify.rewriteBvSubNoUnderflowExpr
-import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoOverflowExpr
-import io.ksmt.expr.rewrite.simplify.rewriteBvMulNoUnderflowExpr
 import io.ksmt.expr.rewrite.simplify.simplifyBvRotateLeftExpr
 import io.ksmt.expr.rewrite.simplify.simplifyBvRotateRightExpr
 import io.ksmt.solver.KSolverUnsupportedFeatureException
@@ -183,8 +183,6 @@ import io.ksmt.sort.KFpSort
 import io.ksmt.sort.KRealSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
-import io.ksmt.utils.powerOfTwo
-import java.math.BigInteger
 
 @Suppress("LargeClass")
 class KCvc5ExprInternalizer(
@@ -580,26 +578,13 @@ class KCvc5ExprInternalizer(
         }
     }
 
-    // custom implementation
-    @Suppress("MagicNumber")
     override fun transform(expr: KBv2IntExpr) = with(expr) {
         transform(value) { value: Term ->
-            // by default, it is unsigned in cvc5
-            val intTerm = tm.mkTerm(Kind.BITVECTOR_TO_NAT, value)
-
-            if (isSigned) {
-                val size = this.value.sort.sizeBits.toInt()
-                val modulo = powerOfTwo(size.toUInt())
-                val maxInt = (powerOfTwo((size - 1).toUInt())) - BigInteger.ONE
-
-                val moduloTerm = tm.builder { mkInteger(modulo.toString(10)) }
-                val maxIntTerm = tm.builder { mkInteger(maxInt.toString(10)) }
-
-                val gtTerm = tm.mkTerm(Kind.GT, intTerm, maxIntTerm)
-                val subTerm = tm.mkTerm(Kind.SUB, intTerm, moduloTerm)
-
-                tm.mkTerm(Kind.ITE, gtTerm, subTerm, intTerm)
-            } else intTerm
+            if (expr.isSigned) {
+                tm.mkTerm(Kind.BITVECTOR_SBV_TO_INT, value)
+            } else {
+                tm.mkTerm(Kind.BITVECTOR_UBV_TO_INT, value)
+            }
         }
     }
 
