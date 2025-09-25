@@ -21,10 +21,14 @@ dependencies {
     testImplementation(project(":ksmt-cvc5:ksmt-cvc5-native"))
 }
 
+tasks.named<Jar>("jar") {
+    archiveClassifier.set("jar")
+}
+
 val publishJar = tasks.register<ShadowJar>("publish-jar") {
     dependsOn(tasks.named("jar"))
 
-    archiveClassifier.set("pub")
+    archiveClassifier.set("")
     dependencies {
         include(dependency(files(cvc5Jar)))
     }

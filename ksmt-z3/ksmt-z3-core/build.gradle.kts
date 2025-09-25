@@ -23,10 +23,14 @@ dependencies {
     testImplementation(project(":ksmt-z3:ksmt-z3-native"))
 }
 
+tasks.named<Jar>("jar") {
+    archiveClassifier.set("jar")
+}
+
 val publishJar = tasks.register<ShadowJar>("publish-jar") {
     dependsOn(tasks.named("jar"))
 
-    archiveClassifier.set("pub")
+    archiveClassifier.set("")
     dependencies {
         include(dependency(z3JavaJar.outputFiles))
     }

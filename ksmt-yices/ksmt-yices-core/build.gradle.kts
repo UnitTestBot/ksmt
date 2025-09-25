@@ -21,10 +21,14 @@ dependencies {
     testImplementation(project(":ksmt-yices:ksmt-yices-native"))
 }
 
+tasks.named<Jar>("jar") {
+    archiveClassifier.set("jar")
+}
+
 val publishJar = tasks.register<ShadowJar>("publish-jar") {
     dependsOn(tasks.named("jar"))
 
-    archiveClassifier.set("pub")
+    archiveClassifier.set("")
     dependencies {
         exclude { true }
     }
