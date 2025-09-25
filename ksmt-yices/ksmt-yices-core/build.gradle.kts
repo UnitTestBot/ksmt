@@ -2,7 +2,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     id("io.ksmt.ksmt-base")
-    id("com.gradleup.shadow") version "9.0.0-beta13"
+    id("com.gradleup.shadow") version "9.0.0-beta13" apply false
     `java-test-fixtures`
 }
 
@@ -21,21 +21,23 @@ dependencies {
     testImplementation(project(":ksmt-yices:ksmt-yices-native"))
 }
 
-tasks.withType<ShadowJar> {
-    archiveClassifier.set("")
+val publishJar = tasks.register<ShadowJar>("publish-jar") {
+    dependsOn(tasks.named("jar"))
+
+    archiveClassifier.set("pub")
     dependencies {
         exclude { true }
     }
-    val implementation = project.configurations["implementation"].dependencies.toSet()
-    val runtimeOnly = project.configurations["runtimeOnly"].dependencies.toSet()
-    val dependencies = (implementation + runtimeOnly)
-    project.configurations.shadow.get().dependencies.addAll(dependencies)
+
+    configurations = listOf(project.configurations.runtimeClasspath.get())
+
+    with(tasks.jar.get() as CopySpec)
 }
 
 publishing {
     publications {
         create<MavenPublication>("maven") {
-            project.shadow.component(this)
+            artifact(publishJar.get())
 
             addKsmtPom()
             generateMavenMetadata(project)
