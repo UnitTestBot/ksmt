@@ -63,8 +63,12 @@ abstract class KNonRecursiveVisitorBase<V : Any> : KVisitor<KExprVisitResult<V>>
      *  Get [expr] visit result.
      *  Returns null if expression was not visited.
      * */
-    fun <T : KSort> visitResult(expr: KExpr<T>): V? =
+    open fun <T : KSort> visitResult(expr: KExpr<T>): V? =
         visitResults[expr]
+
+    open fun <T : KSort> onNewVisitResult(expr: KExpr<T>, result: V) {
+        // do nothing
+    }
 
     fun <T : KSort> result(expr: KExpr<T>): V =
         visitResult(expr) ?: error("Expr $expr was not properly visited")
@@ -87,6 +91,7 @@ abstract class KNonRecursiveVisitorBase<V : Any> : KVisitor<KExprVisitResult<V>>
 
                 if (result.hasResult) {
                     visitResults[e] = result.result
+                    onNewVisitResult(e, result.result)
                 }
             }
         } finally {

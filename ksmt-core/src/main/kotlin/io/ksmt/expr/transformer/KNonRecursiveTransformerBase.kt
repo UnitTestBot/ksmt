@@ -51,6 +51,9 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
 
                 if (exprWasTransformed) {
                     transformed[e] = transformedExpr
+
+                    @Suppress("UNCHECKED_CAST")
+                    onNewTransformedExpr(e as KExpr<KSort>, transformedExpr as KExpr<KSort>)
                 }
             }
         } finally {
@@ -121,11 +124,15 @@ abstract class KNonRecursiveTransformerBase: KTransformer {
      *  Get [expr] transformation result or
      *  null if expression was not transformed yet
      * */
-    fun <T : KSort> transformedExpr(expr: KExpr<T>): KExpr<T>? {
+    open fun <T : KSort> transformedExpr(expr: KExpr<T>): KExpr<T>? {
         if (!exprTransformationRequired(expr)) return expr
 
         @Suppress("UNCHECKED_CAST")
         return transformed[expr] as? KExpr<T>
+    }
+
+    open fun <T : KSort> onNewTransformedExpr(expr: KExpr<T>, transformed: KExpr<T>) {
+        // do nothing
     }
 
     /**
