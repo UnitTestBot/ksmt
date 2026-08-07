@@ -1,5 +1,6 @@
 package io.ksmt.solver.z3
 
+import com.microsoft.z3.Global
 import io.ksmt.KContext
 import io.ksmt.solver.KSolverStatus
 import io.ksmt.utils.mkConst
@@ -82,8 +83,43 @@ class IncrementalApiTest {
         val query = mkUniversalQuantifier(queryBody, listOf(x.decl))
         solver.assert(query)
 
-        val status = solver.checkWithAssumptions(emptyList(), timeout = 1.milliseconds)
+        val status = withZ3MemoryLimit(MEMORY_LIMIT_MB) {
+            solver.checkWithAssumptions(emptyList(), timeout = 1.milliseconds)
+        }
         assertEquals(KSolverStatus.UNKNOWN, status)
-        assertEquals("timeout", solver.reasonOfUnknown())
+
+        /**
+         * Normally Z3 reports the timeout. If it happens to reach the memory limit before
+         * its next timeout checkpoint it reports [Z3_OUT_OF_MEMORY_REASON] instead, which is
+         * an equally valid "gave up on the resource limit" outcome.
+         */
+        val reason = solver.reasonOfUnknown()
+        assertTrue(
+            reason == TIMEOUT_REASON || reason == Z3_OUT_OF_MEMORY_REASON,
+            "Unexpected reason of unknown: $reason"
+        )
+    }
+
+    /**
+     * Z3 only checks the [timeout] parameter at its internal checkpoints. On this query it
+     * allocates memory far faster than it reaches one, so without a memory limit the check
+     * grows to tens of gigabytes and the test process gets killed by the OS.
+     *
+     * The limit is a global Z3 parameter because a solver parameter would not survive:
+     * every check replaces the solver parameters with the ones holding the timeout.
+     */
+    private inline fun <T> withZ3MemoryLimit(limitMb: Int, body: () -> T): T = try {
+        Global.setParameter(Z3_MAX_MEMORY, limitMb.toString())
+        body()
+    } finally {
+        Global.setParameter(Z3_MAX_MEMORY, UNLIMITED_MEMORY)
+    }
+
+    companion object {
+        private const val Z3_MAX_MEMORY = "memory_max_size"
+        private const val UNLIMITED_MEMORY = "0"
+        private const val MEMORY_LIMIT_MB = 2048
+        private const val TIMEOUT_REASON = "timeout"
+        private const val Z3_OUT_OF_MEMORY_REASON = "out of memory"
     }
 }
