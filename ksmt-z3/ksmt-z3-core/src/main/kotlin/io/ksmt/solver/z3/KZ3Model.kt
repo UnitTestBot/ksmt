@@ -13,6 +13,8 @@ import io.ksmt.KContext
 import io.ksmt.decl.KDecl
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.KUninterpretedSortValue
+import io.ksmt.expr.rewrite.simplify.castRealValue
+import io.ksmt.expr.rewrite.simplify.toRealValue
 import io.ksmt.solver.KModel
 import io.ksmt.solver.model.KFuncInterp
 import io.ksmt.solver.model.KFuncInterpEntryVarsFree
@@ -20,6 +22,7 @@ import io.ksmt.solver.model.KFuncInterpEntryWithVars
 import io.ksmt.solver.model.KFuncInterpVarsFree
 import io.ksmt.solver.model.KFuncInterpWithVars
 import io.ksmt.solver.model.KModelImpl
+import io.ksmt.sort.KArithSort
 import io.ksmt.sort.KSort
 import io.ksmt.sort.KUninterpretedSort
 import io.ksmt.utils.mkFreshConst
@@ -92,7 +95,26 @@ open class KZ3Model(
 
         z3Ctx.releaseTemporaryAst(z3Result)
 
-        return result
+        return result.castToSort(expr.sort)
+    }
+
+    /**
+     * Z3 may assign an arith sort to an expression which differs from the sort ksmt uses.
+     * For example, `(^ a b)` is Real sorted in Z3 even when both `a` and `b` are Int sorted,
+     * while in ksmt this expression is Int sorted.
+     * Because of this, the value we get from a Z3 model may have an unexpected arith sort.
+     *
+     * Cast such values back to the sort of the evaluated expression to keep [eval] sort preserving.
+     * The cast is performed in the same way as in the ksmt expression simplifier
+     * (see [castRealValue]) and therefore the value we produce here is consistent
+     * with the value produced by a detached model.
+     * */
+    private fun <T : KSort> KExpr<T>.castToSort(sort: T): KExpr<T> {
+        if (this.sort == sort || sort !is KArithSort) return this
+
+        val value = uncheckedCast<_, KExpr<KArithSort>>().toRealValue() ?: return this
+
+        return ctx.castRealValue(value, sort).uncheckedCast()
     }
 
     override fun <T : KSort> interpretation(decl: KDecl<T>): KFuncInterp<T>? =

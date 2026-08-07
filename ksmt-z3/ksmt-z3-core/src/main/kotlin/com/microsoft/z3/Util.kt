@@ -1,5 +1,6 @@
 package com.microsoft.z3
 
+import com.microsoft.z3.Native.BoolPtr
 import com.microsoft.z3.Native.IntPtr
 import com.microsoft.z3.Native.LongPtr
 import com.microsoft.z3.enumerations.Z3_error_code
@@ -30,9 +31,9 @@ fun fpExponentInt64OrNull(ctx: Long, expr: Long, biased: Boolean): Long? {
 }
 
 fun fpSignOrNull(ctx: Long, expr: Long): Boolean? {
-    val result = IntPtr()
+    val result = BoolPtr()
     if (!Native.fpaGetNumeralSign(ctx, expr, result)) return null
-    return result.value != 0
+    return result.value
 }
 
 @Suppress("LongParameterList")
