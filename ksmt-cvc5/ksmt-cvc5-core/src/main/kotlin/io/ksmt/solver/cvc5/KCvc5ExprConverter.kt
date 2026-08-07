@@ -148,6 +148,7 @@ open class KCvc5ExprConverter(
             Kind.SQRT -> throw KSolverUnsupportedFeatureException("No direct mapping of sqrt on real in ksmt")
             Kind.POW -> convertNativePowExpr(expr)
             Kind.POW2 -> convertNativePowExpr(expr)
+            Kind.LOG2 -> throw KSolverUnsupportedFeatureException("No direct mapping of log2 on int in ksmt")
             Kind.INTS_MODULUS -> expr.convert(::mkIntMod)
             Kind.INTS_DIVISION -> expr.convert(::mkArithDiv)
             Kind.DIVISION -> expr.convert(::mkArithDiv)
@@ -178,7 +179,8 @@ open class KCvc5ExprConverter(
             Kind.DIVISIBLE -> expr.convert { arExpr: KExpr<KIntSort> ->
                 mkIntMod(arExpr, expr.intDivisibleArg.expr) eq 0.expr
             }
-            Kind.IAND -> throw KSolverUnsupportedFeatureException(
+            Kind.IAND,
+            Kind.PIAND -> throw KSolverUnsupportedFeatureException(
                 "No direct mapping in ksmt. btw int to bv is not supported in ksmt"
             )
 

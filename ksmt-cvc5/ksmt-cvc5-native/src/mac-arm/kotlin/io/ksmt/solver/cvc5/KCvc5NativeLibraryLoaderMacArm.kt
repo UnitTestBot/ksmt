@@ -14,9 +14,9 @@ class KCvc5NativeLibraryLoaderMacArm :
     }
 
     companion object {
+        // A single self-contained library: the cvc5 release build for this platform
+        // links libcvc5 and libcvc5parser into libcvc5jni.
         private val libraries = listOf(
-            "libcvc5.1",
-            "libcvc5parser.1",
             "libcvc5jni",
         )
     }
