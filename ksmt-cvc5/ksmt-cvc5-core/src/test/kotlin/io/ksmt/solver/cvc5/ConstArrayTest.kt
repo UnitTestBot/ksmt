@@ -3,6 +3,7 @@ package io.ksmt.solver.cvc5
 import io.ksmt.KContext
 import io.ksmt.expr.KExpr
 import io.ksmt.solver.KSolverStatus
+import io.ksmt.solver.KTheory
 import io.ksmt.sort.KArraySort
 import io.ksmt.sort.KBv64Sort
 import io.ksmt.sort.KBv8Sort
@@ -32,6 +33,14 @@ class ConstArrayTest {
     fun constArrayStoreSelectAtSymbolicIndexIsSat() =
         assertEquals(KSolverStatus.SAT, solve(Shape.CONST_ARRAY_STORE_SYMBOLIC_INDEX))
 
+    /** `arrays-exp` is only set when the caller declares [KTheory.Array], or declares nothing. */
+    @Test
+    fun constArrayIsSupportedWhenOptimizedForArrayTheory() =
+        assertEquals(
+            KSolverStatus.SAT,
+            solve(Shape.CONST_ARRAY_STORE_SYMBOLIC_INDEX, setOf(KTheory.Array, KTheory.BV))
+        )
+
     @Test
     fun uninterpretedArrayBaseIsUnaffected() =
         assertEquals(KSolverStatus.SAT, solve(Shape.UNINTERPRETED_BASE))
@@ -49,9 +58,10 @@ class ConstArrayTest {
     private companion object {
         private const val STORED_BYTE = 0xaa.toByte()
 
-        private fun solve(shape: Shape): KSolverStatus =
+        private fun solve(shape: Shape, theories: Set<KTheory>? = null): KSolverStatus =
             KContext().use { ctx ->
                 KCvc5Solver(ctx).use { solver ->
+                    theories?.let { solver.configure { optimizeForTheories(it, quantifiersAllowed = false) } }
                     solver.assert(ctx.query(shape))
                     solver.check()
                 }

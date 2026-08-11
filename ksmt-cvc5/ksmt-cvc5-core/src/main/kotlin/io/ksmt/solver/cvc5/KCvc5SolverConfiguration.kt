@@ -42,6 +42,13 @@ class KCvc5SolverLazyConfiguration : KCvc5SolverConfiguration {
     private var logicConfiguration: String? = null
     private val options = mutableMapOf<String, String>()
 
+    /**
+     * Theories the caller declared, or `null` when they did not, in which case
+     * nothing is known about the query and every theory has to be assumed.
+     * */
+    var declaredTheories: Set<KTheory>? = null
+        private set
+
     override fun setCvc5Option(option: String, value: String) {
         options[option] = value
     }
@@ -52,6 +59,7 @@ class KCvc5SolverLazyConfiguration : KCvc5SolverConfiguration {
 
     override fun optimizeForTheories(theories: Set<KTheory>?, quantifiersAllowed: Boolean) {
         logicConfiguration = theories.smtLib2String(quantifiersAllowed)
+        declaredTheories = theories
     }
 
     fun configure(solver: Solver) {

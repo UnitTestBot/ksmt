@@ -9,6 +9,7 @@ import io.ksmt.solver.KModel
 import io.ksmt.solver.KSolver
 import io.ksmt.solver.KSolverException
 import io.ksmt.solver.KSolverStatus
+import io.ksmt.solver.KTheory
 import io.ksmt.solver.model.KNativeSolverModel
 import io.ksmt.sort.KBoolSort
 import io.ksmt.utils.library.NativeLibraryLoaderUtils
@@ -43,20 +44,27 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         val solver = termManager.builder { Solver(this) }
 
         solverInitialized = true
-        solverLazyConfiguration?.configure(solver)
+        val configuration = solverLazyConfiguration
+        configuration?.configure(solver)
         solverLazyConfiguration = null
 
         solver.setOption("produce-models", "true")
         solver.setOption("produce-unsat-cores", "true")
 
+        val theories = configuration?.declaredTheories
+
         /**
          * Allow floating-point sorts of all sizes, rather than
          * only Float32 (8/24) or Float64 (11/53) (experimental in cvc5 1.0.2)
          */
-        solver.setOption("fp-exp", "true")
+        if (theories == null || KTheory.FP in theories) {
+            solver.setOption("fp-exp", "true")
+        }
 
         // Allow const arrays, which mkArrayConst is internalized to (experimental in cvc5 1.3.4)
-        solver.setOption("arrays-exp", "true")
+        if (theories == null || KTheory.Array in theories) {
+            solver.setOption("arrays-exp", "true")
+        }
 
         return solver
     }
