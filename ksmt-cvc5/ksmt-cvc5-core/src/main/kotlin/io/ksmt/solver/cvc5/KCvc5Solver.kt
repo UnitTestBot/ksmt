@@ -55,6 +55,9 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
          */
         solver.setOption("fp-exp", "true")
 
+        // Allow const arrays, which mkArrayConst is internalized to (experimental in cvc5 1.3.4)
+        solver.setOption("arrays-exp", "true")
+
         return solver
     }
 
