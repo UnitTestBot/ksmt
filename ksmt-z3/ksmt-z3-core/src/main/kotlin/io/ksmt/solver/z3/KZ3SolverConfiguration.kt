@@ -56,16 +56,53 @@ sealed class KZ3SolverConfigurationImpl(val params: Params) : KZ3SolverConfigura
     }
 }
 
+/**
+ * Sort of the descriptor values ksmt uses to keep uninterpreted sort values distinct
+ * (see `KZ3ExprInternalizer.transform(KUninterpretedSortValue)`).
+ * */
+enum class KZ3UninterpretedValueDescriptor { INT, BV }
+
+/**
+ * A logic to create the Z3 solver for, and the descriptor sort that logic permits.
+ * A `null` [logic] means the general solver, which imposes no restriction.
+ * */
+data class KZ3ResolvedLogic(val logic: String?, val valueDescriptor: KZ3UninterpretedValueDescriptor)
+
 class KZ3SolverLazyConfiguration(params: Params) : KZ3SolverConfigurationImpl(params) {
-    var logicConfiguration: String? = null
+    private var theories: Set<KTheory>? = null
+    private var quantifiersAllowed: Boolean = false
+
     override fun optimizeForTheories(theories: Set<KTheory>?, quantifiersAllowed: Boolean) {
-        if (theories.isNullOrEmpty() || !supportedLogicCombination(theories, quantifiersAllowed)) {
-            logicConfiguration = null
-            return
+        this.theories = theories
+        this.quantifiersAllowed = quantifiersAllowed
+    }
+
+    /**
+     * ksmt keeps uninterpreted sort values distinct through values of a descriptor sort, so every
+     * query constrains that sort whether or not the caller declared its theory. A logic that
+     * forbids it makes Z3 answer UNKNOWN or expose the sort in the model, so the two are chosen
+     * together. Combinations with no specialized solver fall back to the general one.
+     * */
+    fun resolveLogic(): KZ3ResolvedLogic {
+        val requestedTheories = theories
+        if (requestedTheories.isNullOrEmpty()) return GENERAL_SOLVER
+
+        val hasIntegerArithmetic = LIA in requestedTheories || NIA in requestedTheories
+
+        if (BV in requestedTheories && !hasIntegerArithmetic) {
+            return resolve(requestedTheories, KZ3UninterpretedValueDescriptor.BV)
         }
 
-        logicConfiguration = theories.smtLib2String(quantifiersAllowed)
+        val theoriesWithDescriptor = if (hasIntegerArithmetic) requestedTheories else requestedTheories + LIA
+        return resolve(theoriesWithDescriptor, KZ3UninterpretedValueDescriptor.INT)
     }
+
+    private fun resolve(theories: Set<KTheory>, descriptor: KZ3UninterpretedValueDescriptor) =
+        if (supportedLogicCombination(theories, quantifiersAllowed)) {
+            KZ3ResolvedLogic(theories.smtLib2String(quantifiersAllowed), descriptor)
+        } else {
+            GENERAL_SOLVER
+        }
 
     /**
      * Z3 provide special solver only for the following theory combinations
@@ -78,6 +115,8 @@ class KZ3SolverLazyConfiguration(params: Params) : KZ3SolverConfigurationImpl(pa
         }
 
     companion object {
+        private val GENERAL_SOLVER = KZ3ResolvedLogic(logic = null, KZ3UninterpretedValueDescriptor.INT)
+
         private fun l(vararg theories: KTheory) = theories.toSet()
 
         private val supportedTheoriesWithQuantifiers = setOf(

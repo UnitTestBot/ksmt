@@ -42,6 +42,8 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
     private val contextCleanupActionHandler = registerContextForCleanup(this, z3Ctx)
 
     private val exprInternalizer by lazy {
+        // assert internalizes before it touches solver, so resolve the configuration first
+        solver
         createExprInternalizer(z3Ctx)
     }
     private val exprConverter by lazy {
@@ -57,7 +59,11 @@ open class KZ3Solver(private val ctx: KContext) : KSolver<KZ3SolverConfiguration
         val config = lazyConfiguration
         lazyConfiguration = null
 
-        val logic = config?.logicConfiguration
+        val resolvedLogic = config?.resolveLogic()
+        z3Ctx.uninterpretedValueDescriptor = resolvedLogic?.valueDescriptor
+            ?: KZ3UninterpretedValueDescriptor.INT
+
+        val logic = resolvedLogic?.logic
 
         val solver = if (logic != null) {
             z3Ctx.nativeContext.mkSolver(logic)

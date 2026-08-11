@@ -863,7 +863,7 @@ open class KZ3ExprInternalizer(
      * assertion forces that all values of T are also distinct.
      * */
     override fun transform(expr: KUninterpretedSortValue): KExpr<KUninterpretedSort> = with(expr) {
-        transform(ctx.mkIntNum(expr.valueIdx)) { intValueExpr ->
+        transform(mkUniqueValueDescriptor(expr.valueIdx)) { descriptorExpr ->
             val nativeSort = sort.internalizeSort()
             val valueDecl = z3InternCtx.saveUninterpretedSortValueDecl(
                 Native.mkFreshFuncDecl(nCtx, "value", 0, null, nativeSort),
@@ -874,8 +874,8 @@ open class KZ3ExprInternalizer(
                 // Force expression save to perform `incRef` and prevent possible reference counting issues
                 saveInternalizedExpr(expr, it)
 
-                z3InternCtx.registerUninterpretedSortValue(expr, intValueExpr, it) {
-                    val descriptorSort = ctx.intSort.internalizeSort()
+                z3InternCtx.registerUninterpretedSortValue(expr, descriptorExpr, it) {
+                    val descriptorSort = uniqueValueDescriptorSort().internalizeSort()
                     z3InternCtx.saveUninterpretedSortValueInterpreter(
                         Native.mkFreshFuncDecl(nCtx, "interpreter", 1, longArrayOf(nativeSort), descriptorSort)
                     )
@@ -883,6 +883,17 @@ open class KZ3ExprInternalizer(
             }
         }
     }
+
+    private fun uniqueValueDescriptorSort(): KSort = when (z3InternCtx.uninterpretedValueDescriptor) {
+        KZ3UninterpretedValueDescriptor.INT -> ctx.intSort
+        KZ3UninterpretedValueDescriptor.BV -> ctx.bv32Sort
+    }
+
+    private fun mkUniqueValueDescriptor(valueIdx: Int): KExpr<*> =
+        when (z3InternCtx.uninterpretedValueDescriptor) {
+            KZ3UninterpretedValueDescriptor.INT -> ctx.mkIntNum(valueIdx)
+            KZ3UninterpretedValueDescriptor.BV -> ctx.mkBv(valueIdx)
+        }
 
     inline fun <S : KExpr<*>> S.transform(
         arg: KExpr<*>,

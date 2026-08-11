@@ -148,6 +148,9 @@ class KZ3Context(
         return ast
     }
 
+    /** Chosen with the logic, see [KZ3SolverLazyConfiguration.resolveLogic]. */
+    var uninterpretedValueDescriptor: KZ3UninterpretedValueDescriptor = KZ3UninterpretedValueDescriptor.INT
+
     private val uninterpretedSortValueInterpreter = hashMapOf<KUninterpretedSort, Long>()
 
     private val uninterpretedSortValueDecls = Long2ObjectOpenHashMap<KUninterpretedSortValue>()
