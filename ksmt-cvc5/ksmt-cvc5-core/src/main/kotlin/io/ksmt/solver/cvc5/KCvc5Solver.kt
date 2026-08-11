@@ -48,6 +48,8 @@ open class KCvc5Solver(private val ctx: KContext) : KSolver<KCvc5SolverConfigura
         configuration?.configure(solver)
         solverLazyConfiguration = null
 
+        configuration?.let { cvc5Ctx.uninterpretedValueDescriptor = it.valueDescriptor }
+
         solver.setOption("produce-models", "true")
         solver.setOption("produce-unsat-cores", "true")
 

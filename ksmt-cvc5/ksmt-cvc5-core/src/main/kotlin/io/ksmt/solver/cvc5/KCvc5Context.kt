@@ -37,6 +37,9 @@ class KCvc5Context(
 ) : AutoCloseable {
     private var isClosed = false
 
+    /** Chosen with the logic, see [KCvc5SolverLazyConfiguration.optimizeForTheories]. */
+    var uninterpretedValueDescriptor: KCvc5UninterpretedValueDescriptor = KCvc5UninterpretedValueDescriptor.INT
+
     private val uninterpretedSortCollector = KUninterpretedSortCollector(this)
     private var exprCurrentLevelCacheRestorer = KCurrentScopeExprCacheRestorer(uninterpretedSortCollector, ctx)
 

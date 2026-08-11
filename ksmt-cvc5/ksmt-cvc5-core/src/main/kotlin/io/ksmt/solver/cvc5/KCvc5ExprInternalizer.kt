@@ -1152,17 +1152,28 @@ class KCvc5ExprInternalizer(
      * assertion forces that all values of T are also distinct.
      * */
     override fun transform(expr: KUninterpretedSortValue): KExpr<KUninterpretedSort> = with(expr) {
-        transform(ctx.mkIntNum(expr.valueIdx)) { intValueExpr: Term ->
+        transform(mkUniqueValueDescriptor(expr.valueIdx)) { descriptorExpr: Term ->
             val exprSort = sort.internalizeSort()
             cvc5Ctx.saveUninterpretedSortValue(tm.builder { mkConst(exprSort) }, expr).also {
-                cvc5Ctx.registerUninterpretedSortValue(expr, intValueExpr, it) {
-                    val descriptorSort = ctx.intSort.internalizeSort()
+                cvc5Ctx.registerUninterpretedSortValue(expr, descriptorExpr, it) {
+                    val descriptorSort = uniqueValueDescriptorSort().internalizeSort()
                     solver.declareFun("${sort.name}!interpreter", arrayOf(exprSort), descriptorSort)
                         .also { f -> tm.registerPointer(f) }
                 }
             }
         }
     }
+
+    private fun uniqueValueDescriptorSort(): KSort = when (cvc5Ctx.uninterpretedValueDescriptor) {
+        KCvc5UninterpretedValueDescriptor.INT -> cvc5Ctx.ctx.intSort
+        KCvc5UninterpretedValueDescriptor.BV -> cvc5Ctx.ctx.bv32Sort
+    }
+
+    private fun mkUniqueValueDescriptor(valueIdx: Int): KExpr<*> =
+        when (cvc5Ctx.uninterpretedValueDescriptor) {
+            KCvc5UninterpretedValueDescriptor.INT -> cvc5Ctx.ctx.mkIntNum(valueIdx)
+            KCvc5UninterpretedValueDescriptor.BV -> cvc5Ctx.ctx.mkBv(valueIdx)
+        }
 
     private fun <E : KExpr<*>> E.transformQuantifiedExpression(
         bounds: List<KDecl<*>>,
