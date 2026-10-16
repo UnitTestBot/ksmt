@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "io.ksmt"
-version = "0.6.7"
+version = project.findProperty("ksmtVersion")?.toString()?.takeIf { it.isNotBlank() } ?: "0.6.7"
 
 repositories {
     mavenCentral()

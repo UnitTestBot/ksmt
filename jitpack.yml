@@ -1,0 +1,4 @@
+jdk:
+  - openjdk17
+install:
+  - ./gradlew :ksmt-core:publishToMavenLocal :ksmt-bitwuzla:ksmt-bitwuzla-core:publishToMavenLocal ":ksmt-bitwuzla:ksmt-bitwuzla-native:publishMaven-linux-x64PublicationToMavenLocal" -PksmtVersion=$VERSION -x test -x dokkaJavadoc -Dorg.gradle.jvmargs=-Xmx1g

@@ -15,6 +15,17 @@ import io.ksmt.expr.KConst
 import io.ksmt.expr.KEqExpr
 import io.ksmt.expr.KExpr
 import io.ksmt.expr.KFpRoundingMode
+import io.ksmt.expr.KApp
+import io.ksmt.expr.KArray2Lambda
+import io.ksmt.expr.KArray2Store
+import io.ksmt.expr.KArray3Lambda
+import io.ksmt.expr.KArray3Store
+import io.ksmt.expr.KArrayLambda
+import io.ksmt.expr.KArrayLambdaBase
+import io.ksmt.expr.KArrayNLambda
+import io.ksmt.expr.KArrayNStore
+import io.ksmt.expr.KArrayStore
+import io.ksmt.expr.KArrayStoreBase
 import io.ksmt.expr.KInterpretedValue
 import io.ksmt.expr.KIteExpr
 import io.ksmt.expr.printer.ExpressionPrinter
@@ -1186,6 +1197,11 @@ open class KBitwuzlaExprConverter(
                 return@with expr.arg.uncheckedCast()
             }
 
+            val retypedArray = ArrayDomainRetyper(fromSort, toSort).retype(expr.arg)
+            if (retypedArray != null) {
+                return@with AdapterTermRewriter(ctx).apply(retypedArray).uncheckedCast()
+            }
+
             val indices = toSort.domainSorts.map {
                 mkFreshConst("i", it)
             }
@@ -1213,6 +1229,135 @@ open class KBitwuzlaExprConverter(
             is KBv1Sort -> bv1Zero.uncheckedCast()
             is KBoolSort -> ctx.falseExpr.uncheckedCast()
             else -> error("unexpected sort: $this")
+        }
+    }
+
+    private inner class ArrayDomainRetyper(
+        private val fromSort: KArraySortBase<*>,
+        private val toSort: KArraySortBase<*>
+    ) : KNonRecursiveTransformer(ctx) {
+        private val retypedIndices = hashMapOf<KDecl<*>, KDecl<*>>()
+        private var failed = false
+
+        fun retype(array: KExpr<*>): KExpr<*>? {
+            val result = apply(array)
+            return if (failed || result.sort != toSort) null else result
+        }
+
+        override fun <T : KSort> exprTransformationRequired(expr: KExpr<T>): Boolean =
+            expr !is KInterpretedValue<T> && !expr.isAdapterTerm()
+
+        private fun KExpr<*>.isAdapterTerm(): Boolean =
+            this is BoolToBv1AdapterExpr ||
+                this is Bv1ToBoolAdapterExpr ||
+                this is Bv32ToUninterpretedSortAdapterExpr ||
+                this is ArrayAdapterExpr<*, *>
+
+        override fun <T : KSort, A : KSort> transformApp(expr: KApp<T, A>): KExpr<T> {
+            if (expr.sort == fromSort || expr.args.any { it.isRetypedIndex() }) failed = true
+            return expr
+        }
+
+        override fun <T : KSort> transform(expr: KEqExpr<T>): KExpr<KBoolSort> =
+            transformExprAfterTransformed(expr, expr.lhs, expr.rhs) { lhs, rhs ->
+                retypedEquality(lhs, rhs) ?: retypedEquality(rhs, lhs) ?: run {
+                    if (lhs.isRetypedIndex() || rhs.isRetypedIndex()) failed = true
+                    ctx.mkEq(lhs, rhs)
+                }
+            }
+
+        override fun <A : KArraySortBase<R>, R : KSort> transform(expr: KArrayConst<A, R>): KExpr<A> =
+            if (expr.sort != fromSort) super.transform(expr) else retypedConstArray(expr)
+
+        override fun <D : KSort, R : KSort> transform(expr: KArrayStore<D, R>): KExpr<KArraySort<D, R>> =
+            if (expr.sort != fromSort) super.transform(expr) else retypedStore(expr)
+
+        override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+            expr: KArray2Store<D0, D1, R>
+        ): KExpr<KArray2Sort<D0, D1, R>> =
+            if (expr.sort != fromSort) super.transform(expr) else retypedStore(expr)
+
+        override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+            expr: KArray3Store<D0, D1, D2, R>
+        ): KExpr<KArray3Sort<D0, D1, D2, R>> =
+            if (expr.sort != fromSort) super.transform(expr) else retypedStore(expr)
+
+        override fun <R : KSort> transform(expr: KArrayNStore<R>): KExpr<KArrayNSort<R>> =
+            if (expr.sort != fromSort) super.transform(expr) else retypedStore(expr)
+
+        override fun <D : KSort, R : KSort> transform(expr: KArrayLambda<D, R>): KExpr<KArraySort<D, R>> =
+            if (expr.sort != fromSort) super.transform(expr) else retypedLambda(expr)
+
+        override fun <D0 : KSort, D1 : KSort, R : KSort> transform(
+            expr: KArray2Lambda<D0, D1, R>
+        ): KExpr<KArray2Sort<D0, D1, R>> =
+            if (expr.sort != fromSort) super.transform(expr) else retypedLambda(expr)
+
+        override fun <D0 : KSort, D1 : KSort, D2 : KSort, R : KSort> transform(
+            expr: KArray3Lambda<D0, D1, D2, R>
+        ): KExpr<KArray3Sort<D0, D1, D2, R>> =
+            if (expr.sort != fromSort) super.transform(expr) else retypedLambda(expr)
+
+        override fun <R : KSort> transform(expr: KArrayNLambda<R>): KExpr<KArrayNSort<R>> =
+            if (expr.sort != fromSort) super.transform(expr) else retypedLambda(expr)
+
+        private fun <T : KSort> retypedConstArray(expr: KArrayConst<*, *>): KExpr<T> {
+            val array: KExpr<KSort> = expr.uncheckedCast()
+            return transformExprAfterTransformed(array, expr.value) { value ->
+                val wellSortedValue: KExpr<KSort> = value.convertToExpectedIfNeeded(toSort.range)
+                val arraySort: KArraySortBase<KSort> = toSort.uncheckedCast()
+                ctx.mkArrayConst(arraySort, wellSortedValue).uncheckedCast()
+            }.uncheckedCast()
+        }
+
+        private fun <T : KSort> retypedStore(expr: KArrayStoreBase<*, *>): KExpr<T> {
+            val store: KExpr<KSort> = expr.uncheckedCast()
+            return transformExprAfterTransformed(store, expr.args) { args ->
+                val indices = args.subList(1, args.lastIndex)
+                if (indices.any { it !is KInterpretedValue<*> }) failed = true
+                val array: KExpr<KArraySortBase<KSort>> = args.first().uncheckedCast()
+                with(ctx) { mkAnyArrayStore(array, indices, args.last()) }.uncheckedCast()
+            }.uncheckedCast()
+        }
+
+        private fun <T : KSort> retypedLambda(expr: KArrayLambdaBase<*, *>): KExpr<T> {
+            val oldDecls = expr.indexVarDeclarations
+            if (oldDecls.size != toSort.domainSorts.size) failed = true
+            val newDecls = oldDecls.zip(toSort.domainSorts) { old, sort -> retypedIndexDecl(old, sort) }
+
+            val lambda: KExpr<KSort> = expr.uncheckedCast()
+            val body: KExpr<KSort> = expr.body.uncheckedCast()
+            return transformExprAfterTransformed(lambda, body) { transformedBody ->
+                val wellSortedBody: KExpr<KSort> = transformedBody.convertToExpectedIfNeeded(toSort.range)
+                with(ctx) { mkAnyArrayLambda(newDecls, wellSortedBody) }.uncheckedCast()
+            }.uncheckedCast()
+        }
+
+        private fun retypedIndexDecl(old: KDecl<*>, sort: KSort): KDecl<*> = when {
+            old.sort == sort -> old
+            old.sort == ctx.bv32Sort && sort is KUninterpretedSort ->
+                retypedIndices.getOrPut(old) { ctx.mkFreshConstDecl(old.name, sort) }
+            else -> {
+                failed = true
+                old
+            }
+        }
+
+        private fun <T : KSort> retypedEquality(index: KExpr<T>, other: KExpr<T>): KExpr<KBoolSort>? {
+            val newIndex = retypedConst(index) ?: return null
+            val newOther: KExpr<KUninterpretedSort> = when {
+                other is KBitVec32Value -> Bv32ToUninterpretedSortAdapterExpr(other, newIndex.sort)
+                else -> retypedConst(other) ?: return null
+            }
+            return ctx.mkEq(newIndex, newOther)
+        }
+
+        private fun KExpr<*>.isRetypedIndex(): Boolean = this is KConst<*> && decl in retypedIndices
+
+        private fun retypedConst(expr: KExpr<*>): KExpr<KUninterpretedSort>? {
+            if (expr !is KConst<*>) return null
+            val newDecl = retypedIndices[expr.decl] ?: return null
+            return ctx.mkConstApp(newDecl).uncheckedCast()
         }
     }
 
