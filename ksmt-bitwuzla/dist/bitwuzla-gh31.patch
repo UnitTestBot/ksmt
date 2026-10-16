@@ -1,0 +1,67 @@
+--- a/src/bzlabeta.c
++++ b/src/bzlabeta.c
+@@ -460,12 +460,10 @@
+               cache_beta_result(bzla, cache, real_cur->e[0], e[0], result);
+             break;
+           case BZLA_LAMBDA_NODE:
+-            /* function equalities and conditionals always expect a lambda
+-             * as argument */
+-            if (cur_parent
+-                && (bzla_node_is_fun_eq(cur_parent)
+-                    || (bzla_node_is_fun_cond(cur_parent)
+-                        && !bzla_node_param_get_assigned_exp(real_cur->e[0]))))
++            /* a lambda whose parameter was not instantiated by this
++             * reduction (function equalities, conditionals, array updates)
++             * stays a lambda */
++            if (!bzla_node_param_get_assigned_exp(real_cur->e[0]))
+             {
+               assert(bzla_node_is_param(e[1]));
+               result = bzla_exp_lambda(bzla, e[1], e[0]);
+@@ -640,7 +638,7 @@
+       else if (bzla_node_is_param(real_cur))
+       {
+         next = bzla_node_param_get_assigned_exp(real_cur);
+-        assert(next);
++        if (!next) next = real_cur;
+         next = bzla_node_cond_invert(cur, next);
+         BZLA_PUSH_STACK(arg_stack, bzla_node_copy(bzla, next));
+         continue;
+@@ -710,9 +708,23 @@
+           }
+           break;
+         case BZLA_LAMBDA_NODE:
+-          /* lambdas are always reduced to some term without e[1] */
+-          assert(!bzla_node_real_addr(e[0])->parameterized);
+-          result = bzla_node_copy(bzla, e[0]);
++          /* a nested lambda whose parameter was not instantiated by this
++           * reduction (e.g. the array of an update) stays a lambda */
++          if (!bzla_node_param_get_assigned_exp(real_cur->e[0]))
++          {
++            assert(bzla_node_is_param(e[1]));
++            result = bzla_exp_lambda(bzla, e[1], e[0]);
++            if (real_cur->is_array) result->is_array = 1;
++            if (bzla_node_lambda_get_static_rho(real_cur)
++                && !bzla_node_lambda_get_static_rho(result))
++              bzla_node_lambda_set_static_rho(
++                  result, bzla_node_lambda_copy_static_rho(bzla, real_cur));
++          }
++          else
++          {
++            assert(!bzla_node_real_addr(e[0])->parameterized);
++            result = bzla_node_copy(bzla, e[0]);
++          }
+           break;
+         case BZLA_COND_NODE:
+           /* only condition rebuilt, evaluate and choose branch */
+@@ -779,7 +791,10 @@
+       if (real_cur->parameterized || bzla_node_is_lambda(real_cur))
+         BZLA_PUSH_STACK(reset, real_cur);
+ 
+-      if (bzla_node_is_lambda(real_cur))
++      /* only a lambda whose parameters were assigned above pushed its own
++       * entry on 'reset'; a rebuilt nested lambda has nothing to unwind */
++      if (bzla_node_is_lambda(real_cur)
++          && bzla_node_param_get_assigned_exp(real_cur->e[0]))
+       {
+         bzla_beta_unassign_params(bzla, real_cur);
+         next = BZLA_POP_STACK(reset);
