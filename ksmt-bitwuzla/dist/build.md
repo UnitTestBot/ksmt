@@ -8,22 +8,20 @@ To make our distribution portable we statically link Bitwuzla against `libgmp`.
 
 Jni bindings `bitwuzla_jni` are built without any tricks.
 
-### Linux x64 rebuild with the beta-reduction fix
+### Linux x64 library from the Bitwuzla fork
 
-`bitwuzla-linux64-1.0.zip` carries a `libbitwuzla.so` rebuilt from Bitwuzla commit `1230d80a5275ddf525da9c218c2bcd29c3130e49` with `bitwuzla-gh31.patch` applied.
-The patch stops `beta_reduce` and `beta_reduce_partial_aux` in `src/bzlabeta.c` from replacing a lambda by its body when the lambda's parameter was not instantiated.
-Without it an array `update` over such a lambda took a bitvector sort, and the next `bzla_node_create_apply` crashed in `bzla_sort_fun_get_codomain`.
-The crash is reached from the fun solver's lemma loop, so no option avoids it.
+`libbitwuzla.so` in `bitwuzla-linux64-1.0.zip` is the release `1.0-ksmt.1` of the fork https://github.com/metametamoon/bitwuzla, built from its branch `c-api-1.0`.
+That branch starts at Bitwuzla commit `1230d80a5275ddf525da9c218c2bcd29c3130e49`, the commit of the original binary, and adds fixes for lambdas reached through array updates in beta reduction and model generation, with tests.
+The fork's `contrib/ksmt/build-linux64.sh` builds the library in Docker, with GMP, libstdc++ and libgcc linked statically, and its release workflow attaches the library to the tag's GitHub release.
 
-`Dockerfile.bitwuzla-linux64` reproduces the build: GMP 6.3.0 static with `--with-pic --enable-fat`, the pinned Bitwuzla tarball, the patch, the `contrib/setup-*.sh` dependencies, then `./configure.sh production --shared --only-cadical`.
-It checks that the result needs only `libc.so.6` and `libm.so.6` and defines every `bzla_*` and `bitwuzla_*` symbol the unchanged `libbitwuzla_jni.so` imports, then repacks the zip.
+`fetch-linux64.sh` downloads the library of a release, checks its sha256 and that it defines every `bzla_*` and `bitwuzla_*` symbol the unchanged `libbitwuzla_jni.so` imports, and repacks the zip.
 
 ```shell
-BASE_REGISTRY=mirror.gcr.io ./build-linux64.sh
+./fetch-linux64.sh 1.0-ksmt.1
 ```
 
 `libbitwuzla_jni.so` in the zip is still the original binary.
-The rebuilt `libbitwuzla.so` has sha256 `6b2ee8e5efed1af68f86474dfeff7c8f9685f3999472073ce201529fb4486252`.
+The library of `1.0-ksmt.1` has sha256 `51d57475e5e19286496f48da6f62acb59d164c26c373c6b30707461532fdce49`.
 It also lists `ld-linux-x86-64.so.2` as a dependency and needs glibc 2.33 or newer, because the build image is Ubuntu 22.04; the 2023 binary needed glibc 2.14.
 
 ### Building on windows
